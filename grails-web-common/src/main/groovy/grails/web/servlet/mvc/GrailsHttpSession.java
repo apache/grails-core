@@ -189,9 +189,13 @@ public class GrailsHttpSession implements HttpSession {
      */
     @Deprecated
     public void invalidate() {
-        createSessionIfNecessary();
         synchronized (this) {
-            adaptee.invalidate();
+            HttpSession session = adaptee;
+            if (session == null) session = request.getSession(false);
+            if (session != null) {
+                adaptee = session;
+                session.invalidate();
+            }
         }
     }
 

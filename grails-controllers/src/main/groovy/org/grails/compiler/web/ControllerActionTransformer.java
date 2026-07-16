@@ -411,8 +411,8 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
             method = new MethodNode(
                     methodNode.getName(),
                     Modifier.PUBLIC, returnType,
-                    ZERO_PARAMETERS,
-                    EMPTY_CLASS_ARRAY,
+                    Parameter.EMPTY_ARRAY,
+                    ClassNode.EMPTY_ARRAY,
                     methodCode);
 
             GrailsASTUtils.copyAnnotations(methodNode, method);
@@ -480,7 +480,7 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
     protected void addMethodToInvokeClosure(ClassNode controllerClassNode,
             PropertyNode closureProperty, SourceUnit source, GeneratorContext context) {
 
-        MethodNode method = controllerClassNode.getMethod(closureProperty.getName(), ZERO_PARAMETERS);
+        MethodNode method = controllerClassNode.getMethod(closureProperty.getName(), Parameter.EMPTY_ARRAY);
         if (method == null || !method.getDeclaringClass().equals(controllerClassNode)) {
             ClosureExpression closureExpression = (ClosureExpression) closureProperty.getInitialExpression();
             final Parameter[] parameters = closureExpression.getParameters();
@@ -500,7 +500,7 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
             newMethodCode.addStatement(new ExpressionStatement(applyMethodTarget(methodCallExpression, Closure.class, Object.class)));
 
             final MethodNode methodNode = new MethodNode(closureProperty.getName(), Modifier.PUBLIC,
-                    new ClassNode(Object.class), ZERO_PARAMETERS, EMPTY_CLASS_ARRAY, newMethodCode);
+                    new ClassNode(Object.class), Parameter.EMPTY_ARRAY, ClassNode.EMPTY_ARRAY, newMethodCode);
             wrapMethodBodyWithExceptionHandling(controllerClassNode, methodNode);
             annotateActionMethod(controllerClassNode, parameters, methodNode);
             ClassNodeUtils.addGeneratedMethod(controllerClassNode, methodNode);
@@ -676,7 +676,7 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
 
         final MethodNode actionMethod = new MethodNode(property.getName(),
                 Modifier.PUBLIC, property.getType(), closureAction.getParameters(),
-                EMPTY_CLASS_ARRAY, closureAction.getCode());
+                ClassNode.EMPTY_ARRAY, closureAction.getCode());
 
         MethodNode convertedMethod = convertToMethodAction(classNode, actionMethod, source, context);
         if (convertedMethod != null) {

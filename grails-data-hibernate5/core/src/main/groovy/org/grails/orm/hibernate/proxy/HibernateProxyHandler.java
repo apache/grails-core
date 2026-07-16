@@ -181,6 +181,12 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
     }
 
     private ProxyInstanceMetaClass getProxyInstanceMetaClass(Object o) {
+        if (o instanceof HibernateProxy) {
+            // A Hibernate proxy never carries a ProxyInstanceMetaClass, and calling getMetaClass()
+            // on one is intercepted like any other method, initializing the proxy (or throwing
+            // LazyInitializationException when detached) before the identifier shortcut can apply
+            return null;
+        }
         if (o instanceof GroovyObject) {
             MetaClass mc = ((GroovyObject) o).getMetaClass();
             if (mc instanceof HandleMetaClass) {

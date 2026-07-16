@@ -41,7 +41,8 @@ ext {
 dependencies {
     implementation platform(project(':grails-gradle-bom'))
 
-    implementation "org.apache.groovy:groovy:${bomDependencyVersions['groovy.version']}"
+    // Use Gradle's embedded Groovy, not the project's main Groovy version.
+    implementation "org.apache.groovy:groovy:${gradleBomDependencyVersions['gradle-groovy.version']}"
 
     // spock is leaking from the grails-gradle-bom through grails-gradle-model
     implementation project(':grails-gradle-model'), {

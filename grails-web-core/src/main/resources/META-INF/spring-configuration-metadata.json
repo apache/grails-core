@@ -109,13 +109,12 @@
         {
             "name": "grails.exceptionresolver.logRequestParameters",
             "type": "java.lang.Boolean",
-            "description": "Whether to log request parameters in exception stack traces.",
-            "defaultValue": true
+            "description": "Whether to log request parameters in exception stack traces. Defaults to true in development and false otherwise."
         },
         {
             "name": "grails.exceptionresolver.params.exclude",
             "type": "java.util.List<java.lang.String>",
-            "description": "List of parameter names to mask (replace with [*****]) in exception stack traces, typically used for password and creditCard.",
+            "description": "List of parameter names to mask (replace with ***) in exception stack traces, typically used for password and creditCard. Parameter names are matched case-insensitively.",
             "defaultValue": []
         },
         {
@@ -211,7 +210,7 @@
         {
             "name": "grails.converters.encoding",
             "type": "java.lang.String",
-            "description": "The character encoding for converter output (JSON or XML).",
+            "description": "The character encoding for converter output (JSON or XML) and for the response content types stamped by the default renderers used by respond().",
             "defaultValue": "UTF-8"
         },
         {

@@ -26,4 +26,24 @@ class PageController {
     def index() {
         render view: "/page/index", model: [pageTitle: "Admin Page"]
     }
+
+    def links() {
+        render view: "/page/namespaceLinks", model: [pageTitle: "Admin Namespace Links"]
+    }
+
+    def list() {
+        render view: "/page/namespaceLinks", model: [pageTitle: "Admin Namespace Links"]
+    }
+
+    def redirectToBook() {
+        redirect controller: "book", action: "index"
+    }
+
+    def chainToBook() {
+        chain controller: "book", action: "index"
+    }
+
+    def redirectToRootReport() {
+        redirect controller: "report", action: "index", namespace: null
+    }
 }

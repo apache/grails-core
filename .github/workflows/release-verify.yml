@@ -1,0 +1,129 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Runs the automated release verification (etc/bin/verify.sh) against a
+# published release tag. The job fails if any verification step fails.
+# This replaces the local Docker-based flow (etc/bin/Dockerfile) for CI use;
+# the container remains useful for reproducing this environment locally.
+name: "Release - Verify Troubleshooting"
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to verify (e.g. v7.0.5)'
+        required: true
+        type: string
+
+permissions: { }
+
+concurrency:
+  group: release-verify-${{ inputs.release_tag }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      # mirror the layout of the local verification container (etc/bin/Dockerfile):
+      # the source is checked out at 'project' and verification runs from a
+      # sibling 'grails-verify' scratch directory
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          path: project
+      - name: "☕️ Determine Java version from .sdkmanrc"
+        # a release must be verified with the exact JDK it was built with for
+        # the reproducible-build comparison, so read the pinned version from
+        # .sdkmanrc instead of duplicating it here
+        id: sdkmanrc
+        working-directory: project
+        run: |
+          SDKMAN_JAVA=$(grep -E '^java=' .sdkmanrc | cut -d= -f2)
+          JAVA_VERSION=${SDKMAN_JAVA%-*}
+          SDKMAN_SUFFIX=${SDKMAN_JAVA##*-}
+          case "${SDKMAN_SUFFIX}" in
+            librca) JAVA_DISTRIBUTION=liberica ;;
+            tem)    JAVA_DISTRIBUTION=temurin ;;
+            *)
+              echo "❌ Unmapped sdkman java distribution suffix: ${SDKMAN_SUFFIX}" >&2
+              exit 1
+              ;;
+          esac
+          echo "Using Java ${JAVA_VERSION} (${JAVA_DISTRIBUTION})"
+          echo "java-version=${JAVA_VERSION}" >> "${GITHUB_OUTPUT}"
+          echo "java-distribution=${JAVA_DISTRIBUTION}" >> "${GITHUB_OUTPUT}"
+      - name: "☕️ Determine Micronaut-island Java version from release.yml"
+        # the reproducible-build check recompiles the Grails-Micronaut island
+        # (grails-micronaut, grails-micronaut-bom) under JDK 25; read the pinned
+        # version from release.yml ($JAVA_VERSION_MICRONAUT) instead of duplicating it
+        id: micronaut-java
+        working-directory: project
+        run: |
+          MICRONAUT_JAVA=$(grep -E '^\s*JAVA_VERSION_MICRONAUT:' .github/workflows/release.yml \
+            | head -n1 | sed -E 's/.*JAVA_VERSION_MICRONAUT:[[:space:]]*([0-9][0-9.]*).*/\1/')
+          if [ -z "${MICRONAUT_JAVA}" ]; then
+            echo "❌ Could not determine JAVA_VERSION_MICRONAUT from release.yml" >&2
+            exit 1
+          fi
+          echo "Using Micronaut-island Java ${MICRONAUT_JAVA} (liberica)"
+          echo "java-version=${MICRONAUT_JAVA}" >> "${GITHUB_OUTPUT}"
+      - name: "☕️ Setup JDK 25 (Micronaut island)"
+        # installed first so the primary JDK below wins as the default JAVA_HOME;
+        # setup-java still exports JAVA_HOME_25_X64 for the reproducible-build check
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: liberica
+          java-version: ${{ steps.micronaut-java.outputs.java-version }}
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: ${{ steps.sdkmanrc.outputs.java-distribution }}
+          java-version: ${{ steps.sdkmanrc.outputs.java-version }}
+      - name: "☕️ Export JDK 25 home for the reproducible-build check"
+        # verify-reproducible.sh switches JAVA_HOME to ${JDK_25_HOME} for the
+        # Micronaut island pass; mirror the container's ENV JDK_25_HOME here
+        run: |
+          if [ -z "${JAVA_HOME_25_X64:-}" ]; then
+            echo "❌ Expected JAVA_HOME_25_X64 to be exported by setup-java" >&2
+            exit 1
+          fi
+          echo "JDK_25_HOME=${JAVA_HOME_25_X64}" >> "${GITHUB_ENV}"
+          "${JAVA_HOME_25_X64}/bin/java" -version
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        with:
+          # verification must run against a pristine environment, never cached state
+          cache-disabled: true
+      - name: "🥃 Install Groovy"
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends groovy
+          groovy --version
+      - name: "🛠 Add wrapper and verification scripts to PATH"
+        # matches the container's PATH setup: verify.sh resolves `gradlew` from
+        # the PATH (the wrapper locates its jar relative to the script, so the
+        # checkout's copy works from any directory)
+        run: |
+          echo "${GITHUB_WORKSPACE}/project" >> "${GITHUB_PATH}"
+          echo "${GITHUB_WORKSPACE}/project/etc/bin" >> "${GITHUB_PATH}"
+      - name: "✅ Verify release"
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          mkdir -p grails-verify
+          cd grails-verify
+          verify.sh "${RELEASE_TAG}" .

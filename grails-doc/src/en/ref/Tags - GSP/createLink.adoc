@@ -68,7 +68,7 @@ Example usages for above controller:
 <!-- generates "/shop/book/list" -->
 <g:createLink url="[action:'list',controller:'book']" />
 
-<!-- generates a link tot he book controller in the publishing namespace -->
+<!-- generates a link to the book controller in the publishing namespace -->
 <g:createLink controller="book" namespace="publishing"/>
 
 <!-- generates "https://portal.mygreatsite.com/book" -->
@@ -104,7 +104,7 @@ Attributes
 
 * `action` (optional) - The name of the action to use in the link; if not specified the default action will be linked
 * `controller` (optional) - The name of the controller to use in the link; if not specified the current controller will be linked
-* `namespace` (optional) - The namespace of the controller to use in the link
+* `namespace` (optional) - The namespace of the controller to use in the link. If omitted, the namespace is inferred from the target controller; you only need to set it when more than one controller shares the name. Use `namespace=""` to target a non-namespaced controller.
 * `plugin` (optional) - The name of the plugin which provides the controller
 * `id` (optional) - The id to use in the link
 * `fragment` (optional) - The link fragment (often called anchor tag) to use

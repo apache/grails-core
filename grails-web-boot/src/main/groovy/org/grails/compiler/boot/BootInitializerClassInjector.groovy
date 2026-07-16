@@ -115,7 +115,7 @@ class BootInitializerClassInjector extends GlobalClassInjectorAdapter {
                     def methodBody = new BlockStatement()
 
                     methodBody.addStatement(new ExpressionStatement(new MethodCallExpression(new VariableExpression(parameter), 'sources', new ClassExpression(classNode))))
-                    loaderClassNode.addMethod(new MethodNode('configure', Modifier.PROTECTED, springApplicationBuilder, [parameter] as Parameter[], [] as ClassNode[], methodBody))
+                    loaderClassNode.addMethod(new MethodNode('configure', Modifier.PROTECTED, springApplicationBuilder, [parameter] as Parameter[], ClassNode.EMPTY_ARRAY, methodBody))
                     source.getAST().addClass(
                             loaderClassNode
                     )

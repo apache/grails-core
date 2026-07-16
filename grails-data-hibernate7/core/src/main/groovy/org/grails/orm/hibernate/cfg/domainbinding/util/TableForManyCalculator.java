@@ -112,7 +112,6 @@ public class TableForManyCalculator {
 
         // Only proceed with association logic if it's an actual Association and has an associated
         // entity
-        //TODO Use Hibernate hierarchy
         if (!(property instanceof Association<?> association)) {
             throw new MappingException("Property [" + property.getName() +
                     "] is not an association and is not a basic type for table calculation.");

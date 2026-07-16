@@ -97,7 +97,7 @@ class DefaultGraphQLErrorsResponseHandlerSpec extends Specification implements G
         DataFetcher errorsFetcher = codeRegistry.getDataFetcher(coordinates("MockValidateable", "errors"), field)
 
         then:
-        errorsFetcher.get(mockObjectEnv) instanceof List<FieldError>
+        errorsFetcher.get(mockObjectEnv) instanceof List
         ((List<FieldError>) errorsFetcher.get(mockObjectEnv)).size() == 1
 
         when:

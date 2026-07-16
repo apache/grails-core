@@ -47,6 +47,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.Environment;
+import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.PropertiesPropertySource;
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.util.StringUtils;
@@ -62,7 +63,7 @@ import org.grails.gsp.GroovyPagesTemplateEngine;
 import org.grails.gsp.io.GroovyPageScriptSource;
 import org.grails.gsp.jsp.TagLibraryResolver;
 import org.grails.gsp.jsp.TagLibraryResolverImpl;
-import org.grails.plugins.sitemesh3.Sitemesh3GrailsPlugin;
+import org.grails.plugins.sitemesh3.Sitemesh3EnvironmentPostProcessor;
 import org.grails.plugins.web.taglib.RenderSitemeshTagLib;
 import org.grails.plugins.web.taglib.RenderTagLib;
 import org.grails.taglib.TagLibraryLookup;
@@ -90,7 +91,7 @@ public class GspAutoConfiguration {
     }
 
     @Configuration
-    @Import({TagLibraryLookupRegistrar.class, RemoveDefaultViewResolverRegistrar.class})
+    @Import({TagLibraryLookupRegistrar.class, ReplaceViewResolverRegistrar.class})
     protected static class GspTemplateEngineAutoConfiguration extends AbstractGspConfig {
         private static final String LOCAL_DIRECTORY_TEMPLATE_ROOT = "./src/main/resources/templates";
         private static final String CLASSPATH_TEMPLATE_ROOT = "classpath:/templates";
@@ -190,7 +191,10 @@ public class GspAutoConfiguration {
         public void setEnvironment(Environment environment) {
             if (environment instanceof ConfigurableEnvironment) {
                 ConfigurableEnvironment configEnv = (ConfigurableEnvironment) environment;
-                configEnv.getPropertySources().addFirst(Sitemesh3GrailsPlugin.getDefaultPropertySource(configEnv, null));
+                MapPropertySource defaults = Sitemesh3EnvironmentPostProcessor.getDefaultPropertySource(configEnv);
+                if (!defaults.getSource().isEmpty()) {
+                    configEnv.getPropertySources().addFirst(defaults);
+                }
             }
         }
 
@@ -266,26 +270,22 @@ public class GspAutoConfiguration {
     }
 
     /**
-     * {@link WebMvcAutoConfiguration} adds defaultViewResolver and viewResolver beans.
+     * Makes the GSP view resolver the primary {@code viewResolver} for GSP applications by
+     * replacing the {@code viewResolver} bean ({@link WebMvcAutoConfiguration}'s
+     * {@code ContentNegotiatingViewResolver}) with an alias to {@code gspViewResolver}.
      *
-     *  This ImportBeanDefinitionRegistrar removes the defaultViewResolver and replaces
-     *  the viewResolver bean with GSP view resolver by default.
+     * <p>Removal of {@link WebMvcAutoConfiguration}'s {@code defaultViewResolver}
+     * ({@code InternalResourceViewResolver}) is handled centrally for every Grails servlet web
+     * application by {@code GrailsViewResolverAutoConfiguration} (grails-controllers), so it is
+     * not repeated here.
      *
-     *  The behavior of this class can be controlled with spring.gsp.removeDefaultViewResolver and
-     *  spring.gsp.replaceViewResolverBean configuration properties.
-     *
+     * <p>Controlled by the {@code spring.gsp.replaceViewResolverBean} configuration property.
      */
-    protected static class RemoveDefaultViewResolverRegistrar implements ImportBeanDefinitionRegistrar, EnvironmentAware {
-        boolean removeDefaultViewResolverBean;
+    protected static class ReplaceViewResolverRegistrar implements ImportBeanDefinitionRegistrar, EnvironmentAware {
         boolean replaceViewResolverBean;
 
         @Override
         public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
-            if (removeDefaultViewResolverBean) {
-                if (registry.containsBeanDefinition("defaultViewResolver")) {
-                    registry.removeBeanDefinition("defaultViewResolver");
-                }
-            }
             if (replaceViewResolverBean) {
                 if (registry.containsBeanDefinition("viewResolver")) {
                     registry.removeBeanDefinition("viewResolver");
@@ -296,7 +296,6 @@ public class GspAutoConfiguration {
 
         @Override
         public void setEnvironment(Environment environment) {
-            removeDefaultViewResolverBean = environment.getProperty("spring.gsp.removeDefaultViewResolverBean", Boolean.class, true);
             replaceViewResolverBean = environment.getProperty("spring.gsp.replaceViewResolverBean", Boolean.class, true);
         }
     }

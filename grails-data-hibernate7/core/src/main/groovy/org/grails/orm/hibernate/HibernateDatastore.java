@@ -18,8 +18,8 @@
  */
 package org.grails.orm.hibernate;
 
-// TODO: Refactor multi-datasource architecture to avoid the parent-child datastore map and anonymous subclasses.
-// Consider a single CompositeDatastore approach for the next major release.
+// Multi-datasource support currently uses a parent-child datastore map and child datastore instances.
+// A future major release can replace this with a single CompositeDatastore approach.
 
 import java.io.Closeable;
 import java.io.IOException;

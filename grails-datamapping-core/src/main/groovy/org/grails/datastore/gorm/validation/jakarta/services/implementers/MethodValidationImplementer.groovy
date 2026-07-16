@@ -63,7 +63,6 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
 import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.callThisD
 import static org.grails.datastore.mapping.reflect.AstUtils.ZERO_ARGUMENTS
-import static org.grails.datastore.mapping.reflect.AstUtils.ZERO_PARAMETERS
 import static org.grails.datastore.mapping.reflect.AstUtils.findAnnotation
 import static org.grails.datastore.mapping.reflect.AstUtils.varThis
 
@@ -193,9 +192,9 @@ class MethodValidationImplementer implements ServiceEnhancer {
 
         def callExpression = callThisD(innerClassNode, addParameterNamesMethodNode.name, addParameterNamesArguments)
         callExpression.setMethodTarget(addParameterNamesMethodNode)
-        ConstructorNode constructorNode = innerClassNode.getDeclaredConstructor(ZERO_PARAMETERS)
+        ConstructorNode constructorNode = innerClassNode.getDeclaredConstructor(Parameter.EMPTY_ARRAY)
         if (constructorNode == null) {
-            constructorNode = new ConstructorNode(Modifier.PUBLIC, ZERO_PARAMETERS, null, new BlockStatement())
+            constructorNode = new ConstructorNode(Modifier.PUBLIC, Parameter.EMPTY_ARRAY, ClassNode.EMPTY_ARRAY, new BlockStatement())
             innerClassNode.addConstructor(constructorNode)
             markAsGenerated(innerClassNode, constructorNode)
         }

@@ -19,16 +19,24 @@
 
 package org.grails.plugins.i18n;
 
+import java.util.Locale;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
+import org.springframework.boot.autoconfigure.condition.SearchStrategy;
 import org.springframework.boot.autoconfigure.context.MessageSourceAutoConfiguration;
 import org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.support.AbstractApplicationContext;
+import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.DispatcherServlet;
 import org.springframework.web.servlet.LocaleResolver;
+import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
+import org.springframework.web.servlet.i18n.CookieLocaleResolver;
+import org.springframework.web.servlet.i18n.FixedLocaleResolver;
 import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
 import org.springframework.web.servlet.i18n.SessionLocaleResolver;
 
@@ -55,12 +63,55 @@ public class I18nAutoConfiguration {
     @Value("${" + Settings.I18N_FILE_CACHE_SECONDS + ":5}")
     private int fileCacheSeconds;
 
-    @Bean(DispatcherServlet.LOCALE_RESOLVER_BEAN_NAME)
-    public LocaleResolver localeResolver() {
-        return new SessionLocaleResolver();
+    @Value("${" + Settings.I18N_LOCALE_RESOLVER + ":session}")
+    private String localeResolverType;
+
+    // Default locale for the read-only 'fixed' resolver; empty falls back to the JVM default.
+    @Value("${grails.i18n.default.locale:}")
+    private String defaultLocale;
+
+    enum LocaleResolverStrategy { SESSION, COOKIE, ACCEPT_HEADER, FIXED }
+
+    // Normalizes the configured strategy, ignoring case and separators (e.g. 'accept-header').
+    static LocaleResolverStrategy resolveStrategy(String value) {
+        String normalized = value == null ? "" : value.toLowerCase(Locale.ROOT).replaceAll("[^a-z]", "");
+        return switch (normalized) {
+            case "cookie" -> LocaleResolverStrategy.COOKIE;
+            case "acceptheader", "header", "accept" -> LocaleResolverStrategy.ACCEPT_HEADER;
+            case "fixed" -> LocaleResolverStrategy.FIXED;
+            default -> LocaleResolverStrategy.SESSION;
+        };
     }
 
+    // SearchStrategy.CURRENT on all three guards: DispatcherServlet resolves these beans from its
+    // own context, and Boot's MessageSourceAutoConfiguration uses the same scoping — a bean in a
+    // parent context must not make the child context's bean back off.
+    @Bean(DispatcherServlet.LOCALE_RESOLVER_BEAN_NAME)
+    @ConditionalOnMissingBean(name = DispatcherServlet.LOCALE_RESOLVER_BEAN_NAME, search = SearchStrategy.CURRENT)
+    public LocaleResolver localeResolver() {
+        return switch (resolveStrategy(localeResolverType)) {
+            case COOKIE -> new CookieLocaleResolver("locale");
+            case ACCEPT_HEADER -> new AcceptHeaderLocaleResolver();
+            case FIXED -> new FixedLocaleResolver(fixedLocale());
+            case SESSION -> new SessionLocaleResolver();
+        };
+    }
+
+    private Locale fixedLocale() {
+        if (StringUtils.hasText(defaultLocale)) {
+            Locale parsed = StringUtils.parseLocale(defaultLocale);
+            if (parsed != null) {
+                return parsed;
+            }
+        }
+        return Locale.getDefault();
+    }
+
+    // The ?lang= interceptor is always registered. When the configured LocaleResolver is read-only
+    // (ACCEPT_HEADER or FIXED), ParamsAwareLocaleChangeInterceptor detects that the resolver cannot
+    // change and ignores the parameter, so ?lang= simply has no effect.
     @Bean
+    @ConditionalOnMissingBean(name = "localeChangeInterceptor", search = SearchStrategy.CURRENT)
     public LocaleChangeInterceptor localeChangeInterceptor() {
         ParamsAwareLocaleChangeInterceptor localeChangeInterceptor = new ParamsAwareLocaleChangeInterceptor();
         localeChangeInterceptor.setParamName("lang");
@@ -68,6 +119,7 @@ public class I18nAutoConfiguration {
     }
 
     @Bean(AbstractApplicationContext.MESSAGE_SOURCE_BEAN_NAME)
+    @ConditionalOnMissingBean(name = AbstractApplicationContext.MESSAGE_SOURCE_BEAN_NAME, search = SearchStrategy.CURRENT)
     public MessageSource messageSource(GrailsApplication grailsApplication, GrailsPluginManager pluginManager) {
         PluginAwareResourceBundleMessageSource messageSource = new PluginAwareResourceBundleMessageSource(grailsApplication, pluginManager);
         messageSource.setDefaultEncoding(encoding);
@@ -77,5 +129,31 @@ public class I18nAutoConfiguration {
             messageSource.setFileCacheSeconds(fileCacheSeconds);
         }
         return messageSource;
+    }
+
+    /**
+     * Discovers the locales the application is translated into (from {@code <basename>_<locale>.properties}
+     * bundles on the classpath) so that a language selector can list only real translations rather
+     * than every JVM locale. Published to the servlet context by {@link I18nGrailsPlugin} and
+     * consumed by the {@code g:localeSelect available="true"} tag.
+     *
+     * <p>By default every {@code *.properties} bundle on the classpath is considered, so locales
+     * contributed by plugins &mdash; whose bundles are namespaced (e.g.
+     * {@code spring-security-core_*.properties}) &mdash; are included alongside the application's own.
+     * Set {@code grails.i18n.availableLocales.includePlugins=false} to restrict discovery to the
+     * application's own {@code messages_*.properties} bundles.
+     *
+     * <p>The base {@code messages.properties} locale is always included, resolved from
+     * {@code grails.i18n.default.locale} exactly like the rest of this class (falling back to the
+     * JVM default locale when the property is not set).
+     *
+     * @param includePlugins whether to also scan plugin-contributed message bundles
+     * ({@code grails.i18n.availableLocales.includePlugins}, defaults to {@code true})
+     */
+    @Bean
+    @ConditionalOnMissingBean(AvailableLocaleResolver.class)
+    public AvailableLocaleResolver availableLocaleResolver(GrailsApplication grailsApplication,
+            @Value("${grails.i18n.availableLocales.includePlugins:true}") boolean includePlugins) {
+        return new AvailableLocaleResolver(grailsApplication.getClassLoader(), fixedLocale(), includePlugins);
     }
 }

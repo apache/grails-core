@@ -183,7 +183,7 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
                 }
 
                 boolean osivEnabled = config.getProperty('hibernate.osiv.enabled', Boolean, true)
-                boolean isWebApplication = beanDefinitionRegistry?.containsBeanDefinition('dispatcherServlet') ||
+                boolean isWebApplication = isWebApplicationRegistry(beanDefinitionRegistry) ||
                         beanDefinitionRegistry?.containsBeanDefinition('grailsControllerHelper')
 
                 if (isWebApplication && osivEnabled && ClassUtils.isPresent('org.grails.plugin.hibernate.support.GrailsOpenSessionInViewInterceptor')) {

@@ -210,7 +210,7 @@ public class DefaultGrailsDomainClassInjector implements GrailsDomainClassInject
             VariableExpression idVariable = new VariableExpression("id");
             ge.addValue(new TernaryExpression(new BooleanExpression(idVariable), idVariable, new ConstantExpression("(unsaved)")));
             Statement s = new ReturnStatement(ge);
-            MethodNode mn = new MethodNode("toString", Modifier.PUBLIC, new ClassNode(String.class), new Parameter[0], new ClassNode[0], s);
+            MethodNode mn = new MethodNode("toString", Modifier.PUBLIC, new ClassNode(String.class), Parameter.EMPTY_ARRAY, ClassNode.EMPTY_ARRAY, s);
             classNode.addMethod(mn);
             classesWithInjectedToString.add(classNode);
             AnnotatedNodeUtils.markAsGenerated(classNode, mn);

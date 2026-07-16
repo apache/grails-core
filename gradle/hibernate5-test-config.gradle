@@ -20,6 +20,8 @@
 dependencies {
     // https://docs.gradle.org/8.3/userguide/upgrading_version_8.html#test_framework_implementation_dependencies
     add('testRuntimeOnly', 'org.junit.platform:junit-platform-launcher')
+    add('testRuntimeOnly', 'net.bytebuddy:byte-buddy')
+    add('testRuntimeOnly', 'org.objenesis:objenesis')
 }
 
 tasks.withType(Test).configureEach {
@@ -34,6 +36,8 @@ tasks.withType(Test).configureEach {
                 'onlyHibernate7Tests',
                 'skipHibernate5Tests',
                 'onlyMongodbTests',
+                'onlyRedisTests',
+                'onlySpringSecurityTests',
                 'onlyCoreTests',
                 'skipTests'
         ].find {
@@ -42,7 +46,10 @@ tasks.withType(Test).configureEach {
     }
 
     useJUnitPlatform()
-    systemProperty('hibernate5.gorm.suite', System.getProperty('hibernate5.gorm.suite') ?: true)
+    // Lets TCK specs gate features on the running suite. Spock evaluates @IgnoreIf/@Requires
+    // preconditions before setupSpec() runs, so this must be set at the task level - a
+    // TCK-manager System.setProperty would come too late.
+    systemProperty('hibernate5.gorm.suite', 'true')
     reports.html.required = !isCiBuild
     reports.junitXml.required = !isCiBuild
     testLogging {

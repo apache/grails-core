@@ -1,0 +1,105 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-channelSecurity]]
+== Channel Security
+
+Use channel security to configure which URLs require HTTP and which require HTTPS.
+
+.Channel Security configuration options
+[cols="30,30,40"]
+|====================
+| *Property* | *Default Value* | *Meaning*
+
+|portMapper.httpPort
+|`8080`
+|HTTP port your application uses
+
+|portMapper.httpsPort
+|`8443`
+|HTTPS port your application uses
+
+|secureChannel.definition
+|_none_
+|Map of URL pattern to channel rule
+
+|secureChannel.secureHeaderName
+|`'X-Forwarded-Proto'`
+|The name of the header to check for HTTPS
+
+|secureChannel.secureHeaderValue
+|`'http'`
+|The header value for `secureHeaderName` that indicates a need to redirect from HTTPS to HTTP
+
+|secureChannel.secureConfigAttributeKeyword
+|`'REQUIRES_SECURE_CHANNEL'`
+|The config attribute token to use for marking a pattern as requiring HTTPS.
+
+|secureChannel.insecureHeaderName
+|`'X-Forwarded-Proto'`
+|The name of the header to check for HTTP
+
+|secureChannel.insecureHeaderValue
+|`'https'`
+|The header value for `insecureHeaderName` that indicates a need to redirect from HTTP to HTTPS
+
+|secureChannel.insecureConfigAttributeKeyword
+|`'REQUIRES_INSECURE_CHANNEL'`
+|The config attribute token to use for marking a pattern as requiring HTTP.
+|====================
+
+Build a `List` of single-entry ``Map``s under the `secureChannel.definition` key, where URL patterns are stored under the key "`pattern`", and the values are stored under the key "`access`" and are one of the access keywords `REQUIRES_SECURE_CHANNEL`, `REQUIRES_INSECURE_CHANNEL`, or `ANY_CHANNEL`:
+
+[source,groovy]
+.Listing {counter:listing}. Sample `grails.plugin.springsecurity.secureChannel.definition`
+----
+grails.plugin.springsecurity.secureChannel.definition = [
+   [pattern: '/login/**',        access: 'REQUIRES_SECURE_CHANNEL'],
+   [pattern: '/maps/**',         access: 'REQUIRES_INSECURE_CHANNEL'],
+   [pattern: '/images/login/**', access: 'REQUIRES_SECURE_CHANNEL'],
+   [pattern: '/images/**',       access: 'ANY_CHANNEL']
+]
+----
+
+
+[WARNING]
+====
+The format of `secureChannel.definition` has changed from previous versions to avoid configuration parsing issues. In previous versions the property was a single Map, where the keys were the access patterns and the values were one of the access keywords above. The old format is no longer supported and your configurations must be updated to the newer format.
+====
+
+URLs are checked in order, so be sure to put more specific rules before less specific. In the preceding example, `/images/login/pass:[**]` is more specific than `/images/pass:[**]`, so it appears first in the configuration.
+
+=== Header checking
+
+The default implementation of channel security is fairly simple; if you're using HTTP but HTTPS is required, you get redirected to the corresponding SSL URL and vice versa. But when using a load balancer such as an F5 BIG-IP it's not possible to just check secure/insecure. In that case you can configure the load balancer to set a request header indicating the current state. To use this approach, set the `useHeaderCheckChannelSecurity` configuration property to `true` and optionally change the header names or values:
+
+[source,groovy]
+----
+grails.plugin.springsecurity.secureChannel.useHeaderCheckChannelSecurity = true
+----
+
+By default the header name is "`X-Forwarded-Proto`" and the secure header value is "`http`" (i.e. if you're not secure, redirect to secure) and the insecure header value is "`https`" (i.e. if you're secure, redirect to insecure). You can change any or all of these default values though:
+
+[source,groovy]
+----
+grails.plugin.springsecurity.secureChannel.secureHeaderName = '...'
+grails.plugin.springsecurity.secureChannel.secureHeaderValue = '...'
+grails.plugin.springsecurity.secureChannel.insecureHeaderName = '...'
+grails.plugin.springsecurity.secureChannel.insecureHeaderValue = '...'
+----

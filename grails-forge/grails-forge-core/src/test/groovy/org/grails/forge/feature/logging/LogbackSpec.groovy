@@ -54,14 +54,23 @@ class LogbackSpec extends ApplicationContextSpec implements CommandOutputFixture
     }
 
     @Unroll
-    void "test logback-spring.xml disables Jansi for #applicationType application"() {
+    void "test logback-spring.xml composes Spring Boot defaults with an INFO root level for #applicationType application"() {
         when:
         def output = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS))
 
-        then: "Jansi is disabled so its global System.out replacement does not break console logging after a Spring Boot DevTools restart (issue #15663)"
+        then: "the file reuses Spring Boot's own defaults and console appender instead of duplicating them"
         def logback = output.get("grails-app/conf/logback-spring.xml")
-        logback.contains("<withJansi>false</withJansi>")
-        !logback.contains("<withJansi>true</withJansi>")
+        logback.contains('<include resource="org/springframework/boot/logging/logback/defaults.xml"/>')
+        logback.contains('<include resource="org/springframework/boot/logging/logback/console-appender.xml"/>')
+        logback.contains('<root level="INFO">')
+        !logback.contains('<root level="ERROR">')
+
+        and: "environment-specific logging is configured via the development Spring profile"
+        logback.contains('<springProfile name="development">')
+        logback.contains('<logger name="StackTrace" level="ERROR"/>')
+
+        and: "Jansi is not used; its global System.out replacement breaks console logging after a Spring Boot DevTools restart (issue #15663)"
+        !logback.contains("withJansi")
 
         where:
         applicationType << ApplicationType.values().toList()

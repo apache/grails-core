@@ -85,7 +85,6 @@ public class NamingStrategyProvider {
         if (strategy instanceof PhysicalNamingStrategy) {
             return strategy;
         }
-        //TODO Candidate for SneakyThrow
         return strategyClass.newInstance();
     }
 

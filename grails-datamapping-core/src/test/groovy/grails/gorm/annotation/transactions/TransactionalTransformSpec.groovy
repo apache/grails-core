@@ -202,8 +202,6 @@ import grails.gorm.transactions.Transactional
         // so a reflective call outside Spock's runner throws IllegalStateException. The
         // GroovyShell compilation above plus the transformed method signature checks
         // already cover this regression (@Rollback must produce a valid, well-formed spec).
-
-
     }
 
     @Issue('https://github.com/apache/grails-core/issues/9646')
@@ -239,8 +237,6 @@ import grails.gorm.transactions.Transactional
         // reflective call outside Spock's runner throws IllegalStateException. The
         // GroovyShell compilation above plus the transformed method signature checks
         // already cover this regression (@Rollback must produce a valid, well-formed spec).
-
-
     }
 
     void "Test @Rollback when applied to JUnit specifications"() {

@@ -67,8 +67,6 @@ import org.grails.datastore.mapping.mongo.engine.codecs.PersistentEntityCodec
 import org.grails.datastore.mapping.mongo.query.MongoQuery
 import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.query.api.QueryableCriteria
-import org.grails.datastore.mapping.transactions.SessionOnlyTransaction
-import org.grails.datastore.mapping.transactions.Transaction
 
 /**
  * A MongoDB session for codec mapping style
@@ -119,18 +117,18 @@ class MongoCodecSession extends AbstractMongoSession {
             Map<String,Integer> numberOfOptimisticUpdates = [:].withDefault { 0 }
             Map<String,Integer> numberOfPessimisticUpdates = [:].withDefault { 0 }
 
-            Map<PersistentEntity, List<WriteModel<Document>>> writeModels = [:]
+            Map<PersistentEntity, List<WriteModel<Object>>> writeModels = [:]
             for (PersistentEntity persistentEntity in pendingInserts.keySet()) {
                 final Collection<PendingInsert> inserts = pendingInserts[persistentEntity]
                 if (inserts) {
-                    List<WriteModel<?>> entityWrites = getWriteModelsForEntity(persistentEntity, writeModels)
+                    def entityWrites = getCodecWriteModelsForEntity(persistentEntity, writeModels)
                     for (PendingInsert insert in inserts) {
                         insert.run()
 
                         if (insert.vetoed) continue
 
                         def object = insert.nativeEntry
-                        entityWrites << new InsertOneModel<?>(object)
+                        entityWrites << new InsertOneModel<Object>(object)
 
                         final List<PendingOperation> cascadeOperations = insert.cascadeOperations
                         addPostFlushOperations(cascadeOperations)
@@ -144,14 +142,14 @@ class MongoCodecSession extends AbstractMongoSession {
 
                 final Collection<PendingUpdate> updates = pendingUpdates[persistentEntity]
                 if (updates) {
-                    List<WriteModel<?>> entityWrites = getWriteModelsForEntity(persistentEntity, writeModels)
+                    def entityWrites = getCodecWriteModelsForEntity(persistentEntity, writeModels)
                     for (PendingUpdate update in updates) {
                         update.run()
 
                         if (update.vetoed) continue
 
-                        DirtyCheckable changedObject = (DirtyCheckable) update.getNativeEntry()
-                        PersistentEntityCodec codec = (PersistentEntityCodec) datastore.codecRegistry.get(changedObject.getClass())
+                        def changedObject = (DirtyCheckable) update.nativeEntry
+                        def codec = (PersistentEntityCodec) datastore.codecRegistry.get((Class) changedObject.getClass())
 
                         final Object nativeKey = coerceIdToStoredType(update.nativeKey, persistentEntity)
                         final Document id = new Document(MongoEntityPersister.MONGO_ID_FIELD, nativeKey)
@@ -181,7 +179,7 @@ class MongoCodecSession extends AbstractMongoSession {
                             }
                             final options = new UpdateOptions()
 
-                            entityWrites << new UpdateOneModel<Document>(id, updateDoc, options.upsert(false))
+                            entityWrites << new UpdateOneModel<Object>(id, updateDoc, options.upsert(false))
 
                             final List cascadeOperations = update.cascadeOperations
                             addPostFlushOperations(cascadeOperations)
@@ -194,7 +192,7 @@ class MongoCodecSession extends AbstractMongoSession {
             for (PersistentEntity persistentEntity in pendingDeletes.keySet()) {
                 final Collection<PendingDelete> deletes = pendingDeletes[persistentEntity]
                 if (deletes) {
-                    List<WriteModel<?>> entityWrites = getWriteModelsForEntity(persistentEntity, writeModels)
+                    def entityWrites = getCodecWriteModelsForEntity(persistentEntity, writeModels)
                     List<Object> nativeKeys = []
                     for (PendingDelete delete in deletes) {
                         delete.run()
@@ -210,17 +208,17 @@ class MongoCodecSession extends AbstractMongoSession {
 
                     }
                     if (nativeKeys.size() == 1) {
-                        entityWrites << new DeleteOneModel<Document>(new Document(MongoEntityPersister.MONGO_ID_FIELD, nativeKeys.get(0)))
+                        entityWrites << new DeleteOneModel<Object>(new Document(MongoEntityPersister.MONGO_ID_FIELD, nativeKeys.get(0)))
                     }
                     else {
-                        entityWrites << new DeleteManyModel<Document>(new Document(MongoEntityPersister.MONGO_ID_FIELD, new Document(BsonQuery.IN_OPERATOR, nativeKeys)))
+                        entityWrites << new DeleteManyModel<Object>(new Document(MongoEntityPersister.MONGO_ID_FIELD, new Document(BsonQuery.IN_OPERATOR, nativeKeys)))
                     }
                 }
             }
 
             for (PersistentEntity persistentEntity : writeModels.keySet()) {
-                MongoCollection collection = getCollection(persistentEntity)
-                                                .withDocumentClass(persistentEntity.javaClass)
+                MongoCollection<Object> collection = getCollection(persistentEntity)
+                                                .withDocumentClass((Class<Object>) persistentEntity.javaClass)
 
                 WriteConcern wc = writeConcern
                 if (wc == null) {
@@ -233,11 +231,10 @@ class MongoCodecSession extends AbstractMongoSession {
                 else {
                     wc = collection.writeConcern
                 }
-                final List<WriteModel<?>> writes = writeModels[persistentEntity]
+                def writes = writeModels[persistentEntity]
                 if (writes) {
 
-                    final BulkWriteResult bulkWriteResult = collection
-                                                                .bulkWrite(writes)
+                    final BulkWriteResult bulkWriteResult = bulkWrite(collection, writes)
 
                     final boolean isAcknowledged = wc.isAcknowledged()
                     if (!bulkWriteResult.wasAcknowledged() && isAcknowledged) {
@@ -268,6 +265,16 @@ class MongoCodecSession extends AbstractMongoSession {
         }
     }
 
+    protected List<WriteModel<Object>> getCodecWriteModelsForEntity(PersistentEntity persistentEntity, Map<PersistentEntity, List<WriteModel<Object>>> writeModels) {
+        PersistentEntity key = persistentEntity.isRoot() ? persistentEntity : persistentEntity.getRootEntity()
+        List<WriteModel<Object>> entityWrites = writeModels[key]
+        if (entityWrites == null) {
+            entityWrites = []
+            writeModels[key] = entityWrites
+        }
+        return entityWrites
+    }
+
     @Override
     MongoClient getNativeInterface() {
         return mongoDatastore.mongoClient
@@ -277,11 +284,15 @@ class MongoCodecSession extends AbstractMongoSession {
         return (DocumentMappingContext) getMappingContext()
     }
 
-    protected List<WriteModel<?>> getWriteModelsForEntity(PersistentEntity persistentEntity, Map<PersistentEntity, List<WriteModel<?>>> writeModels) {
-        PersistentEntity key = persistentEntity.root ? persistentEntity : persistentEntity.rootEntity
-        List<WriteModel<?>> entityWrites = writeModels[key]
+    protected List<WriteModel<Document>> getWriteModelsForEntity(
+            PersistentEntity persistentEntity,
+            Map<PersistentEntity,
+            List<WriteModel<Document>>> writeModels
+    ) {
+        def key = persistentEntity.root ? persistentEntity : persistentEntity.rootEntity
+        def entityWrites = writeModels[key]
         if (entityWrites == null) {
-            entityWrites = new ArrayList<WriteModel<?>>()
+            entityWrites = new ArrayList<WriteModel<Document>>()
             writeModels[key] = entityWrites
         }
         return entityWrites
@@ -307,11 +318,6 @@ class MongoCodecSession extends AbstractMongoSession {
     }
 
     @Override
-    protected Transaction beginTransactionInternal() {
-        return new SessionOnlyTransaction<MongoClient>(getNativeInterface(), this)
-    }
-
-    @Override
     protected MongoCodecEntityPersister createPersister(Class cls, MappingContext mappingContext) {
         return mongoCodecEntityPersisterMap[cls]
     }
@@ -322,7 +328,7 @@ class MongoCodecSession extends AbstractMongoSession {
         final Document nativeQuery = buildNativeDocumentQueryFromCriteria(criteria, entity)
 
         final MongoCollection collection = getCollection(entity)
-        final DeleteResult deleteResult = collection.deleteMany((Bson) nativeQuery)
+        final DeleteResult deleteResult = deleteMany(collection, (Bson) nativeQuery)
         if (deleteResult.wasAcknowledged()) {
             return deleteResult.deletedCount
         }
@@ -347,7 +353,7 @@ class MongoCodecSession extends AbstractMongoSession {
                 }
             }
         }
-        final UpdateResult updateResult = collection.updateMany(nativeQuery, new Document(MONGO_SET_OPERATOR, properties), updateOptions)
+        final UpdateResult updateResult = updateMany(collection, nativeQuery, new Document(MONGO_SET_OPERATOR, properties), updateOptions)
         if (updateResult.wasAcknowledged()) {
             try {
                 return updateResult.modifiedCount

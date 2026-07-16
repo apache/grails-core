@@ -32,6 +32,35 @@
       "name": "grails.banner.versions.order",
       "description": "A sorted list of versions to put first in the banner versions.",
       "type": "java.util.List<grails.boot.GrailsBanner.VersionOption>"
+    },
+    {
+      "name": "grails.web.removeDefaultViewResolverBean",
+      "description": "Whether to remove Spring Boot's defaultViewResolver bean so Grails' own view resolution is used.",
+      "type": "java.lang.Boolean",
+      "defaultValue": true
+    },
+    {
+      "name": "grails.web.removeWelcomePageMapping",
+      "description": "Whether to remove Spring Boot's welcome-page handler mapping so Grails' URL mappings own the root path ('/') rather than serving a static index.html for it.",
+      "type": "java.lang.Boolean",
+      "defaultValue": true
+    },
+    {
+      "name": "grails.i18n.localeResolver",
+      "description": "The locale resolution strategy. 'session' and 'cookie' are mutable (the ?lang= switch works); 'acceptHeader' and 'fixed' are read-only (the ?lang= switch is ignored).",
+      "type": "java.lang.String",
+      "defaultValue": "session"
+    }
+  ],
+  "hints": [
+    {
+      "name": "grails.i18n.localeResolver",
+      "values": [
+        { "value": "session", "description": "Resolve the locale from the HTTP session (mutable; ?lang= switching works). The default." },
+        { "value": "cookie", "description": "Resolve the locale from a cookie (mutable; ?lang= switching works)." },
+        { "value": "acceptHeader", "description": "Resolve the locale from the Accept-Language header (read-only; ?lang= is ignored)." },
+        { "value": "fixed", "description": "Use a fixed locale from grails.i18n.default.locale, falling back to the JVM default (read-only; ?lang= is ignored)." }
+      ]
     }
   ]
 }

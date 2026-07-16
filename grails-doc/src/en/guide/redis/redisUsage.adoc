@@ -1,0 +1,98 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+==== The redisService bean
+
+The `redisService` bean wraps the connection pool. It provides caching/memoization helpers, template methods, and basic Redis commands, and it will be your primary interface to Redis.
+
+The service overrides `propertyMissing` and `methodMissing` to delegate any unknown request to a Redis connection, so any method you would normally call on a Redis connection can be called directly on `redisService`:
+
+[source,groovy]
+----
+def redisService
+
+redisService.foo = 'bar'
+assert 'bar' == redisService.foo
+
+redisService.sadd('months', 'february')
+assert true == redisService.sismember('months', 'february')
+----
+
+The `withRedis` template method takes a closure and passes it a Jedis connection. The pool connection is automatically obtained and always returned to the pool when the closure finishes, even if an error occurs. Using `withRedis` for a sequence of commands uses a single connection rather than one per command:
+
+[source,groovy]
+----
+redisService.withRedis { Jedis redis ->
+    redis.set('foo', 'bar')
+}
+----
+
+Redis supports pipelining, which lets you send commands without waiting for each response. The `withPipeline` template works like `withRedis`:
+
+[source,groovy]
+----
+redisService.withPipeline { Pipeline pipeline ->
+    pipeline.set('foo', 'bar')
+}
+----
+
+Redis transactions guarantee that all commands in the transaction execute as an atomic unit (Redis does not, however, support rolling back modifications). The `withTransaction` template opens and closes the transaction automatically, telling Redis to execute it if the closure does not throw:
+
+[source,groovy]
+----
+redisService.withTransaction { Transaction transaction ->
+    transaction.set('foo', 'bar')
+}
+----
+
+==== Utility methods
+
+The service also provides a few utility methods:
+
+[source,groovy]
+----
+redisService.flushDB() // dangerous! - should generally only be used for test cleanup
+
+// deletes all keys matching a pattern. This is relatively expensive as it uses the
+// `keys` operation; if you do this frequently, consider aggregating your own set of
+// keys to delete instead.
+redisService.deleteKeysWithPattern('key:pattern:*')
+----
+
+==== The redisPool bean
+
+You can access the pool of Redis connection objects directly by injecting the `redisPool` bean. Normally you will interact with `redisService` instead, but the pool is available if you need to work with it directly:
+
+[source,groovy]
+----
+def redisPool
+----
+
+==== The redis:memoize taglib
+
+The `redis:memoize` tag lets you leverage memoization within your GSP files. Wrap it around any expensive-to-generate content and it will be cached in Redis and served quickly on subsequent requests until the key expires:
+
+[source,html]
+----
+<redis:memoize key="mykey" expire="3600">
+    <div id="header">
+        ... expensive header content that can be cached ...
+    </div>
+</redis:memoize>
+----

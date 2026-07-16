@@ -22,8 +22,6 @@ import groovy.util.logging.Slf4j
 
 import org.springframework.beans.factory.support.AbstractBeanDefinition
 import org.springframework.context.ApplicationContext
-import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter
-import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping
 
 import grails.config.Settings
 import grails.core.GrailsControllerClass
@@ -71,14 +69,6 @@ class ControllersGrailsPlugin extends Plugin {
             }
 
             "${CompositeViewResolver.BEAN_NAME}"(CompositeViewResolver)
-
-            def handlerInterceptors = springConfig.containsBean('localeChangeInterceptor') ? [ref('localeChangeInterceptor')] : []
-            def interceptorsClosure = {
-                interceptors = handlerInterceptors
-            }
-            // allow @Controller annotated beans
-            annotationHandlerMapping(RequestMappingHandlerMapping, interceptorsClosure)
-            annotationHandlerAdapter(RequestMappingHandlerAdapter)
 
             for (controller in application.getArtefacts(ControllerArtefactHandler.TYPE)) {
                 log.debug('Configuring controller {}', controller.fullName)

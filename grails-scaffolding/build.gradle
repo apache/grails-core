@@ -26,6 +26,7 @@ plugins {
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
     id 'org.apache.grails.gradle.grails-code-style'
     id 'org.apache.grails.gradle.grails-jacoco'
 }
@@ -43,10 +44,13 @@ dependencies {
     api project(':grails-fields')
     api project(':grails-rest-transforms')
 
+    implementation project(':grails-gsp')
+
     compileOnly 'org.jline:jline'
     compileOnly 'org.fusesource.jansi:jansi'
 
     testImplementation 'org.spockframework:spock-core'
+    testImplementation project(':grails-layout')
     testImplementation project(':grails-web-gsp')
     testImplementation project(':grails-core')
     testImplementation 'jakarta.servlet:jakarta.servlet-api'

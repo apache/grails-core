@@ -101,16 +101,15 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
             return ep.getProxyKey();
         }
 
-        Serializable identifier = GroovyProxyInterceptorLogic.getIdentifier(o);
-        if (identifier != null) {
-            return identifier;
-        }
-
+        // check HibernateProxy before the Groovy metaClass probe: probing the metaClass of a
+        // proxy whose interceptor is not Groovy-aware would initialize it (or throw
+        // LazyInitializationException when detached), while the LazyInitializer holds the
+        // identifier without needing a session
         if (o instanceof HibernateProxy hp) {
             return (Serializable) hp.getHibernateLazyInitializer().getIdentifier();
         }
 
-        return null;
+        return GroovyProxyInterceptorLogic.getIdentifier(o);
     }
 
     @Override
@@ -120,10 +119,12 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
 
     @Override
     public boolean isProxy(Object o) {
-        return GroovyProxyInterceptorLogic.getProxyInstanceMetaClass(o) != null ||
-                o instanceof EntityProxy ||
+        // instanceof checks first: the Groovy metaClass probe initializes a proxy whose
+        // interceptor is not Groovy-aware
+        return o instanceof EntityProxy ||
                 o instanceof HibernateProxy ||
-                o instanceof PersistentCollection;
+                o instanceof PersistentCollection ||
+                GroovyProxyInterceptorLogic.getProxyInstanceMetaClass(o) != null;
     }
 
     @Override

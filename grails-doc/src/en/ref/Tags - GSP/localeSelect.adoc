@@ -35,6 +35,9 @@ Generates an HTML select with ``Locale``s as values
 ----
 <!-- create a locale select -->
 <g:localeSelect name="myLocale" value="${locale}" />
+
+<!-- list only the locales the application is translated into -->
+<g:localeSelect name="myLocale" available="true" />
 ----
 
 
@@ -46,5 +49,6 @@ Attributes
 * `name` - The name to be used for the select box
 * `value` (optional) - The selected {javase}java.base/java/util/Locale.html[Locale]; defaults to the current request locale if not specified
 * `locale` (optional) - The {javase}java.base/java/util/Locale.html[Locale] to use for formatting the locale names. Defaults to the current request locale and then the system default locale if not specified
+* `available` (optional) - If `true`, lists only the locales the application is actually translated into (those with a `messages_&#42;.properties` bundle on the classpath, as discovered by the i18n plugin) rather than every locale the JVM knows about. Defaults to `false`.
 
 

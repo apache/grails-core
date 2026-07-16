@@ -490,6 +490,11 @@ class WebDriverContainerHolder {
                 }
             }()
 
+            // Helper method for Groovy 5 static type checking compatibility
+            private static Map<String, String> getOverriddenProperties() {
+                OVERRIDDEN_SYSTEM_PROPERTIES.get()
+            }
+
             static <T> T withProperty(String key, String value, Closure<T> body) {
                 propertiesWrappedOnFirstAccess // Access property to trigger property wrapping
                 def map = OVERRIDDEN_SYSTEM_PROPERTIES.get()
@@ -506,7 +511,8 @@ class WebDriverContainerHolder {
             private static class InterceptingProperties extends Properties {
                 @Override
                 String getProperty(String key) {
-                    def v = OVERRIDDEN_SYSTEM_PROPERTIES.get().get(key)
+                    Map<String, String> overrides = getOverriddenProperties()
+                    def v = overrides.get(key)
                     v != null ? v : super.getProperty(key)
                 }
             }

@@ -1,0 +1,1088 @@
+{
+  "groups": [
+    {
+      "name": "grails.plugin.springsecurity",
+      "description": "Apache License 2.0 applies to this metadata. JSON files cannot include comment headers."
+    },
+    {
+      "name": "grails.plugin.springsecurity.general",
+      "description": "General configuration properties."
+    },
+    {
+      "name": "grails.plugin.springsecurity.domain-classes",
+      "description": "Domain class configuration properties."
+    },
+    {
+      "name": "grails.plugin.springsecurity.authentication",
+      "description": "Authentication and authorization configuration properties."
+    },
+    {
+      "name": "grails.plugin.springsecurity.login-logout",
+      "description": "Login and logout configuration properties."
+    },
+    {
+      "name": "grails.plugin.springsecurity.password-encoding",
+      "description": "Password encoding configuration properties."
+    },
+    {
+      "name": "grails.plugin.springsecurity.session",
+      "description": "Session and security context configuration properties."
+    },
+    {
+      "name": "grails.plugin.springsecurity.url-mapping",
+      "description": "URL mapping configuration properties."
+    },
+    {
+      "name": "grails.plugin.springsecurity.remember-me",
+      "description": "Remember-me cookie configuration properties."
+    },
+    {
+      "name": "grails.plugin.springsecurity.basic-digest-auth",
+      "description": "Basic and digest HTTP authentication properties."
+    },
+    {
+      "name": "grails.plugin.springsecurity.switch-user",
+      "description": "Switch user (impersonation) configuration properties."
+    },
+    {
+      "name": "grails.plugin.springsecurity.port-channel",
+      "description": "Port mapping and secure channel configuration properties."
+    },
+    {
+      "name": "grails.plugin.springsecurity.x509",
+      "description": "X.509 client certificate authentication properties."
+    },
+    {
+      "name": "grails.plugin.springsecurity.miscellaneous",
+      "description": "Miscellaneous configuration properties."
+    }
+  ],
+  "properties": [
+    {
+      "name": "grails.plugin.springsecurity.active",
+      "type": "java.lang.Boolean",
+      "description": "Whether the plugin is enabled.",
+      "defaultValue": true,
+      "group": "grails.plugin.springsecurity.general"
+    },
+    {
+      "name": "grails.plugin.springsecurity.printStatusMessages",
+      "type": "java.lang.Boolean",
+      "description": "Whether to print status messages such as \"Configuring Spring Security Core ...\".",
+      "defaultValue": true,
+      "group": "grails.plugin.springsecurity.general"
+    },
+    {
+      "name": "grails.plugin.springsecurity.rejectIfNoRule",
+      "type": "java.lang.Boolean",
+      "description": "Strict mode where a request mapping is required for all resources.",
+      "defaultValue": true,
+      "group": "grails.plugin.springsecurity.general"
+    },
+    {
+      "name": "grails.plugin.springsecurity.excludeSpringSecurityAutoConfiguration",
+      "type": "java.lang.Boolean",
+      "description": "Whether to automatically exclude Spring Boot security auto-configuration classes that conflict with the plugin.",
+      "defaultValue": true,
+      "group": "grails.plugin.springsecurity.general"
+    },
+    {
+      "name": "grails.plugin.springsecurity.useBasicAuth",
+      "type": "java.lang.Boolean",
+      "description": "Whether to enable HTTP Basic authentication.",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.general"
+    },
+    {
+      "name": "grails.plugin.springsecurity.useDigestAuth",
+      "type": "java.lang.Boolean",
+      "description": "Whether to enable HTTP Digest authentication.",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.general"
+    },
+    {
+      "name": "grails.plugin.springsecurity.useSwitchUserFilter",
+      "type": "java.lang.Boolean",
+      "description": "Whether to enable the switch user filter.",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.general"
+    },
+    {
+      "name": "grails.plugin.springsecurity.useX509",
+      "type": "java.lang.Boolean",
+      "description": "Whether to enable X.509 authentication.",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.general"
+    },
+    {
+      "name": "grails.plugin.springsecurity.useExternalClasses",
+      "type": "java.lang.Boolean",
+      "description": "If true, use external domain classes.",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.general"
+    },
+    {
+      "name": "grails.plugin.springsecurity.useRoleGroups",
+      "type": "java.lang.Boolean",
+      "description": "If true, enable role groups.",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.general"
+    },
+    {
+      "name": "grails.plugin.springsecurity.userLookup.userDomainClassName",
+      "type": "java.lang.String",
+      "description": "User class name.",
+      "defaultValue": null,
+      "group": "grails.plugin.springsecurity.domain-classes"
+    },
+    {
+      "name": "grails.plugin.springsecurity.userLookup.usernamePropertyName",
+      "type": "java.lang.String",
+      "description": "User class username property.",
+      "defaultValue": "username",
+      "group": "grails.plugin.springsecurity.domain-classes"
+    },
+    {
+      "name": "grails.plugin.springsecurity.userLookup.usernameIgnoreCase",
+      "type": "java.lang.Boolean",
+      "description": "Ignore case when searching for usernamePropertyName.",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.domain-classes"
+    },
+    {
+      "name": "grails.plugin.springsecurity.userLookup.passwordPropertyName",
+      "type": "java.lang.String",
+      "description": "User class password property.",
+      "defaultValue": "password",
+      "group": "grails.plugin.springsecurity.domain-classes"
+    },
+    {
+      "name": "grails.plugin.springsecurity.userLookup.authoritiesPropertyName",
+      "type": "java.lang.String",
+      "description": "User class role collection property.",
+      "defaultValue": "authorities",
+      "group": "grails.plugin.springsecurity.domain-classes"
+    },
+    {
+      "name": "grails.plugin.springsecurity.userLookup.enabledPropertyName",
+      "type": "java.lang.String",
+      "description": "User class enabled property.",
+      "defaultValue": "enabled",
+      "group": "grails.plugin.springsecurity.domain-classes"
+    },
+    {
+      "name": "grails.plugin.springsecurity.userLookup.accountExpiredPropertyName",
+      "type": "java.lang.String",
+      "description": "User class account expired property.",
+      "defaultValue": "accountExpired",
+      "group": "grails.plugin.springsecurity.domain-classes"
+    },
+    {
+      "name": "grails.plugin.springsecurity.userLookup.accountLockedPropertyName",
+      "type": "java.lang.String",
+      "description": "User class account locked property.",
+      "defaultValue": "accountLocked",
+      "group": "grails.plugin.springsecurity.domain-classes"
+    },
+    {
+      "name": "grails.plugin.springsecurity.userLookup.passwordExpiredPropertyName",
+      "type": "java.lang.String",
+      "description": "User class password expired property.",
+      "defaultValue": "passwordExpired",
+      "group": "grails.plugin.springsecurity.domain-classes"
+    },
+    {
+      "name": "grails.plugin.springsecurity.userLookup.authorityJoinClassName",
+      "type": "java.lang.String",
+      "description": "User and role many-to-many join class name.",
+      "defaultValue": null,
+      "group": "grails.plugin.springsecurity.domain-classes"
+    },
+    {
+      "name": "grails.plugin.springsecurity.authority.className",
+      "type": "java.lang.String",
+      "description": "Role class name.",
+      "defaultValue": null,
+      "group": "grails.plugin.springsecurity.domain-classes"
+    },
+    {
+      "name": "grails.plugin.springsecurity.authority.nameField",
+      "type": "java.lang.String",
+      "description": "Role class role name property.",
+      "defaultValue": "authority",
+      "group": "grails.plugin.springsecurity.domain-classes"
+    },
+    {
+      "name": "grails.plugin.springsecurity.authority.groupAuthorityNameField",
+      "type": "java.lang.String",
+      "description": "Role class authority group name property.",
+      "defaultValue": null,
+      "group": "grails.plugin.springsecurity.domain-classes"
+    },
+    {
+      "name": "grails.plugin.springsecurity.requestMap.className",
+      "type": "java.lang.String",
+      "description": "Requestmap class name.",
+      "defaultValue": null,
+      "group": "grails.plugin.springsecurity.domain-classes"
+    },
+    {
+      "name": "grails.plugin.springsecurity.requestMap.urlField",
+      "type": "java.lang.String",
+      "description": "Requestmap class URL pattern property.",
+      "defaultValue": "url",
+      "group": "grails.plugin.springsecurity.domain-classes"
+    },
+    {
+      "name": "grails.plugin.springsecurity.requestMap.configAttributeField",
+      "type": "java.lang.String",
+      "description": "Requestmap class role and token property.",
+      "defaultValue": "configAttribute",
+      "group": "grails.plugin.springsecurity.domain-classes"
+    },
+    {
+      "name": "grails.plugin.springsecurity.requestMap.httpMethodField",
+      "type": "java.lang.String",
+      "description": "Requestmap class HTTP method property.",
+      "defaultValue": "httpMethod",
+      "group": "grails.plugin.springsecurity.domain-classes"
+    },
+    {
+      "name": "grails.plugin.springsecurity.apf.filterProcessesUrl",
+      "type": "java.lang.String",
+      "description": "Login form post URL, intercepted by Spring Security filter.",
+      "defaultValue": "/login/authenticate",
+      "group": "grails.plugin.springsecurity.login-logout"
+    },
+    {
+      "name": "grails.plugin.springsecurity.apf.usernameParameter",
+      "type": "java.lang.String",
+      "description": "Login form username parameter.",
+      "defaultValue": "username",
+      "group": "grails.plugin.springsecurity.login-logout"
+    },
+    {
+      "name": "grails.plugin.springsecurity.apf.passwordParameter",
+      "type": "java.lang.String",
+      "description": "Login form password parameter.",
+      "defaultValue": "password",
+      "group": "grails.plugin.springsecurity.login-logout"
+    },
+    {
+      "name": "grails.plugin.springsecurity.apf.allowSessionCreation",
+      "type": "java.lang.Boolean",
+      "description": "Whether to allow authentication to create an HTTP session.",
+      "defaultValue": true,
+      "group": "grails.plugin.springsecurity.session"
+    },
+    {
+      "name": "grails.plugin.springsecurity.apf.postOnly",
+      "type": "java.lang.Boolean",
+      "description": "Whether to allow only POST login requests.",
+      "defaultValue": true,
+      "group": "grails.plugin.springsecurity.login-logout"
+    },
+    {
+      "name": "grails.plugin.springsecurity.apf.continueChainBeforeSuccessfulAuthentication",
+      "type": "java.lang.Boolean",
+      "description": "Whether to continue calling subsequent filters in the filter chain.",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.authentication"
+    },
+    {
+      "name": "grails.plugin.springsecurity.apf.storeLastUsername",
+      "type": "java.lang.Boolean",
+      "description": "Whether to store the login username in the HTTP session.",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.session"
+    },
+    {
+      "name": "grails.plugin.springsecurity.failureHandler.defaultFailureUrl",
+      "type": "java.lang.String",
+      "description": "Redirect URL for failed logins.",
+      "defaultValue": "/login/authfail?login_error=1",
+      "group": "grails.plugin.springsecurity.login-logout"
+    },
+    {
+      "name": "grails.plugin.springsecurity.failureHandler.ajaxAuthFailUrl",
+      "type": "java.lang.String",
+      "description": "Redirect URL for failed Ajax logins.",
+      "defaultValue": "/login/authfail?ajax=true",
+      "group": "grails.plugin.springsecurity.login-logout"
+    },
+    {
+      "name": "grails.plugin.springsecurity.failureHandler.exceptionMappings",
+      "type": "java.util.List",
+      "description": "Map of AuthenticationException subclasses to redirect URLs after authentication failure.",
+      "defaultValue": [],
+      "group": "grails.plugin.springsecurity.login-logout"
+    },
+    {
+      "name": "grails.plugin.springsecurity.failureHandler.useForward",
+      "type": "java.lang.Boolean",
+      "description": "Whether to render the error page (true) or redirect (false).",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.login-logout"
+    },
+    {
+      "name": "grails.plugin.springsecurity.failureHandler.allowSessionCreation",
+      "type": "java.lang.Boolean",
+      "description": "Whether to enable session creation to store the authentication failure exception.",
+      "defaultValue": true,
+      "group": "grails.plugin.springsecurity.session"
+    },
+    {
+      "name": "grails.plugin.springsecurity.successHandler.defaultTargetUrl",
+      "type": "java.lang.String",
+      "description": "Default post-login URL if there is no saved request that triggered the login.",
+      "defaultValue": "/",
+      "group": "grails.plugin.springsecurity.login-logout"
+    },
+    {
+      "name": "grails.plugin.springsecurity.successHandler.alwaysUseDefault",
+      "type": "java.lang.Boolean",
+      "description": "Whether to always redirect to successHandler.defaultTargetUrl after successful authentication.",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.login-logout"
+    },
+    {
+      "name": "grails.plugin.springsecurity.successHandler.targetUrlParameter",
+      "type": "java.lang.String",
+      "description": "Name of optional login form parameter that specifies destination after successful login.",
+      "defaultValue": "spring-security-redirect",
+      "group": "grails.plugin.springsecurity.login-logout"
+    },
+    {
+      "name": "grails.plugin.springsecurity.successHandler.useReferer",
+      "type": "java.lang.Boolean",
+      "description": "Whether to use the HTTP Referer header to determine post-login destination.",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.login-logout"
+    },
+    {
+      "name": "grails.plugin.springsecurity.successHandler.ajaxSuccessUrl",
+      "type": "java.lang.String",
+      "description": "URL for redirect after successful Ajax login.",
+      "defaultValue": "/login/ajaxSuccess",
+      "group": "grails.plugin.springsecurity.login-logout"
+    },
+    {
+      "name": "grails.plugin.springsecurity.auth.loginFormUrl",
+      "type": "java.lang.String",
+      "description": "URL of login page.",
+      "defaultValue": "/login/auth",
+      "group": "grails.plugin.springsecurity.login-logout"
+    },
+    {
+      "name": "grails.plugin.springsecurity.auth.forceHttps",
+      "type": "java.lang.Boolean",
+      "description": "If true, redirects login page requests to HTTPS.",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.login-logout"
+    },
+    {
+      "name": "grails.plugin.springsecurity.auth.ajaxLoginFormUrl",
+      "type": "java.lang.String",
+      "description": "URL of Ajax login page.",
+      "defaultValue": "/login/authAjax",
+      "group": "grails.plugin.springsecurity.login-logout"
+    },
+    {
+      "name": "grails.plugin.springsecurity.auth.useForward",
+      "type": "java.lang.Boolean",
+      "description": "Whether to render the login page (true) or redirect (false).",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.login-logout"
+    },
+    {
+      "name": "grails.plugin.springsecurity.logout.afterLogoutUrl",
+      "type": "java.lang.String",
+      "description": "URL for redirect after logout.",
+      "defaultValue": "/",
+      "group": "grails.plugin.springsecurity.login-logout"
+    },
+    {
+      "name": "grails.plugin.springsecurity.logout.filterProcessesUrl",
+      "type": "java.lang.String",
+      "description": "Logout URL, intercepted by Spring Security filter.",
+      "defaultValue": "/logoff",
+      "group": "grails.plugin.springsecurity.login-logout"
+    },
+    {
+      "name": "grails.plugin.springsecurity.logout.handlerNames",
+      "type": "java.util.List",
+      "description": "Logout handler bean names.",
+      "defaultValue": [
+        "rememberMeServices",
+        "securityContextLogoutHandler"
+      ],
+      "group": "grails.plugin.springsecurity.login-logout"
+    },
+    {
+      "name": "grails.plugin.springsecurity.logout.clearAuthentication",
+      "type": "java.lang.Boolean",
+      "description": "If true removes the Authentication from the SecurityContext to prevent issues with concurrent requests.",
+      "defaultValue": true,
+      "group": "grails.plugin.springsecurity.login-logout"
+    },
+    {
+      "name": "grails.plugin.springsecurity.logout.invalidateHttpSession",
+      "type": "java.lang.Boolean",
+      "description": "Whether to invalidate the HTTP session when logging out.",
+      "defaultValue": true,
+      "group": "grails.plugin.springsecurity.session"
+    },
+    {
+      "name": "grails.plugin.springsecurity.logout.targetUrlParameter",
+      "type": "java.lang.String",
+      "description": "The querystring parameter name for the post-logout URL.",
+      "defaultValue": null,
+      "group": "grails.plugin.springsecurity.login-logout"
+    },
+    {
+      "name": "grails.plugin.springsecurity.logout.alwaysUseDefaultTargetUrl",
+      "type": "java.lang.Boolean",
+      "description": "Whether to always use afterLogoutUrl as the post-logout URL.",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.login-logout"
+    },
+    {
+      "name": "grails.plugin.springsecurity.logout.redirectToReferer",
+      "type": "java.lang.Boolean",
+      "description": "Whether to use the Referer header value as the post-logout URL.",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.login-logout"
+    },
+    {
+      "name": "grails.plugin.springsecurity.logout.postOnly",
+      "type": "java.lang.Boolean",
+      "description": "If true only POST requests will be allowed to logout.",
+      "defaultValue": true,
+      "group": "grails.plugin.springsecurity.login-logout"
+    },
+    {
+      "name": "grails.plugin.springsecurity.adh.errorPage",
+      "type": "java.lang.String",
+      "description": "Location of the 403 error page (or set to null to send a 403 error and not render a page).",
+      "defaultValue": "/login/denied",
+      "group": "grails.plugin.springsecurity.login-logout"
+    },
+    {
+      "name": "grails.plugin.springsecurity.adh.ajaxErrorPage",
+      "type": "java.lang.String",
+      "description": "Location of the 403 error page for Ajax requests.",
+      "defaultValue": "/login/ajaxDenied",
+      "group": "grails.plugin.springsecurity.login-logout"
+    },
+    {
+      "name": "grails.plugin.springsecurity.adh.useForward",
+      "type": "java.lang.Boolean",
+      "description": "If true a forward will be used to render the error page, otherwise a redirect is used.",
+      "defaultValue": true,
+      "group": "grails.plugin.springsecurity.login-logout"
+    },
+    {
+      "name": "grails.plugin.springsecurity.rememberMe.cookieName",
+      "type": "java.lang.String",
+      "description": "Remember-me cookie name.",
+      "defaultValue": "grails_remember_me",
+      "group": "grails.plugin.springsecurity.remember-me"
+    },
+    {
+      "name": "grails.plugin.springsecurity.rememberMe.cookieDomain",
+      "type": "java.lang.String",
+      "description": "Remember-me cookie domain.",
+      "defaultValue": null,
+      "group": "grails.plugin.springsecurity.remember-me"
+    },
+    {
+      "name": "grails.plugin.springsecurity.rememberMe.alwaysRemember",
+      "type": "java.lang.Boolean",
+      "description": "Whether to always remember users.",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.remember-me"
+    },
+    {
+      "name": "grails.plugin.springsecurity.rememberMe.tokenValiditySeconds",
+      "type": "java.lang.Integer",
+      "description": "Remember-me token validity in seconds.",
+      "defaultValue": 1209600,
+      "group": "grails.plugin.springsecurity.remember-me"
+    },
+    {
+      "name": "grails.plugin.springsecurity.rememberMe.parameter",
+      "type": "java.lang.String",
+      "description": "Remember-me parameter name.",
+      "defaultValue": "remember-me",
+      "group": "grails.plugin.springsecurity.remember-me"
+    },
+    {
+      "name": "grails.plugin.springsecurity.rememberMe.key",
+      "type": "java.lang.String",
+      "description": "Key used to identify remember-me tokens.",
+      "defaultValue": "grailsRocks",
+      "group": "grails.plugin.springsecurity.remember-me"
+    },
+    {
+      "name": "grails.plugin.springsecurity.rememberMe.persistent",
+      "type": "java.lang.Boolean",
+      "description": "Whether to use persistent remember-me tokens.",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.remember-me"
+    },
+    {
+      "name": "grails.plugin.springsecurity.rememberMe.persistentToken.domainClassName",
+      "type": "java.lang.String",
+      "description": "Persistent token domain class name.",
+      "defaultValue": null,
+      "group": "grails.plugin.springsecurity.remember-me"
+    },
+    {
+      "name": "grails.plugin.springsecurity.rememberMe.persistentToken.seriesLength",
+      "type": "java.lang.Integer",
+      "description": "Persistent token series length.",
+      "defaultValue": 16,
+      "group": "grails.plugin.springsecurity.remember-me"
+    },
+    {
+      "name": "grails.plugin.springsecurity.rememberMe.persistentToken.tokenLength",
+      "type": "java.lang.Integer",
+      "description": "Persistent token token length.",
+      "defaultValue": 16,
+      "group": "grails.plugin.springsecurity.remember-me"
+    },
+    {
+      "name": "grails.plugin.springsecurity.rememberMe.useSecureCookie",
+      "type": "java.lang.Boolean",
+      "description": "Whether to use a secure remember-me cookie.",
+      "defaultValue": null,
+      "group": "grails.plugin.springsecurity.remember-me"
+    },
+    {
+      "name": "grails.plugin.springsecurity.rememberMe.createSessionOnSuccess",
+      "type": "java.lang.Boolean",
+      "description": "Whether to create a session after remember-me login.",
+      "defaultValue": true,
+      "group": "grails.plugin.springsecurity.remember-me"
+    },
+    {
+      "name": "grails.plugin.springsecurity.basic.realmName",
+      "type": "java.lang.String",
+      "description": "Realm name for HTTP Basic authentication.",
+      "defaultValue": "Grails Realm",
+      "group": "grails.plugin.springsecurity.basic-digest-auth"
+    },
+    {
+      "name": "grails.plugin.springsecurity.basic.credentialsCharset",
+      "type": "java.lang.String",
+      "description": "Credentials charset for HTTP Basic authentication.",
+      "defaultValue": "UTF-8",
+      "group": "grails.plugin.springsecurity.basic-digest-auth"
+    },
+    {
+      "name": "grails.plugin.springsecurity.digest.realmName",
+      "type": "java.lang.String",
+      "description": "Realm name for HTTP Digest authentication.",
+      "defaultValue": "Grails Realm",
+      "group": "grails.plugin.springsecurity.basic-digest-auth"
+    },
+    {
+      "name": "grails.plugin.springsecurity.digest.key",
+      "type": "java.lang.String",
+      "description": "Key for HTTP Digest authentication.",
+      "defaultValue": "changeme",
+      "group": "grails.plugin.springsecurity.basic-digest-auth"
+    },
+    {
+      "name": "grails.plugin.springsecurity.digest.nonceValiditySeconds",
+      "type": "java.lang.Integer",
+      "description": "Digest nonce validity in seconds.",
+      "defaultValue": 300,
+      "group": "grails.plugin.springsecurity.basic-digest-auth"
+    },
+    {
+      "name": "grails.plugin.springsecurity.digest.passwordAlreadyEncoded",
+      "type": "java.lang.Boolean",
+      "description": "Whether digest passwords are already encoded.",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.basic-digest-auth"
+    },
+    {
+      "name": "grails.plugin.springsecurity.digest.createAuthenticatedToken",
+      "type": "java.lang.Boolean",
+      "description": "Whether to create authenticated tokens for digest auth.",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.basic-digest-auth"
+    },
+    {
+      "name": "grails.plugin.springsecurity.digest.useCleartextPasswords",
+      "type": "java.lang.Boolean",
+      "description": "Whether to use cleartext passwords for digest auth.",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.basic-digest-auth"
+    },
+    {
+      "name": "grails.plugin.springsecurity.switchUser.switchUserUrl",
+      "type": "java.lang.String",
+      "description": "URL used to switch users.",
+      "defaultValue": "/login/impersonate",
+      "group": "grails.plugin.springsecurity.switch-user"
+    },
+    {
+      "name": "grails.plugin.springsecurity.switchUser.exitUserUrl",
+      "type": "java.lang.String",
+      "description": "URL used to exit switched user.",
+      "defaultValue": "/logout/impersonate",
+      "group": "grails.plugin.springsecurity.switch-user"
+    },
+    {
+      "name": "grails.plugin.springsecurity.switchUser.targetUrl",
+      "type": "java.lang.String",
+      "description": "Target URL after switching user.",
+      "defaultValue": null,
+      "group": "grails.plugin.springsecurity.switch-user"
+    },
+    {
+      "name": "grails.plugin.springsecurity.switchUser.switchFailureUrl",
+      "type": "java.lang.String",
+      "description": "Failure URL for switch user.",
+      "defaultValue": null,
+      "group": "grails.plugin.springsecurity.switch-user"
+    },
+    {
+      "name": "grails.plugin.springsecurity.switchUser.usernameParameter",
+      "type": "java.lang.String",
+      "description": "Username parameter for switch user.",
+      "defaultValue": "username",
+      "group": "grails.plugin.springsecurity.switch-user"
+    },
+    {
+      "name": "grails.plugin.springsecurity.portMapper.httpPort",
+      "type": "java.lang.Integer",
+      "description": "HTTP port for port mapping.",
+      "defaultValue": 8080,
+      "group": "grails.plugin.springsecurity.port-channel"
+    },
+    {
+      "name": "grails.plugin.springsecurity.portMapper.httpsPort",
+      "type": "java.lang.Integer",
+      "description": "HTTPS port for port mapping.",
+      "defaultValue": 8443,
+      "group": "grails.plugin.springsecurity.port-channel"
+    },
+    {
+      "name": "grails.plugin.springsecurity.secureChannel.definition",
+      "type": "java.util.List",
+      "description": "Secure channel definition rules.",
+      "defaultValue": [],
+      "group": "grails.plugin.springsecurity.port-channel"
+    },
+    {
+      "name": "grails.plugin.springsecurity.secureChannel.useHeaderCheckChannelSecurity",
+      "type": "java.lang.Boolean",
+      "description": "Whether to use header based channel security.",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.port-channel"
+    },
+    {
+      "name": "grails.plugin.springsecurity.secureChannel.secureHeaderName",
+      "type": "java.lang.String",
+      "description": "Header name indicating secure channel.",
+      "defaultValue": "X-Forwarded-Proto",
+      "group": "grails.plugin.springsecurity.port-channel"
+    },
+    {
+      "name": "grails.plugin.springsecurity.secureChannel.secureHeaderValue",
+      "type": "java.lang.String",
+      "description": "Header value indicating secure channel.",
+      "defaultValue": "http",
+      "group": "grails.plugin.springsecurity.port-channel"
+    },
+    {
+      "name": "grails.plugin.springsecurity.secureChannel.secureConfigAttributeKeyword",
+      "type": "java.lang.String",
+      "description": "Config attribute keyword for secure channel.",
+      "defaultValue": "REQUIRES_SECURE_CHANNEL",
+      "group": "grails.plugin.springsecurity.port-channel"
+    },
+    {
+      "name": "grails.plugin.springsecurity.secureChannel.insecureHeaderName",
+      "type": "java.lang.String",
+      "description": "Header name indicating insecure channel.",
+      "defaultValue": "X-Forwarded-Proto",
+      "group": "grails.plugin.springsecurity.port-channel"
+    },
+    {
+      "name": "grails.plugin.springsecurity.secureChannel.insecureHeaderValue",
+      "type": "java.lang.String",
+      "description": "Header value indicating insecure channel.",
+      "defaultValue": "https",
+      "group": "grails.plugin.springsecurity.port-channel"
+    },
+    {
+      "name": "grails.plugin.springsecurity.secureChannel.insecureConfigAttributeKeyword",
+      "type": "java.lang.String",
+      "description": "Config attribute keyword for insecure channel.",
+      "defaultValue": "REQUIRES_INSECURE_CHANNEL",
+      "group": "grails.plugin.springsecurity.port-channel"
+    },
+    {
+      "name": "grails.plugin.springsecurity.x509.continueFilterChainOnUnsuccessfulAuthentication",
+      "type": "java.lang.Boolean",
+      "description": "Whether to continue filter chain when X.509 authentication fails.",
+      "defaultValue": true,
+      "group": "grails.plugin.springsecurity.x509"
+    },
+    {
+      "name": "grails.plugin.springsecurity.x509.subjectDnRegex",
+      "type": "java.lang.String",
+      "description": "Regex for extracting username from subject DN.",
+      "defaultValue": "CN=(.*?)(?:,|$)",
+      "group": "grails.plugin.springsecurity.x509"
+    },
+    {
+      "name": "grails.plugin.springsecurity.x509.subjectDnClosure",
+      "type": "groovy.lang.Closure",
+      "description": "Closure to extract principal from subject DN.",
+      "defaultValue": null,
+      "group": "grails.plugin.springsecurity.x509"
+    },
+    {
+      "name": "grails.plugin.springsecurity.x509.checkForPrincipalChanges",
+      "type": "java.lang.Boolean",
+      "description": "Whether to check for principal changes.",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.x509"
+    },
+    {
+      "name": "grails.plugin.springsecurity.x509.invalidateSessionOnPrincipalChange",
+      "type": "java.lang.Boolean",
+      "description": "Whether to invalidate the session when the principal changes.",
+      "defaultValue": true,
+      "group": "grails.plugin.springsecurity.x509"
+    },
+    {
+      "name": "grails.plugin.springsecurity.x509.throwExceptionWhenTokenRejected",
+      "type": "java.lang.Boolean",
+      "description": "Whether to throw an exception when the token is rejected.",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.x509"
+    },
+    {
+      "name": "grails.plugin.springsecurity.ajaxHeader",
+      "type": "java.lang.String",
+      "description": "Header name sent by Ajax library, used to detect Ajax.",
+      "defaultValue": "X-Requested-With",
+      "group": "grails.plugin.springsecurity.miscellaneous"
+    },
+    {
+      "name": "grails.plugin.springsecurity.ajaxCheckClosure",
+      "type": "groovy.lang.Closure",
+      "description": "An optional closure that can determine if a request is Ajax.",
+      "defaultValue": null,
+      "group": "grails.plugin.springsecurity.miscellaneous"
+    },
+    {
+      "name": "grails.plugin.springsecurity.ipRestrictions",
+      "type": "java.util.List",
+      "description": "List of IP addresses allowed by the IP restriction filter.",
+      "defaultValue": [],
+      "group": "grails.plugin.springsecurity.miscellaneous"
+    },
+    {
+      "name": "grails.plugin.springsecurity.beanTypeResolverClass",
+      "type": "java.lang.String",
+      "description": "Bean type resolver class name.",
+      "defaultValue": "grails.plugin.springsecurity.BeanTypeResolver",
+      "group": "grails.plugin.springsecurity.miscellaneous"
+    },
+    {
+      "name": "grails.plugin.springsecurity.gsp.layoutAuth",
+      "type": "java.lang.String",
+      "description": "Layout name for auth views.",
+      "defaultValue": "main",
+      "group": "grails.plugin.springsecurity.miscellaneous"
+    },
+    {
+      "name": "grails.plugin.springsecurity.gsp.layoutDenied",
+      "type": "java.lang.String",
+      "description": "Layout name for denied views.",
+      "defaultValue": "main",
+      "group": "grails.plugin.springsecurity.miscellaneous"
+    },
+    {
+      "name": "grails.plugin.springsecurity.redirectStrategy.contextRelative",
+      "type": "java.lang.Boolean",
+      "description": "If true, the redirect URL will be the value after the request context path.",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.url-mapping"
+    },
+    {
+      "name": "grails.plugin.springsecurity.fii.alwaysReauthenticate",
+      "type": "java.lang.Boolean",
+      "description": "If true, re-authenticates when there is an Authentication in the SecurityContext.",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.authentication"
+    },
+    {
+      "name": "grails.plugin.springsecurity.fii.rejectPublicInvocations",
+      "type": "java.lang.Boolean",
+      "description": "Disallow URL access when there is no request mapping.",
+      "defaultValue": true,
+      "group": "grails.plugin.springsecurity.authentication"
+    },
+    {
+      "name": "grails.plugin.springsecurity.fii.validateConfigAttributes",
+      "type": "java.lang.Boolean",
+      "description": "Whether to check that all ConfigAttribute instances are valid at startup.",
+      "defaultValue": true,
+      "group": "grails.plugin.springsecurity.authentication"
+    },
+    {
+      "name": "grails.plugin.springsecurity.fii.publishAuthorizationSuccess",
+      "type": "java.lang.Boolean",
+      "description": "Whether to publish an AuthorizedEvent after successful access check.",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.authentication"
+    },
+    {
+      "name": "grails.plugin.springsecurity.fii.observeOncePerRequest",
+      "type": "java.lang.Boolean",
+      "description": "If false, allow checks to happen multiple times.",
+      "defaultValue": true,
+      "group": "grails.plugin.springsecurity.authentication"
+    },
+    {
+      "name": "grails.plugin.springsecurity.anon.key",
+      "type": "java.lang.String",
+      "description": "anonymousProcessingFilter key.",
+      "defaultValue": "foo",
+      "group": "grails.plugin.springsecurity.authentication"
+    },
+    {
+      "name": "grails.plugin.springsecurity.atr.anonymousClass",
+      "type": "java.lang.String",
+      "description": "Anonymous token class.",
+      "defaultValue": "grails.plugin.springsecurity.authentication.GrailsAnonymousAuthenticationToken",
+      "group": "grails.plugin.springsecurity.authentication"
+    },
+    {
+      "name": "grails.plugin.springsecurity.atr.rememberMeClass",
+      "type": "java.lang.String",
+      "description": "Remember-me token class.",
+      "defaultValue": "org.springframework.security.authentication.RememberMeAuthenticationToken",
+      "group": "grails.plugin.springsecurity.authentication"
+    },
+    {
+      "name": "grails.plugin.springsecurity.useHttpSessionEventPublisher",
+      "type": "java.lang.Boolean",
+      "description": "If true, an HttpSessionEventPublisher will be configured.",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.session"
+    },
+    {
+      "name": "grails.plugin.springsecurity.cacheUsers",
+      "type": "java.lang.Boolean",
+      "description": "If true, logins are cached using an EhCache.",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.miscellaneous"
+    },
+    {
+      "name": "grails.plugin.springsecurity.useSecurityEventListener",
+      "type": "java.lang.Boolean",
+      "description": "If true, configure SecurityEventListener.",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.miscellaneous"
+    },
+    {
+      "name": "grails.plugin.springsecurity.dao.reflectionSaltSourceProperty",
+      "type": "java.lang.String",
+      "description": "Which property to use for the reflection-based salt source.",
+      "defaultValue": null,
+      "group": "grails.plugin.springsecurity.password-encoding"
+    },
+    {
+      "name": "grails.plugin.springsecurity.password.algorithm",
+      "type": "java.lang.String",
+      "description": "Password encoding algorithm.",
+      "defaultValue": "bcrypt",
+      "group": "grails.plugin.springsecurity.password-encoding"
+    },
+    {
+      "name": "grails.plugin.springsecurity.password.encodeHashAsBase64",
+      "type": "java.lang.Boolean",
+      "description": "Whether to Base64 encode password hashes.",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.password-encoding"
+    },
+    {
+      "name": "grails.plugin.springsecurity.password.bcrypt.logrounds",
+      "type": "java.lang.Integer",
+      "description": "BCrypt log rounds.",
+      "defaultValue": 10,
+      "group": "grails.plugin.springsecurity.password-encoding"
+    },
+    {
+      "name": "grails.plugin.springsecurity.password.hash.iterations",
+      "type": "java.lang.Integer",
+      "description": "Hashing iterations.",
+      "defaultValue": 10000,
+      "group": "grails.plugin.springsecurity.password-encoding"
+    },
+    {
+      "name": "grails.plugin.springsecurity.dao.hideUserNotFoundExceptions",
+      "type": "java.lang.Boolean",
+      "description": "If true, throws BadCredentialsException for both bad username and bad password.",
+      "defaultValue": true,
+      "group": "grails.plugin.springsecurity.authentication"
+    },
+    {
+      "name": "grails.plugin.springsecurity.requestCache.createSession",
+      "type": "java.lang.Boolean",
+      "description": "Whether caching SavedRequest can trigger the creation of a session.",
+      "defaultValue": true,
+      "group": "grails.plugin.springsecurity.session"
+    },
+    {
+      "name": "grails.plugin.springsecurity.useSessionFixationPrevention",
+      "type": "java.lang.Boolean",
+      "description": "Whether to use session fixation prevention.",
+      "defaultValue": true,
+      "group": "grails.plugin.springsecurity.session"
+    },
+    {
+      "name": "grails.plugin.springsecurity.sessionFixationPrevention.migrate",
+      "type": "java.lang.Boolean",
+      "description": "Whether to migrate the session on authentication.",
+      "defaultValue": true,
+      "group": "grails.plugin.springsecurity.session"
+    },
+    {
+      "name": "grails.plugin.springsecurity.sessionFixationPrevention.alwaysCreateSession",
+      "type": "java.lang.Boolean",
+      "description": "Whether to always create a session for session fixation prevention.",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.session"
+    },
+    {
+      "name": "grails.plugin.springsecurity.roleHierarchy",
+      "type": "java.lang.String",
+      "description": "Hierarchical role definition.",
+      "defaultValue": "",
+      "group": "grails.plugin.springsecurity.authentication"
+    },
+    {
+      "name": "grails.plugin.springsecurity.voterNames",
+      "type": "java.util.List",
+      "description": "Bean names of voters.",
+      "defaultValue": [
+        "authenticatedVoter",
+        "roleVoter",
+        "closureVoter"
+      ],
+      "group": "grails.plugin.springsecurity.authentication"
+    },
+    {
+      "name": "grails.plugin.springsecurity.providerNames",
+      "type": "java.util.List",
+      "description": "Bean names of authentication providers.",
+      "defaultValue": [
+        "daoAuthenticationProvider",
+        "anonymousAuthenticationProvider",
+        "rememberMeAuthenticationProvider"
+      ],
+      "group": "grails.plugin.springsecurity.authentication"
+    },
+    {
+      "name": "grails.plugin.springsecurity.afterInvocationManagerProviderNames",
+      "type": "java.util.List",
+      "description": "AfterInvocationManager provider bean names.",
+      "defaultValue": [],
+      "group": "grails.plugin.springsecurity.authentication"
+    },
+    {
+      "name": "grails.plugin.springsecurity.securityConfigType",
+      "type": "java.lang.String",
+      "description": "Type of request mapping to use, one of Annotation, Requestmap, or InterceptUrlMap.",
+      "defaultValue": "Annotation",
+      "group": "grails.plugin.springsecurity.url-mapping"
+    },
+    {
+      "name": "grails.plugin.springsecurity.controllerAnnotations.lowercase",
+      "type": "java.lang.Boolean",
+      "description": "Whether to do URL comparisons using lowercase.",
+      "defaultValue": true,
+      "group": "grails.plugin.springsecurity.url-mapping"
+    },
+    {
+      "name": "grails.plugin.springsecurity.controllerAnnotations.staticRules",
+      "type": "java.util.List",
+      "description": "Extra rules that cannot be mapped using annotations.",
+      "defaultValue": [],
+      "group": "grails.plugin.springsecurity.url-mapping"
+    },
+    {
+      "name": "grails.plugin.springsecurity.interceptUrlMap",
+      "type": "java.util.List",
+      "description": "Request mapping definition when using InterceptUrlMap.",
+      "defaultValue": [],
+      "group": "grails.plugin.springsecurity.url-mapping"
+    },
+    {
+      "name": "grails.plugin.springsecurity.registerLoggerListener",
+      "type": "java.lang.Boolean",
+      "description": "If true, registers a LoggerListener that logs interceptor-related application events.",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.miscellaneous"
+    },
+    {
+      "name": "grails.plugin.springsecurity.scr.allowSessionCreation",
+      "type": "java.lang.Boolean",
+      "description": "Whether to allow creating a session in the securityContextRepository bean.",
+      "defaultValue": true,
+      "group": "grails.plugin.springsecurity.session"
+    },
+    {
+      "name": "grails.plugin.springsecurity.scr.disableUrlRewriting",
+      "type": "java.lang.Boolean",
+      "description": "Whether to disable URL rewriting (and the jsessionid attribute).",
+      "defaultValue": true,
+      "group": "grails.plugin.springsecurity.session"
+    },
+    {
+      "name": "grails.plugin.springsecurity.scr.springSecurityContextKey",
+      "type": "java.lang.String",
+      "description": "The HTTP session key to store the SecurityContext under.",
+      "defaultValue": "HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY",
+      "group": "grails.plugin.springsecurity.session"
+    },
+    {
+      "name": "grails.plugin.springsecurity.scpf.forceEagerSessionCreation",
+      "type": "java.lang.Boolean",
+      "description": "Whether to eagerly create a session in the securityContextRepository bean.",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.session"
+    },
+    {
+      "name": "grails.plugin.springsecurity.sch.strategyName",
+      "type": "java.lang.String",
+      "description": "The strategy to use for storing the SecurityContext.",
+      "defaultValue": "SecurityContextHolder.MODE_THREADLOCAL",
+      "group": "grails.plugin.springsecurity.session"
+    },
+    {
+      "name": "grails.plugin.springsecurity.debug.useFilter",
+      "type": "java.lang.Boolean",
+      "description": "Whether to use the DebugFilter to log request debug information to the console.",
+      "defaultValue": false,
+      "group": "grails.plugin.springsecurity.miscellaneous"
+    },
+    {
+      "name": "grails.plugin.springsecurity.providerManager.eraseCredentialsAfterAuthentication",
+      "type": "java.lang.Boolean",
+      "description": "Whether to remove the password from the Authentication and its child objects after successful authentication.",
+      "defaultValue": true,
+      "group": "grails.plugin.springsecurity.authentication"
+    }
+  ]
+}

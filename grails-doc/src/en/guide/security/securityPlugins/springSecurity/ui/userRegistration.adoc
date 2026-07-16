@@ -1,0 +1,143 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[ui-userRegistration]]
+== User Registration
+
+Most of the plugin's controllers are intended to be part of a backend admin application, but the Registration and Forgot Password workflows are expected to be user-facing. So they're not available in the admin menu like the User, Role, and other backend functionality - you'll need to expose them to your users.
+
+One way to do this is to replace the default `login.gsp` that's provided by the Spring Security Core plugin with this plugin's version. You can do this by running `grails s2ui-override auth` - <<ui-s2ui-override>> script - see the <<ui-customization>> section for details. If you do this your users will have links to both workflows from the login screen:
+
+image::login.png[]
+
+=== Registration
+
+Navigate to `/register/`:
+
+image::register_start.png[]
+
+By default e-mail validation for user creation is turned on.  If you wish to turn it off see the 'E-Mail Validation Parameter' section below.
+If this is turned off then no e-mail is sent to the user and they are automatically redirected to the link that would have been sent in the e-mail.
+
+After filling out valid values an email will be sent and you'll see a success screen:
+
+image::register_sent.png[]
+
+Click on the link in the email:
+
+image::register_email.png[]
+
+and you'll finalize the process, which involves enabling the locked user and pre-authenticating, then redirecting to the configured destination:
+
+image::register_final.png[]
+
+=== Configuration
+
+The post-registration destination url is configurable in `grails-app/conf/application.groovy` using the `postRegisterUrl` attribute:
+
+If you don't specify a value then the `grails.plugin.springsecurity.successHandler.defaultTargetUrl` value will be used, which is `'/'` by default.
+
+In addition, each new user will be granted `ROLE_USER` after finalizing the registration. If you want to change the default role, add more, or grant no roles at all (for example if you want an admin to approve new users and explicitly enable new users) then you can customize that with the `defaultRoleNames` attribute (which is a List of Strings):
+
+[source,groovy]
+----
+grails.plugin.springsecurity.ui.register.postRegisterUrl = '/welcome'
+----
+
+
+== E-Mail Validation Parameter
+You can customize if the user should get e-mail for validation before they can log in for the first time.  To turn off
+e-mail validation set the parameter `requireEmailValidation` to false, if not set it will default to true.  This
+can be set in `grails-app/conf/application.groovy` or `grails-app/conf/application.yml` under
+[source,groovy]
+----
+grails.plugin.springsecurity.ui.register.requireEmailValidation = false
+----
+
+*Please Note if you turn off e-mail validation in production it is strongly recommended to have additional user creation validation*
+
+
+=== Mail configuration
+
+By default the plugin uses the https://github.com/gpc/grails-mail[Mail] plugin to send emails, but only if it is installed. This is configurable by registering your own `MailStrategy` implementation - see the section on <<ui-customization>> for more information. The plugin assumes that the Mail plugin and an SMTP server are already configured.
+
+You can customize the subject, body, and from address of the registration email by overriding the default values in `grails-app/conf/application.groovy`, for example:
+
+[source,groovy]
+----
+grails.plugin.springsecurity.ui.register.emailBody = '...'
+grails.plugin.springsecurity.ui.register.emailFrom = '...'
+grails.plugin.springsecurity.ui.register.emailSubject = '...'
+----
+
+The `emailBody` property should be a GString and will have the User domain class instance in scope in the `user` variable, and the generated url to click to finalize the signup in the `url` variable.
+
+[source,groovy]
+----
+grails.plugin.springsecurity.ui.register.defaultRoleNames = [] // no roles
+----
+
+or
+
+[source,groovy]
+----
+grails.plugin.springsecurity.ui.register.defaultRoleNames = ['ROLE_CUSTOMER']
+----
+
+=== Notes
+
+You should consider the registration code as starter code - every signup workflow will be different, and this should help you get going but is unlikely to be sufficient. You may wish to collect more information than just username and email - first and last name for example. Run `grails s2ui-override register` to copy the registration controller and GSPs into your application to be customized.
+
+If there are unexpected validation errors during registration (which can happen when there is a disconnect between the domain classes and the code in `RegisterController` they will be logged at the `warn` or `error` level, so enable logging to ensure that you see the messages, e.g.
+
+[source,groovy]
+----
+...
+logger 'grails.plugin.springsecurity.ui.SpringSecurityUiService', WARN
+...
+----
+
+[NOTE]
+====
+`RegisterController` and its GSPs assume that your User domain class has an `email` field. Be sure to either rework the workflow (using the `s2ui-override` script) if you don't need an email confirmation step or add an email field.
+====
+
+=== RegistrationCode search
+
+The plugin uses its `grails.plugin.springsecurity.ui.RegistrationCode` domain class to store a token associated with the new users' username for use when finishing the registration process after the user clicks the link in the generated email (and also as part of the forgot-password workflow). The plugin includes a controller and GSPs to manage these instances.
+
+The default action for the RegistrationCode controller is search. By default only the standard fields (`username` and `token`) are available but this is customizable with the <<ui-s2ui-override>> script - see the <<ui-customization>> section for details.
+
+You can search by any combination of fields, and both fields have an Ajax autocomplete to assist in finding instances. Leave both fields empty to return all instances.
+
+image::registration_code_search_start.png[]
+
+Searching is case-insensitive and the search string can appear anywhere in the field. Results are shown paginated in groups of 10 and you can click on any header to sort by that field:
+
+image::registration_code_search_results.png[]
+
+=== RegistrationCode edit
+
+After clicking through to a RegistrationCode you get to the edit page (there are no view pages):
+
+image::registration_code_edit.png[]
+
+You can update the `username` or `token` attribute or delete the RegistrationCode.
+
+Since instances are created during the "User Registration" and "Forgot Password" workflows, there is no functionality in this plugin to create new instances.

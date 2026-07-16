@@ -59,9 +59,6 @@ import org.grails.compiler.injection.ASTErrorsHelper;
 import org.grails.compiler.injection.ASTValidationErrorsHelper;
 import org.grails.web.plugins.support.ValidationSupport;
 
-import static grails.compiler.ast.GrailsArtefactClassInjector.EMPTY_CLASS_ARRAY;
-import static grails.compiler.ast.GrailsArtefactClassInjector.ZERO_PARAMETERS;
-
 public class DefaultASTValidateableHelper implements ASTValidateableHelper {
 
     private static final String CONSTRAINED_PROPERTIES_PROPERTY_NAME = "$constraints";
@@ -96,7 +93,7 @@ public class DefaultASTValidateableHelper implements ASTValidateableHelper {
 
     protected void addGetConstraintsMethod(final ClassNode classNode, boolean defaultNullable) {
         final String getConstraintsMethodName = "getConstraints";
-        MethodNode getConstraintsMethod = classNode.getMethod(getConstraintsMethodName, ZERO_PARAMETERS);
+        MethodNode getConstraintsMethod = classNode.getMethod(getConstraintsMethodName, Parameter.EMPTY_ARRAY);
         if (getConstraintsMethod == null || !getConstraintsMethod.getDeclaringClass().equals(classNode)) {
             final BooleanExpression isConstraintsPropertyNull = new BooleanExpression(new BinaryExpression(new VariableExpression(CONSTRAINED_PROPERTIES_PROPERTY_NAME), Token.newSymbol(
                         Types.COMPARE_EQUAL, 0, 0), new ConstantExpression(null)));
@@ -161,7 +158,7 @@ public class DefaultASTValidateableHelper implements ASTValidateableHelper {
             final Statement returnStatement = new ReturnStatement(new VariableExpression(CONSTRAINED_PROPERTIES_PROPERTY_NAME));
             methodBlockStatement.addStatement(returnStatement);
 
-            final MethodNode methodNode = new MethodNode(getConstraintsMethodName, Modifier.STATIC | Modifier.PUBLIC, new ClassNode(Map.class), ZERO_PARAMETERS, null, methodBlockStatement);
+            final MethodNode methodNode = new MethodNode(getConstraintsMethodName, Modifier.STATIC | Modifier.PUBLIC, new ClassNode(Map.class), Parameter.EMPTY_ARRAY, ClassNode.EMPTY_ARRAY, methodBlockStatement);
             if (classNode.redirect() == null) {
                 classNode.addMethod(methodNode);
                 AnnotatedNodeUtils.markAsGenerated(classNode, methodNode);
@@ -230,11 +227,11 @@ public class DefaultASTValidateableHelper implements ASTValidateableHelper {
             final Parameter fieldsToValidateParameter = new Parameter(new ClassNode(List.class), fieldsToValidateParameterName);
             MethodNode methodNode = new MethodNode(
                     VALIDATE_METHOD_NAME, Modifier.PUBLIC, ClassHelper.boolean_TYPE,
-                    new Parameter[]{fieldsToValidateParameter}, EMPTY_CLASS_ARRAY, validateMethodCode);
+                    new Parameter[]{fieldsToValidateParameter}, ClassNode.EMPTY_ARRAY, validateMethodCode);
             classNode.addMethod(methodNode);
             AnnotatedNodeUtils.markAsGenerated(classNode, methodNode);
         }
-        final MethodNode noArgValidateMethod = classNode.getMethod(VALIDATE_METHOD_NAME, ZERO_PARAMETERS);
+        final MethodNode noArgValidateMethod = classNode.getMethod(VALIDATE_METHOD_NAME, Parameter.EMPTY_ARRAY);
         if (noArgValidateMethod == null) {
             final BlockStatement validateMethodCode = new BlockStatement();
 
@@ -244,7 +241,7 @@ public class DefaultASTValidateableHelper implements ASTValidateableHelper {
             validateMethodCode.addStatement(new ReturnStatement(callListArgValidateMethod));
             MethodNode methodNode = new MethodNode(
                     VALIDATE_METHOD_NAME, Modifier.PUBLIC, ClassHelper.boolean_TYPE,
-                    ZERO_PARAMETERS, EMPTY_CLASS_ARRAY, validateMethodCode);
+                    Parameter.EMPTY_ARRAY, ClassNode.EMPTY_ARRAY, validateMethodCode);
             classNode.addMethod(methodNode);
             AnnotatedNodeUtils.markAsGenerated(classNode, methodNode);
         }

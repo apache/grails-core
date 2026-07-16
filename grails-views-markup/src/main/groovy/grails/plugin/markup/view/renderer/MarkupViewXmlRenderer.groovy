@@ -35,11 +35,11 @@ import grails.web.mime.MimeType
  */
 class MarkupViewXmlRenderer<T> extends DefaultViewRenderer<T> {
 
-    MarkupViewXmlRenderer(Class<T> targetType, SmartViewResolver viewResolver, ProxyHandler proxyHandler, RendererRegistry rendererRegistry, Renderer defaultRenderer) {
+    MarkupViewXmlRenderer(Class<T> targetType, SmartViewResolver viewResolver, ProxyHandler proxyHandler, RendererRegistry rendererRegistry, Renderer<?> defaultRenderer) {
         super(targetType, MimeType.XML, viewResolver, proxyHandler, rendererRegistry, defaultRenderer)
     }
 
-    MarkupViewXmlRenderer(Class<T> targetType, MimeType mimeType, SmartViewResolver viewResolver, ProxyHandler proxyHandler, RendererRegistry rendererRegistry, Renderer defaultRenderer) {
+    MarkupViewXmlRenderer(Class<T> targetType, MimeType mimeType, SmartViewResolver viewResolver, ProxyHandler proxyHandler, RendererRegistry rendererRegistry, Renderer<?> defaultRenderer) {
         super(targetType, mimeType, viewResolver, proxyHandler, rendererRegistry, defaultRenderer)
     }
 }

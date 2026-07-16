@@ -71,6 +71,7 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
     public static final String TRANSACTION_MANAGER_BEAN = 'transactionManager'
     public static final String ENTITY_CLASS_RESOURCE_PATTERN = '/**/*.class'
     public static final String OSIV_CLASS_NAME = 'org.grails.datastore.mapping.web.support.OpenSessionInViewInterceptor'
+    public static final String WEB_APPLICATION_CONTEXT_CLASS_NAME = 'org.springframework.web.context.WebApplicationContext'
 
     PathMatchingResourcePatternResolver resourcePatternResolver = new PathMatchingResourcePatternResolver()
     Collection<Class> persistentClasses = []
@@ -304,7 +305,7 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
             "${type}PersistenceContextInterceptorAggregator"(PersistenceContextInterceptorAggregator)
 
             def classLoader = Thread.currentThread().contextClassLoader
-            if (registry.containsBeanDefinition('dispatcherServlet') && ClassUtils.isPresent(OSIV_CLASS_NAME, classLoader)) {
+            if (isWebApplicationRegistry(registry) && ClassUtils.isPresent(OSIV_CLASS_NAME, classLoader)) {
                 String interceptorName = "${type}OpenSessionInViewInterceptor"
                 "${interceptorName}"(ClassUtils.forName(OSIV_CLASS_NAME, classLoader)) {
                     datastore = ref("${type}Datastore")
@@ -358,6 +359,27 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
     @CompileDynamic
     protected boolean containsRegisteredBean(Object builder, BeanDefinitionRegistry registry, String beanName) {
         registry.containsBeanDefinition(beanName) || (builder.hasProperty('springConfig') && builder.springConfig.containsBean(beanName))
+    }
+
+    /**
+     * Determines whether the given registry belongs to a web application. The presence of the
+     * {@code dispatcherServlet} bean definition is only a reliable signal after Spring Boot
+     * auto-configuration has been processed; Grails plugin bean definitions register before
+     * that, so the type of the registry (the web application context itself) is checked as well.
+     *
+     * @param registry The bean definition registry
+     * @return true if the registry belongs to a web application
+     */
+    protected boolean isWebApplicationRegistry(BeanDefinitionRegistry registry) {
+        if (registry == null) {
+            return false
+        }
+        if (registry.containsBeanDefinition('dispatcherServlet')) {
+            return true
+        }
+        ClassLoader classLoader = getClass().classLoader
+        return ClassUtils.isPresent(WEB_APPLICATION_CONTEXT_CLASS_NAME, classLoader) &&
+                ClassUtils.forName(WEB_APPLICATION_CONTEXT_CLASS_NAME, classLoader).isInstance(registry)
     }
 
     /**

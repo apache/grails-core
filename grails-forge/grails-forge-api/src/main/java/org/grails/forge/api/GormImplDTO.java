@@ -85,7 +85,7 @@ public class GormImplDTO extends Linkable implements Named, Described, Selectabl
 
     @NonNull
     @Override
-    @Schema(description = "A description of the GORM Implementation")
+    @Schema(description = "A description of the Grails Data implementation")
     public String getDescription() {
         return description;
     }
@@ -98,13 +98,13 @@ public class GormImplDTO extends Linkable implements Named, Described, Selectabl
     }
 
     @Override
-    @Schema(description = "The value of the GORM Implementation for select options")
+    @Schema(description = "The value of the Grails Data implementation for select options")
     public GormImpl getValue() {
         return value;
     }
 
     @Override
-    @Schema(description = "The label of the GORM Implementation for select options")
+    @Schema(description = "The label of the Grails Data implementation for select options")
     public String getLabel() {
         return value.getLabel();
     }

@@ -25,6 +25,7 @@ plugins {
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
     id 'org.apache.grails.gradle.grails-code-style'
     id 'org.apache.grails.gradle.grails-jacoco'
 }
@@ -64,7 +65,9 @@ dependencies {
     compileOnly 'org.springframework.boot:spring-boot'
     compileOnly 'org.springframework.boot:spring-boot-loader-tools'
     compileOnly 'org.springframework:spring-web'
-    api 'org.springframework.boot:spring-boot-cli'
+    api('org.springframework.boot:spring-boot-cli') {
+        exclude group: 'jline', module: 'jline'
+    }
     // Must be 'implementation' (not 'compileOnly') so the servlet API is included in the shadow JAR.
     // grails-web-common registers HttpServletRequestExtension as a Groovy extension module, which is
     // auto-discovered when GroovyScriptCommandFactory compiles custom scripts in src/main/scripts/.
@@ -85,6 +88,10 @@ dependencies {
     implementation "org.apache.maven:maven-resolver-provider:$apacheMavenVersion"
     implementation "org.apache.maven:maven-model-builder:$apacheMavenVersion"
     implementation "org.apache.maven:maven-settings-builder:$apacheMavenVersion"
+    // grails-bom forces plexus-utils 4.x (CVE-2025-67030), which no longer contains the
+    // org.codehaus.plexus.util.xml package the maven-model/maven-settings readers need
+    // (XmlStreamReader, the Xpp3 pull parsers) - it moved to plexus-xml (BOM-managed).
+    implementation 'org.codehaus.plexus:plexus-xml'
     //implementation "org.eclipse.sisu:org.eclipse.sisu.inject:0.9.0.M3" // upstream from the maven resolver examples project
 
     testImplementation "net.sf.expectit:expectit-core:$expectitCoreVersion"

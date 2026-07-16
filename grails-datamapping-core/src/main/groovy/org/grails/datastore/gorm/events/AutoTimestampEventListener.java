@@ -21,9 +21,9 @@ package org.grails.datastore.gorm.events;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -78,6 +78,9 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
     protected Map<String, Optional<Set<String>>> entitiesWithCreatedBy = new ConcurrentHashMap<>();
     protected Map<String, Optional<Set<String>>> entitiesWithUpdatedBy = new ConcurrentHashMap<>();
     protected Collection<String> uninitializedEntities = new ConcurrentLinkedQueue<>();
+
+    private final ThreadLocal<DisabledTimestamps> disabledDateCreated = new ThreadLocal<>();
+    private final ThreadLocal<DisabledTimestamps> disabledLastUpdated = new ThreadLocal<>();
 
     private TimestampProvider timestampProvider = new DefaultTimestampProvider();
     private AuditorAware<?> auditorAware;
@@ -219,11 +222,17 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
     }
 
     protected Set<String> getLastUpdatedPropertyNames(String entityName) {
+        if (isDisabled(disabledLastUpdated, entityName)) {
+            return null;
+        }
         Optional<Set<String>> properties = entitiesWithLastUpdated.get(entityName);
         return properties == null ? null : properties.orElse(null);
     }
 
     protected Set<String> getDateCreatedPropertyNames(String entityName) {
+        if (isDisabled(disabledDateCreated, entityName)) {
+            return null;
+        }
         Optional<Set<String>> properties = entitiesWithDateCreated.get(entityName);
         return properties == null ? null : properties.orElse(null);
     }
@@ -269,25 +278,15 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
 
     protected void storeTimestampAvailability(Map<String, Optional<Set<String>>> timestampAvailabilityMap, PersistentEntity persistentEntity, PersistentProperty<?> property) {
         if (property != null && timestampProvider.supportsCreating(property.getType())) {
-            Optional<Set<String>> timestampProperties = timestampAvailabilityMap.computeIfAbsent(persistentEntity.getName(), k -> Optional.of(new HashSet<>()));
-            if (timestampProperties.isPresent()) {
-                timestampProperties.get().add(property.getName());
-            }
-            else {
-                throw new IllegalStateException("Timestamp properties for entity [" + persistentEntity.getName() + "] have been disabled. Cannot add property [" + property.getName() + "]");
-            }
+            timestampAvailabilityMap.computeIfAbsent(persistentEntity.getName(), k -> Optional.of(new HashSet<>()))
+                    .ifPresent(propertyNames -> propertyNames.add(property.getName()));
         }
     }
 
     protected void storeAuditorAvailability(Map<String, Optional<Set<String>>> auditorAvailabilityMap, PersistentEntity persistentEntity, PersistentProperty<?> property) {
         if (property != null) {
-            Optional<Set<String>> auditorProperties = auditorAvailabilityMap.computeIfAbsent(persistentEntity.getName(), k -> Optional.of(new HashSet<>()));
-            if (auditorProperties.isPresent()) {
-                auditorProperties.get().add(property.getName());
-            }
-            else {
-                throw new IllegalStateException("Auditor properties for entity [" + persistentEntity.getName() + "] have been disabled. Cannot add property [" + property.getName() + "]");
-            }
+            auditorAvailabilityMap.computeIfAbsent(persistentEntity.getName(), k -> Optional.of(new HashSet<>()))
+                    .ifPresent(propertyNames -> propertyNames.add(property.getName()));
         }
     }
 
@@ -311,53 +310,83 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
         this.auditorAware = auditorAware;
     }
 
-    private void processAllEntries(final Set<Map.Entry<String, Optional<Set<String>>>> entries, final Runnable runnable) {
-        Map<String, Optional<Set<String>>> originalValues = new LinkedHashMap<>();
-        for (Map.Entry<String, Optional<Set<String>>> entry: entries) {
-            originalValues.put(entry.getKey(), entry.getValue());
-            entry.setValue(Optional.empty());
+    private static boolean isDisabled(final ThreadLocal<DisabledTimestamps> disabledTimestamps, final String entityName) {
+        DisabledTimestamps disabled = disabledTimestamps.get();
+        return disabled != null && disabled.isDisabled(entityName);
+    }
+
+    private static DisabledTimestamps getOrCreateDisabled(final ThreadLocal<DisabledTimestamps> disabledTimestamps) {
+        DisabledTimestamps disabled = disabledTimestamps.get();
+        if (disabled == null) {
+            disabled = new DisabledTimestamps();
+            disabledTimestamps.set(disabled);
         }
-        runnable.run();
-        for (Map.Entry<String, Optional<Set<String>>> entry: entries) {
-            entry.setValue(originalValues.get(entry.getKey()));
+        return disabled;
+    }
+
+    private static void removeIfEmpty(final ThreadLocal<DisabledTimestamps> disabledTimestamps, final DisabledTimestamps disabled) {
+        if (disabled.isEmpty()) {
+            disabledTimestamps.remove();
         }
     }
 
-    private void processEntries(final List<Class> classes, Map<String, Optional<Set<String>>> entities, final Runnable runnable) {
-        Set<Map.Entry<String, Optional<Set<String>>>> entries = new HashSet<>();
-        final List<String> classNames = new ArrayList<>(classes.size());
-        for (Class clazz: classes) {
-            classNames.add(clazz.getName());
+    private static void runWithAllDisabled(final ThreadLocal<DisabledTimestamps> disabledTimestamps, final Runnable runnable) {
+        DisabledTimestamps disabled = getOrCreateDisabled(disabledTimestamps);
+        disabled.allDisabledDepth++;
+        try {
+            runnable.run();
+        } finally {
+            disabled.allDisabledDepth--;
+            removeIfEmpty(disabledTimestamps, disabled);
         }
-        for (Map.Entry<String, Optional<Set<String>>> entry: entities.entrySet()) {
-            if (classNames.contains(entry.getKey())) {
-                entries.add(entry);
+    }
+
+    private static void runWithDisabled(final ThreadLocal<DisabledTimestamps> disabledTimestamps, final List<Class> classes, final Runnable runnable) {
+        // only the names this scope newly disables may be re-enabled on exit; a name already
+        // disabled by an enclosing scope on this thread must survive this scope's finally
+        List<String> added = new ArrayList<>(classes.size());
+        DisabledTimestamps disabled = getOrCreateDisabled(disabledTimestamps);
+        try {
+            for (Class clazz : classes) {
+                String entityName = clazz.getName();
+                if (disabled.entityNames.add(entityName)) {
+                    added.add(entityName);
+                }
             }
+            runnable.run();
+        } finally {
+            disabled.entityNames.removeAll(added);
+            removeIfEmpty(disabledTimestamps, disabled);
         }
-        processAllEntries(entries, runnable);
     }
 
     /**
-     * Temporarily disables the last updated processing during the execution of the runnable
+     * Temporarily disables the last updated processing during the execution of the runnable.
+     * The processing is only disabled for the calling thread; concurrently executing threads
+     * are unaffected.
      *
      * @param runnable The code to execute while the last updated listener is disabled
      */
     public void withoutLastUpdated(final Runnable runnable) {
-        processAllEntries(entitiesWithLastUpdated.entrySet(), runnable);
+        runWithAllDisabled(disabledLastUpdated, runnable);
     }
 
     /**
-     * Temporarily disables the last updated processing only on the provided classes during the execution of the runnable
+     * Temporarily disables the last updated processing only on the provided classes during the
+     * execution of the runnable. The processing is only disabled for the calling thread;
+     * concurrently executing threads are unaffected.
      *
      * @param classes Which classes to disable the last updated processing for
      * @param runnable The code to execute while the last updated listener is disabled
      */
     public void withoutLastUpdated(final List<Class> classes, final Runnable runnable) {
-        processEntries(classes, entitiesWithLastUpdated, runnable);
+        runWithDisabled(disabledLastUpdated, classes, runnable);
     }
 
     /**
-     * Temporarily disables the last updated processing only on the provided class during the execution of the runnable
+     * Temporarily disables the last updated processing only on the provided class during the
+     * execution of the runnable. The processing is only disabled for the calling thread;
+     * concurrently executing threads are unaffected.
      *
      * @param clazz Which class to disable the last updated processing for
      * @param runnable The code to execute while the last updated listener is disabled
@@ -369,26 +398,32 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
     }
 
     /**
-     * Temporarily disables the date created processing during the execution of the runnable
+     * Temporarily disables the date created processing during the execution of the runnable.
+     * The processing is only disabled for the calling thread; concurrently executing threads
+     * are unaffected.
      *
      * @param runnable The code to execute while the date created listener is disabled
      */
     public void withoutDateCreated(final Runnable runnable) {
-        processAllEntries(entitiesWithDateCreated.entrySet(), runnable);
+        runWithAllDisabled(disabledDateCreated, runnable);
     }
 
     /**
-     * Temporarily disables the date created processing only on the provided classes during the execution of the runnable
+     * Temporarily disables the date created processing only on the provided classes during the
+     * execution of the runnable. The processing is only disabled for the calling thread;
+     * concurrently executing threads are unaffected.
      *
      * @param classes Which classes to disable the date created processing for
      * @param runnable The code to execute while the date created listener is disabled
      */
     public void withoutDateCreated(final List<Class> classes, final Runnable runnable) {
-        processEntries(classes, entitiesWithDateCreated, runnable);
+        runWithDisabled(disabledDateCreated, classes, runnable);
     }
 
     /**
-     * Temporarily disables the date created processing only on the provided class during the execution of the runnable
+     * Temporarily disables the date created processing only on the provided class during the
+     * execution of the runnable. The processing is only disabled for the calling thread;
+     * concurrently executing threads are unaffected.
      *
      * @param clazz Which class to disable the date created processing for
      * @param runnable The code to execute while the date created listener is disabled
@@ -400,7 +435,9 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
     }
 
     /**
-     * Temporarily disables the timestamp processing during the execution of the runnable
+     * Temporarily disables the timestamp processing during the execution of the runnable.
+     * The processing is only disabled for the calling thread; concurrently executing threads
+     * are unaffected.
      *
      * @param runnable The code to execute while the timestamp listeners are disabled
      */
@@ -409,7 +446,9 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
     }
 
     /**
-     * Temporarily disables the timestamp processing only on the provided classes during the execution of the runnable
+     * Temporarily disables the timestamp processing only on the provided classes during the
+     * execution of the runnable. The processing is only disabled for the calling thread;
+     * concurrently executing threads are unaffected.
      *
      * @param classes Which classes to disable the timestamp processing for
      * @param runnable The code to execute while the timestamp listeners are disabled
@@ -419,13 +458,121 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
     }
 
     /**
-     * Temporarily disables the timestamp processing during the execution of the runnable
+     * Temporarily disables the timestamp processing during the execution of the runnable.
+     * The processing is only disabled for the calling thread; concurrently executing threads
+     * are unaffected.
      *
      * @param clazz Which class to disable the timestamp processing for
      * @param runnable The code to execute while the timestamp listeners are disabled
      */
     public void withoutTimestamps(final Class clazz, final Runnable runnable) {
         withoutDateCreated(clazz, () -> withoutLastUpdated(clazz, runnable));
+    }
+
+    /**
+     * Captures the timestamp suppression state currently active on the calling thread, so that
+     * it can be re-applied on another thread with
+     * {@link #withTimestampSuppression(TimestampSuppression, Runnable)}. Because the
+     * {@code withoutTimestamps}, {@code withoutDateCreated} and {@code withoutLastUpdated}
+     * windows only affect the calling thread, work handed off to other threads (an executor,
+     * a reactive scheduler) is not suppressed unless the captured state is propagated to the
+     * executing thread.
+     *
+     * <p>The returned snapshot is immutable and may be applied on any number of threads,
+     * concurrently, including after the originating window has closed.
+     *
+     * @return the suppression state active on the calling thread at the time of the call
+     */
+    public TimestampSuppression captureTimestampSuppression() {
+        return new TimestampSuppression(disabledDateCreated.get(), disabledLastUpdated.get());
+    }
+
+    /**
+     * Executes the runnable with the given captured suppression state installed on the calling
+     * thread, restoring the thread's previous suppression state afterwards, even when the
+     * runnable throws. The snapshot replaces any suppression already active on the calling
+     * thread for the duration of the runnable.
+     *
+     * @param suppression The state captured by {@link #captureTimestampSuppression()}
+     * @param runnable The code to execute with the captured suppression state applied
+     */
+    public void withTimestampSuppression(final TimestampSuppression suppression, final Runnable runnable) {
+        Objects.requireNonNull(suppression, "suppression must not be null");
+        DisabledTimestamps previousDateCreated = installSuppression(disabledDateCreated, suppression.dateCreated);
+        DisabledTimestamps previousLastUpdated = installSuppression(disabledLastUpdated, suppression.lastUpdated);
+        try {
+            runnable.run();
+        } finally {
+            restoreSuppression(disabledLastUpdated, previousLastUpdated);
+            restoreSuppression(disabledDateCreated, previousDateCreated);
+        }
+    }
+
+    private static DisabledTimestamps installSuppression(final ThreadLocal<DisabledTimestamps> disabledTimestamps, final DisabledTimestamps snapshot) {
+        DisabledTimestamps previous = disabledTimestamps.get();
+        if (snapshot == null) {
+            disabledTimestamps.remove();
+        } else {
+            // install a copy: nested scopes inside the runnable mutate their thread's instance,
+            // which must not corrupt the shared snapshot or other threads applying it
+            disabledTimestamps.set(new DisabledTimestamps(snapshot));
+        }
+        return previous;
+    }
+
+    private static void restoreSuppression(final ThreadLocal<DisabledTimestamps> disabledTimestamps, final DisabledTimestamps previous) {
+        if (previous == null) {
+            disabledTimestamps.remove();
+        } else {
+            disabledTimestamps.set(previous);
+        }
+    }
+
+    /**
+     * An immutable snapshot of a thread's temporary timestamp suppression state, captured with
+     * {@link AutoTimestampEventListener#captureTimestampSuppression()} and applied on another
+     * thread with {@link AutoTimestampEventListener#withTimestampSuppression(TimestampSuppression, Runnable)}.
+     */
+    public static final class TimestampSuppression {
+
+        private final DisabledTimestamps dateCreated;
+
+        private final DisabledTimestamps lastUpdated;
+
+        private TimestampSuppression(DisabledTimestamps dateCreated, DisabledTimestamps lastUpdated) {
+            this.dateCreated = dateCreated == null || dateCreated.isEmpty() ? null : new DisabledTimestamps(dateCreated);
+            this.lastUpdated = lastUpdated == null || lastUpdated.isEmpty() ? null : new DisabledTimestamps(lastUpdated);
+        }
+
+    }
+
+    /**
+     * The entities for which timestamp processing is temporarily disabled on the current thread.
+     * All entities are disabled while {@code allDisabledDepth} is greater than zero; otherwise
+     * only the entities named in {@code entityNames} are disabled.
+     */
+    private static final class DisabledTimestamps {
+
+        private int allDisabledDepth;
+
+        private final Set<String> entityNames = new HashSet<>();
+
+        private DisabledTimestamps() {
+        }
+
+        private DisabledTimestamps(DisabledTimestamps source) {
+            allDisabledDepth = source.allDisabledDepth;
+            entityNames.addAll(source.entityNames);
+        }
+
+        private boolean isDisabled(String entityName) {
+            return allDisabledDepth > 0 || entityNames.contains(entityName);
+        }
+
+        private boolean isEmpty() {
+            return allDisabledDepth == 0 && entityNames.isEmpty();
+        }
+
     }
 
 }

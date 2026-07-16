@@ -54,10 +54,10 @@ class SomeClass implements Validateable {
     static boolean mappingClosureCalled = false
 
     static constraints = {
-        constraintsClosureCalled = true
+        SomeClass.constraintsClosureCalled = true
     }
 
     static mapping = {
-        mappingClosureCalled = true
+        SomeClass.mappingClosureCalled = true
     }
 }

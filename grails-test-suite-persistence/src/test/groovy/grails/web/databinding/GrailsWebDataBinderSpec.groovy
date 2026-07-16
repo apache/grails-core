@@ -18,6 +18,8 @@
  */
 package grails.web.databinding
 
+import groovy.transform.Sortable
+
 import grails.databinding.BindUsing
 import grails.databinding.BindingFormat
 import grails.databinding.DataBindingSource
@@ -28,7 +30,6 @@ import grails.persistence.Entity
 import grails.testing.gorm.DataTest
 import grails.validation.DeferredBindingActions
 import grails.validation.Validateable
-import groovy.transform.Sortable
 import org.springframework.context.support.StaticMessageSource
 import spock.lang.Issue
 import spock.lang.Specification

@@ -65,8 +65,9 @@ Available Features
 
   Database
   database-migration                  Adds support for Liquibase database migrations. The Database Migration plugin helps you manage database changes while developing Grails applications.
-  gorm-hibernate5 (+)                 Adds support for Hibernate5 using GORM
-  gorm-mongodb                        Configures GORM for MongoDB for Groovy applications
+  gorm-hibernate5 (+)                 Configure Grails Data for using Hibernate 5.
+  gorm-hibernate7                     Configure Grails Data for using Hibernate 7.
+  gorm-mongodb                        Configure Grails Data for using MongoDB.
   gorm-neo4j                          Configures GORM for Neo4j for Groovy applications
   h2 (+)                              Adds the H2 driver and default config
   mongo-sync                          Adds support for the MongoDB Synchronous Driver
@@ -98,7 +99,7 @@ Available Features
   Server
   spring-boot-starter-jetty           spring-boot-starter-jetty
   spring-boot-starter-tomcat (+)      spring-boot-starter-tomcat
-  spring-boot-starter-undertow        spring-boot-starter-undertow
+  grails-undertow                     grails-undertow
 
   Validation
   hibernate-validator                 Adds support for the Hibernate Validator

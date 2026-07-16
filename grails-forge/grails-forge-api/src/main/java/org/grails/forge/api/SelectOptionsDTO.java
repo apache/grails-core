@@ -90,7 +90,7 @@ public class SelectOptionsDTO {
         return reloading;
     }
 
-    @Schema(description = "supported options for GORM Implementation")
+    @Schema(description = "supported options for the Grails Data implementation")
     public GormImplSelectOptions getGorm() {
         return gorm;
     }

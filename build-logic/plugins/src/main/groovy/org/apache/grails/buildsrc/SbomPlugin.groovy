@@ -79,6 +79,10 @@ class SbomPlugin implements Plugin<Project> {
                     id : 'CC0-1.0',
                     url: 'https://creativecommons.org/publicdomain/zero/1.0/'
             ],
+            'MIT'         : [
+                    id : 'MIT',
+                    url: 'https://opensource.org/license/mit/'
+            ],
             // Variant of Apache 1.1 license. Approved by legal LEGAL-707
             'OpenSymphony': [
                     // id is optional and the opensymphony license doesn't have an SPDX id
@@ -89,18 +93,38 @@ class SbomPlugin implements Plugin<Project> {
                     id : 'UPL-1.0',
                     url: 'https://oss.oracle.com/licenses/upl/'
             ],
+            // public domain dedication; no SPDX id. ONLY approved libraries should use this.
+            'Public-Domain': [
+                    name: 'Public Domain',
+                    url : 'https://github.com/stleary/JSON-java/blob/master/LICENSE'
+            ],
     ]
 
     private static Map<String, String> LICENSE_MAPPING = [
-            'pkg:maven/org.antlr/antlr4-runtime@4.7.2?type=jar'               : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
-            'pkg:maven/jline/jline@2.14.6?type=jar'                           : 'BSD-2-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
-            'pkg:maven/org.jline/jline@3.30.6?type=jar'                       : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
-            'pkg:maven/org.liquibase.ext/liquibase-hibernate5@4.27.0?type=jar': 'Apache-2.0', // maps incorrectly because of https://github.com/liquibase/liquibase/issues/2445 & the base pom does not define a license
             'pkg:maven/com.oracle.coherence.ce/coherence-bom@25.03.1?type=pom': 'UPL-1.0', // does not have map based on license id
             'pkg:maven/com.oracle.coherence.ce/coherence-bom@25.03.2?type=pom': 'UPL-1.0', // does not have map based on license id
             'pkg:maven/com.oracle.coherence.ce/coherence-bom@22.06.2?type=pom': 'UPL-1.0', // does not have map based on license id
+            'pkg:maven/jline/jline@2.14.6?type=jar'                           : 'BSD-2-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
             'pkg:maven/opensymphony/sitemesh@2.6.0?type=jar'                  : 'OpenSymphony', // custom license approved by legal LEGAL-707
+            'pkg:maven/org.antlr/antlr4-runtime@4.7.2?type=jar'               : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
+            'pkg:maven/org.jline/jansi@3.30.9?type=jar'                       : 'BSD-3-Clause', // jline group resolved at 3.30.9 transitively via groovy-groovysh; main org.jline:jline pinned at 3.30.6 directly
+            'pkg:maven/org.jline/jline@3.30.6?type=jar'                       : 'BSD-3-Clause', // direct dependency declared at jline.version in dependencies.gradle
+            'pkg:maven/org.jline/jline-builtins@3.30.9?type=jar'              : 'BSD-3-Clause', // jline group resolved at 3.30.9 transitively via groovy-groovysh; main org.jline:jline pinned at 3.30.6 directly
+            'pkg:maven/org.jline/jline-console@3.30.9?type=jar'               : 'BSD-3-Clause', // jline group resolved at 3.30.9 transitively via groovy-groovysh; main org.jline:jline pinned at 3.30.6 directly
+            'pkg:maven/org.jline/jline-native@3.30.9?type=jar'                : 'BSD-3-Clause', // jline group resolved at 3.30.9 transitively via groovy-groovysh; main org.jline:jline pinned at 3.30.6 directly
+            'pkg:maven/org.jline/jline-reader@3.30.9?type=jar'                : 'BSD-3-Clause', // jline group resolved at 3.30.9 transitively via groovy-groovysh; main org.jline:jline pinned at 3.30.6 directly
+            'pkg:maven/org.jline/jline-style@3.30.9?type=jar'                 : 'BSD-3-Clause', // jline group resolved at 3.30.9 transitively via groovy-groovysh; main org.jline:jline pinned at 3.30.6 directly
+            'pkg:maven/org.jline/jline-terminal@3.30.9?type=jar'              : 'BSD-3-Clause', // jline group resolved at 3.30.9 transitively via groovy-groovysh; main org.jline:jline pinned at 3.30.6 directly
+            'pkg:maven/org.jline/jline-terminal-jansi@3.30.9?type=jar'        : 'BSD-3-Clause', // jline group resolved at 3.30.9 transitively via groovy-groovysh; main org.jline:jline pinned at 3.30.6 directly
+            'pkg:maven/org.jline/jline-terminal-jna@3.30.9?type=jar'          : 'BSD-3-Clause', // jline group resolved at 3.30.9 transitively via groovy-groovysh; main org.jline:jline pinned at 3.30.6 directly
+            'pkg:maven/org.jline/jline-terminal-jni@3.30.9?type=jar'          : 'BSD-3-Clause', // jline group resolved at 3.30.9 transitively via groovy-groovysh; main org.jline:jline pinned at 3.30.6 directly
             'pkg:maven/org.jruby/jzlib@1.1.5?type=jar'                        : 'BSD-3-Clause', // https://web.archive.org/web/20240822213507/http://www.jcraft.com/jzlib/LICENSE.txt shows it's a 3 clause
+            'pkg:maven/org.liquibase.ext/liquibase-hibernate5@4.27.0?type=jar': 'Apache-2.0', // maps incorrectly because of https://github.com/liquibase/liquibase/issues/2445 & the base pom does not define a license
+            'pkg:maven/org.json/json@20251224?type=jar'                       : 'Public-Domain', // required due to jedis, https://issues.apache.org/jira/browse/LEGAL-666 approves this usage
+            // Bouncy Castle Licence is the MIT license (https://www.bouncycastle.org/licence.html); pulled in transitively by the CAS client
+            'pkg:maven/org.bouncycastle/bcpkix-jdk18on@1.84?type=jar'         : 'MIT',
+            'pkg:maven/org.bouncycastle/bcprov-jdk18on@1.84?type=jar'         : 'MIT',
+            'pkg:maven/org.bouncycastle/bcutil-jdk18on@1.84?type=jar'         : 'MIT',
     ]
 
     // we don't distribute these so these licenses are considered acceptable, but we still prefer ASF licenses.

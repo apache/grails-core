@@ -20,7 +20,6 @@ package org.grails.orm.hibernate.proxy
 
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.annotation.Entity
-import org.apache.grails.data.testing.tck.domains.Location
 import org.hibernate.Hibernate
 import org.hibernate.proxy.HibernateProxy
 
@@ -58,16 +57,19 @@ class ByteBuddyGroovyInterceptorSpec extends HibernateGormDatastoreSpec {
         !Hibernate.isInitialized(proxy)
     }
 
-    void "toString() on uninitialized proxy returns entityName:id without initialization"() {
+    void "toString() on uninitialized proxy initializes it and delegates to the entity by default"() {
         given:
         def proxy = manager.hibernateSession.getReference(Location, savedId)
+
+        expect:
+        !Hibernate.isInitialized(proxy)
 
         when:
         String s = proxy.toString()
 
-        then:
-        !Hibernate.isInitialized(proxy)
-        s.contains(savedId.toString())
+        then: "matching pre-Grails 8 behavior, toString initializes the proxy"
+        Hibernate.isInitialized(proxy)
+        s != null
     }
 
     void "isDirty() on uninitialized proxy returns false without initialization"() {

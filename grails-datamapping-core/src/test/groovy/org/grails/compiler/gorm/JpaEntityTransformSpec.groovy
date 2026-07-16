@@ -45,7 +45,7 @@ class JpaEntityTransformSpec extends Specification {
                 @GeneratedValue(strategy=GenerationType.AUTO)
                 Long myId
 
-                @Digits
+                @Digits(integer = 10, fraction = 2)
                 String firstName
 
                 String lastName

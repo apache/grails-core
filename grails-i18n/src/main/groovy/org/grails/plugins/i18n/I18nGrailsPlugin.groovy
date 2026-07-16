@@ -24,6 +24,7 @@ import groovy.util.logging.Slf4j
 
 import org.springframework.context.support.ReloadableResourceBundleMessageSource
 import org.springframework.core.io.FileSystemResource
+import org.springframework.web.context.WebApplicationContext
 
 import grails.plugins.Plugin
 import grails.util.BuildSettings
@@ -42,6 +43,35 @@ class I18nGrailsPlugin extends Plugin {
     String version = GrailsUtil.getGrailsVersion()
     String watchedResources = "file:./${baseDir}/**/*.properties".toString()
 
+    /**
+     * Publishes the discovered available locales to the servlet context so that views and the
+     * {@code g:localeSelect available="true"} tag can render a language selector. Reading a servlet
+     * context attribute keeps consumers decoupled from this module.
+     */
+    static final String AVAILABLE_LOCALES_ATTRIBUTE = 'availableLocales'
+
+    @Override
+    void doWithApplicationContext() {
+        publishAvailableLocales()
+    }
+
+    private void publishAvailableLocales() {
+        def ctx = applicationContext
+        if (!(ctx instanceof WebApplicationContext)) {
+            return
+        }
+        def servletContext = ((WebApplicationContext) ctx).servletContext
+        if (servletContext == null) {
+            return
+        }
+        // resolve by type, not name: the auto-configuration backs off by type, so a user-defined
+        // resolver registered under any bean name must still be published
+        AvailableLocaleResolver resolver = ctx.getBeanProvider(AvailableLocaleResolver).getIfAvailable()
+        if (resolver != null) {
+            servletContext.setAttribute(AVAILABLE_LOCALES_ATTRIBUTE, resolver.availableLocales)
+        }
+    }
+
     @Override
     void onChange(Map<String, Object> event) {
         def ctx = applicationContext
@@ -55,7 +85,8 @@ class I18nGrailsPlugin extends Plugin {
         def resourcesDir = BuildSettings.RESOURCES_DIR
         def classesDir = BuildSettings.CLASSES_DIR
 
-        if (resourcesDir.exists() && event.source instanceof FileSystemResource) {
+        // RESOURCES_DIR is null outside a Grails build (e.g. unit tests); nothing to copy then
+        if (resourcesDir?.exists() && event.source instanceof FileSystemResource) {
             // this MUST be getFile() because there's also a isFile() on this class
             File eventFile = (event.source as FileSystemResource).getFile().canonicalFile
             File i18nDir = eventFile.parentFile
@@ -92,6 +123,13 @@ class I18nGrailsPlugin extends Plugin {
         def messageSource = ctx.getBean('messageSource')
         if (messageSource instanceof ReloadableResourceBundleMessageSource) {
             messageSource.clearCache()
+        }
+
+        // A bundle may have been added/removed, so re-scan and re-publish the available locales.
+        AvailableLocaleResolver availableLocaleResolver = ctx.getBeanProvider(AvailableLocaleResolver).getIfAvailable()
+        if (availableLocaleResolver != null) {
+            availableLocaleResolver.clearCache()
+            publishAvailableLocales()
         }
     }
 

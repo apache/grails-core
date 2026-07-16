@@ -21,6 +21,7 @@ package org.grails.forge.feature.migration;
 import jakarta.inject.Singleton;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
+import org.grails.forge.feature.database.GrailsDataHibernate7;
 import org.grails.forge.feature.migration.templates.dbMigrationGradle;
 import org.grails.forge.template.RockerWritable;
 import org.grails.forge.template.URLTemplate;
@@ -57,14 +58,17 @@ public class DatabaseMigrationPlugin implements MigrationFeature {
     @Override
     public void apply(GeneratorContext generatorContext) {
         final String srcDirPath = getSrcDirPath();
+        final String dbMigrationArtifactId = generatorContext.isFeaturePresent(GrailsDataHibernate7.class)
+                ? "grails-data-hibernate7-dbmigration"
+                : "grails-data-hibernate5-dbmigration";
         generatorContext.addBuildscriptDependency(Dependency.builder()
                 .groupId("org.apache.grails")
-                .artifactId("grails-data-hibernate5-dbmigration")
+                .artifactId(dbMigrationArtifactId)
                 .buildSrc()
                 .extension(new RockerWritable(dbMigrationGradle.template(srcDirPath))));
         generatorContext.addDependency(Dependency.builder()
                 .groupId("org.apache.grails")
-                .artifactId("grails-data-hibernate5-dbmigration")
+                .artifactId(dbMigrationArtifactId)
                 .implementation());
 
         final ClassLoader classLoader = Thread.currentThread().getContextClassLoader();

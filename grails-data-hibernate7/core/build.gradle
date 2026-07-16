@@ -114,12 +114,6 @@ dependencies {
     testImplementation "org.hibernate.orm:hibernate-core"
 
     // groovy proxy fixes bytebuddy to be a bit smarter when it comes to groovy metaClass
-    testImplementation 'org.yakworks:hibernate-groovy-proxy', {
-        exclude group: 'org.codehaus.groovy', module: 'groovy'
-        exclude group: 'org.hibernate', module: 'hibernate-core'
-        exclude group: 'org.hibernate.orm', module: 'hibernate-core'
-    }
-
     testImplementation 'org.apache.tomcat:tomcat-jdbc'
     testImplementation 'org.spockframework:spock-core'
 
