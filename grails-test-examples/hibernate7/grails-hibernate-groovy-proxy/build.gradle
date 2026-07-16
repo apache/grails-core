@@ -32,10 +32,6 @@ dependencies {
 
     implementation 'org.apache.grails:grails-data-hibernate7'
     implementation 'org.apache.grails:grails-core'
-    implementation 'org.yakworks:hibernate-groovy-proxy', {
-        exclude group: 'org.codehaus.groovy', module: 'groovy'
-        exclude group: 'org.hibernate', module: 'hibernate-core'
-    }
 
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'com.zaxxer:HikariCP'

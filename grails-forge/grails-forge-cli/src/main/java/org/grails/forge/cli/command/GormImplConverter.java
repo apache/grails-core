@@ -29,13 +29,11 @@ public class GormImplConverter implements CommandLine.ITypeConverter<GormImpl> {
     public GormImpl convert(String value) throws Exception {
         if (value == null) {
             return GormImpl.DEFAULT_OPTION;
-        } else {
-            for (GormImpl impl : GormImpl.values()) {
-                if (value.equalsIgnoreCase(impl.toString())) {
-                    return impl;
-                }
-            }
         }
-        throw new CommandLine.TypeConversionException("Invalid GORM implementation selection: " + value);
+        GormImpl impl = GormImpl.parse(value);
+        if (impl != null) {
+            return impl;
+        }
+        throw new CommandLine.TypeConversionException("Invalid Grails Data implementation selection: " + value);
     }
 }

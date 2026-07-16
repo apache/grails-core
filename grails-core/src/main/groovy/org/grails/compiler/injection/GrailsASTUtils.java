@@ -146,6 +146,11 @@ public class GrailsASTUtils {
             "org.grails.compiler.ValidateableTypeCheckingExtension",
             "org.grails.compiler.WhereQueryTypeCheckingExtension",
             "org.grails.compiler.TagLibraryInvokerTypeCheckingExtension"));
+
+    /**
+     * @deprecated Use Parameter.EMPTY_ARRAY instead.
+     */
+    @Deprecated(forRemoval = true, since = "8.0")
     public static final Parameter[] ZERO_PARAMETERS = new Parameter[0];
     public static final ArgumentListExpression ZERO_ARGUMENTS = new ArgumentListExpression();
 
@@ -359,7 +364,7 @@ public class GrailsASTUtils {
 
         MethodNode methodNode = new MethodNode(methodName,
                 Modifier.PUBLIC, returnType, copyParameters(parameterTypes, genericsPlaceholders),
-                GrailsArtefactClassInjector.EMPTY_CLASS_ARRAY, methodBody);
+                ClassNode.EMPTY_ARRAY, methodBody);
         copyAnnotations(declaredMethod, methodNode);
         if (shouldAddMarkerAnnotation(markerAnnotation, methodNode)) {
             methodNode.addAnnotation(markerAnnotation);
@@ -428,7 +433,7 @@ public class GrailsASTUtils {
      */
     public static Parameter[] getRemainingParameterTypes(Parameter[] parameters) {
         if (parameters.length == 0) {
-            return GrailsArtefactClassInjector.ZERO_PARAMETERS;
+            return Parameter.EMPTY_ARRAY;
         }
 
         Parameter[] newParameters = new Parameter[parameters.length - 1];
@@ -499,7 +504,7 @@ public class GrailsASTUtils {
 
         ClassNode returnType = replaceGenericsPlaceholders(delegateMethod.getReturnType(), genericsPlaceholders);
         MethodNode methodNode = new MethodNode(declaredMethodName, Modifier.PUBLIC | Modifier.STATIC, returnType,
-                copyParameters(parameterTypes, genericsPlaceholders), GrailsArtefactClassInjector.EMPTY_CLASS_ARRAY,
+                copyParameters(parameterTypes, genericsPlaceholders), ClassNode.EMPTY_ARRAY,
                 methodBody);
         copyAnnotations(delegateMethod, methodNode);
         if (shouldAddMarkerAnnotation(markerAnnotation, methodNode)) {

@@ -41,6 +41,19 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
     @AutoCleanup
     ApplicationContext beanContext = ApplicationContext.run()
 
+    PrintStream originalOut
+    PrintStream originalErr
+
+    void setup() {
+        originalOut = System.out
+        originalErr = System.err
+    }
+
+    void cleanup() {
+        System.setOut(originalOut)
+        System.setErr(originalErr)
+    }
+
     void "test creating project with defaults"() {
         given:
         ByteArrayOutputStream out = new ByteArrayOutputStream()
@@ -64,13 +77,77 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
 
         then:
         noExceptionThrown()
-        baos.toString().contains("Invalid GORM implementation selection: xyz")
+        baos.toString().contains("Invalid Grails Data implementation selection: xyz")
+    }
+
+    void "test creating a project with the data switch"() {
+        given:
+        ByteArrayOutputStream out = new ByteArrayOutputStream()
+        System.setOut(new PrintStream(out))
+
+        when:
+        PicocliRunner.run(CreateAppCommand, ctx, "dataswitch", "--data", "hibernate7")
+
+        then:
+        noExceptionThrown()
+        out.toString().contains("Application created")
+    }
+
+    void "test creating a project with the -d short alias"() {
+        given:
+        ByteArrayOutputStream out = new ByteArrayOutputStream()
+        System.setOut(new PrintStream(out))
+
+        when:
+        PicocliRunner.run(CreateAppCommand, ctx, "dshort", "-d", "hibernate7")
+
+        then:
+        noExceptionThrown()
+        out.toString().contains("Application created")
+    }
+
+    void "test creating a project with the legacy -g short alias"() {
+        given:
+        ByteArrayOutputStream out = new ByteArrayOutputStream()
+        System.setOut(new PrintStream(out))
+
+        when:
+        PicocliRunner.run(CreateAppCommand, ctx, "gshort", "-g", "hibernate5")
+
+        then:
+        noExceptionThrown()
+        out.toString().contains("Application created")
+    }
+
+    void "test creating a project with the legacy hibernate gorm value"() {
+        given:
+        ByteArrayOutputStream out = new ByteArrayOutputStream()
+        System.setOut(new PrintStream(out))
+
+        when:
+        PicocliRunner.run(CreateAppCommand, ctx, "legacygorm", "--gorm", "hibernate")
+
+        then:
+        noExceptionThrown()
+        out.toString().contains("Application created")
+    }
+
+    void "test creating a project with the hibernate5 gorm value"() {
+        given:
+        ByteArrayOutputStream out = new ByteArrayOutputStream()
+        System.setOut(new PrintStream(out))
+
+        when:
+        PicocliRunner.run(CreateAppCommand, ctx, "hib5gorm", "--gorm", "hibernate5")
+
+        then:
+        noExceptionThrown()
+        out.toString().contains("Application created")
     }
 
     void "community and preview features are labelled as such"() {
         given:
         ByteArrayOutputStream baos = new ByteArrayOutputStream()
-        PrintStream old = System.out
         System.setOut(new PrintStream(baos))
 
         and:
@@ -87,8 +164,5 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
         //baos.toString().contains("$previewFeature.name [PREVIEW]")
         communityFeature == null
         //baos.toString().contains("$communityFeature.name [COMMUNITY]")
-
-        cleanup:
-        System.setOut(old)
     }
 }

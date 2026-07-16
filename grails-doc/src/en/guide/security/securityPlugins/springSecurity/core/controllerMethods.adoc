@@ -1,0 +1,106 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-controllerMethods]]
+== Controller Methods
+
+The plugin registers some convenience methods into all controllers in your application. As of version 3.1.0 this is implemented by a trait that is applied to all controllers but was implemented in earlier versions by adding methods to each controller's `MetaClass`. All are accessor methods, so they can be called as methods or properties. They include:
+
+=== isLoggedIn
+
+Returns `true` if there is an authenticated user.
+
+[source,groovy]
+.Listing {counter:listing}. Example use of `isLoggedIn()`
+----
+class MyController {
+
+   def someAction() {
+      if (isLoggedIn()) {
+         ...
+      }
+
+      ...
+
+      if (!isLoggedIn()) {
+         ...
+      }
+
+      // or
+
+      if (loggedIn) {
+         ...
+      }
+
+      if (!loggedIn) {
+         ...
+      }
+   }
+}
+----
+
+=== getPrincipal
+
+Retrieves the current authenticated user's Principal (a `GrailsUser` instance unless you've customized this) or `null` if not authenticated.
+
+[source,groovy]
+.Listing {counter:listing}. Example use of `getPrincipal()`
+----
+class MyController {
+
+   def someAction() {
+      if (isLoggedIn()) {
+         String username = getPrincipal().username
+         ...
+      }
+
+      // or
+
+      if (isLoggedIn()) {
+         String username = principal.username
+         ...
+      }
+   }
+}
+----
+
+=== getAuthenticatedUser
+
+Loads the user domain class instance from the database that corresponds to the currently authenticated user, or `null` if not authenticated. This is the equivalent of adding a dependency injection for `springSecurityService` and calling `PersonDomainClassName.get(springSecurityService.principal.id)` (the typical way that this is often done).
+
+[source,groovy]
+.Listing {counter:listing}. Example use of `getAuthenticatedUser()`
+----
+class MyController {
+
+   def someAction() {
+      if (isLoggedIn()) {
+         String email = getAuthenticatedUser().email
+         ...
+      }
+
+      // or
+
+      if (isLoggedIn()) {
+         String email = authenticatedUser.email
+         ...
+      }
+   }
+}
+----

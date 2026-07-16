@@ -20,6 +20,7 @@
 dependencies {
     compileOnly "org.springframework.boot:spring-boot-cli:$springBootVersion", {
         exclude group:'org.codehaus.groovy', module:'groovy'
+        exclude group:'jline', module:'jline'
     }
 
     api "org.springframework.boot:spring-boot-autoconfigure:$springBootVersion"
@@ -37,5 +38,6 @@ dependencies {
     }
     testImplementation "org.springframework.boot:spring-boot-cli:$springBootVersion", {
         exclude group:'org.codehaus.groovy', module:'groovy'
+        exclude group:'jline', module:'jline'
     }
 }

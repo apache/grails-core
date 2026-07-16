@@ -972,9 +972,20 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
      * @attr name REQUIRED The name of the select
      * @attr value The set locale, defaults to the current request locale if not specified
      * @attr locale The locale to use for formatting the locale names. Defaults to the current request locale and then the system default locale if not specified
+     * @attr available If <code>true</code>, list only the locales the application is translated into
+     * (those with a <code>messages_*.properties</code> bundle, as published to the servlet context by
+     * the i18n plugin) instead of every locale the JVM knows about. Defaults to <code>false</code>.
      */
     def localeSelect(Map attrs) {
-        attrs.from = Locale.getAvailableLocales()
+        def availableAttr = attrs.remove('available')
+        boolean availableOnly = availableAttr != null && Boolean.valueOf(availableAttr.toString())
+        if (availableOnly) {
+            def availableLocales = request.servletContext?.getAttribute('availableLocales')
+            attrs.from = availableLocales ?: [RCU.getLocale(request)]
+        }
+        else {
+            attrs.from = Locale.getAvailableLocales()
+        }
         attrs.value = (attrs.value ?: RCU.getLocale(request))?.toString()
         // set the key as a closure that formats the locale
         attrs.optionKey = { it.country ? "${it.language}_${it.country}" : it.language }

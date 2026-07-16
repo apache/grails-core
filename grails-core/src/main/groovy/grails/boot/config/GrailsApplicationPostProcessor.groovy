@@ -24,10 +24,12 @@ import groovy.util.logging.Slf4j
 
 import org.springframework.beans.BeansException
 import org.springframework.beans.factory.BeanFactory
+import org.springframework.beans.factory.BeanRegistrar
 import org.springframework.beans.factory.config.ConfigurableBeanFactory
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
 import org.springframework.beans.factory.support.BeanDefinitionRegistry
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor
+import org.springframework.beans.factory.support.BeanRegistryAdapter
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
 import org.springframework.context.ApplicationListener
@@ -48,6 +50,7 @@ import grails.core.GrailsApplication
 import grails.core.GrailsApplicationClass
 import grails.core.GrailsApplicationLifeCycle
 import grails.plugins.DefaultGrailsPluginManager
+import grails.plugins.GrailsPlugin
 import grails.plugins.GrailsPluginManager
 import grails.spring.BeanBuilder
 import grails.util.Environment
@@ -78,6 +81,7 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
     final GrailsApplicationClass applicationClass
     final Class[] classes
     protected final GrailsPluginManager pluginManager
+    protected final boolean earlyPluginRegistrationRan
     protected ApplicationContext applicationContext
     boolean loadExternalBeans = true
     boolean reloadingEnabled = RELOADING_ENABLED
@@ -91,11 +95,34 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
             this.applicationClass = null
         }
         this.classes = classes != null ? classes : [] as Class[]
-        grailsApplication = applicationClass != null ? new DefaultGrailsApplication(applicationClass) : new DefaultGrailsApplication()
+        this.earlyPluginRegistrationRan = hasEarlyPluginRegistrationRun(applicationContext)
+        if (earlyPluginRegistrationRan) {
+            grailsApplication = applicationContext.getBean(GrailsApplication.APPLICATION_ID, GrailsApplication)
+            if (applicationClass != null && grailsApplication instanceof DefaultGrailsApplication) {
+                ((DefaultGrailsApplication) grailsApplication).setApplicationClass(applicationClass)
+            }
+        }
+        else {
+            grailsApplication = applicationClass != null ? new DefaultGrailsApplication(applicationClass) : new DefaultGrailsApplication()
+        }
         pluginManager = applicationContext?.getBeanNamesForType(GrailsPluginManager) ? applicationContext.getBean(GrailsPluginManager) : new DefaultGrailsPluginManager(grailsApplication, pluginDiscovery)
         if (applicationContext != null) {
             setApplicationContext(applicationContext)
         }
+    }
+
+    /**
+     * Determines whether {@link GrailsEarlyPluginRegistrationPostProcessor} already built the
+     * {@code grailsApplication} and {@code pluginManager} singletons and drained the plugin
+     * runtime configuration for this context. Checked on the local bean factory only, so a
+     * parent context's early phase never short-circuits a child context's lifecycle.
+     */
+    private static boolean hasEarlyPluginRegistrationRun(ApplicationContext applicationContext) {
+        if (applicationContext instanceof ConfigurableApplicationContext) {
+            return ((ConfigurableApplicationContext) applicationContext).beanFactory
+                    .containsSingleton(GrailsEarlyPluginRegistrationPostProcessor.EARLY_REGISTRATION_COMPLETE_BEAN_NAME)
+        }
+        return false
     }
 
     /**
@@ -122,11 +149,32 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
         Environment.setInitializing(true)
         grailsApplication.applicationContext = applicationContext
         grailsApplication.mainContext = applicationContext
-        pluginManager.loadPlugins()
-        pluginManager.applicationContext = applicationContext
+        if (!earlyPluginRegistrationRan) {
+            pluginManager.loadPlugins()
+            pluginManager.applicationContext = applicationContext
+        }
         loadApplicationConfig()
         customizeGrailsApplication(grailsApplication)
-        performGrailsInitializationSequence()
+        if (earlyPluginRegistrationRan) {
+            registerRemainingApplicationClasses()
+        }
+        else {
+            performGrailsInitializationSequence()
+        }
+    }
+
+    /**
+     * When the early plugin registration phase already performed artefact discovery, only the
+     * application classes it could not resolve (e.g. a customized {@code classes()} implementation)
+     * still need to be registered.
+     */
+    private void registerRemainingApplicationClasses() {
+        Set<String> registeredClassNames = grailsApplication.allArtefacts*.name as Set<String>
+        for (cls in classes) {
+            if (!registeredClassNames.contains(cls.name)) {
+                grailsApplication.addArtefact(cls)
+            }
+        }
     }
 
     protected void customizeGrailsApplication(GrailsApplication grailsApplication) {
@@ -194,8 +242,11 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
         def application = grailsApplication
         Holders.setGrailsApplication(application)
 
-        // first register plugin beans
-        pluginManager.doRuntimeConfiguration(springConfig)
+        if (!earlyPluginRegistrationRan) {
+            // first register plugin beans; when the early phase ran they were
+            // already drained into the registry ahead of auto-configuration
+            pluginManager.doRuntimeConfiguration(springConfig)
+        }
 
         if (loadExternalBeans) {
             // now allow overriding via application
@@ -233,6 +284,42 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
         }
 
         springConfig.registerBeansWithRegistry(registry)
+
+        if (!earlyPluginRegistrationRan) {
+            // the early phase applies plugin registrars itself; on the fallback path (contexts not
+            // booted through GrailsApp) apply them here so a plugin's beanRegistrar() behaves the same
+            applyPluginBeanRegistrars(registry)
+        }
+
+        if (lifeCycle) {
+            // the application's BeanRegistrar drains at the same point as its doWithSpring closure,
+            // after the DSL flush so registrar beans win any name conflicts with the deprecated DSL
+            BeanRegistrar registrar = lifeCycle.beanRegistrar()
+            if (registrar != null) {
+                new BeanRegistryAdapter(registry, applicationContext, applicationContext.environment, registrar.getClass())
+                        .register(registrar)
+            }
+        }
+    }
+
+    /**
+     * Applies each enabled plugin's {@link BeanRegistrar} on the fallback path where the early
+     * plugin registration phase did not run, mirroring that phase so a plugin's {@code beanRegistrar()}
+     * is honoured in every context rather than only those booted through {@code GrailsApp}. Runs after
+     * the DSL flush so registrar beans win name conflicts with the deprecated {@code doWithSpring} DSL.
+     */
+    private void applyPluginBeanRegistrars(BeanDefinitionRegistry registry) {
+        String[] activeProfiles = applicationContext.environment.activeProfiles
+        for (GrailsPlugin plugin in pluginManager.allPlugins) {
+            if (!plugin.supportsCurrentScopeAndEnvironment() || !plugin.isEnabled(activeProfiles)) {
+                continue
+            }
+            BeanRegistrar registrar = plugin.beanRegistrar
+            if (registrar != null) {
+                new BeanRegistryAdapter(registry, applicationContext, applicationContext.environment, registrar.getClass())
+                        .register(registrar)
+            }
+        }
     }
 
     @Override
@@ -240,11 +327,21 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
         BeanFactory parentBeanFactory = beanFactory.getParentBeanFactory()
         if (parentBeanFactory instanceof ConfigurableBeanFactory) {
             ConfigurableBeanFactory configurableBeanFactory = parentBeanFactory
-            configurableBeanFactory.registerSingleton(GrailsApplication.APPLICATION_ID, grailsApplication)
-            configurableBeanFactory.registerSingleton(GrailsPluginManager.BEAN_NAME, pluginManager)
+            registerSingletonIfAbsent(configurableBeanFactory, GrailsApplication.APPLICATION_ID, grailsApplication)
+            registerSingletonIfAbsent(configurableBeanFactory, GrailsPluginManager.BEAN_NAME, pluginManager)
         } else {
-            beanFactory.registerSingleton(GrailsApplication.APPLICATION_ID, grailsApplication)
-            beanFactory.registerSingleton(GrailsPluginManager.BEAN_NAME, pluginManager)
+            registerSingletonIfAbsent(beanFactory, GrailsApplication.APPLICATION_ID, grailsApplication)
+            registerSingletonIfAbsent(beanFactory, GrailsPluginManager.BEAN_NAME, pluginManager)
+        }
+    }
+
+    /**
+     * The early plugin registration phase may have already promoted these singletons;
+     * {@code registerSingleton} throws {@code IllegalStateException} on double registration.
+     */
+    private static void registerSingletonIfAbsent(ConfigurableBeanFactory beanFactory, String beanName, Object singleton) {
+        if (!beanFactory.containsSingleton(beanName)) {
+            beanFactory.registerSingleton(beanName, singleton)
         }
     }
 

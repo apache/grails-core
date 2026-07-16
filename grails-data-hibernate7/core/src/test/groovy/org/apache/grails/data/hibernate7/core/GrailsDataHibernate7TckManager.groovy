@@ -64,7 +64,6 @@ class GrailsDataHibernate7TckManager extends GrailsDataTckManager {
 
     @Override
     Session createSession() {
-        System.setProperty('hibernate7.gorm.suite', "true")
         grailsApplication = new DefaultGrailsApplication(domainClasses as Class[], new GroovyClassLoader(GrailsDataHibernate7TckManager.getClassLoader()))
         grailsConfig.dataSource.dbCreate = "create-drop"
         grailsConfig.hibernate.proxy_factory_class = "org.grails.orm.hibernate.proxy.ByteBuddyGroovyProxyFactory"

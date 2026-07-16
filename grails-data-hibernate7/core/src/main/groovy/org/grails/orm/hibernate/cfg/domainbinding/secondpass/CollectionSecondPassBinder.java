@@ -34,10 +34,10 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyPrope
 /**
  * Refactored from CollectionBinder to handle collection second pass binding.
  */
-// TODO (Hibernate 8 refactor): CollectionSecondPassBinder receives its ComponentBinder reference via
-// setComponentBinder() post-construction (mirroring the GrailsPropertyBinder ↔ ComponentBinder circular
-// dependency). This should be resolved by introducing a shared binding context or factory that all binders
-// receive at construction time, eliminating the need for post-construction wiring.
+// CollectionSecondPassBinder receives its ComponentBinder reference via setComponentBinder()
+// post-construction, mirroring the GrailsPropertyBinder ↔ ComponentBinder circular dependency. A future
+// major release can introduce a shared binding context or factory that all binders receive at construction
+// time, eliminating the need for post-construction wiring.
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class CollectionSecondPassBinder {
 

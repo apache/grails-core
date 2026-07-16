@@ -61,9 +61,20 @@ dependencies {
     // Maven-standard way instead of with hand-rolled XML parsing (matching the
     // docs-core ExtractDependenciesTask). The version is pinned in dependencies.gradle
     // (Spring Boot does not manage this artifact) and declared inline here so it is not
-    // published as a managed constraint in the consumer-facing grails-bom. Its only
-    // runtime transitive is org.codehaus.plexus:plexus-utils.
-    implementation "org.apache.maven:maven-model:${gradleBomDependencyVersions['maven-model.version']}"
+    // published as a managed constraint in the consumer-facing grails-bom.
+    implementation("org.apache.maven:maven-model:${gradleBomDependencyVersions['maven-model.version']}") {
+        // Replaced below by the plexus-utils 4.x + plexus-xml pair so the same versions
+        // are chosen whether or not a consumer classpath carries grails-bom constraints.
+        exclude group: 'org.codehaus.plexus', module: 'plexus-utils'
+    }
+    // grails-bom forces plexus-utils 4.x (CVE-2025-67030), which no longer contains the
+    // org.codehaus.plexus.util.xml package maven-model needs (XmlStreamReader, the Xpp3
+    // pull parsers) - it moved to plexus-xml. The 3.x line of plexus-xml is the Maven 3
+    // compatible one (4.x delegates to the Maven 4 XmlNode API). Declare the pair
+    // explicitly so generated apps (whose buildSrc applies platform(grails-bom))
+    // resolve a working combination.
+    implementation "org.codehaus.plexus:plexus-utils:${bomDependencyVersions['plexus-utils.version']}"
+    implementation "org.codehaus.plexus:plexus-xml:${bomDependencyVersions['plexus-xml.version']}"
 
     // Testing - Gradle TestKit is auto-added by java-gradle-plugin
     testImplementation('org.spockframework:spock-core') { transitive = false }

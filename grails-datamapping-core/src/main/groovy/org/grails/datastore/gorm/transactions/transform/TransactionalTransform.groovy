@@ -80,7 +80,6 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.callD
 import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.callThisD
 import static org.grails.datastore.mapping.reflect.AstUtils.ZERO_ARGUMENTS
-import static org.grails.datastore.mapping.reflect.AstUtils.ZERO_PARAMETERS
 import static org.grails.datastore.mapping.reflect.AstUtils.buildGetPropertyExpression
 import static org.grails.datastore.mapping.reflect.AstUtils.copyParameters
 import static org.grails.datastore.mapping.reflect.AstUtils.findAnnotation
@@ -253,7 +252,7 @@ class TransactionalTransform extends AbstractDatastoreMethodDecoratingTransforma
             }
             else {
                 transactionManagerLookupExpr = hasDataSourceProperty ? callX(gormEnhancerExpr, 'findSingleTransactionManager', connectionName) : callX(gormEnhancerExpr, 'findSingleTransactionManager')
-                Parameter[] params = hasDataSourceProperty ? params(param(STRING_TYPE, 'connectionName')) : ZERO_PARAMETERS
+                Parameter[] params = hasDataSourceProperty ? params(param(STRING_TYPE, 'connectionName')) : Parameter.EMPTY_ARRAY
                 transactionManagerLookupExpr.setMethodTarget(
                         gormEnhancerExpr.getType().getDeclaredMethod('findSingleTransactionManager', params)
                 )
@@ -281,7 +280,7 @@ class TransactionalTransform extends AbstractDatastoreMethodDecoratingTransforma
                 MethodNode methodNode = declaringClassNode.addMethod(GET_TRANSACTION_MANAGER_METHOD,
                         Modifier.PUBLIC,
                         transactionManagerClassNode,
-                        ZERO_PARAMETERS, null,
+                        Parameter.EMPTY_ARRAY, ClassNode.EMPTY_ARRAY,
                         ifElse)
                 markAsGenerated(declaringClassNode, methodNode)
             }
@@ -322,7 +321,7 @@ class TransactionalTransform extends AbstractDatastoreMethodDecoratingTransforma
                 MethodNode getterNode = declaringClassNode.addMethod(GET_TRANSACTION_MANAGER_METHOD,
                         Modifier.PUBLIC,
                         transactionManagerClassNode,
-                        ZERO_PARAMETERS, null,
+                        Parameter.EMPTY_ARRAY, ClassNode.EMPTY_ARRAY,
                         getterBody)
                 markAsGenerated(declaringClassNode, getterNode)
 
@@ -337,7 +336,7 @@ class TransactionalTransform extends AbstractDatastoreMethodDecoratingTransforma
                             Modifier.PUBLIC,
                             VOID_TYPE,
                             parameters,
-                            null,
+                            ClassNode.EMPTY_ARRAY,
                             setterBody)
                     markAsGenerated(declaringClassNode, setterNode)
                 }

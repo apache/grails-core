@@ -69,7 +69,6 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
 import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 import static org.grails.datastore.mapping.reflect.AstUtils.OBJECT_CLASS_NODE
-import static org.grails.datastore.mapping.reflect.AstUtils.ZERO_PARAMETERS
 import static org.grails.datastore.mapping.reflect.AstUtils.addAnnotationIfNecessary
 import static org.grails.datastore.mapping.reflect.AstUtils.hasAnnotation
 import static org.grails.datastore.mapping.reflect.AstUtils.isDomainClass
@@ -214,8 +213,8 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
                                     'getId',
                                     Modifier.PUBLIC,
                                     pn.type.plainNodeReference,
-                                    ZERO_PARAMETERS,
-                                    null,
+                                    Parameter.EMPTY_ARRAY,
+                                    ClassNode.EMPTY_ARRAY,
                                     GeneralUtils.returnS(GeneralUtils.varX(propertyField))
                             )
                             markAsGenerated(classNode, getIdMethod)
@@ -235,8 +234,8 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
                                 'getVersion',
                                 Modifier.PUBLIC,
                                 pn.type.plainNodeReference,
-                                ZERO_PARAMETERS,
-                                null,
+                                Parameter.EMPTY_ARRAY,
+                                ClassNode.EMPTY_ARRAY,
                                 GeneralUtils.returnS(GeneralUtils.varX(propertyField))
                         )
                         markAsGenerated(classNode, getVersionMethod)
@@ -261,10 +260,10 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
                     String fieldName = propertyField.getName()
                     String getterName = NameUtils.getGetterName(propertyName, false)
 
-                    MethodNode getter = classNode.getMethod(getterName, ZERO_PARAMETERS)
+                    MethodNode getter = classNode.getMethod(getterName, Parameter.EMPTY_ARRAY)
                     if (getter == null) {
 
-                        getter = classNode.addMethod(getterName, PUBLIC, returnType, ZERO_PARAMETERS, null, returnS(varX(fieldName)))
+                        getter = classNode.addMethod(getterName, PUBLIC, returnType, Parameter.EMPTY_ARRAY, ClassNode.EMPTY_ARRAY, returnS(varX(fieldName)))
                         markAsGenerated(classNode, getter)
 
                         getter.addAnnotation(DIRTY_CHECKED_PROPERTY_ANNOTATION_NODE)
@@ -272,7 +271,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
                                 getter
                         )
                         if (booleanProperty) {
-                            MethodNode methodNode = classNode.addMethod(NameUtils.getGetterName(propertyName, true), PUBLIC, returnType, ZERO_PARAMETERS, null, returnS(varX(fieldName)))
+                            MethodNode methodNode = classNode.addMethod(NameUtils.getGetterName(propertyName, true), PUBLIC, returnType, Parameter.EMPTY_ARRAY, ClassNode.EMPTY_ARRAY, returnS(varX(fieldName)))
                             markAsGenerated(classNode, methodNode)
                         }
                     }
@@ -310,8 +309,8 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
                     'getVersion',
                     Modifier.PUBLIC,
                     ClassHelper.make(Long),
-                    ZERO_PARAMETERS,
-                    null,
+                    Parameter.EMPTY_ARRAY,
+                    ClassNode.EMPTY_ARRAY,
                     GeneralUtils.returnS(GeneralUtils.constX(0))
             )
             markAsGenerated(classNode, getVersionMethod)
@@ -367,7 +366,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
             setterBody.addStatement(stmt(markDirtyMethodCall))
             setterBody.addStatement(assignS(propX(varX('this'), fieldName), varX(setterParameter)))
 
-            setter = classNode.addMethod(setterName, PUBLIC, ClassHelper.VOID_TYPE, params(setterParameter), null, setterBody)
+            setter = classNode.addMethod(setterName, PUBLIC, ClassHelper.VOID_TYPE, params(setterParameter), ClassNode.EMPTY_ARRAY, setterBody)
             markAsGenerated(classNode, setter)
             setter.addAnnotation(DIRTY_CHECKED_PROPERTY_ANNOTATION_NODE)
             staticCompilationVisitor.visitMethod(

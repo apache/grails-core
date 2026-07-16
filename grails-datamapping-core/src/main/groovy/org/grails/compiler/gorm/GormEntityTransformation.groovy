@@ -31,7 +31,6 @@ import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.GenericsType
-import org.codehaus.groovy.ast.InnerClassNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.PropertyNode
@@ -161,8 +160,8 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
             return
         }
 
-        if ((classNode instanceof InnerClassNode) || classNode.isEnum()) {
-            // do not apply transform to enums or inner classes
+        if (classNode.getOuterClass() != null || classNode.isEnum()) {
+            // do not apply transform to enums or inner/nested classes
             return
         }
 
@@ -263,7 +262,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
 
         def methodMissingParameters = [methodNameParam, methodArgsParam] as Parameter[]
         MethodNode methodMissingNode =
-                classNode.addMethod('$static_methodMissing', Modifier.PUBLIC | Modifier.STATIC, AstUtils.OBJECT_CLASS_NODE, methodMissingParameters, null, methodMissingBody)
+                classNode.addMethod('$static_methodMissing', Modifier.PUBLIC | Modifier.STATIC, AstUtils.OBJECT_CLASS_NODE, methodMissingParameters, ClassNode.EMPTY_ARRAY, methodMissingBody)
         markAsGenerated(classNode, methodMissingNode)
 
         // $static_propertyMissing setter
@@ -277,7 +276,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
         )
         def propertyMissingSetParameters = [propertyMissingSetNameParam, propertyMissingSetValueParam] as Parameter[]
         MethodNode propertyMissingNodeSetter =
-                classNode.addMethod('$static_propertyMissing', Modifier.PUBLIC | Modifier.STATIC, AstUtils.OBJECT_CLASS_NODE, propertyMissingSetParameters, null, propertyMissingSetBody)
+                classNode.addMethod('$static_propertyMissing', Modifier.PUBLIC | Modifier.STATIC, AstUtils.OBJECT_CLASS_NODE, propertyMissingSetParameters, ClassNode.EMPTY_ARRAY, propertyMissingSetBody)
         markAsGenerated(classNode, propertyMissingNodeSetter)
 
         // $static_propertyMissing getter
@@ -290,7 +289,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
         )
         def propertyMissingGetParameters = [propertyMissingGetNameParam] as Parameter[]
         MethodNode propertyMissingNodeGetter =
-                classNode.addMethod('$static_propertyMissing', Modifier.PUBLIC | Modifier.STATIC, AstUtils.OBJECT_CLASS_NODE, propertyMissingGetParameters, null, propertyMissingGetBody)
+                classNode.addMethod('$static_propertyMissing', Modifier.PUBLIC | Modifier.STATIC, AstUtils.OBJECT_CLASS_NODE, propertyMissingGetParameters, ClassNode.EMPTY_ARRAY, propertyMissingGetBody)
         markAsGenerated(classNode, propertyMissingNodeGetter)
 
         // now process named query associations
@@ -324,7 +323,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
                                         ClosureExpression closureX = (ClosureExpression) first
                                         Parameter[] closureParams = closureX.parameters
                                         boolean hasParameters = closureParams != null && closureParams.length > 0
-                                        Parameter[] newParams = hasParameters ? AstUtils.copyParameters(closureParams) : AstUtils.ZERO_PARAMETERS
+                                        Parameter[] newParams = hasParameters ? AstUtils.copyParameters(closureParams) : Parameter.EMPTY_ARRAY
                                         MethodNode existing = thisClassNode.getMethod(methodName, newParams)
 
                                         if (existing == null || !existing.getDeclaringClass().equals(thisClassNode)) {
@@ -349,16 +348,16 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
                                                 createNamedQueryCall.setMethodTarget(createNamedQueryMethods.find() { MethodNode mn -> hasParameters ? mn.parameters.length == 3 : mn.parameters.length == 2 })
                                             }
                                             methodBody.addStatement(returnS(createNamedQueryCall))
-                                            MethodNode newMethod = new MethodNode(methodName, Modifier.PUBLIC | Modifier.STATIC, queryOperationsClassNode, newParams, null, methodBody)
+                                            MethodNode newMethod = new MethodNode(methodName, Modifier.PUBLIC | Modifier.STATIC, queryOperationsClassNode, newParams, ClassNode.EMPTY_ARRAY, methodBody)
                                             markAsGenerated(thisClassNode, newMethod)
                                             thisClassNode.addMethod(newMethod)
 
                                             if (!hasParameters) {
 
                                                 String namedQueryGetter = NameUtils.getGetterName(methodName)
-                                                existing = thisClassNode.getMethod(namedQueryGetter, AstUtils.ZERO_PARAMETERS)
+                                                existing = thisClassNode.getMethod(namedQueryGetter, Parameter.EMPTY_ARRAY)
                                                 if (existing == null || !existing.getDeclaringClass().equals(thisClassNode)) {
-                                                    newMethod = new MethodNode(namedQueryGetter, Modifier.PUBLIC | Modifier.STATIC, queryOperationsClassNode, AstUtils.ZERO_PARAMETERS, null, methodBody)
+                                                    newMethod = new MethodNode(namedQueryGetter, Modifier.PUBLIC | Modifier.STATIC, queryOperationsClassNode, Parameter.EMPTY_ARRAY, ClassNode.EMPTY_ARRAY, methodBody)
                                                     markAsGenerated(thisClassNode, newMethod)
                                                     thisClassNode.addMethod(newMethod)
                                                 }
@@ -589,7 +588,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
                     new ExpressionStatement(methodCall)
             )
 
-            def mn = new MethodNode(idProperty, Modifier.PUBLIC, AstUtils.OBJECT_CLASS_NODE, AstUtils.ZERO_PARAMETERS, null, methodBody)
+            def mn = new MethodNode(idProperty, Modifier.PUBLIC, AstUtils.OBJECT_CLASS_NODE, Parameter.EMPTY_ARRAY, ClassNode.EMPTY_ARRAY, methodBody)
             markAsGenerated(classNode, mn)
             classNode.addMethod(mn)
         }
@@ -635,7 +634,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
                     new ExpressionStatement(methodCall)
             )
 
-            def mn = new MethodNode(addToMethod, Modifier.PUBLIC, classNode.getPlainNodeReference(), ADD_TO_PARAMETERS, null, methodBody)
+            def mn = new MethodNode(addToMethod, Modifier.PUBLIC, classNode.getPlainNodeReference(), ADD_TO_PARAMETERS, ClassNode.EMPTY_ARRAY, methodBody)
             markAsGenerated(classNode, mn)
             classNode.addMethod(mn)
         }
@@ -657,7 +656,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
                     new ExpressionStatement(methodCall)
             )
 
-            def mn = new MethodNode(removeFromMethod, Modifier.PUBLIC, classNode.getPlainNodeReference(), ADD_TO_PARAMETERS, null, methodBody)
+            def mn = new MethodNode(removeFromMethod, Modifier.PUBLIC, classNode.getPlainNodeReference(), ADD_TO_PARAMETERS, ClassNode.EMPTY_ARRAY, methodBody)
             markAsGenerated(classNode, mn)
             classNode.addMethod(mn)
         }
@@ -692,7 +691,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
             VariableExpression idVariable = new VariableExpression('id')
             ge.addValue(new TernaryExpression(new BooleanExpression(idVariable), idVariable, new ConstantExpression('(unsaved)')))
             Statement s = new ReturnStatement(ge)
-            MethodNode mn = new MethodNode('toString', Modifier.PUBLIC, new ClassNode(String), new Parameter[0], new ClassNode[0], s)
+            MethodNode mn = new MethodNode('toString', Modifier.PUBLIC, new ClassNode(String), Parameter.EMPTY_ARRAY, ClassNode.EMPTY_ARRAY, s)
             markAsGenerated(classNode, mn)
             classNode.addMethod(mn)
         }

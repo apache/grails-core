@@ -26,6 +26,7 @@ import org.grails.web.converters.configuration.ConvertersConfigurationInitialize
 
 import spock.lang.Issue
 import spock.lang.Specification
+import spock.lang.Unroll
 
 class GrailsMockHttpServletRequestSpec extends Specification {
     @Issue("GRAILS-11493")
@@ -58,5 +59,33 @@ class GrailsMockHttpServletRequestSpec extends Specification {
 
         then: 'the content is no longer available'
         null == result
+    }
+
+    @Unroll
+    def "a form-encoded #httpMethod body is exposed as request parameters"() {
+        given: 'a mock request carrying a form-encoded body on a non-POST method'
+        def request = new GrailsMockHttpServletRequest()
+        request.method = httpMethod
+        request.contentType = 'application/x-www-form-urlencoded'
+        request.content = 'title=The+Stand&pages=1153'.bytes
+
+        expect: 'the fields are visible as parameters, mirroring the form-content filter at runtime'
+        request.getParameter('title') == 'The Stand'
+        request.getParameter('pages') == '1153'
+        request.getParameterValues('title').toList() == ['The Stand']
+
+        where:
+        httpMethod << ['PUT', 'PATCH', 'DELETE']
+    }
+
+    def 'a non-form request body is not exposed as request parameters'() {
+        given: 'a JSON body on a PUT request'
+        def request = new GrailsMockHttpServletRequest()
+        request.method = 'PUT'
+        request.contentType = 'application/json'
+        request.content = '{"title":"The Stand"}'.bytes
+
+        expect: 'the body is left for data binding rather than exposed as parameters'
+        request.getParameter('title') == null
     }
 }

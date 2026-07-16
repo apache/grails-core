@@ -33,7 +33,6 @@ import grails.config.Config
 import grails.core.GrailsApplication
 import grails.core.GrailsApplicationClass
 import org.apache.grails.core.plugins.PluginDiscovery
-import org.grails.compiler.injection.AbstractGrailsArtefactTransformer
 import org.grails.spring.aop.autoproxy.GroovyAwareAspectJAwareAdvisorAutoProxyCreator
 import org.grails.spring.aop.autoproxy.GroovyAwareInfrastructureAdvisorAutoProxyCreator
 
@@ -80,25 +79,13 @@ class GrailsAutoConfiguration implements GrailsApplicationClass, ApplicationCont
      * @return The classes that constitute the Grails application
      */
     Collection<Class> classes() {
-        Collection<Class> classes = new HashSet()
-
-        ClassPathScanner scanner = new ClassPathScanner()
         if (limitScanningToApplication()) {
-            classes.addAll(scanner.scan(getClass(), packageNames()))
-        }
-        else {
-            classes.addAll(scanner.scan(new PathMatchingResourcePatternResolver(applicationContext), packageNames()))
+            return ApplicationArtefactScanner.scanApplicationClasses(getClass(), packageNames())
         }
 
-        ClassLoader classLoader = getClass().getClassLoader()
-        for (cls in AbstractGrailsArtefactTransformer.transformedClassNames) {
-            try {
-                classes << classLoader.loadClass(cls)
-            } catch (ClassNotFoundException cnfe) {
-                // ignore
-            }
-        }
-
+        Collection<Class> classes = new HashSet()
+        classes.addAll(new ClassPathScanner().scan(new PathMatchingResourcePatternResolver(applicationContext), packageNames()))
+        classes.addAll(ApplicationArtefactScanner.loadTransformedClasses(getClass().classLoader))
         return classes
     }
 

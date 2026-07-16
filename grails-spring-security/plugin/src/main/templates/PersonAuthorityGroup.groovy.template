@@ -1,0 +1,86 @@
+package ${packageName}
+
+import grails.gorm.DetachedCriteria
+import groovy.transform.ToString
+import org.codehaus.groovy.util.HashCodeHelper
+import grails.compiler.GrailsCompileStatic
+
+@GrailsCompileStatic
+@ToString(cache=true, includeNames=true, includePackage=false)
+class ${userClassName}${groupClassName} implements Serializable {
+
+	private static final long serialVersionUID = 1
+
+	${userClassName} ${userClassProperty}
+	${groupClassName} ${groupClassProperty}
+
+	@Override
+	boolean equals(other) {
+		if (other instanceof ${userClassName}${groupClassName}) {
+			other.${userClassProperty}Id == ${userClassProperty}?.id && other.${groupClassProperty}Id == ${groupClassProperty}?.id
+		}
+	}
+
+    @Override
+	int hashCode() {
+	    int hashCode = HashCodeHelper.initHash()
+        if (${userClassProperty}) {
+            hashCode = HashCodeHelper.updateHash(hashCode, ${userClassProperty}.id)
+		}
+		if (${groupClassProperty}) {
+		    hashCode = HashCodeHelper.updateHash(hashCode, ${groupClassProperty}.id)
+		}
+		hashCode
+	}
+	
+	static ${userClassName}${groupClassName} get(long ${userClassProperty}Id, long ${groupClassProperty}Id) {
+		criteriaFor(${userClassProperty}Id, ${groupClassProperty}Id).get()
+	}
+
+	static boolean exists(long ${userClassProperty}Id, long ${groupClassProperty}Id) {
+		criteriaFor(${userClassProperty}Id, ${groupClassProperty}Id).count()
+	}
+
+	private static DetachedCriteria<${userClassName}${groupClassName}> criteriaFor(long ${userClassProperty}Id, long ${groupClassProperty}Id) {
+		${userClassName}${groupClassName}.where {
+			${userClassProperty} == ${userClassName}.load(${userClassProperty}Id) &&
+			${groupClassProperty} == ${groupClassName}.load(${groupClassProperty}Id)
+		}
+	}
+
+	static ${userClassName}${groupClassName} create(${userClassName} ${userClassProperty}, ${groupClassName} ${groupClassProperty}, boolean flush = false) {
+		def instance = new ${userClassName}${groupClassName}(${userClassProperty}: ${userClassProperty}, ${groupClassProperty}: ${groupClassProperty})
+		instance.save(flush: flush)
+		instance
+	}
+
+	static boolean remove(${userClassName} u, ${groupClassName} rg) {
+		if (u != null && rg != null) {
+			${userClassName}${groupClassName}.where { ${userClassProperty} == u && ${groupClassProperty} == rg }.deleteAll()
+		}
+	}
+
+	static int removeAll(${userClassName} u) {
+		u == null ? 0 : ${userClassName}${groupClassName}.where { ${userClassProperty} == u }.deleteAll() as int
+	}
+
+	static int removeAll(${groupClassName} rg) {
+		rg == null ? 0 : ${userClassName}${groupClassName}.where { ${groupClassProperty} == rg }.deleteAll() as int
+	}
+
+	static constraints = {
+	    ${groupClassProperty} nullable: false
+		${userClassProperty} nullable: false, validator: { ${userClassName} u, ${userClassName}${groupClassName} ug ->
+			if (ug.${groupClassProperty}?.id) {
+				if (${userClassName}${groupClassName}.exists(u.id, ug.${groupClassProperty}.id)) {
+					return ['userGroup.exists']
+				}
+			}
+		}
+	}
+
+	static mapping = {
+		id composite: ['${groupClassProperty}', '${userClassProperty}']
+		version false
+	}
+}

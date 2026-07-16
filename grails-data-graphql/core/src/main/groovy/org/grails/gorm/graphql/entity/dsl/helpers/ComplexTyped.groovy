@@ -131,7 +131,9 @@ trait ComplexTyped<T> extends ExecutesClosures {
 
     private void handleField(@DelegatesTo(strategy = Closure.DELEGATE_ONLY)Closure closure, Field field) {
         field.nullable(defaultNull)
-        withDelegate(closure, (Object)field)
+        // GROOVY-12106: STC could not resolve this inherited ExecutesClosures static from a sub-trait
+        // body; fixed in Groovy 5.0.7, so the plain inherited-static call compiles again.
+        withDelegate(closure, (Object) field)
         handleField(field)
     }
 

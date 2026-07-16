@@ -18,14 +18,14 @@
  */
 package grails.boot
 
-import grails.plugins.GrailsPlugin
 import grails.plugins.GrailsPluginManager
 import grails.plugins.Plugin
 import grails.util.Environment
-import org.grails.plugins.DefaultGrailsPlugin
-import org.grails.plugins.MockGrailsPluginManager
+import org.apache.grails.core.plugins.DefaultPluginDiscovery
+import org.apache.grails.core.plugins.PluginDiscovery
+import org.springframework.boot.bootstrap.BootstrapRegistry
+import org.springframework.boot.bootstrap.BootstrapRegistryInitializer
 import org.springframework.context.ConfigurableApplicationContext
-import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import spock.lang.Specification
 import spock.util.concurrent.PollingConditions
@@ -42,8 +42,17 @@ class DevelopmentModeWatchSpec extends Specification {
         System.setProperty(Environment.KEY, Environment.DEVELOPMENT.getName())
         System.setProperty("base.dir", ".")
         GrailsApp app = new GrailsApp(GrailsTestConfigurationClass.class)
+        DefaultPluginDiscovery discovery = new DefaultPluginDiscovery([WatchedResourcesGrailsPlugin] as Class<?>[])
+        discovery.loadPluginsFromClasspath = false
+        app.addBootstrapRegistryInitializer(new BootstrapRegistryInitializer() {
+            @Override
+            void initialize(BootstrapRegistry registry) {
+                registry.register(PluginDiscovery, BootstrapRegistry.InstanceSupplier.of(discovery))
+            }
+        })
         ConfigurableApplicationContext context = app.run()
-        WatchedResourcesGrailsPlugin plugin = context.getBean('grailsPluginManager').plugins.values().first().instance
+        GrailsPluginManager pluginManager = context.getBean(GrailsPluginManager.BEAN_NAME, GrailsPluginManager)
+        WatchedResourcesGrailsPlugin plugin = (WatchedResourcesGrailsPlugin) pluginManager.getGrailsPlugin('watchedResources').instance
 
         when:
         File watchedFile = new File('testWatchedFile.properties')
@@ -56,6 +65,8 @@ class DevelopmentModeWatchSpec extends Specification {
         }
 
         cleanup:
+        GrailsApp.setDevelopmentModeActive(false)
+        context?.close()
         if(watchedFile != null) {
             watchedFile.delete()
         }
@@ -64,14 +75,6 @@ class DevelopmentModeWatchSpec extends Specification {
 
 @Configuration
 class GrailsTestConfigurationClass {
-
-    @Bean(name = "grailsPluginManager")
-    GrailsPluginManager getGrailsPluginManager() {
-        MockGrailsPluginManager mockGrailsPluginManager = new MockGrailsPluginManager()
-        GrailsPlugin watchedPlugin = new DefaultGrailsPlugin(WatchedResourcesGrailsPlugin.class, mockGrailsPluginManager.application)
-        mockGrailsPluginManager.registerMockPlugin(watchedPlugin)
-        return mockGrailsPluginManager
-    }
 }
 
 class WatchedResourcesGrailsPlugin extends Plugin {

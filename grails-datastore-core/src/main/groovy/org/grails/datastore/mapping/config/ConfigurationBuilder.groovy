@@ -29,6 +29,7 @@ import groovy.util.logging.Slf4j
 
 import org.springframework.core.convert.ConversionFailedException
 import org.springframework.core.env.PropertyResolver
+import org.springframework.util.ClassUtils
 import org.springframework.util.ReflectionUtils
 
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException
@@ -354,6 +355,35 @@ abstract class ConfigurationBuilder<B, C> {
                             }
                         } catch (Throwable e) {
                             throw new ConfigurationException("Cannot read configuration for path $propertyPathForArg: $e.message", e)
+                        }
+                    }
+                    else if (argType == Class) {
+                        // Resolve a Class-typed setting. The configured value may already be a Class (an
+                        // application.groovy Class literal) or a fully-qualified class-name String. Read it raw and,
+                        // for the String form, resolve via the thread context class loader rather than relying on a
+                        // String->Class converter registered on the property resolver's ConversionService - that
+                        // converter is load-order sensitive and resolves against the framework class loader, so an
+                        // application-defined class (for example hibernate.configClass) was silently left unbound.
+                        Object rawValue = propertyResolver.getProperty(propertyPathForArg, Object)
+                        if (rawValue instanceof Class) {
+                            args.add(rawValue)
+                        }
+                        else {
+                            String className = rawValue instanceof CharSequence ? rawValue.toString().trim() : null
+                            if (className) {
+                                ClassLoader classLoader = Thread.currentThread().contextClassLoader ?: getClass().classLoader
+                                try {
+                                    args.add(ClassUtils.forName(className, classLoader))
+                                } catch (ClassNotFoundException | LinkageError e) {
+                                    throw new ConfigurationException("Invalid class name [$className] for setting [$propertyPathForArg]: ${e.message}", e)
+                                }
+                            }
+                            else {
+                                Object fallBackValue = getFallBackValue(fallBackConfig, settingName)
+                                if (fallBackValue != null) {
+                                    args.add(fallBackValue)
+                                }
+                            }
                         }
                     }
                     else {

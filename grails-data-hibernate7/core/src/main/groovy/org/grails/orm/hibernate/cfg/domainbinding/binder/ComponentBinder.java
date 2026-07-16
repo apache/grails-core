@@ -31,10 +31,10 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedCol
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 
-// TODO (Hibernate 8 refactor): ComponentBinder holds a GrailsPropertyBinder reference set post-construction
-// via setGrailsPropertyBinder() to break a circular dependency (ComponentBinder ↔ GrailsPropertyBinder ↔
-// CollectionBinder ↔ ComponentBinder). This mutual dependency should be resolved by introducing a shared
-// binding context or factory object that all binders receive at construction time.
+// ComponentBinder holds a GrailsPropertyBinder reference set post-construction via
+// setGrailsPropertyBinder() to break a circular dependency (ComponentBinder ↔ GrailsPropertyBinder ↔
+// CollectionBinder ↔ ComponentBinder). A future major release can introduce a shared binding context or
+// factory object that all binders receive at construction time.
 /**
  * Binds embedded components and embedded collection elements to the Hibernate meta-model.
  *

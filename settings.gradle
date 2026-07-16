@@ -132,6 +132,8 @@ include(
         'grails-shell-cli',
         'grails-spring',
         'grails-test-core',
+        'grails-undertow',
+        'grails-undertow-spring-boot',
         'grails-url-mappings',
         'grails-validation',
         'grails-views-core',
@@ -208,6 +210,28 @@ include(
         // until this can be finished being ported to the current Grails release, we are disabling
         //'grails-datamapping-rx',
 
+        // Spring Security
+        // Note: Spring Security documentation is now part of grails-doc (grails-doc/src/en/guide/security).
+        'grails-spring-security-acl',
+        'grails-spring-security-cas',
+        'grails-spring-security',
+        'grails-spring-security-compat',
+        'grails-spring-security-ldap',
+        'grails-spring-security-oauth2',
+        'grails-spring-security-rest',
+        'grails-spring-security-rest-gorm',
+        'grails-spring-security-rest-grailscache',
+        'grails-spring-security-rest-memcached',
+        'grails-spring-security-rest-redis',
+        'grails-spring-security-rest-testapp-profile',
+        'grails-spring-security-ui',
+
+        // Mail
+        'grails-mail',
+
+        // Redis
+        'grails-redis',
+
         // Testing Support
         'grails-testing-support-core',
         'grails-testing-support-datamapping',
@@ -215,7 +239,9 @@ include(
         'grails-testing-support-dbcleanup-h2',
         'grails-testing-support-dbcleanup-postgresql',
         'grails-testing-support-http-client',
+        'grails-testing-support-latency',
         'grails-testing-support-mongodb',
+        'grails-testing-support-redis',
         'grails-testing-support-views-gson',
         'grails-testing-support-web',
 
@@ -263,6 +289,9 @@ project(':grails-web-gsp-taglib').projectDir = file('grails-gsp/grails-web-gsp-t
 project(':grails-web-jsp').projectDir = file('grails-gsp/grails-web-jsp')
 project(':grails-web-taglib').projectDir = file('grails-gsp/grails-web-taglib')
 project(':grails-gsp-spring-boot').projectDir = file('grails-gsp/spring-boot')
+
+project(':grails-undertow-spring-boot').projectDir = file('grails-undertow/spring-boot')
+project(':grails-undertow').projectDir = file('grails-undertow/plugin')
 
 // Data Mapping - Documentation
 include 'grails-data-docs-guide-developer'
@@ -359,6 +388,9 @@ project(':grails-data-mongodb-docs').projectDir = new File(settingsDir, 'grails-
 include 'grails-data-mongodb-spring-boot'
 project(':grails-data-mongodb-spring-boot').projectDir = new File(settingsDir, 'grails-data-mongodb/boot-plugin')
 
+include 'grails-data-mongodb-spring-data'
+project(':grails-data-mongodb-spring-data').projectDir = new File(settingsDir, 'grails-data-mongodb/spring-data')
+
 include 'grails-data-mongodb'
 project(':grails-data-mongodb').projectDir = new File(settingsDir, 'grails-data-mongodb/grails-plugin')
 
@@ -435,6 +467,61 @@ project(':grails-profiles-web').projectDir = file('grails-profiles/web')
 include 'grails-profiles-web-plugin'
 project(':grails-profiles-web-plugin').projectDir = file('grails-profiles/web-plugin')
 
+// Spring Security
+project(':grails-spring-security-acl').projectDir = new File(settingsDir, 'grails-spring-security/acl/plugin')
+project(':grails-spring-security-cas').projectDir = new File(settingsDir, 'grails-spring-security/cas/plugin')
+project(':grails-spring-security').projectDir = new File(settingsDir, 'grails-spring-security/plugin')
+project(':grails-spring-security-compat').projectDir = new File(settingsDir, 'grails-spring-security/compat')
+project(':grails-spring-security-ldap').projectDir = new File(settingsDir, 'grails-spring-security/ldap/plugin')
+project(':grails-spring-security-oauth2').projectDir = new File(settingsDir, 'grails-spring-security/oauth2/plugin')
+project(':grails-spring-security-rest').projectDir = new File(settingsDir, 'grails-spring-security/rest/core')
+project(':grails-spring-security-rest-gorm').projectDir = new File(settingsDir, 'grails-spring-security/rest/gorm')
+project(':grails-spring-security-rest-grailscache').projectDir = new File(settingsDir, 'grails-spring-security/rest/grailscache')
+project(':grails-spring-security-rest-memcached').projectDir = new File(settingsDir, 'grails-spring-security/rest/memcached')
+project(':grails-spring-security-rest-redis').projectDir = new File(settingsDir, 'grails-spring-security/rest/redis')
+project(':grails-spring-security-rest-testapp-profile').projectDir = new File(settingsDir, 'grails-spring-security/rest/testapp-profile')
+project(':grails-spring-security-ui').projectDir = new File(settingsDir, 'grails-spring-security/ui/plugin')
+
+// Spring Security Functional Tests
+include(
+        'grails-test-examples-spring-security-acl-functional-test-app',
+        'grails-test-examples-spring-security-acl-integration-test-app',
+        'grails-test-examples-spring-security-cas-test1',
+        'grails-test-examples-spring-security-core-functional-test-app',
+        'grails-test-examples-spring-security-core-integration-test-app',
+        'grails-test-examples-spring-security-core-misc-functional-test-app-group',
+        'grails-test-examples-spring-security-core-misc-functional-test-app-roles',
+        'grails-test-examples-spring-security-ldap-custom-user-details-context-mapper',
+        'grails-test-examples-spring-security-ldap-functional-test-app',
+        'grails-test-examples-spring-security-ldap-retrieve-db-roles',
+        'grails-test-examples-spring-security-ldap-retrieve-group-roles',
+        'grails-test-examples-spring-security-ui-common',
+        'grails-test-examples-spring-security-ui-extended',
+        'grails-test-examples-spring-security-ui-simple',
+)
+project(':grails-test-examples-spring-security-acl-functional-test-app').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/acl/functional-test-app')
+project(':grails-test-examples-spring-security-acl-integration-test-app').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/acl/integration-test-app')
+project(':grails-test-examples-spring-security-cas-test1').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/cas/test1')
+project(':grails-test-examples-spring-security-core-functional-test-app').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/core/functional-test-app')
+project(':grails-test-examples-spring-security-core-integration-test-app').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/core/integration-test-app')
+project(':grails-test-examples-spring-security-core-misc-functional-test-app-group').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/core/misc-functional-test-app/group')
+project(':grails-test-examples-spring-security-core-misc-functional-test-app-roles').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/core/misc-functional-test-app/roles')
+project(':grails-test-examples-spring-security-ldap-custom-user-details-context-mapper').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/ldap/custom-user-details-context-mapper')
+project(':grails-test-examples-spring-security-ldap-functional-test-app').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/ldap/functional-test-app')
+project(':grails-test-examples-spring-security-ldap-retrieve-db-roles').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/ldap/retrieve-db-roles')
+project(':grails-test-examples-spring-security-ldap-retrieve-group-roles').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/ldap/retrieve-group-roles')
+project(':grails-test-examples-spring-security-ui-common').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/ui/common')
+project(':grails-test-examples-spring-security-ui-extended').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/ui/extended')
+project(':grails-test-examples-spring-security-ui-simple').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/ui/simple')
+
+// Mail Functional Tests
+include 'grails-test-examples-mail'
+project(':grails-test-examples-mail').projectDir = new File(settingsDir, 'grails-test-examples/mail')
+
+// Redis Functional Tests
+include 'grails-test-examples-redis'
+project(':grails-test-examples-redis').projectDir = new File(settingsDir, 'grails-test-examples/redis')
+
 // Functional Tests
 include(
         'grails-test-examples-app1',
@@ -447,6 +534,7 @@ include(
         'grails-test-examples-database-cleanup',
         'grails-test-examples-datasources',
         'grails-test-examples-demo33',
+        'grails-test-examples-enable-mvc-check',
         'grails-test-examples-exploded',
         'grails-test-examples-external-configuration',
         'grails-test-examples-geb',
@@ -463,6 +551,7 @@ include(
         'grails-test-examples-issue-698-domain-save-npe',
         'grails-test-examples-issue-views-182',
         'grails-test-examples-jetty',
+        'grails-test-examples-latency',
         'grails-test-examples-namespaces',
         'grails-test-examples-plugins-exploded',
         'grails-test-examples-plugins-issue11005',
@@ -472,8 +561,8 @@ include(
         'grails-test-examples-config-report',
         'grails-test-examples-scaffolding',
         'grails-test-examples-scaffolding-fields',
-        'grails-test-examples-spring-dependency-management',
         'grails-test-examples-test-phases',
+        'grails-test-examples-undertow',
         'grails-test-examples-views-functional-tests',
         'grails-test-examples-views-functional-tests-plugin',
 )
@@ -500,6 +589,7 @@ project(':grails-test-examples-hyphenated').projectDir = file('grails-test-examp
 project(':grails-test-examples-issue-views-182').projectDir = file('grails-test-examples/issue-views-182')
 project(':grails-test-examples-issue-11102').projectDir = file('grails-test-examples/issue-11102')
 project(':grails-test-examples-demo33').projectDir = file('grails-test-examples/demo33')
+project(':grails-test-examples-enable-mvc-check').projectDir = file('grails-test-examples/enable-mvc-check')
 project(':grails-test-examples-plugins-loadfirst').projectDir = file('grails-test-examples/plugins/loadfirst')
 project(':grails-test-examples-plugins-loadsecond').projectDir = file('grails-test-examples/plugins/loadsecond')
 project(':grails-test-examples-plugins-loadafter').projectDir = file('grails-test-examples/plugins/loadafter')
@@ -514,8 +604,23 @@ project(':grails-test-examples-scaffolding-fields').projectDir = file('grails-te
 project(':grails-test-examples-views-functional-tests').projectDir = file('grails-test-examples/views-functional-tests')
 project(':grails-test-examples-views-functional-tests-plugin').projectDir = file('grails-test-examples/views-functional-tests-plugin')
 project(':grails-test-examples-test-phases').projectDir = file('grails-test-examples/test-phases')
-project(':grails-test-examples-spring-dependency-management').projectDir = file('grails-test-examples/spring-dependency-management')
 project(':grails-test-examples-jetty').projectDir = file('grails-test-examples/jetty')
+project(':grails-test-examples-undertow').projectDir = file('grails-test-examples/undertow')
+project(':grails-test-examples-latency').projectDir = file('grails-test-examples/latency')
+
+// The Spring Dependency Management example imports grails-bom as a Maven BOM through
+// io.spring.dependency-management, which resolves BOM imports with its own detached
+// configurations. Those bypass the local-project substitution rules in
+// gradle/functional-test-config.gradle, so the import only works when
+// org.apache.grails:grails-bom:<projectVersion> is already published to a repository.
+// During a release (reproducible build, SOURCE_DATE_EPOCH set) the version being staged
+// is not published anywhere yet, so the example cannot resolve its dependencies -
+// exclude it from the build graph entirely. It still builds and runs on every regular
+// CI build, where the -SNAPSHOT BOM is available from the Apache snapshots repository.
+if (!isReproducibleBuild) {
+    include 'grails-test-examples-spring-dependency-management'
+    project(':grails-test-examples-spring-dependency-management').projectDir = file('grails-test-examples/spring-dependency-management')
+}
 
 includeBuild('./grails-gradle') {
     name = 'grails-gradle'

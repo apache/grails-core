@@ -28,12 +28,13 @@ import static org.grails.forge.feature.config.ConfigurationFeature.TEST_ENVIRONM
 import static org.grails.forge.feature.config.ConfigurationFeature.PROD_ENVIRONMENT_KEY;
 import static org.grails.forge.feature.config.ConfigurationFeature.ENVIRONMENTS_KEY;
 import static org.grails.forge.feature.config.ConfigurationFeature.PROPERTIES_KEY;
-import static org.grails.forge.feature.database.HibernateGorm.PREFIX;
 
 /**
  * A feature that configures a datasource with a driver
  */
 public interface DatabaseDriverConfigurationFeature extends Feature {
+
+    String DATASOURCE_PREFIX = "dataSource.";
 
     String getUrlKey();
 
@@ -64,6 +65,6 @@ public interface DatabaseDriverConfigurationFeature extends Feature {
     }
 
     default void addProductionDataSourceProperties(Map<String, Object> config, String key, Object value) {
-        config.put(ENVIRONMENTS_KEY + "." + PROD_ENVIRONMENT_KEY + "." + PREFIX + PROPERTIES_KEY + "." + key, value);
+        config.put(ENVIRONMENTS_KEY + "." + PROD_ENVIRONMENT_KEY + "." + DATASOURCE_PREFIX + PROPERTIES_KEY + "." + key, value);
     }
 }

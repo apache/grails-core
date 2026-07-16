@@ -39,6 +39,49 @@ This brings the Spring Boot 4 modular artifact layout, Spring Framework 7 API re
 
 The Grails 8 upgrade guide calls out the major application-impacting changes and links to the Spring Boot 4.0 migration guide, Spring Boot 4.1 release notes and Spring Framework 7.0 release notes.
 
+==== Hibernate 7 Application Generation
+
+Grails Forge can now generate applications configured for Grails Data with Hibernate 7.
+The `create-*` commands also accept a new `-d, --data` option (the previous `-g` and `--gorm` flags remain supported as legacy aliases) with the values `hibernate5`, `hibernate7`, and `mongodb`; the legacy value `hibernate` is still accepted and selects Hibernate 5:
+
+[source,console]
+----
+grails -t forge create-app --data=hibernate7 com.example.demo
+----
+
+Applications generated for Hibernate 7 consume `grails-hibernate7-bom` — or `grails-hibernate7-micronaut-bom` when combined with the `grails-micronaut` feature — consistently across the application dependencies, the buildscript classpath, and `buildSrc`.
+This avoids the dependency resolution conflicts that occur when an application generated for Hibernate 5 is manually switched to `grails-data-hibernate7` while the default `grails-bom` remains on the build classpath.
+The `database-migration` feature also selects the matching `grails-data-hibernate7-dbmigration` plugin automatically.
+
+==== Plugin Beans Register Before Spring Boot Auto-Configuration
+
+Grails {grailsMajorVersion} unifies and retimes the plugin lifecycle so that the beans a plugin contributes are registered before Spring Boot processes its auto-configurations.
+A plugin bean now takes precedence over a Spring Boot default guarded by `@ConditionalOnMissingBean` — Boot backs off in favour of the plugin's bean, with no need to override or remove it afterwards.
+
+Plugins register beans through the new `beanRegistrar()` hook, which returns a Spring Framework {springapi}org/springframework/beans/factory/BeanRegistrar.html[BeanRegistrar]. Because `BeanRegistrar` is a functional interface, a closure coerced with `as BeanRegistrar` is all that is required:
+
+[source,groovy]
+----
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
+import org.springframework.core.env.Environment
+import grails.plugins.Plugin
+
+class MyGrailsPlugin extends Plugin {
+
+    @Override
+    BeanRegistrar beanRegistrar() {
+        { BeanRegistry registry, Environment environment ->
+            registry.registerBean('myService', MyServiceImpl)
+        } as BeanRegistrar
+    }
+}
+----
+
+`beanRegistrar()` replaces the `doWithSpring` bean builder DSL, which is deprecated in Grails {grailsMajorVersion}.
+The DSL continues to work for now, but you are strongly urged to migrate.
+See the xref:upgrading#upgrading80x[upgrade guide] for details.
+
 ==== GSP Tag Library Improvements
 
 Grails {grailsMajorVersion} continues the move toward method-based TagLib handlers while preserving compatibility with existing closure-based tags.
@@ -48,6 +91,13 @@ The Grails Gradle extension now defaults `preserveParameterNames` to `true`, so 
 
 Tag library unit tests also clean up and rebuild TagLib metadata automatically between features.
 Tests that use `TagLibUnitTest` no longer need to manage `purgeTagLibMetaClass`, and specs that mock additional tag libraries continue to work across feature methods.
+
+==== Namespace-Aware Link Generation
+
+Links, form actions, pagination links, sortable column links, redirects, chains, and includes now resolve the target controller namespace automatically when `namespace` is omitted.
+In the normal case, where only one controller has the target name, `controller` and `action` are enough to generate the correct namespaced or non-namespaced URL.
+If multiple controllers share the same name, specify `namespace` to choose one explicitly.
+Use `namespace=""` in GSP markup, or `namespace: null` in Groovy code, to target a non-namespaced controller.
 
 ==== @GrailsCompileStatic on Controllers That Use Tag Libraries
 
@@ -90,13 +140,22 @@ grails {
 }
 ----
 
-All three options are disabled by default and independent, or `compileStatic { all = true }` can be used as a shortcut to enable all of them. Any class that declares its own `@CompileDynamic` (or `@GrailsCompileStatic`/`@CompileStatic`/`@GrailsTypeChecked`/`@TypeChecked`) annotation keeps that setting, so the opt-in never overrides an explicit per-class choice. Tag libraries that still declare tags as closure fields (the deprecated form) are skipped automatically by the `tagLibs` opt-in — left dynamically compiled with a build warning — so define tags as methods to opt them in. See the xref:staticTypeCheckingAndCompilation/grailsCompileStatic[GrailsCompileStatic] section for details.
+All three options are disabled by default and independent, or `compileStatic { all = true }` can be used as a shortcut to enable all of them. Any class that declares its own `@CompileDynamic` (or `@GrailsCompileStatic`/`@CompileStatic`/`@GrailsTypeChecked`/`@TypeChecked`) annotation keeps that setting, so the opt-in never overrides an explicit per-class choice. Tag libraries that still declare tags as closure fields (the deprecated form) are skipped automatically by the `tagLibs` opt-in and left dynamically compiled with a build warning, so define tags as methods to opt them in. See the xref:staticTypeCheckingAndCompilation/grailsCompileStatic[GrailsCompileStatic] section for details.
 
 ==== Test HTTP Client Form Requests
 
 Integration tests that implement `HttpClientSupport` can now use `httpPostForm(...)` to send `application/x-www-form-urlencoded`
 request bodies. The helper URL-encodes form fields using UTF-8, and repeated values in a `Collection` or array are encoded as
 repeated keys in insertion order.
+
+==== Latency Testing Support
+
+The new `grails-testing-support-latency` module injects artificial latency into the application under test, so that
+requests randomly take longer. Slower responses widen the window in which timing bugs occur, turning intermittently
+flaky functional tests — assertions that race a navigation, missing waits, ordering assumptions — into deterministic
+failures. The module is inert until `grails.testing.latency.enabled` is set to `true`, and the delay range, the
+fraction of requests affected, and the url patterns are all configurable. See the
+xref:testing/functionalTesting[Functional Testing] section for details.
 
 ==== GORM for MongoDB: TTL, Text, and Reconciled Indexes
 
@@ -120,3 +179,29 @@ A single property can likewise declare a `$text` index — or another special ty
 When the options of an already-created index change between restarts, GORM now reconciles the difference instead of only
 logging a conflict. A changed TTL is applied in place with MongoDB's `collMod` command — no drop, no rebuild — while any
 other option change is applied by declaring `indexAttributes: [recreateOnConflict: true]`.
+
+==== GORM for MongoDB and Spring Data MongoDB Interoperability
+
+A new optional module, `grails-data-mongodb-spring-data`, lets an application use GORM for MongoDB and
+https://spring.io/projects/spring-data-mongodb[Spring Data MongoDB] — its `MongoTemplate` and repositories — side by
+side over the *same* `MongoClient`, database and codecs, and, within a single `@Transactional` method, the *same*
+MongoDB transaction. When the module and `spring-data-mongodb` are on the classpath of a Spring Boot application that
+already has a GORM `MongoDatastore`, it auto-configures a `MongoDatabaseFactory`, a `MongoTemplate` and a primary
+`transactionManager` over GORM's existing connection — GORM keeps ownership of the client:
+
+[source,groovy]
+----
+@Transactional
+void transfer(MongoTemplate mongoTemplate) {
+    new Account(name: "from").save()                  // GORM
+    mongoTemplate.insert(new LedgerEntry(amount: 10)) // Spring Data
+    // both commit together, or neither is applied if an exception is thrown
+}
+----
+
+The unified transaction shares GORM's server-side `ClientSession`, so it requires GORM multi-document transactions to
+be enabled (`grails.mongodb.transactional = true`). Spring Data repositories are enabled the usual way with
+`@EnableMongoRepositories`, on a package separate from the GORM `@Entity` classes; only the connection, codecs and
+session are shared, and the two object-mapping models stay separate. See the
+link:{mongodb5Guide}index.html#springDataInterop[Spring Data MongoDB Interoperability] section of the GORM for MongoDB
+guide for details.

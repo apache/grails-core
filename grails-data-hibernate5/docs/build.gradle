@@ -43,7 +43,6 @@ dependencies {
     documentation 'org.apache.groovy:groovy-groovydoc'
     documentation 'org.apache.groovy:groovy-templates'
     documentation 'org.fusesource.jansi:jansi'
-    documentation 'jline:jline'
     documentation project(':grails-bootstrap')
     documentation project(':grails-core')
     documentation project(':grails-spring')

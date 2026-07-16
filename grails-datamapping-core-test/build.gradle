@@ -25,6 +25,8 @@ plugins {
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
+    id 'org.apache.grails.gradle.grails-jacoco'
 }
 
 version = projectVersion
@@ -132,4 +134,13 @@ dependencies {
 apply {
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-data-tck-config.gradle')
+}
+
+tasks.withType(Test).configureEach {
+    // Lets TCK specs opt out of features the simple in-memory datastore does not
+    // implement. Spock evaluates @IgnoreIf/@Requires preconditions before setupSpec()
+    // runs, so this must be set at the task level - a TCK-manager System.setProperty
+    // would come too late, which is also why the hibernate/mongodb suites set theirs
+    // in their gradle test configs.
+    systemProperty('simple.gorm.suite', 'true')
 }

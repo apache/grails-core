@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__claude_ai_Atlassian_Rovo__getJiraIssue",
+      "mcp__claude_ai_Atlassian_Rovo__searchJiraIssuesUsingJql",
+      "mcp__claude_ai_Atlassian_Rovo__lookupJiraAccountId",
+      "mcp__excel__read_data_from_excel",
+      "mcp__excel__get_workbook_metadata",
+      "mcp__lens__list-clusters",
+      "mcp__lens__prometheus-execute-query"
+    ]
+  }
+}

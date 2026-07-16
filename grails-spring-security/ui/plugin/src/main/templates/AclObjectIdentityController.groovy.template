@@ -1,0 +1,16 @@
+${packageDeclaration}
+
+import grails.plugin.springsecurity.acl.AclClass
+import grails.plugin.springsecurity.acl.AclObjectIdentity
+import grails.plugin.springsecurity.acl.AclSid
+
+class AclObjectIdentityController extends grails.plugin.springsecurity.ui.AclObjectIdentityController {
+
+	protected String lookupClassName() { AclObjectIdentity.name }
+
+	protected Class<?> lookupClass() { AclObjectIdentity }
+
+	protected Class<?> lookupAclSidClass() { AclSid }
+
+	protected Class<?> lookupAclClassClass() { AclClass }
+}

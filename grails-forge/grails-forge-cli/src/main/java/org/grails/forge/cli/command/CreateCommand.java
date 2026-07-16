@@ -50,7 +50,7 @@ public abstract class CreateCommand extends BaseCommand implements Callable<Inte
     DevelopmentReloading reloading;
 
     @ReflectiveAccess
-    @CommandLine.Option(names = {"-g", "--gorm"}, paramLabel = "GORM Implementation", description = "Which GORM Implementation to configure. Possible values: ${COMPLETION-CANDIDATES}.", completionCandidates = GormImplCandidates.class, converter = GormImplConverter.class)
+    @CommandLine.Option(names = {"-d", "--data", "-g", "--gorm"}, paramLabel = "Grails Data Implementation", description = "Which Grails Data implementation to configure (-g, --gorm are legacy aliases). Possible values: ${COMPLETION-CANDIDATES}.", completionCandidates = GormImplCandidates.class, converter = GormImplConverter.class)
     GormImpl gormImpl;
 
     @ReflectiveAccess

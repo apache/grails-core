@@ -34,7 +34,9 @@ dependencies {
 
     // shell-cli dependencies
     implementation 'org.apache.grails:grails-shell-cli'
-    implementation 'org.springframework.boot:spring-boot-cli'
+    implementation('org.springframework.boot:spring-boot-cli') {
+        exclude group: 'jline', module: 'jline'
+    }
     implementation 'org.apache.groovy:groovy'
     implementation 'org.apache.groovy:groovy-ant'
     implementation 'org.apache.groovy:groovy-templates'

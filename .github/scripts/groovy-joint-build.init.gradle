@@ -1,0 +1,56 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// Gradle init-script applied during the Groovy joint-validation build.
+// Overrides Develocity and build-cache configuration injected by Groovy's own
+// build-scans.gradle without modifying any of Groovy's source files.
+//
+// Applied via: ./gradlew --init-script <path>/groovy-joint-build.init.gradle
+//
+// Defensive: the pluginManager.withPlugin guard makes this a no-op when the
+// Develocity plugin is absent, so the script never crashes Groovy's build.
+
+settingsEvaluated { settings ->
+    settings.pluginManager.withPlugin('com.gradle.develocity') {
+        def isAuthenticated = System.getenv('GRAILS_DEVELOCITY_ACCESS_KEY') != null
+
+        // 'develocity' is the DSL extension registered by the plugin on Settings.
+        settings.develocity {
+            server = 'https://develocity.apache.org'
+
+            buildScan {
+                // Tag the build for visibility on develocity.apache.org. Groovy's own
+                // gradle/build-scans.gradle does not add any tags, so additive is safe.
+                tag('groovy')
+                tag('grails-core')
+                // Only publish when a valid access key is present in the environment.
+                publishing.onlyIf { isAuthenticated }
+                uploadInBackground = false
+            }
+        }
+
+        settings.buildCache {
+            local {
+                enabled = false
+            }
+            remote(settings.develocity.buildCache) {
+                push = isAuthenticated
+                enabled = true
+            }
+        }
+    }
+}

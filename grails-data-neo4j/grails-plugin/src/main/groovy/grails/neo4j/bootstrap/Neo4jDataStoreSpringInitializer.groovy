@@ -106,7 +106,7 @@ class Neo4jDataStoreSpringInitializer extends AbstractDatastoreInitializer {
             }
 
             ClassLoader classLoader = getClass().getClassLoader()
-            if (beanDefinitionRegistry.containsBeanDefinition('dispatcherServlet') && ClassUtils.isPresent(OSIV_CLASS_NAME, classLoader)) {
+            if (isWebApplicationRegistry(beanDefinitionRegistry) && ClassUtils.isPresent(OSIV_CLASS_NAME, classLoader)) {
                 String interceptorName = "neo4jOpenSessionInViewInterceptor"
                 "${interceptorName}"(ClassUtils.forName(OSIV_CLASS_NAME, classLoader)) {
                     datastore = ref("neo4jDatastore")
@@ -121,6 +121,32 @@ class Neo4jDataStoreSpringInitializer extends AbstractDatastoreInitializer {
                 }
             }
         }
+    }
+
+    /**
+     * Determines whether the given registry belongs to a web application. The presence of the
+     * {@code dispatcherServlet} bean definition is only a reliable signal after Spring Boot
+     * auto-configuration has been processed; Grails 8 registers plugin bean definitions before
+     * that, so the type of the registry (the web application context itself) is checked as well.
+     *
+     * <p>Mirrors {@code AbstractDatastoreInitializer#isWebApplicationRegistry} in
+     * grails-datamapping-core; once this build depends on a version that ships it, this
+     * override is redundant and can be removed.
+     *
+     * @param registry The bean definition registry
+     * @return true if the registry belongs to a web application
+     */
+    protected boolean isWebApplicationRegistry(BeanDefinitionRegistry registry) {
+        if (registry == null) {
+            return false
+        }
+        if (registry.containsBeanDefinition('dispatcherServlet')) {
+            return true
+        }
+        String webApplicationContextClassName = 'org.springframework.web.context.WebApplicationContext'
+        ClassLoader classLoader = getClass().classLoader
+        return ClassUtils.isPresent(webApplicationContextClassName, classLoader) &&
+                ClassUtils.forName(webApplicationContextClassName, classLoader).isInstance(registry)
     }
 
     /**
