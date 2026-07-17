@@ -148,7 +148,9 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
                         annotationNode.addMember('value', new ConstantExpression(handler.getType()))
                         classNode.addAnnotation(annotationNode)
 
-                        List<ClassInjector> injectors = cache[handler.type]
+                        // Keep .get() not cache[key]: under @CompileStatic the subscript binds to
+                        // DefaultGroovyMethods.getAt(Map,String), removed in Groovy 6 (NoSuchMethodError at transform time).
+                        List<ClassInjector> injectors = cache.get(handler.type)
                         for (ClassInjector injector : injectors) {
                             if (injector instanceof CompilationUnitAware) {
                                 ((CompilationUnitAware) injector).compilationUnit = compilationUnit

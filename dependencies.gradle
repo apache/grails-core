@@ -87,8 +87,12 @@ ext {
             'guava.version'                 : '33.6.0-jre',
             // Security: overrides spring-boot-dependencies (5.4.2). 5.4.3 fixes CVE-2026-54399 (httpcore5) and CVE-2026-54428 (httpcore5-h2).
             'httpcore5.version'             : '5.4.3',
-            // Security: overrides the transitive com.fasterxml Jackson 2.x. 2.21.5 fixes CVE-2026-54515 flagged against 2.21.4.
-            'jackson2.version'              : '2.21.5',
+            // Security + Groovy 6: overrides the transitive com.fasterxml Jackson 2.x. Bumped to 2.22.0 on this
+            // canary because groovy-yaml 6.0.0-SNAPSHOT pulls the com.fasterxml Jackson 2 suite at 2.22.0; 2.22.0
+            // is newer than 2.21.5 so it retains the CVE-2026-54515 fix while keeping the BOM >= every resolved
+            // Jackson 2 version (rule 14). jackson-annotations versions independently (2.22, not 2.22.0).
+            'jackson2.version'              : '2.22.0',
+            'jackson-annotations.version'   : '2.22',
             // Security: overrides spring-boot-dependencies (3.1.4). 3.1.5 fixes CVE-2026-59889 (JsonView bypass) flagged against jackson-databind.
             'jackson3.version'              : '3.1.5',
             'jquery.version'                : '3.7.1',
@@ -180,11 +184,14 @@ ext {
             // Security override of spring-boot-dependencies - see httpcore5.version
             'httpcore5'                   : "org.apache.httpcomponents.core5:httpcore5:${bomDependencyVersions['httpcore5.version']}",
             'httpcore5-h2'                : "org.apache.httpcomponents.core5:httpcore5-h2:${bomDependencyVersions['httpcore5.version']}",
-            // Security override of the transitive com.fasterxml Jackson 2.x - see jackson2.version. databind 2.21.5
-            // fixes CVE-2026-54515 and drags jackson-core to 2.21.5, so the BOM must manage core too (rule 14).
-            // jackson-annotations is out of lockstep (no 2.21.5 release) and stays transitively managed.
+            // Security override + Groovy 6 - see jackson2.version. groovy-yaml 6.0.0-SNAPSHOT pulls the com.fasterxml
+            // Jackson 2 suite at 2.22.0 (jackson-dataformat-yaml drags core/databind/datatype-jsr310), so the BOM must
+            // manage each of them at >= the resolved 2.22.0 (rule 14). jackson-annotations versions independently (2.22).
+            'jackson-annotations'         : "com.fasterxml.jackson.core:jackson-annotations:${bomDependencyVersions['jackson-annotations.version']}",
             'jackson2-core'               : "com.fasterxml.jackson.core:jackson-core:${bomDependencyVersions['jackson2.version']}",
             'jackson2-databind'           : "com.fasterxml.jackson.core:jackson-databind:${bomDependencyVersions['jackson2.version']}",
+            'jackson2-dataformat-yaml'    : "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:${bomDependencyVersions['jackson2.version']}",
+            'jackson2-datatype-jsr310'    : "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${bomDependencyVersions['jackson2.version']}",
             // Security override of spring-boot-dependencies - see jackson3.version. databind 3.1.5 pins
             // jackson-core 3.1.5 via its parent pom, so the BOM must manage core in lockstep (rule 14).
             'jackson3-core'               : "tools.jackson.core:jackson-core:${bomDependencyVersions['jackson3.version']}",

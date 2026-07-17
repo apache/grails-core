@@ -35,7 +35,9 @@ import spock.lang.Specification
 @Integration(applicationClass = Application)
 class TestFormParamsControllerSpec extends Specification implements HttpClientSupport {
 
-    static final String FORM = 'application/x-www-form-urlencoded'
+    // FORM is provided by the HttpClientSupport trait's getFORM(). Under Groovy 6 a local
+    // `static final String FORM` here would emit a static getFORM() that collides with the
+    // trait's instance getFORM() ("cannot have both a static and an instance method").
 
     @Shared String USERNAME = "Admin"
     @Shared String PASSWORD = "myPassword"
