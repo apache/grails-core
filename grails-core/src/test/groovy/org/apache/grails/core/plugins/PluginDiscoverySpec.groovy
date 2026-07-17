@@ -372,6 +372,53 @@ class RepeatedProbeGrailsPlugin {
         cleanup:
         System.setErr(originalErr)
     }
+
+    def 'reports every missing or incompatible plugin dependency at WARN'() {
+        given: 'a discovery bean with one available and one unresolved plugin'
+        def gcl = new GroovyClassLoader()
+        def availableDependencyClass = gcl.parseClass('''
+class AvailableDependencyGrailsPlugin {
+    def version = "1.0.0"
+}
+''')
+        def unresolvedDependenciesClass = gcl.parseClass('''
+class UnresolvedDependenciesGrailsPlugin {
+    def version = "4.0.0"
+    def dependsOn = [missingDependency: "1.0.0", availableDependency: "2.0.0"]
+}
+''')
+        def discovery = new DefaultPluginDiscovery(
+                [availableDependencyClass, unresolvedDependenciesClass] as Class<?>[]
+        )
+        discovery.loadPluginsFromClasspath = false
+
+        and: 'standard error is captured to observe slf4j-simple output'
+        def originalErr = System.err
+        def captured = new ByteArrayOutputStream()
+        System.setErr(new PrintStream(captured, true))
+
+        when: 'the public discovery API initializes the plugin set'
+        discovery.init(new StandardEnvironment())
+
+        then: 'the unresolved plugin remains failed and is not loaded'
+        discovery.hasFailedPlugin('unresolvedDependencies')
+        !discovery.hasPlugin('unresolvedDependencies')
+        discovery.getPluginsInLoadOrder()*.name == ['availableDependency']
+
+        and: 'one concise warning identifies the failed plugin and every unresolved dependency'
+        def warnings = captured.toString().readLines().findAll { it.contains('unresolvedDependencies') }
+        warnings.size() == 1
+        warnings[0].contains('WARN')
+        warnings[0].contains('Grails plug-in [unresolvedDependencies] with version [4.0.0] cannot be loaded')
+        warnings[0].contains('dependency [missingDependency] with required version [1.0.0] is missing')
+        warnings[0].contains('dependency [availableDependency] has version [1.0.0] but requires [2.0.0]')
+
+        and: 'normal verbosity does not include a stack trace'
+        !captured.toString().contains('at org.apache.grails.core.plugins.DefaultPluginDiscovery')
+
+        cleanup:
+        System.setErr(originalErr)
+    }
 }
 
 // Test fixture plugin classes for GrailsPluginDiscoverySpec
