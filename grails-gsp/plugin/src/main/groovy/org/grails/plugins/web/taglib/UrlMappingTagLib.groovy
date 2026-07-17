@@ -80,8 +80,10 @@ class UrlMappingTagLib implements TagLibrary {
                 id: attrs.id as String,
                 params: attrs.params as Map)
 
-            if (attrs.namespace != null) {
-                mapping.namespace = attrs.namespace as String
+            mapping.namespaceSpecified = attrs.containsKey(LinkGenerator.ATTRIBUTE_NAMESPACE)
+            String namespace = linkGenerator.resolveNamespace(attrs.controller as String, attrs.plugin as String, attrs)
+            if (namespace != null) {
+                mapping.namespace = namespace
             }
             if (attrs.plugin != null) {
                 mapping.pluginName = attrs.plugin as String
@@ -289,6 +291,9 @@ class UrlMappingTagLib implements TagLibrary {
 
         def property = attrs.remove('property')
         def action = attrs.action ? attrs.remove('action') : (actionName ?: 'list')
+        // Only forward namespace when the tag actually supplied one, so that an omitted namespace
+        // lets the link generator infer the current controller's namespace.
+        boolean hasNamespace = attrs.containsKey('namespace')
         def namespace = attrs.remove('namespace')
 
         def defaultOrder = attrs.remove('defaultOrder')
@@ -352,7 +357,9 @@ class UrlMappingTagLib implements TagLibrary {
         }
 
         linkAttrs.action = action
-        linkAttrs.namespace = namespace
+        if (hasNamespace) {
+            linkAttrs.namespace = namespace
+        }
 
         writer << callLink((Map) linkAttrs) {
             title

@@ -23,6 +23,7 @@ import groovy.transform.TypeCheckingMode
 
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.MessageSource
 import org.springframework.http.HttpMethod
 
@@ -96,6 +97,8 @@ abstract class AbstractLinkingRenderer<T> extends AbstractIncludeExcludeRenderer
 
     boolean prettyPrint = Environment.isDevelopmentMode()
     boolean absoluteLinks = true
+
+    @Value('${grails.converters.encoding:UTF-8}')
     String encoding = GrailsWebUtil.DEFAULT_ENCODING
 
     AbstractLinkingRenderer(Class<T> targetType, MimeType mimeType) {

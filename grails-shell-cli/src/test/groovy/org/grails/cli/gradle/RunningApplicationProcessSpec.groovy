@@ -214,7 +214,8 @@ class RunningApplicationProcessSpec extends Specification {
         then:
         result == RunningApplicationProcess.StopResult.STOPPED
         !pidFile.exists()
-        process.waitFor(5, TimeUnit.SECONDS)
-        !process.isAlive()
+        // stop() observes exit via the ProcessHandle; the Process object's own reaper can lag
+        // behind on Windows, so wait for it rather than sampling isAlive() immediately
+        process.waitFor(10, TimeUnit.SECONDS)
     }
 }

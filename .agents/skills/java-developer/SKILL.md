@@ -1,6 +1,6 @@
 ---
 name: java-developer
-description: Guide for developing in Java 17 LTS, including modern features, best practices, and integration with Groovy/Grails projects
+description: Guide for developing on the Java 21 baseline, including modern features, best practices, and integration with Groovy/Grails projects
 license: Apache-2.0
 ---
 <!--
@@ -11,8 +11,8 @@ Licensed to the Apache Software Foundation (ASF) under one or more contributor l
 
 ## What I Do
 
-- Provide guidance on Java 17 LTS syntax, features, and APIs for use in Grails/Groovy projects.
-- Assist with code generation, refactoring, and debugging using Java 17 enhancements like records, sealed classes, pattern matching, and text blocks.
+- Provide guidance on Java 21 syntax, features, and APIs for use in Grails/Groovy projects.
+- Assist with code generation, refactoring, and debugging using modern Java features like records, sealed classes, pattern matching, and text blocks.
 - Recommend best practices for Java code that interoperates with Groovy in mixed-language projects.
 - Guide on tooling: Gradle builds, JDK setup, testing with JUnit 5/Spock, and profiling.
 
@@ -21,11 +21,11 @@ Licensed to the Apache Software Foundation (ASF) under one or more contributor l
 Use this skill when working on Java code within this repository, especially for:
 - Writing Java classes that will be used alongside Groovy code.
 - Implementing features using records, sealed classes, or pattern matching for instanceof.
-- Migrating older Java code (e.g., Java 8/11) to Java 17 idioms.
+- Migrating older Java code (e.g., Java 8/11/17) to Java 21 idioms.
 - Performance optimization, security hardening, or module system (JPMS) questions.
 - Understanding how Java code integrates with Groovy's dynamic features.
 
-## Java 17 Key Features
+## Java 21 Baseline Features
 
 ### Records (JEP 395)
 Immutable data carriers with auto-generated constructors, accessors, equals, hashCode, and toString:
@@ -61,13 +61,13 @@ public non-sealed class Rectangle implements Shape {
 ### Pattern Matching for instanceof (JEP 394)
 Eliminate redundant casts:
 ```java
-// Before Java 17
+// Before pattern matching
 if (obj instanceof String) {
     String s = (String) obj;
     System.out.println(s.length());
 }
 
-// Java 17
+// Modern Java
 if (obj instanceof String s) {
     System.out.println(s.length());
 }
@@ -200,7 +200,7 @@ def "Java record should work in Spock tests"() {
 
 ## Performance and Profiling
 
-### JVM Options for Java 17
+### JVM Options for Java 21
 ```bash
 # Recommended GC for most workloads
 -XX:+UseG1GC
@@ -266,6 +266,6 @@ List<String> copy = List.copyOf(mutableList);
 
 ## Resources
 
-- **Java 17 Documentation**: https://docs.oracle.com/en/java/javase/17/
-- **Java Language Updates**: https://docs.oracle.com/en/java/javase/17/language/
+- **Java 21 Documentation**: https://docs.oracle.com/en/java/javase/21/
+- **Java Language Updates**: https://docs.oracle.com/en/java/javase/21/language/
 - **JEP Index**: https://openjdk.org/jeps/0

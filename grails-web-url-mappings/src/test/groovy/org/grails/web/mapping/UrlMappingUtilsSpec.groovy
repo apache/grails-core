@@ -72,4 +72,24 @@ class UrlMappingUtilsSpec extends Specification {
         and:
             includedContent
     }
+
+    void "test includeForUrlMappingInfo keeps explicit null namespace when linkGenerator is passed in"() {
+        given:
+            final String retUrl = '/testAction'
+            final UrlMappingInfo info = new ForwardUrlMappingInfo(controllerName: 'testController', actionName: 'testAction', namespaceSpecified: true)
+            final Map model = [:]
+
+        when:
+            final IncludedContent includedContent = UrlMappingUtils.includeForUrlMappingInfo(request, response, info, model, linkGenerator)
+
+        then:
+            1 * linkGenerator.link(_ as Map) >> { Map m ->
+                assert m.namespace == null
+                assert m.containsKey(LinkGenerator.ATTRIBUTE_NAMESPACE)
+                retUrl
+            }
+
+        and:
+            includedContent
+    }
 }

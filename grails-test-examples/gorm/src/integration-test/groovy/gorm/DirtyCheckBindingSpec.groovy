@@ -80,7 +80,14 @@ class DirtyCheckBindingSpec extends Specification implements HttpClientSupport {
     @Issue('https://github.com/apache/grails-core/issues/15795')
     void 'an explicit bindable:true id constraint declared on a @DirtyCheck base is inherited and binds over HTTP'() {
         when: 'a form submission posts id, version and a regular property to a domain whose base opts id into binding'
-        def response = httpPost('/dirtyCheckBinding/bindInheritedBindableId', 'id=99&version=5&description=Opening+balance', FORM)
+        def response = httpPostForm(
+                '/dirtyCheckBinding/bindInheritedBindableId',
+                [
+                        id: 99,
+                        version: 5,
+                        description: 'Opening balance'
+                ]
+        )
 
         then: 'the request succeeds'
         response.assertStatus(200)

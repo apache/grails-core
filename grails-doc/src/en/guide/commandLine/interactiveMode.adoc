@@ -61,23 +61,23 @@ You can access general usage information for Grails commands using the help flag
 [source,shell]
 ----
 grails> create-app -h
-Usage: grails create-app [-hivVx] [--list-features] [-g=GORM Implementation] [--jdk=<javaVersion>]
+Usage: grails create-app [-hivVx] [--list-features] [-d=Grails Data Implementation] [--jdk=<javaVersion>]
                          [-s=Servlet Implementation] [-t=TEST] [-f=FEATURE[,FEATURE...]]... [NAME]
 Creates an application
       [NAME]            The name of the application to create.
   -f, --features=FEATURE[,FEATURE...]
                         The features to use. Possible values: h2, scaffolding, gorm-hibernate5,
-                          spring-boot-starter-jetty, spring-boot-starter-tomcat,
+                          gorm-hibernate7, spring-boot-starter-jetty, spring-boot-starter-tomcat,
                           micronaut-http-client, cache-ehcache, hibernate-validator, postgres,
                           mysql, cache, database-migration, grails-gsp, hamcrest, gorm-mongodb,
-                          assertj, mockito, spring-boot-starter-undertow,
+                          assertj, mockito, grails-undertow,
                           github-workflow-java-ci, jrebel, testcontainers, sqlserver,
                           grails-console, views-markup, asset-pipeline-grails, views-json,
                           gorm-neo4j, asciidoctor, grails-web-console,
                           logbackGroovy, mongo-sync, shade, geb, properties
-  -g, --gorm=GORM Implementation
-                        Which GORM Implementation to configure. Possible values: hibernate,
-                          mongodb, neo4j.
+  -d, --data, -g, --gorm=Grails Data Implementation
+                        Which Grails Data implementation to configure (-g, --gorm are legacy
+                          aliases). Possible values: hibernate5, hibernate7, mongodb.
   -h, --help            Show this help message and exit.
   -i, --inplace         Create a service using the current directory
       --jdk, --java-version=<javaVersion>
@@ -116,8 +116,9 @@ Available Features
 
   Database
   database-migration                  Adds support for Liquibase database migrations. The Database Migration plugin helps you manage database changes while developing Grails applications.
-  gorm-hibernate5 (+)                 Adds support for Hibernate5 using GORM
-  gorm-mongodb                        Configures GORM for MongoDB for Groovy applications
+  gorm-hibernate5 (+)                 Configure Grails Data for using Hibernate 5.
+  gorm-hibernate7                     Configure Grails Data for using Hibernate 7.
+  gorm-mongodb                        Configure Grails Data for using MongoDB.
   gorm-neo4j                          Configures GORM for Neo4j for Groovy applications
   h2 (+)                              Adds the H2 driver and default config
   mongo-sync                          Adds support for the MongoDB Synchronous Driver
@@ -151,7 +152,7 @@ Available Features
   Server
   spring-boot-starter-jetty           spring-boot-starter-jetty
   spring-boot-starter-tomcat (+)      spring-boot-starter-tomcat
-  spring-boot-starter-undertow        spring-boot-starter-undertow
+  grails-undertow                     grails-undertow
 
   Validation
   hibernate-validator                 Adds support for the Hibernate Validator

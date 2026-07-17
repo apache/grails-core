@@ -222,7 +222,7 @@ json {
 
 == Specifying the HAL Content Type
 
-The default HAL response content type is `application/hal+json`, however as discussed in the section on link:#mime[TypesCustom Mime Type] you can define your own response content types to represent your resources.
+The default HAL response content type is `application/hal+json`, however as discussed in the section on <<mimeTypes,custom MIME types>> you can define your own response content types to represent your resources.
 
 For example given the following configuration in `grails-app/conf/application.yml`:
 

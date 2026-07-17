@@ -176,6 +176,9 @@ public class UrlMappingUtils {
             Map<String, Object> urlAttrs = new HashMap<>();
             urlAttrs.put("controller", info.getControllerName());
             urlAttrs.put("action", info.getActionName());
+            if (info.getNamespace() != null || isNamespaceSpecified(info)) {
+                urlAttrs.put(LinkGenerator.ATTRIBUTE_NAMESPACE, info.getNamespace());
+            }
             // returned url is always pass to RequestDispather so it has to be relative
             // otherwise RequestDispather append its own context and context appears twice in url
             urlAttrs.put(LinkGenerator.ATTRIBUTE_INCLUDE_CONTEXT, false);
@@ -192,6 +195,10 @@ public class UrlMappingUtils {
             }
         }
         return forwardUrl.toString();
+    }
+
+    private static boolean isNamespaceSpecified(UrlMappingInfo info) {
+        return info instanceof ForwardUrlMappingInfo && ((ForwardUrlMappingInfo) info).isNamespaceSpecified();
     }
 
     /**

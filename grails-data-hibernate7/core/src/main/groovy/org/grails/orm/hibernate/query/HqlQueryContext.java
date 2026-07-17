@@ -58,7 +58,6 @@ import static org.grails.orm.hibernate.query.HqlQueryMethods.convertValue;
     "PMD.AvoidLiteralsInIfCondition",
     "PMD.UseLocaleWithCaseConversions"
 })
-//TODO Cleanup
 public record HqlQueryContext(
         String hql,
         Class<?> targetClass,

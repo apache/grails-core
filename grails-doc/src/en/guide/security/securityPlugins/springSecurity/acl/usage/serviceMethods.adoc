@@ -1,0 +1,98 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[acl-serviceMethods]]
+=== Securing Service Methods
+
+There are two primary use cases for ACL security: determining whether a user is allowed to perform an action on an instance before the action is invoked, and restricting access to single or multiple instances after methods are invoked (this is typically implemented by collection filtering). You can call `aclUtilService.hasPermission()` explicitly, but this tends to clutter your code with security logic that often has little to do with business logic. Instead, Spring Security provides some convenient annotations that are used to wrap your method calls in access checks.
+
+There are four annotations:
+
+* https://docs.spring.io/spring-security/site/docs/6.4.x/api/org/springframework/security/access/prepost/PreAuthorize.html[@PreAuthorize]
+* https://docs.spring.io/spring-security/site/docs/6.4.x/api/org/springframework/security/access/prepost/PreFilter.html[@PreFilter]
+* https://docs.spring.io/spring-security/site/docs/6.4.x/api/org/springframework/security/access/prepost/PostAuthorize.html[@PostAuthorize]
+* https://docs.spring.io/spring-security/site/docs/6.4.x/api/org/springframework/security/access/prepost/PostFilter.html[@PostFilter]
+
+The annotations use security-specific Spring expression language (SpEL) expressions - see https://docs.spring.io/spring-security/reference/servlet/authorization/authorize-http-requests.html#authorization-expressions[the documentation] for the available standard and method expressions.
+
+Here's an example service that manages a `Report` domain class and uses these annotations and expressions:
+
+[source,groovy]
+----
+import org.springframework.security.access.prepost.PostFilter
+import org.springframework.security.access.prepost.PreAuthorize
+import org.springframework.security.core.parameters.P
+import grails.gorm.transactions.Transactional
+
+import com.yourapp.Report
+
+class ReportService {
+
+   @PreAuthorize("hasPermission(#id, 'com.yourapp.Report', read) or " +
+                 "hasPermission(#id, 'com.yourapp.Report', admin)")
+   Report getReport(@P("id") long id) {
+      Report.get(id)
+   }
+
+   @Transactional
+   @PreAuthorize("hasRole('ROLE_USER')")
+   Report createReport(params) {
+      Report report = new Report(params)
+      report.save()
+      report
+   }
+
+   @PreAuthorize("hasRole('ROLE_USER')")
+   @PostFilter("hasPermission(filterObject, read) or " +
+               "hasPermission(filterObject, admin)")
+   List getAllReports(params = [:]) {
+      Report.list(params)
+   }
+
+   @Secured(['ROLE_USER', 'ROLE_ADMIN'])
+   String getReportName(long id) {
+      Report.get(id).name
+   }
+
+   @Transactional
+   @PreAuthorize("hasPermission(#report, write) or " +
+                 "hasPermission(#report, admin)")
+   Report updateReport(@P("report") Report report, params) {
+      report.properties = params
+      report.save()
+      report
+   }
+
+   @Transactional
+   @PreAuthorize("hasPermission(#report, delete) or " +
+                 "hasPermission(#report, admin)")
+   void deleteReport(@P("report") Report report) {
+      report.delete()
+   }
+}
+----
+
+The configuration specifies these rules:
+
+* `getReport` requires that the authenticated user have `BasePermission.READ` or `BasePermission.ADMIN` for the instance
+* `createReport` requires `ROLE_USER`
+* `getAllReports` requires `ROLE_USER` and will have elements removed from the returned `List` that the user doesn't have an ACL grant for; the user must have `BasePermission.READ` or `BasePermission.ADMIN` for each element in the list; elements that don't have access granted will be removed
+* `getReportName` requires that the authenticated user have either `ROLE_USER` or `ROLE_ADMIN` (but no ACL rules)
+* `updateReport` has no role restrictions but must satisfy the requirements of the `aclReportWriteVoter` voter (which has the `ACL_REPORT_WRITE` config attribute), i.e. `BasePermission.ADMINISTRATION` or `BasePermission.WRITE`
+* `deleteReport` has no role restrictions but must satisfy the requirements of the `aclReportDeleteVoter` voter (which has the `ACL_REPORT_DELETE` config attribute), i.e. `BasePermission.ADMINISTRATION` or `BasePermission.DELETE`

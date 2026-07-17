@@ -1,0 +1,47 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+The Spring Security REST Grails plugin allows you to use Spring Security for a stateless, token-based, RESTful authentication.
+
+Versions `1.x.` of the plugin are compatible with Grails 2, whereas versions `2.x` are to be used with Grails 3.
+
+[[rest-introduction]]
+== Motivation
+
+The default behaviour of Spring Security is to store the authenticated principal in the HTTP session. However, in a
+RESTful scenario, we need to make sure our server is stateless.
+
+The typical flow could be the following:
+
+.Sequence diagram overview of the plugin behavior
+image::images/rest.png[]
+
+. The client application requests and endpoint that requires authentication, so the server responds with a 401 response.
+. The client redirects the user to the login form.
+. The user enter credentials, and the client sends a request to the authentication endpoint. The server validates credentials, and if valid, generates, stores and sends back a token to the client.
+. The client then stores the token internally. It will be sent on every API method request.
+. The client sends again a request to the protected resource, passing the token as an HTTP header.
+. The server validates the token, and if valid, executes the actual operation requested.
+
+As per the http://en.wikipedia.org/wiki/Representational_state_transfer[REST definition], the client is transferring its
+state on every request so the server is truly stateless.
+
+This plugin helps you to wire your existing Spring Security authentication mechanism, provides you
+with ready-to-use token generation strategies and comes prepackaged with JWT, Memcached, GORM, Redis
+and Grails Cache support for token storage.

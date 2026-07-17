@@ -1,0 +1,53 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[ui-user]]
+== User Management
+
+=== User search
+
+The default action for the User controller is search. By default only the standard fields (`username`, `enabled`, `accountExpired`, `accountLocked`, and `passwordExpired`) are available but this is customizable with the <<ui-s2ui-override>> script - see the <<ui-customization>> section for details.
+
+You can search by any combination of fields, and the `username` field has an Ajax autocomplete to assist in finding instances. In this screenshot you can see that an `email` field has been added to the domain class and UI. Leave all fields empty and all checkboxes set at "Either" to return all instances.
+
+image::user_search_start.png[]
+
+This example shows a search for usernames containing 'adm' (the search is case-insensitive and the search string can appear anywhere in the username). Results are shown paginated in groups of 10. All of the column headers are clickable and will sort the results by that field.
+
+image::user_search_results.png[]
+
+=== User edit
+
+After clicking through to the 'admin' User you get to the edit page (there are no view pages):
+
+image::user_edit.png[]
+
+You can update any of the attributes or delete the User. You can see that there's a "Login as user" button here - that is only shown if you're authenticated with a User who is granted `ROLE_SWITCH_USER` (this role name can be configured in `application.groovy`):
+
+This allows you to temporarily assume the identity of another User (see https://apache.github.io/grails-spring-security/latest/index.html#switchUser[the Grails Spring Security Core Plugin documentation] for more information about switch-user). The "Logged in as ..." information in the top right of the screen will change to show that you're running as another User and provide a link to switch back. The role name `ROLE_SWITCH_USER` is the default but you can change the value with the `grails.plugin.springsecurity.ui.switchUserRoleName` setting in application.groovy.
+
+If you click the Roles tab you can see the roles granted to this User and can click through to its edit page:
+
+image::user_edit_roles.png[]
+
+=== User creation
+
+You can create new Users by going to `/user/create` or by clicking the `Create` action in the `Users` menu.
+
+image::user_create.png[]

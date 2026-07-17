@@ -60,8 +60,27 @@ name,description,default value
 `hibernate.cache.use_query_cache`, Enables the query cache, `false`
 `hibernate.configLocations`, Location of additional Hibernate XML configuration files
 `hibernate.packagesToScan`, Specify packages to search for autodetection of your entity classes in the classpath
+`hibernate.grails.proxy.lazy_to_string`, Whether `toString()` on an uninitialized proxy avoids initializing it (see Proxies and toString()), `false`
 |===
 
 In addition, any additional settings that start with `hibernate.` are passed through to Hibernate, so if there is any specific feature of Hibernate you wish to configure that is possible.
+
+
+==== Proxies and toString()
+
+
+Grails proxies answer identifier access (`id`, `getId()`, `ident()`) and `metaClass` access without initializing the proxy. By default, calling `toString()` on an uninitialized proxy initializes it and delegates to the domain class's own `toString()` implementation.
+
+If you prefer `toString()` to also avoid initialization — for example to keep log statements from triggering database access — enable lazy `toString()` in `application.yml`:
+
+[source,yaml]
+----
+hibernate:
+    grails:
+        proxy:
+            lazy_to_string: true
+----
+
+With this setting enabled, `toString()` on an uninitialized proxy returns `entityName:id` (for example `com.example.Author:1`) without initializing it. Once the proxy has been initialized, `toString()` always delegates to the domain class's implementation.
 
 TIP: The above table covers the common configuration options. For all configuration refer to properties of the link:../api/org/grails/orm/hibernate/connections/HibernateConnectionSourceSettings.html[HibernateConnectionSourceSettings] class.

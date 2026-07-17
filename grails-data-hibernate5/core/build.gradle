@@ -25,6 +25,7 @@ plugins {
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
     id 'org.apache.grails.gradle.grails-code-style'
     id 'org.apache.grails.gradle.grails-jacoco'
 }
@@ -73,11 +74,6 @@ dependencies {
     testImplementation 'org.apache.groovy:groovy-json'
     testImplementation 'org.apache.tomcat:tomcat-jdbc'
     testImplementation 'org.spockframework:spock-core'
-    testImplementation 'org.yakworks:hibernate-groovy-proxy', {
-        // groovy proxy fixes bytebuddy to be a bit smarter when it comes to groovy metaClass
-        exclude group: 'org.codehaus.groovy', module: 'groovy'
-    }
-
     testRuntimeOnly 'org.hibernate:hibernate-ehcache', {
         // exclude javax variant of hibernate-core 5.6
         exclude group: 'org.hibernate', module: 'hibernate-core'

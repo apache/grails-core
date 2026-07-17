@@ -19,13 +19,19 @@
 package org.grails.forge.options;
 
 import io.micronaut.core.annotation.NonNull;
+import io.micronaut.core.annotation.Nullable;
 
 public enum GormImpl {
 
-    HIBERNATE("gorm-hibernate5", "Hibernate 5"),
+    HIBERNATE5("gorm-hibernate5", "Hibernate 5"),
+    HIBERNATE7("gorm-hibernate7", "Hibernate 7"),
     MONGODB("gorm-mongodb", "MongoDB");
 
-    public static final GormImpl DEFAULT_OPTION = HIBERNATE;
+    public static final GormImpl DEFAULT_OPTION = HIBERNATE5;
+
+    // Selection value accepted before HIBERNATE5 replaced the HIBERNATE constant
+    private static final String LEGACY_HIBERNATE_VALUE = "hibernate";
+
     private final String featureName;
     private final String label;
 
@@ -42,6 +48,29 @@ public enum GormImpl {
     @NonNull
     public String getLabel() {
         return label;
+    }
+
+    /**
+     * Resolves a user-supplied selection value to a {@link GormImpl}.
+     *
+     * @param value the selection value (case-insensitive), e.g. {@code hibernate5};
+     *              the legacy value {@code hibernate} resolves to {@link #HIBERNATE5}
+     * @return the matching implementation, or {@code null} when the value is unknown
+     */
+    @Nullable
+    public static GormImpl parse(@Nullable String value) {
+        if (value == null) {
+            return null;
+        }
+        if (LEGACY_HIBERNATE_VALUE.equalsIgnoreCase(value)) {
+            return HIBERNATE5;
+        }
+        for (GormImpl impl : values()) {
+            if (value.equalsIgnoreCase(impl.name())) {
+                return impl;
+            }
+        }
+        return null;
     }
 
 }

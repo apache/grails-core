@@ -31,18 +31,18 @@ import org.grails.forge.feature.FeatureContext;
  * Adds the {@code grails-data-graphql} plugin to the generated application.
  *
  * <p>GraphQL is a layer on top of GORM rather than a GORM implementation, so
- * this feature is selectable in addition to (not instead of) {@link HibernateGorm}
- * or {@link MongoGorm}. If the user opts into GraphQL without explicitly
+ * this feature is selectable in addition to (not instead of) {@link GrailsDataHibernate5}
+ * or {@link GrailsDataMongoDB}. If the user opts into GraphQL without explicitly
  * selecting a GORM persistence layer, Hibernate is added as a sensible default
  * via {@link #processSelectedFeatures(FeatureContext)}.</p>
  */
 @Singleton
 public class GraphqlGorm implements Feature {
 
-    private final HibernateGorm hibernateGorm;
+    private final GrailsDataHibernate5 grailsDataHibernate5;
 
-    public GraphqlGorm(HibernateGorm hibernateGorm) {
-        this.hibernateGorm = hibernateGorm;
+    public GraphqlGorm(GrailsDataHibernate5 grailsDataHibernate5) {
+        this.grailsDataHibernate5 = grailsDataHibernate5;
     }
 
     @Override
@@ -52,12 +52,12 @@ public class GraphqlGorm implements Feature {
 
     @Override
     public String getTitle() {
-        return "GORM for GraphQL";
+        return "Grails Data for GraphQL";
     }
 
     @Override
     public String getDescription() {
-        return "Generates a GraphQL schema based on entities in GORM.";
+        return "Generates a GraphQL schema based on entities in Grails Data.";
     }
 
     @Override
@@ -75,7 +75,7 @@ public class GraphqlGorm implements Feature {
         // GraphQL needs a GORM implementation to introspect; default to Hibernate
         // when the user has not explicitly chosen a GORM provider.
         if (!featureContext.isPresent(GormFeature.class) && !featureContext.isPresent(GormOneOfFeature.class)) {
-            featureContext.addFeature(hibernateGorm);
+            featureContext.addFeature(grailsDataHibernate5);
         }
     }
 

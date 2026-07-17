@@ -20,7 +20,7 @@ under the License.
 The `create-app` command is available in both the Grails Shell CLI and the Forge CLI.
 
 - Use `grails create-app myapp` to generate a default project using the Grails Shell CLI. This is the most common usage.
-- Use `grails -t forge create-app myapp` to access advanced application generation options such as `--jdk`, `--gorm`, and other Forge-only flags.
+- Use `grails -t forge create-app myapp` to access advanced application generation options such as `--jdk`, `--data`, and other Forge-only flags.
 
 The example below assumes you are using the Forge CLI, which is solely intended for **application generation**. It does not support running, building, or managing a Grails application.
 

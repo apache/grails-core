@@ -409,7 +409,7 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
                         for (i = 0; i < values.length; i++) {
                             sb.append(LINE_SEPARATOR).append(param).append(": ");
 
-                            if (blackList.contains(param)) {
+                            if (isExcludedRequestParameter(param, blackList)) {
                                 sb.append("***");
                             } else {
                                 sb.append(values[i]);
@@ -427,6 +427,18 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
         sb.append("Stacktrace follows:");
 
         return sb.toString();
+    }
+
+    protected boolean isExcludedRequestParameter(String parameterName, List<String> excludedParameterNames) {
+        if (parameterName == null || excludedParameterNames == null) {
+            return false;
+        }
+        for (String excludedParameterName : excludedParameterNames) {
+            if (excludedParameterName != null && parameterName.equalsIgnoreCase(excludedParameterName)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     protected void createStackFilterer() {

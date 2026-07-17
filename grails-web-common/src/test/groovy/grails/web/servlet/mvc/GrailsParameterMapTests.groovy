@@ -18,12 +18,17 @@
  */
 package grails.web.servlet.mvc
 
+import jakarta.servlet.FilterChain
+import jakarta.servlet.http.HttpServletRequest
+
 import org.junit.jupiter.api.Test
 import org.springframework.context.support.StaticMessageSource
 import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.mock.web.MockServletContext
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.support.GenericWebApplicationContext
+import org.springframework.web.filter.FormContentFilter
 import spock.lang.Issue
 
 import static org.junit.jupiter.api.Assertions.*
@@ -92,82 +97,47 @@ class GrailsParameterMapTests {
     }
 
     @Test
-    void testParseRequestBodyForPutRequest() {
-        def request = new MockHttpServletRequest()
-        request.content = 'foo=bar&one=two'.bytes
-        request.method = 'PUT'
-        request.contentType = "application/x-www-form-urlencoded"
-
-        def params = new GrailsParameterMap(request)
+    void testFormEncodedPutBodyIsExposedAsParams() {
+        def params = new GrailsParameterMap(formFilteredRequest('PUT', 'foo=bar&one=two', 'application/x-www-form-urlencoded'))
 
         assert 'bar' == params.foo
         assert 'two' == params.one
-
-        params = new GrailsParameterMap(request)
-        assert params.foo == null // should be null, request can't be parsed twice
-
-        request = new MockHttpServletRequest()
-        request.method = 'PUT'
-        request.content = 'foo='.bytes
-        request.contentType = "application/x-www-form-urlencoded"
-        request.removeAttribute(GrailsParameterMap.REQUEST_BODY_PARSED)
-
-        params = new GrailsParameterMap(request)
-
-        assert '' == params.foo
     }
 
     @Test
-    void testParseRequestBodyForPutRequestWithCharset() {
-        def request = new MockHttpServletRequest()
-        request.content = 'foo=bar&one=two'.bytes
-        request.method = 'PUT'
-        request.contentType = "application/x-www-form-urlencoded; charset=UTF-8"
-
-        def params = new GrailsParameterMap(request)
+    void testFormEncodedPutBodyWithCharsetIsExposedAsParams() {
+        def params = new GrailsParameterMap(formFilteredRequest('PUT', 'foo=bar&one=two', 'application/x-www-form-urlencoded; charset=UTF-8'))
 
         assert 'bar' == params.foo
         assert 'two' == params.one
-
-        params = new GrailsParameterMap(request)
-        assert params.foo == null // should be null, request can't be parsed twice
-
-        request = new MockHttpServletRequest()
-        request.method = 'PUT'
-        request.contentType = "application/x-www-form-urlencoded; charset=UTF-8"
-        request.content = 'foo='.bytes
-        request.removeAttribute(GrailsParameterMap.REQUEST_BODY_PARSED)
-
-        params = new GrailsParameterMap(request)
-
-        assert '' == params.foo
     }
 
     @Test
-    void testParseRequestBodyForPatchRequest() {
-        def request = new MockHttpServletRequest()
-        request.content = 'foo=bar&one=two'.bytes
-        request.method = 'PATCH'
-        request.contentType = "application/x-www-form-urlencoded"
-
-        def params = new GrailsParameterMap(request)
+    void testFormEncodedPatchBodyIsExposedAsParams() {
+        def params = new GrailsParameterMap(formFilteredRequest('PATCH', 'foo=bar&one=two', 'application/x-www-form-urlencoded'))
 
         assert 'bar' == params.foo
         assert 'two' == params.one
+    }
 
-        params = new GrailsParameterMap(request)
-        assert params.foo == null // should be null, request can't be parsed twice
+    @Test
+    void testFormEncodedDeleteBodyIsExposedAsParams() {
+        def params = new GrailsParameterMap(formFilteredRequest('DELETE', 'foo=bar&one=two', 'application/x-www-form-urlencoded'))
 
-        request = new MockHttpServletRequest()
-        request.content = 'foo=bar&one=two'.bytes
-        request.method = 'PATCH'
-        request.contentType = "application/x-www-form-urlencoded"
-        request.content = 'foo='.bytes
-        request.removeAttribute(GrailsParameterMap.REQUEST_BODY_PARSED)
+        assert 'bar' == params.foo
+        assert 'two' == params.one
+    }
 
-        params = new GrailsParameterMap(request)
-
-        assert '' == params.foo
+    // Runs the request through Spring's FormContentFilter — the same filter Boot registers at runtime —
+    // and returns the wrapped request, so the test exercises the real parsing path instead of a fallback.
+    private static HttpServletRequest formFilteredRequest(String method, String body, String contentType) {
+        def request = new MockHttpServletRequest()
+        request.method = method
+        request.contentType = contentType
+        request.content = body.bytes
+        HttpServletRequest[] filtered = new HttpServletRequest[1]
+        new FormContentFilter().doFilter(request, new MockHttpServletResponse(), { req, res -> filtered[0] = (HttpServletRequest) req } as FilterChain)
+        filtered[0]
     }
 
     @Test

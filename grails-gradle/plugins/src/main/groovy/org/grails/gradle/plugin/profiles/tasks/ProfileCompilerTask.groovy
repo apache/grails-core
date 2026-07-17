@@ -206,7 +206,9 @@ abstract class ProfileCompilerTask extends AbstractCompile {
             f.name.endsWith('.yml')
         } ?: []) as List<File>
 
-        Map<String, String> commandNames = [:]
+        // Use a sorted map so the generated commands ordering is deterministic
+        // (the file tree iteration order is filesystem-dependent) and the build is reproducible
+        Map<String, String> commandNames = new TreeMap<>()
         for (File f in groovySourceFiles) {
             def fn = f.name
             commandNames.put(fn - '.groovy', fn)

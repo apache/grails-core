@@ -34,6 +34,8 @@ tasks.withType(Test).configureEach {
                 'onlyHibernate5Tests',
                 'skipHibernate7Tests',
                 'onlyMongodbTests',
+                'onlyRedisTests',
+                'onlySpringSecurityTests',
                 'onlyCoreTests',
                 'skipTests'
         ].find {
@@ -42,7 +44,10 @@ tasks.withType(Test).configureEach {
     }
 
     useJUnitPlatform()
-    systemProperty('hibernate7.gorm.suite', System.getProperty('hibernate7.gorm.suite') ?: true)
+    // Lets TCK specs gate features on the running suite. Spock evaluates @IgnoreIf/@Requires
+    // preconditions before setupSpec() runs, so this must be set at the task level - a
+    // TCK-manager System.setProperty would come too late.
+    systemProperty('hibernate7.gorm.suite', 'true')
     reports.html.required = !isCiBuild
     reports.junitXml.required = !isCiBuild
     testLogging {

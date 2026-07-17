@@ -1,0 +1,84 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-authorityClass]]
+=== Authority Class
+
+The Spring Security plugin uses an "`authority`" class to represent a user's roles in the application. In general this class restricts URLs to users who have been assigned the required access rights. A user can be granted multiple roles to indicate various access rights in the application, and should have at least one. A basic user who can access only non-restricted resources but can still authenticate is a bit unusual. Spring Security usually functions fine if a user has no granted authorities, but fails in a few places that assume one or more. So if a user authenticates successfully but has no granted roles, the plugin grants the user a "`virtual`" role, `ROLE_NO_ROLES`. Thus the user satisfies Spring Security's requirements but cannot access secure resources, as you would not associate any secure resources with this role.
+
+[TIP]
+====
+Note that you aren't required to use roles at all; an application with simple security requirements could use the `isAuthenticated()` expression for guarded URLs to partition the site's URLs into those that are accessible to anyone and those that merely require an authenticated user.
+====
+
+Like the "`person`" class, the "`authority`" class has a default name, `Authority`, and a default name for its one required property, `authority`.
+If you want to use another existing domain class, it simply has to have a property for name. As with the name of the class, the names of the properties can be whatever you want - they're specified in `grails-app/conf/application.groovy`.
+
+Assuming you choose `com.mycompany.myapp` as your package, and `Role` as your class name, you'll generate this class:
+
+[source, groovy]
+.`Role.groovy`
+----
+package com.mycompany.myapp
+
+import groovy.transform.EqualsAndHashCode
+import groovy.transform.ToString
+import grails.compiler.GrailsCompileStatic
+
+@GrailsCompileStatic
+@EqualsAndHashCode(includes='authority')
+@ToString(includes='authority', includeNames=true, includePackage=false)
+class Role implements Serializable {
+
+    private static final long serialVersionUID = 1
+
+    String authority
+
+    static constraints = {
+        authority blank: false, unique: true
+    }
+
+    static mapping = {
+        cache true
+    }
+}
+----
+
+The class and property names are configurable using these configuration attributes:
+
+.Role class configuration options
+[cols="30,30,40"]
+|====================
+| *Property* | *Default Value* | *Meaning*
+
+|authority.className
+|_none_
+|Role class name
+
+|authority.nameField
+|"`authority`"
+|Role class role name property
+|====================
+
+[NOTE]
+====
+Role names must start with "`ROLE_`". This is configurable in Spring Security, but not in the plugin. It would be possible to allow different prefixes, but it's important that the prefix not be blank as the prefix is used to differentiate between role names and tokens such as IS_AUTHENTICATED_FULLY/IS_AUTHENTICATED_ANONYMOUSLY/etc., and SpEL expressions.
+
+The role names should be primarily an internal implementation detail; if you want to display friendlier names in a UI, it's simple to remove the prefix first.
+====

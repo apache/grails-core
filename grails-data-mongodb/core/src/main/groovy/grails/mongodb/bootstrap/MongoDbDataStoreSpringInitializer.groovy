@@ -126,7 +126,7 @@ class MongoDbDataStoreSpringInitializer extends AbstractDatastoreInitializer {
             }
 
             def classLoader = getClass().getClassLoader()
-            if (beanDefinitionRegistry.containsBeanDefinition('dispatcherServlet') && ClassUtils.isPresent(OSIV_CLASS_NAME, classLoader)) {
+            if (isWebApplicationRegistry(beanDefinitionRegistry) && ClassUtils.isPresent(OSIV_CLASS_NAME, classLoader)) {
                 String interceptorName = 'mongoOpenSessionInViewInterceptor'
                 "${interceptorName}"(ClassUtils.forName(OSIV_CLASS_NAME, classLoader)) {
                     datastore = ref('mongoDatastore')

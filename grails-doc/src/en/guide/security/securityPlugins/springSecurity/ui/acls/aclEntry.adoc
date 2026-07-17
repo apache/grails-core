@@ -1,0 +1,45 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[ui-aclEntry]]
+=== AclEntry Management
+
+The default action for the AclEntry controller is search. By default only the standard fields are available but this is customizable with the <<ui-s2ui-override>> script - see the <<ui-customization>> section for details.
+
+Leave all fields at their default values to return all instances.
+
+image::acls/acl_entry_search_start.png[]
+
+Results are shown paginated in groups of 10 and you can click on any header to sort by that field:
+
+image::acls/acl_entry_search_results.png[]
+
+==== AclEntry Edit
+
+After clicking through to an AclEntry you get to the edit page (there are no view pages):
+
+image::acls/acl_entry_edit.png[]
+
+You can update any of the attributes or delete the AclEntry.
+
+==== AclEntry Create
+
+You can create new instances by going to `/aclEntry/create` or by clicking the `Create` action in the `Entry` menu under `ACL`.
+
+image::acls/acl_entry_create.png[]

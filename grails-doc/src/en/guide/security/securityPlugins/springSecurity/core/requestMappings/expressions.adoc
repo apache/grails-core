@@ -1,0 +1,141 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-expressions]]
+=== Using Expressions to Create Descriptive, Fine-Grained Rules
+
+Spring Security uses the {springFrameworkReferenceUrl}expressions.html[Spring Expression Language (SpEL)], which allows you to declare the rules for guarding URLs more descriptively than does the traditional approach, and also allows much more fine-grained rules. Where you traditionally would specify a list of role names and/or special tokens (for example, `IS_AUTHENTICATED_FULLY`), with https://{springSecurityHtmlSingleUrl}#el-access[Spring Security's expression support], you can instead use the embedded scripting language to define simple or complex access rules.
+
+You can use expressions with any of the previously described approaches to securing application URLs. For example, consider this annotated controller:
+
+[source,groovy]
+.Listing {counter:listing}. An annotated controller
+----
+package com.yourcompany.yourapp
+
+import grails.plugin.springsecurity.annotation.Secured
+
+class SecureController {
+
+   @Secured("hasRole('ROLE_ADMIN')")
+   def someAction() {
+      ...
+   }
+
+   @Secured("authentication.name == 'ralph'")
+   def someOtherAction() {
+      ...
+   }
+}
+----
+
+In this example, `someAction` requires `ROLE_ADMIN`, and `someOtherAction` requires that the user be logged in with username "`ralph`".
+
+The corresponding `Requestmap` URLs would be
+
+[source,groovy]
+.Listing {counter:listing}. Creating Requestmap instances
+----
+new Requestmap(url: "/secure/someAction",
+               configAttribute: "hasRole('ROLE_ADMIN')").save()
+
+new Requestmap(url: "/secure/someOtherAction",
+               configAttribute: "authentication.name == 'ralph'").save()
+----
+
+and the corresponding static mappings would be
+
+[source,groovy]
+.Listing {counter:listing}. Adding mappings in `grails.plugin.springsecurity.controllerAnnotations.staticRules`
+----
+grails.plugin.springsecurity.controllerAnnotations.staticRules = [
+   [pattern: '/secure/someAction',      access: ["hasRole('ROLE_ADMIN')"]],
+   [pattern: '/secure/someOtherAction', access: ["authentication.name == 'ralph'"]]
+]
+----
+
+The Spring Security docs have a https://{springSecurityHtmlSingleUrl}#el-common-built-in[table listing the standard expressions], which is copied here for reference:
+
+.Spring Security expressions
+[cols="50,50"]
+|====================
+| *Expression* | *Description*
+
+|`hasRole(role)`
+|Returns `true` if the current principal has the specified role
+
+|`hasAnyRole([role1,role2])`
+|Returns `true` if the current principal has any of the supplied roles (given as a comma-separated list of strings)
+
+|`principal`
+|Allows direct access to the principal object representing the current user
+
+|`authentication`
+|Allows direct access to the current `Authentication` object obtained from the `SecurityContext`
+
+|`permitAll`
+|Always evaluates to `true`
+
+|`denyAll`
+|Always evaluates to `false`
+
+|`isAnonymous()`
+|Returns `true` if the current principal is an anonymous user
+
+|`isRememberMe()`
+|Returns `true` if the current principal is a remember-me user
+
+|`isAuthenticated()`
+|Returns `true` if the user is not anonymous
+
+|`isFullyAuthenticated()`
+|Returns `true` if the user is not an anonymous or a remember-me user
+
+|`request`
+|the HTTP request, allowing expressions such as "`isFullyAuthenticated() or request.getMethod().equals('OPTIONS')`"
+
+|====================
+
+In addition, you can use a web-specific expression `hasIpAddress`. However, you may find it more convenient to separate IP restrictions from role restrictions by using the IP address filter (<<core-ip>>).
+
+To help you migrate traditional configurations to expressions, this table compares various configurations and their corresponding expressions:
+
+.Traditional configurations and associated expressions
+[cols="50,50"]
+|====================
+| *Traditional Config* | *Expression*
+
+|`ROLE_ADMIN`
+|`hasRole('ROLE_ADMIN')`
+
+|`ROLE_USER,ROLE_ADMIN`
+|`hasAnyRole('ROLE_USER','ROLE_ADMIN')`
+
+|`ROLE_ADMIN,IS_AUTHENTICATED_FULLY`
+|`hasRole('ROLE_ADMIN') and isFullyAuthenticated()`
+
+|`IS_AUTHENTICATED_ANONYMOUSLY`
+|`permitAll`
+
+|`IS_AUTHENTICATED_REMEMBERED`
+|`isAuthenticated() or isRememberMe()`
+
+|`IS_AUTHENTICATED_FULLY`
+|`isFullyAuthenticated()`
+|====================

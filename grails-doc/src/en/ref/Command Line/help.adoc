@@ -134,23 +134,23 @@ NOTE: To access help for Forge-only options such as `--features`, `--jdk`, or `-
 [source,shell]
 ----
 grails> create-app --help
-Usage: grails create-app [-hivVx] [--list-features] [-g=GORM Implementation] [--jdk=<javaVersion>]
+Usage: grails create-app [-hivVx] [--list-features] [-d=Grails Data Implementation] [--jdk=<javaVersion>]
                          [-s=Servlet Implementation] [-t=TEST] [-f=FEATURE[,FEATURE...]]... [NAME]
 Creates an application
       [NAME]            The name of the application to create.
   -f, --features=FEATURE[,FEATURE...]
                         The features to use. Possible values: h2, scaffolding, gorm-hibernate5,
-                          spring-boot-starter-jetty, spring-boot-starter-tomcat,
+                          gorm-hibernate7, spring-boot-starter-jetty, spring-boot-starter-tomcat,
                           micronaut-http-client, cache-ehcache, hibernate-validator, postgres,
                           mysql, cache, database-migration, grails-gsp, hamcrest, gorm-mongodb,
-                          assertj, mockito, spring-boot-starter-undertow,
+                          assertj, mockito, grails-undertow,
                           github-workflow-java-ci, jrebel, testcontainers, sqlserver,
                           grails-console, views-markup, asset-pipeline-grails, views-json,
                           gorm-neo4j, asciidoctor, grails-web-console,
                           logbackGroovy, mongo-sync, shade, geb, properties
-  -g, --gorm=GORM Implementation
-                        Which GORM Implementation to configure. Possible values: hibernate,
-                          mongodb, neo4j.
+  -d, --data, -g, --gorm=Grails Data Implementation
+                        Which Grails Data implementation to configure (-g, --gorm are legacy
+                          aliases). Possible values: hibernate5, hibernate7, mongodb.
   -h, --help            Show this help message and exit.
   -i, --inplace         Create a service using the current directory
       --jdk, --java-version=<javaVersion>

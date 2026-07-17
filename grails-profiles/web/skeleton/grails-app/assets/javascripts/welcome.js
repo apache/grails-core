@@ -99,7 +99,7 @@
             });
         });
 
-        // Initial load: show ascending indicator on Name (and sort to match).
+        // Initial load: show the ascending indicator on Name; the server already renders rows in that order.
         const defaultKey = 'name';
         const defaultTh = headers.find((th) => (th.getAttribute('data-sort-key') || '') === defaultKey);
         if (defaultTh) {
@@ -111,5 +111,46 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('table[data-sortable]').forEach(initSortableTable);
+    });
+})();
+(function () {
+    function applyFilter(input) {
+        const list = document.querySelector(input.getAttribute('data-filter-list') || '');
+        if (!list) return;
+
+        const query = input.value.trim().toLowerCase();
+        let visible = 0;
+
+        list.querySelectorAll('[data-name]').forEach((el) => {
+            const show = !query || (el.getAttribute('data-name') || '').toLowerCase().includes(query);
+            el.classList.toggle('d-none', !show);
+            if (show) visible++;
+        });
+
+        // Collapse groups (e.g. controller namespaces) left with no visible entries.
+        list.querySelectorAll('[data-filter-group]').forEach((group) => {
+            group.classList.toggle('d-none', !group.querySelector('[data-name]:not(.d-none)'));
+        });
+
+        const empty = document.querySelector(input.getAttribute('data-filter-empty') || '');
+        if (empty) empty.classList.toggle('d-none', visible > 0);
+
+        // Surface an engaged filter on its toggle button while the menu is closed.
+        const dropdown = input.closest('.dropdown');
+        const toggle = dropdown && dropdown.querySelector('[data-bs-toggle="dropdown"]');
+        if (toggle) toggle.classList.toggle('active', query.length > 0);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('input[data-filter-list]').forEach((input) => {
+            input.addEventListener('input', () => applyFilter(input));
+            // 'search' fires when the field's built-in clear control is used.
+            input.addEventListener('search', () => applyFilter(input));
+
+            const dropdown = input.closest('.dropdown');
+            if (dropdown) {
+                dropdown.addEventListener('shown.bs.dropdown', () => input.focus());
+            }
+        });
     });
 })();

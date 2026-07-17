@@ -71,7 +71,6 @@ import org.grails.orm.hibernate.query.MutationHqlQuery;
  * @author Graeme Rocher
  * @since 1.0
  */
-//TODO Cleanup
 @SuppressWarnings({"rawtypes", "PMD.DataflowAnomalyAnalysis", "PMD.AvoidDuplicateLiterals"})
 public class HibernateSession extends AbstractAttributeStoringSession implements QueryAliasAwareSession {
 
@@ -288,7 +287,6 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
 
     @Override
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
-    //TODO Clean up
     public Serializable getObjectIdentifier(Object instance) {
         if (instance == null) return null;
         if (proxyHandler.isProxy(instance)) {
@@ -313,7 +311,6 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
      */
     @Override
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
-    //TODO Clean up
     public long deleteAll(final QueryableCriteria criteria) {
         return getHibernateTemplate().execute((GrailsHibernateTemplate.HibernateCallback<Integer>) session -> {
             JpaQueryBuilder builder = new JpaQueryBuilder(criteria);
@@ -355,7 +352,6 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
      */
     @Override
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
-    //TODO Cleanup
     public long updateAll(final QueryableCriteria criteria, final Map<String, Object> properties) {
         return getHibernateTemplate().execute((GrailsHibernateTemplate.HibernateCallback<Integer>) session -> {
             JpaQueryBuilder builder = new JpaQueryBuilder(criteria);
@@ -388,7 +384,6 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
 
     @Override
     @SuppressWarnings({"PMD.DataflowAnomalyAnalysis"})
-    //TODO Cleanup
     public List retrieveAll(final Class type, final Iterable keys) {
         final GrailsHibernatePersistentEntity persistentEntity = (GrailsHibernatePersistentEntity) getMappingContext().getPersistentEntity(type.getName());
         final String entityName = persistentEntity.getName();
@@ -453,7 +448,6 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
         }
     }
 
-    //TODO could be used
     protected <D> HibernateGormStaticApi<D> getStaticApi(Class<D> type) {
         return new HibernateGormStaticApi<>(
             type,
