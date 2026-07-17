@@ -21,10 +21,11 @@ package org.grails.plugins;
 import groovy.lang.GroovySystem;
 import groovy.lang.MetaClassRegistry;
 
-import org.springframework.context.ApplicationContext;
-import org.springframework.core.io.Resource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.springframework.context.ApplicationContext;
+import org.springframework.core.io.Resource;
 
 import grails.core.GrailsApplication;
 import grails.plugins.DefaultGrailsPluginManager;

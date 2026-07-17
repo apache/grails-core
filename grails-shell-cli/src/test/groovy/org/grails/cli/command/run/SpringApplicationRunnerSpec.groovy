@@ -92,23 +92,35 @@ class SpringApplicationRunnerSpec extends Specification {
     }
 
     static void main(String[] args) {
+        String originalUserHome = System.getProperty('user.home')
+        File userHome = File.createTempDir('spring-application-runner', '')
         String failureMode = args[0]
         boolean loggingEnabled = Boolean.parseBoolean(args[1])
-        System.setProperty('slf4j.provider', 'ch.qos.logback.classic.spi.LogbackServiceProvider')
-        LifecycleVerifier verifier = new LifecycleVerifier(failureMode, loggingEnabled)
+        int reloadExitCode = 0
         try {
-            verifier.verify()
-            println 'verified'
-            if (failureMode == 'reload') {
-                System.exit(0)
+            System.setProperty('user.home', userHome.absolutePath)
+            System.setProperty('slf4j.provider', 'ch.qos.logback.classic.spi.LogbackServiceProvider')
+            LifecycleVerifier verifier = new LifecycleVerifier(failureMode, loggingEnabled)
+            try {
+                verifier.verify()
+                println 'verified'
+            }
+            catch (Throwable throwable) {
+                throwable.printStackTrace()
+                if (failureMode == 'reload') {
+                    reloadExitCode = 1
+                }
+                else {
+                    throw throwable
+                }
             }
         }
-        catch (Throwable throwable) {
-            throwable.printStackTrace()
-            if (failureMode == 'reload') {
-                System.exit(1)
-            }
-            throw throwable
+        finally {
+            System.setProperty('user.home', originalUserHome)
+            userHome.deleteDir()
+        }
+        if (failureMode == 'reload') {
+            System.exit(reloadExitCode)
         }
     }
 }

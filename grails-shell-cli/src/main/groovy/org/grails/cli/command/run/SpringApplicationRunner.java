@@ -30,11 +30,12 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.grails.cli.boot.SpringApplicationLauncher;
 import org.grails.cli.compiler.GroovyCompiler;
 import org.grails.cli.util.ResourceUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Compiles Groovy code running the resulting classes using a {@code SpringApplication}.
