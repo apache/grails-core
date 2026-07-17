@@ -33,6 +33,8 @@ import java.util.logging.Level;
 import org.grails.cli.boot.SpringApplicationLauncher;
 import org.grails.cli.compiler.GroovyCompiler;
 import org.grails.cli.util.ResourceUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Compiles Groovy code running the resulting classes using a {@code SpringApplication}.
@@ -44,6 +46,8 @@ import org.grails.cli.util.ResourceUtils;
  * @since 1.0.0
  */
 public class SpringApplicationRunner {
+
+    private static final Logger LOG = LoggerFactory.getLogger(SpringApplicationRunner.class);
 
     private static int watcherCounter = 0;
 
@@ -109,7 +113,8 @@ public class SpringApplicationRunner {
                     throw ex;
                 }
                 else {
-                    ex.printStackTrace();
+                    logOrPrintStackTrace(LOG, "Unable to compile and run application after a file change", ex,
+                            Level.SEVERE);
                 }
             }
         }
@@ -171,7 +176,7 @@ public class SpringApplicationRunner {
                         .launch(this.compiledSources, SpringApplicationRunner.this.args);
                 }
                 catch (Exception ex) {
-                    ex.printStackTrace();
+                    logOrPrintStackTrace(LOG, "Unable to launch application", ex, Level.SEVERE);
                 }
             }
         }
@@ -190,7 +195,7 @@ public class SpringApplicationRunner {
                         // Not an application context that we can close
                     }
                     catch (Exception ex) {
-                        ex.printStackTrace();
+                        logOrPrintStackTrace(LOG, "Unable to close application context", ex, Level.WARNING);
                     }
                     finally {
                         this.applicationContext = null;
@@ -199,6 +204,20 @@ public class SpringApplicationRunner {
             }
         }
 
+    }
+
+    private static void logOrPrintStackTrace(Logger logger, String message, Exception exception, Level level) {
+        if (level == Level.WARNING) {
+            if (logger.isWarnEnabled()) {
+                logger.warn(message, exception);
+                return;
+            }
+        }
+        else if (logger.isErrorEnabled()) {
+            logger.error(message, exception);
+            return;
+        }
+        exception.printStackTrace();
     }
 
     /**
