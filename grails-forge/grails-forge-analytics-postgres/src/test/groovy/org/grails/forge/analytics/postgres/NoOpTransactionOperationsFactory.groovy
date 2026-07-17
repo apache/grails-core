@@ -33,6 +33,7 @@ import java.util.Optional
 
 @Factory
 @Requires(env = 'test')
+@Requires(property = 'datasources.default.enabled', value = 'false')
 class NoOpTransactionOperationsFactory {
 
     @Singleton

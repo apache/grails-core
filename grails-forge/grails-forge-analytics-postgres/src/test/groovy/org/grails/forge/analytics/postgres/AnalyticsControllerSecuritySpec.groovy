@@ -54,6 +54,7 @@ import jakarta.inject.Inject
 class AnalyticsControllerSecuritySpec extends Specification {
 
     @Inject @Client('/') HttpClient client
+    @Inject @Client('/analytics') HttpClient analyticsClient
     @Inject ApplicationRepository applicationRepository
     @Inject FeatureRepository featureRepository
     @Inject JdbcOperations jdbcOperations
@@ -88,6 +89,48 @@ class AnalyticsControllerSecuritySpec extends Specification {
         response.status == HttpStatus.OK
         response.body() == '[]'
         0 * applicationRepository._
+    }
+
+    void 'report generation data accepts valid bearer token'() {
+        given:
+        Generated generated = new Generated(
+                ApplicationType.WEB,
+                GormImpl.HIBERNATE5,
+                ServletImpl.TOMCAT,
+                DevelopmentReloading.DEVTOOLS,
+                JdkVersion.DEFAULT_OPTION
+        )
+        generated.setSelectedFeatures([new SelectedFeature('google-cloud-function')])
+        applicationRepository.save(_) >> { arguments -> arguments[0] }
+
+        when:
+        def response = client.toBlocking().exchange(HttpRequest.POST('/analytics/report', generated).bearerAuth(validToken()), String)
+
+        then:
+        response.status == HttpStatus.ACCEPTED
+        1 * featureRepository.saveAll(_)
+        0 * jdbcOperations._
+    }
+
+    void 'report generation data accepts valid bearer token with analytics client'() {
+        given:
+        Generated generated = new Generated(
+                ApplicationType.WEB,
+                GormImpl.HIBERNATE5,
+                ServletImpl.TOMCAT,
+                DevelopmentReloading.DEVTOOLS,
+                JdkVersion.DEFAULT_OPTION
+        )
+        generated.setSelectedFeatures([new SelectedFeature('google-cloud-function')])
+        applicationRepository.save(_) >> { arguments -> arguments[0] }
+
+        when:
+        def response = analyticsClient.toBlocking().exchange(HttpRequest.POST('report', generated).bearerAuth(validToken()), String)
+
+        then:
+        response.status == HttpStatus.ACCEPTED
+        1 * featureRepository.saveAll(_)
+        0 * jdbcOperations._
     }
 
     void 'report generation data rejects bearer token with wrong audience'() {
@@ -158,6 +201,15 @@ class AnalyticsControllerSecuritySpec extends Specification {
                 sub: '1234567890',
                 iss: 'forge-test',
                 aud: 'other-service'
+        ]).orElseThrow()
+    }
+
+    @NonNull
+    private String validToken() {
+        tokenGenerator.generateToken([
+                sub: '1234567890',
+                iss: 'forge-test',
+                aud: 'forge-analytics'
         ]).orElseThrow()
     }
 
