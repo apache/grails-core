@@ -35,12 +35,17 @@ public final class GroovyJsonFacade {
     }
 
     public static JSONElement parse(String json) {
-        Object value = new JsonSlurper().parseText(json);
-        Object converted = toGrailsJson(value);
-        if (converted instanceof JSONElement) {
-            return (JSONElement) converted;
+        try {
+            Object value = new JsonSlurper().parseText(json);
+            Object converted = toGrailsJson(value);
+            if (converted instanceof JSONElement) {
+                return (JSONElement) converted;
+            }
+            throw new JSONException("JSON text must describe an object or array");
         }
-        throw new JSONException("JSON text must describe an object or array");
+        catch (groovy.json.JsonException | IllegalArgumentException e) {
+            throw new JSONException(e);
+        }
     }
 
     public static String toJson(Object value) {
