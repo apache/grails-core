@@ -16,34 +16,46 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.forge.feature.spring;
+package org.grails.forge.feature.mail;
 
 import jakarta.inject.Singleton;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
+import org.grails.forge.build.dependencies.Dependency;
 import org.grails.forge.feature.Category;
-import org.grails.forge.feature.DefaultFeature;
 import org.grails.forge.feature.Feature;
-import org.grails.forge.feature.spring.template.springResources;
-import org.grails.forge.options.Options;
-import org.grails.forge.template.RockerTemplate;
+import org.grails.forge.util.VersionInfo;
 
-import org.grails.forge.feature.security.SpringSecurityCore;
-
-import java.util.Set;
+import java.util.Map;
 
 @Singleton
-public class SpringResources implements DefaultFeature {
-    @Override
-    public boolean shouldApply(ApplicationType applicationType, Options options, Set<Feature> selectedFeatures) {
-        // The spring-security feature contributes its own resources.groovy registering the
-        // password-encoder listener bean, so the default empty one must back off
-        return selectedFeatures.stream().noneMatch(SpringSecurityCore.class::isInstance);
-    }
+public class Mail implements Feature {
 
     @Override
     public String getName() {
-        return "spring-resources";
+        return "mail";
+    }
+
+    @Override
+    public String getTitle() {
+        return "Mail";
+    }
+
+    @Override
+    public String getDescription() {
+        return "The Mail Plugin provides a mailService and the sendMail builder for sending email, "
+                + "including GSP-rendered mail bodies.";
+    }
+
+    @Override
+    public void apply(GeneratorContext generatorContext) {
+        Map<String, Object> config = generatorContext.getConfiguration();
+        config.put("grails.mail.host", "localhost");
+        config.put("grails.mail.port", 25);
+        generatorContext.addDependency(Dependency.builder()
+                .groupId("org.apache.grails")
+                .artifactId("grails-mail")
+                .implementation());
     }
 
     @Override
@@ -52,17 +64,13 @@ public class SpringResources implements DefaultFeature {
     }
 
     @Override
-    public boolean isVisible() {
-        return false;
-    }
-
-    @Override
-    public void apply(GeneratorContext generatorContext) {
-        generatorContext.addTemplate("springResources", new RockerTemplate("grails-app/conf/spring/resources.groovy", springResources.template()));
-    }
-
-    @Override
     public String getCategory() {
-        return Category.SPRING;
+        return Category.MESSAGING;
     }
+
+    @Override
+    public String getDocumentation() {
+        return "https://grails.apache.org/docs/" + VersionInfo.getDocumentationVersion() + "/guide/mail.html";
+    }
+
 }
