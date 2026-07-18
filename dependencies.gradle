@@ -35,7 +35,8 @@ ext {
             'jansi.version'                 : '1.18',
             'javaparser-core.version'       : '3.28.0',
             'jline.version'                 : '2.14.6',
-            'jna.version'                   : '5.17.0',
+            // Transitive of testcontainers 2.x - see testcontainers.version below.
+            'jna.version'                   : '5.18.1',
             'jquery.version'                : '3.7.1',
             'objenesis.version'             : '3.4',
             'spring-boot.version'           : '3.5.16',
@@ -111,6 +112,9 @@ ext {
             'scribejava.version'            : '8.3.3',
             'sitemesh.version'              : '2.6.0',
             'starter-sitemesh.version'      : '3.2.2',
+            // Overrides spring-boot-dependencies (1.21.4): testcontainers 2.x split PostgreSQL support
+            // out into a renamed org.testcontainers:testcontainers-postgresql artifact.
+            'testcontainers.version'        : '2.0.5',
     ]
 
     // Note: the name of the dependency must be the prefix of the property name so properties in the pom are resolved correctly
@@ -221,6 +225,9 @@ ext {
             'scribejava-core'                                : "com.github.scribejava:scribejava-core:${bomDependencyVersions['scribejava.version']}",
             'sitemesh'                                       : "opensymphony:sitemesh:${bomDependencyVersions['sitemesh.version']}",
             'starter-sitemesh'                               : "org.sitemesh:spring-boot-starter-sitemesh:${bomDependencyVersions['starter-sitemesh.version']}",
+            // Intentional override of spring-boot-dependencies - see testcontainers.version
+            'testcontainers'                                 : "org.testcontainers:testcontainers:${bomDependencyVersions['testcontainers.version']}",
+            'testcontainers-postgresql'                      : "org.testcontainers:testcontainers-postgresql:${bomDependencyVersions['testcontainers.version']}",
     ]
 
     // Because pom exclusions aren't properly supported by gradle, we can't inherit the grails-gradle-bom
