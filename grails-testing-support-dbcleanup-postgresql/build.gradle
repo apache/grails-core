@@ -50,7 +50,7 @@ dependencies {
 
     testImplementation 'org.apache.groovy:groovy'
     testImplementation 'org.postgresql:postgresql'
-    testImplementation 'org.testcontainers:postgresql:2.0.5'
+    testImplementation 'org.testcontainers:testcontainers-postgresql:2.0.5'
     testImplementation 'org.testcontainers:testcontainers:2.0.5'
     testImplementation 'org.slf4j:slf4j-simple'
     testRuntimeOnly 'net.bytebuddy:byte-buddy'
