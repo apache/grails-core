@@ -85,7 +85,7 @@ public class Application {
     /**
      * @return The development reloading
      */
-    public @NonNull DevelopmentReloading getDevelopmentReloading() {
+    public @NonNull DevelopmentReloading getReloading() {
         return reloading;
     }
 

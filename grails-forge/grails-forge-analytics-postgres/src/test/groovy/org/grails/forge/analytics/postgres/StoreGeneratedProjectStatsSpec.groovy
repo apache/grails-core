@@ -118,7 +118,7 @@ class StoreGeneratedProjectStatsSpec extends Specification implements TestProper
 
         then:
         gorm
-        gorm[0].name == 'HIBERNATE'
+        gorm[0].name == 'HIBERNATE5'
         featureRepository.topBuildTools()
         featureRepository.topJdkVersion()
         featureRepository.topReloading()
