@@ -76,6 +76,7 @@ import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.model.types.Custom;
+import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.model.types.ManyToMany;
 import org.grails.datastore.mapping.model.types.Simple;
 import org.grails.datastore.mapping.model.types.TenantId;
@@ -308,6 +309,13 @@ public class Neo4jSession extends AbstractSession<Session> {
                                 simpleProps.put(name, mappingContext.convertToNative(value));
                             } else {
                                 simpleProps.put(name, null);
+                            }
+                        } else if (property instanceof Embedded) {
+                            Object embeddedValue = access.getProperty(property.getName());
+                            if (embeddedValue != null) {
+                                flattenEmbeddedProperties(property.getName(), (Embedded<?>) property, embeddedValue, simpleProps);
+                            } else {
+                                nullOutEmbeddedProperties(property.getName(), (Embedded<?>) property, simpleProps);
                             }
                         } else if (property instanceof Custom) {
                             applyCustomType(access, property, simpleProps);
@@ -739,11 +747,44 @@ public class Neo4jSession extends AbstractSession<Session> {
                 if (value != null) {
                     simpleProps.put(name, getMappingContext().convertToNative(value));
                 }
+            } else if (pp instanceof Embedded) {
+                Object embeddedValue = access.getProperty(pp.getName());
+                if (embeddedValue != null) {
+                    flattenEmbeddedProperties(pp.getName(), (Embedded<?>) pp, embeddedValue, simpleProps);
+                }
             } else if (pp instanceof Custom) {
                 applyCustomType(access, pp, simpleProps);
             }
         }
         return simpleProps;
+    }
+
+    private void nullOutEmbeddedProperties(String embeddedPropertyName, Embedded<?> embedded, Map<String, Object> simpleProps) {
+        for (PersistentProperty nested : embedded.getAssociatedEntity().getPersistentProperties()) {
+            if (nested instanceof Simple) {
+                simpleProps.put(embeddedPropertyName + "_" + nested.getName(), null);
+            }
+        }
+    }
+
+    /**
+     * Embedded components have no node/relationship of their own (see
+     * Neo4jEntityPersister#persistAssociationsOfEntity, which explicitly skips them for that
+     * reason) - their simple properties are instead flattened directly onto the owning node as
+     * "&lt;embeddedPropertyName&gt;_&lt;nestedPropertyName&gt;", mirroring the property names
+     * Neo4jQuery's AssociationQueryHandler expects when reading an embedded association block back.
+     */
+    private void flattenEmbeddedProperties(String embeddedPropertyName, Embedded<?> embedded, Object embeddedValue, Map<String, Object> simpleProps) {
+        PersistentEntity embeddedEntity = embedded.getAssociatedEntity();
+        EntityAccess embeddedAccess = createEntityAccess(embeddedEntity, embeddedValue);
+        for (PersistentProperty nested : embeddedEntity.getPersistentProperties()) {
+            if (nested instanceof Simple) {
+                Object nestedValue = embeddedAccess.getProperty(nested.getName());
+                if (nestedValue != null) {
+                    simpleProps.put(embeddedPropertyName + "_" + nested.getName(), getMappingContext().convertToNative(nestedValue));
+                }
+            }
+        }
     }
 
     @SuppressWarnings("unchecked")

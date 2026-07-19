@@ -137,7 +137,10 @@ class Neo4jAssociationQueryExecutor implements AssociationQueryExecutor<Serializ
                         List previousAssociations = []
 
                         for (Association association in associations) {
-                            if (association.isBasic()) continue
+                            // Neither has a separate node/relationship to collect here - Basic
+                            // values and Embedded's flattened properties both come back with the
+                            // node itself.
+                            if (association.isBasic() || association.isEmbedded()) continue
 
                             boolean isEager = ((Property) association.mapping.mappedForm).isLazy()
 

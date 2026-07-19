@@ -22,6 +22,8 @@ import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.util.logging.Slf4j
 
+import java.lang.reflect.Constructor
+
 import jakarta.persistence.FetchType
 
 import org.neo4j.driver.QueryRunner
@@ -42,6 +44,7 @@ import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.Basic
+import org.grails.datastore.mapping.model.types.Embedded
 import org.grails.datastore.mapping.model.types.ManyToOne
 import org.grails.datastore.mapping.model.types.ToMany
 import org.grails.datastore.mapping.model.types.ToOne
@@ -317,6 +320,13 @@ class Neo4jQuery extends Query {
                 lhs = graphPersistentEntity.formatProperty(prefix, criterion.property)
             }
             builder.replaceParamAt(paramNumber, convertEnumsInList(values))
+            PersistentProperty inProperty = entity.getPropertyByName(criterion.property)
+            if (inProperty instanceof Basic) {
+                // A Basic collection is stored as a native array property on the node (e.g. n.schools),
+                // so "in" here means "does that array overlap the given values" - Cypher's plain
+                // `x IN list` would instead compare the whole array against each scalar in the list.
+                return new CypherExpression("ANY(x IN $lhs WHERE x IN \$$paramNumber)")
+            }
             return new CypherExpression(lhs, "\$$paramNumber", CriterionHandler.OPERATOR_IN)
         }
             },
@@ -457,7 +467,10 @@ class Neo4jQuery extends Query {
                     cypherBuilder.addReturnColumn(CypherBuilder.DEFAULT_RETURN_TYPES)
 
                     for (Association association in associations) {
-                        if (association.isBasic()) continue
+                        // Neither has a separate node/relationship to collect here - Basic values
+                        // and Embedded's flattened properties both come back with the default
+                        // "RETURN n" fetch already added above.
+                        if (association.isBasic() || association.isEmbedded()) continue
 
                         FetchType fetchType = fetchStrategy(association.name)
                         boolean isEager = fetchType.is(fetchType.EAGER)
@@ -735,13 +748,22 @@ class Neo4jQuery extends Query {
         @Override
         CypherExpression handle(GraphPersistentEntity entity, AssociationQuery criterion, CypherBuilder builder, String prefix) {
             AssociationQuery aq = (AssociationQuery) criterion
+            Association association = (Association) aq.association
+            if (association instanceof Embedded) {
+                // Embedded components are flattened onto the owning node's own properties at
+                // write time (see Neo4jEntityPersister#persistAssociationsOfEntity's Basic/Embedded
+                // skip), so there is no separate node to MATCH here - dispatch the nested criteria
+                // against the same node/prefix, with property names rewritten to the flattened
+                // "<embeddedName>_<property>" form used on write.
+                Query.Criterion flattened = flattenEmbeddedCriterion(aq.criteria, association.name)
+                return dispatchCriterion(flattened, entity, builder, prefix)
+            }
             if (entity.isRelationshipEntity()) {
                 return dispatchCriterion(aq.criteria, entity, builder, aq.association.name)
             } else {
                 String targetNodeName = "m_${builder.getNextMatchNumber()}"
                 String nextPrefix = targetNodeName
                 String relationship = ''
-                Association association = (Association) aq.association
                 if (criterion.entity instanceof RelationshipPersistentEntity) {
                     String type = (criterion.entity as RelationshipPersistentEntity).type()
                     relationship = "$nextPrefix:$type"
@@ -753,6 +775,50 @@ class Neo4jQuery extends Query {
                 return dispatchCriterion(aq.criteria, entity, builder, nextPrefix)
             }
 
+        }
+
+        /**
+         * Rewrites a criterion tree from an embedded association block so each leaf's property
+         * name is qualified with the embedded property's own flattened prefix (e.g. "provider"
+         * becomes "extRef1_provider"), producing new criterion instances rather than mutating the
+         * originals (the same DetachedCriteria/AssociationQuery can be reused across executions).
+         */
+        private static Query.Criterion flattenEmbeddedCriterion(Query.Criterion criterion, String embeddedPropertyPrefix) {
+            if (criterion instanceof Query.Junction) {
+                Query.Junction original = (Query.Junction) criterion
+                Query.Junction copy = (Query.Junction) criterion.getClass().getDeclaredConstructor().newInstance()
+                for (Query.Criterion child : original.criteria) {
+                    copy.add(flattenEmbeddedCriterion(child, embeddedPropertyPrefix))
+                }
+                return copy
+            }
+            if (criterion instanceof Query.PropertyNameCriterion) {
+                String flattenedName = "${embeddedPropertyPrefix}_${((Query.PropertyNameCriterion) criterion).property}".toString()
+                return rebuildPropertyCriterion((Query.PropertyNameCriterion) criterion, flattenedName)
+            }
+            throw new UnsupportedOperationException("Criterion of type ${criterion.class.name} is not supported inside an embedded association block")
+        }
+
+        private static Query.Criterion rebuildPropertyCriterion(Query.PropertyNameCriterion criterion, String newName) {
+            if (criterion instanceof Query.In) {
+                return new Query.In(newName, ((Query.In) criterion).values)
+            }
+            if (criterion instanceof Query.PropertyCriterion) {
+                // Subclasses declare their 2nd constructor parameter as Object (Equals, NotEquals,
+                // GreaterThan, ...) or narrower (Like/ILike/RLike take String) - getConstructor()
+                // matches formal parameter types exactly, so a fixed (String, Object) lookup misses
+                // the narrower ones. Find whichever public 2-arg (String, *) constructor is declared.
+                Object value = ((Query.PropertyCriterion) criterion).value
+                for (Constructor<?> ctor : criterion.getClass().getConstructors()) {
+                    Class<?>[] paramTypes = ctor.getParameterTypes()
+                    if (paramTypes.length == 2 && paramTypes[0] == String) {
+                        return (Query.Criterion) ctor.newInstance(newName, value)
+                    }
+                }
+                throw new IllegalStateException("No (String, *) constructor found on ${criterion.class.name}")
+            }
+            // IsNull / IsEmpty / IsNotEmpty take just (String)
+            return (Query.Criterion) criterion.getClass().getConstructor(String).newInstance(newName)
         }
     }
 

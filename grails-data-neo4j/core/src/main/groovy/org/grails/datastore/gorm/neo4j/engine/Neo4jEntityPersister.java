@@ -90,6 +90,7 @@ import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
+import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.model.types.ManyToMany;
 import org.grails.datastore.mapping.model.types.OneToMany;
 import org.grails.datastore.mapping.model.types.OneToOne;
@@ -488,6 +489,35 @@ public class Neo4jEntityPersister extends EntityPersister {
                     entityAccess.setProperty(propertyName, node.get(propertyName).asObject());
 
                     nodeProperties.remove(propertyName);
+                }
+            } else if (property instanceof Embedded) {
+                // Embedded components are flattened onto this node's own properties as
+                // "<propertyName>_<nestedPropertyName>" (see Neo4jSession#flattenEmbeddedProperties);
+                // there is no associated node/relationship to look up, so reconstruct the embedded
+                // instance directly from those flattened keys rather than falling into the generic
+                // Association branch below.
+                Embedded<?> embedded = (Embedded<?>) property;
+                PersistentEntity embeddedEntity = embedded.getAssociatedEntity();
+                boolean anyFlattenedKeyPresent = false;
+                for (PersistentProperty nested : embeddedEntity.getPersistentProperties()) {
+                    if ((nested instanceof Simple) && node.containsKey(propertyName + "_" + nested.getName())) {
+                        anyFlattenedKeyPresent = true;
+                        break;
+                    }
+                }
+                if (anyFlattenedKeyPresent) {
+                    Object embeddedInstance = embeddedEntity.newInstance();
+                    EntityAccess embeddedAccess = session.createEntityAccess(embeddedEntity, embeddedInstance);
+                    for (PersistentProperty nested : embeddedEntity.getPersistentProperties()) {
+                        if (nested instanceof Simple) {
+                            String nestedKey = propertyName + "_" + nested.getName();
+                            if (node.containsKey(nestedKey)) {
+                                embeddedAccess.setProperty(nested.getName(), node.get(nestedKey).asObject());
+                                nodeProperties.remove(nestedKey);
+                            }
+                        }
+                    }
+                    entityAccess.setPropertyNoConversion(propertyName, embeddedInstance);
                 }
             } else if (property instanceof Association association) {
 
@@ -941,6 +971,13 @@ public class Neo4jEntityPersister extends EntityPersister {
         for (PersistentProperty persistentProperty : graphEntity.getAssociations()) {
             String propertyName = persistentProperty.getName();
             if (persistentProperty instanceof Basic) {
+                continue;
+            }
+            // Embedded components (which extend ToOne) have no node/relationship of their own -
+            // their properties are flattened onto this node by Neo4jSession#readNodePropertiesForInsert
+            // instead, so treating them like a real to-one association here would try to persist
+            // and look up a Persister for an object that was never registered as one.
+            if (persistentProperty instanceof Embedded) {
                 continue;
             }
 
