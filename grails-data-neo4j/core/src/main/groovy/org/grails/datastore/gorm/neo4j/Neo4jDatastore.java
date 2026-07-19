@@ -44,15 +44,11 @@ import org.springframework.core.env.PropertyResolver;
 
 import grails.neo4j.Relationship;
 import org.grails.datastore.gorm.GormEnhancer;
-import org.grails.datastore.gorm.GormInstanceApi;
-import org.grails.datastore.gorm.GormStaticApi;
-import org.grails.datastore.gorm.GormValidationApi;
 import org.grails.datastore.gorm.events.AutoTimestampEventListener;
 import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher;
 import org.grails.datastore.gorm.events.DefaultApplicationEventPublisher;
 import org.grails.datastore.gorm.events.DomainEventListener;
 import org.grails.datastore.gorm.multitenancy.MultiTenantEventListener;
-import org.grails.datastore.gorm.neo4j.api.Neo4jGormStaticApi;
 import org.grails.datastore.gorm.neo4j.connections.Neo4jConnectionSourceFactory;
 import org.grails.datastore.gorm.neo4j.connections.Neo4jConnectionSourceSettings;
 import org.grails.datastore.gorm.neo4j.connections.Neo4jConnectionSourceSettingsBuilder;
@@ -70,12 +66,10 @@ import org.grails.datastore.mapping.core.StatelessDatastore;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.core.connections.ConnectionSources;
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesInitializer;
-import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport;
 import org.grails.datastore.mapping.core.connections.DefaultConnectionSource;
 import org.grails.datastore.mapping.core.connections.InMemoryConnectionSources;
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore;
 import org.grails.datastore.mapping.core.connections.SingletonConnectionSources;
-import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
 import org.grails.datastore.mapping.graph.GraphDatastore;
 import org.grails.datastore.mapping.model.DatastoreConfigurationException;
 import org.grails.datastore.mapping.model.MappingContext;
@@ -448,46 +442,7 @@ public class Neo4jDatastore extends AbstractDatastore implements Closeable, Stat
             }
         });
 
-        return new GormEnhancer(this, transactionManager, settings) {
-
-            @Override
-            protected <D> GormStaticApi<D> getStaticApi(Class<D> cls, String qualifier) {
-                Neo4jDatastore neo4jDatastore = getDatastoreForQualifier(cls, qualifier);
-                return new Neo4jGormStaticApi<D>(cls, neo4jDatastore, createDynamicFinders(neo4jDatastore), neo4jDatastore.getTransactionManager());
-            }
-
-            @Override
-            protected <D> GormValidationApi<D> getValidationApi(Class<D> cls, String qualifier) {
-                Neo4jDatastore neo4jDatastore = getDatastoreForQualifier(cls, qualifier);
-                return new GormValidationApi<>(cls, neo4jDatastore);
-            }
-
-            @Override
-            protected <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, String qualifier) {
-                Neo4jDatastore neo4jDatastore = getDatastoreForQualifier(cls, qualifier);
-                GormInstanceApi<D> instanceApi = new GormInstanceApi<>(cls, neo4jDatastore);
-                instanceApi.setFailOnError(getFailOnError());
-                instanceApi.setMarkDirty(getMarkDirty());
-                return instanceApi;
-            }
-
-            private <D> Neo4jDatastore getDatastoreForQualifier(Class<D> cls, String qualifier) {
-                String defaultConnectionSourceName = ConnectionSourcesSupport.getDefaultConnectionSourceName(getMappingContext().getPersistentEntity(cls.getName()));
-                boolean isDefaultQualifier = qualifier.equals(ConnectionSource.DEFAULT);
-                if (isDefaultQualifier && defaultConnectionSourceName.equals(ConnectionSource.DEFAULT)) {
-                    return Neo4jDatastore.this;
-                } else {
-                    if (isDefaultQualifier) {
-                        qualifier = defaultConnectionSourceName;
-                    }
-                    ConnectionSource<Driver, Neo4jConnectionSourceSettings> connectionSource = connectionSources.getConnectionSource(qualifier);
-                    if (connectionSource == null) {
-                        throw new ConfigurationException("Invalid connection [" + defaultConnectionSourceName + "] configured for class [" + cls + "]");
-                    }
-                    return Neo4jDatastore.this.datastoresByConnectionSource.get(qualifier);
-                }
-            }
-        };
+        return new GormEnhancer(this, transactionManager, settings);
     }
 
     public void setSkipIndexSetup(boolean skipIndexSetup) {
