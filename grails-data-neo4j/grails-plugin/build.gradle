@@ -76,6 +76,12 @@ dependencies {
     testImplementation 'org.apache.grails:grails-core'
     testImplementation 'org.apache.grails.bootstrap:grails-bootstrap'
     testImplementation 'org.spockframework:spock-core'
+    // Neo4jDataStoreSpringInitializer#isWebApplicationRegistry type-checks the bean registry
+    // against WebApplicationContext; Groovy's bean introspection of that check needs
+    // ServletContext on the classpath even outside a real web app - same reason
+    // grails-data-hibernate5/grails-plugin declares this for the same AbstractDatastoreInitializer
+    // code path.
+    testImplementation 'jakarta.servlet:jakarta.servlet-api'
     testImplementation "org.neo4j.test:neo4j-harness:$neo4jVersion"
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }

@@ -140,7 +140,7 @@ class Neo4jDataStoreSpringInitializer extends AbstractDatastoreInitializer {
 
             ClassLoader classLoader = getClass().getClassLoader()
             if (isWebApplicationRegistry(beanDefinitionRegistry) && ClassUtils.isPresent(OSIV_CLASS_NAME, classLoader)) {
-                String interceptorName = "neo4jOpenSessionInViewInterceptor"
+                String interceptorName = 'neo4jOpenSessionInViewInterceptor'
                 "${interceptorName}"(ClassUtils.forName(OSIV_CLASS_NAME, classLoader)) {
                     datastore = ref('neo4jDatastore')
                 }
