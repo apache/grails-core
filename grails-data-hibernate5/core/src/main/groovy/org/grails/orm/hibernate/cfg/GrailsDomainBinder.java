@@ -118,7 +118,6 @@ import org.grails.datastore.mapping.model.types.TenantId;
 import org.grails.datastore.mapping.model.types.ToMany;
 import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.reflect.EntityReflector;
-import org.grails.datastore.mapping.reflect.NameUtils;
 import org.grails.orm.hibernate.access.TraitPropertyAccessStrategy;
 
 /**
@@ -773,7 +772,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                     columnName = config.getJoinTable().getColumn().getName();
                 }
                 else {
-                    columnName = namingStrategy.propertyToColumnName(NameUtils.decapitalize(domainClass.getName())) + FOREIGN_KEY_SUFFIX;
+                    columnName = getForeignKeyForDomainClass(domainClass, sessionFactoryBeanName);
                 }
 
                 bindSimpleValue("long", element, true, columnName, mappings);
@@ -3213,7 +3212,7 @@ public class GrailsDomainBinder implements MetadataContributor {
             }
 
             if (!association.isBidirectional() && association instanceof org.grails.datastore.mapping.model.types.OneToMany) {
-                String prefix = namingStrategy.classToTableName(property.getOwner().getName());
+                String prefix = trimBackTigs(getTableName(property.getOwner(), sessionFactoryBeanName));
                 return addUnderscore(prefix, columnName) + FOREIGN_KEY_SUFFIX;
             }
 
@@ -3229,9 +3228,12 @@ public class GrailsDomainBinder implements MetadataContributor {
 
     protected String getForeignKeyForPropertyDomainClass(PersistentProperty property,
                                                          String sessionFactoryBeanName) {
-        final String propertyName = NameUtils.decapitalize(property.getOwner().getName());
-        NamingStrategy namingStrategy = getNamingStrategy(sessionFactoryBeanName);
-        return namingStrategy.propertyToColumnName(propertyName) + FOREIGN_KEY_SUFFIX;
+        return getForeignKeyForDomainClass(property.getOwner(), sessionFactoryBeanName);
+    }
+
+    protected String getForeignKeyForDomainClass(PersistentEntity domainClass,
+                                                 String sessionFactoryBeanName) {
+        return trimBackTigs(getTableName(domainClass, sessionFactoryBeanName)) + FOREIGN_KEY_SUFFIX;
     }
 
     protected String getIndexColumnName(PersistentProperty property, String sessionFactoryBeanName) {
