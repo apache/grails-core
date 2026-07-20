@@ -36,6 +36,7 @@ import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.SafeConstructor
 import org.yaml.snakeyaml.error.YAMLException
 
+import java.nio.charset.StandardCharsets
 import java.util.Set
 import java.util.regex.Matcher
 import java.util.regex.Pattern
@@ -141,11 +142,11 @@ abstract class RepositoryConventionsTask extends DefaultTask {
             options.setAllowDuplicateKeys(false)
             document = new Yaml(new SafeConstructor(options)).load(lines.subList(1, end).join('\n'))
         } catch (YAMLException exception) {
-            violations.add(sanitizeViolation("${path}: malformed skill front matter: ${exception.message}".toString()))
+            violations.add("${path}: malformed skill front matter: ${exception.message}".toString())
             return [:]
         }
         if (!(document instanceof Map)) {
-            violations.add(sanitizeViolation("${path}: skill front matter must be a YAML mapping".toString()))
+            violations.add("${path}: skill front matter must be a YAML mapping".toString())
             return [:]
         }
         Map<String, String> values = [:]
@@ -154,7 +155,7 @@ abstract class RepositoryConventionsTask extends DefaultTask {
             if (value instanceof String) {
                 values[key] = (String) value
             } else if (value != null) {
-                violations.add(sanitizeViolation("${path}: skill front matter field '${key}' must be a string".toString()))
+                violations.add("${path}: skill front matter field '${key}' must be a string".toString())
             }
         }
         values
@@ -398,7 +399,7 @@ abstract class RepositoryConventionsTask extends DefaultTask {
         List<PropertiesLine> result = []
         String content = null
         int start = 0
-        file.readLines().eachWithIndex { String line, int index ->
+        file.readLines(StandardCharsets.UTF_8.name()).eachWithIndex { String line, int index ->
             if (content == null) {
                 String trimmed = line.trim()
                 if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('!')) {

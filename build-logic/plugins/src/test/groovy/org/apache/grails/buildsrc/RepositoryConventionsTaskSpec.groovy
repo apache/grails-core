@@ -23,6 +23,7 @@ import org.gradle.testkit.runner.TaskOutcome
 import spock.lang.Specification
 import spock.lang.TempDir
 
+import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 
 class RepositoryConventionsTaskSpec extends Specification {
@@ -362,6 +363,58 @@ injected\\r\\n|forged=two
         !report.contains('\r')
     }
 
+    def "validateRepositoryConventions sanitizes front matter violations once in reports and exceptions"() {
+        given:
+        writeBuild()
+        writeSkillContent('sample', '''---
+name: sample
+description: Test skill
+license: Apache-2.0
+"duplicate|key": one
+"duplicate|key": two
+---
+''')
+        writeAgents('.agents/skills/sample/SKILL.md')
+        writeWorkflow('valid.yml', "uses: actions/checkout@${SHA}")
+
+        when:
+        def result = runAndFail('validateRepositoryConventions')
+        def report = testProjectDir.resolve('build/reports/violations/REPOSITORY_CONVENTIONS.md').toFile().text
+
+        then:
+        result.output.contains('duplicate key duplicate\\|key')
+        !result.output.contains('duplicate key duplicate\\\\|key')
+        report.contains('duplicate key duplicate\\|key')
+        !report.contains('duplicate key duplicate\\\\|key')
+    }
+
+    def "validateRepositoryConventions reads duplicate UTF-8 message keys independently of the Gradle default charset"() {
+        given:
+        writeBuild()
+        writeSkill('sample', 'sample')
+        writeAgents('.agents/skills/sample/SKILL.md')
+        writeWorkflow('valid.yml', "uses: actions/checkout@${SHA}")
+        def build = testProjectDir.resolve('build.gradle').toFile()
+        build << '''
+tasks.register('verifyDefaultEncoding') {
+    doLast {
+        assert java.nio.charset.Charset.defaultCharset() == java.nio.charset.StandardCharsets.ISO_8859_1
+    }
+}
+'''
+        testProjectDir.resolve('gradle.properties').toFile().text = 'org.gradle.jvmargs=-Dfile.encoding=ISO-8859-1\n'
+        def file = testProjectDir.resolve('src/main/resources/messages.properties').toFile()
+        file.parentFile.mkdirs()
+        file.setText('caf\u00e9=one\ncaf\u00e9=two\n', StandardCharsets.UTF_8.name())
+
+        when:
+        def result = runAndFail('verifyDefaultEncoding', 'validateRepositoryConventions')
+
+        then:
+        result.task(':verifyDefaultEncoding').outcome == TaskOutcome.SUCCESS
+        result.output.contains("duplicate message key 'caf\u00e9'")
+    }
+
     def "validateRepositoryConventions requires skill front matter to begin on line one"() {
         given:
         writeBuild()
@@ -570,10 +623,12 @@ ${withLicense ? 'license: Apache-2.0' : ''}
                 .build()
     }
 
-    private def runAndFail(String task) {
+    private def runAndFail(String task, String... additionalArguments) {
+        List<String> arguments = [task, '--stacktrace']
+        arguments.addAll(additionalArguments)
         GradleRunner.create()
                 .withProjectDir(testProjectDir.toFile())
-                .withArguments(task, '--stacktrace')
+                .withArguments(arguments)
                 .withPluginClasspath()
                 .buildAndFail()
     }
