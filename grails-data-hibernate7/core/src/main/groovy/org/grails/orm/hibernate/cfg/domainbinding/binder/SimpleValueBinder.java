@@ -28,7 +28,6 @@ import org.hibernate.mapping.DependantValue;
 import org.hibernate.mapping.Formula;
 import org.hibernate.mapping.SimpleValue;
 import org.hibernate.mapping.Table;
-import org.hibernate.type.SqlTypes;
 import org.jspecify.annotations.NonNull;
 
 import org.grails.datastore.mapping.model.types.TenantId;
@@ -86,19 +85,7 @@ public class SimpleValueBinder {
 
         PropertyConfig propertyConfig = property.getHibernateMappedForm();
         String typeName = property.getTypeName(simpleValue);
-        if (isUnboundedTextType(typeName) && simpleValue instanceof BasicValue basicValue) {
-            // Hibernate's legacy named-type lookup resolves "text" to StandardBasicTypes.TEXT,
-            // whose JDBC type code is the legacy java.sql.Types.LONGVARCHAR. Dialects (e.g.
-            // Postgres) don't render that legacy code as their native unbounded text/CLOB type,
-            // falling back instead to a bounded VARCHAR at Hibernate's generic Length.LONG
-            // default (32600) when no explicit column length is set - see GH-16010. The modern
-            // SqlTypes.LONG32VARCHAR code is what dialects actually map to an unbounded type, so
-            // bind that directly rather than going through the ambiguous legacy type name.
-            basicValue.setExplicitJdbcTypeAccess(
-                    typeConfiguration -> typeConfiguration.getJdbcTypeRegistry().getDescriptor(SqlTypes.LONG32VARCHAR));
-        } else {
-            simpleValue.setTypeName(typeName);
-        }
+        simpleValue.setTypeName(typeName);
         simpleValue.setTypeParameters(property.getTypeParameters(simpleValue));
 
         if (propertyConfig.isDerived() && !(property instanceof TenantId)) {
@@ -114,7 +101,7 @@ public class SimpleValueBinder {
                     .forEach(cc -> {
                         Column column = new Column();
                         columnConfigToColumnBinder.bindColumnConfigToColumn(column, cc, propertyConfig);
-                        columnBinder.bindColumn(property, parentProperty, column, cc, path, table);
+                        columnBinder.bindColumn(property, parentProperty, column, cc, path, table, typeName);
                         if (simpleValue instanceof DependantValue) {
                             column.setNullable(true);
                         }
@@ -125,9 +112,5 @@ public class SimpleValueBinder {
                     });
         }
         return simpleValue;
-    }
-
-    private static boolean isUnboundedTextType(String typeName) {
-        return "text".equalsIgnoreCase(typeName);
     }
 }
