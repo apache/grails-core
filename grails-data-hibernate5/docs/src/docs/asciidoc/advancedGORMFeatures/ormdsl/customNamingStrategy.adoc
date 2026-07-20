@@ -79,3 +79,4 @@ class CustomNamingStrategy extends ImprovedNamingStrategy {
 }
 ----
 
+The result of `classToTableName` is also used as the prefix for foreign-key columns in join tables. For example, if the strategy maps `TBook` to `book`, a `hasMany` join-table foreign key is named `book_id`. Changing this mapping can therefore require a database migration for existing join-table columns.
