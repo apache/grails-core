@@ -19,6 +19,8 @@
 
 package org.grails.plugins.web.controllers
 
+import org.springframework.beans.factory.BeanCreationException
+import org.springframework.core.env.MapPropertySource
 import java.util.function.Supplier
 
 import grails.core.DefaultGrailsApplication
@@ -35,6 +37,7 @@ import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.mock.web.MockServletContext
+import org.springframework.web.context.support.AnnotationConfigWebApplicationContext
 import org.springframework.web.context.WebApplicationContext
 import org.springframework.web.context.support.StaticWebApplicationContext
 import org.springframework.web.filter.RequestContextFilter
@@ -53,6 +56,27 @@ class ControllersAutoConfigurationSpec extends Specification {
     }
 
     def autoConfiguration = new ControllersAutoConfiguration()
+
+    def "legacy multipart configuration fails startup with migration instructions"() {
+        given:
+        def applicationContext = new AnnotationConfigWebApplicationContext()
+        applicationContext.servletContext = new MockServletContext()
+        applicationContext.environment.propertySources.addFirst(new MapPropertySource('test', [
+                'grails.controllers.upload.maxFileSize': 20000000,
+        ]))
+        applicationContext.register(ControllersAutoConfiguration)
+
+        when:
+        applicationContext.refresh()
+
+        then:
+        BeanCreationException exception = thrown()
+        exception.rootCause instanceof IllegalStateException
+        exception.rootCause.message == ControllersAutoConfiguration.LEGACY_MULTIPART_CONFIGURATION_ERROR
+
+        cleanup:
+        applicationContext.close()
+    }
 
     void 'grailsWebRequest filter is a RequestContextFilter so Boot WebMvcAutoConfiguration backs off its own RequestContextFilter'() {
         when: 'the Grails request-binding filter bean is created'
