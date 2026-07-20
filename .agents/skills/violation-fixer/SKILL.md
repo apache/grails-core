@@ -30,7 +30,7 @@ Activate this skill when:
 
 | Plugin | Applied to | Responsibility |
 |--------|-----------|----------------|
-| `org.apache.grails.gradle.grails-code-style` | Every subproject | Applies Checkstyle and CodeNarc; registers per-project `codeStyle` task; redirects XML reports to root `build/reports/code-style/` |
+| `org.apache.grails.gradle.grails-code-style` | Every subproject | Applies Checkstyle, CodeNarc, and code analysis; registers per-project `codeStyle` task; redirects XML reports to root `build/reports/code-style/` |
 | `org.apache.grails.gradle.grails-code-analysis` | Every subproject | Applies PMD and SpotBugs (both opt-in); registers per-project `codeAnalysis` task; redirects XML reports to root `build/reports/code-analysis/` |
 | `org.apache.grails.gradle.grails-jacoco` | Every subproject | Applies JaCoCo; wires `jacocoTestReport` to run after each `test` task |
 | `org.apache.grails.gradle.grails-violation-aggregation` | **Root project only** | Registers `aggregateViolations` and `aggregateJacocoCoverage` tasks; writes Markdown summaries to `build/reports/violations/` |
@@ -44,6 +44,7 @@ Activate this skill when:
 | `./gradlew codeStyle` | per-project | Runs Checkstyle and CodeNarc for that project |
 | `./gradlew codeAnalysis` | per-project | Runs PMD and/or SpotBugs for that project (when enabled) |
 | `./gradlew aggregateViolations` | root | Runs all checks across every module, then writes `*_VIOLATIONS.md` to `build/reports/violations/` |
+| `./gradlew validateRepositoryConventions` | root | Validates canonical skill metadata, AGENTS paths, GitHub Action pins, message keys, and RAT provenance |
 | `./gradlew aggregateJacocoCoverage` | root | Runs JaCoCo reports across every module, then writes `JACOCO_COVERAGE.md` to `build/reports/violations/` |
 | `./gradlew codenarcFix` | per-project | Auto-fixes a subset of CodeNarc violations |
 
@@ -58,6 +59,9 @@ Activate this skill when:
 
 # Full multi-module check + report
 ./gradlew aggregateViolations
+
+# Repository conventions only
+./gradlew validateRepositoryConventions
 
 # Include test sources in style checks
 ./gradlew aggregateViolations -Pgrails.code-style.enabled.tests=true
@@ -85,8 +89,9 @@ After running `aggregateViolations`, these files appear under `build/reports/vio
 |------|------|-----------------|
 | `build/reports/violations/CODENARC_VIOLATIONS.md` | CodeNarc | Yes |
 | `build/reports/violations/CHECKSTYLE_VIOLATIONS.md` | Checkstyle | Yes |
-| `build/reports/violations/PMD_VIOLATIONS.md` | PMD | Yes — contains `No violations found!` when PMD is disabled |
-| `build/reports/violations/SPOTBUGS_VIOLATIONS.md` | SpotBugs | Yes — contains `No violations found!` when SpotBugs is disabled |
+| `build/reports/violations/PMD_VIOLATIONS.md` | PMD | Yes - reports `PMD is disabled.` when PMD is disabled |
+| `build/reports/violations/SPOTBUGS_VIOLATIONS.md` | SpotBugs | Yes - reports `SpotBugs is disabled.` when SpotBugs is disabled |
+| `build/reports/violations/REPOSITORY_CONVENTIONS.md` | Repository conventions | Yes - lists skill, Action, or message-key failures after RAT succeeds |
 
 After running `aggregateJacocoCoverage`:
 
@@ -97,6 +102,16 @@ After running `aggregateJacocoCoverage`:
 All reports are inside `build/` and are excluded from version control via `.gitignore`. A clean run produces `No violations found! 🎉` in each style file. **The build must be clean before committing.**
 
 Each file is a Markdown table grouped by module, with columns: **Class**, **Tool**, **Violation**, **Line**, **Message**.
+
+## Repository Conventions
+
+Run `./gradlew validateRepositoryConventions` to write `build/reports/violations/REPOSITORY_CONVENTIONS.md`. Fix the reported source rather than suppressing the validation.
+
+| Finding | Fix |
+|---------|-----|
+| Skill | Start `SKILL.md` with YAML front matter, supply `name`, `description`, and `license`, match the directory name, and synchronize its literal path in `AGENTS.md`. |
+| GitHub Action | Pin external references to one lowercase 40-hex SHA for that action across workflows and repository-local `action.yml` or `action.yaml` manifests. Local `./...` uses are permitted. Pin Docker `uses`, Docker action `runs.image`, and workflow job/service container images to immutable `@sha256:` digests. |
+| Message key | Remove or rename the duplicate logical key in the reported `messages*.properties` file, preserving escaped separators and continuation semantics. |
 
 ---
 
@@ -140,9 +155,9 @@ Common violations:
 | `FileTabCharacter` | Replace tabs with 4 spaces |
 | `NewlineAtEndOfFile` | Ensure file ends with `\n` |
 
-### PMD (Java/Groovy — opt-in)
+### PMD (Java/Groovy - opt-in)
 
-Enable: `-Pgrails.code-analysis.enabled.pmd=true`
+Enable all projects with `-Pgrails.code-analysis.enabled.pmd=true`, or enable selected project paths with `-Pgrails.code-analysis.enabled.pmd.projects=:project-a,:project-b`. The root build enforces PMD only for the clean-baseline paths configured in `gradle.properties`. PMD excludes sources under each project's configured build directory.
 
 Rule file: `build/code-analysis/pmd/pmd.xml`.
 
@@ -185,10 +200,12 @@ All properties can be set in `gradle.properties` or passed as `-P` flags:
 
 | Property | Default | Description |
 |----------|---------|-------------|
-| `grails.code-analysis.enabled.pmd` | `false` | Enable PMD |
-| `grails.code-analysis.enabled.spotbugs` | `false` | Enable SpotBugs |
+| `grails.code-analysis.enabled.pmd` | `false` | Enable PMD for every project |
+| `grails.code-analysis.enabled.pmd.projects` | unset | Comma-separated project paths for selective PMD enablement |
+| `grails.code-analysis.enabled.spotbugs` | `false` | Enable SpotBugs for every project |
+| `grails.code-analysis.enabled.spotbugs.projects` | unset | Comma-separated project paths for selective SpotBugs enablement |
 | `grails.code-analysis.enabled.tests` | `false` | Also analyse test source sets |
-| `grails.code-analysis.ignoreFailures` | `false` | Collect reports without failing build |
+| `grails.code-analysis.ignoreFailures` | `false` | Collect ordinary findings without failing the build; missing expected XML always fails |
 | `grails.code-analysis.dir.pmd` | (auto) | Custom path to PMD config dir |
 | `skipCodeStyle` | unset | If present, all analysis tasks are also skipped |
 
@@ -211,11 +228,11 @@ All XML reports are consolidated at:
 ```
 build/reports/code-style/        ← XML inputs for style aggregation
 ├── checkstyle/
-│   ├── grails-core-checkstyleMain.xml
-│   ├── grails-web-mvc-checkstyleMain.xml
+│   ├── <hex-project-path>-checkstyleMain.xml
+│   ├── <hex-project-path>-checkstyleCli.xml
 │   └── ...
 └── codenarc/
-    ├── grails-core-codenarcMain.xml
+    ├── <hex-project-path>-codenarcMain.xml
     └── ...
 
 build/reports/code-analysis/     ← XML inputs for analysis aggregation (if enabled)
@@ -227,7 +244,8 @@ build/reports/violations/       ← Markdown summaries written by aggregateViola
 ├── CHECKSTYLE_VIOLATIONS.md
 ├── PMD_VIOLATIONS.md
 ├── SPOTBUGS_VIOLATIONS.md
+├── REPOSITORY_CONVENTIONS.md
 └── JACOCO_COVERAGE.md          ← written by aggregateJacocoCoverage
 ```
 
-The module name is derived from the filename: everything before the last `-` (e.g. `grails-core-checkstyleMain.xml` → module `grails-core`).
+The filename prefix is the UTF-8 hexadecimal encoding of the full Gradle project path. Aggregation decodes it back to paths such as `:grails-core`, preventing nested projects with the same leaf name from colliding.

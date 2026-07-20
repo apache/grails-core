@@ -40,6 +40,7 @@ dependencies {
     implementation "org.cyclonedx.bom:org.cyclonedx.bom.gradle.plugin:${gradleProperties.gradleCycloneDxPluginVersion}"
     implementation "com.github.spotbugs.snom:spotbugs-gradle-plugin:${gradleProperties.spotbugsPluginVersion}"
     implementation "org.sonatype.gradle.plugins:scan-gradle-plugin:${gradleProperties.sonatypeScanPluginVersion}"
+    implementation 'org.yaml:snakeyaml:2.4'
 
     testImplementation "org.spockframework:spock-core:${gradleBomDependencyVersions['gradle-spock.version']}"
     testImplementation gradleTestKit()

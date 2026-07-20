@@ -74,7 +74,7 @@ jobs:
         # The docs themselves have no code dependency on Micronaut.
         run: ./gradlew grails-doc:build -PgithubBranch=${TARGET_BRANCH}
       - name: "🚀 Publish to GitHub Pages"
-        uses: apache/grails-github-actions/deploy-github-pages@asf
+        uses: apache/grails-github-actions/deploy-github-pages@fe90f651c47c5230cdd70b6fee0e0d250fea30ac # asf
         env:
           GH_TOKEN: ${{ secrets.GRAILS_GHTOKEN }} # To be able to push to grails-website repo
           GRADLE_PUBLISH_RELEASE: 'true'

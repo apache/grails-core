@@ -20,6 +20,9 @@ apply plugin: 'org.nosphere.apache.rat'
 tasks.named('rat') {
     def allExcludes = [
             '.asf.yaml', // ASF metadata for github integration excluded from src zip
+            '.omo/**', // local agent work state excluded from src zip
+            '.claude/**', '.clinerules', '.cursorrules', '.windsurfrules', // local agent configuration excluded from src zip
+            'CLAUDE.md', 'GEMINI.md', // local agent guidance excluded from src zip
             '.mailmap', // authorship mapping for git history, will not be included in src zip
             'CODE_OF_CONDUCT.md',
             'BUILD_DATE', // build artifact for storing the build date / verifying

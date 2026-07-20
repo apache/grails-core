@@ -45,7 +45,7 @@ jobs:
           cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "🔎 Check Core Projects"
-        run: ./gradlew aggregateAnalysisViolations --continue -Pgrails.code-analysis.enabled.pmd=true -Pgrails.code-analysis.enabled.spotbugs=true -Pgrails.code-analysis.ignoreFailures=true
+        run: ./gradlew aggregateAnalysisViolations --continue
       - name: "📤 Upload Reports"
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -60,6 +60,24 @@ jobs:
             file="build/reports/violations/$report"
             [ -f "$file" ] && cat "$file" >> $GITHUB_STEP_SUMMARY || true
           done
+      - name: "🔎 Run Core SpotBugs Advisory"
+        if: always()
+        continue-on-error: true
+        run: |
+          rm -f build/reports/violations/SPOTBUGS_VIOLATIONS.md
+          ./gradlew aggregateAnalysisViolations --continue "-Pgrails.code-analysis.enabled.pmd.projects=" -Pgrails.code-analysis.enabled.spotbugs=true -Pgrails.code-analysis.ignoreFailures=true
+      - name: "📤 Upload SpotBugs Advisory Reports"
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: core-spotbugs-advisory-reports
+          path: build/reports/violations/
+      - name: "📋 Publish SpotBugs Advisory Report in Job Summary"
+        if: always()
+        run: |
+          echo "## 🔎 SpotBugs Advisory Report - Core Projects" >> $GITHUB_STEP_SUMMARY
+          file="build/reports/violations/SPOTBUGS_VIOLATIONS.md"
+          [ -f "$file" ] && cat "$file" >> $GITHUB_STEP_SUMMARY || true
   check_gradle_plugin_projects:
     name: "Gradle Plugin Projects"
     runs-on: ubuntu-24.04
@@ -80,7 +98,7 @@ jobs:
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "🔎 Check Gradle Plugin Projects"
         working-directory: grails-gradle
-        run: ./gradlew aggregateAnalysisViolations --continue -Pgrails.code-analysis.enabled.pmd=true -Pgrails.code-analysis.enabled.spotbugs=true -Pgrails.code-analysis.ignoreFailures=true
+        run: ./gradlew aggregateAnalysisViolations --continue -Pgrails.code-analysis.enabled.pmd=true -Pgrails.code-analysis.ignoreFailures=true
       - name: "📤 Upload Reports"
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -95,3 +113,22 @@ jobs:
             file="grails-gradle/build/reports/violations/$report"
             [ -f "$file" ] && cat "$file" >> $GITHUB_STEP_SUMMARY || true
           done
+      - name: "🔎 Run Gradle Plugin SpotBugs Advisory"
+        if: always()
+        continue-on-error: true
+        working-directory: grails-gradle
+        run: |
+          rm -f build/reports/violations/SPOTBUGS_VIOLATIONS.md
+          ./gradlew aggregateAnalysisViolations --continue -Pgrails.code-analysis.enabled.spotbugs=true -Pgrails.code-analysis.ignoreFailures=true
+      - name: "📤 Upload Gradle Plugin SpotBugs Advisory Reports"
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: gradle-plugin-spotbugs-advisory-reports
+          path: grails-gradle/build/reports/violations/
+      - name: "📋 Publish Gradle Plugin SpotBugs Advisory Report in Job Summary"
+        if: always()
+        run: |
+          echo "## 🔎 SpotBugs Advisory Report - Gradle Plugin Projects" >> $GITHUB_STEP_SUMMARY
+          file="grails-gradle/build/reports/violations/SPOTBUGS_VIOLATIONS.md"
+          [ -f "$file" ] && cat "$file" >> $GITHUB_STEP_SUMMARY || true

@@ -45,7 +45,7 @@ jobs:
           ref: ${{ env.TAG }}
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: "⚙️ Run post-release"
-        uses: apache/grails-github-actions/post-release@asf
+        uses: apache/grails-github-actions/post-release@fe90f651c47c5230cdd70b6fee0e0d250fea30ac # asf
         env:
           PR_LABELS: skip-changelog
           RELEASE_SCRIPT_PATH: '.github/scripts/setSnapshotGrailsVersion.sh'

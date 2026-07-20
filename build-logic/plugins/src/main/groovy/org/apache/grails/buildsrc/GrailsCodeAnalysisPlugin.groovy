@@ -48,9 +48,11 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
 
     static String PMD_DIR_PROPERTY = 'grails.code-analysis.dir.pmd'
     static String PMD_ENABLED_PROPERTY = 'grails.code-analysis.enabled.pmd'
+    static String PMD_ENABLED_PROJECTS_PROPERTY = 'grails.code-analysis.enabled.pmd.projects'
     static String PMD_CONFIG_FILE_NAME = 'pmd.xml'
 
     static String SPOTBUGS_ENABLED_PROPERTY = 'grails.code-analysis.enabled.spotbugs'
+    static String SPOTBUGS_ENABLED_PROJECTS_PROPERTY = 'grails.code-analysis.enabled.spotbugs.projects'
 
     static String IGNORE_FAILURES_PROPERTY = 'grails.code-analysis.ignoreFailures'
     static String TEST_ANALYSIS_PROPERTY = 'grails.code-analysis.enabled.tests'
@@ -108,8 +110,7 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
     }
 
     static void configurePmd(Project project) {
-        def pmdEnabled = GradleUtils.booleanProvider(project, PMD_ENABLED_PROPERTY)
-        if (!pmdEnabled.get()) {
+        if (!isToolEnabled(project, PMD_ENABLED_PROPERTY, PMD_ENABLED_PROJECTS_PROPERTY)) {
             return
         }
 
@@ -117,6 +118,8 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
 
         def ignoreFailures = GradleUtils.booleanProvider(project, IGNORE_FAILURES_PROPERTY)
         def testStylingEnabled = GradleUtils.booleanProvider(project, TEST_ANALYSIS_PROPERTY)
+        def skipCodeStyle = project.providers.gradleProperty('skipCodeStyle')
+        def projectBuildDirectory = project.layout.buildDirectory.map { it.asFile.toPath().toAbsolutePath().normalize() }
 
         project.extensions.configure(PmdExtension) {
             it.ruleSetFiles = project.files(project.extensions.getByType(GrailsCodeAnalysisExtension).pmdDirectory.file(PMD_CONFIG_FILE_NAME))
@@ -128,26 +131,30 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
 
         project.tasks.withType(Pmd).configureEach {
             it.group = 'verification'
-            it.onlyIf { !project.hasProperty('skipCodeStyle') }
+            it.onlyIf { !skipCodeStyle.present }
             it.ignoreFailures = ignoreFailures.get()
 
             if (it.name.contains('Test') || it.name.contains('test')) {
                 it.enabled = testStylingEnabled.get()
             }
 
+            it.exclude { org.gradle.api.file.FileTreeElement element ->
+                element.file.toPath().toAbsolutePath().normalize().startsWith(projectBuildDirectory.get())
+            }
+
             it.reports.xml.required.set(true)
             it.reports.xml.outputLocation.set(
-                    project.extensions.getByType(GrailsCodeAnalysisExtension)
-                            .reportsDirectory.get()
-                            .dir('pmd')
-                            .file("${project.name}-${it.name}.xml")
+                            project.extensions.getByType(GrailsCodeAnalysisExtension)
+                            .reportsDirectory
+                            .file("pmd/${GradleUtils.reportFileName(project, it.name)}")
             )
+            GradleUtils.configureReportMarker(it, project.rootProject.layout.projectDirectory, it.reports.xml.outputLocation,
+                    GradleUtils.reportMarker(project, 'pmd', it.name))
         }
     }
 
     static void configureSpotbugs(Project project) {
-        def spotbugsEnabled = GradleUtils.booleanProvider(project, SPOTBUGS_ENABLED_PROPERTY)
-        if (!spotbugsEnabled.get()) {
+        if (!isToolEnabled(project, SPOTBUGS_ENABLED_PROPERTY, SPOTBUGS_ENABLED_PROJECTS_PROPERTY)) {
             return
         }
 
@@ -155,6 +162,7 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
 
         def ignoreFailures = GradleUtils.booleanProvider(project, IGNORE_FAILURES_PROPERTY)
         def testStylingEnabled = GradleUtils.booleanProvider(project, TEST_ANALYSIS_PROPERTY)
+        def skipCodeStyle = project.providers.gradleProperty('skipCodeStyle')
 
         project.extensions.configure(SpotBugsExtension) {
             it.effort.set(Effort.valueOf('MAX'))
@@ -170,16 +178,25 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
             def xmlReport = spotBugsReports.maybeCreate('xml')
             xmlReport.required.set(true)
             xmlReport.outputLocation.set(
-                project.extensions.getByType(GrailsCodeAnalysisExtension)
-                        .reportsDirectory.get()
-                        .dir('spotbugs')
-                        .file("${project.name}-${it.name}.xml")
+                        project.extensions.getByType(GrailsCodeAnalysisExtension)
+                        .reportsDirectory
+                        .file("spotbugs/${GradleUtils.reportFileName(project, it.name)}")
             )
-            it.onlyIf { !project.hasProperty('skipCodeStyle') }
+            GradleUtils.configureReportMarker(it, project.rootProject.layout.projectDirectory, xmlReport.outputLocation,
+                    GradleUtils.reportMarker(project, 'spotbugs', it.name))
+            it.onlyIf { !skipCodeStyle.present }
 
             if (it.name.contains('Test') || it.name.contains('test')) {
                 it.enabled = testStylingEnabled.get()
             }
         }
+    }
+
+    static boolean isToolEnabled(Project project, String enabledProperty, String enabledProjectsProperty) {
+        GradleUtils.booleanProvider(project, enabledProperty).get() ||
+                project.providers.gradleProperty(enabledProjectsProperty)
+                        .map { it.split(',')*.trim().contains(project.path) }
+                        .orElse(false)
+                        .get()
     }
 }

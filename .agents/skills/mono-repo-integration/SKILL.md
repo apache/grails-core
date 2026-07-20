@@ -1,3 +1,14 @@
+---
+name: mono-repo-integration
+description: Step-by-step process for merging a previously-standalone Grails plugin repository (e.g. grails-spring-security, grails-redis) into the grails-core monorepo as one or more Gradle subprojects, wiring it into the shared build, publishing, docs, and CI the same way the existing modules are.
+license: Apache-2.0
+compatibility: opencode, claude, grok, gemini, copilot, cursor, windsurf
+metadata:
+  audience: maintainers
+  frameworks: grails
+  versions: 7
+---
+
 <!--
 SPDX-License-Identifier: Apache-2.0
 
@@ -13,16 +24,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
----
-name: mono-repo-integration
-description: Step-by-step process for merging a previously-standalone Grails plugin repository (e.g. grails-spring-security, grails-redis) into the grails-core monorepo as one or more Gradle subprojects, wiring it into the shared build, publishing, docs, and CI the same way the existing modules are.
-license: Apache-2.0
-compatibility: opencode, claude, grok, gemini, copilot, cursor, windsurf
-metadata:
-  audience: maintainers
-  frameworks: grails
-  versions: 7
----
 
 ## What I Do
 
