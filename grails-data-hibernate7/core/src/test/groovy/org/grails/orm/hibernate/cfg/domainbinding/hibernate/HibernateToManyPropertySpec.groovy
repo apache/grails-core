@@ -21,6 +21,9 @@ package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 import grails.gorm.annotation.Entity
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.hibernate.MappingException
+import org.hibernate.boot.model.naming.Identifier
+import org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PropertyMapping
@@ -28,6 +31,8 @@ import org.grails.datastore.mapping.model.ClassMapping
 import org.grails.datastore.mapping.reflect.EntityReflector
 import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.grails.orm.hibernate.cfg.Mapping
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
+import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyWrapper
 
 class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
 
@@ -61,6 +66,27 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
 
         then:
         columnName == "custom_book_fk"
+    }
+
+    void "resolveJoinTableForeignKeyColumnName removes a domain prefix through a physical naming strategy"() {
+        given:
+        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
+        def namingStrategy = new NamingStrategyWrapper(
+                new HTMPPrefixRemovingPhysicalNamingStrategy(), getGrailsDomainBinder().jdbcEnvironment)
+        hibernateFirstPass()
+
+        expect:
+        property.resolveJoinTableForeignKeyColumnName(namingStrategy) == "book_id"
+    }
+
+    void "resolveJoinTableForeignKeyColumnName uses the associated entity explicit table mapping"() {
+        given:
+        def property = createTestHibernateToManyProperty(HTMPMappedTableAuthor, "books")
+        def namingStrategy = getGrailsDomainBinder().namingStrategy
+        hibernateFirstPass()
+
+        expect:
+        property.resolveJoinTableForeignKeyColumnName(namingStrategy) == "htmp_book_id"
     }
 
     void "isAssociationColumnNullable returns false for ManyToMany"() {
@@ -351,6 +377,22 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
         property.joinTableColumName(namingStrategy) != null
     }
 
+    void "joinTableColumName applies table naming to an associated entity"() {
+        given:
+        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
+        def namingStrategy = Mock(PersistentEntityNamingStrategy)
+        hibernateFirstPass()
+
+        when:
+        String columnName = property.joinTableColumName(namingStrategy)
+
+        then:
+        1 * namingStrategy.resolveTableName(_ as GrailsHibernatePersistentEntity) >> "book"
+        1 * namingStrategy.resolveTableName("books") >> "books"
+        0 * namingStrategy.resolveColumnName(_)
+        columnName == "books_book"
+    }
+
     void "joinTableColumName returns derived column name for enum collection"() {
         given:
         def property = createTestHibernateToManyProperty(HTMPEntityWithEnum, "statuses")
@@ -579,6 +621,33 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
 class HTMPBook {
     Long id
     String title
+}
+
+@Entity
+class Book {
+    Long id
+    String title
+
+    static mapping = {
+        table 'htmp_book'
+    }
+}
+
+@Entity
+class HTMPMappedTableAuthor {
+    Long id
+    String name
+    static hasMany = [books: Book]
+}
+
+class HTMPPrefixRemovingPhysicalNamingStrategy extends PhysicalNamingStrategyStandardImpl {
+
+    @Override
+    Identifier toPhysicalTableName(Identifier logicalName, JdbcEnvironment jdbcEnvironment) {
+        logicalName.text == HTMPBook.simpleName ?
+                Identifier.toIdentifier('book') :
+                super.toPhysicalTableName(logicalName, jdbcEnvironment)
+    }
 }
 
 @Entity
