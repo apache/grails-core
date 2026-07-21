@@ -23,6 +23,7 @@ plugins {
     id 'project-report'
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.gradle.grails-plugin-cli'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
@@ -33,6 +34,12 @@ plugins {
 
 version = projectVersion
 group = 'org.apache.grails'
+
+cliArtifact {
+    automaticModuleName = 'org.apache.grails.core.cli'
+    // this framework module wires its cli dependencies with project dependencies below
+    defaultDependencies = false
+}
 
 dependencies {
 
@@ -63,6 +70,12 @@ dependencies {
     api project(':grails-spring')
 
     api project(':grails-datastore-core')
+
+    // the cli tier — published separately as org.apache.grails:grails-core-cli
+    cliImplementation platform(project(':grails-bom'))
+    cliApi project(project.path)
+    cliImplementation 'org.apache.groovy:groovy-json'
+    cliImplementation 'org.apache.groovy:groovy-templates'
 
     testImplementation 'org.springframework:spring-jdbc'
 

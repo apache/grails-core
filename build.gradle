@@ -66,6 +66,13 @@ subprojects {
         }
     }
 
+    // Framework modules wire their cli tier with project dependencies; only the test-example
+    // apps exercise the external-coordinate auto-provisioning (resolved locally through the
+    // dependency substitution in gradle/functional-test-config.gradle) like real applications.
+    if (!name.startsWith('grails-test-examples')) {
+        ext.grailsCliAutoProvision = false
+    }
+
     if (name.startsWith('grails-doc') || name.startsWith('grails-data-doc') || name.endsWith('-docs') || name.endsWith('-test-report')) {
         rootProject.ext['docProjects'] << name
     }

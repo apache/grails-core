@@ -36,6 +36,7 @@ import org.grails.cli.GrailsCli
 import org.grails.cli.profile.CommandDescription
 import org.grails.cli.profile.ExecutionContext
 import org.grails.cli.profile.Feature
+import org.grails.cli.profile.GrailsRepositoryOverrides
 import org.grails.cli.profile.Profile
 import org.grails.cli.profile.ProfileRepository
 import org.grails.cli.profile.ProfileRepositoryAware
@@ -495,20 +496,22 @@ class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepos
         }
     }
 
-    private List<GrailsGradleRepository> createRepositoryList(List<String> baseRepositories) {
+    protected List<GrailsGradleRepository> createRepositoryList(List<String> baseRepositories) {
         List<GrailsGradleRepository> configuredRepositories = []
-        String overrideRepo = System.getProperty('grails.repo.url') ?: System.getenv('GRAILS_REPO_URL')
-        if (overrideRepo) {
-            List<String> overrideRepos = Arrays.stream(overrideRepo.split(';'))
-                    .map(String::trim)
-                    .filter(s -> !s.isEmpty())
-                    .toList()
-            for (String overrideUrl : overrideRepos) {
-                // when setting the environment variable, it's either a path or url so update the path case to ensure
-                String updatedUrl = overrideUrl.startsWith('http') ? overrideUrl : "uri('${overrideUrl}')"
-                System.out.println("Grails repo url override detected, including repo: ${overrideUrl} using ${updatedUrl}")
-                configuredRepositories.add(new GrailsGradleRepository(url: updatedUrl))
+        // Overrides are validated the same way as in the wrapper and forge: local repositories pass, remote repositories must use HTTPS
+        for (String overrideUrl : GrailsRepositoryOverrides.configuredOverrides) {
+            String updatedUrl
+            if (GrailsRepositoryOverrides.isRepositoryAlias(overrideUrl)) {
+                // the Gradle repository aliases render verbatim as their method calls
+                updatedUrl = overrideUrl
+            } else if (GrailsRepositoryOverrides.isLocalRepository(overrideUrl)) {
+                // a local path is rendered through Gradle's uri(...) so the generated build resolves it as a file repository
+                updatedUrl = "uri('${overrideUrl}')"
+            } else {
+                updatedUrl = overrideUrl
             }
+            System.out.println("Grails repo url override detected, including repo: ${overrideUrl} using ${updatedUrl}")
+            configuredRepositories.add(new GrailsGradleRepository(url: updatedUrl))
         }
         for (String repoUrl : baseRepositories) {
             configuredRepositories.add(new GrailsGradleRepository(url: repoUrl))
@@ -801,7 +804,7 @@ class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepos
     }
 
     @EqualsAndHashCode(includes = ['url', 'includeRestriction'])
-    private static class GrailsGradleRepository {
+    protected static class GrailsGradleRepository {
 
         String url
 
@@ -845,9 +848,12 @@ class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepos
                 return "${' ' * spaces}${url}" as String
             }
 
+            // A uri(...) value is a Gradle expression (a local-path override) and must be
+            // emitted unquoted; quoting it renders the invalid "url = 'uri('...')'"
+            String urlValue = url.startsWith('uri(') ? url : "'${url}'"
             List<String> lines = [
                     "${' ' * spaces}maven {" as String,
-                    "${' ' * (spaces + 4)}url = '${url}'" as String
+                    "${' ' * (spaces + 4)}url = ${urlValue}" as String
             ]
             if (includeRestriction) {
                 lines.add(includeRestriction.generate(spaces + 4, lineSeparator))

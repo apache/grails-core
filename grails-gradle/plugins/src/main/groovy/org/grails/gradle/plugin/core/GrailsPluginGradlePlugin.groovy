@@ -106,7 +106,7 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
     @CompileStatic
     protected void configureSourcesJarTask(Project project) {
         if (!project.tasks.names.contains('sourcesJar')) {
-            project.logger.lifecycle('A sourcesJar task was not found, creating one.', project.name)
+            project.logger.info('A sourcesJar task was not found, creating one.', project.name)
             project.tasks.register('sourcesJar', Jar).configure { Jar jarTask ->
                 jarTask.archiveClassifier.set('sources')
                 jarTask.from(SourceSets.findMainSourceSet(project).allSource)

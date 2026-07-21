@@ -61,6 +61,30 @@ class GrailsFactoriesLoader extends FactoriesLoaderSupport {
         (List<T>) loadFactoriesWithArguments(factoryClass, classLoader, NO_ARGUMENTS)
     }
 
+    /**
+     * Load the factory implementations of the given type from the given resource location,
+     * using the given class loader.
+     * <p>The returned factories are ordered in accordance with the {@link org.springframework.core.OrderComparator}.
+     * @param factoryClass the interface or abstract class representing the factory
+     * @param classLoader the ClassLoader to use for loading (can be {@code null} to use the default)
+     * @param resourceLocation the classpath location of the factories files to read
+     *          (e.g. {@link #CLI_FACTORIES_RESOURCE_LOCATION})
+     */
+    static <T> List<T> loadFactories(Class<T> factoryClass, ClassLoader classLoader, String resourceLocation) {
+        List<T> results = []
+        for (Class<? extends T> clazz : loadFactoryClasses(factoryClass, classLoader, resourceLocation)) {
+            results.add(clazz.getDeclaredConstructor().newInstance())
+        }
+
+        // This list should always be rather small, so sort the handlers by class name.  This will provide
+        // a deterministic order before accounting for PriorityOrdering
+        results.sort { T a, T b ->
+            a?.getClass()?.name <=> b?.getClass()?.name
+        }
+        OrderComparator.sort((List<T>) results)
+        results
+    }
+
     static <T> List<T> loadFactoriesWithArguments(Class<T> factoryClass, ClassLoader classLoader, Object[] arguments) {
         boolean hasArguments = !(arguments != null && arguments.length == 0)
         List<T> results = new ArrayList<T>()
@@ -77,10 +101,11 @@ class GrailsFactoriesLoader extends FactoriesLoaderSupport {
         results
     }
 
-    static <T> List<Class<T>> loadFactoryClasses(Class<T> factoryClass, ClassLoader classLoader = GrailsFactoriesLoader.classLoader) {
+    static <T> List<Class<T>> loadFactoryClasses(Class<T> factoryClass, ClassLoader classLoader = GrailsFactoriesLoader.classLoader,
+                                                 String resourceLocation = FACTORIES_RESOURCE_LOCATION) {
         Assert.notNull(factoryClass, "'factoryClass' must not be null")
 
-        def factoryNames = loadFactoryNames(factoryClass, classLoader)
+        def factoryNames = loadFactoryNames(factoryClass, classLoader, resourceLocation)
 
         List<Class<T>> result = []
         for (String factoryName in factoryNames) {

@@ -22,15 +22,19 @@ package grails.plugin.cache
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
 import org.springframework.cache.Cache
+import org.springframework.core.env.Environment
 
 import grails.plugins.Plugin
 import org.grails.plugin.cache.GrailsCacheManager
 
 @Slf4j
+@CompileStatic
 class CacheGrailsPlugin extends Plugin {
 
-    def grailsVersion = '7.0.0-SNAPSHOT > *'
+    def grailsVersion = '8.0.0-SNAPSHOT > *'
     def observe = ['controllers', 'services']
     def loadAfter = ['controllers', 'services']
     def authorEmail = 'brownj@objectcomputing.com'
@@ -46,26 +50,16 @@ class CacheGrailsPlugin extends Plugin {
         config.getProperty('grails.cache.enabled', Boolean, true)
     }
 
-    Closure doWithSpring() {
-        { ->
-            if (!cachingEnabled) {
+    @Override
+    BeanRegistrar beanRegistrar() {
+        return { BeanRegistry registry, Environment environment ->
+            if (!environment.getProperty('grails.cache.enabled', Boolean, true)) {
                 log.warn('Cache plugin is disabled')
                 return
             }
 
-            customCacheKeyGenerator(CustomCacheKeyGenerator)
-
-            Class<? extends GrailsCacheManager> cacheClazz = GrailsConcurrentMapCacheManager
-            // Selects cache manager from config
-            if (config.getProperty('grails.cache.cacheManager', String, null) == 'GrailsConcurrentLinkedMapCacheManager') {
-                cacheClazz = GrailsConcurrentLinkedMapCacheManager
-            }
-
-            grailsCacheManager(cacheClazz) {
-                configuration = ref('grailsCacheConfiguration')
-            }
-            grailsCacheAdminService(GrailsCacheAdminService)
-            grailsCacheConfiguration(CachePluginConfiguration)
+            registry.registerBean('grailsCacheAdminService', GrailsCacheAdminService)
+            registry.registerBean('grailsCacheConfiguration', CachePluginConfiguration)
         }
     }
 

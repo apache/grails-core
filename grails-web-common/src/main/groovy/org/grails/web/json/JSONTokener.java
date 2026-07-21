@@ -470,7 +470,7 @@ public class JSONTokener {
             endIndex = 19;
             appendDots = true;
         }
-        StringBuffer output = new StringBuffer(" at character " + this.myIndex + " of " + this.mySource.substring(0, endIndex));
+        StringBuilder output = new StringBuilder(" at character " + this.myIndex + " of " + this.mySource.substring(0, endIndex));
         if (appendDots) {
             output.append("...");
         }

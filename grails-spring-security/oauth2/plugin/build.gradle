@@ -28,15 +28,35 @@ plugins {
 	id 'org.apache.grails.buildsrc.sbom'
 	id 'org.apache.grails.gradle.grails-code-style'
 	id 'org.apache.grails.gradle.grails-plugin'
+	id 'org.apache.grails.gradle.grails-plugin-cli'
 	id 'org.apache.grails.gradle.grails-gsp'
 }
 
 version = projectVersion
 group = 'org.apache.grails'
 
+cliArtifact {
+	automaticModuleName = 'org.apache.grails.security.oauth2.cli'
+	// this framework module wires its cli dependencies with project dependencies below
+	defaultDependencies = false
+}
+
+
 dependencies {
 
 	implementation platform(project(':grails-bom'))
+
+	// the cli tier — published separately as a companion -cli artifact
+	cliImplementation platform(project(':grails-bom'))
+	cliApi project(project.path)
+	cliApi(project(':grails-core')) {
+		capabilities {
+			requireCapability('org.apache.grails:grails-core-cli')
+		}
+	}
+	// GrailsConsole (used by init-o-auth2) needs jline at compile time
+	cliImplementation 'org.jline:jline'
+	cliImplementation 'org.fusesource.jansi:jansi'
 
 	api project(':grails-spring-security'), {
 		// api: GrailsUserDetailsService, SpringSecurityService

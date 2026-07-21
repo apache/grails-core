@@ -44,6 +44,8 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
  */
 public class GrailsUpdater {
 
+    private static final int MAX_REDIRECTS = 5;
+
     private final GrailsWrapperHome grailsWrapperHome;
     private final GrailsVersion preferredVersion;
     private GrailsVersion updatedVersion;
@@ -194,8 +196,15 @@ public class GrailsUpdater {
                 contentLength = jarFile.length();
             } else {
                 HttpURLConnection conn = createHttpURLConnection(wrapperUrl);
-                contentLength = conn.getContentLengthLong();
-                inputStream = conn.getInputStream();
+                try {
+                    contentLength = conn.getContentLengthLong();
+                    inputStream = conn.getInputStream();
+                } catch (IOException | RuntimeException e) {
+                    // createHttpURLConnection transfers ownership; do not leak the
+                    // connection when the response turns out to be an error (e.g. 404)
+                    closeQuietly(conn);
+                    throw e;
+                }
             }
 
             success = downloadWrapperJar(version, downloadedJar, inputStream, contentLength, repo.isFile);
@@ -293,9 +302,20 @@ public class GrailsUpdater {
             }
             return Files.newInputStream(metadataFile.toPath());
         } else {
-            HttpURLConnection connection = createHttpURLConnection(metadataUrl);
             try {
-                return connection.getInputStream();
+                // Open the connection inside the try so a connection/HTTP failure (including
+                // the eager response-code check and redirect resolution) is reported as a
+                // missing release for this repository, letting update() fall back to the next
+                // repository instead of aborting the whole wrapper run.
+                HttpURLConnection connection = createHttpURLConnection(metadataUrl);
+                try {
+                    return connection.getInputStream();
+                } catch (IOException | RuntimeException e) {
+                    // createHttpURLConnection transfers ownership; do not leak the
+                    // connection when the response turns out to be an error (e.g. 404)
+                    closeQuietly(connection);
+                    throw e;
+                }
             } catch (Exception e) {
                 throw new GrailsReleaseNotFoundException("There was an error downloading the metadata file", e);
             }
@@ -329,17 +349,100 @@ public class GrailsUpdater {
         }
     }
 
-    private static HttpURLConnection createHttpURLConnection(String mavenMetadataFileUrl) throws IOException {
-        final URL url;
+    static HttpURLConnection createHttpURLConnection(String mavenMetadataFileUrl) throws IOException {
+        return createHttpURLConnection(mavenMetadataFileUrl, url -> (HttpURLConnection) url.openConnection());
+    }
+
+    @FunctionalInterface
+    interface HttpURLConnectionFactory {
+        HttpURLConnection open(URL url) throws IOException;
+    }
+
+    static HttpURLConnection createHttpURLConnection(String mavenMetadataFileUrl, HttpURLConnectionFactory openConnection) throws IOException {
+        URI uri = createSecureRemoteUri(mavenMetadataFileUrl);
+        for (int redirectCount = 0; ; redirectCount++) {
+            URL url = uri.toURL();
+            HttpURLConnection conn = openConnection.open(url);
+            String location;
+            try {
+                conn.setRequestProperty("User-Agent", "Apache-Maven/3.9.6");
+                conn.setInstanceFollowRedirects(false);
+
+                int responseCode = conn.getResponseCode();
+                if (!isRedirect(responseCode)) {
+                    // Ownership of the open connection transfers to the caller.
+                    return conn;
+                }
+
+                if (redirectCount >= MAX_REDIRECTS) {
+                    throw new IOException("Too many redirects while downloading Grails wrapper remote resource: " + mavenMetadataFileUrl);
+                }
+
+                location = conn.getHeaderField("Location");
+            }
+            catch (IOException | RuntimeException e) {
+                // Never leak a connection when request setup, the response code, or the
+                // redirect cap fails partway through an iteration.
+                closeQuietly(conn);
+                throw e;
+            }
+            closeQuietly(conn);
+            uri = resolveSecureRedirectUrl(uri, location);
+        }
+    }
+
+    private static void closeQuietly(HttpURLConnection conn) {
         try {
-            url = new URI(mavenMetadataFileUrl).toURL();
+            InputStream errorStream = conn.getErrorStream();
+            if (errorStream != null) {
+                errorStream.close();
+            }
+        } catch (IOException ignored) {
+            // ignore cleanup failure
+        } finally {
+            conn.disconnect();
+        }
+    }
+
+    static URL createSecureRemoteUrl(String mavenMetadataFileUrl) throws IOException {
+        return createSecureRemoteUri(mavenMetadataFileUrl).toURL();
+    }
+
+    private static URI createSecureRemoteUri(String mavenMetadataFileUrl) throws IOException {
+        try {
+            URI uri = new URI(mavenMetadataFileUrl);
+            validateHttpsUri(uri);
+            return uri;
         } catch (URISyntaxException | IllegalArgumentException e) {
             throw new IOException("Invalid Maven metadata URL: " + mavenMetadataFileUrl, e);
         }
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestProperty("User-Agent", "Apache-Maven/3.9.6");
-        conn.setInstanceFollowRedirects(true);
-        return conn;
+    }
+
+    static URI resolveSecureRedirectUrl(URI currentUri, String location) throws IOException {
+        if (location == null || location.isBlank()) {
+            throw new IOException("Redirect response is missing a Location header for Grails wrapper remote resource: " + currentUri);
+        }
+        try {
+            URI redirectUri = currentUri.resolve(location);
+            validateHttpsUri(redirectUri);
+            return redirectUri;
+        } catch (IllegalArgumentException e) {
+            throw new IOException("Invalid redirect Location header for Grails wrapper remote resource: " + location, e);
+        }
+    }
+
+    private static boolean isRedirect(int responseCode) {
+        return responseCode == HttpURLConnection.HTTP_MOVED_PERM ||
+            responseCode == HttpURLConnection.HTTP_MOVED_TEMP ||
+            responseCode == HttpURLConnection.HTTP_SEE_OTHER ||
+            responseCode == 307 ||
+            responseCode == 308;
+    }
+
+    private static void validateHttpsUri(URI uri) throws IOException {
+        if (!"https".equalsIgnoreCase(uri.getScheme())) {
+            throw new IOException("Grails wrapper remote repository URLs must use HTTPS: " + uri);
+        }
     }
 
     private static SAXParser createSAXParser() throws ParserConfigurationException, SAXException {

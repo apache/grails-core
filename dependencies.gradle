@@ -30,12 +30,12 @@ ext {
             'directory-watcher.version'     : '0.19.1',
             'gradle-groovy.version'         : '4.0.32',
             'gradle-spock.version'          : '2.4-groovy-4.0',
-            'grails-publish-plugin.version' : '1.0.0-M1',
+            'grails-publish-plugin.version' : '1.0.0-M2',
             'jansi.version'                 : '2.4.2',
             'javaparser-core.version'       : '3.28.2',
             'jline.version'                 : '3.30.6',
             'jna.version'                   : '5.19.1',
-            'jquery.version'                : '3.7.1',
+            'jquery.version'                : '4.0.0',
             'maven-model.version'           : '3.9.16',
             'objenesis.version'             : '3.4',
             'spring-boot.version'           : '4.1.0',
@@ -95,7 +95,7 @@ ext {
             'jackson-annotations.version'   : '2.22',
             // Security: overrides spring-boot-dependencies (3.1.4). 3.1.5 fixes CVE-2026-59889 (JsonView bypass) flagged against jackson-databind.
             'jackson3.version'              : '3.1.5',
-            'jquery.version'                : '3.7.1',
+            'jquery.version'                : '4.0.0',
             'kotlin.version'                : '2.2.21',
             'liquibase-hibernate5.version'  : '4.27.0',
             // Security: overrides spring-boot-dependencies (1.5.34). 1.5.37 fixes CVE-2026-13006 flagged against logback-core.

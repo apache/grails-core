@@ -215,4 +215,11 @@ interface GroovyTransformOrder {
      * Transforms a method to non-block IO
      */
     static final int RX_SCHEDULER_ORDER = LINK_ORDER + DECREMENT_PRIORITY
+
+    /**
+     * Registers compiled ApplicationCommand implementations in META-INF/grails-cli.factories.
+     * Runs after the global Grails transform; the two write different files so there is no
+     * contention, but a deterministic order keeps compilation output reproducible.
+     */
+    static final int COMMAND_FACTORIES_ORDER = RX_SCHEDULER_ORDER + DECREMENT_PRIORITY
 }

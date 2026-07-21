@@ -23,6 +23,10 @@ import groovy.transform.CompileStatic
 import org.apache.commons.logging.Log
 import org.apache.commons.logging.LogFactory
 
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
+import org.springframework.core.env.Environment
+
 import grails.config.Settings
 import grails.core.GrailsApplication
 import grails.core.GrailsClass
@@ -37,6 +41,7 @@ import org.grails.plugins.web.rest.render.DefaultRendererRegistry
  * @since 2.3
  * @author Graeme Rocher
  */
+@CompileStatic
 class RestResponderGrailsPlugin extends Plugin {
 
     private static final Log LOG = LogFactory.getLog(RestResponderGrailsPlugin)
@@ -48,15 +53,16 @@ class RestResponderGrailsPlugin extends Plugin {
     GrailsApplication grailsApplication
 
     @Override
-    Closure doWithSpring() {
-        { ->
+    BeanRegistrar beanRegistrar() {
+        return { BeanRegistry registry, Environment environment ->
+            RestResponderGrailsPlugin.registryResourceControllers(grailsApplication)
 
-            def application = grailsApplication
-            RestResponderGrailsPlugin.registryResourceControllers(application)
-
-            rendererRegistry(DefaultRendererRegistry) { bean ->
-                bean.lazyInit = true
-                modelSuffix = application.config.getProperty(Settings.SCAFFOLDING_DOMAIN_SUFFIX, '')
+            registry.registerBean('rendererRegistry', DefaultRendererRegistry) {
+                it.lazyInit().supplier {
+                    DefaultRendererRegistry rendererRegistry = new DefaultRendererRegistry()
+                    rendererRegistry.modelSuffix = environment.getProperty(Settings.SCAFFOLDING_DOMAIN_SUFFIX, '')
+                    return rendererRegistry
+                }
             }
         }
     }

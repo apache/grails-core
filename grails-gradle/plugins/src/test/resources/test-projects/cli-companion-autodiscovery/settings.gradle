@@ -1,0 +1,3 @@
+rootProject.name = 'cli-companion-autodiscovery'
+
+include 'my-plugin', 'renamed-plugin', 'app'

@@ -62,6 +62,8 @@ dependencies {
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
     testImplementation 'org.junit.platform:junit-platform-suite'
+    // GrailsUnitTest boots the data-binding plugin, whose web binding sources need the servlet API
+    testRuntimeOnly 'jakarta.servlet:jakarta.servlet-api'
 
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 

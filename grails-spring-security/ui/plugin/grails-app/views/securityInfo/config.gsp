@@ -20,17 +20,16 @@
 <head>
     <meta name="layout" content="${layoutUi}"/>
     <title><g:message code='spring.security.ui.menu.securityInfo.config'/></title>
-    <s2ui:stylesheet src='jquery.dataTables.css'/>
 </head>
 
 <body>
-<div id="configHolder">
-    <table id="config" cellpadding="0" cellspacing="0" border="0" class="display">
-        <caption><g:message code='spring.security.ui.menu.securityInfo.config'/></caption>
+<div class="table-responsive">
+    <table id="config" class="table table-striped table-hover align-middle">
+        <caption class="caption-top"><g:message code='spring.security.ui.menu.securityInfo.config'/></caption>
         <thead>
         <tr>
-            <th><g:message code='spring.security.ui.info.config.header.name'/></th>
-            <th><g:message code='spring.security.ui.info.config.header.value'/></th>
+            <th scope="col"><g:message code='spring.security.ui.info.config.header.name'/></th>
+            <th scope="col"><g:message code='spring.security.ui.info.config.header.value'/></th>
         </tr>
         </thead>
         <tbody>
@@ -54,9 +53,5 @@
         </tbody>
     </table>
 </div>
-<s2ui:deferredScript src='webjars/datatables/1.10.25/js/jquery.dataTables.js'/>
-<s2ui:documentReady>
-    $('#config').DataTable();
-</s2ui:documentReady>
 </body>
 </html>

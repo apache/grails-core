@@ -119,6 +119,24 @@ gradlePlugin {
             id = 'org.apache.grails.gradle.grails-plugin'
             implementationClass = 'org.grails.gradle.plugin.core.GrailsPluginGradlePlugin'
         }
+        grailsCli {
+            displayName = 'Grails CLI Gradle Plugin'
+            description = 'Configures the Grails CLI tier: the grailsCli configurations with automatic -cli companion discovery, command tasks, and the console/shell tasks'
+            id = 'org.apache.grails.gradle.grails-cli'
+            implementationClass = 'org.grails.gradle.plugin.commands.GrailsCliGradlePlugin'
+        }
+        grailsPluginCli {
+            displayName = 'Grails Plugin CLI Artifact Gradle Plugin'
+            description = 'Declares a Grails plugin\'s CLI commands as a companion -cli artifact, keeping command code off application runtime classpaths'
+            id = 'org.apache.grails.gradle.grails-plugin-cli'
+            implementationClass = 'org.grails.gradle.plugin.commands.GrailsCliArtifactGradlePlugin'
+        }
+        grailsCliLibrary {
+            displayName = 'Grails CLI Library Gradle Plugin'
+            description = 'Publishes a library that consumes a cli tier in its main variants with plain -cli companion coordinates instead of capability requests'
+            id = 'org.apache.grails.gradle.grails-cli-library'
+            implementationClass = 'org.grails.gradle.plugin.commands.GrailsCliLibraryGradlePlugin'
+        }
         grailsProfile {
             displayName = 'Grails Profile Gradle Plugin'
             description = 'A plugin that is capable of compiling a Grails profile into a JAR file for distribution'

@@ -65,6 +65,11 @@ dependencies {
     compileOnly 'org.slf4j:slf4j-api' // @Slf4j
     compileOnly 'org.slf4j:slf4j-nop' // Remove warning about missing slf4j implementation during gsp compilation
 
+    testImplementation project(':grails-core')
+    testImplementation 'org.spockframework:spock-core'
+    testImplementation 'org.springframework:spring-beans'
+    testRuntimeOnly 'org.slf4j:slf4j-nop'
+
     integrationTestImplementation project(':grails-testing-support-redis')
     integrationTestImplementation project(':grails-testing-support-web')
     integrationTestImplementation project(':grails-testing-support-datamapping')
@@ -77,4 +82,5 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/redis-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 }

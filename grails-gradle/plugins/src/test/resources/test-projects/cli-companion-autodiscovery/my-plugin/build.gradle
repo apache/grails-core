@@ -1,0 +1,12 @@
+// A command-bearing plugin developed in the same build as the consuming app. It advertises its
+// companion (org.example.test:my-plugin-cli) through the Grails-Cli-Artifact manifest attribute
+// and exposes the companion as its `cli` feature capability. `defaultDependencies = false` keeps
+// the cli tier free of the grails-core-cli contract so the whole build resolves offline.
+plugins {
+    id 'java-library'
+    id 'org.apache.grails.gradle.grails-plugin-cli'
+}
+
+cliArtifact {
+    defaultDependencies = false
+}

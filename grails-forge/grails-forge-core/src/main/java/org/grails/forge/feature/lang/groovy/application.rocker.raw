@@ -31,6 +31,10 @@ import groovy.transform.CompileStatic
 import io.micronaut.spring.boot.starter.EnableMicronaut
 
 }
+@if(features.contains("spring-boot-starter-security")) {
+import org.springframework.context.annotation.Import
+
+}
 import grails.boot.GrailsApp
 import grails.boot.config.GrailsAutoConfiguration
 @if(applicationType.equals(ApplicationType.PLUGIN) || applicationType.equals(ApplicationType.WEB_PLUGIN)) {
@@ -44,6 +48,9 @@ import grails.plugins.metadata.PluginSource
 @@CompileStatic
 @if(features.contains("grails-micronaut")) {
 @@EnableMicronaut
+}
+@if(features.contains("spring-boot-starter-security")) {
+@@Import(SecurityConfig)
 }
 class Application extends GrailsAutoConfiguration {
     static void main(String[] args) {

@@ -19,6 +19,7 @@
 package org.grails.plugins.i18n;
 
 import java.io.IOException;
+import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -147,7 +148,13 @@ public class AvailableLocaleResolver {
             log.warn("Unable to resolve available locales from message bundles: {}", ex.getMessage());
         }
         List<Locale> sorted = new ArrayList<>(locales);
-        sorted.sort(Comparator.comparing((Locale locale) -> locale.getDisplayName(locale)));
+        // Sort by each locale's autonym (its name in its own language) using a fixed ROOT
+        // collator: unlike natural String order this is case-insensitive and keeps accented
+        // Latin letters with their base letter (e.g. "čeština" near "c"), and unlike a
+        // current-locale collator the order is identical in every UI language, so the selector
+        // it drives stays spatially stable for a user who arrives in a language they cannot read.
+        Collator collator = Collator.getInstance(Locale.ROOT);
+        sorted.sort(Comparator.comparing((Locale locale) -> locale.getDisplayName(locale), collator));
         return Collections.unmodifiableList(sorted);
     }
 

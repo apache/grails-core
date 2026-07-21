@@ -17,31 +17,76 @@
         <a class="navbar-brand d-flex align-items-center" href="${request.contextPath}/">
             <asset:image class="w-75" src="grails.svg" alt="Grails Logo"/>
         </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false"
+                aria-label="${message(code: 'layout.nav.toggle', default: 'Toggle navigation')}">
+            <span class="navbar-toggler-icon"></span>
+        </button>
         <g:set var="navControllers"
                value="${grailsApplication.controllerClasses.toList().sort { it.fullName }}"/>
+        <div class="collapse navbar-collapse" id="mainNav">
+        <ul class="navbar-nav me-auto">
         <g:if test="${navControllers}">
-            <ul class="navbar-nav me-auto">
+            <%-- A filter earns its place only once the list is long enough to be a
+                 chore to scan; below the threshold the plain list is quicker. --%>
+            <g:set var="showNavFilter" value="${navControllers.size() > 8}"/>
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="controllersDropdown" role="button"
                        data-bs-toggle="dropdown" aria-expanded="false">
                         <g:message code="welcome.artefact.controllers"/>
                     </a>
-                    <ul class="dropdown-menu" aria-labelledby="controllersDropdown"
+                    <ul class="dropdown-menu" id="controllersMenu" aria-labelledby="controllersDropdown"
                         style="max-height: 60vh; overflow-y: auto;">
+                        <g:if test="${showNavFilter}">
+                            <li class="position-sticky top-0 bg-body border-bottom px-2 pt-1 pb-2" style="z-index: 2;">
+                                <input type="search" class="form-control form-control-sm nav-filter-input"
+                                       data-filter-scope="#controllersMenu"
+                                       placeholder="${message(code: 'welcome.filter.name')}"
+                                       aria-label="${message(code: 'welcome.filter.name')}">
+                            </li>
+                        </g:if>
                         <g:each var="c" in="${navControllers}">
+                            <%-- A controller whose default action cannot be requested with
+                                 GET (per allowedMethods, e.g. a POST-only logout) is invoked
+                                 through a form using the method it allows, with a badge
+                                 showing the verb: a plain link would only produce a 405. --%>
+                            <g:set var="navMethods"
+                                   value="${c.getPropertyValue('allowedMethods') instanceof Map ? c.getPropertyValue('allowedMethods')[c.defaultAction ?: 'index'] : null}"/>
+                            <g:set var="navGetOk"
+                                   value="${navMethods == null || 'GET' in [navMethods].flatten()*.toString()*.toUpperCase()}"/>
                             <g:set var="navControllerName" value="${(c.fullName ?: '')
                                     .tokenize('.')
                                     .last()
                                     .replaceFirst(/Controller$/, '')}"/>
-                            <li>
+                            <g:set var="navControllerLabel"
+                                   value="${((c.namespace ?: '').trim()) ? "${c.namespace} / ${navControllerName}" : navControllerName}"/>
+                            <li data-name="${navControllerLabel}">
+                                <g:if test="${navGetOk}">
                                 <g:link controller="${c.logicalPropertyName}" namespace="${c.namespace}"
-                                        class="dropdown-item">${((c.namespace ?: '').trim()) ? "${c.namespace} / ${navControllerName}" : navControllerName}</g:link>
+                                        class="dropdown-item">${navControllerLabel}</g:link>
+                                </g:if>
+                                <g:else>
+                                <form action="${createLink(controller: c.logicalPropertyName, namespace: c.namespace)}" method="post" class="m-0">
+                                    <button type="submit" class="dropdown-item d-flex align-items-center justify-content-between gap-3">
+                                        ${navControllerLabel}
+                                        <span class="badge bg-body-tertiary text-body-secondary border">${[navMethods].flatten()*.toString()*.toUpperCase().join(' / ')}</span>
+                                    </button>
+                                </form>
+                                </g:else>
                             </li>
                         </g:each>
+                        <g:if test="${showNavFilter}">
+                            <li class="nav-filter-empty dropdown-item-text small text-body-secondary d-none">
+                                <g:message code="welcome.filter.none"/>
+                            </li>
+                        </g:if>
                     </ul>
                 </li>
-            </ul>
         </g:if>
+            <%-- Navbar items contributed by the rendered page (e.g. plugin screens)
+                 through a <content tag="nav"> block of <li> elements. --%>
+            <g:pageProperty name="page.nav"/>
+        </ul>
         <ul class="navbar-nav ms-auto">
             <g:set var="availableLocales" value="${application.getAttribute('availableLocales')}"/>
             <g:if test="${availableLocales && availableLocales.size() > 1}">
@@ -51,22 +96,17 @@
                         <i class="bi bi-globe me-1"></i>${currentLocale.getDisplayName(currentLocale)}
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="localeDropdown">
-                        <%-- The default language stays pinned on top: a user who switched to a
-                             language they cannot read must always find a recognizable way back.
-                             Resolved from spring.web.locale so a configured default is honored. --%>
-                        <g:set var="defaultLocale"
-                               value="${org.springframework.util.StringUtils.parseLocale(grailsApplication.config.getProperty('spring.web.locale', 'en')) ?: java.util.Locale.ENGLISH}"/>
-                        <li>
-                            <a class="dropdown-item${defaultLocale.language == currentLocale.language ? ' active' : ''}" href="?lang=${defaultLocale.toLanguageTag()}">${defaultLocale.getDisplayName(defaultLocale)}</a>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <g:each in="${availableLocales}" var="availableLocale">
-                            <g:if test="${availableLocale.language != defaultLocale.language}">
-                                <li>
-                                    <a class="dropdown-item${availableLocale.language == currentLocale.language ? ' active' : ''}" href="?lang=${availableLocale.toLanguageTag()}">${availableLocale.getDisplayName(availableLocale)}</a>
-                                </li>
-                            </g:if>
-                        </g:each>
+                        <%-- g:localeSelect (body form) renders each translated locale, already
+                             autonym-sorted by AvailableLocaleResolver, and flags the active and default
+                             entries; this layout supplies only the Bootstrap markup. pinDefault emits the
+                             configured default first (index 0), so a user who switched to a language they
+                             cannot read always has a recognizable way back at the top, above the divider. --%>
+                        <g:localeSelect available="true" pinDefault="true" var="loc">
+                            <g:if test="${loc.index == 1}"><li><hr class="dropdown-divider"></li></g:if>
+                            <li>
+                                <a class="dropdown-item${loc.active ? ' active' : ''}" href="?lang=${loc.tag}">${loc.autonym}</a>
+                            </li>
+                        </g:localeSelect>
                     </ul>
                 </li>
             </g:if>
@@ -93,7 +133,52 @@
                     </li>
                 </ul>
             </li>
+            <%-- Right-aligned navbar items contributed by the rendered page through a
+                 <content tag="navActions"> block of <li> elements (e.g. a security
+                 plugin's account menu). Rendered after language and theme so account
+                 controls sit rightmost, matching the built-in sign-in block below. --%>
+            <g:pageProperty name="page.navActions"/>
+            <%-- Sign-in affordance, rendered whenever Spring Security is on the classpath -
+                 the plain starter or the security plugin alike, resolved without a hard class
+                 reference. POST /logout is Spring Security's default LogoutFilter URL and the
+                 plugin's POST-only LogoutController route; /login is the starter's form-login
+                 page, which the plugin's LoginController also answers. g:form carries the
+                 CSRF token through the registered RequestDataValueProcessor. A page that
+                 contributes its own navActions (e.g. a security plugin's account menu)
+                 supersedes this block. --%>
+            <g:if test="${!pageProperty(name: 'page.navActions') && org.springframework.util.ClassUtils.isPresent('org.springframework.security.core.context.SecurityContextHolder', null)}">
+                <g:set var="securityAuthentication"
+                       value="${org.springframework.util.ClassUtils.forName('org.springframework.security.core.context.SecurityContextHolder', null).context?.authentication}"/>
+                <g:set var="securityLoggedIn"
+                       value="${securityAuthentication?.authenticated &&
+                               !org.springframework.util.ClassUtils.forName('org.springframework.security.authentication.AnonymousAuthenticationToken', null).isInstance(securityAuthentication)}"/>
+                <g:if test="${securityLoggedIn}">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button"
+                           data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-person-circle me-1"></i>${securityAuthentication.name}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li>
+                                <g:form url="[uri: '/logout']" method="post">
+                                    <button type="submit" class="dropdown-item">
+                                        <i class="bi bi-box-arrow-right me-2"></i><g:message code="layout.logout"/>
+                                    </button>
+                                </g:form>
+                            </li>
+                        </ul>
+                    </li>
+                </g:if>
+                <g:else>
+                    <li class="nav-item d-flex align-items-center ms-lg-2">
+                        <a class="btn btn-primary btn-sm" href="${request.contextPath}/login">
+                            <g:message code="layout.login"/>
+                        </a>
+                    </li>
+                </g:else>
+            </g:if>
         </ul>
+        </div>
     </div>
 </nav>
 
