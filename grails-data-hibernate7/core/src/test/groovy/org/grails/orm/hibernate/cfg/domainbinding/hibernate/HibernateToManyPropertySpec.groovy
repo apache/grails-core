@@ -377,7 +377,7 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
         property.joinTableColumName(namingStrategy) != null
     }
 
-    void "joinTableColumName applies table naming to an associated entity"() {
+    void "joinTableColumName applies table naming to the associated entity and column naming to the property prefix"() {
         given:
         def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
         def namingStrategy = Mock(PersistentEntityNamingStrategy)
@@ -388,8 +388,8 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
 
         then:
         1 * namingStrategy.resolveTableName(_ as GrailsHibernatePersistentEntity) >> "book"
-        1 * namingStrategy.resolveTableName("books") >> "books"
-        0 * namingStrategy.resolveColumnName(_)
+        1 * namingStrategy.resolveColumnName("books") >> "books"
+        0 * namingStrategy.resolveTableName("books")
         columnName == "books_book"
     }
 

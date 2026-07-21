@@ -212,9 +212,7 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
         return ofNullable(getHibernateMappedForm())
                 .map(PropertyConfig::getJoinTableColumnConfig)
                 .map(ColumnConfig::getName)
-                .orElseGet(() -> getHibernateAssociatedEntity()
-                                .getHibernateRootEntity()
-                                .getTableName(namingStrategy) +
+                .orElseGet(() -> resolveAssociatedEntityTableName(namingStrategy) +
                         GrailsDomainBinder.FOREIGN_KEY_SUFFIX);
     }
 
@@ -228,8 +226,8 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
         } else {
             var clazz = isBasic() ?
                     namingStrategy.resolveColumnName(referencedType.getName()) :
-                    getHibernateAssociatedEntity().getHibernateRootEntity().getTableName(namingStrategy);
-            var prop = namingStrategy.resolveTableName(getName());
+                    resolveAssociatedEntityTableName(namingStrategy);
+            var prop = namingStrategy.resolveColumnName(getName());
             columnName = referencedType.isEnum() ?
                     clazz :
                     new BackticksRemover().apply(prop) + UNDERSCORE + new BackticksRemover().apply(clazz);

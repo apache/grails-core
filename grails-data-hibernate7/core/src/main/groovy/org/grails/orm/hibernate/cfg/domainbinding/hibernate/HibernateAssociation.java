@@ -27,6 +27,7 @@ import org.hibernate.mapping.Property;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.orm.hibernate.cfg.Mapping;
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 /**
@@ -78,6 +79,10 @@ public interface HibernateAssociation extends HibernatePersistentProperty {
 
     default String getReferencedEntityName() {
         return getHibernateAssociatedEntity().getName();
+    }
+
+    default String resolveAssociatedEntityTableName(PersistentEntityNamingStrategy namingStrategy) {
+        return getHibernateAssociatedEntity().getHibernateRootEntity().getTableName(namingStrategy);
     }
 
     @Override
