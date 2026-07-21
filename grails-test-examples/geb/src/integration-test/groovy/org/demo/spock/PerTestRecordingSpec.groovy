@@ -123,21 +123,36 @@ class PerTestRecordingSpec extends ContainerGebSpec {
             long pollIntervalMillis = 500L
     ) {
         long deadline = System.currentTimeMillis() + timeoutMillis
-        List<File> recordingFiles = []
+        Map<String, Long> previousSizes = [:]
+        List<File> readyFiles = []
         while (System.currentTimeMillis() < deadline) {
             // Re-scan on every poll: the directory and the files both appear
             // asynchronously while the recording container flushes videos.
-            recordingFiles = currentRunRecordingDirs(baseRecordingDir).collectMany { File dir ->
+            List<File> candidateFiles = currentRunRecordingDirs(baseRecordingDir).collectMany { File dir ->
                 (dir.listFiles({ File file ->
                     isVideoFile(file) && file.name.contains(testClassName)
                 } as FileFilter) ?: new File[0]) as List<File>
             }
+            Map<String, Long> currentSizes = candidateFiles.collectEntries { File file ->
+                [(file.absolutePath): file.length()]
+            }
 
-            if (recordingFiles.size() >= minFileCount) {
+            // Testcontainers copies each recording with a plain, non-atomic
+            // stream copy, so a file can appear in the directory scan above
+            // while still 0 bytes or only partially written. Only treat a
+            // recording as ready once its size is non-zero and unchanged
+            // since the previous poll, which means the copy has finished.
+            readyFiles = candidateFiles.findAll { File file ->
+                long size = currentSizes[file.absolutePath]
+                size > 0 && previousSizes[file.absolutePath] == size
+            }
+
+            if (readyFiles.size() >= minFileCount) {
                 break
             }
+            previousSizes = currentSizes
             sleep(pollIntervalMillis)
         }
-        return recordingFiles
+        return readyFiles
     }
 }
