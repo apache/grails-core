@@ -107,37 +107,7 @@ class SbomPlugin implements Plugin<Project> {
             'pkg:maven/jline/jline@2.14.6?type=jar'                           : 'BSD-2-Clause', // legacy jline:jline group, BSD-2; maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
             'pkg:maven/opensymphony/sitemesh@2.6.0?type=jar'                  : 'OpenSymphony', // custom license approved by legal LEGAL-707
             'pkg:maven/org.antlr/antlr4-runtime@4.7.2?type=jar'               : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
-            'pkg:maven/org.jline/jansi@4.0.12?type=jar'                       : 'BSD-3-Clause', // jline 4.0.12 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.0.12/LICENSE.txt confirms BSD-3-Clause; cyclonedx misreports as BSD-4-Clause (cyclonedx-core-java#205); resolved transitively via groovy-groovysh on Groovy 6
-            'pkg:maven/org.jline/jansi@4.1.0?type=jar'                        : 'BSD-3-Clause', // jline 4.1.0 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.1.0/LICENSE.txt confirms BSD-3-Clause; cyclonedx misreports as BSD-4-Clause (cyclonedx-core-java#205); resolved transitively via groovy-groovysh on Groovy 6
-            'pkg:maven/org.jline/jansi@4.2.1?type=jar'                        : 'BSD-3-Clause', // jline 4.2.1 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.2.1/LICENSE.txt confirms BSD-3-Clause; cyclonedx misreports as BSD-4-Clause (cyclonedx-core-java#205); resolved transitively via groovy-groovysh on Groovy 6
             'pkg:maven/org.jline/jline@3.30.6?type=jar'                       : 'BSD-3-Clause', // jline 3.30.6 LICENSE at https://github.com/jline/jline3/blob/jline-parent-3.30.6/LICENSE.txt confirms BSD-3-Clause; direct dependency declared at jline.version in dependencies.gradle
-            'pkg:maven/org.jline/jline-builtins@4.0.12?type=jar'              : 'BSD-3-Clause', // jline 4.0.12 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.0.12/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
-            'pkg:maven/org.jline/jline-console@4.0.12?type=jar'               : 'BSD-3-Clause', // jline 4.0.12 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.0.12/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
-            'pkg:maven/org.jline/jline-console-ui@4.0.12?type=jar'            : 'BSD-3-Clause', // jline 4.0.12 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.0.12/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
-            'pkg:maven/org.jline/jline-native@4.0.12?type=jar'                : 'BSD-3-Clause', // jline 4.0.12 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.0.12/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
-            'pkg:maven/org.jline/jline-reader@4.0.12?type=jar'                : 'BSD-3-Clause', // jline 4.0.12 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.0.12/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
-            'pkg:maven/org.jline/jline-shell@4.0.12?type=jar'                 : 'BSD-3-Clause', // jline 4.0.12 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.0.12/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
-            'pkg:maven/org.jline/jline-style@4.0.12?type=jar'                 : 'BSD-3-Clause', // jline 4.0.12 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.0.12/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
-            'pkg:maven/org.jline/jline-terminal@4.0.12?type=jar'              : 'BSD-3-Clause', // jline 4.0.12 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.0.12/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
-            'pkg:maven/org.jline/jline-terminal-jni@4.0.12?type=jar'          : 'BSD-3-Clause', // jline 4.0.12 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.0.12/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
-            'pkg:maven/org.jline/jline-builtins@4.1.0?type=jar'               : 'BSD-3-Clause', // jline 4.1.0 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.1.0/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
-            'pkg:maven/org.jline/jline-console@4.1.0?type=jar'                : 'BSD-3-Clause', // jline 4.1.0 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.1.0/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
-            'pkg:maven/org.jline/jline-console-ui@4.1.0?type=jar'             : 'BSD-3-Clause', // jline 4.1.0 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.1.0/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
-            'pkg:maven/org.jline/jline-native@4.1.0?type=jar'                 : 'BSD-3-Clause', // jline 4.1.0 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.1.0/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
-            'pkg:maven/org.jline/jline-reader@4.1.0?type=jar'                 : 'BSD-3-Clause', // jline 4.1.0 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.1.0/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
-            'pkg:maven/org.jline/jline-shell@4.1.0?type=jar'                  : 'BSD-3-Clause', // jline 4.1.0 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.1.0/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
-            'pkg:maven/org.jline/jline-style@4.1.0?type=jar'                  : 'BSD-3-Clause', // jline 4.1.0 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.1.0/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
-            'pkg:maven/org.jline/jline-terminal@4.1.0?type=jar'               : 'BSD-3-Clause', // jline 4.1.0 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.1.0/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
-            'pkg:maven/org.jline/jline-terminal-jni@4.1.0?type=jar'           : 'BSD-3-Clause', // jline 4.1.0 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.1.0/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
-            'pkg:maven/org.jline/jline-builtins@4.2.1?type=jar'               : 'BSD-3-Clause', // jline 4.2.1 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.2.1/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
-            'pkg:maven/org.jline/jline-console@4.2.1?type=jar'                : 'BSD-3-Clause', // jline 4.2.1 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.2.1/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
-            'pkg:maven/org.jline/jline-console-ui@4.2.1?type=jar'             : 'BSD-3-Clause', // jline 4.2.1 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.2.1/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
-            'pkg:maven/org.jline/jline-native@4.2.1?type=jar'                 : 'BSD-3-Clause', // jline 4.2.1 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.2.1/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
-            'pkg:maven/org.jline/jline-reader@4.2.1?type=jar'                 : 'BSD-3-Clause', // jline 4.2.1 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.2.1/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
-            'pkg:maven/org.jline/jline-shell@4.2.1?type=jar'                  : 'BSD-3-Clause', // jline 4.2.1 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.2.1/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
-            'pkg:maven/org.jline/jline-style@4.2.1?type=jar'                  : 'BSD-3-Clause', // jline 4.2.1 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.2.1/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
-            'pkg:maven/org.jline/jline-terminal@4.2.1?type=jar'               : 'BSD-3-Clause', // jline 4.2.1 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.2.1/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
-            'pkg:maven/org.jline/jline-terminal-jni@4.2.1?type=jar'           : 'BSD-3-Clause', // jline 4.2.1 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.2.1/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
             'pkg:maven/org.jruby/jzlib@1.1.5?type=jar'                        : 'BSD-3-Clause', // https://web.archive.org/web/20240822213507/http://www.jcraft.com/jzlib/LICENSE.txt shows it's a 3 clause
             'pkg:maven/org.liquibase.ext/liquibase-hibernate5@4.27.0?type=jar': 'Apache-2.0', // maps incorrectly because of https://github.com/liquibase/liquibase/issues/2445 & the base pom does not define a license
             'pkg:maven/org.json/json@20251224?type=jar'                       : 'Public-Domain', // required due to jedis, https://issues.apache.org/jira/browse/LEGAL-666 approves this usage
@@ -146,6 +116,18 @@ class SbomPlugin implements Plugin<Project> {
             'pkg:maven/org.bouncycastle/bcprov-jdk18on@1.84?type=jar'         : 'MIT',
             'pkg:maven/org.bouncycastle/bcutil-jdk18on@1.84?type=jar'         : 'MIT',
     ]
+
+    private static String forcedLicenseFor(String bomRef) {
+        if (LICENSE_MAPPING.containsKey(bomRef)) {
+            return LICENSE_MAPPING[bomRef]
+        }
+        // JLine 4 LICENSE.txt confirms BSD-3-Clause, but CycloneDX misreports it as BSD-4-Clause
+        // (cyclonedx-core-java#205). This is limited to the org.jline Maven jar family resolved via Groovy 6.
+        if (bomRef.matches('pkg:maven/org\\.jline/[^/@?]+@4\\.[^?]+\\?type=jar')) {
+            return 'BSD-3-Clause'
+        }
+        null
+    }
 
     // we don't distribute these so these licenses are considered acceptable, but we still prefer ASF licenses.
     // Require a whitelist of any case of category X licenses to prevent accidental inclusion in a distributed artifact
@@ -482,10 +464,10 @@ class SbomPlugin implements Plugin<Project> {
         }
 
         logger.info('Picking license for {} from {} choices', bomRef, licenseChoices.size())
-        if (LICENSE_MAPPING.containsKey(bomRef)) {
+        def licenseId = forcedLicenseFor(bomRef)
+        if (licenseId) {
             // There are several reasons that cyclone will get the license wrong, usually due to upstream not publishing information or publishing it incorrectly
             // see the licenseMapping map above for details
-            def licenseId = LICENSE_MAPPING[bomRef]
             logger.lifecycle('Forcing license for {} to {}', bomRef, licenseId)
 
             def licenseBlock = LICENSES[licenseId]
