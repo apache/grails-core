@@ -510,16 +510,22 @@ abstract class ConfigurationBuilder<B, C> {
                 try {
                     def instance = argType.getDeclaredConstructor().newInstance()
                     mapValue.each { key, val ->
-                        if (instance.hasProperty(key as String)) {
-                            instance[key as String] = val
+                        String propertyName = key as String
+                        if (!instance.hasProperty(propertyName)) {
+                            throw new ConfigurationException("Unknown setting [$propertyPathForArg.$propertyName]")
                         }
+                        instance[propertyName] = val
                     }
                     return instance
+                } catch (ConfigurationException e2) {
+                    throw e2
                 } catch (Throwable e2) {
                     log.debug('Failed to instantiate {} from Map: {}', argType, e2.message)
                     populationFailure = e2
                 }
             }
+        } catch (ConfigurationException e3) {
+            throw e3
         } catch (Throwable e3) {
             log.debug('Failed to get raw value for {}: {}', propertyPathForArg, e3.message)
         }

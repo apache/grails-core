@@ -177,6 +177,22 @@ class ConfigurationBuilderSpec extends Specification {
         configuration.strictNested.value == 'ok'
     }
 
+    void "Test nested map conversion rejects unknown properties"() {
+
+        given: "A nested configuration map with an unknown property"
+        def config = DatastoreUtils.createPropertyResolver(
+                (Settings.PREFIX + ".strictNested"): [valu: 'configured']
+        )
+
+        when: "The configuration is built"
+        new StrictNestedConfigurationBuilder(config).build()
+
+        then: "The unknown property is rejected"
+        def e = thrown(ConfigurationException)
+        e.message.contains('strictNested')
+        e.message.contains('valu')
+    }
+
     void "Test nested map conversion preserves empty map defaults"() {
 
         given: "An empty nested configuration map that Spring cannot convert directly"
