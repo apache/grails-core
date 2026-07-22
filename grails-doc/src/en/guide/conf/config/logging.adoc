@@ -30,3 +30,73 @@ NOTE: The filename `logback.xml` still works but `logback-spring.xml` is now rec
 
 More information can be found in the official https://logback.qos.ch/documentation.html[Logback documentation].
 
+=== Structured Logging
+
+Grails does not enable structured logging. Existing Logback configuration and plain-text output remain unchanged
+unless an application explicitly selects a Spring Boot structured format. Spring Boot 4.1 provides the JSON format
+IDs `ecs` (Elastic Common Schema), `gelf` (Graylog Extended Log Format), and `logstash` for console and file output.
+For the complete reference, see the https://docs.spring.io/spring-boot/reference/features/logging.html#features.logging.structured[Spring Boot structured logging documentation].
+
+Configure the console and file outputs independently in `grails-app/conf/application.yml`:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+logging:
+    structured:
+        format:
+            console: ecs
+            file: logstash
+        json:
+            exclude: process.pid
+            rename:
+                log.level: severity
+            add:
+                service.team: web
+            stacktrace:
+                root: first
+                max-length: 1024
+                max-throwable-depth: 20
+                include-common-frames: true
+                include-hashes: true
+----
+
+`logging.structured.json.include` limits output to selected paths. Use `exclude`, `rename`, and `add` to remove,
+rename, or add JSON members. The `stacktrace` settings control root-cause order, length, throwable depth, common
+frames, and hashes. Use `logging.structured.format.console` and `logging.structured.format.file` only with Spring
+Boot's default Logback configuration, or update a custom `logback-spring.xml` to use Spring Boot's structured encoder.
+
+Structured formats include MDC entries and SLF4J fluent key-value pairs. For example, application code can add both:
+
+[source,groovy]
+----
+import org.slf4j.LoggerFactory
+import org.slf4j.MDC
+
+class AuditService {
+    private static final log = LoggerFactory.getLogger(AuditService)
+
+    void record(String orderId) {
+        MDC.put('tenantId', 'acme')
+        try {
+            log.atInfo().addKeyValue('order.id', orderId).log('Order accepted')
+        } finally {
+            MDC.remove('tenantId')
+        }
+    }
+}
+----
+
+Structured logging does not enable tracing. When Micrometer tracing is configured, tracing owns the `traceId` and
+`spanId` MDC context that structured formats include. To copy selected baggage fields to MDC, configure
+`management.tracing.baggage.correlation.fields`, for example:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+management:
+    tracing:
+        baggage:
+            correlation:
+                fields: tenantId
+----

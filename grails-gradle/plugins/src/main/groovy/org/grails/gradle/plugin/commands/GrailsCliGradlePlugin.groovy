@@ -62,6 +62,13 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
     public static final String APPLICATION_CONTEXT_COMMAND_CLASS = 'org.apache.grails.core.cli.ApplicationCommand'
 
     /**
+     * The task group the CLI command tasks are placed in. A group makes them visible in the
+     * default {@code gradle tasks} listing (and therefore to shell tab-completion), matching the
+     * commands offered by the interactive Grails shell.
+     */
+    public static final String GRAILS_COMMAND_GROUP = 'Grails'
+
+    /**
      * The dependency bucket carrying CLI-only dependencies (Grails commands and their libraries):
      * compile-visible so `grails-app/commands` sources compile against the cli-only contract, on
      * the command-runner classpath, but never on `runtimeClasspath`, `bootRun`, or packaged
@@ -305,6 +312,8 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                 String commandName = GrailsNameUtils.getScriptName(GrailsNameUtils.getLogicalName(ctxCommand, 'Command'))
                 if (!project.tasks.names.contains(taskName)) {
                     project.tasks.register(taskName, ApplicationContextCommandTask).configure {
+                        it.group = GRAILS_COMMAND_GROUP
+                        it.description = "Runs the Grails ${commandName} command"
                         it.classpath = fileCollection
                         it.command = commandName
                         it.systemProperty(Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName()))
@@ -384,6 +393,8 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
         def consoleTask = tasks.register('console', JavaExec)
         project.afterEvaluate {
             consoleTask.configure {
+                it.group = GRAILS_COMMAND_GROUP
+                it.description = 'Runs the interactive Grails Swing console'
                 it.dependsOn(tasks.named('classes'), tasks.named('findMainClass'))
                 // grails-console arrives through the auto-provisioned grailsCli tier; the
                 // `console` configuration remains for additional console-only dependencies
@@ -406,6 +417,8 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
         def shellTask = tasks.register('shell', JavaExec)
         project.afterEvaluate {
             shellTask.configure {
+                it.group = GRAILS_COMMAND_GROUP
+                it.description = 'Runs the interactive Grails shell'
                 it.dependsOn(tasks.named('classes'), tasks.named('findMainClass'))
                 // grails-console arrives through the auto-provisioned grailsCli tier; the
                 // `console` configuration remains for additional console-only dependencies
@@ -430,6 +443,8 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
             def runTask = project.tasks.register('runScript', ApplicationContextScriptTask)
             project.afterEvaluate {
                 runTask.configure {
+                    it.group = GRAILS_COMMAND_GROUP
+                    it.description = 'Executes a Grails script'
                     SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
                     it.classpath = mainSourceSet.runtimeClasspath + project.configurations.getByName(GRAILS_CLI_CLASSPATH_CONFIGURATION)
                     it.systemProperty(Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName()))
@@ -461,6 +476,8 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
             def runTask = project.tasks.register('runCommand', ApplicationContextCommandTask)
             project.afterEvaluate {
                 runTask.configure {
+                    it.group = GRAILS_COMMAND_GROUP
+                    it.description = 'Runs a Grails command against the application context'
                     SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
                     it.classpath = mainSourceSet.runtimeClasspath + project.configurations.getByName(GRAILS_CLI_CLASSPATH_CONFIGURATION)
                     it.systemProperty(Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName()))

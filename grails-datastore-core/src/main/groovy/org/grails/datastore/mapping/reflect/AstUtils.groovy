@@ -438,8 +438,7 @@ class AstUtils {
                 if (isDomainClass(new File(filePath).toURI().toURL())) {
                     return true
                 }
-            } catch (MalformedURLException e) {
-                // ignore
+            } catch (MalformedURLException ignored) {
             }
         }
         List<AnnotationNode> annotations = classNode.getAnnotations()

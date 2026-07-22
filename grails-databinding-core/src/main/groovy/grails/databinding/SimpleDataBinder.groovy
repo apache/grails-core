@@ -605,7 +605,9 @@ class SimpleDataBinder implements DataBinder {
     protected convertStringToEnum(Class<? extends Enum> enumClass, String value) {
         try {
             enumClass.valueOf(value)
-        } catch (IllegalArgumentException iae) {}
+        } catch (IllegalArgumentException ignored) {
+            // intentional: an unmatched value cannot be converted to the enum
+        }
     }
 
     protected preprocessValue(propertyValue) {
@@ -781,7 +783,7 @@ class SimpleDataBinder implements DataBinder {
                     }
                 }
             }
-        } catch (Exception e) {
+        } catch (Exception ignored) {
         }
         initializer
     }
