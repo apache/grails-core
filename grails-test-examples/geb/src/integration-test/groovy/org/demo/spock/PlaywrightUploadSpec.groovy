@@ -16,29 +16,26 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.demo.spock
 
-import geb.direct.PlaywrightWebDriver
-import org.demo.spock.pages.HomePage
+import org.demo.spock.pages.UploadPage
+import org.demo.spock.pages.UploadSuccessPage
 
 import grails.plugin.geb.PlaywrightGebSpec
 import grails.testing.mixin.integration.Integration
 
-/**
- * Test spec to verify that the Playwright driver configuration is used.
- */
 @Integration
-class GebConfigSpec extends PlaywrightGebSpec {
+class PlaywrightUploadSpec extends PlaywrightGebSpec {
 
-    void 'should use PlaywrightWebDriver from GebConfig.groovy'() {
-        expect: 'the driver is the local Playwright adapter'
-        driver instanceof PlaywrightWebDriver
+    void 'should upload a local file without a container file detector'() {
+        given:
+        UploadPage uploadPage = to(UploadPage)
 
-        when: 'navigating to a page'
-        to(HomePage)
+        when:
+        uploadPage.fileInput.file = new File('src/integration-test/resources/assets/upload-test.txt')
+        uploadPage.submitBtn.click()
 
-        then: 'the browser has an active page'
-        ((PlaywrightWebDriver) driver).page != null
+        then:
+        at(UploadSuccessPage)
     }
 }

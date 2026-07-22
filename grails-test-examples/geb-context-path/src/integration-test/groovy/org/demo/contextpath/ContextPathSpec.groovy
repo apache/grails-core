@@ -22,7 +22,7 @@ package org.demo.contextpath
 import org.demo.contextpath.pages.GreetingPage
 import org.demo.contextpath.pages.HomePage
 
-import grails.plugin.geb.ContainerGebSpec
+import grails.plugin.geb.PlaywrightGebSpec
 import grails.testing.mixin.integration.Integration
 
 /**
@@ -31,7 +31,7 @@ import grails.testing.mixin.integration.Integration
  * in the base URL, page navigation would result in 404 errors.
  */
 @Integration
-class ContextPathSpec extends ContainerGebSpec {
+class ContextPathSpec extends PlaywrightGebSpec {
 
     void 'should navigate to the home page under the configured context path'() {
         expect: 'visiting the home page'
