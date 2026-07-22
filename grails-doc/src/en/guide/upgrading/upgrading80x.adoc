@@ -1215,6 +1215,64 @@ GORM's `createCriteria()` and `withCriteria()` DSL are implemented on top of the
 
 *`javax.persistence` → `jakarta.persistence`*: This migration was already required for Grails 7; Grails 8 continues to require `jakarta.*`.
 
+===== 26.9 Many-to-Many Join-Table Column Names
+
+In Grails 7 (Hibernate 5), the default foreign-key column names of a many-to-many join table were derived from the simple names of the associated domain classes, after applying the column naming strategy.
+For example, the domain class `Book` produced the foreign-key column `book_id`, even when its physical table was mapped to a different name.
+
+In Grails 8 (Hibernate 7), these foreign-key column names are instead derived from the physical table names of the associated domain classes.
+The physical name includes an explicit `table` mapping and any transformation made by a custom physical naming strategy.
+For example, given the following mapping:
+
+[source,groovy]
+----
+class Book {
+    static mapping = {
+        table 'catalog_book'
+    }
+}
+----
+
+Grails 7 used `book_id` by default in the join table, whereas Grails 8 uses `catalog_book_id`.
+This is a breaking schema change for an existing database if its join table still uses the Grails 7 column names.
+
+To keep the existing schema unchanged, configure the join table and both foreign-key columns explicitly in the `static mapping` block on each side of the relationship:
+
+[source,groovy]
+----
+class Author {
+    String name
+
+    static hasMany = [books: Book]
+
+    static mapping = {
+        books joinTable: [
+            name: 'author_books',
+            key: 'author_id',
+            column: 'book_id'
+        ]
+    }
+}
+
+class Book {
+    String title
+
+    static belongsTo = Author
+    static hasMany = [authors: Author]
+
+    static mapping = {
+        authors joinTable: [
+            name: 'author_books',
+            key: 'book_id',
+            column: 'author_id'
+        ]
+    }
+}
+----
+
+Replace `author_books`, `author_id`, and `book_id` with the table and column names already used by your database.
+Declaring all three names prevents the naming strategy from changing the mapping during the upgrade.
+
 ==== 27. GORM Properties Are Nullable by Default
 
 Grails 8 changes the validation default so that an *unconstrained persistent (domain) property is nullable by default* rather than required.
