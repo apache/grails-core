@@ -87,11 +87,11 @@ ext {
             'guava.version'                 : '33.6.0-jre',
             // Security: overrides spring-boot-dependencies (5.4.2). 5.4.3 fixes CVE-2026-54399 (httpcore5) and CVE-2026-54428 (httpcore5-h2).
             'httpcore5.version'             : '5.4.3',
-            // Security + Groovy 6: overrides the transitive com.fasterxml Jackson 2.x. Bumped to 2.22.0 on this
-            // canary because groovy-yaml 6.0.0-SNAPSHOT pulls the com.fasterxml Jackson 2 suite at 2.22.0; 2.22.0
-            // is newer than 2.21.5 so it retains the CVE-2026-54515 fix while keeping the BOM >= every resolved
-            // Jackson 2 version (rule 14). jackson-annotations versions independently (2.22, not 2.22.0).
-            'jackson2.version'              : '2.22.0',
+            // Security + Groovy 6: overrides the transitive com.fasterxml Jackson 2.x. Bumped on this canary
+            // because groovy-yaml 6.0.0-SNAPSHOT and hibernate7-dbmigration resolve the com.fasterxml Jackson 2
+            // suite at 2.22.1; 2.22.1 is newer than 2.21.5 so it retains the CVE-2026-54515 fix while keeping the
+            // BOM >= every resolved Jackson 2 version (rule 14). jackson-annotations versions independently (2.22).
+            'jackson2.version'              : '2.22.1',
             'jackson-annotations.version'   : '2.22',
             // Security: overrides spring-boot-dependencies (3.1.4). 3.1.5 fixes CVE-2026-59889 (JsonView bypass) flagged against jackson-databind.
             'jackson3.version'              : '3.1.5',
