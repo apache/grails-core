@@ -38,6 +38,7 @@ import org.grails.beans.support.PropertiesEditor
 import org.grails.core.io.DefaultResourceLocator
 import org.grails.core.support.ClassEditor
 import org.grails.dev.support.DevelopmentShutdownHook
+import org.grails.spring.BeanConfiguration
 import org.grails.spring.DefaultRuntimeSpringConfiguration
 import org.grails.spring.RuntimeSpringConfigUtilities
 import org.grails.spring.RuntimeSpringConfiguration
@@ -74,8 +75,8 @@ class CoreGrailsPlugin extends Plugin {
 
             // enable post-processing of @Configuration beans defined by plugins
             grailsConfigurationClassPostProcessor(ConfigurationClassPostProcessor)
-            grailsBeanOverrideConfigurer(MapBasedSmartPropertyOverrideConfigurer) {
-                delegate.grailsApplication = application
+            grailsBeanOverrideConfigurer(MapBasedSmartPropertyOverrideConfigurer) { BeanConfiguration bean ->
+                bean.addProperty('grailsApplication', application)
             }
 
             Class proxyCreatorClazz = null
@@ -87,9 +88,9 @@ class CoreGrailsPlugin extends Plugin {
             }
 
             Boolean isProxyTargetClass = config.getProperty(SPRING_PROXY_TARGET_CLASS_CONFIG, Boolean)
-            'org.springframework.aop.config.internalAutoProxyCreator'(proxyCreatorClazz) {
+            'org.springframework.aop.config.internalAutoProxyCreator'(proxyCreatorClazz) { BeanConfiguration bean ->
                 if (isProxyTargetClass != null) {
-                    proxyTargetClass = isProxyTargetClass
+                    bean.addProperty('proxyTargetClass', isProxyTargetClass)
                 }
             }
 
@@ -114,16 +115,16 @@ class CoreGrailsPlugin extends Plugin {
             if (devMode && ClassUtils.isPresent('jline.Terminal', application.classLoader)) {
                 shutdownHook(DevelopmentShutdownHook)
             }
-            abstractGrailsResourceLocator {
-                searchLocations = [BuildSettings.BASE_DIR.absolutePath]
+            abstractGrailsResourceLocator { BeanConfiguration bean ->
+                bean.addProperty('searchLocations', [BuildSettings.BASE_DIR.absolutePath])
             }
             grailsResourceLocator(DefaultResourceLocator) { bean ->
-                bean.parent = 'abstractGrailsResourceLocator'
+                bean.setParent('abstractGrailsResourceLocator')
             }
 
-            customEditors(CustomEditorConfigurer) {
-                customEditors = [(Class): ClassEditor,
-                                 (Properties): PropertiesEditor]
+            customEditors(CustomEditorConfigurer) { BeanConfiguration bean ->
+                bean.addProperty('customEditors', [(Class): ClassEditor,
+                                                   (Properties): PropertiesEditor])
             }
 
             proxyHandler(DefaultProxyHandler)

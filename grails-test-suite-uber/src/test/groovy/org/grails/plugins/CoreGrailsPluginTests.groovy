@@ -19,21 +19,37 @@
 
 package org.grails.plugins
 
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.config.RuntimeBeanReference
 import org.springframework.core.env.StandardEnvironment
+import org.springframework.jdbc.datasource.DataSourceTransactionManager
 
 import grails.plugins.GrailsPlugin
 import grails.plugins.GrailsPluginManager
+import grails.util.BuildSettings
 import grails.web.servlet.plugins.GrailsWebPluginManager
 import org.apache.grails.core.plugins.DefaultPluginDiscovery
 import org.grails.config.PropertySourcesConfig
+import org.grails.core.support.ClassEditor
+import org.grails.beans.support.PropertiesEditor
+import org.grails.commons.test.AbstractGrailsMockTests
 import org.grails.spring.aop.autoproxy.GroovyAwareAspectJAwareAdvisorAutoProxyCreator
 import org.grails.spring.aop.autoproxy.GroovyAwareInfrastructureAdvisorAutoProxyCreator
 import org.grails.web.servlet.context.support.WebRuntimeSpringConfiguration
-import org.grails.commons.test.AbstractGrailsMockTests
-import org.springframework.jdbc.datasource.DataSourceTransactionManager
-import org.springframework.beans.factory.config.RuntimeBeanReference
 
 class CoreGrailsPluginTests extends AbstractGrailsMockTests {
+
+    @BeforeEach
+    void setUpTest() throws Exception {
+        super.setUp()
+    }
+
+    @AfterEach
+    void tearDownTest() throws Exception {
+        super.tearDown()
+    }
 
     void testComponentScan() {
         def pluginClass = gcl.loadClass("org.grails.plugins.CoreGrailsPlugin")
@@ -51,10 +67,13 @@ class CoreGrailsPluginTests extends AbstractGrailsMockTests {
         def appCtx = springConfig.getApplicationContext()
 
     }
+
+    @Test
     void testCorePlugin() {
         def pluginClass = gcl.loadClass("org.grails.plugins.CoreGrailsPlugin")
 
         def plugin = new DefaultGrailsPlugin(pluginClass, ga)
+        ga.config = new PropertySourcesConfig(['spring.aop.proxy-target-class': true])
 
         def springConfig = new WebRuntimeSpringConfiguration(ctx)
         springConfig.servletContext = createMockServletContext()
@@ -66,6 +85,13 @@ class CoreGrailsPluginTests extends AbstractGrailsMockTests {
         assert appCtx.containsBean("classLoader")
         assert appCtx.containsBean("customEditors")
         assert appCtx.getBean("org.springframework.aop.config.internalAutoProxyCreator") instanceof GroovyAwareAspectJAwareAdvisorAutoProxyCreator
+        assert appCtx.getBeanDefinition('grailsBeanOverrideConfigurer').propertyValues.getPropertyValue('grailsApplication').value.is(ga)
+        assert appCtx.getBean('grailsBeanOverrideConfigurer').grailsApplication.is(ga)
+        assert appCtx.getBeanDefinition('org.springframework.aop.config.internalAutoProxyCreator').propertyValues.getPropertyValue('proxyTargetClass').value
+        assert appCtx.getBeanDefinition('abstractGrailsResourceLocator').propertyValues.getPropertyValue('searchLocations').value == [BuildSettings.BASE_DIR.absolutePath]
+        assert appCtx.getBeanDefinition('grailsResourceLocator').parentName == 'abstractGrailsResourceLocator'
+        assert appCtx.getBeanDefinition('customEditors').propertyValues.getPropertyValue('customEditors').value == [(Class): ClassEditor,
+                                                                                                                       (Properties): PropertiesEditor]
     }
 
     void testDisableAspectj() {
