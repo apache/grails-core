@@ -70,9 +70,13 @@ class ControllersAutoConfigurationSpec extends Specification {
         applicationContext.refresh()
 
         then:
-        BeanCreationException exception = thrown()
+        def exception = thrown(BeanCreationException)
         exception.rootCause instanceof IllegalStateException
-        exception.rootCause.message == ControllersAutoConfiguration.LEGACY_MULTIPART_CONFIGURATION_ERROR
+        exception.rootCause.message ==
+                "Configuration properties under 'grails.controllers.upload' are no longer supported. " +
+                "Use Spring Boot's 'spring.servlet.multipart' configuration instead. For example, set " +
+                "'spring.servlet.multipart.max-file-size=200MB' and " +
+                "'spring.servlet.multipart.max-request-size=200MB'."
 
         cleanup:
         applicationContext.close()
