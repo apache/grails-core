@@ -70,7 +70,7 @@ class ProfileRepoConfig {
             if (uri.getScheme() != null) {
                 return repoUrl
             }
-        } catch (URISyntaxException e) {
+        } catch (URISyntaxException ignored) {
             // Not a valid URI, fall through to file conversion
         }
 

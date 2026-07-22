@@ -108,12 +108,10 @@ class GrailsCli {
                         Thread.start {
                             currentExecutionContext?.cancel()
                         }.join(1000)
-                    } catch (Throwable e) {
-                        // ignore
+                    } catch (Throwable ignored) {
                     }
                 }
-            } catch (e) {
-                // ignore
+            } catch (ignored) {
             }
         }
     }
@@ -575,8 +573,7 @@ class GrailsCli {
                 try {
                     // add tools.jar
                     urls.add(new File("${System.getenv('JAVA_HOME')}/lib/tools.jar").toURI().toURL())
-                } catch (Throwable e) {
-                    // ignore
+                } catch (Throwable ignored) {
                 }
                 def profiles = (List<URL>) dependencyMap.get('profiles')
                 URLClassLoader classLoader = new URLClassLoader(urls as URL[], Thread.currentThread().contextClassLoader)
@@ -678,8 +675,7 @@ class GrailsCli {
         keepRunning = false
         try {
             GradleAsyncInvoker.POOL.shutdownNow()
-        } catch (Throwable e) {
-            // ignore
+        } catch (Throwable ignored) {
         }
     }
 
