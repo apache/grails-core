@@ -20,30 +20,16 @@ package grails.plugin.geb
 
 import groovy.transform.CompileStatic
 
-import org.opentest4j.IncompleteExecutionException
-import org.spockframework.runtime.extension.IMethodInterceptor
-import org.spockframework.runtime.extension.IMethodInvocation
+import spock.lang.Tag
 
 /**
- * Adapts {@link geb.spock.OnFailureReporter} for use with
- * {@link grails.plugin.geb.ContainerGebSpec}.
+ * A Geb specification backed by a local headless Playwright browser.
+ *
+ * <p>The application under test runs on the host, so this specification does
+ * not require a Testcontainers-compatible container runtime.
  */
+@Tag('geb')
+@Tag('playwright-geb')
 @CompileStatic
-class GebOnFailureReporter implements IMethodInterceptor {
-
-    void intercept(IMethodInvocation invocation) throws Throwable {
-        try {
-            invocation.proceed()
-        } catch (IncompleteExecutionException notACauseForReporting) {
-            throw notACauseForReporting
-        } catch (Throwable throwable) {
-            def spec = invocation.instance as GrailsGebSpec
-            if (spec.testManager.reportingEnabled) {
-                try {
-                    spec.testManager.reportFailure()
-                } catch (ignored) {}
-            }
-            throw throwable
-        }
-    }
+abstract class PlaywrightGebSpec extends GrailsGebSpec {
 }

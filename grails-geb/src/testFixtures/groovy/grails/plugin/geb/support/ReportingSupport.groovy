@@ -26,7 +26,7 @@ import geb.report.PageSourceReporter
 import geb.report.Reporter
 import geb.report.ScreenshotReporter
 
-import grails.plugin.geb.ContainerGebSpec
+import grails.plugin.geb.GrailsGebSpec
 
 /**
  * Enables reporting support for ContainerGebSpec.
@@ -36,7 +36,7 @@ import grails.plugin.geb.ContainerGebSpec
  * @since 4.2
  */
 @CompileStatic
-@SelfType(ContainerGebSpec)
+@SelfType(GrailsGebSpec)
 trait ReportingSupport {
 
     void report(String message) {

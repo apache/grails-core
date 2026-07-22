@@ -36,7 +36,7 @@ import geb.waiting.WaitingSupport
 import org.openqa.selenium.By
 import org.openqa.selenium.WebElement
 
-import grails.plugin.geb.ContainerGebSpec
+import grails.plugin.geb.GrailsGebSpec
 
 /**
  * Handles delegation to the page instance so that the Geb API can be used directly in the test.
@@ -48,7 +48,7 @@ import grails.plugin.geb.ContainerGebSpec
  * @since 4.2
  */
 @CompileStatic
-@SelfType(ContainerGebSpec)
+@SelfType(GrailsGebSpec)
 trait PageDelegate implements Navigable, AlertAndConfirmSupport, WaitingSupport, FrameSupport, InteractionsSupport {
 
     @Delegate

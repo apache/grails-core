@@ -31,7 +31,7 @@ import geb.url.UrlFragment
 import geb.webstorage.WebStorage
 import org.openqa.selenium.WebDriver
 
-import grails.plugin.geb.ContainerGebSpec
+import grails.plugin.geb.GrailsGebSpec
 
 import static groovy.lang.Closure.DELEGATE_FIRST
 
@@ -45,7 +45,7 @@ import static groovy.lang.Closure.DELEGATE_FIRST
  * @since 4.2
  */
 @CompileStatic
-@SelfType(ContainerGebSpec)
+@SelfType(GrailsGebSpec)
 trait BrowserDelegate {
 
     /**
