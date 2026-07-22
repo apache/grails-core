@@ -38,6 +38,12 @@ plugins {
     id 'org.apache.grails.buildsrc.repo'
 }
 
+dependencyResolutionManagement {
+    repositories {
+        mavenLocal()
+    }
+}
+
 // NOTE: Known Gradle deprecation warnings (scheduled for removal in Gradle 10):
 // 1. StartParameter.isConfigurationCacheRequested - from org.asciidoctor.jvm.convert plugin (4.0.5)
 //    Fix available in asciidoctor-gradle-plugin 5.0.0+ (currently alpha)

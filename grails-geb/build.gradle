@@ -48,6 +48,7 @@ dependencies {
     testFixturesCompileOnly 'org.slf4j:slf4j-simple' // Remove compilation warning about missing slf4j impl
 
     testFixturesApi 'org.apache.groovy.geb:geb-spock'
+    testFixturesApi 'org.apache.groovy.geb:geb-direct'
     testFixturesApi project(':grails-testing-support-core')
     testFixturesApi project(':grails-datamapping-core')
     testFixturesApi "org.testcontainers:testcontainers-selenium"
