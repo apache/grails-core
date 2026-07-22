@@ -26,26 +26,18 @@ import jakarta.servlet.DispatcherType;
 import jakarta.servlet.Filter;
 import jakarta.servlet.MultipartConfigElement;
 
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.servlet.autoconfigure.HttpEncodingAutoConfiguration;
 import org.springframework.boot.servlet.filter.OrderedCharacterEncodingFilter;
-import org.springframework.boot.autoconfigure.web.servlet.DispatcherServletRegistrationBean;
-import org.springframework.boot.autoconfigure.web.servlet.HttpEncodingAutoConfiguration;
-import org.springframework.boot.autoconfigure.web.servlet.WebMvcAutoConfiguration;
-import org.springframework.boot.context.properties.bind.Bindable;
-import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.boot.webmvc.autoconfigure.DispatcherServletAutoConfiguration;
 import org.springframework.boot.webmvc.autoconfigure.DispatcherServletRegistrationBean;
 import org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.EnvironmentAware;
 import org.springframework.context.annotation.Bean;
-import org.springframework.core.env.Environment;
 import org.springframework.util.ClassUtils;
 import org.springframework.web.filter.CharacterEncodingFilter;
 import org.springframework.web.servlet.DispatcherServlet;
@@ -66,15 +58,7 @@ import org.grails.web.servlet.mvc.GrailsWebRequestFilter;
         after = {GrailsDomainClassAutoConfiguration.class}
 )
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-public class ControllersAutoConfiguration implements EnvironmentAware {
-
-    private static final String LEGACY_MULTIPART_CONFIGURATION = "grails.controllers.upload";
-
-    static final String LEGACY_MULTIPART_CONFIGURATION_ERROR =
-            "Configuration properties under 'grails.controllers.upload' are no longer supported. " +
-            "Use Spring Boot's 'spring.servlet.multipart' configuration instead. For example, set " +
-            "'spring.servlet.multipart.max-file-size=200MB' and " +
-            "'spring.servlet.multipart.max-request-size=200MB'.";
+public class ControllersAutoConfiguration {
 
     @Value("${" + Settings.FILTER_ENCODING + ":utf-8}")
     private String filtersEncoding;
@@ -90,6 +74,18 @@ public class ControllersAutoConfiguration implements EnvironmentAware {
 
     @Value("${" + Settings.RESOURCES_PATTERN + ":" + Settings.DEFAULT_RESOURCE_PATTERN + "}")
     private String resourcesPattern;
+
+    @Value("${" + Settings.CONTROLLERS_UPLOAD_LOCATION + ":#{null}}")
+    private String uploadTmpDir;
+
+    @Value("${" + Settings.CONTROLLERS_UPLOAD_MAX_FILE_SIZE + ":128000}")
+    private long maxFileSize;
+
+    @Value("${" + Settings.CONTROLLERS_UPLOAD_MAX_REQUEST_SIZE + ":128000}")
+    private long maxRequestSize;
+
+    @Value("${" + Settings.CONTROLLERS_UPLOAD_FILE_SIZE_THRESHOLD + ":0}")
+    private int fileSizeThreshold;
 
     @Value("${" + Settings.WEB_SERVLET_PATH + ":#{null}}")
     String grailsServletPath;
@@ -154,11 +150,12 @@ public class ControllersAutoConfiguration implements EnvironmentAware {
         return registrationBean;
     }
 
-    @Override
-    public void setEnvironment(Environment environment) {
-        if (Binder.get(environment).bind(LEGACY_MULTIPART_CONFIGURATION, Bindable.mapOf(String.class, Object.class)).isBound()) {
-            throw new IllegalStateException(LEGACY_MULTIPART_CONFIGURATION_ERROR);
+    @Bean
+    public MultipartConfigElement multipartConfigElement() {
+        if (uploadTmpDir == null) {
+            uploadTmpDir = System.getProperty("java.io.tmpdir");
         }
+        return new MultipartConfigElement(uploadTmpDir, maxFileSize, maxRequestSize, fileSizeThreshold);
     }
 
     @Bean
@@ -167,7 +164,7 @@ public class ControllersAutoConfiguration implements EnvironmentAware {
     }
 
     @Bean
-    public DispatcherServletRegistrationBean dispatcherServletRegistration(GrailsApplication application, DispatcherServlet dispatcherServlet, ObjectProvider<MultipartConfigElement> multipartConfigElement) {
+    public DispatcherServletRegistrationBean dispatcherServletRegistration(GrailsApplication application, DispatcherServlet dispatcherServlet, MultipartConfigElement multipartConfigElement) {
         if (grailsServletPath == null) {
             boolean isTomcat = ClassUtils.isPresent("org.apache.catalina.startup.Tomcat", application.getClassLoader());
             grailsServletPath = isTomcat ? Settings.DEFAULT_TOMCAT_SERVLET_PATH : Settings.DEFAULT_WEB_SERVLET_PATH;
@@ -175,7 +172,7 @@ public class ControllersAutoConfiguration implements EnvironmentAware {
         DispatcherServletRegistrationBean dispatcherServletRegistration = new DispatcherServletRegistrationBean(dispatcherServlet, grailsServletPath);
         dispatcherServletRegistration.setLoadOnStartup(2);
         dispatcherServletRegistration.setAsyncSupported(true);
-        multipartConfigElement.ifAvailable(dispatcherServletRegistration::setMultipartConfig);
+        dispatcherServletRegistration.setMultipartConfig(multipartConfigElement);
         return dispatcherServletRegistration;
     }
 
