@@ -54,6 +54,21 @@ This will create a new Geb test named `MyFunctionalSpec` in the `src/integration
 
 There are two ways to use this plugin. Either extend your test classes with the `ContainerGebSpec` class or with the `GebSpec` class.
 
+### PlaywrightGebSpec
+
+`PlaywrightGebSpec` runs Geb against a local headless Playwright Chromium browser, without a Testcontainers browser or a container runtime. Add `geb-direct` alongside the Grails Geb test fixtures, install Chromium with `npx playwright install chromium`, and annotate the integration specification with `@Integration`:
+
+```groovy
+import grails.plugin.geb.PlaywrightGebSpec
+import grails.testing.mixin.integration.Integration
+
+@Integration
+class HomePageSpec extends PlaywrightGebSpec {
+}
+```
+
+The local browser uses `http://localhost:<serverPort>` and includes `server.servlet.context-path` when configured. File uploads use local files directly. Configure Playwright video or tracing in `GebConfig.groovy` through `PlaywrightDriver.config`.
+
 ### ContainerGebSpec (recommended)
 
 By extending your test classes with `ContainerGebSpec`, your tests will automatically use a containerized browser using [Testcontainers](https://java.testcontainers.org/).
