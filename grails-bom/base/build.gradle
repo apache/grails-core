@@ -61,6 +61,7 @@ dependencies {
         exclude group: 'jakarta.servlet'
         exclude group: 'jakarta.validation'
     }
+    api platform(gradleBomPlatformDependencies['log4j2-bom'])
 
     for (def entry : bomPlatformDependencies.entrySet()) {
         if (entry.key == 'groovy-bom') {

@@ -43,6 +43,7 @@ dependencies {
         exclude group: 'org.spockframework'
         exclude group: 'com.fasterxml.jackson'
     }
+    api platform(gradleBomPlatformDependencies['log4j2-bom'])
 
     // Because gradle uses groovy 3, we must use groovy 3 compatible versions for the grails-gradle-bom
     api platform("org.codehaus.groovy:groovy-bom:${GroovySystem.version}")
