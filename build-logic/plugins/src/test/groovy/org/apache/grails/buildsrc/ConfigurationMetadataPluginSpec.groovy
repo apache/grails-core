@@ -60,6 +60,7 @@ class ConfigurationMetadataPluginSpec extends Specification {
                 implementation 'org.apache.groovy:groovy:5.0.7'
                 implementation 'org.springframework.boot:spring-boot:4.1.0'
             }
+
         '''.stripIndent())
         writeJavaConfiguration(false)
         write('src/main/java/fixture/RootConfiguration.java', '''
@@ -149,6 +150,9 @@ class ConfigurationMetadataPluginSpec extends Specification {
         property(metadata, 'fixture.java.readOnlyNames').type == 'java.util.List<java.lang.String>'
         property(metadata, 'fixture.java.resource').type == 'org.springframework.core.io.Resource'
         property(metadata, 'fixture.java.inheritedValue').type == 'java.lang.String'
+        property(metadata, 'fixture.java.immutableValue').type == 'java.lang.String'
+        property(metadata, 'fixture.java.immutableNames').type == 'java.util.List<java.lang.String>'
+        property(metadata, 'fixture.java.computedValue') == null
         group(metadata, 'fixture.java.resource') == null
         property(metadata, 'fixture.java.internalSecret') == null
         property(metadata, 'fixture.java.privateValue') == null
@@ -251,12 +255,20 @@ class ConfigurationMetadataPluginSpec extends Specification {
                 private String internalSecret;
                 private String privateValue;
                 private final List<String> readOnlyNames = new java.util.ArrayList<>();
+                private final String immutableValue;
+                private final List<String> immutableNames;
                 private Resource resource;
+                public JavaConfiguration(String immutableValue, List<String> immutableNames) {
+                    this.immutableValue = immutableValue;
+                    this.immutableNames = immutableNames;
+                }
                 public List<String> getNames() { return names; }
                 public void setNames(List<String> names) { this.names = names; }
                 public JavaNested getNested() { return nested; }
                 public void setNested(JavaNested nested) { this.nested = nested; }
                 public List<String> getReadOnlyNames() { return readOnlyNames; }
+                public String getImmutableValue() { return immutableValue; }
+                public String getComputedValue() { return "computed"; }
                 public Resource getResource() { return resource; }
                 public void setResource(Resource resource) { this.resource = resource; }
                 private void setPrivateValue(String privateValue) { this.privateValue = privateValue; }
@@ -273,6 +285,10 @@ class ConfigurationMetadataPluginSpec extends Specification {
                 private String inheritedValue;
                 public String getInheritedValue() { return inheritedValue; }
                 public void setInheritedValue(String inheritedValue) { this.inheritedValue = inheritedValue; }
+            }
+
+            class GenericConstructor {
+                <T> GenericConstructor(T value) { }
             }
         """.stripIndent())
     }

@@ -42,9 +42,14 @@ class ConfigurationMetadataTransformationSpec extends Specification {
                 String displayName = 'Grails'
                 int port = 8080
                 List<String> labels = ['one']
+                final String immutableValue
                 Nested nested = new Nested()
                 String dynamicValue = UUID.randomUUID().toString()
                 private String internalSecret = 'secret'
+
+                SampleConfiguration(String immutableValue) {
+                    this.immutableValue = immutableValue
+                }
             }
 
             class Nested {
@@ -70,6 +75,7 @@ class ConfigurationMetadataTransformationSpec extends Specification {
         payload.get('properties')*.name == [
                 'sample.service.displayName',
                 'sample.service.dynamicValue',
+                'sample.service.immutableValue',
                 'sample.service.labels',
                 'sample.service.nested.enabled',
                 'sample.service.port'
@@ -80,6 +86,7 @@ class ConfigurationMetadataTransformationSpec extends Specification {
         payload.get('properties').find { it.name == 'sample.service.nested.enabled' }.defaultValue
         payload.get('properties').find { it.name == 'sample.service.labels' }.type == 'java.util.List<java.lang.String>'
         !payload.get('properties').find { it.name == 'sample.service.dynamicValue' }.containsKey('defaultValue')
+        !payload.get('properties').find { it.name == 'sample.service.immutableValue' }.containsKey('defaultValue')
         !payload.get('properties').find { it.name == 'sample.service.labels' }.containsKey('defaultValue')
 
         cleanup:

@@ -47,6 +47,8 @@ import static java.lang.reflect.Modifier.STATIC
 class ConfigurationMetadataTransformation implements ASTTransformation {
 
     static final String PAYLOAD_FIELD = '__grailsConfigurationMetadata'
+    private static final String CONSTRUCTOR_BINDING =
+            'org.springframework.boot.context.properties.bind.ConstructorBinding'
     private static final int SYNTHETIC = 0x00001000
     private static final String CONFIGURATION_PROPERTIES = 'org.springframework.boot.context.properties.ConfigurationProperties'
 
@@ -140,11 +142,26 @@ class ConfigurationMetadataTransformation implements ASTTransformation {
 
     private static boolean isBindableProperty(PropertyNode property) {
         FieldNode field = property.field
-        !field.static && !field.final && !field.name.startsWith('$') &&
+        boolean constructorBound = !field.final || constructorBoundProperties(field.owner).contains(field.name)
+        !field.static && constructorBound && !field.name.startsWith('$') &&
                 field.name != 'metaClass' && field.name != PAYLOAD_FIELD &&
                 !field.annotations.any { annotation ->
                     annotation.classNode.name in ['groovy.lang.Delegate', 'groovy.transform.Delegate']
                 }
+    }
+
+    private static Set<String> constructorBoundProperties(ClassNode owner) {
+        List constructors = owner.declaredConstructors.findAll { constructor ->
+            !constructor.synthetic && !constructor.private
+        }
+        List candidates = constructors.findAll { constructor -> constructor.parameters.length > 0 }
+        List selected = candidates.findAll { constructor ->
+            constructor.annotations.any { annotation -> annotation.classNode.name == CONSTRUCTOR_BINDING }
+        }
+        def bindingConstructor = selected.size() == 1 ? selected[0] :
+                (!constructors.any { constructor -> constructor.parameters.length == 0 } && candidates.size() == 1 ?
+                        candidates[0] : null)
+        bindingConstructor ? bindingConstructor.parameters*.name as Set<String> : Collections.emptySet()
     }
 
     private static void collectSetterProperties(ClassNode node, Map<String, Map<String, Object>> bindable,

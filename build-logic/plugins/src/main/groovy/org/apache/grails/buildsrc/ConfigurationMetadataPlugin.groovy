@@ -36,12 +36,14 @@ import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.compile.JavaCompile
 import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.FieldVisitor
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
+import org.objectweb.asm.RecordComponentVisitor
 import org.objectweb.asm.Type
 
 import java.nio.charset.StandardCharsets
@@ -57,6 +59,11 @@ class ConfigurationMetadataPlugin implements Plugin<Project> {
     void apply(Project project) {
         project.plugins.withId('java') {
             JavaPluginExtension java = project.extensions.getByType(JavaPluginExtension)
+            project.tasks.withType(JavaCompile).configureEach { JavaCompile task ->
+                if (!task.options.compilerArgs.contains('-parameters')) {
+                    task.options.compilerArgs.add('-parameters')
+                }
+            }
             Project compilerProject = project.rootProject.findProject(':grails-configuration-metadata')
             if (compilerProject == null) {
                 throw new IllegalStateException(
@@ -91,6 +98,8 @@ abstract class GenerateConfigurationMetadataTask extends DefaultTask {
 
     static final String CONFIGURATION_PROPERTIES =
             'Lorg/springframework/boot/context/properties/ConfigurationProperties;'
+    static final String CONSTRUCTOR_BINDING =
+            'Lorg/springframework/boot/context/properties/bind/ConstructorBinding;'
     static final String PAYLOAD_FIELD = '__grailsConfigurationMetadata'
 
     @InputFiles
@@ -202,12 +211,49 @@ abstract class GenerateConfigurationMetadataTask extends DefaultTask {
             }
 
             @Override
+            RecordComponentVisitor visitRecordComponent(String name, String descriptor, String signature) {
+                model.properties[name] = new PropertyModel(
+                        name: name,
+                        type: fieldType(descriptor, signature),
+                        constructorBound: true,
+                        readable: true)
+                null
+            }
+
+            @Override
             MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
+                Type method = Type.getMethodType(descriptor)
+                if (name == '<init>' && (access & (Opcodes.ACC_PRIVATE | Opcodes.ACC_SYNTHETIC)) == 0) {
+                    ConstructorModel constructor = new ConstructorModel()
+                    model.constructors << constructor
+                    Type[] argumentTypes = method.argumentTypes
+                    List<String> argumentTypeNames = methodArgumentTypes(descriptor, signature)
+                    return new MethodVisitor(Opcodes.ASM9) {
+                        private int parameterIndex
+
+                        @Override
+                        void visitParameter(String parameterName, int parameterAccess) {
+                            if (parameterName && parameterIndex < argumentTypes.length &&
+                                    (parameterAccess & (Opcodes.ACC_SYNTHETIC | Opcodes.ACC_MANDATED)) == 0) {
+                                constructor.properties[parameterName] = new PropertyModel(
+                                        name: parameterName,
+                                        type: argumentTypeNames[parameterIndex],
+                                        constructorBound: true)
+                            }
+                            parameterIndex++
+                        }
+
+                        @Override
+                        AnnotationVisitor visitAnnotation(String annotationDescriptor, boolean visible) {
+                            constructor.selected |= annotationDescriptor == CONSTRUCTOR_BINDING
+                            null
+                        }
+                    }
+                }
                 if ((access & Opcodes.ACC_PUBLIC) == 0 ||
                         (access & (Opcodes.ACC_STATIC | Opcodes.ACC_SYNTHETIC)) != 0 || name.contains('$')) {
                     return null
                 }
-                Type method = Type.getMethodType(descriptor)
                 if (name.startsWith('get') && name.length() > 3 && method.argumentTypes.length == 0 &&
                         method.returnType.sort != Type.VOID) {
                     addAccessor(model, decapitalize(name.substring(3)), method.returnType.descriptor,
@@ -222,7 +268,7 @@ abstract class GenerateConfigurationMetadataTask extends DefaultTask {
                 }
                 null
             }
-        }, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES)
+        }, ClassReader.SKIP_CODE | ClassReader.SKIP_FRAMES)
 
         if (model.payload != null) {
             Map payload = new JsonSlurper().parseText(model.payload) as Map
@@ -235,8 +281,19 @@ abstract class GenerateConfigurationMetadataTask extends DefaultTask {
                 new LinkedHashMap<String, Object>(property)
             }
         } else {
+            List<ConstructorModel> selectedConstructors = model.constructors.findAll { ConstructorModel constructor ->
+                constructor.selected
+            }
+            ConstructorModel bindingConstructor = selectedConstructors.size() == 1 ? selectedConstructors[0] :
+                    (model.constructors.size() == 1 && !model.constructors[0].properties.isEmpty() ?
+                            model.constructors[0] : null)
+            bindingConstructor?.properties?.each { String name, PropertyModel constructorProperty ->
+                PropertyModel property = model.properties.computeIfAbsent(name) { new PropertyModel(name: name) }
+                property.type = property.type ?: constructorProperty.type
+                property.constructorBound = true
+            }
             model.properties = model.properties.findAll { String name, PropertyModel property ->
-                property.writable || property.collectionOrMap()
+                property.writable || property.collectionOrMap() || property.constructorBound
             }
         }
         model
@@ -244,8 +301,11 @@ abstract class GenerateConfigurationMetadataTask extends DefaultTask {
 
     private static void addAccessor(ClassModel model, String name, String descriptor, String signature, boolean writable) {
         PropertyModel property = model.properties.computeIfAbsent(name) { new PropertyModel(name: name) }
-        property.type = property.type ?: fieldType(descriptor, signature)
+        if (property.type == null || signature != null) {
+            property.type = fieldType(descriptor, signature)
+        }
         property.writable |= writable
+        property.readable |= !writable
     }
 
     static void addProperties(ClassModel model, String prefix, String sourceType,
@@ -367,6 +427,11 @@ abstract class GenerateConfigurationMetadataTask extends DefaultTask {
         signature ? signature.substring(signature.indexOf('(') + 1) : null
     }
 
+    private static List<String> methodArgumentTypes(String descriptor, String signature) {
+        signature?.startsWith('(') ? new TypeSignatureParser(signature).parseMethodArguments() :
+                Type.getArgumentTypes(descriptor).collect { Type argument -> argument.className }
+    }
+
     private static String decapitalize(String value) {
         value.length() > 1 && Character.isUpperCase(value.charAt(0)) && Character.isUpperCase(value.charAt(1)) ?
                 value : value[0].toLowerCase(Locale.ROOT) + value.substring(1)
@@ -380,12 +445,20 @@ abstract class GenerateConfigurationMetadataTask extends DefaultTask {
         String payload
         List<Map<String, Object>> payloadGroups = []
         List<Map<String, Object>> payloadProperties
+        List<ConstructorModel> constructors = []
+        Map<String, PropertyModel> properties = [:]
+    }
+
+    private static class ConstructorModel {
+        boolean selected
         Map<String, PropertyModel> properties = [:]
     }
 
     private static class PropertyModel {
         String name
         String type
+        boolean constructorBound
+        boolean readable
         boolean writable
 
         String rawType() {
@@ -399,6 +472,7 @@ abstract class GenerateConfigurationMetadataTask extends DefaultTask {
                     'java.util.SortedMap', 'java.util.NavigableMap'
             ]
         }
+
     }
 
     private static class TypeSignatureParser {
@@ -417,6 +491,17 @@ abstract class GenerateConfigurationMetadataTask extends DefaultTask {
 
         String parse() {
             parseType()
+        }
+
+        List<String> parseMethodArguments() {
+            if (signature.charAt(position++) != '(' as char) {
+                throw new IllegalArgumentException("Not a JVM method signature '${signature}'")
+            }
+            List<String> arguments = []
+            while (signature.charAt(position) != ')' as char) {
+                arguments << parseType()
+            }
+            arguments
         }
 
         private String parseType() {
