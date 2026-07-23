@@ -40,6 +40,7 @@ dependencies {
     implementation "org.cyclonedx.bom:org.cyclonedx.bom.gradle.plugin:${gradleProperties.gradleCycloneDxPluginVersion}"
     implementation "com.github.spotbugs.snom:spotbugs-gradle-plugin:${gradleProperties.spotbugsPluginVersion}"
     implementation "org.sonatype.gradle.plugins:scan-gradle-plugin:${gradleProperties.sonatypeScanPluginVersion}"
+    implementation gradleBomDependencies['asm']
 
     testImplementation "org.spockframework:spock-core:${gradleBomDependencyVersions['gradle-spock.version']}"
     testImplementation gradleTestKit()
@@ -107,6 +108,10 @@ gradlePlugin {
         register('vulnerabilityScanPlugin') {
             id = 'org.apache.grails.buildsrc.vulnerability-scan'
             implementationClass = 'org.apache.grails.buildsrc.VulnerabilityScanPlugin'
+        }
+        register('configurationMetadataPlugin') {
+            id = 'org.apache.grails.buildsrc.configuration-metadata'
+            implementationClass = 'org.apache.grails.buildsrc.ConfigurationMetadataPlugin'
         }
     }
 }
