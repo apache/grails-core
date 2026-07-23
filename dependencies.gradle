@@ -23,6 +23,7 @@
 ext {
     gradleBomDependencyVersions = [
             'ant.version'                   : '1.10.17',
+            'asm.version'                   : '9.10.1',
             'asciidoctor-gradle-jvm.version': '4.0.5',
             'asciidoctorj.version'          : '3.0.0',
             'asset-pipeline-gradle.version' : '5.2.0-M1',
@@ -52,6 +53,7 @@ ext {
     gradleBomDependencies = [
             'ant'                     : "org.apache.ant:ant:${gradleBomDependencyVersions['ant.version']}",
             'ant-junit'               : "org.apache.ant:ant-junit:${gradleBomDependencyVersions['ant.version']}",
+            'asm'                     : "org.ow2.asm:asm:${gradleBomDependencyVersions['asm.version']}",
             'asciidoctor-gradle-jvm'  : "org.asciidoctor:asciidoctor-gradle-jvm:${gradleBomDependencyVersions['asciidoctor-gradle-jvm.version']}",
             'asciidoctorj'            : "org.asciidoctor:asciidoctorj:${gradleBomDependencyVersions['asciidoctorj.version']}",
             'asset-pipeline-gradle'   : "cloud.wondrify:asset-pipeline-gradle:${gradleBomDependencyVersions['asset-pipeline-gradle.version']}",
