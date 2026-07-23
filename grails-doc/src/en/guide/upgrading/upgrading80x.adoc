@@ -109,7 +109,9 @@ org.springframework.boot.env.EnvironmentPostProcessor=com.example.MyPostProcesso
 org.springframework.boot.EnvironmentPostProcessor=com.example.MyPostProcessor
 ----
 
-==== 4. MongoDB Configuration Property Changes
+==== 4. Spring Boot Configuration Property Changes
+
+===== 4.1 MongoDB Configuration
 
 Spring Boot 4 renamed the MongoDB configuration property namespace for Spring Boot's own auto-configuration.
 If your `application.yml` or `application.groovy` uses `spring.data.mongodb.*` properties for Spring Boot auto-configuration, you must rename them to `spring.mongodb.*`.
@@ -135,6 +137,34 @@ spring:
         port: 27017
         database: mydb
 ----
+
+===== 4.2 Multipart Upload Configuration
+
+The `grails.controllers.upload.*` configuration properties are no longer supported.
+Applications that still define any property under `grails.controllers.upload` fail at startup with migration instructions.
+Move those settings to Spring Boot's `spring.servlet.multipart.*` namespace:
+
+[source,yaml]
+.application.yml - Before (Grails 7)
+----
+grails:
+    controllers:
+        upload:
+            maxFileSize: 200MB
+            maxRequestSize: 200MB
+----
+
+[source,yaml]
+.application.yml - After (Grails 8)
+----
+spring:
+    servlet:
+        multipart:
+            max-file-size: 200MB
+            max-request-size: 200MB
+----
+
+Spring Boot also provides `spring.servlet.multipart.location`, `spring.servlet.multipart.file-size-threshold`, and `spring.servlet.multipart.enabled` as replacements for the corresponding legacy settings.
 
 ==== 5. Hibernate ORM Package Relocations
 
