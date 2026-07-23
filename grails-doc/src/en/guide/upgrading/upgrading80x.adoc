@@ -150,8 +150,8 @@ Move those settings to Spring Boot's `spring.servlet.multipart.*` namespace:
 grails:
     controllers:
         upload:
-            maxFileSize: 200MB
-            maxRequestSize: 200MB
+            maxFileSize: 200000
+            maxRequestSize: 200000
 ----
 
 [source,yaml]
