@@ -28,7 +28,9 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.FileSystemOperations
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.api.provider.MapProperty
 import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Optional
@@ -106,6 +108,13 @@ abstract class GenerateConfigurationMetadataTask extends DefaultTask {
     @PathSensitive(PathSensitivity.RELATIVE)
     abstract ConfigurableFileCollection getClassesDirs()
 
+    @InputFiles
+    @PathSensitive(PathSensitivity.RELATIVE)
+    abstract ConfigurableFileCollection getDslConfigurationFiles()
+
+    @Input
+    abstract MapProperty<String, String> getDslRootPrefixes()
+
     @InputFile
     @Optional
     @PathSensitive(PathSensitivity.RELATIVE)
@@ -117,9 +126,15 @@ abstract class GenerateConfigurationMetadataTask extends DefaultTask {
     @Inject
     abstract FileSystemOperations getFileSystemOperations()
 
+    GenerateConfigurationMetadataTask() {
+        dslRootPrefixes.convention([:])
+    }
+
     @TaskAction
     void generate() {
         Map<String, ClassModel> models = readModels()
+        List<Map<String, Object>> dslProperties = GroovyDslConfigurationMetadataParser.parse(
+                dslConfigurationFiles.files, dslRootPrefixes.get())
         List<Map<String, Object>> groups = []
         List<Map<String, Object>> properties = []
         models.values().findAll { ClassModel model -> model.prefix != null }.sort { ClassModel model -> model.name }.each {
@@ -144,7 +159,7 @@ abstract class GenerateConfigurationMetadataTask extends DefaultTask {
             }
         }
 
-        Map<String, Object> metadata = merge(groups, properties, readOverlay())
+        Map<String, Object> metadata = merge([], dslProperties, groups, properties, readOverlay())
         File output = outputDirectory.get().asFile
         fileSystemOperations.delete { it.delete(output) }
         File target = new File(output, 'META-INF/spring-configuration-metadata.json')
@@ -348,13 +363,17 @@ abstract class GenerateConfigurationMetadataTask extends DefaultTask {
         file?.isFile() ? new JsonSlurper().parse(file, StandardCharsets.UTF_8.name()) as Map : [:]
     }
 
-    private static Map<String, Object> merge(List<Map<String, Object>> groups,
-                                             List<Map<String, Object>> properties, Map overlay) {
+    private static Map<String, Object> merge(List<Map<String, Object>> dslGroups,
+                                              List<Map<String, Object>> dslProperties,
+                                              List<Map<String, Object>> typedGroups,
+                                              List<Map<String, Object>> typedProperties,
+                                              Map overlay) {
         Map<String, Object> result = [:]
-        result['groups'] = mergeNamed(groups, (overlay.get('groups') ?: []) as List, 'groups')
-        result['properties'] = mergeNamed(properties, (overlay.get('properties') ?: []) as List, 'properties')
+        result['groups'] = mergeNamed(dslGroups, typedGroups, (overlay.get('groups') ?: []) as List, 'groups')
+        result['properties'] = mergeNamed(dslProperties, typedProperties,
+                (overlay.get('properties') ?: []) as List, 'properties')
         if (overlay.containsKey('hints')) {
-            result['hints'] = mergeNamed([], overlay.get('hints') as List, 'hints')
+            result['hints'] = mergeNamed([], [], overlay.get('hints') as List, 'hints')
         }
         overlay.each { Object keyValue, Object value ->
             String key = keyValue.toString()
@@ -365,25 +384,30 @@ abstract class GenerateConfigurationMetadataTask extends DefaultTask {
         if (overlay.containsKey('ignored')) {
             Map ignored = new LinkedHashMap((overlay.get('ignored') ?: [:]) as Map)
             if (ignored.containsKey('properties')) {
-                ignored['properties'] = mergeNamed([], ignored.get('properties') as List, 'ignored.properties')
+                ignored['properties'] = mergeNamed([], [], ignored.get('properties') as List, 'ignored.properties')
             }
             result['ignored'] = ignored
         }
         result
     }
 
-    private static List<Object> mergeNamed(List generated, List overlay, String category) {
-        Map<String, Object> generatedByName = indexByName(generated, category, 'generated')
+    private static List<Object> mergeNamed(List dsl, List typed, List overlay, String category) {
+        Map<String, Object> dslByName = indexByName(dsl, category, 'DSL')
+        Map<String, Object> typedByName = indexByName(typed, category, 'generated')
         Map<String, Object> overlayByName = indexByName(overlay, category, 'overlay')
-        Map<String, Object> merged = new LinkedHashMap<>(generatedByName)
+        Map<String, Object> merged = new LinkedHashMap<>(dslByName)
+        typedByName.each { String name, Object value ->
+            merged[name] = mergeFields(merged[name], value)
+        }
         overlayByName.each { String name, Object value ->
-            if (merged[name] instanceof Map && value instanceof Map) {
-                merged[name] = new LinkedHashMap((Map) merged[name]) + (Map) value
-            } else {
-                merged[name] = value
-            }
+            merged[name] = mergeFields(merged[name], value)
         }
         merged.keySet().sort().collect { String name -> merged[name] }
+    }
+
+    private static Object mergeFields(Object lowerPrecedence, Object higherPrecedence) {
+        lowerPrecedence instanceof Map && higherPrecedence instanceof Map ?
+                new LinkedHashMap((Map) lowerPrecedence) + (Map) higherPrecedence : higherPrecedence
     }
 
     private static Map<String, Object> indexByName(List source, String category, String sourceName) {

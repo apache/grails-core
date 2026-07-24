@@ -25,6 +25,7 @@ plugins {
 	id 'org.apache.grails.buildsrc.properties'
 	id 'org.apache.grails.buildsrc.dependency-validator'
 	id 'org.apache.grails.buildsrc.compile'
+	id 'org.apache.grails.buildsrc.configuration-metadata'
 	id 'org.apache.grails.buildsrc.publish'
 	id 'org.apache.grails.buildsrc.sbom'
 	id 'org.apache.grails.gradle.grails-code-style'
@@ -118,4 +119,9 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
 	from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
 	from rootProject.layout.projectDirectory.file('gradle/spring-security-test-config.gradle')
+}
+
+tasks.named('generateConfigurationMetadata') {
+    dslConfigurationFiles.from(file('grails-app/conf/DefaultSecurityConfig.groovy'))
+    dslRootPrefixes.put('security', 'grails.plugin.springsecurity')
 }

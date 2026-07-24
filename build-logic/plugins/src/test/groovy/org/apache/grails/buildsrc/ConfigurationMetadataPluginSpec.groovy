@@ -207,6 +207,181 @@ class ConfigurationMetadataPluginSpec extends Specification {
         metadataEntryCount() == 1
     }
 
+    def "generates static Groovy DSL metadata without executing the DSL source"() {
+        given: 'a mapped DSL source and curated metadata for one of its properties'
+        writeGroovyDslConfiguration(false)
+        configureDslMetadata('src/dsl/fixture/SecurityConfig.groovy')
+        write('src/main/resources/META-INF/additional-spring-configuration-metadata.json', '''
+            {
+              "properties": [
+                {
+                  "name": "grails.plugin.springsecurity.userLookup.userDomainClassName",
+                  "type": "java.lang.String",
+                  "defaultValue": "overlay.User",
+                  "description": "Curated user domain class"
+                }
+              ]
+            }
+        '''.stripIndent())
+
+        when: 'the jar is built without executing the DSL script'
+        BuildResult clean = run('clean', 'jar')
+        Map metadata = readMetadata()
+
+        then: 'nested closures use the mapped root prefix and literal defaults retain their types'
+        clean.task(':generateConfigurationMetadata').outcome == TaskOutcome.SUCCESS
+        property(metadata, 'grails.plugin.springsecurity.userLookup.enabled').type == 'java.lang.Boolean'
+        property(metadata, 'grails.plugin.springsecurity.userLookup.enabled').defaultValue == true
+        property(metadata, 'grails.plugin.springsecurity.oauth.client.clientId').type == 'java.lang.String'
+        property(metadata, 'grails.plugin.springsecurity.oauth.client.clientId').defaultValue == 'client'
+        property(metadata, 'grails.plugin.springsecurity.authentication.maxAttempts').type == 'java.lang.Integer'
+        property(metadata, 'grails.plugin.springsecurity.authentication.maxAttempts').defaultValue == 3
+        property(metadata, 'grails.plugin.springsecurity.authentication.roles').type == 'java.util.List'
+        property(metadata, 'grails.plugin.springsecurity.authentication.roles').defaultValue == ['ROLE_USER', 'ROLE_ADMIN']
+        property(metadata, 'grails.plugin.springsecurity.authentication.options').type == 'java.util.Map'
+        property(metadata, 'grails.plugin.springsecurity.authentication.options').defaultValue == [maxSessions: 1, rememberMe: true]
+        property(metadata, 'grails.plugin.springsecurity.authentication.session.timeout').type == 'java.lang.Integer'
+        property(metadata, 'grails.plugin.springsecurity.authentication.session.timeout').defaultValue == 30
+
+        and: 'dynamic and environment-conditional expressions have no static default'
+        property(metadata, 'grails.plugin.springsecurity.authentication.dynamicDefault').type == 'java.lang.String'
+        !property(metadata, 'grails.plugin.springsecurity.authentication.dynamicDefault').containsKey('defaultValue')
+        property(metadata, 'grails.plugin.springsecurity.authentication.environmentDefault').type == 'java.lang.String'
+        !property(metadata, 'grails.plugin.springsecurity.authentication.environmentDefault').containsKey('defaultValue')
+
+        and: 'curated metadata remains the final overlay'
+        property(metadata, 'grails.plugin.springsecurity.userLookup.userDomainClassName').defaultValue == 'overlay.User'
+        property(metadata, 'grails.plugin.springsecurity.userLookup.userDomainClassName').description == 'Curated user domain class'
+
+        and: 'the generated jar has one canonical metadata entry'
+        metadataEntryCount() == 1
+
+        when: 'nothing changes'
+        BuildResult unchanged = run('jar')
+
+        then: 'the task is up to date'
+        unchanged.task(':generateConfigurationMetadata').outcome == TaskOutcome.UP_TO_DATE
+
+        when: 'the DSL source is edited without cleaning'
+        writeGroovyDslConfiguration(true)
+        BuildResult edited = run('jar')
+        Map editedMetadata = readMetadata()
+
+        then: 'metadata is regenerated from the edited DSL source'
+        edited.task(':generateConfigurationMetadata').outcome == TaskOutcome.SUCCESS
+        property(editedMetadata, 'grails.plugin.springsecurity.authentication.sessionTimeout').type == 'java.lang.Integer'
+        property(editedMetadata, 'grails.plugin.springsecurity.authentication.sessionTimeout').defaultValue == 30
+        metadataEntryCount() == 1
+
+        when: 'the DSL source is deleted without cleaning'
+        projectDir.resolve('src/dsl/fixture/SecurityConfig.groovy').toFile().delete()
+        BuildResult deleted = run('jar')
+        Map deletedMetadata = readMetadata()
+
+        then: 'DSL-derived metadata is removed while the curated overlay remains'
+        deleted.task(':generateConfigurationMetadata').outcome == TaskOutcome.SUCCESS
+        property(deletedMetadata, 'grails.plugin.springsecurity.oauth.client.clientId') == null
+        property(deletedMetadata, 'grails.plugin.springsecurity.authentication.sessionTimeout') == null
+        property(deletedMetadata, 'grails.plugin.springsecurity.userLookup.userDomainClassName').defaultValue == 'overlay.User'
+        metadataEntryCount() == 1
+    }
+
+    def "merges same-name DSL typed and curated metadata fields by precedence"() {
+        given: 'a DSL property also declared by a typed configuration class and curated overlay'
+        writeGroovyDslConfiguration(false)
+        writeTypedSecurityConfiguration()
+        configureDslMetadata('src/dsl/fixture/SecurityConfig.groovy')
+        write('src/main/resources/META-INF/additional-spring-configuration-metadata.json', '''
+            {
+              "properties": [
+                {
+                  "name": "grails.plugin.springsecurity.authentication.maxAttempts",
+                  "description": "Curated maximum attempts"
+                }
+              ]
+            }
+        '''.stripIndent())
+
+        when:
+        BuildResult result = run('generateConfigurationMetadata')
+        Map metadata = readMetadata()
+
+        then: 'typed fields override the DSL while the DSL default and curated fields remain'
+        result.task(':generateConfigurationMetadata').outcome == TaskOutcome.SUCCESS
+        property(metadata, 'grails.plugin.springsecurity.authentication.maxAttempts').type == 'java.lang.Long'
+        property(metadata, 'grails.plugin.springsecurity.authentication.maxAttempts').sourceType == 'fixture.SecurityConfiguration'
+        property(metadata, 'grails.plugin.springsecurity.authentication.maxAttempts').defaultValue == 3
+        property(metadata, 'grails.plugin.springsecurity.authentication.maxAttempts').description == 'Curated maximum attempts'
+    }
+
+    def "parses DSL sources without executing transforms or dynamic nested calls"() {
+        given: 'a DSL source outside the compiled source set with an impossible dependency transform'
+        write('src/dsl/fixture/TransformConfig.groovy', '''
+            @GrabResolver(name = 'missing', root = 'file:///not-a-repository')
+            @Grab('missing.group:missing-artifact:1.0')
+            import missing.Dependency
+
+            security {
+                enabled = true
+                this."${System.getProperty('fixture.dynamic.section')}" {
+                    ignored = true
+                }
+            }
+        '''.stripIndent())
+        configureDslMetadata('src/dsl/fixture/TransformConfig.groovy')
+
+        when:
+        BuildResult result = run('generateConfigurationMetadata')
+        Map metadata = readMetadata()
+
+        then: 'the transform is not discovered or executed and dynamic nested names are ignored'
+        result.task(':generateConfigurationMetadata').outcome == TaskOutcome.SUCCESS
+        property(metadata, 'grails.plugin.springsecurity.enabled').defaultValue == true
+        property(metadata, 'grails.plugin.springsecurity.null.ignored') == null
+        !metadata.properties*.name.any { String name -> name.contains('.null.') }
+    }
+
+    def "preserves null literals and omits map defaults with non-string keys"() {
+        given:
+        write('src/dsl/fixture/LiteralConfig.groovy', '''
+            security {
+                literals {
+                    nullList = [null, 'present']
+                    nullMap = [first: null, second: 'present']
+                    unsupportedMap = [(1): 'one']
+                }
+            }
+        '''.stripIndent())
+        configureDslMetadata('src/dsl/fixture/LiteralConfig.groovy')
+
+        when:
+        BuildResult result = run('generateConfigurationMetadata')
+        Map metadata = readMetadata()
+
+        then:
+        result.task(':generateConfigurationMetadata').outcome == TaskOutcome.SUCCESS
+        property(metadata, 'grails.plugin.springsecurity.literals.nullList').defaultValue == [null, 'present']
+        property(metadata, 'grails.plugin.springsecurity.literals.nullMap').defaultValue == [first: null, second: 'present']
+        property(metadata, 'grails.plugin.springsecurity.literals.unsupportedMap').type == 'java.util.Map'
+        !property(metadata, 'grails.plugin.springsecurity.literals.unsupportedMap').containsKey('defaultValue')
+    }
+
+    def "reports the actual source file for malformed DSL"() {
+        given:
+        File malformedDsl = write('src/dsl/fixture/BrokenConfig.groovy', '''
+            security {
+                enabled =
+            }
+        '''.stripIndent())
+        configureDslMetadata('src/dsl/fixture/BrokenConfig.groovy')
+
+        when:
+        BuildResult result = runner('generateConfigurationMetadata').buildAndFail()
+
+        then:
+        result.output.contains(malformedDsl.absolutePath)
+    }
+
     def "fails on conflicting duplicate identities in an overlay source"() {
         given:
         write('src/main/resources/META-INF/additional-spring-configuration-metadata.json', '''
@@ -293,6 +468,52 @@ class ConfigurationMetadataPluginSpec extends Specification {
         """.stripIndent())
     }
 
+    private void writeGroovyDslConfiguration(boolean includeSessionTimeout) {
+        String sessionTimeout = includeSessionTimeout ? 'sessionTimeout = 30' : ''
+        write('src/dsl/fixture/SecurityConfig.groovy', """
+            package fixture
+
+            throw new AssertionError('The configuration metadata task must not execute DSL sources')
+
+            security {
+                userLookup {
+                    userDomainClassName = 'fixture.User'
+                    enabled = true
+                }
+                oauth {
+                    client {
+                        clientId = 'client'
+                    }
+                }
+                authentication {
+                    maxAttempts = 3
+                    session.timeout = 30
+                    roles = ['ROLE_USER', 'ROLE_ADMIN']
+                    options = [maxSessions: 1, rememberMe: true]
+                    dynamicDefault = System.getProperty('fixture.security.dynamic')
+                    environmentDefault = System.getenv('FIXTURE_SECURITY_ENABLED') ? 'enabled' : 'disabled'
+                    ${sessionTimeout}
+                }
+            }
+        """.stripIndent())
+    }
+
+    private void writeTypedSecurityConfiguration() {
+        write('src/main/java/fixture/SecurityConfiguration.java', '''
+            package fixture;
+
+            import org.springframework.boot.context.properties.ConfigurationProperties;
+
+            @ConfigurationProperties("grails.plugin.springsecurity.authentication")
+            public class SecurityConfiguration {
+                private Long maxAttempts;
+
+                public Long getMaxAttempts() { return maxAttempts; }
+                public void setMaxAttempts(Long maxAttempts) { this.maxAttempts = maxAttempts; }
+            }
+        '''.stripIndent())
+    }
+
     private BuildResult run(String... arguments) {
         runner(arguments).build()
     }
@@ -304,10 +525,20 @@ class ConfigurationMetadataPluginSpec extends Specification {
                 .withPluginClasspath()
     }
 
-    private void write(String relativePath, String contents) {
+    private void configureDslMetadata(String relativePath) {
+        projectDir.resolve('build.gradle').toFile() << """
+            tasks.named('generateConfigurationMetadata') {
+                dslConfigurationFiles.from(file('${relativePath}'))
+                dslRootPrefixes.put('security', 'grails.plugin.springsecurity')
+            }
+        """.stripIndent()
+    }
+
+    private File write(String relativePath, String contents) {
         File file = projectDir.resolve(relativePath).toFile()
         file.parentFile.mkdirs()
         file.text = contents
+        file
     }
 
     private File metadataFile() {
