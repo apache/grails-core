@@ -109,7 +109,10 @@ class SbomPlugin implements Plugin<Project> {
             // Bouncy Castle Licence is the MIT license (https://www.bouncycastle.org/licence.html); pulled in transitively by the CAS client
             'pkg:maven/org.bouncycastle/bcpkix-jdk15on@1.70?type=jar'         : 'MIT',
             'pkg:maven/org.bouncycastle/bcprov-jdk15on@1.70?type=jar'         : 'MIT',
-            'pkg:maven/org.bouncycastle/bcutil-jdk15on@1.70?type=jar'         : 'MIT'
+            'pkg:maven/org.bouncycastle/bcutil-jdk15on@1.70?type=jar'         : 'MIT',
+            // jQuery UI is MIT licensed (https://jquery.org/license/); the webjars POM reports NOASSERTION
+            'pkg:maven/org.webjars/jquery-ui@1.14.2?type=jar'                 : 'MIT',
+            'pkg:maven/org.webjars/jquery-ui-themes@1.14.2?type=jar'          : 'MIT'
     ]
 
     // we don't distribute these so these licenses are considered acceptable, but we still prefer ASF licenses.
