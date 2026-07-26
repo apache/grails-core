@@ -140,6 +140,32 @@ ${ExcludedArtefact.name}
         !classes*.name.contains(ExcludedArtefact.name)
     }
 
+    void 'filters indexed artefacts declared in the default package'() {
+        given:
+        Class<?> applicationClass = applicationClass("""
+DefaultPackageArtefact
+${IndexedFirstArtefact.name}
+""")
+
+        when:
+        Collection<Class> classes = ApplicationArtefactScanner.scanApplicationClasses(applicationClass, [''])
+
+        then:
+        classes*.name.contains('DefaultPackageArtefact')
+        !classes*.name.contains(IndexedFirstArtefact.name)
+    }
+
+    void 'ignores null package names when filtering indexed artefacts'() {
+        given:
+        Class<?> applicationClass = applicationClass(IndexedFirstArtefact.name)
+
+        when:
+        Collection<Class> classes = ApplicationArtefactScanner.scanApplicationClasses(applicationClass, [null, IndexedFirstArtefact.package.name])
+
+        then:
+        classes*.name.contains(IndexedFirstArtefact.name)
+    }
+
     void 'falls back to classpath scanning when an indexed class is missing'() {
         given:
         Class<?> applicationClass = applicationClass('grails.boot.config.MissingArtefact')
@@ -192,6 +218,7 @@ ${ExcludedArtefact.name}
         [IndexedApplication, IndexedFirstArtefact, IndexedSecondArtefact, FallbackArtefact, ArtefactMarker, IncludedArtefact, ExcludedArtefact].each {
             Class<?> type -> copyClass(type, directory)
         }
+        copyClass(Class.forName('DefaultPackageArtefact', false, ApplicationArtefactScannerSpec.classLoader), directory)
         if (index != null) {
             writeIndex(directory, index)
         }
@@ -307,7 +334,7 @@ class TestApplicationClassLoader extends URLClassLoader {
     }
 
     private static boolean isFixtureClass(String name) {
-        name.startsWith('grails.boot.config.Indexed') || name.startsWith('grails.boot.config.indexed.') || name.startsWith('grails.boot.config.excluded.') || name == FallbackArtefact.name || name == ArtefactMarker.name
+        name.startsWith('grails.boot.config.Indexed') || name.startsWith('grails.boot.config.indexed.') || name.startsWith('grails.boot.config.excluded.') || name == FallbackArtefact.name || name == ArtefactMarker.name || name == 'DefaultPackageArtefact'
     }
 
     private static boolean isFixtureClassResource(String name) {
