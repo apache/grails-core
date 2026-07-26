@@ -71,6 +71,12 @@ class GrailsAotSmokeSpec extends Specification {
             ''')
             def application = new DefaultGrailsApplication([dynamicArtefact] as Class<?>[], classLoader)
             def context = new GenericApplicationContext()
+            // registerSingleton (not registerBean, as in the first test) because the pre-populated instance
+            // can only be built via the (Class[], ClassLoader) constructor: an instance-supplier registration
+            // is rejected by AOT ("instance supplier is not supported"), and the public addArtefact(Class) API
+            // added post-construction doesn't populate the field getAllArtefacts() reads. This does conflate
+            // "singleton invisible to AOT" with "no artefact-registry AOT support" - see the @PendingFeature
+            // reason below for why the two gaps can't be isolated here.
             context.beanFactory.registerSingleton(GrailsApplication.APPLICATION_ID, application)
             def generationContext = generationContext()
 
