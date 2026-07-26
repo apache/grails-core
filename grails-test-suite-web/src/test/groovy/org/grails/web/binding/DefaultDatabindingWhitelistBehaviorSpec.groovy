@@ -27,18 +27,15 @@ import spock.lang.Specification
 
 class DefaultDatabindingWhitelistBehaviorSpec extends Specification implements ControllerUnitTest<WhitelistBehaviorController> {
 
-    void 'domain binding includes simple and association properties but excludes special and unlisted properties'() {
+    // Domain exclusion of id/version/dateCreated/lastUpdated is already pinned by
+    // DefaultASTDatabindingHelperDomainClassSpecialPropertiesSpec (GRAILS-11173, #15681); this spec
+    // only covers the Object/def-typed exclusion and nested association binding.
+    void 'domain binding includes simple and association properties but excludes Object/def-typed properties'() {
         given:
-        Date dateCreated = new Date()
-        Date lastUpdated = new Date()
         Map source = [
                 name: 'Ada',
                 address: [street: 'Analytical Engine Way'],
-                id: 99L,
-                version: 7L,
-                dateCreated: dateCreated,
-                lastUpdated: lastUpdated,
-                ignored: 'not bindable'
+                untypedProperty: 'not bindable'
         ]
 
         when:
@@ -48,14 +45,10 @@ class DefaultDatabindingWhitelistBehaviorSpec extends Specification implements C
         then:
         domain.name == 'Ada'
         domain.address.street == 'Analytical Engine Way'
-        domain.id == null
-        domain.version == null
-        domain.dateCreated == null
-        domain.lastUpdated == null
-        domain.ignored == null
+        domain.untypedProperty == null
     }
 
-    void 'Validateable command binding includes declared special properties but excludes unlisted properties'() {
+    void 'Validateable command binding includes declared special properties but excludes Object/def-typed properties'() {
         given:
         Date dateCreated = new Date()
         Date lastUpdated = new Date()
@@ -65,7 +58,7 @@ class DefaultDatabindingWhitelistBehaviorSpec extends Specification implements C
         params.version = '7'
         params.dateCreated = dateCreated
         params.lastUpdated = lastUpdated
-        params.ignored = 'not bindable'
+        params.untypedProperty = 'not bindable'
 
         when:
         WhitelistCommand command = controller.bindCommand().command
@@ -77,7 +70,7 @@ class DefaultDatabindingWhitelistBehaviorSpec extends Specification implements C
         command.version == 7L
         command.dateCreated == dateCreated
         command.lastUpdated == lastUpdated
-        command.ignored == null
+        command.untypedProperty == null
     }
 }
 
@@ -85,13 +78,7 @@ class DefaultDatabindingWhitelistBehaviorSpec extends Specification implements C
 class WhitelistDomain {
     String name
     WhitelistAddress address = new WhitelistAddress()
-    Long id
-    Long version
-    Date dateCreated
-    Date lastUpdated
-    Object ignored
-
-    static hasOne = [address: WhitelistAddress]
+    Object untypedProperty
 }
 
 @Entity
@@ -113,5 +100,5 @@ class WhitelistCommand implements Validateable {
     Long version
     Date dateCreated
     Date lastUpdated
-    Object ignored
+    Object untypedProperty
 }
