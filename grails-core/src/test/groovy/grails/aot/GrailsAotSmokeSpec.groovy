@@ -86,7 +86,6 @@ class GrailsAotSmokeSpec extends Specification {
             classLoader.close()
     }
 
-    @PendingFeature(exceptions = [SpockAssertionError], reason = 'Blocker: plugin doWithSpring closures are evaluated from runtime Groovy classes, with no AOT contribution that converts their bean definitions into build-time generated source.')
     void 'Spring AOT records a dynamically loaded plugin doWithSpring bean'() {
         given: 'a plugin class loaded at runtime with a Groovy bean-definition closure'
             def classLoader = new GroovyClassLoader()
@@ -100,7 +99,6 @@ class GrailsAotSmokeSpec extends Specification {
             ''')
             def application = new DefaultGrailsApplication([] as Class<?>[], classLoader)
             def context = new GenericApplicationContext()
-            def runtimeContext = new GenericApplicationContext()
             application.mainContext = context
             def discovery = new DefaultPluginDiscovery([dynamicPlugin] as Class<?>[])
             discovery.loadPluginsFromClasspath = false
@@ -114,8 +112,8 @@ class GrailsAotSmokeSpec extends Specification {
         when: 'the runtime plugin configuration phase registers its DSL bean before Spring processes the context through its public AOT API'
             def springConfiguration = new DefaultRuntimeSpringConfiguration()
             pluginManager.doRuntimeConfiguration(springConfiguration)
-            springConfiguration.registerBeansWithContext(runtimeContext)
-            if (!runtimeContext.beanFactory.containsBeanDefinition('dynamicPluginBean')) {
+            springConfiguration.registerBeansWithContext(context)
+            if (!context.beanFactory.containsBeanDefinition('dynamicPluginBean')) {
                 throw new IllegalStateException('Plugin doWithSpring did not register dynamicPluginBean before AOT processing')
             }
             new ApplicationContextAotGenerator().processAheadOfTime(context, generationContext)
@@ -126,7 +124,6 @@ class GrailsAotSmokeSpec extends Specification {
 
         cleanup:
             context.close()
-            runtimeContext.close()
             classLoader.close()
     }
 
