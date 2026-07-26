@@ -57,7 +57,11 @@ class GrailsAotSmokeSpec extends Specification {
             context.close()
     }
 
-    @PendingFeature(exceptions = [SpockAssertionError], reason = 'Blocker: Grails discovers artefact classes at runtime, and no AOT contribution currently records that runtime artefact registry as generated source.')
+    // @PendingFeature treats any AssertionError as pending regardless of `exceptions`; the exceptions list
+    // only extends pending handling to non-assertion Throwables. Scoping it to SpockAssertionError means the
+    // IllegalStateException guard below (and any non-assertion failure from processAheadOfTime) still hard-fails
+    // instead of being silently swallowed as pending - it does not shield the final assertion from regressions.
+    @PendingFeature(exceptions = [SpockAssertionError], reason = 'Blocker: this probe conflates two gaps - manually registered singletons are invisible to AOT bean processing, and no AOT contribution currently records the runtime artefact registry as generated source. They cannot be isolated here: registering the pre-populated GrailsApplication as a bean definition instead (as in the first test) fails, since AOT bean registration codegen supports neither an instance supplier (AotBeanProcessingException: instance supplier is not supported) nor constructor arguments carrying runtime-only state such as a ClassLoader.')
     void 'Spring AOT records a dynamically discovered Grails artefact'() {
         given: 'an artefact discovered from a runtime Groovy class loader'
             def classLoader = new GroovyClassLoader()
@@ -79,6 +83,9 @@ class GrailsAotSmokeSpec extends Specification {
             generationContext.writeGeneratedContent()
 
         then: 'the generated source preserves the runtime-discovered artefact type'
+            // A class parsed by a runtime GroovyClassLoader has no build-time bytecode, so the most a future
+            // AOT contribution could do is record registry metadata (e.g. the class name) as generated source -
+            // this string match on the joined sources is how this probe is expected to flip to passing.
             generatedSource(generationContext).contains(dynamicArtefact.name)
 
         cleanup:
