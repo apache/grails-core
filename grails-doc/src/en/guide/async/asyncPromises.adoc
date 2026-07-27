@@ -93,9 +93,9 @@ def result = p.get(1,MINUTES)
 
 By default, the `Promises` static methods use an instance of `PromiseFactory`. This `PromiseFactory` interface has various implementations. The default implementation is link:{api}org/grails/async/factory/future/CachedThreadPoolPromiseFactory.html[CachedThreadPoolPromiseFactory] which uses a thread pool that will create threads as needed (the same as `java.util.concurrent.Executors.newCachedThreadPool()`)
 
-Grails 8.1 also includes an opt-in Java 21 virtual-thread seed implementation, `org.grails.async.factory.future.VirtualThreadPromiseFactory`.
+Grails 8 also includes an opt-in Java 21 virtual-thread seed implementation, `org.grails.async.factory.future.VirtualThreadPromiseFactory`.
 Set the JVM system property `grails.async.promiseFactory=virtual-thread` to select it when no service-loaded `PromiseFactory` is present.
-The GPars module remains available for compatibility, but new applications should prefer the core promise factories or the virtual-thread opt-in while GPars support is prepared for deprecation.
+The GPars module remains available. New applications may also consider the core promise factories or the virtual-thread opt-in.
 
 However, the design of the Grails promises framework is such that you can swap out the underlying implementation for your own or one of the pre-supported implementations. For example to use RxJava 1.x simply add the RxJava dependency to `build.gradle`:
 

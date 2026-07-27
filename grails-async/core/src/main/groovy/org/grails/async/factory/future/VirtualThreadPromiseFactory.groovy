@@ -37,7 +37,7 @@ import org.grails.async.factory.BoundPromise
 /**
  * PromiseFactory implementation backed by Java virtual threads.
  *
- * @since 8.1
+ * @since 8.0
  */
 @AutoFinal
 @CompileStatic
@@ -83,29 +83,38 @@ class VirtualThreadPromiseFactory extends AbstractPromiseFactory implements Clos
 
     @Override
     <T> Promise<List<T>> onComplete(List<Promise<T>> promises, Closure<T> callable) {
-        return createPromise({
+        // callable's return value is intentionally discarded: the resolved value of the
+        // returned Promise is the waited-on values themselves (matching Promise<List<T>>),
+        // not whatever the T-typed callback happens to return.
+        FutureTaskPromise<List<T>> promise = new FutureTaskPromise<List<T>>(this, {
             List<T> values = waitAll(promises)
             callable.call(values)
-        } as Closure<List<T>>)
+            return values
+        } as Callable<List<T>>)
+        executorService.execute(promise)
+        return promise
     }
 
     @Override
     <T> Promise<List<T>> onError(List<Promise<T>> promises, Closure<?> callable) {
-        return createPromise({
+        FutureTaskPromise<List<T>> promise = new FutureTaskPromise<List<T>>(this, {
             try {
-                waitAll(promises)
-                return null
+                return waitAll(promises)
             }
             catch (Throwable e) {
                 callable.call(e)
-                return e
+                return Collections.<T> emptyList()
             }
-        } as Closure<List<T>>)
+        } as Callable<List<T>>)
+        executorService.execute(promise)
+        return promise
     }
 
     @Override
     @PreDestroy
     void close() {
-        executorService.shutdown()
+        if (!executorService.isShutdown()) {
+            executorService.shutdown()
+        }
     }
 }
