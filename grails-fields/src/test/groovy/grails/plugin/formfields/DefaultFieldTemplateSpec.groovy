@@ -18,6 +18,9 @@
  */
 package grails.plugin.formfields
 
+import org.jsoup.Jsoup
+import org.jsoup.nodes.Element
+
 import grails.testing.web.taglib.TagLibUnitTest
 import spock.lang.Specification
 
@@ -47,25 +50,26 @@ class DefaultFieldTemplateSpec extends Specification implements TagLibUnitTest<F
 
     void "default rendering"() {
         when:
-        String output = tagLib.renderDefaultField(model).toString()
+        Element root = renderRoot()
 
         then:
-        output.contains('<div class="fieldcontain">')
+        root.hasClass('fieldcontain')
 
         and:
-        output.contains('<label class="" for="property">label</label>')
-        output.indexOf('<label class="" for="property">label</label>') < output.indexOf('<input name="property">')
+        Element label = root.selectFirst('label')
+        label.text() == 'label'
+        label.attr('for') == 'property'
+
+        and:
+        label.nextElementSibling().is('input[name=property]')
     }
 
     void "container marked as invalid"() {
         given:
         model.invalid = true
 
-        when:
-        String output = tagLib.renderDefaultField(model).toString()
-
-        then:
-        output.contains('<div class="fieldcontain error">')
+        expect:
+        renderRoot().hasClass('error')
     }
 
     void "container marked as required"() {
@@ -73,13 +77,19 @@ class DefaultFieldTemplateSpec extends Specification implements TagLibUnitTest<F
         model.required = true
 
         when:
-        String output = tagLib.renderDefaultField(model).toString()
+        Element root = renderRoot()
 
         then:
-        output.contains('<div class="fieldcontain required">')
+        root.hasClass('required')
 
         and:
-        output.contains('<span class="required-indicator">*</span>')
+        Element indicator = root.selectFirst('label .required-indicator')
+        indicator.text() == '*'
+    }
+
+    private Element renderRoot() {
+        String output = tagLib.renderDefaultField(model).toString()
+        Jsoup.parseBodyFragment(output).body().children().first()
     }
 
 }
