@@ -70,8 +70,8 @@ public class ControllersAutoConfiguration implements EnvironmentAware {
     private static final String LEGACY_MULTIPART_CONFIGURATION_ERROR =
             "Configuration properties under 'grails.controllers.upload' are no longer supported. " +
             "Use Spring Boot's 'spring.servlet.multipart' configuration instead. For example, set " +
-            "'spring.servlet.multipart.max-file-size=200MB' and " +
-            "'spring.servlet.multipart.max-request-size=200MB'.";
+            "'spring.servlet.multipart.maxFileSize=200MB' and " +
+            "'spring.servlet.multipart.maxRequestSize=200MB'.";
 
     @Value("${" + Settings.FILTER_ENCODING + ":utf-8}")
     private String filtersEncoding;
