@@ -20,8 +20,9 @@ package grails.plugin.hibernate.commands
 
 import java.util.concurrent.TimeUnit
 
-import grails.dev.commands.ExecutionContext
 import grails.gorm.annotation.Entity
+import org.apache.grails.core.cli.ExecutionContext
+import org.apache.grails.data.hibernate7.cli.SchemaExportCommand
 import org.grails.build.parsing.CommandLine
 import org.grails.orm.hibernate.HibernateDatastore
 import org.slf4j.LoggerFactory
