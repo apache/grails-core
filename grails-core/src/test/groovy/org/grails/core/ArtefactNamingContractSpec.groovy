@@ -19,21 +19,31 @@
 package org.grails.core
 
 import grails.core.GrailsClass
+import org.grails.core.artefact.ControllerArtefactHandler
+import org.grails.core.artefact.DomainClassArtefactHandler
 import spock.lang.Specification
 import spock.lang.Unroll
 
 /**
- * Tests for deterministic GrailsClass naming metadata.
+ * Tests for deterministic GrailsClass naming metadata, and for the artefact detection
+ * contract (ArtefactHandler#isArtefactClass) that a naming precomputation refactor is
+ * most likely to disturb.
  */
-class ArtefactNamePrecomputationSpec extends Specification {
+class ArtefactNamingContractSpec extends Specification {
 
     private static final String BASE_PACKAGE = 'org.grails.core'
 
     @Unroll
-    void "naming contract for #entry.label is precomputed"() {
+    void "#entry.label naming metadata matches the observed contract"() {
         given:
         GrailsClass grailsClass = grailsClassFor(entry.artifactType, entry.wrapperClass)
 
+        // GrailsNameUtils.getNaturalName splits into words at each lower-to-upper case
+        // transition, but an acronym run (HTML, JSONAPI, URL) absorbs the first letter
+        // of the following word before that transition triggers - hence 'HTMLC ontroller'
+        // (not 'HTML Controller') and 'JSONAPIS ervice' (not 'JSONAPI Service') below.
+        // These are pinned intentionally: don't "fix" these expectations, or the
+        // algorithm, without knowing this spec exists to catch exactly that change.
         expect:
         grailsClass.name == entry.name
         grailsClass.shortName == entry.shortName
@@ -186,6 +196,21 @@ class ArtefactNamePrecomputationSpec extends Specification {
         ]
     }
 
+    void "ControllerArtefactHandler accepts a concrete class whose name ends with the controller suffix"() {
+        expect:
+        new ControllerArtefactHandler().isArtefactClass(HTMLController)
+    }
+
+    void "ControllerArtefactHandler rejects an abstract class even when the name matches the controller suffix"() {
+        expect:
+        !new ControllerArtefactHandler().isArtefactClass(AbstractFooController)
+    }
+
+    void "DomainClassArtefactHandler rejects a class named like a domain class but carrying no domain annotation"() {
+        expect:
+        !new DomainClassArtefactHandler().isArtefactClass(URLDomain)
+    }
+
     private GrailsClass grailsClassFor(String artifactType, Class<?> wrapperClass) {
         switch (artifactType) {
             case 'controller':
@@ -203,6 +228,8 @@ class ArtefactNamePrecomputationSpec extends Specification {
 }
 
 class HTMLController {}
+
+abstract class AbstractFooController {}
 
 class PayRollController {}
 
