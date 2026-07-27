@@ -89,6 +89,16 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
         property.resolveJoinTableForeignKeyColumnName(namingStrategy) == "htmp_book_id"
     }
 
+    void "resolveJoinTableForeignKeyColumnName strips backticks from a backtick-quoted associated entity table name"() {
+        given:
+        def property = createTestHibernateToManyProperty(HTMPQuotedTableAuthor, "books")
+        def namingStrategy = getGrailsDomainBinder().namingStrategy
+        hibernateFirstPass()
+
+        expect:
+        property.resolveJoinTableForeignKeyColumnName(namingStrategy) == "htmp_quoted_book_id"
+    }
+
     void "isAssociationColumnNullable returns false for ManyToMany"() {
         given: "Register only entities for this specific test"
         createPersistentEntity(HTMPCourse) // Course is needed because Student refers to it
@@ -638,6 +648,23 @@ class HTMPMappedTableAuthor {
     Long id
     String name
     static hasMany = [books: Book]
+}
+
+@Entity
+class HTMPQuotedTableBook {
+    Long id
+    String title
+
+    static mapping = {
+        table '`htmp_quoted_book`'
+    }
+}
+
+@Entity
+class HTMPQuotedTableAuthor {
+    Long id
+    String name
+    static hasMany = [books: HTMPQuotedTableBook]
 }
 
 class HTMPPrefixRemovingPhysicalNamingStrategy extends PhysicalNamingStrategyStandardImpl {
