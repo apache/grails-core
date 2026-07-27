@@ -87,11 +87,43 @@ class UrlMappingsIndexPropertiesSpec extends Specification {
         indexProperties.getProperty('source') == 'descriptor'
     }
 
+    void 'falls back to the provided classloader when no thread context classloader is set'() {
+        given:
+        Thread currentThread = Thread.currentThread()
+        ClassLoader originalClassLoader = currentThread.contextClassLoader
+        currentThread.contextClassLoader = null
+
+        when:
+        UrlMappingsIndexProperties indexProperties = UrlMappingsIndexProperties.load(classLoaderWithProperties('source=fallback'))
+
+        then:
+        indexProperties.present
+        indexProperties.getProperty('source') == 'fallback'
+
+        cleanup:
+        currentThread.contextClassLoader = originalClassLoader
+    }
+
+    void 'propertyNames exposes descriptor keys when present and is empty otherwise'() {
+        expect:
+        UrlMappingsIndexProperties.load(classLoaderWithProperties('source=descriptor')).propertyNames() as Set == ['source'] as Set
+        UrlMappingsIndexProperties.load(classLoaderWithNoResources()).propertyNames().empty
+    }
+
     private static ClassLoader classLoaderWithProperties(String properties) {
         new ClassLoader() {
             @Override
             InputStream getResourceAsStream(String name) {
                 name == UrlMappingsIndexProperties.LOCATION ? new ByteArrayInputStream(properties.bytes) : null
+            }
+        }
+    }
+
+    private static ClassLoader classLoaderWithNoResources() {
+        new ClassLoader() {
+            @Override
+            InputStream getResourceAsStream(String name) {
+                null
             }
         }
     }
