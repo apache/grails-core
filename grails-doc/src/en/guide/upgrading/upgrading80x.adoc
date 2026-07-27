@@ -548,8 +548,9 @@ If your application references `DEFAULT_FILTER_ORDER` for custom filter position
 Longer term, consider migrating to the fluent `HttpSecurity` API for filter chain configuration.
 
 Grails 8 also registers a servlet filter that sends default browser hardening headers for servlet web applications.
-Applications that already set these headers through Spring Security or a custom filter keep their existing response values.
-To disable or customize the Grails defaults, configure `grails.security.headers.*`; see the Security guide's HTTP Security Headers section for the full list.
+This filter does not apply at all when Spring Security's own header-writing filter is on the classpath - Spring Security already ships its own configurable header defaults, so applications using Spring Security are unaffected by this change.
+Applications with a custom filter that sets one of these headers keep their existing response values, as long as that filter runs before Grails' filter (`GrailsFilters.LAST`) in the chain.
+To disable or customize the Grails defaults, configure `grails.security.headers.*`; see the Security guide's HTTP Security Headers section for the full list, including guidance on reverse-proxy deployments where the proxy itself already sends one or more of these headers.
 
 ==== 14. Spring Dependency Management Plugin Replaced by Gradle Platforms
 

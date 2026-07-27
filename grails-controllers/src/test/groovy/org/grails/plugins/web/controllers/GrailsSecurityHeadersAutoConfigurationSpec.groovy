@@ -23,20 +23,32 @@ import jakarta.servlet.DispatcherType
 import jakarta.servlet.FilterChain
 
 import org.springframework.boot.autoconfigure.AutoConfigurations
+import org.springframework.boot.test.context.FilteredClassLoader
 import org.springframework.boot.test.context.runner.ApplicationContextRunner
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner
 import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.mock.web.MockFilterChain
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
+import org.springframework.security.web.header.HeaderWriterFilter
 
 import spock.lang.Specification
 
 class GrailsSecurityHeadersAutoConfigurationSpec extends Specification {
 
+    /**
+     * Spring Security's HeaderWriterFilter is a real test dependency (needed to verify
+     * the auto-configuration backs off when it's present), so tests that exercise the
+     * "Spring Security absent" default behavior must hide it from the context's
+     * classloader - otherwise every context in this spec would see it as present.
+     */
+    private static WebApplicationContextRunner webRunnerWithoutSpringSecurity() {
+        new WebApplicationContextRunner().withClassLoader(new FilteredClassLoader(HeaderWriterFilter))
+    }
+
     void 'default servlet web auto-configuration registers the security headers filter'() {
         expect:
-        new WebApplicationContextRunner()
+        webRunnerWithoutSpringSecurity()
                 .withConfiguration(AutoConfigurations.of(GrailsSecurityHeadersAutoConfiguration))
                 .run { context ->
                     assert context.getBeanNamesForType(GrailsSecurityHeadersFilter).length == 1
@@ -55,8 +67,17 @@ class GrailsSecurityHeadersAutoConfigurationSpec extends Specification {
 
     void 'security headers auto-configuration can be disabled'() {
         expect:
-        new WebApplicationContextRunner()
+        webRunnerWithoutSpringSecurity()
                 .withPropertyValues('grails.security.headers.enabled=false')
+                .withConfiguration(AutoConfigurations.of(GrailsSecurityHeadersAutoConfiguration))
+                .run { context ->
+                    assert context.getBeanNamesForType(GrailsSecurityHeadersFilter).length == 0
+                }
+    }
+
+    void 'security headers auto-configuration backs off when Spring Security header writing is on the classpath'() {
+        expect: 'the real HeaderWriterFilter class is on this spec\'s test classpath, unfiltered'
+        new WebApplicationContextRunner()
                 .withConfiguration(AutoConfigurations.of(GrailsSecurityHeadersAutoConfiguration))
                 .run { context ->
                     assert context.getBeanNamesForType(GrailsSecurityHeadersFilter).length == 0
@@ -68,7 +89,7 @@ class GrailsSecurityHeadersAutoConfigurationSpec extends Specification {
         def userFilter = new GrailsSecurityHeadersFilter(new GrailsSecurityHeadersProperties())
 
         expect:
-        new WebApplicationContextRunner()
+        webRunnerWithoutSpringSecurity()
                 .withBean(GrailsSecurityHeadersFilter) { userFilter }
                 .withConfiguration(AutoConfigurations.of(GrailsSecurityHeadersAutoConfiguration))
                 .run { context ->
@@ -82,7 +103,7 @@ class GrailsSecurityHeadersAutoConfigurationSpec extends Specification {
         def userRegistration = new FilterRegistrationBean()
 
         expect:
-        new WebApplicationContextRunner()
+        webRunnerWithoutSpringSecurity()
                 .withBean('grailsSecurityHeadersFilter', FilterRegistrationBean) { userRegistration }
                 .withConfiguration(AutoConfigurations.of(GrailsSecurityHeadersAutoConfiguration))
                 .run { context ->

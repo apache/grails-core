@@ -25,6 +25,7 @@ import jakarta.servlet.DispatcherType;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
@@ -32,9 +33,22 @@ import org.springframework.context.annotation.Bean;
 
 import org.grails.web.config.http.GrailsFilters;
 
+/**
+ * Registers {@link GrailsSecurityHeadersFilter} to apply baseline browser-hardening
+ * response headers.
+ *
+ * <p>Backs off entirely when Spring Security's header-writing infrastructure
+ * ({@code HeaderWriterFilter}) is on the classpath: that filter chain runs after this
+ * one would and only writes a header when it is still absent, so an eagerly-applied
+ * Grails default would silently win over an application's explicit Spring Security
+ * header configuration. Spring Security already ships secure header defaults of its
+ * own, so this auto-configuration only fills the gap for applications that don't have
+ * it.</p>
+ */
 @AutoConfiguration
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 @ConditionalOnBooleanProperty(name = "grails.security.headers.enabled", matchIfMissing = true)
+@ConditionalOnMissingClass("org.springframework.security.web.header.HeaderWriterFilter")
 @EnableConfigurationProperties(GrailsSecurityHeadersProperties.class)
 public class GrailsSecurityHeadersAutoConfiguration {
 
