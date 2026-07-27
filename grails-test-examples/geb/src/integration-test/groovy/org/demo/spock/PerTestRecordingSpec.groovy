@@ -85,11 +85,27 @@ class PerTestRecordingSpec extends ContainerGebSpec {
         names.contains('setup_running_a_test_to_create_a_recording')
         names.contains('setup_running_a_second_test_to_create_another')
 
-        and: 'the recording files should have different content'
+        and: 'each recording captured meaningful content, not just a near-blank connection handshake'
+        // A VNC recording container that was only just restarted (see
+        // WebDriverContainerHolder#restartVncRecordingContainer) is guaranteed to have
+        // connected, but not to have captured more than a frame or two by the time a fast
+        // iteration finishes. Two such near-blank captures can encode to identical,
+        // non-zero, stable-sized bytes via ffmpeg - passing a raw byte-difference check
+        // without actually being distinct, meaningful recordings. Requiring a sensible
+        // minimum size - well under any real capture observed locally (tens of KB), but
+        // well above a single near-blank keyframe - asserts the real framework contract.
         def firstRecording = recordingFiles.find { it.name.contains('setup_running_a_test_to_create_a_recording') }
         def secondRecording = recordingFiles.find { it.name.contains('setup_running_a_second_test_to_create_another') }
+        firstRecording.length() > MIN_MEANINGFUL_RECORDING_BYTES
+        secondRecording.length() > MIN_MEANINGFUL_RECORDING_BYTES
+
+        and: 'the recording files should have different content'
         Files.mismatch(firstRecording.toPath(), secondRecording.toPath()) != -1
     }
+
+    // Comfortably below every real capture observed locally (tens of KB) but well above
+    // what a single near-blank keyframe from a just-restarted VNC connection would encode to.
+    private static final long MIN_MEANINGFUL_RECORDING_BYTES = 5_000L
 
     private static final DateTimeFormatter RECORDING_DIR_FORMAT = DateTimeFormatter.ofPattern('yyyyMMdd_HHmmss')
 
@@ -123,36 +139,21 @@ class PerTestRecordingSpec extends ContainerGebSpec {
             long pollIntervalMillis = 500L
     ) {
         long deadline = System.currentTimeMillis() + timeoutMillis
-        Map<String, Long> previousSizes = [:]
-        List<File> readyFiles = []
+        List<File> recordingFiles = []
         while (System.currentTimeMillis() < deadline) {
             // Re-scan on every poll: the directory and the files both appear
             // asynchronously while the recording container flushes videos.
-            List<File> candidateFiles = currentRunRecordingDirs(baseRecordingDir).collectMany { File dir ->
+            recordingFiles = currentRunRecordingDirs(baseRecordingDir).collectMany { File dir ->
                 (dir.listFiles({ File file ->
                     isVideoFile(file) && file.name.contains(testClassName)
                 } as FileFilter) ?: new File[0]) as List<File>
             }
-            Map<String, Long> currentSizes = candidateFiles.collectEntries { File file ->
-                [(file.absolutePath): file.length()]
-            }
 
-            // Testcontainers copies each recording with a plain, non-atomic
-            // stream copy, so a file can appear in the directory scan above
-            // while still 0 bytes or only partially written. Only treat a
-            // recording as ready once its size is non-zero and unchanged
-            // since the previous poll, which means the copy has finished.
-            readyFiles = candidateFiles.findAll { File file ->
-                long size = currentSizes[file.absolutePath]
-                size > 0 && previousSizes[file.absolutePath] == size
-            }
-
-            if (readyFiles.size() >= minFileCount) {
+            if (recordingFiles.size() >= minFileCount) {
                 break
             }
-            previousSizes = currentSizes
             sleep(pollIntervalMillis)
         }
-        return readyFiles
+        return recordingFiles
     }
 }

@@ -88,11 +88,18 @@ class WebDriverContainerHolder {
     }
 
     void stop() {
-        container?.stop()
-        container = null
-        browser = null
-        testManager = null
-        containerConf = null
+        try {
+            container?.stop()
+        } finally {
+            // Reset state even if stop() throws - otherwise isInitialized() keeps reporting
+            // true for a container that's actually broken, and a later reinitialize() call
+            // would see matchesCurrentContainerConfiguration() as a false positive without
+            // ever attempting to recover.
+            container = null
+            browser = null
+            testManager = null
+            containerConf = null
+        }
     }
 
     boolean matchesCurrentContainerConfiguration(WebDriverContainerConfiguration specConf) {
@@ -440,13 +447,18 @@ class WebDriverContainerHolder {
             if (vncContainer) {
                 // Stop the current VNC recording container
                 vncContainer.stop()
-                // Create and start a new VNC recording container for the next test
+                // Create and start a new VNC recording container for the next test.
+                // start() must succeed BEFORE the field is updated: if it throws (e.g. the
+                // "Connected" wait strategy times out), the exception below is deliberately
+                // swallowed to avoid breaking test execution - so if the field were already
+                // pointing at newVncContainer by then, every subsequent saveRecordingToFile()
+                // would silently target a container that never actually started.
                 def newVncContainer = new VncRecordingContainer(container)
                         .withVncPassword('secret')
                         .withVncPort(5900)
                         .withVideoFormat(settings.recordingFormat)
-                field.set(container, newVncContainer)
                 newVncContainer.start()
+                field.set(container, newVncContainer)
 
                 log.debug('Successfully restarted VNC recording container')
             }
