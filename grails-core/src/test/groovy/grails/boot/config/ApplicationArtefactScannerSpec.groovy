@@ -86,13 +86,44 @@ grails.boot.config.IndexedSecondArtefact
         classes*.name.contains(FallbackArtefact.name)
     }
 
-    void 'falls back to classpath scanning when an index is malformed'() {
+    void 'skips blank lines when reading the index'() {
         given:
         Class<?> applicationClass = applicationClass('''
 grails.boot.config.IndexedFirstArtefact
 
 grails.boot.config.IndexedSecondArtefact
 ''')
+
+        when:
+        Collection<Class> classes = ApplicationArtefactScanner.scanApplicationClasses(applicationClass)
+
+        then:
+        indexedClassNames(classes) == [
+                IndexedFirstArtefact.name,
+                IndexedSecondArtefact.name
+        ]
+        !classes*.name.contains(FallbackArtefact.name)
+    }
+
+    void 'forces classpath scanning when the artefact index is disabled via system property'() {
+        given:
+        System.setProperty(ArtefactIndexReader.DISABLED_PROPERTY, 'true')
+        Class<?> applicationClass = applicationClass(IndexedFirstArtefact.name)
+
+        when:
+        Collection<Class> classes = ApplicationArtefactScanner.scanApplicationClasses(applicationClass)
+
+        then:
+        classes*.name.contains(FallbackArtefact.name)
+        !classes*.name.contains(IndexedFirstArtefact.name)
+
+        cleanup:
+        System.clearProperty(ArtefactIndexReader.DISABLED_PROPERTY)
+    }
+
+    void 'falls back to classpath scanning when reading an indexed class throws a runtime exception'() {
+        given:
+        Class<?> applicationClass = applicationClass('grails.boot.config.RestrictedArtefact', null, null, 'grails.boot.config.RestrictedArtefact')
 
         when:
         Collection<Class> classes = ApplicationArtefactScanner.scanApplicationClasses(applicationClass)
@@ -212,7 +243,7 @@ ${IndexedFirstArtefact.name}
         knownTransformedClassNames.addAll(transformedClassNames)
     }
 
-    private Class<?> applicationClass(String index, String dependencyIndex = null, String linkageErrorClassName = null) {
+    private Class<?> applicationClass(String index, String dependencyIndex = null, String linkageErrorClassName = null, String runtimeExceptionClassName = null) {
         File directory = File.createTempDir()
         temporaryDirectories << directory
         [IndexedApplication, IndexedFirstArtefact, IndexedSecondArtefact, FallbackArtefact, ArtefactMarker, IncludedArtefact, ExcludedArtefact].each {
@@ -232,7 +263,7 @@ ${IndexedFirstArtefact.name}
             classLoaders << dependencyClassLoader
             parent = dependencyClassLoader
         }
-        URLClassLoader classLoader = new TestApplicationClassLoader([directory.toURI().toURL()] as URL[], parent, linkageErrorClassName)
+        URLClassLoader classLoader = new TestApplicationClassLoader([directory.toURI().toURL()] as URL[], parent, linkageErrorClassName, runtimeExceptionClassName)
         classLoaders << classLoader
         return classLoader.loadClass(IndexedApplication.name)
     }
@@ -291,16 +322,21 @@ class FallbackArtefact {
 class TestApplicationClassLoader extends URLClassLoader {
 
     private final String linkageErrorClassName
+    private final String runtimeExceptionClassName
 
-    TestApplicationClassLoader(URL[] urls, ClassLoader parent, String linkageErrorClassName) {
+    TestApplicationClassLoader(URL[] urls, ClassLoader parent, String linkageErrorClassName, String runtimeExceptionClassName = null) {
         super(urls, parent)
         this.linkageErrorClassName = linkageErrorClassName
+        this.runtimeExceptionClassName = runtimeExceptionClassName
     }
 
     @Override
     protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
         if (name == linkageErrorClassName) {
             throw new NoClassDefFoundError(name)
+        }
+        if (name == runtimeExceptionClassName) {
+            throw new SecurityException(name)
         }
         if (!isFixtureClass(name)) {
             return super.loadClass(name, resolve)
