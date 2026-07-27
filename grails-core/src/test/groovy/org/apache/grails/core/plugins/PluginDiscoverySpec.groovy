@@ -373,7 +373,7 @@ class RepeatedProbeGrailsPlugin {
         System.setErr(originalErr)
     }
 
-    def 'reports every missing or incompatible plugin dependency at WARN'() {
+    def 'reports every missing or incompatible plugin dependency at ERROR'() {
         given: 'a discovery bean with one available and one unresolved plugin'
         def gcl = new GroovyClassLoader()
         def availableDependencyClass = gcl.parseClass('''
@@ -405,16 +405,61 @@ class UnresolvedDependenciesGrailsPlugin {
         !discovery.hasPlugin('unresolvedDependencies')
         discovery.getPluginsInLoadOrder()*.name == ['availableDependency']
 
-        and: 'one concise warning identifies the failed plugin and every unresolved dependency'
-        def warnings = captured.toString().readLines().findAll { it.contains('unresolvedDependencies') }
-        warnings.size() == 1
-        warnings[0].contains('WARN')
-        warnings[0].contains('Grails plug-in [unresolvedDependencies] with version [4.0.0] cannot be loaded')
-        warnings[0].contains('dependency [missingDependency] with required version [1.0.0] is missing')
-        warnings[0].contains('dependency [availableDependency] has version [1.0.0] but requires [2.0.0]')
+        and: 'one concise message at ERROR identifies the failed plugin and every unresolved dependency'
+        def errors = captured.toString().readLines().findAll { it.contains('unresolvedDependencies') }
+        errors.size() == 1
+        errors[0].contains('ERROR')
+        errors[0].contains('Grails plug-in [unresolvedDependencies] with version [4.0.0] cannot be loaded')
+        errors[0].contains('dependency [missingDependency] with required version [1.0.0] is missing')
+        errors[0].contains('dependency [availableDependency] has version [1.0.0] but requires [2.0.0]')
 
         and: 'normal verbosity does not include a stack trace'
         !captured.toString().contains('at org.apache.grails.core.plugins.DefaultPluginDiscovery')
+
+        cleanup:
+        System.setErr(originalErr)
+    }
+
+    def 'reports a dependency that failed to load as failed rather than missing'() {
+        given: 'a plugin whose only dependency itself fails to load due to a genuinely missing dependency'
+        def gcl = new GroovyClassLoader()
+        def failingDependencyClass = gcl.parseClass('''
+class FailingDependencyGrailsPlugin {
+    def version = "1.0.0"
+    def dependsOn = [reallyMissing: "1.0.0"]
+}
+''')
+        def dependentClass = gcl.parseClass('''
+class DependentOnFailedGrailsPlugin {
+    def version = "1.0.0"
+    def dependsOn = [failingDependency: "1.0.0"]
+}
+''')
+        def discovery = new DefaultPluginDiscovery(
+                [failingDependencyClass, dependentClass] as Class<?>[]
+        )
+        discovery.loadPluginsFromClasspath = false
+
+        and: 'standard error is captured to observe slf4j-simple output'
+        def originalErr = System.err
+        def captured = new ByteArrayOutputStream()
+        System.setErr(new PrintStream(captured, true))
+
+        when:
+        discovery.init(new StandardEnvironment())
+
+        then: 'both plugins end up failed'
+        discovery.hasFailedPlugin('failingDependency')
+        discovery.hasFailedPlugin('dependentOnFailed')
+
+        and: 'the missing root cause is reported as missing'
+        def rootCause = captured.toString().readLines().find { it.contains('[failingDependency]') }
+        rootCause.contains('dependency [reallyMissing] with required version [1.0.0] is missing')
+
+        and: 'the plugin depending on the failed plugin reports it as failed, not missing'
+        def dependent = captured.toString().readLines().find { it.contains('[dependentOnFailed]') }
+        dependent.contains('dependency [failingDependency] with required version [1.0.0] failed to load')
+        !dependent.contains('is missing')
 
         cleanup:
         System.setErr(originalErr)
