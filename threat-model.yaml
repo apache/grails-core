@@ -124,14 +124,14 @@ config_knobs:
     security_relevant: true
     maintainer_stance: unresolved
     section: "§5a"
-  - name: spring.servlet.multipart.max-file-size
+  - name: spring.servlet.multipart.maxFileSize
     default: 1048576
     default_units: bytes
     default_source: Spring Boot MultipartProperties
     security_relevant: true
     maintainer_stance: unresolved
     section: "§5a"
-  - name: spring.servlet.multipart.max-request-size
+  - name: spring.servlet.multipart.maxRequestSize
     default: 10485760
     default_units: bytes
     default_source: Spring Boot MultipartProperties

@@ -75,8 +75,8 @@ class ControllersAutoConfigurationSpec extends Specification {
         exception.rootCause.message ==
                 "Configuration properties under 'grails.controllers.upload' are no longer supported. " +
                 "Use Spring Boot's 'spring.servlet.multipart' configuration instead. For example, set " +
-                "'spring.servlet.multipart.max-file-size=200MB' and " +
-                "'spring.servlet.multipart.max-request-size=200MB'."
+                "'spring.servlet.multipart.maxFileSize=200MB' and " +
+                "'spring.servlet.multipart.maxRequestSize=200MB'."
 
         cleanup:
         applicationContext.close()

@@ -160,11 +160,11 @@ grails:
 spring:
     servlet:
         multipart:
-            max-file-size: 200MB
-            max-request-size: 200MB
+            maxFileSize: 200MB
+            maxRequestSize: 200MB
 ----
 
-Spring Boot also provides `spring.servlet.multipart.location`, `spring.servlet.multipart.file-size-threshold`, and `spring.servlet.multipart.enabled` as replacements for the corresponding legacy settings.
+Spring Boot also provides `spring.servlet.multipart.location`, `spring.servlet.multipart.fileSizeThreshold`, and `spring.servlet.multipart.enabled` as replacements for the corresponding legacy settings.
 
 ==== 5. Hibernate ORM Package Relocations
 
