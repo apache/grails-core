@@ -52,11 +52,11 @@ dependencies {
     implementation 'org.springframework.security:spring-security-web'
 
     // 3rd party client-side assets bundled in webjars
-    implementation 'org.webjars:datatables:1.10.25'
-    implementation 'org.webjars:jquery:2.1.4'
-    implementation 'org.webjars:jquery-form:3.51'
-    implementation 'org.webjars:jquery-ui:1.10.3'
-    implementation 'org.webjars:jquery-ui-themes:1.10.3'
+    implementation 'org.webjars:datatables:2.3.0'
+    implementation 'org.webjars:jquery:4.0.0'
+    implementation 'org.webjars:jquery-form:4.2.2'
+    implementation 'org.webjars:jquery-ui:1.14.1'
+    implementation 'org.webjars:jquery-ui-themes:1.13.2'
     implementation 'org.webjars.bower:bgiframe:3.0.1'
     implementation 'org.webjars.bower:jgrowl:1.4.6'
 

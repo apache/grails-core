@@ -18,9 +18,9 @@ $(function() {
 
 (function($){
 	function addEvents(ul) {
-		var settings = $.data( $(ul).parents().andSelf().filter('ul.jd_menu')[0], 'jdMenuSettings' );
+		var settings = $.data( $(ul).parents().addBack().filter('ul.jd_menu')[0], 'jdMenuSettings' );
 		$('> li', ul)
-			.bind('mouseenter.jdmenu mouseleave.jdmenu', function(evt) {
+			.on('mouseenter.jdmenu mouseleave.jdmenu', function(evt) {
 				$(this).toggleClass('jdm_hover');
 				var ul = $('> ul', this);
 				if ( ul.length == 1 ) {
@@ -32,7 +32,7 @@ $(function() {
 					}, enter ? settings.showDelay : settings.hideDelay );
 				}
 			})
-			.bind('click.jdmenu', function(evt) {
+			.on('click.jdmenu', function(evt) {
 				var ul = $('> ul', this);
 				if ( ul.length == 1 && 
 					( settings.disableLinks == true || $(this).hasClass('accessible') ) ) {
@@ -59,16 +59,16 @@ $(function() {
 				}
 			})
 			.find('> a')
-				.bind('focus.jdmenu blur.jdmenu', function(evt) {
+				.on('focus.jdmenu blur.jdmenu', function(evt) {
 					var p = $(this).parents('li:eq(0)');
 					if ( evt.type == 'focus' ) {
 						p.addClass('jdm_hover');
-					} else { 
+					} else {
 						p.removeClass('jdm_hover');
 					}
 				})
 				.filter('.accessible')
-					.bind('click.jdmenu', function(evt) {
+					.on('click.jdmenu', function(evt) {
 						evt.preventDefault();
 					});
 	}
@@ -139,7 +139,7 @@ $(function() {
 									// This callback allows for you to animate menus
 									//onAnimate:	null
 									}, settings);
-		if ( !$.isFunction( settings.onAnimate ) ) {
+		if ( typeof settings.onAnimate !== 'function' ) {
 			settings.onAnimate = undefined;
 		}
 		return this.filter('ul.jd_menu').each(function() {
@@ -153,8 +153,8 @@ $(function() {
 	
 	$.fn.jdMenuUnbind = function() {
 		$('ul.jdm_events', this)
-			.unbind('.jdmenu')
-			.find('> a').unbind('.jdmenu');
+			.off('.jdmenu')
+			.find('> a').off('.jdmenu');
 	};
 	$.fn.jdMenuHide = function() {
 		return this.filter('ul').each(function(){ 
@@ -165,7 +165,7 @@ $(function() {
 	// Private methods and logic
 	$(window)
 		// Bind a click event to hide all visible menus when the document is clicked
-		.bind('click.jdmenu', function(){
+		.on('click.jdmenu', function(){
 			$('ul.jd_menu ul:visible').jdMenuHide();
 		});
 })(jQuery);

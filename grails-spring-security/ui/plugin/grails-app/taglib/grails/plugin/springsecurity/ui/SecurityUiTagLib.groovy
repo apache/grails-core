@@ -155,7 +155,7 @@ class SecurityUiTagLib {
             <div id="deleteConfirmDialog" title="${message(code: 'default.button.delete.confirm.message')}"></div>"""
 
         writeDocumentReady out, """
-    \$("#deleteButton").button().bind('click', function() {
+    \$("#deleteButton").button().on('click', function() {
         \$('#deleteConfirmDialog').dialog('open');
     });
 
@@ -711,7 +711,7 @@ class SecurityUiTagLib {
 
         writeDocumentReady out, """\
     \$("#$elementId").button();
-    \$('#$elementId').bind('click', function() {
+    \$('#$elementId').on('click', function() {
         document.forms.${formName}.submit();
     });"""
     }

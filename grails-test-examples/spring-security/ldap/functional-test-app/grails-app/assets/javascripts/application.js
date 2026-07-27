@@ -24,6 +24,6 @@
 // You're free to add application-wide JavaScript to this file, but it's generally better
 // to create separate JavaScript files as needed.
 //
-//= require webjars/jquery/3.3.1/jquery
-//= require webjars/bootstrap/4.1.3/js/bootstrap.bundle
+//= require webjars/jquery/4.0.0/jquery
+//= require webjars/bootstrap/5.3.8/js/bootstrap.bundle
 //= require_self

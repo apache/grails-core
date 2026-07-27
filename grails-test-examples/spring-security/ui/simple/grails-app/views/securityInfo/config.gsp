@@ -53,7 +53,7 @@ if (value instanceof Class) {
 		</tbody>
 	</table>
 </div>
-<s2ui:deferredScript src='webjars/datatables/1.10.25/js/jquery.dataTables.js'/>
+<s2ui:deferredScript src='webjars/datatables/2.3.0/js/dataTables.js'/>
 <s2ui:documentReady>
 $('#config').DataTable();
 </s2ui:documentReady>

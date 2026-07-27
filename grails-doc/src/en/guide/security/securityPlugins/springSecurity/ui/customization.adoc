@@ -177,7 +177,7 @@ The layouts use `grails-app/assets/javascripts/jquery.js`, which contains this:
 //=require jquery/jquery-${grails.plugin.springsecurity.ui.Constants.JQUERY_VERSION}.js
 ----
 
-This resolves to `grails-app/assets/javascripts/jquery/jquery-2.1.4.js`, and to use your own version, either use the same approach in a file called `jquery.js` or rename your file to `jquery.js`.
+This resolves to `grails-app/assets/javascripts/jquery/jquery-4.0.0.js`, and to use your own version, either use the same approach in a file called `jquery.js` or rename your file to `jquery.js`.
 
 Likewise for jQuery UI, the JavaScript file is `grails-app/assets/javascripts/jquery-ui.js`, which contains this
 
@@ -195,9 +195,9 @@ and the CSS file `grails-app/assets/stylesheets/jquery-ui.css`, which contains
  */
 ----
 
-The JavaScript file resolves to `grails-app/assets/javascripts/jquery-ui/jquery-ui-1.10.3.custom.js`, and to use your own version, either use the same approach in a file called `jquery-ui.js` or rename your file to `jquery-ui.js`.
+The JavaScript file resolves to `grails-app/assets/javascripts/jquery-ui/jquery-ui-1.14.1.js`, and to use your own version, either use the same approach in a file called `jquery-ui.js` or rename your file to `jquery-ui.js`.
 
-The CSS file resolves to `grails-app/assets/stylesheets/smoothness/jquery-ui-1.10.3.custom.css`, and to use your own version, either use the same approach in a file called `jquery-ui.js` or rename your file to `jquery-ui.js`.
+The CSS file resolves to `grails-app/assets/stylesheets/smoothness/jquery-ui-1.14.1.css`, and to use your own version, either use the same approach in a file called `jquery-ui.js` or rename your file to `jquery-ui.js`.
 
 Use your own `jquery-ui.js` and/or `jquery-ui.css` to override the plugin's.
 

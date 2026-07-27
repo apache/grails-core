@@ -34,7 +34,7 @@ $(function() {
 		buttons: buttons
 	});
 
-	$('#loginForm').bind('submit', function() {
+	$('#loginForm').on('submit', function() {
 		$(this).ajaxSubmit({
 			target: '#loginMessage',
 			beforeSubmit: function() {

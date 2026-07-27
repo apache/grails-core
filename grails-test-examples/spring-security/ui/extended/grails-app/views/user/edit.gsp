@@ -68,7 +68,7 @@
 </g:if>
 <s2ui:documentReady>
 	$("#runAsButton").button();
-	$('#runAsButton').bind('click', function() {
+	$('#runAsButton').on('click', function() {
 		document.forms.runAsForm.submit();
 	});
 </s2ui:documentReady>

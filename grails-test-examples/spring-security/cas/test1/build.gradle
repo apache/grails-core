@@ -38,8 +38,8 @@ dependencies {
     implementation 'org.apache.grails:grails-layout'
 
     // 3rd party client-side assets bundled in webjars
-    implementation 'org.webjars:bootstrap:3.3.6'
-    implementation 'org.webjars:jquery:2.2.0'
+    implementation 'org.webjars:bootstrap:5.3.8'
+    implementation 'org.webjars:jquery:4.0.0'
 
     runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
     runtimeOnly 'com.h2database:h2'
