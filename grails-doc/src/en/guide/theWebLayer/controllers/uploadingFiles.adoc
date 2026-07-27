@@ -106,15 +106,15 @@ You can configure the limit in your `application.yml` as follows:
 spring:
     servlet:
         multipart:
-            max-file-size: 200MB
-            max-request-size: 200MB
+            maxFileSize: 200MB
+            maxRequestSize: 200MB
 ----
 
-`max-file-size` = The maximum size allowed for an uploaded file.
+`maxFileSize` = The maximum size allowed for an uploaded file.
 
-`max-request-size` = The maximum size allowed for a multipart/form-data request.
+`maxRequestSize` = The maximum size allowed for a multipart/form-data request.
 
-The `spring.servlet.multipart` namespace also supports Spring Boot's `location`, `file-size-threshold`, and `enabled` properties.
+The `spring.servlet.multipart` namespace also supports Spring Boot's `location`, `fileSizeThreshold`, and `enabled` properties.
 The former `grails.controllers.upload` configuration is no longer supported. Applications using it fail at startup with a message explaining how to migrate to `spring.servlet.multipart`.
 
 You should keep in mind https://www.owasp.org/index.php/Unrestricted_File_Upload[OWASP recommendations - Unrestricted File Upload]
