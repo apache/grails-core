@@ -20,6 +20,7 @@
 plugins {
     id 'groovy'
     id 'java-library'
+    id 'org.apache.grails.gradle.grails-plugin-cli'
     id 'project-report'
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
@@ -34,9 +35,24 @@ plugins {
 version = projectVersion
 group = 'org.apache.grails.web'
 
+cliArtifact {
+    automaticModuleName = 'org.apache.grails.web.mapping.cli'
+    // this framework module wires its cli dependencies with project dependencies below
+    defaultDependencies = false
+}
+
 dependencies {
 
     implementation platform(project(':grails-bom'))
+
+    // the cli tier — published separately as a companion -cli artifact
+    cliImplementation platform(project(':grails-bom'))
+    cliApi project(project.path)
+    cliApi(project(':grails-core')) {
+        capabilities {
+            requireCapability('org.apache.grails:grails-core-cli')
+        }
+    }
 
     api project(':grails-web-common')
     implementation 'io.micrometer:micrometer-observation'

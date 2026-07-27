@@ -19,8 +19,8 @@
 package org.grails.plugins.databasemigration.liquibase
 
 import liquibase.exception.CommandExecutionException
-import org.grails.plugins.databasemigration.command.ApplicationContextDatabaseMigrationCommandSpec
-import org.grails.plugins.databasemigration.command.DbmUpdateCommand
+import org.apache.grails.data.hibernate5.dbmigration.cli.ApplicationContextDatabaseMigrationCommandSpec
+import org.apache.grails.data.hibernate5.dbmigration.cli.DbmUpdateCommand
 
 class GroovyPreconditionSpec extends ApplicationContextDatabaseMigrationCommandSpec {
 

@@ -21,6 +21,7 @@ plugins {
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.gradle.grails-plugin'
+    id 'org.apache.grails.gradle.grails-plugin-cli'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
@@ -31,6 +32,12 @@ plugins {
 version = projectVersion
 group = 'org.apache.grails'
 
+cliArtifact {
+    automaticModuleName = 'org.apache.grails.data.hibernate7.cli'
+    // this framework module wires its cli dependencies with project dependencies below
+    defaultDependencies = false
+}
+
 ext {
     gormApiDocs = true
     pomTitle = 'Grails GORM Hibernate 7 Plugin'
@@ -38,6 +45,17 @@ ext {
 }
 
 dependencies {
+    // the cli tier — published separately as org.apache.grails:grails-data-hibernate7-cli
+    cliImplementation platform(project(':grails-hibernate7-bom'))
+    cliApi project(project.path)
+    cliApi(project(':grails-core')) {
+        capabilities {
+            requireCapability('org.apache.grails:grails-core-cli')
+        }
+    }
+    // SchemaExport lives in hibernate-tools, which is implementation-scoped in the main tier
+    cliImplementation 'org.hibernate.tool:hibernate-tools-orm'
+
     implementation platform(project(':grails-hibernate7-bom'))
 
     api 'org.springframework.boot:spring-boot'

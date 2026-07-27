@@ -31,14 +31,14 @@ Since Grails 3.2.0, commands have similar abilities as scripts in regards to ret
 
 If you created a command in a previous version of grails, you can update your command to have those abilities by changing which trait you are implementing.
 
-Commands created in Grails 3.1.x or lower implement the link:{api}grails/dev/commands/ApplicationCommand.html[ApplicationCommand] trait by default which requires your command to implement the following method:
+Commands created in Grails 3.1.x or lower implement the link:{api}org/apache/grails/core/cli/ApplicationCommand.html[ApplicationCommand] trait by default which requires your command to implement the following method:
 
 [source,groovy]
 ----
 boolean handle(ExecutionContext executionContext)
 ----
 
-Commands created in Grails 3.2.0 or higher implement the link:{api}grails/dev/commands/GrailsApplicationCommand.html[GrailsApplicationCommand] trait by default which requires your command to implement the following method:
+Commands created in Grails 3.2.0 or higher implement the link:{api}org/apache/grails/core/cli/GrailsApplicationCommand.html[GrailsApplicationCommand] trait by default which requires your command to implement the following method:
 
 [source,groovy]
 ----
@@ -82,7 +82,7 @@ There are several reasons why you might want to write a custom command for your 
 * Integration: Custom commands can be used to integrate your Grails application with other systems or services. For example, you can create a command to synchronize data with an external API.
 * Customized Workflows: If your application has unique workflows or processes, custom commands provide a way to execute these workflows from the command line.
 
-In Grails, you can create custom commands by implementing the link:{api}grails/dev/commands/GrailsApplicationCommand.html[GrailsApplicationCommand] trait. By default, this trait requires your command to implement the handle() method as following:
+In Grails, you can create custom commands by implementing the link:{api}org/apache/grails/core/cli/GrailsApplicationCommand.html[GrailsApplicationCommand] trait. By default, this trait requires your command to implement the handle() method as following:
 
 [source,shell]
 ----
@@ -107,7 +107,7 @@ To create a custom command, you need to create a Groovy class that implements th
 // grails-app/commands/com/example/GreetCommand.groovy
 package com.example
 
-import grails.dev.commands.GrailsApplicationCommand
+import org.apache.grails.core.cli.GrailsApplicationCommand
 
 class GreetCommand implements GrailsApplicationCommand {
 
@@ -126,7 +126,7 @@ class GreetCommand implements GrailsApplicationCommand {
 }
 ----
 
-In this example, we've created a `GreetCommand` class that implements the `GrailsApplicationCommand` trait. It provides a `getName()` method to define the command name, a `getDescription()` method for a brief description, and the `run()` method to specify the code to execute when the command is run.
+In this example, we've created a `GreetCommand` class that implements the `GrailsApplicationCommand` trait. It provides a `getName()` method to define the command name (overriding the default derived from the class name), a `getDescription()` method for a brief description, and the `handle()` method to specify the code to execute when the command is run.
 
 Step 2: Build Your Grails Application
 
@@ -166,7 +166,7 @@ Grails also supports command-line arguments and options for custom commands. You
 // grails-app/commands/com/example/GreetCommand.groovy
 package com.example
 
-import grails.dev.commands.GrailsApplicationCommand
+import org.apache.grails.core.cli.GrailsApplicationCommand
 
 class GreetCommand implements GrailsApplicationCommand {
 
@@ -179,9 +179,10 @@ class GreetCommand implements GrailsApplicationCommand {
     }
 
     boolean handle() {
-        def args = commandLine.args
-        String name = args.size() > 0 ? args[0] : "user"
-        boolean loud = args.contains("--loud")
+        // `args` (from the GrailsApplicationCommand trait) holds the remaining arguments
+        // after the command name; `--`-prefixed flags are parsed as options instead
+        String name = args ? args[0] : "user"
+        boolean loud = executionContext.commandLine.hasOption("loud")
 
         if (loud) {
             println("HELLO, $name! (LOUD)")
@@ -230,7 +231,7 @@ Here's an example of how you can create a custom command that uses the execution
 // grails-app/commands/com/example/BackupCommand.groovy
 package com.example
 
-import grails.dev.commands.GrailsApplicationCommand
+import org.apache.grails.core.cli.GrailsApplicationCommand
 
 class BackupCommand implements GrailsApplicationCommand {
 
@@ -272,69 +273,164 @@ When you run this custom command using `./gradlew runCommand -Pargs="backup"`, i
 
 **How to Create a Custom Command from a Grails Plugin**
 
-You can create custom commands not only within your Grails application but also from a Grails plugin. Here's how to do it:
+Plugins publish their commands in a *companion cli artifact* (`<plugin-artifactId>-cli`) instead of
+the plugin's runtime jar, so command code and its CLI-only dependencies never reach an
+application's runtime classpath (`bootRun`, `bootJar`, `bootWar`). Here is the complete workflow:
 
-1. **Create a Grails Plugin:** If you don't already have a Grails plugin, you can create one using Grails' plugin generation commands. For example:
-
+1. **Create a Grails Plugin:** If you don't already have a Grails plugin, create one:
 +
 [source,shell]
 ----
 grails create-plugin my-plugin
 ----
 
-2. **Define the Command:** Inside your Grails plugin, define the custom command by creating a Groovy class that implements the `GrailsApplicationCommand` trait or interface, providing the necessary methods like `getName()`, `getDescription()`, and `handle()`.
-
-3. **Build and Package the Plugin:** To publish the plugin, you should use the Gradle maven-publish plugin. Update your plugin's build.gradle file to include the following configuration:
-
+2. **Define the Command in a `cli` source set:** plugin commands live in `src/cli/groovy` (not
+`grails-app/commands`, which is compiled into the runtime jar). Give them a package that is unique
+to the cli artifact:
 +
 [source,groovy]
 ----
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            from components.java
-        }
-    }
-    repositories {
-        maven {
-            url "file://path/to/your/local/repo" // Adjust the path accordingly
-        }
+// src/cli/groovy/com/example/myplugin/cli/AuditReportCommand.groovy
+package com.example.myplugin.cli
+
+import org.apache.grails.core.cli.GrailsApplicationCommand
+
+class AuditReportCommand implements GrailsApplicationCommand {
+
+    String description = 'Prints an audit report'
+
+    @Override
+    boolean handle() {
+        println 'Audit report...'
+        return true
     }
 }
-
 ----
 +
+When this source set compiles with `grails-core-cli` on its classpath, the command is registered
+automatically in `META-INF/grails-cli.factories` inside the cli jar — no manual registration file
+is needed.
 
-Then, you can publish the plugin to your local repository:
+3. **Apply the Grails cli-artifact plugin in `build.gradle`:** it wires everything — the `cli`
+source set as a feature variant, the `grails-core-cli` contract and the plugin's own runtime
+classes on the cli compile classpath, the `Grails-Cli-Artifact` manifest advertisement on the
+runtime jar, and (when the Grails publish plugin is applied) the companion publication:
++
+[source,groovy]
+----
+plugins {
+    id 'org.apache.grails.gradle.grails-plugin'
+    id 'org.apache.grails.gradle.grails-plugin-cli'
+    id 'org.apache.grails.gradle.grails-publish'
+}
 
+cliArtifact {
+    // recommended: a unique, stable JPMS module name matching the cli package
+    automaticModuleName = 'com.example.myplugin.cli'
+
+    // optional: customize the companion coordinate (defaults to '<plugin-artifactId>-cli');
+    // the advertised coordinate is also carried as a capability of the cli variants, so
+    // in-build consumers can require it either way
+    // artifactId = 'my-plugin-tools'
+}
+
+dependencies {
+    // additional CLI-only dependencies of the commands, if any:
+    // cliImplementation 'org.example:some-cli-tool'
+}
+----
+
+4. **Publish both artifacts:** publishing the plugin publishes the companion alongside it, as its
+own coordinate with its own pom, sources, and javadoc:
 +
 [source,shell]
 ----
 ./gradlew publishToMavenLocal
+# com.example:my-plugin        (runtime — no command code)
+# com.example:my-plugin-cli    (the commands)
 ----
++
+NOTE: Without the Grails publish plugin, the cli feature is still built and advertised, but the
+companion publication must be configured manually from the `cli` software component.
 
-4. **Add the Plugin as a Dependency:** Instead of using the grails install-plugin command, you should add the plugin as a dependency in your Grails application's build.gradle file. Include the following dependency:
-
+5. **Consume the plugin from an application:** the application declares only the runtime plugin.
+The Grails Gradle plugin reads the `Grails-Cli-Artifact` manifest attribute from the plugin jar,
+adds `com.example:my-plugin-cli` to the application's `grailsCli` configuration, and registers the
+per-command Gradle task automatically:
 +
 [source,groovy]
 ----
 dependencies {
-    // ...
-    implementation 'com.example:my-plugin:1.0.0' // Replace with your plugin's group and version
-    // ...
+    implementation 'com.example:my-plugin:1.0.0'   // my-plugin-cli follows automatically
 }
 ----
-+
-Make sure to replace "com.example:my-plugin:1.0.0" with the appropriate group and version for your plugin
 
-5. **Run the Custom Command:** Now, you can run the custom command from your Grails application's root directory using the Gradle `runCommand` task, as previously explained:
+6. **Run the Command:**
 +
 [source,shell]
 ----
-./gradlew runCommand -Pargs="your-command-name"
+./gradlew runCommand -Pargs="audit-report"
+# or, via the automatically registered per-command task:
+./gradlew auditReport
 ----
-+
 
-Replace `"your-command-name"` with the name of the custom command you defined in your plugin.
+If an application disables the automatic discovery (`grails { cliAutoProvision = false }`), it
+declares the companion explicitly instead:
 
-By following these steps, you can create and run custom commands from a Grails plugin, extending the functionality of your Grails application as needed. This approach allows you to modularize your custom functionality and share it across multiple Grails projects if necessary.
+[source,groovy]
+----
+dependencies {
+    implementation 'com.example:my-plugin:1.0.0'
+    grailsCli 'com.example:my-plugin-cli:1.0.0'
+}
+----
+
+By packaging commands this way, the plugin's runtime jar stays free of command code and CLI-only
+libraries, while applications get the commands with no additional build configuration.
+
+**Depending on Another Module's CLI Tier**
+
+Within a multi-project build, one project's cli tier may build on another project's cli companion.
+Declare the dependency on the owning project with a *capability* naming the companion:
+
+[source,groovy]
+----
+dependencies {
+    cliApi(project(':my-other-plugin')) {
+        capabilities {
+            requireCapability('com.example:my-other-plugin-cli')
+        }
+    }
+}
+----
+
+The cli-artifact plugin publishes such a dependency as a plain dependency on the companion
+coordinate (`com.example:my-other-plugin-cli`) in both the pom and the module metadata, so
+external consumers resolve the published artifacts directly. This works with a customized
+`cliArtifact { artifactId = ... }` as well: the customized coordinate is carried as a capability
+of the cli variants, and the published metadata records the customized plain coordinate.
+
+A library that consumes a cli tier in its *main* configurations (`api`/`implementation`) rather
+than a `cli` source set — and therefore does not apply the cli-artifact plugin — applies the
+`org.apache.grails.gradle.grails-cli-library` plugin to publish its cli dependencies the same way:
+
+[source,groovy]
+----
+plugins {
+    id 'java-library'
+    id 'org.apache.grails.gradle.grails-cli-library'
+}
+
+dependencies {
+    api(project(':my-other-plugin')) {
+        capabilities {
+            requireCapability('com.example:my-other-plugin-cli')
+        }
+    }
+}
+----
+
+WARNING: Capability requests are a build-internal addressing scheme. Never declare
+`requireCapability` on an *external* (binary) Grails dependency — published metadata cannot
+satisfy it and resolution fails with a capability conflict. External consumers always depend on
+the plain `-cli` coordinate, e.g. `grailsCli 'com.example:my-plugin-cli:1.0.0'`.

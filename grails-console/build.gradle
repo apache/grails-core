@@ -28,6 +28,10 @@ plugins {
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.buildsrc.vulnerability-scan'
     id 'org.apache.grails.gradle.grails-code-style'
+    // the cli tier is consumed in the main variants (see the capability dependency below); the
+    // published pom and module metadata must record the companion coordinate (grails-core-cli)
+    // instead of the capability request, which external consumers cannot resolve
+    id 'org.apache.grails.gradle.grails-cli-library'
     id 'org.apache.grails.gradle.grails-jacoco'
 }
 
@@ -39,6 +43,12 @@ dependencies {
     implementation platform(project(':grails-bom'))
 
     api project(":grails-core")
+    // the command runner executes ApplicationCommands, which live in the cli companion artifact
+    api(project(':grails-core')) {
+        capabilities {
+            requireCapability('org.apache.grails:grails-core-cli')
+        }
+    }
     api 'org.apache.groovy:groovy'
     api 'org.apache.groovy:groovy-console'
     api 'org.apache.groovy:groovy-swing'

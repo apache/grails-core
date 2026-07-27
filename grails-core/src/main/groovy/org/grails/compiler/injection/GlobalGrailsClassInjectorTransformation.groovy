@@ -43,8 +43,6 @@ import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
 import org.codehaus.groovy.transform.TransformWithPriority
 
-import org.springframework.core.CollectionFactory
-
 import grails.artefact.Artefact
 import grails.compiler.ast.ClassInjector
 import grails.core.ArtefactHandler
@@ -52,7 +50,6 @@ import grails.io.IOUtils
 import grails.plugins.metadata.GrailsPlugin
 import grails.util.GrailsNameUtils
 import org.apache.grails.common.compiler.GroovyTransformOrder
-import org.apache.grails.gradle.common.PropertyFileUtils
 import org.grails.core.io.support.GrailsFactoriesLoader
 import org.grails.io.support.AntPathMatcher
 import org.grails.io.support.GrailsResourceUtils
@@ -69,7 +66,6 @@ import org.grails.io.support.UrlResource
 class GlobalGrailsClassInjectorTransformation implements ASTTransformation, CompilationUnitAware, TransformWithPriority {
 
     public static final ClassNode ARTEFACT_HANDLER_CLASS = ClassHelper.make('grails.core.ArtefactHandler')
-    public static final ClassNode APPLICATION_CONTEXT_COMMAND_CLASS = ClassHelper.make('grails.dev.commands.ApplicationCommand')
     public static final ClassNode TRAIT_INJECTOR_CLASS = ClassHelper.make('grails.compiler.traits.TraitInjector')
 
     @Override
@@ -123,9 +119,6 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
             }
 
             if (updateGrailsFactoriesWithType(classNode, ARTEFACT_HANDLER_CLASS, compilationTargetDirectory)) {
-                continue
-            }
-            if (updateGrailsFactoriesWithType(classNode, APPLICATION_CONTEXT_COMMAND_CLASS, compilationTargetDirectory)) {
                 continue
             }
             if (updateGrailsFactoriesWithType(classNode, TRAIT_INJECTOR_CLASS, compilationTargetDirectory)) {
@@ -219,83 +212,8 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
     }
 
     static boolean updateGrailsFactoriesWithType(ClassNode classNode, ClassNode superType, File compilationTargetDirectory) {
-        if (GrailsASTUtils.isSubclassOfOrImplementsInterface(classNode, superType)) {
-            if (Modifier.isAbstract(classNode.getModifiers())) return false
-
-            def classNodeName = classNode.name
-            // Use SortedProperties to ensure a consistent order of entries for reproducible builds
-            def props = CollectionFactory.createSortedProperties(false)
-            def superTypeName = superType.getName()
-
-            // generate META-INF/grails.factories
-            File factoriesFile = new File(compilationTargetDirectory, 'META-INF/grails.factories')
-            if (!factoriesFile.parentFile.exists()) {
-                factoriesFile.parentFile.mkdirs()
-            }
-            loadFromFile(props, factoriesFile)
-
-            File sourceDirectory = findSourceDirectory(compilationTargetDirectory)
-            if (sourceDirectory != null) {
-                File sourceFactoriesFile = new File(sourceDirectory, 'src/main/resources/META-INF/grails.factories')
-                loadFromFile(props, sourceFactoriesFile)
-            }
-
-            addToProps(props, superTypeName, classNodeName)
-
-            factoriesFile.withWriter { Writer writer ->
-                props.store(writer, 'Grails Factories File')
-            }
-
-            PropertyFileUtils.makePropertiesFileReproducible(factoriesFile)
-
-            return true
-        }
-        return false
-    }
-
-    private static void loadFromFile(Properties props, File factoriesFile) {
-        if (factoriesFile.exists()) {
-            Properties fileProps = new Properties()
-            factoriesFile.withInputStream { InputStream input ->
-                fileProps.load(input)
-                fileProps.each { Map.Entry prop ->
-                    addToProps(props, (String) prop.key, (String) prop.value)
-                }
-            }
-        }
-    }
-
-    private static Properties addToProps(Properties props, String superTypeName, String classNodeNames) {
-        final List<String> classNodesNameList = classNodeNames.tokenize(',')
-        classNodesNameList.forEach(classNodeName -> {
-            String existing = props.getProperty(superTypeName)
-            if (!existing) {
-                props.put(superTypeName, classNodeName)
-            } else if (existing && !existing.contains(classNodeName)) {
-                props.put(superTypeName, [existing, classNodeName].join(','))
-            }
-        })
-        props
-    }
-
-    private static File findSourceDirectory(File compilationTargetDirectory) {
-        // Prefer the project base directory supplied by the build tool — more reliable than
-        // walking up from the compile target, which may live under a non-standard output
-        // directory (e.g. when project.buildDir is renamed). The Grails Gradle plugin
-        // publishes this via GrailsAppBaseDirProvider on the compiler's forkOptions.
-        String baseDirProp = System.getProperty('base.dir')
-        if (baseDirProp) {
-            File baseDir = new File(baseDirProp)
-            if (baseDir.exists() && baseDir.isDirectory()) {
-                return baseDir
-            }
-        }
-
-        File sourceDirectory = compilationTargetDirectory
-        while (sourceDirectory != null && !(sourceDirectory.name in ['build', 'target'])) {
-            sourceDirectory = sourceDirectory.parentFile
-        }
-        sourceDirectory?.parentFile
+        FactoriesFileWriter.updateFactoriesWithType(classNode, superType, compilationTargetDirectory,
+                'META-INF/grails.factories', ['src/main/resources/META-INF/grails.factories'])
     }
 
     static LinkedHashSet<String> pendingPluginClasses = []

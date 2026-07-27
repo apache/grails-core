@@ -49,6 +49,17 @@ configurations.configureEach {
                 else {
                     substitute module(substitutedArtifact) using project(":$possibleProject.name")
                 }
+
+                // companion cli artifacts are additional publications of the same project,
+                // reachable locally through the project's cli capability
+                def cliArtifactId = possibleProject.findProperty('cliArtifactId')
+                if (cliArtifactId) {
+                    def cliCoordinate = "$possibleProject.group:$cliArtifactId" as String
+                    def cliReplacement = it.variant(project(":$possibleProject.name")) { v ->
+                        v.capabilities { it.requireCapability(cliCoordinate) }
+                    }
+                    substitute module(cliCoordinate) using cliReplacement
+                }
             }
         }
     }

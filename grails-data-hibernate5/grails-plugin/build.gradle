@@ -21,6 +21,7 @@ plugins {
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.gradle.grails-plugin'
+    id 'org.apache.grails.gradle.grails-plugin-cli'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
@@ -32,6 +33,12 @@ plugins {
 version = projectVersion
 group = 'org.apache.grails'
 
+cliArtifact {
+    automaticModuleName = 'org.apache.grails.data.hibernate5.cli'
+    // this framework module wires its cli dependencies with project dependencies below
+    defaultDependencies = false
+}
+
 ext {
     gormApiDocs = true
     pomTitle = 'Grails GORM Hibernate 5 Plugin'
@@ -39,8 +46,17 @@ ext {
 }
 
 dependencies {
+    // the cli tier — published separately as org.apache.grails:grails-data-hibernate5-cli
+    cliImplementation platform(project(':grails-hibernate5-bom'))
+    cliApi project(project.path)
+    cliApi(project(':grails-core')) {
+        capabilities {
+            requireCapability('org.apache.grails:grails-core-cli')
+        }
+    }
+
     // TODO: Clarify and clean up dependencies
-    implementation platform(project(':grails-bom'))
+    implementation platform(project(':grails-hibernate5-bom'))
 
     api "org.springframework.boot:spring-boot"
     api "org.springframework:spring-orm"

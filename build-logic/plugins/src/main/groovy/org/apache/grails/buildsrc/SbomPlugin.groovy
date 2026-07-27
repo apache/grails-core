@@ -150,6 +150,10 @@ class SbomPlugin implements Plugin<Project> {
             'grails-data-hibernate5-dbmigration': [
                     'pkg:maven/javax.xml.bind/jaxb-api@2.3.1?type=jar': 'CDDL-1.1', // api export
             ],
+            'grails-data-hibernate5-dbmigration-cli': [
+                    'pkg:maven/org.hibernate.common/hibernate-commons-annotations@5.1.2.Final?type=jar': 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
+                    'pkg:maven/org.hibernate/hibernate-core-jakarta@5.6.15.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
+            ],
             'grails-data-hibernate7-dbmigration-core': [
                     'pkg:maven/javax.xml.bind/jaxb-api@2.3.1?type=jar': 'CDDL-1.1', // api export
             ],
@@ -162,20 +166,25 @@ class SbomPlugin implements Plugin<Project> {
     void apply(Project project) {
         registerCyclonedxDirectBomTask(project)
 
-        def sbomOutputLocation = project.layout.buildDirectory.file(
-                project.provider {
-                    def artifactId = lookupProperty(project, 'pomArtifactId', project.name)
-                    def version = project.findProperty('projectVersion')
-                    "$artifactId-$version-sbom.json" as String
-                }
-        )
+        configureSbomMetadata(project)
 
-        configureSbomTask(project, sbomOutputLocation)
+        Provider<String> artifactId = project.provider { lookupProperty(project, 'pomArtifactId', project.name).toString() }
+        def sbomOutputLocation = sbomOutputLocationFor(project, artifactId)
+        configureBomTaskOutput(project, 'cyclonedxDirectBom', sbomOutputLocation, artifactId, ['runtimeClasspath'])
+
         configureNormalization(project)
         ensureLicensesValidated(project)
 
         // sboms are only published to Grails jar files at this time
         publishSbomForJarProjects(project, sbomOutputLocation)
+
+        configureCliSbom(project)
+    }
+
+    static Provider<RegularFile> sbomOutputLocationFor(Project project, Provider<String> artifactId) {
+        project.layout.buildDirectory.file(project.provider {
+            "${artifactId.get()}-${project.findProperty('projectVersion')}-sbom.json" as String
+        })
     }
 
     /**
@@ -197,11 +206,10 @@ class SbomPlugin implements Plugin<Project> {
         }
     }
 
-    private static void configureSbomTask(Project project, Provider<RegularFile> sbomOutputLocation) {
+    private static void configureSbomMetadata(Project project) {
         project.tasks.withType(CyclonedxDirectTask).configureEach { CyclonedxDirectTask task ->
             task.with {
                 projectType.set(Component.Type.valueOf(lookupProperty(project, 'sbomProjectType', 'FRAMEWORK').toString()))
-                componentName.set(lookupProperty(project, 'pomArtifactId', project.name).toString())
                 organizationalEntity.set(new OrganizationalEntity(
                         name: 'Apache Software Foundation',
                         urls: [
@@ -250,9 +258,6 @@ class SbomPlugin implements Plugin<Project> {
                 }
                 externalReferences.set(references)
 
-                // sboms are published for the purposes of vulnerability analysis so only include the runtime classpath
-                includeConfigs.set(['runtimeClasspath'])
-
                 // turn off license text since it's base64 encoded & will inflate the jar sizes
                 includeLicenseText.set(false)
 
@@ -263,10 +268,11 @@ class SbomPlugin implements Plugin<Project> {
                 // build info out of the sbom; this is the supported plugin-level off switch for it.
                 includeBuildSystem.set(false)
 
-                // disable xml output
+                // disable xml output; the json output location, the scanned configuration, and the
+                // component name are set per task by configureBomTaskOutput so each published jar's
+                // SBOM lists only its own dependencies (the primary jar scans runtimeClasspath, the
+                // cli companion scans cliRuntimeClasspath)
                 xmlOutput.unsetConvention()
-                jsonOutput.set(sbomOutputLocation.get())
-                outputs.file(sbomOutputLocation)
 
                 // cyclonedx does not support "choosing" the license placed in the sbom
                 // see: https://github.com/CycloneDX/cyclonedx-gradle-plugin/issues/16
@@ -275,6 +281,8 @@ class SbomPlugin implements Plugin<Project> {
                 // See: https://docs.gradle.org/current/userguide/configuration_cache.html#config_cache:requirements:use_project_during_execution
                 def projectName = project.name
                 def projectPath = project.path
+                Provider<RegularFile> bomOutput = jsonOutput
+                Provider<String> sbomComponent = componentName
                 Provider<Boolean> isReproducibleBuildProvider = project.provider { lookupProperty(project, 'isReproducibleBuild') as boolean }
                 Provider<ZonedDateTime> buildDateProvider = project.provider { lookupProperty(project, 'buildDate') as ZonedDateTime }
                 doLast {
@@ -296,7 +304,7 @@ class SbomPlugin implements Plugin<Project> {
                         comps.each { c ->
                             // .licenses => choose a license that is compatible with ASF policy if multiple licensed
                             if (c instanceof Map && c.licenses instanceof List && !(c.licenses as List).empty) {
-                                def chosen = pickLicense(logger, projectName, c['bom-ref'] as String, c.licenses as List)
+                                def chosen = pickLicense(logger, projectName, sbomComponent.get(), c['bom-ref'] as String, c.licenses as List)
                                 if (chosen != null) {
                                     c.licenses = [chosen]
                                 }
@@ -342,9 +350,88 @@ class SbomPlugin implements Plugin<Project> {
                         logger.info('Rewrote JSON SBOM ({}) to pick preferred license', projectPath)
                     }
 
-                    sbomOutputLocation.get().with { rewriteSbom(it.asFile) }
+                    bomOutput.get().with { rewriteSbom(it.asFile) }
                 }
 
+            }
+        }
+    }
+
+    /**
+     * Wires the per-task SBOM settings that differ between a module's primary jar and its cli
+     * companion: the emitted component name, the configuration whose resolved runtime classpath is
+     * scanned, and the json output location. Together with {@link #configureSbomMetadata} this lets
+     * a single module emit more than one SBOM, each describing only the dependencies of its own jar.
+     */
+    private static void configureBomTaskOutput(Project project, String taskName, Provider<RegularFile> output,
+                                               Provider<String> componentName, List<String> includeConfigs) {
+        project.tasks.named(taskName, CyclonedxDirectTask).configure { CyclonedxDirectTask task ->
+            task.componentName.set(componentName)
+            // sboms are published for the purposes of vulnerability analysis so only include the runtime classpath
+            task.includeConfigs.set(includeConfigs)
+            task.jsonOutput.set(output)
+            task.outputs.file(output)
+        }
+    }
+
+    /**
+     * A plugin that ships a cli companion artifact (via {@code org.apache.grails.gradle.grails-plugin-cli})
+     * publishes {@code <artifactId>-cli} as its own Maven coordinate with its own runtime dependencies.
+     * Give that jar its own SBOM built from the cli source set's runtime classpath — the same
+     * configuration the cli publication maps its dependencies from — so the companion carries an
+     * accurate bill of materials just like the primary jar.
+     */
+    private static void configureCliSbom(Project project) {
+        project.pluginManager.withPlugin('org.apache.grails.gradle.grails-plugin-cli') {
+            Provider<String> cliArtifactId = cliCompanionArtifactId(project)
+
+            project.tasks.register('cyclonedxCliBom', CyclonedxDirectTask) { CyclonedxDirectTask task ->
+                Provider<Directory> reportDir = project.layout.buildDirectory.dir('reports/cyclonedx-cli')
+                task.xmlOutput.convention(reportDir.map { it.file('bom.xml') })
+                task.jsonOutput.convention(reportDir.map { it.file('bom.json') })
+            }
+
+            def cliSbomOutputLocation = sbomOutputLocationFor(project, cliArtifactId)
+            configureBomTaskOutput(project, 'cyclonedxCliBom', cliSbomOutputLocation, cliArtifactId, ['cliRuntimeClasspath'])
+
+            project.tasks.named('build').configure { it.dependsOn('cyclonedxCliBom') }
+
+            publishSbomForCliJar(project, cliSbomOutputLocation)
+        }
+    }
+
+    /**
+     * The companion coordinate published by the cli-artifact plugin, honouring a custom
+     * {@code cliArtifact { artifactId = '...' }}. Read from the extension directly (the same property
+     * the cli publication uses) rather than the derived {@code <name>-cli} default, so a customised
+     * name is reflected in the SBOM component name and file. Accessed dynamically because build-logic
+     * does not compile against the cli-artifact plugin.
+     */
+    @CompileDynamic
+    static Provider<String> cliCompanionArtifactId(Project project) {
+        project.extensions.getByName('cliArtifact').artifactId
+    }
+
+    private static void publishSbomForCliJar(Project project, Provider<RegularFile> sbomOutputLocation) {
+        Provider<Boolean> publishesJavaComponent = project.provider { !project.findProperty('skipJavaComponent') as boolean }
+
+        project.tasks.named('cliJar', Jar).configure { Jar jar ->
+            jar.dependsOn('cyclonedxCliBom')
+            jar.from(publishesJavaComponent.map { include -> include ? sbomOutputLocation.get() : [] }) { CopySpec spec ->
+                spec.into('META-INF')
+                spec.rename {
+                    'sbom.json'
+                }
+            }
+            jar.manifest { Manifest manifest ->
+                manifest.attributes('Sbom-Location': 'META-INF/sbom.json')
+                manifest.attributes('Sbom-Format': 'CycloneDX')
+            }
+            jar.doFirst {
+                if (!publishesJavaComponent.get()) {
+                    jar.manifest.attributes.remove('Sbom-Location')
+                    jar.manifest.attributes.remove('Sbom-Format')
+                }
             }
         }
     }
@@ -363,14 +450,15 @@ class SbomPlugin implements Plugin<Project> {
      *
      * @param logger the logger to use for logging
      * @param projectName the name of the project (captured at configuration time)
+     * @param sbomComponent the artifact the SBOM describes (the primary or cli companion coordinate)
      * @param bomRef the bom reference for the dependency
      * @param licenseChoices the list of license choices
      * @return the chosen license
      */
     @CompileDynamic
-    private static Object pickLicense(org.gradle.api.logging.Logger logger, String projectName, String bomRef, List licenseChoices) {
+    static Object pickLicense(org.gradle.api.logging.Logger logger, String projectName, String sbomComponent, String bomRef, List licenseChoices) {
         if (!bomRef) {
-            throw new GradleException("No bomRef found for a dependency of ${projectName}, cannot pick license")
+            throw new GradleException("No bomRef found for a dependency of ${sbomComponent}, cannot pick license")
         }
 
         logger.info('Picking license for {} from {} choices', bomRef, licenseChoices.size())
@@ -382,14 +470,14 @@ class SbomPlugin implements Plugin<Project> {
 
             def licenseBlock = LICENSES[licenseId]
             if (!licenseBlock) {
-                throw new GradleException("Cannot find license information for id ${licenseId} to use for bomRef ${bomRef} in project ${projectName}")
+                throw new GradleException("Cannot find license information for id ${licenseId} to use for bomRef ${bomRef} in ${sbomComponent}")
             }
 
             return licenseBlock
         }
 
         if (!(licenseChoices instanceof List) || licenseChoices.isEmpty()) {
-            throw new GradleException("No License was found for dependency: ${bomRef} in project ${projectName}")
+            throw new GradleException("No License was found for dependency: ${bomRef} in ${sbomComponent}")
         }
 
         def licenseIds = licenseChoices.findAll { it instanceof Map && it.license instanceof Map && it.license.id }
@@ -401,13 +489,15 @@ class SbomPlugin implements Plugin<Project> {
         def defaultLicense = licenseChoices[0] // pick the first one found
         def defaultLicenseId = defaultLicense.license.id as String
         if (defaultLicenseId == null) {
-            throw new GradleException("Could not determine License id for dependency: ${bomRef} in project ${projectName} for value ${defaultLicense}")
+            throw new GradleException("Could not determine License id for dependency: ${bomRef} in ${sbomComponent} for value ${defaultLicense}")
         }
         if (!(defaultLicenseId in PREFERRED_LICENSES)) {
-            def projectLicenseExemptions = LICENSE_EXCEPTIONS[projectName] ?: [:]
-            def permittedLicense = projectLicenseExemptions.get(bomRef) == defaultLicenseId
+            // an exemption may be declared against the project or the specific SBOM component (e.g. a
+            // cli companion whose runtime classpath differs from the primary jar)
+            def exemptions = (LICENSE_EXCEPTIONS[projectName] ?: [:]) + (LICENSE_EXCEPTIONS[sbomComponent] ?: [:])
+            def permittedLicense = exemptions.get(bomRef) == defaultLicenseId
             if (!permittedLicense) {
-                throw new GradleException("Unpermitted License found for bom dependency: ${bomRef} in project ${projectName} : ${defaultLicenseId}")
+                throw new GradleException("Unpermitted License found for bom dependency: ${bomRef} in ${sbomComponent} : ${defaultLicenseId}")
             }
         }
 

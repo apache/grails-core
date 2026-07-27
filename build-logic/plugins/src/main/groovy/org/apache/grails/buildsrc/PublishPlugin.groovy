@@ -157,6 +157,7 @@ class PublishPlugin implements Plugin<Project> {
     private static void configureChecksums(Project project, TaskProvider<Task> artifactsTask) {
         project.pluginManager.apply(ChecksumPlugin)
 
+        def publishing = project.extensions.getByType(PublishingExtension)
         def checksumTask = project.tasks.register('publishedChecksums', Checksum)
         checksumTask.configure { Checksum check ->
             check.group = 'publishing'
@@ -164,30 +165,35 @@ class PublishPlugin implements Plugin<Project> {
             check.outputDirectory.set(project.layout.buildDirectory.dir('checksums'))
             check.dependsOn(project.tasks.withType(Jar))
             check.finalizedBy(artifactsTask)
-        }
-
-        project.gradle.taskGraph.whenReady {
-            project.extensions.configure(PublishingExtension) {
-                it.publications.withType(MavenPublication).configureEach {
-                    project.logger.lifecycle('Maven Publication Found for project: {} with name {}', project.name, it.name)
-                    List<File> filesToChecksum = []
-                    it.artifacts.each {
-                        if (it.file.name in ['grails-plugin.xml', 'profile.yml']) {
-                            return
-                        }
-                        filesToChecksum << it.file
-                    }
-
-                    checksumTask.configure { Checksum check ->
-                        check.inputFiles.setFrom(filesToChecksum.unique())
-                    }
-                }
-            }
+            check.inputFiles.from(project.provider { collectChecksumInputFiles(project, publishing) })
         }
 
         project.tasks.withType(AbstractPublishToMaven).configureEach {
             it.finalizedBy(checksumTask)
         }
+    }
+
+    /**
+     * Collects the artifact files to checksum across <em>all</em> Maven publications of the project,
+     * including additional publications such as the {@code cli} companion coordinate. Publication
+     * metadata sidecars ({@code grails-plugin.xml}, {@code profile.yml}) are excluded.
+     *
+     * Accumulating across every publication is essential: earlier revisions set the checksum inputs
+     * per publication, so only the last-configured publication survived and companion artifacts
+     * (e.g. {@code grails-core-cli-*.jar}) went unchecksummed.
+     */
+    protected static List<File> collectChecksumInputFiles(Project project, PublishingExtension publishing) {
+        List<File> filesToChecksum = []
+        publishing.publications.withType(MavenPublication).each { MavenPublication publication ->
+            project.logger.lifecycle('Maven Publication Found for project: {} with name {}', project.name, publication.name)
+            publication.artifacts.each { MavenArtifact artifact ->
+                if (artifact.file.name in ['grails-plugin.xml', 'profile.yml']) {
+                    return
+                }
+                filesToChecksum << artifact.file
+            }
+        }
+        filesToChecksum.unique(false)
     }
 
     private static void disableSigningWhenTesting(Project project) {

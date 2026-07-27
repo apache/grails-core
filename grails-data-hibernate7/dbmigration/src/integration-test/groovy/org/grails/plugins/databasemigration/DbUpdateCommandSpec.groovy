@@ -19,8 +19,8 @@
 
 package org.grails.plugins.databasemigration
 
-import grails.dev.commands.ApplicationCommand
-import grails.dev.commands.ExecutionContext
+import org.apache.grails.core.cli.ApplicationCommand
+import org.apache.grails.core.cli.ExecutionContext
 import grails.testing.mixin.integration.Integration
 import grails.util.GrailsNameUtils
 import groovy.sql.Sql
@@ -28,7 +28,7 @@ import liquibase.GlobalConfiguration
 import liquibase.Scope
 import liquibase.exception.LiquibaseException
 import org.grails.build.parsing.CommandLineParser
-import org.grails.plugins.databasemigration.command.DbmUpdateCommand
+import org.apache.grails.data.hibernate7.dbmigration.cli.DbmUpdateCommand
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ApplicationContext
 import org.springframework.stereotype.Component

@@ -58,19 +58,17 @@ public class DatabaseMigrationPlugin implements MigrationFeature {
     @Override
     public void apply(GeneratorContext generatorContext) {
         final String srcDirPath = getSrcDirPath();
+        // the dbm-* commands ship in the companion -cli artifact, which the Grails Gradle plugin
+        // discovers automatically from the plugin jar's Grails-Cli-Artifact manifest attribute —
+        // no buildscript classpath or grailsCli entry is generated
         final String dbMigrationArtifactId = generatorContext.isFeaturePresent(GrailsDataHibernate7.class)
                 ? "grails-data-hibernate7-dbmigration"
                 : "grails-data-hibernate5-dbmigration";
-        generatorContext.addBuildscriptDependency(Dependency.builder()
-                .groupId("org.apache.grails")
-                .artifactId(dbMigrationArtifactId)
-                .buildSrc()
-                .extension(new RockerWritable(dbMigrationGradle.template(srcDirPath))));
         generatorContext.addDependency(Dependency.builder()
                 .groupId("org.apache.grails")
                 .artifactId(dbMigrationArtifactId)
-                .implementation());
-
+                .implementation()
+                .extension(new RockerWritable(dbMigrationGradle.template(srcDirPath))));
         final ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         generatorContext.addTemplate(srcDirPath, new URLTemplate(srcDirPath + "/.gitkeep", classLoader.getResource(".gitkeep")));
     }

@@ -40,8 +40,11 @@ class DefaultSecurityInfoSpec extends SecurityUISpec {
 			contains('/login/ajaxDenied')
 		}
 
-		and: 'the DataTables info line is rendered by deferred JavaScript'
-		waitFor { pageSource.contains('Showing 1 to 10 of ') }
+		and: 'the full config table is rendered (no client-side pagination)'
+		with(pageSource) {
+			contains('securityConfigType')
+			contains('userLookup.userDomainClassName')
+		}
 	}
 
 	void testMappings() {

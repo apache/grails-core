@@ -1,0 +1,57 @@
+// A consuming application. It declares only the runtime plugin dependency; the cli tier is wired
+// automatically by the grails-cli plugin. Auto-provisioning is toggled with -PgrailsCliAutoProvision.
+plugins {
+    id 'java'
+    id 'org.apache.grails.gradle.grails-cli'
+}
+
+dependencies {
+    implementation project(':my-plugin')
+    implementation project(':renamed-plugin')
+}
+
+tasks.register('inspectGrailsCli') {
+    // build the sibling jars so their components (and advertised companions) are resolvable
+    dependsOn ':my-plugin:jar', ':renamed-plugin:jar'
+    def grailsCli = configurations.grailsCli
+    doLast {
+        grailsCli.dependencies.each { dep ->
+            if (dep instanceof org.gradle.api.artifacts.ProjectDependency) {
+                def caps = dep.requestedCapabilities.collect { "${it.group}:${it.name}" }.join(',')
+                println "GRAILSCLI_DEP: project path=${dep.path} capabilities=[${caps}]"
+            }
+            else {
+                println "GRAILSCLI_DEP: module ${dep.group}:${dep.name}"
+            }
+        }
+    }
+}
+
+tasks.register('inspectClasspathWiring') {
+    doLast {
+        def extendsGrailsCli = { org.gradle.api.artifacts.Configuration c -> 'grailsCli' in (c.hierarchy*.name as Set) }
+        println "COMPILE_EXTENDS_GRAILSCLI=${extendsGrailsCli(configurations.compileClasspath)}"
+        println "RUNTIME_EXTENDS_GRAILSCLI=${extendsGrailsCli(configurations.runtimeClasspath)}"
+    }
+}
+
+tasks.register('inspectRuntimeClasspath') {
+    dependsOn ':my-plugin:jar', ':renamed-plugin:jar'
+    def runtimeClasspath = configurations.runtimeClasspath
+    doLast {
+        runtimeClasspath.incoming.artifactView { it.lenient(true) }.files.each {
+            println "RUNTIME_ARTIFACT: ${it.name}"
+        }
+    }
+}
+
+tasks.register('inspectCliClasspath') {
+    // the companion jars must actually resolve through the projects' cli capabilities
+    dependsOn ':my-plugin:cliJar', ':renamed-plugin:cliJar'
+    def cliClasspath = configurations.grailsCliClasspath
+    doLast {
+        cliClasspath.incoming.artifactView { it.lenient(true) }.files.each {
+            println "CLI_ARTIFACT: ${it.name}"
+        }
+    }
+}

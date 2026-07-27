@@ -60,7 +60,9 @@ class GraphQLEntityHelper {
                     if (hibernateMapping.isAssignableFrom(mapping.class)) {
                         description = hibernateMapping.getMethod('getComment').invoke(mapping)
                     }
-                } catch (ClassNotFoundException e) { }
+                } catch (ClassNotFoundException ignored) {
+                    // intentional: Hibernate support is optional
+                }
             }
         }
         descriptions.put(entity, description)

@@ -196,7 +196,7 @@ class FooGrailsPlugin {
             File target = new File(baseDir, 'build/classes/groovy/main')
 
         when:
-            File resolved = GlobalGrailsClassInjectorTransformation.findSourceDirectory(target)
+            File resolved = FactoriesFileWriter.findSourceDirectory(target)
 
         then: "the build-tool supplied base.dir wins"
             resolved == baseDir
@@ -213,7 +213,7 @@ class FooGrailsPlugin {
             File target = new File(projectDir, 'build/classes/groovy/main')
 
         when:
-            File resolved = GlobalGrailsClassInjectorTransformation.findSourceDirectory(target)
+            File resolved = FactoriesFileWriter.findSourceDirectory(target)
 
         then: "it resolves to the parent of the build directory"
             resolved == projectDir

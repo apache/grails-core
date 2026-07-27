@@ -20,6 +20,7 @@
 package org.grails.plugins.web.controllers;
 
 import java.util.EnumSet;
+import java.util.Properties;
 
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.Filter;
@@ -47,6 +48,7 @@ import grails.config.Settings;
 import grails.core.GrailsApplication;
 import org.grails.plugins.domain.GrailsDomainClassAutoConfiguration;
 import org.grails.web.config.http.GrailsFilters;
+import org.grails.web.errors.GrailsExceptionResolver;
 import org.grails.web.filters.HiddenHttpMethodFilter;
 import org.grails.web.servlet.mvc.GrailsDispatcherServlet;
 import org.grails.web.servlet.mvc.GrailsWebRequestFilter;
@@ -107,6 +109,18 @@ public class ControllersAutoConfiguration {
         registrationBean.addUrlPatterns(Settings.DEFAULT_WEB_SERVLET_PATH);
         registrationBean.setOrder(GrailsFilters.HIDDEN_HTTP_METHOD_FILTER.getOrder());
         return registrationBean;
+    }
+
+    // Auto-configured rather than registered by the plugin descriptor so an application- or
+    // plugin-defined 'exceptionHandler' backs this default off instead of overriding it.
+    @Bean(GrailsApplication.EXCEPTION_HANDLER_BEAN)
+    @ConditionalOnMissingBean(name = GrailsApplication.EXCEPTION_HANDLER_BEAN)
+    public GrailsExceptionResolver exceptionHandler() {
+        GrailsExceptionResolver exceptionResolver = new GrailsExceptionResolver();
+        Properties exceptionMappings = new Properties();
+        exceptionMappings.setProperty("java.lang.Exception", "/error");
+        exceptionResolver.setExceptionMappings(exceptionMappings);
+        return exceptionResolver;
     }
 
     // GrailsWebRequestFilter extends RequestContextFilter, so Boot's WebMvcAutoConfiguration backs off

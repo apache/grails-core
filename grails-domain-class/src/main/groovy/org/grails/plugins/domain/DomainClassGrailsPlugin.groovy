@@ -18,8 +18,14 @@
  */
 package org.grails.plugins.domain
 
+import groovy.transform.CompileStatic
+
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
+import org.springframework.core.env.Environment
+
+import grails.config.Config
 import grails.plugins.Plugin
-import grails.util.Environment
 import grails.util.GrailsUtil
 import org.grails.datastore.mapping.config.Settings as DatastoreSettings
 
@@ -29,6 +35,7 @@ import org.grails.datastore.mapping.config.Settings as DatastoreSettings
  * @author Graeme Rocher
  * @since 0.4
  */
+@CompileStatic
 class DomainClassGrailsPlugin extends Plugin {
 
     def watchedResources = ['file:./grails-app/domain/**/*.groovy',
@@ -39,13 +46,14 @@ class DomainClassGrailsPlugin extends Plugin {
     def loadAfter = ['controllers', 'dataSource']
 
     @Override
-    Closure doWithSpring() {
-        { ->
+    BeanRegistrar beanRegistrar() {
+        return { BeanRegistry registry, Environment environment ->
             // Set default for auto-timestamp annotation caching based on environment if not explicitly configured
-            def config = grailsApplication.config
+            Config config = grailsApplication.config
             if (!config.containsProperty(DatastoreSettings.SETTING_AUTO_TIMESTAMP_CACHE_ANNOTATIONS)) {
                 // Not configured - disable caching in development mode to support class reloading
-                config.put(DatastoreSettings.SETTING_AUTO_TIMESTAMP_CACHE_ANNOTATIONS, !Environment.isDevelopmentMode())
+                config.put(DatastoreSettings.SETTING_AUTO_TIMESTAMP_CACHE_ANNOTATIONS,
+                        !grails.util.Environment.isDevelopmentMode())
             }
         }
     }

@@ -1453,6 +1453,8 @@ Several Grails framework beans that were previously registered unconditionally a
 
 * i18n: `localeResolver`, `localeChangeInterceptor` and `messageSource`
 * URL mappings: `grailsCorsFilter`, `urlMappingsErrorPageCustomizer` and `urlMappingsInfoHandlerAdapter`
+* Controllers: `exceptionHandler`
+* Cache: `grailsCacheManager` and `customCacheKeyGenerator`
 
 **No action is required.**
 The framework beans still register by default; this only changes what happens when you define your own.
@@ -1601,3 +1603,160 @@ Custom field renderers should go through the documented `f:field`, `f:widget`, a
 | Custom context subclasses should use supported Spring lifecycle extension points instead of overriding this removed hook.
 Spring theme APIs removed from the same area are covered in section 10.
 |===
+
+==== 35. CLI Commands Move to Companion `-cli` Artifacts
+
+Grails commands (`ApplicationCommand` implementations) no longer ship inside runtime plugin
+artifacts. Each command-bearing module publishes a companion artifact under its own coordinate with
+a `-cli` suffix, and commands are registered in a dedicated `META-INF/grails-cli.factories` file
+instead of `META-INF/grails.factories`.
+
+**Package rename.** The command contract moved from `grails.dev.commands.*` (in `grails-core`) to
+`org.apache.grails.core.cli.*` (in the new `org.apache.grails:grails-core-cli` artifact). Update
+imports in your `grails-app/commands` classes:
+
+[source,groovy]
+----
+// Grails 7
+import grails.dev.commands.ApplicationCommand
+import grails.dev.commands.ExecutionContext
+
+// Grails 8
+import org.apache.grails.core.cli.ApplicationCommand
+import org.apache.grails.core.cli.ExecutionContext
+----
+
+**New `grailsCli` configuration.** The Grails Gradle plugin registers a `grailsCli` configuration
+that is compile-visible for `grails-app/commands` sources and on the command-runner classpath, but
+never on `runtimeClasspath` — so commands and their CLI-only dependencies are excluded from
+`bootRun`, `bootJar`, and `bootWar`.
+
+**CLI dependencies are discovered automatically.** The plugin adds
+`org.apache.grails:grails-core-cli` (the command contract) and `org.apache.grails:grails-console`
+(the command runner) to `grailsCli`, and walks the application's resolved dependency graph —
+including transitive plugins — for jars carrying the `Grails-Cli-Artifact` manifest attribute,
+adding each advertised companion automatically. The per-command Gradle tasks (e.g. `dbmUpdate`)
+are registered from those companions as well, so no `buildscript` classpath entry is required. In
+most applications, upgrading therefore requires **no build changes** to keep plugin commands
+working:
+
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    // the dbm-* commands are discovered automatically: the plugin jar advertises
+    // org.apache.grails:grails-data-hibernate7-dbmigration-cli, which is added to grailsCli
+    implementation 'org.apache.grails:grails-data-hibernate7-dbmigration'
+}
+----
+
+The `console` and `shell` tasks also draw from the provisioned cli tier, so the
+`console "org.apache.grails:grails-console"` dependency that earlier Grails versions generated in
+`build.gradle` is no longer needed and can be removed (the `console` configuration itself remains
+for additional console-only dependencies).
+
+Disable the discovery with `grails { cliAutoProvision = false }` and declare the cli tier
+explicitly when full control over the command classpath is preferred:
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    cliAutoProvision = false
+}
+
+dependencies {
+    implementation 'org.apache.grails:grails-data-hibernate7-dbmigration'
+    grailsCli 'org.apache.grails:grails-core-cli'
+    grailsCli 'org.apache.grails:grails-console'
+    grailsCli 'org.apache.grails:grails-data-hibernate7-dbmigration-cli'
+}
+----
+
+The renamed framework command packages are:
+
+|===
+|Grails 7 | Grails 8 (`-cli` artifact)
+
+|`grails.dev.commands.*` (grails-core)
+|`org.apache.grails.core.cli.*` (grails-core-cli)
+
+|`org.grails.web.mapping.reporting.UrlMappingsReportCommand`
+|`org.apache.grails.web.mapping.cli.UrlMappingsReportCommand` (grails-web-url-mappings-cli)
+
+|`scaffolding.*` commands
+|`org.apache.grails.scaffolding.cli.*` (grails-scaffolding-cli)
+
+|`grails.plugin.hibernate.commands.SchemaExportCommand`
+|`org.apache.grails.data.hibernate5.cli` / `...hibernate7.cli` (grails-data-hibernate5-cli / -7-cli)
+
+|`org.grails.plugins.databasemigration.command.*`
+|`org.apache.grails.data.hibernate5.dbmigration.cli` / `...hibernate7.dbmigration.cli`
+
+|`grails.plugin.springsecurity` s2 commands
+|`org.apache.grails.security.cli.*` (grails-spring-security-cli)
+|===
+
+**Third-party plugins must be rebuilt against Grails 8 for their commands to be available.**
+Apply the new `org.apache.grails.gradle.grails-plugin-cli` Gradle plugin, move command sources from
+`grails-app/commands` to `src/cli/groovy`, and update the contract imports — recompiling then
+regenerates the `grails-cli.factories` registration automatically and the companion `-cli`
+artifact is published alongside the plugin (see
+xref:commandLine#creatingCustomCommands[Creating Custom Commands] for the complete workflow).
+Hand-authored command registrations must move from
+`src/main/resources/META-INF/grails.factories` to `.../grails-cli.factories`. A Grails 7 command
+plugin dropped onto a Grails 8 application unchanged will not have its commands discovered.
+
+**What this change means for upgrading an application.** Plugin re-releases are *not* a
+prerequisite for upgrading the application itself — the impact of the CLI split is bounded as
+follows:
+
+* *Plugins that ship no commands* are entirely unaffected by this change.
+* *Command-bearing plugins that have not yet been rebuilt for Grails 8* keep their runtime
+  functionality — controllers, services, taglibs, and other artefacts continue to work exactly as
+  before, because the runtime plugin jar never depended on the command contract. Only the plugin's
+  *commands* are unavailable: their registrations in the legacy `grails.factories` location are
+  ignored (the clean break above), so they disappear from the command list rather than fail. The
+  commands return once the plugin publishes a Grails 8 release with a companion `-cli` artifact.
+* *The application's own commands* in `grails-app/commands` need only the import rename shown
+  above; the build wiring is automatic.
+
+NOTE: The statements above are about the CLI split specifically. Independently of it, Grails 8
+removes APIs that were deprecated in Grails 7 — a Grails 7 plugin that avoided those deprecations
+generally continues to work on Grails 8 unchanged, while one that relied on them (or on other
+Grails 8 changes such as Spring Boot 4) needs an update for that reason.
+
+==== 36. jQuery Webjar Upgraded to 4.0.0
+
+The jQuery webjar managed by the `grails-bom` (`org.webjars.npm:jquery`) moves from 3.7.1 to 4.0.0.
+jQuery 4 is a major release: it drops Internet Explorer and other legacy browsers and removes long-deprecated utilities such as `jQuery.trim`, `jQuery.type`, `jQuery.isArray`, `jQuery.isFunction`, `jQuery.proxy`, and `jQuery.isWindow`.
+See the https://jquery.com/upgrade-guide/4.0/[jQuery 4.0 Upgrade Guide] for the complete list of changes.
+
+Because the version is managed by the BOM, any application that references the jQuery webjar without an explicit version picks up 4.0.0 automatically once it adopts the Grails 8 BOM.
+This includes the generated create-app welcome page, whose assets have been verified against 4.0.0.
+
+If your application's own JavaScript relies on the removed APIs, migrate those call sites.
+If you are not ready to migrate, pin the previous version in your gradle build:
+
+[source,properties]
+.gradle.properties
+----
+jquery.version=3.7.1
+----
+
+==== 37. spring-security-ui Rewritten on Bootstrap 5
+
+The `spring-security-ui` plugin's screens are rewritten on Bootstrap 5 with no bundled styling of their own.
+The plugin no longer ships or depends on jQuery UI, jquery-form, jGrowl, DataTables, bgiframe or the bundled jdMenu/positionBy plugins, and every plugin stylesheet and image has been removed — dialogs are Bootstrap modals, tabs are nav-tabs, notifications render through `g:flashMessages`, and the autocomplete search uses a native `datalist`.
+jQuery (4.x) and Bootstrap are expected from the host application, as provided by the create-app layout.
+
+Plugin pages now render through the host application's own layout — configured with `grails.plugin.springsecurity.ui.gsp.parentLayout` (default `main`) — inheriting its theme, including Bootstrap dark mode, locale selector and branding.
+The security menu and login state are contributed to the host navbar through `nav` and `navActions` content blocks, which the create-app layout renders with `<g:pageProperty name="page.nav"/>` and `<g:pageProperty name="page.navActions"/>`; a custom layout that wants the menu in its navbar renders the same page properties.
+
+If you upgrade an application that customized the plugin:
+
+* Views previously copied into the application with `s2ui-override` reference removed stylesheets and rely on the old table-based markup of the `s2ui` field-row tags, which now emit Bootstrap form groups; regenerate or update those copies.
+* CSS written against the old `s2ui_*` and `jd_menu` classes no longer has anything to match; restyle against Bootstrap classes.
+* Applications that used the plugin's transitive webjars (jQuery UI, jGrowl, DataTables, jquery-form) must now declare those dependencies themselves.
+* The `grails.plugin.springsecurity.ui.Constants` class and the `spring-security-ui-register.js` and `spring-security-ui-*` stylesheet assets have been removed.
+* `LogoutController` now declares a computed `allowedMethods` restricting its action to POST while `logout.postOnly` is active (the default), making the restriction visible to tooling such as the create-app welcome page.

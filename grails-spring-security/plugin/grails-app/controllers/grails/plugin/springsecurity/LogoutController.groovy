@@ -30,6 +30,17 @@ class LogoutController {
     RedirectStrategy redirectStrategy
 
     /**
+     * Declares the POST-only restriction (active by default through
+     * {@code logout.postOnly}) so tooling that inspects a controller's
+     * {@code allowedMethods} — like the create-app welcome page — can tell
+     * that the action is not reachable with GET. Enforcement itself stays
+     * in the action, which honors the config at request time.
+     */
+    static Map getAllowedMethods() {
+        SpringSecurityUtils.securityConfig?.logout?.postOnly ? [index: 'POST'] : [:]
+    }
+
+    /**
      * Index action. Redirects to the Spring security logout uri.
      */
     def index() {

@@ -1,0 +1,27 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-plugin'
+}
+
+repositories {
+    maven {
+        url = uri("${rootDir}/maven-repo")
+    }
+}
+
+grails {
+    bom = 'race-bom'
+}
+
+// Overrides race-bom's default (1.0.0), so BomPropertyOverridesPlugin computes a real
+// version override and its afterEvaluate callback actually attempts to mutate this
+// project's declarable configurations - the step that used to race
+// GrailsCliGradlePlugin's grailsCliDetect probe (see the multiproject-race spec).
+ext['race.managed.version'] = '2.0.0'
+
+tasks.register('printOverrideApplied') {
+    def implConstraints = configurations.implementation.dependencyConstraints
+    doLast {
+        def applied = implConstraints.any { it.group == 'org.example' && it.name == 'race-lib' && it.versionConstraint.strictVersion == '2.0.0' }
+        println "OVERRIDE_APPLIED=${applied}"
+    }
+}

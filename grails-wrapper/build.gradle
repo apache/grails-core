@@ -47,6 +47,8 @@ dependencies {
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
     testImplementation 'org.junit.platform:junit-platform-suite'
+    testImplementation "io.github.cjstehno.ersatz:ersatz:$ersatzVersion"
+    testImplementation "io.github.cjstehno.ersatz:ersatz-groovy:$ersatzVersion"
     // for easier setting of environment variables in tests
     testImplementation 'uk.org.webcompere:system-stubs-core:2.1.8'
 }
@@ -73,6 +75,11 @@ startScripts.configure { CreateStartScripts t ->
     t.applicationName = 'grailsw'
     t.mainClass = project.findProperty('startMainClass') as String
     t.classpath = files(jarTask)
+
+    // the wrapper loads the downloaded CLI jar into this JVM, where JLine loads a native terminal
+    // library via System::load, a restricted method under JEP 472; without this grant JDK 24+
+    // warns on every launch and a future JDK will refuse the call
+    t.defaultJvmOpts = ['--enable-native-access=ALL-UNNAMED']
 
     // See gradle tickets such as for lib https://github.com/gradle/gradle/issues/7033
     doLast {

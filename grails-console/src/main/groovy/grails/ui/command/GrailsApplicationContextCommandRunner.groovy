@@ -22,14 +22,13 @@ import org.springframework.beans.factory.config.AutowireCapableBeanFactory
 import org.springframework.context.ConfigurableApplicationContext
 
 import grails.config.Settings
-import grails.dev.commands.ApplicationContextCommandRegistry
-import grails.dev.commands.ExecutionContext
+import org.apache.grails.core.cli.ApplicationContextCommandRegistry
+import org.apache.grails.core.cli.ExecutionContext
 import grails.ui.support.DevelopmentGrailsApplication
 import org.grails.build.parsing.CommandLine
 import org.grails.build.parsing.CommandLineParser
 
 /**
- * @author Graeme Rocher
  * @since 3.0
  */
 @CompileStatic
@@ -85,8 +84,7 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
             finally {
                 try {
                     ctx?.close()
-                } catch (Throwable e) {
-                    // ignore
+                } catch (Throwable ignored) {
                 }
             }
         }

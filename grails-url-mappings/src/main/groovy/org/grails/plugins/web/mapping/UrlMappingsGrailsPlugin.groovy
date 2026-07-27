@@ -21,22 +21,20 @@ package org.grails.plugins.web.mapping
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
-import org.springframework.aop.framework.ProxyFactoryBean
 import org.springframework.aop.target.HotSwappableTargetSource
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
 import org.springframework.context.ApplicationContext
+import org.springframework.core.env.Environment
 
 import grails.config.Settings
 import grails.plugins.Plugin
-import grails.util.Environment
 import grails.util.GrailsUtil
 import grails.web.mapping.LinkGenerator
-import grails.web.mapping.UrlMappings
 import grails.web.mapping.UrlMappingsHolder
 import org.grails.core.artefact.UrlMappingsArtefactHandler
-import org.grails.spring.beans.factory.HotSwappableTargetSourceFactoryBean
 import org.grails.web.mapping.CachingLinkGenerator
 import org.grails.web.mapping.UrlMappingsHolderFactoryBean
-import org.grails.web.mapping.mvc.UrlMappingsHandlerMapping
 
 /**
  * Handles the configuration of URL mappings.
@@ -44,6 +42,7 @@ import org.grails.web.mapping.mvc.UrlMappingsHandlerMapping
  * @author Graeme Rocher
  * @since 0.4
  */
+@CompileStatic
 class UrlMappingsGrailsPlugin extends Plugin {
 
     def watchedResources = ['file:./grails-app/controllers/*UrlMappings.groovy']
@@ -52,44 +51,31 @@ class UrlMappingsGrailsPlugin extends Plugin {
     def dependsOn = [core: version]
     def loadAfter = ['controllers']
 
-    Closure doWithSpring() {
-        { ->
-            def application = grailsApplication
-            if (!application.getArtefacts(UrlMappingsArtefactHandler.TYPE)) {
-                application.addArtefact(UrlMappingsArtefactHandler.TYPE, DefaultUrlMappings )
+    @Override
+    BeanRegistrar beanRegistrar() {
+        return { BeanRegistry registry, Environment environment ->
+            if (!grailsApplication.getArtefacts(UrlMappingsArtefactHandler.TYPE)) {
+                grailsApplication.addArtefact(UrlMappingsArtefactHandler.TYPE, DefaultUrlMappings)
             }
 
-            def config = application.config
-            boolean isReloadEnabled = Environment.isDevelopmentMode() || Environment.current.isReloadEnabled()
-            boolean corsFilterEnabled = config.getProperty(Settings.SETTING_CORS_FILTER, Boolean, true)
+            boolean reloadEnabled = grails.util.Environment.isDevelopmentMode() ||
+                    grails.util.Environment.current.isReloadEnabled()
+            boolean corsFilterEnabled = environment.getProperty(Settings.SETTING_CORS_FILTER, Boolean, true)
 
-            urlMappingsHandlerMapping(UrlMappingsHandlerMapping, ref('grailsUrlMappingsHolder')) {
-                if (!corsFilterEnabled) {
-                    grailsCorsConfiguration = ref('grailsCorsConfiguration')
-                }
-            }
-
-            if (isReloadEnabled) {
-                urlMappingsTargetSource(HotSwappableTargetSourceFactoryBean) {
-                    it.lazyInit = true
-                    target = bean(UrlMappingsHolderFactoryBean) {
-                        it.lazyInit = true
-                    }
-                }
-                grailsUrlMappingsHolder(ProxyFactoryBean) {
-                    it.lazyInit = true
-                    targetSource = urlMappingsTargetSource
-                    proxyInterfaces = [UrlMappings]
-                 }
-            } else {
-                grailsUrlMappingsHolder(UrlMappingsHolderFactoryBean) { bean ->
-                    bean.lazyInit = true
+            // The url-mapping holder is a ProxyFactoryBean (reload mode) whose produced UrlMappings
+            // type must stay visible to Spring's factory-bean type prediction for by-type autowiring
+            // of UrlMappingsHolder — which an instance supplier would hide — so the definitions are
+            // contributed by a dedicated post-processor instead.
+            registry.registerBean('urlMappingsBeanDefinitionsPostProcessor', UrlMappingsBeanDefinitionsPostProcessor) {
+                it.infrastructure().supplier {
+                    new UrlMappingsBeanDefinitionsPostProcessor(reloadEnabled, corsFilterEnabled)
                 }
             }
         }
     }
 
     @Override
+    @CompileDynamic
     void onChange(Map<String, Object> event) {
         def application = grailsApplication
         if (!application.isArtefactOfType(UrlMappingsArtefactHandler.TYPE, event.source)) {

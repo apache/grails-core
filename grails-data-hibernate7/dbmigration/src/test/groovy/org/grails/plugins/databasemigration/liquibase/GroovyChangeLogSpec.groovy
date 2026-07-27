@@ -20,12 +20,12 @@ package org.grails.plugins.databasemigration.liquibase
 
 import grails.core.GrailsApplication
 import liquibase.exception.CommandExecutionException
-import org.grails.plugins.databasemigration.command.ApplicationContextDatabaseMigrationCommandSpec
-import org.grails.plugins.databasemigration.command.DbmChangelogSyncCommand
-import org.grails.plugins.databasemigration.command.DbmRollbackCommand
-import org.grails.plugins.databasemigration.command.DbmTagCommand
-import org.grails.plugins.databasemigration.command.DbmUpdateCommand
-import org.grails.plugins.databasemigration.command.DbmUpdateCountCommand
+import org.apache.grails.data.hibernate7.dbmigration.cli.ApplicationContextDatabaseMigrationCommandSpec
+import org.apache.grails.data.hibernate7.dbmigration.cli.DbmChangelogSyncCommand
+import org.apache.grails.data.hibernate7.dbmigration.cli.DbmRollbackCommand
+import org.apache.grails.data.hibernate7.dbmigration.cli.DbmTagCommand
+import org.apache.grails.data.hibernate7.dbmigration.cli.DbmUpdateCommand
+import org.apache.grails.data.hibernate7.dbmigration.cli.DbmUpdateCountCommand
 
 class GroovyChangeLogSpec extends ApplicationContextDatabaseMigrationCommandSpec {
 

@@ -51,6 +51,7 @@ public class Category {
     public static final String SERVERLESS           = "Serverless";
     public static final String SERVICE_DISCOVERY    = "Service Discovery";
     public static final String SPRING               = "Spring Framework";
+    public static final String SPRING_SECURITY      = "Spring Security";
     public static final String SSL                  = "SSL";
     public static final String TESTING              = "Testing";
     public static final String TRACING              = "Distributed Tracing";
