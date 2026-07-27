@@ -53,4 +53,12 @@ class BeanBuilderGrailsBeanRegistryAdapterTest {
             new BeanBuilderGrailsBeanRegistryAdapter(null)
         }
     }
+
+    @Test
+    void adapterExposesTheBeanBuilderItDelegatesTo() {
+        BeanBuilder beanBuilder = new BeanBuilder()
+        BeanBuilderGrailsBeanRegistryAdapter adapter = new BeanBuilderGrailsBeanRegistryAdapter(beanBuilder)
+
+        assertTrue(adapter.beanBuilder.is(beanBuilder))
+    }
 }
