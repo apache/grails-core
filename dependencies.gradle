@@ -96,6 +96,8 @@ ext {
             'liquibase-hibernate5.version'  : '4.27.0',
             // Security: overrides spring-boot-dependencies (1.5.34). 1.5.37 fixes CVE-2026-13006 flagged against logback-core.
             'logback.version'               : '1.5.37',
+            // Security: overrides spring-boot-dependencies (2.24.3). 2.25.5 fixes CVE-2026-49844 flagged against log4j-api.
+            'log4j2.version'                : '2.25.5',
             'mockito.version'               : '5.23.0',
             'mongodb.version'               : '5.8.0',
             'nimbus-jose-jwt.version'       : '10.9',
@@ -132,6 +134,7 @@ ext {
     bomPlatformDependencies = [
             'asset-pipeline-bom': "cloud.wondrify:asset-pipeline-bom:${bomDependencyVersions['asset-pipeline-bom.version']}",
             'groovy-bom'        : "org.apache.groovy:groovy-bom:${bomDependencyVersions['groovy.version']}",
+            'log4j2-bom'        : "org.apache.logging.log4j:log4j-bom:${bomDependencyVersions['log4j2.version']}",
             'selenium-bom'      : "org.seleniumhq.selenium:selenium-bom:${bomDependencyVersions['selenium.version']}",
             'spock-bom'         : "org.spockframework:spock-bom:${bomDependencyVersions['spock.version']}",
     ]
@@ -193,6 +196,12 @@ ext {
             // Security override of spring-boot-dependencies - see logback.version
             'logback-classic'            : "ch.qos.logback:logback-classic:${bomDependencyVersions['logback.version']}",
             'logback-core'               : "ch.qos.logback:logback-core:${bomDependencyVersions['logback.version']}",
+            // Security override of spring-boot-dependencies - see log4j2.version
+            'log4j2-api'                 : "org.apache.logging.log4j:log4j-api:${bomDependencyVersions['log4j2.version']}",
+            'log4j2-core'                : "org.apache.logging.log4j:log4j-core:${bomDependencyVersions['log4j2.version']}",
+            'log4j2-jul'                 : "org.apache.logging.log4j:log4j-jul:${bomDependencyVersions['log4j2.version']}",
+            'log4j2-slf4j2-impl'         : "org.apache.logging.log4j:log4j-slf4j2-impl:${bomDependencyVersions['log4j2.version']}",
+            'log4j2-to-slf4j'            : "org.apache.logging.log4j:log4j-to-slf4j:${bomDependencyVersions['log4j2.version']}",
             // Security override of the transitive 3.5.1 - see plexus-utils.version
             'plexus-utils'                : "org.codehaus.plexus:plexus-utils:${bomDependencyVersions['plexus-utils.version']}",
             // Required alongside plexus-utils 4.x - see plexus-xml.version

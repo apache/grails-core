@@ -888,6 +888,12 @@ jobs:
     if: github.repository_owner == 'apache' && github.event_name == 'push'
     needs: [ publish ]
     runs-on: ubuntu-24.04
+    # Documentation publishing targets a shared resource (the apache/grails-website repo).
+    # Share the static group used by the release documentation publish (release.yml) so only
+    # one documentation publish can run at a time across every branch; the rest queue.
+    concurrency:
+      group: grails-docs-publish
+      cancel-in-progress: false
     steps:
       - name: "⚙️ Maximize build space"
         run: |
