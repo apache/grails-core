@@ -800,6 +800,34 @@ class GrailsWebDataBinderSpec extends Specification implements DataTest {
         updatedA3.name == 'Author Tres'
     }
 
+    void 'Test updating Set elements by id with non-numeric grouping keys'() {
+
+        given:
+        def publisher = new Publisher(name: 'Some Publisher')
+
+        when:
+        def a1 = new Author(name: 'Author One').save()
+        def a2 = new Author(name: 'Author Two').save()
+        publisher.addToAuthors(a1)
+        publisher.addToAuthors(a2)
+
+        then:
+        a1.id != null
+        a2.id != null
+
+        when:
+        binder.bind(publisher, new SimpleMapDataBindingSource([
+            'authors[foo]': [id: a2.id, name: 'Author Dos'],
+            'authors[bar]': [id: a1.id, name: 'Author Uno']
+        ]))
+        def updatedA1 = publisher.authors.find { it.id == a1.id }
+        def updatedA2 = publisher.authors.find { it.id == a2.id }
+
+        then:
+        updatedA1.name == 'Author Uno'
+        updatedA2.name == 'Author Dos'
+    }
+
     void 'Test updating Set elements by id'() {
 
         given:

@@ -400,12 +400,27 @@ class SimpleDataBinder implements DataBinder {
         }
     }
 
+    /**
+     * Parses an indexed binding path segment as a non-negative integer.
+     * <p>
+     * Indexed properties follow the JavaBeans model (spec v1.01, section 7.2):
+     * array-typed properties with paired {@code int}-indexed accessors. Grails
+     * extends that model to positional collection binding; negative indexes are
+     * rejected because they are not part of the beans model (the prior
+     * {@code [-1]} behavior was Groovy list semantics leaking through the binder).
+     * </p>
+     *
+     * @return the parsed index, or {@code null} when the segment is rejected as a binding error
+     */
     protected Integer parseIndexedPropertyIndex(obj, IndexedPropertyReferenceDescriptor indexedPropertyReferenceDescriptor,
         val, DataBindingListener listener, errors) {
 
         try {
             Integer index = Integer.parseInt(indexedPropertyReferenceDescriptor.index)
             if (index < 0) {
+                // Intentional: report the same generic NumberFormatException as a
+                // malformed index so untrusted request data cannot distinguish that
+                // negative indexes are handled explicitly.
                 throw new NumberFormatException(indexedPropertyReferenceDescriptor.index)
             }
             index

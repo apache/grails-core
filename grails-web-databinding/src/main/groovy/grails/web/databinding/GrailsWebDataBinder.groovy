@@ -434,10 +434,8 @@ class GrailsWebDataBinder extends SimpleDataBinder {
                 if (referencedType != null && isDomainClass(referencedType)) {
                     needsBinding = false
                     if (Set.isAssignableFrom(metaProperty.type)) {
-                        Integer index = parseIndexedPropertyIndex(obj, indexedPropertyReferenceDescriptor, val, listener, errors)
-                        if (index == null) {
-                            return
-                        }
+                        // Set association keys are grouping keys (not positions); do not
+                        // require a numeric index. Selection is by id.
                         def collection = initializeCollection(obj, propName, metaProperty.type)
                         def instance
                         if (collection != null) {
@@ -452,7 +450,7 @@ class GrailsWebDataBinder extends SimpleDataBinder {
                                 Exception e = new IllegalArgumentException(message)
                                 addBindingError(obj, propName, idValue, e, listener, errors)
                             } else {
-                                addElementToCollectionAt(obj, propName, collection, index, instance)
+                                addElementToCollectionAt(obj, propName, collection, 0, instance)
                             }
                         }
                         if (instance != null) {
