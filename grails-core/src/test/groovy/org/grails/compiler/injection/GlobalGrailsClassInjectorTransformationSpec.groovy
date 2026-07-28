@@ -794,6 +794,120 @@ class GlobalGrailsClassInjectorTransformationSpec extends Specification {
             !new File(targetDir, 'META-INF/grails-plugin.xml').exists()
     }
 
+    void "artefact class names are deferred and then included when the plugin descriptor is compiled later"() {
+        given: 'a plugin.xml file that does not exist yet'
+            def pluginXml = new File(tempDir, 'deferred-plugin.xml')
+
+        and: 'no plugin descriptor class has been compiled yet'
+            def classNode = compilePlugin('class DeferredGrailsPlugin {}')
+
+        when: 'generatePluginXml is called with artefact classes but no plugin class or existing xml'
+            transformation.generatePluginXml(
+                    null,
+                    null,
+                    ['FirstDeferredClass'] as Set,
+                    pluginXml
+            )
+
+        then: 'no xml file is written because there is no plugin descriptor'
+            !pluginXml.exists()
+
+        when: 'the plugin descriptor is compiled and generatePluginXml is called again'
+            transformation.generatePluginXml(
+                    classNode,
+                    '1.0',
+                    ['SecondClass'] as Set,
+                    pluginXml
+            )
+
+        then: 'the xml now includes both the deferred class and the new class'
+            pluginXml.exists()
+            def xml = new XmlSlurper().parse(pluginXml)
+            xml.@name.text() == 'deferred'
+            xml.resources.resource*.text() as Set == ['FirstDeferredClass', 'SecondClass'] as Set
+    }
+
+    void "updatePluginXml returns early and leaves the file unchanged when artefact list is empty"() {
+        given:
+            def pluginXml = new File(tempDir, 'empty-artefacts-plugin.xml')
+            pluginXml.text = '<plugin name="test" version="1.0"/>'
+
+        when:
+            transformation.updatePluginXml(null, null, pluginXml, [])
+
+        then:
+            def xml = new XmlSlurper().parse(pluginXml)
+            xml.@name.text() == 'test'
+            xml.@version.text() == '1.0'
+    }
+
+    void "abstract GrailsPlugin class is not treated as a plugin descriptor so artefact names are deferred"() {
+        given:
+            def classNode = compilePlugin('abstract class AbstractGrailsPlugin {}')
+            def pluginXml = new File(tempDir, 'abstract-grails-plugin.xml')
+            String version = null
+
+        when: 'called with an abstract plugin class'
+            transformation.generatePluginXml(classNode, version, ['DeferredArtefact'] as Set, pluginXml)
+
+        then: 'no xml is written because the abstract class is skipped'
+            !pluginXml.exists()
+
+        when: 'a concrete plugin descriptor is compiled and generatePluginXml is called again'
+            def concreteClass = compilePlugin('class ConcreteGrailsPlugin {}')
+            transformation.generatePluginXml(concreteClass, '1.0', ['NewArtefact'] as Set, pluginXml)
+
+        then: 'both deferred and new artefacts appear in the generated xml'
+            pluginXml.exists()
+            def xml = new XmlSlurper().parse(pluginXml)
+            xml.resources.resource*.text() as Set == ['DeferredArtefact', 'NewArtefact'] as Set
+    }
+
+    void "artefact class that already has @Artefact annotation is not re-annotated or double-registered"() {
+        given: 'a service source under grails-app that already carries @Artefact'
+            def sourceFile = new File(tempDir, 'grails-app/services/AnnotatedService.groovy')
+            def targetDir = new File(tempDir, 'build/classes/groovy/main')
+            TraitInjectionUtils.@traitInjectors = []
+
+        when:
+            def classNode = compileToFile(
+                    sourceFile,
+                    '''
+                        import grails.artefact.Artefact
+                        @Artefact('Service')
+                        class AnnotatedService {}
+                    ''',
+                    targetDir
+            )
+
+        then: 'the class still has exactly one @Artefact annotation'
+            classNode.getAnnotations(ClassHelper.make(Artefact)).size() == 1
+
+        cleanup:
+            TraitInjectionUtils.@traitInjectors = null
+    }
+
+    void "abstract GrailsPlugin class is not identified as a plugin descriptor by the visit method"() {
+        given: 'an abstract GrailsPlugin class under grails-app'
+            def sourceFile = new File(tempDir, 'grails-app/AbstractPluginGrailsPlugin.groovy')
+            def targetDir = new File(tempDir, 'build/classes/groovy/main')
+            TraitInjectionUtils.@traitInjectors = []
+
+        when: 'the source is compiled, exercising the registered global transform'
+            compileToFile(
+                    sourceFile,
+                    'abstract class AbstractPluginGrailsPlugin {}',
+                    targetDir,
+                    [projectName: 'abstractPlugin', projectVersion: '1.0']
+            )
+
+        then: 'no plugin.xml file is generated because the class was not treated as a plugin descriptor'
+            !new File(targetDir, 'META-INF/grails-plugin.xml').exists()
+
+        cleanup:
+            TraitInjectionUtils.@traitInjectors = null
+    }
+
     private SourceUnit sourceUnitWithTarget(File targetDirectory) {
         def cc = new CompilerConfiguration()
         cc.setTargetDirectory((File) targetDirectory)
