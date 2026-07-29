@@ -24,8 +24,9 @@ import java.util.concurrent.Executors
 
 import org.springframework.transaction.support.TransactionSynchronizationManager
 
-import org.grails.datastore.mapping.transactions.SessionHolder
 import spock.lang.Specification
+
+import org.grails.datastore.mapping.transactions.SessionHolder
 
 class TransactionSynchronizationSessionResolverSpec extends Specification {
 
@@ -91,7 +92,7 @@ class TransactionSynchronizationSessionResolverSpec extends Specification {
         resolver.resolve() == session
     }
 
-    def "resolve() evicts a disconnected session instead of returning it, matching doGetSession's validation"() {
+    def "resolve() evicts a disconnected sole session and unbinds the emptied holder so later binds are not blocked"() {
         given: "a bound session that has since been disconnected"
         Session session = Mock(Session)
         session.getDatastore() >> datastore
@@ -101,12 +102,32 @@ class TransactionSynchronizationSessionResolverSpec extends Specification {
         expect: "the stale session is not resolvable"
         resolver.resolve() == null
 
-        and: "it was evicted from the holder, not just skipped"
-        SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.getResource(datastore)
-        !holder.containsSession(session)
+        and: "the emptied holder was unbound, so a fresh bindSession cannot fail with 'already bound'"
+        TransactionSynchronizationManager.getResource(datastore) == null
+
+        when:
+        Session fresh = connectedSession()
+        DatastoreUtils.bindSession(fresh)
+
+        then:
+        noExceptionThrown()
+        resolver.resolve() == fresh
     }
 
-    def "resolve() returns null for a bound but empty SessionHolder"() {
+    def "resolve() skips a disconnected top session and returns the still-connected one beneath it"() {
+        given: "a connected session with a stale one stacked on top"
+        Session live = connectedSession()
+        Session stale = Mock(Session)
+        stale.getDatastore() >> datastore
+        stale.isConnected() >> false
+        DatastoreUtils.bindSession(live)
+        DatastoreUtils.bindNewSession(stale)
+
+        expect: "the stale top is evicted and the live session underneath is resolved"
+        resolver.resolve() == live
+    }
+
+    def "resolve() returns null for a bound but empty SessionHolder and cleans up the binding"() {
         given: "a holder left bound after its only session was removed"
         Session session = connectedSession()
         DatastoreUtils.bindSession(session)
@@ -115,6 +136,21 @@ class TransactionSynchronizationSessionResolverSpec extends Specification {
 
         expect:
         resolver.resolve() == null
+        TransactionSynchronizationManager.getResource(datastore) == null
+    }
+
+    def "resolve() leaves an emptied holder bound when it is synchronized with an active transaction"() {
+        given: "a transaction-owned holder whose only session has been disconnected"
+        Session session = Mock(Session)
+        session.getDatastore() >> datastore
+        session.isConnected() >> false
+        DatastoreUtils.bindSession(session)
+        SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.getResource(datastore)
+        holder.setSynchronizedWithTransaction(true)
+
+        expect: "the transaction manager keeps ownership of its holder"
+        resolver.resolve() == null
+        TransactionSynchronizationManager.getResource(datastore).is(holder)
     }
 
     def "a session bound on one thread is not visible to another thread"() {

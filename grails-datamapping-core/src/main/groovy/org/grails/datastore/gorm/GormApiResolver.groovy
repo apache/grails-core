@@ -200,7 +200,7 @@ class PreferredDatastoreSelector {
             if (preferred instanceof MultiTenantCapableDatastore) {
                 MultiTenantCapableDatastore mtds = (MultiTenantCapableDatastore) preferred
                 try {
-                    Serializable tid = CurrentTenantHolder.get()
+                    Serializable tid = CurrentTenantHolder.get((Datastore) mtds)
                     if (tid == null && entity != null && MultiTenant.isAssignableFrom(entity)) {
                         tid = mtds.tenantResolver.resolveTenantIdentifier()
                     }
@@ -330,7 +330,12 @@ class ActiveSessionDatastoreSelector {
         
         // Fallback: If no datastore found in TransactionSynchronizationManager,
         // we might still have a non-transactional session bound for one of the registered datastores.
-        // For performance, we only do the full iteration if allDatastores is small.
+        // This scan is the only path that discovers sessions bound under non-Datastore TSM keys
+        // (e.g. HibernateDatastore keys its holders by SessionFactory), and it is deliberately
+        // bounded: beyond 10 registered datastores the cost of an O(datastores) scan on every
+        // unresolved lookup outweighs the benefit, and routing falls back to the entity's DEFAULT
+        // datastore instead. Deployments with more than 10 datastores should bind sessions
+        // explicitly (transactions or Tenants.withId) rather than rely on this discovery.
         if (registry.allDatastores.size() <= 10) {
             for (Datastore registeredDs in registry.allDatastores) {
                 if (registeredDs.hasCurrentSession()) {
@@ -363,7 +368,7 @@ class ActiveSessionDatastoreSelector {
                     if (entity != null && entity.isMultiTenant()) {
                         Serializable resolvedTenantId = null
                         try {
-                            resolvedTenantId = CurrentTenantHolder.get()
+                            resolvedTenantId = CurrentTenantHolder.get(ds)
                             if (resolvedTenantId == null) {
                                 resolvedTenantId = ((MultiTenantCapableDatastore) ds).getTenantResolver().resolveTenantIdentifier()
                             }
@@ -403,7 +408,7 @@ class DefaultDatastoreSelector {
             boolean isDatabaseMode = multiTenantCapableDatastore.getMultiTenancyMode() ==
                     MultiTenancySettings.MultiTenancyMode.DATABASE
             try {
-                Serializable currentTenantId = CurrentTenantHolder.get()
+                Serializable currentTenantId = CurrentTenantHolder.get(defaultDs)
                 if (currentTenantId == null && entity != null && MultiTenant.isAssignableFrom(entity)) {
                     currentTenantId = multiTenantCapableDatastore.tenantResolver.resolveTenantIdentifier()
                 }

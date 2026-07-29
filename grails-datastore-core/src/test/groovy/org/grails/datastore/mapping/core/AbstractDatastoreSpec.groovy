@@ -19,13 +19,15 @@
 
 package org.grails.datastore.mapping.core
 
-import org.grails.datastore.mapping.model.MappingContext
-import org.grails.datastore.mapping.transactions.SessionHolder
 import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.context.support.GenericApplicationContext
 import org.springframework.core.env.PropertyResolver
 import org.springframework.transaction.support.TransactionSynchronizationManager
+
 import spock.lang.Specification
+
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.transactions.SessionHolder
 
 class AbstractDatastoreSpec extends Specification {
 

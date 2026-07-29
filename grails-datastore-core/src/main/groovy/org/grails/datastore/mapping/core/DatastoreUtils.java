@@ -309,14 +309,13 @@ public abstract class DatastoreUtils {
      */
     public static Object doWithSession(final Datastore datastore, final Closure c) {
         boolean existing = datastore.hasCurrentSession();
-        Session session = existing ? datastore.getCurrentSession() : bindSession(datastore.connect());
+        Session session = existing ? datastore.getCurrentSession() : bindNewSession(datastore.connect());
         try {
             return c.call(session);
         }
         finally {
             if (!existing) {
-                TransactionSynchronizationManager.unbindResource(session.getDatastore());
-                closeSessionOrRegisterDeferredClose(session, datastore);
+                unbindSession(session);
             }
         }
     }
@@ -330,14 +329,13 @@ public abstract class DatastoreUtils {
      */
     public static <T> T execute(final Datastore datastore, final SessionCallback<T> callback) {
         boolean existing = datastore.hasCurrentSession();
-        Session session = existing ? datastore.getCurrentSession() : bindSession(datastore.connect());
+        Session session = existing ? datastore.getCurrentSession() : bindNewSession(datastore.connect());
         try {
             return callback.doInSession(session);
         }
         finally {
             if (!existing) {
-                TransactionSynchronizationManager.unbindResource(session.getDatastore());
-                closeSessionOrRegisterDeferredClose(session, datastore);
+                unbindSession(session);
             }
         }
     }
@@ -349,14 +347,13 @@ public abstract class DatastoreUtils {
      */
     public static void execute(final Datastore datastore, final VoidSessionCallback callback) {
         boolean existing = datastore.hasCurrentSession();
-        Session session = existing ? datastore.getCurrentSession() : bindSession(datastore.connect());
+        Session session = existing ? datastore.getCurrentSession() : bindNewSession(datastore.connect());
         try {
             callback.doInSession(session);
         }
         finally {
             if (!existing) {
-                TransactionSynchronizationManager.unbindResource(datastore);
-                closeSessionOrRegisterDeferredClose(session, datastore);
+                unbindSession(session);
             }
         }
     }

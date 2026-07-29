@@ -19,9 +19,11 @@
 
 package org.grails.datastore.mapping.core
 
-import org.grails.datastore.mapping.model.MappingContext
 import org.springframework.core.env.PropertyResolver
+
 import spock.lang.Specification
+
+import org.grails.datastore.mapping.model.MappingContext
 
 class SessionResolverIntegrationSpec extends Specification {
 

@@ -85,6 +85,13 @@ abstract class AbstractGormApiRegistry<T extends AbstractDatastoreApi> {
                 api = qualify(defaultApi, normalizedQualifier)
                 if (api != null) {
                     classQualifiedApis.put(normalizedQualifier, api)
+                    // register(className, newApi) does apis.put(new) then qualifiedApis.remove(..).
+                    // If that remove ran between our read of defaultApi and the put above, the
+                    // cached entry would be derived from a stale default API and survive
+                    // indefinitely. Re-validate after publishing and retract if superseded.
+                    if (!defaultApi.is(apis.get(normalizedClassName))) {
+                        classQualifiedApis.remove(normalizedQualifier, api)
+                    }
                 }
             }
             return api

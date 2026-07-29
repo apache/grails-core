@@ -166,7 +166,7 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
 
     public void setApplicationContext(ApplicationContext ctx) {
         applicationContext = ctx;
-        this.applicationEventPublisher = (ctx instanceof ApplicationEventPublisher) ? (ApplicationEventPublisher) ctx : null;
+        this.applicationEventPublisher = ctx;
     }
 
     public Session connect() {

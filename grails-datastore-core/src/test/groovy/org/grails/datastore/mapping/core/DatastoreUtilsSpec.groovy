@@ -164,6 +164,33 @@ class DatastoreUtilsSpec extends Specification {
         !TransactionSynchronizationManager.hasResource(datastore)
     }
 
+    void "execute survives a bound but empty SessionHolder by stacking onto it instead of rebinding"() {
+        given: "a holder left bound after its only session was removed, and a datastore with resolver-backed hasCurrentSession"
+        Datastore datastore = new AbstractDatastoreSpec.TestDatastore(null, null, null)
+        Session stale = Mock()
+        stale.getDatastore() >> datastore
+        stale.isConnected() >> true
+        DatastoreUtils.bindSession(stale)
+        SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.getResource(datastore)
+        holder.removeSession(stale)
+
+        and: "a fresh session for the callback"
+        Session fresh = Mock()
+        fresh.getDatastore() >> datastore
+        fresh.isConnected() >> true
+        datastore.sessionCreator = { fresh }
+
+        when:
+        def result = DatastoreUtils.execute(datastore, { Session session -> session } as SessionCallback)
+
+        then: "no 'already value bound' failure, and the temporary session is cleaned up"
+        result.is(fresh)
+        1 * fresh.disconnect()
+
+        cleanup:
+        TransactionSynchronizationManager.unbindResourceIfPossible(datastore)
+    }
+
     void "executeWithNewSession cleans up correctly when connect() returns a session owned by a different datastore"() {
         given: "a parent datastore whose connect() hands out a child datastore's session, like ChildHibernateDatastore"
         Datastore parent = Mock()

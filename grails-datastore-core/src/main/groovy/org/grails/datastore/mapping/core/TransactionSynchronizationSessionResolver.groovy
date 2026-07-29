@@ -31,8 +31,14 @@ import org.grails.datastore.mapping.transactions.SessionHolder
  * a thin, stateless view over the one authoritative session stack for its owning datastore, rather
  * than an independent thread-local store that could disagree with it. Nested bindings are supported
  * because {@link SessionHolder} itself is a stack: {@link #bind(Session)} pushes, {@link #resolve()}
- * returns the top, and {@link #unbind()} closes and pops only the top session, restoring the outer
- * binding rather than discarding the whole holder.
+ * returns the topmost still-connected session, and {@link #unbind()} closes and pops only the top
+ * session, restoring the outer binding rather than discarding the whole holder.
+ * <p>
+ * {@link #resolve()} performs the same housekeeping as {@code DatastoreUtils.doGetSession}:
+ * disconnected sessions are evicted from the holder, and a holder left empty by eviction is
+ * unbound (unless it is synchronized with an active transaction, in which case the transaction
+ * manager owns its lifecycle) so that a stale binding can never block a later
+ * {@code bindSession}.
  *
  * @author Walter Duque de Estrada
  * @since 8.0
@@ -49,7 +55,17 @@ class TransactionSynchronizationSessionResolver implements SessionResolver {
     @Override
     Session resolve() {
         SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.getResource(datastore)
-        return holder != null ? holder.getValidatedSession() : null
+        if (holder == null) {
+            return null
+        }
+        Session session = holder.getValidatedSession()
+        while (session == null && !holder.isEmpty()) {
+            session = holder.getValidatedSession()
+        }
+        if (session == null && !holder.isSynchronizedWithTransaction()) {
+            TransactionSynchronizationManager.unbindResourceIfPossible(datastore)
+        }
+        return session
     }
 
     @Override

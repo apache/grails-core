@@ -18,11 +18,13 @@
  */
 package org.grails.datastore.mapping.core.connections
 
-import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller
-import org.grails.datastore.mapping.multitenancy.TenantResolver
 import org.springframework.core.env.PropertyResolver
 import org.springframework.core.env.StandardEnvironment
+
 import spock.lang.Specification
+
+import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller
+import org.grails.datastore.mapping.multitenancy.TenantResolver
 
 class AbstractConnectionSourceFactorySpec extends Specification {
 

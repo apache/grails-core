@@ -321,13 +321,22 @@ class GormStaticApiSpec extends Specification {
         api.whereAny { eq('name', 'a') }.count() == 1
     }
 
-    void "saveAll persists a varargs and an iterable batch"() {
+    void "saveAll persists a varargs and an iterable batch without forcing a flush of its own"() {
         given:
         def api = new GormStaticApi(GormStaticApiThing, datastore, [])
 
-        expect:
-        api.saveAll(new GormStaticApiThing(name: 'a'), new GormStaticApiThing(name: 'b')).size() == 2
-        api.saveAll([new GormStaticApiThing(name: 'c')]).size() == 1
+        when: "saveAll runs inside a bound session, like the baseline no-flush contract expects"
+        def varargsIds = null
+        def iterableIds = null
+        api.withNewSession { Session session ->
+            varargsIds = api.saveAll(new GormStaticApiThing(name: 'a'), new GormStaticApiThing(name: 'b'))
+            iterableIds = api.saveAll([new GormStaticApiThing(name: 'c')])
+            session.flush()
+        }
+
+        then: "the persisted ids are returned and the flushed batch is visible afterwards"
+        varargsIds.size() == 2
+        iterableIds.size() == 1
         api.count() == 3
     }
 

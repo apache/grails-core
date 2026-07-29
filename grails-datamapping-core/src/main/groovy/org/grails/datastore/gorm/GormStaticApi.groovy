@@ -39,6 +39,7 @@ import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.SessionCallback
+import org.grails.datastore.mapping.core.StatelessDatastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSources
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
@@ -465,9 +466,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     @Override
     List<Serializable> saveAll(Iterable<?> objectsToSave) {
         execute({ Session session ->
-            List<Serializable> ids = session.persist(objectsToSave)
-            session.flush()
-            ids
+            session.persist(objectsToSave)
         } as SessionCallback<List<Serializable>>)
     }
 
@@ -729,9 +728,18 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     @Override
     def <T1> T1 withStatelessSession(Closure<T1> callable) {
         Datastore ds = getDatastore()
-        DatastoreUtils.executeWithNewSession(ds, { Session session ->
-            callable.call(session)
-        } as SessionCallback<T1>)
+        if (ds instanceof StatelessDatastore) {
+            Session session = DatastoreUtils.bindNewSession(ds.connectStateless())
+            try {
+                return callable.call(session)
+            }
+            finally {
+                DatastoreUtils.unbindSession(session)
+            }
+        }
+        else {
+            throw new UnsupportedOperationException('Stateless sessions not supported by implementation')
+        }
     }
 
     @Override

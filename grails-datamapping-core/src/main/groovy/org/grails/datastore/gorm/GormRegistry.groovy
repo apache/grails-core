@@ -392,6 +392,16 @@ class GormRegistry {
         staticApiRegistry.removeDatastore(datastore)
         instanceApiRegistry.removeDatastore(datastore)
         validationApiRegistry.removeDatastore(datastore)
+
+        // When the last datastore goes away (application shutdown, or test/dev-reload cycles),
+        // drop the normalization caches too: normalizedEntityKeysByClass holds strong Class
+        // references (classloader retention across reloads) and normalizedQualifiers grows by one
+        // entry per tenant identifier ever seen.
+        if (allDatastores.isEmpty()) {
+            normalizedEntityKeysByClass.clear()
+            normalizedEntityKeysByName.clear()
+            normalizedQualifiers.clear()
+        }
     }
 
     /**
@@ -722,7 +732,10 @@ class GormRegistry {
         List<String> qualifiers = connectionSourceNames ?: Collections.singletonList(ConnectionSource.DEFAULT)
         boolean multiTenantEntity = entity instanceof PersistentEntity && ((PersistentEntity) entity).isMultiTenant()
 
-        entityDatastores.remove(normalizedClassName)
+        // Accumulate the entity's qualifier routing into a local map and publish it with a single
+        // put below: remove-then-repopulate would open a window where a concurrent lookup sees no
+        // routing for this entity at all and falls back to the wrong datastore.
+        Map<String, Datastore> newEntityDatastores = new ConcurrentHashMap<>()
 
         Datastore primaryDatastore = defaultDatastore
 
@@ -756,7 +769,7 @@ class GormRegistry {
                 primaryDatastore = qualifierDatastore
             }
             registerDatastoreByQualifier(normalizedQualifier, qualifierDatastore)
-            registerEntityDatastore(normalizedClassName, normalizedQualifier, qualifierDatastore)
+            newEntityDatastores.put(normalizedQualifier, qualifierDatastore)
         }
 
         // If the entity does not explicitly include DEFAULT, route its unqualified (no-connection)
@@ -770,7 +783,16 @@ class GormRegistry {
                     !((MultipleConnectionSourceCapableDatastore) defaultDatastore).routesUnqualifiedToMappedConnection()) {
                 defaultConnectionDatastore = defaultDatastore
             }
-            registerEntityDatastore(normalizedClassName, ConnectionSource.DEFAULT, defaultConnectionDatastore)
+            if (defaultConnectionDatastore != null) {
+                newEntityDatastores.put(ConnectionSource.DEFAULT, defaultConnectionDatastore)
+            }
+        }
+
+        if (newEntityDatastores.isEmpty()) {
+            entityDatastores.remove(normalizedClassName)
+        }
+        else {
+            entityDatastores.put(normalizedClassName, newEntityDatastores)
         }
     }
 

@@ -37,8 +37,9 @@ interface SessionResolver {
     /**
      * Resolves the current valid session bound in the current context (thread), or {@code null}
      * if none is bound. Implementations must return only sessions that
-     * {@link Session#isConnected()} - a stale, disconnected session is evicted rather than
-     * returned, matching {@code DatastoreUtils.doGetSession}'s validation semantics.
+     * {@link Session#isConnected()} - stale, disconnected sessions are evicted rather than
+     * returned (and a binding left empty by eviction is cleaned up), matching
+     * {@code DatastoreUtils.doGetSession}'s validation semantics.
      */
     Session resolve()
 
@@ -55,7 +56,8 @@ interface SessionResolver {
      * Unbinds <b>and closes</b> the current session, restoring the previously-bound session (if
      * any) as current. Equivalent to {@code DatastoreUtils.unbindSession(resolve())}: the popped
      * session is closed (or registered for deferred close), so callers must not continue using a
-     * session after unbinding it. Does nothing if no session is bound.
+     * session after unbinding it. When no valid session is bound, no session is closed (though
+     * the same stale-binding housekeeping as {@link #resolve()} may still occur).
      */
     void unbind()
 }

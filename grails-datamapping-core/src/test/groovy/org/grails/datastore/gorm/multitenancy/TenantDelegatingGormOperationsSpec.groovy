@@ -60,6 +60,21 @@ class TenantDelegatingGormOperationsSpec extends Specification {
         return new TenantDelegatingGormOperations<Object>(tenantDatastore, 'tenant1', delegate)
     }
 
+    void "delete(instance, params) delegates to the wrapped delete, not save"() {
+        given:
+        def delegate = Mock(GormAllOperations)
+        def ops = buildOperations(delegate)
+        def instance = new Object()
+        def params = [flush: true]
+
+        when:
+        ops.delete(instance, params)
+
+        then:
+        1 * delegate.delete(instance, params)
+        0 * delegate.save(_, _)
+    }
+
     void "deleteAll() delegates to the wrapped operations under the bound tenant"() {
         given:
         def delegate = Mock(GormAllOperations)
