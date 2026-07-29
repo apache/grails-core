@@ -62,7 +62,7 @@ dependencies {
     api 'org.slf4j:jcl-over-slf4j'
 
     // Testing
-    testImplementation 'org.slf4j:slf4j-simple'
+    testImplementation(testFixtures(project(':grails-core')))
     testImplementation 'org.spockframework:spock-core'
 }
 
