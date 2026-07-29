@@ -1528,6 +1528,27 @@ Both hooks may be used on the same plugin during migration; when a registrar and
 
 **Bean-definition overriding edge case.** Grails defaults `spring.main.allow-bean-definition-overriding` to `true`, and under that default nothing changes: an application bean (from the application class, `resources.groovy` or `resources.xml`) that uses the same name as a plugin bean still replaces the plugin's bean. However, because plugin beans now register earlier and application beans register in a separate, later step, an application that explicitly sets `spring.main.allow-bean-definition-overriding` to `false` will see a `BeanDefinitionOverrideException` for an application bean that shadows a plugin bean — in previous releases the two definitions were merged before a single registry write, so the shadowing was silent even with overriding disabled.
 
+
+==== 34. Compile-Time GORM Query Safety Check
+
+Grails 8 adds a compile-time check that can **break existing builds**: passing a GORM query method (`find`, `findAll`, `executeQuery`, `executeUpdate`, and the Neo4j Cypher equivalents) a `String`-typed variable that was built from an interpolated `GString` is now a compile error, not just a discouraged pattern.
+
+[source,groovy]
+----
+def vulnerable() {
+    String query = "from Book as b where b.title = ${params.title}"  // fails to compile
+    def books = Book.executeQuery(query)
+}
+----
+
+This is flagged because passing the `GString` *directly* to `executeQuery` is safe — GORM binds the interpolated value as a query parameter — but assigning it to a `String`-typed local first causes Groovy to coerce it to a plain `String` at that point, silently discarding the safe binding; the interpolated value is then embedded as raw, unescaped query text. See <<sqlInjection,SQL injection>> for the full explanation and examples.
+
+If your application has this pattern, fix it by keeping the query a `GString` all the way to the call, or by using named/positional parameters instead. For a call site that has been reviewed and is genuinely safe, add `@SuppressWarnings("GormUnsafeQueryString")` to the enclosing method rather than restructuring the code.
+
+This check runs automatically wherever `grails-datamapping-core` is on the compile classpath, with no opt-in configuration required. If it produces a false positive with no workaround, the whole check can be disabled by setting the `protectSqlInjectionAttacks` system property to `false` (it defaults to `true`) — this is a last-resort, build-wide kill switch, not a substitute for the per-call-site `@SuppressWarnings` above.
+
+The same check also emits (non-build-breaking) **compile-time warnings**, not errors, for two related but lower-confidence patterns: a `String`-typed field assigned an interpolated `GString` and later read through `this.field` in a query call, and query text built with `+` concatenation from a non-constant value with no `GString` involved. Neither of these fails the build, but both are worth reviewing — see <<sqlInjection,SQL injection>> for examples of both.
+
 **Most applications and plugins need no action.** Behavior only changes where a plugin bean and a conditional Boot bean competed for the same name or type — the plugin bean now wins, which is almost always the intended outcome.
 
 ==== 34. Extension API Compatibility Notes
