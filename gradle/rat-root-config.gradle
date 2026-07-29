@@ -19,7 +19,7 @@ apply plugin: 'org.nosphere.apache.rat'
 
 tasks.named('rat') {
     def allExcludes = [
-            '.asf.yaml', // ASF metadata for github integration excluded from src zip
+            '.asf.yaml', // ASF metadata for GitHub integration; kept in source archives, excluded from RAT only
             '.omo/**', // local agent work state excluded from src zip
             '.worktrees/**', // standard location for agent/tooling git worktrees, never shipped
             '.claude/settings.json', // JSON files cannot contain license headers

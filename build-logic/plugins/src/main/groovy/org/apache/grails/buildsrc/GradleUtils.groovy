@@ -41,7 +41,11 @@ class GradleUtils {
 
     static Directory findAsfRootDir(Directory currentDirectory) {
         def asfFile = currentDirectory.file('.asf.yaml').asFile
-        asfFile.exists() ? currentDirectory : findAsfRootDir(currentDirectory.dir('../'))
+        if (asfFile.exists()) {
+            return currentDirectory
+        }
+        File parent = currentDirectory.asFile.parentFile
+        parent && parent != currentDirectory.asFile ? findAsfRootDir(currentDirectory.dir('../')) : null
     }
 
     static Provider<Boolean> booleanProvider(Project project, String name, boolean defaultValue = false) {

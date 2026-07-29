@@ -382,7 +382,7 @@ jobs:
           -x 'grails/.github/*'
           -x 'grails/.omo/*'
           -x 'grails/.worktrees/*'
-          -x 'grails/.asf.yaml'
+          -x 'grails/worktrees/*'
           -x 'grails/.mailmap'
       - name: "🔐 Set up GPG" # use env var to not expose the key
         env:
