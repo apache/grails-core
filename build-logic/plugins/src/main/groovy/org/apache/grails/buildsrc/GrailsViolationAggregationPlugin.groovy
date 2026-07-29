@@ -74,8 +74,6 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
 
     static final String DEFAULT_JACOCO_EXCLUDED_CLASS_PREFIXES = 'org.grails.orm.hibernate.support.hibernate7.'
 
-    private static final String CANONICAL_ROOT_MARKER = '.github/workflows'
-
     @Override
     void apply(Project project) {
         if (project != project.rootProject) {
@@ -86,7 +84,8 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
         }
 
         def violationsDir = project.layout.buildDirectory.dir('reports/violations')
-        TaskProvider<RepositoryConventionsTask> repositoryConventionsTask = project.file(CANONICAL_ROOT_MARKER).isDirectory() ?
+        TaskProvider<RepositoryConventionsTask> repositoryConventionsTask = project.file('.asf.yaml').isFile() &&
+                GradleUtils.findRootGrailsCoreDir(project).asFile == project.projectDir ?
                 registerRepositoryConventions(project, violationsDir) : null
         def styleTask = registerStyleAggregation(project, violationsDir)
         def analysisTask = registerAnalysisAggregation(project, violationsDir)
@@ -98,6 +97,7 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
             task.dependsOn(styleTask, analysisTask)
             if (repositoryConventionsTask) {
                 task.dependsOn(repositoryConventionsTask)
+                task.dependsOn(project.tasks.named { String name -> name == 'rat' })
             }
         }
     }
@@ -107,22 +107,29 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
             task.group = 'verification'
             task.description = 'Validates repository conventions and writes build/reports/violations/REPOSITORY_CONVENTIONS.md'
             task.repositoryDirectory.set(root.layout.projectDirectory)
+            List<String> buildOutputExcludes = root.allprojects.collect { Project sub ->
+                root.layout.projectDirectory.asFile.toPath()
+                        .relativize(sub.layout.buildDirectory.get().asFile.toPath())
+                        .toString().replace(File.separator, '/') + '/**'
+            }
             task.conventionSources.from(
                     root.file('AGENTS.md'),
                     root.fileTree('.agents/skills') { include '*/SKILL.md' },
                     root.fileTree('.github/workflows') { include '**/*.yml', '**/*.yaml' },
                     root.fileTree('.') {
                         include '**/action.yml', '**/action.yaml'
-                        exclude '**/build/**', '**/generated/**', '**/.gradle/**', '**/.git/**', '**/.hg/**', '**/.svn/**'
+                        exclude(buildOutputExcludes)
+                        exclude '**/.gradle/**', '**/.git/**', '**/.hg/**', '**/.svn/**'
                     },
                     root.fileTree('.') {
-                        include '**/messages*.properties'
-                        exclude '**/build/**', '**/generated/**'
+                        include '**/grails-app/i18n/**/*.properties'
+                        exclude(buildOutputExcludes)
+                        exclude '**/.gradle/**', '**/.git/**', '**/.hg/**', '**/.svn/**'
                     }
             )
             task.reportFile.set(violationsDir.map { it.file('REPOSITORY_CONVENTIONS.md') })
             task.outputs.upToDateWhen { false }
-            task.dependsOn(root.tasks.matching { Task candidate -> candidate.name == 'rat' })
+            task.mustRunAfter(root.tasks.named { String name -> name == 'rat' })
         }
     }
 
@@ -134,14 +141,12 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
         def checkstyleEnabled = GradleUtils.booleanProvider(root, GrailsCodeStylePlugin.CHECKSTYLE_ENABLED_PROPERTY, true)
         def codenarcMarkers = root.files()
         def checkstyleMarkers = root.files()
-        def codenarcReports = root.files()
-        def checkstyleReports = root.files()
         def codenarcMarkdown = root.layout.buildDirectory.file('reports/violations/CODENARC_VIOLATIONS.md')
         def checkstyleMarkdown = root.layout.buildDirectory.file('reports/violations/CHECKSTYLE_VIOLATIONS.md')
         def cleanupTask = root.tasks.register('cleanAggregateStyleReports') {
             it.doLast {
-                deleteReports(codenarcMarkers.files, codenarcReports.files)
-                deleteReports(checkstyleMarkers.files, checkstyleReports.files)
+                deleteReports(codenarcMarkers.files)
+                deleteReports(checkstyleMarkers.files)
             }
         }
 
@@ -150,7 +155,6 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
             it.description = 'Writes CodeNarc and Checkstyle violation reports into build/reports/violations/'
             it.inputs.files(codenarcMarkers).optional()
             it.inputs.files(checkstyleMarkers).optional()
-            it.inputs.property('ignoreFailures', ignoreFailures)
             it.outputs.file(codenarcMarkdown)
             it.outputs.file(checkstyleMarkdown)
             it.outputs.upToDateWhen { false }
@@ -161,7 +165,7 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
             it.doLast {
                 parseStyleViolations(codenarcMarkers.files, checkstyleMarkers.files, rootDirectory, violationsDir.get(),
                     checkStyleTests.get(), codenarcEnabled.get(),
-                    checkstyleEnabled.get(), ignoreFailures.get())
+                    checkstyleEnabled.get())
             }
         }
         def aggregateTask = root.tasks.register('aggregateStyleViolations') {
@@ -169,31 +173,26 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
             it.description = 'Aggregates CodeNarc and Checkstyle violations into build/reports/violations/'
             it.dependsOn(writerTask)
         }
-        if (root.tasks.names.contains('validateRepositoryConventions')) {
-            aggregateTask.configure { it.dependsOn(root.tasks.named('validateRepositoryConventions')) }
-        }
-        def finalizeTask = root.tasks.register('finalizeStyleViolations') {
-            it.group = 'verification'
-            it.dependsOn(writerTask)
-        }
         root.allprojects { Project sub ->
-            sub.tasks.withType(CodeNarc).all { CodeNarc codeNarcTask ->
-                codenarcMarkers.from(GradleUtils.reportMarker(sub, 'codenarc', codeNarcTask.name))
-                def reportLocation = codeNarcTask.reports.xml.outputLocation
-                codenarcReports.from { reportLocation.get().asFile }
-                codeNarcTask.dependsOn(cleanupTask)
-                codeNarcTask.finalizedBy(finalizeTask)
-                writerTask.configure { it.mustRunAfter(codeNarcTask) }
-                aggregateTask.configure { it.dependsOn(codeNarcTask) }
+            def codenarcTasks = sub.tasks.withType(CodeNarc)
+            aggregateTask.configure {
+                it.dependsOn(codenarcTasks)
+                it.dependsOn(cleanupTask)
             }
-            sub.tasks.withType(Checkstyle).all { Checkstyle checkstyleTask ->
+            writerTask.configure { it.mustRunAfter(codenarcTasks) }
+            codenarcTasks.configureEach { CodeNarc codeNarcTask ->
+                codenarcMarkers.from(GradleUtils.reportMarker(sub, 'codenarc', codeNarcTask.name))
+                codeNarcTask.mustRunAfter(cleanupTask)
+            }
+            def checkstyleTasks = sub.tasks.withType(Checkstyle)
+            aggregateTask.configure {
+                it.dependsOn(checkstyleTasks)
+                it.dependsOn(cleanupTask)
+            }
+            writerTask.configure { it.mustRunAfter(checkstyleTasks) }
+            checkstyleTasks.configureEach { Checkstyle checkstyleTask ->
                 checkstyleMarkers.from(GradleUtils.reportMarker(sub, 'checkstyle', checkstyleTask.name))
-                def reportLocation = checkstyleTask.reports.xml.outputLocation
-                checkstyleReports.from { reportLocation.get().asFile }
-                checkstyleTask.dependsOn(cleanupTask)
-                checkstyleTask.finalizedBy(finalizeTask)
-                writerTask.configure { it.mustRunAfter(checkstyleTask) }
-                aggregateTask.configure { it.dependsOn(checkstyleTask) }
+                checkstyleTask.mustRunAfter(cleanupTask)
             }
         }
         aggregateTask
@@ -204,25 +203,35 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
         def checkAnalysisTests = GradleUtils.booleanProvider(root, GrailsCodeAnalysisPlugin.TEST_ANALYSIS_PROPERTY)
         def ignoreFailures = GradleUtils.booleanProvider(root, GrailsCodeAnalysisPlugin.IGNORE_FAILURES_PROPERTY)
         def pmdEnabled = GradleUtils.booleanProvider(root, GrailsCodeAnalysisPlugin.PMD_ENABLED_PROPERTY)
-        def pmdEnabledProjectPaths = root.providers.gradleProperty(GrailsCodeAnalysisPlugin.PMD_ENABLED_PROJECTS_PROPERTY)
+        def pmdConfiguredProjectPaths = root.providers.gradleProperty(GrailsCodeAnalysisPlugin.PMD_ENABLED_PROJECTS_PROPERTY)
                 .map { configuredProjectPaths(it) }
                 .orElse([])
         def spotbugsEnabled = GradleUtils.booleanProvider(root, GrailsCodeAnalysisPlugin.SPOTBUGS_ENABLED_PROPERTY)
-        def spotbugsEnabledProjectPaths = root.providers.gradleProperty(GrailsCodeAnalysisPlugin.SPOTBUGS_ENABLED_PROJECTS_PROPERTY)
+        def spotbugsConfiguredProjectPaths = root.providers.gradleProperty(GrailsCodeAnalysisPlugin.SPOTBUGS_ENABLED_PROJECTS_PROPERTY)
                 .map { configuredProjectPaths(it) }
                 .orElse([])
         List<String> knownProjectPaths = root.allprojects.findAll { Project candidate -> candidate != root }
                 .collect { Project candidate -> candidate.path }.sort()
         def pmdMarkers = root.files()
         def spotbugsMarkers = root.files()
-        def pmdReports = root.files()
-        def spotbugsReports = root.files()
+        Set<String> pmdEnabledProjectPaths = [] as Set<String>
+        Set<String> spotbugsEnabledProjectPaths = [] as Set<String>
+        root.allprojects { Project sub ->
+            sub.pluginManager.withPlugin('pmd') {
+                pmdEnabledProjectPaths << sub.path
+            }
+            sub.pluginManager.withPlugin('com.github.spotbugs') {
+                spotbugsEnabledProjectPaths << sub.path
+            }
+        }
+        def activePmdProjectPaths = root.providers.provider { pmdEnabledProjectPaths.toList().sort() }
+        def activeSpotbugsProjectPaths = root.providers.provider { spotbugsEnabledProjectPaths.toList().sort() }
         def pmdMarkdown = root.layout.buildDirectory.file('reports/violations/PMD_VIOLATIONS.md')
         def spotbugsMarkdown = root.layout.buildDirectory.file('reports/violations/SPOTBUGS_VIOLATIONS.md')
         def cleanupTask = root.tasks.register('cleanAggregateAnalysisReports') {
             it.doLast {
-                deleteReports(pmdMarkers.files, pmdReports.files)
-                deleteReports(spotbugsMarkers.files, spotbugsReports.files)
+                deleteReports(pmdMarkers.files)
+                deleteReports(spotbugsMarkers.files)
             }
         }
 
@@ -233,25 +242,25 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
             it.inputs.files(spotbugsMarkers).optional()
             it.inputs.property('ignoreFailures', ignoreFailures)
             it.inputs.property('pmdEnabled', pmdEnabled)
-            it.inputs.property('pmdEnabledProjectPaths', pmdEnabledProjectPaths)
+            it.inputs.property('pmdEnabledProjectPaths', activePmdProjectPaths)
             it.inputs.property('spotbugsEnabled', spotbugsEnabled)
-            it.inputs.property('spotbugsEnabledProjectPaths', spotbugsEnabledProjectPaths)
+            it.inputs.property('spotbugsEnabledProjectPaths', activeSpotbugsProjectPaths)
             it.inputs.property('knownProjectPaths', knownProjectPaths)
             it.outputs.file(pmdMarkdown)
             it.outputs.file(spotbugsMarkdown)
             it.outputs.upToDateWhen { false }
             it.doLast {
                 parseAnalysisViolations(pmdMarkers.files, spotbugsMarkers.files, rootDirectory, violationsDir.get(),
-                    checkAnalysisTests.get(), pmdEnabled.get(), pmdEnabledProjectPaths.get(),
-                    spotbugsEnabled.get(), spotbugsEnabledProjectPaths.get(), ignoreFailures.get())
+                    checkAnalysisTests.get(), pmdEnabled.get(), activePmdProjectPaths.get(),
+                    spotbugsEnabled.get(), activeSpotbugsProjectPaths.get(), ignoreFailures.get())
             }
             it.doFirst {
                 pmdMarkdown.get().asFile.delete()
                 spotbugsMarkdown.get().asFile.delete()
                 validateConfiguredProjectPaths(GrailsCodeAnalysisPlugin.PMD_ENABLED_PROJECTS_PROPERTY,
-                        pmdEnabledProjectPaths.get(), knownProjectPaths)
+                        pmdConfiguredProjectPaths.get(), knownProjectPaths)
                 validateConfiguredProjectPaths(GrailsCodeAnalysisPlugin.SPOTBUGS_ENABLED_PROJECTS_PROPERTY,
-                        spotbugsEnabledProjectPaths.get(), knownProjectPaths)
+                        spotbugsConfiguredProjectPaths.get(), knownProjectPaths)
             }
         }
         def aggregateTask = root.tasks.register('aggregateAnalysisViolations') {
@@ -259,28 +268,26 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
             it.description = 'Aggregates PMD and SpotBugs violations into build/reports/violations/'
             it.dependsOn(writerTask)
         }
-        def finalizeTask = root.tasks.register('finalizeAnalysisViolations') {
-            it.group = 'verification'
-            it.dependsOn(writerTask)
-        }
         root.allprojects { Project sub ->
-            sub.tasks.withType(Pmd).all { Pmd pmdTask ->
-                pmdMarkers.from(GradleUtils.reportMarker(sub, 'pmd', pmdTask.name))
-                def reportLocation = pmdTask.reports.xml.outputLocation
-                pmdReports.from { reportLocation.get().asFile }
-                pmdTask.dependsOn(cleanupTask)
-                pmdTask.finalizedBy(finalizeTask)
-                writerTask.configure { it.mustRunAfter(pmdTask) }
-                aggregateTask.configure { it.dependsOn(pmdTask) }
+            def pmdTasks = sub.tasks.withType(Pmd)
+            aggregateTask.configure {
+                it.dependsOn(pmdTasks)
+                it.dependsOn(cleanupTask)
             }
-            sub.tasks.withType(SpotBugsTask).all { SpotBugsTask spotbugsTask ->
+            writerTask.configure { it.mustRunAfter(pmdTasks) }
+            pmdTasks.configureEach { Pmd pmdTask ->
+                pmdMarkers.from(GradleUtils.reportMarker(sub, 'pmd', pmdTask.name))
+                pmdTask.mustRunAfter(cleanupTask)
+            }
+            def spotbugsTasks = sub.tasks.withType(SpotBugsTask)
+            aggregateTask.configure {
+                it.dependsOn(spotbugsTasks)
+                it.dependsOn(cleanupTask)
+            }
+            writerTask.configure { it.mustRunAfter(spotbugsTasks) }
+            spotbugsTasks.configureEach { SpotBugsTask spotbugsTask ->
                 spotbugsMarkers.from(GradleUtils.reportMarker(sub, 'spotbugs', spotbugsTask.name))
-                def reportLocation = spotbugsTask.reports.maybeCreate('xml').outputLocation
-                spotbugsReports.from { reportLocation.get().asFile }
-                spotbugsTask.dependsOn(cleanupTask)
-                spotbugsTask.finalizedBy(finalizeTask)
-                writerTask.configure { it.mustRunAfter(spotbugsTask) }
-                aggregateTask.configure { it.dependsOn(spotbugsTask) }
+                spotbugsTask.mustRunAfter(cleanupTask)
             }
         }
         aggregateTask
@@ -351,7 +358,8 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
     }
 
     @CompileDynamic
-    private static void writeReport(Directory violationsDir, String fileName, List violations, String title, String disabledMessage = null) {
+    private static void writeReport(Directory violationsDir, String fileName, List violations, String title,
+            Collection<String> modules, String disabledMessage = null) {
         def reportFile = new File(
                 violationsDir.asFile.tap { it.mkdirs() },
                 fileName
@@ -359,6 +367,7 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
         def text = new StringBuilder()
         text.append("# ${title}\n")
         text.append("Generated on: ${LocalDateTime.now().format(TIMESTAMP_FORMAT)}\n\n")
+        text.append("Modules analyzed: ${modules.isEmpty() ? 'none' : modules.toList().sort().join(', ')}\n\n")
 
         if (disabledMessage) {
             text.append("${disabledMessage}\n")
@@ -384,7 +393,7 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
     @CompileDynamic
     private static void parseStyleViolations(Set<File> codenarcMarkers, Set<File> checkstyleMarkers, Directory rootDirectory,
             Directory violationsDir, boolean checkStyleTests,
-            boolean codenarcEnabled, boolean checkstyleEnabled, boolean ignoreFailures) {
+            boolean codenarcEnabled, boolean checkstyleEnabled) {
         def slurper = createSecureSlurper()
         def missingReports = []
 
@@ -400,11 +409,13 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
 
         // CodeNarc
         def codenarcViolations = []
+        Set<String> codenarcModules = [] as Set<String>
         if (codenarcEnabled) {
             codenarcMarkers.each { File marker ->
                 if (!marker.exists() || (!checkStyleTests && isTestFile(marker.name))) {
                     return
                 }
+                codenarcModules << resolveModule(marker.name)
                 File file = reportForMarker(marker, rootDirectory)
                 if (!file || !file.exists() || file.size() == 0) {
                     def violation = missingReportViolation(resolveModule(marker.name), 'CodeNarc')
@@ -439,15 +450,17 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
                 }
             }
         }
-        writeReport(violationsDir, 'CODENARC_VIOLATIONS.md', codenarcViolations, 'CodeNarc Violations Summary')
+        writeReport(violationsDir, 'CODENARC_VIOLATIONS.md', codenarcViolations, 'CodeNarc Violations Summary', codenarcModules)
 
         // Checkstyle
         def checkstyleViolations = []
+        Set<String> checkstyleModules = [] as Set<String>
         if (checkstyleEnabled) {
             checkstyleMarkers.each { File marker ->
                 if (!marker.exists() || (!checkStyleTests && isTestFile(marker.name))) {
                     return
                 }
+                checkstyleModules << resolveModule(marker.name)
                 File file = reportForMarker(marker, rootDirectory)
                 if (!file || !file.exists() || file.size() == 0) {
                     def violation = missingReportViolation(resolveModule(marker.name), 'Checkstyle')
@@ -484,7 +497,7 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
                 }
             }
         }
-        writeReport(violationsDir, 'CHECKSTYLE_VIOLATIONS.md', checkstyleViolations, 'Checkstyle Violations Summary')
+        writeReport(violationsDir, 'CHECKSTYLE_VIOLATIONS.md', checkstyleViolations, 'Checkstyle Violations Summary', checkstyleModules)
         if (!missingReports.isEmpty()) {
             throw new GradleException('Expected style XML reports were not generated. See build/reports/violations/ for details.')
         }
@@ -509,12 +522,14 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
 
         // PMD
         def pmdViolations = []
+        Set<String> pmdModules = [] as Set<String>
         if (pmdEnabledForAnyProject) {
             pmdMarkers.each { File marker ->
                 if (!marker.exists() || (!checkAnalysisTests && isTestFile(marker.name))) {
                     return
                 }
                 def module = resolveModule(marker.name)
+                pmdModules << module
                 File file = reportForMarker(marker, rootDirectory)
                 if (!file || !file.exists() || file.size() == 0) {
                     def violation = missingReportViolation(module, 'PMD')
@@ -541,17 +556,19 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
                 }
             }
         }
-        writeReport(violationsDir, 'PMD_VIOLATIONS.md', pmdViolations, 'PMD Violations Summary',
+        writeReport(violationsDir, 'PMD_VIOLATIONS.md', pmdViolations, 'PMD Violations Summary', pmdModules,
                 pmdEnabledForAnyProject ? null : 'PMD is disabled.')
 
         // SpotBugs
         def spotbugsViolations = []
+        Set<String> spotbugsModules = [] as Set<String>
         if (spotbugsEnabledForAnyProject) {
             spotbugsMarkers.each { File marker ->
                 if (!marker.exists() || (!checkAnalysisTests && isTestFile(marker.name))) {
                     return
                 }
                 def module = resolveModule(marker.name)
+                spotbugsModules << module
                 File file = reportForMarker(marker, rootDirectory)
                 if (!file || !file.exists() || file.size() == 0) {
                     def violation = missingReportViolation(module, 'SpotBugs')
@@ -576,7 +593,7 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
                 }
             }
         }
-        writeReport(violationsDir, 'SPOTBUGS_VIOLATIONS.md', spotbugsViolations, 'SpotBugs Violations Summary',
+        writeReport(violationsDir, 'SPOTBUGS_VIOLATIONS.md', spotbugsViolations, 'SpotBugs Violations Summary', spotbugsModules,
                 spotbugsEnabledForAnyProject ? null : 'SpotBugs is disabled.')
         boolean hasFindings = (pmdViolations + spotbugsViolations).any { it.type != 'MissingReport' }
         if (!missingReports.isEmpty() || (!ignoreFailures && hasFindings)) {
@@ -603,8 +620,7 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
         new File(rootDirectory.asFile, relativeReportPath)
     }
 
-    private static void deleteReports(Set<File> markers, Set<File> reports) {
-        reports.each { File report -> report.delete() }
+    private static void deleteReports(Set<File> markers) {
         markers.each { File marker ->
             marker.delete()
         }

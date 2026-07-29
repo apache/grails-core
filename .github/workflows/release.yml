@@ -87,7 +87,7 @@ jobs:
           cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "⚙️ Run pre-release"
-        uses: apache/grails-github-actions/pre-release@fe90f651c47c5230cdd70b6fee0e0d250fea30ac # asf
+        uses: apache/grails-github-actions/pre-release@asf
         env:
           RELEASE_VERSION: ${{ env.VERSION }}
           RELEASE_SCRIPT_PATH: '.github/scripts/setReleasedGrailsVersion.sh'
@@ -224,7 +224,7 @@ jobs:
         # staged from a JDK 25 runner. This is a NEW reproducibility pin -
         # keep $JAVA_VERSION_MICRONAUT synced with the secondary JDK in
         # etc/bin/Dockerfile so verifiers can reproduce the resulting JARs.
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@v4
         with:
           distribution: liberica
           java-version: ${{ env.JAVA_VERSION_MICRONAUT }}
@@ -247,7 +247,7 @@ jobs:
         # downstream checksum/artifact-list combination steps all expect the
         # default JDK 21 toolchain. Also keeps any future steps that touch the
         # repository's own (non-Micronaut) Gradle config on the documented JDK.
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@v4
         with:
           distribution: liberica
           java-version: ${{ env.JAVA_VERSION }}
@@ -372,6 +372,7 @@ jobs:
         run: |
           SOURCE_DATE_EPOCH=$(cat grails/BUILD_DATE)
           find . -depth \( -type f -o -type d \) -exec touch -d "@${SOURCE_DATE_EPOCH}" {} +
+          find . -depth -type l -exec touch -h -d "@${SOURCE_DATE_EPOCH}" {} +
       - name: "📦 Create source distribution ZIP"
         run: >
           zip -yr
@@ -380,12 +381,8 @@ jobs:
           -x 'grails/.git/*'
           -x 'grails/.github/*'
           -x 'grails/.omo/*'
-          -x 'grails/.claude/*'
-          -x 'grails/.clinerules'
-          -x 'grails/.cursorrules'
-          -x 'grails/.windsurfrules'
-          -x 'grails/CLAUDE.md'
-          -x 'grails/GEMINI.md'
+          -x 'grails/.worktrees/*'
+          -x 'grails/.asf.yaml'
           -x 'grails/.mailmap'
       - name: "🔐 Set up GPG" # use env var to not expose the key
         env:
@@ -698,7 +695,7 @@ jobs:
         # Runs on the JDK 21 pin, where settings.gradle auto-prunes the Micronaut island.
         run: ./gradlew grails-doc:build -PgithubBranch=${TARGET_BRANCH}
       - name: "🚀 Publish to GitHub Pages"
-        uses: apache/grails-github-actions/deploy-github-pages@fe90f651c47c5230cdd70b6fee0e0d250fea30ac # asf
+        uses: apache/grails-github-actions/deploy-github-pages@asf
         env:
           GH_TOKEN: ${{ secrets.GRAILS_GHTOKEN }} # To be able to push to grails-website repo
           GRADLE_PUBLISH_RELEASE: 'true'
@@ -773,7 +770,7 @@ jobs:
           ref: ${{ env.TAG }}
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: "⚙️ Run post-release"
-        uses: apache/grails-github-actions/post-release@fe90f651c47c5230cdd70b6fee0e0d250fea30ac # asf
+        uses: apache/grails-github-actions/post-release@asf
         env:
           PR_LABELS: skip-changelog
           RELEASE_SCRIPT_PATH: '.github/scripts/setSnapshotGrailsVersion.sh'

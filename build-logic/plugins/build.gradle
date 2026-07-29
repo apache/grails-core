@@ -40,7 +40,7 @@ dependencies {
     implementation "org.cyclonedx.bom:org.cyclonedx.bom.gradle.plugin:${gradleProperties.gradleCycloneDxPluginVersion}"
     implementation "com.github.spotbugs.snom:spotbugs-gradle-plugin:${gradleProperties.spotbugsPluginVersion}"
     implementation "org.sonatype.gradle.plugins:scan-gradle-plugin:${gradleProperties.sonatypeScanPluginVersion}"
-    implementation 'org.yaml:snakeyaml:2.4'
+    implementation "org.yaml:snakeyaml:${gradleProperties.snakeyamlVersion}"
 
     testImplementation "org.spockframework:spock-core:${gradleBomDependencyVersions['gradle-spock.version']}"
     testImplementation gradleTestKit()
@@ -49,6 +49,9 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+    systemProperty 'grails.test.checkstyleVersion', gradleProperties.checkstyleVersion
+    systemProperty 'grails.test.pmdVersion', gradleProperties.pmdVersion
+    systemProperty 'grails.test.codenarcVersion', gradleProperties.codenarcVersion
 }
 
 gradlePlugin {

@@ -163,9 +163,10 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
             // Redirect XML report output to a single directory to consolidate
             // reports across all subprojects into one known location
             task.reports.xml.outputLocation.set(
-                            project.extensions.getByType(GrailsCodeStyleExtension)
-                            .reportsDirectory
-                            .file("checkstyle/${GradleUtils.reportFileName(project, task.name)}")
+                    project.extensions.getByType(GrailsCodeStyleExtension)
+                            .reportsDirectory.get()
+                            .dir('checkstyle')
+                            .file(GradleUtils.reportFileName(project, task.name))
             )
             GradleUtils.configureReportMarker(task, project.rootProject.layout.projectDirectory, task.reports.xml.outputLocation,
                     GradleUtils.reportMarker(project, 'checkstyle', task.name))
@@ -205,9 +206,10 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
             // reports across all subprojects into one known location
             task.reports.xml.required.set(true)
             task.reports.xml.outputLocation.set(
-                            project.extensions.getByType(GrailsCodeStyleExtension)
-                            .reportsDirectory
-                            .file("codenarc/${GradleUtils.reportFileName(project, task.name)}")
+                    project.extensions.getByType(GrailsCodeStyleExtension)
+                            .reportsDirectory.get()
+                            .dir('codenarc')
+                            .file(GradleUtils.reportFileName(project, task.name))
             )
             GradleUtils.configureReportMarker(task, project.rootProject.layout.projectDirectory, task.reports.xml.outputLocation,
                     GradleUtils.reportMarker(project, 'codenarc', task.name))

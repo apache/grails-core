@@ -21,8 +21,12 @@ tasks.named('rat') {
     def allExcludes = [
             '.asf.yaml', // ASF metadata for github integration excluded from src zip
             '.omo/**', // local agent work state excluded from src zip
-            '.claude/**', '.clinerules', '.cursorrules', '.windsurfrules', // local agent configuration excluded from src zip
-            'CLAUDE.md', 'GEMINI.md', // local agent guidance excluded from src zip
+            '.worktrees/**', // standard location for agent/tooling git worktrees, never shipped
+            '.claude/settings.json', // JSON files cannot contain license headers
+            // Symlinks to AGENTS.md and .agents/skills/**, which carry the license header. They ship in the
+            // src zip as links, but cannot be audited here: on platforms without symlink support git
+            // materializes them as plain text files containing the link target.
+            '.claude/skills/**', '.clinerules', '.cursorrules', '.windsurfrules', 'CLAUDE.md', 'GEMINI.md',
             '.mailmap', // authorship mapping for git history, will not be included in src zip
             'CODE_OF_CONDUCT.md',
             'BUILD_DATE', // build artifact for storing the build date / verifying

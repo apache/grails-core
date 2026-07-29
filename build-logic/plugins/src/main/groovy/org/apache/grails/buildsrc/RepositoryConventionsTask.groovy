@@ -18,6 +18,10 @@
  */
 package org.apache.grails.buildsrc
 
+import java.nio.charset.StandardCharsets
+import java.util.regex.Matcher
+import java.util.regex.Pattern
+
 import groovy.transform.CompileStatic
 
 import org.gradle.api.DefaultTask
@@ -36,18 +40,17 @@ import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.SafeConstructor
 import org.yaml.snakeyaml.error.YAMLException
 
-import java.nio.charset.StandardCharsets
-import java.util.Set
-import java.util.regex.Matcher
-import java.util.regex.Pattern
-
 @CompileStatic
 abstract class RepositoryConventionsTask extends DefaultTask {
 
-    private static final Pattern AGENT_SKILL_PATH = Pattern.compile(/\.agents\/skills\/[A-Za-z0-9_-]+\/SKILL\.md/)
+    private static final String SKILL_DIRECTORY_NAME = '[A-Za-z0-9_-]+'
+    private static final Pattern AGENT_SKILL_PATH = Pattern.compile("\\.agents/skills/${SKILL_DIRECTORY_NAME}/SKILL\\.md".toString())
+    // A 40-hex ref can identify either a commit or an annotated-tag object; both are immutable and accepted.
     private static final Pattern COMMIT_SHA = Pattern.compile(/^[0-9a-f]{40}$/)
     private static final Pattern DOCKER_IMAGE_DIGEST = Pattern.compile(/^docker:\/\/[^@\s]+@sha256:[0-9a-f]{64}$/)
     private static final Pattern CONTAINER_IMAGE_DIGEST = Pattern.compile(/^[^@\s]+@sha256:[0-9a-f]{64}$/)
+    // GitHub-official and first-party ASF actions track upstream ASF approvals and are never pinned.
+    private static final Set<String> EXEMPT_ACTION_OWNERS = ['actions', 'apache'] as Set<String>
 
     @Internal
     abstract DirectoryProperty getRepositoryDirectory()
@@ -61,7 +64,7 @@ abstract class RepositoryConventionsTask extends DefaultTask {
 
     @TaskAction
     void validateRepositoryConventions() {
-        File root = repositoryDirectory.get().asFile
+        File root = repositoryDirectory.get().asFile.canonicalFile
         List<File> files = conventionSources.files.toList()
         List<String> violations = []
         validateSkills(root, files, violations)
@@ -77,11 +80,16 @@ abstract class RepositoryConventionsTask extends DefaultTask {
     private static void validateSkills(File root, List<File> files, List<String> violations) {
         List<File> skills = files.findAll { relativePath(root, it) ==~ /^\.agents\/skills\/[^\/]+\/SKILL\.md$/ }.sort()
         Map<String, File> names = [:]
-        Set<String> canonicalPaths = []
         skills.each { File skill ->
             String path = relativePath(root, skill)
             String directoryName = skill.parentFile.name
             Map<String, String> metadata = frontMatter(skill, path, violations)
+            if (!(directoryName ==~ SKILL_DIRECTORY_NAME)) {
+                violations.add("${path}: skill directory '${directoryName}' must match ${SKILL_DIRECTORY_NAME}".toString())
+            }
+            if (metadata == null) {
+                return
+            }
             ['name', 'description', 'license'].each { String key ->
                 if (!metadata[key]) {
                     violations.add("${path}: skill front matter is missing '${key}'".toString())
@@ -96,7 +104,6 @@ abstract class RepositoryConventionsTask extends DefaultTask {
             } else if (name) {
                 names[name] = skill
             }
-            canonicalPaths << path
         }
 
         File agents = new File(root, 'AGENTS.md')
@@ -105,15 +112,13 @@ abstract class RepositoryConventionsTask extends DefaultTask {
             return
         }
         Set<String> documentedPaths = []
-        Matcher matcher = AGENT_SKILL_PATH.matcher(agents.text)
+        Matcher matcher = AGENT_SKILL_PATH.matcher(agents.getText(StandardCharsets.UTF_8.name()))
         while (matcher.find()) {
             documentedPaths << matcher.group()
         }
-        canonicalPaths.each { String path ->
-            if (!documentedPaths.contains(path)) {
-                violations.add("AGENTS.md: missing canonical skill path '${path}'".toString())
-            }
-        }
+        // Whether AGENTS.md enumerates skills explicitly or discovers them from the directory is a
+        // documentation choice this gate deliberately does not decide (see #15977). Only references
+        // that AGENTS.md actually makes are validated, so a dangling path can never survive.
         documentedPaths.each { String path ->
             if (!new File(root, path).isFile()) {
                 violations.add("AGENTS.md: skill path '${path}' does not exist".toString())
@@ -122,9 +127,13 @@ abstract class RepositoryConventionsTask extends DefaultTask {
     }
 
     private static Map<String, String> frontMatter(File skill, String path, List<String> violations) {
-        List<String> lines = skill.readLines()
+        List<String> lines = skill.readLines(StandardCharsets.UTF_8.name())
+        if (!lines.isEmpty() && lines[0].startsWith('\uFEFF')) {
+            lines[0] = lines[0].substring(1)
+        }
         if (lines.isEmpty() || lines[0] != '---') {
-            return [:]
+            violations.add("${path}: skill front matter must start on line 1".toString())
+            return null
         }
         int end = -1
         for (int index = 1; index < lines.size(); index++) {
@@ -134,7 +143,8 @@ abstract class RepositoryConventionsTask extends DefaultTask {
             }
         }
         if (end < 0) {
-            return [:]
+            violations.add("${path}: skill front matter block is unterminated".toString())
+            return null
         }
         Object document
         try {
@@ -203,7 +213,7 @@ abstract class RepositoryConventionsTask extends DefaultTask {
         try {
             LoaderOptions options = new LoaderOptions()
             options.setAllowDuplicateKeys(false)
-            new Yaml(new SafeConstructor(options)).load(manifest.text)
+            new Yaml(new SafeConstructor(options)).load(manifest.getText(StandardCharsets.UTF_8.name()))
         } catch (YAMLException exception) {
             violations.add("${path}: malformed YAML: ${exception.message}".toString())
             null
@@ -265,6 +275,8 @@ abstract class RepositoryConventionsTask extends DefaultTask {
     private static void validateContainerImage(Object image, String location, String path, List<String> violations) {
         if (!(image instanceof String)) {
             violations.add("${path}:${location}: container image must be a string".toString())
+        } else if (((String) image).contains('\${{')) {
+            violations.add("${path}:${location}: container images must be literal name@sha256:<digest> values because expression values cannot be verified as immutable".toString())
         } else if (!CONTAINER_IMAGE_DIGEST.matcher((String) image).matches()) {
             violations.add("${path}:${location}: container image '${image}' must use an immutable sha256 digest".toString())
         }
@@ -347,6 +359,11 @@ abstract class RepositoryConventionsTask extends DefaultTask {
         }
         String action = use.substring(0, separator)
         String sha = use.substring(separator + 1)
+        int ownerSeparator = action.indexOf('/')
+        String owner = ownerSeparator > 0 ? action.substring(0, ownerSeparator) : ''
+        if (EXEMPT_ACTION_OWNERS.contains(owner)) {
+            return
+        }
         if (!COMMIT_SHA.matcher(sha).matches()) {
             violations.add("${path}:${location}: action '${action}' uses '${sha}', not a lowercase 40-hex commit SHA".toString())
         } else if (actionShas.containsKey(action) && actionShas[action] != sha) {
@@ -360,9 +377,8 @@ abstract class RepositoryConventionsTask extends DefaultTask {
     private static void validateLocalAction(File root, String use, String location, String path,
             Map<String, String> actionShas, Map<String, String> actionFiles, List<String> violations,
             Set<String> validatedManifests) {
-        File canonicalRoot = root.canonicalFile
         File target = new File(root, use.substring(2)).canonicalFile
-        if (!target.toPath().startsWith(canonicalRoot.toPath())) {
+        if (!target.toPath().startsWith(root.toPath())) {
             violations.add("${path}:${location}: local action '${use}' resolves outside the repository".toString())
             return
         }
@@ -379,10 +395,16 @@ abstract class RepositoryConventionsTask extends DefaultTask {
     }
 
     private static void validateProperties(File root, List<File> files, List<String> violations) {
-        files.findAll { File file -> file.name.startsWith('messages') && file.name.endsWith('.properties') }.sort().each { File file ->
+        files.findAll { File file -> file.name.endsWith('.properties') }.sort().each { File file ->
             Map<String, Integer> keys = [:]
             logicalPropertiesLines(file).each { PropertiesLine line ->
-                String key = propertyKey(line.content)
+                String key
+                try {
+                    key = propertyKey(line.content)
+                } catch (IllegalArgumentException exception) {
+                    violations.add("${relativePath(root, file)}:${line.number}: malformed properties line: ${exception.message}".toString())
+                    return
+                }
                 if (!key) {
                     return
                 }
@@ -433,11 +455,7 @@ abstract class RepositoryConventionsTask extends DefaultTask {
 
     private static String propertyKey(String line) {
         Properties properties = new Properties()
-        try {
-            properties.load(new StringReader(line))
-        } catch (IllegalArgumentException ignored) {
-            return null
-        }
+        properties.load(new StringReader(line))
         properties.stringPropertyNames().find()
     }
 
@@ -451,7 +469,7 @@ abstract class RepositoryConventionsTask extends DefaultTask {
             text.append('| Violation |\n| :--- |\n')
             violations.each { String violation -> text.append("| ${sanitizeViolation(violation)} |\n") }
         }
-        output.text = text.toString()
+        output.setText(text.toString(), StandardCharsets.UTF_8.name())
     }
 
     private static String sanitizeViolation(String violation) {
@@ -459,7 +477,7 @@ abstract class RepositoryConventionsTask extends DefaultTask {
     }
 
     private static String relativePath(File root, File file) {
-        root.toPath().relativize(file.toPath()).toString().replace(File.separatorChar, '/' as char)
+        root.toPath().relativize(file.canonicalFile.toPath()).toString().replace(File.separatorChar, '/' as char)
     }
 
     private static final class PropertiesLine {

@@ -39,7 +39,7 @@ class RepositoryConventionsTaskSpec extends Specification {
         writeSkill('sample', 'sample')
         writeAgents('.agents/skills/sample/SKILL.md')
         writeWorkflow('valid.yml', "uses: actions/checkout@${SHA}")
-        writeProperties('src/main/resources/messages.properties', '''escaped\\=key=one
+        writeProperties('grails-app/i18n/messages.properties', '''escaped\\=key=one
 continued\\
  key=one
 ''')
@@ -55,7 +55,23 @@ continued\\
         testProjectDir.resolve('build/reports/violations/REPOSITORY_CONVENTIONS.md').toFile().text.contains('No violations found!')
     }
 
-    def "validateRepositoryConventions reports skill metadata and AGENTS inventory failures"() {
+    def "codestyle core projects CI invokes repository conventions validation and publishes its report"() {
+        given:
+        File repositoryRoot = findRepositoryRoot()
+        File workflow = new File(repositoryRoot, '.github/workflows/codestyle.yml')
+        String workflowText = workflow.getText(StandardCharsets.UTF_8.name())
+        int coreProjectsStart = workflowText.indexOf('  check_core_projects:')
+        int forgeProjectsStart = workflowText.indexOf('  check_forge_projects:')
+
+        expect:
+        coreProjectsStart >= 0
+        forgeProjectsStart > coreProjectsStart
+        String coreProjectsJob = workflowText.substring(coreProjectsStart, forgeProjectsStart)
+        coreProjectsJob.contains('run: ./gradlew aggregateStyleViolations validateRepositoryConventions --continue')
+        coreProjectsJob.contains('CODENARC_VIOLATIONS.md CHECKSTYLE_VIOLATIONS.md REPOSITORY_CONVENTIONS.md')
+    }
+
+    def "validateRepositoryConventions reports skill metadata and dangling AGENTS references"() {
         given:
         writeBuild()
         writeSkill('expected-name', 'different-name', false)
@@ -70,7 +86,6 @@ continued\\
         result.output.contains("skill front matter is missing 'license'")
         result.output.contains("skill name 'different-name' does not match directory 'expected-name'")
         result.output.contains("skill name 'different-name' duplicates .agents/skills/duplicate-name/SKILL.md")
-        result.output.contains("missing canonical skill path '.agents/skills/expected-name/SKILL.md'")
         result.output.contains("skill path '.agents/skills/missing/SKILL.md' does not exist")
     }
 
@@ -233,17 +248,17 @@ runs:
         writeAgents('.agents/skills/sample/SKILL.md')
         writeWorkflowContent('one.yml', """jobs:
   reusable:
-    uses: actions/reusable@v4
+    uses: someorg/reusable@v4
   build:
     steps:
       - { "uses": actions/checkout@v4 }
       - uses: ./local-action
       - uses: docker://alpine:3
       - uses: docker://registry@invalid/alpine@sha256:${'b' * 64}
-      - uses: actions/checkout@${SHA}
-      - uses: actions/cache@${SHA.toUpperCase()}
+      - uses: someorg/checkout@${SHA}
+      - uses: someorg/cache@${SHA.toUpperCase()}
 """)
-        writeWorkflow('two.yml', "uses: actions/checkout@${'f' * 40}")
+        writeWorkflow('two.yml', "uses: someorg/checkout@${'f' * 40}")
         writeCompositeAction('sample', '''runs:
   using: composite
   steps:
@@ -259,15 +274,50 @@ runs:
         def result = runAndFail('validateRepositoryConventions')
 
         then:
-        result.output.contains("action 'actions/reusable' uses 'v4'")
-        result.output.contains("action 'actions/checkout' uses 'v4'")
-        result.output.contains("action 'actions/cache' uses '${SHA.toUpperCase()}'")
+        result.output.contains("action 'someorg/reusable' uses 'v4'")
+        result.output.contains("action 'someorg/cache' uses '${SHA.toUpperCase()}'")
         result.output.contains("Docker action 'docker://alpine:3' must use an immutable sha256 digest")
         result.output.contains("Docker action 'docker://registry@invalid/alpine@sha256:${'b' * 64}' must use an immutable sha256 digest")
-        result.output.contains(".github/actions/sample/action.yaml:\$.runs.steps[0].uses: action 'actions/setup-java' uses 'v4'")
-        result.output.contains(".github/actions/legacy/action.yml:\$.runs.steps[0].uses: action 'actions/setup-node' uses 'v4'")
-        result.output.contains("action 'actions/checkout' uses ${'f' * 40}, inconsistent with ${SHA}")
+        result.output.contains("action 'someorg/checkout' uses ${'f' * 40}, inconsistent with ${SHA}")
         !result.output.contains('local-action')
+    }
+
+    def "validateRepositoryConventions allows GitHub and ASF action refs without SHA consistency checks"() {
+        given:
+        writeBuild()
+        writeSkill('sample', 'sample')
+        writeAgents('.agents/skills/sample/SKILL.md')
+        writeWorkflowContent('official.yml', '''steps:
+  - uses: actions/checkout@v6
+  - uses: apache/grails-github-actions/pre-release@asf
+  - uses: apache/grails-github-actions/post-release@asf
+''')
+
+        when:
+        def result = run('validateRepositoryConventions')
+
+        then:
+        result.task(':validateRepositoryConventions').outcome == TaskOutcome.SUCCESS
+    }
+
+    def "validateRepositoryConventions requires refs for exempt actions and SHA pins for third-party actions"() {
+        given:
+        writeBuild()
+        writeSkill('sample', 'sample')
+        writeAgents('.agents/skills/sample/SKILL.md')
+        writeWorkflowContent('invalid.yml', '''steps:
+  - uses: actions/checkout@
+  - uses: actions/checkout
+  - uses: someorg/someaction@v1
+''')
+
+        when:
+        def result = runAndFail('validateRepositoryConventions')
+
+        then:
+        result.output.contains("action 'actions/checkout@' must use a lowercase 40-hex commit SHA")
+        result.output.contains("action 'actions/checkout' must use a lowercase 40-hex commit SHA")
+        result.output.contains("action 'someorg/someaction' uses 'v1', not a lowercase 40-hex commit SHA")
     }
 
     def "validateRepositoryConventions reports malformed YAML with its file"() {
@@ -312,21 +362,50 @@ runs:
         writeActionManifest('tools/actions/sample', '''runs:
   using: composite
   steps:
-    - uses: actions/setup-java@v4
+    - uses: someorg/setup-java@v4
 ''')
         writeActionManifest('.github/actions/build', '''runs:
   using: composite
   steps:
-    - uses: actions/setup-node@v4
+    - uses: someorg/setup-node@v4
 ''')
 
         when:
         def result = runAndFail('validateRepositoryConventions')
 
         then:
-        result.output.contains("tools/actions/sample/action.yml:\$.runs.steps[0].uses: action 'actions/setup-java' uses 'v4'")
-        result.output.contains(".github/actions/build/action.yml:\$.runs.steps[0].uses: action 'actions/setup-node' uses 'v4'")
+        result.output.contains("tools/actions/sample/action.yml:\$.runs.steps[0].uses: action 'someorg/setup-java' uses 'v4'")
+        result.output.contains(".github/actions/build/action.yml:\$.runs.steps[0].uses: action 'someorg/setup-node' uses 'v4'")
         !result.output.contains('./tools/actions/sample')
+    }
+
+    def "validateRepositoryConventions scans checked-in build actions but excludes configured build output"() {
+        given:
+        writeBuild()
+        testProjectDir.resolve('build.gradle').toFile() << """
+            layout.buildDirectory.set(layout.projectDirectory.dir('generated-output'))
+        """
+        writeSkill('sample', 'sample')
+        writeAgents('.agents/skills/sample/SKILL.md')
+        writeWorkflow('valid.yml', "uses: actions/checkout@${SHA}")
+        writeActionManifest('.github/actions/build', '''runs:
+  using: composite
+  steps:
+    - uses: someorg/setup-java@v4
+''')
+        writeActionManifest('generated-output/actions/ignored', '''runs:
+  using: composite
+  steps:
+    - uses: someorg/setup-node@v4
+''')
+
+        when:
+        def result = runAndFail('validateRepositoryConventions')
+
+        then:
+        result.output.contains(".github/actions/build/action.yml:\$.runs.steps[0].uses: action 'someorg/setup-java' uses 'v4'")
+        !result.output.contains('generated-output/actions/ignored/action.yml')
+        !result.output.contains('someorg/setup-node')
     }
 
     def "validateRepositoryConventions rejects local action paths outside the repository"() {
@@ -343,13 +422,28 @@ runs:
         result.output.contains("local action './../outside' resolves outside the repository")
     }
 
+    def "validateRepositoryConventions validates action uses in directly referenced local workflows"() {
+        given:
+        writeBuild()
+        writeSkill('sample', 'sample')
+        writeAgents('.agents/skills/sample/SKILL.md')
+        writeWorkflow('caller.yml', 'uses: ./.github/workflows/referenced.yml')
+        writeWorkflow('referenced.yml', 'uses: someorg/someaction@v1')
+
+        when:
+        def result = runAndFail('validateRepositoryConventions')
+
+        then:
+        result.output.contains(".github/workflows/referenced.yml:\$.steps[0].uses: action 'someorg/someaction' uses 'v1', not a lowercase 40-hex commit SHA")
+    }
+
     def "validateRepositoryConventions sanitizes decoded property keys in reports and exceptions"() {
         given:
         writeBuild()
         writeSkill('sample', 'sample')
         writeAgents('.agents/skills/sample/SKILL.md')
         writeWorkflow('valid.yml', "uses: actions/checkout@${SHA}")
-        writeProperties('src/main/resources/messages.properties', '''injected\\r\\n|forged=one
+        writeProperties('grails-app/i18n/messages.properties', '''injected\\r\\n|forged=one
 injected\\r\\n|forged=two
 ''')
 
@@ -388,12 +482,24 @@ license: Apache-2.0
         !report.contains('duplicate key duplicate\\\\|key')
     }
 
-    def "validateRepositoryConventions reads duplicate UTF-8 message keys independently of the Gradle default charset"() {
+    def "validateRepositoryConventions reads UTF-8 skills, workflows, properties, and reports independently of the Gradle default charset"() {
         given:
         writeBuild()
-        writeSkill('sample', 'sample')
+        writeSkillContent('sample', '''---
+name: sample
+description: Café skill
+license: Apache-2.0
+---
+''')
         writeAgents('.agents/skills/sample/SKILL.md')
-        writeWorkflow('valid.yml', "uses: actions/checkout@${SHA}")
+        def workflow = testProjectDir.resolve('.github/workflows/valid.yml').toFile()
+        workflow.parentFile.mkdirs()
+        workflow.setText("""jobs:
+  build:
+    container: mongo:café
+    steps:
+      - uses: actions/checkout@v6
+""", StandardCharsets.UTF_8.name())
         def build = testProjectDir.resolve('build.gradle').toFile()
         build << '''
 tasks.register('verifyDefaultEncoding') {
@@ -403,16 +509,20 @@ tasks.register('verifyDefaultEncoding') {
 }
 '''
         testProjectDir.resolve('gradle.properties').toFile().text = 'org.gradle.jvmargs=-Dfile.encoding=ISO-8859-1\n'
-        def file = testProjectDir.resolve('src/main/resources/messages.properties').toFile()
+        def file = testProjectDir.resolve('grails-app/i18n/messages.properties').toFile()
         file.parentFile.mkdirs()
         file.setText('caf\u00e9=one\ncaf\u00e9=two\n', StandardCharsets.UTF_8.name())
 
         when:
         def result = runAndFail('verifyDefaultEncoding', 'validateRepositoryConventions')
+        def report = testProjectDir.resolve('build/reports/violations/REPOSITORY_CONVENTIONS.md').toFile().getText(StandardCharsets.UTF_8.name())
 
         then:
         result.task(':verifyDefaultEncoding').outcome == TaskOutcome.SUCCESS
-        result.output.contains("duplicate message key 'caf\u00e9'")
+        result.output.contains("duplicate message key 'café'")
+        result.output.contains("container image 'mongo:café' must use an immutable sha256 digest")
+        report.contains("duplicate message key 'café'")
+        report.contains("container image 'mongo:café' must use an immutable sha256 digest")
     }
 
     def "validateRepositoryConventions requires skill front matter to begin on line one"() {
@@ -428,9 +538,50 @@ tasks.register('verifyDefaultEncoding') {
         def result = runAndFail('validateRepositoryConventions')
 
         then:
-        result.output.contains("skill front matter is missing 'name'")
-        result.output.contains("skill front matter is missing 'description'")
-        result.output.contains("skill front matter is missing 'license'")
+        result.output.contains('.agents/skills/sample/SKILL.md: skill front matter must start on line 1')
+        !result.output.contains("skill front matter is missing 'name'")
+        !result.output.contains("skill front matter is missing 'description'")
+        !result.output.contains("skill front matter is missing 'license'")
+    }
+
+    def "validateRepositoryConventions accepts UTF-8 BOM-prefixed skill front matter"() {
+        given:
+        writeBuild()
+        writeSkillContent('sample', '''﻿---
+name: sample
+description: Test skill
+license: Apache-2.0
+---
+''')
+        writeAgents('.agents/skills/sample/SKILL.md')
+        writeWorkflow('valid.yml', 'uses: actions/checkout@v6')
+
+        when:
+        def result = run('validateRepositoryConventions')
+
+        then:
+        result.task(':validateRepositoryConventions').outcome == TaskOutcome.SUCCESS
+    }
+
+    def "validateRepositoryConventions reports unterminated skill front matter once"() {
+        given:
+        writeBuild()
+        writeSkillContent('sample', '''---
+name: sample
+description: Test skill
+license: Apache-2.0
+''')
+        writeAgents('.agents/skills/sample/SKILL.md')
+        writeWorkflow('valid.yml', 'uses: actions/checkout@v6')
+
+        when:
+        def result = runAndFail('validateRepositoryConventions')
+
+        then:
+        result.output.contains('.agents/skills/sample/SKILL.md: skill front matter block is unterminated')
+        !result.output.contains("skill front matter is missing 'name'")
+        !result.output.contains("skill front matter is missing 'description'")
+        !result.output.contains("skill front matter is missing 'license'")
     }
 
     def "validateRepositoryConventions accepts quoted and block scalar skill metadata"() {
@@ -526,13 +677,26 @@ license: Apache-2.0
         result.output.contains('.agents/skills/root/SKILL.md: skill front matter must be a YAML mapping')
     }
 
+    def "validateRepositoryConventions rejects invalid skill directory names"() {
+        given:
+        writeBuild()
+        writeSkill('bad.name', 'bad.name')
+        writeWorkflow('valid.yml', 'uses: actions/checkout@v6')
+
+        when:
+        def result = runAndFail('validateRepositoryConventions')
+
+        then:
+        result.output.contains(".agents/skills/bad.name/SKILL.md: skill directory 'bad.name' must match [A-Za-z0-9_-]+")
+    }
+
     def "validateRepositoryConventions detects duplicate logical message keys and ignores generated trees"() {
         given:
         writeBuild()
         writeSkill('sample', 'sample')
         writeAgents('.agents/skills/sample/SKILL.md')
         writeWorkflow('valid.yml', "uses: actions/checkout@${SHA}")
-        writeProperties('src/main/resources/messages.properties', '''# message=ignored
+        writeProperties('grails-app/i18n/messages.properties', '''# message=ignored
 message=one
 message=two
 escaped\\=key=one
@@ -541,7 +705,7 @@ continued\\
  key=one
 continuedkey=two
 ''')
-        writeProperties('build/generated/messages.properties', '''message=one
+        writeProperties('build/generated/grails-app/i18n/messages.properties', '''message=one
 message=two
 ''')
 
@@ -552,11 +716,67 @@ message=two
         result.output.contains("duplicate message key 'message'")
         result.output.contains("duplicate message key 'escaped=key'")
         result.output.contains("duplicate message key 'continuedkey'")
-        !result.output.contains('build/generated/messages.properties')
+        !result.output.contains('build/generated/grails-app/i18n/messages.properties')
+    }
+
+    def "validateRepositoryConventions reports malformed properties lines and scans non-message bundles"() {
+        given:
+        writeBuild()
+        writeSkill('sample', 'sample')
+        writeAgents('.agents/skills/sample/SKILL.md')
+        writeWorkflow('valid.yml', 'uses: actions/checkout@v6')
+        writeProperties('grails-app/i18n/spring-security-core.properties', '''duplicate=one
+duplicate=two
+malformed=\\u12x
+''')
+
+        when:
+        def result = runAndFail('validateRepositoryConventions')
+
+        then:
+        result.output.contains("duplicate message key 'duplicate'")
+        result.output.contains('spring-security-core.properties:3: malformed properties line:')
+    }
+
+    def "validateRepositoryConventions does not continue logical properties lines ending in an even number of backslashes"() {
+        given:
+        writeBuild()
+        writeSkill('sample', 'sample')
+        writeAgents('.agents/skills/sample/SKILL.md')
+        writeWorkflow('valid.yml', 'uses: actions/checkout@v6')
+        writeProperties('grails-app/i18n/messages.properties', '''escaped\\\\=one
+escaped\\\\=two
+''')
+
+        when:
+        def result = runAndFail('validateRepositoryConventions')
+
+        then:
+        result.output.contains("duplicate message key 'escaped\\'")
+    }
+
+    def "validateRepositoryConventions explains why container image expressions are rejected"() {
+        given:
+        writeBuild()
+        writeSkill('sample', 'sample')
+        writeAgents('.agents/skills/sample/SKILL.md')
+        writeWorkflowContent('expression.yml', '''jobs:
+  build:
+    container: ${{ matrix.mongo-image }}
+    steps:
+      - uses: actions/checkout@v6
+''')
+
+        when:
+        def result = runAndFail('validateRepositoryConventions')
+
+        then:
+        result.output.contains('container images must be literal name@sha256:<digest> values because expression values cannot be verified as immutable')
     }
 
     private void writeBuild(boolean includeRat = false) {
         testProjectDir.resolve('settings.gradle').toFile().text = ''
+        testProjectDir.resolve('.asf.yaml').toFile().text = ''
         testProjectDir.resolve('build.gradle').toFile().text = '''plugins {
     id 'org.apache.grails.gradle.grails-violation-aggregation'
 }
@@ -566,8 +786,20 @@ tasks.register('rat') {
         file('build').mkdirs()
         file('build/rat-ran').text = 'ran'
     }
+
 }
 ''' : '')
+    }
+
+    private static File findRepositoryRoot() {
+        File directory = new File('.').canonicalFile
+        while (directory != null) {
+            if (new File(directory, '.asf.yaml').isFile()) {
+                return directory
+            }
+            directory = directory.parentFile
+        }
+        throw new IllegalStateException("Unable to locate repository root containing .asf.yaml from ${new File('.').canonicalPath}")
     }
 
     private void writeSkill(String directory, String name, boolean withLicense = true) {

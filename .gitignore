@@ -70,3 +70,8 @@ etc/bin/results
 node_modules/
 local-tasks.gradle
 local-init.gradle
+
+# Local agent work state
+.omo/
+# Standard location for agent/tooling git worktrees
+.worktrees/

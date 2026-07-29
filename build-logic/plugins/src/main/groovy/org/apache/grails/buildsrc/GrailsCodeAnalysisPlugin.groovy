@@ -31,11 +31,13 @@ import com.github.spotbugs.snom.SpotBugsTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.FileTreeElement
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.plugins.quality.Pmd
 import org.gradle.api.plugins.quality.PmdExtension
 import org.gradle.api.plugins.quality.PmdPlugin
+import org.gradle.api.provider.Property
 
 /**
  * Convention plugin for Grails byte code analysis (PMD and SpotBugs).
@@ -62,8 +64,11 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
     @Override
     void apply(Project project) {
         initExtension(project)
-        configurePmd(project)
-        configureSpotbugs(project)
+        project.afterEvaluate {
+            GrailsCodeAnalysisExtension extension = project.extensions.getByType(GrailsCodeAnalysisExtension)
+            configurePmd(project, extension)
+            configureSpotbugs(project, extension)
+        }
 
         // withType returns a live empty collection when the tool is not enabled,
         // so these dependsOn calls are safe regardless of whether PMD/SpotBugs are active
@@ -109,8 +114,8 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
         }
     }
 
-    static void configurePmd(Project project) {
-        if (!isToolEnabled(project, PMD_ENABLED_PROPERTY, PMD_ENABLED_PROJECTS_PROPERTY)) {
+    static void configurePmd(Project project, GrailsCodeAnalysisExtension extension) {
+        if (!isToolEnabled(project, PMD_ENABLED_PROPERTY, PMD_ENABLED_PROJECTS_PROPERTY, extension.pmdEnabled)) {
             return
         }
 
@@ -138,23 +143,24 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
                 it.enabled = testStylingEnabled.get()
             }
 
-            it.exclude { org.gradle.api.file.FileTreeElement element ->
+            it.exclude { FileTreeElement element ->
                 element.file.toPath().toAbsolutePath().normalize().startsWith(projectBuildDirectory.get())
             }
 
             it.reports.xml.required.set(true)
             it.reports.xml.outputLocation.set(
-                            project.extensions.getByType(GrailsCodeAnalysisExtension)
-                            .reportsDirectory
-                            .file("pmd/${GradleUtils.reportFileName(project, it.name)}")
+                    project.extensions.getByType(GrailsCodeAnalysisExtension)
+                            .reportsDirectory.get()
+                            .dir('pmd')
+                            .file(GradleUtils.reportFileName(project, it.name))
             )
             GradleUtils.configureReportMarker(it, project.rootProject.layout.projectDirectory, it.reports.xml.outputLocation,
                     GradleUtils.reportMarker(project, 'pmd', it.name))
         }
     }
 
-    static void configureSpotbugs(Project project) {
-        if (!isToolEnabled(project, SPOTBUGS_ENABLED_PROPERTY, SPOTBUGS_ENABLED_PROJECTS_PROPERTY)) {
+    static void configureSpotbugs(Project project, GrailsCodeAnalysisExtension extension) {
+        if (!isToolEnabled(project, SPOTBUGS_ENABLED_PROPERTY, SPOTBUGS_ENABLED_PROJECTS_PROPERTY, extension.spotbugsEnabled)) {
             return
         }
 
@@ -178,9 +184,10 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
             def xmlReport = spotBugsReports.maybeCreate('xml')
             xmlReport.required.set(true)
             xmlReport.outputLocation.set(
-                        project.extensions.getByType(GrailsCodeAnalysisExtension)
-                        .reportsDirectory
-                        .file("spotbugs/${GradleUtils.reportFileName(project, it.name)}")
+                    project.extensions.getByType(GrailsCodeAnalysisExtension)
+                            .reportsDirectory.get()
+                            .dir('spotbugs')
+                            .file(GradleUtils.reportFileName(project, it.name))
             )
             GradleUtils.configureReportMarker(it, project.rootProject.layout.projectDirectory, xmlReport.outputLocation,
                     GradleUtils.reportMarker(project, 'spotbugs', it.name))
@@ -192,11 +199,12 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
         }
     }
 
-    static boolean isToolEnabled(Project project, String enabledProperty, String enabledProjectsProperty) {
+    static boolean isToolEnabled(Project project, String enabledProperty, String enabledProjectsProperty,
+            Property<Boolean> extensionEnabled) {
         GradleUtils.booleanProvider(project, enabledProperty).get() ||
                 project.providers.gradleProperty(enabledProjectsProperty)
                         .map { it.split(',')*.trim().contains(project.path) }
                         .orElse(false)
-                        .get()
+                        .get() || extensionEnabled.get()
     }
 }

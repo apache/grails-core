@@ -61,21 +61,23 @@ jobs:
             [ -f "$file" ] && cat "$file" >> $GITHUB_STEP_SUMMARY || true
           done
       - name: "🔎 Run Core SpotBugs Advisory"
-        if: always()
+        if: success() || failure()
         continue-on-error: true
+        id: core_spotbugs_advisory
         run: |
           rm -f build/reports/violations/SPOTBUGS_VIOLATIONS.md
-          ./gradlew aggregateAnalysisViolations --continue "-Pgrails.code-analysis.enabled.pmd.projects=" -Pgrails.code-analysis.enabled.spotbugs=true -Pgrails.code-analysis.ignoreFailures=true
+          ./gradlew aggregateAnalysisViolations --continue -Pgrails.code-analysis.enabled.spotbugs=true -Pgrails.code-analysis.ignoreFailures=true
       - name: "📤 Upload SpotBugs Advisory Reports"
-        if: always()
+        if: success() || failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: core-spotbugs-advisory-reports
-          path: build/reports/violations/
+          path: build/reports/violations/SPOTBUGS_VIOLATIONS.md
       - name: "📋 Publish SpotBugs Advisory Report in Job Summary"
-        if: always()
+        if: success() || failure()
         run: |
           echo "## 🔎 SpotBugs Advisory Report - Core Projects" >> $GITHUB_STEP_SUMMARY
+          echo "Advisory run outcome: ${{ steps.core_spotbugs_advisory.outcome }}" >> $GITHUB_STEP_SUMMARY
           file="build/reports/violations/SPOTBUGS_VIOLATIONS.md"
           [ -f "$file" ] && cat "$file" >> $GITHUB_STEP_SUMMARY || true
   check_gradle_plugin_projects:
@@ -114,21 +116,23 @@ jobs:
             [ -f "$file" ] && cat "$file" >> $GITHUB_STEP_SUMMARY || true
           done
       - name: "🔎 Run Gradle Plugin SpotBugs Advisory"
-        if: always()
+        if: success() || failure()
         continue-on-error: true
+        id: gradle_plugin_spotbugs_advisory
         working-directory: grails-gradle
         run: |
           rm -f build/reports/violations/SPOTBUGS_VIOLATIONS.md
           ./gradlew aggregateAnalysisViolations --continue -Pgrails.code-analysis.enabled.spotbugs=true -Pgrails.code-analysis.ignoreFailures=true
       - name: "📤 Upload Gradle Plugin SpotBugs Advisory Reports"
-        if: always()
+        if: success() || failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: gradle-plugin-spotbugs-advisory-reports
-          path: grails-gradle/build/reports/violations/
+          path: grails-gradle/build/reports/violations/SPOTBUGS_VIOLATIONS.md
       - name: "📋 Publish Gradle Plugin SpotBugs Advisory Report in Job Summary"
-        if: always()
+        if: success() || failure()
         run: |
           echo "## 🔎 SpotBugs Advisory Report - Gradle Plugin Projects" >> $GITHUB_STEP_SUMMARY
+          echo "Advisory run outcome: ${{ steps.gradle_plugin_spotbugs_advisory.outcome }}" >> $GITHUB_STEP_SUMMARY
           file="grails-gradle/build/reports/violations/SPOTBUGS_VIOLATIONS.md"
           [ -f "$file" ] && cat "$file" >> $GITHUB_STEP_SUMMARY || true
