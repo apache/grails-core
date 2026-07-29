@@ -109,6 +109,16 @@ def length = text?.length() ?: 0
 def firstTitle = books?.first()?.title ?: "No books"
 ```
 
+### Ternary Operator
+```groovy
+// Use ternary operators only for simple conditions.
+// Split long ternary expressions into multiple lines. 
+// Align `?` and `:` branches for readability.
+String message = condition
+        ? "Value when true"
+        : "Value when false"
+```
+
 ### Spread Operator
 ```groovy
 // Spread operator for collections

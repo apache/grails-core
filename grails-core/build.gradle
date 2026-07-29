@@ -20,6 +20,7 @@
 plugins {
     id 'groovy'
     id 'java-library'
+    id 'java-test-fixtures'
     id 'project-report'
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
@@ -95,21 +96,22 @@ dependencies {
     api 'org.slf4j:jcl-over-slf4j'
 
     // Testing
-    testImplementation 'org.slf4j:slf4j-simple'
     testImplementation 'org.spockframework:spock-core'
 
     testRuntimeOnly 'net.bytebuddy:byte-buddy' // Required by Spock's mocking support
     testRuntimeOnly 'org.objenesis:objenesis' // Required by Spock for mocking classes without default constructor
+
+    testFixturesImplementation(platform(project(':grails-bom')))
+    testFixturesApi 'ch.qos.logback:logback-classic' // LogCapture uses Logback types in its API
 }
 
-TaskProvider<WriteProperties> writeProps = tasks.register('writeGrailsProperties', WriteProperties)
-writeProps.configure { WriteProperties it ->
-    it.destinationFile = project.layout.buildDirectory.file('grails.build.properties')
-    it.property('grails.version', project.version)
+def writeProps = tasks.register('writeGrailsProperties', WriteProperties) {
+    destinationFile = project.layout.buildDirectory.file('grails.build.properties')
+    property('grails.version', project.version)
 }
 
-tasks.named('processResources', ProcessResources).configure { ProcessResources it ->
-    it.from writeProps
+tasks.named('processResources', ProcessResources) {
+    from(writeProps)
 }
 
 apply {

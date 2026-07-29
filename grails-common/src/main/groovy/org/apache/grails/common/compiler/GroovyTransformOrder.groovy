@@ -98,9 +98,15 @@ interface GroovyTransformOrder {
     static final int FINDER_ORDER = WHERE_ORDER + DECREMENT_PRIORITY
 
     /**
+     * Detects GORM query strings that were GString-interpolated but coerced to a plain String
+     * before reaching a query method, losing GORM's automatic parameter binding
+     */
+    static final int QUERY_SAFETY_ORDER = FINDER_ORDER + DECREMENT_PRIORITY
+
+    /**
      * Grails allows applying transforms by artefact type, this transformation is what implements that
      */
-    static final int GLOBAL_GRAILS_TRANSFORM_ORDER = FINDER_ORDER + DECREMENT_PRIORITY
+    static final int GLOBAL_GRAILS_TRANSFORM_ORDER = QUERY_SAFETY_ORDER + DECREMENT_PRIORITY
 
     /**
      * Similar to Groovy's @Delegate AST transform but instead assumes the first

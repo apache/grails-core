@@ -18,11 +18,14 @@
  */
 package org.apache.grails.core.plugins
 
-import org.springframework.core.env.StandardEnvironment
+import ch.qos.logback.classic.Level
 import spock.lang.Specification
 import spock.lang.Unroll
 
+import org.springframework.core.env.StandardEnvironment
+
 import org.grails.io.support.SpringIOUtils
+import org.apache.grails.core.testing.support.LogCapture
 
 class PluginDiscoverySpec extends Specification {
 
@@ -69,9 +72,11 @@ class PluginDiscoverySpec extends Specification {
 
          then: 'the descriptor only includes <resource> elements, not <type> elements'
          descriptors.size() == 1
-         descriptors[0].providedClasses == ['com.example.MyDomainClass', 'com.example.MyService']
-         descriptors[0].resource != null
-         descriptors[0].resource.exists()
+         with(descriptors[0]) {
+             providedClasses == ['com.example.MyDomainClass', 'com.example.MyService']
+             resource != null
+             resource.exists()
+         }
 
          cleanup:
          tempDir.deleteDir()
@@ -138,10 +143,10 @@ class PluginDiscoverySpec extends Specification {
         PluginUtils.getLogicalPluginName(pluginClass) == expectedName
 
         where:
-        pluginClass                        || expectedName
-        DiscoveryTestCoreGrailsPlugin      || 'discoveryTestCore'
-        DiscoveryTestSimpleGrailsPlugin    || 'discoveryTestSimple'
-        DiscoveryTestABCGrailsPlugin       || 'discoveryTestABC'
+        pluginClass                     || expectedName
+        DiscoveryTestCoreGrailsPlugin   || 'discoveryTestCore'
+        DiscoveryTestSimpleGrailsPlugin || 'discoveryTestSimple'
+        DiscoveryTestABCGrailsPlugin    || 'discoveryTestABC'
     }
 
     def 'treats plugin metadata with the same name as equal'() {
@@ -246,30 +251,31 @@ class PluginDiscoverySpec extends Specification {
                 <resource>com.example.AnotherClass</resource>
             </plugin>
         '''
-
         def handler = new PluginXmlHandler()
-        def parser = SpringIOUtils.newSAXParser()
 
         when: 'the XML is parsed'
-        parser.parse(new ByteArrayInputStream(xml.bytes), handler)
+        SpringIOUtils.newSAXParser().parse(new ByteArrayInputStream(xml.bytes), handler)
 
         then: 'the handler captures the declared plugin and provided class names'
-        handler.pluginClassNames == ['com.example.TestGrailsPlugin', 'com.example.OtherGrailsPlugin']
-        handler.providedClasses == ['com.example.SomeClass', 'com.example.AnotherClass']
+        with(handler) {
+            pluginClassNames == ['com.example.TestGrailsPlugin', 'com.example.OtherGrailsPlugin']
+            providedClasses == ['com.example.SomeClass', 'com.example.AnotherClass']
+        }
     }
 
     def 'returns no plugin or provided classes when plugin XML has no matching elements'() {
         given: 'plugin XML without type or resource elements'
         def xml = '<plugin name="empty"></plugin>'
         def handler = new PluginXmlHandler()
-        def parser = SpringIOUtils.newSAXParser()
 
         when: 'the XML is parsed'
-        parser.parse(new ByteArrayInputStream(xml.bytes), handler)
+        SpringIOUtils.newSAXParser().parse(new ByteArrayInputStream(xml.bytes), handler)
 
         then: 'both collected lists remain empty'
-        handler.pluginClassNames.empty
-        handler.providedClasses.empty
+        with(handler) {
+            pluginClassNames.empty
+            providedClasses.empty
+        }
     }
 
     def 'trims surrounding whitespace from plugin class names in XML elements'() {
@@ -283,10 +289,9 @@ class PluginDiscoverySpec extends Specification {
         '''
 
         def handler = new PluginXmlHandler()
-        def parser = SpringIOUtils.newSAXParser()
 
         when: 'the XML is parsed'
-        parser.parse(new ByteArrayInputStream(xml.bytes), handler)
+        SpringIOUtils.newSAXParser().parse(new ByteArrayInputStream(xml.bytes), handler)
 
         then: 'the extracted plugin class name is trimmed'
         handler.pluginClassNames == ['com.example.TestGrailsPlugin']
@@ -306,18 +311,20 @@ class PluginDiscoverySpec extends Specification {
         given: 'a plugin class compiled by a Groovy class loader'
         def gcl = new GroovyClassLoader()
         gcl.parseClass('''
-class DuplicateDescriptorProbeGrailsPlugin {
-    def version = "1.0.0"
-}
-''')
+            class DuplicateDescriptorProbeGrailsPlugin {
+                def version = "1.0.0"
+            }
+        ''')
 
         and: 'two classpath roots each declaring the same plugin class in META-INF/grails-plugin.xml'
         def tempDirs = (1..2).collect { index ->
             def tempDir = File.createTempDir()
             def metaInfDir = new File(tempDir, 'META-INF').tap { mkdirs() }
-            new File(metaInfDir, 'grails-plugin.xml').text = """<plugin name='descriptor${index}'>
-  <type>DuplicateDescriptorProbeGrailsPlugin</type>
-</plugin>"""
+            new File(metaInfDir, 'grails-plugin.xml').text = """
+                <plugin name='descriptor${index}'>
+                    <type>DuplicateDescriptorProbeGrailsPlugin</type>
+                </plugin>
+            """
             tempDir
         }
         def classLoader = new URLClassLoader(tempDirs*.toURI()*.toURL() as URL[], gcl)
@@ -334,7 +341,7 @@ class DuplicateDescriptorProbeGrailsPlugin {
         discovery.hasPlugin('duplicateDescriptorProbe')
 
         and: 'only one registration appears in the load order'
-        discovery.getPluginsInLoadOrder().count { it.name == 'duplicateDescriptorProbe' } == 1
+        discovery.pluginsInLoadOrder.count { it.name == 'duplicateDescriptorProbe' } == 1
 
         cleanup:
         Thread.currentThread().contextClassLoader = originalContextClassLoader
@@ -343,34 +350,37 @@ class DuplicateDescriptorProbeGrailsPlugin {
 
     def 'a plugin class supplied more than once is registered only once and skipping is logged at WARN'() {
         given: 'a discovery bean supplied the same plugin class twice'
-        def gcl = new GroovyClassLoader()
-        def pluginClass = gcl.parseClass('''
-class RepeatedProbeGrailsPlugin {
-    def version = "1.0.0"
-}
-''')
-        def discovery = new DefaultPluginDiscovery(new Class<?>[]{pluginClass, pluginClass})
-        discovery.loadPluginsFromClasspath = false
+        def pluginClass = new GroovyClassLoader().parseClass('''
+            class RepeatedProbeGrailsPlugin {
+                def version = '1.0.0'
+            }
+        ''')
+        def discovery = new DefaultPluginDiscovery([pluginClass, pluginClass] as Class<?>[]).tap {
+            loadPluginsFromClasspath = false
+        }
 
-        and: 'standard error is captured to observe slf4j-simple output'
-        def originalErr = System.err
-        def captured = new ByteArrayOutputStream()
-        System.setErr(new PrintStream(captured, true))
+        and: 'configure a logback appender to capture log messages'
+        def logCapture = new LogCapture(DefaultPluginDiscovery)
 
         when:
         discovery.init(new StandardEnvironment())
 
         then: 'only one registration appears in the load order'
-        discovery.hasPlugin('repeatedProbe')
-        discovery.getPluginsInLoadOrder().count { it.name == 'repeatedProbe' } == 1
-
-        and: 'the skipped duplicate is reported at WARN'
-        captured.toString().readLines().any {
-            it.contains('WARN') && it.contains('repeatedProbe') && it.contains('already registered')
+        with(discovery) {
+            hasPlugin('repeatedProbe')
+            pluginsInLoadOrder.count { it.name == 'repeatedProbe' } == 1
         }
 
+        and: 'the skipped duplicate is reported at WARN'
+        def duplicateWarnings = logCapture.events.findAll {
+            it.level == Level.WARN &&
+            it.formattedMessage.contains('repeatedProbe') &&
+            it.formattedMessage.contains('already registered')
+        }
+        duplicateWarnings.size() == 1
+
         cleanup:
-        System.setErr(originalErr)
+        logCapture.close()
     }
 }
 
