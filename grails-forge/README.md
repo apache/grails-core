@@ -73,8 +73,8 @@ AWS migration configuration is available in this repository for five Forge API s
 
 The target slots are `latest.grails.org`, `snapshot.grails.org`, `next.grails.org`, `prev.grails.org`, and `prev-snapshot.grails.org`. GitHub Actions authenticates to AWS through OIDC using the repository variable `AWS_FORGE_DEPLOY_ROLE_ARN`; it does not use static AWS access keys.
 
-Deployments package the normal Forge executable JAR in a ZIP source bundle. Analytics is not part of the initial AWS deployment. When its endpoint and analytics environment variables are absent, reporting is disabled without affecting application generation.
+Deployments package the normal Forge executable JAR in a ZIP source bundle. Analytics is not deployed. When its endpoint and analytics environment variables are absent, reporting is disabled without affecting application generation. The unused server-side GitHub create / OAuth integration is also omitted.
 
-For bootstrap, deployment, pre-cutover checks, DNS cutover, rollback, monitoring, analytics, and GCP decommissioning procedures, see [AWS Elastic Beanstalk Deployment Runbook](docs/aws-elastic-beanstalk.md).
+For bootstrap, deployment, pre-cutover checks, DNS cutover, rollback, monitoring, and GCP decommissioning procedures, see [AWS Elastic Beanstalk Deployment Runbook](docs/aws-elastic-beanstalk.md).
 
 

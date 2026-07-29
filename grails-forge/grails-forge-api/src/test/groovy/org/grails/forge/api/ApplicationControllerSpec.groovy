@@ -60,16 +60,17 @@ class ApplicationControllerSpec extends Specification {
         configuration.redirectUri.get().toString() == 'https://example.com/forge/'
     }
 
-    void "test absent redirect URL configuration"() {
+    void "test absent redirect URL configuration ignores null"() {
         given:
         GrailsForgeConfiguration configuration = new GrailsForgeConfiguration()
+        def before = configuration.redirectUrl
 
         when:
         configuration.redirectUrl = null
 
         then:
-        configuration.redirectUri.empty
-        configuration.redirectUrl == null
+        configuration.redirectUrl == before
+        configuration.redirectUri.present
     }
 
     void "test application types"() {
