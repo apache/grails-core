@@ -164,6 +164,24 @@ class DatastoreUtilsSpec extends Specification {
         !TransactionSynchronizationManager.hasResource(datastore)
     }
 
+    void "executeWithNewSession cleans up correctly when connect() returns a session owned by a different datastore"() {
+        given: "a parent datastore whose connect() hands out a child datastore's session, like ChildHibernateDatastore"
+        Datastore parent = Mock()
+        Datastore child = Mock()
+        Session childSession = Mock()
+        childSession.getDatastore() >> child
+        parent.connect() >> childSession
+
+        when:
+        def result = DatastoreUtils.executeWithNewSession(parent, { Session session -> session } as SessionCallback)
+
+        then: "the session is unbound from the key it was bound under, so nothing leaks"
+        result.is(childSession)
+        1 * childSession.disconnect()
+        !TransactionSynchronizationManager.hasResource(child)
+        !TransactionSynchronizationManager.hasResource(parent)
+    }
+
     void "executeWithNewSession stacks onto an existing bound session rather than replacing it"() {
         given:
         Datastore datastore = Mock()

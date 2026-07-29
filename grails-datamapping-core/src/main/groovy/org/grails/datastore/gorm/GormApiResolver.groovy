@@ -328,8 +328,8 @@ class ActiveSessionDatastoreSelector {
             }
         }
         
-        // Fallback: If no datastore found in TransactionSynchronizationManager, 
-        // we might still have a non-transactional session bound to a ThreadLocalSessionResolver.
+        // Fallback: If no datastore found in TransactionSynchronizationManager,
+        // we might still have a non-transactional session bound for one of the registered datastores.
         // For performance, we only do the full iteration if allDatastores is small.
         if (registry.allDatastores.size() <= 10) {
             for (Datastore registeredDs in registry.allDatastores) {

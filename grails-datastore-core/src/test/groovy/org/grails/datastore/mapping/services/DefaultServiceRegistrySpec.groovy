@@ -53,8 +53,6 @@ class DefaultServiceRegistrySpec extends Specification {
     }
 }
 
-class TestService implements Service, ITestService {
-    Datastore datastore
-}
+class TestService implements Service, ITestService {}
 
 interface ITestService {}

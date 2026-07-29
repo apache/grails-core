@@ -34,44 +34,38 @@ import org.grails.datastore.mapping.transactions.SessionHolder
  * returns the top, and {@link #unbind()} closes and pops only the top session, restoring the outer
  * binding rather than discarding the whole holder.
  *
- * @author borinquenkid
+ * @author Walter Duque de Estrada
  * @since 8.0
  */
 @CompileStatic
-class ThreadLocalSessionResolver<S extends Session> implements SessionResolver<S> {
+class TransactionSynchronizationSessionResolver implements SessionResolver {
 
     private final Datastore datastore
 
-    ThreadLocalSessionResolver(Datastore datastore) {
+    TransactionSynchronizationSessionResolver(Datastore datastore) {
         this.datastore = datastore
     }
 
     @Override
-    S resolve() {
+    Session resolve() {
         SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.getResource(datastore)
-        return holder != null ? (S) holder.getSession() : null
+        return holder != null ? holder.getValidatedSession() : null
     }
 
     @Override
-    void bind(S session) {
+    void bind(Session session) {
+        if (session.getDatastore() != datastore) {
+            throw new IllegalArgumentException(
+                    "Cannot bind session [$session]: it belongs to datastore [${session.getDatastore()}], not [$datastore]")
+        }
         DatastoreUtils.bindNewSession(session)
     }
 
     @Override
     void unbind() {
-        SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.getResource(datastore)
-        if (holder == null) {
-            return
-        }
-        Session session = holder.getSession()
+        Session session = resolve()
         if (session != null) {
-            holder.removeSession(session)
-        }
-        if (holder.isEmpty()) {
-            TransactionSynchronizationManager.unbindResourceIfPossible(datastore)
-        }
-        if (session != null) {
-            DatastoreUtils.closeSessionOrRegisterDeferredClose(session, datastore)
+            DatastoreUtils.unbindSession(session)
         }
     }
 }

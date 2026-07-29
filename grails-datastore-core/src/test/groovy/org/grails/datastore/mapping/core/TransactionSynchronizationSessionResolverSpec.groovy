@@ -23,21 +23,29 @@ import java.util.concurrent.Callable
 import java.util.concurrent.Executors
 
 import org.springframework.transaction.support.TransactionSynchronizationManager
+
+import org.grails.datastore.mapping.transactions.SessionHolder
 import spock.lang.Specification
 
-class ThreadLocalSessionResolverSpec extends Specification {
+class TransactionSynchronizationSessionResolverSpec extends Specification {
 
     Datastore datastore = Mock()
-    ThreadLocalSessionResolver<Session> resolver = new ThreadLocalSessionResolver<>(datastore)
+    TransactionSynchronizationSessionResolver resolver = new TransactionSynchronizationSessionResolver(datastore)
 
     void cleanup() {
         TransactionSynchronizationManager.unbindResourceIfPossible(datastore)
     }
 
-    def "should bind and resolve session"() {
-        given:
+    private Session connectedSession() {
         Session session = Mock(Session)
         session.getDatastore() >> datastore
+        session.isConnected() >> true
+        return session
+    }
+
+    def "should bind and resolve session"() {
+        given:
+        Session session = connectedSession()
 
         when:
         resolver.bind(session)
@@ -48,8 +56,7 @@ class ThreadLocalSessionResolverSpec extends Specification {
 
     def "should unbind session"() {
         given:
-        Session session = Mock(Session)
-        session.getDatastore() >> datastore
+        Session session = connectedSession()
         resolver.bind(session)
 
         when:
@@ -59,10 +66,23 @@ class ThreadLocalSessionResolverSpec extends Specification {
         resolver.resolve() == null
     }
 
+    def "bind() rejects a session that belongs to a different datastore"() {
+        given: "a session owned by some other datastore"
+        Datastore otherDatastore = Mock(Datastore)
+        Session session = Mock(Session)
+        session.getDatastore() >> otherDatastore
+
+        when:
+        resolver.bind(session)
+
+        then: "the mismatch is rejected up front instead of binding under one key and resolving under another"
+        thrown(IllegalArgumentException)
+        resolver.resolve() == null
+    }
+
     def "resolve() returns the same session DatastoreUtils.bindSession bound, not an independent copy"() {
         given: "a session bound the way GORM's own transaction/session machinery binds it"
-        Session session = Mock(Session)
-        session.getDatastore() >> datastore
+        Session session = connectedSession()
 
         when:
         DatastoreUtils.bindSession(session)
@@ -71,10 +91,35 @@ class ThreadLocalSessionResolverSpec extends Specification {
         resolver.resolve() == session
     }
 
-    def "a session bound on one thread is not visible to another thread"() {
-        given:
+    def "resolve() evicts a disconnected session instead of returning it, matching doGetSession's validation"() {
+        given: "a bound session that has since been disconnected"
         Session session = Mock(Session)
         session.getDatastore() >> datastore
+        session.isConnected() >> false
+        DatastoreUtils.bindSession(session)
+
+        expect: "the stale session is not resolvable"
+        resolver.resolve() == null
+
+        and: "it was evicted from the holder, not just skipped"
+        SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.getResource(datastore)
+        !holder.containsSession(session)
+    }
+
+    def "resolve() returns null for a bound but empty SessionHolder"() {
+        given: "a holder left bound after its only session was removed"
+        Session session = connectedSession()
+        DatastoreUtils.bindSession(session)
+        SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.getResource(datastore)
+        holder.removeSession(session)
+
+        expect:
+        resolver.resolve() == null
+    }
+
+    def "a session bound on one thread is not visible to another thread"() {
+        given:
+        Session session = connectedSession()
         resolver.bind(session)
 
         when:
@@ -92,7 +137,9 @@ class ThreadLocalSessionResolverSpec extends Specification {
         Session first = Mock(Session)
         Session second = Mock(Session)
         first.getDatastore() >> datastore
+        first.isConnected() >> true
         second.getDatastore() >> datastore
+        second.isConnected() >> true
 
         when:
         resolver.bind(first)

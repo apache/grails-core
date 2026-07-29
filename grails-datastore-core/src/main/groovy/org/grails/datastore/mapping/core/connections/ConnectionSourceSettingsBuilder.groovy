@@ -39,10 +39,6 @@ class ConnectionSourceSettingsBuilder extends ConfigurationBuilder<ConnectionSou
         super(propertyResolver, configurationPrefix)
     }
 
-    ConnectionSourceSettingsBuilder(PropertyResolver propertyResolver, String configurationPrefix, Object fallBackConfiguration) {
-        super(propertyResolver, configurationPrefix, fallBackConfiguration)
-    }
-
     @Override
     protected ConnectionSourceSettings createBuilder() {
         return new ConnectionSourceSettings()

@@ -46,5 +46,4 @@ trait Service<T> {
     void setDatastore(Datastore datastore) {
         this.datastore = datastore
     }
-
 }

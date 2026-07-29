@@ -26,7 +26,7 @@ import spock.lang.Specification
 
 class AbstractConnectionSourceFactorySpec extends Specification {
 
-    void "createSettings() applies the injected TenantResolver, matching create(name, configuration)"() {
+    void "create(name, configuration) applies the injected TenantResolver to the fallback settings"() {
         given:
         def tenantResolver = Mock(TenantResolver)
         def factory = new RecordingConnectionSourceFactory()
@@ -34,13 +34,13 @@ class AbstractConnectionSourceFactorySpec extends Specification {
         PropertyResolver configuration = new StandardEnvironment()
 
         when:
-        def settings = factory.createSettings(configuration)
+        def connectionSource = factory.create(ConnectionSource.DEFAULT, configuration)
 
         then:
-        settings.multiTenancy.tenantResolver.is(tenantResolver)
+        connectionSource.settings.multiTenancy.tenantResolver.is(tenantResolver)
     }
 
-    void "createSettings() applies the injected custom type marshallers, matching create(name, configuration)"() {
+    void "create(name, configuration) applies the injected custom type marshallers to the fallback settings"() {
         given:
         def marshaller = Mock(CustomTypeMarshaller)
         def factory = new RecordingConnectionSourceFactory()
@@ -48,28 +48,10 @@ class AbstractConnectionSourceFactorySpec extends Specification {
         PropertyResolver configuration = new StandardEnvironment()
 
         when:
-        def settings = factory.createSettings(configuration)
+        def connectionSource = factory.create(ConnectionSource.DEFAULT, configuration)
 
         then:
-        settings.custom.types.contains(marshaller)
-    }
-
-    void "createSettings() and create(name, configuration) build equivalent fallback settings"() {
-        given:
-        def tenantResolver = Mock(TenantResolver)
-        def marshaller = Mock(CustomTypeMarshaller)
-        def factory = new RecordingConnectionSourceFactory()
-        factory.setTenantResolver(tenantResolver)
-        factory.setCustomTypes([marshaller])
-        PropertyResolver configuration = new StandardEnvironment()
-
-        when:
-        def viaCreateSettings = factory.createSettings(configuration)
-        def viaCreate = factory.create(ConnectionSource.DEFAULT, configuration)
-
-        then:
-        viaCreateSettings.multiTenancy.tenantResolver.is(viaCreate.settings.multiTenancy.tenantResolver)
-        viaCreateSettings.custom.types == viaCreate.settings.custom.types
+        connectionSource.settings.custom.types.contains(marshaller)
     }
 
     private static class RecordingConnectionSourceFactory extends AbstractConnectionSourceFactory<Object, ConnectionSourceSettings> {

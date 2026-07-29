@@ -20,9 +20,6 @@
 package org.grails.datastore.mapping.core
 
 import org.grails.datastore.mapping.model.MappingContext
-import org.grails.datastore.mapping.services.Service
-import org.springframework.context.ApplicationEventPublisher
-import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.core.env.PropertyResolver
 import spock.lang.Specification
 
@@ -33,33 +30,9 @@ class SessionResolverIntegrationSpec extends Specification {
         def datastore = new TestDatastore(Mock(MappingContext))
         def session = Mock(Session)
         session.getDatastore() >> datastore
+        session.isConnected() >> true
 
         def resolver = datastore.getSessionResolver()
-
-        when:
-        resolver.bind(session)
-
-        then:
-        resolver.resolve() == session
-
-        when:
-        resolver.unbind()
-
-        then:
-        resolver.resolve() == null
-    }
-
-    void "Datastore's default getSessionResolver returns a working thread-local resolver when not overridden"() {
-        given: "a bare Datastore implementor that does not override getSessionResolver()"
-        def datastore = new BareDatastore()
-        def session = Mock(Session)
-        session.getDatastore() >> datastore
-
-        when:
-        def resolver = datastore.getSessionResolver()
-
-        then:
-        resolver instanceof ThreadLocalSessionResolver
 
         when:
         resolver.bind(session)
@@ -83,27 +56,5 @@ class SessionResolverIntegrationSpec extends Specification {
         protected Session createSession(PropertyResolver connectionDetails) {
             return null
         }
-    }
-
-    static class BareDatastore implements Datastore {
-        Session connect() { null }
-
-        Session getCurrentSession() { null }
-
-        boolean hasCurrentSession() { false }
-
-        MappingContext getMappingContext() { null }
-
-        ApplicationEventPublisher getApplicationEventPublisher() { null }
-
-        ConfigurableApplicationContext getApplicationContext() { null }
-
-        boolean isSchemaless() { false }
-
-        def <T> T withSession(Closure<T> callable) { null }
-
-        def <T extends Service> Iterable<T> getServices() { [] }
-
-        def <T> T getService(Class<T> interfaceType) { null }
     }
 }

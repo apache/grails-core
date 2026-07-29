@@ -28,18 +28,34 @@ import groovy.transform.CompileStatic
  * maintaining independent state, so this never disagrees with Spring's own transactional session
  * bookkeeping.
  *
- * @author borinquenkid
+ * @author Walter Duque de Estrada
  * @since 8.0
  */
 @CompileStatic
-interface SessionResolver<S extends Session> {
+interface SessionResolver {
 
-    /** Resolves the current session based on current context (thread) */
-    S resolve()
+    /**
+     * Resolves the current valid session bound in the current context (thread), or {@code null}
+     * if none is bound. Implementations must return only sessions that
+     * {@link Session#isConnected()} - a stale, disconnected session is evicted rather than
+     * returned, matching {@code DatastoreUtils.doGetSession}'s validation semantics.
+     */
+    Session resolve()
 
-    /** Binds a session to the current context */
-    void bind(S session)
+    /**
+     * Binds a session owned by this resolver's datastore to the current context, making it the
+     * session {@link #resolve()} returns. Nested bindings stack: binding a second session pushes
+     * it on top of the first.
+     *
+     * @throws IllegalArgumentException if the session belongs to a different datastore
+     */
+    void bind(Session session)
 
-    /** Unbinds the current session */
+    /**
+     * Unbinds <b>and closes</b> the current session, restoring the previously-bound session (if
+     * any) as current. Equivalent to {@code DatastoreUtils.unbindSession(resolve())}: the popped
+     * session is closed (or registered for deferred close), so callers must not continue using a
+     * session after unbinding it. Does nothing if no session is bound.
+     */
     void unbind()
 }

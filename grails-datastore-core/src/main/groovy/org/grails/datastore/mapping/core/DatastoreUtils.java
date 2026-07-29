@@ -374,14 +374,7 @@ public abstract class DatastoreUtils {
             return callback.doInSession(session);
         }
         finally {
-            SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(datastore);
-            if (sessionHolder != null) {
-                sessionHolder.removeSession(session);
-                if (sessionHolder.isEmpty()) {
-                    TransactionSynchronizationManager.unbindResource(datastore);
-                }
-            }
-            closeSessionOrRegisterDeferredClose(session, datastore);
+            unbindSession(session);
         }
     }
 
@@ -525,7 +518,7 @@ public abstract class DatastoreUtils {
         }
         else {
 
-            Map<String, Object>[] configurations = (Map<String, Object>[]) new Map[1];
+            Map<String, Object>[] configurations = new Map[1];
             configurations[0] = configuration;
             return createPropertyResolvers(configurations);
         }
