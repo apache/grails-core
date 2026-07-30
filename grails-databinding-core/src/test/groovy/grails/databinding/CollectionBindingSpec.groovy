@@ -187,6 +187,44 @@ class CollectionBindingSpec extends Specification {
         dept.setOfCodes.contains 'Rush'
     }
 
+    void 'Test binding to a Set with non-numeric grouping keys'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def dept = new Department()
+        def listener = new CollectionBindingListener()
+
+        when:
+        binder.bind dept, new SimpleMapDataBindingSource([
+                'setOfCodes[foo]': 2112,
+                'setOfCodes[bar]': 'Rush'
+        ]), listener
+
+        then:
+        dept.setOfCodes.size() == 2
+        dept.setOfCodes.contains 2112
+        dept.setOfCodes.contains 'Rush'
+        listener.bindingErrors.empty
+    }
+
+    void 'Test binding to a Set with negative grouping keys'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def dept = new Department()
+        def listener = new CollectionBindingListener()
+
+        when:
+        binder.bind dept, new SimpleMapDataBindingSource([
+                'setOfCodes[-1]': 2112,
+                'setOfCodes[-2]': 'Rush'
+        ]), listener
+
+        then:
+        dept.setOfCodes.size() == 2
+        dept.setOfCodes.contains 2112
+        dept.setOfCodes.contains 'Rush'
+        listener.bindingErrors.empty
+    }
+
     void 'Test binding to an unitialized untyped Map'() {
         given:
         def binder = new SimpleDataBinder()
@@ -225,6 +263,7 @@ class CollectionBindingListener extends DataBindingListenerAdapter {
 
     List<BindingError> bindingErrors = []
 
+    @Override
     void bindingError(BindingError error, errors) {
         bindingErrors << error
     }

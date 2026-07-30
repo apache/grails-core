@@ -435,7 +435,9 @@ class GrailsWebDataBinder extends SimpleDataBinder {
                     needsBinding = false
                     if (Set.isAssignableFrom(metaProperty.type)) {
                         // Set association keys are grouping keys (not positions); do not
-                        // require a numeric index. Selection is by id.
+                        // require a numeric index. Selection is by id, and
+                        // addElementToCollectionAt ignores the index for Sets, so the
+                        // value passed below is inert.
                         def collection = initializeCollection(obj, propName, metaProperty.type)
                         def instance
                         if (collection != null) {

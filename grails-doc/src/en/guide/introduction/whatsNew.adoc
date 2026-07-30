@@ -257,3 +257,14 @@ be enabled (`grails.mongodb.transactional = true`). Spring Data repositories are
 session are shared, and the two object-mapping models stay separate. See the
 link:{mongodb5Guide}index.html#springDataInterop[Spring Data MongoDB Interoperability] section of the GORM for MongoDB
 guide for details.
+
+==== Indexed Data Binding Changes
+
+Indexed array, collection, and positional-association binding now follows the JavaBeans indexed-property model
+(spec v1.01, section 7.2): only non-negative `int` indexes are accepted. Paths such as `books[-1].title` or
+`albums[bogus]` are rejected as binding errors instead of mutating the last element via Groovy `putAt(-1)` semantics
+or throwing an uncaught exception. The offending path is skipped and the target is left unchanged by that entry.
+
+`Set` association keys remain arbitrary grouping tokens (selection is by `id`), so values such as `authors[foo]` and
+`authors[-1]` continue to bind for Sets. See the link:theWebLayer.html#dataBinding[Data Binding] guide and the
+xref:upgrading#upgrading80x[upgrade guide] for details.

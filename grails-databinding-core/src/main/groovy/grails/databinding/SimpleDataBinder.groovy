@@ -342,13 +342,20 @@ class SimpleDataBinder implements DataBinder {
                 addElementToArrayAt(array, index, val)
             }
         } else if (Collection.isAssignableFrom(propertyType)) {
-            Integer index = parseIndexedPropertyIndex(obj, indexedPropertyReferenceDescriptor, val, listener, errors)
-            if (index == null) {
-                return
+            // Sets use the bracket key only as a grouping token; the parsed index is never
+            // consumed (isOkToAddElementAt / addElementToCollectionAt ignore it). Require a
+            // non-negative integer index only for List/Collection paths that actually use it.
+            boolean isSet = Set.isAssignableFrom(propertyType)
+            Integer index = 0
+            if (!isSet) {
+                index = parseIndexedPropertyIndex(obj, indexedPropertyReferenceDescriptor, val, listener, errors)
+                if (index == null) {
+                    return
+                }
             }
             Collection collectionInstance = initializeCollection(obj, propName, propertyType)
             def indexedInstance = null
-            if (!(Set.isAssignableFrom(propertyType))) {
+            if (!isSet) {
                 indexedInstance = collectionInstance[index]
             }
             if (indexedInstance == null) {
@@ -415,20 +422,25 @@ class SimpleDataBinder implements DataBinder {
     protected Integer parseIndexedPropertyIndex(obj, IndexedPropertyReferenceDescriptor indexedPropertyReferenceDescriptor,
         val, DataBindingListener listener, errors) {
 
+        String rawIndex = indexedPropertyReferenceDescriptor.index
+        Integer index = null
         try {
-            Integer index = Integer.parseInt(indexedPropertyReferenceDescriptor.index)
-            if (index < 0) {
-                // Intentional: report the same generic NumberFormatException as a
-                // malformed index so untrusted request data cannot distinguish that
-                // negative indexes are handled explicitly.
-                throw new NumberFormatException(indexedPropertyReferenceDescriptor.index)
-            }
-            index
+            index = Integer.parseInt(rawIndex)
         }
-        catch (NumberFormatException e) {
-            addBindingError(obj, indexedPropertyReferenceDescriptor.toString(), val, e, listener, errors)
-            null
+        catch (NumberFormatException ignored) {
+            // handled below, with the same error as a negative index
         }
+
+        if (index == null || index < 0) {
+            // Intentional: malformed and negative indexes are reported identically, so
+            // untrusted request data cannot tell that negative indexes are handled by a
+            // separate check. Do not "improve" this into two distinct messages.
+            // GrailsWebDataBindingListener copies cause.message into FieldError.defaultMessage.
+            addBindingError(obj, indexedPropertyReferenceDescriptor.toString(), val,
+                    new NumberFormatException("For input string: \"${rawIndex}\""), listener, errors)
+            return null
+        }
+        index
     }
 
     @CompileStatic(TypeCheckingMode.SKIP)

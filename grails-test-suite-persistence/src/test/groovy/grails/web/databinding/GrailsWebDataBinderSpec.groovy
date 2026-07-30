@@ -828,6 +828,77 @@ class GrailsWebDataBinderSpec extends Specification implements DataTest {
         updatedA2.name == 'Author Dos'
     }
 
+    void 'Test updating Set elements by id with negative grouping keys'() {
+
+        given:
+        def publisher = new Publisher(name: 'Some Publisher')
+        def bindingErrors = [] as List<BindingError>
+        def listener = new DataBindingListenerAdapter() {
+            @Override void bindingError(BindingError error, Object errors) {
+                bindingErrors << error
+            }
+        }
+
+        when:
+        def a1 = new Author(name: 'Author One').save()
+        def a2 = new Author(name: 'Author Two').save()
+        publisher.addToAuthors(a1)
+        publisher.addToAuthors(a2)
+
+        then:
+        a1.id != null
+        a2.id != null
+
+        when:
+        // Negative keys are grouping tokens for Sets, not positions - must not bind-error.
+        binder.bind(publisher, new SimpleMapDataBindingSource([
+            'authors[-1]': [id: a2.id, name: 'Author Dos'],
+            'authors[-2]': [id: a1.id, name: 'Author Uno']
+        ]), listener)
+        def updatedA1 = publisher.authors.find { it.id == a1.id }
+        def updatedA2 = publisher.authors.find { it.id == a2.id }
+
+        then:
+        bindingErrors.empty
+        updatedA1.name == 'Author Uno'
+        updatedA2.name == 'Author Dos'
+    }
+
+    void 'Test adding new Set elements with non-numeric grouping keys'() {
+
+        given:
+        def publisher = new Publisher(name: 'Some Publisher')
+        def bindingErrors = [] as List<BindingError>
+        def listener = new DataBindingListenerAdapter() {
+            @Override void bindingError(BindingError error, Object errors) {
+                bindingErrors << error
+            }
+        }
+
+        when:
+        def a1 = new Author(name: 'Author One').save()
+        publisher.addToAuthors(a1)
+
+        then:
+        a1.id != null
+
+        when:
+        binder.bind(publisher, new SimpleMapDataBindingSource([
+            'authors[foo]': [name: 'Brand New Author'],
+            'authors[bar]': [name: 'Another New Author']
+        ]), listener)
+        def existing = publisher.authors.find { it.id == a1.id }
+        def brandNew = publisher.authors.find { it.name == 'Brand New Author' }
+        def another = publisher.authors.find { it.name == 'Another New Author' }
+
+        then:
+        bindingErrors.empty
+        existing.name == 'Author One'
+        brandNew
+        another
+        publisher.authors.size() == 3
+    }
+
     void 'Test updating Set elements by id'() {
 
         given:
