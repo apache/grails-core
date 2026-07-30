@@ -1215,12 +1215,15 @@ GORM's `createCriteria()` and `withCriteria()` DSL are implemented on top of the
 
 *`javax.persistence` → `jakarta.persistence`*: This migration was already required for Grails 7; Grails 8 continues to require `jakarta.*`.
 
-===== 26.9 Many-to-Many Join-Table Column Names
+[[_join_table_foreign_key_column_names]]
+===== 26.9 Join-Table Foreign-Key Column Names
 
-In Grails 7 (Hibernate 5), the default foreign-key column names of a many-to-many join table were derived from the simple names of the associated domain classes, after applying the column naming strategy.
+This change affects only a *unidirectional* `hasMany` — a collection with no `belongsTo` and no reciprocal `hasMany` on the other side. A *bidirectional* many-to-many association (both sides declare `hasMany`, or one side uses `belongsTo`) is **not** affected: both of its join-table foreign-key columns are still derived from the class names, identical to Grails 7.
+
+In Grails 7 (Hibernate 5), the default foreign-key column that referenced the associated entity in a unidirectional `hasMany` join table was derived from the simple name of that entity's domain class, after applying the column naming strategy.
 For example, the domain class `Book` produced the foreign-key column `book_id`, even when its physical table was mapped to a different name.
 
-In Grails 8 (Hibernate 7), these foreign-key column names are instead derived from the physical table names of the associated domain classes.
+In Grails 8 (Hibernate 7), that foreign-key column is instead derived from the physical table name of the associated domain class.
 The physical name includes an explicit `table` mapping and any transformation made by a custom physical naming strategy.
 For example, given the following mapping:
 
@@ -1231,47 +1234,40 @@ class Book {
         table 'catalog_book'
     }
 }
+
+class Shelf {
+    String label
+
+    static hasMany = [books: Book] // unidirectional: no belongsTo, no reciprocal hasMany
+}
 ----
 
-Grails 7 used `book_id` by default in the join table, whereas Grails 8 uses `catalog_book_id`.
-This is a breaking schema change for an existing database if its join table still uses the Grails 7 column names.
+Grails 7 used `book_id` by default in the `shelf_books` join table, whereas Grails 8 uses `catalog_book_id`. The other column in that same join table (`shelf_id`, derived from the owning `Shelf` class) is unchanged.
+This is a breaking schema change for an existing database if its join table still uses the Grails 7 column name.
 
-To keep the existing schema unchanged, configure the join table and both foreign-key columns explicitly in the `static mapping` block on each side of the relationship:
+To keep the existing schema unchanged, configure the join table and its foreign-key column explicitly in the `static mapping` block:
 
 [source,groovy]
 ----
-class Author {
-    String name
+class Shelf {
+    String label
 
     static hasMany = [books: Book]
 
     static mapping = {
         books joinTable: [
-            name: 'author_books',
-            key: 'author_id',
+            name: 'shelf_books',
+            key: 'shelf_id',
             column: 'book_id'
-        ]
-    }
-}
-
-class Book {
-    String title
-
-    static belongsTo = Author
-    static hasMany = [authors: Author]
-
-    static mapping = {
-        authors joinTable: [
-            name: 'author_books',
-            key: 'book_id',
-            column: 'author_id'
         ]
     }
 }
 ----
 
-Replace `author_books`, `author_id`, and `book_id` with the table and column names already used by your database.
+Replace `shelf_books`, `shelf_id`, and `book_id` with the table and column names already used by your database.
 Declaring all three names prevents the naming strategy from changing the mapping during the upgrade.
+
+Separately, the element column of a *basic or enum collection* (e.g. `static hasMany = [items: String]`) is now resolved through the naming strategy's *column* naming rules instead of its *table* naming rules for the property-name prefix (e.g. `items_value`). Most naming strategies apply the same transformation to both, so this only matters if your custom `PhysicalNamingStrategy` implements `toPhysicalColumnName` and `toPhysicalTableName` differently.
 
 ==== 27. GORM Properties Are Nullable by Default
 

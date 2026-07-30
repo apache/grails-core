@@ -208,6 +208,11 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
                         IndexedCollection.DEFAULT_ELEMENT_COLUMN_NAME);
     }
 
+    /**
+     * Only reached for a unidirectional {@code hasMany} join table (via {@code CollectionWithJoinTableBinder}).
+     * A bidirectional many-to-many join table's foreign-key columns instead go through
+     * {@code DefaultColumnNameFetcher#resolveForeignKeyForPropertyDomainClass}, unaffected by this method.
+     */
     default String resolveJoinTableForeignKeyColumnName(PersistentEntityNamingStrategy namingStrategy) {
         return ofNullable(getHibernateMappedForm())
                 .map(PropertyConfig::getJoinTableColumnConfig)
@@ -224,9 +229,10 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
         if (present) {
             columnName = joinColumnMappingOptional.get().getName();
         } else {
-            var clazz = isBasic() ?
-                    namingStrategy.resolveColumnName(referencedType.getName()) :
-                    resolveAssociatedEntityTableName(namingStrategy);
+            // Both callers of joinTableColumName (BasicCollectionElementBinder, EnumTypeBinder) operate on
+            // a HibernateBasicProperty, so referencedType is always the collection's basic element type here,
+            // never an associated entity - resolveAssociatedEntityTableName does not apply to this path.
+            var clazz = namingStrategy.resolveColumnName(referencedType.getName());
             var prop = namingStrategy.resolveColumnName(getName());
             columnName = referencedType.isEnum() ?
                     clazz :

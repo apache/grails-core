@@ -31,7 +31,6 @@ import org.grails.datastore.mapping.model.ClassMapping
 import org.grails.datastore.mapping.reflect.EntityReflector
 import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.grails.orm.hibernate.cfg.Mapping
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyWrapper
 
 class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
@@ -387,20 +386,15 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
         property.joinTableColumName(namingStrategy) != null
     }
 
-    void "joinTableColumName applies table naming to the associated entity and column naming to the property prefix"() {
-        given:
-        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
-        def namingStrategy = Mock(PersistentEntityNamingStrategy)
+    void "joinTableColumName resolves the property prefix through column naming rather than table naming"() {
+        given: "a physical naming strategy where column and table transformation rules diverge for 'tags'"
+        def property = createTestHibernateToManyProperty(HTMPOwnerString, "tags")
+        def namingStrategy = new NamingStrategyWrapper(
+                new HTMPColumnMarkingPhysicalNamingStrategy(), getGrailsDomainBinder().jdbcEnvironment)
         hibernateFirstPass()
 
-        when:
-        String columnName = property.joinTableColumName(namingStrategy)
-
-        then:
-        1 * namingStrategy.resolveTableName(_ as GrailsHibernatePersistentEntity) >> "book"
-        1 * namingStrategy.resolveColumnName("books") >> "books"
-        0 * namingStrategy.resolveTableName("books")
-        columnName == "books_book"
+        expect: "the property prefix carries the column-naming marker; the unmarked form would mean the old resolveTableName() path ran instead"
+        property.joinTableColumName(namingStrategy).startsWith("tags_as_column_")
     }
 
     void "joinTableColumName returns derived column name for enum collection"() {
@@ -634,7 +628,7 @@ class HTMPBook {
 }
 
 @Entity
-class Book {
+class HTMPMappedTableBook {
     Long id
     String title
 
@@ -647,7 +641,7 @@ class Book {
 class HTMPMappedTableAuthor {
     Long id
     String name
-    static hasMany = [books: Book]
+    static hasMany = [books: HTMPMappedTableBook]
 }
 
 @Entity
@@ -674,6 +668,16 @@ class HTMPPrefixRemovingPhysicalNamingStrategy extends PhysicalNamingStrategySta
         logicalName.text == HTMPBook.simpleName ?
                 Identifier.toIdentifier('book') :
                 super.toPhysicalTableName(logicalName, jdbcEnvironment)
+    }
+}
+
+class HTMPColumnMarkingPhysicalNamingStrategy extends PhysicalNamingStrategyStandardImpl {
+
+    @Override
+    Identifier toPhysicalColumnName(Identifier logicalName, JdbcEnvironment jdbcEnvironment) {
+        logicalName.text == 'tags' ?
+                Identifier.toIdentifier('tags_as_column') :
+                super.toPhysicalColumnName(logicalName, jdbcEnvironment)
     }
 }
 
