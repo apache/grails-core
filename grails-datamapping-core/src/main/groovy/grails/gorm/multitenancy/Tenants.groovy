@@ -291,7 +291,7 @@ class Tenants {
         try {
             childDatastore = multiTenantCapableDatastore.getDatastoreForTenantId(tenantId)
         } catch (Throwable e) {
-            // ignore
+            log.debug('Ignoring failure resolving datastore for tenant {}: {}', tenantId, e.message)
         }
         // Only reuse an already-bound per-tenant session for non-shared-connection modes
         // (e.g. DATABASE), where getDatastoreForTenantId yields a distinct child datastore.

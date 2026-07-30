@@ -19,6 +19,7 @@
 package org.grails.datastore.gorm
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 
 import jakarta.persistence.FlushModeType
 
@@ -52,6 +53,7 @@ import org.grails.datastore.mapping.validation.ValidationErrors
  * @since 1.0
  */
 @CompileStatic
+@Slf4j
 class GormValidationApi<D> extends AbstractGormApi<D> {
 
     public static final String ARGUMENT_DEEP_VALIDATE = 'deepValidate'
@@ -332,7 +334,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
                 try {
                     ds.getCurrentSession().setAttribute(instance, GormProperties.ERRORS, errors)
                 } catch (IllegalStateException e) {
-                    // Ignore, session might be disconnected
+                    log.debug('Ignoring failure attaching errors to the current session, it might be disconnected: {}', e.message)
                 }
             }
         }

@@ -757,6 +757,7 @@ class GormRegistry {
                     }
                 } catch (Throwable e) {
                     // qualifier is not a datasource connection name; keep defaultDatastore
+                    log.debug('Ignoring failure resolving connection {} for entity {}: {}', normalizedQualifier, className, e.message)
                 }
             }
             // Skip non-DEFAULT qualifiers that resolve back to the parent for multi-tenant entities.

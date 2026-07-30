@@ -23,6 +23,7 @@ import grails.gorm.multitenancy.CurrentTenantHolder
 import grails.gorm.multitenancy.Tenants
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
@@ -177,6 +178,7 @@ class GormApiResolver {
 }
 
 @CompileStatic
+@Slf4j
 class PreferredDatastoreSelector {
 
     @CompileDynamic
@@ -228,7 +230,7 @@ class PreferredDatastoreSelector {
                     return ds
                 }
             } catch (Throwable e) {
-                // ignore
+                log.debug('Ignoring failure resolving connection {} on the preferred datastore: {}', qualifier, e.message)
             }
         }
         return null
@@ -236,6 +238,7 @@ class PreferredDatastoreSelector {
 }
 
 @CompileStatic
+@Slf4j
 class QualifiedDatastoreSelector {
 
     @CompileDynamic
@@ -273,7 +276,7 @@ class QualifiedDatastoreSelector {
                     return ds
                 }
             } catch (Throwable e) {
-                // ignore
+                log.debug('Ignoring failure resolving connection {}: {}', qualifier, e.message)
             } finally {
                 stateRegistry.setResolvingDatastoreDepth(depth)
             }
@@ -286,7 +289,7 @@ class QualifiedDatastoreSelector {
                     return ds
                 }
             } catch (Throwable e) {
-                // ignore
+                log.debug('Ignoring failure resolving tenant {}: {}', qualifier, e.message)
             } finally {
                 stateRegistry.setResolvingDatastoreDepth(depth)
             }
