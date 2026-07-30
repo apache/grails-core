@@ -41,7 +41,7 @@ class GormRegistryConcurrencySpec extends Specification {
         GormRegistry.reset()
     }
 
-    @Timeout(10)
+    @Timeout(15)
     void "registry hot-paths perform without lock contention under high concurrency"() {
         given:
         def registry = GormRegistry.instance
@@ -119,7 +119,10 @@ class GormRegistryConcurrencySpec extends Specification {
         }
 
         startLatch.countDown() // Release all threads
-        boolean completedInTime = endLatch.await(5, TimeUnit.SECONDS)
+        // A generous budget: on a quiescent machine this completes in low single-digit seconds,
+        // but shared/noisy CI runners (e.g. macos-latest under concurrent load) need headroom so
+        // the assertion measures a genuine hang rather than ordinary scheduling jitter.
+        boolean completedInTime = endLatch.await(10, TimeUnit.SECONDS)
         if (!completedInTime) {
             executor.shutdownNow()
         } else {
