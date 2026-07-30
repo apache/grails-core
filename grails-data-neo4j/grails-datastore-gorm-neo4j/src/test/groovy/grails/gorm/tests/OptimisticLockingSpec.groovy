@@ -130,17 +130,18 @@ class OptimisticLockingSpec extends GormDatastoreSpec {
         when:
         o = OptLockNotVersioned.get(o.id)
 
-        try {
-            Thread.start {
-                OptLockNotVersioned.withNewSession { s ->
-                    def reloaded = OptLockNotVersioned.get(o.id)
-                    reloaded.name += ' in new session'
-                    reloaded.save(flush: true)
-                }
-            }.join(2000)
-        } catch (InterruptedException e) {
-            // ignore
+        def backgroundUpdate = Thread.start {
+            OptLockNotVersioned.withNewSession { s ->
+                def reloaded = OptLockNotVersioned.get(o.id)
+                reloaded.name += ' in new session'
+                reloaded.save(flush: true)
+            }
         }
+        // Unlike the unbounded join() above, join(timeout) can return before the thread
+        // finishes; assert completion explicitly so a slow runner fails loudly instead of
+        // silently racing the assertions below.
+        backgroundUpdate.join(5000)
+        assert !backgroundUpdate.isAlive()
         // Same headroom rationale as "Test optimistic locking" above.
         sleep 5000
 
