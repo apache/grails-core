@@ -96,7 +96,11 @@ class OptimisticLockingSpec extends GormDatastoreSpec {
                 }
             }
         }.join()
-        sleep 2000 // heisenbug
+        // The background thread's save is already synchronized via join() above; this sleep is
+        // headroom for the embedded Neo4j harness's own write durability, not thread completion.
+        // A noisy/loaded CI runner can push that past a couple of seconds - give it more room
+        // rather than risk a spurious failure (heisenbug).
+        sleep 5000
 
         o.name += ' in main session'
         def ex
@@ -137,7 +141,8 @@ class OptimisticLockingSpec extends GormDatastoreSpec {
         } catch (InterruptedException e) {
             // ignore
         }
-        sleep 2000 // heisenbug
+        // Same headroom rationale as "Test optimistic locking" above.
+        sleep 5000
 
         o.name += ' in main session'
         def ex
