@@ -609,7 +609,12 @@ project(':grails-test-examples-jetty').projectDir = file('grails-test-examples/j
 project(':grails-test-examples-undertow').projectDir = file('grails-test-examples/undertow')
 project(':grails-test-examples-latency').projectDir = file('grails-test-examples/latency')
 
-// The Spring Dependency Management example imports the in-commit BOMs from the local Maven repository.
+// The Spring Dependency Management example imports grails-bom through
+// io.spring.dependency-management, which resolves it in its own detached configuration and so never
+// sees the project substitution in gradle/functional-test-config.gradle. The root build script writes
+// the BOM poms this build generates into .gradle/local-boms, and GrailsRepoSettingsPlugin serves them
+// from there as an exclusiveContent file repository - not mavenLocal(), and nothing is downloaded - so
+// the example is always managed by the BOM in this commit and works on an unpublished version.
 include 'grails-test-examples-spring-dependency-management'
 project(':grails-test-examples-spring-dependency-management').projectDir = file('grails-test-examples/spring-dependency-management')
 
