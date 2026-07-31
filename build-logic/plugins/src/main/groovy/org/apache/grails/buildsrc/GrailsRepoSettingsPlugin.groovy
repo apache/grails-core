@@ -69,6 +69,39 @@ class GrailsRepoSettingsPlugin implements Plugin<Settings> {
         target.dependencyResolutionManagement { DependencyResolutionManagement manager ->
             manager.repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
             manager.repositories { RepositoryHandler repo ->
+                // The Spring Dependency Management example imports grails-bom through
+                // io.spring.dependency-management, which resolves BOM imports with its own detached
+                // configuration and so never sees the project substitution in
+                // gradle/functional-test-config.gradle. The root build script writes the BOM poms this
+                // build generates into .gradle/local-boms, and they are served from here. That location
+                // is deliberately outside build/, so a combined `gradlew clean <task>` invocation cannot
+                // delete the poms after configuration has written them but before the example resolves.
+                //
+                // This is declared as exclusiveContent deliberately: these coordinates must resolve
+                // from the local build and nowhere else. A plain content filter would let a missing
+                // local pom fall through to the remote repositories and silently manage the example
+                // with the last published BOM instead of the one in this commit - which is the exact
+                // bug this arrangement exists to prevent, and it fails silently.
+                //
+                // Scoped to the grails-core root build, which is the only build that produces these
+                // poms, so other consumers of this settings plugin are unaffected.
+                if (new File(target.rootDir, 'grails-test-examples/spring-dependency-management').isDirectory()) {
+                    repo.exclusiveContent {
+                        it.forRepository {
+                            repo.maven {
+                                name = 'grailsLocalTestRepo'
+                                url = new File(target.rootDir, '.gradle/local-boms').toURI()
+                                metadataSources { source -> source.mavenPom() }
+                            }
+                        }
+                        it.filter { filter ->
+                            filter.includeModule('org.apache.grails', 'grails-base-bom')
+                            filter.includeModule('org.apache.grails', 'grails-bom')
+                            filter.includeModule('org.apache.grails', 'grails-hibernate5-bom')
+                            filter.includeModule('org.apache.grails', 'grails-hibernate7-bom')
+                        }
+                    }
+                }
                 if (System.getenv('GRAILS_INCLUDE_MAVEN_LOCAL')) {
                     repo.mavenLocal()
                 }

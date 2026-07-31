@@ -108,6 +108,26 @@ class BomPropertyOverridesPluginSpec extends Specification {
         'org.example:enforced-bom:2.0.0' in coordinates
     }
 
+    def "detectDeclaredBoms ignores project platform dependencies"() {
+        given:
+        def root = ProjectBuilder.builder().withName('root').build()
+        def bom = ProjectBuilder.builder().withName('test-bom').withParent(root).build()
+        bom.group = 'org.example'
+        bom.version = '1.0.0'
+        def consumer = ProjectBuilder.builder().withName('consumer').withParent(root).build()
+        consumer.plugins.apply('java')
+        consumer.dependencies.add(
+                'implementation',
+                consumer.dependencies.platform(consumer.dependencies.project(path: ':test-bom'))
+        )
+
+        when:
+        def coordinates = BomPropertyOverridesPlugin.detectDeclaredBoms(consumer.configurations)
+
+        then:
+        coordinates.isEmpty()
+    }
+
     def "detectDeclaredBoms ignores non-platform dependencies"() {
         given:
         def project = ProjectBuilder.builder().build()

@@ -26,6 +26,7 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.ConfigurationContainer
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ModuleDependency
+import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.api.artifacts.dsl.DependencyHandler
 import org.gradle.api.attributes.Category
 
@@ -180,6 +181,9 @@ class BomPropertyOverridesPlugin implements Plugin<Project> {
         configurations.each {
             for (Dependency dep : it.dependencies) {
                 if (!(dep instanceof ModuleDependency)) {
+                    continue
+                }
+                if (dep instanceof ProjectDependency) {
                     continue
                 }
                 if (!isPlatformDependency((ModuleDependency) dep)) {

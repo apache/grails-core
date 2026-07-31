@@ -131,6 +131,25 @@ apply {
     from layout.projectDirectory.file('gradle/rat-root-config.gradle')
 }
 
+if (findProject(':grails-test-examples-spring-dependency-management')) {
+    // grails-base-bom is evaluated LAST on purpose. It builds its constraints by walking the other
+    // projects, and anything not yet carrying java-platform is taken for an ordinary published module -
+    // so evaluating it first would make it adopt the sibling BOMs as managed dependencies and bake that
+    // into the published base BOM. Force every platform to be configured before any pom is generated.
+    def bomNames = ['grails-bom', 'grails-hibernate5-bom', 'grails-hibernate7-bom', 'grails-base-bom']
+    bomNames.each { String bomName -> evaluationDependsOn(project(":${bomName}").path) }
+    bomNames.each { String bomName ->
+        Project bomProject = project(":${bomName}")
+        def generatePom = bomProject.tasks.named('generatePomFileForMavenPublication', GenerateMavenPom).get()
+        generatePom.doGenerate()
+        copy {
+            from generatePom.destination
+            into layout.projectDirectory.dir(".gradle/local-boms/org/apache/grails/${bomName}/${projectVersion}")
+            rename { "${bomName}-${projectVersion}.pom" }
+        }
+    }
+}
+
 // For debugging the gradle task graph: Uncomment to show task dependencies when a task is run
 //gradle.taskGraph.whenReady {taskGraph ->
 //    logger.lifecycle("Found ${taskGraph.allTasks.size()} tasks.")
