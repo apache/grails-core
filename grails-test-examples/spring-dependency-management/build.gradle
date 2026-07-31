@@ -27,9 +27,9 @@
 //   * grails { bom = null } opts out of the Grails Gradle plugin's automatic
 //     platform(grails-bom) injection, so version management is NOT provided by the
 //     framework's native platform.
-//   * io.spring.dependency-management is applied directly and imports grails-bom as
-//     a Maven BOM, exactly as a migrated Grails 7 build would, so that the Spring DM
-//     plugin is the source of truth for managed versions here.
+//   * io.spring.dependency-management is applied directly and manages the external
+//     versions this example needs, so the Spring DM plugin remains the source of
+//     truth for managed versions here.
 plugins {
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.compile'
@@ -53,20 +53,37 @@ grails {
     bom = null
 }
 
+apply from: rootProject.layout.projectDirectory.file('dependencies.gradle')
+def grailsBomVersions = rootProject.project(':grails-bom').customBomVersions
+
+// Override Spring Boot's managed properties with the Grails BOM values so the legacy
+// Spring Dependency Management path keeps the project-selected versions.
+ext['groovy.version'] = bomDependencyVersions['groovy.version']
+ext['commons-codec.version'] = bomDependencyVersions['commons-codec.version']
+ext['log4j2.version'] = bomDependencyVersions['log4j2.version']
+ext['logback.version'] = bomDependencyVersions['logback.version']
+ext['jackson-bom.version'] = bomDependencyVersions['jackson3.version']
+
 dependencyManagement {
-    imports {
-        mavenBom "org.apache.grails:grails-bom:${projectVersion}"
+    dependencies {
+        dependency "org.apache.groovy:groovy:${bomDependencyVersions['groovy.version']}"
+        dependency "org.apache.ant:ant:${gradleBomDependencyVersions['ant.version']}"
+        dependency "org.apache.ant:ant-junit:${gradleBomDependencyVersions['ant.version']}"
+        dependency "ch.qos.logback:logback-classic:${bomDependencyVersions['logback.version']}"
+        dependency "ch.qos.logback:logback-core:${bomDependencyVersions['logback.version']}"
+        dependency "org.fusesource.jansi:jansi:${gradleBomDependencyVersions['jansi.version']}"
+        dependency "org.jline:jline:${gradleBomDependencyVersions['jline.version']}"
+        dependency "org.hibernate:hibernate-core-jakarta:${grailsBomVersions['hibernate.version']}"
+        dependency "org.objenesis:objenesis:${gradleBomDependencyVersions['objenesis.version']}"
+        dependency "opensymphony:sitemesh:${bomDependencyVersions['sitemesh.version']}"
+        dependency "org.spockframework:spock-core:${bomDependencyVersions['spock.version']}"
+        dependency "org.spockframework:spock-spring:${bomDependencyVersions['spock.version']}"
+        dependency "org.sitemesh:spring-boot-starter-sitemesh:${bomDependencyVersions['starter-sitemesh.version']}"
+        dependency "org.sitemesh:spring-webmvc-sitemesh:${bomDependencyVersions['spring-webmvc-sitemesh.version']}"
+        dependency "tools.jackson.core:jackson-core:${bomDependencyVersions['jackson3.version']}"
+        dependency "tools.jackson.core:jackson-databind:${bomDependencyVersions['jackson3.version']}"
     }
 }
-
-// io.spring.dependency-management lets spring-boot-dependencies' own logback.version property win over
-// the grails-bom import, so the security-patched logback isn't applied automatically. A migrated Grails 7
-// app hitting the same CVE would override the Spring-managed version property directly; reproduce that here,
-// sourcing the number from dependencies.gradle so it stays the single source of truth.
-apply from: rootProject.layout.projectDirectory.file('dependencies.gradle')
-ext['logback.version'] = bomDependencyVersions['logback.version']
-// Same situation for the Jackson 3 security override (CVE-2026-59889) - see jackson3.version in dependencies.gradle.
-ext['jackson-bom.version'] = bomDependencyVersions['jackson3.version']
 
 dependencies {
     implementation 'org.apache.grails:grails-dependencies-starter-web'
@@ -79,6 +96,66 @@ dependencies {
     testImplementation 'org.apache.grails:grails-testing-support-web'
 
     integrationTestImplementation 'org.apache.grails:grails-testing-support-http-client'
+}
+
+def expectedDependencyVersions = [
+        'ch.qos.logback:logback-classic'           : bomDependencyVersions['logback.version'],
+        'ch.qos.logback:logback-core'              : bomDependencyVersions['logback.version'],
+        'commons-codec:commons-codec'              : bomDependencyVersions['commons-codec.version'],
+        'org.apache.groovy:groovy'                 : bomDependencyVersions['groovy.version'],
+        'org.apache.groovy:groovy-console'         : bomDependencyVersions['groovy.version'],
+        'org.apache.groovy:groovy-json'            : bomDependencyVersions['groovy.version'],
+        'org.apache.groovy:groovy-sql'             : bomDependencyVersions['groovy.version'],
+        'org.apache.groovy:groovy-templates'       : bomDependencyVersions['groovy.version'],
+        'org.apache.groovy:groovy-xml'             : bomDependencyVersions['groovy.version'],
+        'org.apache.logging.log4j:log4j-api'       : bomDependencyVersions['log4j2.version'],
+        'org.apache.logging.log4j:log4j-to-slf4j'  : bomDependencyVersions['log4j2.version'],
+        'tools.jackson.core:jackson-core'          : bomDependencyVersions['jackson3.version'],
+        'tools.jackson.core:jackson-databind'      : bomDependencyVersions['jackson3.version'],
+]
+
+tasks.register('verifyDependencyManagementVersions') {
+    group = 'verification'
+    description = 'Verifies Spring Dependency Management resolves Grails-selected dependency versions.'
+    doLast {
+        // A coordinate is only asserted on a configuration that actually consumes it - logback and
+        // jackson, for instance, are runtime-only and never appear on compileClasspath. Absence is
+        // therefore not a failure here, but a coordinate that appears on NO configuration is: that
+        // would mean this check had quietly stopped covering it, which is the drift it exists to catch.
+        def seenDependencies = [] as Set
+        [configurations.compileClasspath, configurations.integrationTestRuntimeClasspath].each { configuration ->
+            def resolvedVersions = configuration.resolvedConfiguration.resolvedArtifacts.collectEntries { artifact ->
+                def module = artifact.moduleVersion.id
+                // toString() matters: a GString key never matches the String keys below.
+                ["${module.group}:${module.name}".toString(), module.version]
+            }
+            expectedDependencyVersions.each { dependency, expectedVersion ->
+                def resolvedVersion = resolvedVersions[dependency]
+                if (resolvedVersion == null) {
+                    return
+                }
+                seenDependencies << dependency
+                if (resolvedVersion != expectedVersion) {
+                    throw new GradleException("${configuration.name} resolved ${dependency}:${resolvedVersion}, expected ${expectedVersion}")
+                }
+            }
+            resolvedVersions.findAll { dependency, ignored -> dependency.startsWith('org.apache.groovy:') }.each { dependency, resolvedVersion ->
+                def expectedVersion = bomDependencyVersions['groovy.version']
+                if (resolvedVersion != expectedVersion) {
+                    throw new GradleException("${configuration.name} resolved ${dependency}:${resolvedVersion}, expected ${expectedVersion}")
+                }
+            }
+        }
+        def unseenDependencies = expectedDependencyVersions.keySet() - seenDependencies
+        if (unseenDependencies) {
+            throw new GradleException("no checked configuration resolved ${unseenDependencies.join(', ')} - " +
+                    'this check is no longer covering them')
+        }
+    }
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('verifyDependencyManagementVersions')
 }
 
 apply {
