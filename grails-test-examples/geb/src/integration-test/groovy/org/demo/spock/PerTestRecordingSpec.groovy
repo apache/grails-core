@@ -92,19 +92,26 @@ class PerTestRecordingSpec extends ContainerGebSpec {
         // iteration finishes. Two such near-blank captures can encode to identical,
         // non-zero, stable-sized bytes via ffmpeg - passing a raw byte-difference check
         // without actually being distinct, meaningful recordings. Requiring a sensible
-        // minimum size - well under any real capture observed locally (tens of KB), but
-        // well above a single near-blank keyframe - asserts the real framework contract.
+        // minimum size asserts the real framework contract - a real, played-out recording -
+        // rather than raw byte inequality of whatever ffmpeg happened to produce.
         def firstRecording = recordingFiles.find { it.name.contains('setup_running_a_test_to_create_a_recording') }
         def secondRecording = recordingFiles.find { it.name.contains('setup_running_a_second_test_to_create_another') }
         firstRecording.length() > MIN_MEANINGFUL_RECORDING_BYTES
         secondRecording.length() > MIN_MEANINGFUL_RECORDING_BYTES
 
         and: 'the recording files should have different content'
+        // Kept alongside the size check above rather than dropped in favor of it: the size
+        // check only rules out near-blank captures, it says nothing about two recordings
+        // accidentally being the *same* file (e.g. a future regression in how recording
+        // files are named or matched). The two checks guard against different failure modes.
         Files.mismatch(firstRecording.toPath(), secondRecording.toPath()) != -1
     }
 
-    // Comfortably below every real capture observed locally (tens of KB) but well above
-    // what a single near-blank keyframe from a just-restarted VNC connection would encode to.
+    // Two local runs against a real VNC recording container measured every genuine,
+    // played-out recording at 75KB-855KB (org.demo.spock.PerTestRecordingSpec, recorded
+    // 2026-07-21 and 2026-07-31). 5,000 bytes stays more than an order of magnitude below
+    // the smallest of those, while still comfortably clearing a single near-blank keyframe
+    // from a just-restarted VNC connection.
     private static final long MIN_MEANINGFUL_RECORDING_BYTES = 5_000L
 
     private static final DateTimeFormatter RECORDING_DIR_FORMAT = DateTimeFormatter.ofPattern('yyyyMMdd_HHmmss')
