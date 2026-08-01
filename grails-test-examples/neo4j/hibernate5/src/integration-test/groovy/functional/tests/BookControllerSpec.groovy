@@ -19,30 +19,28 @@
 
 package functional.tests
 
-import geb.spock.*
+import functional.tests.pages.BookCreatePage
+import functional.tests.pages.BookListPage
+import functional.tests.pages.BookShowPage
+
+import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
 import spock.lang.Ignore
 
 @Integration(applicationClass = Application)
-class BookControllerSpec extends GebSpec {
+class BookControllerSpec extends ContainerGebSpec {
 
     void "Test list books"() {
-        when:"The home page is visited"
-            go('/book/index')
-
-        then:"The title is correct"
-        	title == "Book List"
+        expect: 'The book list page is rendered'
+        to(BookListPage)
     }
 
     @Ignore
     void "Test save book"() {
-        when:
-        go "/book/create"
-        $('form').title = "The Stand"
-        $('input.save').click()
+        when: 'The create book page is visited and a book is created'
+        to(BookCreatePage).createBook('The Stand')
 
-        then:"The book is correct"
-        title == "Show Book"
-        $('li.fieldcontain div').text() == 'The Stand'
+        then: 'The book is saved and the show page is rendered'
+        at(BookShowPage).bookTitle == 'The Stand'
     }
 }

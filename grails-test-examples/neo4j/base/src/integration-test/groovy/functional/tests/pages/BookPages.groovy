@@ -16,29 +16,43 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+package functional.tests.pages
 
-package functional.tests
+import geb.Page
+import geb.module.TextInput
 
-import functional.tests.pages.BookCreatePage
-import functional.tests.pages.BookListPage
-import functional.tests.pages.BookShowPage
+class BookListPage extends Page {
 
-import grails.plugin.geb.ContainerGebSpec
-import grails.testing.mixin.integration.Integration
+    static String pageTitle = 'Book List'
 
-@Integration(applicationClass = Application)
-class BookControllerSpec extends ContainerGebSpec {
+    static url = '/book/index'
+    static at = { title == pageTitle }
+}
 
-    void "Test list books"() {
-        expect: 'The book list page is rendered'
-        to(BookListPage)
+class BookShowPage extends Page {
+
+    static String pageTitle = 'Show Book'
+
+    static url = '/book/show'
+    static at = { title == pageTitle }
+    static content = {
+        bookTitle { $('li.fieldcontain div').text() }
+    }
+}
+
+class BookCreatePage extends Page {
+
+    static String pageTitle = 'Create Book'
+
+    static url = '/book/create'
+    static at = { title == pageTitle }
+    static content = {
+        titleInput { $('input#title').module(TextInput) }
+        createButton { $('input#create') }
     }
 
-    void "Test save book"() {
-        when: 'The create book page is visited and a book is created'
-        to(BookCreatePage).createBook('The Stand')
-
-        then: 'The book is saved and the show page is rendered'
-        at(BookShowPage).bookTitle == 'The Stand'
+    void createBook(String title) {
+        titleInput.value(title)
+        createButton.click()
     }
 }
