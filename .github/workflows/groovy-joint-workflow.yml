@@ -75,7 +75,7 @@ jobs:
       - name: "📥 Checkout Apache Groovy (${{ steps.groovy-branch.outputs.value }})"
         run: git clone --depth 1 https://github.com/apache/groovy.git -b ${{ steps.groovy-branch.outputs.value }} --single-branch
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
         with:
           cache-disabled: true # this workflow rebuilds Groovy each run; a Gradle home cache is not useful here
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
@@ -134,7 +134,7 @@ jobs:
           java-version: 21
           distribution: liberica
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
         with:
           cache-disabled: true # this workflow rebuilds Groovy each run; a Gradle home cache is not useful here
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
