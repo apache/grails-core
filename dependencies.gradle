@@ -27,6 +27,10 @@ ext {
             'asciidoctor-gradle-jvm.version': '4.0.5',
             'asciidoctorj.version'          : '3.0.0',
             'asset-pipeline-gradle.version' : '5.0.34',
+            // Log4j 2.25.5 requires biz.aQute.bnd.annotation 7.1.0; manage it so the
+            // dependency version validator matches the winning transitive version
+            // (Spring Boot still manages 7.0.0).
+            'bnd.version'                   : '7.1.0',
             'byte-buddy.version'            : '1.18.3',
             'commons-text.version'          : '1.15.0',
             'directory-watcher.version'     : '0.19.1',
@@ -60,6 +64,7 @@ ext {
             'asciidoctor-gradle-jvm': "org.asciidoctor:asciidoctor-gradle-jvm:${gradleBomDependencyVersions['asciidoctor-gradle-jvm.version']}",
             'asciidoctorj'          : "org.asciidoctor:asciidoctorj:${gradleBomDependencyVersions['asciidoctorj.version']}",
             'asset-pipeline-gradle' : "cloud.wondrify:asset-pipeline-gradle:${gradleBomDependencyVersions['asset-pipeline-gradle.version']}",
+            'bnd-annotation'        : "biz.aQute.bnd:biz.aQute.bnd.annotation:${gradleBomDependencyVersions['bnd.version']}",
             'byte-buddy'            : "net.bytebuddy:byte-buddy:${gradleBomDependencyVersions['byte-buddy.version']}",
             'commons-text'          : "org.apache.commons:commons-text:${gradleBomDependencyVersions['commons-text.version']}",
             'directory-watcher'     : "io.methvin:directory-watcher:${gradleBomDependencyVersions['directory-watcher.version']}",
