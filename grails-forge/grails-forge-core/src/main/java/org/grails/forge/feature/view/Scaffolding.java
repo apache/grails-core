@@ -81,7 +81,7 @@ public class Scaffolding implements DefaultFeature {
     @Override
     public void apply(GeneratorContext generatorContext) {
         generatorContext.addDependency(Dependency.builder()
-                .groupId("org.fusesource.jansi")
+                .groupId("org.jline")
                 .artifactId("jansi")
                 .runtimeOnly());
 

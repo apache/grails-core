@@ -32,9 +32,9 @@ import org.codehaus.groovy.runtime.StackTraceUtils;
 import org.codehaus.groovy.runtime.typehandling.NumberMath;
 
 import org.apache.tools.ant.BuildException;
-import org.fusesource.jansi.Ansi;
-import org.fusesource.jansi.Ansi.Color;
-import org.fusesource.jansi.AnsiConsole;
+import org.jline.jansi.Ansi;
+import org.jline.jansi.Ansi.Color;
+import org.jline.jansi.AnsiConsole;
 import org.jline.reader.Completer;
 import org.jline.reader.History;
 import org.jline.reader.LineReader;
@@ -49,11 +49,11 @@ import grails.util.Environment;
 import org.grails.build.logging.GrailsConsoleErrorPrintStream;
 import org.grails.build.logging.GrailsConsolePrintStream;
 
-import static org.fusesource.jansi.Ansi.Color.DEFAULT;
-import static org.fusesource.jansi.Ansi.Color.RED;
-import static org.fusesource.jansi.Ansi.Color.YELLOW;
-import static org.fusesource.jansi.Ansi.Erase.FORWARD;
-import static org.fusesource.jansi.Ansi.ansi;
+import static org.jline.jansi.Ansi.Color.DEFAULT;
+import static org.jline.jansi.Ansi.Color.RED;
+import static org.jline.jansi.Ansi.Color.YELLOW;
+import static org.jline.jansi.Ansi.Erase.FORWARD;
+import static org.jline.jansi.Ansi.ansi;
 
 /**
  * Utility class for delivering console output in a nicely formatted way.

@@ -18,7 +18,7 @@
  */
 package org.grails.forge.cli;
 
-import org.fusesource.jansi.AnsiConsole;
+import org.jline.jansi.AnsiConsole;
 import org.jline.reader.EndOfFileException;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;

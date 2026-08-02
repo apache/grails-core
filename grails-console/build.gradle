@@ -53,7 +53,7 @@ dependencies {
     api 'org.apache.groovy:groovy-console'
     api 'org.apache.groovy:groovy-swing'
     api 'org.apache.groovy:groovy-groovysh'
-    implementation 'org.fusesource.jansi:jansi'
+    implementation 'org.jline:jansi'
     implementation 'org.jline:jline'
     implementation 'net.java.dev.jna:jna'
 

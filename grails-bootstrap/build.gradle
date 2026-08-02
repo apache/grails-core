@@ -52,7 +52,7 @@ dependencies {
     compileOnly 'org.apache.groovy:groovy-ant'
 
     compileOnly 'io.methvin:directory-watcher'
-    compileOnly 'org.fusesource.jansi:jansi'
+    compileOnly 'org.jline:jansi'
     compileOnly 'org.jline:jline'
     compileOnly 'net.java.dev.jna:jna'
 
@@ -60,7 +60,7 @@ dependencies {
 
     testImplementation 'org.apache.groovy:groovy-xml'
     testImplementation 'org.apache.groovy:groovy-templates'
-    testImplementation 'org.fusesource.jansi:jansi'
+    testImplementation 'org.jline:jansi'
     testImplementation 'org.jline:jline'
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'

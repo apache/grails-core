@@ -90,7 +90,7 @@ dependencies {
     implementation "info.picocli:picocli:$picocliVersion"
     implementation "info.picocli:picocli-shell-jline3:$picocliVersion"
     implementation 'jakarta.inject:jakarta.inject-api'
-    implementation "org.fusesource.jansi:jansi:$jansiVersion"
+    implementation "org.jline:jansi:$jansiVersion"
     implementation "org.slf4j:slf4j-nop"
     implementation "org.yaml:snakeyaml"
 

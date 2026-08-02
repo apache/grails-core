@@ -56,7 +56,7 @@ dependencies {
     testAndDevelopmentOnly 'org.webjars.npm:jquery'
 
     runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
-    runtimeOnly 'org.fusesource.jansi:jansi'
+    runtimeOnly 'org.jline:jansi'
 
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
 }

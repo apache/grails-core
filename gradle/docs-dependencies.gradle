@@ -20,7 +20,7 @@ apply plugin: 'org.apache.grails.buildsrc.groovydoc'
 
 dependencies {
     add('documentation', platform(project(':grails-bom')))
-    add('documentation', 'org.fusesource.jansi:jansi')
+    add('documentation', 'org.jline:jansi')
     add('documentation', 'com.github.javaparser:javaparser-core')
     add('documentation', 'org.apache.groovy:groovy')
     add('documentation', 'org.apache.groovy:groovy-groovydoc')

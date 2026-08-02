@@ -55,7 +55,7 @@ dependencies {
 
     // command line requirements
     api  'org.jline:jline'
-    api 'org.fusesource.jansi:jansi'
+    api 'org.jline:jansi'
 
     // Ant
     api 'org.apache.ant:ant'

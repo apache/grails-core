@@ -61,7 +61,7 @@ dependencies {
     }
 
     compileOnly 'org.jline:jline' // for profile compilation
-    compileOnly 'org.fusesource.jansi:jansi'
+    compileOnly 'org.jline:jansi'
 
     api 'org.yaml:snakeyaml'
 

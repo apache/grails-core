@@ -48,7 +48,7 @@ dependencies {
     testAndDevelopmentOnly 'org.webjars.npm:jquery'
 
     runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
-    runtimeOnly 'org.fusesource.jansi:jansi'
+    runtimeOnly 'org.jline:jansi'
     runtimeOnly 'org.apache.grails:grails-url-mappings'
     runtimeOnly 'org.apache.grails:grails-scaffolding'
     runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'

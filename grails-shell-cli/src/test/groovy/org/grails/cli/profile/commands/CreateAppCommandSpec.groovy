@@ -21,6 +21,7 @@ package org.grails.cli.profile.commands
 import grails.build.logging.GrailsConsole
 import org.grails.cli.profile.Feature
 import org.grails.cli.profile.Profile
+import org.jline.jansi.Ansi
 import org.spockframework.util.StringMessagePrintStream
 import spock.lang.Shared
 import spock.lang.Specification
@@ -38,7 +39,7 @@ class CreateAppCommandSpec extends Specification {
     PrintStream originalOut
 
     void setup() {
-        System.setProperty("org.fusesource.jansi.Ansi.disable", "true")
+        System.setProperty(Ansi.DISABLE, "true")
         originalOut = GrailsConsole.instance.out
         sps = new StringPrintStream()
         GrailsConsole.instance.out = sps
