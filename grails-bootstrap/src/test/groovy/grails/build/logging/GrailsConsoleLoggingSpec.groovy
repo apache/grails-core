@@ -18,6 +18,7 @@
  */
 package grails.build.logging
 
+import java.lang.management.ManagementFactory
 import java.util.concurrent.TimeUnit
 
 import org.slf4j.LoggerFactory
@@ -47,12 +48,12 @@ class GrailsConsoleLoggingSpec extends Specification {
     private String runFixture(boolean apiOnly) {
         File argumentsFile = new File(tempDir, "grails-console-${apiOnly}.args")
         File outputFile = new File(tempDir, "grails-console-${apiOnly}.output")
-        argumentsFile.text = """\
-            -cp
-            ${testRuntimeClasspath(apiOnly)}
-            ${GrailsConsoleLoggingSpec.name}
-            ${apiOnly}
-            """.stripIndent().trim()
+        argumentsFile.text = (jacocoAgentArguments() + [
+            '-cp',
+            testRuntimeClasspath(apiOnly),
+            GrailsConsoleLoggingSpec.name,
+            apiOnly as String
+        ]).join('\n')
         Process process = new ProcessBuilder(
             new File(System.getProperty('java.home'), 'bin/java').absolutePath,
             "@${argumentsFile.absolutePath}"
@@ -88,6 +89,12 @@ class GrailsConsoleLoggingSpec extends Specification {
             return entries.join(File.pathSeparator)
         }
         entries.findAll { !it.contains('slf4j-simple') && !it.contains('logback-classic') }.join(File.pathSeparator)
+    }
+
+    private static List<String> jacocoAgentArguments() {
+        ManagementFactory.runtimeMXBean.inputArguments.findAll {
+            it.startsWith('-javaagent:') && it.contains('jacoco')
+        }
     }
 
     static void main(String[] args) {

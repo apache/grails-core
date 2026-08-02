@@ -18,6 +18,7 @@
  */
 package org.grails.cli.command.run
 
+import java.lang.management.ManagementFactory
 import java.util.concurrent.TimeUnit
 
 import spock.lang.Specification
@@ -46,13 +47,13 @@ class SpringApplicationRunnerSpec extends Specification {
 
     private String runFixture(String failureMode, boolean loggingEnabled) {
         File argumentsFile = new File(tempDir, "${failureMode}-${loggingEnabled}.args")
-        argumentsFile.text = """\
-            -cp
-            ${testRuntimeClasspath()}
-            ${SpringApplicationRunnerSpec.name}
-            ${failureMode}
-            ${loggingEnabled}
-            """.stripIndent().trim()
+        argumentsFile.text = (jacocoAgentArguments() + [
+            '-cp',
+            testRuntimeClasspath(),
+            SpringApplicationRunnerSpec.name,
+            failureMode,
+            loggingEnabled as String
+        ]).join('\n')
         Process process = new ProcessBuilder(
             new File(System.getProperty('java.home'), 'bin/java').absolutePath,
             "@${argumentsFile.absolutePath}"
@@ -89,6 +90,12 @@ class SpringApplicationRunnerSpec extends Specification {
             System.getProperty('java.class.path'),
             new File('grails-shell-cli/build/resources/test').absolutePath
         ].join(File.pathSeparator)
+    }
+
+    private static List<String> jacocoAgentArguments() {
+        ManagementFactory.runtimeMXBean.inputArguments.findAll {
+            it.startsWith('-javaagent:') && it.contains('jacoco')
+        }
     }
 
     static void main(String[] args) {

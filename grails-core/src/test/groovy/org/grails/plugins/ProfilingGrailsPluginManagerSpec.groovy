@@ -21,6 +21,7 @@ package org.grails.plugins
 import grails.core.DefaultGrailsApplication
 import org.apache.grails.core.plugins.DefaultPluginDiscovery
 import org.apache.grails.core.plugins.PluginDiscovery
+import org.grails.spring.DefaultRuntimeSpringConfiguration
 import org.springframework.context.support.GenericApplicationContext
 import org.springframework.core.env.StandardEnvironment
 import spock.lang.Specification
@@ -49,6 +50,62 @@ class ProfilingGrailsPluginManagerSpec extends Specification {
         !capturedOut.toString().contains('Loading plugins')
         capturedErr.toString().contains('INFO grails.plugins.DefaultGrailsPluginManager - Loading plugins started')
         capturedErr.toString() ==~ /(?s).*INFO grails\.plugins\.DefaultGrailsPluginManager - Loading plugins took \d+.*/
+
+        cleanup:
+        System.setOut(originalOut)
+        System.setErr(originalErr)
+    }
+
+    void "configuration phases emit INFO profiling messages for each plugin"() {
+        given:
+        def gcl = new GroovyClassLoader()
+        def probeClass = gcl.parseClass('''
+class ProfilingProbeGrailsPlugin {
+    def version = "1.0.0"
+}
+''')
+        def application = new DefaultGrailsApplication()
+        def mainContext = new GenericApplicationContext()
+        application.mainContext = mainContext
+        def discovery = new DefaultPluginDiscovery(new Class<?>[]{probeClass})
+        discovery.loadPluginsFromClasspath = false
+        discovery.init(new StandardEnvironment())
+        def manager = new ProfilingGrailsPluginManager(application, discovery)
+        def originalOut = System.out
+        def originalErr = System.err
+        def capturedOut = new ByteArrayOutputStream()
+        def capturedErr = new ByteArrayOutputStream()
+        System.setOut(new PrintStream(capturedOut, true))
+        System.setErr(new PrintStream(capturedErr, true))
+
+        when:
+        manager.loadPlugins()
+        manager.applicationContext = mainContext
+        manager.doArtefactConfiguration()
+        manager.doRuntimeConfiguration(new DefaultRuntimeSpringConfiguration())
+        manager.doDynamicMethods()
+        manager.doPostProcessing(mainContext)
+
+        then:
+        !capturedOut.toString().contains('doWith')
+        !capturedOut.toString().contains('doArtefactConfiguration')
+        def output = capturedErr.toString()
+        [
+            'doArtefactConfiguration started',
+            'doWithSpring started',
+            'doWithSpring for plugin [profilingProbe] started',
+            'doWithDynamicMethods started',
+            'doWithDynamicMethods for plugin [profilingProbe] started',
+            'doWithApplicationContext started',
+            'doWithApplicationContext for plugin [profilingProbe] started'
+        ].every { message ->
+            output.contains("INFO grails.plugins.DefaultGrailsPluginManager - $message")
+        }
+        ['doArtefactConfiguration', 'doWithSpring', 'doWithDynamicMethods', 'doWithApplicationContext'].every { phase ->
+            output ==~ /(?s).*INFO grails\.plugins\.DefaultGrailsPluginManager - ${phase} took \d+.*/ &&
+                    (phase == 'doArtefactConfiguration' ||
+                            output ==~ /(?s).*INFO grails\.plugins\.DefaultGrailsPluginManager - ${phase} for plugin \[profilingProbe\] took \d+.*/)
+        }
 
         cleanup:
         System.setOut(originalOut)

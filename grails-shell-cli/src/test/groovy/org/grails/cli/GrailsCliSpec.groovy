@@ -18,6 +18,7 @@
  */
 package org.grails.cli
 
+import java.lang.management.ManagementFactory
 import java.util.concurrent.TimeUnit
 
 import spock.lang.Specification
@@ -41,12 +42,12 @@ class GrailsCliSpec extends Specification {
 
     private String loadGrailsCli(File homeDirectory) {
         File argumentsFile = new File(tempDir, 'grails-cli.args')
-        argumentsFile.text = """\
-            -cp
-            ${testRuntimeClasspath()}
-            ${GrailsCliSpec.name}
-            ${homeDirectory.absolutePath}
-            """.stripIndent().trim()
+        argumentsFile.text = (jacocoAgentArguments() + [
+            '-cp',
+            testRuntimeClasspath(),
+            GrailsCliSpec.name,
+            homeDirectory.absolutePath
+        ]).join('\n')
         Process process = new ProcessBuilder(
             new File(System.getProperty('java.home'), 'bin/java').absolutePath,
             "@${argumentsFile.absolutePath}"
@@ -83,6 +84,12 @@ class GrailsCliSpec extends Specification {
             System.getProperty('java.class.path'),
             new File('grails-shell-cli/build/resources/test').absolutePath
         ].join(File.pathSeparator)
+    }
+
+    private static List<String> jacocoAgentArguments() {
+        ManagementFactory.runtimeMXBean.inputArguments.findAll {
+            it.startsWith('-javaagent:') && it.contains('jacoco')
+        }
     }
 
     static void main(String[] args) {
