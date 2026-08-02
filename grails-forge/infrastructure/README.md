@@ -9,7 +9,7 @@ The current target is `us-east-1` in the default VPC. Discover its ID and public
 ```bash
 VPC_ID=$(aws ec2 describe-vpcs \
   --region us-east-1 \
-  --filters Name=isDefault,Values=true \
+  --filters Name=is-default,Values=true \
   --query 'Vpcs[0].VpcId' \
   --output text)
 
