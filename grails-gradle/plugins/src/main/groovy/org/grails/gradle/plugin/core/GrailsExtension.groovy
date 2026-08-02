@@ -54,6 +54,10 @@ class GrailsExtension {
             def fromProperty = project.findProperty('grailsCliAutoProvision')
             fromProperty == null ? Boolean.TRUE : Boolean.parseBoolean(fromProperty as String)
         })
+        this.legacyCommandSupport = project.objects.property(Boolean).convention(project.provider {
+            def fromProperty = project.findProperty('grailsLegacyCommandSupport')
+            fromProperty == null ? Boolean.FALSE : Boolean.parseBoolean(fromProperty as String)
+        })
         this.bom = project.objects.property(String)
         // Use set() rather than convention() so that clearing the value (bom = null,
         // or the deprecated springDependencyManagement = false) results in no BOM being
@@ -73,6 +77,17 @@ class GrailsExtension {
      * property) and declare `grailsCli` dependencies explicitly.
      */
     final Property<Boolean> cliAutoProvision
+
+    /**
+     * Whether the plugin auto-provisions the Grails 7 application-command compatibility bridge
+     * ({@code org.apache.grails:grails-core-cli-legacy}) onto the execution-only
+     * {@code grailsCliLegacy} configuration. Disabled by default. When enabled <strong>and</strong>
+     * {@link #cliAutoProvision} is also enabled, unchanged Grails 7 command plugins keep working
+     * without a re-release. Opt in with {@code grails { legacyCommandSupport = true }} (or the
+     * {@code grailsLegacyCommandSupport} project property) while leaving modern CLI companion
+     * auto-provisioning alone, or disable both with {@code cliAutoProvision = false}.
+     */
+    final Property<Boolean> legacyCommandSupport
 
     /**
      * Whether to invoke native2ascii on resource bundles

@@ -17,49 +17,60 @@
  *  under the License.
  */
 
-rootProject.subprojects
-        .findAll { !(it.name in testProjects) && !(it.name in docProjects) && !(it.name in cliProjects) }
-        .each { project.evaluationDependsOn(it.path) }
-
+if (!rootProject.ext.has('substitutableFunctionalTestProjectsCache')) {
+    def skippedProjects = testProjects + docProjects + cliProjects
+    rootProject.ext.set('substitutableFunctionalTestProjectsCache', rootProject.subprojects
+            .findAll { !(it.name in skippedProjects) }
+            .collect { subproject ->
+                // Ensure the target project is evaluated before we attempt to substitute it.
+                // This is necessary because it may not have been evaluated yet, and we need to
+                // ensure that the artifactId and cliArtifactId properties are available for substitution.
+                project.evaluationDependsOn(subproject.path)
+                return [
+                        project: subproject,
+                        artifactId: subproject.findProperty('pomArtifactId') ?: subproject.name,
+                        cliArtifactId: subproject.findProperty('cliArtifactId')
+                ]
+            }
+    )
+}
+def substitutableProjects = rootProject.ext.get('substitutableFunctionalTestProjectsCache')
 configurations.configureEach {
     resolutionStrategy.dependencySubstitution {
         // Test projects will often include dependencies from local projects. This will ensure any dependencies
         // included will be substituted with the local projects in this repository instead of pulling upstream.
-        for (def possibleProject : rootProject.subprojects) {
-            if (!(possibleProject.name in testProjects) && !(possibleProject.name in docProjects) && !(possibleProject.name in cliProjects)) {
-                def artifactId = possibleProject.findProperty('pomArtifactId') ?: possibleProject.name
-                def substitutedArtifact = "$possibleProject.group:$artifactId"
-                //TODO: This does not handle libraries that are both test fixtures & a libraries like grails-data-mongodb,
-                // see grails-test-examples-mongodb-base, & grails-test-examples-mongodb-hibernate5 for project() workaround
-                if (possibleProject.name == 'grails-bom') {
-                    substitute module(substitutedArtifact) using platform(project(':grails-bom'))
-                }
-                else if(possibleProject.name == 'grails-geb') {
-                    def selector = it.variant(module(substitutedArtifact)) { VariantSelectionDetails details ->
-                        details.capabilities { ModuleDependencyCapabilitiesHandler handler ->
-                            handler.requireCapability("${substitutedArtifact}-test-fixtures" as String)
-                        }
+        for (def substitutionInfo : substitutableProjects) {
+            def substitutableProject = substitutionInfo.project as Project
+            def substitutedArtifact = "$substitutableProject.group:${substitutionInfo.artifactId}"
+            //TODO: This does not handle libraries that are both test fixtures & a libraries like grails-data-mongodb,
+            // see grails-test-examples-mongodb-base, & grails-test-examples-mongodb-hibernate5 for project() workaround
+            if (substitutableProject.name == 'grails-bom') {
+                substitute module(substitutedArtifact) using platform(project(':grails-bom'))
+            }
+            else if(substitutableProject.name == 'grails-geb') {
+                def selector = it.variant(module(substitutedArtifact)) { VariantSelectionDetails details ->
+                    details.capabilities { ModuleDependencyCapabilitiesHandler handler ->
+                        handler.requireCapability("${substitutedArtifact}-test-fixtures" as String)
                     }
-
-                    def replacement = it.variant(project(":$possibleProject.name")) { v ->
-                        v.capabilities { it.requireCapability("${substitutedArtifact}-test-fixtures") }
-                    }
-                    substitute selector using replacement
-                }
-                else {
-                    substitute module(substitutedArtifact) using project(":$possibleProject.name")
                 }
 
-                // companion cli artifacts are additional publications of the same project,
-                // reachable locally through the project's cli capability
-                def cliArtifactId = possibleProject.findProperty('cliArtifactId')
-                if (cliArtifactId) {
-                    def cliCoordinate = "$possibleProject.group:$cliArtifactId" as String
-                    def cliReplacement = it.variant(project(":$possibleProject.name")) { v ->
-                        v.capabilities { it.requireCapability(cliCoordinate) }
-                    }
-                    substitute module(cliCoordinate) using cliReplacement
+                def replacement = it.variant(project(":$substitutableProject.name")) { v ->
+                    v.capabilities { it.requireCapability("${substitutedArtifact}-test-fixtures") }
                 }
+                substitute selector using replacement
+            }
+            else {
+                substitute module(substitutedArtifact) using project(":$substitutableProject.name")
+            }
+
+            // companion cli artifacts are additional publications of the same project,
+            // reachable locally through the project's cli capability
+            if (substitutionInfo.cliArtifactId) {
+                def cliCoordinate = "$substitutableProject.group:$substitutionInfo.cliArtifactId" as String
+                def cliReplacement = it.variant(project(":$substitutableProject.name")) { v ->
+                    v.capabilities { it.requireCapability(cliCoordinate) }
+                }
+                substitute module(cliCoordinate) using cliReplacement
             }
         }
     }

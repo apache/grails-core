@@ -21,7 +21,7 @@
 
 project:
   name: apache/grails-core
-  version_binding: "8.0.x"
+  version_binding: "9.0.x"
   threat_model: THREAT_MODEL.md
   status: draft
   date: "2026-01"

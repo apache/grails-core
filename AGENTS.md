@@ -102,6 +102,7 @@ This repository contains multiple independent Gradle projects:
 | **build-logic/** | Gradle convention plugins for the build | `cd build-logic && ../gradlew build` |
 | **grails-gradle/** | Grails Gradle plugins | `cd grails-gradle && ./gradlew build` |
 | **grails-forge/** | Application generator (like Spring Initializr) | `cd grails-forge && ./gradlew build` |
+| **end-to-end/** | End-to-end tests consuming published Grails artifacts (see `end-to-end/README.md` for required setup) | `cd end-to-end && ./gradlew check` |
 
 Each project has its own `settings.gradle` and independent build. When working on a specific project, run Gradle commands from that project's directory.
 
@@ -290,7 +291,7 @@ and known non-findings — before reporting issues.
 ## Resources
 
 - **Grails Guide**: https://grails.apache.org/docs/latest/guide/single.html
-- **Groovy 5 Docs**: https://docs.groovy-lang.org/docs/groovy-5.0.7/html/documentation/
+- **Groovy 5 Docs**: https://groovy-lang.org/documentation.html#all-versions (select latest 5.0.x)
 - **Spock 2.4 Docs**: https://spockframework.org/spock/docs/2.4/all_in_one.html
 - **GORM Docs**: https://grails.apache.org/docs/latest/grails-data/
 - **Issues**: https://github.com/apache/grails-core/issues

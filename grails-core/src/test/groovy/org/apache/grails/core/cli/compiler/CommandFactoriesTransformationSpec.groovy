@@ -18,6 +18,9 @@
  */
 package org.apache.grails.core.cli.compiler
 
+import org.codehaus.groovy.ast.ClassHelper
+
+import org.apache.grails.core.cli.ApplicationCommandTargetAware
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -41,5 +44,18 @@ class CommandFactoriesTransformationSpec extends Specification {
         '/work/my-plugin/src/cli/resources/META-INF/grails-cli.factories'       || false
         '/work/my-plugin/grails-app/commands/example/BackupCommand.groovy'      || false
         '/work/clipboard/src/climate/groovy/com/example/NotCliCommand.groovy'   || false
+    }
+
+    def "does not register target-aware command adapters as command factories"() {
+        expect:
+        !CommandFactoriesTransformation.shouldRegisterCommand(ClassHelper.make(TargetAwareTestAdapter))
+    }
+}
+
+class TargetAwareTestAdapter implements ApplicationCommandTargetAware {
+
+    @Override
+    Object getTarget() {
+        null
     }
 }

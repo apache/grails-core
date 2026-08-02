@@ -43,6 +43,7 @@ def publishedProjects = [
         'grails-controllers',
         'grails-converters',
         'grails-core',
+        'grails-core-cli-legacy',
         'grails-databinding',
         'grails-databinding-core',
         'grails-datasource',
