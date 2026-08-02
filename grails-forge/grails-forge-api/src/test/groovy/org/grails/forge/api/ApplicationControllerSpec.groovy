@@ -19,6 +19,7 @@
 
 package org.grails.forge.api
 
+import io.micronaut.context.annotation.Property
 import io.micronaut.context.i18n.ResourceBundleMessageSource
 import io.micronaut.http.HttpHeaders
 import io.micronaut.http.HttpRequest
@@ -32,6 +33,7 @@ import jakarta.inject.Singleton
 import spock.lang.Specification
 
 @MicronautTest
+@Property(name = 'grails.forge.redirect-url', value = 'https://example.com/forge/')
 class ApplicationControllerSpec extends Specification {
 
     @Inject
@@ -41,6 +43,9 @@ class ApplicationControllerSpec extends Specification {
     @Inject
     ApplicationTypeClient applicationTypeClient
 
+    @Inject
+    GrailsForgeConfiguration configuration
+
     void "test versions"() {
         given:
         def response = client.toBlocking().retrieve(HttpRequest.GET('/versions'), Map)
@@ -48,6 +53,23 @@ class ApplicationControllerSpec extends Specification {
         expect:
         response.containsKey("versions")
         response.versions["grails.version"]
+    }
+
+    void "test redirect URL configuration"() {
+        expect:
+        configuration.redirectUri.get().toString() == 'https://example.com/forge/'
+    }
+
+    void "test absent redirect URL configuration"() {
+        given:
+        GrailsForgeConfiguration configuration = new GrailsForgeConfiguration()
+
+        when:
+        configuration.redirectUrl = null
+
+        then:
+        configuration.redirectUri.empty
+        configuration.redirectUrl == null
     }
 
     void "test application types"() {

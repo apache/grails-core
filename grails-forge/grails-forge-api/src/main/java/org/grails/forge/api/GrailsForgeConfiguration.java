@@ -60,12 +60,13 @@ public class GrailsForgeConfiguration {
      * @return The URI to redirect to when visiting via the browser
      */
     public Optional<URI> getRedirectUri() {
-        return Optional.of(URI.create(redirectUrl));
+        return Optional.ofNullable(redirectUrl).map(URI::create);
     }
 
     /**
      * @return The URL to redirect to when visiting via the browser
      */
+    @Nullable
     public String getRedirectUrl() {
         return redirectUrl;
     }
@@ -75,7 +76,7 @@ public class GrailsForgeConfiguration {
      * @param redirectUri The redirect URI
      */
     public void setRedirectUrl(@Nullable String redirectUri) {
-        this.redirectUrl = redirectUrl;
+        this.redirectUrl = redirectUri;
     }
 
     /**
