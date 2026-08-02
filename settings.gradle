@@ -33,7 +33,7 @@ pluginManagement {
 }
 
 plugins {
-    id 'com.gradle.develocity' version '4.3.2'
+    id 'com.gradle.develocity' version '4.5.0'
     id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.4.0'
     id 'org.apache.grails.buildsrc.repo'
 }
@@ -608,29 +608,6 @@ project(':grails-test-examples-test-phases').projectDir = file('grails-test-exam
 project(':grails-test-examples-jetty').projectDir = file('grails-test-examples/jetty')
 project(':grails-test-examples-undertow').projectDir = file('grails-test-examples/undertow')
 project(':grails-test-examples-latency').projectDir = file('grails-test-examples/latency')
-
-// The Spring Dependency Management example imports grails-bom as a Maven BOM through
-// io.spring.dependency-management, which resolves BOM imports with its own detached
-// configurations. Those bypass the local-project substitution rules in
-// gradle/functional-test-config.gradle, so the import only works when
-// org.apache.grails:grails-bom:<projectVersion> is already published to a repository.
-// During a release (reproducible build, SOURCE_DATE_EPOCH set) the version being staged
-// is not published anywhere yet, so the example cannot resolve its dependencies -
-// exclude it from the build graph entirely. It still builds and runs on every regular
-// CI build, where the -SNAPSHOT BOM is available from the Apache snapshots repository.
-//
-// A newly created release branch is the same condition: the moment projectVersion is
-// bumped to a version that has never been published, the BOM import silently resolves
-// to nothing, every managed version comes back empty, and the whole build fails with
-// "Could not find <group>:<artifact>:" - before CI can ever publish the snapshot that
-// would fix it. Set -PbomSnapshotNotPublished (or add it to gradle.properties) on such
-// a branch to exclude the example until its first snapshot publish succeeds, then drop
-// the flag again. The flag is presence-based; its value is ignored.
-def bomSnapshotNotPublished = providers.gradleProperty('bomSnapshotNotPublished').isPresent()
-if (!isReproducibleBuild && !bomSnapshotNotPublished) {
-    include 'grails-test-examples-spring-dependency-management'
-    project(':grails-test-examples-spring-dependency-management').projectDir = file('grails-test-examples/spring-dependency-management')
-}
 
 includeBuild('./grails-gradle') {
     name = 'grails-gradle'

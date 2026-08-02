@@ -16,6 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+import org.apache.tools.ant.DirectoryScanner
 
 pluginManagement {
     includeBuild('../grails-gradle') {
@@ -103,6 +104,15 @@ rootProject.name = 'grails-end-to-end'
 include(
         'legacy-commands',
         'legacy-commands-plugin',
+        // Belongs here rather than in grails-test-examples: it imports grails-bom as a Maven BOM
+        // through io.spring.dependency-management, which resolves imports in its own detached
+        // configuration. That bypasses any project substitution, so the import can only ever be
+        // satisfied by a published org.apache.grails:grails-bom:<projectVersion> - which is what
+        // the repository above is. In the core build it had to be excluded whenever nothing had
+        // been published yet (a reproducible release build, or a fresh release branch whose
+        // version has never been published), and otherwise resolved against whatever the Apache
+        // snapshot repository held rather than the working tree.
+        'spring-dependency-management',
 )
 
 // legacy-g7-command-plugin is deliberately NOT included here. It compiles against published
@@ -110,3 +120,10 @@ include(
 // org.apache.grails:grails-core for this repo's Groovy 5 project - which is exactly the
 // substitution the fixture exists to avoid. It stays a standalone build, run under its own JDK
 // (legacy-g7-command-plugin/.sdkmanrc), and legacy-commands consumes the jar it produces.
+
+// Due to https://github.com/gradle/gradle/issues/2986 , we can't change the global exclude for profiles, it must be done everywhere
+for (String pattern in DirectoryScanner.defaultExcludes) {
+    if (pattern.contains('gitignore') || pattern.contains('gitattributes')) {
+        DirectoryScanner.removeDefaultExclude(pattern)
+    }
+}

@@ -291,7 +291,7 @@ and known non-findings — before reporting issues.
 ## Resources
 
 - **Grails Guide**: https://grails.apache.org/docs/latest/guide/single.html
-- **Groovy 5 Docs**: https://docs.groovy-lang.org/docs/groovy-5.0.7/html/documentation/
+- **Groovy 5 Docs**: https://groovy-lang.org/documentation.html#all-versions (select latest 5.0.x)
 - **Spock 2.4 Docs**: https://spockframework.org/spock/docs/2.4/all_in_one.html
 - **GORM Docs**: https://grails.apache.org/docs/latest/grails-data/
 - **Issues**: https://github.com/apache/grails-core/issues

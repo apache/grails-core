@@ -20,7 +20,10 @@
 # substitution - that is what makes the tests end-to-end. The repository is the same
 # build/local-maven that grails-forge points its generated applications at, populated by
 # publishAllPublicationsToTestCaseMavenRepoRepository, so the suite exercises real poms and
-# module metadata including the CLI companion artifacts.
+# module metadata including the CLI companion artifacts. That is a hard requirement for some of
+# these projects rather than a nicety: spring-dependency-management imports grails-bom as a Maven
+# BOM through io.spring.dependency-management, which resolves it in its own detached configuration
+# and so can only ever consume a published pom.
 #
 # It also needs two JDKs, which is the other reason it gets its own workflow: the Grails 7
 # fixture must be compiled on Java 17 (the minimum for a Grails 7 app, so the binary matches
@@ -135,6 +138,8 @@ jobs:
         # Only the end-to-end build. grails-core's own unit and functional suites are the CI
         # workflow's job; nothing here re-runs them. The publish steps above are setup, not tests.
         working-directory: 'end-to-end'
+        env:
+          DO_NOT_CACHE_TESTS: '1'
         run: ./gradlew check --continue --stacktrace
       - name: "📤 Upload test reports"
         if: failure()

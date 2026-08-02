@@ -16,6 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+import org.apache.tools.ant.DirectoryScanner
 
 pluginManagement {
     apply from: file('../gradle/plugin-repositories.gradle')
@@ -91,3 +92,10 @@ project(':build-logic').projectDir = file('plugins')
 
 include 'grails-docs-core'
 project(':grails-docs-core').projectDir = file('docs-core')
+
+// Due to https://github.com/gradle/gradle/issues/2986 , we can't change the global exclude for profiles, it must be done everywhere
+for (String pattern in DirectoryScanner.defaultExcludes) {
+    if (pattern.contains('gitignore') || pattern.contains('gitattributes')) {
+        DirectoryScanner.removeDefaultExclude(pattern)
+    }
+}

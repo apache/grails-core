@@ -256,37 +256,44 @@ class GrailsGradlePlugin implements Plugin<Project> {
     protected Closure<String> getGroovyCompilerScript(GroovyCompile compile, Project project) {
         GrailsExtension grails = project.extensions.findByType(GrailsExtension)
 
-        // Start with user-configured imports
-        Set<String> starImports = new LinkedHashSet<>(grails.starImports)
-
-        // Add java.time if enabled
-        if (grails.importJavaTime) {
-            starImports.add('java.time')
-        }
-
-        // Add Grails annotation packages and common validation annotations if enabled
-        if (grails.importGrailsCommonAnnotations) {
-            // Always add jakarta.validation.constraints
-            starImports.add('jakarta.validation.constraints')
-
-            // Check for grails.gorm.annotation.* classes on classpath
-            if (isClassOnClasspath(compile.classpath, 'grails.gorm.annotation.CreatedDate')) {
-                starImports.add('grails.gorm.annotation')
-            }
-
-            // Check for grails.plugin.scaffolding.annotation.* classes on classpath
-            if (isClassOnClasspath(compile.classpath, 'grails.plugin.scaffolding.annotation.Scaffold')) {
-                starImports.add('grails.plugin.scaffolding.annotation')
-            }
-        }
-
-        // Return null if no imports are needed
-        if (starImports.isEmpty()) {
-            return null
-        }
-
-        // Build the import statements
+        // Everything below runs inside the returned closure, invoked from the task's doFirst:
+        // the isClassOnClasspath probes resolve the compile classpath, which must not happen while
+        // the task is being configured. A GroovyCompile task can be realized from inside an
+        // in-flight resolution of compileClasspath (scheduling any task whose inputs include that
+        // configuration realizes the compile task through the target-JVM attribute's provider
+        // chain), and re-entering that resolution fails on Gradle 9.5+ with
+        // 'Cannot observe dependencies before markAsObserved(String) has been called'.
         return { ->
+            // Start with user-configured imports
+            Set<String> starImports = new LinkedHashSet<>(grails.starImports)
+
+            // Add java.time if enabled
+            if (grails.importJavaTime) {
+                starImports.add('java.time')
+            }
+
+            // Add Grails annotation packages and common validation annotations if enabled
+            if (grails.importGrailsCommonAnnotations) {
+                // Always add jakarta.validation.constraints
+                starImports.add('jakarta.validation.constraints')
+
+                // Check for grails.gorm.annotation.* classes on classpath
+                if (isClassOnClasspath(compile.classpath, 'grails.gorm.annotation.CreatedDate')) {
+                    starImports.add('grails.gorm.annotation')
+                }
+
+                // Check for grails.plugin.scaffolding.annotation.* classes on classpath
+                if (isClassOnClasspath(compile.classpath, 'grails.plugin.scaffolding.annotation.Scaffold')) {
+                    starImports.add('grails.plugin.scaffolding.annotation')
+                }
+            }
+
+            // Return null if no imports are needed
+            if (starImports.isEmpty()) {
+                return null
+            }
+
+            // Build the import statements
             def importStatements = starImports.collect { pkg -> "                        star '$pkg'" }.join('\n')
             """withConfig(configuration) {
                     imports {

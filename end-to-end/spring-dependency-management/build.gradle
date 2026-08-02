@@ -30,22 +30,26 @@
 //   * io.spring.dependency-management is applied directly and imports grails-bom as
 //     a Maven BOM, exactly as a migrated Grails 7 build would, so that the Spring DM
 //     plugin is the source of truth for managed versions here.
+//
+// It is an end-to-end test because a Maven BOM import is only satisfiable by a real
+// published pom - see the note on the include in settings.gradle.
 plugins {
+    id 'groovy'
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.vulnerability-scan'
+    id 'org.apache.grails.gradle.grails-web'
+    id 'org.apache.grails.gradle.grails-gsp'
 }
 
 version = '0.1'
-group = 'functionaltests'
+group = 'springdm'
 
-apply plugin: 'org.apache.grails.gradle.grails-web'
-apply plugin: 'org.apache.grails.gradle.grails-gsp'
-
-// io.spring.dependency-management is already available on the build classpath, so it is
-// applied here without a version (an explicit version in the plugins {} block fails when a
-// plugin is already on the classpath with an unknown version). A real end-user Grails build
-// would instead declare it in its own plugins {} block with a version.
+// io.spring.dependency-management arrives on the build classpath transitively, through the Grails
+// Gradle plugin's dependency on spring-boot-gradle-plugin, so it is applied here without a version
+// (an explicit version in the plugins {} block fails when a plugin is already on the classpath with
+// an unknown version). A real end-user Grails build would instead declare it in its own plugins {}
+// block with a version.
 apply plugin: 'io.spring.dependency-management'
 
 grails {
@@ -55,6 +59,8 @@ grails {
 
 dependencyManagement {
     imports {
+        // Resolved by Spring DM's own detached configuration, so it is a genuine Maven BOM import
+        // of the pom the core build published into build/local-maven - not a substituted project.
         mavenBom "org.apache.grails:grails-bom:${projectVersion}"
     }
 }
@@ -63,7 +69,7 @@ dependencyManagement {
 // the grails-bom import, so the security-patched logback isn't applied automatically. A migrated Grails 7
 // app hitting the same CVE would override the Spring-managed version property directly; reproduce that here,
 // sourcing the number from dependencies.gradle so it stays the single source of truth.
-apply from: rootProject.layout.projectDirectory.file('dependencies.gradle')
+apply from: rootProject.layout.projectDirectory.file('../dependencies.gradle')
 ext['logback.version'] = bomDependencyVersions['logback.version']
 // Same situation for the Jackson 3 security override (CVE-2026-59889) - see jackson3.version in dependencies.gradle.
 ext['jackson-bom.version'] = bomDependencyVersions['jackson3.version']
@@ -81,6 +87,18 @@ dependencies {
     integrationTestImplementation 'org.apache.grails:grails-testing-support-http-client'
 }
 
+// The core build's gradle/functional-test-config.gradle is deliberately not applied here, for the
+// same reasons as in legacy-commands: its dependency substitution enumerates
+// rootProject.subprojects, which only makes sense inside the core build - and substituting
+// projects is the very thing this project must not do, since the point is to import a published
+// grails-bom pom. Its remaining job, the per-suite skip flags keyed off grails-test-examples-*
+// project names, has no meaning in this build, which is driven by its own workflow.
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+}
+
+tasks.withType(Test).configureEach {
+    // Allow extra headroom for slow start-up under CI load (the client default is 60s), matching
+    // what gradle/functional-test-config.gradle gave this application in the core build.
+    systemProperty('grails.http.client.timeout', '120')
 }

@@ -35,11 +35,20 @@ applications at via `GRAILS_REPO_URL`.
 | `legacy-g7-command-plugin` | A **standalone build**, not part of this one. Compiles against published Grails 7 / Groovy 4 to produce a genuine precompiled `grails.dev.commands.ApplicationCommand` binary. |
 | `legacy-commands-plugin` | A Grails 8 plugin whose legacy commands are recompiled under Groovy 5. |
 | `legacy-commands` | A Grails 8 application that consumes both and runs their commands through the registry. |
+| `spring-dependency-management` | A Grails 8 application that manages its versions with the legacy `io.spring.dependency-management` plugin instead of the Grails Gradle plugin's native `platform(grails-bom)`, as an upgraded Grails 7 application does. |
 
 `legacy-g7-command-plugin` is deliberately excluded from `settings.gradle`. An included build would
 substitute `org.apache.grails:grails-core` for this repository's Groovy 5 project, which is exactly
 the substitution the fixture exists to avoid — it must be compiled by a real Grails 7 toolchain for
 its trait-woven bytecode to prove anything.
+
+`spring-dependency-management` is here because Spring DM imports a BOM as a **Maven** BOM, resolving
+it in its own detached configuration. That bypasses any project substitution, so the import can only
+ever be satisfied by a published `org.apache.grails:grails-bom:<projectVersion>` — which is precisely
+what this build already provides. In the core build it had to be excluded whenever nothing had been
+published yet (a reproducible release build, or a fresh release branch whose version has never been
+published), and otherwise silently fell back to whatever the Apache snapshot repository happened to
+hold rather than the working tree.
 
 ## JDKs
 
@@ -81,6 +90,13 @@ cd end-to-end
 
 Re-run the publish whenever you change something in the core build that these tests exercise;
 nothing here can detect that for you, because the whole point is that the build boundary is real.
+For the same reason a re-run against freshly published artifacts often comes back `UP-TO-DATE` —
+nothing Gradle can see about these projects changed. `DO_NOT_CACHE_TESTS` (honoured here exactly as
+in the core build, see `DEVELOPMENT.md`) forces the test tasks to run anyway:
+
+```shell
+DO_NOT_CACHE_TESTS=1 ./gradlew check
+```
 
 CI does the same three steps, reading both JDK majors out of the `.sdkmanrc` files. Only the major
 is honoured there: `sdk env` gives a developer the exact Liberica patch, but these are test builds
