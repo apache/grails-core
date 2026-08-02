@@ -166,6 +166,7 @@ ext {
             'groovy'                   : "org.apache.groovy:groovy:${bomDependencyVersions['groovy.version']}",
             'groovy-ant'               : "org.apache.groovy:groovy-ant:${bomDependencyVersions['groovy.version']}",
             'groovy-astbuilder'        : "org.apache.groovy:groovy-astbuilder:${bomDependencyVersions['groovy.version']}",
+            'groovy-callsite'          : "org.apache.groovy:groovy-callsite:${bomDependencyVersions['groovy.version']}",
             'groovy-cli-commons'       : "org.apache.groovy:groovy-cli-commons:${bomDependencyVersions['groovy.version']}",
             'groovy-cli-picocli'       : "org.apache.groovy:groovy-cli-picocli:${bomDependencyVersions['groovy.version']}",
             'groovy-console'           : "org.apache.groovy:groovy-console:${bomDependencyVersions['groovy.version']}",
