@@ -90,6 +90,90 @@ recompiled:
 On Groovy 6, non-indy compilation also needs `groovy-callsite` on the classpath (already managed
 in the canary BOM).
 
+== App-level validation (grails-test-examples)
+
+Microbenchmarks prove hot-path deltas. Real apps prove the stack still behaves the same way once
+Spring Boot, URL mappings, interceptors, GSP/views, and filters are in play.
+
+### Methodology (same discipline as JMH)
+
+1. *Same machine, sequential A/B.* Never compare across machines or concurrent load.
+2. *Clean rebuild each mode.* `./gradlew clean ... -PgrailsIndy=false|true` so framework modules
+   and the app recompile with classic callsites or invokedynamic (`CompilePlugin` +
+   `grails-extension-gradle-config.gradle`).
+3. *Full app stack.* Gated `@Integration` specs boot Spring Boot (`RANDOM_PORT`) and issue real
+   HTTP through `HttpClientSupport` - not mocked controllers.
+4. *Warmup then measure.* Default 200 discarded requests, then 1000 timed samples. Split samples
+   into fork-shaped rawData so `:grails-benchmarks:jmhCompare` can consume the JSON.
+5. *Rulers / stability.* Prefer apps with no external DB cold-start noise for the first pass
+   (in-memory H2). Skip Geb/browser paths for timing. Do not use wall-clock of the whole
+   integration suite as a primary metric (Spock setup dominates).
+6. *Secondary metrics only.* Compile time and full-suite wall clock are informative, not verdicts.
+
+### Gated specs
+
+| App | Project | Spec | Path under test |
+| --- | --- | --- | --- |
+| latency | `:grails-test-examples-latency` | `AppBenchFastPingSpec` | `GET /fast/ping` (plain `render`) |
+| app1 | `:grails-test-examples-app1` | `AppBenchInterceptorDemoSpec` | `GET /interceptorDemo/one` |
+| gsp-layout | `:grails-test-examples-gsp-layout` | `AppBenchDemoRenderTextSpec` | `GET /demo/renderText` |
+
+Enable with `-PappBench=true`. Specs are `@IgnoreIf` when the flag is off, so normal CI is unchanged.
+
+### One app, both modes
+
+[source,powershell]
+----
+$out = "$PWD/build/app-bench"
+New-Item -ItemType Directory -Force -Path $out | Out-Null
+
+./gradlew clean :grails-test-examples-latency:integrationTest `
+  "-PgrailsIndy=false" "-PappBench=true" `
+  "-PappBenchOut=$out/latency-noindy.json" `
+  --tests "latencyapp.AppBenchFastPingSpec"
+
+./gradlew clean :grails-test-examples-latency:integrationTest `
+  "-PgrailsIndy=true" "-PappBench=true" `
+  "-PappBenchOut=$out/latency-indy.json" `
+  --tests "latencyapp.AppBenchFastPingSpec"
+
+./gradlew -q :grails-benchmarks:jmhCompare `
+  --args="--base $out/latency-noindy.json --head $out/latency-indy.json --output $out/latency-indy-vs-noindy.md"
+----
+
+### Orchestrate all three apps
+
+[source,powershell]
+----
+pwsh grails-benchmarks/scripts/run-app-indy-bench.ps1
+# optional: -Warmup 100 -Samples 500
+----
+
+Reports land in `build/app-bench/*-indy-vs-noindy.md` and `build/app-bench/all-apps-indy-vs-noindy.md`.
+
+=== Known blocker on Groovy 6 (non-indy)
+
+Compiling the framework with `-PgrailsIndy=false` currently produces *broken* interface
+default methods that reference a missing CallSite holder class, for example:
+
+----
+// GrailsApplicationLifeCycle.beanRegistrar() with indy=false
+invokestatic grails/core/GrailsApplicationLifeCycle$1.$getCallSiteArray
+----
+
+`GrailsApplicationLifeCycle$1` is not emitted into `grails-core.jar`, so real apps fail at
+boot with:
+
+----
+java.lang.NoClassDefFoundError: grails/core/GrailsApplicationLifeCycle$1
+----
+
+With `-PgrailsIndy=true` the same default method compiles to a direct `return null` and apps
+boot. Framework JMH microbenchmarks still run under both modes because they never execute
+these default methods. Until this GROOVY-11158 / interface-default-method packaging issue is
+fixed, *app-level* A/B is blocked on the non-indy side: measure indy apps, and treat non-indy
+boot failure as a hard regression rather than a timing result.
+
 == Gradle properties
 
 |===

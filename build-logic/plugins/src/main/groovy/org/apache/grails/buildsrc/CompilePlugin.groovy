@@ -143,6 +143,9 @@ class CompilePlugin implements Plugin<Project> {
                         GradleUtils.findRootGrailsCoreDir(project).file('gradle/groovy-compile-configscript.groovy').asFile
                 if (frameworkIndy != null) {
                     it.groovyOptions.optimizationOptions.indy = frameworkIndy
+                    // Ensure Gradle rebuilds when A/B toggling indy; otherwise UP-TO-DATE jars
+                    // from the other mode produce NoClassDefFoundError at runtime.
+                    it.inputs.property('grailsIndy', frameworkIndy)
                 }
             }
             project.tasks.withType(Test).configureEach {
