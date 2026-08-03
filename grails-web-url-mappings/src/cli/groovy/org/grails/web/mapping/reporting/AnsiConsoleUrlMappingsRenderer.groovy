@@ -20,8 +20,6 @@ package org.grails.web.mapping.reporting
 
 import groovy.transform.CompileStatic
 
-import org.fusesource.jansi.Ansi
-
 import grails.build.logging.GrailsConsole
 import grails.gorm.validation.ConstrainedProperty
 import grails.web.mapping.UrlMapping
@@ -29,12 +27,12 @@ import grails.web.mapping.reporting.UrlMappingsRenderer
 import org.grails.web.mapping.ResponseCodeMappingData
 import org.grails.web.mapping.ResponseCodeUrlMapping
 
-import static org.fusesource.jansi.Ansi.Color.CYAN
-import static org.fusesource.jansi.Ansi.Color.DEFAULT
-import static org.fusesource.jansi.Ansi.Color.GREEN
-import static org.fusesource.jansi.Ansi.Color.RED
-import static org.fusesource.jansi.Ansi.Color.YELLOW
-import static org.fusesource.jansi.Ansi.ansi
+import static org.grails.build.logging.ConsoleAnsi.FG_CYAN as CYAN
+import static org.grails.build.logging.ConsoleAnsi.FG_DEFAULT as DEFAULT
+import static org.grails.build.logging.ConsoleAnsi.FG_GREEN as GREEN
+import static org.grails.build.logging.ConsoleAnsi.FG_RED as RED
+import static org.grails.build.logging.ConsoleAnsi.FG_YELLOW as YELLOW
+import static org.grails.build.logging.ConsoleAnsi.ansi
 
 /**
  * Renders URL mappings to the console
@@ -95,7 +93,7 @@ class AnsiConsoleUrlMappingsRenderer implements UrlMappingsRenderer {
 
     String bold(String text) {
         if (isAnsiEnabled) {
-            return ansi().a(Ansi.Attribute.INTENSITY_BOLD).a(text).a(Ansi.Attribute.INTENSITY_BOLD_OFF)
+            return ansi().bold().a(text).boldOff()
         }
         return text
     }
@@ -172,16 +170,16 @@ class AnsiConsoleUrlMappingsRenderer implements UrlMappingsRenderer {
     }
 
     String error(String errorCode) {
-        return ansi().a(Ansi.Attribute.INTENSITY_BOLD).fg(RED).a(errorCode).a(Ansi.Attribute.INTENSITY_BOLD_OFF).fg(DEFAULT)
+        return ansi().bold().fg(RED).a(errorCode).boldOff().fg(DEFAULT)
     }
 
     String variable(String name, boolean withAnsi = isAnsiEnabled) {
-        return ansi().a(Ansi.Attribute.INTENSITY_BOLD).fg(CYAN).a(name).a(Ansi.Attribute.INTENSITY_BOLD_OFF).fg(DEFAULT).reset()
+        return ansi().bold().fg(CYAN).a(name).boldOff().fg(DEFAULT).reset()
     }
 
     String header(String text) {
         if (isAnsiEnabled) {
-            ansi().a(Ansi.Attribute.INTENSITY_BOLD).fg(GREEN).a(text).a(Ansi.Attribute.INTENSITY_BOLD_OFF).fg(DEFAULT)
+            ansi().bold().fg(GREEN).a(text).boldOff().fg(DEFAULT)
         }
         else {
             return text
@@ -190,7 +188,7 @@ class AnsiConsoleUrlMappingsRenderer implements UrlMappingsRenderer {
 
     String header(String text, String description) {
         if (isAnsiEnabled) {
-            ansi().a(Ansi.Attribute.INTENSITY_BOLD).fg(GREEN).a("$text: ".toString()).fg(DEFAULT).a(description).a(Ansi.Attribute.INTENSITY_BOLD_OFF)
+            ansi().bold().fg(GREEN).a("$text: ".toString()).fg(DEFAULT).a(description).boldOff()
         }
         else {
             return "$text: $description"
@@ -199,14 +197,14 @@ class AnsiConsoleUrlMappingsRenderer implements UrlMappingsRenderer {
 
     String yellowBar() {
         if (isAnsiEnabled) {
-            return ansi().a(Ansi.Attribute.INTENSITY_BOLD).fg(YELLOW).a(' | ').a(Ansi.Attribute.INTENSITY_BOLD_OFF).fg(DEFAULT)
+            return ansi().bold().fg(YELLOW).a(' | ').boldOff().fg(DEFAULT)
         }
         return ' | '
     }
 
     String endBar() {
         if (isAnsiEnabled) {
-            return ansi().a(Ansi.Attribute.INTENSITY_BOLD).fg(YELLOW).a(' |').a(Ansi.Attribute.INTENSITY_BOLD_OFF).fg(DEFAULT)
+            return ansi().bold().fg(YELLOW).a(' |').boldOff().fg(DEFAULT)
         }
         return ' |'
     }

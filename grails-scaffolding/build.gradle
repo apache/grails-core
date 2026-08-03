@@ -60,14 +60,10 @@ dependencies {
     }
     // GrailsConsole (used by the scaffolding commands) needs jline at compile time
     cliImplementation 'org.jline:jline'
-    cliImplementation 'org.fusesource.jansi:jansi'
     api project(':grails-fields')
     api project(':grails-rest-transforms')
 
     implementation project(':grails-gsp')
-
-    compileOnly 'org.jline:jline'
-    compileOnly 'org.fusesource.jansi:jansi'
 
     testImplementation 'org.spockframework:spock-core'
     testImplementation project(':grails-layout')

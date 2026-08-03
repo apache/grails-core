@@ -284,9 +284,12 @@ application's runtime classpath (`bootRun`, `bootJar`, `bootWar`). Here is the c
 grails create-plugin my-plugin
 ----
 
-2. **Define the Command in a `cli` source set:** plugin commands live in `src/cli/groovy` (not
-`grails-app/commands`, which is compiled into the runtime jar). Give them a package that is unique
-to the cli artifact:
+2. **Define the Command in a `cli` source set:** compiled plugin commands live in `src/cli/groovy`
+(not `grails-app/commands`, which is compiled into the runtime jar). Give them a package that is
+unique to the cli artifact. Code-generation scripts and multi-step YAML/JSON commands may stay in
+`src/main/scripts`; when `grails-plugin-cli` is applied they are copied into the companion jar as
+`META-INF/commands` and excluded from the runtime plugin jar. You may also place them directly under
+`src/cli/resources/META-INF/commands`:
 +
 [source,groovy]
 ----

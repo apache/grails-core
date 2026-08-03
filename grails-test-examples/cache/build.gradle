@@ -60,7 +60,6 @@ dependencies {
     runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'org.apache.tomcat:tomcat-jdbc'
-    runtimeOnly 'org.fusesource.jansi:jansi'
 
     testImplementation 'org.apache.grails:grails-testing-support-datamapping'
     testImplementation 'org.apache.grails:grails-testing-support-web'

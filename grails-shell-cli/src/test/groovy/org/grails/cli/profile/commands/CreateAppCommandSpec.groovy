@@ -38,7 +38,7 @@ class CreateAppCommandSpec extends Specification {
     PrintStream originalOut
 
     void setup() {
-        System.setProperty("org.fusesource.jansi.Ansi.disable", "true")
+        System.setProperty("spring.output.ansi.enabled", "never")
         originalOut = GrailsConsole.instance.out
         sps = new StringPrintStream()
         GrailsConsole.instance.out = sps
