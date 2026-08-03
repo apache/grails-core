@@ -104,6 +104,15 @@ tasks.register('jmhCompare', JavaExec) {
 // The jmh source set compiles and runs against everything main depends on.
 configurations.jmh.extendsFrom(configurations.implementation)
 
+// Spock is test-only. If its META-INF/services AST transform is fat-jarred into the JMH jar,
+// runtime Groovy compilation (JSON/markup views) loads SpockTransform and fails on Groovy 6
+// with IncompatibleGroovyVersionException. Keep Spock off the JMH runtime classpath entirely.
+configurations.configureEach { conf ->
+    if (conf.name.toLowerCase().contains('jmh')) {
+        conf.exclude group: 'org.spockframework'
+    }
+}
+
 // Every JMH knob the CI workflow needs to override is exposed as a Gradle property so that
 // .github/workflows/benchmark.yml can run a fast PR profile and a slower scheduled profile
 // from the same build. Defaults here are the quick local-development profile.
@@ -130,6 +139,9 @@ jmh {
             .map { it.split(',') as List<String> }
             .orElse([])
             .get()
+    // Belt-and-suspenders with the Spock classpath exclude: view engines compile Groovy at
+    // runtime inside the JMH fork (same opt-out the monorepo uses for Spock 2.4 on Groovy 6).
+    jvmArgsAppend = ['-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true']
 }
 
 def mergeJmhClasspathMetadata = tasks.register('mergeJmhClasspathMetadata') {
@@ -158,6 +170,7 @@ def mergeJmhClasspathMetadata = tasks.register('mergeJmhClasspathMetadata') {
 
             configurations.jmhRuntimeClasspath.files
                     .findAll { File artifact -> artifact.name.endsWith('.jar') }
+                    .findAll { File artifact -> !artifact.name.contains('spock') }
                     .sort { File artifact -> artifact.absolutePath }
                     .each { File artifact ->
                         new ZipFile(artifact).withCloseable { ZipFile zipFile ->
@@ -184,10 +197,12 @@ def mergeJmhClasspathMetadata = tasks.register('mergeJmhClasspathMetadata') {
                                         }
                                     }
                                 } else if (lineMetadataPrefixes.any { String prefix -> path.startsWith(prefix) }) {
+                                    // Never fat-jar Spock's global AST transform into the JMH runtime
+                                    // (view engines compile Groovy at runtime and would load it).
                                     Set<String> lines = lineEntries.computeIfAbsent(path) { new TreeSet<>() }
                                     zipFile.getInputStream(entry).withCloseable { input ->
                                         input.getText('UTF-8').readLines().each { String line ->
-                                            if (line) {
+                                            if (line && !line.contains('spockframework') && !line.contains('SpockTransform')) {
                                                 lines.add(line)
                                             }
                                         }
