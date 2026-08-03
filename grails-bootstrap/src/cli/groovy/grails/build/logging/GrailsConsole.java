@@ -25,16 +25,15 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.List;
+import java.util.Locale;
 import java.util.Stack;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.codehaus.groovy.runtime.StackTraceUtils;
 import org.codehaus.groovy.runtime.typehandling.NumberMath;
 
 import org.apache.tools.ant.BuildException;
-import org.fusesource.jansi.Ansi;
-import org.fusesource.jansi.Ansi.Color;
-import org.fusesource.jansi.AnsiConsole;
 import org.jline.reader.Completer;
 import org.jline.reader.History;
 import org.jline.reader.LineReader;
@@ -49,11 +48,11 @@ import grails.util.Environment;
 import org.grails.build.logging.GrailsConsoleErrorPrintStream;
 import org.grails.build.logging.GrailsConsolePrintStream;
 
-import static org.fusesource.jansi.Ansi.Color.DEFAULT;
-import static org.fusesource.jansi.Ansi.Color.RED;
-import static org.fusesource.jansi.Ansi.Color.YELLOW;
-import static org.fusesource.jansi.Ansi.Erase.FORWARD;
-import static org.fusesource.jansi.Ansi.ansi;
+import org.springframework.boot.ansi.AnsiOutput;
+
+import org.grails.build.logging.ConsoleAnsi;
+
+import static org.grails.build.logging.ConsoleAnsi.ansi;
 
 /**
  * Utility class for delivering console output in a nicely formatted way.
@@ -66,6 +65,24 @@ public class GrailsConsole implements ConsoleLogger {
     private static GrailsConsole instance;
 
     public static final String ENABLE_TERMINAL = "grails.console.enable.terminal";
+
+    /**
+     * Spring Boot's ansi switch ({@code spring.output.ansi.enabled}: {@code always}, {@code detect} or
+     * {@code never}). Honoured rather than a Grails-specific property so applications configure console
+     * colour in one place. Inside a Spring application Boot binds this onto {@link AnsiOutput}; the CLI
+     * has no Environment, so the system property is read directly as well.
+     */
+    private static final String SPRING_ANSI_PROPERTY = "spring.output.ansi.enabled";
+
+    /** The last rejected {@link #SPRING_ANSI_PROPERTY} value, so the warning is not repeated per message. */
+    private static final AtomicReference<String> WARNED_ANSI_VALUE = new AtomicReference<>();
+
+    /**
+     * Set to {@code true} while a caller has deliberately replaced {@code System.out}/{@code System.err}
+     * and does not want the console to re-install its own streams over the top. See
+     * {@code org.grails.test.io.SystemOutAndErrSwapper}.
+     */
+    public static final String SUSPEND_SYSTEM_OUT_REDIRECT = "grails.console.suspend.system.out.redirect";
     public static final String ENABLE_INTERACTIVE = "grails.console.enable.interactive";
     public static final String LINE_SEPARATOR = System.getProperty("line.separator");
     public static final String CATEGORY_SEPARATOR = "|";
@@ -105,7 +122,7 @@ public class GrailsConsole implements ConsoleLogger {
      */
     String lastMessage = "";
 
-    Ansi lastStatus = null;
+    ConsoleAnsi lastStatus = null;
     /**
      * The reader to read info from the console
      */
@@ -336,13 +353,10 @@ public class GrailsConsole implements ConsoleLogger {
         if (instance == null) {
             try {
                 final GrailsConsole console = createInstance();
-                AnsiConsole.systemInstall();
                 console.addShutdownHook();
                 setInstance(console);
             } catch (IOException e) {
                 throw new RuntimeException("Cannot create grails console: " + e.getMessage(), e);
-            } finally {
-                AnsiConsole.systemUninstall();
             }
         }
         return instance;
@@ -394,12 +408,30 @@ public class GrailsConsole implements ConsoleLogger {
     }
 
     protected void redirectSystemOutAndErr(boolean force) {
+        if (!force && isSystemOutRedirectSuspended()) {
+            return;
+        }
         if (force || !(System.out instanceof GrailsConsolePrintStream)) {
             System.setOut(new GrailsConsolePrintStream(out));
         }
         if (force || !(System.err instanceof GrailsConsoleErrorPrintStream)) {
             System.setErr(new GrailsConsoleErrorPrintStream(err));
         }
+    }
+
+    /**
+     * Whether something has deliberately taken over {@code System.out}/{@code System.err} and asked the
+     * console to keep its hands off.
+     *
+     * <p>Every output method calls {@code verifySystemOut()}, which re-installs the console streams
+     * whenever it does not recognise the current ones. That is the right default for a stream some
+     * library replaced behind the console's back, but it also destroys a capture a caller installed on
+     * purpose - test output capture, most obviously. Such a caller sets {@link #SUSPEND_SYSTEM_OUT_REDIRECT}
+     * for the duration of the swap. A plain system property rather than a marker type keeps modules that
+     * capture output (grails-test-core) free of any dependency on the cli tier.</p>
+     */
+    private static boolean isSystemOutRedirectSuspended() {
+        return Boolean.getBoolean(SUSPEND_SYSTEM_OUT_REDIRECT);
     }
 
     public static GrailsConsole createInstance() throws IOException {
@@ -604,7 +636,7 @@ public class GrailsConsole implements ConsoleLogger {
                     out.print(erasePreviousLine(CATEGORY_SEPARATOR));
                 }
                 lastStatus = outputCategory(ansi(), CATEGORY_SEPARATOR)
-                        .fg(Color.DEFAULT).a(msg).reset();
+                        .fg(ConsoleAnsi.FG_DEFAULT).a(msg).reset();
                 out.println(lastStatus);
                 if (!userInputActive) {
                     cursorMove = replaceCount;
@@ -625,7 +657,7 @@ public class GrailsConsole implements ConsoleLogger {
         }
     }
 
-    private Ansi moveDownToSkipPrompt() {
+    private ConsoleAnsi moveDownToSkipPrompt() {
         return ansi()
                 .cursorDown(1)
                 .cursorLeft(PROMPT.length());
@@ -690,7 +722,51 @@ public class GrailsConsole implements ConsoleLogger {
     }
 
     public boolean isAnsiEnabled() {
-        return Ansi.isEnabled() && (terminal != null && !"dumb".equals(terminal.getType())) && ansiEnabled;
+        AnsiOutput.Enabled configured = resolveConfiguredAnsi();
+        if (configured == AnsiOutput.Enabled.NEVER) {
+            return false;
+        }
+        if (configured == AnsiOutput.Enabled.ALWAYS) {
+            return ansiEnabled;
+        }
+        return (terminal != null && !"dumb".equals(terminal.getType())) && ansiEnabled;
+    }
+
+    /**
+     * Resolves Spring Boot's ansi setting, preferring what Boot has already bound and falling back to the
+     * raw system property for the CLI, where no Environment exists to bind it.
+     */
+    private AnsiOutput.Enabled resolveConfiguredAnsi() {
+        AnsiOutput.Enabled bound = AnsiOutput.getEnabled();
+        if (bound != null && bound != AnsiOutput.Enabled.DETECT) {
+            return bound;
+        }
+        String property = System.getProperty(SPRING_ANSI_PROPERTY);
+        if (property == null) {
+            return AnsiOutput.Enabled.DETECT;
+        }
+        try {
+            return AnsiOutput.Enabled.valueOf(property.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ignored) {
+            warnAboutUnsupportedAnsiValue(property);
+            return AnsiOutput.Enabled.DETECT;
+        }
+    }
+
+    /**
+     * Reports an unusable ansi setting. Falling back to {@code detect} silently reads as "colour on",
+     * which is the opposite of what someone writing {@code =false} or {@code =off} intended, and Spring
+     * Boot's binder - which would reject the value outright - never sees a property read this way.
+     *
+     * <p>The notice goes to the captured stderr rather than through this console, because
+     * {@link #isAnsiEnabled()} runs on every message; it is repeated only when the offending value
+     * changes so a bad setting costs one line, not one per message.</p>
+     */
+    private void warnAboutUnsupportedAnsiValue(String property) {
+        if (!property.equals(WARNED_ANSI_VALUE.getAndSet(property)) && err != null) {
+            err.println("Ignoring unsupported " + SPRING_ANSI_PROPERTY + " value '" + property
+                    + "'; expected one of always, detect or never. Falling back to detect.");
+        }
     }
 
     /**
@@ -767,8 +843,14 @@ public class GrailsConsole implements ConsoleLogger {
     }
 
     private void erasePrompt(PrintStream printStream) {
+        // ConsoleAnsi always renders the escape it is asked for, so the caller has to decide whether
+        // ansi is wanted. The previous ansi library returned a no-op builder while output was
+        // disabled, which silently covered this call site.
+        if (!isAnsiEnabled()) {
+            return;
+        }
         printStream.print(ansi()
-                .eraseLine(Ansi.Erase.BACKWARD).cursorLeft(PROMPT.length()));
+                .eraseLineBackward().cursorLeft(PROMPT.length()));
     }
 
     /**
@@ -783,7 +865,9 @@ public class GrailsConsole implements ConsoleLogger {
         PrintStream printStream = out;
         try {
             if (userInputActive && !appendCalled) {
-                printStream.print(moveDownToSkipPrompt());
+                if (isAnsiEnabled()) {
+                    printStream.print(moveDownToSkipPrompt());
+                }
                 appendCalled = true;
             }
             if (msg.endsWith(LINE_SEPARATOR)) {
@@ -861,7 +945,7 @@ public class GrailsConsole implements ConsoleLogger {
         }
 
         lastMessage = "";
-        msg = isAnsiEnabled() ? outputCategory(ansi(), ">").fg(DEFAULT).a(msg).reset().toString() : msg;
+        msg = isAnsiEnabled() ? outputCategory(ansi(), ">").fg(ConsoleAnsi.FG_DEFAULT).a(msg).reset().toString() : msg;
         try {
             return readLine(msg, secure);
         } finally {
@@ -917,13 +1001,13 @@ public class GrailsConsole implements ConsoleLogger {
         return showPrompt(prompt);
     }
 
-    private Ansi ansiPrompt(String prompt) {
+    private ConsoleAnsi ansiPrompt(String prompt) {
         return ansi()
-                .a(Ansi.Attribute.INTENSITY_BOLD)
-                .fg(YELLOW)
+                .bold()
+                .fg(ConsoleAnsi.FG_YELLOW)
                 .a(prompt)
-                .a(Ansi.Attribute.INTENSITY_BOLD_OFF)
-                .fg(DEFAULT);
+                .boldOff()
+                .fg(ConsoleAnsi.FG_DEFAULT);
     }
 
     public String userInput(String message, List<String> validResponses) {
@@ -966,28 +1050,28 @@ public class GrailsConsole implements ConsoleLogger {
         return message + "[" + DefaultGroovyMethods.join(validResponses, ",") + "] ";
     }
 
-    private Ansi outputCategory(Ansi ansi, String categoryName) {
+    private ConsoleAnsi outputCategory(ConsoleAnsi ansi, String categoryName) {
         return ansi
-                .a(Ansi.Attribute.INTENSITY_BOLD)
-                .fg(YELLOW)
+                .bold()
+                .fg(ConsoleAnsi.FG_YELLOW)
                 .a(categoryName)
                 .a(SPACE)
-                .a(Ansi.Attribute.INTENSITY_BOLD_OFF);
+                .boldOff();
     }
 
-    private Ansi outputErrorLabel(Ansi ansi, String label) {
+    private ConsoleAnsi outputErrorLabel(ConsoleAnsi ansi, String label) {
         return ansi
-                .a(Ansi.Attribute.INTENSITY_BOLD)
-                .fg(RED)
+                .bold()
+                .fg(ConsoleAnsi.FG_RED)
                 .a(CATEGORY_SEPARATOR)
                 .a(SPACE)
                 .a(label)
                 .a(" ")
-                .a(Ansi.Attribute.INTENSITY_BOLD_OFF)
-                .fg(Color.DEFAULT);
+                .boldOff()
+                .fg(ConsoleAnsi.FG_DEFAULT);
     }
 
-    private Ansi erasePreviousLine(String categoryName) {
+    private ConsoleAnsi erasePreviousLine(String categoryName) {
         int cursorMove = this.cursorMove;
         if (userInputActive) cursorMove++;
         if (cursorMove > 0) {
@@ -998,7 +1082,7 @@ public class GrailsConsole implements ConsoleLogger {
             return ansi()
                     .cursorUp(cursorMove)
                     .cursorLeft(moveLeftLength)
-                    .eraseLine(FORWARD);
+                    .eraseLineForward();
 
         }
         return ansi();
@@ -1014,7 +1098,7 @@ public class GrailsConsole implements ConsoleLogger {
         cursorMove = 0;
         try {
             if (isAnsiEnabled()) {
-                Ansi ansi = outputErrorLabel(userInputActive ? moveDownToSkipPrompt() : ansi(), label).a(message).reset();
+                ConsoleAnsi ansi = outputErrorLabel(userInputActive ? moveDownToSkipPrompt() : ansi(), label).a(message).reset();
 
                 if (message.endsWith(LINE_SEPARATOR)) {
                     out.print(ansi);
