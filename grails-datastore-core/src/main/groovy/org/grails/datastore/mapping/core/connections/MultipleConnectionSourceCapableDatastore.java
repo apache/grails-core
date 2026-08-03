@@ -36,21 +36,4 @@ public interface MultipleConnectionSourceCapableDatastore extends Datastore {
      * @return The {@link Datastore}
      */
     Datastore getDatastoreForConnection(String connectionName);
-
-    /**
-     * Whether an entity mapped only to non-default connection sources should route its unqualified
-     * (no explicit connection) operations to its first mapped connection's datastore.
-     *
-     * Real datastores manage an independent session per connection, so such an entity's default
-     * operations belong to that mapped connection's datastore. The in-memory mock used for unit
-     * testing manages a single session on this (parent) datastore and only fabricates isolated
-     * children for explicit connection access, so it overrides this to keep unqualified operations
-     * on the parent — otherwise they would target a child whose session the test harness never
-     * flushes.
-     *
-     * @return {@code true} to route unqualified operations to the mapped connection datastore
-     */
-    default boolean routesUnqualifiedToMappedConnection() {
-        return true;
-    }
 }

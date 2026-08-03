@@ -218,10 +218,12 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
     /**
      * @return Whether {@link #getCurrentSession()} would return an existing session rather than
      * opening a new one: a validated (still connected) session is bound to the current thread.
-     * Delegates to {@link #getSessionResolver()} so both methods read the same state.
+     * Reads the same state as {@link #getCurrentSession()} but leaves it untouched — this is a
+     * predicate, and callers such as datastore-routing scans invoke it on datastores they are only
+     * inspecting.
      */
     public boolean hasCurrentSession() {
-        return getSessionResolver().resolve() != null;
+        return getSessionResolver().hasSession();
     }
 
     /**

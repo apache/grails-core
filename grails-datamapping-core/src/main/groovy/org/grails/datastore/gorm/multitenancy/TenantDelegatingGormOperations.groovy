@@ -29,6 +29,7 @@ import grails.gorm.multitenancy.Tenants
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.query.api.BuildableCriteria
 import org.grails.datastore.mapping.query.api.Criteria
 
@@ -53,119 +54,119 @@ class TenantDelegatingGormOperations<D> implements GormAllOperations<D> {
 
     @Override
     def propertyMissing(D instance, String name) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.propertyMissing(instance, name)
         }
     }
 
     @Override
     boolean instanceOf(D instance, Class cls) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.instanceOf(instance, cls)
         }
     }
 
     @Override
     D lock(D instance) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.lock(instance)
         }
     }
 
     @Override
     def <T> T mutex(D instance, Closure<T> callable) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.mutex(instance, callable)
         }
     }
 
     @Override
     D refresh(D instance) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.refresh(instance)
         }
     }
 
     @Override
     D save(D instance) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.save(instance)
         }
     }
 
     @Override
     D insert(D instance) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.insert(instance)
         }
     }
 
     @Override
     D insert(D instance, Map params) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.insert(instance, params)
         }
     }
 
     @Override
     D merge(D instance, Map params) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.merge(instance, params)
         }
     }
 
     @Override
     D save(D instance, boolean validate) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.save(instance, validate)
         }
     }
 
     @Override
     D save(D instance, Map params) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.save(instance, params)
         }
     }
 
     @Override
     Serializable ident(D instance) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.ident(instance)
         }
     }
 
     @Override
     D attach(D instance) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.attach(instance)
         }
     }
 
     @Override
     boolean isAttached(D instance) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.isAttached(instance)
         }
     }
 
     @Override
     void discard(D instance) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.discard(instance)
         }
     }
 
     @Override
     void delete(D instance) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.delete(instance)
         }
     }
 
     @Override
     void delete(D instance, Map params) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.delete(instance, params)
         }
     }
@@ -182,98 +183,98 @@ class TenantDelegatingGormOperations<D> implements GormAllOperations<D> {
 
     @Override
     DetachedCriteria<D> where(Closure callable) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.where(callable)
         }
     }
 
     @Override
     DetachedCriteria<D> whereLazy(Closure callable) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.whereLazy(callable)
         }
     }
 
     @Override
     DetachedCriteria<D> whereAny(Closure callable) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.whereAny(callable)
         }
     }
 
     @Override
     List<D> findAll(Closure callable) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.findAll(callable)
         }
     }
 
     @Override
     List<D> findAll(Map args, Closure callable) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.findAll(args, callable)
         }
     }
 
     @Override
     D find(Closure callable) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.find(callable)
         }
     }
 
     @Override
     List<Serializable> saveAll(Object... objectsToSave) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.saveAll(objectsToSave)
         }
     }
 
     @Override
     List<Serializable> saveAll(Iterable<?> objectsToSave) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.saveAll(objectsToSave)
         }
     }
 
     @Override
     Number deleteAll() {
-        (Number)Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        (Number)withTenantId() {
             allOperations.deleteAll()
         }
     }
 
     @Override
     Number deleteAll(Map params) {
-        (Number)Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        (Number)withTenantId() {
             allOperations.deleteAll(params)
         }
     }
 
     @Override
     void deleteAll(Object... objectsToDelete) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.deleteAll(objectsToDelete)
         }
     }
 
     @Override
     void deleteAll(Map params, Object... objectsToDelete) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.deleteAll(params, objectsToDelete)
         }
     }
 
     @Override
     void deleteAll(Iterable objectsToDelete) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.deleteAll(objectsToDelete)
         }
     }
 
     @Override
     void deleteAll(Map params, Iterable objectsToDelete) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.deleteAll(params, objectsToDelete)
         }
     }
@@ -285,497 +286,497 @@ class TenantDelegatingGormOperations<D> implements GormAllOperations<D> {
 
     @Override
     D get(Serializable id) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.get(id)
         }
     }
 
     @Override
     D read(Serializable id) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.read(id)
         }
     }
 
     @Override
     D load(Serializable id) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.load(id)
         }
     }
 
     @Override
     D proxy(Serializable id) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.proxy(id)
         }
     }
 
     @Override
     List<D> getAll(Iterable<Serializable> ids) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.getAll(ids)
         }
     }
 
     @Override
     List<D> getAll(Serializable... ids) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.getAll(ids)
         }
     }
 
     @Override
     List<D> getAll() {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.getAll()
         }
     }
 
     @Override
     BuildableCriteria createCriteria() {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.createCriteria()
         }
     }
 
     @Override
     def <T> T withCriteria(@DelegatesTo(Criteria) Closure<T> callable) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.withCriteria(callable)
         }
     }
 
     @Override
     def <T> T withCriteria(Map builderArgs, @DelegatesTo(Criteria) Closure callable) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.withCriteria(builderArgs, callable)
         }
     }
 
     @Override
     D lock(Serializable id) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.lock(id)
         }
     }
 
     @Override
     D merge(D d) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.merge(d)
         }
     }
 
     @Override
     Integer count() {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.count()
         }
     }
 
     @Override
     Integer getCount() {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.getCount()
         }
     }
 
     @Override
     boolean exists(Serializable id) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.exists(id)
         }
     }
 
     @Override
     List<D> list(Map params) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.list(params)
         }
     }
 
     @Override
     List<D> list() {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.list()
         }
     }
 
     @Override
     List<D> findAll(Map params) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.findAll(params)
         }
     }
 
     @Override
     List<D> findAll() {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.findAll()
         }
     }
 
     @Override
     List<D> findAll(D example) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.findAll(example)
         }
     }
 
     @Override
     List<D> findAll(D example, Map args) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.findAll(example, args)
         }
     }
 
     @Override
     D first() {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.first()
         }
     }
 
     @Override
     D first(String propertyName) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.first(propertyName)
         }
     }
 
     @Override
     D first(Map queryParams) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.first(queryParams)
         }
     }
 
     @Override
     D last() {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.last()
         }
     }
 
     @Override
     D last(String propertyName) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.last(propertyName)
         }
     }
 
     @Override
     Object methodMissing(String methodName, Object arg) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.methodMissing(methodName, arg)
         }
     }
 
     @Override
     Object propertyMissing(String property) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.propertyMissing(property)
         }
     }
 
     @Override
     void propertyMissing(String property, Object value) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.propertyMissing(property, value)
         }
     }
 
     @Override
     D last(Map queryParams) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.last(queryParams)
         }
     }
 
     @Override
     List<D> findAllWhere(Map queryMap) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.findAllWhere(queryMap)
         }
     }
 
     @Override
     List<D> findAllWhere(Map queryMap, Map args) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.findAllWhere(queryMap, args)
         }
     }
 
     @Override
     D find(D example) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.find(example)
         }
     }
 
     @Override
     D find(D example, Map args) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.find(example, args)
         }
     }
 
     @Override
     D findWhere(Map queryMap) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.findWhere(queryMap)
         }
     }
 
     @Override
     D findWhere(Map queryMap, Map args) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.findWhere(queryMap, args)
         }
     }
 
     @Override
     D findOrCreateWhere(Map queryMap) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.findOrCreateWhere(queryMap)
         }
     }
 
     @Override
     D findOrSaveWhere(Map queryMap) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.findOrSaveWhere(queryMap)
         }
     }
 
     @Override
     def <T> T withSession(Closure<T> callable) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.withSession(callable)
         }
     }
 
     @Override
     def <T> T withDatastoreSession(Closure<T> callable) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.withDatastoreSession(callable)
         }
     }
 
     @Override
     def <T> T withTransaction(Closure<T> callable) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.withTransaction(callable)
         }
     }
 
     @Override
     def <T> T withNewTransaction(Closure<T> callable) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.withNewTransaction(callable)
         }
     }
 
     @Override
     def <T> T withTransaction(Map transactionProperties, Closure<T> callable) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.withTransaction(transactionProperties, callable)
         }
     }
 
     @Override
     def <T> T withNewTransaction(Map transactionProperties, Closure<T> callable) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.withNewTransaction(transactionProperties, callable)
         }
     }
 
     @Override
     def <T> T withTransaction(TransactionDefinition definition, Closure<T> callable) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.withTransaction(definition, callable)
         }
     }
 
     @Override
     def <T> T withNewSession(Closure<T> callable) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.withNewSession(callable)
         }
     }
 
     @Override
     def <T> T withStatelessSession(Closure<T> callable) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.withStatelessSession(callable)
         }
     }
 
     @Override
     List executeQuery(CharSequence query) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.executeQuery(query)
         }
     }
 
     @Override
     List executeQuery(CharSequence query, Map args) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.executeQuery(query, args)
         }
     }
 
     @Override
     List executeQuery(CharSequence query, Map params, Map args) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.executeQuery(query, params, args)
         }
     }
 
     @Override
     List executeQuery(CharSequence query, Collection params) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.executeQuery(query, params)
         }
     }
 
     @Override
     List executeQuery(CharSequence query, Object... params) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.executeQuery(query, params)
         }
     }
 
     @Override
     List executeQuery(CharSequence query, Collection params, Map args) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.executeQuery(query, params, args)
         }
     }
 
     @Override
     Integer executeUpdate(CharSequence query) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.executeUpdate(query)
         }
     }
 
     @Override
     Integer executeUpdate(CharSequence query, Map args) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.executeUpdate(query, args)
         }
     }
 
     @Override
     Integer executeUpdate(CharSequence query, Map params, Map args) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.executeUpdate(query, params, args)
         }
     }
 
     @Override
     Integer executeUpdate(CharSequence query, Collection params) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.executeUpdate(query, params)
         }
     }
 
     @Override
     Integer executeUpdate(CharSequence query, Object... params) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.executeUpdate(query, params)
         }
     }
 
     @Override
     Integer executeUpdate(CharSequence query, Collection params, Map args) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.executeUpdate(query, params, args)
         }
     }
 
     @Override
     D find(CharSequence query) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.find(query)
         }
     }
 
     @Override
     D find(CharSequence query, Map params) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.find(query, params)
         }
     }
 
     @Override
     D find(CharSequence query, Map params, Map args) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.find(query, params, args)
         }
     }
 
     @Override
     D find(CharSequence query, Collection params) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.find(query, params)
         }
     }
 
     @Override
     D find(CharSequence query, Object[] params) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.find(query, params)
         }
     }
 
     @Override
     D find(CharSequence query, Collection params, Map args) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.find(query, params, args)
         }
     }
 
     @Override
     List<D> findAll(CharSequence query) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.findAll(query)
         }
     }
 
     @Override
     List<D> findAll(CharSequence query, Map params) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.findAll(query, params)
         }
     }
 
     @Override
     List<D> findAll(CharSequence query, Map params, Map args) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.findAll(query, params, args)
         }
     }
 
     @Override
     List<D> findAll(CharSequence query, Collection params) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.findAll(query, params)
         }
     }
 
     @Override
     List<D> findAll(CharSequence query, Object[] params) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.findAll(query, params)
         }
     }
 
     @Override
     List<D> findAll(CharSequence query, Collection params, Map args) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+        withTenantId() {
             allOperations.findAll(query, params, args)
         }
     }
@@ -793,5 +794,19 @@ class TenantDelegatingGormOperations<D> implements GormAllOperations<D> {
     @Override
     GormAllOperations<D> withTenant(Serializable tenantId) {
         allOperations.withTenant(tenantId)
+    }
+
+    /**
+     * Runs the delegated call with this wrapper's tenant bound.
+     *
+     * Uses the datastore instance this wrapper was constructed with rather than looking one up by
+     * its class: the instance is already known, and a type lookup would fail for a datastore that is
+     * not registered by type, or resolve to a sibling when several share one type.
+     */
+    private <T> T withTenantId(Closure<T> callable) {
+        if (datastore instanceof MultiTenantCapableDatastore) {
+            return Tenants.withId((MultiTenantCapableDatastore) datastore, tenantId, callable)
+        }
+        return Tenants.withId((Class<? extends Datastore>) datastore.getClass(), tenantId, callable)
     }
 }

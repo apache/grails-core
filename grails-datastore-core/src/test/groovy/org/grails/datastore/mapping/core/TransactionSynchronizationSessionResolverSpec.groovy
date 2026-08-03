@@ -153,6 +153,66 @@ class TransactionSynchronizationSessionResolverSpec extends Specification {
         TransactionSynchronizationManager.getResource(datastore).is(holder)
     }
 
+    def "hasSession() reports whether a connected session is bound"() {
+        expect:
+        !resolver.hasSession()
+
+        when:
+        Session session = connectedSession()
+        resolver.bind(session)
+
+        then:
+        resolver.hasSession()
+
+        when:
+        resolver.unbind()
+
+        then:
+        !resolver.hasSession()
+    }
+
+    def "hasSession() is false when the only bound session is disconnected"() {
+        given:
+        Session session = Mock(Session)
+        session.getDatastore() >> datastore
+        session.isConnected() >> false
+        DatastoreUtils.bindSession(session)
+
+        expect:
+        !resolver.hasSession()
+    }
+
+    def "hasSession() sees a connected session beneath a disconnected one"() {
+        given:
+        Session live = connectedSession()
+        Session stale = Mock(Session)
+        stale.getDatastore() >> datastore
+        stale.isConnected() >> false
+        DatastoreUtils.bindSession(live)
+        DatastoreUtils.bindNewSession(stale)
+
+        expect:
+        resolver.hasSession()
+    }
+
+    def "hasSession() does not evict a disconnected session or unbind the holder"() {
+        given: "a bound holder whose only session has been disconnected — resolve() would clean this up"
+        Session session = Mock(Session)
+        session.getDatastore() >> datastore
+        session.isConnected() >> false
+        DatastoreUtils.bindSession(session)
+        SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.getResource(datastore)
+
+        when: "the datastore is merely interrogated, as a routing scan does across many datastores"
+        boolean answer = resolver.hasSession()
+
+        then: "the answer is correct and the thread-bound state is exactly as it was"
+        !answer
+        TransactionSynchronizationManager.getResource(datastore).is(holder)
+        holder.containsSession(session)
+        holder.size() == 1
+    }
+
     def "a session bound on one thread is not visible to another thread"() {
         given:
         Session session = connectedSession()

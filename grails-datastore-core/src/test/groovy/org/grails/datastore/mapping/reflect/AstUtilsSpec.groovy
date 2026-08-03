@@ -57,8 +57,38 @@ class AstUtilsSpec extends Specification {
         to.getAnnotations(annotationType).size() == 1
     }
 
-    void "copyAnnotations does not add a second annotation of a type the target already carries"() {
+    void "copyAnnotations copies repeatable annotations by default"() {
+        given: "a source carrying the same annotation type twice, as a repeatable annotation legitimately does"
+        def from = newMethodNode()
+        def to = newMethodNode()
+        def annotationType = ClassHelper.make("jakarta.validation.constraints.Pattern")
+        from.addAnnotation(new AnnotationNode(annotationType))
+        from.addAnnotation(new AnnotationNode(annotationType))
+
+        when:
+        AstUtils.copyAnnotations(from, to)
+
+        then: "both are copied — the default must not silently drop all but the first"
+        to.getAnnotations(annotationType).size() == 2
+    }
+
+    void "copyAnnotations with skipExisting does not add a type the target already carries"() {
         given: "a target that a caller has already annotated directly, e.g. to avoid double-adding @NotTransactional/@ReadOnly"
+        def from = newMethodNode()
+        def to = newMethodNode()
+        def annotationType = ClassHelper.make("grails.gorm.transactions.NotTransactional")
+        from.addAnnotation(new AnnotationNode(annotationType))
+        to.addAnnotation(new AnnotationNode(annotationType))
+
+        when:
+        AstUtils.copyAnnotations(from, to, null, null, true)
+
+        then: "the target keeps its own single instance rather than gaining a duplicate, which Groovy's compiler rejects"
+        to.getAnnotations(annotationType).size() == 1
+    }
+
+    void "copyAnnotations without skipExisting keeps the pre-existing annotation and the copy"() {
+        given:
         def from = newMethodNode()
         def to = newMethodNode()
         def annotationType = ClassHelper.make("grails.gorm.transactions.NotTransactional")
@@ -68,8 +98,8 @@ class AstUtilsSpec extends Specification {
         when:
         AstUtils.copyAnnotations(from, to)
 
-        then: "the target keeps its own single instance rather than gaining a duplicate, which Groovy's compiler rejects"
-        to.getAnnotations(annotationType).size() == 1
+        then: "the default is unchanged from the general-purpose contract — callers opt in to deduplication"
+        to.getAnnotations(annotationType).size() == 2
     }
 
     private static MethodNode newMethodNode() {

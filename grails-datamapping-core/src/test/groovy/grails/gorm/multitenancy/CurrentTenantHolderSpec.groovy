@@ -20,6 +20,7 @@ package grails.gorm.multitenancy
 
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.multitenancy.exceptions.TenantException
 import spock.lang.Specification
 
 /**
@@ -47,6 +48,57 @@ class CurrentTenantHolderSpec extends Specification {
         CurrentTenantHolder.withTenant(datastore, 'tenant1') {
             CurrentTenantHolder.get() == 'tenant1'
         }
+    }
+
+    void "get() returns the tenant when several datastores are bound to the same one"() {
+        given: "the shape Tenants.withTenant produces — the same tenant keyed by both instance and type"
+        def datastore = Mock(Datastore)
+        CurrentTenantHolder.set(datastore.class, 'tenant1')
+        CurrentTenantHolder.set(datastore, 'tenant1')
+
+        expect: "the answer is unambiguous, so it is returned"
+        CurrentTenantHolder.get() == 'tenant1'
+
+        cleanup:
+        CurrentTenantHolder.remove(datastore)
+        CurrentTenantHolder.remove(datastore.class)
+    }
+
+    void "get() throws rather than guessing when different datastores hold different tenants"() {
+        given:
+        def datastoreA = Mock(Datastore)
+        def datastoreB = Mock(Datastore)
+        CurrentTenantHolder.set(datastoreA, 'tenantA')
+        CurrentTenantHolder.set(datastoreB, 'tenantB')
+
+        when:
+        CurrentTenantHolder.get()
+
+        then: "returning an arbitrary one of the two is how cross-tenant data leaks happen"
+        TenantException e = thrown()
+        e.message.contains('tenantA')
+        e.message.contains('tenantB')
+        e.message.contains('get(Datastore)')
+
+        cleanup:
+        CurrentTenantHolder.remove(datastoreA)
+        CurrentTenantHolder.remove(datastoreB)
+    }
+
+    void "get(Datastore) still answers unambiguously when different datastores hold different tenants"() {
+        given:
+        def datastoreA = Mock(Datastore)
+        def datastoreB = Mock(Datastore)
+        CurrentTenantHolder.set(datastoreA, 'tenantA')
+        CurrentTenantHolder.set(datastoreB, 'tenantB')
+
+        expect:
+        CurrentTenantHolder.get(datastoreA) == 'tenantA'
+        CurrentTenantHolder.get(datastoreB) == 'tenantB'
+
+        cleanup:
+        CurrentTenantHolder.remove(datastoreA)
+        CurrentTenantHolder.remove(datastoreB)
     }
 
     void "get(Datastore) returns null when nothing is bound for that datastore"() {

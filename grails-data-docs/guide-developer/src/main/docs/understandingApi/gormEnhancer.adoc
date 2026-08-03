@@ -43,8 +43,7 @@ def mongoDatastore = new MongoDatastore(context)
 mongoDatastore.afterPropertiesSet()
 
 // enhance
-def enhancer = new MongoGormEnhancer(mongoDatastore, new DatastoreTransactionManager(datastore: mongoDatastore))
-enhancer.enhance()
+new MongoGormEnhancer(mongoDatastore, new DatastoreTransactionManager(datastore: mongoDatastore))
 
 // use GORM!
 def books = Book.list()
@@ -54,6 +53,30 @@ The key element for enabling the use of all GORM methods (`list()`, dynamic find
 
 [source,groovy]
 ----
-def enhancer = new GormEnhancer(mongoDatastore, new DatastoreTransactionManager(datastore: mongoDatastore))
-enhancer.enhance()
+new GormEnhancer(mongoDatastore, new DatastoreTransactionManager(datastore: mongoDatastore))
 ----
+
+Constructing the enhancer is all that is required. It registers every entity in the datastore's mapping context
+as it is constructed, and `registerEntity(PersistentEntity)` registers one that is added later. There is no
+separate `enhance()` step.
+
+=== Supplying Your Own API Objects
+
+API objects are built on demand by a `GormApiFactory`, looked up per `(entity, qualifier)`. A datastore that
+needs specialised API objects — for instance a static API exposing driver-specific query methods — registers a
+factory for its datastore type by overriding `registerApiFactories()`, which the enhancer calls once before any
+entity is registered:
+
+[source,groovy]
+----
+class MongoGormEnhancer extends GormEnhancer {
+
+    @Override
+    protected void registerApiFactories() {
+        GormRegistry.instance.registerApiFactory(MongoDatastore, new MongoGormApiFactory())
+    }
+}
+----
+
+Registering the factory before entity registration is what lets code cast the result of a lookup to the
+specialised type, for example `(MongoStaticApi) findStaticApi(..)`.

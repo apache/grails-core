@@ -190,6 +190,7 @@ public class HibernateSession extends AbstractHibernateSession {
             }
 
             final Map<Object, Object> entitiesById = new HashMap<>();
+            final Map<String, Object> entitiesByIdString = new HashMap<>();
             if (!distinctIds.isEmpty()) {
                 final CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
                 CriteriaQuery criteriaQuery = criteriaBuilder.createQuery(type);
@@ -204,17 +205,36 @@ public class HibernateSession extends AbstractHibernateSession {
 
                 final List results = new HibernateHqlQuery(this, persistentEntity, jpaQuery).list();
                 for (Object entity : results) {
-                    entitiesById.put(session.getIdentifier(entity), entity);
+                    Object identifier = session.getIdentifier(entity);
+                    entitiesById.put(identifier, entity);
+                    entitiesByIdString.put(String.valueOf(identifier), entity);
                 }
             }
 
             // Reassemble in the requested order, leaving a null slot for missing ids.
             final List ordered = new ArrayList<>(requestedIds.size());
             for (Serializable requestedId : requestedIds) {
-                ordered.add(requestedId == null ? null : entitiesById.get(requestedId));
+                ordered.add(requestedId == null ? null : resolveEntity(requestedId, entitiesById, entitiesByIdString));
             }
             return ordered;
         });
+    }
+
+    /**
+     * Looks up the entity returned for a requested id.
+     *
+     * The direct lookup covers ids that reached the query already in the identifier's type. When
+     * {@link #convertToIdentifierType} could not coerce a key, that key was passed through raw and
+     * Hibernate coerced it instead, so the returned entity's identifier does not equal the requested
+     * key and the direct lookup misses. The string index catches exactly that case: identifiers are
+     * unique within an entity type, so their string forms are too.
+     */
+    private Object resolveEntity(Serializable requestedId, Map<Object, Object> entitiesById, Map<String, Object> entitiesByIdString) {
+        Object entity = entitiesById.get(requestedId);
+        if (entity == null) {
+            entity = entitiesByIdString.get(String.valueOf(requestedId));
+        }
+        return entity;
     }
 
     private Serializable convertToIdentifierType(Object key, Class idType, ConversionService conversionService) {

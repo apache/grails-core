@@ -25,27 +25,34 @@ import spock.lang.AutoCleanup
 import spock.lang.Specification
 
 /**
- * The diff added two new constructor-time field assignments: {@code persistentEntity} (resolved
- * eagerly from the datastore's mapping context) and {@code multiTenancyMode} (read from the
- * datastore when it's a real {@code MongoDatastore}, else defaulting to {@code NONE}). The
- * existing {@code MongoStaticApiMultiTenancySpec} (a real, Docker-backed
- * {@code AutoStartedMongoSpec}) already covers the "real MongoDatastore" branch; this spec covers
- * the "not a MongoDatastore" fallback cheaply with a {@link SimpleMapDatastore}, avoiding the need
- * to spin up a real MongoDB instance just to prove a defaulting branch.
+ * {@code MongoStaticApi} inherits {@code multiTenancyMode} and the persistent-entity lookup from
+ * {@code GormStaticApi} rather than re-declaring them, so there is exactly one of each per API object.
+ * The existing {@code MongoStaticApiMultiTenancySpec} (a real, Docker-backed
+ * {@code AutoStartedMongoSpec}) covers the "real MongoDatastore" branch; this spec covers the
+ * "not multi-tenant" fallback cheaply with a {@link SimpleMapDatastore}, avoiding the need to spin up a
+ * real MongoDB instance just to prove a defaulting branch.
  */
 class MongoStaticApiSpec extends Specification {
 
     @AutoCleanup
     SimpleMapDatastore datastore = new SimpleMapDatastore(MongoStaticApiSpecThing)
 
-    void "constructing MongoStaticApi with a non-MongoDatastore defaults multiTenancyMode to NONE"() {
+    void "MongoStaticApi over a datastore with no multi-tenancy reports mode NONE"() {
         when:
         def api = new MongoStaticApi<MongoStaticApiSpecThing>(MongoStaticApiSpecThing, datastore, [], datastore.transactionManager)
 
         then:
         api.multiTenancyMode == MultiTenancySettings.MultiTenancyMode.NONE
-        api.persistentEntity != null
-        api.persistentEntity.javaClass == MongoStaticApiSpecThing
+    }
+
+    void "MongoStaticApi resolves its persistent entity through the inherited accessor"() {
+        when:
+        def api = new MongoStaticApi<MongoStaticApiSpecThing>(MongoStaticApiSpecThing, datastore, [], datastore.transactionManager)
+
+        then: "there is no shadowing field — base-class code and MongoStaticApi see the same entity"
+        api.gormPersistentEntity != null
+        api.gormPersistentEntity.javaClass == MongoStaticApiSpecThing
+        !MongoStaticApi.declaredFields.any { it.name in ['persistentEntity', 'multiTenancyMode'] }
     }
 }
 

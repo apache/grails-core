@@ -45,6 +45,7 @@ import org.grails.datastore.mapping.core.connections.ConnectionSources
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.query.api.BuildableCriteria
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
@@ -96,6 +97,28 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
             return ((TransactionCapableDatastore)ds).getTransactionManager()
         }
         return null
+    }
+
+    /**
+     * The multi-tenancy mode of the datastore this API currently resolves to.
+     *
+     * Derived on each call rather than captured at construction: an API is no longer bound to a single
+     * datastore for its lifetime, so a captured value could describe a datastore this API is no longer
+     * operating against.
+     *
+     * @return The multi-tenancy mode, or {@link MultiTenancySettings.MultiTenancyMode#NONE} when the
+     *         datastore declares none
+     */
+    MultiTenancySettings.MultiTenancyMode getMultiTenancyMode() {
+        Datastore ds = getDatastore()
+        if (ds instanceof MultiTenantCapableDatastore) {
+            return ((MultiTenantCapableDatastore) ds).getMultiTenancyMode() ?: MultiTenancySettings.MultiTenancyMode.NONE
+        }
+        if (ds instanceof ConnectionSourcesProvider) {
+            ConnectionSources connectionSources = ((ConnectionSourcesProvider) ds).getConnectionSources()
+            return connectionSources?.defaultConnectionSource?.settings?.multiTenancy?.mode ?: MultiTenancySettings.MultiTenancyMode.NONE
+        }
+        return MultiTenancySettings.MultiTenancyMode.NONE
     }
 
     @Override
@@ -387,14 +410,21 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     @Override
     D first(Map params) {
         Map queryParams = new LinkedHashMap(params ?: [:])
-        queryParams.max = 1
-        queryParams.order = 'asc'
         if (!queryParams.containsKey('sort')) {
-            String idPropertyName = getGormPersistentEntity()?.identity?.name
+            String idPropertyName = singleIdentityPropertyName()
             if (idPropertyName) {
                 queryParams.sort = idPropertyName
             }
         }
+        if (!queryParams.containsKey('sort')) {
+            // Nothing to order by — an entity with a composite key has no single identity property.
+            // Issuing `order` with no `sort` and a limit of 1 would return an arbitrary row, so read
+            // the result in its natural order and take the first element.
+            List<D> unordered = list(queryParams)
+            return unordered ? unordered[0] : null
+        }
+        queryParams.max = 1
+        queryParams.order = 'asc'
         List<D> resultList = list(queryParams)
         resultList ? resultList[0] : null
     }
@@ -412,16 +442,35 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     @Override
     D last(Map params) {
         Map queryParams = new LinkedHashMap(params ?: [:])
-        queryParams.max = 1
-        queryParams.order = 'desc'
         if (!queryParams.containsKey('sort')) {
-            String idPropertyName = getGormPersistentEntity()?.identity?.name
+            String idPropertyName = singleIdentityPropertyName()
             if (idPropertyName) {
                 queryParams.sort = idPropertyName
             }
         }
+        if (!queryParams.containsKey('sort')) {
+            // See first(Map): with no property to order by, read the natural order and take the last
+            // element rather than reversing an unordered query.
+            List<D> unordered = list(queryParams)
+            return unordered ? unordered[-1] : null
+        }
+        queryParams.max = 1
+        queryParams.order = 'desc'
         List<D> resultList = list(queryParams)
         resultList ? resultList[0] : null
+    }
+
+    /**
+     * @return The name of the entity's single identity property, or {@code null} when it has none —
+     *         an entity mapped with a composite key has a {@code compositeIdentity} instead, whose
+     *         constituent properties are not a meaningful substitute for identity ordering.
+     */
+    private String singleIdentityPropertyName() {
+        PersistentEntity entity = getGormPersistentEntity()
+        if (entity == null || entity.getCompositeIdentity()) {
+            return null
+        }
+        return entity.identity?.name
     }
 
     @Override
@@ -477,14 +526,18 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     Number deleteAll() {
-        execute({ Session session ->
-            session.deleteAll(new DetachedCriteria(persistentClass))
-        } as SessionCallback<Number>)
+        deleteAll(Collections.emptyMap())
     }
 
     @Override
     Number deleteAll(Map params) {
-        deleteAll()
+        execute({ Session session ->
+            Number deleted = session.deleteAll(new DetachedCriteria(persistentClass))
+            if (params?.flush) {
+                session.flush()
+            }
+            return deleted
+        } as SessionCallback<Number>)
     }
 
     @Override

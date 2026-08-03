@@ -90,7 +90,7 @@ class HibernateGormEnhancer extends GormEnhancer {
     }
 
     @Override
-    protected void registerConstraints(Datastore datastore) {
+    protected void registerApiFactories() {
         GormRegistry.instance.registerApiFactory(HibernateDatastore, new HibernateGormApiFactory(Thread.currentThread().contextClassLoader))
     }
 

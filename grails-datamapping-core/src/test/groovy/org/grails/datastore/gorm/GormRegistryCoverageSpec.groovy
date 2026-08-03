@@ -307,7 +307,6 @@ class GormRegistryCoverageSpec extends Specification {
         def secondaryDs = Stub(Datastore)
         def multiConnectionDs = Stub(MultipleConnectionSourceDatastore) {
             getDatastoreForConnection('secondary') >> secondaryDs
-            routesUnqualifiedToMappedConnection() >> true
         }
 
         when:
@@ -315,6 +314,59 @@ class GormRegistryCoverageSpec extends Specification {
 
         then:
         registry.getDatastoreByString(GormRegistryCoverageThing.name, 'secondary') == secondaryDs
+    }
+
+    void "registerEntityDatastores routes unqualified operations to the first declared connection, deterministically"() {
+        given: "an entity mapped only to non-default connections"
+        def registry = new GormRegistry()
+        def analyticsDs = Stub(Datastore)
+        def reportingDs = Stub(Datastore)
+        def multiConnectionDs = Stub(MultipleConnectionSourceDatastore) {
+            getDatastoreForConnection('analytics') >> analyticsDs
+            getDatastoreForConnection('reporting') >> reportingDs
+        }
+
+        when:
+        registry.registerEntityDatastores(GormRegistryCoverageThing.name, multiConnectionDs, ['analytics', 'reporting'], null)
+
+        then: "the unqualified route is the FIRST declared connection, not whichever entry an iterator yields"
+        registry.getDatastoreByString(GormRegistryCoverageThing.name, ConnectionSource.DEFAULT) == analyticsDs
+
+        when: "the same entity is registered with the declaration order reversed"
+        registry.registerEntityDatastores(GormRegistryCoverageThing.name, multiConnectionDs, ['reporting', 'analytics'], null)
+
+        then: "the unqualified route follows declaration order rather than staying arbitrary"
+        registry.getDatastoreByString(GormRegistryCoverageThing.name, ConnectionSource.DEFAULT) == reportingDs
+    }
+
+    void "registerEntityDatastore establishes the unqualified route from the first connection registered"() {
+        given:
+        def registry = new GormRegistry()
+        def analyticsDs = Stub(Datastore)
+        def reportingDs = Stub(Datastore)
+
+        when:
+        registry.registerEntityDatastore(GormRegistryCoverageThing.name, 'analytics', analyticsDs)
+        registry.registerEntityDatastore(GormRegistryCoverageThing.name, 'reporting', reportingDs)
+
+        then: "both qualified routes resolve, and the unqualified one is pinned to the first registration"
+        registry.getDatastoreByString(GormRegistryCoverageThing.name, 'analytics') == analyticsDs
+        registry.getDatastoreByString(GormRegistryCoverageThing.name, 'reporting') == reportingDs
+        registry.getDatastoreByString(GormRegistryCoverageThing.name, ConnectionSource.DEFAULT) == analyticsDs
+    }
+
+    void "registerEntityDatastore lets an explicit DEFAULT registration override the pinned unqualified route"() {
+        given:
+        def registry = new GormRegistry()
+        def analyticsDs = Stub(Datastore)
+        def defaultDs = Stub(Datastore)
+
+        when:
+        registry.registerEntityDatastore(GormRegistryCoverageThing.name, 'analytics', analyticsDs)
+        registry.registerEntityDatastore(GormRegistryCoverageThing.name, ConnectionSource.DEFAULT, defaultDs)
+
+        then:
+        registry.getDatastoreByString(GormRegistryCoverageThing.name, ConnectionSource.DEFAULT) == defaultDs
     }
 
     void "registerEntityDatastores swallows connection resolution failures and keeps the parent datastore"() {
@@ -379,13 +431,22 @@ class GormRegistryCoverageSpec extends Specification {
         !registry.createDynamicFinders(datastore).isEmpty()
     }
 
-    void "registerConstraints does nothing for a null datastore and swallows failures for one without constraint support"() {
+    void "initializeDatastore ignores a null datastore and registers a real one by qualifier and type"() {
         given:
         def registry = new GormRegistry()
 
-        expect:
-        registry.registerConstraints(null) == null
-        registry.registerConstraints(datastore) == null
+        when:
+        registry.initializeDatastore(null, ConnectionSource.DEFAULT)
+
+        then:
+        registry.getDatastore(ConnectionSource.DEFAULT) == null
+
+        when:
+        registry.initializeDatastore(datastore, ConnectionSource.DEFAULT)
+
+        then:
+        registry.getDatastore(ConnectionSource.DEFAULT).is(datastore)
+        registry.apiResolver.findDatastoreByType(SimpleMapDatastore).is(datastore)
     }
 
     void "registerEntity registers static, instance and validation apis plus the entity's default datastore mapping"() {

@@ -73,28 +73,13 @@ class GrailsTransactionTemplate {
             Object result = transactionTemplate.execute(new TransactionCallback() {
                 Object doInTransaction(TransactionStatus status) {
                     try {
-                        if (log.isDebugEnabled()) {
-                            log.debug('executeAndRollback doInTransaction - starting on transaction manager: ' + transactionTemplate.getTransactionManager())
-                        }
-                        Object val = action.call(status)
-                        if (log.isDebugEnabled()) {
-                            log.debug('executeAndRollback doInTransaction - finished action')
-                            log.debug('executeAndRollback action finished. status=' + status)
-                        }
-                        return val
+                        return action.call(status)
                     }
                     catch (Throwable e) {
-                        if (log.isDebugEnabled()) {
-                            log.debug('executeAndRollback doInTransaction - caught exception: ' + e)
-                            log.debug('executeAndRollback action caught: ' + e)
-                        }
+                        log.debug('Rolling back after the action threw', e)
                         return new ThrowableHolder(e)
                     } finally {
                         status.setRollbackOnly()
-                        if (log.isDebugEnabled()) {
-                            log.debug('executeAndRollback doInTransaction - setRollbackOnly called. isRollbackOnly=' + status.isRollbackOnly())
-                            log.debug('executeAndRollback setRollbackOnly called. status.isRollbackOnly=' + status.isRollbackOnly())
-                        }
                     }
                 }
             })

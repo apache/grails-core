@@ -374,15 +374,6 @@ public class SimpleMapDatastore extends AbstractDatastore implements Closeable, 
     }
 
     @Override
-    public boolean routesUnqualifiedToMappedConnection() {
-        // This in-memory mock manages a single session on the parent datastore; its per-connection
-        // children exist only for explicit connection access. An entity mapped to a non-default
-        // datasource must therefore keep its unqualified operations on the parent, not on a child
-        // whose session the unit-test harness never flushes.
-        return false;
-    }
-
-    @Override
     public void close() throws IOException {
         try {
             destroy();

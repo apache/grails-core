@@ -69,6 +69,23 @@ class TransactionSynchronizationSessionResolver implements SessionResolver {
     }
 
     @Override
+    boolean hasSession() {
+        SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.getResource(datastore)
+        if (holder == null) {
+            return false
+        }
+        // Read the holder without popping: unlike resolve(), this must leave the thread-bound state
+        // exactly as it found it, because callers use it to interrogate datastores they are not
+        // (yet) operating on.
+        for (Session session in holder.getSessions()) {
+            if (session != null && session.isConnected()) {
+                return true
+            }
+        }
+        return false
+    }
+
+    @Override
     void bind(Session session) {
         if (session.getDatastore() != datastore) {
             throw new IllegalArgumentException(

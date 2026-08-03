@@ -35,7 +35,6 @@ import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.SessionCallback
 import org.grails.datastore.mapping.core.VoidSessionCallback
 import org.grails.datastore.mapping.core.connections.ConnectionSource
-import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
@@ -49,10 +48,30 @@ import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 @CompileStatic
 abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
 
-    protected static final List<String> EXCLUDES = [
-        'wait', 'notify', 'notifyAll', 'toString', 'hashCode', 'equals', 'getClass',
-        'getMetaClass', 'setMetaClass', 'getProperty', 'setProperty', 'invokeMethod'
-    ]
+    /**
+     * The names of methods that are part of the API object's own plumbing and must never be reported by
+     * {@link #getMethods()} / {@link #getExtendedMethods()} as part of the GORM surface of an entity.
+     */
+    static final List<String> EXCLUDES = [
+        'setProperty',
+        'getProperty',
+        'getMetaClass',
+        'setMetaClass',
+        'invokeMethod',
+        'getMethods',
+        'getExtendedMethods',
+        'wait',
+        'equals',
+        'toString',
+        'hashCode',
+        'getClass',
+        'notify',
+        'notifyAll',
+        'setTransactionManager',
+        'getTransactionManager',
+        'getQualifier',
+        'getGormPersistentEntity'
+    ].asImmutable()
 
     private static final Map<Class, List<Method>> METHODS_CACHE = new ConcurrentHashMap<>()
     private static final Map<Class, List<Method>> EXTENDED_METHODS_CACHE = new ConcurrentHashMap<>()
@@ -109,23 +128,17 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
         if (currentQualifier != null && !ConnectionSource.DEFAULT.equals(currentQualifier) && !ConnectionSource.OLD_DEFAULT.equalsIgnoreCase(currentQualifier)) {
             if (isMultiTenantEntity && isMultiTenantCapable) {
                 // Determine whether the qualifier names a datasource connection or is a tenant ID.
-                // A datasource connection qualifier resolves via getDatastoreForConnection(); a tenant ID
-                // (e.g. from withTenant("t1")) does not. When it IS a connection qualifier we must not
-                // bind it as the tenant ID — doing so overwrites the tenant context set by the
-                // TenantResolver (e.g. SystemPropertyTenantResolver) and causes discriminator filters to
-                // match the connection name instead of the real tenant.
-                boolean isConnectionQualifier = false
-                if (ds instanceof MultipleConnectionSourceCapableDatastore) {
-                    try {
-                        Datastore resolved = ((MultipleConnectionSourceCapableDatastore) ds)
-                                .getDatastoreForConnection(currentQualifier)
-                        if (resolved != null) {
-                            isConnectionQualifier = true
-                        }
-                    } catch (Exception ignored) {
-                        // qualifier is not a known datasource name; treat it as a tenant ID below
-                    }
-                }
+                // A datasource connection qualifier is one of the datastore's configured connection
+                // sources; a tenant ID (e.g. from withTenant("t1")) is not. When it IS a connection
+                // qualifier we must not bind it as the tenant ID — doing so overwrites the tenant context
+                // set by the TenantResolver (e.g. SystemPropertyTenantResolver) and causes discriminator
+                // filters to match the connection name instead of the real tenant.
+                //
+                // This is checked against the declared connection source names rather than by probing
+                // getDatastoreForConnection(), which throws ConfigurationException for an unknown name:
+                // in DISCRIMINATOR mode the qualifier is always a tenant ID, so probing would fill in a
+                // stack trace on every single operation.
+                boolean isConnectionQualifier = ConnectionSourceNameResolver.isConnectionSourceName(ds, currentQualifier)
                 if (!isConnectionQualifier) {
                     // Qualifier is a tenant ID — bind it so the session and any discriminator filter
                     // both see the correct tenant for this operation.
@@ -150,6 +163,13 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
     }
 
     /**
+     * The qualifier this API instance is bound to: either a connection source name, or a tenant id.
+     *
+     * Tenant ids are represented here — and throughout GORM's connection resolution, including
+     * {@code MultiTenantCapableDatastore.getDatastoreForTenantId} — by their {@code toString()}. A tenant id
+     * must therefore be uniquely representable as a string: two ids whose {@code toString()} collide (for
+     * example {@code 1L} and {@code "1"}) are the same qualifier and resolve to the same cached API.
+     *
      * @return The qualifier for this API instance
      */
     String getQualifier() {

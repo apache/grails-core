@@ -113,6 +113,59 @@ class AbstractGormApiRegistrySpec extends Specification {
         secondaryApi == api
     }
 
+    void "removeDatastore evicts only the APIs backed by the datastore being removed"() {
+        given:
+        def registry = GormRegistry.instance
+        def testRegistry = new TestGormApiRegistry(registry)
+        def removed = Stub(Datastore)
+        def retained = Stub(Datastore)
+        testRegistry.register(TestEntity.name, new DummyApi(removed))
+        testRegistry.register(OtherTestEntity.name, new DummyApi(retained))
+
+        when:
+        testRegistry.removeDatastore(removed)
+
+        then:
+        !testRegistry.containsKey(TestEntity.name)
+        testRegistry.containsKey(OtherTestEntity.name)
+    }
+
+    void "removeDatastore keeps an API whose datastore cannot be resolved"() {
+        given: "an API backed by a resolver that throws, as a tenant-aware resolver does with no tenant bound"
+        def testRegistry = new TestGormApiRegistry(GormRegistry.instance)
+        def throwingApi = new DummyApi({ throw new IllegalStateException('No tenant bound') } as DatastoreResolver)
+        testRegistry.register(TestEntity.name, throwingApi)
+
+        when:
+        testRegistry.removeDatastore(Stub(Datastore))
+
+        then: "the registration survives — a transient resolution failure is not a positive identity match"
+        testRegistry.get(TestEntity.name).is(throwingApi)
+    }
+
+    void "removeDatastore keeps a qualified API whose datastore cannot be resolved"() {
+        given:
+        def registry = GormRegistry.instance
+        def testRegistry = new TestGormApiRegistry(registry)
+        def defaultDatastore = Stub(Datastore)
+        def secondaryDatastore = Stub(Datastore)
+        testRegistry.register(TestEntity.name, new DummyApi(defaultDatastore))
+        registry.registerDatastore(ConnectionSource.DEFAULT, defaultDatastore)
+        registry.registerDatastore('secondary', secondaryDatastore)
+        registry.registerEntityDatastore(TestEntity.name, ConnectionSource.DEFAULT, defaultDatastore)
+        registry.registerEntityDatastore(TestEntity.name, 'secondary', secondaryDatastore)
+        testRegistry.qualifyWith = new DummyApi({ throw new IllegalStateException('No tenant bound') } as DatastoreResolver)
+
+        and: "the qualified API has been materialized"
+        testRegistry.get(TestEntity.name, 'secondary')
+
+        when:
+        testRegistry.removeDatastore(Stub(Datastore))
+
+        then:
+        testRegistry.isAllocated(TestEntity.name, 'secondary')
+    }
+
     void "test clear"() {
         given:
         def testRegistry = new TestGormApiRegistry(GormRegistry.instance)
@@ -147,15 +200,23 @@ class AbstractGormApiRegistrySpec extends Specification {
 
     static class TestEntity {
     }
-    
+
+    static class OtherTestEntity {
+    }
+
     static class DummyApi extends AbstractDatastoreApi {
         DummyApi(Datastore ds) {
             super(ds)
+        }
+
+        DummyApi(DatastoreResolver resolver) {
+            super(resolver)
         }
     }
 
     static class TestGormApiRegistry extends AbstractGormApiRegistry<AbstractDatastoreApi> {
         AbstractDatastoreApi qualifiedApi
+        AbstractDatastoreApi qualifyWith
 
         TestGormApiRegistry(GormRegistry registry) {
             super(registry)
@@ -163,7 +224,7 @@ class AbstractGormApiRegistrySpec extends Specification {
 
         @Override
         protected AbstractDatastoreApi qualify(AbstractDatastoreApi api, String qualifier) {
-            qualifiedApi = new DummyApi(api.datastore)
+            qualifiedApi = qualifyWith ?: new DummyApi(api.datastore)
             return qualifiedApi
         }
 

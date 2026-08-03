@@ -20,7 +20,6 @@ package org.grails.datastore.gorm
 
 import java.util.concurrent.ConcurrentHashMap
 
-import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 
@@ -236,9 +235,10 @@ class GormRegistry {
                 if (ds != null) {
                     return ds
                 }
-                if (ConnectionSource.DEFAULT.equals(normalizedQualifier) && !mappedDatastores.isEmpty()) {
-                    return mappedDatastores.values().iterator().next()
-                }
+                // No fallback to "whichever datastore this entity happens to be mapped to". The entity's
+                // unqualified routing is decided once, in declaration order, at registration time and stored
+                // under the DEFAULT key; picking an arbitrary map entry here would make an entity mapped only
+                // to non-default connections read and write a different database between runs.
                 Datastore qualifierDs = datastoresByQualifier.get(normalizedQualifier)
                 if (qualifierDs != null && qualifierDs.getMappingContext()?.getPersistentEntity(normalizedClassName) != null) {
                     return qualifierDs
@@ -774,18 +774,13 @@ class GormRegistry {
         }
 
         // If the entity does not explicitly include DEFAULT, route its unqualified (no-connection)
-        // operations. Real datastores manage a session per connection, so DEFAULT goes to the first
-        // explicit connection's datastore. A single-session mock (the in-memory datastore used by
-        // unit tests) keeps unqualified operations on the parent it manages — its connection
-        // children exist only for explicit access and have no harness-flushed session.
+        // operations to the datastore of its FIRST declared connection. A datastore manages a session
+        // per connection, so an entity mapped only to non-default connections belongs to one of them,
+        // and which one has to be decided here — deterministically, in declaration order — rather than
+        // left to an arbitrary map entry at lookup time.
         if (!qualifiers.collect { String it -> normalizeQualifier(it) }.contains(ConnectionSource.DEFAULT)) {
-            Datastore defaultConnectionDatastore = primaryDatastore
-            if (defaultDatastore instanceof MultipleConnectionSourceCapableDatastore &&
-                    !((MultipleConnectionSourceCapableDatastore) defaultDatastore).routesUnqualifiedToMappedConnection()) {
-                defaultConnectionDatastore = defaultDatastore
-            }
-            if (defaultConnectionDatastore != null) {
-                newEntityDatastores.put(ConnectionSource.DEFAULT, defaultConnectionDatastore)
+            if (primaryDatastore != null) {
+                newEntityDatastores.put(ConnectionSource.DEFAULT, primaryDatastore)
             }
         }
 
@@ -799,6 +794,10 @@ class GormRegistry {
 
     /**
      * Registers an entity-specific datastore override.
+     *
+     * If the entity has no unqualified routing yet, the first connection registered for it also becomes
+     * its unqualified route, so that an entity mapped only to non-default connections resolves to a
+     * datastore chosen at registration time rather than to whichever entry a map iterator yields.
      */
     void registerEntityDatastore(String className, String qualifier, Datastore datastore) {
         if (datastore != null) {
@@ -807,7 +806,9 @@ class GormRegistry {
                 return
             }
             String normalizedQualifier = normalizeQualifier(qualifier)
-            getInternalMap(entityDatastores, normalizedClassName).put(normalizedQualifier, datastore)
+            Map<String, Datastore> mappedDatastores = getInternalMap(entityDatastores, normalizedClassName)
+            mappedDatastores.put(normalizedQualifier, datastore)
+            mappedDatastores.putIfAbsent(ConnectionSource.DEFAULT, datastore)
         }
     }
 
@@ -844,7 +845,6 @@ class GormRegistry {
      * Create a DatastoreResolver for a class and optional qualifier.
      */
     DatastoreResolver createClassDatastoreResolver(Class cls, String qualifier = ConnectionSource.DEFAULT) {
-        String normalizedClassName = normalizeEntityKey(cls)
         String normalizedQualifier = normalizeQualifier(qualifier)
         return new DatastoreResolver() {
             @Override
@@ -855,31 +855,32 @@ class GormRegistry {
     }
 
     /**
-     * Create a GormStaticApi instance.
-     * Uses a bound resolver (always returns the given datastore) at registration time so that
-     * tenant-resolving DatastoreResolvers are not invoked before any tenant context is active.
+     * Create a GormStaticApi bound to the given datastore.
+     *
+     * The API is bound to the concrete datastore rather than to a resolving {@link DatastoreResolver}, so
+     * that tenant-resolving lookups are not invoked at registration time, before any tenant context exists.
      */
-    GormStaticApi createStaticApi(Class cls, Datastore datastore, DatastoreResolver resolver, String qualifier) {
+    GormStaticApi createStaticApi(Class cls, Datastore datastore, String qualifier) {
         DatastoreResolver boundResolver = { datastore } as DatastoreResolver
         return getApiFactory(datastore).createStaticApi(cls, datastore.mappingContext, boundResolver, qualifier, this)
     }
 
     /**
-     * Create a GormInstanceApi instance.
-     * Uses a bound resolver (always returns the given datastore) at registration time so that
-     * tenant-resolving DatastoreResolvers are not invoked before any tenant context is active.
+     * Create a GormInstanceApi bound to the given datastore.
+     *
+     * @see #createStaticApi(Class, Datastore, String) for why the binding is to the datastore itself
      */
-    GormInstanceApi createInstanceApi(Class cls, Datastore datastore, DatastoreResolver resolver, boolean failOnError, boolean markDirty) {
+    GormInstanceApi createInstanceApi(Class cls, Datastore datastore, boolean failOnError, boolean markDirty) {
         DatastoreResolver boundResolver = { datastore } as DatastoreResolver
         return getApiFactory(datastore).createInstanceApi(cls, datastore.mappingContext, boundResolver, this, failOnError, markDirty)
     }
 
     /**
-     * Create a GormValidationApi instance.
-     * Uses a bound resolver (always returns the given datastore) at registration time so that
-     * tenant-resolving DatastoreResolvers are not invoked before any tenant context is active.
+     * Create a GormValidationApi bound to the given datastore.
+     *
+     * @see #createStaticApi(Class, Datastore, String) for why the binding is to the datastore itself
      */
-    GormValidationApi createValidationApi(Class cls, Datastore datastore, DatastoreResolver resolver) {
+    GormValidationApi createValidationApi(Class cls, Datastore datastore) {
         DatastoreResolver boundResolver = { datastore } as DatastoreResolver
         return getApiFactory(datastore).createValidationApi(cls, datastore.mappingContext, boundResolver, this)
     }
@@ -893,46 +894,19 @@ class GormRegistry {
     }
 
     /**
-     * Register constraints for all entities in a datastore.
-     * Delegates to the ConstraintsEvaluator if available in the mapping context.
+     * Initialize a datastore with GORM, registering it under its default connection source qualifier
+     * and by its type.
      *
-     * @param datastore The datastore containing the entities
-     */
-    @CompileDynamic
-    void registerConstraints(Object datastore) {
-        if (datastore == null) return
-        
-        try {
-            def context = ((Datastore) datastore).mappingContext
-            def factory = context.mappingFactory
-            if (factory.hasProperty('entityContext')) {
-                def constraintsEvaluator = factory.entityContext.getBean(Class.forName('org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator', false, GormRegistry.classLoader))
-                if (constraintsEvaluator != null) {
-                    for (entity in context.persistentEntities) {
-                        constraintsEvaluator.evaluate(entity.javaClass)
-                    }
-                }
-            }
-        } catch (Throwable e) {
-            log.debug('Could not register GORM constraints: {}', e.message)
-        }
-    }
-
-    /**
-     * Initialize a datastore with GORM.
-     * Orchestrates constraint registration and datastore registration.
-     * Note: Entity-specific registration is still handled by GormEnhancer.
+     * Constraint registration is not done here: {@link GormEnhancer#registerConstraints(Datastore)} is
+     * the single path for that, and duplicating it would mean an extra O(entities) pass on every
+     * bootstrap. Entity-specific registration is handled by {@link GormEnhancer}.
      *
      * @param datastore The datastore to initialize
      * @param defaultQualifier The default connection source qualifier
      */
     void initializeDatastore(Object datastore, String defaultQualifier) {
         if (datastore == null) return
-        
-        // Register constraints
-        registerConstraints(datastore)
-        
-        // Register datastore with default qualifier
+
         Datastore typedDatastore = (Datastore) datastore
         registerDatastore(defaultQualifier, typedDatastore)
         datastoresByType.put(typedDatastore.getClass(), typedDatastore)
@@ -957,12 +931,11 @@ class GormRegistry {
 
         // Always (re)register API singletons so classloader or datastore changes do not leave stale API instances.
         final Class cls = persistentEntity.javaClass
-        DatastoreResolver resolver = createClassDatastoreResolver(cls)
         Datastore datastore = enhancer.datastore
 
-        GormStaticApi staticApi = createStaticApi(cls, datastore, resolver, ConnectionSource.DEFAULT)
-        GormInstanceApi instanceApi = createInstanceApi(cls, datastore, resolver, enhancer.failOnError, enhancer.markDirty)
-        GormValidationApi validationApi = createValidationApi(cls, datastore, resolver)
+        GormStaticApi staticApi = createStaticApi(cls, datastore, ConnectionSource.DEFAULT)
+        GormInstanceApi instanceApi = createInstanceApi(cls, datastore, enhancer.failOnError, enhancer.markDirty)
+        GormValidationApi validationApi = createValidationApi(cls, datastore)
 
         registerEntityApis(className, staticApi, instanceApi, validationApi)
 

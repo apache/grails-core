@@ -26,10 +26,12 @@ import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSources
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException
 import org.grails.datastore.mapping.multitenancy.AllTenantsResolver
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.multitenancy.TenantResolver
+import org.grails.datastore.mapping.multitenancy.exceptions.TenantException
 
 /**
  * Helper methods for working with multi tenancy
@@ -59,7 +61,13 @@ class Tenants {
     }
 
     /**
-     * Execute the given closure with the given tenant id.
+     * Binds the given tenant id to the current thread for the duration of the closure.
+     *
+     * This binds the tenant only. Unlike {@link #withId(Serializable, Closure)} it opens no session and
+     * manages no connection life cycle: the closure runs in whatever session the caller has already
+     * established, and the caller remains responsible for opening and closing it. Reach for {@code withId}
+     * when the tenant's work needs a session of its own — in DATABASE mode that is also what selects the
+     * tenant's connection.
      *
      * @param tenantId The tenant id
      * @param callable The closure
@@ -213,12 +221,36 @@ class Tenants {
     }
 
     /**
-     * Execute the given closure with given tenant id
+     * Execute the given closure with given tenant id against the datastore of the given type
+     *
+     * @param datastoreClass The datastore type
      * @param tenantId The tenant id
      * @param callable The closure
      * @return The result of the closure
      */
-    static <T> T withId(Class domainClass, Serializable tenantId, Closure<T> callable) {
+    static <T> T withId(Class<? extends Datastore> datastoreClass, Serializable tenantId, Closure<T> callable) {
+        Datastore datastore = datastoreLocator.getDatastore(datastoreClass)
+        if (datastore instanceof MultiTenantCapableDatastore) {
+            MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore) datastore
+            return withId(multiTenantCapableDatastore, tenantId, callable)
+        }
+        else {
+            throw new UnsupportedOperationException('Datastore implementation does not support multi-tenancy')
+        }
+    }
+
+    /**
+     * Execute the given closure with given tenant id against the datastore that maps the given domain class.
+     *
+     * Distinct from {@link #withId(Class, Serializable, Closure)}, which takes a <i>datastore</i> type: both
+     * erase to the same signature, so the domain-class form needs its own name to stay unambiguous.
+     *
+     * @param domainClass The domain class whose datastore should be used
+     * @param tenantId The tenant id
+     * @param callable The closure
+     * @return The result of the closure
+     */
+    static <T> T withIdForDomain(Class domainClass, Serializable tenantId, Closure<T> callable) {
         Datastore datastore = datastoreLocator.getDatastoreForDomain(domainClass)
         if (datastore instanceof MultiTenantCapableDatastore) {
             MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore) datastore
@@ -230,12 +262,18 @@ class Tenants {
     }
 
     /**
-     * Execute the given closure with given tenant id for the given datastore. This method will create a new datastore session for the scope of the call and hence is designed to be used to manage the connection life cycle
+     * Binds the given tenant id to the current thread for the datastore that maps the given domain class, for
+     * the duration of the closure.
+     *
+     * This binds the tenant only. Unlike {@link #withIdForDomain(Class, Serializable, Closure)} it opens no
+     * session and manages no connection: the caller owns the session the closure runs in.
+     *
+     * @param domainClass The domain class whose datastore the tenant should be bound for
      * @param tenantId The tenant id
      * @param callable The closure
      * @return The result of the closure
      */
-    static <T> T withTenant(Class domainClass, Serializable tenantId, Closure<T> callable) {
+    static <T> T withTenantForDomain(Class domainClass, Serializable tenantId, Closure<T> callable) {
         Datastore datastore = datastoreLocator.getDatastoreForDomain(domainClass)
         return CurrentTenantHolder.withTenant(datastore.getClass(), tenantId) {
             return CurrentTenantHolder.withTenant(datastore, tenantId, callable)
@@ -287,11 +325,14 @@ class Tenants {
      */
     static <T> T withId(MultiTenantCapableDatastore multiTenantCapableDatastore, Serializable tenantId, Closure<T> callable) {
         log.debug('Tenants.withId called for datastore {} with tenantId {}', multiTenantCapableDatastore, tenantId)
-        org.grails.datastore.mapping.core.Datastore childDatastore = null
+        Datastore childDatastore = null
         try {
             childDatastore = multiTenantCapableDatastore.getDatastoreForTenantId(tenantId)
-        } catch (Throwable e) {
-            log.debug('Ignoring failure resolving datastore for tenant {}: {}', tenantId, e.message)
+        }
+        catch (ConfigurationException | TenantException e) {
+            // An unknown tenant or missing connection: fall through to the session-creating path below,
+            // which resolves the tenant again and reports the failure to the caller rather than hiding it.
+            log.warn('Could not resolve a datastore for tenant [{}]: {}', tenantId, e.message)
         }
         // Only reuse an already-bound per-tenant session for non-shared-connection modes
         // (e.g. DATABASE), where getDatastoreForTenantId yields a distinct child datastore.
@@ -319,21 +360,15 @@ class Tenants {
                 def i = callable.parameterTypes.length
                 if (i == 2) {
                     return multiTenantCapableDatastore.withSession { session ->
-                        def result = callable.call(tenantId, session)
-                        log.debug('Result from shared connection with 2 args: {}', result)
-                        return result
+                        return callable.call(tenantId, session)
                     }
                 }
                 else {
                     switch (i) {
                         case 0:
-                            def result = callable.call()
-                            log.debug('Result from shared connection with 0 args: {}', result)
-                            return result
+                            return callable.call()
                         case 1:
-                            def result = callable.call(tenantId)
-                            log.debug('Result from shared connection with 1 arg: {}', result)
-                            return result
+                            return callable.call(tenantId)
                         default:
                             throw new IllegalArgumentException('Provided closure accepts too many arguments')
                     }
@@ -341,21 +376,14 @@ class Tenants {
             }
             else {
                 return multiTenantCapableDatastore.withNewSession(tenantId) { session ->
-                    log.debug('Inside withNewSession for tenantId {}', tenantId)
                     def i = callable.parameterTypes.length
                     switch (i) {
                         case 0:
-                            def result = callable.call()
-                            log.debug('Result from new session with 0 args: {}', result)
-                            return result
+                            return callable.call()
                         case 1:
-                            def result = callable.call(tenantId)
-                            log.debug('Result from new session with 1 arg: {}', result)
-                            return result
+                            return callable.call(tenantId)
                         case 2:
-                            def result = callable.call(tenantId, session)
-                            log.debug('Result from new session with 2 args: {}', result)
-                            return result
+                            return callable.call(tenantId, session)
                         default:
                             throw new IllegalArgumentException('Provided closure accepts too many arguments')
                     }

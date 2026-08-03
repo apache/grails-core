@@ -44,6 +44,18 @@ interface SessionResolver {
     Session resolve()
 
     /**
+     * Whether {@link #resolve()} would return a session, answered <b>without side effects</b>.
+     *
+     * {@link #resolve()} does housekeeping — it evicts disconnected sessions and may unbind an
+     * emptied holder — which makes it unsuitable for purely interrogative callers. Routing and
+     * discovery code asks many datastores whether they hold a session before choosing one; that
+     * probe must not mutate the thread-bound state of the datastores it merely inspects.
+     *
+     * @return {@code true} if a still-connected session is bound to the current context
+     */
+    boolean hasSession()
+
+    /**
      * Binds a session owned by this resolver's datastore to the current context, making it the
      * session {@link #resolve()} returns. Nested bindings stack: binding a second session pushes
      * it on top of the first.

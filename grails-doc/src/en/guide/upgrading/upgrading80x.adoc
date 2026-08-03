@@ -1940,3 +1940,87 @@ refreshes. Any context not started through `SpringApplication` — the CLI, plai
 tests — keeps the previous fallback behaviour unchanged: a plain `DefaultStackTraceFilterer` with no
 configuration applied. The filterer is JVM-global rather than per-context, so in a JVM hosting more than one
 application context the last one booted supplies the filterer for all of them.
+
+==== 39. GORM API Resolution Moves to a Registry
+
+GORM no longer allocates an API object for every (entity, connection) pair up front. Per-entity, per-qualifier
+state now lives in a registry, and APIs are built on first use by a pluggable factory. For applications this is
+invisible — `Book.list()`, dynamic finders, and `Book.withNewSession { }` behave as before. It does change the
+extension points that out-of-tree GORM implementations subclass.
+
+===== GormEnhancer
+
+The following members of `org.grails.datastore.gorm.GormEnhancer` were removed:
+
+[cols="1,2", options="header"]
+|===
+| Removed
+| Migration note
+
+| `enhance()` and `enhance(PersistentEntity)`
+| Entity registration now happens as each entity is registered — `GormEnhancer`'s constructor registers every
+entity in the datastore's mapping context, and `registerEntity(PersistentEntity)` registers one. Delete calls to
+`enhance()`; a datastore is usable as soon as its enhancer is constructed.
+
+| `dynamicEnhance`
+| The flag gated `enhance()` and was always `false` when constructed from `ConnectionSourceSettings`. GORM now
+installs `methodMissing`/`propertyMissing` on an entity's metaclass only for classes that do not implement
+`GormEntity` — a `GormEntity` already carries compiled dispatch, so nothing is installed over it.
+
+| `finders`
+| Use `createDynamicFinders(Datastore)`, or read the finders from the API object you are working with.
+
+| `transactionManager`
+| Obtain the transaction manager from the datastore, e.g. `((TransactionCapableDatastore) datastore).transactionManager`.
+
+| `GormEnhancer(Datastore)` and `GormEnhancer(Datastore, PlatformTransactionManager, boolean, boolean, boolean)`
+| Use `GormEnhancer(Datastore, PlatformTransactionManager, ConnectionSourceSettings)`, which carries `failOnError`
+and `markDirty`.
+|===
+
+A new `registerApiFactories()` hook is called once, before any entity is registered. Adapters that build
+specialised API objects should override it:
+
+[source,groovy]
+----
+class MyGormEnhancer extends GormEnhancer {
+
+    @Override
+    protected void registerApiFactories() {
+        GormRegistry.instance.registerApiFactory(MyDatastore, new MyGormApiFactory())
+    }
+}
+----
+
+WARNING: Earlier snapshots of this work registered API factories from `registerConstraints(Datastore)`.
+Move that code to `registerApiFactories()`; factory registration must not depend on the constraints lifecycle step.
+
+===== GormStaticApi
+
+`GormStaticApi.multiTenancyMode` is no longer a field captured at construction. It is now a derived property
+resolved from the datastore the API currently routes to, because an API is no longer bound to one datastore for
+its lifetime. Reading `multiTenancyMode` from a subclass continues to work; assigning it does not.
+
+Subclasses should read the persistent entity through `getGormPersistentEntity()` rather than the deprecated
+`persistentEntity` field, and must not re-declare either member — a shadowing field diverges from the base
+class's value with no compiler warning.
+
+===== Tenants
+
+`Tenants.withId(Class, Serializable, Closure)` continues to take a *datastore* type. A new
+`Tenants.withIdForDomain(Class, Serializable, Closure)` takes a *domain* class instead, and
+`Tenants.withTenantForDomain(Class, Serializable, Closure)` is its `withTenant` counterpart. The names differ
+because all three erase to the same signature; existing `withId(SomeDatastore, id) { }` calls are unaffected.
+
+See <<multiTenancy,Multi-Tenancy>> for the full multi-tenancy API.
+
+===== CurrentTenantHolder.get()
+
+`grails.gorm.multitenancy.CurrentTenantHolder.get()` — the no-argument form — now throws `TenantException` when
+different datastores hold different tenants on the calling thread, rather than returning an arbitrary one of
+them. Pass the datastore you are operating on:
+
+[source,groovy]
+----
+CurrentTenantHolder.get(datastore)
+----

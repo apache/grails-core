@@ -173,6 +173,54 @@ class GormEnhancerCoverageSpec extends Specification {
         then:
         thrown(MissingMethodException)
     }
+
+    void "registerApiFactories runs before any entity is registered, so adapter APIs are used from the first entity on"() {
+        given: "an enhancer that registers a factory through the dedicated hook, as the Hibernate and Mongo adapters do"
+        def registry = GormRegistry.instance
+        def order = []
+
+        when:
+        new GormEnhancer(datastore, datastore.transactionManager, new ConnectionSourceSettings()) {
+            @Override
+            protected void registerApiFactories() {
+                order << 'factories'
+                registry.registerApiFactory(SimpleMapDatastore, new DefaultGormApiFactory())
+            }
+
+            @Override
+            void registerEntity(org.grails.datastore.mapping.model.PersistentEntity entity) {
+                order << "entity:${entity.name}".toString()
+                super.registerEntity(entity)
+            }
+        }
+
+        then: "factory registration happens first — an entity registered before it would get the wrong API type"
+        order.first() == 'factories'
+        order.size() > 1
+    }
+
+    void "registerApiFactories is independent of registerConstraints"() {
+        given: "a subclass that suppresses constraint registration entirely"
+        def registry = GormRegistry.instance
+        boolean factoriesRegistered = false
+
+        when:
+        new GormEnhancer(datastore, datastore.transactionManager, new ConnectionSourceSettings()) {
+            @Override
+            protected void registerApiFactories() {
+                factoriesRegistered = true
+                registry.registerApiFactory(SimpleMapDatastore, new DefaultGormApiFactory())
+            }
+
+            @Override
+            protected void registerConstraints(Datastore ds) {
+                // deliberately skipped
+            }
+        }
+
+        then: "factory registration still happens — it is not coupled to the constraints lifecycle step"
+        factoriesRegistered
+    }
 }
 
 @Entity

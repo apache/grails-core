@@ -22,6 +22,7 @@ import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSources
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException
 import org.grails.datastore.mapping.multitenancy.AllTenantsResolver
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
@@ -284,7 +285,30 @@ class TenantsSpec extends Specification {
         thrown(UnsupportedOperationException)
     }
 
-    void "withId(domainClass, tenantId, callable) resolves the datastore for that domain class before delegating"() {
+    void "withId(datastoreClass, tenantId, callable) resolves the datastore by type before delegating"() {
+        given:
+        def mtds = Stub(MixedDatastore) {
+            getMultiTenancyMode() >> MultiTenancySettings.MultiTenancyMode.DATABASE
+            withNewSession(_, _) >> { Serializable tid, Closure c -> c.call(Stub(Session)) }
+        }
+        useLocator(Stub(Datastore), mtds, Stub(Datastore))
+
+        expect: "the datastore type, not the domain class, decides which datastore is used"
+        Tenants.withId(MixedDatastore, 'tenant1') { -> 'ran' } == 'ran'
+    }
+
+    void "withId(datastoreClass, tenantId, callable) throws for a datastore that does not support multi-tenancy"() {
+        given:
+        useLocator(Stub(Datastore), Stub(Datastore))
+
+        when:
+        Tenants.withId(MixedDatastore, 'tenant1') { }
+
+        then:
+        thrown(UnsupportedOperationException)
+    }
+
+    void "withIdForDomain(domainClass, tenantId, callable) resolves the datastore for that domain class before delegating"() {
         given:
         def mtds = Stub(MixedDatastore) {
             getMultiTenancyMode() >> MultiTenancySettings.MultiTenancyMode.DATABASE
@@ -293,27 +317,41 @@ class TenantsSpec extends Specification {
         useLocator(Stub(Datastore), null, mtds)
 
         expect:
-        Tenants.withId(String, 'tenant1') { -> 'ran' } == 'ran'
+        Tenants.withIdForDomain(String, 'tenant1') { -> 'ran' } == 'ran'
     }
 
-    void "withId(domainClass, tenantId, callable) throws for a datastore that does not support multi-tenancy"() {
+    void "withIdForDomain(domainClass, tenantId, callable) throws for a datastore that does not support multi-tenancy"() {
         given:
         useLocator(Stub(Datastore), null, Stub(Datastore))
 
         when:
-        Tenants.withId(String, 'tenant1') { }
+        Tenants.withIdForDomain(String, 'tenant1') { }
 
         then:
         thrown(UnsupportedOperationException)
     }
 
-    void "withTenant(domainClass, tenantId, callable) binds the tenant for the datastore resolved for that domain class"() {
+    void "withTenantForDomain(domainClass, tenantId, callable) binds the tenant for the datastore resolved for that domain class"() {
         given:
         def ds = Stub(Datastore)
         useLocator(Stub(Datastore), null, ds)
 
         expect:
-        Tenants.withTenant(String, 'tenant1') { CurrentTenantHolder.get(ds) } == 'tenant1'
+        Tenants.withTenantForDomain(String, 'tenant1') { CurrentTenantHolder.get(ds) } == 'tenant1'
+    }
+
+    void "withTenantForDomain(domainClass, tenantId, callable) binds the tenant without opening a session"() {
+        given: "a datastore that fails the spec if any session is opened"
+        def ds = Mock(Datastore)
+        useLocator(Stub(Datastore), null, ds)
+
+        when:
+        def result = Tenants.withTenantForDomain(String, 'tenant1') { CurrentTenantHolder.get(ds) }
+
+        then: "as the javadoc states, the caller owns the session — none is created here"
+        result == 'tenant1'
+        0 * ds.connect()
+        0 * ds.connect(_)
     }
 
     void "withoutId(MultiTenantCapableDatastore, callable) runs a 0-arg closure directly for a shared-connection mode"() {
@@ -402,17 +440,32 @@ class TenantsSpec extends Specification {
         thrown(IllegalArgumentException)
     }
 
-    void "withId(MultiTenantCapableDatastore, tenantId, callable) swallows getDatastoreForTenantId failures and falls through"() {
-        given:
+    void "withId(MultiTenantCapableDatastore, tenantId, callable) falls through when the tenant has no datastore yet"() {
+        given: "a misconfiguration the probe cannot resolve — an unknown tenant or a missing connection"
         def session = Stub(Session)
         def mtds = Stub(MixedDatastore) {
             getMultiTenancyMode() >> MultiTenancySettings.MultiTenancyMode.DATABASE
-            getDatastoreForTenantId('tenant1') >> { throw new IllegalStateException('boom') }
+            getDatastoreForTenantId('tenant1') >> { throw new ConfigurationException('DataSource not found') }
             withNewSession('tenant1', _) >> { String tid, Closure body -> body.call(session) }
         }
 
-        expect:
+        expect: "the session-creating path is still taken, which resolves the tenant again and reports any real failure"
         Tenants.withId(mtds, 'tenant1') { -> 'ran' } == 'ran'
+    }
+
+    void "withId(MultiTenantCapableDatastore, tenantId, callable) propagates unexpected failures from getDatastoreForTenantId"() {
+        given:
+        def mtds = Stub(MixedDatastore) {
+            getMultiTenancyMode() >> MultiTenancySettings.MultiTenancyMode.DATABASE
+            getDatastoreForTenantId('tenant1') >> { throw new IllegalStateException('boom') }
+        }
+
+        when:
+        Tenants.withId(mtds, 'tenant1') { -> 'ran' }
+
+        then: "only unknown-tenant/missing-connection failures are tolerated; anything else surfaces to the caller"
+        IllegalStateException e = thrown()
+        e.message == 'boom'
     }
 
     void "withId(MultiTenantCapableDatastore, tenantId, callable) uses the shared-connection withSession path, dispatching by closure arity"() {

@@ -116,14 +116,37 @@ class AbstractGormApiSpec extends Specification {
         extendedMethods.any { it.name == 'customExtraMethod' }
         !extendedMethods.any { it.name == 'get' }
 
-        and: "excluded Object/GroovyObject-level methods never appear in either list"
-        !methods.any { it.name in AbstractGormApi.EXCLUDES }
+        and: "the api object's own plumbing never appears in either list, whatever EXCLUDES happens to contain"
+        !methods.any {
+            it.name in ['getClass', 'getMetaClass', 'setMetaClass', 'getProperty', 'setProperty', 'invokeMethod',
+                        'wait', 'notify', 'notifyAll', 'equals', 'hashCode', 'toString',
+                        'getMethods', 'getExtendedMethods', 'getTransactionManager', 'setTransactionManager',
+                        'getQualifier', 'getGormPersistentEntity']
+        }
+        !extendedMethods.any {
+            it.name in ['getMethods', 'getExtendedMethods', 'getTransactionManager', 'setTransactionManager',
+                        'getQualifier', 'getGormPersistentEntity']
+        }
 
         when: "requesting the methods again"
         def methodsAgain = api.getMethods()
 
         then: "the same cached list instance is returned"
         methodsAgain.is(methods)
+    }
+
+    void "EXCLUDES stays publicly readable and immutable"() {
+        when: "read from outside the AbstractGormApi hierarchy, as third-party GORM implementations do"
+        List<String> excludes = AbstractGormApi.EXCLUDES
+
+        then:
+        excludes.containsAll(['getMethods', 'getExtendedMethods', 'setTransactionManager', 'getTransactionManager'])
+
+        when:
+        excludes << 'somethingElse'
+
+        then:
+        thrown(UnsupportedOperationException)
     }
 
     void "ConstantDatastoreResolver always resolves to the datastore it was constructed with"() {

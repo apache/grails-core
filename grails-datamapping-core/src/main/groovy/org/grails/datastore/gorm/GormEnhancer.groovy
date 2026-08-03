@@ -105,11 +105,26 @@ class GormEnhancer implements Closeable {
         String qualifier = ConnectionSourceNameResolver.resolveDefaultConnectionSourceName(datastore)
         registry.initializeDatastore(datastore, qualifier)
 
+        registerApiFactories()
         registerConstraints(datastore)
 
         for (entity in datastore.mappingContext.persistentEntities) {
             registerEntity(entity)
         }
+    }
+
+    /**
+     * Registers the {@link GormApiFactory} implementations this enhancer's datastore needs, before any
+     * entity is registered.
+     *
+     * Adapters that build specialised API objects (for example Mongo's {@code MongoStaticApi}, which
+     * {@code MongoEntity} casts to) override this. It is deliberately separate from
+     * {@link #registerConstraints(Datastore)}: factory registration has nothing to do with constraints,
+     * and hanging it off the constraints hook would break the moment a subclass reordered or skipped that
+     * step.
+     */
+    protected void registerApiFactories() {
+        // no-op by default: the registry falls back to DefaultGormApiFactory
     }
 
     /**
@@ -121,11 +136,30 @@ class GormEnhancer implements Closeable {
         if (!entity.isExternal()) {
             // Delegate entity registration orchestration to the registry
             registry.registerEntity(entity, this)
-            
-            // Add dynamic methods to the class
-            addStaticMethods(entity)
-            addInstanceMethods(entity)
+
+            if (requiresMetaClassDispatch(entity)) {
+                addStaticMethods(entity)
+                addInstanceMethods(entity)
+            }
         }
+    }
+
+    /**
+     * Whether the entity needs GORM's missing-method/missing-property dispatch installed on its
+     * {@link ExpandoMetaClass}.
+     *
+     * A {@link GormEntity} does not: the trait supplies {@code methodMissing}/{@code propertyMissing}
+     * and {@code GormEntityTransformation} compiles in {@code $static_methodMissing} /
+     * {@code $static_propertyMissing}, so dispatch already resolves without touching the metaclass.
+     * Installing closures over the top would shadow those compiled implementations — letting the two
+     * dispatch paths diverge — force an {@code ExpandoMetaClass} for every persistent entity at
+     * startup, and move dynamic-finder resolution onto a per-call metaclass miss.
+     *
+     * Classes that are not {@code GormEntity} — a Java entity, for instance — have no such dispatch of
+     * their own, so the metaclass is the only route available to them.
+     */
+    protected boolean requiresMetaClassDispatch(PersistentEntity entity) {
+        return !GormEntity.isAssignableFrom(entity.javaClass)
     }
 
     /**
@@ -223,20 +257,13 @@ class GormEnhancer implements Closeable {
     @CompileDynamic
     protected void removeConstraints() {
         try {
-            def cls = Class.forName('org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator', false, GormEnhancer.classLoader)
-            if (cls != null) {
-                def factory = datastore.mappingContext.mappingFactory
-                if (factory.hasProperty('entityContext')) {
-                    def constraintsEvaluator = factory.entityContext.getBean(cls)
-                    if (constraintsEvaluator != null) {
-                        for (entity in datastore.mappingContext.persistentEntities) {
-                            constraintsEvaluator.removeConstraints(entity.javaClass)
-                        }
-                    }
-                }
+            String className = 'org.apache.groovy.grails.validation.ConstrainedProperty'
+            ClassLoader classLoader = getClass().getClassLoader()
+            if (ClassUtils.isPresent(className, classLoader)) {
+                classLoader.loadClass(className).removeConstraint('unique')
             }
         } catch (Throwable e) {
-            log.debug("Not running in Grails environment, cannot de-register constraints. ${e.message}")
+            log.debug("Not running in Grails 2 environment, cannot de-register constraints. This exception can be safely ignored if you are not using Grails 2. ${e.message}", e)
         }
     }
 
@@ -257,7 +284,14 @@ class GormEnhancer implements Closeable {
     protected void addStaticMethods(PersistentEntity e) {
         def cls = e.javaClass
         ExpandoMetaClass mc = MetaClassUtils.getExpandoMetaClass(cls)
-        
+
+        if (mc.getStaticMetaMethod('methodMissing', [String, Object] as Class[]) != null) {
+            // An application or another plugin owns this class's static dispatch. Overwriting it here
+            // would silently break whatever it handles, so leave it in place.
+            log.debug('Not installing GORM static missing-method dispatch on {}: a handler is already installed', cls.name)
+            return
+        }
+
         mc.static.methodMissing = { String name, args ->
             def api = registry.findStaticApi(cls, null)
             try {
@@ -285,6 +319,12 @@ class GormEnhancer implements Closeable {
     protected void addInstanceMethods(PersistentEntity e) {
         Class cls = e.javaClass
         ExpandoMetaClass mc = MetaClassUtils.getExpandoMetaClass(cls)
+
+        if (mc.getMetaMethod('methodMissing', [String, Object] as Class[]) != null) {
+            // See addStaticMethods: defer to a handler someone else installed rather than clobbering it.
+            log.debug('Not installing GORM instance missing-method dispatch on {}: a handler is already installed', cls.name)
+            return
+        }
 
         mc.methodMissing = { String name, args ->
             def api = registry.findInstanceApi(cls, null)

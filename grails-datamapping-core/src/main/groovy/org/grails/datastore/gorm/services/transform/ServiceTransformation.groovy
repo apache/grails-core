@@ -243,7 +243,7 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
 
             addDatastoreMethods(impl, datastoreType, targetDomainClass, propertiesFields)
 
-            copyAnnotations(classNode, impl)
+            copyAnnotations(classNode, impl, null, null, true)
             AnnotationNode serviceAnnotation = findAnnotation((AnnotatedNode)impl, Service)
             if (serviceAnnotation != null && serviceAnnotation.getMember('name') == null) {
 
@@ -326,7 +326,9 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
 
                         // Copy annotations after implement() so that @Query GString values are
                         // already replaced with constX(IMPLEMENTED) before being copied to methodImpl.
-                        copyAnnotations(method, methodImpl)
+                        // Skip types methodImpl already carries: @NotTransactional above and anything
+                        // implement() added would otherwise be duplicated, which the compiler rejects.
+                        copyAnnotations(method, methodImpl, null, null, true)
 
                         if (!Modifier.isProtected(method.modifiers)) {
                             if (!TransactionalTransform.hasTransactionalAnnotation(methodImpl)) {

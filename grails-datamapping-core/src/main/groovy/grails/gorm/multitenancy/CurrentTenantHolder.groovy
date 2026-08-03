@@ -22,7 +22,17 @@ import groovy.transform.CompileStatic
 
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.multitenancy.exceptions.TenantException
 
+/**
+ * Holds the tenant bound to the current thread, per datastore.
+ *
+ * A thread may have a different tenant bound for each datastore in play, so lookups are scoped by
+ * datastore. Bindings are made either against a datastore instance or against a datastore type; an
+ * instance binding wins over a type binding for the same datastore.
+ *
+ * @since 8.0
+ */
 @CompileStatic
 class CurrentTenantHolder {
 
@@ -34,14 +44,26 @@ class CurrentTenantHolder {
     }
 
     /**
-     * @return Obtain the current tenant (fallback for any datastore)
+     * Obtain the tenant bound to the current thread, irrespective of datastore.
+     *
+     * Prefer {@link #get(Datastore)}. A thread can hold a different tenant for each datastore, and only the
+     * datastore-scoped lookup can say which of them applies to a given operation.
+     *
+     * @return The bound tenant id, or {@code null} if no tenant is bound
+     * @throws TenantException if different tenants are bound for different datastores. There is no correct
+     *         answer to return in that case, and returning an arbitrary one is how cross-tenant reads and
+     *         writes happen.
      */
     static Serializable get() {
-        def map = currentTenantThreadLocal.get()
-        if (!map.isEmpty()) {
-            return map.values().iterator().next()
+        Map<Object, Serializable> map = currentTenantThreadLocal.get()
+        if (map.isEmpty()) {
+            return null
         }
-        return null
+        Set<Serializable> boundTenants = new LinkedHashSet<>(map.values())
+        if (boundTenants.size() > 1) {
+            throw new TenantException("Cannot resolve a single current tenant: ${boundTenants} are bound on this thread for different datastores. Use get(Datastore) to select the tenant of the datastore being operated on.")
+        }
+        return boundTenants.iterator().next()
     }
 
     /**

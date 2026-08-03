@@ -29,8 +29,7 @@ import spock.lang.Specification
  * enable it). The diff here reworked {@code getDatastoreForConnection} to be idempotent for a leaf
  * (single-connection, no-children) datastore resolving its own connection name back to itself
  * (needed so an API already bound to a tenant's own datastore can still be wrapped in
- * {@code Tenants.withId(tenantId)} without failing), and added
- * {@code routesUnqualifiedToMappedConnection()} returning {@code false}.
+ * {@code Tenants.withId(tenantId)} without failing).
  */
 class SimpleMapDatastoreSpec extends Specification {
 
@@ -59,8 +58,12 @@ class SimpleMapDatastoreSpec extends Specification {
         thrown(ConfigurationException)
     }
 
-    void "routesUnqualifiedToMappedConnection always returns false"() {
-        expect:
-        !multiDatastore.routesUnqualifiedToMappedConnection()
+    void "each connection source gets its own child datastore with its own store"() {
+        given:
+        Datastore secondary = multiDatastore.getDatastoreForConnection('secondary')
+
+        expect: "a per-connection child is a real, independent datastore, not a view onto the parent"
+        !secondary.is(multiDatastore)
+        secondary.getMappingContext().is(multiDatastore.getMappingContext())
     }
 }
