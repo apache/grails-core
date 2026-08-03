@@ -102,6 +102,14 @@ class CompilePlugin implements Plugin<Project> {
             }
         }
 
+        // Framework modules do not apply the Grails Gradle plugin, so grails { indy = ... } never
+        // reaches them. Honour the same -PgrailsIndy toggle used by grails-extension-gradle-config
+        // (and CI matrix.indy) so JMH / full-tree rebuilds can compile the framework and fixtures
+        // with classic callsites or invokedynamic. Property absent => leave Groovy's default alone.
+        final Boolean frameworkIndy = project.hasProperty('grailsIndy')
+                ? Boolean.parseBoolean(project.property('grailsIndy') as String)
+                : null
+
         project.plugins.withId('groovy') {
             project.tasks.withType(GroovyCompile).configureEach {
                 // encoding needs to be the same since it's different across platforms
@@ -133,9 +141,21 @@ class CompilePlugin implements Plugin<Project> {
                 // when both are present.
                 it.groovyOptions.configurationScript =
                         GradleUtils.findRootGrailsCoreDir(project).file('gradle/groovy-compile-configscript.groovy').asFile
+                if (frameworkIndy != null) {
+                    it.groovyOptions.optimizationOptions.indy = frameworkIndy
+                }
             }
             project.tasks.withType(Test).configureEach {
                 it.jvmArgs('-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true')
+            }
+            // GROOVY-11158: classic (non-indy) call-site bytecode lives in groovy-callsite.
+            // Inject at configuration time (not afterEvaluate) when -PgrailsIndy=false for
+            // monorepo modules that can resolve the coordinate via grails-bom. Skip included
+            // builds such as grails-gradle/build-logic where :grails-bom is absent.
+            if (Boolean.FALSE.equals(frameworkIndy)
+                    && project.rootProject.findProject(':grails-bom') != null
+                    && project.configurations.findByName('implementation') != null) {
+                project.dependencies.add('implementation', 'org.apache.groovy:groovy-callsite')
             }
         }
     }

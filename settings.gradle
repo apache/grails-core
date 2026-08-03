@@ -109,6 +109,7 @@ def buildGroovySupportsMicronaut = buildGroovyVersionLine?.contains("'5.") ?: fa
 def skipMicronautProjects = explicitlySkipMicronaut || ((!buildJdkSupportsMicronaut || !buildGroovySupportsMicronaut) && !explicitlyIncludeMicronaut)
 
 include(
+        'grails-benchmarks',
         'grails-bootstrap',
         'grails-cache',
         'grails-codecs-core',
