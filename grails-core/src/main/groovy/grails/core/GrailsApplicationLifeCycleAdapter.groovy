@@ -21,6 +21,8 @@ package grails.core
 
 import groovy.transform.CompileStatic
 
+import org.springframework.beans.factory.BeanRegistrar
+
 /**
  * Adapter for the {@link GrailsApplicationLifeCycle} interface
  *
@@ -33,6 +35,11 @@ class GrailsApplicationLifeCycleAdapter implements GrailsApplicationLifeCycle {
     @Override
     Closure doWithSpring() {
         return { -> }
+    }
+
+    @Override
+    BeanRegistrar beanRegistrar() {
+        return null
     }
 
     @Override

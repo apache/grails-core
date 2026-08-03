@@ -16,30 +16,39 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.core
+package grails.core;
 
-import org.springframework.beans.factory.BeanRegistrar
+import java.util.Map;
+
+import groovy.lang.Closure;
+
+import org.springframework.beans.factory.BeanRegistrar;
 
 /**
  * API which plugins implement to provide behavior in defined application lifecycle hooks.
  *
- * The {@link GrailsApplicationLifeCycle#beanRegistrar()} method can be used to register Spring beans.
+ * <p>The {@link #beanRegistrar()} method can be used to register Spring beans.</p>
+ *
+ * <p>Implemented in Java (not Groovy) so the default {@link #beanRegistrar()} method is a plain
+ * JVM default method. Groovy 6 classic-callsite compilation of Groovy interface default methods
+ * emits a reference to a synthetic CallSite holder class that is not packaged into the jar
+ * ({@code GrailsApplicationLifeCycle$1}), which breaks app boot under {@code -PgrailsIndy=false}.</p>
  *
  * @since 3.0
- * @see {@link grails.plugins.Plugin}
+ * @see grails.plugins.Plugin
  */
-interface GrailsApplicationLifeCycle {
+public interface GrailsApplicationLifeCycle {
 
     /**
-     * Sub classes should override to provide implementations
+     * Sub classes should override to provide implementations.
      *
      * @return A closure that defines beans to be registered by Spring
      * @deprecated since 8.0 in favour of {@link #beanRegistrar()}. The underlying bean builder DSL
      * remains available but is no longer actively supported and will not receive fixes for new
      * issues — you are strongly urged to migrate to {@link #beanRegistrar()}.
      */
-    @Deprecated(since = '8.0')
-    Closure doWithSpring()
+    @Deprecated(since = "8.0")
+    Closure doWithSpring();
 
     /**
      * Sub classes should override to register beans with the Spring Framework
@@ -53,35 +62,40 @@ interface GrailsApplicationLifeCycle {
      * @since 8.0
      */
     default BeanRegistrar beanRegistrar() {
-        return null
+        return null;
     }
 
     /**
-     * Invoked once the {@link org.springframework.context.ApplicationContext} has been refreshed in a phase where plugins can add dynamic methods. Subclasses should override
+     * Invoked once the {@link org.springframework.context.ApplicationContext} has been refreshed in a
+     * phase where plugins can add dynamic methods. Subclasses should override.
      */
-    void doWithDynamicMethods()
-    /**
-     * Invoked once the {@link org.springframework.context.ApplicationContext} has been refreshed and after {#doWithDynamicMethods()} is invoked. Subclasses should override
-     */
-    void doWithApplicationContext()
+    void doWithDynamicMethods();
 
     /**
-     * Invoked when the application configuration changes
-     *
-     * @param event The event
+     * Invoked once the {@link org.springframework.context.ApplicationContext} has been refreshed and
+     * after {@link #doWithDynamicMethods()} is invoked. Subclasses should override.
      */
-    void onConfigChange(Map<String, Object> event)
+    void doWithApplicationContext();
 
     /**
-     * Invoked once all prior initialization hooks: {@link GrailsApplicationLifeCycle#doWithSpring()}, {@link GrailsApplicationLifeCycle#doWithDynamicMethods()} and {@link GrailsApplicationLifeCycle#doWithApplicationContext()}
+     * Invoked when the application configuration changes.
      *
      * @param event The event
      */
-    void onStartup(Map<String, Object> event)
+    void onConfigChange(Map<String, Object> event);
+
     /**
-     * Invoked when the {@link org.springframework.context.ApplicationContext} is closed
+     * Invoked once all prior initialization hooks: {@link #doWithSpring()},
+     * {@link #doWithDynamicMethods()} and {@link #doWithApplicationContext()}.
      *
      * @param event The event
      */
-    void onShutdown(Map<String, Object> event)
+    void onStartup(Map<String, Object> event);
+
+    /**
+     * Invoked when the {@link org.springframework.context.ApplicationContext} is closed.
+     *
+     * @param event The event
+     */
+    void onShutdown(Map<String, Object> event);
 }
