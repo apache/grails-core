@@ -75,6 +75,13 @@ dependencies {
     // the cli tier — published separately as org.apache.grails:grails-core-cli
     cliImplementation platform(project(':grails-bom'))
     cliApi project(project.path)
+    // commands render through GrailsConsole, which ships as grails-bootstrap's cli companion; exposed
+    // as cliApi so every module building on grails-core's cli tier inherits it
+    cliApi(project(':grails-bootstrap')) {
+        capabilities {
+            requireCapability('org.apache.grails.bootstrap:grails-bootstrap-cli')
+        }
+    }
     cliImplementation 'org.apache.groovy:groovy-json'
     cliImplementation 'org.apache.groovy:groovy-templates'
 

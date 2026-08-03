@@ -31,9 +31,10 @@ ext {
             'gradle-groovy.version'         : '4.0.33',
             'gradle-spock.version'          : '2.4-groovy-4.0',
             'grails-publish-plugin.version' : '1.0.0-M2',
-            'jansi.version'                 : '2.4.2',
             'javaparser-core.version'       : '3.28.2',
-            'jline.version'                 : '3.30.6',
+            // Tracks the JLine version Groovy ships (groovy-groovysh), so the framework and groovysh
+            // share one terminal stack - keep in step with groovy.version.
+            'jline.version'                 : '3.30.9',
             'jna.version'                   : '5.19.1',
             'jquery.version'                : '4.0.0',
             // Security: overrides spring-boot-dependencies (2.24.3). 2.25.5 fixes CVE-2026-49844 flagged against log4j-api.
@@ -62,7 +63,6 @@ ext {
             'commons-text'            : "org.apache.commons:commons-text:${gradleBomDependencyVersions['commons-text.version']}",
             'directory-watcher'       : "io.methvin:directory-watcher:${gradleBomDependencyVersions['directory-watcher.version']}",
             'grails-publish-plugin'   : "org.apache.grails.gradle:grails-publish:${gradleBomDependencyVersions['grails-publish-plugin.version']}",
-            'jansi'                   : "org.fusesource.jansi:jansi:${gradleBomDependencyVersions['jansi.version']}",
             'javaparser-core'         : "com.github.javaparser:javaparser-core:${gradleBomDependencyVersions['javaparser-core.version']}",
             'jline'                   : "org.jline:jline:${gradleBomDependencyVersions['jline.version']}",
             'jna'                     : "net.java.dev.jna:jna:${gradleBomDependencyVersions['jna.version']}",

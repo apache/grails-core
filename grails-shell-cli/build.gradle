@@ -27,6 +27,7 @@ plugins {
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.buildsrc.vulnerability-scan'
     id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-cli-library'
     id 'org.apache.grails.gradle.grails-jacoco'
 }
 
@@ -54,9 +55,14 @@ dependencies {
     implementation 'org.apache.groovy:groovy-json'
 
     api project(':grails-bootstrap')
+    // the console and the jline completion handler now ship as grails-bootstrap's cli companion
+    api(project(':grails-bootstrap')) {
+        capabilities {
+            requireCapability('org.apache.grails.bootstrap:grails-bootstrap-cli')
+        }
+    }
     api 'org.apache.grails.gradle:grails-gradle-model'
     api 'org.apache.ant:ant'
-    api 'org.fusesource.jansi:jansi'
     api 'org.jline:jline'
     api("org.gradle:gradle-tooling-api:$gradleToolingApiVersion") {
         exclude group: 'org.slf4j', module: 'slf4j-api'

@@ -41,6 +41,7 @@ import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.attributes.AttributeMatchingStrategy
 import org.gradle.api.attributes.Category
+import org.gradle.api.file.CopySpec
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.file.FileCollection
 import org.gradle.api.file.RegularFile
@@ -130,6 +131,8 @@ class GrailsGradlePlugin implements Plugin<Project> {
         String grailsVersion = resolveGrailsVersion(project)
 
         enableNative2Ascii(project, grailsVersion)
+
+        configureTemplateResources(project)
 
         configureAssetCompilation(project)
 
@@ -336,7 +339,7 @@ ${importStatements}
         // Adding an exclusion to every dependency in a pom is very verbose and
         // greatly increases the size of the pom.
         // It would be nice to have documented in a comment why this global exclude is in here
-        String slf4jPreventExclusion = project.properties['slf4jPreventExclusion']
+        String slf4jPreventExclusion = project.findProperty('slf4jPreventExclusion')
         if (!slf4jPreventExclusion || slf4jPreventExclusion != 'true') {
             project.configurations.configureEach { Configuration configuration ->
                 configuration.exclude(group: 'org.slf4j', module: 'slf4j-simple')
@@ -353,7 +356,7 @@ ${importStatements}
                 profileConfiguration.transitive = true
 
                 profileConfiguration.defaultDependencies { DependencySet deps ->
-                    String defaultProfileCoordinates = "org.apache.grails.profiles:${System.getProperty('grails.profile') ?: getDefaultProfile()}:${project.properties['grailsVersion'] ?: BuildSettings.grailsVersion}" as String
+                    String defaultProfileCoordinates = "org.apache.grails.profiles:${System.getProperty('grails.profile') ?: getDefaultProfile()}:${project.findProperty('grailsVersion') ?: BuildSettings.grailsVersion}" as String
                     project.logger.info('No Grails profile is defined for project {}, defaulting to: {}', project.name, defaultProfileCoordinates)
                     deps.add(
                             project.dependencies.create(defaultProfileCoordinates)
@@ -632,7 +635,7 @@ ${importStatements}
                     'grails.env': Environment.isSystemSet() ? Environment.getCurrent().getName() : Environment.PRODUCTION.getName(),
                     'info.app.name': project.name,
                     'info.app.version': project.version instanceof Serializable ? project.version : project.version.toString(),
-                    'info.app.grailsVersion': project.properties.get('grailsVersion')
+                    'info.app.grailsVersion': project.findProperty('grailsVersion')
             ]
 
             // Capture build directory at configuration time to avoid Task.project access at execution time
@@ -664,7 +667,7 @@ ${importStatements}
     @CompileStatic
     protected void configureMicronaut(Project project) {
         project.afterEvaluate {
-            boolean micronautEnabled = project.getConfigurations().getByName('runtimeClasspath').getAllDependencies().findAll { Dependency dep -> dep.group == 'org.apache.grails' && dep.name == 'grails-micronaut' } as boolean
+            boolean micronautEnabled = project.getConfigurations().getByName('runtimeClasspath').getAllDependencies().any { Dependency dep -> dep.group == 'org.apache.grails' && dep.name == 'grails-micronaut' }
             if (!micronautEnabled) {
                 return
             }
@@ -737,7 +740,7 @@ ${importStatements}
 
     @CompileStatic
     protected void configureGroovy(Project project) {
-        final String groovyVersion = project.properties['groovy.version']
+        final String groovyVersion = project.findProperty('groovy.version')
         if (groovyVersion) {
             project.logger.lifecycle('Warning: groovy.version is defined, Grails Gradle Plugin will force all groovy dependencies to version {}.', groovyVersion)
             project.configurations.configureEach { Configuration configuration ->
@@ -1097,6 +1100,22 @@ ${importStatements}
     }
 
     /**
+     * Packages {@code src/main/templates} into the main resources as {@code META-INF/templates}.
+     *
+     * <p>Grails plugins override this: they stage templates through the {@code copyTemplates} task
+     * into a directory of their own so that a plugin's templates are not subject to the resource
+     * filters {@code processResources} applies to {@code grails-app} resource directories.</p>
+     */
+    protected void configureTemplateResources(Project project) {
+        SourceSet sourceSet = SourceSets.findMainSourceSet(project)
+        project.tasks.named(sourceSet.processResourcesTaskName, ProcessResources).configure { ProcessResources task ->
+            task.from(project.layout.projectDirectory.dir('src/main/templates')) { CopySpec spec ->
+                spec.into('META-INF/templates')
+            }
+        }
+    }
+
+    /**
      * Enables native2ascii processing of resource bundles
      **/
     @CompileDynamic
@@ -1127,10 +1146,6 @@ ${importStatements}
             // the app version leaves processResources UP-TO-DATE and stale substituted values
             // (e.g. info.app.grailsVersion in application.yml) are repackaged into every build.
             task.inputs.properties(replaceTokens)
-
-            task.from(project.relativePath('src/main/templates')) { spec ->
-                spec.into('META-INF/templates')
-            }
 
             if (!native2ascii) {
                 task.from(sourceSet.resources) { spec ->
