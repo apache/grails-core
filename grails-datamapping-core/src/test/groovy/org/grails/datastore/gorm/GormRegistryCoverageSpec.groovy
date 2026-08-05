@@ -307,7 +307,6 @@ class GormRegistryCoverageSpec extends Specification {
         def secondaryDs = Stub(Datastore)
         def multiConnectionDs = Stub(MultipleConnectionSourceDatastore) {
             getDatastoreForConnection('secondary') >> secondaryDs
-            routesUnqualifiedToMappedConnection() >> true
         }
 
         when:

@@ -19,21 +19,16 @@
 
 package org.grails.datastore.mapping.core.connections;
 
-import org.grails.datastore.mapping.core.Datastore;
-
 /**
- * A {@link Datastore} capable of configuring multiple {@link Datastore} with individually named {@link ConnectionSource} instances
+ * Marker for a {@link MultipleConnectionSourceCapableDatastore} that manages a single, unified
+ * session across all of its connection sources rather than an independently-flushed session per
+ * connection.
  *
- * @author Graeme Rocher
- * @since 6.1
+ * <p>This is not part of the public multi-connection contract. It exists solely so the GORM
+ * registry can keep an entity's unqualified (no explicit connection) operations on such a
+ * datastore itself, rather than routing them to a per-connection child whose session it never
+ * manages independently. Production {@link MultipleConnectionSourceCapableDatastore}
+ * implementations should not implement this.</p>
  */
-public interface MultipleConnectionSourceCapableDatastore extends Datastore {
-
-    /**
-     * Lookup a {@link Datastore} by {@link ConnectionSource} name
-     *
-     * @param connectionName The connection name
-     * @return The {@link Datastore}
-     */
-    Datastore getDatastoreForConnection(String connectionName);
+public interface SingleSessionCapableDatastore extends MultipleConnectionSourceCapableDatastore {
 }

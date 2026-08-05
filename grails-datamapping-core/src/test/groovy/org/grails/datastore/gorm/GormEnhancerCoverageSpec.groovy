@@ -31,14 +31,16 @@ import spock.lang.Specification
  * {@link GormEnhancerAllQualifiersSpec} (pre-existing) covers {@code allQualifiers}'s
  * same-datastore path and {@code registerEntity}/{@code close}'s happy paths thoroughly. This
  * spec targets the remaining gaps: the deprecated static/protected delegators, the
- * {@code allQualifiers} foreign-datastore branch, and - the hardest part - the
- * {@code addStaticMethods}/{@code addInstanceMethods} closures, which only execute when a real
- * missing-method/property call goes through Groovy's {@code ExpandoMetaClass} dispatch on the
- * actual entity class, not when calling the underlying API object directly (as
- * {@code GormStaticApiSpec}/item 2 does). The datastore's own internal {@code GormEnhancer}
- * (constructed automatically by {@code SimpleMapDatastore}) already enhances the entity class
- * against the {@code GormRegistry} singleton, so most tests below don't need to construct their
- * own {@code GormEnhancer} at all.
+ * {@code allQualifiers} foreign-datastore branch, and the missing-method/property dispatch that
+ * routes through the {@code GormEntity} trait hooks when a real call goes through Groovy
+ * dispatch on the actual entity class, not when calling the underlying API object directly (as
+ * {@code GormStaticApiSpec}/item 2 does). Bootstrap performs no metaclass mutation:
+ * {@code addStaticMethods}/{@code addInstanceMethods} are only reachable through
+ * {@code enhance(..)}, which is gated on {@code dynamicEnhance} (always {@code false} from the
+ * settings constructor). The datastore's own internal {@code GormEnhancer} (constructed
+ * automatically by {@code SimpleMapDatastore}) already registers the entity class against the
+ * {@code GormRegistry} singleton, so most tests below don't need to construct their own
+ * {@code GormEnhancer} at all.
  */
 class GormEnhancerCoverageSpec extends Specification {
 
@@ -126,7 +128,26 @@ class GormEnhancerCoverageSpec extends Specification {
         GormEnhancer.findEntity(GormEnhancerCoverageThing) != null
     }
 
-    void "a real dynamic-finder call on the entity class routes through the installed static methodMissing"() {
+    void "constructing an enhancer performs no metaclass mutation and enhance() is a no-op while dynamicEnhance is false"() {
+        given:
+        def ds = new SimpleMapDatastore(GormEnhancerGatingThing)
+        def enhancer = new GormEnhancer(ds, null, new ConnectionSourceSettings())
+
+        expect: "bootstrap did not force an ExpandoMetaClass onto the entity class"
+        !enhancer.dynamicEnhance
+        !(GroovySystem.metaClassRegistry.getMetaClass(GormEnhancerGatingThing) instanceof ExpandoMetaClass)
+
+        when: "enhance() is called with dynamicEnhance false"
+        enhancer.enhance()
+
+        then: "still no metaclass mutation"
+        !(GroovySystem.metaClassRegistry.getMetaClass(GormEnhancerGatingThing) instanceof ExpandoMetaClass)
+
+        cleanup:
+        ds.close()
+    }
+
+    void "a real dynamic-finder call on the entity class routes through the trait's static methodMissing hook"() {
         given:
         datastore.withSession {
             def instance = new GormEnhancerCoverageThing(name: 'find-me')
@@ -134,11 +155,11 @@ class GormEnhancerCoverageSpec extends Specification {
             it.flush()
         }
 
-        expect: "the class-level methodMissing closure resolves the dynamic finder and executes it"
+        expect: "the trait's staticMethodMissing hook resolves the dynamic finder and executes it"
         GormEnhancerCoverageThing.findByName('find-me') != null
     }
 
-    void "an unresolvable static property access routes through the installed static propertyMissing and reports MissingPropertyException"() {
+    void "an unresolvable static property access routes through the trait's staticPropertyMissing and reports MissingPropertyException"() {
         when:
         GormEnhancerCoverageThing.someCompletelyUnknownStaticProperty
 
@@ -146,7 +167,7 @@ class GormEnhancerCoverageSpec extends Specification {
         thrown(MissingPropertyException)
     }
 
-    void "an unresolvable instance property get/set routes through the installed instance propertyMissing"() {
+    void "an unresolvable instance property get/set routes through the trait's propertyMissing hooks"() {
         given:
         def instance = new GormEnhancerCoverageThing(name: 'a')
 
@@ -163,7 +184,7 @@ class GormEnhancerCoverageSpec extends Specification {
         thrown(MissingPropertyException)
     }
 
-    void "an unresolvable instance method call routes through the installed instance methodMissing"() {
+    void "an unresolvable instance method call routes through the trait's methodMissing hook"() {
         given:
         def instance = new GormEnhancerCoverageThing(name: 'a')
 
@@ -183,6 +204,12 @@ class GormEnhancerCoverageThing {
 
 @Entity
 class MultiTenantCoverageThing implements MultiTenant<MultiTenantCoverageThing> {
+
+    String name
+}
+
+@Entity
+class GormEnhancerGatingThing {
 
     String name
 }

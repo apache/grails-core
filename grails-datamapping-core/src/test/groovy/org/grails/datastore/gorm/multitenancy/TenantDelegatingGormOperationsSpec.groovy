@@ -26,12 +26,9 @@ import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import spock.lang.Specification
 
 /**
- * This entire ~750-line pure-delegator class had 0% coverage before this item (no test ever
- * constructed one), but the PR's own diff only *adds* 4 new overloads
- * ({@code deleteAll()}/{@code deleteAll(Map)}/{@code deleteAll(Map, Object...)}/
- * {@code deleteAll(Map, Iterable)}) matching the exact same {@code Tenants.withId(...) { ... }}
- * pattern already used by the other ~90 methods - so per this plan's "patch coverage, not whole-file"
- * lesson (item 10/13), only those 4 new methods are in scope here.
+ * Verifies {@link TenantDelegatingGormOperations} delegates to the wrapped operations under the
+ * bound tenant, rather than a different method with a compatible signature, and that the
+ * {@code Map}-arg overloads of {@code deleteAll} forward the params map rather than dropping it.
  *
  * Swaps {@link Tenants#datastoreLocator} (the established, pluggable-for-testing static field - see
  * {@code TenantsSpec}/{@code DefaultTenantServiceSpec}) so {@code Tenants.withId(Class, ...)}
@@ -75,31 +72,17 @@ class TenantDelegatingGormOperationsSpec extends Specification {
         0 * delegate.save(_, _)
     }
 
-    void "deleteAll() delegates to the wrapped operations under the bound tenant"() {
+    void "deleteAll(Iterable) delegates to the wrapped operations under the bound tenant"() {
         given:
         def delegate = Mock(GormAllOperations)
         def ops = buildOperations(delegate)
+        def toDelete = ['a', 'b']
 
         when:
-        def result = ops.deleteAll()
+        ops.deleteAll(toDelete)
 
         then:
-        1 * delegate.deleteAll() >> 5
-        result == 5
-    }
-
-    void "deleteAll(Map) delegates to the wrapped operations under the bound tenant"() {
-        given:
-        def delegate = Mock(GormAllOperations)
-        def ops = buildOperations(delegate)
-        def params = [flush: true]
-
-        when:
-        def result = ops.deleteAll(params)
-
-        then:
-        1 * delegate.deleteAll(params) >> 3
-        result == 3
+        1 * delegate.deleteAll(toDelete)
     }
 
     void "deleteAll(Map, Object...) delegates to the wrapped operations under the bound tenant"() {

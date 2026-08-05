@@ -413,7 +413,12 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
                 }
             }
 
-            final Map<Object, Object> entitiesById = new HashMap<>();
+            // Keyed by the identifier's string form rather than its typed value:
+            // convertToIdentifierType falls back to the raw, unconverted key when the
+            // ConversionService can't convert it, so a requestedId that Hibernate itself
+            // coerced during the query would not equal the typed identifier returned by
+            // session.getIdentifier(). Normalizing both sides to String avoids that mismatch.
+            final Map<String, Object> entitiesById = new HashMap<>();
             if (!distinctIds.isEmpty()) {
                 HqlQueryContext queryContext = HqlQueryContext.prepare(
                     persistentEntity,
@@ -434,14 +439,14 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
                     queryContext
                 ).list();
                 for (Object entity : results) {
-                    entitiesById.put(session.getIdentifier(entity), entity);
+                    entitiesById.put(String.valueOf(session.getIdentifier(entity)), entity);
                 }
             }
 
             // Reassemble in the requested order, leaving a null slot for missing ids.
             final List ordered = new ArrayList<>(requestedIds.size());
             for (Serializable requestedId : requestedIds) {
-                ordered.add(requestedId == null ? null : entitiesById.get(requestedId));
+                ordered.add(requestedId == null ? null : entitiesById.get(String.valueOf(requestedId)));
             }
             return ordered;
         });

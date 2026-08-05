@@ -58,7 +58,7 @@ import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider;
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport;
 import org.grails.datastore.mapping.core.connections.DefaultConnectionSource;
 import org.grails.datastore.mapping.core.connections.InMemoryConnectionSources;
-import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore;
+import org.grails.datastore.mapping.core.connections.SingleSessionCapableDatastore;
 import org.grails.datastore.mapping.core.connections.SingletonConnectionSources;
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext;
@@ -79,7 +79,7 @@ import org.grails.datastore.mapping.transactions.TransactionCapableDatastore;
  * @since 1.0
  */
 @SuppressWarnings("rawtypes")
-public class SimpleMapDatastore extends AbstractDatastore implements Closeable, TransactionCapableDatastore, MultipleConnectionSourceCapableDatastore, SchemaMultiTenantCapableDatastore<Map<String, Map>, ConnectionSourceSettings>, ConnectionSourcesProvider<Map<String, Map>, ConnectionSourceSettings> {
+public class SimpleMapDatastore extends AbstractDatastore implements Closeable, TransactionCapableDatastore, SingleSessionCapableDatastore, SchemaMultiTenantCapableDatastore<Map<String, Map>, ConnectionSourceSettings>, ConnectionSourcesProvider<Map<String, Map>, ConnectionSourceSettings> {
     private final Map<String, Map> inmemoryData;
     private final TenantResolver tenantResolver;
     protected final GormEnhancer gormEnhancer;
@@ -371,15 +371,6 @@ public class SimpleMapDatastore extends AbstractDatastore implements Closeable, 
             return this;
         }
         throw new ConfigurationException("No datastore found for connection named [" + connectionName + "]");
-    }
-
-    @Override
-    public boolean routesUnqualifiedToMappedConnection() {
-        // This in-memory mock manages a single session on the parent datastore; its per-connection
-        // children exist only for explicit connection access. An entity mapped to a non-default
-        // datasource must therefore keep its unqualified operations on the parent, not on a child
-        // whose session the unit-test harness never flushes.
-        return false;
     }
 
     @Override

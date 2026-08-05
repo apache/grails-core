@@ -19,6 +19,7 @@
 package org.grails.datastore.mapping.simple
 
 import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.core.connections.SingleSessionCapableDatastore
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException
 import spock.lang.AutoCleanup
 import spock.lang.Specification
@@ -29,8 +30,8 @@ import spock.lang.Specification
  * enable it). The diff here reworked {@code getDatastoreForConnection} to be idempotent for a leaf
  * (single-connection, no-children) datastore resolving its own connection name back to itself
  * (needed so an API already bound to a tenant's own datastore can still be wrapped in
- * {@code Tenants.withId(tenantId)} without failing), and added
- * {@code routesUnqualifiedToMappedConnection()} returning {@code false}.
+ * {@code Tenants.withId(tenantId)} without failing), and marked this datastore as a
+ * {@link SingleSessionCapableDatastore}.
  */
 class SimpleMapDatastoreSpec extends Specification {
 
@@ -59,8 +60,8 @@ class SimpleMapDatastoreSpec extends Specification {
         thrown(ConfigurationException)
     }
 
-    void "routesUnqualifiedToMappedConnection always returns false"() {
+    void "is marked as a single-session datastore for unqualified-connection routing"() {
         expect:
-        !multiDatastore.routesUnqualifiedToMappedConnection()
+        multiDatastore instanceof SingleSessionCapableDatastore
     }
 }

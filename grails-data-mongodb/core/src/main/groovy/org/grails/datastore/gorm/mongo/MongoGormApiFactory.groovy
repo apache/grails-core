@@ -26,7 +26,6 @@ import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.gorm.mongo.api.MongoStaticApi
 import org.grails.datastore.mapping.model.MappingContext
-import org.grails.datastore.mapping.mongo.MongoDatastore
 
 /**
  * MongoDB-specific {@link org.grails.datastore.gorm.GormApiFactory} that creates a
@@ -42,8 +41,7 @@ class MongoGormApiFactory extends DefaultGormApiFactory {
 
     @Override
     <D> MongoStaticApi<D> createStaticApi(Class<D> persistentClass, MappingContext mappingContext, DatastoreResolver resolver, String qualifier, GormRegistry registry) {
-        MongoDatastore mongoDatastore = (MongoDatastore) resolver.resolve()
         List<FinderMethod> finders = createDynamicFinders(resolver, mappingContext)
-        return new MongoStaticApi<D>(persistentClass, mongoDatastore, finders, mongoDatastore.getTransactionManager())
+        return new MongoStaticApi<D>(persistentClass, mappingContext, finders, resolver, qualifier, registry)
     }
 }

@@ -340,31 +340,6 @@ class GormStaticApiSpec extends Specification {
         api.count() == 3
     }
 
-    void "deleteAll removes every persisted instance of the entity"() {
-        given:
-        def api = new GormStaticApi(GormStaticApiThing, datastore, [])
-        new GormStaticApiThing(name: 'a').save(flush: true)
-        new GormStaticApiThing(name: 'b').save(flush: true)
-
-        when:
-        api.deleteAll()
-
-        then:
-        api.count() == 0
-    }
-
-    void "deleteAll(Map) delegates to deleteAll()"() {
-        given:
-        def api = new GormStaticApi(GormStaticApiThing, datastore, [])
-        new GormStaticApiThing(name: 'a').save(flush: true)
-
-        when:
-        api.deleteAll([:])
-
-        then:
-        api.count() == 0
-    }
-
     void "deleteAll(Iterable) and deleteAll(varargs) remove exactly the given instances"() {
         given:
         def api = new GormStaticApi(GormStaticApiThing, datastore, [])

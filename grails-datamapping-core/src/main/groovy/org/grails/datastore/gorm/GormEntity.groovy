@@ -545,25 +545,6 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     }
 
     /**
-     * Deletes all objects
-     * @return The number of objects deleted
-     */
-    @Generated
-    static Number deleteAll() {
-        currentGormStaticApi().deleteAll()
-    }
-
-    /**
-     * Deletes all objects for the given arguments
-     * @param params The arguments
-     * @return The number of objects deleted
-     */
-    @Generated
-    static Number deleteAll(Map params) {
-        currentGormStaticApi().deleteAll(params)
-    }
-
-    /**
      * Deletes a list of objects in one go
      * @param objectsToDelete The objects to delete
      */

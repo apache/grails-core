@@ -237,20 +237,6 @@ class TenantDelegatingGormOperations<D> implements GormAllOperations<D> {
     }
 
     @Override
-    Number deleteAll() {
-        (Number)Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
-            allOperations.deleteAll()
-        }
-    }
-
-    @Override
-    Number deleteAll(Map params) {
-        (Number)Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
-            allOperations.deleteAll(params)
-        }
-    }
-
-    @Override
     void deleteAll(Object... objectsToDelete) {
         Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
             allOperations.deleteAll(objectsToDelete)

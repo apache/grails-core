@@ -33,6 +33,7 @@ import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
+import org.grails.datastore.mapping.core.connections.SingleSessionCapableDatastore
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
@@ -775,13 +776,12 @@ class GormRegistry {
 
         // If the entity does not explicitly include DEFAULT, route its unqualified (no-connection)
         // operations. Real datastores manage a session per connection, so DEFAULT goes to the first
-        // explicit connection's datastore. A single-session mock (the in-memory datastore used by
+        // explicit connection's datastore. A single-session datastore (the in-memory mock used by
         // unit tests) keeps unqualified operations on the parent it manages — its connection
         // children exist only for explicit access and have no harness-flushed session.
         if (!qualifiers.collect { String it -> normalizeQualifier(it) }.contains(ConnectionSource.DEFAULT)) {
             Datastore defaultConnectionDatastore = primaryDatastore
-            if (defaultDatastore instanceof MultipleConnectionSourceCapableDatastore &&
-                    !((MultipleConnectionSourceCapableDatastore) defaultDatastore).routesUnqualifiedToMappedConnection()) {
+            if (defaultDatastore instanceof SingleSessionCapableDatastore) {
                 defaultConnectionDatastore = defaultDatastore
             }
             if (defaultConnectionDatastore != null) {

@@ -66,16 +66,24 @@ class GormEnhancer implements Closeable {
      */
     boolean includeExternal = true
 
-    @Deprecated
-    GormEnhancer(Datastore datastore, PlatformTransactionManager transactionManager) {
-        this(datastore, transactionManager, new ConnectionSourceSettings())
-    }
+    /**
+     * Whether to enhance classes dynamically using meta programming as well, only necessary for Java classes
+     */
+    final boolean dynamicEnhance
 
     /**
-     * Backward-compatible constructor for callers that pass failOnError as a boolean.
+     * Retained for API compatibility. The registry-based enhancer no longer uses the
+     * transaction manager directly; obtain it from the GORM APIs instead.
      */
-    GormEnhancer(Datastore datastore, PlatformTransactionManager transactionManager, boolean failOnError) {
-        this(datastore, transactionManager, new ConnectionSourceSettings().failOnError(failOnError))
+    @Deprecated
+    final PlatformTransactionManager transactionManager
+
+    GormEnhancer(Datastore datastore) {
+        this(datastore, null)
+    }
+
+    GormEnhancer(Datastore datastore, PlatformTransactionManager transactionManager, boolean failOnError = false, boolean dynamicEnhance = false, boolean markDirty = true) {
+        this(datastore, transactionManager, new ConnectionSourceSettings().failOnError(failOnError).markDirty(markDirty))
     }
 
     /**
@@ -87,15 +95,17 @@ class GormEnhancer implements Closeable {
      * @param registry The GORM registry (optional, defaults to singleton instance)
      */
     GormEnhancer(Datastore datastore,
-                 PlatformTransactionManager ignoredTransactionManager,
+                 PlatformTransactionManager transactionManager,
                  ConnectionSourceSettings settings,
                  GormRegistry registry = GormRegistry.getInstance()) {
         assert datastore != null, 'Datastore is required'
         assert settings != null, 'ConnectionSourceSettings is required'
-        
+
         this.datastore = datastore
         this.registry = registry
-        
+        this.transactionManager = transactionManager
+        this.dynamicEnhance = false
+
         this.failOnError = settings.isFailOnError()
         Boolean markDirty = settings.getMarkDirty()
         this.markDirty = markDirty == null ? true : markDirty
@@ -121,10 +131,35 @@ class GormEnhancer implements Closeable {
         if (!entity.isExternal()) {
             // Delegate entity registration orchestration to the registry
             registry.registerEntity(entity, this)
-            
-            // Add dynamic methods to the class
-            addStaticMethods(entity)
-            addInstanceMethods(entity)
+        }
+    }
+
+    /**
+     * Enhances all persistent entities.
+     *
+     * @param onlyExtendedMethods If only to add additional methods provides by subclasses of the GORM APIs
+     */
+    void enhance(boolean onlyExtendedMethods = false) {
+        if (dynamicEnhance) {
+            for (PersistentEntity e in datastore.mappingContext.persistentEntities) {
+                if (e.external && !includeExternal) continue
+                enhance(e, onlyExtendedMethods)
+            }
+        }
+    }
+
+    /**
+     * Enhance and individual entity
+     *
+     * @param e The entity
+     * @param onlyExtendedMethods If only to add additional methods provides by subclasses of the GORM APIs
+     */
+    void enhance(PersistentEntity e, boolean onlyExtendedMethods = false) {
+        registerEntity(e)
+
+        if (!(GroovyObject.isAssignableFrom(e.javaClass)) || dynamicEnhance) {
+            addInstanceMethods(e)
+            addStaticMethods(e)
         }
     }
 

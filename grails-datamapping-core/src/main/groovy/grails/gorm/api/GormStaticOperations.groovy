@@ -106,19 +106,6 @@ interface GormStaticOperations<D> {
     List<Serializable> saveAll(Iterable<?> objectsToSave)
 
     /**
-     * Deletes all objects
-     * @return The number of objects deleted
-     */
-    Number deleteAll()
-
-    /**
-     * Deletes all objects for the given arguments
-     * @param params The arguments
-     * @return The number of objects deleted
-     */
-    Number deleteAll(Map params)
-
-    /**
      * Deletes a list of objects in one go
      * @param objectsToDelete The objects to delete
      */

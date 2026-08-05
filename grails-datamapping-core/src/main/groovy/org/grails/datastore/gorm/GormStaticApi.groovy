@@ -45,6 +45,7 @@ import org.grails.datastore.mapping.core.connections.ConnectionSources
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.query.api.BuildableCriteria
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
@@ -61,6 +62,13 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     private static final TransactionTemplateFactory DEFAULT_TRANSACTION_TEMPLATE_FACTORY = new DefaultTransactionTemplateFactory()
 
     protected final List<FinderMethod> finders
+
+    /**
+     * The multi-tenancy mode of the datastore this API was created for, resolved once at
+     * construction time. Retained for source/binary compatibility with out-of-tree
+     * {@code GormStaticApi} subclasses that reference this field directly.
+     */
+    protected final MultiTenancyMode multiTenancyMode
 
     @Deprecated
     GormStaticApi(Class<D> persistentClass, Datastore datastore, List<FinderMethod> finders) {
@@ -87,6 +95,23 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     GormStaticApi(Class<D> persistentClass, MappingContext mappingContext, List<FinderMethod> finders, DatastoreResolver resolver, String qualifier, GormRegistry registry) {
         super(persistentClass, mappingContext, resolver, qualifier, registry)
         this.finders = finders
+        this.multiTenancyMode = resolveMultiTenancyMode(resolver)
+    }
+
+    /**
+     * Resolves the multi-tenancy mode from the datastore this API is bound to. Safe to call at
+     * construction time: every code path that constructs a {@code GormStaticApi} passes either
+     * {@code null} or a resolver already bound to a concrete, already-registered datastore (see
+     * {@code GormRegistry.createStaticApi}) — never a tenant-resolving resolver that could throw
+     * before a tenant context is bound.
+     */
+    private static MultiTenancyMode resolveMultiTenancyMode(DatastoreResolver resolver) {
+        Datastore ds = resolver?.resolve()
+        if (ds instanceof ConnectionSourcesProvider) {
+            def defaultConnectionSource = ((ConnectionSourcesProvider) ds).connectionSources.defaultConnectionSource
+            return defaultConnectionSource.settings.multiTenancy.mode
+        }
+        return MultiTenancyMode.NONE
     }
 
     @Override
@@ -387,14 +412,21 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     @Override
     D first(Map params) {
         Map queryParams = new LinkedHashMap(params ?: [:])
-        queryParams.max = 1
-        queryParams.order = 'asc'
         if (!queryParams.containsKey('sort')) {
             String idPropertyName = getGormPersistentEntity()?.identity?.name
             if (idPropertyName) {
                 queryParams.sort = idPropertyName
             }
         }
+        if (queryParams.containsKey('sort')) {
+            queryParams.max = 1
+            queryParams.order = queryParams.order ?: 'asc'
+            List<D> resultList = list(queryParams)
+            return resultList ? resultList[0] : null
+        }
+        // No identifier or explicit sort to order by (e.g. a composite-key entity) — take the
+        // first element of the naturally-ordered result instead of forcing a database-level
+        // LIMIT with no ORDER BY, which would return an arbitrary row.
         List<D> resultList = list(queryParams)
         resultList ? resultList[0] : null
     }
@@ -412,16 +444,23 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     @Override
     D last(Map params) {
         Map queryParams = new LinkedHashMap(params ?: [:])
-        queryParams.max = 1
-        queryParams.order = 'desc'
         if (!queryParams.containsKey('sort')) {
             String idPropertyName = getGormPersistentEntity()?.identity?.name
             if (idPropertyName) {
                 queryParams.sort = idPropertyName
             }
         }
+        if (queryParams.containsKey('sort')) {
+            queryParams.max = 1
+            queryParams.order = queryParams.order ?: 'desc'
+            List<D> resultList = list(queryParams)
+            return resultList ? resultList[0] : null
+        }
+        // No identifier or explicit sort to order by (e.g. a composite-key entity) — take the
+        // last element of the naturally-ordered result instead of forcing a database-level
+        // LIMIT with no ORDER BY, which would return an arbitrary row.
         List<D> resultList = list(queryParams)
-        resultList ? resultList[0] : null
+        resultList ? resultList[-1] : null
     }
 
     @Override
@@ -473,18 +512,6 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     @Override
     List<Serializable> saveAll(Object... objectsToSave) {
         saveAll(Arrays.asList(objectsToSave))
-    }
-
-    @Override
-    Number deleteAll() {
-        execute({ Session session ->
-            session.deleteAll(new DetachedCriteria(persistentClass))
-        } as SessionCallback<Number>)
-    }
-
-    @Override
-    Number deleteAll(Map params) {
-        deleteAll()
     }
 
     @Override
