@@ -153,6 +153,49 @@ class TransactionSynchronizationSessionResolverSpec extends Specification {
         TransactionSynchronizationManager.getResource(datastore).is(holder)
     }
 
+    def "hasResolvedSession() returns false when nothing is bound"() {
+        expect:
+        !resolver.hasResolvedSession()
+    }
+
+    def "hasResolvedSession() returns true when a connected session is bound"() {
+        given:
+        resolver.bind(connectedSession())
+
+        expect:
+        resolver.hasResolvedSession()
+    }
+
+    def "hasResolvedSession() returns false for a disconnected sole session, without evicting it or unbinding the holder"() {
+        given: "a bound session that has since been disconnected"
+        Session session = Mock(Session)
+        session.getDatastore() >> datastore
+        session.isConnected() >> false
+        DatastoreUtils.bindSession(session)
+
+        expect: "the stale session is reported as no session, but nothing was mutated to reach that answer"
+        !resolver.hasResolvedSession()
+        TransactionSynchronizationManager.getResource(datastore) != null
+        ((SessionHolder) TransactionSynchronizationManager.getResource(datastore)).containsSession(session)
+    }
+
+    def "hasResolvedSession() sees a still-connected session even when a disconnected one is stacked on top, without evicting the disconnected one"() {
+        given: "a connected session with a stale one stacked on top"
+        Session live = connectedSession()
+        Session stale = Mock(Session)
+        stale.getDatastore() >> datastore
+        stale.isConnected() >> false
+        DatastoreUtils.bindSession(live)
+        DatastoreUtils.bindNewSession(stale)
+
+        expect: "the answer accounts for the connected session beneath the stale top"
+        resolver.hasResolvedSession()
+
+        and: "the stale top was left exactly as it was - unlike resolve(), this made no attempt to evict it"
+        ((SessionHolder) TransactionSynchronizationManager.getResource(datastore)).containsSession(stale)
+        ((SessionHolder) TransactionSynchronizationManager.getResource(datastore)).containsSession(live)
+    }
+
     def "a session bound on one thread is not visible to another thread"() {
         given:
         Session session = connectedSession()

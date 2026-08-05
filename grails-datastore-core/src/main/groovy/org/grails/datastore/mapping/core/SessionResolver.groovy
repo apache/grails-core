@@ -44,6 +44,15 @@ interface SessionResolver {
     Session resolve()
 
     /**
+     * Non-mutating check for whether a connected session is currently bound - the same
+     * determination {@link #resolve()} makes, but without evicting any stale, disconnected
+     * session it finds along the way or unbinding a holder left empty by that eviction.
+     * Safe to call from routing/discovery code that scans multiple datastores and must not have
+     * side effects on bindings unrelated to the one it ultimately selects.
+     */
+    boolean hasResolvedSession()
+
+    /**
      * Binds a session owned by this resolver's datastore to the current context, making it the
      * session {@link #resolve()} returns. Nested bindings stack: binding a second session pushes
      * it on top of the first.

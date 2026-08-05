@@ -144,6 +144,32 @@ class AbstractDatastoreSpec extends Specification {
         TransactionSynchronizationManager.unbindResourceIfPossible(datastore)
     }
 
+    void "hasCurrentSession probing one datastore does not evict or unbind an unrelated datastore's stale session"() {
+        given: "two independently-bound datastores, as a routing scan (e.g. ActiveSessionDatastoreSelector) would encounter"
+        def mappingContext = Mock(MappingContext)
+        def datastoreA = new TestDatastore(mappingContext, (PropertyResolver) null, null)
+        def datastoreB = new TestDatastore(mappingContext, (PropertyResolver) null, null)
+        def staleSessionOnB = Mock(Session)
+        staleSessionOnB.getDatastore() >> datastoreB
+        staleSessionOnB.isConnected() >> false
+        DatastoreUtils.bindSession(staleSessionOnB)
+
+        when: "a probe scans datastore A - unrelated to B - the way a multi-datastore routing lookup would"
+        boolean aHasSession = datastoreA.hasCurrentSession()
+        boolean bHasSession = datastoreB.hasCurrentSession()
+
+        then: "both probes report accurately"
+        !aHasSession
+        !bHasSession
+
+        and: "B's stale binding is untouched by having been probed - not evicted, not unbound"
+        TransactionSynchronizationManager.getResource(datastoreB) != null
+        ((SessionHolder) TransactionSynchronizationManager.getResource(datastoreB)).containsSession(staleSessionOnB)
+
+        cleanup:
+        TransactionSynchronizationManager.unbindResourceIfPossible(datastoreB)
+    }
+
     void "destroy() closes every session held on the current thread and clears the binding"() {
         given:
         def mappingContext = Mock(MappingContext) {
