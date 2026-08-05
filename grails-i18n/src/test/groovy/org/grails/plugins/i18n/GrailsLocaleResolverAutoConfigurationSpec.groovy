@@ -95,6 +95,30 @@ class GrailsLocaleResolverAutoConfigurationSpec extends Specification {
                 }
     }
 
+    void 'beforeName genuinely forces GrailsLocaleResolverAutoConfiguration to run before I18nAutoConfiguration, not merely declaration order'() {
+        given: 'contextRunner()\'s own AutoConfigurations.of(...) call already lists them in the correct ' +
+                'final order, so declaring them backwards here is the only way to prove @AutoConfiguration' +
+                '(beforeName = ...) - not declaration order - is what puts GrailsLocaleResolverAutoConfiguration first'
+        GrailsApplication grailsApplication = new DefaultGrailsApplication()
+        GrailsPluginManager pluginManager = Mock(GrailsPluginManager) {
+            getAllPlugins() >> ([] as GrailsPlugin[])
+        }
+
+        expect:
+        new WebApplicationContextRunner()
+                .withBean(GrailsApplication, () -> grailsApplication)
+                .withBean(GrailsPluginManager, () -> pluginManager)
+                .withConfiguration(AutoConfigurations.of(
+                        PropertyPlaceholderAutoConfiguration,
+                        I18nAutoConfiguration,
+                        GrailsLocaleResolverAutoConfiguration))
+                .withUserConfiguration(EnableWebMvcConfig)
+                .run { context ->
+                    assert context.getBean('localeResolver') instanceof SessionLocaleResolver
+                    assert context.getBeanNamesForType(AcceptHeaderLocaleResolver).length == 0
+                }
+    }
+
     @Configuration(proxyBeanMethods = false)
     @EnableWebMvc
     static class EnableWebMvcConfig {

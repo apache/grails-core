@@ -25,17 +25,22 @@ ext {
             'ant.version'                   : '1.10.17',
             'asciidoctor-gradle-jvm.version': '4.0.5',
             'asciidoctorj.version'          : '3.0.0',
+            'asm.version'                   : '9.10.1',
             'asset-pipeline-gradle.version' : '5.2.0-M1',
             'commons-text.version'          : '1.15.0',
             'directory-watcher.version'     : '0.19.1',
-            'gradle-groovy.version'         : '4.0.32',
+            'gradle-groovy.version'         : '4.0.33',
             'gradle-spock.version'          : '2.4-groovy-4.0',
             'grails-publish-plugin.version' : '1.0.0-M2',
-            'jansi.version'                 : '2.4.2',
             'javaparser-core.version'       : '3.28.2',
-            'jline.version'                 : '3.30.6',
+            // Tracks the JLine version Groovy ships (groovy-groovysh), so the framework and groovysh
+            // share one terminal stack - keep in step with groovy.version.
+            'jline.version'                 : '3.30.9',
             'jna.version'                   : '5.19.1',
             'jquery.version'                : '4.0.0',
+            // Security: overrides spring-boot-dependencies (2.24.3). 2.25.5 fixes CVE-2026-49844 flagged against log4j-api.
+            // Also declared in bomDependencyVersions so app BOMs and the Gradle plugin BOM stay aligned.
+            'log4j2.version'                : '2.25.5',
             'maven-model.version'           : '3.9.16',
             'objenesis.version'             : '3.4',
             'spring-boot.version'           : '4.1.0',
@@ -44,6 +49,7 @@ ext {
     // Note: the name of the dependency must be the prefix of the property name so properties in the pom are resolved correctly
     gradleBomPlatformDependencies = [
             'spring-boot-bom'  : "org.springframework.boot:spring-boot-dependencies:${gradleBomDependencyVersions['spring-boot.version']}",
+            'log4j2-bom'       : "org.apache.logging.log4j:log4j-bom:${gradleBomDependencyVersions['log4j2.version']}",
             'gradle-groovy-bom': "org.apache.groovy:groovy-bom:${gradleBomDependencyVersions['gradle-groovy.version']}",
             'gradle-spock-bom' : "org.spockframework:spock-bom:${gradleBomDependencyVersions['gradle-spock.version']}",
     ]
@@ -58,10 +64,15 @@ ext {
             'commons-text'            : "org.apache.commons:commons-text:${gradleBomDependencyVersions['commons-text.version']}",
             'directory-watcher'       : "io.methvin:directory-watcher:${gradleBomDependencyVersions['directory-watcher.version']}",
             'grails-publish-plugin'   : "org.apache.grails.gradle:grails-publish:${gradleBomDependencyVersions['grails-publish-plugin.version']}",
-            'jansi'                   : "org.fusesource.jansi:jansi:${gradleBomDependencyVersions['jansi.version']}",
             'javaparser-core'         : "com.github.javaparser:javaparser-core:${gradleBomDependencyVersions['javaparser-core.version']}",
             'jline'                   : "org.jline:jline:${gradleBomDependencyVersions['jline.version']}",
             'jna'                     : "net.java.dev.jna:jna:${gradleBomDependencyVersions['jna.version']}",
+            // Security override of spring-boot-dependencies - see log4j2.version
+            'log4j2-api'              : "org.apache.logging.log4j:log4j-api:${gradleBomDependencyVersions['log4j2.version']}",
+            'log4j2-core'             : "org.apache.logging.log4j:log4j-core:${gradleBomDependencyVersions['log4j2.version']}",
+            'log4j2-jul'              : "org.apache.logging.log4j:log4j-jul:${gradleBomDependencyVersions['log4j2.version']}",
+            'log4j2-slf4j2-impl'      : "org.apache.logging.log4j:log4j-slf4j2-impl:${gradleBomDependencyVersions['log4j2.version']}",
+            'log4j2-to-slf4j'         : "org.apache.logging.log4j:log4j-to-slf4j:${gradleBomDependencyVersions['log4j2.version']}",
             'objenesis'               : "org.objenesis:objenesis:${gradleBomDependencyVersions['objenesis.version']}",
             'spring-boot-cli'         : "org.springframework.boot:spring-boot-cli:${gradleBomDependencyVersions['spring-boot.version']}",
             'spring-boot-gradle'      : "org.springframework.boot:spring-boot-gradle-plugin:${gradleBomDependencyVersions['spring-boot.version']}",
@@ -83,7 +94,7 @@ ext {
             // extended-scalars compatibility. See https://github.com/apache/grails-core/issues/15674
             'graphql-java.version'          : '25.0',
             'graphql-java-extended-scalars.version': '24.0',
-            'groovy.version'                : '5.0.7',
+            'groovy.version'                : '5.0.8',
             'guava.version'                 : '33.6.0-jre',
             // Security: overrides spring-boot-dependencies (5.4.2). 5.4.3 fixes CVE-2026-54399 (httpcore5) and CVE-2026-54428 (httpcore5-h2).
             'httpcore5.version'             : '5.4.3',
@@ -230,7 +241,12 @@ ext {
 
     // Because pom exclusions aren't properly supported by gradle, we can't inherit the grails-gradle-bom
     // this requires copying the platforms selectively to the grails-bom. Create a combined version for convenience.
-    combinedPlatforms = ['spring-boot-bom': gradleBomPlatformDependencies['spring-boot-bom']] + bomPlatformDependencies
+    // log4j2-bom is listed ahead of spring-boot-bom so published POM import order keeps CVE-2026-49844's
+    // Log4j 2.25.5 management ahead of Spring Boot's older Log4j pin (see each BOM's dependencies block).
+    combinedPlatforms = [
+            'log4j2-bom'     : bomPlatformDependencies['log4j2-bom'],
+            'spring-boot-bom': gradleBomPlatformDependencies['spring-boot-bom'],
+    ] + bomPlatformDependencies.findAll { it.key != 'log4j2-bom' }
     combinedDependencies = gradleBomDependencies + bomDependencies
     combinedVersions = gradleBomDependencyVersions + bomDependencyVersions
 
@@ -444,7 +460,7 @@ ext {
                 'liquibase-hibernate.version': '4.27.0',
                 'liquibase.version'          : '4.27.0',
                 'hibernate.version'          : '5.6.15.Final',
-                'groovy.version'  : '5.0.7',
+                'groovy.version'  : '5.0.8',
                 'spock.version'   : '2.4-groovy-5.0',
                 'protobuf.version': '4.30.2',
                 'asm.version'     : '9.10.1',
@@ -505,7 +521,7 @@ ext {
                 'liquibase-hibernate.version': '4.27.0',
                 'liquibase.version'          : '4.27.0',
                 'hibernate.version'          : '5.6.15.Final',
-                'groovy.version'  : '5.0.7',
+                'groovy.version'  : '5.0.8',
                 'spock.version'   : '2.4-groovy-5.0',
                 'protobuf.version': '4.30.2',
                 'asm.version'     : '9.10.1',

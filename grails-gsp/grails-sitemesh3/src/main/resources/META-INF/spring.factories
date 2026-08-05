@@ -15,5 +15,5 @@
 # specific language governing permissions and limitations
 # under the License.
 
-org.springframework.boot.env.EnvironmentPostProcessor=\
+org.springframework.boot.EnvironmentPostProcessor=\
 org.grails.plugins.sitemesh3.Sitemesh3EnvironmentPostProcessor

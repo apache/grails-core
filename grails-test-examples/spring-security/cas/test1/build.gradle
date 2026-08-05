@@ -47,7 +47,6 @@ dependencies {
     runtimeOnly 'org.apache.grails:grails-databinding'
     runtimeOnly 'org.apache.grails:grails-url-mappings'
     runtimeOnly 'org.apache.grails:grails-data-hibernate5'
-    runtimeOnly 'org.fusesource.jansi:jansi'
     runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'

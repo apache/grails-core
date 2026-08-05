@@ -52,6 +52,12 @@ dependencies {
     api 'jakarta.persistence:jakarta.persistence-api'
     api 'jakarta.annotation:jakarta.annotation-api'
 
+    // api, and the only declaration of it anywhere: grails-core is on every Grails project's
+    // classpath, and GlobalGrailsClassInjectorTransformation.compileBeansDsl loads the transform
+    // reflectively and returns silently when it is absent - so this is what makes the implicit
+    // 'def beans = { }' convention reach a third-party plugin author at all.
+    api project(':grails-beans-dsl')
+
     implementation 'com.github.ben-manes.caffeine:caffeine'
     api 'org.apache.groovy:groovy'
     implementation 'org.apache.groovy:groovy-json'
@@ -75,10 +81,24 @@ dependencies {
     // the cli tier — published separately as org.apache.grails:grails-core-cli
     cliImplementation platform(project(':grails-bom'))
     cliApi project(project.path)
+    // commands render through GrailsConsole, which ships as grails-bootstrap's cli companion; exposed
+    // as cliApi so every module building on grails-core's cli tier inherits it
+    cliApi(project(':grails-bootstrap')) {
+        capabilities {
+            requireCapability('org.apache.grails.bootstrap:grails-bootstrap-cli')
+        }
+    }
     cliImplementation 'org.apache.groovy:groovy-json'
     cliImplementation 'org.apache.groovy:groovy-templates'
 
     testImplementation 'org.springframework:spring-jdbc'
+    testImplementation 'org.springframework.boot:spring-boot-test'
+    // ApplicationContextRunner's signatures reach AssertJ through ApplicationContextAssertProvider;
+    // without it on the classpath Groovy cannot introspect the runner and every call misses.
+    testRuntimeOnly 'org.assertj:assertj-core'
+    // AspectJ is compileOnly for the framework; on the test classpath so CoreGrailsPlugin's
+    // AspectJ-aware auto proxy creator branch is reachable
+    testRuntimeOnly 'org.aspectj:aspectjweaver'
 
     testImplementation 'org.hamcrest:hamcrest'
 

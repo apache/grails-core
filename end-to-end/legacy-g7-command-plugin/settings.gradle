@@ -1,0 +1,60 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+// Plugin resolution only - this affects no dependency of the fixture itself, whose classpath must
+// stay pinned to published Grails 7 / Groovy 4. Note the repo-wide settings plugin
+// (org.apache.grails.buildsrc.repo) is deliberately not applied: it sets FAIL_ON_PROJECT_REPOS,
+// which would reject this build's own `repositories { mavenCentral() }`.
+pluginManagement {
+    apply from: file('../../gradle/plugin-repositories.gradle')
+    repositories {
+        configurePluginRepositories(delegate)
+    }
+}
+
+plugins {
+    id 'com.gradle.develocity' version '4.3.2'
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.4.0'
+}
+
+def isCI = System.getenv().containsKey('CI')
+def isLocal = !isCI
+def isReproducibleBuild = System.getenv('SOURCE_DATE_EPOCH') != null
+
+// Same shape as the root and end-to-end builds, so this leg of the suite shows up in Develocity
+// alongside them rather than being the one invocation with no scan.
+develocity {
+    server = 'https://develocity.apache.org'
+    buildScan {
+        tag('grails')
+        tag('grails-end-to-end')
+        tag('grails-7-fixture')
+        publishing.onlyIf { it.authenticated }
+        uploadInBackground = isLocal
+    }
+}
+
+buildCache {
+    local { enabled = (isLocal && !isReproducibleBuild) || (isCI && isReproducibleBuild) }
+    remote(develocity.buildCache) {
+        push = isCI
+        enabled = !isReproducibleBuild
+    }
+}
+
+rootProject.name = 'legacy-g7-command-plugin'

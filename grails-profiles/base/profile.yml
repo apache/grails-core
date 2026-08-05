@@ -49,7 +49,5 @@ dependencies:
       coords: "org.apache.grails:grails-core"
     - scope: testImplementation
       coords: "org.apache.grails:grails-testing-support-datamapping"
-    - scope: runtimeOnly
-      coords: "org.fusesource.jansi:jansi"
     - scope: testImplementation
       coords: "org.spockframework:spock-core"

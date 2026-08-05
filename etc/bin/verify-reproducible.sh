@@ -150,7 +150,9 @@ cd "${DOWNLOAD_LOCATION}/grails/etc/bin/results"
 echo "Checking for differences in checksums"
 # diff -u CHECKSUMS second.txt
 DIFF_RESULTS=$(comm -3 <(sort ../../../CHECKSUMS) <(sort second.txt) | cut -d' ' -f1 | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$' | uniq | sort)
-echo "$DIFF_RESULTS" > diff.txt
+if [[ -n $DIFF_RESULTS ]]; then
+    printf '%s\n' "$DIFF_RESULTS"
+fi > diff.txt
 
 if [ -s diff.txt ]; then
   echo "Differences were found, diffing jar files ..."
@@ -165,6 +167,7 @@ if [ -s diff.txt ]; then
 
   : > diff_purged.txt  # Ensure the file exists and is empty
   while IFS= read -r jar_file; do
+      [[ -z "${jar_file//[[:space:]]/}" ]] && continue
       echo "Checking jar ${jar_file}..."
 
       echo "Extracting ${jar_file}"

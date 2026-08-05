@@ -20,6 +20,7 @@ package org.apache.grails.core
 
 import grails.config.Settings
 import grails.util.GrailsUtil
+import org.apache.grails.core.testing.support.LogCapture
 import org.grails.core.cfg.GroovyConfigPropertySourceLoader
 import org.grails.exceptions.reporting.DefaultStackTraceFilterer
 import org.grails.exceptions.reporting.StackTraceFilterer
@@ -225,39 +226,33 @@ class GrailsBootstrapRegistryInitializerSpec extends Specification {
         def context = contextWithProperties([
                 (Settings.SETTING_LOG_FULL_STACKTRACE_ON_FILTER): 'false'
         ])
-        def originalErr = System.err
-        def baos = new ByteArrayOutputStream()
-        System.setErr(new PrintStream(baos, true))
+        def logCapture = new LogCapture('StackTrace')
 
         when:
         closeBootstrapContext(context)
         GrailsUtil.deepSanitize(exceptionWithApplicationFrame())
 
         then: "no 'Full Stack Trace:' entry is emitted"
-        System.err.flush()
-        !baos.toString().contains(StackTraceFilterer.FULL_STACK_TRACE_MESSAGE)
+        logCapture.events.count { it.formattedMessage.contains(StackTraceFilterer.FULL_STACK_TRACE_MESSAGE) } == 0
 
         cleanup:
-        System.setErr(originalErr)
+        logCapture.close()
     }
 
     def 'defaults logFullStackTraceOnFilter to true on the promoted DefaultStackTraceFilterer'() {
         given:
         def context = contextWithProperties([:])
-        def originalErr = System.err
-        def baos = new ByteArrayOutputStream()
-        System.setErr(new PrintStream(baos, true))
+        def logCapture = new LogCapture('StackTrace')
 
         when:
         closeBootstrapContext(context)
         GrailsUtil.deepSanitize(exceptionWithApplicationFrame())
 
         then: 'the positive control proving the negative case above is meaningful'
-        System.err.flush()
-        baos.toString().contains(StackTraceFilterer.FULL_STACK_TRACE_MESSAGE)
+        logCapture.events.any { it.formattedMessage.contains(StackTraceFilterer.FULL_STACK_TRACE_MESSAGE) }
 
         cleanup:
-        System.setErr(originalErr)
+        logCapture.close()
     }
 
     private static StackTraceFilterer promotedFilterer(GenericApplicationContext context) {

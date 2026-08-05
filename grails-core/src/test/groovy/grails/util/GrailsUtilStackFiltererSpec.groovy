@@ -18,6 +18,7 @@
  */
 package grails.util
 
+import org.apache.grails.core.testing.support.LogCapture
 import org.grails.exceptions.reporting.DefaultStackTraceFilterer
 import org.grails.exceptions.reporting.StackTraceFilterer
 import spock.lang.Specification
@@ -104,10 +105,8 @@ class GrailsUtilStackFiltererSpec extends Specification {
     }
 
     def 'installed DefaultStackTraceFilterer honours logFullStackTraceOnFilter=false'() {
-        given: 'captured System.err'
-        def originalErr = System.err
-        def baos = new ByteArrayOutputStream()
-        System.setErr(new PrintStream(baos, true))
+        given: 'a configured log appender to capture the StackTrace log entry'
+        def logCapture = new LogCapture('StackTrace')
 
         and: 'a filterer with the side-effect emission disabled'
         def quietFilterer = new DefaultStackTraceFilterer()
@@ -118,18 +117,15 @@ class GrailsUtilStackFiltererSpec extends Specification {
         GrailsUtil.deepSanitize(exceptionWithApplicationFrame())
 
         then: "no 'Full Stack Trace:' entry is emitted"
-        System.err.flush()
-        !baos.toString().contains(StackTraceFilterer.FULL_STACK_TRACE_MESSAGE)
+        logCapture.events.count { it.formattedMessage.contains(StackTraceFilterer.FULL_STACK_TRACE_MESSAGE) } == 0
 
         cleanup:
-        System.setErr(originalErr)
+        logCapture.close()
     }
 
     def 'installed DefaultStackTraceFilterer emits Full Stack Trace by default'() {
-        given: 'captured System.err'
-        def originalErr = System.err
-        def baos = new ByteArrayOutputStream()
-        System.setErr(new PrintStream(baos, true))
+        given: 'a configured log appender to capture the StackTrace log entry'
+        def logCapture = new LogCapture('StackTrace')
 
         and: 'a filterer with the default (enabled) side-effect emission'
         def loudFilterer = new DefaultStackTraceFilterer()
@@ -139,11 +135,10 @@ class GrailsUtilStackFiltererSpec extends Specification {
         GrailsUtil.deepSanitize(exceptionWithApplicationFrame())
 
         then: "a 'Full Stack Trace:' entry is emitted -- the positive control proving the negative case above is meaningful"
-        System.err.flush()
-        baos.toString().contains(StackTraceFilterer.FULL_STACK_TRACE_MESSAGE)
+        logCapture.events.any { it.formattedMessage.contains(StackTraceFilterer.FULL_STACK_TRACE_MESSAGE) }
 
         cleanup:
-        System.setErr(originalErr)
+        logCapture.close()
     }
 
     private static RuntimeException exceptionWithApplicationFrame() {

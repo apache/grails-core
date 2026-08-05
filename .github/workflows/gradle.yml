@@ -57,6 +57,11 @@ jobs:
           ./gradlew validateDependencyVersions
           --continue
           --stacktrace
+      - name: "🔍 Validate grails-core production classpath"
+        run: >
+          ./gradlew validateProductionClasspath
+          --continue
+          --stacktrace
       - name: "🔍 Validate grails-gradle dependency versions"
         working-directory: 'grails-gradle'
         run: >
