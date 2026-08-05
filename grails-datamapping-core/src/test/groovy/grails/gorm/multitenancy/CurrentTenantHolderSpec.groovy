@@ -20,6 +20,7 @@ package grails.gorm.multitenancy
 
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.multitenancy.exceptions.TenantException
 import spock.lang.Specification
 
 /**
@@ -47,6 +48,35 @@ class CurrentTenantHolderSpec extends Specification {
         CurrentTenantHolder.withTenant(datastore, 'tenant1') {
             CurrentTenantHolder.get() == 'tenant1'
         }
+    }
+
+    void "get() throws when different tenants are bound for different datastores"() {
+        given:
+        def datastoreA = Mock(Datastore)
+        def datastoreB = Mock(Datastore)
+
+        when:
+        CurrentTenantHolder.withTenant(datastoreA, 'tenantA') {
+            CurrentTenantHolder.withTenant(datastoreB, 'tenantB') {
+                CurrentTenantHolder.get()
+            }
+        }
+
+        then:
+        thrown(TenantException)
+    }
+
+    void "get() does not throw when the same tenant id is bound for multiple datastores"() {
+        given:
+        def datastoreA = Mock(Datastore)
+        def datastoreB = Mock(Datastore)
+
+        expect:
+        CurrentTenantHolder.withTenant(datastoreA, 'sameTenant') {
+            CurrentTenantHolder.withTenant(datastoreB, 'sameTenant') {
+                CurrentTenantHolder.get()
+            }
+        } == 'sameTenant'
     }
 
     void "get(Datastore) returns null when nothing is bound for that datastore"() {
