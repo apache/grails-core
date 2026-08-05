@@ -545,6 +545,34 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     }
 
     /**
+     * Deletes every persisted instance of this class.
+     *
+     * To delete a subset, build a query and delete through it — for example
+     * {@code Book.where { author == 'X' }.deleteAll()}.
+     *
+     * @return The number of objects deleted
+     */
+    @Generated
+    static Number deleteAll() {
+        currentGormStaticApi().deleteAll()
+    }
+
+    /**
+     * Deletes every persisted instance of this class.
+     *
+     * {@code params} controls how the delete is executed; it does not narrow what is deleted. The
+     * supported argument is {@code flush}. To delete a subset, build a query and delete through it —
+     * for example {@code Book.where { author == 'X' }.deleteAll()}.
+     *
+     * @param params The arguments, e.g. {@code [flush: true]}
+     * @return The number of objects deleted
+     */
+    @Generated
+    static Number deleteAll(Map params) {
+        currentGormStaticApi().deleteAll(params)
+    }
+
+    /**
      * Deletes a list of objects in one go
      * @param objectsToDelete The objects to delete
      */

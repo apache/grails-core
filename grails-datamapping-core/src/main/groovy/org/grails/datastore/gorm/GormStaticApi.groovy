@@ -515,6 +515,22 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     }
 
     @Override
+    Number deleteAll() {
+        deleteAll(Collections.emptyMap())
+    }
+
+    @Override
+    Number deleteAll(Map params) {
+        execute({ Session session ->
+            Number deleted = session.deleteAll(new DetachedCriteria(persistentClass))
+            if (params?.flush) {
+                session.flush()
+            }
+            return deleted
+        } as SessionCallback<Number>)
+    }
+
+    @Override
     void deleteAll(Iterable objectsToDelete) {
         execute({ Session session ->
             for (obj in objectsToDelete) {

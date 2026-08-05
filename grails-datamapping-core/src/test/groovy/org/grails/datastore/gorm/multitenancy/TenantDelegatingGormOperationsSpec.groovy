@@ -72,6 +72,33 @@ class TenantDelegatingGormOperationsSpec extends Specification {
         0 * delegate.save(_, _)
     }
 
+    void "deleteAll() delegates to the wrapped operations under the bound tenant"() {
+        given:
+        def delegate = Mock(GormAllOperations)
+        def ops = buildOperations(delegate)
+
+        when:
+        def result = ops.deleteAll()
+
+        then:
+        1 * delegate.deleteAll() >> 5
+        result == 5
+    }
+
+    void "deleteAll(Map) delegates to the wrapped operations under the bound tenant"() {
+        given:
+        def delegate = Mock(GormAllOperations)
+        def ops = buildOperations(delegate)
+        def params = [flush: true]
+
+        when:
+        def result = ops.deleteAll(params)
+
+        then:
+        1 * delegate.deleteAll(params) >> 3
+        result == 3
+    }
+
     void "deleteAll(Iterable) delegates to the wrapped operations under the bound tenant"() {
         given:
         def delegate = Mock(GormAllOperations)

@@ -22,6 +22,7 @@ import grails.gorm.annotation.Entity
 import grails.gorm.multitenancy.Tenants
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.Session
+import org.grails.datastore.mapping.core.SessionCallback
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSources
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
@@ -338,6 +339,55 @@ class GormStaticApiSpec extends Specification {
         varargsIds.size() == 2
         iterableIds.size() == 1
         api.count() == 3
+    }
+
+    void "deleteAll removes every persisted instance of the entity"() {
+        given:
+        def api = new GormStaticApi(GormStaticApiThing, datastore, [])
+        new GormStaticApiThing(name: 'a').save(flush: true)
+        new GormStaticApiThing(name: 'b').save(flush: true)
+
+        when:
+        api.deleteAll()
+
+        then:
+        api.count() == 0
+    }
+
+    void "deleteAll(Map) deletes every instance and reports how many"() {
+        given:
+        def api = new GormStaticApi(GormStaticApiThing, datastore, [])
+        new GormStaticApiThing(name: 'a').save(flush: true)
+        new GormStaticApiThing(name: 'b').save(flush: true)
+
+        when:
+        def deleted = api.deleteAll([:])
+
+        then:
+        deleted == 2
+        api.count() == 0
+    }
+
+    void "deleteAll(Map) honours the flush argument"() {
+        given:
+        def session = Mock(Session)
+        def api = new GormStaticApi(GormStaticApiThing, datastore, []) {
+            @Override protected Object execute(SessionCallback callback) { callback.doInSession(session) }
+        }
+
+        when:
+        api.deleteAll([flush: true])
+
+        then:
+        1 * session.deleteAll(_) >> 3
+        1 * session.flush()
+
+        when:
+        api.deleteAll([:])
+
+        then: "without flush: true the session is left to the caller's flush policy"
+        1 * session.deleteAll(_) >> 3
+        0 * session.flush()
     }
 
     void "deleteAll(Iterable) and deleteAll(varargs) remove exactly the given instances"() {
