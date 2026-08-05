@@ -23,6 +23,7 @@ import grails.gorm.annotation.Entity
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
+import org.grails.datastore.mapping.reflect.MetaClassUtils
 import org.grails.datastore.mapping.simple.SimpleMapDatastore
 import spock.lang.AutoCleanup
 import spock.lang.Specification
@@ -147,6 +148,42 @@ class GormEnhancerCoverageSpec extends Specification {
         ds.close()
     }
 
+    void "addInstanceMethods does not clobber a pre-existing instance methodMissing handler"() {
+        given: "another plugin/application has already installed an instance methodMissing handler"
+        def ds = new SimpleMapDatastore(GormEnhancerClobberGuardThing)
+        def enhancer = new GormEnhancer(ds, null, new ConnectionSourceSettings())
+        def entity = ds.mappingContext.getPersistentEntity(GormEnhancerClobberGuardThing.name)
+        def mc = MetaClassUtils.getExpandoMetaClass(GormEnhancerClobberGuardThing)
+        mc.methodMissing = { String name, args -> 'existing-instance-handler' }
+        def instance = new GormEnhancerClobberGuardThing(name: 'a')
+
+        when:
+        enhancer.addInstanceMethods(entity)
+
+        then: "the pre-existing handler is left in place, not overwritten by GORM's dispatch"
+        mc.invokeMethod(instance, 'someUnknownInstanceMethod', [] as Object[]) == 'existing-instance-handler'
+
+        cleanup:
+        ds.close()
+    }
+
+    void "addInstanceMethods installs GORM's instance dispatch when nothing else has claimed it"() {
+        given:
+        def ds = new SimpleMapDatastore(GormEnhancerClobberGuardThing)
+        def enhancer = new GormEnhancer(ds, null, new ConnectionSourceSettings())
+        def entity = ds.mappingContext.getPersistentEntity(GormEnhancerClobberGuardThing.name)
+        def mc = MetaClassUtils.getExpandoMetaClass(GormEnhancerClobberGuardThing)
+
+        when:
+        enhancer.addInstanceMethods(entity)
+
+        then: "the entity's instances now resolve unknown methods through the installed dispatch"
+        mc.getMetaMethod('methodMissing', [String, Object] as Class[]) != null
+
+        cleanup:
+        ds.close()
+    }
+
     void "a real dynamic-finder call on the entity class routes through the trait's static methodMissing hook"() {
         given:
         datastore.withSession {
@@ -210,6 +247,12 @@ class MultiTenantCoverageThing implements MultiTenant<MultiTenantCoverageThing> 
 
 @Entity
 class GormEnhancerGatingThing {
+
+    String name
+}
+
+@Entity
+class GormEnhancerClobberGuardThing {
 
     String name
 }

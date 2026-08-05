@@ -292,7 +292,7 @@ class GormEnhancer implements Closeable {
     protected void addStaticMethods(PersistentEntity e) {
         def cls = e.javaClass
         ExpandoMetaClass mc = MetaClassUtils.getExpandoMetaClass(cls)
-        
+
         mc.static.methodMissing = { String name, args ->
             def api = registry.findStaticApi(cls, null)
             try {
@@ -320,6 +320,12 @@ class GormEnhancer implements Closeable {
     protected void addInstanceMethods(PersistentEntity e) {
         Class cls = e.javaClass
         ExpandoMetaClass mc = MetaClassUtils.getExpandoMetaClass(cls)
+
+        if (mc.getMetaMethod('methodMissing', [String, Object] as Class[]) != null) {
+            // See addStaticMethods: defer to a handler someone else installed rather than clobbering it.
+            log.debug('Not installing GORM instance missing-method dispatch on {}: a handler is already installed', cls.name)
+            return
+        }
 
         mc.methodMissing = { String name, args ->
             def api = registry.findInstanceApi(cls, null)
