@@ -20,6 +20,7 @@
 package org.grails.core.io.support
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 
 import org.springframework.core.OrderComparator
 import org.springframework.util.Assert
@@ -35,6 +36,7 @@ import org.grails.io.support.FactoriesLoaderSupport
  * @since 2.4
  * @author Graeme Rocher
  */
+@Slf4j
 @CompileStatic
 class GrailsFactoriesLoader extends FactoriesLoaderSupport {
 
@@ -99,6 +101,58 @@ class GrailsFactoriesLoader extends FactoriesLoaderSupport {
         }
         OrderComparator.sort((List<T>) results)
         results
+    }
+
+    /**
+     * Loads factory class names grouped by the resource that declares them without loading the
+     * classes themselves. This lets callers that need diagnostic context apply stricter class
+     * loading semantics than the framework-wide best-effort factory loader.
+     */
+    static Map<String, List<String>> loadFactoryDeclarations(
+            Class<?> factoryClass,
+            ClassLoader classLoader = GrailsFactoriesLoader.classLoader,
+            String resourceLocation = FACTORIES_RESOURCE_LOCATION) {
+        Assert.notNull(factoryClass, "'factoryClass' must not be null")
+        loadFactoryDeclarations(factoryClass.name, classLoader, resourceLocation)
+    }
+
+    static Map<String, List<String>> loadFactoryDeclarations(
+            String factoryClassName,
+            ClassLoader classLoader = GrailsFactoriesLoader.classLoader,
+            String resourceLocation = FACTORIES_RESOURCE_LOCATION) {
+        Assert.hasText(factoryClassName, "'factoryClassName' must not be empty")
+        ClassLoader factoryClassLoader = classLoader ?: GrailsFactoriesLoader.classLoader
+        Map<String, List<String>> declarations = new LinkedHashMap<>()
+        Enumeration<URL> resources = factoryClassLoader.getResources(resourceLocation)
+        while (resources.hasMoreElements()) {
+            URL resource = resources.nextElement()
+            Properties properties = new Properties()
+            try {
+                resource.openStream().withCloseable { InputStream input ->
+                    properties.load(input)
+                }
+            }
+            catch (IOException | IllegalArgumentException e) {
+                log.warn('Unable to read factory declarations from \'{}\'; skipping it. Any factories declared in that resource are unavailable.',
+                        resource.toExternalForm(), e)
+                continue
+            }
+
+            List<String> factoryNames = []
+            String declaredFactories = properties.getProperty(factoryClassName)
+            if (declaredFactories) {
+                for (String factoryName : declaredFactories.split(',')) {
+                    String trimmedName = factoryName.trim()
+                    if (trimmedName) {
+                        factoryNames.add(trimmedName)
+                    }
+                }
+            }
+            if (factoryNames) {
+                declarations.putIfAbsent(resource.toExternalForm(), factoryNames)
+            }
+        }
+        declarations
     }
 
     static <T> List<Class<T>> loadFactoryClasses(Class<T> factoryClass, ClassLoader classLoader = GrailsFactoriesLoader.classLoader,

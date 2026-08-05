@@ -23,6 +23,7 @@ plugins {
     id 'groovy'
     id 'java-library'
     id 'project-report'
+    id 'org.apache.grails.gradle.grails-plugin-cli'
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
@@ -36,8 +37,23 @@ plugins {
 version = projectVersion
 group = 'org.apache.grails.bootstrap'
 
+cliArtifact {
+    automaticModuleName = 'org.apache.grails.bootstrap.cli'
+    // the console tier wires its own dependencies below
+    defaultDependencies = false
+}
+
 dependencies {
     implementation platform(project(':grails-bom'))
+
+    // the console, its print streams and the jline completion handler are developer tooling: they are
+    // published as the grails-bootstrap-cli companion and never reach an application runtime classpath
+    cliImplementation platform(project(':grails-bom'))
+    cliApi project(project.path)
+    cliApi 'org.jline:jline'
+    cliImplementation 'org.springframework.boot:spring-boot'
+    cliImplementation 'org.apache.groovy:groovy'
+    cliImplementation 'org.apache.groovy:groovy-ant'
 
     implementation 'org.springframework:spring-context'
     implementation 'org.springframework.boot:spring-boot-autoconfigure'
@@ -52,16 +68,12 @@ dependencies {
     compileOnly 'org.apache.groovy:groovy-ant'
 
     compileOnly 'io.methvin:directory-watcher'
-    compileOnly 'org.fusesource.jansi:jansi'
-    compileOnly 'org.jline:jline'
     compileOnly 'net.java.dev.jna:jna'
 
     api 'org.yaml:snakeyaml'
 
     testImplementation 'org.apache.groovy:groovy-xml'
     testImplementation 'org.apache.groovy:groovy-templates'
-    testImplementation 'org.fusesource.jansi:jansi'
-    testImplementation 'org.jline:jline'
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
