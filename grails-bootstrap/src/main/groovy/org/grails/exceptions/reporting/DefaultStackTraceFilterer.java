@@ -18,7 +18,6 @@
  */
 package org.grails.exceptions.reporting;
 
-import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -36,11 +35,9 @@ public class DefaultStackTraceFilterer implements StackTraceFilterer {
     public static final String STACK_LOG_NAME = "StackTrace";
     /**
      * Dedicated logger for exception stack traces. The filterer emits the unfiltered
-     * trace to this logger and {@link System#err} as a side effect of {@link #filter(Throwable)} —
-     * before the trace is trimmed in place — when {@link #logFullStackTraceOnFilter} is {@code true}
-     * (the default). Emitting to the current error stream ensures the trace is not lost when a
-     * logging backend has no provider or retains an earlier stream reference.
-     * {@code GrailsExceptionResolver} also emits to this logger when
+     * trace to this logger as a side effect of {@link #filter(Throwable)} — before the
+     * trace is trimmed in place — when {@link #logFullStackTraceOnFilter} is {@code true}
+     * (the default). {@code GrailsExceptionResolver} also emits to this logger when
      * {@code grails.exceptionresolver.logFullStackTrace} is enabled. Exposed as a public
      * constant so that subclasses and logback configurations can reference the logger
      * name symbolically.
@@ -92,7 +89,7 @@ public class DefaultStackTraceFilterer implements StackTraceFilterer {
 
     /**
      * Controls whether {@link #filter(Throwable)} emits the unfiltered stack trace
-     * to {@link #STACK_LOG} and {@link System#err} as a side effect before trimming the trace in place.
+     * to {@link #STACK_LOG} as a side effect before trimming the trace in place.
      * Defaults to {@code true} for backwards compatibility with pre-7.1 behaviour;
      * set to {@code false} to disable the side-effect emission. The exception
      * resolver wires this from {@code grails.exceptionresolver.logFullStackTraceOnFilter}.
@@ -132,9 +129,6 @@ public class DefaultStackTraceFilterer implements StackTraceFilterer {
                 // emit the unfiltered trace before mutating in place; once setStackTrace(clean)
                 // runs the original frames are gone
                 STACK_LOG.error(FULL_STACK_TRACE_MESSAGE, source);
-                PrintStream errorStream = System.err;
-                errorStream.println(FULL_STACK_TRACE_MESSAGE);
-                source.printStackTrace(errorStream);
             }
             StackTraceElement[] clean = new StackTraceElement[newTrace.size()];
             newTrace.toArray(clean);
