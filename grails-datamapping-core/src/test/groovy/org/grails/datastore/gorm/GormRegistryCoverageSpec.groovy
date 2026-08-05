@@ -357,6 +357,29 @@ class GormRegistryCoverageSpec extends Specification {
         registry.getDatastoreByString(GormRegistryCoverageThing.name, ConnectionSource.DEFAULT) == secondaryDs
     }
 
+    void "getDatastoreByString(DEFAULT) falls back deterministically to the entity's next declared connection after the one DEFAULT pointed to is removed"() {
+        given: "an entity mapped only to non-default connections, declared analytics first, then reporting, then audit"
+        def registry = new GormRegistry()
+        def analyticsDs = Stub(Datastore)
+        def reportingDs = Stub(Datastore)
+        def auditDs = Stub(Datastore)
+        def multiConnectionDs = Stub(MultipleConnectionSourceDatastore) {
+            getDatastoreForConnection('analytics') >> analyticsDs
+            getDatastoreForConnection('reporting') >> reportingDs
+            getDatastoreForConnection('audit') >> auditDs
+        }
+        registry.registerEntityDatastores(GormRegistryCoverageThing.name, multiConnectionDs, ['analytics', 'reporting', 'audit'], null)
+
+        expect: "registration deterministically pointed DEFAULT at the first declared connection"
+        registry.getDatastoreByString(GormRegistryCoverageThing.name, ConnectionSource.DEFAULT) == analyticsDs
+
+        when: "the datastore DEFAULT points to is torn down at runtime (e.g. a tenant/child datastore removal)"
+        registry.removeDatastore(analyticsDs)
+
+        then: "DEFAULT falls back to the entity's next declared connection (reporting), not to whichever remaining entry the map's iteration order happens to produce"
+        registry.getDatastoreByString(GormRegistryCoverageThing.name, ConnectionSource.DEFAULT) == reportingDs
+    }
+
     void "createClassDatastoreResolver builds a resolver that delegates to the api resolver for the normalized class and qualifier"() {
         given:
         def registry = new GormRegistry()

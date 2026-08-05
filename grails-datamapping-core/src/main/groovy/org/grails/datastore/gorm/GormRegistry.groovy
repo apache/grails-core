@@ -66,6 +66,10 @@ class GormRegistry {
 
     final Map<String, Datastore> datastoresByQualifier = new ConcurrentHashMap<>()
     private final Map<String, Map<String, Datastore>> entityDatastores = new ConcurrentHashMap<>()
+    // Records each entity's declared (non-DEFAULT) connection order, so a later removal that
+    // strips the DEFAULT routing can be repaired deterministically rather than falling back to
+    // entityDatastores' unspecified ConcurrentHashMap iteration order.
+    private final Map<String, List<String>> entityConnectionOrder = new ConcurrentHashMap<>()
     private final Map<Class, String> normalizedEntityKeysByClass = new ConcurrentHashMap<>()
     private final Map<String, String> normalizedEntityKeysByName = new ConcurrentHashMap<>()
     private final Map<String, String> normalizedQualifiers = new ConcurrentHashMap<>()
@@ -98,6 +102,7 @@ class GormRegistry {
         validationApiRegistry.clear()
         datastoresByQualifier.clear()
         entityDatastores.clear()
+        entityConnectionOrder.clear()
         normalizedEntityKeysByClass.clear()
         normalizedEntityKeysByName.clear()
         normalizedQualifiers.clear()
@@ -383,11 +388,13 @@ class GormRegistry {
             if (it.next().value == datastore) it.remove()
         }
 
-        for (Map<String, Datastore> entityMap in entityDatastores.values()) {
+        for (Map.Entry<String, Map<String, Datastore>> entry in entityDatastores.entrySet()) {
+            Map<String, Datastore> entityMap = entry.value
             Iterator<Map.Entry<String, Datastore>> eit = entityMap.entrySet().iterator()
             while (eit.hasNext()) {
                 if (eit.next().value == datastore) eit.remove()
             }
+            repairDefaultRouting(entry.key, entityMap)
         }
 
         staticApiRegistry.removeDatastore(datastore)
@@ -416,6 +423,30 @@ class GormRegistry {
                 while (eit.hasNext()) {
                     if (eit.next().value == datastore) eit.remove()
                 }
+                repairDefaultRouting(className, entityMap)
+            }
+        }
+    }
+
+    /**
+     * If removing a datastore stripped this entity's DEFAULT routing but left other declared
+     * connections behind, re-point DEFAULT deterministically at the earliest-declared connection
+     * that remains (per {@link #registerEntityDatastores}), rather than leaving unqualified
+     * lookups to fall back on entityDatastores' unspecified ConcurrentHashMap iteration order.
+     */
+    private void repairDefaultRouting(String className, Map<String, Datastore> mappedDatastores) {
+        if (mappedDatastores.isEmpty() || mappedDatastores.containsKey(ConnectionSource.DEFAULT)) {
+            return
+        }
+        List<String> declaredOrder = entityConnectionOrder.get(className)
+        if (declaredOrder == null) {
+            return
+        }
+        for (String qualifier in declaredOrder) {
+            Datastore candidate = mappedDatastores.get(qualifier)
+            if (candidate != null) {
+                mappedDatastores.put(ConnectionSource.DEFAULT, candidate)
+                return
             }
         }
     }
@@ -737,6 +768,7 @@ class GormRegistry {
         // put below: remove-then-repopulate would open a window where a concurrent lookup sees no
         // routing for this entity at all and falls back to the wrong datastore.
         Map<String, Datastore> newEntityDatastores = new ConcurrentHashMap<>()
+        List<String> declaredOrder = new ArrayList<>()
 
         Datastore primaryDatastore = defaultDatastore
 
@@ -772,6 +804,9 @@ class GormRegistry {
             }
             registerDatastoreByQualifier(normalizedQualifier, qualifierDatastore)
             newEntityDatastores.put(normalizedQualifier, qualifierDatastore)
+            if (!ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
+                declaredOrder.add(normalizedQualifier)
+            }
         }
 
         // If the entity does not explicitly include DEFAULT, route its unqualified (no-connection)
@@ -791,9 +826,11 @@ class GormRegistry {
 
         if (newEntityDatastores.isEmpty()) {
             entityDatastores.remove(normalizedClassName)
+            entityConnectionOrder.remove(normalizedClassName)
         }
         else {
             entityDatastores.put(normalizedClassName, newEntityDatastores)
+            entityConnectionOrder.put(normalizedClassName, Collections.unmodifiableList(declaredOrder))
         }
     }
 
