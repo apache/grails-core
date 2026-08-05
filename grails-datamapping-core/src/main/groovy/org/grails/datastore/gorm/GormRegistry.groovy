@@ -242,9 +242,11 @@ class GormRegistry {
                 if (ds != null) {
                     return ds
                 }
-                if (ConnectionSource.DEFAULT.equals(normalizedQualifier) && !mappedDatastores.isEmpty()) {
-                    return mappedDatastores.values().iterator().next()
-                }
+                // No fallback to "whichever datastore this entity happens to be mapped to". The
+                // entity's unqualified (DEFAULT) route is decided deterministically at registration
+                // time (see registerEntityDatastores/repairDefaultRouting) and stored under the
+                // DEFAULT key; picking an arbitrary map entry here would make an entity mapped only
+                // to non-default connections read/write a different database between runs.
                 Datastore qualifierDs = datastoresByQualifier.get(normalizedQualifier)
                 if (qualifierDs != null && qualifierDs.getMappingContext()?.getPersistentEntity(normalizedClassName) != null) {
                     return qualifierDs
