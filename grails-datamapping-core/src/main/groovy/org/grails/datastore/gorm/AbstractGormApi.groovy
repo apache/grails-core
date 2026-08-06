@@ -48,9 +48,23 @@ import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 @CompileStatic
 abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
 
-    protected static final List<String> EXCLUDES = [
-        'wait', 'notify', 'notifyAll', 'toString', 'hashCode', 'equals', 'getClass',
-        'getMetaClass', 'setMetaClass', 'getProperty', 'setProperty', 'invokeMethod'
+    static final List<String> EXCLUDES = [
+        'setProperty',
+        'getProperty',
+        'getMetaClass',
+        'setMetaClass',
+        'invokeMethod',
+        'getMethods',
+        'getExtendedMethods',
+        'wait',
+        'equals',
+        'toString',
+        'hashCode',
+        'getClass',
+        'notify',
+        'notifyAll',
+        'setTransactionManager',
+        'getTransactionManager'
     ]
 
     private static final Map<Class, List<Method>> METHODS_CACHE = new ConcurrentHashMap<>()

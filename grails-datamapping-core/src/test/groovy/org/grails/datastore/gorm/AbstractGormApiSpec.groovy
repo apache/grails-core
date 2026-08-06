@@ -116,14 +116,30 @@ class AbstractGormApiSpec extends Specification {
         extendedMethods.any { it.name == 'customExtraMethod' }
         !extendedMethods.any { it.name == 'get' }
 
-        and: "excluded Object/GroovyObject-level methods never appear in either list"
-        !methods.any { it.name in AbstractGormApi.EXCLUDES }
+        and: "excluded Object/GroovyObject/GORM-housekeeping methods never appear in either list"
+        ['getClass', 'getMetaClass', 'setMetaClass', 'getProperty', 'setProperty', 'invokeMethod',
+         'wait', 'notify', 'notifyAll', 'equals', 'toString', 'hashCode', 'getMethods',
+         'getExtendedMethods', 'getTransactionManager', 'setTransactionManager'].every { excluded ->
+            !methods.any { it.name == excluded }
+        }
 
         when: "requesting the methods again"
         def methodsAgain = api.getMethods()
 
         then: "the same cached list instance is returned"
         methodsAgain.is(methods)
+    }
+
+    void "EXCLUDES is publicly accessible and lists the exact Object/GroovyObject/GORM-housekeeping method names to hide"() {
+        expect: "the field is reachable as a public static Groovy property, not just protected"
+        AbstractGormApi.EXCLUDES.is(AbstractGormApi.getEXCLUDES())
+
+        and: "the exact set jdaugherty's review restored, plus getTransactionManager for the new abstract getter"
+        AbstractGormApi.EXCLUDES as Set == [
+            'setProperty', 'getProperty', 'getMetaClass', 'setMetaClass', 'invokeMethod',
+            'getMethods', 'getExtendedMethods', 'wait', 'equals', 'toString', 'hashCode',
+            'getClass', 'notify', 'notifyAll', 'setTransactionManager', 'getTransactionManager'
+        ] as Set
     }
 
     void "ConstantDatastoreResolver always resolves to the datastore it was constructed with"() {
