@@ -138,16 +138,25 @@ public class Holders {
                 return grailsApplication;
             }
         }
-        synchronized (applicationSingletonMonitor) {
-            drainFailedApplications();
-            return applicationSingleton.get();
-        }
+        return findGrailsApplicationFallback();
     }
 
     public static GrailsApplication getGrailsApplication() {
         GrailsApplication grailsApplication = findApplication();
         Assert.notNull(grailsApplication, "GrailsApplication not found");
         return grailsApplication;
+    }
+
+    /**
+     * Returns the fallback Grails application without invoking discovery strategies.
+     *
+     * @return the fallback application, or {@code null}
+     */
+    public static GrailsApplication findGrailsApplicationFallback() {
+        synchronized (applicationSingletonMonitor) {
+            drainFailedApplications();
+            return applicationSingleton.get();
+        }
     }
 
     /**

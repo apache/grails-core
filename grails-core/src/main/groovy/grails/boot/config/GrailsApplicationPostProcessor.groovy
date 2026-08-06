@@ -240,7 +240,9 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
     void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         def springConfig = new DefaultRuntimeSpringConfiguration()
         def application = grailsApplication
-        Holders.setGrailsApplication(application)
+        if (!earlyPluginRegistrationRan) {
+            Holders.setGrailsApplication(application)
+        }
 
         if (!earlyPluginRegistrationRan) {
             // first register plugin beans; when the early phase ran they were

@@ -74,6 +74,15 @@ interface Settings {
     String PLUGIN_EXCLUDES = 'grails.plugin.excludes'
 
     /**
+     * Whether legacy {@code doWithSpring} closures can access the application through
+     * {@code Holders}. Defaults to {@code false}; enable only while migrating those closures away
+     * from global {@code Holders} access.
+     *
+     * @since 8.0
+     */
+    String LEGACY_HOLDERS_DURING_DO_WITH_SPRING = 'grails.legacy.holdersDuringDoWithSpring'
+
+    /**
      * Whether to include the jsessionid in the rendered links
      **/
     String GRAILS_VIEWS_ENABLE_JSESSIONID = 'grails.views.enable.jsessionid'

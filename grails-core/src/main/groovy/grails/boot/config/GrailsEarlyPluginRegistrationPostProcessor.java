@@ -42,6 +42,7 @@ import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.io.Resource;
 import org.springframework.util.ClassUtils;
 
+import grails.config.Settings;
 import grails.core.DefaultGrailsApplication;
 import grails.core.GrailsApplication;
 import grails.core.GrailsApplicationClass;
@@ -126,7 +127,7 @@ public class GrailsEarlyPluginRegistrationPostProcessor
         // success path leaves it set and resets on refresh via the listener added at the end.
         GrailsApplication previousGrailsApplication = null;
         GrailsApplication publishedGrailsApplication = null;
-        boolean grailsApplicationPublished = false;
+        boolean publishedToLegacyHolder = false;
         Environment.setInitializing(true);
         try {
             DefaultGrailsApplication grailsApplication = new DefaultGrailsApplication();
@@ -151,11 +152,21 @@ public class GrailsEarlyPluginRegistrationPostProcessor
             }
 
             RuntimeSpringConfiguration springConfig = new DefaultRuntimeSpringConfiguration();
-            // Legacy doWithSpring closures access the application through Holders during configuration.
-            // Discovery strategies retain their existing precedence over this fallback, as they did in Grails 7.
-            previousGrailsApplication = Holders.replaceGrailsApplication(grailsApplication);
-            publishedGrailsApplication = grailsApplication;
-            grailsApplicationPublished = true;
+            boolean legacyHoldersDuringDoWithSpring = applicationContext.getEnvironment()
+                    .getProperty(Settings.LEGACY_HOLDERS_DURING_DO_WITH_SPRING, Boolean.class, false);
+            // This opt-in shim preserves Grails 7 compatibility for plugins that read Holders in
+            // doWithSpring. It is disabled by default because that global publication is unsafe
+            // during early plugin registration; plugins should migrate to injected dependencies.
+            if (legacyHoldersDuringDoWithSpring) {
+                LOG.warn("legacy doWithSpring compatibility shim is enabled. Migrate closures away from Holders access and remove '{}'",
+                        Settings.LEGACY_HOLDERS_DURING_DO_WITH_SPRING);
+                previousGrailsApplication = Holders.replaceGrailsApplication(grailsApplication);
+                publishedGrailsApplication = grailsApplication;
+                publishedToLegacyHolder = true;
+            }
+            else {
+                previousGrailsApplication = Holders.findGrailsApplicationFallback();
+            }
             pluginManager.doRuntimeConfiguration(springConfig);
             springConfig.registerBeansWithRegistry(registry);
             applyBeanRegistrars(pluginManager, registry);
@@ -169,11 +180,14 @@ public class GrailsEarlyPluginRegistrationPostProcessor
             // present in every context that runs this phase — reset here as well so the flag does not
             // leak once the context is up.
             applicationContext.addApplicationListener(this);
+            if (!publishedToLegacyHolder) {
+                Holders.restoreGrailsApplication(previousGrailsApplication, grailsApplication);
+            }
         }
         catch (Throwable e) {
             Environment.setInitializing(false);
-            if (grailsApplicationPublished) {
-                Holders.restoreGrailsApplication(publishedGrailsApplication, previousGrailsApplication);
+            if (publishedToLegacyHolder) {
+                Holders.restoreGrailsApplicationAfterFailure(publishedGrailsApplication, previousGrailsApplication);
             }
             if (e instanceof RuntimeException runtimeException) {
                 throw runtimeException;
