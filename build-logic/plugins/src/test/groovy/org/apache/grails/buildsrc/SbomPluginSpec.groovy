@@ -18,12 +18,21 @@
  */
 package org.apache.grails.buildsrc
 
+import org.gradle.api.GradleException
 import org.gradle.api.Project
+import org.gradle.api.logging.Logging
 import org.gradle.api.provider.Property
 import org.gradle.testfixtures.ProjectBuilder
 import spock.lang.Specification
 
 class SbomPluginSpec extends Specification {
+
+    private static final def LOGGER = Logging.getLogger(SbomPluginSpec)
+    private static final String HIBERNATE_COMMONS = 'pkg:maven/org.hibernate.common/hibernate-commons-annotations@5.1.2.Final?type=jar'
+
+    private static List lgplChoice() {
+        [[license: [id: 'LGPL-2.1-only']]]
+    }
 
     static class FakeCliArtifactExtension {
         final Property<String> artifactId
@@ -70,5 +79,22 @@ class SbomPluginSpec extends Specification {
 
         then: "the sbom file name tracks the custom name, not the <project>-cli default"
         location.get().asFile.name == 'grails-core-custom-cli-8.0.0-sbom.json'
+    }
+
+    void "a category-X license is permitted when exempted for the sbom component (cli companion)"() {
+        expect: "the hibernate 5 LGPL exemption keyed to the dbmigration cli companion is honoured"
+        SbomPlugin.pickLicense(LOGGER, 'grails-data-hibernate5-dbmigration',
+                'grails-data-hibernate5-dbmigration-cli', HIBERNATE_COMMONS, lgplChoice()) != null
+    }
+
+    void "an unexempted category-X license fails naming the sbom component, not just the project"() {
+        when: "the same LGPL dependency appears in an sbom component with no matching exemption"
+        SbomPlugin.pickLicense(LOGGER, 'grails-data-hibernate5-dbmigration',
+                'grails-data-hibernate5-dbmigration', HIBERNATE_COMMONS, lgplChoice())
+
+        then: "the failure identifies the offending sbom component"
+        GradleException e = thrown(GradleException)
+        e.message.contains('grails-data-hibernate5-dbmigration')
+        e.message.contains('LGPL-2.1-only')
     }
 }

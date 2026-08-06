@@ -84,6 +84,139 @@ class GrailsViolationAggregationPluginSpec extends Specification {
         result.output.contains('aggregateJacocoCoverage')
     }
 
+    def "generated profile wrappers avoid convention validation implicit dependencies"() {
+        given: "a source-tree convention input and the legacy wrapper copy output"
+        testProjectDir.resolve('settings.gradle').toFile().text = ''
+        testProjectDir.resolve('AGENTS.md').toFile().text = ''
+        testProjectDir.resolve('.asf.yaml').toFile().text = ''
+        def i18n = testProjectDir.resolve('skeleton/grails-app/i18n/messages.properties').toFile()
+        i18n.parentFile.mkdirs()
+        i18n.text = 'message=Message\n'
+        def staleWrappers = [
+                'grails-wrapper.jar': 'stale-jar',
+                'grailsw': 'stale-shell',
+                'grailsw.bat': 'stale-bat',
+        ]
+        staleWrappers.each { String name, String content ->
+            new File(testProjectDir.resolve('skeleton').toFile(), name).text = content
+        }
+        def wrapper = testProjectDir.resolve('wrapper').toFile()
+        wrapper.mkdirs()
+        def generatedWrappers = [
+                'grails-wrapper.jar': 'generated-jar',
+                'grailsw': 'generated-shell',
+                'grailsw.bat': 'generated-bat',
+        ]
+        generatedWrappers.each { String name, String content ->
+            new File(wrapper, name).text = content
+        }
+        new File(wrapper, 'LICENSE').text = 'license'
+        new File(wrapper, 'NOTICE').text = 'notice'
+        testProjectDir.resolve('build.gradle').toFile().text = '''
+            plugins {
+                id 'org.apache.grails.gradle.grails-violation-aggregation'
+            }
+
+            def copyWrapper = tasks.register('copyGrailsWrapperScripts', Copy) {
+                from('wrapper')
+                into(layout.projectDirectory.dir('skeleton'))
+            }
+            tasks.register('packageProfile', Zip) {
+                dependsOn(copyWrapper)
+                from(layout.projectDirectory.dir('skeleton'))
+                archiveFileName.set('packageProfile.zip')
+                destinationDirectory.set(layout.buildDirectory.dir('distributions'))
+            }
+            tasks.register('sourcesJar', Zip) {
+                dependsOn(copyWrapper)
+                from(layout.projectDirectory.dir('skeleton'))
+                archiveFileName.set('sourcesJar.zip')
+                destinationDirectory.set(layout.buildDirectory.dir('distributions'))
+            }
+        '''
+
+        when: "Gradle 9 validates the old combined task graph"
+        def failedResult = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('validateRepositoryConventions', 'packageProfile', 'sourcesJar', '--stacktrace')
+                .withPluginClasspath()
+                .buildAndFail()
+
+        then: "the source-owned wrapper output is rejected"
+        failedResult.output.contains("Task ':validateRepositoryConventions' uses this output of task ':copyGrailsWrapperScripts'")
+
+        when: "wrappers are generated under build and consumed at the skeleton archive path"
+        def generatedOutput = testProjectDir.resolve('build/generated/wrapper').toFile()
+        generatedOutput.mkdirs()
+        new File(generatedOutput, 'NOTICE').text = 'stale-sidecar'
+        testProjectDir.resolve('build.gradle').toFile().text = '''
+            plugins {
+                id 'org.apache.grails.gradle.grails-violation-aggregation'
+            }
+
+            def wrapperFiles = ['grails-wrapper.jar', 'grailsw', 'grailsw.bat']
+            def sourceSkeleton = layout.projectDirectory.dir('skeleton').asFile
+            def copyWrapper = tasks.register('copyGrailsWrapperScripts', Sync) {
+                from('wrapper') {
+                    include 'grails-wrapper.jar'
+                    include 'grailsw'
+                    include 'grailsw.bat'
+                }
+                into(layout.buildDirectory.dir('generated/wrapper'))
+            }
+            tasks.register('packageProfile', Zip) {
+                exclude { details -> details.file.parentFile == sourceSkeleton && wrapperFiles.contains(details.name) }
+                from(sourceSkeleton) {
+                    into('skeleton')
+                }
+                from(copyWrapper) {
+                    into('skeleton')
+                }
+                archiveFileName.set('packageProfile.zip')
+                destinationDirectory.set(layout.buildDirectory.dir('distributions'))
+            }
+            tasks.register('sourcesJar', Zip) {
+                exclude { details -> details.file.parentFile == sourceSkeleton && wrapperFiles.contains(details.name) }
+                from(sourceSkeleton) {
+                    into('skeleton')
+                }
+                from(copyWrapper) {
+                    into('skeleton')
+                }
+                archiveFileName.set('sourcesJar.zip')
+                destinationDirectory.set(layout.buildDirectory.dir('distributions'))
+            }
+        '''
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('validateRepositoryConventions', 'packageProfile', 'sourcesJar', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+
+        then: "validation and wrapper packaging succeed together"
+        result.task(':validateRepositoryConventions').outcome == TaskOutcome.SUCCESS
+        result.task(':copyGrailsWrapperScripts').outcome == TaskOutcome.SUCCESS
+        result.task(':packageProfile').outcome == TaskOutcome.SUCCESS
+        result.task(':sourcesJar').outcome == TaskOutcome.SUCCESS
+        !new File(generatedOutput, 'NOTICE').exists()
+
+        and: "both archives retain source content and exactly the generated wrappers"
+        ['build/distributions/packageProfile.zip', 'build/distributions/sourcesJar.zip'].each { String archive ->
+            new java.util.zip.ZipFile(testProjectDir.resolve(archive).toFile()).withCloseable { zipFile ->
+                def entries = zipFile.entries()*.name
+                assert entries.contains('skeleton/grails-app/i18n/messages.properties')
+                generatedWrappers.each { String wrapperName, String generatedContent ->
+                    assert entries.count { it == 'skeleton/' + wrapperName } == 1
+                    zipFile.getInputStream(zipFile.getEntry('skeleton/' + wrapperName)).withCloseable { input ->
+                        assert input.getText('UTF-8') == generatedContent
+                    }
+                }
+                assert !entries.contains('skeleton/LICENSE')
+                assert !entries.contains('skeleton/NOTICE')
+            }
+        }
+    }
+
     def "canonical roots report a missing AGENTS.md"() {
         given:
         testProjectDir.resolve('settings.gradle').toFile().text = ''

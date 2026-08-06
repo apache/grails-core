@@ -129,6 +129,11 @@ tasks.named('test', Test) {
     classpath += configurations.enversRuntime
 }
 
+tasks.named('testCli', Test) {
+    systemProperty("java.util.logging.config.file", "src/test-cli/resources/logging.properties")
+    classpath += configurations.enversRuntime
+}
+
 tasks.named('jar', Jar) {
     exclude('testapp/**/**')
 }

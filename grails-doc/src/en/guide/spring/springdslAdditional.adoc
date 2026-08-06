@@ -205,3 +205,41 @@ class MyBeanImpl {
 Using `ref` (in XML or the DSL) is very powerful since it configures a runtime reference, so the referenced bean doesn't have to exist yet. As long as it's in place when the final application context configuration occurs, everything will be resolved correctly.
 
 For a full reference of the available beans see the plugin reference in the reference guide.
+
+
+==== Defining Beans at Compile Time with @GrailsBeans
+
+
+`resources.groovy` and `doWithSpring` wire their beans at runtime, every time the application starts. The link:{api}grails/compiler/beans/GrailsBeans.html[GrailsBeans] annotation is a compile-time alternative: a similar closure style of bean definition, compiled at build time into real `@Bean` factory methods — no closures, and nothing DSL-specific, survive into the bytecode.
+
+`@GrailsBeans` is not plugin-specific. It works on any class Spring Boot processes as a configuration source — including the application's own `Application` class, since Spring Boot reads `@Bean` methods directly off the class it is launched with. Declare a `beans` closure whose statements construct and return each bean:
+
+[source,groovy]
+----
+import grails.boot.GrailsApp
+import grails.boot.config.GrailsAutoConfiguration
+import my.company.MyBeanImpl
+
+class Application extends GrailsAutoConfiguration {
+
+    static void main(String[] args) {
+        GrailsApp.run(Application, args)
+    }
+
+    def beans = {
+        bean(MyService)
+
+        bean('myBean', MyBeanImpl) {
+            new MyBeanImpl(someProperty: 42, otherProperty: 'blue')
+        }
+    }
+}
+----
+
+Both the name and the body are optional. `bean(MyService)` declares a bean named `myService` — the type's decapitalized simple name — that is simply `new MyService()`; give it a name only when the type does not produce the one you want, and a body only when there is something to say beyond constructing it.
+
+No annotation is required on the `Application` class, or on a `*GrailsPlugin.groovy` plugin descriptor: a `beans` property on either is compiled automatically, in the same way `doWithSpring` and `watchedResources` are conventions rather than annotated members. `@GrailsBeans` is only needed on a class that is neither — a standalone `@AutoConfiguration` class, which must also be listed in `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports` like any other hand-written auto-configuration. Declaring the annotation explicitly on a plugin or application class is harmless, and a class with no `beans` property is left entirely alone.
+
+No further registration is needed on the `Application` class — Spring Boot already processes it. Beans declared here are also ordinary user beans as far as Spring Boot is concerned, so any auto-configuration guarded by `@ConditionalOnMissingBean` backs off in their favour, exactly as it would for a bean defined in `resources.groovy`. A standalone class annotated with both `@GrailsBeans` and `@AutoConfiguration` must instead be listed in `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`, like any other hand-written auto-configuration.
+
+The DSL's full surface — the `bean(...)` qualifiers such as `.conditionalOnMissingBean(...)`, `.primary()` and `.annotate(...)`, plus `field(...)` and `method(...)` for state and logic shared across bean methods — is documented in the link:plugins.html#hookingIntoRuntimeConfiguration[plugin development chapter], together with applying `@GrailsBeans` directly to a plugin descriptor.

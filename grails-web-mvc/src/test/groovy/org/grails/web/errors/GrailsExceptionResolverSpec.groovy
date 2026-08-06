@@ -23,6 +23,11 @@ import grails.core.GrailsApplication
 import grails.web.mapping.UrlMappingsHolder
 import grails.web.mapping.exceptions.UrlMappingException
 import org.grails.exceptions.reporting.DefaultStackTraceFilterer
+import org.apache.grails.core.GrailsBootstrapRegistryInitializer
+import org.grails.exceptions.reporting.StackTraceFilterer
+import org.springframework.beans.factory.BeanNotOfRequiredTypeException
+import org.springframework.beans.factory.NoSuchBeanDefinitionException
+import org.springframework.context.ApplicationContext
 import org.springframework.mock.web.MockHttpServletRequest
 import spock.lang.Specification
 
@@ -339,5 +344,88 @@ class GrailsExceptionResolverSpec extends Specification {
         msg.contains('apiToken: visible')
         !msg.contains('Password: secret')
         !msg.contains('TOKEN: abc123')
+    }
+
+    void "createStackFilterer reuses the StackTraceFilterer promoted by GrailsBootstrapRegistryInitializer instead of building a second copy"() {
+        given:
+        def promoted = new DefaultStackTraceFilterer()
+        def mainContext = Mock(ApplicationContext)
+        mainContext.getBean(GrailsBootstrapRegistryInitializer.STACK_TRACE_FILTERER_BEAN_NAME, StackTraceFilterer) >> promoted
+        def grailsApp = Mock(GrailsApplication)
+        grailsApp.getMainContext() >> mainContext
+        def resolver = new GrailsExceptionResolver()
+        resolver.grailsApplication = grailsApp
+
+        when:
+        resolver.createStackFilterer()
+
+        then: 'the promoted bean is reused verbatim'
+        resolver.stackFilterer.is(promoted)
+
+        and: 'config is never consulted since the promoted bean already had it applied at bootstrap time'
+        0 * grailsApp.getConfig()
+    }
+
+    void "createStackFilterer falls back to building from config when no StackTraceFilterer bean is promoted"() {
+        given:
+        def config = Mock(Config)
+        config.getProperty('grails.logging.stackTraceFiltererClass', Class, DefaultStackTraceFilterer) >> DefaultStackTraceFilterer
+        config.getProperty('grails.exceptionresolver.logFullStackTraceOnFilter', Boolean, true) >> true
+        def mainContext = Mock(ApplicationContext)
+        mainContext.getBean(GrailsBootstrapRegistryInitializer.STACK_TRACE_FILTERER_BEAN_NAME, StackTraceFilterer) >> { throw new NoSuchBeanDefinitionException(GrailsBootstrapRegistryInitializer.STACK_TRACE_FILTERER_BEAN_NAME) }
+        def grailsApp = Mock(GrailsApplication)
+        grailsApp.getMainContext() >> mainContext
+        grailsApp.getConfig() >> config
+        def resolver = new GrailsExceptionResolver()
+        resolver.grailsApplication = grailsApp
+
+        when:
+        resolver.createStackFilterer()
+
+        then:
+        resolver.stackFilterer instanceof DefaultStackTraceFilterer
+    }
+
+    void "createStackFilterer falls back to building from config when the application has no main context yet"() {
+        given:
+        def config = Mock(Config)
+        config.getProperty('grails.logging.stackTraceFiltererClass', Class, DefaultStackTraceFilterer) >> DefaultStackTraceFilterer
+        config.getProperty('grails.exceptionresolver.logFullStackTraceOnFilter', Boolean, true) >> true
+        def grailsApp = Mock(GrailsApplication)
+        grailsApp.getMainContext() >> null
+        grailsApp.getConfig() >> config
+        def resolver = new GrailsExceptionResolver()
+        resolver.grailsApplication = grailsApp
+
+        when:
+        resolver.createStackFilterer()
+
+        then:
+        noExceptionThrown()
+        resolver.stackFilterer instanceof DefaultStackTraceFilterer
+    }
+
+    void "createStackFilterer falls back to building from config when a bean of an unrelated type holds the name"() {
+        given: 'an application that registers its own stackTraceFilterer bean of an incompatible type'
+        def config = Mock(Config)
+        config.getProperty('grails.logging.stackTraceFiltererClass', Class, DefaultStackTraceFilterer) >> DefaultStackTraceFilterer
+        config.getProperty('grails.exceptionresolver.logFullStackTraceOnFilter', Boolean, true) >> true
+        def mainContext = Mock(ApplicationContext)
+        mainContext.getBean(GrailsBootstrapRegistryInitializer.STACK_TRACE_FILTERER_BEAN_NAME, StackTraceFilterer) >> {
+            throw new BeanNotOfRequiredTypeException(
+                    GrailsBootstrapRegistryInitializer.STACK_TRACE_FILTERER_BEAN_NAME, StackTraceFilterer, String)
+        }
+        def grailsApp = Mock(GrailsApplication)
+        grailsApp.getMainContext() >> mainContext
+        grailsApp.getConfig() >> config
+        def resolver = new GrailsExceptionResolver()
+        resolver.grailsApplication = grailsApp
+
+        when:
+        resolver.createStackFilterer()
+
+        then: 'a name collision degrades to the default rather than failing the context'
+        noExceptionThrown()
+        resolver.stackFilterer instanceof DefaultStackTraceFilterer
     }
 }

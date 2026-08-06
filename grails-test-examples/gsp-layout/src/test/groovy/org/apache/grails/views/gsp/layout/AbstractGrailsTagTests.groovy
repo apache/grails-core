@@ -35,10 +35,13 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.w3c.dom.Document
 
+import org.springframework.beans.factory.BeanRegistrar
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory
+import org.springframework.beans.factory.support.BeanRegistryAdapter
 import org.springframework.beans.factory.support.RootBeanDefinition
 import org.springframework.context.ApplicationContext
 import org.springframework.context.MessageSource
+import org.springframework.context.support.GenericApplicationContext
 import org.springframework.context.support.StaticMessageSource
 import org.springframework.core.convert.support.DefaultConversionService
 import org.springframework.core.io.Resource
@@ -338,7 +341,10 @@ abstract class AbstractGrailsTagTests {
 
         dependentPlugins*.doWithRuntimeConfiguration(springConfig)
 
-        grailsApplication.mainContext = springConfig.getUnrefreshedApplicationContext()
+        GenericApplicationContext unrefreshedContext = springConfig.getUnrefreshedApplicationContext() as GenericApplicationContext
+        applyPluginBeanRegistrars(dependentPlugins, unrefreshedContext)
+
+        grailsApplication.mainContext = unrefreshedContext
         appCtx = springConfig.getApplicationContext()
 
         ctx.servletContext.setAttribute(GrailsApplicationAttributes.APPLICATION_CONTEXT, appCtx)
@@ -352,6 +358,22 @@ abstract class AbstractGrailsTagTests {
             def v = new PersistentEntityValidator()
             v.targetClass = dc
             dc.validator.messageSource = messageSource
+        }
+    }
+
+    /**
+     * Applies each plugin's {@link BeanRegistrar} to the unrefreshed context, the second half of
+     * what the runtime does for a plugin: {@code doWithRuntimeConfiguration} drains the deprecated
+     * {@code doWithSpring} DSL, then the registrars run. A harness that only does the former sees
+     * none of the beans a plugin contributes through {@code beanRegistrar()}.
+     */
+    private static void applyPluginBeanRegistrars(List<DefaultGrailsPlugin> plugins, GenericApplicationContext context) {
+        for (DefaultGrailsPlugin plugin in plugins) {
+            BeanRegistrar registrar = plugin.beanRegistrar
+            if (registrar != null) {
+                new BeanRegistryAdapter(context, context.beanFactory, context.environment, registrar.getClass())
+                        .register(registrar)
+            }
         }
     }
 

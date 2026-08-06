@@ -80,6 +80,9 @@ dependencies {
     testImplementation project(':grails-testing-support-web')
     testImplementation 'jakarta.mail:jakarta.mail-api'
     testImplementation 'org.spockframework:spock-core'
+    testImplementation 'org.springframework.boot:spring-boot-autoconfigure'
+    testImplementation 'org.springframework.boot:spring-boot-test'
+    testRuntimeOnly 'org.assertj:assertj-core'
 
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }

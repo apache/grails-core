@@ -80,7 +80,7 @@ jobs:
           cache-disabled: true # this workflow rebuilds Groovy each run; a Gradle home cache is not useful here
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
       - name: "🔍 Setup TestLens"
-        uses: testlens-app/setup-testlens@d96a555133c275a00949d2cc77b70fe9a4242ebf # v1.9.2
+        uses: testlens-app/setup-testlens@3f82d2dc6cd5c03f02ce5f7885a21195d85f8d14 # v1.9.3
       - name: "📝 Store Groovy version to use when building Grails"
         id: groovy-version
         run: |
@@ -139,7 +139,7 @@ jobs:
           cache-disabled: true # this workflow rebuilds Groovy each run; a Gradle home cache is not useful here
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
       - name: "🔍 Setup TestLens"
-        uses: testlens-app/setup-testlens@d96a555133c275a00949d2cc77b70fe9a4242ebf # v1.9.2
+        uses: testlens-app/setup-testlens@3f82d2dc6cd5c03f02ce5f7885a21195d85f8d14 # v1.9.3
       - name: "📥 Fetch the locally built Groovy artifacts"
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:

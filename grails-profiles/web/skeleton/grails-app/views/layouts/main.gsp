@@ -88,28 +88,13 @@
             <g:pageProperty name="page.nav"/>
         </ul>
         <ul class="navbar-nav ms-auto">
-            <g:set var="availableLocales" value="${application.getAttribute('availableLocales')}"/>
-            <g:if test="${availableLocales && availableLocales.size() > 1}">
-                <g:set var="currentLocale" value="${org.springframework.web.servlet.support.RequestContextUtils.getLocale(request)}"/>
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="localeDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bi bi-globe me-1"></i>${currentLocale.getDisplayName(currentLocale)}
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="localeDropdown">
-                        <%-- g:localeSelect (body form) renders each translated locale, already
-                             autonym-sorted by AvailableLocaleResolver, and flags the active and default
-                             entries; this layout supplies only the Bootstrap markup. pinDefault emits the
-                             configured default first (index 0), so a user who switched to a language they
-                             cannot read always has a recognizable way back at the top, above the divider. --%>
-                        <g:localeSelect available="true" pinDefault="true" var="loc">
-                            <g:if test="${loc.index == 1}"><li><hr class="dropdown-divider"></li></g:if>
-                            <li>
-                                <a class="dropdown-item${loc.active ? ' active' : ''}" href="?lang=${loc.tag}">${loc.autonym}</a>
-                            </li>
-                        </g:localeSelect>
-                    </ul>
-                </li>
-            </g:if>
+            <%-- The whole language menu: only the locales this app is translated into, the
+                 configured default pinned above a divider so a visitor who switched to a
+                 language they cannot read has a way back, the current one marked active, and
+                 each name titlecased for standalone display. Renders nothing when the app has
+                 a single locale. Every class is overridable, and supplying a body instead
+                 gives full control of the markup for non-Bootstrap layouts. --%>
+            <g:localeSelect available="true" pinDefault="true" type="dropdown"/>
             <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="themeDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="${message(code: 'layout.theme.toggle')}">
                     <i class="bi bi-circle-half theme-icon-active"></i>

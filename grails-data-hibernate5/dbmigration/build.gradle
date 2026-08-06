@@ -114,6 +114,10 @@ tasks.named('test', Test) {
     systemProperty("java.util.logging.config.file", "src/test/resources/logging.properties")
 }
 
+tasks.named('testCli', Test) {
+    systemProperty("java.util.logging.config.file", "src/test-cli/resources/logging.properties")
+}
+
 tasks.named('jar', Jar) {
     exclude('testapp/**/**')
 }

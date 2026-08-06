@@ -74,6 +74,7 @@ tasks.named('rat') {
             'build-logic/plugins/build/**', // exclude build artifacts
             'build-logic/docs-core/build/**', // exclude build artifacts
             'grails-test-examples/*/build/**', // build directories
+            'grails-test-examples/plugins/*/build/**', // nested plugin example build directories
             'grails-gsp/*/build/**', // build directories
             'grails-test-examples/gsp-spring-boot/app/build', // build directories
             '*/build', // root build directories
@@ -131,7 +132,10 @@ tasks.named('rat') {
             'grails-forge/**/src/main/resources/**', // src/main/resources are included in generated application and should not include a license
             'grails-forge/**/src/test/resources/**', // src/test/resources are used in tests against files included in generated application and should not include a license
             'grails-gradle/**/build/**', // grails-gradle does not have a build package name so exclude any build directories
+            'grails-gradle/plugins/bin/**', // generated IDE output for the Gradle plugin build
+            'grails-bom/micronaut/build/**', // excluded from the Java 21 project graph but still generated locally
             'grails-forge/*/build/**', // grails-forge build directories
+            'grails-forge/grails-forge-*/bin/**', // generated IDE output for Grails Forge modules
             'grails-forge/build/**', // grails-forge build directories
             'grails-spring-security/plugin/src/main/templates/**', // template files that people are expected to use in the end application
             'grails-spring-security/ldap/examples/functional-test-app/grails-app/ldap-servers/d1/data/users.ldif', // test database that does not support comments
@@ -156,7 +160,11 @@ tasks.named('rat') {
             '**/*.log', // exclude log files
             'local-tasks.gradle', // exclude local helper scripts
             '**/spring-configuration-metadata.json', // JSON files cannot contain license headers
-    ] + rootProject.subprojects.collect{"${rootProject.projectDir.relativePath(it.layout.buildDirectory.get().asFile).toString()}/**/*" }
+    ] + rootProject.subprojects.collectMany { project ->
+        String projectPath = rootProject.projectDir.relativePath(project.projectDir).toString().replace(File.separator, '/')
+        String buildPath = rootProject.projectDir.relativePath(project.layout.buildDirectory.get().asFile).toString().replace(File.separator, '/')
+        ["${buildPath}/**/*", "${projectPath}/bin/**/*"]
+    }
     // logger.lifecycle("Excludes for RAT task: ${allExcludes.join(', \n')}")
     excludes = allExcludes
     // never cache license audits

@@ -57,7 +57,6 @@ dependencies {
 	}
 	// GrailsConsole (used by the s2-* commands) needs jline at compile time
 	cliImplementation 'org.jline:jline'
-	cliImplementation 'org.fusesource.jansi:jansi'
 
 	api project(':grails-spring-security-compat')
 	api project(':grails-async') // AsyncGrailsWebRequest is used in public API
@@ -91,7 +90,6 @@ dependencies {
 
 	compileOnly 'jakarta.servlet:jakarta.servlet-api' // Provided
 	compileOnly 'org.jline:jline' // for shell commands
-	compileOnly 'org.fusesource.jansi:jansi' // required for Groovy static type checking of groovysh (Ansi) references
 	compileOnly project(':grails-core') // Provided as this is a Grails Plugin
 	compileOnly 'org.apache.groovy:groovy' // Compile-time annotations
 	compileOnly 'org.slf4j:slf4j-nop' // Prevents warnings about missing slf4j implementation during compilation
