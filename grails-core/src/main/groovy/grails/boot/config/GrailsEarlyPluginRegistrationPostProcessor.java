@@ -26,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.BeanInitializationException;
 import org.springframework.beans.factory.BeanRegistrar;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
@@ -123,6 +124,8 @@ public class GrailsEarlyPluginRegistrationPostProcessor
         // The initializing flag is a system property, so a leak on failure poisons every subsequent
         // context in the same JVM (test forks especially). Reset it if anything below throws; the
         // success path leaves it set and resets on refresh via the listener added at the end.
+        GrailsApplication previousGrailsApplication = null;
+        boolean grailsApplicationPublished = false;
         Environment.setInitializing(true);
         try {
             DefaultGrailsApplication grailsApplication = new DefaultGrailsApplication();
@@ -147,6 +150,10 @@ public class GrailsEarlyPluginRegistrationPostProcessor
             }
 
             RuntimeSpringConfiguration springConfig = new DefaultRuntimeSpringConfiguration();
+            // Legacy doWithSpring closures access the application through Holders during configuration.
+            // Discovery strategies retain their existing precedence over this fallback, as they did in Grails 7.
+            previousGrailsApplication = Holders.replaceGrailsApplication(grailsApplication);
+            grailsApplicationPublished = true;
             pluginManager.doRuntimeConfiguration(springConfig);
             springConfig.registerBeansWithRegistry(registry);
             applyBeanRegistrars(pluginManager, registry);
@@ -155,16 +162,24 @@ public class GrailsEarlyPluginRegistrationPostProcessor
             beanFactory.registerSingleton(GrailsApplication.APPLICATION_ID, grailsApplication);
             beanFactory.registerSingleton(GrailsPluginManager.BEAN_NAME, pluginManager);
             beanFactory.registerSingleton(EARLY_REGISTRATION_COMPLETE_BEAN_NAME, Boolean.TRUE);
-            Holders.setGrailsApplication(grailsApplication);
 
             // GrailsApplicationPostProcessor resets the initializing flag on refresh, but it is not
             // present in every context that runs this phase — reset here as well so the flag does not
             // leak once the context is up.
             applicationContext.addApplicationListener(this);
         }
-        catch (RuntimeException | Error e) {
+        catch (Throwable e) {
             Environment.setInitializing(false);
-            throw e;
+            if (grailsApplicationPublished) {
+                Holders.setGrailsApplication(previousGrailsApplication);
+            }
+            if (e instanceof RuntimeException runtimeException) {
+                throw runtimeException;
+            }
+            if (e instanceof Error error) {
+                throw error;
+            }
+            throw new BeanInitializationException("Early Grails plugin registration failed", e);
         }
     }
 

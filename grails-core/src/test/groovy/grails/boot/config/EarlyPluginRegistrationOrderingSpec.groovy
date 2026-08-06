@@ -22,8 +22,10 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import org.springframework.beans.factory.BeanRegistrar
 import org.springframework.beans.factory.BeanRegistry
+import org.springframework.beans.factory.BeanInitializationException
 import org.springframework.beans.factory.support.BeanDefinitionOverrideException
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
+import org.springframework.context.ApplicationContext
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -39,6 +41,7 @@ import grails.util.Environment
 import grails.util.Holders
 import org.apache.grails.core.plugins.DefaultPluginDiscovery
 import org.apache.grails.core.plugins.PluginDiscovery
+import org.grails.core.support.GrailsApplicationDiscoveryStrategy
 import spock.lang.Specification
 
 /**
@@ -237,8 +240,29 @@ class EarlyPluginRegistrationOrderingSpec extends Specification {
             Environment.setInitializing(false)
     }
 
+    void 'a Grails 7-style plugin can access the promoted grailsApplication from Holders during doWithSpring'() {
+        given: 'a legacy plugin that reads Holders.grailsApplication from its doWithSpring closure'
+            def ctx = new AnnotationConfigApplicationContext()
+            registerDiscovery(ctx, EarlyOrderingHoldersLegacyGrailsPlugin)
+            new GrailsPluginLifecycleInitializer().initialize(ctx)
+
+        when: 'the context refreshes through the real early registration path'
+            ctx.refresh()
+
+        then: 'the plugin observed the same Grails application instance promoted to the context'
+            EarlyOrderingHoldersLegacyGrailsPlugin.grailsApplicationSeen.is(ctx.getBean(GrailsApplication.APPLICATION_ID))
+
+        cleanup:
+            ctx.close()
+            Holders.clear()
+            EarlyOrderingHoldersLegacyGrailsPlugin.grailsApplicationSeen = null
+            Environment.setInitializing(false)
+    }
+
     void 'the initializing flag is reset when the early phase throws'() {
         given: 'a plugin whose doWithSpring throws while the early phase drains it'
+            def previousApplication = new DefaultGrailsApplication()
+            Holders.setGrailsApplication(previousApplication)
             def ctx = new AnnotationConfigApplicationContext()
             registerDiscovery(ctx, EarlyOrderingThrowingGrailsPlugin)
             new GrailsPluginLifecycleInitializer().initialize(ctx)
@@ -251,6 +275,57 @@ class EarlyPluginRegistrationOrderingSpec extends Specification {
 
         and: '...but the initializing flag (a system property) was reset, not leaked to later contexts'
             !Environment.isInitializing()
+
+        and: 'the Grails application Holder was restored, not replaced by the failed context'
+            Holders.findApplication().is(previousApplication)
+
+        cleanup:
+            ctx.close()
+            Holders.clear()
+            Environment.setInitializing(false)
+    }
+
+    void 'failure restoration does not invoke Grails application discovery strategies'() {
+        given: 'a prior fallback application, a broken discovery strategy, and a throwing plugin'
+            def previousApplication = new DefaultGrailsApplication()
+            Holders.setGrailsApplication(previousApplication)
+            def throwingStrategy = new EarlyOrderingThrowingApplicationDiscoveryStrategy()
+            Holders.addApplicationDiscoveryStrategy(throwingStrategy)
+            def ctx = new AnnotationConfigApplicationContext()
+            registerDiscovery(ctx, EarlyOrderingThrowingGrailsPlugin)
+            new GrailsPluginLifecycleInitializer().initialize(ctx)
+
+        when: 'the plugin fails after the new application is published'
+            ctx.refresh()
+
+        then: 'the plugin failure propagates without consulting discovery or leaking global state'
+            thrown(Exception)
+            throwingStrategy.invocationCount.get() == 0
+            !Environment.isInitializing()
+            Holders.replaceGrailsApplication(null).is(previousApplication)
+
+        cleanup:
+            ctx.close()
+            Holders.clear()
+            Environment.setInitializing(false)
+    }
+
+    void 'a checked doWithSpring failure is wrapped after restoring global state'() {
+        given: 'a prior application and a plugin whose doWithSpring sneaky-throws a checked exception'
+            def previousApplication = new DefaultGrailsApplication()
+            Holders.setGrailsApplication(previousApplication)
+            def ctx = new AnnotationConfigApplicationContext()
+            registerDiscovery(ctx, EarlyOrderingCheckedThrowingGrailsPlugin)
+            new GrailsPluginLifecycleInitializer().initialize(ctx)
+
+        when: 'the context refreshes'
+            ctx.refresh()
+
+        then: 'the checked failure is wrapped and both process-wide values are restored'
+            def failure = thrown(BeanInitializationException)
+            failure.cause.message == 'checked failure from doWithSpring'
+            !Environment.isInitializing()
+            Holders.findApplication().is(previousApplication)
 
         cleanup:
             ctx.close()
@@ -368,6 +443,41 @@ class EarlyOrderingThrowingGrailsPlugin extends Plugin {
     Closure doWithSpring() {
         { -> throw new IllegalStateException('boom from doWithSpring') }
     }
+}
+
+class EarlyOrderingThrowingApplicationDiscoveryStrategy implements GrailsApplicationDiscoveryStrategy {
+
+    final AtomicInteger invocationCount = new AtomicInteger()
+
+    @Override
+    GrailsApplication findGrailsApplication() {
+        invocationCount.incrementAndGet()
+        throw new IllegalStateException('broken Grails application discovery')
+    }
+
+    @Override
+    ApplicationContext findApplicationContext() {
+        null
+    }
+}
+
+class EarlyOrderingCheckedThrowingGrailsPlugin extends Plugin {
+
+    def version = '1.0'
+
+    @Override
+    Closure doWithSpring() {
+        { -> throw new Exception('checked failure from doWithSpring') }
+    }
+}
+
+class EarlyOrderingHoldersLegacyGrailsPlugin {
+
+    static GrailsApplication grailsApplicationSeen
+
+    def version = '1.0'
+
+    def doWithSpring = { grailsApplicationSeen = Holders.grailsApplication }
 }
 
 class EarlyOrderingAppResolver {

@@ -142,6 +142,18 @@ public class Holders {
         applicationSingleton = application;
     }
 
+    /**
+     * Replaces the fallback Grails application without invoking discovery strategies.
+     *
+     * @param application the new fallback application
+     * @return the previous fallback application
+     */
+    public static GrailsApplication replaceGrailsApplication(GrailsApplication application) {
+        GrailsApplication previous = applicationSingleton;
+        applicationSingleton = application;
+        return previous;
+    }
+
     public static void setConfig(Config config) {
         configs.set(config);
 
