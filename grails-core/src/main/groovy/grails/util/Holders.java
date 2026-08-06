@@ -18,10 +18,15 @@
  */
 package grails.util;
 
+import java.lang.ref.ReferenceQueue;
+import java.lang.ref.WeakReference;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
@@ -63,6 +68,9 @@ public class Holders {
     }
 
     private static final AtomicReference<GrailsApplication> applicationSingleton = new AtomicReference<>(); // TODO remove
+    private static final Object applicationSingletonMonitor = new Object();
+    private static final ReferenceQueue<GrailsApplication> failedApplications = new ReferenceQueue<>();
+    private static final Map<WeakIdentityKey, GrailsApplication> failedApplicationPredecessors = new HashMap<>();
 
     private Holders() {
         // static only
@@ -81,7 +89,7 @@ public class Holders {
             servletContexts.set(null);
         }
         applicationDiscoveryStrategies.clear();
-        applicationSingleton.set(null);
+        clearGrailsApplicationState();
     }
 
     public static void setServletContext(final Object servletContext) {
@@ -130,7 +138,10 @@ public class Holders {
                 return grailsApplication;
             }
         }
-        return applicationSingleton.get();
+        synchronized (applicationSingletonMonitor) {
+            drainFailedApplications();
+            return applicationSingleton.get();
+        }
     }
 
     public static GrailsApplication getGrailsApplication() {
@@ -139,29 +150,143 @@ public class Holders {
         return grailsApplication;
     }
 
+    /**
+     * Sets the fallback Grails application without invoking discovery strategies.
+     * A previously failed application is replaced by its first nonfailed predecessor.
+     *
+     * @param application the fallback application, or {@code null}
+     */
     public static void setGrailsApplication(GrailsApplication application) {
-        applicationSingleton.set(application);
+        synchronized (applicationSingletonMonitor) {
+            drainFailedApplications();
+            applicationSingleton.set(firstNonfailedApplication(application));
+        }
     }
 
     /**
      * Replaces the fallback Grails application without invoking discovery strategies.
      *
-     * @param application the new fallback application
+     * <p>A previously failed requested application is replaced by its first nonfailed predecessor.
+     *
+     * @param application the new fallback application, or {@code null}
      * @return the previous fallback application
      */
     public static GrailsApplication replaceGrailsApplication(GrailsApplication application) {
-        return applicationSingleton.getAndSet(application);
+        synchronized (applicationSingletonMonitor) {
+            drainFailedApplications();
+            return applicationSingleton.getAndSet(firstNonfailedApplication(application));
+        }
     }
 
     /**
      * Restores a fallback Grails application only if no other publisher has replaced it.
      *
+     * <p>The ownership comparison retains identity semantics. A previously failed application
+     * requested for restoration is replaced by its first nonfailed predecessor.
+     *
      * @param expected the fallback application owned by the caller
-     * @param application the fallback application to restore
+     * @param application the fallback application to restore, or {@code null}
      * @return {@code true} when the fallback was restored
      */
     public static boolean restoreGrailsApplication(GrailsApplication expected, GrailsApplication application) {
-        return applicationSingleton.compareAndSet(expected, application);
+        synchronized (applicationSingletonMonitor) {
+            drainFailedApplications();
+            return applicationSingleton.compareAndSet(expected, firstNonfailedApplication(application));
+        }
+    }
+
+    /**
+     * Records a failed fallback publication and restores its first nonfailed predecessor if the
+     * caller still owns the fallback. The failure record is retained when another publisher is
+     * currently visible, allowing that publisher's later restore to skip the failed application.
+     * Discovery strategies are not invoked.
+     *
+     * <p>The failure key uses weak identity semantics. The predecessor remains strongly reachable
+     * only while the failed application is reachable, directly or through another live failure
+     * chain.
+     *
+     * @param expected the failed fallback application owned by the caller, never {@code null}
+     * @param previous the predecessor that was visible before publication, or {@code null}
+     * @return {@code true} when the failed fallback was still visible and was restored
+     */
+    public static boolean restoreGrailsApplicationAfterFailure(GrailsApplication expected, GrailsApplication previous) {
+        synchronized (applicationSingletonMonitor) {
+            drainFailedApplications();
+            Assert.notNull(expected, "Expected failed GrailsApplication must not be null");
+            failedApplicationPredecessors.put(new WeakIdentityKey(expected, failedApplications), previous);
+            Set<GrailsApplication> visited = Collections.newSetFromMap(new IdentityHashMap<>());
+            visited.add(expected);
+            GrailsApplication application = firstNonfailedApplication(previous, visited);
+            return applicationSingleton.compareAndSet(expected, application);
+        }
+    }
+
+    private static GrailsApplication firstNonfailedApplication(GrailsApplication application) {
+        return firstNonfailedApplication(application, Collections.newSetFromMap(new IdentityHashMap<>()));
+    }
+
+    private static GrailsApplication firstNonfailedApplication(
+            GrailsApplication application, Set<GrailsApplication> visited) {
+        GrailsApplication candidate = application;
+        while (candidate != null) {
+            if (!visited.add(candidate)) {
+                // A publication chain cannot legitimately cycle. Terminate it both to avoid
+                // resurrection and to prevent strong predecessor values retaining the cycle.
+                failedApplicationPredecessors.put(new WeakIdentityKey(candidate, failedApplications), null);
+                return null;
+            }
+            WeakIdentityKey lookupKey = new WeakIdentityKey(candidate);
+            if (!failedApplicationPredecessors.containsKey(lookupKey)) {
+                return candidate;
+            }
+            candidate = failedApplicationPredecessors.get(lookupKey);
+        }
+        return null;
+    }
+
+    private static void drainFailedApplications() {
+        WeakIdentityKey failedApplication;
+        while ((failedApplication = (WeakIdentityKey) failedApplications.poll()) != null) {
+            failedApplicationPredecessors.remove(failedApplication);
+        }
+    }
+
+    /**
+     * Weak map key whose hash and equality use Grails application identity rather than
+     * application-defined equality. Cleared keys compare only to themselves so queue removal
+     * remains reliable without allowing unrelated cleared references to compare equal.
+     */
+    private static final class WeakIdentityKey extends WeakReference<GrailsApplication> {
+
+        private final int identityHashCode;
+
+        private WeakIdentityKey(GrailsApplication application) {
+            super(application);
+            identityHashCode = System.identityHashCode(application);
+        }
+
+        private WeakIdentityKey(
+                GrailsApplication application, ReferenceQueue<GrailsApplication> referenceQueue) {
+            super(application, referenceQueue);
+            identityHashCode = System.identityHashCode(application);
+        }
+
+        @Override
+        public int hashCode() {
+            return identityHashCode;
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            if (this == other) {
+                return true;
+            }
+            if (!(other instanceof WeakIdentityKey otherKey)) {
+                return false;
+            }
+            GrailsApplication application = get();
+            return application != null && application == otherKey.get();
+        }
     }
 
     public static void setConfig(Config config) {
@@ -224,11 +349,21 @@ public class Holders {
 
     public static void reset() {
         setPluginManager(null);
-        setGrailsApplication(null);
-        setServletContext(null);
+        clearGrailsApplicationState();
+        if (servletContexts != null) {
+            setServletContext(null);
+        }
         setPluginManager(null);
         setPluginManagerInCreation(false);
         setConfig(null);
+    }
+
+    private static void clearGrailsApplicationState() {
+        synchronized (applicationSingletonMonitor) {
+            drainFailedApplications();
+            applicationSingleton.set(null);
+            failedApplicationPredecessors.clear();
+        }
     }
 
     private static <T> T get(Holder<T> holder, String type) {
