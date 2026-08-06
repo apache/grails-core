@@ -18,7 +18,6 @@
  */
 package org.grails.web.mapping
 
-import grails.build.logging.GrailsConsole
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
 import grails.web.CamelCaseUrlConverter

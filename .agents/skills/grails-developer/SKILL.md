@@ -865,6 +865,6 @@ grails.plugin.springsecurity.controllerAnnotations.staticRules = [
 - **Grails User Guide**: https://grails.apache.org/docs/latest/guide/single.html
 - **GORM Documentation**: https://grails.apache.org/docs/latest/grails-data/
 - **Grails Plugins**: https://grails.apache.org/plugins.html
-- **Groovy 5 Documentation**: https://docs.groovy-lang.org/docs/groovy-5.0.7/html/documentation/
+- **Groovy 5 Documentation**: https://groovy-lang.org/documentation.html#all-versions (select latest 5.0.x)
 - **Spock Framework**: https://spockframework.org/spock/docs/2.4/all_in_one.html
 - **Geb Manual**: https://groovy.apache.org/geb/manual/current/
