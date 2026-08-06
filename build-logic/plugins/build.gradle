@@ -91,6 +91,10 @@ gradlePlugin {
             id = 'org.apache.grails.gradle.grails-violation-aggregation'
             implementationClass = 'org.apache.grails.buildsrc.GrailsViolationAggregationPlugin'
         }
+        register('grailsValidateActions') {
+            id = 'org.apache.grails.gradle.grails-validate-actions'
+            implementationClass = 'org.apache.grails.buildsrc.GrailsValidateActionsPlugin'
+        }
         register('grailsIJFormatter') {
             id = 'org.apache.grails.gradle.grails-ij-formatter'
             implementationClass = 'org.apache.grails.buildsrc.GrailsIJFormatterPlugin'

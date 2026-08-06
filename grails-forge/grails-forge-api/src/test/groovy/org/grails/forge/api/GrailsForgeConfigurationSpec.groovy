@@ -16,22 +16,34 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.forge.client.github.oauth;
 
-import io.micronaut.http.HttpHeaders;
-import io.micronaut.http.annotation.Header;
-import io.micronaut.http.annotation.Post;
-import io.micronaut.http.annotation.QueryValue;
+package org.grails.forge.api
 
-/**
- * GitHub Oauth operations.
- *
- * @author Pavol Gressa
- * @since 6.0.0
- */
-public interface GitHubOAuthOperations {
+import spock.lang.Specification
 
-    @Post(value = "/access_token")
-    AccessToken accessToken(@Header(HttpHeaders.USER_AGENT) String userAgent, @QueryValue("client_id") String clientId, @QueryValue("client_secret") String clientSecret, @QueryValue String code, @QueryValue String state);
+class GrailsForgeConfigurationSpec extends Specification {
 
+    void "setRedirectUrl updates the browser redirect target"() {
+        given:
+        def configuration = new GrailsForgeConfiguration()
+
+        when:
+        configuration.setRedirectUrl('https://start.grails.org/')
+
+        then:
+        configuration.redirectUrl == 'https://start.grails.org/'
+        configuration.redirectUri.get().toString() == 'https://start.grails.org/'
+    }
+
+    void "setRedirectUrl ignores null so the default remains"() {
+        given:
+        def configuration = new GrailsForgeConfiguration()
+        def before = configuration.redirectUrl
+
+        when:
+        configuration.setRedirectUrl(null)
+
+        then:
+        configuration.redirectUrl == before
+    }
 }

@@ -62,4 +62,6 @@ withForm {
 }
 ----
 
+Tokens are single-use. A valid token is consumed atomically when `withForm` validates it, so duplicate concurrent submissions for the same token allow exactly one request to run the valid block. Grails stores token state in the session with a limit of 100 form URL buckets and 100 tokens per URL; after those limits, the oldest bucket or oldest token is discarded and later submission of that form is handled as `invalidToken`.
+
 See link:{guidePath}theWebLayer.html#formtokens[Handling Duplicate Form Submissions] for more information.

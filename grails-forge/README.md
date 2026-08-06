@@ -195,16 +195,13 @@ Create two databases `grailsforge-production` and `grailsforge-snapshot`
 
 #### Cloud Run grailsforge-latest
 
-| Name                                             | Value                                                                                                                                  | 
-|:-------------------------------------------------|:---------------------------------------------------------------------------------------------------------------------------------------|
-| `MICRONAUT_ENV_DEDUCTION`                        | `false`                                                                                                                                |
-| `MICRONAUT_ENVIRONMENTS`                         | `gcp`                                                                                                                                  |
-| `MICRONAUT_HTTP_SERVICES_ANALYTICS_READ_TIMEOUT` | `20s`                                                                                                                                  |
-| `MICRONAUT_HTTP_SERVICES_ANALYTICS_URL`          | URL of cloud run `grailsforge-analytics-latest`                                                                                        |
-| `GITHUB_OAUTH_APP_CLIENT_ID`                     | The Client ID shared after creating GitHub OAuth App                                                                                   |
-| `GITHUB_OAUTH_APP_CLIENT_SECRET`                 | The Client secret shared after creating the GitHub OAuth app                                                                           |
-| `GITHUB_USER_AGENT`                              | URL of the grails-forge-ui static website. For example, `https://start.grails.org/`. The default value is `https://start.grails.org/`. |
-| `GITHUB_REDIRECT_URL`                            | URL of the grails-forge-ui static website. For example, `https://start.grails.org/`. The default value is `https://start.grails.org/`. |
+| Name                                             | Value                                                                                           |
+|:-------------------------------------------------|:------------------------------------------------------------------------------------------------|
+| `MICRONAUT_ENV_DEDUCTION`                        | `false`                                                                                         |
+| `MICRONAUT_ENVIRONMENTS`                         | `gcp`                                                                                           |
+| `MICRONAUT_HTTP_SERVICES_ANALYTICS_READ_TIMEOUT` | `20s`                                                                                           |
+| `MICRONAUT_HTTP_SERVICES_ANALYTICS_URL`          | URL of cloud run `grailsforge-analytics-latest`                                                 |
+| `GITHUB_REDIRECT_URL`                            | Browser redirect target for the Forge UI. Default: `https://start.grails.org/`.                 |
 
 ### Cloud Run grailsforge-analytics-latest
 
@@ -223,16 +220,13 @@ Create two databases `grailsforge-production` and `grailsforge-snapshot`
 
 ### Cloud Run grailsforge-snapshot
 
-| Name                                             | Value                                                                                                                                                  | 
-|:-------------------------------------------------|:-------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `MICRONAUT_ENV_DEDUCTION`                        | `false`                                                                                                                                                |
-| `MICRONAUT_ENVIRONMENTS`                         | `gcp`                                                                                                                                                  |
-| `MICRONAUT_HTTP_SERVICES_ANALYTICS_READ_TIMEOUT` | `20s`                                                                                                                                                  |
-| `MICRONAUT_HTTP_SERVICES_ANALYTICS_URL`          | URL of cloud run `grailsforge-analytics-snapshot`                                                                                                      |
-| `GITHUB_OAUTH_APP_CLIENT_ID`                     | The Client ID shared after creating GitHub OAuth App                                                                                                   |
-| `GITHUB_OAUTH_APP_CLIENT_SECRET`                 | The Client secret shared after creating the GitHub OAuth app                                                                                           |
-| `GITHUB_USER_AGENT`                              | URL of the grails-forge-ui static website. The default value is `https://start.grails.org/`. |
-| `GITHUB_REDIRECT_URL`                            | URL of the grails-forge-ui static website. The default value is `https://start.grails.org/`. |
+| Name                                             | Value                                                                           |
+|:-------------------------------------------------|:--------------------------------------------------------------------------------|
+| `MICRONAUT_ENV_DEDUCTION`                        | `false`                                                                         |
+| `MICRONAUT_ENVIRONMENTS`                         | `gcp`                                                                           |
+| `MICRONAUT_HTTP_SERVICES_ANALYTICS_READ_TIMEOUT` | `20s`                                                                           |
+| `MICRONAUT_HTTP_SERVICES_ANALYTICS_URL`          | URL of cloud run `grailsforge-analytics-snapshot`                               |
+| `GITHUB_REDIRECT_URL`                            | Browser redirect target for the Forge UI. Default: `https://start.grails.org/`. |
 
 
 ### Cloud Run grailsforge-analytics-latest
