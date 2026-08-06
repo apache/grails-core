@@ -30,8 +30,11 @@ import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.control.customizers.CompilationCustomizer
+import org.codehaus.groovy.control.messages.WarningMessage
 import org.springframework.boot.context.properties.ConfigurationProperties
+import org.springframework.boot.context.properties.NestedConfigurationProperty
 import spock.lang.Specification
+import spock.lang.Unroll
 
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
@@ -63,10 +66,10 @@ class ConfigurationMetadataTransformationSpec extends Specification {
                 SampleConfiguration(String immutableValue) {
                     this.immutableValue = immutableValue
                 }
-            }
 
-            class Nested {
-                boolean enabled = true
+                static class Nested {
+                    boolean enabled = true
+                }
             }
         ''')
         Field payloadField = configuration.getDeclaredField(ConfigurationMetadataTransformation.PAYLOAD_FIELD)
@@ -83,7 +86,7 @@ class ConfigurationMetadataTransformationSpec extends Specification {
         payload.get('groups') == [[
                 name: 'sample.service.nested',
                 sourceType: 'example.SampleConfiguration',
-                type: 'example.Nested'
+                type: 'example.SampleConfiguration$Nested'
         ]]
         payload.get('properties')*.name == [
                 'sample.service.displayName',
@@ -184,6 +187,218 @@ class ConfigurationMetadataTransformationSpec extends Specification {
         loader.close()
     }
 
+    @Unroll
+    def "global transform warns about #visibility #delegateType fields before Delegate composition"() {
+        given:
+        List<WarningMessage> warnings = []
+        CompilerConfiguration compilerConfiguration = new CompilerConfiguration()
+        compilerConfiguration.addCompilationCustomizers(new CompilationCustomizer(CompilePhase.CANONICALIZATION) {
+            @Override
+            void call(SourceUnit source, GeneratorContext context, ClassNode classNode) {
+                warnings.addAll(source.errorCollector.warnings.findAll { it instanceof WarningMessage } as List<WarningMessage>)
+            }
+        })
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader, compilerConfiguration)
+        if (delegateType == 'groovy.transform.Delegate') {
+            loader.parseClass('''
+                package groovy.transform
+
+                @interface Delegate {
+                }
+            ''')
+        }
+
+        when:
+        Class<?> configuration = loader.parseClass("""
+            package example
+
+            import ${delegateType}
+            import org.springframework.boot.context.properties.ConfigurationProperties
+
+            @ConfigurationProperties('sample.delegate')
+            class DelegatingConfiguration {
+                ${visibility}@Delegate URI endpoint
+            }
+        """)
+        Map payload = payloadFor(configuration)
+
+        then:
+        WarningMessage warning = warnings.find { it.message.contains('DelegatingConfiguration.endpoint') &&
+                it.message.contains('SEMANTIC_ANALYSIS') &&
+                it.message.contains('additional-spring-configuration-metadata.json') }
+        warning
+        warning.context.startLine == 9
+        !payload.get('properties')*.name.contains('sample.delegate.endpoint')
+
+        cleanup:
+        loader.close()
+
+        where:
+        delegateType                     | visibility
+        'groovy.lang.Delegate'           | ''
+        'groovy.transform.Delegate'      | ''
+        'groovy.lang.Delegate'           | 'private '
+        'groovy.transform.Delegate'      | 'private '
+        'groovy.lang.Delegate'           | 'protected '
+        'groovy.transform.Delegate'      | 'protected '
+    }
+
+    def "global transform only recurses into inner and explicitly nested configuration properties"() {
+        given:
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+
+        when:
+        loader.parseClass('''
+            package example
+
+            import org.springframework.boot.context.properties.ConfigurationProperties
+            import org.springframework.boot.context.properties.NestedConfigurationProperty
+
+            class ConfigurationParent {
+                void setInherited(String inherited) {
+                }
+            }
+
+            class ForeignBean {
+                String leaked
+            }
+
+            class ExplicitNested {
+                String explicitValue
+            }
+
+            @ConfigurationProperties('sample.nesting')
+            class InferenceConfiguration extends ConfigurationParent {
+                Inner inner = new Inner()
+                @NestedConfigurationProperty ExplicitNested explicitNested = new ExplicitNested()
+                ForeignBean foreignBean = new ForeignBean()
+
+                static class Inner {
+                    String value
+                    Inner child
+                }
+            }
+        ''')
+        Map payload = payloadFor(loader.loadClass('example.InferenceConfiguration'))
+
+        then:
+        payload.get('groups')*.name == [
+                'sample.nesting.explicitNested',
+                'sample.nesting.inner'
+        ]
+        payload.get('properties')*.name == [
+                'sample.nesting.explicitNested.explicitValue',
+                'sample.nesting.foreignBean',
+                'sample.nesting.inherited',
+                'sample.nesting.inner.child',
+                'sample.nesting.inner.value'
+        ]
+        !payload.get('properties')*.name.any { it.startsWith('sample.nesting.foreignBean.') }
+
+        cleanup:
+        loader.close()
+    }
+
+    def "global transform recognizes inherited nested configuration properties annotated on JavaBean getters"() {
+        given:
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+
+        when:
+        loader.parseClass('''
+            package example
+
+            import org.springframework.boot.context.properties.ConfigurationProperties
+            import org.springframework.boot.context.properties.NestedConfigurationProperty
+
+            class AccessorNested {
+                String value
+            }
+
+            class AccessorParent {
+                @NestedConfigurationProperty
+                AccessorNested getNested() {
+                    null
+                }
+
+                void setNested(AccessorNested nested) {
+                }
+            }
+
+            @ConfigurationProperties('sample.accessor')
+            class AccessorConfiguration extends AccessorParent {
+            }
+        ''')
+        Map payload = payloadFor(loader.loadClass('example.AccessorConfiguration'))
+
+        then:
+        payload.get('groups') == [[
+                name: 'sample.accessor.nested',
+                sourceType: 'example.AccessorConfiguration',
+                type: 'example.AccessorNested'
+        ]]
+        payload.get('properties')*.name == ['sample.accessor.nested.value']
+
+        cleanup:
+        loader.close()
+    }
+
+    def "global transform merges compatible nested annotations from field-backed and getter-only JavaBean accessors"() {
+        given:
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+
+        when:
+        loader.parseClass('''
+            package example
+
+            import org.springframework.boot.context.properties.ConfigurationProperties
+            import org.springframework.boot.context.properties.NestedConfigurationProperty
+
+            class AccessorNested {
+                String value
+            }
+
+            @ConfigurationProperties('sample.accessor')
+            class AccessorConfiguration {
+                AccessorNested fieldBacked = new AccessorNested()
+                private final AccessorNested getterOnly = new AccessorNested()
+
+                @NestedConfigurationProperty
+                AccessorNested getFieldBacked() {
+                    fieldBacked
+                }
+
+                @NestedConfigurationProperty
+                AccessorNested getGetterOnly() {
+                    getterOnly
+                }
+
+                @NestedConfigurationProperty
+                AccessorNested getIncompatible() {
+                    null
+                }
+
+                void setIncompatible(String incompatible) {
+                }
+            }
+        ''')
+        Map payload = payloadFor(loader.loadClass('example.AccessorConfiguration'))
+
+        then:
+        payload.get('groups')*.name == [
+                'sample.accessor.fieldBacked',
+                'sample.accessor.getterOnly'
+        ]
+        payload.get('properties')*.name == [
+                'sample.accessor.fieldBacked.value',
+                'sample.accessor.getterOnly.value',
+                'sample.accessor.incompatible'
+        ]
+        !payload.get('properties')*.name.any { it.startsWith('sample.accessor.incompatible.') }
+
+        cleanup:
+        loader.close()
+    }
+
     def "global transform selects only supported constructor binding candidates"() {
         given:
         GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
@@ -237,11 +452,42 @@ class ConfigurationMetadataTransformationSpec extends Specification {
                 }
             }
 
+            class ExternalOptions {
+                String host
+            }
+
+            enum Mode {
+                DEFAULT
+            }
+
+            @ConfigurationProperties('sample.options')
+            class ConstructorOptionsConfiguration {
+                final ExternalOptions options
+                final String text
+                final int port
+                final Mode mode
+                final Class target
+                final List<String> labels
+                final Map<String, String> values
+
+                ConstructorOptionsConfiguration(ExternalOptions options, String text, int port, Mode mode,
+                                                Class target, List<String> labels, Map<String, String> values) {
+                    this.options = options
+                    this.text = text
+                    this.port = port
+                    this.mode = mode
+                    this.target = target
+                    this.labels = labels
+                    this.values = values
+                }
+            }
+
         ''')
         Map annotated = payloadFor(loader.loadClass('example.AnnotatedConstructorConfiguration'))
         Map fallback = payloadFor(loader.loadClass('example.FallbackConstructorConfiguration'))
         Class<?> filteredClass = loader.loadClass('example.FilteredConstructorConfiguration')
         Map filtered = payloadFor(filteredClass)
+        Map options = payloadFor(loader.loadClass('example.ConstructorOptionsConfiguration'))
 
         then:
         annotated.get('properties')*.name == ['sample.annotated.annotated']
@@ -249,6 +495,16 @@ class ConfigurationMetadataTransformationSpec extends Specification {
         filteredClass.declaredConstructors.any { Modifier.isPrivate(it.modifiers) }
         filtered.get('properties')*.name == ['sample.filtered.selected']
         !filtered.get('properties')*.name.contains('sample.filtered.privateValue')
+        options.get('groups')*.name == ['sample.options.options']
+        options.get('properties')*.name == [
+                'sample.options.labels',
+                'sample.options.mode',
+                'sample.options.options.host',
+                'sample.options.port',
+                'sample.options.target',
+                'sample.options.text',
+                'sample.options.values'
+        ]
 
         cleanup:
         loader.close()
