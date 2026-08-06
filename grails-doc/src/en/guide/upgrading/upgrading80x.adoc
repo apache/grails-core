@@ -1940,3 +1940,75 @@ refreshes. Any context not started through `SpringApplication` — the CLI, plai
 tests — keeps the previous fallback behaviour unchanged: a plain `DefaultStackTraceFilterer` with no
 configuration applied. The filterer is JVM-global rather than per-context, so in a JVM hosting more than one
 application context the last one booted supplies the filterer for all of them.
+
+==== 39. GORM API Resolution Moves to a Registry
+
+GORM no longer allocates an API object for every (entity, connection) pair up front. Per-entity, per-qualifier
+state now lives in a registry (`org.grails.datastore.gorm.GormRegistry`), and APIs are built on first use by a
+pluggable factory. For applications this is invisible — `Book.list()`, dynamic finders, and
+`Book.withNewSession { }` behave as before. It does change some extension points that out-of-tree GORM
+implementations subclass.
+
+===== GormEnhancer
+
+`org.grails.datastore.gorm.GormEnhancer`'s public constructors, `enhance()`/`enhance(PersistentEntity)`,
+`dynamicEnhance`, and the `transactionManager` field are all unchanged in behaviour and signature (the
+`transactionManager` field is now `@Deprecated` and immutable after construction — read it, don't assign it).
+
+The following members were removed:
+
+[cols="1,2", options="header"]
+|===
+| Removed
+| Migration note
+
+| `finders` field / `getFinders()`
+| Use `createDynamicFinders(Datastore)`, or read the finders from the API object you are working with.
+
+| `removeConstraints()`
+| Moved to `GormRegistry.removeConstraints()`, called automatically from `GormRegistry.removeDatastore(Datastore)`
+as part of tearing a datastore down. There is nothing to call directly - it runs when the enhancer's `close()`
+removes the datastore from the registry, same as before.
+
+| `addStaticMethods(PersistentEntity, boolean)` / `addInstanceMethods(PersistentEntity, boolean)`
+| The `onlyExtendedMethods` parameter is gone; both methods now take only the entity. Installation mechanism
+also changed from per-method reflective registration to a single `methodMissing`/`propertyMissing` handler pair.
+
+| `findTenantId`, `apiQualifiers`, `findDatastoreByType`, `findSingleDatastore`,
+`findSingleTransactionManager`, `findTransactionManager(Class, String)`, `appliesToDatastore`,
+`getInstanceMethodApiProviders`, `registerStaticMethod`, `registerInstanceMethod`, `doesRealMethodExist`,
+`isRealMethod`
+| Internal helpers of the old per-method reflective registration mechanism, replaced wholesale by the registry
+and its `methodMissing`/`propertyMissing` handlers. If you overrode one of these to customise dispatch, override
+`registerApiFactories()` (below) or a `GormApiFactory` instead.
+|===
+
+A new `registerApiFactories()` hook is called once, before any entity is registered. Adapters that build
+specialised API objects should override it:
+
+[source,groovy]
+----
+class MyGormEnhancer extends GormEnhancer {
+
+    @Override
+    protected void registerApiFactories() {
+        GormRegistry.instance.registerApiFactory(MyDatastore, new MyGormApiFactory())
+    }
+}
+----
+
+WARNING: Earlier snapshots of this work registered API factories from `registerConstraints(Datastore)`.
+Move that code to `registerApiFactories()`; factory registration must not depend on the constraints lifecycle step.
+
+===== CurrentTenantHolder.get()
+
+`grails.gorm.multitenancy.CurrentTenantHolder.get()` — the no-argument form — now throws `TenantException` when
+different datastores hold different tenants on the calling thread, rather than returning an arbitrary one of
+them. Pass the datastore you are operating on:
+
+[source,groovy]
+----
+CurrentTenantHolder.get(datastore)
+----
+
+See <<multiTenancy,Multi-Tenancy>> for the full multi-tenancy API.
