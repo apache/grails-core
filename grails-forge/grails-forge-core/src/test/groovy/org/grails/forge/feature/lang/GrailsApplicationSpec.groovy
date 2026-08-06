@@ -42,6 +42,7 @@ class GrailsApplicationSpec extends BeanContextSpec implements CommandOutputFixt
         output.containsKey("grails-app/init/example/grails/Application.${Language.GROOVY.extension}".toString())
         def applicationGroovyFile = output.get("grails-app/init/example/grails/Application.${Language.GROOVY.extension}".toString())
         applicationGroovyFile.contains("@CompileStatic")
+        applicationGroovyFile.contains("@ComponentScan(value = 'example.grails')")
         !applicationGroovyFile.contains("@PluginSource")
 
         where:
@@ -58,9 +59,24 @@ class GrailsApplicationSpec extends BeanContextSpec implements CommandOutputFixt
         output.containsKey("grails-app/init/example/grails/Application.${Language.GROOVY.extension}".toString())
         def applicationGroovyFile = output.get("grails-app/init/example/grails/Application.${Language.GROOVY.extension}".toString())
         applicationGroovyFile.contains("@PluginSource")
+        applicationGroovyFile.contains("@ComponentScan(value = 'example.grails')")
 
         where:
         applicationType << [ApplicationType.PLUGIN, ApplicationType.WEB_PLUGIN]
+    }
+
+    void 'profile Application skeletons configure base-package component scanning'() {
+        given:
+        File profiles = new File('../../grails-profiles').canonicalFile
+
+        expect:
+        ['base', 'plugin'].every { String profile ->
+            File application = new File(profiles, "${profile}/skeleton/grails-app/init/@grails.codegen.defaultPackage.path@/Application.groovy")
+            assert application.file, "missing profile Application skeleton ${application}"
+            assert application.text.contains('import org.springframework.context.annotation.ComponentScan')
+            assert application.text.contains("@ComponentScan(value = '@grails.codegen.defaultPackage@')")
+            true
+        }
     }
 
     void "REST-API application should have ApplicationController"() {
