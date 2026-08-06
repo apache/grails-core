@@ -408,6 +408,7 @@ class ConfigurationMetadataTransformationSpec extends Specification {
             package example
 
             import org.springframework.boot.context.properties.ConfigurationProperties
+            import org.springframework.boot.context.properties.NestedConfigurationProperty
             import org.springframework.boot.context.properties.bind.ConstructorBinding
 
             @ConfigurationProperties('sample.annotated')
@@ -462,7 +463,10 @@ class ConfigurationMetadataTransformationSpec extends Specification {
 
             @ConfigurationProperties('sample.options')
             class ConstructorOptionsConfiguration {
-                final ExternalOptions options
+                final ExternalOptions externalOptions
+                final NestedOptions nestedOptions
+                @NestedConfigurationProperty
+                final ExternalOptions annotatedOptions
                 final String text
                 final int port
                 final Mode mode
@@ -470,15 +474,22 @@ class ConfigurationMetadataTransformationSpec extends Specification {
                 final List<String> labels
                 final Map<String, String> values
 
-                ConstructorOptionsConfiguration(ExternalOptions options, String text, int port, Mode mode,
+                ConstructorOptionsConfiguration(ExternalOptions externalOptions, NestedOptions nestedOptions,
+                                                ExternalOptions annotatedOptions, String text, int port, Mode mode,
                                                 Class target, List<String> labels, Map<String, String> values) {
-                    this.options = options
+                    this.externalOptions = externalOptions
+                    this.nestedOptions = nestedOptions
+                    this.annotatedOptions = annotatedOptions
                     this.text = text
                     this.port = port
                     this.mode = mode
                     this.target = target
                     this.labels = labels
                     this.values = values
+                }
+
+                static class NestedOptions {
+                    String enabled
                 }
             }
 
@@ -495,11 +506,16 @@ class ConfigurationMetadataTransformationSpec extends Specification {
         filteredClass.declaredConstructors.any { Modifier.isPrivate(it.modifiers) }
         filtered.get('properties')*.name == ['sample.filtered.selected']
         !filtered.get('properties')*.name.contains('sample.filtered.privateValue')
-        options.get('groups')*.name == ['sample.options.options']
+        options.get('groups')*.name == [
+                'sample.options.annotatedOptions',
+                'sample.options.nestedOptions'
+        ]
         options.get('properties')*.name == [
+                'sample.options.annotatedOptions.host',
+                'sample.options.externalOptions',
                 'sample.options.labels',
                 'sample.options.mode',
-                'sample.options.options.host',
+                'sample.options.nestedOptions.enabled',
                 'sample.options.port',
                 'sample.options.target',
                 'sample.options.text',

@@ -100,14 +100,12 @@ class ConfigurationMetadataTransformation implements ASTTransformation {
             return [groups: [], properties: []]
         }
         Map<String, Map<String, Object>> bindable = [:]
-        Set<String> constructorBound = constructorBoundProperties(node)
         node.properties.findAll { PropertyNode property -> isBindableProperty(property) }.each {
             PropertyNode propertyNode ->
             FieldNode field = propertyNode.field
             Map<String, Object> propertyMetadata = [
                     propertyName: field.name, type: typeName(field.type), classNode: field.type,
-                    nested: isNestedConfigurationProperty(node, field.type, field.annotations) ||
-                            (constructorBound.contains(field.name) && isConstructorBoundComplexObject(field.type)),
+                    nested: isNestedConfigurationProperty(node, field.type, field.annotations),
                     owner: node.name]
             Expression initialExpression = field.initialExpression
             if (initialExpression instanceof ConstantExpression && !initialExpression.isNullExpression()) {
@@ -264,11 +262,6 @@ class ConfigurationMetadataTransformation implements ASTTransformation {
 
     private static boolean isInnerClassOf(ClassNode type, ClassNode owner) {
         type.name.startsWith(owner.name + '$')
-    }
-
-    private static boolean isConstructorBoundComplexObject(ClassNode type) {
-        !type.array && !type.enum && !ClassHelper.isPrimitiveType(type) &&
-                !type.name.startsWith('java.') && !type.name.startsWith('groovy.')
     }
 
     private static String typeName(ClassNode type) {
