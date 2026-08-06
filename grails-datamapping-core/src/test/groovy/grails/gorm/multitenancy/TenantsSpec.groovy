@@ -22,10 +22,12 @@ import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSources
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException
 import org.grails.datastore.mapping.multitenancy.AllTenantsResolver
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.multitenancy.TenantResolver
+import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
 import spock.lang.Specification
 
 /**
@@ -402,17 +404,44 @@ class TenantsSpec extends Specification {
         thrown(IllegalArgumentException)
     }
 
-    void "withId(MultiTenantCapableDatastore, tenantId, callable) swallows getDatastoreForTenantId failures and falls through"() {
-        given:
+    void "withId(MultiTenantCapableDatastore, tenantId, callable) swallows a ConfigurationException from getDatastoreForTenantId and falls through"() {
+        given: "an unknown tenant/connection name, matching what H5/H7/Mongo's getDatastoreForConnection actually throws"
         def session = Stub(Session)
         def mtds = Stub(MixedDatastore) {
             getMultiTenancyMode() >> MultiTenancySettings.MultiTenancyMode.DATABASE
-            getDatastoreForTenantId('tenant1') >> { throw new IllegalStateException('boom') }
+            getDatastoreForTenantId('tenant1') >> { throw new ConfigurationException('boom') }
             withNewSession('tenant1', _) >> { String tid, Closure body -> body.call(session) }
         }
 
         expect:
         Tenants.withId(mtds, 'tenant1') { -> 'ran' } == 'ran'
+    }
+
+    void "withId(MultiTenantCapableDatastore, tenantId, callable) swallows a TenantException from getDatastoreForTenantId and falls through"() {
+        given:
+        def session = Stub(Session)
+        def mtds = Stub(MixedDatastore) {
+            getMultiTenancyMode() >> MultiTenancySettings.MultiTenancyMode.DATABASE
+            getDatastoreForTenantId('tenant1') >> { throw new TenantNotFoundException('boom') }
+            withNewSession('tenant1', _) >> { String tid, Closure body -> body.call(session) }
+        }
+
+        expect:
+        Tenants.withId(mtds, 'tenant1') { -> 'ran' } == 'ran'
+    }
+
+    void "withId(MultiTenantCapableDatastore, tenantId, callable) does not swallow an unrelated exception from getDatastoreForTenantId"() {
+        given: "a failure that is not a known tenant-resolution error should not be silently hidden"
+        def mtds = Stub(MixedDatastore) {
+            getMultiTenancyMode() >> MultiTenancySettings.MultiTenancyMode.DATABASE
+            getDatastoreForTenantId('tenant1') >> { throw new IllegalStateException('boom') }
+        }
+
+        when:
+        Tenants.withId(mtds, 'tenant1') { -> 'ran' }
+
+        then:
+        thrown(IllegalStateException)
     }
 
     void "withId(MultiTenantCapableDatastore, tenantId, callable) uses the shared-connection withSession path, dispatching by closure arity"() {

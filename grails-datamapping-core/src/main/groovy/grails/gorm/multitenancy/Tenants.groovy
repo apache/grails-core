@@ -26,10 +26,12 @@ import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSources
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException
 import org.grails.datastore.mapping.multitenancy.AllTenantsResolver
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.multitenancy.TenantResolver
+import org.grails.datastore.mapping.multitenancy.exceptions.TenantException
 
 /**
  * Helper methods for working with multi tenancy
@@ -287,11 +289,14 @@ class Tenants {
      */
     static <T> T withId(MultiTenantCapableDatastore multiTenantCapableDatastore, Serializable tenantId, Closure<T> callable) {
         log.debug('Tenants.withId called for datastore {} with tenantId {}', multiTenantCapableDatastore, tenantId)
-        org.grails.datastore.mapping.core.Datastore childDatastore = null
+        Datastore childDatastore = null
         try {
             childDatastore = multiTenantCapableDatastore.getDatastoreForTenantId(tenantId)
-        } catch (Throwable e) {
-            log.debug('Ignoring failure resolving datastore for tenant {}: {}', tenantId, e.message)
+        }
+        catch (ConfigurationException | TenantException e) {
+            // An unknown tenant or missing connection: fall through to the session-creating path below,
+            // which resolves the tenant again and reports the failure to the caller rather than hiding it.
+            log.warn('Could not resolve a datastore for tenant [{}]: {}', tenantId, e.message)
         }
         // Only reuse an already-bound per-tenant session for non-shared-connection modes
         // (e.g. DATABASE), where getDatastoreForTenantId yields a distinct child datastore.
@@ -319,21 +324,15 @@ class Tenants {
                 def i = callable.parameterTypes.length
                 if (i == 2) {
                     return multiTenantCapableDatastore.withSession { session ->
-                        def result = callable.call(tenantId, session)
-                        log.debug('Result from shared connection with 2 args: {}', result)
-                        return result
+                        return callable.call(tenantId, session)
                     }
                 }
                 else {
                     switch (i) {
                         case 0:
-                            def result = callable.call()
-                            log.debug('Result from shared connection with 0 args: {}', result)
-                            return result
+                            return callable.call()
                         case 1:
-                            def result = callable.call(tenantId)
-                            log.debug('Result from shared connection with 1 arg: {}', result)
-                            return result
+                            return callable.call(tenantId)
                         default:
                             throw new IllegalArgumentException('Provided closure accepts too many arguments')
                     }
@@ -341,21 +340,14 @@ class Tenants {
             }
             else {
                 return multiTenantCapableDatastore.withNewSession(tenantId) { session ->
-                    log.debug('Inside withNewSession for tenantId {}', tenantId)
                     def i = callable.parameterTypes.length
                     switch (i) {
                         case 0:
-                            def result = callable.call()
-                            log.debug('Result from new session with 0 args: {}', result)
-                            return result
+                            return callable.call()
                         case 1:
-                            def result = callable.call(tenantId)
-                            log.debug('Result from new session with 1 arg: {}', result)
-                            return result
+                            return callable.call(tenantId)
                         case 2:
-                            def result = callable.call(tenantId, session)
-                            log.debug('Result from new session with 2 args: {}', result)
-                            return result
+                            return callable.call(tenantId, session)
                         default:
                             throw new IllegalArgumentException('Provided closure accepts too many arguments')
                     }
