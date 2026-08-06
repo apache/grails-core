@@ -18,16 +18,22 @@
  */
 package org.grails.plugins.datasource
 
+import javax.sql.DataSource
+
+import groovy.sql.Sql
+
+import org.springframework.beans.factory.support.BeanRegistryAdapter
+import org.springframework.context.support.GenericApplicationContext
+import org.springframework.core.env.MapPropertySource
+import org.springframework.core.env.StandardEnvironment
+import org.springframework.util.ClassUtils
+
 import grails.core.GrailsApplication
 import grails.plugins.GrailsPluginManager
-import grails.spring.BeanBuilder
-import groovy.sql.Sql
 import org.grails.config.PropertySourcesConfig
-import org.grails.datastore.mapping.core.DatastoreUtils
-import org.springframework.context.ApplicationContext
-import spock.lang.Specification
+import org.grails.transaction.ChainedTransactionManagerPostProcessor
 
-import javax.sql.DataSource
+import spock.lang.Specification
 
 /**
  * Created by graemerocher on 19/01/2017.
@@ -35,32 +41,74 @@ import javax.sql.DataSource
 class DataSourceGrailsPluginSpec extends Specification {
 
     void "test data sources Grails plugin Spring configuration"() {
+        given:
+        def ctx = new GenericApplicationContext()
+        applyRegistrar(ctx, false, [
+                'dataSource.pooled': true,
+                'dataSource.url': 'jdbc:h2:mem:devDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE'])
+
         when:
-        DataSourceGrailsPlugin plugin = new DataSourceGrailsPlugin()
-        plugin.setPluginManager(Mock(GrailsPluginManager))
-        GrailsApplication application = Mock(GrailsApplication)
-        application.getConfig() >> new PropertySourcesConfig('dataSource.pooled':true,'dataSource.url':'jdbc:h2:mem:devDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE')
-
-        plugin.setGrailsApplication(application)
-
-        BeanBuilder beanBuilder = new BeanBuilder()
-        beanBuilder.beans plugin.doWithSpring()
-
-        ApplicationContext ctx = beanBuilder.createApplicationContext()
+        ctx.refresh()
 
         then:
         ctx.containsBean('dataSource')
         ctx.getBean('dataSource', DataSource)
 
-
-        when:"A query is executed"
-        DataSource ds = ctx.getBean('dataSource', DataSource)
-        Sql sql = new Sql(ds)
+        when: 'a query is executed'
+        def ds = ctx.getBean('dataSource', DataSource)
+        def sql = new Sql(ds)
         int result = sql.call('CREATE TABLE `user` (username VARCHAR(50), password VARCHAR(50)); select * from `user`')
 
         then:
         result == 0
 
-
+        cleanup:
+        ctx.close()
     }
- }
+
+    void "no data source beans are registered without data source configuration"() {
+        given:
+        def ctx = new GenericApplicationContext()
+
+        when:
+        applyRegistrar(ctx, false)
+
+        then:
+        !ctx.containsBeanDefinition('dataSourceConnectionSources')
+        !ctx.containsBeanDefinition('dataSource')
+    }
+
+    void "the chained transaction manager post-processor is registered when enabled with hibernate present"() {
+        given:
+        def ctx = new GenericApplicationContext()
+        ctx.environment.propertySources.addFirst(new MapPropertySource('test',
+                [(DataSourceGrailsPlugin.TRANSACTION_MANAGER_ENABLED): 'true']))
+
+        when:
+        applyRegistrar(ctx, true)
+
+        then:
+        ctx.beanFactory.getBeanDefinition('chainedTransactionManagerPostProcessor').beanClassName ==
+                ChainedTransactionManagerPostProcessor.name
+
+        and: 'the embedded database shutdown hook follows the h2 driver presence'
+        ctx.containsBeanDefinition('embeddedDatabaseShutdownHook') ==
+                ClassUtils.isPresent('org.h2.Driver', DataSourceGrailsPlugin.classLoader)
+    }
+
+    private void applyRegistrar(GenericApplicationContext ctx, boolean hibernatePresent, Map config = [:]) {
+        def application = Mock(GrailsApplication)
+        application.getConfig() >> new PropertySourcesConfig(config)
+        def pluginManager = Mock(GrailsPluginManager)
+        pluginManager.hasGrailsPlugin('hibernate') >> hibernatePresent
+
+        def plugin = new DataSourceGrailsPlugin()
+        plugin.setGrailsApplication(application)
+        plugin.setPluginManager(pluginManager)
+        plugin.setApplicationContext(ctx)
+
+        def registrar = plugin.beanRegistrar()
+        new BeanRegistryAdapter(ctx.defaultListableBeanFactory, (StandardEnvironment) ctx.environment,
+                registrar.getClass()).register(registrar)
+    }
+}

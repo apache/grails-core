@@ -30,7 +30,6 @@ import grails.util.Environment
 /**
  * A extension to the Gradle plugin to configure Grails settings
  *
- * @author Graeme Rocher
  * @since 3.0
  */
 @CompileStatic
@@ -51,12 +50,44 @@ class GrailsExtension {
         this.indy = project.objects.property(Boolean).convention(false)
         this.preserveParameterNames = project.objects.property(Boolean).convention(true)
         this.compileStatic = project.objects.newInstance(GrailsCompileStaticOptions)
+        this.cliAutoProvision = project.objects.property(Boolean).convention(project.provider {
+            def fromProperty = project.findProperty('grailsCliAutoProvision')
+            fromProperty == null ? Boolean.TRUE : Boolean.parseBoolean(fromProperty as String)
+        })
+        this.legacyCommandSupport = project.objects.property(Boolean).convention(project.provider {
+            def fromProperty = project.findProperty('grailsLegacyCommandSupport')
+            fromProperty == null ? Boolean.FALSE : Boolean.parseBoolean(fromProperty as String)
+        })
         this.bom = project.objects.property(String)
         // Use set() rather than convention() so that clearing the value (bom = null,
         // or the deprecated springDependencyManagement = false) results in no BOM being
         // applied, instead of silently falling back to the convention.
         this.bom.set(DEFAULT_BOM)
     }
+
+    /**
+     * Whether the plugin auto-provisions the CLI tier onto the {@code grailsCli} configuration.
+     * When enabled (the default), the plugin adds {@code org.apache.grails:grails-core-cli} (the
+     * command contract) and {@code org.apache.grails:grails-console} (the command runner), and
+     * discovers every companion {@code -cli} artifact advertised by the application's dependency
+     * graph — a plugin advertises its companion through the {@code Grails-Cli-Artifact} manifest
+     * attribute of its runtime jar. Plugin commands (e.g. the {@code dbm-*} or scaffolding
+     * commands) therefore work with no additional build configuration. Opt out with
+     * {@code grails { cliAutoProvision = false }} (or the {@code grailsCliAutoProvision} project
+     * property) and declare `grailsCli` dependencies explicitly.
+     */
+    final Property<Boolean> cliAutoProvision
+
+    /**
+     * Whether the plugin auto-provisions the Grails 7 application-command compatibility bridge
+     * ({@code org.apache.grails:grails-core-cli-legacy}) onto the execution-only
+     * {@code grailsCliLegacy} configuration. Disabled by default. When enabled <strong>and</strong>
+     * {@link #cliAutoProvision} is also enabled, unchanged Grails 7 command plugins keep working
+     * without a re-release. Opt in with {@code grails { legacyCommandSupport = true }} (or the
+     * {@code grailsLegacyCommandSupport} project property) while leaving modern CLI companion
+     * auto-provisioning alone, or disable both with {@code cliAutoProvision = false}.
+     */
+    final Property<Boolean> legacyCommandSupport
 
     /**
      * Whether to invoke native2ascii on resource bundles

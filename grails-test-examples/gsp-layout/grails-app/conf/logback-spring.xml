@@ -25,7 +25,6 @@
     <conversionRule conversionWord="wex" class="org.springframework.boot.logging.logback.WhitespaceThrowableProxyConverter" />
 
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-    <withJansi>true</withJansi>
         <encoder>
             <charset>UTF-8</charset>
             <pattern>%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%5p) %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n%wex</pattern>

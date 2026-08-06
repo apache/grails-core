@@ -112,7 +112,7 @@ dependencies {
 Because all Grails projects will apply the Grails Gradle plugin, the BOM is automatically applied.
 You can override a version in the BOM by setting the associated Gradle property.
 The possible gradle properties are generated as part of this documentation.
-Please see link:{versionsRef}Grails BOM.html[Grails BOM Dependencies] for a quick reference.
+Please see link:{versionsRef}Grails%20BOM.html[Grails BOM Dependencies] for a quick reference.
 
 ===== 4.1 BOM Property Changes
 
@@ -261,13 +261,13 @@ The benefits of reproducible builds are well documented, but for Grails applicat
 To make your local build reproducible, you'll want to set the environment variable `SOURCE_DATE_EPOCH` to a fixed date.
 For Grails, we set this value to the last commit in git via the bash command: `SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)`
 
-==== 8. Spring 3.5.x:
+==== 8. Spring 6.2.x:
 
 Grails 7.0.x is built on the Spring Framework, version 6.2.x. If your project uses Spring-specific features, refer to the https://github.com/spring-projects/spring-framework/wiki/Upgrading-to-Spring-Framework-6.x[Upgrading to Spring 6 guide].
 
 This update introduces enhancements and fixes to the Spring Framework, providing you with the latest improvements in dependency injection, web frameworks, and other Spring-related functionalities.
 
-==== 9. Spring Boot 6.2.x:
+==== 9. Spring Boot 3.5.x:
 
 Grails 6 used Spring Boot 2.7.x. Grails 7.0.x updates this to Spring Boot 3.5.x. For more information, consult the release notes for previous Spring Boot releases:
 1. https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.5-Release-Notes[Spring Boot 3.5 Release Notes]

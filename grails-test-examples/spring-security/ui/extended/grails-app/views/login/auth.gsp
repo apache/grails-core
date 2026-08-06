@@ -16,47 +16,44 @@
   ~  specific language governing permissions and limitations
   ~  under the License.
   --%>
+<%-- Application override of the plugin's login page: renders through the
+     app's 'main' layout directly and leaves the username input unadorned. --%>
 <g:set var='securityConfig' value='${applicationContext.springSecurityService.securityConfig}'/>
 <html>
 <head>
 	<meta name="layout" content="main"/>
 	<s2ui:title messageCode='spring.security.ui.login.title'/>
-	<asset:stylesheet src='spring-security-ui-auth.css'/>
 </head>
 <body>
-<p/>
-<div class="login s2ui_center ui-corner-all" style='text-align:center;'>
-	<div class="login-inner">
-		<s2ui:form type='login' focus='username'>
-			<div class="sign-in">
-				<h2><g:message code='spring.security.ui.login.signin'/></h2>
-				<table>
-					<tr>
-						<td><label for="username"><g:message code='spring.security.ui.login.username'/></label></td>
-						<td><input type="text" name="${securityConfig.apf.usernameParameter}" id="username" class='formLogin' size="20"/></td>
-					</tr>
-					<tr>
-						<td><label for="password"><g:message code='spring.security.ui.login.password'/></label></td>
-						<td><input type="password" name="${securityConfig.apf.passwordParameter}" id="password" class="formLogin" size="20"/></td>
-					</tr>
-					<tr>
-						<td colspan='2'>
-							<input type="checkbox" class="checkbox" name="${securityConfig.rememberMe.parameter}" id="remember_me" checked="checked"/>
-							<label for='remember_me'><g:message code='spring.security.ui.login.rememberme'/></label> |
-							<span class="forgot-link">
-								<g:link controller='register' action='forgotPassword'><g:message code='spring.security.ui.login.forgotPassword'/></g:link>
-							</span>
-						</td>
-					</tr>
-					<tr>
-						<td colspan='2'>
-							<s2ui:linkButton elementId='register' controller='register' messageCode='spring.security.ui.login.register'/>
-							<s2ui:submitButton elementId='loginButton' messageCode='spring.security.ui.login.login'/>
-						</td>
-					</tr>
-				</table>
+<div class="row justify-content-center">
+	<div class="col-11 col-sm-9 col-md-7 col-lg-5 col-xl-4">
+		<div class="card shadow-sm">
+			<div class="card-body p-4 p-sm-5">
+				<h1 class="h4 card-title text-center mb-4"><g:message code='spring.security.ui.login.signin'/></h1>
+				<s2ui:form type='login' focus='username'>
+					<div class="mb-3">
+						<label class="form-label" for="username"><g:message code='spring.security.ui.login.username'/></label>
+						<input type="text" class="form-control" name="${securityConfig.apf.usernameParameter}" id="username"/>
+					</div>
+					<div class="mb-3">
+						<label class="form-label" for="password"><g:message code='spring.security.ui.login.password'/></label>
+						<input type="password" class="form-control" name="${securityConfig.apf.passwordParameter}" id="password"
+						       autocomplete="current-password"/>
+					</div>
+					<div class="mb-3 form-check">
+						<input type="checkbox" class="form-check-input" name="${securityConfig.rememberMe.parameter}" id="remember_me" checked="checked"/>
+						<label class="form-check-label" for="remember_me"><g:message code='spring.security.ui.login.rememberme'/></label>
+					</div>
+					<div class="d-grid gap-2">
+						<s2ui:submitButton elementId='loginButton' messageCode='spring.security.ui.login.login'/>
+						<s2ui:linkButton elementId='register' controller='register' messageCode='spring.security.ui.login.register'/>
+					</div>
+					<div class="text-center mt-3 small">
+						<g:link controller='register' action='forgotPassword'><g:message code='spring.security.ui.login.forgotPassword'/></g:link>
+					</div>
+				</s2ui:form>
 			</div>
-		</s2ui:form>
+		</div>
 	</div>
 </div>
 </body>

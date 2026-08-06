@@ -1,0 +1,12 @@
+rootProject.name = 'cli-companion-autodiscovery'
+
+include 'my-plugin', 'renamed-plugin', 'app'
+
+includeBuild('included-digit-bearing-plugin') {
+    dependencySubstitution {
+        substitute module('org.example.test:my-plugin-2fa-one') using project(':my-plugin-2fa-one')
+        substitute module('org.example.test:my-plugin-2fa-snapshot') using project(':my-plugin-2fa-snapshot')
+        substitute module('org.example.test:my-plugin-2fa-timestamp') using project(':my-plugin-2fa-timestamp')
+        substitute module('org.example.test:my-plugin-2fa-unspecified') using project(':my-plugin-2fa-unspecified')
+    }
+}

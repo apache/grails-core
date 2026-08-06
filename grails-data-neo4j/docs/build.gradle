@@ -49,7 +49,6 @@ configurations {
 }
 
 dependencies {
-    documentation "org.fusesource.jansi:jansi:$jansiVersion"
     documentation "org.apache.groovy:groovy"
     documentation "org.apache.groovy:groovy-templates"
     documentation "org.apache.groovy:groovy-dateutil"

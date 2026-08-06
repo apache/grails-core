@@ -1,0 +1,27 @@
+// Analog of grails-core: owns a cli tier published as the `owner-cli` companion coordinate
+plugins {
+    id 'java-library'
+    id 'org.apache.grails.gradle.grails-plugin-cli'
+    id 'org.apache.grails.gradle.grails-publish'
+}
+
+group = 'org.example.test'
+
+cliArtifact {
+    defaultDependencies = false
+}
+
+dependencies {
+    cliApi project(path)
+}
+
+grailsPublish {
+    githubSlug = 'apache/grails-core'
+    license {
+        name = 'Apache-2.0'
+    }
+    title = 'Owner'
+    desc = 'Test module that owns a cli companion artifact'
+    developers = [test: 'Test Developer']
+    testRepositoryPath = rootProject.layout.buildDirectory.dir('test-repo').get()
+}

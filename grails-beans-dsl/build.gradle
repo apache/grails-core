@@ -1,0 +1,71 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'groovy'
+    id 'java-library'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
+    id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-jacoco'
+}
+
+version = projectVersion
+group = 'org.apache.grails.beandsl'
+
+ext {
+    pomTitle = 'Grails Bean DSL Compiler Support'
+    pomDescription =
+            'A Groovy AST transformation (@GrailsBeans) that compiles a bean-definition DSL into ' +
+            'real Spring @Bean methods on a plain Spring Boot @AutoConfiguration class at compile time.'
+}
+
+dependencies {
+
+    implementation platform(project(':grails-bom'))
+
+    api 'org.apache.groovy:groovy'
+
+    // The transformation resolves @Bean/@ConditionalOnMissingBean against these real
+    // classes (not by name) so Groovy recognises them as genuine annotation types when
+    // it validates AnnotationNodes added after semantic analysis has already run.
+    api 'org.springframework:spring-context'
+    api 'org.springframework.boot:spring-boot-autoconfigure'
+
+    // Only needed so fixture sources compiled by the tests can genuinely extend
+    // grails.plugins.Plugin; the transformation itself detects a Plugin superclass by
+    // fully-qualified name, not by type, so the main sourceSet has no such dependency.
+    testImplementation project(':grails-core')
+
+    testImplementation 'org.apache.groovy:groovy-test-junit5'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'org.junit.platform:junit-platform-suite'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+    testImplementation 'org.spockframework:spock-core'
+    testRuntimeOnly 'org.slf4j:slf4j-simple'
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+}

@@ -19,13 +19,16 @@
 
 package redis
 
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
+import org.springframework.core.env.Environment
+
 import grails.plugins.Plugin
-import grails.plugins.redis.RedisService
-import grails.plugins.redis.util.RedisConfigurationUtil
+import grails.plugins.redis.RedisBeanDefinitionsPostProcessor
 
 class RedisGrailsPlugin extends Plugin {
 
-    def grailsVersion = '7.0.0-SNAPSHOT > *'
+    def grailsVersion = '8.0.0-SNAPSHOT > *'
     def pluginExcludes = [
             'codenarc.properties',
             'grails-app/conf/**',
@@ -57,14 +60,21 @@ class RedisGrailsPlugin extends Plugin {
             [name: 'John Mulhern'],
             [name: 'Shaun Jurgemeyer']]
 
-    Closure doWithSpring() {
-        { ->
-            def redisConfigMap = grailsApplication.config.get('grails.redis') ?: [:]
+    @Override
+    BeanRegistrar beanRegistrar() {
+        return { BeanRegistry registry, Environment environment ->
+            // Read through the Grails config, not the Environment: map-shaped subtrees are
+            // not resolvable as Environment properties
+            Map redisConfigMap = (Map) (grailsApplication.config.get('grails.redis') ?: [:])
 
-            RedisConfigurationUtil.configureService(delegate, redisConfigMap, '', RedisService)
-            redisConfigMap?.connections?.each { connection ->
-                RedisConfigurationUtil.configureService(delegate, connection.value, connection?.key?.capitalize(), RedisService)
+            // The redis pool definitions need destroy methods and dynamic pool-config property
+            // values, which the BeanRegistry API cannot express — the definitions are contributed
+            // by a dedicated post-processor instead
+            registry.registerBean('redisBeanDefinitionsPostProcessor', RedisBeanDefinitionsPostProcessor) {
+                it.infrastructure().supplier {
+                    new RedisBeanDefinitionsPostProcessor(redisConfigMap)
+                }
             }
-        }
+        } as BeanRegistrar
     }
 }

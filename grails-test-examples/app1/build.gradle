@@ -61,7 +61,6 @@ dependencies {
     testImplementation 'org.apache.grails:grails-testing-support-web'
     testImplementation 'org.apache.grails:grails-testing-support-datamapping'
 
-    console 'org.apache.grails:grails-console'
 
     implementation project(':grails-test-examples-plugins-loadfirst')
     implementation project(':grails-test-examples-plugins-loadsecond')
