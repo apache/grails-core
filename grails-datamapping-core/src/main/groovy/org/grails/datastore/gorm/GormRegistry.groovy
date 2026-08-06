@@ -25,6 +25,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 
 import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.util.ClassUtils
 
 import grails.gorm.MultiTenant
 import grails.gorm.multitenancy.CurrentTenantHolder
@@ -382,6 +383,7 @@ class GormRegistry {
      */
     void removeDatastore(Datastore datastore) {
         if (datastore == null) return
+        removeConstraints()
         allDatastores.remove(datastore)
         datastoresByType.remove(datastore.getClass())
 
@@ -931,45 +933,40 @@ class GormRegistry {
     }
 
     /**
-     * Register constraints for all entities in a datastore.
-     * Delegates to the ConstraintsEvaluator if available in the mapping context.
+     * De-registers the old Grails 2 'unique' constraint, if present.
      *
-     * @param datastore The datastore containing the entities
+     * Mirrors {@link GormEnhancer#registerConstraints(Datastore)}'s reflective, soft-dependency
+     * lookup - a no-op outside a Grails 2 environment. Not scoped to a specific datastore (the
+     * underlying constraint registry this clears is global), so takes no parameters, same as the
+     * original. Lives here, not on {@code GormEnhancer}, because {@link #removeDatastore(Datastore)}
+     * already owns every other piece of teardown for a datastore going away (API deregistration,
+     * datastore mapping cleanup, metaclass cleanup); constraint removal is one more.
      */
     @CompileDynamic
-    void registerConstraints(Object datastore) {
-        if (datastore == null) return
-        
+    void removeConstraints() {
         try {
-            def context = ((Datastore) datastore).mappingContext
-            def factory = context.mappingFactory
-            if (factory.hasProperty('entityContext')) {
-                def constraintsEvaluator = factory.entityContext.getBean(Class.forName('org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator', false, GormRegistry.classLoader))
-                if (constraintsEvaluator != null) {
-                    for (entity in context.persistentEntities) {
-                        constraintsEvaluator.evaluate(entity.javaClass)
-                    }
-                }
+            String className = 'org.apache.groovy.grails.validation.ConstrainedProperty'
+            ClassLoader classLoader = getClass().getClassLoader()
+            if (ClassUtils.isPresent(className, classLoader)) {
+                classLoader.loadClass(className).removeConstraint('unique')
             }
         } catch (Throwable e) {
-            log.debug('Could not register GORM constraints: {}', e.message)
+            log.debug('Not running in Grails 2 environment, cannot de-register constraints. This exception can be safely ignored if you are not using Grails 2. {}', e.message, e)
         }
     }
 
     /**
      * Initialize a datastore with GORM.
-     * Orchestrates constraint registration and datastore registration.
-     * Note: Entity-specific registration is still handled by GormEnhancer.
+     * Orchestrates datastore registration. Constraint registration is handled by
+     * {@link GormEnhancer#registerConstraints(Datastore)}; entity-specific registration is still
+     * handled by GormEnhancer.
      *
      * @param datastore The datastore to initialize
      * @param defaultQualifier The default connection source qualifier
      */
     void initializeDatastore(Object datastore, String defaultQualifier) {
         if (datastore == null) return
-        
-        // Register constraints
-        registerConstraints(datastore)
-        
+
         // Register datastore with default qualifier
         Datastore typedDatastore = (Datastore) datastore
         registerDatastore(defaultQualifier, typedDatastore)

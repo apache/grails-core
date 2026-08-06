@@ -115,11 +115,26 @@ class GormEnhancer implements Closeable {
         String qualifier = ConnectionSourceNameResolver.resolveDefaultConnectionSourceName(datastore)
         registry.initializeDatastore(datastore, qualifier)
 
+        registerApiFactories()
         registerConstraints(datastore)
 
         for (entity in datastore.mappingContext.persistentEntities) {
             registerEntity(entity)
         }
+    }
+
+    /**
+     * Registers the {@link GormApiFactory} implementations this enhancer's datastore needs, before any
+     * entity is registered.
+     *
+     * Adapters that build specialised API objects (for example Mongo's {@code MongoStaticApi}, which
+     * {@code MongoEntity} casts to) override this. It is deliberately separate from
+     * {@link #registerConstraints(Datastore)}: factory registration has nothing to do with constraints,
+     * and hanging it off the constraints hook would break the moment a subclass reordered or skipped
+     * that step.
+     */
+    protected void registerApiFactories() {
+        // no-op by default: the registry falls back to DefaultGormApiFactory
     }
 
     /**
@@ -236,7 +251,6 @@ class GormEnhancer implements Closeable {
      */
     @CompileStatic
     void close() throws IOException {
-        removeConstraints()
         if (STATE_REGISTRY.getPreferredDatastore() == datastore) {
             STATE_REGISTRY.clearPreferredDatastore()
         }
@@ -252,26 +266,6 @@ class GormEnhancer implements Closeable {
             if (!stillManaged) {
                 metaClassRegistry.removeMetaClass(cls)
             }
-        }
-    }
-
-    @CompileDynamic
-    protected void removeConstraints() {
-        try {
-            def cls = Class.forName('org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator', false, GormEnhancer.classLoader)
-            if (cls != null) {
-                def factory = datastore.mappingContext.mappingFactory
-                if (factory.hasProperty('entityContext')) {
-                    def constraintsEvaluator = factory.entityContext.getBean(cls)
-                    if (constraintsEvaluator != null) {
-                        for (entity in datastore.mappingContext.persistentEntities) {
-                            constraintsEvaluator.removeConstraints(entity.javaClass)
-                        }
-                    }
-                }
-            }
-        } catch (Throwable e) {
-            log.debug("Not running in Grails environment, cannot de-register constraints. ${e.message}")
         }
     }
 

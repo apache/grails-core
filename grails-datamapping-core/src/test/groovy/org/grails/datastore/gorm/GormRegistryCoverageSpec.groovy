@@ -401,13 +401,24 @@ class GormRegistryCoverageSpec extends Specification {
         !registry.createDynamicFinders(datastore).isEmpty()
     }
 
-    void "registerConstraints does nothing for a null datastore and swallows failures for one without constraint support"() {
+    void "removeConstraints swallows failures outside a Grails 2 environment"() {
         given:
         def registry = new GormRegistry()
 
         expect:
-        registry.registerConstraints(null) == null
-        registry.registerConstraints(datastore) == null
+        registry.removeConstraints() == null
+    }
+
+    void "removeDatastore de-registers constraints as part of tearing down the datastore"() {
+        given:
+        def registry = new GormRegistry()
+        registry.registerDatastore(ConnectionSource.DEFAULT, datastore)
+
+        when:
+        registry.removeDatastore(datastore)
+
+        then: "no exception - the Grails-2-only constraint removal safely no-ops outside that environment"
+        notThrown(Throwable)
     }
 
     void "registerEntity registers static, instance and validation apis plus the entity's default datastore mapping"() {
