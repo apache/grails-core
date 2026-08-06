@@ -154,6 +154,7 @@ abstract class GenerateConfigurationMetadataTask extends DefaultTask {
 
     private Map<String, ClassModel> readModels() {
         Map<String, ClassModel> models = [:]
+        Map<String, File> origins = [:]
         classesDirs.files.findAll { File file -> file.isDirectory() }.sort { File file -> file.absolutePath }.each {
             File directory ->
             Stream<java.nio.file.Path> paths = Files.walk(directory.toPath())
@@ -163,10 +164,12 @@ abstract class GenerateConfigurationMetadataTask extends DefaultTask {
                         .forEach { java.nio.file.Path path ->
                             ClassModel model = GenerateConfigurationMetadataTask.readClass(Files.readAllBytes(path))
                             ClassModel previous = models.put(model.name, model)
-                            if (previous != null && previous != model) {
+                            if (previous != null) {
                                 throw new IllegalArgumentException(
-                                        "Duplicate compiled class '${model.name}' in configuration metadata inputs")
+                                        "Duplicate compiled class '${model.name}' in configuration metadata inputs " +
+                                                "(first seen in '${origins[model.name]}', also in '${directory}')")
                             }
+                            origins[model.name] = directory
                         }
             } finally {
                 paths.close()
@@ -351,7 +354,7 @@ abstract class GenerateConfigurationMetadataTask extends DefaultTask {
     private static Map<String, Object> merge(List<Map<String, Object>> groups,
                                              List<Map<String, Object>> properties, Map overlay) {
         Map<String, Object> result = [:]
-        result['groups'] = mergeNamed(groups, (overlay.get('groups') ?: []) as List, 'groups')
+        result['groups'] = mergeGroups(groups, (overlay.get('groups') ?: []) as List)
         result['properties'] = mergeNamed(properties, (overlay.get('properties') ?: []) as List, 'properties')
         if (overlay.containsKey('hints')) {
             result['hints'] = mergeNamed([], overlay.get('hints') as List, 'hints')
@@ -399,6 +402,77 @@ abstract class GenerateConfigurationMetadataTask extends DefaultTask {
             indexed[name] = entry
         }
         indexed
+    }
+
+    private static List<Object> mergeGroups(List generated, List overlay) {
+        Map<String, Object> merged = new LinkedHashMap<>()
+        generated.each { Object entry ->
+            Map<String, Object> group = (Map<String, Object>) entry
+            String key = groupKey(group)
+            if (merged.containsKey(key)) {
+                throw new IllegalArgumentException("Conflicting generated groups metadata for '${group.name}'")
+            }
+            merged[key] = group
+        }
+        Set<String> appliedNameOnly = new LinkedHashSet<>()
+        Set<String> appliedOverlayKeys = new LinkedHashSet<>()
+        overlay.each { Object entry ->
+            Map<String, Object> group = (Map<String, Object>) entry
+            String name = group.name as String
+            if (!name) {
+                throw new IllegalArgumentException("groups entry has no name")
+            }
+            String sourceType = group.sourceType as String
+            String sourceMethod = group.sourceMethod as String
+            if (sourceType == null && sourceMethod == null) {
+                if (!appliedNameOnly.add(name)) {
+                    throw new IllegalArgumentException("Conflicting overlay groups metadata for '${name}'")
+                }
+                boolean matched = false
+                List<String> keys = new ArrayList<>(merged.keySet())
+                keys.each { String key ->
+                    Object existing = merged[key]
+                    if (existing instanceof Map && ((Map) existing).name == name) {
+                        merged[key] = new LinkedHashMap((Map) existing) + group
+                        matched = true
+                    }
+                }
+                if (!matched) {
+                    merged[groupKey(group)] = group
+                }
+            } else {
+                String key = groupKey(group)
+                if (!appliedOverlayKeys.add(key)) {
+                    throw new IllegalArgumentException("Conflicting overlay groups metadata for '${name}'")
+                }
+                Object existing = merged[key]
+                if (existing instanceof Map) {
+                    merged[key] = new LinkedHashMap((Map) existing) + group
+                } else {
+                    merged[key] = group
+                }
+            }
+        }
+        merged.entrySet().sort { a, b ->
+            Map<String, Object> left = (Map<String, Object>) a.value
+            Map<String, Object> right = (Map<String, Object>) b.value
+            int byName = (left.name as String) <=> (right.name as String)
+            if (byName != 0) {
+                return byName
+            }
+            int bySourceType = ((left.sourceType as String) ?: '') <=> ((right.sourceType as String) ?: '')
+            if (bySourceType != 0) {
+                return bySourceType
+            }
+            ((left.sourceMethod as String) ?: '') <=> ((right.sourceMethod as String) ?: '')
+        }.collect { Map.Entry entry -> entry.value }
+    }
+
+    private static String groupKey(Map<String, Object> group) {
+        String name = group.name as String
+        String sourceType = group.sourceType as String
+        String sourceMethod = group.sourceMethod as String
+        name + '|' + (sourceType ?: '') + '|' + (sourceMethod ?: '')
     }
 
     private static Object canonical(Object value) {
