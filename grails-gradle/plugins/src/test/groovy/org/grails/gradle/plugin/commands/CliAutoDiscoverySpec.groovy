@@ -37,9 +37,14 @@ class CliAutoDiscoverySpec extends GradleSpecification {
     def "a companion advertised by a same-build project dependency is wired to its cli capability, not an external module"() {
         given: 'an app that depends on an in-build command-bearing plugin'
         setupTestResourceProject('cli-companion-autodiscovery')
+        executeTask(':app:prepareDigitBearingPlugin')
 
         when: 'the app resolves its grailsCli dependencies'
-        def result = executeTask(':app:inspectGrailsCli')
+        def result = executeTask(':app:inspectGrailsCli', [
+                ':app:inspectGrailsCliLegacy',
+                ':app:inspectClasspathWiring',
+                '-PgrailsLegacyCommandSupport=true'
+        ])
 
         then: 'the companion is a project dependency requesting the plugin cli capability'
         result.output.contains('GRAILSCLI_DEP: project path=:my-plugin capabilities=[org.example.test:my-plugin-cli]')
@@ -47,9 +52,26 @@ class CliAutoDiscoverySpec extends GradleSpecification {
         and: 'it is NOT an external module coordinate (the bug this regression pins)'
         !result.output.contains('GRAILSCLI_DEP: module org.example.test:my-plugin-cli')
 
-        and: 'the command contract and runner are auto-provisioned as well'
-        result.output.contains('GRAILSCLI_DEP: module org.apache.grails:grails-core-cli')
-        result.output.contains('GRAILSCLI_DEP: module org.apache.grails:grails-console')
+        and: 'digit-bearing composite-build artifacts use their resolved producer versions'
+        result.output.contains('GRAILSCLI_DEP: module org.example.test:my-plugin-2fa-one-cli:1')
+        result.output.contains('GRAILSCLI_DEP: module org.example.test:my-plugin-2fa-snapshot-cli:1-SNAPSHOT')
+        result.output.contains('GRAILSCLI_DEP: module org.example.test:my-plugin-2fa-timestamp-cli:1-20260101.123456-1')
+        result.output.contains("GRAILSCLI_DEP: module org.example.test:my-plugin-2fa-unspecified-cli:${PROJECT_VERSION}")
+
+        and: 'the command contract and runner are auto-provisioned at the current Grails version'
+        result.output.contains("GRAILSCLI_DEP: module org.apache.grails:grails-core-cli:${PROJECT_VERSION}")
+        result.output.contains("GRAILSCLI_DEP: module org.apache.grails:grails-console:${PROJECT_VERSION}")
+
+        and: 'the opt-in legacy bridge is execution-only and versioned to the current Grails version'
+        result.output.contains("GRAILSCLILEGACY_DEP: module org.apache.grails:grails-core-cli-legacy:${PROJECT_VERSION}")
+        !result.output.contains('GRAILSCLI_DEP: module org.apache.grails:grails-core-cli-legacy')
+        result.output.contains('CLASSPATH_EXTENDS_GRAILSCLILEGACY=true')
+        result.output.contains('COMPILE_EXTENDS_GRAILSCLILEGACY=false')
+        result.output.contains('COMPILE_HAS_GRAILSCLILEGACY=false')
+        result.output.contains('TEST_COMPILE_HAS_GRAILSCLILEGACY=false')
+        result.output.contains('INTEGRATION_TEST_COMPILE_HAS_GRAILSCLILEGACY=false')
+        result.output.contains('TEST_RUNTIME_HAS_GRAILSCLILEGACY=true')
+        result.output.contains('INTEGRATION_TEST_RUNTIME_HAS_GRAILSCLILEGACY=true')
     }
 
     def "a companion with a customized artifactId is discovered and resolves through its advertised capability"() {
@@ -72,11 +94,21 @@ class CliAutoDiscoverySpec extends GradleSpecification {
         setupTestResourceProject('cli-companion-autodiscovery')
 
         when:
-        def result = executeTask(':app:inspectClasspathWiring', [':app:inspectRuntimeClasspath'])
+        def result = executeTask(':app:inspectClasspathWiring', [
+                ':app:inspectRuntimeClasspath',
+                '-PgrailsLegacyCommandSupport=true'
+        ])
 
         then: 'grailsCli extends the compile classpath but not the runtime classpath'
         result.output.contains('COMPILE_EXTENDS_GRAILSCLI=true')
         result.output.contains('RUNTIME_EXTENDS_GRAILSCLI=false')
+        result.output.contains('COMPILE_EXTENDS_GRAILSCLILEGACY=false')
+        result.output.contains('CLASSPATH_EXTENDS_GRAILSCLILEGACY=true')
+        result.output.contains('COMPILE_HAS_GRAILSCLILEGACY=false')
+        result.output.contains('TEST_COMPILE_HAS_GRAILSCLILEGACY=false')
+        result.output.contains('INTEGRATION_TEST_COMPILE_HAS_GRAILSCLILEGACY=false')
+        result.output.contains('TEST_RUNTIME_HAS_GRAILSCLILEGACY=true')
+        result.output.contains('INTEGRATION_TEST_RUNTIME_HAS_GRAILSCLILEGACY=true')
 
         and: 'no companion (-cli) jar reaches the resolved runtime classpath'
         !result.output.readLines().any { it.startsWith('RUNTIME_ARTIFACT:') && it.contains('-cli') }
@@ -86,10 +118,93 @@ class CliAutoDiscoverySpec extends GradleSpecification {
         given:
         setupTestResourceProject('cli-companion-autodiscovery')
 
-        when:
-        def result = executeTask(':app:inspectGrailsCli', ['-PgrailsCliAutoProvision=false'])
+        when: 'the master switch is off even if the legacy bridge is explicitly opted in'
+        def result = executeTask(':app:inspectGrailsCli', [
+                ':app:inspectGrailsCliLegacy',
+                ':app:inspectClasspathWiring',
+                '-PgrailsCliAutoProvision=false',
+                '-PgrailsLegacyCommandSupport=true'
+        ])
 
         then: 'nothing is provisioned onto grailsCli — neither the companion nor the contract/runner'
         !result.output.contains('GRAILSCLI_DEP:')
+        !result.output.contains('GRAILSCLILEGACY_DEP:')
+        result.output.contains('COMPILE_HAS_GRAILSCLILEGACY=false')
+        result.output.contains('TEST_COMPILE_HAS_GRAILSCLILEGACY=false')
+        result.output.contains('INTEGRATION_TEST_COMPILE_HAS_GRAILSCLILEGACY=false')
+        result.output.contains('TEST_RUNTIME_HAS_GRAILSCLILEGACY=false')
+        result.output.contains('INTEGRATION_TEST_RUNTIME_HAS_GRAILSCLILEGACY=false')
+    }
+
+    def "legacyCommandSupport defaults to false and leaves only the modern CLI tier"() {
+        given:
+        setupTestResourceProject('cli-companion-autodiscovery')
+
+        when:
+        def result = executeTask(':app:inspectGrailsCli', [
+                ':app:inspectGrailsCliLegacy',
+                ':app:inspectClasspathWiring'
+        ])
+
+        then: 'the modern CLI tier is still auto-provisioned'
+        result.output.contains("GRAILSCLI_DEP: module org.apache.grails:grails-core-cli:${PROJECT_VERSION}")
+        result.output.contains("GRAILSCLI_DEP: module org.apache.grails:grails-console:${PROJECT_VERSION}")
+        result.output.contains('GRAILSCLI_DEP: project path=:my-plugin capabilities=[org.example.test:my-plugin-cli]')
+
+        and: 'the legacy bridge is not provisioned by default'
+        !result.output.contains('GRAILSCLILEGACY_DEP:')
+        result.output.contains('COMPILE_HAS_GRAILSCLILEGACY=false')
+        result.output.contains('TEST_COMPILE_HAS_GRAILSCLILEGACY=false')
+        result.output.contains('INTEGRATION_TEST_COMPILE_HAS_GRAILSCLILEGACY=false')
+        result.output.contains('TEST_RUNTIME_HAS_GRAILSCLILEGACY=false')
+        result.output.contains('INTEGRATION_TEST_RUNTIME_HAS_GRAILSCLILEGACY=false')
+    }
+
+    def "legacyCommandSupport = false disables only the Grails 7 command bridge"() {
+        given:
+        setupTestResourceProject('cli-companion-autodiscovery')
+
+        when:
+        def result = executeTask(':app:inspectGrailsCli', [
+                ':app:inspectGrailsCliLegacy',
+                ':app:inspectClasspathWiring',
+                '-PgrailsLegacyCommandSupport=false'
+        ])
+
+        then: 'the modern CLI tier is still auto-provisioned'
+        result.output.contains("GRAILSCLI_DEP: module org.apache.grails:grails-core-cli:${PROJECT_VERSION}")
+        result.output.contains("GRAILSCLI_DEP: module org.apache.grails:grails-console:${PROJECT_VERSION}")
+        result.output.contains('GRAILSCLI_DEP: project path=:my-plugin capabilities=[org.example.test:my-plugin-cli]')
+
+        and: 'the explicit false property keeps the legacy bridge off'
+        !result.output.contains('GRAILSCLILEGACY_DEP:')
+        result.output.contains('COMPILE_HAS_GRAILSCLILEGACY=false')
+        result.output.contains('TEST_COMPILE_HAS_GRAILSCLILEGACY=false')
+        result.output.contains('INTEGRATION_TEST_COMPILE_HAS_GRAILSCLILEGACY=false')
+        result.output.contains('TEST_RUNTIME_HAS_GRAILSCLILEGACY=false')
+        result.output.contains('INTEGRATION_TEST_RUNTIME_HAS_GRAILSCLILEGACY=false')
+    }
+
+    def "legacyCommandSupport = true provisions only the Grails 7 command bridge"() {
+        given:
+        setupTestResourceProject('cli-companion-autodiscovery')
+
+        when:
+        def result = executeTask(':app:inspectGrailsCli', [
+                ':app:inspectGrailsCliLegacy',
+                ':app:inspectClasspathWiring',
+                '-PgrailsLegacyCommandSupport=true'
+        ])
+
+        then: 'the modern CLI tier remains auto-provisioned'
+        result.output.contains("GRAILSCLI_DEP: module org.apache.grails:grails-core-cli:${PROJECT_VERSION}")
+        result.output.contains("GRAILSCLI_DEP: module org.apache.grails:grails-console:${PROJECT_VERSION}")
+        result.output.contains('GRAILSCLI_DEP: project path=:my-plugin capabilities=[org.example.test:my-plugin-cli]')
+
+        and: 'the legacy bridge is provisioned only when opted in'
+        result.output.contains("GRAILSCLILEGACY_DEP: module org.apache.grails:grails-core-cli-legacy:${PROJECT_VERSION}")
+        !result.output.contains('GRAILSCLI_DEP: module org.apache.grails:grails-core-cli-legacy')
+        result.output.contains('TEST_RUNTIME_HAS_GRAILSCLILEGACY=true')
+        result.output.contains('INTEGRATION_TEST_RUNTIME_HAS_GRAILSCLILEGACY=true')
     }
 }

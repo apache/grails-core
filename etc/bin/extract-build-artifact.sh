@@ -30,17 +30,17 @@ EXTRACT_LOCATION="${2:-${SCRIPT_DIR}/results}"
 
 echo "Looking for build artifact ${ARTIFACT_NAME} in ${EXTRACT_LOCATION}"
 
-if [ -z "${EXTRACT_LOCATION}/first/${ARTIFACT_NAME}" ]; then
+if [ ! -f "${EXTRACT_LOCATION}/first/${ARTIFACT_NAME}" ]; then
     echo "❌ First Artifact Not found: ${ARTIFACT_NAME} could not be found under ${EXTRACT_LOCATION}/first/${ARTIFACT_NAME}"
     exit 1;
 else
   echo "     ✅ First Artifact Found @ ${EXTRACT_LOCATION}/first/${ARTIFACT_NAME}"
 fi
-if [ -z "${EXTRACT_LOCATION}/second/${ARTIFACT_NAME}" ]; then
+if [ ! -f "${EXTRACT_LOCATION}/second/${ARTIFACT_NAME}" ]; then
     echo "❌ Second Artifact Not found: ${ARTIFACT_NAME} could not be found under ${EXTRACT_LOCATION}/second/${ARTIFACT_NAME}"
     exit 1;
 else
-  echo "     ✅ Second Artifact Found @ ${EXTRACT_LOCATION}/first/${ARTIFACT_NAME}"
+  echo "     ✅ Second Artifact Found @ ${EXTRACT_LOCATION}/second/${ARTIFACT_NAME}"
 fi
 
 rm -rf "${EXTRACT_LOCATION}/firstArtifact" || true
