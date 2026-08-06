@@ -86,6 +86,8 @@ class GroovyScriptCommandFactory extends ResourceResolvingCommandFactory<GroovyS
     @Override
     protected Command createCommand(Profile profile, String commandName, Resource resource, GroovyScriptCommand data) {
         data.setProfile(profile)
+        data.name = commandName
+        data.description.name = commandName
         return data
     }
 }

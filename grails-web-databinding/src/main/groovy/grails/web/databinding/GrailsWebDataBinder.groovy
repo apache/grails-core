@@ -265,7 +265,7 @@ class GrailsWebDataBinder extends SimpleDataBinder {
     protected getPersistentInstance(Class<?> type, id) {
         try {
             InvokerHelper.invokeStaticMethod(type, 'get', id)
-        } catch (Exception exc) {}
+        } catch (Exception ignored) {}
     }
 
     /**
@@ -731,7 +731,7 @@ class GrailsWebDataBinder extends SimpleDataBinder {
         if (grailsApplication != null) {
             try {
                 return grailsApplication.mappingContext.getPersistentEntity(clazz.name)
-            } catch (GrailsConfigurationException e) {
+            } catch (GrailsConfigurationException ignored) {
                 //no-op
             }
         }

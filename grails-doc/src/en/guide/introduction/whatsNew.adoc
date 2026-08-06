@@ -82,6 +82,78 @@ class MyGrailsPlugin extends Plugin {
 The DSL continues to work for now, but you are strongly urged to migrate.
 See the xref:upgrading#upgrading80x[upgrade guide] for details.
 
+==== CLI Commands Move to Companion `-cli` Artifacts
+
+Grails commands (`ApplicationCommand` implementations such as the `dbm-*` database-migration
+commands, the scaffolding `generate-*` commands, `url-mappings-report`, and `schema-export`) no
+longer ship inside the runtime plugin artifacts.
+Each command-bearing module now publishes a companion artifact under its own Maven coordinate with
+a `-cli` suffix — for example `org.apache.grails:grails-core-cli` and
+`org.apache.grails:grails-data-hibernate7-dbmigration-cli`.
+
+The command contract itself moved from `grails.dev.commands.*` to `org.apache.grails.core.cli.*`
+in the new `grails-core-cli` artifact.
+Applications consume cli artifacts through the new `grailsCli` Gradle configuration, which is
+compile-visible for `grails-app/commands` sources and on the command-runner classpath, but never on
+`runtimeClasspath` — commands and their CLI-only dependencies (such as `grails-shell-cli`) are
+excluded from `bootRun`, `bootJar`, and `bootWar` entirely.
+The Grails Gradle plugin provisions `grailsCli` automatically: it adds `grails-core-cli` and
+`grails-console`, and discovers every companion cli artifact advertised by the application's
+dependency graph — a command-bearing plugin advertises its companion through the
+`Grails-Cli-Artifact` manifest attribute of its runtime jar, and its commands are registered in a
+`META-INF/grails-cli.factories` file inside the companion jar. Declaring a plugin is therefore all
+that is needed; its commands (including the per-command Gradle tasks such as `dbmUpdate`) follow
+automatically, even when the plugin is only a transitive dependency:
+
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    // the dbm-* commands are discovered automatically: the plugin jar advertises
+    // org.apache.grails:grails-data-hibernate7-dbmigration-cli, which is added to grailsCli
+    implementation 'org.apache.grails:grails-data-hibernate7-dbmigration'
+}
+----
+
+The auto-provisioning can be disabled with `grails { cliAutoProvision = false }`, in which case
+`grailsCli` dependencies are declared explicitly.
+
+The plugin can also provision `grails-core-cli-legacy` into a separate execution-only
+`grailsCliLegacy` bucket when both `cliAutoProvision` (default `true`) and
+`legacyCommandSupport` (default `false`) are enabled. That bucket contributes to
+`grailsCliClasspath`, never to application or plugin compile classpaths. Opt in with
+`grails { legacyCommandSupport = true }` so unchanged Grails 7 command plugins keep working
+without a re-release, without leaking `grails.dev.commands.*` into the Grails 8
+command-authoring ABI.
+
+When that bridge is disabled, runtime command discovery still detects plugins that publish legacy
+`grails.dev.commands.ApplicationCommand` factories without loading their command classes. Grails
+logs the originating plugin artifact and appends the exact opt-in or upgrade remediation when an
+unknown command is requested. The detection remains on the resolved command runtime classpath and
+does not add a Gradle configuration-time dependency scan.
+
+Plugin authors get the whole publishing side from the new
+`org.apache.grails.gradle.grails-plugin-cli` Gradle plugin: it creates the `cli` source set as a
+feature variant, wires the command contract onto its compile classpath, advertises the companion
+from the runtime jar, and publishes it (via the Grails publish plugin) under the plugin's
+coordinate with the `-cli` suffix — the framework's own command-bearing modules are built with the
+same plugin.
+
+This removes CLI-only dependencies — and their side effects, such as the WAR-deployment failure
+caused by a CLI Spring Boot initializer on the runtime classpath — from packaged applications.
+
+The split does not hold up application upgrades on plugin re-releases: a plugin that ships no
+commands is unaffected, and a command-bearing plugin that has not yet been rebuilt for Grails 8
+keeps its runtime functionality. Its legacy `grails.dev.commands.ApplicationCommand` registrations
+can continue to work through a deprecated compatibility layer when `legacyCommandSupport` is
+enabled, so those commands remain available without a re-release; publishing a companion `-cli`
+artifact is recommended when migrating to the Grails 8 command API. New commands should use
+`org.apache.grails.core.cli.*`. A plugin that still authors legacy commands must explicitly compile
+against `grails-core-cli-legacy`; consumers of an already-published legacy plugin enable the bridge
+with `grails { legacyCommandSupport = true }` (or declare `grailsCliLegacy` themselves). See the
+xref:upgrading#upgrading80x[upgrade guide] for the migration steps and the full upgrade-impact
+breakdown.
+
 ==== GSP Tag Library Improvements
 
 Grails {grailsMajorVersion} continues the move toward method-based TagLib handlers while preserving compatibility with existing closure-based tags.

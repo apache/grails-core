@@ -30,14 +30,33 @@ plugins {
 	id 'org.apache.grails.gradle.grails-code-style'
 	id 'org.apache.grails.gradle.grails-gsp'
 	id 'org.apache.grails.gradle.grails-plugin'
+	id 'org.apache.grails.gradle.grails-plugin-cli'
 }
 
 version = projectVersion
 group = 'org.apache.grails'
 
+cliArtifact {
+	automaticModuleName = 'org.apache.grails.security.cli'
+	// this framework module wires its cli dependencies with project dependencies below
+	defaultDependencies = false
+}
+
+
 dependencies {
 
 	implementation platform(project(':grails-bom'))
+
+	// the cli tier — published separately as a companion -cli artifact
+	cliImplementation platform(project(':grails-bom'))
+	cliApi project(project.path)
+	cliApi(project(':grails-core')) {
+		capabilities {
+			requireCapability('org.apache.grails:grails-core-cli')
+		}
+	}
+	// GrailsConsole (used by the s2-* commands) needs jline at compile time
+	cliImplementation 'org.jline:jline'
 
 	api project(':grails-spring-security-compat')
 	api project(':grails-async') // AsyncGrailsWebRequest is used in public API
@@ -71,7 +90,6 @@ dependencies {
 
 	compileOnly 'jakarta.servlet:jakarta.servlet-api' // Provided
 	compileOnly 'org.jline:jline' // for shell commands
-	compileOnly 'org.fusesource.jansi:jansi' // required for Groovy static type checking of groovysh (Ansi) references
 	compileOnly project(':grails-core') // Provided as this is a Grails Plugin
 	compileOnly 'org.apache.groovy:groovy' // Compile-time annotations
 	compileOnly 'org.slf4j:slf4j-nop' // Prevents warnings about missing slf4j implementation during compilation

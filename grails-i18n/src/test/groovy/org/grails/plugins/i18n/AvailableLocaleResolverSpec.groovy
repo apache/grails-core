@@ -20,9 +20,11 @@ package org.grails.plugins.i18n
 
 import spock.lang.Specification
 
+import java.text.Collator
+
 /**
  * Tests {@link AvailableLocaleResolver} against the {@code messages_*.properties} bundles on the
- * test classpath ({@code src/test/resources}: es, fr, pt_BR, plus the base {@code messages.properties}).
+ * test classpath ({@code src/test/resources}: cs, es, fr, pt_BR, plus the base {@code messages.properties}).
  */
 class AvailableLocaleResolverSpec extends Specification {
 
@@ -67,20 +69,30 @@ class AvailableLocaleResolverSpec extends Specification {
                 .availableLocales.every { it.language in isoLanguages }
     }
 
-    void 'sorts the discovered locales by their display name in their own language'() {
+    void 'sorts the discovered locales by their autonym using a ROOT collator'() {
         given:
+        Collator collator = Collator.getInstance(Locale.ROOT)
         List<Locale> expectedKnown = [
+                Locale.forLanguageTag('cs'),
                 Locale.forLanguageTag('en'),
                 Locale.forLanguageTag('es'),
                 Locale.forLanguageTag('fr'),
                 Locale.forLanguageTag('pt-BR')
-        ].sort { it.getDisplayName(it) }
+        ].sort(false) { a, b -> collator.compare(a.getDisplayName(a), b.getDisplayName(b)) }
 
         when: 'the discovered list is narrowed to the bundles this test controls'
         List<Locale> actualKnown = newResolver().availableLocales.findAll { it in expectedKnown }
 
-        then: 'their relative order matches a display-name sort'
+        then: 'their relative order matches a collator sort of the autonyms'
         actualKnown == expectedKnown
+    }
+
+    void 'orders accented autonyms by base letter, not Unicode code point'() {
+        given: 'čeština (cs) begins with č, which sorts after every ASCII letter by code point'
+        List<Locale> locales = newResolver().availableLocales
+
+        expect: 'a collator keeps it with the c-names, before español (es); a code-point sort would push it last'
+        locales.indexOf(Locale.forLanguageTag('cs')) < locales.indexOf(Locale.forLanguageTag('es'))
     }
 
     void 'always includes the configured default locale even without a matching bundle'() {

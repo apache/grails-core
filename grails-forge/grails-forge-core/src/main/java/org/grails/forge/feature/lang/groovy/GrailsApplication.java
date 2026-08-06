@@ -68,7 +68,7 @@ public class GrailsApplication implements GrailsApplicationFeature, DefaultFeatu
             generatorContext.addTemplate("plugin", new RockerTemplate(generatorContext.getSourcePath("/{packagePath}/{className}GrailsPlugin"),
                     plugin.template(generatorContext.getProject(), applicationType)));
         }
-        generatorContext.addTemplate("bootStrap", new RockerTemplate("grails-app/init/{packagePath}/BootStrap.groovy", bootStrap.template(generatorContext.getProject())));
+        generatorContext.addTemplate("bootStrap", new RockerTemplate("grails-app/init/{packagePath}/BootStrap.groovy", bootStrap.template(generatorContext.getProject(), generatorContext.getFeatures())));
     }
 
     protected boolean shouldGenerateApplicationFile(ApplicationType applicationType, GeneratorContext generatorContext) {

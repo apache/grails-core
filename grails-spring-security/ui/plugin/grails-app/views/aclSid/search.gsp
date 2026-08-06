@@ -22,49 +22,46 @@
 	<s2ui:title messageCode='spring.security.ui.aclSid.search'/>
 </head>
 <body>
-<div>
-	<s2ui:formContainer type='search' beanType='aclSid'>
-		<s2ui:searchForm colspan='4'>
+<s2ui:formContainer type='search' beanType='aclSid' width='40rem'>
+	<s2ui:searchForm>
+		<div class="mb-3">
+			<label class="form-label" for="sid"><g:message code='aclSid.sid.label' default='SID'/></label>
+			<g:textField name='sid' class='form-control' maxlength='255' autocomplete='off' value='${sid}'/>
+		</div>
+		<div class="mb-3">
+			<span class="form-label d-block"><g:message code='aclSid.principal.label' default='Principal'/></span>
+			<g:radioGroup name='principal'
+			              labels='${[message(code: "spring.security.ui.search.true"), message(code: "spring.security.ui.search.false"), message(code: "spring.security.ui.search.either")]}'
+			              values='[1,-1,0]' value='${principal ?: 0}'>
+				<div class="form-check form-check-inline">
+					<%= it.radio.toString().replace('<input ', '<input class="form-check-input" ') %>
+					<span class="form-check-label">${it.label}</span>
+				</div>
+			</g:radioGroup>
+		</div>
+	</s2ui:searchForm>
+</s2ui:formContainer>
+<g:if test='${searched}'>
+<div class="table-responsive">
+	<table class="table table-striped table-hover align-middle">
+		<thead>
+		<tr>
+			<s2ui:sortableColumn property='sid' titleDefault='SID'/>
+			<s2ui:sortableColumn property='principal' titleDefault='Principal'/>
+		</tr>
+		</thead>
+		<tbody>
+		<g:each in='${results}' var='aclSid'>
 			<tr>
-				<td><g:message code='aclSid.sid.label' default='SID'/>:</td>
-				<td colspan='3'><g:textField name='sid' size='50' maxlength='255' autocomplete='off' value='${sid}'/></td>
+				<td><g:link action='edit' id='${aclSid.id}'>${uiPropertiesStrategy.getProperty(aclSid, 'sid')}</g:link></td>
+				<td><s2ui:formatBoolean bean='${aclSid}' name='principal'/></td>
 			</tr>
-			<tr>
-				<td>&nbsp;</td>
-				<td><g:message code='spring.security.ui.search.true'/></td>
-				<td><g:message code='spring.security.ui.search.false'/></td>
-				<td><g:message code='spring.security.ui.search.either'/></td>
-			</tr>
-			<tr>
-				<td><g:message code='aclSid.principal.label' default='Principal'/>:</td>
-				<g:radioGroup name='principal' labels="['','','']" values='[1,-1,0]' value='${principal ?: 0}'>
-					<td><%=it.radio%></td>
-				</g:radioGroup>
-			</tr>
-		</s2ui:searchForm>
-	</s2ui:formContainer>
-	<g:if test='${searched}'>
-	<div class="list">
-		<table>
-			<thead>
-			<tr>
-				<s2ui:sortableColumn property='sid' titleDefault='SID'/>
-				<s2ui:sortableColumn property='principal' titleDefault='Principal'/>
-			</tr>
-			</thead>
-			<tbody>
-			<g:each in='${results}' status='i' var='aclSid'>
-				<tr class="${(i % 2) == 0 ? 'odd' : 'even'}">
-					<td><g:link action='edit' id='${aclSid.id}'>${uiPropertiesStrategy.getProperty(aclSid, 'sid')}</g:link></td>
-					<td><s2ui:formatBoolean bean='${aclSid}' name='principal'/></td>
-				</tr>
-			</g:each>
-			</tbody>
-		</table>
-	</div>
-	<s2ui:paginate total='${totalCount}'/>
-	</g:if>
+		</g:each>
+		</tbody>
+	</table>
 </div>
+<s2ui:paginate total='${totalCount}'/>
+</g:if>
 <s2ui:ajaxSearch paramName='sid'/>
 </body>
 </html>

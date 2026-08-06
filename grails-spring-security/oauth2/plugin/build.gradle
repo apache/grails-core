@@ -28,15 +28,34 @@ plugins {
 	id 'org.apache.grails.buildsrc.sbom'
 	id 'org.apache.grails.gradle.grails-code-style'
 	id 'org.apache.grails.gradle.grails-plugin'
+	id 'org.apache.grails.gradle.grails-plugin-cli'
 	id 'org.apache.grails.gradle.grails-gsp'
 }
 
 version = projectVersion
 group = 'org.apache.grails'
 
+cliArtifact {
+	automaticModuleName = 'org.apache.grails.security.oauth2.cli'
+	// this framework module wires its cli dependencies with project dependencies below
+	defaultDependencies = false
+}
+
+
 dependencies {
 
 	implementation platform(project(':grails-bom'))
+
+	// the cli tier — published separately as a companion -cli artifact
+	cliImplementation platform(project(':grails-bom'))
+	cliApi project(project.path)
+	cliApi(project(':grails-core')) {
+		capabilities {
+			requireCapability('org.apache.grails:grails-core-cli')
+		}
+	}
+	// GrailsConsole (used by init-o-auth2) needs jline at compile time
+	cliImplementation 'org.jline:jline'
 
 	api project(':grails-spring-security'), {
 		// api: GrailsUserDetailsService, SpringSecurityService
@@ -66,7 +85,6 @@ dependencies {
 	implementation 'org.jline:jline', {
 		// comp: ConsoleReader
 	}
-	compileOnly 'org.fusesource.jansi:jansi' // required for Groovy static type checking of groovysh (Ansi) references
 	implementation project(':grails-datamapping-core'), {
 		// impl: @Transactional(runtime)
 	}

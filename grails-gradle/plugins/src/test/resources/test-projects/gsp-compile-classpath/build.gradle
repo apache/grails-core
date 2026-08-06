@@ -1,0 +1,37 @@
+// Verifies the GSP compile classpath assembled by GroovyPagePlugin. Marker directories are used as
+// file dependencies so the classpath can be asserted without resolving anything from a repository.
+plugins {
+    id 'groovy'
+    id 'war'
+    id 'org.apache.grails.gradle.grails-gsp'
+}
+
+dependencies {
+    implementation files('compile-classpath-marker')
+    providedCompile files('provided-compile-marker')
+}
+
+tasks.register('inspectGspCompileClasspath') {
+    doLast {
+        println "HAS_GSP_COMPILE_CONFIGURATION=${configurations.findByName('gspCompile') != null}"
+
+        def mainPaths = classpathOf('compileGroovyPages')
+        def webappPaths = classpathOf('compileWebappGroovyPages')
+
+        println "MAIN_HAS_COMPILE_CLASSPATH=${containsEntry(mainPaths, 'compile-classpath-marker')}"
+        println "MAIN_HAS_PROVIDED_COMPILE=${containsEntry(mainPaths, 'provided-compile-marker')}"
+        println "MAIN_HAS_CLASSES_DIR=${mainPaths.any { it.contains('/build/classes/') }}"
+
+        println "WEBAPP_HAS_COMPILE_CLASSPATH=${containsEntry(webappPaths, 'compile-classpath-marker')}"
+        println "WEBAPP_HAS_PROVIDED_COMPILE=${containsEntry(webappPaths, 'provided-compile-marker')}"
+        println "WEBAPP_HAS_CLASSES_DIR=${webappPaths.any { it.contains('/build/classes/') }}"
+    }
+}
+
+List<String> classpathOf(String taskName) {
+    tasks.named(taskName).get().classpath.files.collect { it.absolutePath.replace('\\', '/') }
+}
+
+static boolean containsEntry(List<String> paths, String directoryName) {
+    paths.any { it.endsWith("/${directoryName}") }
+}

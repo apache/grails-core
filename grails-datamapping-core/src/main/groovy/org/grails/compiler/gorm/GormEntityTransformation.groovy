@@ -184,7 +184,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
                 try {
                     def cl = Thread.currentThread().contextClassLoader
                     AstUtils.addAnnotationIfNecessary(classNode, (Class<? extends Annotation>) Class.forName('grails.persistence.Entity', true, cl))
-                } catch (Throwable e2) {
+                } catch (Throwable ignored) {
                     // Only GORM classes on the classpath continue
                 }
             }

@@ -24,7 +24,7 @@ abstract class CreatePage extends LifecyclePage {
 		title == "Create ${typeName()}"
 	}
 	static content = {
-		submitBtn { $('a', id: 'create') }
+		submitBtn { $('#create') }
 	}
 
 	boolean assertNotUnique() {
