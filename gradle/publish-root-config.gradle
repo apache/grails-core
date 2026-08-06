@@ -40,7 +40,6 @@ def publishedProjects = [
         'grails-codecs',
         'grails-codecs-core',
         'grails-common',
-        'grails-configuration-metadata',
         'grails-console',
         'grails-controllers',
         'grails-converters',
