@@ -883,7 +883,6 @@ class GormRegistry {
      * Create a DatastoreResolver for a class and optional qualifier.
      */
     DatastoreResolver createClassDatastoreResolver(Class cls, String qualifier = ConnectionSource.DEFAULT) {
-        String normalizedClassName = normalizeEntityKey(cls)
         String normalizedQualifier = normalizeQualifier(qualifier)
         return new DatastoreResolver() {
             @Override
@@ -898,7 +897,7 @@ class GormRegistry {
      * Uses a bound resolver (always returns the given datastore) at registration time so that
      * tenant-resolving DatastoreResolvers are not invoked before any tenant context is active.
      */
-    GormStaticApi createStaticApi(Class cls, Datastore datastore, DatastoreResolver resolver, String qualifier) {
+    GormStaticApi createStaticApi(Class cls, Datastore datastore, String qualifier) {
         DatastoreResolver boundResolver = { datastore } as DatastoreResolver
         return getApiFactory(datastore).createStaticApi(cls, datastore.mappingContext, boundResolver, qualifier, this)
     }
@@ -908,7 +907,7 @@ class GormRegistry {
      * Uses a bound resolver (always returns the given datastore) at registration time so that
      * tenant-resolving DatastoreResolvers are not invoked before any tenant context is active.
      */
-    GormInstanceApi createInstanceApi(Class cls, Datastore datastore, DatastoreResolver resolver, boolean failOnError, boolean markDirty) {
+    GormInstanceApi createInstanceApi(Class cls, Datastore datastore, boolean failOnError, boolean markDirty) {
         DatastoreResolver boundResolver = { datastore } as DatastoreResolver
         return getApiFactory(datastore).createInstanceApi(cls, datastore.mappingContext, boundResolver, this, failOnError, markDirty)
     }
@@ -918,7 +917,7 @@ class GormRegistry {
      * Uses a bound resolver (always returns the given datastore) at registration time so that
      * tenant-resolving DatastoreResolvers are not invoked before any tenant context is active.
      */
-    GormValidationApi createValidationApi(Class cls, Datastore datastore, DatastoreResolver resolver) {
+    GormValidationApi createValidationApi(Class cls, Datastore datastore) {
         DatastoreResolver boundResolver = { datastore } as DatastoreResolver
         return getApiFactory(datastore).createValidationApi(cls, datastore.mappingContext, boundResolver, this)
     }
@@ -996,12 +995,11 @@ class GormRegistry {
 
         // Always (re)register API singletons so classloader or datastore changes do not leave stale API instances.
         final Class cls = persistentEntity.javaClass
-        DatastoreResolver resolver = createClassDatastoreResolver(cls)
         Datastore datastore = enhancer.datastore
 
-        GormStaticApi staticApi = createStaticApi(cls, datastore, resolver, ConnectionSource.DEFAULT)
-        GormInstanceApi instanceApi = createInstanceApi(cls, datastore, resolver, enhancer.failOnError, enhancer.markDirty)
-        GormValidationApi validationApi = createValidationApi(cls, datastore, resolver)
+        GormStaticApi staticApi = createStaticApi(cls, datastore, ConnectionSource.DEFAULT)
+        GormInstanceApi instanceApi = createInstanceApi(cls, datastore, enhancer.failOnError, enhancer.markDirty)
+        GormValidationApi validationApi = createValidationApi(cls, datastore)
 
         registerEntityApis(className, staticApi, instanceApi, validationApi)
 
