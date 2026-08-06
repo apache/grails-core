@@ -19,6 +19,7 @@
 package org.grails.datastore.gorm
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
@@ -27,6 +28,7 @@ import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 
 import java.util.concurrent.ConcurrentHashMap
 
+@Slf4j
 @CompileStatic
 abstract class AbstractGormApiRegistry<T extends AbstractDatastoreApi> {
 
@@ -140,30 +142,46 @@ abstract class AbstractGormApiRegistry<T extends AbstractDatastoreApi> {
         if (datastore == null) return
         Iterator<Map.Entry<String, T>> it = apis.entrySet().iterator()
         while (it.hasNext()) {
-            try {
-                if (it.next().value.getDatastore() == datastore) {
-                    it.remove()
-                }
-            } catch (Exception e) {
+            Map.Entry<String, T> entry = it.next()
+            if (belongsTo(entry.value, datastore, entry.key, null)) {
                 it.remove()
             }
         }
         Iterator<Map.Entry<String, Map<String, T>>> qit = qualifiedApis.entrySet().iterator()
         while (qit.hasNext()) {
-            Map<String, T> classQualifiedApis = qit.next().value
+            Map.Entry<String, Map<String, T>> classEntry = qit.next()
+            Map<String, T> classQualifiedApis = classEntry.value
             Iterator<Map.Entry<String, T>> eit = classQualifiedApis.entrySet().iterator()
             while (eit.hasNext()) {
-                try {
-                    if (eit.next().value.getDatastore() == datastore) {
-                        eit.remove()
-                    }
-                } catch (Exception e) {
+                Map.Entry<String, T> entry = eit.next()
+                if (belongsTo(entry.value, datastore, classEntry.key, entry.key)) {
                     eit.remove()
                 }
             }
             if (classQualifiedApis.isEmpty()) {
                 qit.remove()
             }
+        }
+    }
+
+    /**
+     * Whether the given API is backed by the datastore being removed.
+     *
+     * An API whose datastore cannot be read is deliberately kept: {@code getDatastore()} routes through
+     * a {@code DatastoreResolver}, and a tenant-aware one throws whenever no tenant is bound on the
+     * calling thread. That is an ordinary transient condition, not evidence the API belongs to this
+     * datastore, so only a positive identity match evicts. Evicting on failure would permanently lose
+     * the entity's API registration and leave subsequent lookups either failing or falling back to a
+     * different datastore.
+     */
+    private boolean belongsTo(T api, Datastore datastore, String className, String qualifier) {
+        try {
+            return api.getDatastore() == datastore
+        }
+        catch (Exception e) {
+            log.warn('Could not resolve the datastore of the GORM API registered for [{}]; leaving it registered',
+                    qualifier == null ? className : "${className} (qualifier [${qualifier}])", e)
+            return false
         }
     }
 
