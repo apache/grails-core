@@ -118,6 +118,20 @@ dependencies {
 The auto-provisioning can be disabled with `grails { cliAutoProvision = false }`, in which case
 `grailsCli` dependencies are declared explicitly.
 
+The plugin can also provision `grails-core-cli-legacy` into a separate execution-only
+`grailsCliLegacy` bucket when both `cliAutoProvision` (default `true`) and
+`legacyCommandSupport` (default `false`) are enabled. That bucket contributes to
+`grailsCliClasspath`, never to application or plugin compile classpaths. Opt in with
+`grails { legacyCommandSupport = true }` so unchanged Grails 7 command plugins keep working
+without a re-release, without leaking `grails.dev.commands.*` into the Grails 8
+command-authoring ABI.
+
+When that bridge is disabled, runtime command discovery still detects plugins that publish legacy
+`grails.dev.commands.ApplicationCommand` factories without loading their command classes. Grails
+logs the originating plugin artifact and appends the exact opt-in or upgrade remediation when an
+unknown command is requested. The detection remains on the resolved command runtime classpath and
+does not add a Gradle configuration-time dependency scan.
+
 Plugin authors get the whole publishing side from the new
 `org.apache.grails.gradle.grails-plugin-cli` Gradle plugin: it creates the `cli` source set as a
 feature variant, wires the command contract onto its compile classpath, advertises the companion
@@ -130,9 +144,15 @@ caused by a CLI Spring Boot initializer on the runtime classpath — from packag
 
 The split does not hold up application upgrades on plugin re-releases: a plugin that ships no
 commands is unaffected, and a command-bearing plugin that has not yet been rebuilt for Grails 8
-keeps its runtime functionality — only its commands are unavailable until it publishes a companion
-`-cli` artifact. See the xref:upgrading#upgrading80x[upgrade guide] for the migration steps and the
-full upgrade-impact breakdown.
+keeps its runtime functionality. Its legacy `grails.dev.commands.ApplicationCommand` registrations
+can continue to work through a deprecated compatibility layer when `legacyCommandSupport` is
+enabled, so those commands remain available without a re-release; publishing a companion `-cli`
+artifact is recommended when migrating to the Grails 8 command API. New commands should use
+`org.apache.grails.core.cli.*`. A plugin that still authors legacy commands must explicitly compile
+against `grails-core-cli-legacy`; consumers of an already-published legacy plugin enable the bridge
+with `grails { legacyCommandSupport = true }` (or declare `grailsCliLegacy` themselves). See the
+xref:upgrading#upgrading80x[upgrade guide] for the migration steps and the full upgrade-impact
+breakdown.
 
 ==== GSP Tag Library Improvements
 

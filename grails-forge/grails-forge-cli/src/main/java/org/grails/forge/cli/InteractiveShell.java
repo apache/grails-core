@@ -18,7 +18,6 @@
  */
 package org.grails.forge.cli;
 
-import org.fusesource.jansi.AnsiConsole;
 import org.jline.reader.EndOfFileException;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
@@ -62,7 +61,6 @@ public class InteractiveShell {
     }
 
     public void start() {
-        AnsiConsole.systemInstall();
         try {
             PicocliJLineCompleter picocliCommands = new PicocliJLineCompleter(commandLine.getCommandSpec());
             Terminal terminal = TerminalBuilder.terminal();
@@ -73,7 +71,12 @@ public class InteractiveShell {
                     .variable(LineReader.LIST_MAX, 50)   // max tab completion candidates
                     .build();
 
-            String ansiPrompt = AUTO.string(prompt);
+            // Applied to the command line as well as the prompt, so command help and usage text agree
+            // with what the prompt does.
+            CommandLine.Help.Ansi ansi = resolveAnsi(terminal);
+            commandLine.setColorScheme(CommandLine.Help.defaultColorScheme(ansi));
+
+            String ansiPrompt = ansi.string(prompt);
             String rightPrompt = null;
 
             // start the shell and process input until the user quits with Ctl-D
@@ -96,8 +99,27 @@ public class InteractiveShell {
             }
         } catch (Throwable t) {
             onError.apply(t, commandLine);
-        } finally {
-            AnsiConsole.systemUninstall();
         }
+    }
+
+    /**
+     * Decides whether the shell renders ansi.
+     *
+     * <p>{@code Help.Ansi.AUTO} cannot be trusted alone here any more. Its Windows branch reports
+     * support only when a jansi {@code AnsiConsole} is installed on {@code System.out}, and this shell
+     * no longer installs one. JLine's terminal is what actually renders, and it turns on
+     * virtual-terminal processing itself, so it is the better answer whenever AUTO says no.</p>
+     *
+     * <p>{@code NO_COLOR} still wins over both, since a user asking for no colour means it.</p>
+     */
+    private static CommandLine.Help.Ansi resolveAnsi(Terminal terminal) {
+        if (System.getenv("NO_COLOR") != null) {
+            return CommandLine.Help.Ansi.OFF;
+        }
+        if (AUTO.enabled()) {
+            return CommandLine.Help.Ansi.ON;
+        }
+        boolean terminalRenders = terminal != null && !Terminal.TYPE_DUMB.equals(terminal.getType());
+        return terminalRenders ? CommandLine.Help.Ansi.ON : CommandLine.Help.Ansi.OFF;
     }
 }

@@ -55,6 +55,8 @@ class CommandFactoriesTransformation implements ASTTransformation, TransformWith
 
     public static final ClassNode APPLICATION_COMMAND_CLASS = ClassHelper.make('org.apache.grails.core.cli.ApplicationCommand')
 
+    public static final ClassNode APPLICATION_COMMAND_TARGET_AWARE_CLASS = ClassHelper.make('org.apache.grails.core.cli.ApplicationCommandTargetAware')
+
     /** The command registration file written into the compilation target directory */
     public static final String CLI_FACTORIES_LOCATION = 'META-INF/grails-cli.factories'
 
@@ -94,8 +96,16 @@ class CommandFactoriesTransformation implements ASTTransformation, TransformWith
         File compilationTargetDirectory = GlobalGrailsClassInjectorTransformation.resolveCompilationTargetDirectory(source)
 
         for (ClassNode classNode : classes) {
-            FactoriesFileWriter.updateFactoriesWithType(classNode, APPLICATION_COMMAND_CLASS,
-                    compilationTargetDirectory, CLI_FACTORIES_LOCATION, SOURCE_CLI_FACTORIES_LOCATIONS)
+            if (shouldRegisterCommand(classNode)) {
+                FactoriesFileWriter.updateFactoriesWithType(classNode, APPLICATION_COMMAND_CLASS,
+                        compilationTargetDirectory, CLI_FACTORIES_LOCATION, SOURCE_CLI_FACTORIES_LOCATIONS)
+            }
+        }
+    }
+
+    protected static boolean shouldRegisterCommand(ClassNode classNode) {
+        !classNode.allInterfaces.any { ClassNode interfaceNode ->
+            interfaceNode.name == APPLICATION_COMMAND_TARGET_AWARE_CLASS.name
         }
     }
 

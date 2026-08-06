@@ -58,15 +58,15 @@ export GRADLE_OPTS="-Xms2G -Xmx5G"
 
 ## Available Skills
 
-> **AI AGENTS - MANDATORY**: Before writing or modifying any code, you **MUST** read the relevant skill file(s) below. Do not write Groovy/Grails code without first loading these instructions:
+> **AI AGENTS - MANDATORY**: Before writing or modifying any code, you **MUST** read the relevant skill file(s) below. Do not write Groovy/Grails/Gradle code without first loading these instructions:
 > - Writing Grails code → Read `.agents/skills/grails-developer/SKILL.md`
 > - Writing Groovy code → Read `.agents/skills/groovy-developer/SKILL.md`
 > - Writing Java code → Read `.agents/skills/java-developer/SKILL.md`
+> - Writing or changing Gradle builds → Read `.agents/skills/gradle-developer/SKILL.md`
 > - Upgrading applications to Grails 8 → Read `.agents/skills/grails-8-upgrade/SKILL.md`
 > - Writing Hibernate code → Read `.agents/skills/hibernate-developer/SKILL.md`
 > - Fixing style/analysis violations → Read `.agents/skills/violation-fixer/SKILL.md`
 > - Fixing broken test → Read `.agents/skills/test-fixer/SKILL.md`
-> - Indexing code -> Read `.agents/skills/codebase-memory/SKILL.md`
 >
 > Use your file reading capability to load the skill content before proceeding with any code changes.
 
@@ -74,11 +74,13 @@ export GRADLE_OPTS="-Xms2G -Xmx5G"
 |-------|------|---------|
 | **grails-developer** | `.agents/skills/grails-developer/SKILL.md` | Current Grails apps, GORM, controllers, views |
 | **groovy-developer** | `.agents/skills/groovy-developer/SKILL.md` | Groovy 5 syntax, closures, DSLs, Spock |
+| **gradle-developer** | `.agents/skills/gradle-developer/SKILL.md` | Gradle 9 builds, BOM/platforms, convention plugins, wrappers |
 | **grails-8-upgrade** | `.agents/skills/grails-8-upgrade/SKILL.md` | Upgrading Grails applications from 7.x to 8 |
 | **java-developer** | `.agents/skills/java-developer/SKILL.md` | Java 21 features, Groovy interop |
 | **hibernate-developer** | `.agents/skills/hibernate-developer/SKILL.md` | Hibernate 7 mapping, binders, generators |
 | **violation-fixer** | `.agents/skills/violation-fixer/SKILL.md` | Fix style/analysis violations (CodeNarc, Checkstyle, PMD, SpotBugs) |
 | **test-fixer** | `.agents/skills/test-fixer/SKILL.md` | Aggregate and fix test failures |
+| **mono-repo-integration** | `.agents/skills/mono-repo-integration/SKILL.md` | Merge a standalone Grails plugin repository into this monorepo |
 
 ## Technology Stack
 
@@ -99,9 +101,10 @@ This repository contains multiple independent Gradle projects:
 | Project | Description | Build Command |
 |---------|-------------|---------------|
 | **grails-core** (root) | Main framework with 60+ modules | `./gradlew build` |
-| **build-logic/** | Gradle convention plugins for the build | `cd build-logic && ../gradlew build` |
+| **build-logic/** | Gradle convention plugins for the build | `cd build-logic && ./gradlew build` |
 | **grails-gradle/** | Grails Gradle plugins | `cd grails-gradle && ./gradlew build` |
 | **grails-forge/** | Application generator (like Spring Initializr) | `cd grails-forge && ./gradlew build` |
+| **end-to-end/** | End-to-end tests consuming published Grails artifacts (see `end-to-end/README.md` for required setup) | `cd end-to-end && ./gradlew check` |
 
 Each project has its own `settings.gradle` and independent build. When working on a specific project, run Gradle commands from that project's directory.
 
@@ -112,7 +115,7 @@ All managed dependency versions live in `dependencies.gradle` (the single source
 - **The BOM must manage the latest (winning) version.** Validation fails when a transitive dependency resolves to a version *newer* than the BOM manages. The fix is to **bump the version in `dependencies.gradle`** so the BOM's version is `>=` everything on the classpath and stays authoritative. This is the *purpose* of the check — keeping the BOM ahead of its transitives.
 - **Do not suppress validation to work around a bump.** `allowedBomOverrides` (per-project ext) and dependency exclusions are reserved for an explicit, documented conflict or an agreed-upon workaround — never as a shortcut to silence a version the BOM should simply manage. Comment the reason when you must use one.
 - **A dependency managed in more than one BOM must use the *same* version everywhere.** Versions appear in `gradleBomDependencyVersions` (build tooling / `grails-gradle-bom`), `bomDependencyVersions` (`grails-bom`), and per-BOM `customBomVersions` blocks (e.g. `grails-micronaut-bom`). `grails-bom` re-declares the gradle-BOM constraints, and the Micronaut/Hibernate BOMs are consumed via `enforcedPlatform`. Declaring one coordinate (e.g. `org.ow2.asm:asm`) at two different versions across these maps produces irreconcilable strict constraints and breaks `enforcedPlatform` resolution. Pin it once, consistently.
-- **Prefer inheriting from the Spring Boot BOM.** Do not re-pin a coordinate that `spring-boot-dependencies` (3.5.x) already manages unless you are intentionally overriding it to a newer version (e.g. a security fix); note the reason inline.
+- **Prefer inheriting from the Spring Boot BOM.** Do not re-pin a coordinate that `spring-boot-dependencies` (4.1.x) already manages unless you are intentionally overriding it to a newer version (e.g. a security fix); note the reason inline.
 
 ## Key Modules
 
@@ -290,7 +293,7 @@ and known non-findings — before reporting issues.
 ## Resources
 
 - **Grails Guide**: https://grails.apache.org/docs/latest/guide/single.html
-- **Groovy 5 Docs**: https://docs.groovy-lang.org/docs/groovy-5.0.7/html/documentation/
+- **Groovy 5 Docs**: https://groovy-lang.org/documentation.html#all-versions (select latest 5.0.x)
 - **Spock 2.4 Docs**: https://spockframework.org/spock/docs/2.4/all_in_one.html
 - **GORM Docs**: https://grails.apache.org/docs/latest/grails-data/
 - **Issues**: https://github.com/apache/grails-core/issues

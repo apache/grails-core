@@ -1,0 +1,38 @@
+// Plugin without a companion -cli artifact. Historical packaging keeps src/main/scripts in the
+// runtime jar so unmigrated Grails 7 plugins and legacyCommandSupport consumers still discover them.
+plugins {
+    id 'org.apache.grails.gradle.grails-plugin'
+}
+
+group = 'org.example.test'
+
+grails {
+    bom = null
+    cliAutoProvision = false
+}
+
+tasks.register('inspectCommandPackaging') {
+    dependsOn 'jar'
+    doLast {
+        def runtimeJar = tasks.named('jar', Jar).get().archiveFile.get().asFile
+        def runtimeEntries = jarEntries(runtimeJar)
+        println "RUNTIME_JAR=${runtimeJar.name}"
+        println "RUNTIME_HAS_SCRIPT=${runtimeEntries.contains('META-INF/commands/legacy-only-script.groovy')}"
+        println "RUNTIME_HAS_TEMPLATE=${runtimeEntries.contains('META-INF/templates/legacy-only.txt')}"
+        println "RUNTIME_HAS_GSP_TEMPLATE=${runtimeEntries.contains('META-INF/templates/legacy-only.gsp')}"
+        println "RUNTIME_SCRIPT_COUNT=${runtimeEntries.count { it.startsWith('META-INF/commands/') && !it.endsWith('/') }}"
+    }
+}
+
+static Set<String> jarEntries(File jarFile) {
+    def entries = new LinkedHashSet<String>()
+    jarFile.withInputStream { InputStream input ->
+        new java.util.jar.JarInputStream(input).withCloseable { java.util.jar.JarInputStream jar ->
+            java.util.jar.JarEntry entry
+            while ((entry = jar.nextJarEntry) != null) {
+                entries << entry.name
+            }
+        }
+    }
+    entries
+}
