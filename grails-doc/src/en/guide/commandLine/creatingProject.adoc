@@ -23,7 +23,7 @@ The `create-app` and related commands are available in both the Grails Shell CLI
 
 - To create a project using the default Grails Shell CLI:
 `$ grails create-app myapp`
-- To use Forge-specific options (such as `--java-version`, `--features`, etc.):  
+- To use Forge-specific options (such as `--java-version`, `--features`, etc.):
 `$ grails -t forge create-app myapp`
 
 ====
@@ -175,7 +175,7 @@ The "create-*" commands are used to produce a fundamental Grails project, allowi
 ----
 
 | -f, --features
-| The features to use. Possible values: h2, gorm-hibernate5, gorm-hibernate7, spring-boot-starter-jetty, micronaut-http-client, cache-ehcache, hibernate-validator, postgres, mysql, cache, database-migration, grails-gsp, hamcrest, gorm-mongodb, assertj, mockito, spring-boot-starter-undertow, github-workflow-java-ci, jrebel, testcontainers, sqlserver, grails-console, views-markup, views-json, gorm-neo4j, asciidoctor, grails-web-console, logbackGroovy, mongo-sync, shade, properties
+| The features to use. Possible values: h2, gorm-hibernate5, gorm-hibernate7, spring-boot-starter-jetty, micronaut-http-client, cache-ehcache, hibernate-validator, postgres, mysql, cache, database-migration, grails-gsp, hamcrest, gorm-mongodb, assertj, mockito, grails-undertow, github-workflow-java-ci, jrebel, testcontainers, sqlserver, grails-console, views-markup, views-json, gorm-neo4j, asciidoctor, grails-web-console, logbackGroovy, mongo-sync, shade, properties
 |
 [source,shell]
 ----

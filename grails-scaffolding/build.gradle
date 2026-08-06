@@ -22,6 +22,7 @@ plugins {
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.gradle.grails-plugin'
+    id 'org.apache.grails.gradle.grails-plugin-cli'
     id 'org.apache.grails.gradle.grails-gsp'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
@@ -34,6 +35,13 @@ plugins {
 version = projectVersion
 group = 'org.apache.grails'
 
+cliArtifact {
+    automaticModuleName = 'org.apache.grails.scaffolding.cli'
+    // this framework module wires its cli dependencies with project dependencies below
+    defaultDependencies = false
+}
+
+
 ext {
     pomTitle = 'Grails Scaffolding Plugin'
     pomDescription = 'Provides scaffolding for Grails applications'
@@ -41,13 +49,24 @@ ext {
 
 dependencies {
     implementation platform(project(':grails-bom'))
+
+    // the cli tier — published separately as a companion -cli artifact
+    cliImplementation platform(project(':grails-bom'))
+    cliApi project(project.path)
+    cliApi(project(':grails-core')) {
+        capabilities {
+            requireCapability('org.apache.grails:grails-core-cli')
+        }
+    }
+    // GrailsConsole (used by the scaffolding commands) needs jline at compile time
+    cliImplementation 'org.jline:jline'
     api project(':grails-fields')
     api project(':grails-rest-transforms')
 
-    compileOnly 'org.jline:jline'
-    compileOnly 'org.fusesource.jansi:jansi'
+    implementation project(':grails-gsp')
 
     testImplementation 'org.spockframework:spock-core'
+    testImplementation project(':grails-layout')
     testImplementation project(':grails-web-gsp')
     testImplementation project(':grails-core')
     testImplementation 'jakarta.servlet:jakarta.servlet-api'

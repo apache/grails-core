@@ -17,7 +17,7 @@
 # published release tag. The job fails if any verification step fails.
 # This replaces the local Docker-based flow (etc/bin/Dockerfile) for CI use;
 # the container remains useful for reproducing this environment locally.
-name: "Release Verification"
+name: "Release - Verify Troubleshooting"
 
 on:
   workflow_dispatch:
@@ -66,11 +66,43 @@ jobs:
           echo "Using Java ${JAVA_VERSION} (${JAVA_DISTRIBUTION})"
           echo "java-version=${JAVA_VERSION}" >> "${GITHUB_OUTPUT}"
           echo "java-distribution=${JAVA_DISTRIBUTION}" >> "${GITHUB_OUTPUT}"
+      - name: "☕️ Determine Micronaut-island Java version from release.yml"
+        # the reproducible-build check recompiles the Grails-Micronaut island
+        # (grails-micronaut, grails-micronaut-bom) under JDK 25; read the pinned
+        # version from release.yml ($JAVA_VERSION_MICRONAUT) instead of duplicating it
+        id: micronaut-java
+        working-directory: project
+        run: |
+          MICRONAUT_JAVA=$(grep -E '^\s*JAVA_VERSION_MICRONAUT:' .github/workflows/release.yml \
+            | head -n1 | sed -E 's/.*JAVA_VERSION_MICRONAUT:[[:space:]]*([0-9][0-9.]*).*/\1/')
+          if [ -z "${MICRONAUT_JAVA}" ]; then
+            echo "❌ Could not determine JAVA_VERSION_MICRONAUT from release.yml" >&2
+            exit 1
+          fi
+          echo "Using Micronaut-island Java ${MICRONAUT_JAVA} (liberica)"
+          echo "java-version=${MICRONAUT_JAVA}" >> "${GITHUB_OUTPUT}"
+      - name: "☕️ Setup JDK 25 (Micronaut island)"
+        # installed first so the primary JDK below wins as the default JAVA_HOME;
+        # setup-java still exports JAVA_HOME_25_X64 for the reproducible-build check
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: liberica
+          java-version: ${{ steps.micronaut-java.outputs.java-version }}
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
           distribution: ${{ steps.sdkmanrc.outputs.java-distribution }}
           java-version: ${{ steps.sdkmanrc.outputs.java-version }}
+      - name: "☕️ Export JDK 25 home for the reproducible-build check"
+        # verify-reproducible.sh switches JAVA_HOME to ${JDK_25_HOME} for the
+        # Micronaut island pass; mirror the container's ENV JDK_25_HOME here
+        run: |
+          if [ -z "${JAVA_HOME_25_X64:-}" ]; then
+            echo "❌ Expected JAVA_HOME_25_X64 to be exported by setup-java" >&2
+            exit 1
+          fi
+          echo "JDK_25_HOME=${JAVA_HOME_25_X64}" >> "${GITHUB_ENV}"
+          "${JAVA_HOME_25_X64}/bin/java" -version
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:

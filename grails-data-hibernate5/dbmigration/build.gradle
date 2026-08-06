@@ -21,6 +21,7 @@ plugins {
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.gradle.grails-plugin'
+    id 'org.apache.grails.gradle.grails-plugin-cli'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
@@ -31,6 +32,12 @@ plugins {
 
 version = projectVersion
 group = 'org.apache.grails'
+
+cliArtifact {
+    automaticModuleName = 'org.apache.grails.data.hibernate5.dbmigration.cli'
+    // this framework module wires its cli dependencies with project dependencies below
+    defaultDependencies = false
+}
 
 ext {
     gormApiDocs = true
@@ -54,12 +61,34 @@ dependencies {
         exclude group: 'org.liquibase', module: 'liquibase-core'
     }
 
-    implementation(project(':grails-shell-cli')) {
+    // the cli tier — published separately as org.apache.grails:grails-data-hibernate5-dbmigration-cli;
+    // the dbm-* commands and their CLI-only dependencies (grails-shell-cli) stay off the
+    // application runtime classpath entirely
+    cliImplementation platform(project(':grails-hibernate5-bom'))
+    cliApi project(project.path)
+    cliApi(project(':grails-core')) {
+        capabilities {
+            requireCapability('org.apache.grails:grails-core-cli')
+        }
+    }
+    cliImplementation("org.liquibase:liquibase-core") {
+        exclude group: 'javax.xml.bind', module: 'jaxb-api'
+    }
+    cliImplementation("org.liquibase.ext:liquibase-hibernate5") {
+        exclude group: 'org.hibernate', module: 'hibernate-core'
+        exclude group: 'org.hibernate', module: 'hibernate-entitymanager'
+        exclude group: 'org.hibernate', module: 'hibernate-envers'
+        exclude group: 'com.h2database', module: 'h2'
+        exclude group: 'org.liquibase', module: 'liquibase-commercial'
+        exclude group: 'org.liquibase', module: 'liquibase-core'
+    }
+    cliImplementation project(':grails-data-hibernate5')
+    cliCompileOnly 'org.apache.groovy:groovy-sql'
+    cliCompileOnly 'org.apache.groovy:groovy-xml'
+    cliImplementation(project(':grails-shell-cli')) {
         exclude group: 'org.slf4j', module: 'slf4j-simple'
 
-        // TODO: the shell cli is exporting groovy 3, while this project is expected to use groovy 4
-        //       this plugin needs split into commands & the plugin itself so that different versions
-        //       of groovy can be used
+        // Keep legacy org.codehaus.groovy artifacts off this plugin's Groovy 5 classpath.
         exclude group: 'org.codehaus.groovy'
     }
 
@@ -83,6 +112,10 @@ dependencies {
 
 tasks.named('test', Test) {
     systemProperty("java.util.logging.config.file", "src/test/resources/logging.properties")
+}
+
+tasks.named('testCli', Test) {
+    systemProperty("java.util.logging.config.file", "src/test-cli/resources/logging.properties")
 }
 
 tasks.named('jar', Jar) {

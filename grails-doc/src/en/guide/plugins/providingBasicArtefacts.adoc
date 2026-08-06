@@ -34,6 +34,15 @@ A plugin can add new commands to the Grails interactive shell in one of two ways
 
 Code generation scripts can be used to create artefacts within the project tree and automate interactions with Gradle.
 
+When the plugin also applies `org.apache.grails.gradle.grails-plugin-cli` (see
+<<Ship plugin commands as a companion -cli artifact>> below), files under `src/main/scripts`
+(including `*.groovy`, `*.yml`, and `*.json` multi-step commands) are packaged into the companion
+`-cli` jar as `META-INF/commands` and are **not** copied into the runtime plugin jar. That keeps
+command-only resources off `runtimeClasspath`, `bootJar`, and `bootWar` while still making them
+discoverable through `grailsCliClasspath`. Plugins that do **not** publish a companion keep the
+historical behavior and continue to ship `src/main/scripts` in the runtime jar so unmigrated
+Grails 7 plugins remain discoverable under `legacyCommandSupport`.
+
 If you want to create a new shell command that interacts with a loaded Grails application instance then you should use the `create-command` command:
 
 [source,groovy]
@@ -41,11 +50,11 @@ If you want to create a new shell command that interacts with a loaded Grails ap
 $ grails create-command MyExampleCommand
 ----
 
-This will create a file called `grails-app/commands/PACKAGE_PATH/MyExampleCommand.groovy` that extends link:{api}grails/dev/commands/ApplicationCommand.html[ApplicationCommand]:
+This will create a file called `grails-app/commands/PACKAGE_PATH/MyExampleCommand.groovy` that extends link:{api}org/apache/grails/core/cli/ApplicationCommand.html[ApplicationCommand]:
 
 [source,groovy]
 ----
-import grails.dev.commands.*
+import org.apache.grails.core.cli.*
 
 class MyExampleCommand implements ApplicationCommand {
 
@@ -57,6 +66,48 @@ class MyExampleCommand implements ApplicationCommand {
 ----
 
 An `ApplicationCommand` has access to the `GrailsApplication` instance and is subject to autowiring like any other Spring bean.
+
+===== Ship plugin commands as a companion `-cli` artifact
+
+Commands are only ever executed by the CLI, so a plugin should keep them off the application
+runtime classpath. Publish them as a companion artifact under the plugin's coordinate with a `-cli`
+suffix by applying the `org.apache.grails.gradle.grails-plugin-cli` Gradle plugin:
+
+[source,groovy]
+.build.gradle
+----
+plugins {
+    id 'org.apache.grails.gradle.grails-plugin'
+    id 'org.apache.grails.gradle.grails-plugin-cli'
+}
+
+cliArtifact {
+    automaticModuleName = 'org.example.myplugin.cli'
+}
+----
+
+Place the command sources in `src/cli/groovy` (not `grails-app/commands`, which is compiled into
+the runtime plugin jar). The plugin creates the `cli` source set as a feature variant, puts the
+`grails-core-cli` command contract and the plugin's own runtime classes on its compile classpath,
+and registers compiled commands automatically in `META-INF/grails-cli.factories` inside the cli
+jar. It also advertises the companion coordinate through the `Grails-Cli-Artifact` manifest
+attribute of the runtime jar — the Grails Gradle plugin scans an application's dependency graph
+for this attribute and adds each advertised artifact to `grailsCli`, so applications only declare
+the runtime plugin:
+
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    implementation 'org.example:my-plugin'   // org.example:my-plugin-cli follows automatically
+}
+----
+
+When the Grails publish plugin (`org.apache.grails.gradle.grails-publish`) is applied, the
+companion is published alongside the plugin as `org.example:my-plugin-cli` with its own pom,
+sources, and javadoc. See the
+xref:commandLine#creatingCustomCommands[Creating Custom Commands] section for the complete
+workflow.
 
 You can also inform Grails to skip the execution of `Bootstrap.groovy` files with a simple property in your command:
 

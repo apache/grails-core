@@ -19,9 +19,16 @@
 
 package grails.plugin.markup.view
 
+import groovy.transform.CompileStatic
+
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
+import org.springframework.core.env.Environment
+
 import grails.plugin.markup.view.mvc.MarkupViewResolver
 import grails.plugins.Plugin
 import grails.views.mvc.GenericGroovyTemplateViewResolver
+import grails.views.mvc.SmartViewResolver
 import grails.views.resolve.PluginAwareTemplateResolver
 
 /**
@@ -30,10 +37,11 @@ import grails.views.resolve.PluginAwareTemplateResolver
  * @author Graeme Rocher
  * @since 1.0
  */
+@CompileStatic
 class MarkupViewGrailsPlugin extends Plugin {
 
     // the version or versions of Grails the plugin is designed for
-    def grailsVersion = '7.0.0-SNAPSHOT > *'
+    def grailsVersion = '8.0.0-SNAPSHOT > *'
 
     def title = 'Markup Views' // Headline display name of the plugin
     def author = 'Graeme Rocher'
@@ -61,14 +69,32 @@ class MarkupViewGrailsPlugin extends Plugin {
     // Online location of the plugin's browseable source code.
     def scm = [ url: 'https://github.com/apache/grails-core']
 
-    Closure doWithSpring() {
-        { ->
-            markupViewConfiguration(MarkupViewConfiguration)
-            markupTemplateEngine(MarkupViewTemplateEngine, markupViewConfiguration, applicationContext.classLoader)
-            smartMarkupViewResolver(MarkupViewResolver, markupTemplateEngine) {
-                templateResolver = bean(PluginAwareTemplateResolver, markupViewConfiguration)
+    @Override
+    BeanRegistrar beanRegistrar() {
+        return { BeanRegistry registry, Environment environment ->
+            registry.registerBean('markupViewConfiguration', MarkupViewConfiguration)
+            registry.registerBean('markupTemplateEngine', MarkupViewTemplateEngine) {
+                it.supplier {
+                    new MarkupViewTemplateEngine(
+                            it.bean('markupViewConfiguration', MarkupViewConfiguration),
+                            applicationContext.classLoader)
+                }
             }
-            markupViewResolver(GenericGroovyTemplateViewResolver, smartMarkupViewResolver)
+            registry.registerBean('smartMarkupViewResolver', MarkupViewResolver) {
+                it.supplier {
+                    MarkupViewResolver viewResolver = new MarkupViewResolver(it.bean('markupTemplateEngine', MarkupViewTemplateEngine))
+                    PluginAwareTemplateResolver templateResolver = new PluginAwareTemplateResolver(
+                            it.bean('markupViewConfiguration', MarkupViewConfiguration))
+                    templateResolver.pluginManager = pluginManager
+                    viewResolver.templateResolver = templateResolver
+                    return viewResolver
+                }
+            }
+            registry.registerBean('markupViewResolver', GenericGroovyTemplateViewResolver) {
+                it.supplier {
+                    new GenericGroovyTemplateViewResolver(it.bean('smartMarkupViewResolver', SmartViewResolver))
+                }
+            }
         }
     }
 }

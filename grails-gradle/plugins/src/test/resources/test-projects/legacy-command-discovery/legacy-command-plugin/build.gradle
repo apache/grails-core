@@ -1,0 +1,14 @@
+plugins {
+    id 'groovy'
+}
+
+configurations.configureEach {
+    resolutionStrategy.dependencySubstitution {
+        substitute module('org.apache.grails:grails-core-cli-legacy') using project(':legacy-command-api')
+    }
+}
+
+dependencies {
+    implementation localGroovy()
+    compileOnly 'org.apache.grails:grails-core-cli-legacy'
+}

@@ -166,8 +166,7 @@ class IntegrationTestAstTransformation implements ASTTransformation, TransformWi
         try {
             servletApi = Class.forName('jakarta.servlet.ServletContext', false, getClass().classLoader)
         }
-        catch (Exception e) {
-            // ignore
+        catch (Exception ignored) {
         }
 
         if (servletApi) {

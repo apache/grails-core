@@ -46,7 +46,7 @@ class CreateAppSpec extends CommandSpec {
             dependencies are included for OperatingSystem.MACOS_ARCH64 and this
             causes the integrationTest task to fail.
         */
-        final String output = executeGradle("build -x iT").getOutput()
+        final String output = executeGradle("build -x integrationTest").getOutput()
 
         then:
         output.contains('BUILD SUCCESSFUL')

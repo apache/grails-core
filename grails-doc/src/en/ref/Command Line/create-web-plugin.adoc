@@ -38,7 +38,7 @@ grails create-web-plugin [OPTIONS] NAME
 
 Here are the available options for the `create-web-plugin` command:
 
-- `-f, --features=FEATURE[,FEATURE...]`: Specifies the features to include in the plugin. Available options include h2, gorm-hibernate5, gorm-hibernate7, spring-boot-starter-jetty, micronaut-http-client, cache-ehcache, hibernate-validator, postgres, mysql, cache, database-migration, grails-gsp, hamcrest, gorm-mongodb, assertj, mockito, spring-boot-starter-undertow, github-workflow-java-ci, jrebel, testcontainers, sqlserver, grails-console, views-markup, views-json, gorm-neo4j, asciidoctor, grails-web-console, logbackGroovy, mongo-sync, shade, properties.
+- `-f, --features=FEATURE[,FEATURE...]`: Specifies the features to include in the plugin. Available options include h2, gorm-hibernate5, gorm-hibernate7, spring-boot-starter-jetty, micronaut-http-client, cache-ehcache, hibernate-validator, postgres, mysql, cache, database-migration, grails-gsp, hamcrest, gorm-mongodb, assertj, mockito, grails-undertow, github-workflow-java-ci, jrebel, testcontainers, sqlserver, grails-console, views-markup, views-json, gorm-neo4j, asciidoctor, grails-web-console, logbackGroovy, mongo-sync, shade, properties.
 
 - `-d, --data=Grails Data Implementation` (`-g`, `--gorm` are legacy aliases): Specifies the Grails Data implementation to configure for the plugin. Possible values are hibernate5, hibernate7, mongodb.
 

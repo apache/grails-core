@@ -36,20 +36,22 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurationSupp
 /**
  * When an application declares {@code @EnableWebMvc}, Spring's {@link WebMvcConfigurationSupport}
  * contributes its own {@code localeResolver} bean (an {@code AcceptHeaderLocaleResolver}). That bean
- * exists before {@link I18nAutoConfiguration} is evaluated, so its
- * {@code @ConditionalOnMissingBean(name = "localeResolver")} backs off and Grails' configured
- * resolver (a {@code SessionLocaleResolver} by default) never registers — silently disabling
- * {@code ?lang=} switching. This was not the case before {@code WebMvcConfigurationSupport} gained a
- * {@code localeResolver} bean: Grails' resolver used to take precedence, matching Grails 7 behavior.
+ * exists before {@link I18nGrailsPlugin}'s generated {@code I18nAutoConfiguration} is
+ * evaluated, so its {@code @ConditionalOnMissingBean(name = "localeResolver")} backs off and Grails'
+ * configured resolver (a {@code SessionLocaleResolver} by default) never registers — silently
+ * disabling {@code ?lang=} switching. This was not the case before {@code WebMvcConfigurationSupport}
+ * gained a {@code localeResolver} bean: Grails' resolver used to take precedence, matching Grails 7
+ * behavior.
  *
  * <p>This removes the {@code WebMvcConfigurationSupport}-contributed {@code localeResolver} so that
- * {@link I18nAutoConfiguration} registers the Grails-configured resolver instead. A
- * {@code localeResolver} contributed by the application itself (for example via
+ * {@link I18nGrailsPlugin}'s generated auto-configuration registers the Grails-configured resolver
+ * instead. A {@code localeResolver} contributed by the application itself (for example via
  * {@code resources.groovy} or a user {@code @Configuration}) is left untouched, so an explicit
- * application resolver still wins. Ordered before {@link I18nAutoConfiguration} so the removal
- * happens before that configuration's condition is evaluated.
+ * application resolver still wins. Ordered before that generated auto-configuration (by name, since
+ * it does not exist as a compilable class for this class to reference directly) so the removal
+ * happens before its condition is evaluated.
  */
-@AutoConfiguration(before = I18nAutoConfiguration.class)
+@AutoConfiguration(beforeName = "org.grails.plugins.i18n.I18nAutoConfiguration")
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 @Import(GrailsLocaleResolverAutoConfiguration.RemoveWebMvcSupportLocaleResolverRegistrar.class)
 public class GrailsLocaleResolverAutoConfiguration {

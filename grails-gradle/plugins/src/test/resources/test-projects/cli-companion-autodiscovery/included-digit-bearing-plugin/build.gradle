@@ -1,0 +1,21 @@
+def pluginVersions = [
+        'my-plugin-2fa-one': '1',
+        'my-plugin-2fa-snapshot': '1-SNAPSHOT',
+        'my-plugin-2fa-timestamp': '1-20260101.123456-1'
+]
+
+subprojects {
+    apply plugin: 'java-library'
+
+    group = 'org.example.test'
+    if (pluginVersions.containsKey(name)) {
+        version = pluginVersions[name]
+    }
+    def artifactName = name
+
+    tasks.named('jar', Jar).configure {
+        manifest {
+            attributes('Grails-Cli-Artifact': "org.example.test:${artifactName}-cli")
+        }
+    }
+}

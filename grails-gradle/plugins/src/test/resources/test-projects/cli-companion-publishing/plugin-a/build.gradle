@@ -1,0 +1,32 @@
+// Analog of grails-scaffolding: its cli tier depends on the owner's cli tier via a capability
+plugins {
+    id 'java-library'
+    id 'org.apache.grails.gradle.grails-plugin-cli'
+    id 'org.apache.grails.gradle.grails-publish'
+}
+
+group = 'org.example.test'
+
+cliArtifact {
+    defaultDependencies = false
+}
+
+dependencies {
+    cliApi project(path)
+    cliApi(project(':owner')) {
+        capabilities {
+            requireCapability('org.example.test:owner-cli')
+        }
+    }
+}
+
+grailsPublish {
+    githubSlug = 'apache/grails-core'
+    license {
+        name = 'Apache-2.0'
+    }
+    title = 'Plugin A'
+    desc = 'Test module whose cli tier consumes the owner cli companion'
+    developers = [test: 'Test Developer']
+    testRepositoryPath = rootProject.layout.buildDirectory.dir('test-repo').get()
+}

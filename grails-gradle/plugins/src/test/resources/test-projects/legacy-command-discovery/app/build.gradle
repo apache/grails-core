@@ -1,0 +1,15 @@
+plugins {
+    id 'java'
+    id 'org.apache.grails.gradle.grails-cli'
+}
+
+dependencies {
+    implementation project(':legacy-command-plugin')
+}
+
+tasks.register('inspectLegacyCommandTask') {
+    doLast {
+        println "LEGACY_COMMAND_TASK_PRESENT=${tasks.names.contains('helloLegacyApp')}"
+        println "RUN_COMMAND_TASK_PRESENT=${tasks.names.contains('runCommand')}"
+    }
+}

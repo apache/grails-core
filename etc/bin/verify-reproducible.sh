@@ -150,7 +150,9 @@ cd "${DOWNLOAD_LOCATION}/grails/etc/bin/results"
 echo "Checking for differences in checksums"
 # diff -u CHECKSUMS second.txt
 DIFF_RESULTS=$(comm -3 <(sort ../../../CHECKSUMS) <(sort second.txt) | cut -d' ' -f1 | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$' | uniq | sort)
-echo "$DIFF_RESULTS" > diff.txt
+if [[ -n $DIFF_RESULTS ]]; then
+    printf '%s\n' "$DIFF_RESULTS"
+fi > diff.txt
 
 if [ -s diff.txt ]; then
   echo "Differences were found, diffing jar files ..."
@@ -165,6 +167,7 @@ if [ -s diff.txt ]; then
 
   : > diff_purged.txt  # Ensure the file exists and is empty
   while IFS= read -r jar_file; do
+      [[ -z "${jar_file//[[:space:]]/}" ]] && continue
       echo "Checking jar ${jar_file}..."
 
       echo "Extracting ${jar_file}"
@@ -185,6 +188,12 @@ if [ -s diff.txt ]; then
       java -jar vineflower.jar firstArtifact firstSource > /dev/null 2>&1
       java -jar vineflower.jar secondArtifact secondSource > /dev/null 2>&1
       echo "✅ Decompiled ${jar_file}"
+
+      # Annotation member order in class files is not semantically meaningful and Groovy
+      # emits it nondeterministically for annotations copied from precompiled classes
+      # (e.g. @DelegatesTo on trait methods), so canonicalize it before comparing
+      "${SCRIPT_DIR}/normalize_annotations.groovy" "firstSource" "secondSource"
+      echo "✅ Normalized annotation member order for ${jar_file}"
 
       set +e
       DIFF_RESULT=$(diff -r -q "firstSource" "secondSource")

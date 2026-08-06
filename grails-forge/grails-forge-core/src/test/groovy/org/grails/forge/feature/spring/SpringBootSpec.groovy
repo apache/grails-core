@@ -19,16 +19,15 @@
 
 package org.grails.forge.feature.spring
 
+import spock.lang.Unroll
+
 import org.grails.forge.BeanContextSpec
 import org.grails.forge.BuildBuilder
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.fixture.CommandOutputFixture
 import org.grails.forge.options.DevelopmentReloading
-import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.Options
 import org.grails.forge.options.ServletImpl
-import org.grails.forge.options.TestFramework
-import spock.lang.Unroll
 
 class SpringBootSpec extends BeanContextSpec implements CommandOutputFixture {
 
@@ -69,19 +68,19 @@ class SpringBootSpec extends BeanContextSpec implements CommandOutputFixture {
         !build.contains("implementation \"org.springframework.boot:spring-boot-starter-tomcat\"")
     }
 
-    void "test undertow servlet is unavailable with Spring Boot 4"() {
+    void "test undertow servlet applies the grails-undertow plugin"() {
         when:
-        // Undertow does not yet support Servlet 6.1, which Spring Boot 4 requires.
-        // ContextFactory.determineServletImpl rejects the selection with a clear
-        // IllegalArgumentException so users get a meaningful error rather than a
-        // silently dropped servlet implementation.
-        new BuildBuilder(beanContext)
+        // Spring Boot 4 no longer ships spring-boot-starter-undertow; Undertow
+        // support comes from the Grails Undertow plugin, which bundles the vendored
+        // Spring Boot Undertow autoconfiguration (grails-undertow-spring-boot).
+        final String build = new BuildBuilder(beanContext)
                 .servletImpl(ServletImpl.UNDERTOW)
                 .render()
 
         then:
-        IllegalArgumentException ex = thrown()
-        ex.message.contains('Undertow is not currently supported')
-        ex.message.contains('Servlet 6.1')
+        build.contains("implementation \"org.apache.grails:grails-undertow\"")
+        !build.contains("org.springframework.boot:spring-boot-starter-undertow")
+        !build.contains("implementation \"org.springframework.boot:spring-boot-starter-tomcat\"")
+        !build.contains("implementation \"org.springframework.boot:spring-boot-starter-jetty\"")
     }
 }

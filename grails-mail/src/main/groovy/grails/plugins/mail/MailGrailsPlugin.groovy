@@ -15,10 +15,28 @@
  */
 package grails.plugins.mail
 
+import grails.core.GrailsApplication
+import grails.plugins.GrailsPluginManager
 import grails.plugins.Plugin
+import grails.web.pages.GroovyPagesUriService
+import groovy.transform.CompileStatic
+import jakarta.mail.Session
+import org.grails.gsp.GroovyPagesTemplateEngine
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.boot.autoconfigure.AutoConfiguration
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
+import org.springframework.boot.context.properties.EnableConfigurationProperties
+import org.springframework.jndi.JndiObjectFactoryBean
+import org.springframework.mail.MailSender
+import org.springframework.mail.javamail.JavaMailSender
+import org.springframework.mail.javamail.JavaMailSenderImpl
 
+@CompileStatic
+@AutoConfiguration
+@EnableConfigurationProperties(MailConfigurationProperties)
 class MailGrailsPlugin extends Plugin {
-    
+
     def grailsVersion = '7.0.0 > *'
     def author = 'The Grails team'
     def authorEmail = 'info@grails.org'
@@ -26,9 +44,9 @@ class MailGrailsPlugin extends Plugin {
     def description = '''\
         This plugin provides a MailService class as well as configuring the necessary beans within
         the Spring ApplicationContext.
-        
+
         It also adds a "sendMail" method to all controller classes. A typical example usage is:
-        
+
         sendMail {
             to 'fred@g2one.com','ginger@g2one.com'
             from 'john@g2one.com'
@@ -59,4 +77,59 @@ class MailGrailsPlugin extends Plugin {
         url: 'https://github.com/grails-plugins/grails-mail'
     ]
     def providedArtefacts = [PlainTextMailTagLib]
+
+    def beans = {
+        bean('mailSession', JndiObjectFactoryBean).conditionalOnMissingBean().annotate(ConditionalOnProperty, prefix: 'grails.mail', name: 'jndiName') { MailConfigurationProperties mailProperties ->
+            new JndiObjectFactoryBean().tap {
+                jndiName = mailProperties.jndiName
+            }
+        }
+
+        bean('mailSender', JavaMailSender).conditionalOnMissingBean() { @Autowired(required = false) @Qualifier('mailSession') Session mailSession,
+                MailConfigurationProperties mailProperties ->
+            new JavaMailSenderImpl().tap {
+                if (mailProperties.host || !mailProperties.jndiName) {
+                    host = mailProperties.host ?: System.getenv('SMTP_HOST') ?: 'localhost'
+                }
+                if (mailProperties.encoding || !mailProperties.jndiName) {
+                    defaultEncoding = mailProperties.encoding ?: 'utf-8'
+                }
+                if (mailSession) {
+                    session = mailSession
+                }
+                if (mailProperties.port) {
+                    port = mailProperties.port
+                }
+                if (mailProperties.username) {
+                    username = mailProperties.username
+                }
+                if (mailProperties.password) {
+                    password = mailProperties.password
+                }
+                if (mailProperties.protocol) {
+                    protocol = mailProperties.protocol
+                }
+                if (mailProperties.props) {
+                    javaMailProperties = mailProperties.props
+                }
+            }
+        }
+
+        bean(MailMessageBuilderFactory).conditionalOnMissingBean() {
+                MailSender mailSender,
+                MailMessageContentRenderer mailMessageContentRenderer ->
+        }
+
+        bean(MailMessageContentRenderer).conditionalOnMissingBean() {
+                GroovyPagesTemplateEngine groovyPagesTemplateEngine,
+                GroovyPagesUriService groovyPagesUriService,
+                GrailsApplication grailsApplication,
+                GrailsPluginManager pluginManager ->
+        }
+
+        bean(MailService).conditionalOnMissingBean() {
+                MailConfigurationProperties mailConfigurationProperties,
+                MailMessageBuilderFactory mailMessageBuilderFactory ->
+        }
+    }
 }
