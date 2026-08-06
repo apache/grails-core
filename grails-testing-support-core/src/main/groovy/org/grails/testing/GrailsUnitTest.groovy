@@ -128,11 +128,11 @@ trait GrailsUnitTest {
         Closure dsl = null
         try {
             dsl = (Closure) clazz.getMethod('doWithSpring').invoke(plugin)
-        } catch (NoSuchMethodException e) {}
+        } catch (NoSuchMethodException ignored) {}
         if (dsl == null) {
             try {
                 dsl = (Closure) clazz.getMethod('getDoWithSpring').invoke(plugin)
-            } catch (NoSuchMethodException e) {}
+            } catch (NoSuchMethodException ignored) {}
         }
         if (dsl != null) {
             defineBeans(dsl)
@@ -144,7 +144,7 @@ trait GrailsUnitTest {
             if (registrar != null) {
                 defineBeans(registrar)
             }
-        } catch (NoSuchMethodException e) {}
+        } catch (NoSuchMethodException ignored) {}
     }
 
     Closure doWithSpring() {

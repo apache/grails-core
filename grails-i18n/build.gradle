@@ -41,6 +41,7 @@ dependencies {
     api project(':grails-web-core')
     api 'org.apache.groovy:groovy'
 
+
     testCompileOnly 'org.apache.groovy:groovy-ant'
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'

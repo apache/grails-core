@@ -289,13 +289,13 @@ class GrailsGspSpec extends ApplicationContextSpec implements CommandOutputFixtu
         final def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS))
         final String layout = output["grails-app/views/layouts/main.gsp"]
 
-        then: "the navbar reads the i18n plugin's published available locales"
-        layout.contains("application.getAttribute('availableLocales')")
+        then: "the navbar asks localeSelect for the ready-made menu of translated locales"
+        layout.contains('<g:localeSelect available="true" pinDefault="true" type="dropdown"/>')
 
-        and: "and renders a Bootstrap dropdown that switches language via ?lang="
-        layout.contains("dropdown-toggle")
-        layout.contains('?lang=${loc.tag}')
-        layout.contains('${loc.autonym}')
+        and: "the layout carries no hand-rolled markup for it, so the tag stays the one source"
+        !layout.contains('id="localeDropdown"')
+        !layout.contains('?lang=${loc.tag}')
+        !layout.contains("application.getAttribute('availableLocales')")
     }
 
     void "test default layout includes a controllers dropdown on every page"() {
@@ -342,16 +342,14 @@ class GrailsGspSpec extends ApplicationContextSpec implements CommandOutputFixtu
 
         then: "only controllers, language and theme live in the navbar"
         layout.contains('id="controllersDropdown"')
-        layout.contains('id="localeDropdown"')
+        layout.contains('<g:localeSelect')
         layout.contains('id="themeDropdown"')
         !layout.contains('id="statusDropdown"')
         !layout.contains('id="pluginsDropdown"')
         !layout.contains('id="actuatorsDropdown"')
 
         and: "the language menu pins the default language on top so users can always navigate back"
-        layout.contains('<g:localeSelect available="true" pinDefault="true" var="loc">')
-        layout.contains('loc.index == 1')
-        layout.contains('dropdown-divider')
+        layout.contains('pinDefault="true"')
 
         and: "a sign-in affordance renders whenever Spring Security is on the classpath, plugin or plain starter"
         layout.contains("ClassUtils.isPresent('org.springframework.security.core.context.SecurityContextHolder'")

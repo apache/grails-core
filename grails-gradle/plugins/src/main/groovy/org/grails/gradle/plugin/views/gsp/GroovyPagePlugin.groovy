@@ -54,9 +54,6 @@ class GroovyPagePlugin implements Plugin<Project> {
     private void configureProject(Project project) {
         TaskContainer tasks = project.tasks
 
-        project.configurations.register('gspCompile')
-        project.dependencies.add('gspCompile', 'jakarta.servlet:jakarta.servlet-api:6.0.0')
-
         SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
         SourceSetOutput output = mainSourceSet?.output
         FileCollection classesDirs = resolveClassesDirs(output, project)
@@ -67,7 +64,6 @@ class GroovyPagePlugin implements Plugin<Project> {
         FileCollection allClasspath = project.getObjects().fileCollection().from(
                 [
                         project.configurations.named('compileClasspath'),
-                        project.configurations.named('gspCompile'),
                         classesDirs,
                         project.configurations.findByName('providedCompile') ?: null
                 ].findAll { it }

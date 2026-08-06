@@ -161,16 +161,16 @@ class LocaleSelectRenderingSpec extends Specification implements TagLibUnitTest<
         output.indexOf('[en:true]') < output.indexOf('[es:false]')
     }
 
-    void 'the body form drives the create-app Bootstrap dropdown: pinned default, one divider, active row'() {
+    void 'the body form builds a custom dropdown: pinned default, one divider, active row'() {
         given: 'the resolver publishes an autonym-sorted list; en is the default, it is current'
         publish([Locale.forLanguageTag('en'), Locale.forLanguageTag('it'), Locale.forLanguageTag('nl')])
 
-        when: 'the exact snippet the generated main.gsp layout uses'
+        when: 'a caller supplies its own markup, as a non-Bootstrap layout would'
         String output = applyTemplate('''
             <ul class="dropdown-menu">
                 <g:localeSelect available="true" pinDefault="true" value="it" var="loc">
                     <g:if test="${loc.index == 1}"><li><hr class="dropdown-divider"></li></g:if>
-                    <li><a class="dropdown-item${loc.active ? ' active' : ''}" href="?lang=${loc.tag}">${loc.autonym}</a></li>
+                    <li><a class="dropdown-item${loc.active ? ' active' : ''}" href="?lang=${loc.tag}">${loc.menuName}</a></li>
                 </g:localeSelect>
             </ul>
         '''.stripIndent())
@@ -186,6 +186,151 @@ class LocaleSelectRenderingSpec extends Specification implements TagLibUnitTest<
         and: 'the non-default locales follow the divider in the resolver order'
         output.indexOf('dropdown-divider') < output.indexOf('?lang=it')
         output.indexOf('?lang=it') < output.indexOf('?lang=nl')
+
+        and: 'menuName is titlecased for display while autonym keeps the CLDR mid-sentence form'
+        output.contains('>Italiano</a>')
+        !output.contains('>italiano</a>')
+        output.contains('>Nederlands</a>')
+    }
+
+    void 'menuName titlecases for display while autonym keeps the CLDR mid-sentence form'() {
+        given: 'a language that lowercases its own name, a non-Latin script, and a caseless one'
+        publish([Locale.forLanguageTag('it'), Locale.forLanguageTag('ru'), Locale.forLanguageTag('ja')])
+
+        when:
+        String output = applyTemplate(
+                '<g:localeSelect available="true" var="loc">[${loc.autonym}|${loc.menuName}]</g:localeSelect>')
+
+        then: 'the mid-sentence autonym is preserved for callers rendering it in prose'
+        output.contains('[italiano|')
+        output.contains('[русский|')
+
+        and: 'menuName is titlecased, including outside the Latin script'
+        output.contains('|Italiano]')
+        output.contains('|Русский]')
+
+        and: 'a caseless script is returned unchanged, not mangled'
+        output.contains('[日本語|日本語]')
+    }
+
+    void 'type=dropdown renders the whole Bootstrap menu with no body'() {
+        given:
+        publish([Locale.forLanguageTag('en'), Locale.forLanguageTag('it'), Locale.forLanguageTag('nl')])
+
+        when:
+        String output = applyTemplate(
+                '<g:localeSelect available="true" pinDefault="true" value="it" type="dropdown"/>')
+
+        then: 'the toggle carries the current locale, its own name titlecased, behind a globe icon'
+        output.contains('class="nav-item dropdown"')
+        output.contains('id="localeDropdown"')
+        output.contains('class="bi bi-globe me-1"')
+        output.contains('Italiano</a>')
+
+        and: 'the menu pins the default above a single divider and marks the active entry'
+        output.contains('class="dropdown-menu dropdown-menu-end" aria-labelledby="localeDropdown"')
+        output.count('dropdown-divider') == 1
+        output.indexOf('?lang=en') < output.indexOf('dropdown-divider')
+        output.contains('class="dropdown-item active" href="?lang=it"')
+        output.contains('class="dropdown-item" href="?lang=nl"')
+
+        and: 'entries are titlecased for menu display'
+        output.contains('>Nederlands</a>')
+        !output.contains('>italiano</a>')
+    }
+
+    void 'type=dropdown markup is overridable, so it is not locked to Bootstrap'() {
+        given:
+        publish([Locale.forLanguageTag('en'), Locale.forLanguageTag('it')])
+
+        when:
+        String output = applyTemplate('''
+            <g:localeSelect available="true" value="it" type="dropdown"
+                            id="langMenu" param="locale" icon=""
+                            navItemClass="menu" toggleClass="menu-btn" menuClass="menu-list"
+                            itemClass="menu-entry" activeClass="is-on"/>
+        '''.stripIndent())
+
+        then: 'every class comes from the attributes and no Bootstrap default leaks through'
+        output.contains('class="menu"')
+        output.contains('class="menu-btn"')
+        output.contains('class="menu-list"')
+        output.contains('class="menu-entry is-on" href="?locale=it"')
+        !output.contains('nav-item dropdown')
+        !output.contains('dropdown-item')
+
+        and: 'an empty icon suppresses the <i> element entirely'
+        !output.contains('<i class=')
+    }
+
+    void 'links and dropdown keep the current query string, replacing only the language'() {
+        given: 'a visitor part-way through a paged, sorted listing'
+        publish([Locale.forLanguageTag('en'), Locale.forLanguageTag('it')])
+        request.queryString = 'page=2&sort=title'
+
+        when:
+        String links = applyTemplate('<g:localeSelect available="true" type="links"/>')
+        String dropdown = applyTemplate('<g:localeSelect available="true" type="dropdown"/>')
+
+        then: 'paging and sorting survive the switch in both modes'
+        links.contains('href="?page=2&amp;sort=title&amp;lang=it"')
+        dropdown.contains('href="?page=2&amp;sort=title&amp;lang=it"')
+
+        and: 'a bare ?lang= would have discarded them'
+        !links.contains('href="?lang=it"')
+        !dropdown.contains('href="?lang=it"')
+    }
+
+    void 'an existing language parameter is replaced rather than duplicated'() {
+        given: 'the visitor already switched language once, so lang is already in the URL'
+        publish([Locale.forLanguageTag('en'), Locale.forLanguageTag('it')])
+        request.queryString = 'lang=en&page=2'
+
+        when:
+        String output = applyTemplate('<g:localeSelect available="true" type="links"/>')
+
+        then: 'the stale value is dropped and the new one appended once, paging intact'
+        output.contains('href="?page=2&amp;lang=it"')
+        output.contains('href="?page=2&amp;lang=en"')
+
+        and: 'no href carries the parameter twice'
+        (output =~ /href="([^"]*)"/).collect { it[1] }.every { String href ->
+            href.count('lang=') == 1
+        }
+    }
+
+    void 'a request with no query string still yields a bare switch link'() {
+        given:
+        publish([Locale.forLanguageTag('en'), Locale.forLanguageTag('it')])
+
+        when:
+        String output = applyTemplate('<g:localeSelect available="true" type="links"/>')
+
+        then:
+        output.contains('href="?lang=it"')
+    }
+
+    void 'type=dropdown renders nothing when the application has a single locale'() {
+        given:
+        publish([Locale.forLanguageTag('en')])
+
+        when:
+        String output = applyTemplate('<g:localeSelect available="true" type="dropdown"/>')
+
+        then: 'a one-language app carries no language menu, without the caller guarding'
+        output.trim().isEmpty()
+    }
+
+    void 'var without a body falls back to the requested type instead of rendering nothing'() {
+        given:
+        publish([Locale.forLanguageTag('en'), Locale.forLanguageTag('it')])
+
+        when: 'an empty body would otherwise emit one empty string per locale'
+        String output = applyTemplate('<g:localeSelect available="true" var="loc" type="links"/>')
+
+        then:
+        output.contains('href="?lang=en"')
+        output.contains('href="?lang=it"')
     }
 
     void 'default rendering is unchanged: a <select> with the legacy label and key'() {

@@ -42,6 +42,7 @@ ext {
 dependencies {
 
     implementation platform(project(':grails-bom'))
+    compileOnlyApi 'jakarta.servlet:jakarta.servlet-api' // api needed downstream to compile GSPs, and exposed by GroovyPageView/PageRenderer/GroovyPagesServlet
     compileOnly 'org.apache.ant:ant'
     api project(':grails-gsp-core')
     api project(':grails-web-common')

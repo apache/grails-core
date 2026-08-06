@@ -33,6 +33,17 @@ group = 'org.apache.grails'
 
 ext {
     pomDescription = 'A meta-project that aggregates all web, non-test, non-database Grails dependencies.'
+    // Developer tooling belongs to the cli tier, which the Grails Gradle plugin auto-provisions onto
+    // `grailsCli` (compile and test only, never the application runtime classpath). Anything listed
+    // here reaching runtimeClasspath means an application would ship it - see validateProductionClasspath.
+    forbiddenRuntimeCoordinates = [
+            'org.jline:*',
+            'org.fusesource.jansi:*',
+            'org.apache.grails:grails-console',
+            'org.apache.groovy:groovy-groovysh',
+            'org.apache.groovy:groovy-swing',
+            'org.apache.groovy:groovy-console',
+    ]
 }
 
 def configurations = [
@@ -41,7 +52,6 @@ def configurations = [
                 ':grails-async',
                 ':grails-cache',
                 ':grails-codecs',
-                ':grails-console',
                 ':grails-controllers',
                 ':grails-converters',
                 ':grails-core',
