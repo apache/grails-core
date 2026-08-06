@@ -35,7 +35,6 @@ import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.SessionCallback
 import org.grails.datastore.mapping.core.VoidSessionCallback
 import org.grails.datastore.mapping.core.connections.ConnectionSource
-import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
@@ -109,23 +108,17 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
         if (currentQualifier != null && !ConnectionSource.DEFAULT.equals(currentQualifier) && !ConnectionSource.OLD_DEFAULT.equalsIgnoreCase(currentQualifier)) {
             if (isMultiTenantEntity && isMultiTenantCapable) {
                 // Determine whether the qualifier names a datasource connection or is a tenant ID.
-                // A datasource connection qualifier resolves via getDatastoreForConnection(); a tenant ID
-                // (e.g. from withTenant("t1")) does not. When it IS a connection qualifier we must not
-                // bind it as the tenant ID — doing so overwrites the tenant context set by the
-                // TenantResolver (e.g. SystemPropertyTenantResolver) and causes discriminator filters to
-                // match the connection name instead of the real tenant.
-                boolean isConnectionQualifier = false
-                if (ds instanceof MultipleConnectionSourceCapableDatastore) {
-                    try {
-                        Datastore resolved = ((MultipleConnectionSourceCapableDatastore) ds)
-                                .getDatastoreForConnection(currentQualifier)
-                        if (resolved != null) {
-                            isConnectionQualifier = true
-                        }
-                    } catch (Exception ignored) {
-                        // qualifier is not a known datasource name; treat it as a tenant ID below
-                    }
-                }
+                // A datasource connection qualifier is one of the datastore's configured connection
+                // sources; a tenant ID (e.g. from withTenant("t1")) is not. When it IS a connection
+                // qualifier we must not bind it as the tenant ID — doing so overwrites the tenant context
+                // set by the TenantResolver (e.g. SystemPropertyTenantResolver) and causes discriminator
+                // filters to match the connection name instead of the real tenant.
+                //
+                // This is checked against the declared connection source names rather than by probing
+                // getDatastoreForConnection(), which throws ConfigurationException for an unknown name:
+                // in DISCRIMINATOR mode the qualifier is always a tenant ID, so probing would fill in a
+                // stack trace on every single operation.
+                boolean isConnectionQualifier = ConnectionSourceNameResolver.isConnectionSourceName(ds, currentQualifier)
                 if (!isConnectionQualifier) {
                     // Qualifier is a tenant ID — bind it so the session and any discriminator filter
                     // both see the correct tenant for this operation.
@@ -141,7 +134,15 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
         if (isMultiTenantCapable) {
             Serializable tenantId = CurrentTenantHolder.get((MultiTenantCapableDatastore) ds)
             if (tenantId != null) {
-                // If a tenant is already bound, use executeQualified to delegate to a potentially specialized API
+                // If a tenant is already bound, use executeQualified to delegate to a potentially
+                // specialized API, keyed by the tenant id's String representation. In DISCRIMINATOR
+                // mode this always resolves back to this same entity's DEFAULT api (no per-tenant api
+                // is ever registered under a tenant qualifier there), so the flattening is inert. In
+                // DATABASE/SCHEMA mode, per-tenant apis/datastores genuinely are registered under this
+                // String key throughout GormRegistry - so distinct tenant ids whose String
+                // representations collide (e.g. the Long 1L and the String "1") would be treated as
+                // the same tenant here. Tenant ids used with DATABASE/SCHEMA multi-tenancy must be
+                // uniquely representable as strings.
                 return executeQualified(tenantId.toString(), callback)
             }
         }

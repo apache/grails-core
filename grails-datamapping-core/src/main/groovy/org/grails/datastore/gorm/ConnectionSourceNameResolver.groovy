@@ -67,4 +67,40 @@ class ConnectionSourceNameResolver {
         }
         return ConnectionSource.DEFAULT
     }
+
+    /**
+     * Whether the given name is one of the datastore's configured connection sources.
+     *
+     * This answers "is this qualifier a datasource name or a tenant id?" without probing
+     * {@code getDatastoreForConnection}, which throws for an unknown name and would put stack-trace
+     * construction on the per-operation path of every discriminator-mode query.
+     *
+     * @param datastore The datastore to inspect
+     * @param name The candidate connection source name
+     * @return {@code true} if the datastore declares a connection source with that name
+     */
+    static boolean isConnectionSourceName(Object datastore, String name) {
+        if (name == null || !(datastore instanceof ConnectionSourcesProvider)) {
+            return false
+        }
+        ConnectionSources connectionSources = ((ConnectionSourcesProvider) datastore).connectionSources
+        if (connectionSources == null) {
+            return false
+        }
+        // Check the default first: it is the common case, needs no iteration, and a child datastore
+        // built for a single connection resolves its own name through it.
+        if (name == connectionSources.defaultConnectionSource?.name) {
+            return true
+        }
+        Iterable<ConnectionSource> allConnections = connectionSources.allConnectionSources
+        if (allConnections == null) {
+            return false
+        }
+        for (ConnectionSource connectionSource in allConnections) {
+            if (name == connectionSource.name) {
+                return true
+            }
+        }
+        return false
+    }
 }

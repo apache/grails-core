@@ -51,4 +51,55 @@ class ConnectionSourceNameResolverSpec extends Specification {
         ConnectionSourceNameResolver.resolveConnectionSourceNames(datastore) == [ConnectionSource.DEFAULT]
         ConnectionSourceNameResolver.resolveDefaultConnectionSourceName(datastore) == ConnectionSource.DEFAULT
     }
+
+    void "isConnectionSourceName recognises a declared connection source"() {
+        expect:
+        ConnectionSourceNameResolver.isConnectionSourceName(datastore, ConnectionSource.DEFAULT)
+    }
+
+    void "isConnectionSourceName answers false for a tenant id without throwing"() {
+        expect: "an unknown name is a plain false - no ConfigurationException, so no stack trace is built per operation"
+        !ConnectionSourceNameResolver.isConnectionSourceName(datastore, 'someTenantId')
+    }
+
+    void "isConnectionSourceName answers false for a null name or a datastore with no connection sources"() {
+        given:
+        def noConnectionSources = Stub(ConnectionSourcesProvider) {
+            getConnectionSources() >> null
+        }
+
+        expect:
+        !ConnectionSourceNameResolver.isConnectionSourceName(datastore, null)
+        !ConnectionSourceNameResolver.isConnectionSourceName(new Object(), 'anything')
+        !ConnectionSourceNameResolver.isConnectionSourceName(noConnectionSources, 'anything')
+    }
+
+    void "isConnectionSourceName recognises a datastore's own default connection"() {
+        given: "a child datastore built for a single connection, which enumerates only that connection"
+        def leaf = Stub(ConnectionSourcesProvider) {
+            getConnectionSources() >> Stub(ConnectionSources) {
+                getDefaultConnectionSource() >> Stub(ConnectionSource) { getName() >> 'secondary' }
+            }
+        }
+
+        expect: "resolving its own connection name is recognised, so it is not mistaken for a tenant id"
+        ConnectionSourceNameResolver.isConnectionSourceName(leaf, 'secondary')
+        !ConnectionSourceNameResolver.isConnectionSourceName(leaf, 'tenant1')
+    }
+
+    void "isConnectionSourceName recognises every declared connection, not just the default"() {
+        given:
+        def provider = Stub(ConnectionSourcesProvider) {
+            getConnectionSources() >> Stub(ConnectionSources) {
+                getAllConnectionSources() >> [
+                        Stub(ConnectionSource) { getName() >> ConnectionSource.DEFAULT },
+                        Stub(ConnectionSource) { getName() >> 'analytics' }
+                ]
+            }
+        }
+
+        expect:
+        ConnectionSourceNameResolver.isConnectionSourceName(provider, 'analytics')
+        !ConnectionSourceNameResolver.isConnectionSourceName(provider, 'reporting')
+    }
 }
