@@ -31,7 +31,6 @@ import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.util.StringValueResolver;
 
 import grails.config.Config;
-import grails.core.support.GrailsConfigurationAware;
 
 /**
  * Uses Grails' ConfigObject for place holder values.
@@ -39,12 +38,11 @@ import grails.core.support.GrailsConfigurationAware;
  * @author Graeme Rocher
  * @since 1.0
  */
-public class GrailsPlaceholderConfigurer extends PropertySourcesPlaceholderConfigurer implements GrailsConfigurationAware {
+public class GrailsPlaceholderConfigurer extends PropertySourcesPlaceholderConfigurer {
 
     private Properties properties;
     private String beanName;
     private BeanFactory beanFactory;
-    private Config config;
 
     public GrailsPlaceholderConfigurer(String placeHolderPrefix, Properties properties) {
         this.properties = properties;
@@ -58,10 +56,7 @@ public class GrailsPlaceholderConfigurer extends PropertySourcesPlaceholderConfi
 
     @Override
     protected void loadProperties(Properties props) throws IOException {
-        if (config != null) {
-            props.putAll(config.toProperties());
-        }
-        else if (this.properties != null) {
+        if (this.properties != null) {
             props.putAll(properties);
         }
         this.properties = props;
@@ -113,10 +108,5 @@ public class GrailsPlaceholderConfigurer extends PropertySourcesPlaceholderConfi
 
         // New in Spring 3.0: resolve placeholders in embedded values such as annotation attributes.
         beanFactoryToProcess.addEmbeddedValueResolver(valueResolver);
-    }
-
-    @Override
-    public void setConfiguration(Config co) {
-        this.config = co;
     }
 }

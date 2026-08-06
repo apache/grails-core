@@ -1,0 +1,129 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+import org.apache.tools.ant.DirectoryScanner
+
+pluginManagement {
+    includeBuild('../grails-gradle') {
+        name = 'grails-gradle'
+    }
+    includeBuild('../build-logic') {
+        name = 'build-logic-root'
+    }
+    apply from: file('../gradle/plugin-repositories.gradle')
+    repositories {
+        configurePluginRepositories(delegate)
+    }
+}
+
+plugins {
+    id 'com.gradle.develocity' version '4.3.2'
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.4.0'
+    id 'org.apache.grails.buildsrc.repo'
+}
+
+def isCI = System.getenv().containsKey('CI')
+def isLocal = !isCI
+def isReproducibleBuild = System.getenv('SOURCE_DATE_EPOCH') != null
+
+develocity {
+    server = 'https://develocity.apache.org'
+    buildScan {
+        tag('grails')
+        tag('grails-end-to-end')
+        publishing.onlyIf { it.authenticated }
+        uploadInBackground = isLocal
+    }
+}
+
+// Same shape as the root build's settings.gradle, so scans and cache behave identically here.
+buildCache {
+    local { enabled = (isLocal && !isReproducibleBuild) || (isCI && isReproducibleBuild) }
+    remote(develocity.buildCache) {
+        push = isCI
+        enabled = !isReproducibleBuild
+    }
+}
+
+// Resolve Grails from the artifacts the core build publishes, not from project substitution. That
+// is what makes these tests end-to-end: they consume grails-core exactly as an application does,
+// through real poms and Gradle module metadata.
+//
+// The repository is TestCaseMavenRepo, which every published project declares via the publish
+// plugin's testRepositoryPath (build-logic .../PublishPlugin.groovy) and which resolves to
+// <repository root>/build/local-maven. Populate it before running this build:
+//
+//     ./gradlew publishAllPublicationsToTestCaseMavenRepoRepository
+//
+// grails-forge consumes the same directory for the applications its tests generate
+// (grails-forge/gradle/test-config.gradle passes it as GRAILS_REPO_URL).
+//
+// Deliberately NOT includeBuild('..'): composite substitution would win over this repository and
+// take us back to resolving projects instead of artifacts. It also cannot express the CLI
+// companions - grails-core-cli is a secondary capability of :grails-core rather than a project, so
+// substitution hits a capability self-conflict. Published metadata has that already solved: the
+// companion is a first-class module with its own publication, and CliPublishingSupport rewrites
+// capability requests out of what gets published precisely so external consumers resolve the plain
+// coordinate.
+dependencyResolutionManagement {
+    repositories {
+        // exclusiveContent rather than ordering: every org.apache.grails artifact must come from
+        // the local build. Without it a remote 8.0.0-SNAPSHOT could satisfy the request and the
+        // suite would quietly test something other than this working tree.
+        exclusiveContent {
+            forRepository {
+                maven {
+                    name = 'GrailsLocalMaven'
+                    url = rootDir.toPath().resolve('../build/local-maven').normalize().toUri()
+                }
+            }
+            filter {
+                includeGroupByRegex('org\\.apache\\.grails.*')
+            }
+        }
+    }
+}
+
+rootProject.name = 'grails-end-to-end'
+
+include(
+        'legacy-commands',
+        'legacy-commands-plugin',
+        // Belongs here rather than in grails-test-examples: it imports grails-bom as a Maven BOM
+        // through io.spring.dependency-management, which resolves imports in its own detached
+        // configuration. That bypasses any project substitution, so the import can only ever be
+        // satisfied by a published org.apache.grails:grails-bom:<projectVersion> - which is what
+        // the repository above is. In the core build it had to be excluded whenever nothing had
+        // been published yet (a reproducible release build, or a fresh release branch whose
+        // version has never been published), and otherwise resolved against whatever the Apache
+        // snapshot repository held rather than the working tree.
+        'spring-dependency-management',
+)
+
+// legacy-g7-command-plugin is deliberately NOT included here. It compiles against published
+// Grails 7 / Groovy 4 artifacts, and an included build would substitute
+// org.apache.grails:grails-core for this repo's Groovy 5 project - which is exactly the
+// substitution the fixture exists to avoid. It stays a standalone build, run under its own JDK
+// (legacy-g7-command-plugin/.sdkmanrc), and legacy-commands consumes the jar it produces.
+
+// Due to https://github.com/gradle/gradle/issues/2986 , we can't change the global exclude for profiles, it must be done everywhere
+for (String pattern in DirectoryScanner.defaultExcludes) {
+    if (pattern.contains('gitignore') || pattern.contains('gitattributes')) {
+        DirectoryScanner.removeDefaultExclude(pattern)
+    }
+}

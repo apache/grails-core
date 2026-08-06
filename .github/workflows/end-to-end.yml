@@ -1,0 +1,149 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# The end-to-end suite is its own Gradle build, so the core build never reaches it and
+# `./gradlew build` at the root is unaffected.
+#
+# It resolves Grails from the artifacts the core build publishes rather than by project
+# substitution - that is what makes the tests end-to-end. The repository is the same
+# build/local-maven that grails-forge points its generated applications at, populated by
+# publishAllPublicationsToTestCaseMavenRepoRepository, so the suite exercises real poms and
+# module metadata including the CLI companion artifacts. That is a hard requirement for some of
+# these projects rather than a nicety: spring-dependency-management imports grails-bom as a Maven
+# BOM through io.spring.dependency-management, which resolves it in its own detached configuration
+# and so can only ever consume a published pom.
+#
+# It also needs two JDKs, which is the other reason it gets its own workflow: the Grails 7
+# fixture must be compiled on Java 17 (the minimum for a Grails 7 app, so the binary matches
+# what a real Grails 7 plugin is built with), while the core build and the Grails 8
+# application consuming the fixture need 21. The Grails 8 side simply tracks the repository's
+# root .sdkmanrc - it has to run on whatever the core build it consumes runs on - and only the
+# fixture carries its own pin. The steps below read both out of those files rather than relying
+# on Gradle toolchain auto-detection.
+name: "End to End"
+on:
+  push:
+    branches:
+      - '[0-9]+.[0-9]+.x'
+  pull_request:
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  endToEnd:
+    name: "End to End Tests (end-to-end build only)"
+    if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: "☕️ Determine JDKs from .sdkmanrc"
+        # Read both pins out of the files that already declare them. Only the major is kept:
+        # `sdk env` gives a developer the exact Liberica patch, but the fixture and the suite are
+        # test builds outside the reproducible-build surface, so CI deliberately takes the
+        # runner's current release of each major rather than pinning patch versions here.
+        id: jdks
+        run: |
+          set -euo pipefail
+          fixture_java=$(grep -E '^java=' end-to-end/legacy-g7-command-plugin/.sdkmanrc | cut -d= -f2)
+          build_java=$(grep -E '^java=' .sdkmanrc | cut -d= -f2)
+          echo "fixture-java=${fixture_java%%.*}" >> "$GITHUB_OUTPUT"
+          echo "build-java=${build_java%%.*}" >> "$GITHUB_OUTPUT"
+          echo "Grails 7 fixture JDK: ${fixture_java}"
+          echo "end-to-end build JDK (from root .sdkmanrc): ${build_java}"
+      - name: "☕️ Setup JDKs"
+        # Both, in one step. The last version listed becomes the default JAVA_HOME (the Grails 8
+        # side); the fixture step below switches to the matching JAVA_HOME_<major>_X64 for its
+        # single invocation.
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: liberica
+          java-version: |
+            ${{ steps.jdks.outputs.fixture-java }}
+            ${{ steps.jdks.outputs.build-java }}
+      - name: "🗄️ Restore dependency jar cache"
+        uses: actions/cache@v4
+        with:
+          # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
+          # Keyed by branch version so each release branch maintains its own warm cache.
+          path: |
+            ~/.gradle/caches/modules-2
+            ~/.gradle/wrapper
+          key: gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-${{ hashFiles('**/dependencies.gradle', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        with:
+          cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
+      - name: "📦 Setup: publish grails-gradle to the local repository the tests resolve from"
+        # Both builds publish into the same build/local-maven, and both are needed: the Grails BOM
+        # constrains org.apache.grails.gradle artifacts. grails-forge depends on this same pair of
+        # publish tasks for the applications its tests generate.
+        working-directory: 'grails-gradle'
+        run: ./gradlew publishAllPublicationsToTestCaseMavenRepoRepository -PskipTests --stacktrace
+      - name: "📦 Setup: publish Grails to the local repository the tests resolve from"
+        run: ./gradlew publishAllPublicationsToTestCaseMavenRepoRepository -PskipTests --stacktrace
+      - name: "📦 Setup: build the precompiled Grails 7 / Groovy 4 fixture"
+        working-directory: 'end-to-end/legacy-g7-command-plugin'
+        env:
+          # Derived from the major the jdks step read out of the fixture's .sdkmanrc, so a fixture
+          # JDK bump changes this lookup with it instead of leaving a stale literal behind.
+          JAVA_HOME: ${{ env[format('JAVA_HOME_{0}_X64', steps.jdks.outputs.fixture-java)] }}
+        run: |
+          set -euo pipefail
+          if [ -z "${JAVA_HOME:-}" ]; then
+            echo "setup-java did not provision JDK ${{ steps.jdks.outputs.fixture-java }}; refusing to build the fixture on the default JDK" >&2
+            exit 1
+          fi
+          ./gradlew jar --stacktrace
+      - name: "🔍 Verify the fixture really was built by the Grails 7 toolchain"
+        working-directory: 'end-to-end/legacy-g7-command-plugin'
+        # A fixture silently built by the wrong toolchain would still pass the suite while
+        # proving nothing, so fail loudly here instead. Grails-/Groovy-Compile-Version come from
+        # the resolved BOM and Build-Jdk-Spec from the JVM that ran Gradle (all stamped into the
+        # manifest at jar time); the class-file major version is the ground truth for what the
+        # bytecode actually targets, since the fixture deliberately sets no toolchain or release.
+        run: |
+          set -euo pipefail
+          fixture_java='${{ steps.jdks.outputs.fixture-java }}'
+          jar=$(ls build/libs/*.jar)
+          unzip -p "$jar" META-INF/MANIFEST.MF | tr -d '\r' > /tmp/fixture-manifest
+          cat /tmp/fixture-manifest
+          grep -q '^Grails-Compile-Version: 7\.' /tmp/fixture-manifest
+          grep -q '^Groovy-Compile-Version: 4\.' /tmp/fixture-manifest
+          grep -q "^Build-Jdk-Spec: ${fixture_java}\$" /tmp/fixture-manifest
+          expected_major=$((fixture_java + 44))
+          actual_major=$(unzip -p "$jar" legacy/g7/commands/HelloG7PrecompiledCommand.class \
+              | od -An -t u1 -j 6 -N 2 | awk 'NF { print $1 * 256 + $2; exit }')
+          echo "class-file major version: ${actual_major} (expected ${expected_major} for Java ${fixture_java})"
+          [ "$actual_major" -eq "$expected_major" ]
+      - name: "🔍 Setup TestLens"
+        uses: testlens-app/setup-testlens@d96a555133c275a00949d2cc77b70fe9a4242ebf # v1.9.2
+      - name: "🧪 Run the end-to-end tests"
+        # Only the end-to-end build. grails-core's own unit and functional suites are the CI
+        # workflow's job; nothing here re-runs them. The publish steps above are setup, not tests.
+        working-directory: 'end-to-end'
+        env:
+          DO_NOT_CACHE_TESTS: '1'
+        run: ./gradlew check --continue --stacktrace
+      - name: "📤 Upload test reports"
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: end-to-end-test-reports
+          path: end-to-end/**/build/reports/tests/**

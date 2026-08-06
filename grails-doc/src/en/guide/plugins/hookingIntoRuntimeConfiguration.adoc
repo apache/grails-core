@@ -119,6 +119,148 @@ class I18nGrailsPlugin extends Plugin {
 A plugin may override either `doWithSpring()` or `doWithSpring(BeanBuilder)`, but not both. The closure-returning `doWithSpring()` remains fully supported for backwards compatibility. Defining both forms in the same plugin is an error: the plugin will fail to load with an exception, since the two forms are alternatives and defining both indicates an incomplete migration between them. Consolidate the bean definitions into a single form.
 
 
+==== Compiling Bean Definitions into a Spring Boot AutoConfiguration
+
+
+`beanRegistrar()` and `doWithSpring` register beans at a single, fixed point in startup: before Spring Boot processes any `{springbootapi}org/springframework/boot/autoconfigure/AutoConfiguration.html[AutoConfiguration]`. That is enough for a bean to win against a Boot default guarded by `@ConditionalOnMissingBean`, but it cannot express ordering *relative to a specific* auto-configuration — running before `WebMvcAutoConfiguration` but after `MessageSourceAutoConfiguration`, say, regardless of where those two land in Boot's overall sort. Only a real `AutoConfiguration` class can declare that ordering, via `@AutoConfiguration(before = ..., after = ...)`.
+
+The link:{api}grails/compiler/beans/GrailsBeans.html[GrailsBeans] annotation lets you author bean definitions with DSL syntax similar to the classic Beans DSL, while compiling them at build time into genuine `@Bean` factory methods on a plain `AutoConfiguration` class — no closures, and nothing DSL-specific, survive into the compiled bytecode. Declare a class whose `beans` property is a closure of `bean(["name", ] Type) { ... }` statements:
+
+NOTE: On a `*GrailsPlugin.groovy` plugin descriptor or an application's `Application` class the annotation is implicit — a `beans` property is compiled automatically, the same way `doWithSpring` and `watchedResources` are conventions rather than annotated members. `@GrailsBeans` is written out only on a standalone class, as in the first example below. A class with no `beans` property is untouched.
+
+[source,groovy]
+----
+import grails.compiler.beans.GrailsBeans
+import org.springframework.boot.autoconfigure.AutoConfiguration
+import org.springframework.boot.autoconfigure.context.MessageSourceAutoConfiguration
+import org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration
+import org.springframework.context.MessageSource
+import org.springframework.context.support.ReloadableResourceBundleMessageSource
+import org.springframework.web.servlet.i18n.CookieLocaleResolver
+import org.springframework.web.servlet.i18n.LocaleChangeInterceptor
+
+@GrailsBeans
+@AutoConfiguration(before = [MessageSourceAutoConfiguration, WebMvcAutoConfiguration])
+class I18nBeans {
+
+    def beans = {
+        bean('messageSource', ReloadableResourceBundleMessageSource) {
+            new ReloadableResourceBundleMessageSource(basename: 'WEB-INF/grails-app/i18n/messages')
+        }
+
+        bean('localeResolver', CookieLocaleResolver).conditionalOnMissingBean(CookieLocaleResolver) {
+            new CookieLocaleResolver('locale')
+        }
+
+        bean('localeChangeInterceptor', LocaleChangeInterceptor) { MessageSource messageSource ->
+            new LocaleChangeInterceptor(paramName: 'lang')
+        }
+    }
+}
+----
+
+Each `bean(["name", ] Type)` statement compiles to a public method returning the declared type and annotated `@Bean("name")`. The generated method's name is an implementation detail — Spring resolves the bean by its `@Bean("name")` value, never by the method name. It matches the bean name when that is a valid Java identifier not already taken by an existing member (declared, inherited, or defined elsewhere in the DSL — a bean named `toString` will not override `Object.toString()`); otherwise a synthesized `<type>$N` name (`service$0`, `service$1`, ...) is used instead, so any legal, non-blank Spring bean name compiles:
+
+* The bean name defaults to the decapitalized simple class name when omitted.
+* The factory closure itself may be omitted when a bean is nothing but its own no-argument construction: `bean(XmlDataBindingSourceCreator)` declares exactly what `bean(XmlDataBindingSourceCreator) { new XmlDataBindingSourceCreator() }` does, without restating the type twice. It takes an explicit name (`bean('xmlCreator', XmlDataBindingSourceCreator)`) and chains the qualifiers below just as the closure form does (`bean(Widget).primary().lazy()`). The declared type is the one constructed, so it must be concrete and have an accessible no-argument constructor; for an interface or abstract type, give the bean a body naming the implementation.
+* Leaving the closure's *body* empty means the same thing for a bean with dependencies: the parameters say what is injected, and the constructor call is generated. `bean('validateableConstraintsEvaluator', DefaultConstraintEvaluatorFactoryBean).lazy() { List<MessageSource> messageSources, @Qualifier('grailsDomainClassMappingContext') MappingContext mappingContext, GrailsApplication grailsApplication -> }` generates a method with exactly those three parameters whose body is `new DefaultConstraintEvaluatorFactoryBean(messageSources, mappingContext, grailsApplication)` — the parameters in the order written. Which constructor that selects is decided by the compiler from the parameter types, exactly as for a body you wrote yourself, so nothing here depends on the declared type's other constructors. A body is still needed whenever construction is more than passing the parameters straight through — `new ConfigProperties(grailsApplication.config)`, or anything followed by `.tap { }`.
+* The same bean name may be declared by more than one `bean(...)` statement — the standard Spring Boot pattern for mutually exclusive variants of one bean, such as the framework's own `grailsUrlConverter` selected by `@ConditionalOnProperty` — provided every declaration with the name carries its own discriminating condition (such as `.annotate(ConditionalOnProperty, ...)`), so that at most one of them registers at runtime. Duplicating a bean name without that is a compile-time error, since Spring would keep the first definition and silently skip the rest.
+* Chaining `.conditionalOnMissingBean(...)` adds a `@ConditionalOnMissingBean` annotation to the generated method, matching Spring Boot's usual back-off semantics. It takes positional types (`.conditionalOnMissingBean(Greeter)`), the annotation's own named attributes (`.conditionalOnMissingBean(name: 'localeResolver', search: SearchStrategy.CURRENT)`), or both. With no arguments at all it compiles to the bare annotation, letting Spring Boot infer the back-off type from the method's return type — the recommended form when a bean simply backs off its own type, since `bean(AvailableLocaleResolver).conditionalOnMissingBean()` already says everything `.conditionalOnMissingBean(AvailableLocaleResolver)` would repeat.
+* Chaining `.conditionalOnMissingBeanName(...)` is the name-based counterpart: "register this bean unless a bean with *this bean's name* already exists". The condition's `name` member is set from the bean's own (explicit or convention-derived) name, so `bean(MessageSource).conditionalOnMissingBeanName(search: SearchStrategy.CURRENT) { ... }` states `messageSource` once and it feeds both `@Bean` and the condition — the two strings the explicit form has to keep in sync cannot diverge. It accepts the annotation's other attributes (`search:`, `ignored:`, ...) but rejects `name:` and types, which would contradict its purpose; use `.conditionalOnMissingBean(...)` for those.
+* Chaining `.primary()`, `.lazy()`, and/or `.scope("name")` adds `@Primary`, `@Lazy`, and `@Scope("name")` respectively.
+* Chaining `.staticMethod()` makes the generated factory method `static` — Spring's recommended shape for `BeanFactoryPostProcessor` and `BeanPostProcessor` beans, which must be creatable without instantiating their declaring configuration class. A static bean's closure cannot reference `field(...)` or `method(...)` members, since those are instance members; under `@CompileStatic` that mistake is a compile error.
+* Chaining `.annotate(AnnotationType[, attr: value, ...])` attaches any other single-valued annotation directly — any `@Conditional*` (built-in or a custom `Condition`), `@Order`, `@DependsOn`, or anything else a hand-written `@Bean` method could carry. It's repeatable, so several different annotations can be chained onto the same bean: `bean('special', Special).annotate(Order, value: 1).annotate(ConditionalOnProperty, prefix: 'myapp', name: 'enabled', havingValue: 'true') { ... }`.
+* Any combination of the above can be chained together, in any order — for example `bean('slowGreeter', SlowGreeter).lazy().scope('prototype') { ... }`.
+* Typed closure parameters (`{ MessageSource messageSource -> ... }`) become the generated method's parameters, so other beans are injected the same way a hand-written `@Bean` method would declare them — and a parameter-level annotation such as `{ @Qualifier('special') Greeter g -> ... }` carries straight through too, since the closure's own parameters become the generated method's parameters directly.
+
+Two more statement kinds can appear inside `beans { }` alongside `bean(...)`, for state and logic shared across bean methods — the same role a hand-written `@Configuration` class's own fields and private methods play:
+
+* `field(["name", ] Type)`, optionally chained with `.value(...)` and/or (repeatably) `.annotate(AnnotationType[, attr: value, ...])`, declares a private field on the generated class. The usual case is injected configuration, and `.value(...)` covers it directly: `field('encoding', String).value('grails.views.gsp.encoding', 'UTF-8')` compiles to `@Value("${grails.views.gsp.encoding:UTF-8}")`. The two-argument form takes a config key and default — and because the DSL builds the placeholder itself, the key may be a bare constant reference (`.value(Settings.GSP_VIEW_ENCODING, 'UTF-8')`), the one shape a directly-written annotation value can't accept. The one-argument form takes a bare config key with no default — `.value('grails.web.linkGenerator.useCache')` compiles to `@Value("${grails.web.linkGenerator.useCache}")` — while a string already containing a `${...}` placeholder or a `#{...}` SpEL expression passes through verbatim: `.value('#{T(java.lang.Runtime).getRuntime().availableProcessors()}')`.
+* `method(["name", ] Type) { ... }`, chainable with `.annotate(...)` only (`.value(...)` is field-specific), declares a private helper method the same way `bean(...)` declares a public one — typed closure parameters become method parameters, and the closure body becomes the method body.
+
+Both are ordinary private members of the generated class, so a `bean(...)` closure reads a `field(...)` or calls a `method(...)` exactly like a hand-written `@Bean` method would reference a sibling field or method on its own class:
+
+[source,groovy]
+----
+field('suffix', String).value('myapp.greeting-suffix', '!')
+
+method('buildGreeting', String) { String name ->
+    "Hello, ${name}${suffix}"
+}
+
+bean('greeting', Greeting) {
+    new Greeting(buildGreeting('World'))
+}
+----
+
+Because the result is an ordinary `AutoConfiguration` class, it must be registered the same way any Spring Boot auto-configuration is: listed in `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`. Modules built as part of this project can apply the `org.apache.grails.buildsrc.autoconfiguration-imports` Gradle convention plugin to generate that file automatically, by scanning the module's own compiled classes for `@AutoConfiguration` at build time. Projects outside this build register the class the same way any hand-written `AutoConfiguration` is registered — by listing it in that file directly.
+
+NOTE: `@GrailsBeans` does not require extending `Plugin` at all — it produces a plain Spring Boot `AutoConfiguration`, so it can be used by any Spring Boot module, not just a Grails plugin descriptor. Applications can use it too, including directly on the `Application` class — where no imports-file registration is needed, since Spring Boot processes the application class itself — see link:spring.html#springdslAdditional[Configuring Additional Beans]. Within a plugin, reach for it specifically when a bean's registration needs to be ordered against a particular other auto-configuration; otherwise `beanRegistrar()` remains the recommended way to register beans from a `Plugin`.
+
+The DSL still covers a narrower surface than `doWithSpring(BeanBuilder)`:
+
+* Each top-level statement inside `beans { }` must be exactly `bean(...)`, `field(...)`, or `method(...)`, with their respective chaining — an `if`, a `for` loop, or any other imperative Groovy directly inside `beans { }` is a compile-time error, not a runtime one. Note that this is about the DSL's own top-level statements, not the bodies of `bean(...)`/`method(...)` closures themselves, which accept arbitrary Groovy, subject only to what is reachable from the generated class (see the last bullet below) — and `field(...)`/`method(...)` already cover the common reasons to want shared state or logic in the first place.
+* `.annotate(...)` attribute values must resolve to a constant at compile time: a literal, a reference to a `static final` field, or a concatenation of those. `.annotate(Value, value: '${' + Settings.I18N_LOCALE_RESOLVER + ':session}')` folds, `@CompileStatic` included, the same way `.value(...)` folds its arguments — the resolution happens while the DSL is compiled, before `@CompileStatic` runs, so it makes no difference whether the constant is declared on an interface or on a class. What cannot be used is anything that is not a compile-time constant: a method call, a local variable, a value read from configuration. An attribute that itself takes a nested annotation as its value isn't supported.
+* Dependencies on other beans are expressed through typed closure parameters, autowired by type; there is no `ref('beanName')` lookup. Where the type alone is ambiguous, select by name with a parameter annotation — `@Qualifier('beanName')` — as `DomainClassGrailsPlugin` does with `@Qualifier('grailsDomainClassMappingContext') MappingContext mappingContext`.
+* A `bean(...)`/`method(...)` closure body cannot reach members of the `Plugin` it was written in. The body is relocated verbatim onto the generated sibling, which extends `Object` and holds no reference to the plugin instance, so reading `config`, `grailsApplication` or `applicationContext` from a body fails — at compile time under `@CompileStatic`, and otherwise not until Spring invokes the factory method during startup. This is the one habit worth unlearning when converting from `doWithSpring`, whose closures can read plugin state freely: take injected configuration through `field(...)`, and a `GrailsApplication` (or any other bean) through a typed closure parameter.
+
+===== Using @GrailsBeans directly on a *GrailsPlugin.groovy class
+
+`@GrailsBeans` may also be applied directly to a `Plugin` subclass, so bean definitions can live in the familiar `*GrailsPlugin.groovy` file instead of a separate class:
+
+[source,groovy]
+----
+import grails.compiler.beans.GrailsBeans
+import grails.plugins.Plugin
+import grails.util.GrailsUtil
+import org.springframework.boot.autoconfigure.AutoConfiguration
+import org.springframework.boot.autoconfigure.context.MessageSourceAutoConfiguration
+import org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration
+import org.springframework.context.MessageSource
+import org.springframework.context.support.ReloadableResourceBundleMessageSource
+import org.springframework.web.servlet.i18n.CookieLocaleResolver
+import org.springframework.web.servlet.i18n.LocaleChangeInterceptor
+
+@GrailsBeans
+@AutoConfiguration(before = [MessageSourceAutoConfiguration, WebMvcAutoConfiguration])
+class I18nGrailsPlugin extends Plugin {
+
+    def version = GrailsUtil.getGrailsVersion()
+
+    def beans = {
+        bean('messageSource', ReloadableResourceBundleMessageSource) {
+            new ReloadableResourceBundleMessageSource(basename: 'WEB-INF/grails-app/i18n/messages')
+        }
+
+        bean('localeResolver', CookieLocaleResolver).conditionalOnMissingBean(CookieLocaleResolver) {
+            new CookieLocaleResolver('locale')
+        }
+
+        bean('localeChangeInterceptor', LocaleChangeInterceptor) { MessageSource messageSource ->
+            new LocaleChangeInterceptor(paramName: 'lang')
+        }
+    }
+
+    @Override
+    void doWithApplicationContext() {
+        // other Plugin lifecycle hooks work exactly as they do without @GrailsBeans
+    }
+}
+----
+
+A `Plugin` subclass is instantiated by `DefaultGrailsPlugin` via plain reflection, never as a Spring bean, so it cannot itself carry `@Bean` methods or a meaningful `@AutoConfiguration`/`@Conditional*` annotation. When `@GrailsBeans` is applied to a `Plugin` subclass, the compiled `@Bean` methods land on a generated sibling class in the same package instead. Its name follows the Grails plugin-descriptor convention: a class named `*GrailsPlugin` swaps that suffix for `AutoConfiguration` — the example above produces both `I18nGrailsPlugin` (with `beans` stripped, `doWithApplicationContext` untouched) and a separate `I18nAutoConfiguration` class carrying the three `@Bean` methods, exactly the name the hand-written class it replaces would have had. Any other class name appends `AutoConfiguration` (`FooPlugin` → `FooPluginAutoConfiguration`). Everything else about the plugin class — `version`, `watchedResources`, `doWithApplicationContext`, `onChange`, and so on — works exactly as it does without `@GrailsBeans`.
+
+Every annotation on the plugin class that only makes sense on whatever Spring Boot actually evaluates moves onto that sibling too, since none of them has any effect on a class Spring never processes as a bean: `@AutoConfiguration`, the whole `@Conditional*` family, `@Import`/`@ImportAutoConfiguration`/`@ImportResource`, `@ComponentScan`, `@EnableConfigurationProperties`, `@PropertySource`/`@PropertySources`, and `@AutoConfigureOrder`/`Before`/`After`. This also recognises a *composed* annotation built on top of any of these — for example a project-specific `@ConditionalOnFeature` that is itself meta-annotated with Spring Boot's `@ConditionalOnProperty` (rather than `@Conditional` directly), or a custom `@EnableSomething` meta-annotated with `@Import` — so it isn't limited to Spring's own built-in annotation types. An annotation *outside* that set (one neither listed nor meta-annotated with anything listed) stays on the plugin class, where Spring never sees it — for those, name them explicitly with `@GrailsBeans(moveAnnotations = [SomeVendorAnnotation])` and they move like the recognised ones do.
+
+The `@AutoConfiguration` annotation is required whenever `@GrailsBeans` is applied to a `Plugin` subclass, even with no `before=`/`after=`: without it, the generated sibling would carry no annotation telling Spring Boot to process it, and its beans would silently never be registered. Omitting it is a compile-time error rather than a silent runtime gap.
+
+Set `@GrailsBeans(autoConfigurationName = "...")` to override the derived name (still generated in the plugin's own package) — useful when converting an existing, already-public `@AutoConfiguration` class whose name doesn't follow the convention, since other modules may reference it by name (`exclude =`, `before=`/`after=` ordering, `AutoConfiguration.imports`) or import it directly in tests.
+
+`@GrailsBeans` compiles cleanly alongside `@CompileStatic`/`@GrailsCompileStatic` on the same class. The `beans` closure is rewritten into real `@Bean` methods during `CompilePhase.CANONICALIZATION`, which runs before static type checking (`CompilePhase.INSTRUCTION_SELECTION`) ever examines the class, so the type checker only ever sees the generated, concretely-typed methods — never the `bean(...)` DSL calls themselves.
+
+On both the standalone-class and `Plugin`-subclass forms, the generated `@Bean` methods are genuinely statically compiled whenever `@CompileStatic` or `@GrailsCompileStatic` is present — verified directly by disassembling the bytecode (no `invokedynamic` call sites). The Plugin form requires one additional step internally: because its sibling class is generated after Groovy discovers local annotation transforms, `@GrailsBeans` invokes Groovy's static-compilation transform directly after generating the sibling's methods.
+
+
 ==== Customizing the Servlet Environment
 
 

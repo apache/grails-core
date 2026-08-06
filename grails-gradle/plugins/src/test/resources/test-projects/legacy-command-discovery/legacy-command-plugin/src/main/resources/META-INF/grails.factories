@@ -1,0 +1,1 @@
+grails.dev.commands.ApplicationCommand=org.example.legacy.HelloLegacyAppCommand

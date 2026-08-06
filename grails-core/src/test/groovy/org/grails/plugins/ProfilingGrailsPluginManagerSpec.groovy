@@ -18,9 +18,12 @@
  */
 package org.grails.plugins
 
+import ch.qos.logback.classic.Level
 import grails.core.DefaultGrailsApplication
+import grails.plugins.DefaultGrailsPluginManager
 import org.apache.grails.core.plugins.DefaultPluginDiscovery
 import org.apache.grails.core.plugins.PluginDiscovery
+import org.apache.grails.core.testing.support.LogCapture
 import org.grails.spring.DefaultRuntimeSpringConfiguration
 import org.springframework.context.support.GenericApplicationContext
 import org.springframework.core.env.StandardEnvironment
@@ -37,23 +40,29 @@ class ProfilingGrailsPluginManagerSpec extends Specification {
         discovery.init(new StandardEnvironment())
         def manager = new ProfilingGrailsPluginManager(application, discovery)
         def originalOut = System.out
-        def originalErr = System.err
         def capturedOut = new ByteArrayOutputStream()
-        def capturedErr = new ByteArrayOutputStream()
         System.setOut(new PrintStream(capturedOut, true))
-        System.setErr(new PrintStream(capturedErr, true))
+        def logCapture = new LogCapture(DefaultGrailsPluginManager, Level.INFO)
 
         when:
         manager.loadPlugins()
 
         then:
         !capturedOut.toString().contains('Loading plugins')
-        capturedErr.toString().contains('INFO grails.plugins.DefaultGrailsPluginManager - Loading plugins started')
-        capturedErr.toString() ==~ /(?s).*INFO grails\.plugins\.DefaultGrailsPluginManager - Loading plugins took \d+.*/
+        logCapture.events.any {
+            it.loggerName == DefaultGrailsPluginManager.name &&
+                    it.level == Level.INFO &&
+                    it.formattedMessage == 'Loading plugins started'
+        }
+        logCapture.events.any {
+            it.loggerName == DefaultGrailsPluginManager.name &&
+                    it.level == Level.INFO &&
+                    it.formattedMessage ==~ /Loading plugins took \d+/
+        }
 
         cleanup:
         System.setOut(originalOut)
-        System.setErr(originalErr)
+        logCapture.close()
     }
 
     void "configuration phases emit INFO profiling messages for each plugin"() {
@@ -72,11 +81,9 @@ class ProfilingProbeGrailsPlugin {
         discovery.init(new StandardEnvironment())
         def manager = new ProfilingGrailsPluginManager(application, discovery)
         def originalOut = System.out
-        def originalErr = System.err
         def capturedOut = new ByteArrayOutputStream()
-        def capturedErr = new ByteArrayOutputStream()
         System.setOut(new PrintStream(capturedOut, true))
-        System.setErr(new PrintStream(capturedErr, true))
+        def logCapture = new LogCapture(DefaultGrailsPluginManager, Level.INFO)
 
         when:
         manager.loadPlugins()
@@ -89,7 +96,6 @@ class ProfilingProbeGrailsPlugin {
         then:
         !capturedOut.toString().contains('doWith')
         !capturedOut.toString().contains('doArtefactConfiguration')
-        def output = capturedErr.toString()
         [
             'doArtefactConfiguration started',
             'doWithSpring started',
@@ -99,17 +105,29 @@ class ProfilingProbeGrailsPlugin {
             'doWithApplicationContext started',
             'doWithApplicationContext for plugin [profilingProbe] started'
         ].every { message ->
-            output.contains("INFO grails.plugins.DefaultGrailsPluginManager - $message")
+            logCapture.events.any {
+                it.loggerName == DefaultGrailsPluginManager.name &&
+                        it.level == Level.INFO &&
+                        it.formattedMessage == message
+            }
         }
         ['doArtefactConfiguration', 'doWithSpring', 'doWithDynamicMethods', 'doWithApplicationContext'].every { phase ->
-            output ==~ /(?s).*INFO grails\.plugins\.DefaultGrailsPluginManager - ${phase} took \d+.*/ &&
+            logCapture.events.any {
+                it.loggerName == DefaultGrailsPluginManager.name &&
+                        it.level == Level.INFO &&
+                        it.formattedMessage ==~ /${phase} took \d+/
+            } &&
                     (phase == 'doArtefactConfiguration' ||
-                            output ==~ /(?s).*INFO grails\.plugins\.DefaultGrailsPluginManager - ${phase} for plugin \[profilingProbe\] took \d+.*/)
+                            logCapture.events.any {
+                                it.loggerName == DefaultGrailsPluginManager.name &&
+                                        it.level == Level.INFO &&
+                                        it.formattedMessage ==~ /${phase} for plugin \[profilingProbe\] took \d+/
+                            })
         }
 
         cleanup:
         System.setOut(originalOut)
-        System.setErr(originalErr)
+        logCapture.close()
     }
 
     void "deprecated constructors log their warning in the historical category"() {
@@ -120,9 +138,7 @@ class ProfilingProbeGrailsPlugin {
         applicationContext.beanFactory.registerSingleton(PluginDiscovery.BEAN_NAME, discovery)
         applicationContext.refresh()
         application.mainContext = applicationContext
-        def originalErr = System.err
-        def capturedErr = new ByteArrayOutputStream()
-        System.setErr(new PrintStream(capturedErr, true))
+        def logCapture = new LogCapture(DefaultGrailsPluginManager, Level.WARN)
 
         when:
         def manager = new ProfilingGrailsPluginManager(new Class<?>[0], application)
@@ -132,10 +148,14 @@ class ProfilingProbeGrailsPlugin {
         1 * discovery.reset()
         1 * discovery.setPluginClasses(_)
         1 * discovery.init(_)
-        capturedErr.toString().contains('WARN grails.plugins.DefaultGrailsPluginManager - Using deprecated DefaultGrailsPluginManager constructor.')
+        logCapture.events.any {
+            it.loggerName == DefaultGrailsPluginManager.name &&
+                    it.level == Level.WARN &&
+                    it.formattedMessage.startsWith('Using deprecated DefaultGrailsPluginManager constructor.')
+        }
 
         cleanup:
-        System.setErr(originalErr)
+        logCapture.close()
         applicationContext.close()
     }
 }

@@ -21,7 +21,6 @@ apply plugin: 'org.apache.grails.buildsrc.groovydoc'
 
 dependencies {
     add('documentation', platform(project(':grails-gradle-bom')))
-    add('documentation', 'org.fusesource.jansi:jansi')
     add('documentation', 'com.github.javaparser:javaparser-core')
     // Use Gradle's embedded Groovy (gradle-groovy.version), not the project's main Groovy version.
     add('documentation', "org.apache.groovy:groovy:${gradleBomDependencyVersions['gradle-groovy.version']}")
