@@ -19,6 +19,7 @@
 
 package org.grails.forge.create
 
+import org.gradle.testkit.runner.TaskOutcome
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.OperatingSystem
 import org.grails.forge.options.DevelopmentReloading
@@ -192,10 +193,10 @@ class CreateAppSpec extends CommandSpec {
         '''.stripIndent()
 
         when:
-        String output = executeGradle('test', '--tests', 'example.grails.ComponentScanningSpec').output
+        def result = executeGradle('test', '--tests', 'example.grails.ComponentScanningSpec')
 
         then:
-        output.contains('BUILD SUCCESSFUL')
+        result.task(':test').outcome == TaskOutcome.SUCCESS
     }
 
     void "test create-app with micronaut feature"() {

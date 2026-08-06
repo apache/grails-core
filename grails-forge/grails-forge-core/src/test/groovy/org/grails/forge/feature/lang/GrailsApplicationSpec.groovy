@@ -67,7 +67,7 @@ class GrailsApplicationSpec extends BeanContextSpec implements CommandOutputFixt
 
     void 'profile Application skeletons configure base-package component scanning'() {
         given:
-        File profiles = new File('../../grails-profiles').canonicalFile
+        File profiles = findProfilesDirectory()
 
         expect:
         ['base', 'plugin'].every { String profile ->
@@ -142,5 +142,14 @@ class GrailsApplicationSpec extends BeanContextSpec implements CommandOutputFixt
         where:
         applicationType << ApplicationType.values().toList()
 
+    }
+
+    private static File findProfilesDirectory() {
+        File current = new File(GrailsApplicationSpec.getProtectionDomain().getCodeSource().getLocation().toURI())
+        while (current && !new File(current, 'grails-profiles').isDirectory()) {
+            current = current.parentFile
+        }
+        assert current != null: 'Unable to locate the grails-core repository root'
+        new File(current, 'grails-profiles')
     }
 }
