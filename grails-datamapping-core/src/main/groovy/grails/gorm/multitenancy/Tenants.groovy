@@ -61,7 +61,13 @@ class Tenants {
     }
 
     /**
-     * Execute the given closure with the given tenant id.
+     * Binds the given tenant id to the current thread for the duration of the closure.
+     *
+     * This binds the tenant only. Unlike {@link #withId(Serializable, Closure)} it opens no session and
+     * manages no connection life cycle: the closure runs in whatever session the caller has already
+     * established, and the caller remains responsible for opening and closing it. Reach for {@code withId}
+     * when the tenant's work needs a session of its own - in DATABASE mode that is also what selects the
+     * tenant's connection.
      *
      * @param tenantId The tenant id
      * @param callable The closure
@@ -232,7 +238,13 @@ class Tenants {
     }
 
     /**
-     * Execute the given closure with given tenant id for the given datastore. This method will create a new datastore session for the scope of the call and hence is designed to be used to manage the connection life cycle
+     * Binds the given tenant id to the current thread for the datastore that maps the given domain class,
+     * for the duration of the closure.
+     *
+     * This binds the tenant only. Unlike {@link #withId(Class, Serializable, Closure)} it opens no session
+     * and manages no connection: the caller owns the session the closure runs in.
+     *
+     * @param domainClass The domain class whose datastore the tenant should be bound for
      * @param tenantId The tenant id
      * @param callable The closure
      * @return The result of the closure
