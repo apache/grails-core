@@ -51,6 +51,7 @@ ext {
 }
 
 dependencies {
+    api platform(gradleBomPlatformDependencies['log4j2-bom'])
     api platform(project(':grails-bom'))
     api platform(gradleBomPlatformDependencies['spring-boot-bom']), {
         exclude group: 'org.hibernate.orm'

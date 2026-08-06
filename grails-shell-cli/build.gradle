@@ -115,6 +115,11 @@ dependencies {
     testRuntimeOnly 'net.bytebuddy:byte-buddy'
     testImplementation 'org.objenesis:objenesis'
 
+    // Required to load SpringApplicationWebApplicationInitializer (extends SpringBootServletInitializer)
+    // in tests; these are compileOnly for the main source set.
+    testImplementation 'org.springframework.boot:spring-boot'
+    testImplementation 'org.springframework:spring-web'
+
     // any project that should be included in the end distribution should be included here
     // historically these were the included projects so we have trimmed them back down to pre7.0
     shellCliDependencies project(':grails-codecs-core')

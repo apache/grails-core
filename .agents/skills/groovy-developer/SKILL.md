@@ -515,7 +515,7 @@ sql.execute("INSERT INTO books (title) VALUES ($title)")
 
 ## Resources
 
-- **Groovy 4 Documentation**: https://docs.groovy-lang.org/docs/groovy-4.0.30/html/documentation/
+- **Groovy 4 Documentation**: https://groovy-lang.org/documentation.html#all-versions (select latest 4.0.x)
 - **Groovy Style Guide**: https://groovy-lang.org/style-guide.html
 - **GORM Documentation**: https://grails.apache.org/docs/latest/grails-data/
 - **Spock Framework**: https://spockframework.org/spock/docs/2.3/all_in_one.html
