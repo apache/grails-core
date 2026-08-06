@@ -1472,12 +1472,30 @@ A plugin that wanted to replace a Boot-provided bean therefore had to rely on be
 In Grails 8 the plugin lifecycle is unified and retimed: plugin bean definitions — both `doWithSpring` and the new `beanRegistrar()` hook — are drained into the bean definition registry *before* Spring Boot expands its auto-configurations. The practical effects are:
 
 * **Plugin beans win `@ConditionalOnMissingBean` races.** When a plugin registers a bean, a Boot auto-configuration bean of the same name or type that is guarded by `@ConditionalOnMissingBean` now backs off in favor of the plugin's bean. Plugins no longer need to override or remove Boot's defaults after the fact.
-* **A single plugin manager and `GrailsApplication`.** The plugin manager and the `grailsApplication` are built once, early in the context lifecycle, and reused for the rest of startup, so plugins are loaded by a single manager pass rather than a throwaway pass followed by the real one. `Holders.grailsApplication` is available earlier than before.
+* **A single plugin manager and `GrailsApplication`.** The plugin manager and the `grailsApplication` are built once, early in the context lifecycle, and reused for the rest of startup, so plugins are loaded by a single manager pass rather than a throwaway pass followed by the real one.
 * **Artefact discovery happens earlier.** Controllers, services, domain classes and other artefacts are discovered before plugin beans are registered, because core plugins iterate the application's artefacts while defining beans. The set of discovered artefacts is unchanged — only the timing moved.
 * **Side-effectful `doWithSpring` closures still run once**, just earlier. Closures that read `grailsApplication.config` continue to work; the configuration is fully loaded (including plugin-contributed configuration) before any bean-definition code runs.
 * **The application class is instantiated a second time during early artefact discovery.** A throwaway instance is created solely to compute the application's class scan; the real lifecycle bean is still created by Spring. An application-class constructor with side effects therefore runs twice per boot, so keep application-class constructors free of side effects.
 * **Plugins that inspect the bean definition registry see a pre-auto-configuration registry.** A `doWithSpring` closure that checks for the presence of a bean definition (for example `dispatcherServlet` as a "web application" signal) now runs before Spring Boot has registered its auto-configured beans, so such a check returns `false` where it previously returned `true`. Plugin code should test a registration-order-independent signal instead — for example whether the application context is a web application context.
 * **The `annotationHandlerMapping` and `annotationHandlerAdapter` beans were removed.** These duplicated the request-mapping infrastructure that Spring's own MVC configuration already provides and were never consulted at runtime, but with plugin beans now registering first the bare duplicate adapter started shadowing Spring's fully configured one. `@Controller` annotated beans continue to be handled by Spring Boot's standard MVC infrastructure.
+
+===== 33.1 Legacy `Holders.grailsApplication` Access During `doWithSpring`
+
+By default, Grails does not publish the application being initialized to `Holders.grailsApplication` while a plugin's `doWithSpring` closure runs. In the normal one-application-per-JVM lifecycle no application is therefore available there. A preexisting global Holder from another context is left untouched, so plugins must not use `Holders` to identify the application being initialized. Spring is still wiring bean definitions at this stage and the new application lifecycle is not ready.
+
+Some Grails 7 plugins, including audit-logging 6.0.0, read `Holders.grailsApplication` from `doWithSpring`. As a temporary migration aid, enable the legacy shim in `application.yml`:
+
+[source,yaml]
+.application.yml
+----
+grails:
+    legacy:
+        holdersDuringDoWithSpring: true
+----
+
+The shim exposes only the promoted application during legacy `doWithSpring` execution. It does not make the lifecycle generally ready, and Grails logs a warning when it is used. Treat it as transitional, deprecated-style compatibility help while the plugin is migrated.
+
+New plugins should use the `Environment`, configuration, or injected dependencies instead of `Holders`. Migrate `doWithSpring` registrations to `beanRegistrar()` where appropriate.
 
 **The bean builder DSL is deprecated.** `doWithSpring()` on `GrailsApplicationLifeCycle` and `grails.plugins.Plugin` is deprecated as of Grails 8 — it continues to work, but the recommended way to register beans is the new `beanRegistrar()` hook, which returns a Spring Framework `org.springframework.beans.factory.BeanRegistrar`.
 

@@ -382,6 +382,16 @@ class ConfigReportCommandSpec extends Specification {
         profileEntry.description != null
         profileEntry.description.length() > 0
         metadataResult.groupDescriptions.get('grails') == 'Core Properties'
+
+        and: "legacy compatibility metadata retains its migration guidance"
+        ConfigReportCommand.ConfigPropertyMetadata legacyEntry = metadataResult.properties.find { ConfigReportCommand.ConfigPropertyMetadata property -> property.name == 'grails.legacy.holdersDuringDoWithSpring' }
+        legacyEntry.name == 'grails.legacy.holdersDuringDoWithSpring'
+        legacyEntry.type == 'java.lang.Boolean'
+        legacyEntry.defaultValue == false
+        legacyEntry.description != null
+        legacyEntry.description.length() > 0
+        legacyEntry.description.toLowerCase().contains('migrat')
+        metadataResult.groupDescriptions.get('grails.legacy') == 'Legacy Compatibility'
     }
 
     def "escapeAsciidoc handles null and empty strings"() {

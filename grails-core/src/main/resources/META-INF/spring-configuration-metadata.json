@@ -13,6 +13,10 @@
             "description": "Core Properties"
         },
         {
+            "name": "grails.legacy",
+            "description": "Legacy Compatibility"
+        },
+        {
             "name": "grails.spring",
             "description": "Core Properties"
         },
@@ -94,6 +98,12 @@
             "name": "grails.bootstrap.skip",
             "type": "java.lang.Boolean",
             "description": "Whether to skip execution of BootStrap.groovy classes on startup.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.legacy.holdersDuringDoWithSpring",
+            "type": "java.lang.Boolean",
+            "description": "Whether legacy doWithSpring closures can access the promoted GrailsApplication through Holders during early plugin registration. Enable only while migrating legacy plugins away from global Holders access.",
             "defaultValue": false
         },
         {
