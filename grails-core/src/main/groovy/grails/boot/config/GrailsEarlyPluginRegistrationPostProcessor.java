@@ -125,6 +125,7 @@ public class GrailsEarlyPluginRegistrationPostProcessor
         // context in the same JVM (test forks especially). Reset it if anything below throws; the
         // success path leaves it set and resets on refresh via the listener added at the end.
         GrailsApplication previousGrailsApplication = null;
+        GrailsApplication publishedGrailsApplication = null;
         boolean grailsApplicationPublished = false;
         Environment.setInitializing(true);
         try {
@@ -153,6 +154,7 @@ public class GrailsEarlyPluginRegistrationPostProcessor
             // Legacy doWithSpring closures access the application through Holders during configuration.
             // Discovery strategies retain their existing precedence over this fallback, as they did in Grails 7.
             previousGrailsApplication = Holders.replaceGrailsApplication(grailsApplication);
+            publishedGrailsApplication = grailsApplication;
             grailsApplicationPublished = true;
             pluginManager.doRuntimeConfiguration(springConfig);
             springConfig.registerBeansWithRegistry(registry);
@@ -171,7 +173,7 @@ public class GrailsEarlyPluginRegistrationPostProcessor
         catch (Throwable e) {
             Environment.setInitializing(false);
             if (grailsApplicationPublished) {
-                Holders.setGrailsApplication(previousGrailsApplication);
+                Holders.restoreGrailsApplication(publishedGrailsApplication, previousGrailsApplication);
             }
             if (e instanceof RuntimeException runtimeException) {
                 throw runtimeException;

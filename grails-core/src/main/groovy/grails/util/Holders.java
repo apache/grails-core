@@ -22,6 +22,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -61,7 +62,7 @@ public class Holders {
         createServletContextsHolder();
     }
 
-    private static GrailsApplication applicationSingleton; // TODO remove
+    private static final AtomicReference<GrailsApplication> applicationSingleton = new AtomicReference<>(); // TODO remove
 
     private Holders() {
         // static only
@@ -80,7 +81,7 @@ public class Holders {
             servletContexts.set(null);
         }
         applicationDiscoveryStrategies.clear();
-        applicationSingleton = null;
+        applicationSingleton.set(null);
     }
 
     public static void setServletContext(final Object servletContext) {
@@ -129,7 +130,7 @@ public class Holders {
                 return grailsApplication;
             }
         }
-        return applicationSingleton;
+        return applicationSingleton.get();
     }
 
     public static GrailsApplication getGrailsApplication() {
@@ -139,7 +140,7 @@ public class Holders {
     }
 
     public static void setGrailsApplication(GrailsApplication application) {
-        applicationSingleton = application;
+        applicationSingleton.set(application);
     }
 
     /**
@@ -149,9 +150,18 @@ public class Holders {
      * @return the previous fallback application
      */
     public static GrailsApplication replaceGrailsApplication(GrailsApplication application) {
-        GrailsApplication previous = applicationSingleton;
-        applicationSingleton = application;
-        return previous;
+        return applicationSingleton.getAndSet(application);
+    }
+
+    /**
+     * Restores a fallback Grails application only if no other publisher has replaced it.
+     *
+     * @param expected the fallback application owned by the caller
+     * @param application the fallback application to restore
+     * @return {@code true} when the fallback was restored
+     */
+    public static boolean restoreGrailsApplication(GrailsApplication expected, GrailsApplication application) {
+        return applicationSingleton.compareAndSet(expected, application);
     }
 
     public static void setConfig(Config config) {

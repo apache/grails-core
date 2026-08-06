@@ -18,6 +18,8 @@
  */
 package grails.boot.config
 
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 import org.springframework.beans.factory.BeanRegistrar
@@ -333,6 +335,65 @@ class EarlyPluginRegistrationOrderingSpec extends Specification {
             Environment.setInitializing(false)
     }
 
+    void 'a failed context does not overwrite a newer Grails application publisher'() {
+        given: 'a plugin that replaces the fallback application before its startup fails'
+            def ctx = new AnnotationConfigApplicationContext()
+            registerDiscovery(ctx, EarlyOrderingCompetingPublisherGrailsPlugin)
+            new GrailsPluginLifecycleInitializer().initialize(ctx)
+
+        when: 'the context refreshes and fails after the competing publication'
+            ctx.refresh()
+
+        then: 'rollback leaves the newer publisher in place'
+            thrown(Exception)
+            Holders.replaceGrailsApplication(null).is(EarlyOrderingCompetingPublisherGrailsPlugin.competitor)
+            !Environment.isInitializing()
+
+        cleanup:
+            ctx.close()
+            Holders.clear()
+            Environment.setInitializing(false)
+    }
+
+    void 'conditional fallback restoration cannot overwrite a concurrent publisher'() {
+        given: 'an owned fallback, a value to restore, and a newer competing application'
+            def ownedApplication = new DefaultGrailsApplication()
+            def previousApplication = new DefaultGrailsApplication()
+            def competingApplication = new DefaultGrailsApplication()
+            Holders.setGrailsApplication(ownedApplication)
+            def ready = new CountDownLatch(2)
+            def start = new CountDownLatch(1)
+            def finished = new CountDownLatch(2)
+
+        and: 'two publishers ready to race'
+            def restoreThread = Thread.start {
+                ready.countDown()
+                start.await()
+                Holders.restoreGrailsApplication(ownedApplication, previousApplication)
+                finished.countDown()
+            }
+            def publishThread = Thread.start {
+                ready.countDown()
+                start.await()
+                Holders.setGrailsApplication(competingApplication)
+                finished.countDown()
+            }
+
+        when: 'rollback and the competing publication start together'
+            assert ready.await(5, TimeUnit.SECONDS)
+            start.countDown()
+
+        then: 'the newer publication wins regardless of operation order'
+            finished.await(5, TimeUnit.SECONDS)
+            Holders.replaceGrailsApplication(null).is(competingApplication)
+
+        cleanup:
+            start.countDown()
+            restoreThread.join(5000)
+            publishThread.join(5000)
+            Holders.clear()
+    }
+
     private static void registerDiscovery(AnnotationConfigApplicationContext ctx, Class<?> pluginClass) {
         def discovery = new DefaultPluginDiscovery([pluginClass] as Class<?>[])
         discovery.loadPluginsFromClasspath = false
@@ -468,6 +529,21 @@ class EarlyOrderingCheckedThrowingGrailsPlugin extends Plugin {
     @Override
     Closure doWithSpring() {
         { -> throw new Exception('checked failure from doWithSpring') }
+    }
+}
+
+class EarlyOrderingCompetingPublisherGrailsPlugin extends Plugin {
+
+    static final GrailsApplication competitor = new DefaultGrailsApplication()
+
+    def version = '1.0'
+
+    @Override
+    Closure doWithSpring() {
+        { ->
+            Holders.setGrailsApplication(competitor)
+            throw new IllegalStateException('failure after competing publication')
+        }
     }
 }
 
