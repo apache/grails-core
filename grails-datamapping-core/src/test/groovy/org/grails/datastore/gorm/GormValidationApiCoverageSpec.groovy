@@ -115,6 +115,9 @@ class GormValidationApiCoverageSpec extends Specification {
         then:
         !qualified.is(api)
         qualified.hasDatastore
+
+        and: "the resolver built into the qualified api resolves through the registry by qualifier"
+        qualified.getDatastore() == targetDs
     }
 
     void "executeQualified runs directly when no distinct qualified api is registered"() {
@@ -131,6 +134,35 @@ class GormValidationApiCoverageSpec extends Specification {
         api.executeQualified(org.grails.datastore.mapping.core.connections.ConnectionSource.DEFAULT, { Session s -> 'ran' }) == 'ran'
     }
 
+    void "executeQualified delegates to the distinct api the registry resolves for a different qualifier"() {
+        given: "GormValidationApi#executeQualified calls the STATIC GormRegistry.findValidationApi, which always\n" +
+                "resolves against GormRegistry.instance - a fresh, unregistered GormRegistry passed to the\n" +
+                "constructor is not consulted, so the singleton must be used and reset around this test"
+        def registry = GormRegistry.instance
+        registry.reset()
+        def session = Stub(Session)
+        def ds = Stub(Datastore) {
+            getMappingContext() >> Stub(MappingContext)
+            connect() >> session
+        }
+        session.getDatastore() >> ds
+        def api = new GormValidationApi<Thing>(Thing, ds, registry)
+        registry.validationApiRegistry.register(Thing.name, api)
+        // getDirect() only calls qualify()/forQualifier() - producing a genuinely distinct api -
+        // when the qualifier resolves to a DIFFERENT datastore than the default api's own.
+        def secondaryDs = Stub(Datastore) { getMappingContext() >> Stub(MappingContext) }
+        registry.registerEntityDatastore(Thing.name, 'secondary', secondaryDs)
+
+        when: "findValidationApi('secondary') routes through forQualifier and returns a distinct instance"
+        def result = api.executeQualified('secondary', { Session s -> 'ran-qualified' })
+
+        then:
+        result == 'ran-qualified'
+
+        cleanup:
+        registry.reset()
+    }
+
     void "getTransactionManager returns the transaction manager for a transaction-capable datastore and null otherwise"() {
         given:
         def txManager = Stub(PlatformTransactionManager)
@@ -142,6 +174,28 @@ class GormValidationApiCoverageSpec extends Specification {
         expect:
         new GormValidationApi<Thing>(Thing, capableDs).getTransactionManager() == txManager
         new GormValidationApi<Thing>(Thing, plainDs).getTransactionManager() == null
+    }
+
+    void "getValidator prefers a ValidatorProvider persistent entity over the mapping context lookup"() {
+        given:
+        def providedValidator = Stub(Validator)
+        def persistentEntity = Mock(additionalInterfaces: [org.grails.datastore.gorm.validation.ValidatorProvider], PersistentEntity) {
+            getValidator() >> providedValidator
+        }
+        def mappingContext = Mock(MappingContext) {
+            getPersistentEntity(Thing.name) >> persistentEntity
+        }
+        def ds = Stub(Datastore) {
+            getMappingContext() >> mappingContext
+        }
+        def api = new GormValidationApi<Thing>(Thing, ds)
+
+        when:
+        def result = api.getValidator()
+
+        then:
+        result == providedValidator
+        0 * mappingContext.getEntityValidator(_)
     }
 
     void "setValidator makes getValidator return the set validator directly, bypassing resolution"() {
@@ -268,15 +322,21 @@ class GormValidationApiCoverageSpec extends Specification {
     }
 
     void "fireEvent falls back to the datastore's application event publisher when none was set at construction"() {
-        given:
+        given: "the DatastoreResolver constructor leaves the eventPublisher field null (unlike the Datastore-only constructor)"
         def eventPublisher = Mock(ApplicationEventPublisher)
         def ds = Stub(Datastore) {
             getMappingContext() >> Stub(MappingContext)
             getApplicationEventPublisher() >> eventPublisher
         }
-        def api = new GormValidationApi<Thing>(Thing, ds)
+        def resolver = new DatastoreResolver() {
+            @Override Datastore resolve() { ds }
+        }
+        def api = new GormValidationApi<Thing>(Thing, Stub(MappingContext), resolver)
         api.setValidator(Stub(Validator))
         def instance = new Thing(name: 'a')
+
+        expect:
+        api.eventPublisher == null
 
         when:
         api.validate(instance)

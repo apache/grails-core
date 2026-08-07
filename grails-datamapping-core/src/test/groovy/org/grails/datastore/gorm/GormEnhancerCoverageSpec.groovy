@@ -72,6 +72,50 @@ class GormEnhancerCoverageSpec extends Specification {
         viaThreeArg.failOnError
     }
 
+    void "the 1-arg constructor delegates through with no transaction manager"() {
+        when:
+        def enhancer = new GormEnhancer(datastore)
+
+        then:
+        enhancer.datastore == datastore
+        enhancer.transactionManager == null
+        !enhancer.failOnError
+    }
+
+    void "getConnectionSourceNames exposes the resolved connection source names"() {
+        given:
+        def enhancer = new GormEnhancer(datastore, null, new ConnectionSourceSettings())
+
+        expect:
+        enhancer.getConnectionSourceNames() == enhancer.connectionSourceNames
+        !enhancer.connectionSourceNames.isEmpty()
+    }
+
+    void "enhance(entity) registers the entity directly, independent of the enhance(boolean) dynamicEnhance loop"() {
+        given:
+        def enhancer = new GormEnhancer(datastore, null, new ConnectionSourceSettings())
+        def entity = datastore.mappingContext.getPersistentEntity(GormEnhancerCoverageThing.name)
+
+        when:
+        enhancer.enhance(entity)
+
+        then: "registerEntity runs and the GroovyObject/dynamicEnhance guard evaluates to false for a Groovy entity - no error"
+        notThrown(Throwable)
+    }
+
+    void "close() clears the preferred datastore when it matches the enhancer's own datastore"() {
+        given:
+        def ds = new SimpleMapDatastore(GormEnhancerGatingThing)
+        def enhancer = new GormEnhancer(ds, null, new ConnectionSourceSettings())
+        GormEnhancerRegistry.instance.setPreferredDatastore(ds)
+
+        when:
+        enhancer.close()
+
+        then:
+        GormEnhancerRegistry.instance.getPreferredDatastore() == null
+    }
+
     void "allQualifiers resolves connection names by which registered datastore they map to, for a datastore other than the enhancer's own"() {
         given: "a MultiTenant entity, since the foreign-datastore scan only runs inside the multi-tenant/ALL-datasource branch"
         def tenantDs = new SimpleMapDatastore(MultiTenantCoverageThing)
@@ -231,6 +275,85 @@ class GormEnhancerCoverageSpec extends Specification {
         then:
         thrown(MissingMethodException)
     }
+
+    void "addStaticMethods installs a static dispatch that resolves a real dynamic finder"() {
+        given:
+        def ds = new SimpleMapDatastore(GormEnhancerStaticDispatchThing)
+        def enhancer = new GormEnhancer(ds, null, new ConnectionSourceSettings())
+        def entity = ds.mappingContext.getPersistentEntity(GormEnhancerStaticDispatchThing.name)
+        def mc = MetaClassUtils.getExpandoMetaClass(GormEnhancerStaticDispatchThing)
+        ds.withSession {
+            it.persist(new GormEnhancerStaticDispatchThing(name: 'static-dispatch'))
+            it.flush()
+        }
+
+        when: "invoking a real dynamic finder directly through the installed static dispatch"
+        enhancer.addStaticMethods(entity)
+        def result = mc.invokeStaticMethod(GormEnhancerStaticDispatchThing, 'countByName', ['static-dispatch'] as Object[])
+
+        then: "the static API's own methodMissing resolves and executes the finder - no exception"
+        result == 1
+
+        when: "invoking an unrecognised name through the same dispatch"
+        mc.invokeStaticMethod(GormEnhancerStaticDispatchThing, 'notARealFinderOrMethod', [] as Object[])
+
+        then: "the static API's own methodMissing rejects it and the failure surfaces to the caller"
+        thrown(MissingMethodException)
+
+        cleanup:
+        ds.close()
+    }
+
+    void "addStaticMethods installs a static propertyMissing that resolves a qualifier and rejects an unknown property"() {
+        given:
+        def ds = new SimpleMapDatastore(GormEnhancerStaticDispatchThing)
+        def enhancer = new GormEnhancer(ds, null, new ConnectionSourceSettings())
+        def entity = ds.mappingContext.getPersistentEntity(GormEnhancerStaticDispatchThing.name)
+        def mc = MetaClassUtils.getExpandoMetaClass(GormEnhancerStaticDispatchThing)
+
+        when:
+        enhancer.addStaticMethods(entity)
+        mc.invokeStaticMethod(GormEnhancerStaticDispatchThing, 'propertyMissing', ['someCompletelyUnknownStaticProperty'] as Object[])
+
+        then:
+        thrown(MissingPropertyException)
+    }
+
+    void "addInstanceMethods installs an instance dispatch that delegates unresolved methods and properties to the instance API"() {
+        given:
+        def ds = new SimpleMapDatastore(GormEnhancerInstanceDispatchThing)
+        def enhancer = new GormEnhancer(ds, null, new ConnectionSourceSettings())
+        def entity = ds.mappingContext.getPersistentEntity(GormEnhancerInstanceDispatchThing.name)
+        def mc = MetaClassUtils.getExpandoMetaClass(GormEnhancerInstanceDispatchThing)
+        def instance = new GormEnhancerInstanceDispatchThing(name: 'a')
+
+        when:
+        enhancer.addInstanceMethods(entity)
+
+        then: "the closures were installed"
+        mc.getMetaMethod('methodMissing', [String, Object] as Class[]) != null
+
+        when: "an unresolved instance method is invoked directly through the installed dispatch"
+        mc.invokeMethod(instance, 'someCompletelyUnknownInstanceMethod', [] as Object[])
+
+        then: "GormInstanceApi has no matching method either, and the failure surfaces to the caller"
+        thrown(MissingMethodException)
+
+        when: "an unresolved instance property is read directly through the installed dispatch"
+        mc.getProperty(instance, 'someCompletelyUnknownInstanceProperty')
+
+        then: "GormInstanceApi's propertyMissing(instance, name) is delegated to and rejects it too"
+        thrown(MissingPropertyException)
+
+        when: "an unresolved instance property is set directly through the installed dispatch"
+        mc.invokeMethod(instance, 'propertyMissing', ['someCompletelyUnknownInstanceProperty', 'value'] as Object[])
+
+        then: "the setter closure forwards to the instance API's own setProperty"
+        thrown(MissingPropertyException)
+
+        cleanup:
+        ds.close()
+    }
 }
 
 @Entity
@@ -253,6 +376,18 @@ class GormEnhancerGatingThing {
 
 @Entity
 class GormEnhancerClobberGuardThing {
+
+    String name
+}
+
+@Entity
+class GormEnhancerStaticDispatchThing {
+
+    String name
+}
+
+@Entity
+class GormEnhancerInstanceDispatchThing {
 
     String name
 }

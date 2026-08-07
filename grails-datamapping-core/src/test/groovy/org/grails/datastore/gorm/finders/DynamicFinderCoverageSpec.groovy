@@ -118,6 +118,12 @@ class DynamicFinderCoverageSpec extends Specification {
         DynamicFinderThing.list().size() == 3
     }
 
+    void "list(Map) with an order but no explicit sort defaults the sort to the entity's identity property"() {
+        expect: "no sort: given, but order: is - the identity property (id) becomes the sort key"
+        DynamicFinderThing.list(order: 'asc')*.id == DynamicFinderThing.list(order: 'asc')*.id.sort()
+        DynamicFinderThing.list(order: 'desc')*.id == DynamicFinderThing.list(order: 'asc')*.id.reverse()
+    }
+
     void "list(Map) applies fetch strategy from a FetchType map without throwing"() {
         expect:
         DynamicFinderThing.list(fetch: [name: FetchType.EAGER]).size() == 3
@@ -191,6 +197,19 @@ class DynamicFinderCoverageSpec extends Specification {
         notThrown(Exception)
     }
 
+    void "populateArgumentsForCriteria(BuildableCriteria, Map) with an order but no explicit sort defaults the sort to the entity's identity property"() {
+        given:
+        def api = new org.grails.datastore.gorm.GormStaticApi(DynamicFinderThing, datastore, [])
+        def criteria = api.createCriteria()
+
+        when:
+        DynamicFinder.populateArgumentsForCriteria(criteria, [order: 'desc'])
+
+        then: "no explicit sort: was given, so the entity's identity (id) property became the sort key"
+        notThrown(Exception)
+        criteria.list(null)*.id == DynamicFinderThing.list(order: 'asc')*.id.reverse()
+    }
+
     void "populateArgumentsForCriteria(BuildableCriteria, Map) sorts by a Map of property to direction"() {
         given:
         def api = new org.grails.datastore.gorm.GormStaticApi(DynamicFinderThing, datastore, [])
@@ -203,11 +222,19 @@ class DynamicFinderCoverageSpec extends Specification {
         notThrown(Exception)
     }
 
-    void "the MappingContext-only constructor wires a finder that is usable without a bound datastore"() {
+    void "the DatastoreResolver+MappingContext constructor wires a finder that is usable without a bound datastore"() {
         given:
         def finder = new FindByFinder(new org.grails.datastore.gorm.DatastoreResolver() {
             @Override org.grails.datastore.mapping.core.Datastore resolve() { datastore }
         }, datastore.mappingContext)
+
+        expect:
+        finder.isMethodMatch('findByName')
+    }
+
+    void "the MappingContext-only constructor wires a finder without any datastore or resolver"() {
+        given:
+        def finder = new FindByFinder(datastore.mappingContext)
 
         expect:
         finder.isMethodMatch('findByName')
