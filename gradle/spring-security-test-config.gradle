@@ -23,6 +23,10 @@ dependencies {
 }
 
 tasks.withType(Test).configureEach {
+    // Honor DO_NOT_CACHE_TESTS=1 without rerunning non-test tasks.
+    outputs.cacheIf { !doNotCacheTests }
+    outputs.upToDateWhen { !doNotCacheTests }
+
     onlyIf {
         ![
                 'skipSpringSecurityTests',

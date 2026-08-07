@@ -114,12 +114,13 @@ jobs:
           -PskipTests
       - name: "🔨 Build project with tests"
         if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
+        env:
+          DO_NOT_CACHE_TESTS: '1'
         working-directory: 'grails-gradle'
         run: >
           ./gradlew build
           --continue
           --stacktrace
-          --rerun-tasks
           -PskipCodeStyle
   build:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
@@ -172,56 +173,18 @@ jobs:
         # and included automatically on JDK 25+. So the Java 21 entries build everything
         # except the island and the Java 25 entries build the full graph - no flag needed.
         run: >
-          ./gradlew build :grails-shell-cli:installDist groovydoc
+          ./gradlew build :grails-shell-cli:installDist
           --continue
           --stacktrace
           -PonlyCoreTests
           -PskipCodeStyle
-  buildRerunTasks:
-    if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
-    name: 'Build Grails-Core Rerunning all Tasks'
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            java: 21
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
-        run: curl -s https://api.ipify.org
-      - name: "📥 Checkout repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
-        with:
-          distribution: liberica
-          java-version: ${{ matrix.java }}
-      - name: "🗄️ Restore dependency jar cache"
-        uses: actions/cache@v4
-        with:
-          # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
-          # Keyed by branch version so each release branch maintains its own warm cache.
-          path: |
-            ~/.gradle/caches/modules-2
-            ~/.gradle/wrapper
-          key: gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-${{ hashFiles('**/dependencies.gradle', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
-      - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
-        with:
-          cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
-          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
-      - name: "🔍 Setup TestLens"
-        uses: testlens-app/setup-testlens@3f82d2dc6cd5c03f02ce5f7885a21195d85f8d14 # v1.9.3
-      - name: "🔨 Build project"
-        # This job only runs on Java 21, where settings.gradle auto-prunes the Micronaut
-        # island (Micronaut 5 GA targets JVM 25 bytecode). See comment on `build`.
+      - name: "📚 Generate Groovydoc"
+        # Runs on the JDK 25 entry so the Micronaut island is documented too; a sub-25
+        # JDK prunes that island from the build graph (see the comment above).
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.java == 25 }}
         run: >
-          ./gradlew build :grails-shell-cli:installDist groovydoc
+          ./gradlew groovydoc
           --continue
-          --rerun-tasks
           --stacktrace
           -PonlyCoreTests
           -PskipCodeStyle
@@ -280,12 +243,13 @@ jobs:
           -PskipTests
       - name: "🔨 Build project with tests"
         if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
+        env:
+          DO_NOT_CACHE_TESTS: '1'
         working-directory: 'grails-forge'
         # See comment above on the auto-managed Micronaut island.
         run: >
           ./gradlew build
           --continue
-          --rerun-tasks
           --stacktrace
           -PgrailsIndy=${{ matrix.indy }}
           -PskipCodeStyle
@@ -346,12 +310,13 @@ jobs:
       - name: "🔍 Setup TestLens"
         uses: testlens-app/setup-testlens@3f82d2dc6cd5c03f02ce5f7885a21195d85f8d14 # v1.9.3
       - name: "🏃 Run Functional Tests"
+        env:
+          DO_NOT_CACHE_TESTS: '1'
         # The Micronaut island is auto-pruned on a sub-25 JDK (settings.gradle), so the
         # Java 21 entries skip it and the Java 25 entries include it (see comment on `build`).
         run: >
           ./gradlew bootJar check
           --continue
-          --rerun-tasks
           --stacktrace
           -PgrailsIndy=${{ matrix.indy }}
           -PonlyFunctionalTests
@@ -394,10 +359,11 @@ jobs:
       - name: "🔍 Setup TestLens"
         uses: testlens-app/setup-testlens@3f82d2dc6cd5c03f02ce5f7885a21195d85f8d14 # v1.9.3
       - name: "🏃 Run Functional Tests"
+        env:
+          DO_NOT_CACHE_TESTS: '1'
         run: >
           ./gradlew bootJar check
           --continue
-          --rerun-tasks
           --stacktrace
           -PonlySpringSecurityTests
           -PskipCodeStyle
@@ -432,11 +398,12 @@ jobs:
       - name: "🔍 Setup TestLens"
         uses: testlens-app/setup-testlens@3f82d2dc6cd5c03f02ce5f7885a21195d85f8d14 # v1.9.3
       - name: "🏃 Run Spring Security Functional Tests (TESTCONFIG=${{ matrix.test-config }})"
+        env:
+          DO_NOT_CACHE_TESTS: '1'
         run: >
           ./gradlew
           :grails-test-examples-spring-security-core-functional-test-app:check
           --continue
-          --rerun-tasks
           --stacktrace
           -DTESTCONFIG=${{ matrix.test-config }}
           -PskipCodeStyle
@@ -467,10 +434,11 @@ jobs:
       - name: "🔍 Setup TestLens"
         uses: testlens-app/setup-testlens@3f82d2dc6cd5c03f02ce5f7885a21195d85f8d14 # v1.9.3
       - name: "🏃 Run Redis Tests"
+        env:
+          DO_NOT_CACHE_TESTS: '1'
         run: >
           ./gradlew bootJar check
           --continue
-          --rerun-tasks
           --stacktrace
           -PonlyRedisTests
           -PredisContainerVersion=${{ matrix.redis-version }}
@@ -518,12 +486,12 @@ jobs:
       - name: "🏃 Run Functional Tests"
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          DO_NOT_CACHE_TESTS: '1'
         # The Micronaut island is auto-pruned on a sub-25 JDK (settings.gradle), so the
         # Java 21 entries skip it and the Java 25 entries include it (see comment on `build`).
         run: >
           ./gradlew bootJar check
           --continue
-          --rerun-tasks
           --stacktrace
           -PgrailsIndy=${{ matrix.indy }}
           -PonlyMongodbTests
@@ -570,12 +538,12 @@ jobs:
       - name: "🏃 Run Functional Tests"
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          DO_NOT_CACHE_TESTS: '1'
         # The Micronaut island is auto-pruned on a sub-25 JDK (settings.gradle), so the
         # Java 21 entries skip it and the Java 25 entries include it (see comment on `build`).
         run: >
           ./gradlew bootJar check
           --continue
-          --rerun-tasks
           --stacktrace
           -PgrailsIndy=${{ matrix.indy }}
           -PonlyHibernate5Tests
@@ -610,10 +578,10 @@ jobs:
       - name: "🏃 Run Functional Tests"
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          DO_NOT_CACHE_TESTS: '1'
         run: >
           ./gradlew bootJar check
           --continue
-          --rerun-tasks
           --stacktrace
           -PgrailsIndy=${{ matrix.indy }}
           -PonlyHibernate7Tests
