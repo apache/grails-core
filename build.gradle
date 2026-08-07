@@ -46,7 +46,8 @@ ext {
     // needing --rerun-tasks. Useful for repeatedly running the same test command while
     // chasing flaky tests across runs.
     doNotCacheTests = System.getenv('DO_NOT_CACHE_TESTS')?.toBoolean()
-    configuredTestParallel = findProperty('maxTestParallel') as Integer ?: (isCiBuild ? 4 : Runtime.runtime.availableProcessors() * 3 / 4 as int ?: 1)
+    // Four forks are a conservative local default; -PmaxTestParallel=N takes precedence.
+    configuredTestParallel = findProperty('maxTestParallel') as Integer ?: 4
     excludeUnusedTransDeps = findProperty('excludeUnusedTransDeps')
 
     testProjectsStartWith = [
