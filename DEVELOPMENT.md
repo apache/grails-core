@@ -72,17 +72,22 @@ Example with multiple tags:
 ./gradlew iT -PincludeTestTags=geb,api
 ```
 
-## Environment variables
+## Build performance
 
-* `DO_NOT_CACHE_TESTS` - set to `1` (or any truthy value) to force every `Test` task to run
-  every invocation, without needing `--rerun-tasks`. This skips both Gradle's build cache
-  and the `up-to-date` check for tests, while leaving the rest of the build (compilation,
-  resource processing, etc.) cacheable. Useful when chasing flaky tests that depend on
-  test execution order across runs.
+Root and `grails-gradle` `Test` tasks use four local forks by default. Use
+`-PmaxTestParallel=N` to override that default, such as when bisecting a flaky test.
 
-  ```
-  DO_NOT_CACHE_TESTS=1 ./gradlew :grails-gsp:test
-  ```
+Set `DO_NOT_CACHE_TESTS=1` to force every `Test` task to execute without disabling
+caching or up-to-date checks for compilation and other build work:
+
+```bash
+DO_NOT_CACHE_TESTS=1 ./gradlew :grails-gsp:test
+```
+
+`--rerun-tasks` forces every selected task, not just tests, to run again. CI test jobs that
+need forced test execution use `DO_NOT_CACHE_TESTS=1`; the weekly and manually dispatched
+build-validation workflow keeps the full forced-rerun sentinel so every task is still
+executed from scratch on a schedule.
 
 ## Start a mongo docker container (containers will start by default)
 `docker run -d  --name mongo-on-docker  -p 27017:27017 mongo`
