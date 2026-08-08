@@ -11,7 +11,7 @@ Licensed to the Apache Software Foundation (ASF) under one or more contributor l
 
 ## What I Do
 
-- Write and change Gradle build scripts the way **this repository** already does them on `8.0.x` (Gradle **9.6.x**).
+- Write and change Gradle build scripts the way **this repository** already does them on `8.0.x` (Gradle **9.7.x**).
 - Keep agents off generic Gradle "best practice" when it conflicts with established monorepo patterns.
 - Cover composite builds (`build-logic`, `grails-gradle`, `grails-forge`, `end-to-end`), convention plugins, BOM/`platform()` dependency management, test wiring, publishing hooks, and Gradle 9 task-configuration traps learned from recent PRs.
 - Make Gradle changes boring, copy-paste consistent, and correct on the first try.
@@ -136,7 +136,7 @@ Presence-based flags (property **present**, value optional) match `skipFunctiona
 
 ## Gradle Version Sync (Hard Rule)
 
-Current line: **Gradle 9.6.0** (`distributionUrl` + `gradleToolingApiVersion=9.6.0`). Upstream may already ship a newer 9.6.x patch - this repo rides close to latest **only after** a deliberate multi-location bump PR. Do not "helpfully" jump one wrapper ahead of the rest.
+Current line: **Gradle 9.7.0** (`distributionUrl` + `gradleToolingApiVersion=9.7.0`). Upstream may already ship a newer 9.7.x patch - this repo rides close to latest **only after** a deliberate multi-location bump PR. Do not "helpfully" jump one wrapper ahead of the rest.
 
 **Two Groovy stacks:** Gradle itself embeds **Groovy 4** for build logic. Application/runtime code on 8.0.x is **Groovy 5**. That is why `dependencies.gradle` keeps separate maps:
 
@@ -599,16 +599,16 @@ Develocity: `https://develocity.apache.org` - build scans publish when authentic
 
 Use official docs for API signatures and deprecations (pin URLs to the version you are bumping toward):
 
-- [Gradle 9.6 release notes](https://docs.gradle.org/9.6.0/release-notes.html)
-- [Upgrading major version 9](https://docs.gradle.org/9.6.0/userguide/upgrading_major_version_9.html)
-- [Upgrading within Gradle 9.x](https://docs.gradle.org/9.6.0/userguide/upgrading_version_9.html)
-- [Java Library plugin](https://docs.gradle.org/9.6.0/userguide/java_library_plugin.html)
-- [Java Platform / BOM](https://docs.gradle.org/9.6.0/userguide/java_platform_plugin.html)
-- [Platforms](https://docs.gradle.org/9.6.0/userguide/platforms.html)
-- [Sharing build logic via included builds](https://docs.gradle.org/9.6.0/userguide/sharing_build_logic_between_subprojects.html)
-- [Task configuration avoidance](https://docs.gradle.org/9.6.0/userguide/task_configuration_avoidance.html)
-- [Configuration cache](https://docs.gradle.org/9.6.0/userguide/configuration_cache.html) (read for compatibility - still **off** here)
-- [Version catalogs](https://docs.gradle.org/9.6.0/userguide/version_catalogs.html) (docs like them - **this repo does not**)
+- [Gradle 9.7 release notes](https://docs.gradle.org/9.7.0/release-notes.html)
+- [Upgrading major version 9](https://docs.gradle.org/9.7.0/userguide/upgrading_major_version_9.html)
+- [Upgrading within Gradle 9.x](https://docs.gradle.org/9.7.0/userguide/upgrading_version_9.html)
+- [Java Library plugin](https://docs.gradle.org/9.7.0/userguide/java_library_plugin.html)
+- [Java Platform / BOM](https://docs.gradle.org/9.7.0/userguide/java_platform_plugin.html)
+- [Platforms](https://docs.gradle.org/9.7.0/userguide/platforms.html)
+- [Sharing build logic via included builds](https://docs.gradle.org/9.7.0/userguide/sharing_build_logic_between_subprojects.html)
+- [Task configuration avoidance](https://docs.gradle.org/9.7.0/userguide/task_configuration_avoidance.html)
+- [Configuration cache](https://docs.gradle.org/9.7.0/userguide/configuration_cache.html) (read for compatibility - still **off** here)
+- [Version catalogs](https://docs.gradle.org/9.7.0/userguide/version_catalogs.html) (docs like them - **this repo does not**)
 
 ### Docs say X - we do Y
 
