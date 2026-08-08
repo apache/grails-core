@@ -31,8 +31,8 @@ import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.SourceSetContainer
-import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.compile.GroovyCompile
+import org.gradle.api.tasks.bundling.Jar
 import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
 
@@ -82,10 +82,7 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
     @Override
     protected Closure<String> getGroovyCompilerScript(GroovyCompile compile, Project project) {
         def versionProvider = project.provider { project.version.toString() }
-        compile.inputs.property('version', versionProvider)
-
         def projectNameProvider = project.provider { project.name }
-        compile.inputs.property('name', projectNameProvider)
 
         Closure<String> parent = super.getGroovyCompilerScript(compile, project)
         return { ->
