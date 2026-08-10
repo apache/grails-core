@@ -24,6 +24,7 @@ import spock.lang.Tag
 import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.http.client.HttpClientSupport
 import org.apache.grails.testing.http.client.MultipartBody
+import org.springframework.test.context.TestPropertySource
 
 /**
  * Integration tests for file upload functionality in Grails.
@@ -33,6 +34,10 @@ import org.apache.grails.testing.http.client.MultipartBody
  */
 @Integration
 @Tag('http-client')
+@TestPropertySource(properties = [
+        'spring.servlet.multipart.maxFileSize=2KB',
+        'spring.servlet.multipart.maxRequestSize=3KB'
+])
 class FileUploadSpec extends Specification implements HttpClientSupport {
 
     // ========== Single File Upload Tests ==========
@@ -282,6 +287,37 @@ class FileUploadSpec extends Specification implements HttpClientSupport {
         response.assertJsonContains(200, [
                 success: true,
                 size   : 1000
+        ])
+    }
+
+    def "upload over the configured multipart max file size is rejected"() {
+        given:
+        def content = 'X' * (2 * 1024 + 1)
+        def body = MultipartBody.builder()
+                .addPart('file', 'over-limit.txt', 'text/plain', content.bytes)
+                .build()
+
+        when:
+        def response = httpPostMultipart('/fileUploadTest/uploadSingle', body)
+
+        then:
+        response.assertStatus(413)
+    }
+
+    def "upload within the configured multipart max file size succeeds"() {
+        given:
+        def content = 'X' * 1536
+        def body = MultipartBody.builder()
+                .addPart('file', 'raised-limit.txt', 'text/plain', content.bytes)
+                .build()
+
+        when:
+        def response = httpPostMultipart('/fileUploadTest/uploadSingle', body)
+
+        then:
+        response.assertJsonContains(200, [
+                success: true,
+                size   : content.bytes.length
         ])
     }
 
