@@ -26,10 +26,12 @@ import grails.core.GrailsApplication
 
 import org.springframework.beans.factory.BeanCreationException
 import org.springframework.boot.autoconfigure.AutoConfigurations
+import org.springframework.boot.servlet.autoconfigure.MultipartAutoConfiguration
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner
 import org.springframework.boot.web.servlet.AbstractFilterRegistrationBean
 import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.boot.web.servlet.ServletContextInitializerBeans
+import org.springframework.boot.webmvc.autoconfigure.DispatcherServletRegistrationBean
 import org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ConfigurableApplicationContext
@@ -153,6 +155,47 @@ class ControllersAutoConfigurationSpec extends Specification {
                 }
     }
 
+    void 'Boot multipart configuration reaches the dispatcher servlet registration'() {
+        expect:
+        new WebApplicationContextRunner()
+                .withBean(GrailsApplication, grailsApplicationSupplier())
+                .withPropertyValues('spring.servlet.multipart.maxFileSize=1MB')
+                .withConfiguration(AutoConfigurations.of(
+                        ControllersAutoConfiguration,
+                        WebMvcAutoConfiguration,
+                        MultipartAutoConfiguration))
+                .run { context ->
+                    assert context.getBean(DispatcherServletRegistrationBean).multipartConfig.maxFileSize == 1024 * 1024
+                }
+    }
+
+    void 'disabled Boot multipart configuration is not added to the dispatcher servlet registration'() {
+        expect:
+        new WebApplicationContextRunner()
+                .withBean(GrailsApplication, grailsApplicationSupplier())
+                .withPropertyValues('spring.servlet.multipart.enabled=false')
+                .withConfiguration(AutoConfigurations.of(
+                        ControllersAutoConfiguration,
+                        WebMvcAutoConfiguration,
+                        MultipartAutoConfiguration))
+                .run { context ->
+                    assert context.getBean(DispatcherServletRegistrationBean).multipartConfig == null
+                }
+    }
+
+    void 'the dispatcher servlet registration starts without the legacy multipart property'() {
+        expect:
+        new WebApplicationContextRunner()
+                .withBean(GrailsApplication, grailsApplicationSupplier())
+                .withConfiguration(AutoConfigurations.of(
+                        ControllersAutoConfiguration,
+                        WebMvcAutoConfiguration,
+                        MultipartAutoConfiguration))
+                .run { context ->
+                    assert context.startupFailure == null
+                }
+    }
+
     void 'a user-defined GrailsWebMvcConfigurer bean makes the auto-configured webMvcConfig back off'() {
         given: 'a GrailsApplication, required by the controllers auto-config'
         def grailsApplication = Mock(GrailsApplication) {
@@ -236,6 +279,12 @@ class ControllersAutoConfigurationSpec extends Specification {
         webApplicationContext.beanFactory.registerSingleton(GrailsApplication.APPLICATION_ID, new DefaultGrailsApplication())
         servletContext.setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, webApplicationContext)
         return servletContext
+    }
+
+    private Supplier<GrailsApplication> grailsApplicationSupplier() {
+        () -> Mock(GrailsApplication) {
+            getClassLoader() >> getClass().classLoader
+        }
     }
 
     // Reconstructs the servlet filter chain the way Boot assembles it at container start, so the specs
