@@ -31,8 +31,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
-import org.springframework.boot.context.properties.bind.Bindable;
-import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.servlet.autoconfigure.HttpEncodingAutoConfiguration;
 import org.springframework.boot.servlet.filter.OrderedCharacterEncodingFilter;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
@@ -40,9 +38,7 @@ import org.springframework.boot.webmvc.autoconfigure.DispatcherServletAutoConfig
 import org.springframework.boot.webmvc.autoconfigure.DispatcherServletRegistrationBean;
 import org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.EnvironmentAware;
 import org.springframework.context.annotation.Bean;
-import org.springframework.core.env.Environment;
 import org.springframework.util.ClassUtils;
 import org.springframework.web.filter.CharacterEncodingFilter;
 import org.springframework.web.servlet.DispatcherServlet;
@@ -63,15 +59,7 @@ import org.grails.web.servlet.mvc.GrailsWebRequestFilter;
         after = {DomainClassAutoConfiguration.class}
 )
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-public class ControllersAutoConfiguration implements EnvironmentAware {
-
-    private static final String LEGACY_MULTIPART_CONFIGURATION = "grails.controllers.upload";
-
-    private static final String LEGACY_MULTIPART_CONFIGURATION_ERROR =
-            "Configuration properties under 'grails.controllers.upload' are no longer supported. " +
-            "Use Spring Boot's 'spring.servlet.multipart' configuration instead. For example, set " +
-            "'spring.servlet.multipart.maxFileSize=200MB' and " +
-            "'spring.servlet.multipart.maxRequestSize=200MB'.";
+public class ControllersAutoConfiguration {
 
     @Value("${" + Settings.FILTER_ENCODING + ":utf-8}")
     private String filtersEncoding;
@@ -149,13 +137,6 @@ public class ControllersAutoConfiguration implements EnvironmentAware {
         registrationBean.addUrlPatterns(Settings.DEFAULT_WEB_SERVLET_PATH);
         registrationBean.setOrder(GrailsFilters.GRAILS_WEB_REQUEST_FILTER.getOrder());
         return registrationBean;
-    }
-
-    @Override
-    public void setEnvironment(Environment environment) {
-        if (Binder.get(environment).bind(LEGACY_MULTIPART_CONFIGURATION, Bindable.mapOf(String.class, Object.class)).isBound()) {
-            throw new IllegalStateException(LEGACY_MULTIPART_CONFIGURATION_ERROR);
-        }
     }
 
     @Bean

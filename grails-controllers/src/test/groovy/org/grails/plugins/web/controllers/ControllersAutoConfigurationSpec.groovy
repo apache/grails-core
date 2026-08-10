@@ -24,7 +24,6 @@ import java.util.function.Supplier
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
 
-import org.springframework.beans.factory.BeanCreationException
 import org.springframework.boot.autoconfigure.AutoConfigurations
 import org.springframework.boot.servlet.autoconfigure.MultipartAutoConfiguration
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner
@@ -35,12 +34,10 @@ import org.springframework.boot.webmvc.autoconfigure.DispatcherServletRegistrati
 import org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ConfigurableApplicationContext
-import org.springframework.core.env.MapPropertySource
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.mock.web.MockServletContext
 import org.springframework.web.context.WebApplicationContext
-import org.springframework.web.context.support.AnnotationConfigWebApplicationContext
 import org.springframework.web.context.support.StaticWebApplicationContext
 import org.springframework.web.filter.RequestContextFilter
 import org.springframework.web.servlet.handler.SimpleMappingExceptionResolver
@@ -58,32 +55,6 @@ class ControllersAutoConfigurationSpec extends Specification {
     }
 
     def autoConfiguration = new ControllersAutoConfiguration()
-
-    def "legacy multipart configuration fails startup with migration instructions"() {
-        given:
-        def applicationContext = new AnnotationConfigWebApplicationContext().tap {
-            servletContext = new MockServletContext()
-            environment.propertySources.addFirst(new MapPropertySource('test', [
-                    'grails.controllers.upload.maxFileSize': 20000000,
-            ]))
-            register(ControllersAutoConfiguration)
-        }
-
-        when:
-        applicationContext.refresh()
-
-        then:
-        def exception = thrown(BeanCreationException)
-        exception.rootCause instanceof IllegalStateException
-        exception.rootCause.message ==
-                "Configuration properties under 'grails.controllers.upload' are no longer supported. " +
-                "Use Spring Boot's 'spring.servlet.multipart' configuration instead. For example, set " +
-                "'spring.servlet.multipart.maxFileSize=200MB' and " +
-                "'spring.servlet.multipart.maxRequestSize=200MB'."
-
-        cleanup:
-        applicationContext.close()
-    }
 
     void 'grailsWebRequest filter is a RequestContextFilter so Boot WebMvcAutoConfiguration backs off its own RequestContextFilter'() {
         when: 'the Grails request-binding filter bean is created'
