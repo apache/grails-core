@@ -89,10 +89,12 @@ tasks.withType(Test).configureEach {
     if (System.getProperty('debug.tests')) {
         jvmArgs += debugArguments
     }
-    afterSuite {
-        System.out.print('.')
-        System.out.flush()
-    }
+    addTestListener([
+        afterSuite: { desc, result ->
+            System.out.print('.')
+            System.out.flush()
+        }
+    ] as TestListener)
     // Bridge Geb-specific properties (e.g. from local.properties) to the Test JVM
     // to allow local overrides of Docker images and other settings.
     project.properties.each { key, value ->
@@ -119,15 +121,19 @@ if (hasProperty('testBisect')) {
             }
         }
 
-        beforeTest { testDescriptor ->
-            logger.info('STARTED TEST: {} > {}', testDescriptor.className, testDescriptor.name)
-        }
-
-        afterSuite { desc, result ->
-            if (!desc.parent) {
-                def testStatus = result.failedTestCount == 0 && result.testCount > 1 ? 'PASSED' : 'FAILED'
-                logger.info('FINISHED - {} - {} tests executed, {} failed', testStatus, result.testCount, result.failedTestCount)
-            }
-        }
+        addTestListener([
+                beforeTest: { testDescriptor ->
+                    logger.info('STARTED TEST: {} > {}', testDescriptor.className, testDescriptor.name)
+                },
+                afterSuite: { suite, result ->
+                    if (!suite.parent) {
+                        def testStatus = result.failedTestCount == 0 && result.testCount > 1 ? 'PASSED' : 'FAILED'
+                        logger.info(
+                                'FINISHED - {} - {} tests executed, {} failed',
+                                testStatus, result.testCount, result.failedTestCount
+                        )
+                    }
+                }
+        ] as TestListener)
     }
 }

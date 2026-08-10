@@ -20,6 +20,10 @@ package org.grails.orm.hibernate.cfg.domainbinding
 
 import org.grails.orm.hibernate.cfg.ColumnConfig
 import org.grails.orm.hibernate.cfg.PropertyConfig
+import org.hibernate.dialect.H2Dialect
+import org.hibernate.dialect.MySQLDialect
+import org.hibernate.dialect.OracleDialect
+import org.hibernate.dialect.PostgreSQLDialect
 import org.hibernate.mapping.Column
 import spock.lang.Specification
 import org.grails.orm.hibernate.cfg.domainbinding.binder.NumericColumnConstraintsBinder
@@ -36,7 +40,7 @@ class NumericColumnConstraintsBinderSpec extends Specification {
         cc.scale = 2
 
         when:
-        binder.bindNumericColumnConstraints(column, cc, new PropertyConfig())
+        binder.bindNumericColumnConstraints(column, cc, new PropertyConfig(), BigDecimal)
 
         then:
         column.precision == 10
@@ -52,36 +56,97 @@ class NumericColumnConstraintsBinderSpec extends Specification {
         pc.max = 1000
 
         when:
-        binder.bindNumericColumnConstraints(column, cc, pc)
+        binder.bindNumericColumnConstraints(column, cc, pc, BigDecimal)
 
         then:
         column.precision == 8 // 4 digits + 4 scale
         column.scale == 4
     }
 
-    def "should use default precision 15 for non-Oracle when no constraints"() {
+    def "should default BigDecimal precision from the dialect's decimal default when no constraints"() {
         given:
-        def nonOracleBinder = new NumericColumnConstraintsBinder(new org.hibernate.dialect.H2Dialect())
+        def h2Binder = new NumericColumnConstraintsBinder(new H2Dialect())
         def cc = new ColumnConfig()
         def pc = new PropertyConfig()
 
         when:
-        nonOracleBinder.bindNumericColumnConstraints(column, cc, pc)
+        h2Binder.bindNumericColumnConstraints(column, cc, pc, BigDecimal)
 
         then:
-        column.precision == 15
+        column.precision == new H2Dialect().getDefaultDecimalPrecision()
     }
 
-    def "should use default precision 126 for Oracle when no constraints"() {
+    def "should default decimal precision consistently across dialects without a per-dialect special case"() {
         given:
-        def oracleBinder = new NumericColumnConstraintsBinder(new org.hibernate.dialect.OracleDialect())
+        def binderFor = new NumericColumnConstraintsBinder(dialect)
+        def cc = new ColumnConfig()
+        def pc = new PropertyConfig()
+        def col = new Column("test")
+
+        when:
+        binderFor.bindNumericColumnConstraints(col, cc, pc, BigDecimal)
+
+        then:
+        col.precision == dialect.getDefaultDecimalPrecision()
+
+        where:
+        dialect << [new H2Dialect(), new PostgreSQLDialect(), new MySQLDialect(), new OracleDialect()]
+    }
+
+    def "should leave Float precision unset when no constraints, avoiding invalid float(n) DDL"() {
+        given:
         def cc = new ColumnConfig()
         def pc = new PropertyConfig()
 
         when:
-        oracleBinder.bindNumericColumnConstraints(column, cc, pc)
+        binder.bindNumericColumnConstraints(column, cc, pc, Float)
 
         then:
-        column.precision == 126
+        column.precision == null
+    }
+
+    def "should leave Double precision unset when no constraints, avoiding invalid float(n) DDL"() {
+        given:
+        def cc = new ColumnConfig()
+        def pc = new PropertyConfig()
+
+        when:
+        binder.bindNumericColumnConstraints(column, cc, pc, Double)
+
+        then:
+        column.precision == null
+    }
+
+    def "should leave Float/Double precision unset even when min/max constraints are present"() {
+        given:
+        def cc = new ColumnConfig()
+        def pc = new PropertyConfig()
+        pc.min = -100
+        pc.max = 1000
+
+        when:
+        binder.bindNumericColumnConstraints(column, cc, pc, propertyType)
+
+        then: 'min/max only drives decimal precision - it must not leak into float/double precision'
+        column.precision == null
+
+        where:
+        propertyType << [Float, Double]
+    }
+
+    def "should still honor an explicit column-config precision for Float/Double"() {
+        given:
+        def cc = new ColumnConfig()
+        cc.precision = 10
+        def pc = new PropertyConfig()
+
+        when:
+        binder.bindNumericColumnConstraints(column, cc, pc, propertyType)
+
+        then:
+        column.precision == 10
+
+        where:
+        propertyType << [Float, Double]
     }
 }

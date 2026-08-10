@@ -469,7 +469,7 @@ class SbomPlugin implements Plugin<Project> {
             // There are several reasons that cyclone will get the license wrong, usually due to upstream not publishing information or publishing it incorrectly
             // see the licenseMapping map above for details
             def licenseId = LICENSE_MAPPING[bomRef]
-            logger.lifecycle('Forcing license for {} to {}', bomRef, licenseId)
+            logger.info('Forcing license for {} to {}', bomRef, licenseId)
 
             def licenseBlock = LICENSES[licenseId]
             if (!licenseBlock) {

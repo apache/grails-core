@@ -45,6 +45,8 @@ dependencies {
     api project(':grails-core')
     api project(':grails-encoder')
 
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
 //    api 'org.apache.grails:grails-core', { // InjectableGrailsClass, ArtefactHandlerAdapter, ArtefactInfo, GrailsClass, AbstractInjectableGrailsClass, GrailsApplication, EncodingStateRegistry, EncodingStateRegistryLookup
 //        // API dependencies in grails-core
 //        exclude group: 'org.apache.groovy', module: 'groovy'
@@ -80,9 +82,8 @@ dependencies {
 //    compileOnly 'org.apache.groovy:groovy' // Needed as there are Java files that reference Groovy classes
 //
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during compilation and tests
     testImplementation 'org.spockframework:spock-core'
-
-    testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during tests
 }
 
 apply {

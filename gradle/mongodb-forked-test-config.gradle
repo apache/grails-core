@@ -52,10 +52,12 @@ tasks.withType(Test).configureEach {
     useJUnitPlatform()
     maxParallelForks = configuredTestParallel
     jvmArgs = ['-Xmx768M']
-    afterSuite {
-        System.out.print('.')
-        System.out.flush()
-    }
+    addTestListener([
+        afterSuite: { desc, result ->
+            System.out.print('.')
+            System.out.flush()
+        }
+    ] as TestListener)
     testLogging {
         events('passed', 'skipped', 'failed')
         exceptionFormat = 'full'

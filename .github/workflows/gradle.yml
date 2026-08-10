@@ -123,19 +123,44 @@ jobs:
           -PskipCodeStyle
   build:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
-    name: 'Build Grails-Core'
+    name: 'Build Grails-Core (${{ matrix.job_name }})'
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
             java: 21
+            job_name: Ubuntu JDK 21
+            gradle_task: 'build :grails-shell-cli:installDist groovydoc'
+            cache_writer: true
           - os: ubuntu-latest
             java: 25
+            job_name: Ubuntu JDK 25
+            gradle_task: 'build :grails-shell-cli:installDist groovydoc'
+            cache_writer: false
           - os: macos-latest
             java: 21
+            job_name: macOS JDK 21
+            gradle_task: 'build :grails-shell-cli:installDist groovydoc'
+            cache_writer: true
           - os: windows-latest
             java: 25
+            job_name: Windows JDK 25 shard 0
+            gradle_task: 'build :grails-shell-cli:installDist groovydoc'
+            shard_arguments: '-PtestShardCount=3 -PtestShardIndex=0'
+            cache_writer: true
+          - os: windows-latest
+            java: 25
+            job_name: Windows JDK 25 shard 1
+            gradle_task: testShard
+            shard_arguments: '-PtestShardCount=3 -PtestShardIndex=1'
+            cache_writer: false
+          - os: windows-latest
+            java: 25
+            job_name: Windows JDK 25 shard 2
+            gradle_task: testShard
+            shard_arguments: '-PtestShardCount=3 -PtestShardIndex=2'
+            cache_writer: false
     runs-on: ${{ matrix.os }}
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
@@ -148,7 +173,8 @@ jobs:
           distribution: liberica
           java-version: ${{ matrix.java }}
       - name: "🗄️ Restore dependency jar cache"
-        uses: actions/cache@v4
+        id: dependency-cache
+        uses: actions/cache/restore@v4
         with:
           # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
           # Keyed by branch version so each release branch maintains its own warm cache.
@@ -172,20 +198,51 @@ jobs:
         # and included automatically on JDK 25+. So the Java 21 entries build everything
         # except the island and the Java 25 entries build the full graph - no flag needed.
         run: >
-          ./gradlew build :grails-shell-cli:installDist groovydoc
+          ./gradlew ${{ matrix.gradle_task }}
           --continue
           --stacktrace
           -PonlyCoreTests
           -PskipCodeStyle
+          ${{ matrix.shard_arguments }}
+      - name: "🗄️ Save dependency jar cache"
+        if: ${{ success() && matrix.cache_writer && steps.dependency-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.gradle/caches/modules-2
+            ~/.gradle/wrapper
+          key: gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-${{ hashFiles('**/dependencies.gradle', '**/gradle-wrapper.properties') }}
   buildRerunTasks:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
-    name: 'Build Grails-Core Rerunning all Tasks'
+    name: 'Build Grails-Core Rerunning all Tasks (${{ matrix.job_name }})'
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
             java: 21
+            job_name: Ubuntu JDK 21 build
+            gradle_task: 'build :grails-shell-cli:installDist groovydoc'
+            extra_arguments: '-PskipTests'
+            cache_writer: true
+          - os: ubuntu-latest
+            java: 21
+            job_name: Ubuntu JDK 21 shard 0
+            gradle_task: testShard
+            extra_arguments: '-PtestShardCount=3 -PtestShardIndex=0'
+            cache_writer: false
+          - os: ubuntu-latest
+            java: 21
+            job_name: Ubuntu JDK 21 shard 1
+            gradle_task: testShard
+            extra_arguments: '-PtestShardCount=3 -PtestShardIndex=1'
+            cache_writer: false
+          - os: ubuntu-latest
+            java: 21
+            job_name: Ubuntu JDK 21 shard 2
+            gradle_task: testShard
+            extra_arguments: '-PtestShardCount=3 -PtestShardIndex=2'
+            cache_writer: false
     runs-on: ${{ matrix.os }}
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
@@ -198,7 +255,8 @@ jobs:
           distribution: liberica
           java-version: ${{ matrix.java }}
       - name: "🗄️ Restore dependency jar cache"
-        uses: actions/cache@v4
+        id: dependency-cache
+        uses: actions/cache/restore@v4
         with:
           # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
           # Keyed by branch version so each release branch maintains its own warm cache.
@@ -219,12 +277,21 @@ jobs:
         # This job only runs on Java 21, where settings.gradle auto-prunes the Micronaut
         # island (Micronaut 5 GA targets JVM 25 bytecode). See comment on `build`.
         run: >
-          ./gradlew build :grails-shell-cli:installDist groovydoc
+          ./gradlew ${{ matrix.gradle_task }}
           --continue
           --rerun-tasks
           --stacktrace
           -PonlyCoreTests
           -PskipCodeStyle
+          ${{ matrix.extra_arguments }}
+      - name: "🗄️ Save dependency jar cache"
+        if: ${{ success() && matrix.cache_writer && steps.dependency-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.gradle/caches/modules-2
+            ~/.gradle/wrapper
+          key: gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-${{ hashFiles('**/dependencies.gradle', '**/gradle-wrapper.properties') }}
   buildForge:
     name: "Build Grails Forge (Java ${{ matrix.java }}, indy=${{ matrix.indy }})"
     strategy:
@@ -306,16 +373,54 @@ jobs:
           path: grails-forge/tmp1/cli/**/*
           if-no-files-found: 'error'
   functional:
-    name: "Functional Tests (Java ${{ matrix.java }}, indy=${{ matrix.indy }})"
+    name: "Functional Tests (${{ matrix.job_name }})"
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     strategy:
       fail-fast: false
       matrix:
-        java: [ 21, 25 ]
-        indy: [ false ]
         include:
           - java: 21
+            indy: false
+            job_name: Java 21, indy=false
+            gradle_task: 'bootJar check'
+            artifact_suffix: java21-indyfalse-shard0
+            cache_writer: true
+            shard_arguments: '-PtestShardCount=2 -PtestShardIndex=0'
+          - java: 21
+            indy: false
+            job_name: Java 21, indy=false, shard 1
+            gradle_task: testShard
+            artifact_suffix: java21-indyfalse-shard1
+            cache_writer: false
+            shard_arguments: '-PtestShardCount=2 -PtestShardIndex=1'
+          - java: 21
             indy: true
+            job_name: Java 21, indy=true
+            gradle_task: 'bootJar check'
+            artifact_suffix: java21-indytrue-shard0
+            cache_writer: false
+            shard_arguments: '-PtestShardCount=2 -PtestShardIndex=0'
+          - java: 21
+            indy: true
+            job_name: Java 21, indy=true, shard 1
+            gradle_task: testShard
+            artifact_suffix: java21-indytrue-shard1
+            cache_writer: false
+            shard_arguments: '-PtestShardCount=2 -PtestShardIndex=1'
+          - java: 25
+            indy: false
+            job_name: Java 25, indy=false
+            gradle_task: 'bootJar check'
+            artifact_suffix: java25-indyfalse-shard0
+            cache_writer: false
+            shard_arguments: '-PtestShardCount=2 -PtestShardIndex=0'
+          - java: 25
+            indy: false
+            job_name: Java 25, indy=false, shard 1
+            gradle_task: testShard
+            artifact_suffix: java25-indyfalse-shard1
+            cache_writer: false
+            shard_arguments: '-PtestShardCount=2 -PtestShardIndex=1'
     runs-on: ubuntu-24.04
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
@@ -328,7 +433,8 @@ jobs:
           distribution: liberica
           java-version: ${{ matrix.java }}
       - name: "🗄️ Restore dependency jar cache"
-        uses: actions/cache@v4
+        id: dependency-cache
+        uses: actions/cache/restore@v4
         with:
           # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
           # Keyed by branch version so each release branch maintains its own warm cache.
@@ -349,7 +455,7 @@ jobs:
         # The Micronaut island is auto-pruned on a sub-25 JDK (settings.gradle), so the
         # Java 21 entries skip it and the Java 25 entries include it (see comment on `build`).
         run: >
-          ./gradlew bootJar check
+          ./gradlew ${{ matrix.gradle_task }}
           --continue
           --rerun-tasks
           --stacktrace
@@ -361,20 +467,40 @@ jobs:
           -PskipMongodbTests
           -PskipSpringSecurityTests
           -PskipRedisTests
+          ${{ matrix.shard_arguments }}
+      - name: "🗄️ Save dependency jar cache"
+        if: ${{ success() && matrix.cache_writer && steps.dependency-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.gradle/caches/modules-2
+            ~/.gradle/wrapper
+          key: gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-${{ hashFiles('**/dependencies.gradle', '**/gradle-wrapper.properties') }}
       - name: "📤 Upload Geb Reports"
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: geb-reports-functional-java${{ matrix.java }}-indy${{ matrix.indy }}
+          name: geb-reports-functional-${{ matrix.artifact_suffix }}
           path: '**/build/geb-reports/'
           if-no-files-found: ignore
   security:
-    name: "Spring Security Tests"
+    name: "Spring Security Tests (${{ matrix.job_name }})"
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     strategy:
       fail-fast: false
       matrix:
-        java: [ 21, 25 ]
+        include:
+          - java: 21
+            job_name: Java 21
+            gradle_task: 'bootJar check'
+          - java: 25
+            job_name: Java 25
+            gradle_task: 'bootJar check'
+            shard_arguments: '-PtestShardCount=2 -PtestShardIndex=0'
+          - java: 25
+            job_name: Java 25, shard 1
+            gradle_task: testShard
+            shard_arguments: '-PtestShardCount=2 -PtestShardIndex=1'
     runs-on: ubuntu-24.04
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
@@ -395,12 +521,13 @@ jobs:
         uses: testlens-app/setup-testlens@3f82d2dc6cd5c03f02ce5f7885a21195d85f8d14 # v1.9.3
       - name: "🏃 Run Functional Tests"
         run: >
-          ./gradlew bootJar check
+          ./gradlew ${{ matrix.gradle_task }}
           --continue
           --rerun-tasks
           --stacktrace
           -PonlySpringSecurityTests
           -PskipCodeStyle
+          ${{ matrix.shard_arguments }}
   securityConfig:
     name: "Spring Security Config Functional Tests"
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
@@ -582,16 +709,47 @@ jobs:
           -PskipCodeStyle
   hibernate7Functional:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
-    name: "Hibernate7 Functional Tests (Java ${{ matrix.java }}, indy=${{ matrix.indy }})"
+    name: "Hibernate7 Functional Tests (${{ matrix.job_name }})"
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
-        java: [ 21, 25 ]
-        indy: [ false ]
         include:
           - java: 21
+            indy: false
+            job_name: Java 21, indy=false
+            gradle_task: 'bootJar check'
+            shard_arguments: '-PtestShardCount=3 -PtestShardIndex=0'
+          - java: 21
+            indy: false
+            job_name: Java 21, indy=false, shard 1
+            gradle_task: testShard
+            shard_arguments: '-PtestShardCount=3 -PtestShardIndex=1'
+          - java: 21
+            indy: false
+            job_name: Java 21, indy=false, shard 2
+            gradle_task: testShard
+            shard_arguments: '-PtestShardCount=3 -PtestShardIndex=2'
+          - java: 21
             indy: true
+            job_name: Java 21, indy=true
+            gradle_task: 'bootJar check'
+            shard_arguments: '-PtestShardCount=2 -PtestShardIndex=0'
+          - java: 21
+            indy: true
+            job_name: Java 21, indy=true, shard 1
+            gradle_task: testShard
+            shard_arguments: '-PtestShardCount=2 -PtestShardIndex=1'
+          - java: 25
+            indy: false
+            job_name: Java 25, indy=false
+            gradle_task: 'bootJar check'
+            shard_arguments: '-PtestShardCount=2 -PtestShardIndex=0'
+          - java: 25
+            indy: false
+            job_name: Java 25, indy=false, shard 1
+            gradle_task: testShard
+            shard_arguments: '-PtestShardCount=2 -PtestShardIndex=1'
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
@@ -611,13 +769,14 @@ jobs:
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: >
-          ./gradlew bootJar check
+          ./gradlew ${{ matrix.gradle_task }}
           --continue
           --rerun-tasks
           --stacktrace
           -PgrailsIndy=${{ matrix.indy }}
           -PonlyHibernate7Tests
           -PskipCodeStyle
+          ${{ matrix.shard_arguments }}
   publishGradle:
     if: github.repository_owner == 'apache' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     needs: [ buildGradle ]

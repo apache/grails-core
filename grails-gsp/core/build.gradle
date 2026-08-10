@@ -48,6 +48,8 @@ dependencies {
     // GSP rendering/compilation Micrometer instrumentation (gsp.view/template/layout/compile + cache counters)
     implementation 'io.micrometer:micrometer-observation'
 
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
 //    api project(':grails-bootstrap'), { // ConfigMap
 //        // API dependencies in grails-bootstrap
 //        exclude group: 'org.yaml', module: 'snakeyaml'
@@ -90,10 +92,8 @@ dependencies {
 //    implementation 'org.springframework:spring-context' // ApplicationContext
 //
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation and tests
     testImplementation 'org.spockframework:spock-core'
-
-    testRuntimeOnly 'org.slf4j:slf4j-nop'
-    // Get rid of warning about missing slf4j implementation during test compilation
 }
 
 apply {

@@ -91,6 +91,8 @@ dependencies {
     cliImplementation 'org.apache.groovy:groovy-json'
     cliImplementation 'org.apache.groovy:groovy-templates'
 
+    cliCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
     testImplementation 'org.springframework:spring-jdbc'
     testImplementation 'org.springframework.boot:spring-boot-test'
     // ApplicationContextRunner's signatures reach AssertJ through ApplicationContextAssertProvider;

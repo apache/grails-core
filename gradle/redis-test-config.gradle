@@ -43,7 +43,9 @@ tasks.withType(Test).configureEach {
         exceptionFormat = 'full'
         events 'passed', 'skipped', 'failed'
     }
-    beforeTest { descriptor -> logger.quiet(" -- $descriptor") }
+    addTestListener([
+        beforeTest: { descriptor -> logger.quiet(" -- $descriptor") }
+    ] as TestListener)
 
     // Forwarded to org.apache.grails.testing.redis extensions to control the Testcontainers Redis image version
     if (project.hasProperty('redisContainerVersion')) {
