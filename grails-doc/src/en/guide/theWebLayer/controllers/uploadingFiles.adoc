@@ -114,7 +114,7 @@ spring:
 
 `maxRequestSize` = The maximum size allowed for a multipart/form-data request.
 
-The `spring.servlet.multipart` namespace also supports Spring Boot's `location`, `fileSizeThreshold`, and `enabled` properties.
+The `spring.servlet.multipart` namespace also supports Spring Boot's `location`, `fileSizeThreshold`, `enabled`, `resolveLazily`, and `strictServletCompliance` properties. See the {springBootReference}../appendix/application-properties/index.html[Spring Boot multipart application properties] reference for the complete list.
 The former `grails.controllers.upload` configuration is no longer supported. Applications using it fail at startup with a message explaining how to migrate to `spring.servlet.multipart`.
 
 You should keep in mind https://www.owasp.org/index.php/Unrestricted_File_Upload[OWASP recommendations - Unrestricted File Upload]
