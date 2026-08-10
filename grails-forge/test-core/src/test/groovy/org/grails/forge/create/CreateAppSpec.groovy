@@ -19,11 +19,13 @@
 
 package org.grails.forge.create
 
+import org.gradle.testkit.runner.TaskOutcome
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.OperatingSystem
 import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.JdkVersion
 import org.grails.forge.utils.CommandSpec
+import spock.lang.Unroll
 
 class CreateAppSpec extends CommandSpec {
 
@@ -60,28 +62,141 @@ class CreateAppSpec extends CommandSpec {
         new File(dir, "grails-app/i18n").exists()
     }
 
-    void "test create-app creates a correct Application.groovy"() {
+    @Unroll
+    void "test create-app #applicationType creates a correct Application.groovy"() {
         given:
-        generateProject(OperatingSystem.MACOS_ARCH64, [], ApplicationType.DEFAULT_OPTION)
+        generateProject(OperatingSystem.MACOS_ARCH64, [], applicationType)
         def applicationClassSourceFile = new File(dir, 'grails-app/init/example/grails/Application.groovy')
 
         expect:
         applicationClassSourceFile.exists()
-        applicationClassSourceFile.text == '''\
+        applicationClassSourceFile.text == applicationSource.stripIndent(8)
+
+        where:
+        applicationType            | applicationSource
+        ApplicationType.WEB        | '''\
         package example.grails
         
         import groovy.transform.CompileStatic
+
+        import org.springframework.context.annotation.ComponentScan
 
         import grails.boot.GrailsApp
         import grails.boot.config.GrailsAutoConfiguration
         
         @CompileStatic
+        @ComponentScan(value = 'example.grails')
         class Application extends GrailsAutoConfiguration {
             static void main(String[] args) {
                 GrailsApp.run(Application, args)
             }
         }
-        '''.stripIndent(8)
+        '''
+        ApplicationType.REST_API   | '''\
+        package example.grails
+
+        import groovy.transform.CompileStatic
+
+        import org.springframework.context.annotation.ComponentScan
+
+        import grails.boot.GrailsApp
+        import grails.boot.config.GrailsAutoConfiguration
+
+        @CompileStatic
+        @ComponentScan(value = 'example.grails')
+        class Application extends GrailsAutoConfiguration {
+            static void main(String[] args) {
+                GrailsApp.run(Application, args)
+            }
+        }
+        '''
+        ApplicationType.PLUGIN     | '''\
+        package example.grails
+
+        import groovy.transform.CompileStatic
+
+        import org.springframework.context.annotation.ComponentScan
+
+        import grails.boot.GrailsApp
+        import grails.boot.config.GrailsAutoConfiguration
+        import grails.plugins.metadata.PluginSource
+
+        @PluginSource
+        @CompileStatic
+        @ComponentScan(value = 'example.grails')
+        class Application extends GrailsAutoConfiguration {
+            static void main(String[] args) {
+                GrailsApp.run(Application, args)
+            }
+        }
+        '''
+        ApplicationType.WEB_PLUGIN | '''\
+        package example.grails
+        
+        import groovy.transform.CompileStatic
+
+        import org.springframework.context.annotation.ComponentScan
+
+        import grails.boot.GrailsApp
+        import grails.boot.config.GrailsAutoConfiguration
+        import grails.plugins.metadata.PluginSource
+        
+        @PluginSource
+        @CompileStatic
+        @ComponentScan(value = 'example.grails')
+        class Application extends GrailsAutoConfiguration {
+            static void main(String[] args) {
+                GrailsApp.run(Application, args)
+            }
+        }
+        '''
+    }
+
+    void "test generated application scans standard Spring components"() {
+        given:
+        generateProject(OperatingSystem.MACOS_ARCH64)
+        File componentSourceFile = new File(dir, 'src/main/groovy/example/grails/components/ScannedComponent.groovy')
+        componentSourceFile.parentFile.mkdirs()
+        componentSourceFile.text = '''\
+            package example.grails.components
+
+            import org.springframework.stereotype.Component
+
+            @Component
+            class ScannedComponent {
+                String value() {
+                    'scanned'
+                }
+            }
+        '''.stripIndent()
+        File componentSpecFile = new File(dir, 'src/test/groovy/example/grails/ComponentScanningSpec.groovy')
+        componentSpecFile.parentFile.mkdirs()
+        componentSpecFile.text = '''\
+            package example.grails
+
+            import example.grails.components.ScannedComponent
+            import grails.testing.mixin.integration.Integration
+            import org.springframework.beans.factory.annotation.Autowired
+            import spock.lang.Specification
+
+            @Integration
+            class ComponentScanningSpec extends Specification {
+
+                @Autowired
+                ScannedComponent scannedComponent
+
+                void "standard Spring component is injected"() {
+                    expect:
+                    scannedComponent.value() == 'scanned'
+                }
+            }
+        '''.stripIndent()
+
+        when:
+        def result = executeGradle('test', '--tests', 'example.grails.ComponentScanningSpec')
+
+        then:
+        result.task(':test').outcome == TaskOutcome.SUCCESS
     }
 
     void "test create-app with micronaut feature"() {
@@ -99,33 +214,6 @@ class CreateAppSpec extends CommandSpec {
         gradleProperties.text.contains('micronautPlatformVersion=4.10.16')
         gradleBuildFile.exists()
         gradleBuildFile.text.contains('implementation "org.apache.grails:grails-micronaut"')
-    }
-
-    void "test create-app web-plugin creates a correct Application.groovy"() {
-        given:
-        generateProject(OperatingSystem.MACOS_ARCH64, [], ApplicationType.WEB_PLUGIN)
-
-        def applicationClassSourceFile = new File(dir, 'grails-app/init/example/grails/Application.groovy')
-
-        expect:
-        applicationClassSourceFile.exists()
-        applicationClassSourceFile.text == '''\
-        package example.grails
-        
-        import groovy.transform.CompileStatic
-
-        import grails.boot.GrailsApp
-        import grails.boot.config.GrailsAutoConfiguration
-        import grails.plugins.metadata.PluginSource
-        
-        @PluginSource
-        @CompileStatic
-        class Application extends GrailsAutoConfiguration {
-            static void main(String[] args) {
-                GrailsApp.run(Application, args)
-            }
-        }
-        '''.stripIndent(8)
     }
 
     @Override

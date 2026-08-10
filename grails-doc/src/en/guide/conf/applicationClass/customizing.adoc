@@ -23,7 +23,9 @@ There are several ways in which you can customize the `Application` class.
 === Customizing Scanning
 
 
-By default Grails will scan all known source directories for controllers, domain class etc., however if there are packages in other JAR files you wish to scan you can do so by overriding the `packageNames()` method of the `Application` class:
+Newly generated Grails applications include `@ComponentScan(value = 'your.application.package')` on the `Application` class. This scans standard Spring components in the application's base package and its subpackages.
+
+Grails scans its known source directories separately for Grails artefacts such as controllers and domain classes. To add packages to that Grails artefact scan, override the `packageNames()` method of the `Application` class:
 
 [source,groovy]
 ----
