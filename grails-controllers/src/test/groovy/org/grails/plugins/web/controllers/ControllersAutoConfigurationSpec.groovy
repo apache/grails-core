@@ -61,12 +61,13 @@ class ControllersAutoConfigurationSpec extends Specification {
 
     def "legacy multipart configuration fails startup with migration instructions"() {
         given:
-        def applicationContext = new AnnotationConfigWebApplicationContext()
-        applicationContext.servletContext = new MockServletContext()
-        applicationContext.environment.propertySources.addFirst(new MapPropertySource('test', [
-                'grails.controllers.upload.maxFileSize': 20000000,
-        ]))
-        applicationContext.register(ControllersAutoConfiguration)
+        def applicationContext = new AnnotationConfigWebApplicationContext().tap {
+            servletContext = new MockServletContext()
+            environment.propertySources.addFirst(new MapPropertySource('test', [
+                    'grails.controllers.upload.maxFileSize': 20000000,
+            ]))
+            register(ControllersAutoConfiguration)
+        }
 
         when:
         applicationContext.refresh()
@@ -86,7 +87,7 @@ class ControllersAutoConfigurationSpec extends Specification {
 
     void 'grailsWebRequest filter is a RequestContextFilter so Boot WebMvcAutoConfiguration backs off its own RequestContextFilter'() {
         when: 'the Grails request-binding filter bean is created'
-        GrailsWebRequestFilter filter = autoConfiguration.grailsWebRequest(applicationContext)
+        def filter = autoConfiguration.grailsWebRequest(applicationContext)
 
         then: 'it is exposed as a RequestContextFilter, the type Boot @ConditionalOnMissingBean keys on'
         filter != null
@@ -95,10 +96,10 @@ class ControllersAutoConfigurationSpec extends Specification {
 
     void 'grailsWebRequestFilter registers the GrailsWebRequestFilter with the Grails request-filter order'() {
         given: 'the Grails request-binding filter'
-        GrailsWebRequestFilter filter = autoConfiguration.grailsWebRequest(applicationContext)
+        def filter = autoConfiguration.grailsWebRequest(applicationContext)
 
         when: 'it is wrapped in a registration bean'
-        FilterRegistrationBean<GrailsWebRequestFilter> registrationBean = autoConfiguration.grailsWebRequestFilter(filter)
+        def registrationBean = autoConfiguration.grailsWebRequestFilter(filter)
 
         then: 'the same filter instance is registered ahead of the Spring Security chain'
         registrationBean.filter.is(filter)
@@ -115,15 +116,9 @@ class ControllersAutoConfigurationSpec extends Specification {
     }
 
     void 'Grails controllers auto-config makes Boot WebMvcAutoConfiguration back off its requestContextFilter'() {
-        given: 'a GrailsApplication, required by the controllers auto-config'
-        def grailsApplication = Mock(GrailsApplication) {
-            getClassLoader() >> getClass().classLoader
-        }
-        Supplier<GrailsApplication> grailsApplicationSupplier = () -> grailsApplication
-
         expect: 'Boot does not contribute its OrderedRequestContextFilter, leaving GrailsWebRequest bound'
         new WebApplicationContextRunner()
-                .withBean(GrailsApplication, grailsApplicationSupplier)
+                .withBean(GrailsApplication, grailsApplicationSupplier())
                 .withConfiguration(AutoConfigurations.of(ControllersAutoConfiguration, WebMvcAutoConfiguration))
                 .run { context ->
                     assert !context.containsBean('requestContextFilter')
@@ -133,19 +128,13 @@ class ControllersAutoConfigurationSpec extends Specification {
     }
 
     void 'a user-defined grailsWebRequestFilter registration bean makes the auto-configured one back off'() {
-        given: 'a GrailsApplication, required by the controllers auto-config'
-        def grailsApplication = Mock(GrailsApplication) {
-            getClassLoader() >> getClass().classLoader
-        }
-        Supplier<GrailsApplication> grailsApplicationSupplier = () -> grailsApplication
-
-        and: 'a user-defined registration bean under the auto-configured bean name'
-        FilterRegistrationBean<GrailsWebRequestFilter> userRegistration = new FilterRegistrationBean<>()
-        Supplier<FilterRegistrationBean> userRegistrationSupplier = () -> userRegistration
+        given: 'a user-defined registration bean under the auto-configured bean name'
+        def userRegistration = new FilterRegistrationBean<>()
+        def userRegistrationSupplier = () -> userRegistration
 
         expect: 'the user bean wins and the framework filter backs off entirely — no second, Boot-adapted copy on the chain'
         new WebApplicationContextRunner()
-                .withBean(GrailsApplication, grailsApplicationSupplier)
+                .withBean(GrailsApplication, grailsApplicationSupplier())
                 .withBean('grailsWebRequestFilter', FilterRegistrationBean, userRegistrationSupplier)
                 .withConfiguration(AutoConfigurations.of(ControllersAutoConfiguration, WebMvcAutoConfiguration))
                 .run { context ->
@@ -197,19 +186,13 @@ class ControllersAutoConfigurationSpec extends Specification {
     }
 
     void 'a user-defined GrailsWebMvcConfigurer bean makes the auto-configured webMvcConfig back off'() {
-        given: 'a GrailsApplication, required by the controllers auto-config'
-        def grailsApplication = Mock(GrailsApplication) {
-            getClassLoader() >> getClass().classLoader
-        }
-        Supplier<GrailsApplication> grailsApplicationSupplier = () -> grailsApplication
-
-        and: 'a user-defined web MVC configurer'
+        given: 'a user-defined web MVC configurer'
         def userConfigurer = new ControllersAutoConfiguration.GrailsWebMvcConfigurer(0, false, '/custom/**')
-        Supplier<ControllersAutoConfiguration.GrailsWebMvcConfigurer> userConfigurerSupplier = () -> userConfigurer
+        def userConfigurerSupplier = () -> userConfigurer
 
         expect: 'the user bean wins and only one GrailsWebMvcConfigurer exists'
         new WebApplicationContextRunner()
-                .withBean(GrailsApplication, grailsApplicationSupplier)
+                .withBean(GrailsApplication, grailsApplicationSupplier())
                 .withBean(ControllersAutoConfiguration.GrailsWebMvcConfigurer, userConfigurerSupplier)
                 .withConfiguration(AutoConfigurations.of(ControllersAutoConfiguration, WebMvcAutoConfiguration))
                 .run { context ->
@@ -221,9 +204,10 @@ class ControllersAutoConfigurationSpec extends Specification {
 
     void 'the default exceptionHandler maps exceptions to the error view'() {
         given: 'the auto-configured exception resolver, wired the way the runtime does'
-        GrailsExceptionResolver exceptionResolver = autoConfiguration.exceptionHandler()
-        exceptionResolver.grailsApplication = new DefaultGrailsApplication()
-        exceptionResolver.servletContext = servletContextWithWebApplicationContext()
+        def exceptionResolver = autoConfiguration.exceptionHandler().tap {
+            grailsApplication = new DefaultGrailsApplication()
+            servletContext = servletContextWithWebApplicationContext()
+        }
 
         when:
         def modelAndView = exceptionResolver.resolveException(
@@ -234,15 +218,9 @@ class ControllersAutoConfigurationSpec extends Specification {
     }
 
     void 'the exceptionHandler default is auto-configured when no user bean exists'() {
-        given: 'a GrailsApplication, required by the controllers auto-config'
-        def grailsApplication = Mock(GrailsApplication) {
-            getClassLoader() >> getClass().classLoader
-        }
-        Supplier<GrailsApplication> grailsApplicationSupplier = () -> grailsApplication
-
         expect:
         new WebApplicationContextRunner()
-                .withBean(GrailsApplication, grailsApplicationSupplier)
+                .withBean(GrailsApplication, grailsApplicationSupplier())
                 .withConfiguration(AutoConfigurations.of(ControllersAutoConfiguration, WebMvcAutoConfiguration))
                 .run { context ->
                     assert context.getBean('exceptionHandler') instanceof GrailsExceptionResolver
@@ -250,20 +228,14 @@ class ControllersAutoConfigurationSpec extends Specification {
     }
 
     void 'a user-defined exceptionHandler bean makes the auto-configured default back off'() {
-        given: 'a GrailsApplication, required by the controllers auto-config'
-        def grailsApplication = Mock(GrailsApplication) {
-            getClassLoader() >> getClass().classLoader
-        }
-        Supplier<GrailsApplication> grailsApplicationSupplier = () -> grailsApplication
-
-        and: 'a user-defined exception resolver under the auto-configured bean name'
+        given: 'a user-defined exception resolver under the auto-configured bean name'
         def userResolver = new SimpleMappingExceptionResolver()
-        Supplier<SimpleMappingExceptionResolver> userResolverSupplier = () -> userResolver
+        def userResolverSupplier = () -> userResolver
 
         expect: 'the user bean wins and the framework default is never registered'
         new WebApplicationContextRunner()
                 .withBean('exceptionHandler', SimpleMappingExceptionResolver, userResolverSupplier)
-                .withBean(GrailsApplication, grailsApplicationSupplier)
+                .withBean(GrailsApplication, grailsApplicationSupplier())
                 .withConfiguration(AutoConfigurations.of(ControllersAutoConfiguration, WebMvcAutoConfiguration))
                 .run { context ->
                     assert context.getBean('exceptionHandler').is(userResolver)
@@ -273,12 +245,15 @@ class ControllersAutoConfigurationSpec extends Specification {
 
     private static MockServletContext servletContextWithWebApplicationContext() {
         def servletContext = new MockServletContext()
-        def webApplicationContext = new StaticWebApplicationContext()
-        webApplicationContext.servletContext = servletContext
-        webApplicationContext.refresh()
-        webApplicationContext.beanFactory.registerSingleton(GrailsApplication.APPLICATION_ID, new DefaultGrailsApplication())
-        servletContext.setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, webApplicationContext)
-        return servletContext
+        servletContext.setAttribute(
+                WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE,
+                new StaticWebApplicationContext().tap {
+                    it.servletContext = servletContext
+                    refresh()
+                    beanFactory.registerSingleton(GrailsApplication.APPLICATION_ID, new DefaultGrailsApplication())
+                }
+        )
+        servletContext
     }
 
     private Supplier<GrailsApplication> grailsApplicationSupplier() {
