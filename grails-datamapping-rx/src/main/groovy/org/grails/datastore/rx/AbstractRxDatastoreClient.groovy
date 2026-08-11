@@ -33,7 +33,12 @@ import org.grails.datastore.mapping.core.exceptions.ConfigurationException
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckableCollection
 import org.grails.datastore.mapping.engine.EntityAccess
-import org.grails.datastore.mapping.engine.event.*
+import org.grails.datastore.mapping.engine.event.PostDeleteEvent
+import org.grails.datastore.mapping.engine.event.PostInsertEvent
+import org.grails.datastore.mapping.engine.event.PostUpdateEvent
+import org.grails.datastore.mapping.engine.event.PreDeleteEvent
+import org.grails.datastore.mapping.engine.event.PreInsertEvent
+import org.grails.datastore.mapping.engine.event.PreUpdateEvent
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
@@ -68,6 +73,7 @@ import org.springframework.context.support.StaticMessageSource
 import rx.Observable
 
 import jakarta.persistence.CascadeType
+
 /**
  * Abstract implementation the {@link RxDatastoreClient} interface
  *
@@ -96,7 +102,7 @@ abstract class AbstractRxDatastoreClient<T> implements RxDatastoreClient<T>, RxD
         MultiTenancySettings multiTenancySettings = connectionSourceSettings.multiTenancy
         this.multiTenancyMode = multiTenancySettings.getMode()
         this.tenantResolver = multiTenancySettings.getTenantResolver()
-        if(this.tenantResolver instanceof RxDatastoreClientAware) {
+        if (this.tenantResolver instanceof RxDatastoreClientAware) {
             ((RxDatastoreClientAware)tenantResolver).setRxDatastoreClient(this)
         }
         this.mappingContext.setValidatorRegistry(
@@ -128,7 +134,7 @@ abstract class AbstractRxDatastoreClient<T> implements RxDatastoreClient<T>, RxD
 
     @Override
     RxDatastoreClient getDatastoreClientForTenantId(Serializable tenantId) {
-        if(multiTenancyMode == MultiTenancySettings.MultiTenancyMode.DATABASE) {
+        if (multiTenancyMode == MultiTenancySettings.MultiTenancyMode.DATABASE) {
             return getDatastoreClient(tenantId.toString())
         }
         else {
@@ -149,7 +155,7 @@ abstract class AbstractRxDatastoreClient<T> implements RxDatastoreClient<T>, RxD
         configurableApplicationEventPublisher.addApplicationListener(new AutoTimestampEventListener(this))
         configurableApplicationEventPublisher.addApplicationListener(new DomainEventListener(this))
 
-        if(multiTenancyMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
+        if (multiTenancyMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
             configurableApplicationEventPublisher.addApplicationListener(new MultiTenantEventListener(this))
         }
     }
@@ -199,7 +205,7 @@ abstract class AbstractRxDatastoreClient<T> implements RxDatastoreClient<T>, RxD
     @Override
     final Query createQuery(Class type, QueryState queryState, Map arguments) {
         def entity = mappingContext.getPersistentEntity(type.name)
-        if(entity == null) {
+        if (entity == null) {
             throw new IllegalArgumentException("Type [$type.name] is not a persistent type")
         }
 
@@ -237,23 +243,23 @@ abstract class AbstractRxDatastoreClient<T> implements RxDatastoreClient<T>, RxD
     Observable<Number> deleteAll(Iterable instances, Map<String, Object> arguments) {
         def ctx = this.mappingContext
         def proxyHandler = ctx.getProxyHandler()
-        if(instances != null) {
+        if (instances != null) {
             def batchOperation = new BatchOperation(arguments)
             List<ApplicationEvent> postEvents = []
-            for(o in instances) {
+            for (o in instances) {
                 Class type = proxyHandler.getProxiedClass(o)
                 def entity = ctx.getPersistentEntity(type.name)
-                if(entity == null) {
+                if (entity == null) {
                     throw new IllegalArgumentException("Type [$type.name] of instance [$o] is not a persistent type")
                 }
                 def reflector = mappingContext.getEntityReflector(entity)
                 def id = proxyHandler.getIdentifier(o) ?: reflector.getIdentifier(o)
-                if(id != null) {
+                if (id != null) {
 
                     def ea = ctx.createEntityAccess(entity, o)
                     def preDeleteEvent = new PreDeleteEvent(this, entity, ea)
                     eventPublisher?.publishEvent(preDeleteEvent)
-                    if(!preDeleteEvent.isCancelled()) {
+                    if (!preDeleteEvent.isCancelled()) {
                         batchOperation.addDelete(entity, id, o)
                         postEvents.add new PostDeleteEvent(this, entity, ea)
                     }
@@ -261,9 +267,9 @@ abstract class AbstractRxDatastoreClient<T> implements RxDatastoreClient<T>, RxD
             }
 
             return batchDelete(batchOperation).map { Number deleteCount ->
-                if(deleteCount > 0) {
-                    if(eventPublisher != null) {
-                        for(event in postEvents) {
+                if (deleteCount > 0) {
+                    if (eventPublisher != null) {
+                        for (event in postEvents) {
                             eventPublisher.publishEvent(event)
                         }
                     }
@@ -285,7 +291,7 @@ abstract class AbstractRxDatastoreClient<T> implements RxDatastoreClient<T>, RxD
     @Override
     final <T1> Observable<T1> persist(T1 instance, Map<String, Object> arguments) {
         persistAll((Iterable<T1>)Collections.singletonList(instance), arguments).map { List<Serializable> identifiers ->
-            if(!identifiers.isEmpty()) {
+            if (!identifiers.isEmpty()) {
                 return instance
             }
             else {
@@ -297,7 +303,7 @@ abstract class AbstractRxDatastoreClient<T> implements RxDatastoreClient<T>, RxD
     @Override
     final <T1> Observable<T1> insert(T1 instance, Map<String, Object> arguments) {
         insertAll((Iterable<T1>)Collections.singletonList(instance), arguments).map { List<Serializable> identifiers ->
-            if(!identifiers.isEmpty()) {
+            if (!identifiers.isEmpty()) {
                 return instance
             }
             else {
@@ -360,14 +366,14 @@ abstract class AbstractRxDatastoreClient<T> implements RxDatastoreClient<T>, RxD
                         postEvents.add(new PostUpdateEvent(this, entity, entityAccess))
                     }
                 } else {
-                    if(!hasId) {
+                    if (!hasId) {
                         ValueGenerator valueGenerator = entity.getMapping().getIdentifier().generator
-                        if(valueGenerator == ValueGenerator.NATIVE) {
+                        if (valueGenerator == ValueGenerator.NATIVE) {
                             // if the identifier is generated natively then use the hash code to identity the entity since the
                             // identifiers themselves will be generated from the insert operation
                             id = o.hashCode()
                         }
-                        else if(valueGenerator == ValueGenerator.ASSIGNED) {
+                        else if (valueGenerator == ValueGenerator.ASSIGNED) {
                             throw new IdentityGenerationException("Id generator is set to assigned but not identifier was provided for entity $o")
                         }
                         else {
@@ -405,35 +411,35 @@ abstract class AbstractRxDatastoreClient<T> implements RxDatastoreClient<T>, RxD
     }
 
     void processAssociations(PersistentEntity entity, Serializable id, Object instance, EntityReflector entityReflector, BatchOperation operation, List<ApplicationEvent> postEvents) {
-        if(operation.isAlreadyPending(entity, id, instance)) {
+        if (operation.isAlreadyPending(entity, id, instance)) {
             return
         }
-        for(association in entity.associations) {
-            if(association.doesCascade(CascadeType.PERSIST) && !association.isEmbedded() && !association.isBasic()) {
+        for (association in entity.associations) {
+            if (association.doesCascade(CascadeType.PERSIST) && !association.isEmbedded() && !association.isBasic()) {
                 def associatedEntity = association.associatedEntity
 
-                if(association instanceof ToOne) {
-                    DirtyCheckable associatedObject = (DirtyCheckable )entityReflector.getProperty(instance, association.name)
-                    if(associatedObject != null && associatedObject.hasChanged()) {
+                if (association instanceof ToOne) {
+                    DirtyCheckable associatedObject = (DirtyCheckable) entityReflector.getProperty(instance, association.name)
+                    if (associatedObject != null && associatedObject.hasChanged()) {
                         scheduleInsertOrUpdate(associatedEntity, associatedObject, operation, postEvents)
                     }
                 }
-                else if(association instanceof ToMany) {
+                else if (association instanceof ToMany) {
                     Iterable collection = (Iterable)entityReflector.getProperty(instance, association.name)
-                    if(collection != null) {
+                    if (collection != null) {
 
-                        if(collection instanceof PersistentCollection) {
-                            if( !((PersistentCollection)collection).isInitialized() ) {
+                        if (collection instanceof PersistentCollection) {
+                            if (!((PersistentCollection) collection).isInitialized()) {
                                 continue
                             }
                         }
-                        if(collection instanceof DirtyCheckableCollection) {
-                            if( !((DirtyCheckableCollection)collection).hasChanged() ) {
+                        if (collection instanceof DirtyCheckableCollection) {
+                            if (!((DirtyCheckableCollection) collection).hasChanged()) {
                                 continue
                             }
                         }
 
-                        for(obj in collection) {
+                        for (obj in collection) {
                             scheduleInsertOrUpdate(associatedEntity, (DirtyCheckable)obj, operation, postEvents)
                         }
                     }
@@ -457,7 +463,7 @@ abstract class AbstractRxDatastoreClient<T> implements RxDatastoreClient<T>, RxD
     protected void scheduleInsert(PersistentEntity associatedEntity, DirtyCheckable associatedObject, EntityReflector associationReflector, EntityAccess associationAccess, BatchOperation operation, List<ApplicationEvent> postEvents) {
         ValueGenerator valueGenerator = associatedEntity.getMapping().getIdentifier().generator
         def associatedId
-        if(valueGenerator == ValueGenerator.NATIVE) {
+        if (valueGenerator == ValueGenerator.NATIVE) {
             // if the identifier is generated natively then use the hash code to identity the entity since the
             // identifiers themselves will be generated from the insert operation
             associatedId = associatedObject.hashCode()
@@ -494,9 +500,9 @@ abstract class AbstractRxDatastoreClient<T> implements RxDatastoreClient<T>, RxD
     }
 
     protected boolean isIndexed(PersistentProperty property) {
-        PropertyMapping<Property> pm = property.getMapping();
-        final Property keyValue = pm.getMappedForm();
-        return keyValue != null && keyValue.isIndex();
+        PropertyMapping<Property> pm = property.getMapping()
+        final Property keyValue = pm.getMappedForm()
+        return keyValue != null && keyValue.isIndex()
     }
 
     @Override
@@ -504,7 +510,7 @@ abstract class AbstractRxDatastoreClient<T> implements RxDatastoreClient<T>, RxD
         try {
             RxGormEnhancer.close()
             def registry = GroovySystem.metaClassRegistry
-            for(entity in mappingContext.persistentEntities) {
+            for (entity in mappingContext.persistentEntities) {
                 registry.removeMetaClass(entity.javaClass)
             }
         } finally {
@@ -575,7 +581,6 @@ abstract class AbstractRxDatastoreClient<T> implements RxDatastoreClient<T>, RxD
      */
     abstract Serializable generateIdentifier(PersistentEntity entity, Object instance, EntityReflector reflector)
 
-
     /**
      * Creates a query for the given entity
      *
@@ -599,7 +604,7 @@ abstract class AbstractRxDatastoreClient<T> implements RxDatastoreClient<T>, RxD
     @Override
     RxDatastoreClient getDatastoreClient(String connectionSourceName) {
         def datastoreClient = this.datastoreClients.get(connectionSourceName)
-        if(datastoreClient == null) {
+        if (datastoreClient == null) {
             throw new ConfigurationException("No connection source configured for name [$connectionSourceName]. Check your configuration.")
         }
         return datastoreClient

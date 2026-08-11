@@ -32,6 +32,7 @@ import rx.Observable
  * @since 6.0
  */
 interface RxGormStaticOperations<D> {
+
     /**
      * @return A new instance of this RxEntity
      */
@@ -55,7 +56,6 @@ interface RxGormStaticOperations<D> {
      */
     Observable<D> get(Serializable id, Map queryArgs)
 
-
     /**
      * Retrieve a proxy to an instance by id
      *
@@ -73,7 +73,6 @@ interface RxGormStaticOperations<D> {
      * @return An observable
      */
     ObservableProxy<D> proxy(Serializable id, Map queryArgs)
-
 
     /**
      * Retrieve a proxy to an instance by id
@@ -228,8 +227,6 @@ interface RxGormStaticOperations<D> {
      */
     Observable<D> last(Map params)
 
-
-
     /**
      * List all entities and return an observable
      *
@@ -380,7 +377,6 @@ interface RxGormStaticOperations<D> {
      */
     Object staticPropertyMissing(String property)
 
-
     /**
      * Execute the closure with the given tenantId
      *
@@ -389,7 +385,6 @@ interface RxGormStaticOperations<D> {
      * @return The result of the closure
      */
     def <T> T withTenant(Serializable tenantId, @DelegatesTo(RxGormAllOperations) Closure<T> callable)
-
 
     /**
      * Execute the closure for each tenant

@@ -63,31 +63,31 @@ class SingleResultAdapter implements ServiceImplementer, Ordered, AdaptedImpleme
     @Override
     boolean doesImplement(ClassNode domainClass, MethodNode methodNode) {
         def alreadyImplemented = methodNode.getNodeMetaData(IMPLEMENTED)
-        if(!alreadyImplemented) {
+        if (!alreadyImplemented) {
             boolean isObservableOfReturnType
 
             ClassNode methodReturnType = methodNode.returnType
-            if(isDomainReturnType) {
+            if (isDomainReturnType) {
                 isObservableOfReturnType = RxAstUtils.isSingleOfDomainClass(methodReturnType) && !methodReturnType.isArray()
             }
-            else if(returnType != null) {
+            else if (returnType != null) {
                 isObservableOfReturnType = RxAstUtils.isSingleOf(methodReturnType, returnType) && !methodReturnType.isArray()
             }
             else {
                 isObservableOfReturnType = RxAstUtils.isSingleOf(methodReturnType, Object) && !methodReturnType.isArray()
             }
 
-            if(!isObservableOfReturnType && (adapted instanceof SingleResultInterfaceProjectionBuilder) && RxAstUtils.isSingle(methodReturnType)) {
+            if (!isObservableOfReturnType && (adapted instanceof SingleResultInterfaceProjectionBuilder) && RxAstUtils.isSingle(methodReturnType)) {
                 ClassNode genericType = resolveSingleGenericType(methodReturnType)
-                isObservableOfReturnType =  ((SingleResultInterfaceProjectionBuilder)adapted).isInterfaceProjection(domainClass, methodNode, genericType )
+                isObservableOfReturnType =  ((SingleResultInterfaceProjectionBuilder)adapted).isInterfaceProjection(domainClass, methodNode, genericType)
             }
 
-            if(adapted instanceof AnnotatedServiceImplementer) {
+            if (adapted instanceof AnnotatedServiceImplementer) {
                 return ((AnnotatedServiceImplementer)adapted).isAnnotated(domainClass, methodNode) && isObservableOfReturnType
             }
             else {
                 String prefix = adapted.resolvePrefix(methodNode)
-                if(adapted instanceof SingleResultProjectionServiceImplementer) {
+                if (adapted instanceof SingleResultProjectionServiceImplementer) {
                     ClassNode genericType = resolveSingleGenericType(methodReturnType)
                     return ((SingleResultProjectionServiceImplementer)adapted).isCompatibleReturnType(domainClass, methodNode, genericType, prefix)
                 }
@@ -103,10 +103,10 @@ class SingleResultAdapter implements ServiceImplementer, Ordered, AdaptedImpleme
     @Override
     void implement(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, ClassNode targetClassNode) {
         ClassNode returnType = resolveSingleGenericType(abstractMethodNode.returnType)
-        newMethodNode.setNodeMetaData(RETURN_TYPE, returnType )
+        newMethodNode.setNodeMetaData(RETURN_TYPE, returnType)
         adapted.implement(domainClassNode, abstractMethodNode, newMethodNode, targetClassNode)
 
-        if(!isRxEntity(returnType)) {
+        if (!isRxEntity(returnType)) {
             def ann = addAnnotationOrGetExisting(newMethodNode, RxSchedule)
             ann.setMember(RxScheduleIOTransformation.ANN_SINGLE_RESULT, ConstantExpression.TRUE)
             newMethodNode.addAnnotation(ann)
@@ -116,7 +116,7 @@ class SingleResultAdapter implements ServiceImplementer, Ordered, AdaptedImpleme
 
     @Override
     int getOrder() {
-        if(adapted instanceof Ordered) {
+        if (adapted instanceof Ordered) {
             return ((Ordered)adapted).getOrder()
         }
         return 0

@@ -31,7 +31,6 @@ import rx.Observable
 @CompileStatic
 interface RxQuery<T> {
 
-
     /**
      * @return All results matching this query as an observable
      */

@@ -50,6 +50,7 @@ import static org.grails.gorm.rx.transform.RxAstUtils.isRxEntity
  */
 @CompileStatic
 class ObservableResultAdapter  implements ServiceImplementer, Ordered, AdaptedImplementer {
+
     final PrefixedServiceImplementer adapted
     final Class returnType
     final boolean isDomainReturnType
@@ -63,36 +64,36 @@ class ObservableResultAdapter  implements ServiceImplementer, Ordered, AdaptedIm
     @Override
     boolean doesImplement(ClassNode domainClass, MethodNode methodNode) {
         def alreadyImplemented = methodNode.getNodeMetaData(IMPLEMENTED)
-        if(!alreadyImplemented) {
+        if (!alreadyImplemented) {
             boolean isObservableOfReturnType
 
             ClassNode methodReturnType = methodNode.returnType
-            if(isDomainReturnType) {
+            if (isDomainReturnType) {
                 isObservableOfReturnType = RxAstUtils.isObservableOfDomainClass(methodReturnType)
             }
-            else if(returnType != null) {
+            else if (returnType != null) {
                 isObservableOfReturnType = RxAstUtils.isObservableOf(methodReturnType, returnType)
             }
             else {
                 isObservableOfReturnType = RxAstUtils.isObservableOf(methodReturnType, Object)
             }
 
-            if(!isObservableOfReturnType && (adapted instanceof IterableInterfaceProjectionBuilder) && RxAstUtils.isObservable(methodReturnType)) {
+            if (!isObservableOfReturnType && (adapted instanceof IterableInterfaceProjectionBuilder) && RxAstUtils.isObservable(methodReturnType)) {
                 ClassNode genericType = resolveSingleGenericType(methodReturnType)
-                isObservableOfReturnType =  ((IterableInterfaceProjectionBuilder)adapted).isInterfaceProjection(domainClass, methodNode, genericType )
+                isObservableOfReturnType =  ((IterableInterfaceProjectionBuilder)adapted).isInterfaceProjection(domainClass, methodNode, genericType)
             }
 
-            if(adapted instanceof AnnotatedServiceImplementer) {
+            if (adapted instanceof AnnotatedServiceImplementer) {
                 return ((AnnotatedServiceImplementer)adapted).isAnnotated(domainClass, methodNode) && isObservableOfReturnType
             }
             else {
                 String prefix = adapted.resolvePrefix(methodNode)
-                if(adapted instanceof IterableProjectionServiceImplementer) {
+                if (adapted instanceof IterableProjectionServiceImplementer) {
                     ClassNode genericType = resolveSingleGenericType(methodReturnType)
                     ClassNode iterableType = GenericsUtils.makeClassSafeWithGenerics(Iterable, genericType)
 
-                    if(adapted instanceof IterableInterfaceProjectionBuilder) {
-                        return prefix && ((IterableInterfaceProjectionBuilder)adapted).isInterfaceProjection(domainClass, methodNode, iterableType )
+                    if (adapted instanceof IterableInterfaceProjectionBuilder) {
+                        return prefix && ((IterableInterfaceProjectionBuilder)adapted).isInterfaceProjection(domainClass, methodNode, iterableType)
                     }
                     else {
                         return prefix && ((IterableProjectionServiceImplementer)adapted).isCompatibleReturnType(domainClass, methodNode, iterableType, prefix)
@@ -110,15 +111,15 @@ class ObservableResultAdapter  implements ServiceImplementer, Ordered, AdaptedIm
     @Override
     void implement(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, ClassNode targetClassNode) {
         ClassNode returnType = resolveSingleGenericType(abstractMethodNode.returnType)
-        if(isDomainReturnType && !(adapted instanceof IterableInterfaceProjectionBuilder)) {
+        if (isDomainReturnType && !(adapted instanceof IterableInterfaceProjectionBuilder)) {
             domainClassNode = returnType
         }
 
         ClassNode iterableType = GenericsUtils.makeClassSafeWithGenerics(Iterable, returnType)
-        newMethodNode.setNodeMetaData(RETURN_TYPE, iterableType )
+        newMethodNode.setNodeMetaData(RETURN_TYPE, iterableType)
         adapted.implement(domainClassNode, abstractMethodNode, newMethodNode, targetClassNode)
 
-        if(!isRxEntity(domainClassNode)) {
+        if (!isRxEntity(domainClassNode)) {
             def ann = addAnnotationOrGetExisting(newMethodNode, RxSchedule)
             ann.setMember(RxScheduleIOTransformation.ANN_SINGLE_RESULT, ConstantExpression.TRUE)
             newMethodNode.addAnnotation(ann)
@@ -127,7 +128,7 @@ class ObservableResultAdapter  implements ServiceImplementer, Ordered, AdaptedIm
 
     @Override
     int getOrder() {
-        if(adapted instanceof Ordered) {
+        if (adapted instanceof Ordered) {
             return ((Ordered)adapted).getOrder()
         }
         return 0

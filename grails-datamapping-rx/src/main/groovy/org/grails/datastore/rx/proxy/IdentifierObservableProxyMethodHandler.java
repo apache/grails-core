@@ -18,17 +18,17 @@
  */
 package org.grails.datastore.rx.proxy;
 
+import java.io.Serializable;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import rx.Observable;
+import rx.functions.Func1;
+
 import org.grails.datastore.rx.RxDatastoreClient;
 import org.grails.datastore.rx.exceptions.BlockingOperationException;
 import org.grails.datastore.rx.internal.RxDatastoreClientImplementor;
 import org.grails.datastore.rx.query.QueryState;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import rx.Observable;
-import rx.functions.Action1;
-import rx.functions.Func1;
-
-import java.io.Serializable;
 
 /**
  * A proxy {@link javassist.util.proxy.MethodHandler} that uses the entity class and identifier to resolve the target
@@ -62,23 +62,23 @@ class IdentifierObservableProxyMethodHandler extends AbstractObservableProxyMeth
 
     @Override
     protected Object resolveDelegate(Object self) {
-        if(target != null) {
+        if (target != null) {
             return target;
         }
 
         Object loadedEntity = queryState != null ? queryState.getLoadedEntity(type, proxyKey) : null;
-        if(loadedEntity != null) {
+        if (loadedEntity != null) {
             this.target = loadedEntity;
         }
         else {
-            if(((RxDatastoreClientImplementor)client).isAllowBlockingOperations()) {
-                if(LOG.isWarnEnabled()) {
+            if (((RxDatastoreClientImplementor) client).isAllowBlockingOperations()) {
+                if (LOG.isWarnEnabled()) {
                     LOG.warn("Entity of type [{}] with id [{}] lazy loaded using a blocking operation. Consider using ObservableProxy.subscribe(..) instead", type.getName(), proxyKey);
                 }
                 this.target = observable.toBlocking().first();
             }
             else {
-                throw new BlockingOperationException("Cannot initialize proxy for class ["+type+"] using a blocking operation. Use ObservableProxy.subscribe(..) instead.");
+                throw new BlockingOperationException("Cannot initialize proxy for class [" + type + "] using a blocking operation. Use ObservableProxy.subscribe(..) instead.");
             }
         }
         return this.target;

@@ -25,7 +25,6 @@ import org.grails.datastore.gorm.finders.DynamicFinderInvocation
 import org.grails.datastore.gorm.finders.MethodExpression
 import org.grails.datastore.rx.RxDatastoreClient
 import rx.Observable
-import rx.Observer
 import rx.Subscriber
 
 /**
@@ -36,6 +35,7 @@ import rx.Subscriber
  */
 @CompileStatic
 class FindOrCreateByFinder extends FindByFinder {
+
     FindOrCreateByFinder(RxDatastoreClient datastoreClient) {
         super(datastoreClient)
         setPattern(org.grails.datastore.gorm.finders.FindOrCreateByFinder.METHOD_PATTERN)
@@ -44,7 +44,7 @@ class FindOrCreateByFinder extends FindByFinder {
     @Override
     protected Object doInvokeInternal(DynamicFinderInvocation invocation) {
         Observable observable = (Observable)super.doInvokeInternal(invocation)
-        observable.switchIfEmpty(Observable.create( { Subscriber s ->
+        observable.switchIfEmpty(Observable.create({ Subscriber s ->
                 Thread.start {
                     Map m = [:]
                     List<MethodExpression> expressions = invocation.getExpressions()
@@ -58,23 +58,23 @@ class FindOrCreateByFinder extends FindByFinder {
                     }
 
                     def newInstance = invocation.javaClass.newInstance(m)
-                    if(shouldSaveOnCreate()) {
+                    if (shouldSaveOnCreate()) {
                         def saveObservable = ((RxEntity) newInstance).save()
                         saveObservable.subscribe(new Subscriber() {
-                            @Override
-                            void onCompleted() {
-                                s.onCompleted()
-                            }
+                        @Override
+                        void onCompleted() {
+                            s.onCompleted()
+                        }
 
-                            @Override
-                            void onError(Throwable e) {
-                                s.onCompleted()
-                            }
+                        @Override
+                        void onError(Throwable e) {
+                            s.onCompleted()
+                        }
 
-                            @Override
-                            void onNext(Object o) {
-                                s.onNext o
-                            }
+                        @Override
+                        void onNext(Object o) {
+                            s.onNext o
+                        }
                         })
                     }
                     else {

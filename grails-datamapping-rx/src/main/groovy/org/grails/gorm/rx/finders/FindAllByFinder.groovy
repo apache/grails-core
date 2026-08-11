@@ -32,6 +32,7 @@ import org.grails.datastore.rx.query.RxQuery
  */
 @CompileStatic
 class FindAllByFinder extends org.grails.datastore.gorm.finders.FindAllByFinder {
+
     final RxDatastoreClient datastoreClient
 
     FindAllByFinder(RxDatastoreClient datastoreClient) {
@@ -43,7 +44,10 @@ class FindAllByFinder extends org.grails.datastore.gorm.finders.FindAllByFinder 
     protected Object doInvokeInternal(DynamicFinderInvocation invocation) {
         def javaClass = invocation.getJavaClass()
         def query = datastoreClient.createQuery(javaClass)
-        query = buildQuery(invocation, javaClass, query)
+        applyAdditionalCriteria(query, invocation.getCriteria())
+        applyDetachedCriteria(query, invocation.getDetachedCriteria())
+        configureQueryWithArguments(javaClass, query, invocation.getArguments())
+        query.add(getJunction(invocation))
         def arguments = invocation.getArguments()
         if (arguments.length > 0 && (arguments[0] instanceof Map)) {
             ((RxQuery)query).findAll((Map)arguments[0])

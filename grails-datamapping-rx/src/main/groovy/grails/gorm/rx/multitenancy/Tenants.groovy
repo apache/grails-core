@@ -27,6 +27,7 @@ import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.TenantResolver
 import org.grails.datastore.rx.RxDatastoreClient
 import org.grails.gorm.rx.api.RxGormEnhancer
+
 /**
  * Tenants implementation for RxGORM
  *
@@ -36,6 +37,7 @@ import org.grails.gorm.rx.api.RxGormEnhancer
 @CompileStatic
 @Slf4j
 class Tenants {
+
     /**
      * Execute the given closure for each tenant.
      *
@@ -64,7 +66,7 @@ class Tenants {
     static Serializable currentId() {
         RxDatastoreClient datastoreClient = RxGormEnhancer.findSingleDatastoreClient()
         def tenantId = grails.gorm.multitenancy.Tenants.CurrentTenant.get()
-        if(tenantId != null) {
+        if (tenantId != null) {
             return tenantId
         }
         else {
@@ -78,7 +80,7 @@ class Tenants {
     static Serializable currentId(Class<? extends RxDatastoreClient> datastoreClass) {
         RxDatastoreClient datastore = RxGormEnhancer.findDatastoreClientByType(datastoreClass)
         def tenantId = grails.gorm.multitenancy.Tenants.CurrentTenant.get()
-        if(tenantId != null) {
+        if (tenantId != null) {
             log.debug "Found tenant id [$tenantId] bound to thread local"
             return tenantId
         }
@@ -149,7 +151,7 @@ class Tenants {
                     return callable.call(tenantIdentifier)
                     break
                 default:
-                    throw new IllegalArgumentException("Provided closure accepts too many arguments")
+                    throw new IllegalArgumentException('Provided closure accepts too many arguments')
             }
         }
     }

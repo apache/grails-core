@@ -35,6 +35,7 @@ import org.grails.datastore.mapping.reflect.AstUtils
  */
 @CompileStatic
 class RxAstUtils extends AstUtils {
+
     /**
      * The rx entity class node
      */
@@ -57,9 +58,9 @@ class RxAstUtils extends AstUtils {
      * @return True if it is
      */
     static boolean isObservableOfDomainClass(ClassNode cls) {
-        if(isObservable(cls)) {
+        if (isObservable(cls)) {
             GenericsType[] genericsTypes = cls.genericsTypes
-            if(genericsTypes != null && genericsTypes.length == 1) {
+            if (genericsTypes != null && genericsTypes.length == 1) {
                 ClassNode type = genericsTypes[0].type
                 return type != null && isDomainClass(type)
             }
@@ -74,9 +75,9 @@ class RxAstUtils extends AstUtils {
      * @return True if it is
      */
     static boolean isSingleOfDomainClass(ClassNode cls) {
-        if(isSingle(cls)) {
+        if (isSingle(cls)) {
             GenericsType[] genericsTypes = cls.genericsTypes
-            if(genericsTypes != null && genericsTypes.length == 1) {
+            if (genericsTypes != null && genericsTypes.length == 1) {
                 ClassNode type = genericsTypes[0].type
                 return type != null && isDomainClass(type)
             }
@@ -91,9 +92,9 @@ class RxAstUtils extends AstUtils {
      * @return True if it is
      */
     static boolean isObservableOf(ClassNode cls, ClassNode parent) {
-        if(isObservable(cls) || isSingle(cls)) {
+        if (isObservable(cls) || isSingle(cls)) {
             GenericsType[] genericsTypes = cls.genericsTypes
-            if(genericsTypes != null && genericsTypes.length == 1) {
+            if (genericsTypes != null && genericsTypes.length == 1) {
                 ClassNode type = genericsTypes[0].type
                 return type != null && isSubclassOfOrImplementsInterface(type, parent)
             }
@@ -107,9 +108,9 @@ class RxAstUtils extends AstUtils {
      * @return True if it is
      */
     static boolean isSingleOf(ClassNode cls, Class parent) {
-        if(isSingle(cls)) {
+        if (isSingle(cls)) {
             GenericsType[] genericsTypes = cls.genericsTypes
-            if(genericsTypes != null && genericsTypes.length == 1) {
+            if (genericsTypes != null && genericsTypes.length == 1) {
                 ClassNode type = genericsTypes[0].type
                 return type != null && isSubclassOfOrImplementsInterface(type, parent.name)
             }
@@ -123,9 +124,9 @@ class RxAstUtils extends AstUtils {
      * @return True if it is
      */
     static boolean isObservableOf(ClassNode cls, Class parent) {
-        if(isObservable(cls)) {
+        if (isObservable(cls)) {
             GenericsType[] genericsTypes = cls.genericsTypes
-            if(genericsTypes != null && genericsTypes.length == 1) {
+            if (genericsTypes != null && genericsTypes.length == 1) {
                 ClassNode type = genericsTypes[0].type
                 return type != null && isSubclassOfOrImplementsInterface(type, parent.name)
             }
@@ -139,7 +140,7 @@ class RxAstUtils extends AstUtils {
      * @return True if it is
      */
     static boolean isSingle(ClassNode cls) {
-        isSubclassOf(cls, "rx.Single")
+        isSubclassOf(cls, 'rx.Single')
     }
 
     /**
@@ -149,6 +150,6 @@ class RxAstUtils extends AstUtils {
      * @return True if it is
      */
     static boolean isObservable(ClassNode cls) {
-        return isSubclassOf(cls, "rx.Observable")
+        return isSubclassOf(cls, 'rx.Observable')
     }
 }

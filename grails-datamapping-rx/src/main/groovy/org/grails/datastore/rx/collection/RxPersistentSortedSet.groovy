@@ -44,12 +44,13 @@ import rx.Subscription
 @CompileStatic
 @Slf4j
 class RxPersistentSortedSet<T> extends PersistentSortedSet implements RxPersistentCollection<T>, RxUnidirectionalCollection, RxCollection<T> {
+
     final RxDatastoreClient datastoreClient
     final Association association
 
     protected final QueryState queryState
 
-    RxPersistentSortedSet( RxDatastoreClient datastoreClient, Association association, Serializable associationKey, QueryState queryState = null) {
+    RxPersistentSortedSet(RxDatastoreClient datastoreClient, Association association, Serializable associationKey, QueryState queryState = null) {
         super(association, associationKey, null)
         this.datastoreClient = datastoreClient
         this.association = association
@@ -57,7 +58,7 @@ class RxPersistentSortedSet<T> extends PersistentSortedSet implements RxPersiste
         this.observable = resolveObservable()
     }
 
-    RxPersistentSortedSet( RxDatastoreClient datastoreClient, Association association, List<Serializable> entitiesKeys, QueryState queryState = null) {
+    RxPersistentSortedSet(RxDatastoreClient datastoreClient, Association association, List<Serializable> entitiesKeys, QueryState queryState = null) {
         super(entitiesKeys, association.associatedEntity.javaClass, null)
         this.datastoreClient = datastoreClient
         this.association = association
@@ -65,7 +66,7 @@ class RxPersistentSortedSet<T> extends PersistentSortedSet implements RxPersiste
         this.observable = resolveObservable()
     }
 
-    RxPersistentSortedSet( RxDatastoreClient datastoreClient, Association association, Query initializerQuery, QueryState queryState = null) {
+    RxPersistentSortedSet(RxDatastoreClient datastoreClient, Association association, Query initializerQuery, QueryState queryState = null) {
         super(association, null, null)
         this.datastoreClient = datastoreClient
         this.association = association
@@ -75,8 +76,8 @@ class RxPersistentSortedSet<T> extends PersistentSortedSet implements RxPersiste
 
     protected Observable resolveObservable() {
         def query = ((RxDatastoreClientImplementor)datastoreClient).createQuery(childType, queryState)
-        if(associationKey != null) {
-            query.eq( association.inverseSide.name, associationKey )
+        if (associationKey != null) {
+            query.eq(association.inverseSide.name, associationKey)
         }
         else {
             query.in(association.associatedEntity.identity.name, keys.toList())
@@ -90,14 +91,13 @@ class RxPersistentSortedSet<T> extends PersistentSortedSet implements RxPersiste
 
     @Override
     void initialize() {
-        if(initializing != null) return
+        if (initializing != null) return
         initializing = true
-
 
         try {
             def observable = toListObservable()
 
-            if(((RxDatastoreClientImplementor)datastoreClient).isAllowBlockingOperations()) {
+            if (((RxDatastoreClientImplementor)datastoreClient).isAllowBlockingOperations()) {
                 log.warn("Association $association initialised using blocking operation. Consider using subscribe(..) or an eager query instead")
 
                 addAll observable.toBlocking().first()
@@ -148,7 +148,7 @@ class RxPersistentSortedSet<T> extends PersistentSortedSet implements RxPersiste
 
     @Override
     List<Serializable> getAssociationKeys() {
-        if(keys != null) {
+        if (keys != null) {
             return keys.toList() as List<Serializable>
         }
         else {

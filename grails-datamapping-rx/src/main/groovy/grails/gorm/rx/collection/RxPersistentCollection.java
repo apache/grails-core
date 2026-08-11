@@ -20,9 +20,6 @@ package grails.gorm.rx.collection;
 
 import org.grails.datastore.mapping.collection.PersistentCollection;
 
-import java.io.Serializable;
-import java.util.List;
-
 /**
  * Represents a reactive collection
  *

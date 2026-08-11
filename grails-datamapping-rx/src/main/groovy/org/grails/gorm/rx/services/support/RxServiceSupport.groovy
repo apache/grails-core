@@ -25,7 +25,6 @@ import rx.Observer
 import rx.Scheduler
 import rx.Single
 import rx.SingleSubscriber
-import rx.Subscriber
 import rx.observables.SyncOnSubscribe
 import rx.schedulers.Schedulers
 

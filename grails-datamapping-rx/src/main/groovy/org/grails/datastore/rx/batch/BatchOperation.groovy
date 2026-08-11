@@ -31,6 +31,7 @@ import org.grails.datastore.mapping.model.PersistentEntity
 
 @CompileStatic
 class BatchOperation {
+
     final Map<PersistentEntity, Map<Serializable, EntityOperation>> deletes = [:].withDefault { [:] }
     final Map<PersistentEntity, Map<Serializable, EntityOperation>> updates = [:].withDefault { [:] }
     final Map<PersistentEntity, Map<Serializable, EntityOperation>> inserts = [:].withDefault { [:] }

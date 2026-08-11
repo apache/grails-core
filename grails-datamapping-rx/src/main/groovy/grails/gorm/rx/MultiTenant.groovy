@@ -55,7 +55,7 @@ trait MultiTenant<D> extends RxEntity<D> {
      * @return The result of the closure
      */
     @Generated
-    static RxGormAllOperations<D> eachTenant( @DelegatesTo(RxGormAllOperations) Closure callable) {
+    static RxGormAllOperations<D> eachTenant(@DelegatesTo(RxGormAllOperations) Closure callable) {
         RxGormEnhancer.findStaticApi(this, ConnectionSource.DEFAULT).eachTenant callable
     }
 

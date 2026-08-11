@@ -53,7 +53,6 @@ interface RxGormInstanceOperations<D> {
      */
     Observable<D> save(D instance, Map arguments)
 
-
     /**
      * Saves an entity and returns an {@link Observable}, forcing an insert operation regardless whether an identifier is already present or not
      *

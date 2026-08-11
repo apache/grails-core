@@ -20,7 +20,6 @@
 package grails.gorm.rx.api
 
 import rx.Observable
-import rx.Single
 
 /**
  * Interface for Reactive GORM operations on instances
@@ -45,7 +44,6 @@ interface RxGormOperations<D> {
      * @return An {@link Observable} with the result of the operation
      */
     Observable<D> save(Map<String, Object> arguments)
-
 
     /**
      * Saves an entity and returns an {@link Observable}, forcing an insert operation regardless whether an identifier is already present or not

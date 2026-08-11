@@ -34,7 +34,7 @@ import grails.gorm.rx.collection.ObservableCollection
  * @since 6.0
  */
 @CompileStatic
-trait RxCollection<T> implements ObservableCollection<T>{
+trait RxCollection<T> implements ObservableCollection<T> {
 
     /**
      * The underlying observable

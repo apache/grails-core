@@ -26,4 +26,5 @@ package grails.gorm.rx.api
  * @since 6.0
  */
 interface RxGormAllOperations<D> extends RxGormStaticOperations<D>, RxGormInstanceOperations<D> {
+
 }

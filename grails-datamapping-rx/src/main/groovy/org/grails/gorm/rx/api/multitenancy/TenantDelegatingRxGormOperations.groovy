@@ -36,6 +36,7 @@ import rx.Observable
  */
 @CompileStatic
 class TenantDelegatingRxGormOperations<D> implements RxGormAllOperations<D> {
+
     final RxDatastoreClient datastoreClient
     final Serializable tenantId
     final RxGormAllOperations<D> delegateOperations

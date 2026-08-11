@@ -18,12 +18,17 @@
  */
 package grails.gorm.rx.services;
 
-import org.codehaus.groovy.transform.GroovyASTTransformationClass;
-import org.grails.datastore.gorm.transform.GormASTTransformationClass;
-import rx.schedulers.Schedulers;
-import org.apache.grails.common.compiler.GroovyTransformOrder;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-import java.lang.annotation.*;
+import org.codehaus.groovy.transform.GroovyASTTransformationClass;
+
+import org.apache.grails.common.compiler.GroovyTransformOrder;
+import org.grails.datastore.gorm.transform.GormASTTransformationClass;
 
 /**
  * A transformation that transforms the body of a method to return an Observable that runs on the IO Scheduler
@@ -40,7 +45,7 @@ import java.lang.annotation.*;
 public @interface RxSchedule {
 
     /**
-     * @return A closure that returns the scheduler to run on. Default is {@link Schedulers#io()}
+     * @return A closure that returns the scheduler to run on. Default is {@link rx.schedulers.Schedulers#io()}
      */
     Class scheduler() default Object.class;
     /**
@@ -48,7 +53,5 @@ public @interface RxSchedule {
      */
     boolean singleResult() default false;
 
-    default int priority() {
-        return GroovyTransformOrder.RX_SCHEDULE;
-    }
+    int priority() default GroovyTransformOrder.RX_SCHEDULER_ORDER;
 }

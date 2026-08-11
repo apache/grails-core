@@ -57,26 +57,26 @@ class RxQueryUtils {
      * @return The new observable
      */
     static Observable processFetchStrategies(RxDatastoreClientImplementor datastoreClient, Observable observable, PersistentEntity entity, Map<String, FetchType> fetchStrategies, QueryState queryState) {
-        if(!fetchStrategies.isEmpty()) {
+        if (!fetchStrategies.isEmpty()) {
 
             EntityReflector entityReflector = entity.mappingContext.getEntityReflector(entity)
             List<String> joinedProperties = []
             observable = observable.switchMap { Object o ->
 
                 List<Observable<?>> observables = [Observable.just(o)] as List<Observable<?>>
-                if(entity.isInstance(o)) {
+                if (entity.isInstance(o)) {
 
-                    for(fetch in fetchStrategies) {
+                    for (fetch in fetchStrategies) {
                         PersistentProperty property = entity.getPropertyByName(fetch.key)
                         FetchType fetchType = fetch.value
-                        if(fetchType == FetchType.EAGER) {
+                        if (fetchType == FetchType.EAGER) {
                             def propertyName = property.name
                             def currentValue = entityReflector.getProperty(o, propertyName)
 
-                            if(property instanceof ToOne && (currentValue instanceof ObservableProxy)) {
+                            if (property instanceof ToOne && (currentValue instanceof ObservableProxy)) {
                                 ToOne toOne = (ToOne)property
-                                if(!toOne.isEmbedded()) {
-                                    if(!toOne.isForeignKeyInChild()) {
+                                if (!toOne.isEmbedded()) {
+                                    if (!toOne.isForeignKeyInChild()) {
                                         joinedProperties.add(propertyName)
                                         observables.add datastoreClient.get(toOne.associatedEntity.javaClass, ((ObservableProxy)currentValue).getProxyKey(), queryState)
                                     }
@@ -90,13 +90,12 @@ class RxQueryUtils {
                                     }
                                 }
                             }
-                            else if(property instanceof ToMany) {
+                            else if (property instanceof ToMany) {
                                 ToMany toMany = (ToMany)property
-                                if(toMany.isBidirectional() && !(toMany instanceof ManyToMany)) {
+                                if (toMany.isBidirectional() && !(toMany instanceof ManyToMany)) {
                                     def inverseSide = toMany.inverseSide
-                                    if(inverseSide instanceof ManyToOne) {
+                                    if (inverseSide instanceof ManyToOne) {
                                         joinedProperties.add(propertyName)
-
 
                                         RxQuery rxQuery = (RxQuery)datastoreClient.createQuery(inverseSide.owner.javaClass, queryState)
                                                 .eq(inverseSide.name, o)
@@ -104,11 +103,11 @@ class RxQueryUtils {
                                         observables.add((Observable) rxQuery.findAll().toList())
                                     }
                                 }
-                                else if(currentValue instanceof RxUnidirectionalCollection) {
+                                else if (currentValue instanceof RxUnidirectionalCollection) {
                                     RxUnidirectionalCollection ruc = (RxUnidirectionalCollection)currentValue
                                     def associationKeys = ruc.associationKeys
                                     joinedProperties.add(propertyName)
-                                    if(associationKeys) {
+                                    if (associationKeys) {
                                         def inverseEntity = toMany.associatedEntity
                                         RxQuery rxQuery = (RxQuery)datastoreClient.createQuery(inverseEntity.javaClass, queryState)
                                                 .in(inverseEntity.identity.name, associationKeys)
@@ -134,11 +133,11 @@ class RxQueryUtils {
                 List<Object> result = (List<Object>) r
                 // first result is the entity
                 def entityInstance = result.get(0)
-                if(result.size() > 1) {
+                if (result.size() > 1) {
                     int i = 0
-                    for(o in result[1..-1]) {
+                    for (o in result[1..-1]) {
                         String name = joinedProperties.get(i++)
-                        if(o instanceof Collection) {
+                        if (o instanceof Collection) {
                             def propertyWriter = entityReflector.getPropertyWriter(name)
                             o = o.asType(propertyWriter.propertyType())
                             propertyWriter.write(entityInstance, DirtyCheckingSupport.wrap((Collection)o, (DirtyCheckable)entityInstance, name))

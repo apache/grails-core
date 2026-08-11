@@ -208,8 +208,7 @@ include(
         'grails-datamapping-core-test',
 
         // RX projects
-        // until this can be finished being ported to the current Grails release, we are disabling
-        //'grails-datamapping-rx',
+        'grails-datamapping-rx',
 
         // Spring Security
         // Note: Spring Security documentation is now part of grails-doc (grails-doc/src/en/guide/security).

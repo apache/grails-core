@@ -20,11 +20,9 @@
 package grails.gorm.rx
 
 import groovy.transform.CompileStatic
-import groovy.transform.InheritConstructors
 import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.query.criteria.AbstractDetachedCriteria
 import org.grails.datastore.mapping.query.Query
-import org.grails.datastore.mapping.query.api.Criteria
 import org.grails.datastore.mapping.query.api.ProjectionList
 import org.grails.datastore.mapping.query.api.QueryArgumentsAware
 import org.grails.datastore.mapping.query.api.QueryableCriteria
@@ -44,6 +42,7 @@ import jakarta.persistence.FetchType
  */
 @CompileStatic
 class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implements PersistentObservable<T> {
+
     DetachedCriteria(Class<Observable<T>> targetClass, String alias) {
         super(targetClass, alias)
     }
@@ -267,7 +266,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
     }
 
     @Override
-    protected DetachedCriteria<T> clone() {
+    DetachedCriteria<T> clone() {
         return (DetachedCriteria)super.clone()
     }
 
@@ -644,11 +643,11 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
         }
         DynamicFinder.applyDetachedCriteria(query, this)
 
-        for(entry in fetchStrategies) {
-            switch(entry.value) {
+        for (entry in fetchStrategies) {
+            switch (entry.value) {
                 case FetchType.EAGER:
                     query.join(entry.key)
-                break
+                    break
                 default:
                     query.select(entry.key)
             }
