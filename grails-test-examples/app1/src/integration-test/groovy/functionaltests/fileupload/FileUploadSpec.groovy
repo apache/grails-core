@@ -24,7 +24,6 @@ import spock.lang.Tag
 import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.http.client.HttpClientSupport
 import org.apache.grails.testing.http.client.MultipartBody
-import org.springframework.test.context.TestPropertySource
 
 /**
  * Integration tests for file upload functionality in Grails.
@@ -34,10 +33,6 @@ import org.springframework.test.context.TestPropertySource
  */
 @Integration
 @Tag('http-client')
-@TestPropertySource(properties = [
-        'spring.servlet.multipart.maxFileSize=2KB',
-        'spring.servlet.multipart.maxRequestSize=3KB'
-])
 class FileUploadSpec extends Specification implements HttpClientSupport {
 
     // ========== Single File Upload Tests ==========
@@ -294,7 +289,7 @@ class FileUploadSpec extends Specification implements HttpClientSupport {
         given:
         def content = 'X' * (2 * 1024 + 1)
         def body = MultipartBody.builder()
-                .addPart('file', 'over-limit.txt', 'text/plain', content.bytes)
+                .addPart('file', 'over-size-limit.txt', 'text/plain', content.bytes)
                 .build()
 
         when:
@@ -308,7 +303,7 @@ class FileUploadSpec extends Specification implements HttpClientSupport {
         given:
         def content = 'X' * 1536
         def body = MultipartBody.builder()
-                .addPart('file', 'raised-limit.txt', 'text/plain', content.bytes)
+                .addPart('file', 'within-size-limit.txt', 'text/plain', content.bytes)
                 .build()
 
         when:

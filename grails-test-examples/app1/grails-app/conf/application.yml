@@ -64,7 +64,11 @@ grails:
         enabled: true
         mappings:
             '[/api/**]': default
-
+spring:
+    servlet:
+        multipart:
+            maxFileSize: 2KB
+            maxRequestSize: 3KB
 ---
 dataSource:
     pooled: true
