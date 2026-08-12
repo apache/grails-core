@@ -167,6 +167,6 @@ public class CriteriaBuilder<T> extends AbstractCriteriaBuilder implements Build
 
     @Override
     public Object scroll(@DelegatesTo(Criteria.class) Closure c) {
-        return invokeMethod(SCROLL_CALL, new Object[]{c});
+        return executeCriteriaConstruction(c);
     }
 }

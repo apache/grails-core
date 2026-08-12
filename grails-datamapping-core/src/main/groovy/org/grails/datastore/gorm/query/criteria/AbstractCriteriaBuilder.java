@@ -279,20 +279,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
 
         ensureQueryIsInitialized();
         if (isCriteriaConstructionMethod(name, args)) {
-
-            uniqueResult = false;
-
-            invokeClosureNode(args[0]);
-
-            Object result;
-            if (!uniqueResult) {
-                result = invokeList();
-            }
-            else {
-                result = query.singleResult();
-            }
-            query = null;
-            return result;
+            return executeCriteriaConstruction(args[0]);
         }
 
         Object result = invokeMetaMethod(getMetaClass(), this, name, args);
@@ -335,6 +322,35 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
         }
 
         throw new MissingMethodException(name, getClass(), args);
+    }
+
+    /**
+     * Evaluates a criteria-construction closure (the body of {@code call}/{@code doCall}/
+     * {@code scroll}) and executes the resulting query. Callers that already know they are
+     * performing a criteria construction call - such as {@link #scroll(Closure)} - should call
+     * this directly rather than re-entering {@link #invokeMethod(String, Object)}: routing back
+     * through the dynamic dispatch there is not just redundant, it is unsafe, since a call with
+     * a mismatched/null argument can resolve back to the very method that made it, recursing
+     * indefinitely.
+     *
+     * @param callable The criteria-construction closure; ignored if not a {@link Closure}
+     * @return The query results, or a single result if {@link #uniqueResult} is set
+     */
+    protected Object executeCriteriaConstruction(Object callable) {
+        ensureQueryIsInitialized();
+        uniqueResult = false;
+
+        invokeClosureNode(callable);
+
+        Object result;
+        if (!uniqueResult) {
+            result = invokeList();
+        }
+        else {
+            result = query.singleResult();
+        }
+        query = null;
+        return result;
     }
 
     private Object invokeMetaMethod(MetaObjectProtocol metaClass, Object target, String name, Object[] args) {

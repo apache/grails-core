@@ -1014,11 +1014,6 @@ class CriteriaBuilderSpec extends Specification {
         def criteria = newBuilder()
 
         when:
-        // Deliberately not scroll(): CriteriaBuilder.scroll(Closure) unconditionally re-enters
-        // invokeMethod with its (possibly null) argument, and Groovy's meta-method lookup keeps
-        // matching a single-null-arg call back to that same method - an infinite recursion this
-        // test must not trip. Two non-null args can never match that one-arg method, so this
-        // safely misses it and exercises the "wrong arg count" branch without the loop.
         criteria.scroll('not-a-closure', 'extra')
 
         then:
@@ -1034,6 +1029,26 @@ class CriteriaBuilderSpec extends Specification {
 
         then:
         thrown(MissingMethodException)
+    }
+
+    void "scroll with no arguments executes the query with no criteria applied, without recursing"() {
+        // Regression test: scroll(Closure) used to call invokeMethod(SCROLL_CALL, [c]) to run its
+        // shared construction logic. A zero-arg call resolves - via Groovy's meta-method lookup,
+        // which is willing to match a missing Closure argument as null - back to that very method
+        // with a null argument, which again called invokeMethod, which again resolved back to
+        // scroll(null): unbounded recursion and a StackOverflowError. scroll() now executes the
+        // shared logic directly instead of re-entering the dynamic dispatch, so a null/absent
+        // closure is just a no-op criteria and the call completes normally.
+        given:
+        def criteria = newBuilder()
+        query.list() >> ['a']
+
+        when:
+        def result = criteria.scroll()
+
+        then:
+        result == ['a']
+        0 * query.add(_)
     }
 
     void "call with a non-closure argument executes the query without evaluating any closure"() {
