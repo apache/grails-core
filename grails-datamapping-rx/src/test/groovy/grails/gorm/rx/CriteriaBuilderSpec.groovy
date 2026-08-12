@@ -63,9 +63,7 @@ class CriteriaBuilderSpec extends Specification {
     }
 
     CriteriaBuilder<CriteriaBuilderTestPerson> newBuilder() {
-        def criteria = new CriteriaBuilder<CriteriaBuilderTestPerson>(CriteriaBuilderTestPerson, queryCreator, mappingContext)
-        criteria.@query = query
-        criteria
+        new CriteriaBuilder<CriteriaBuilderTestPerson>(CriteriaBuilderTestPerson, queryCreator, mappingContext)
     }
 
     void "get(Closure) evaluates the closure, flags a unique result and returns a single observable"() {

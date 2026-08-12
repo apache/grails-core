@@ -58,11 +58,12 @@ class CriteriaBuilderSpec extends Specification {
         createQuery(CriteriaBuilderTestPerson) >> query
         isSchemaless() >> false
     }
+    Session session = Stub(Session) {
+        getMappingContext() >> mappingContext
+    }
 
     CriteriaBuilder<CriteriaBuilderTestPerson> newBuilder() {
-        def criteria = new CriteriaBuilder<CriteriaBuilderTestPerson>(CriteriaBuilderTestPerson, queryCreator, mappingContext)
-        criteria.@query = query
-        criteria
+        new CriteriaBuilder<CriteriaBuilderTestPerson>(CriteriaBuilderTestPerson, session, query)
     }
 
     void "constructor rejects a null target class"() {
@@ -755,6 +756,30 @@ class CriteriaBuilderSpec extends Specification {
         1 * query.add(associationQuery)
     }
 
+    void "invoking an association name whose query does not yield an association query does not add a criterion"() {
+        given:
+        Association association = Stub(Association) {
+            getName() >> 'books'
+            getAssociatedEntity() >> persistentEntity
+        }
+        PersistentEntity ownerEntity = Stub(PersistentEntity) {
+            getIdentity() >> idProperty
+            getPropertyByName('books') >> association
+        }
+        MappingContext ownerMappingContext = Stub(MappingContext) {
+            getPersistentEntity(CriteriaBuilderTestPerson.name) >> ownerEntity
+        }
+        query.createQuery('books') >> null
+        def criteria = new CriteriaBuilder<CriteriaBuilderTestPerson>(CriteriaBuilderTestPerson, queryCreator, ownerMappingContext)
+
+        when:
+        def result = criteria.books {}
+
+        then:
+        result == null
+        0 * query.add(_)
+    }
+
     void "an unresolvable method call throws a MissingMethodException"() {
         given:
         def criteria = newBuilder()
@@ -798,7 +823,6 @@ class CriteriaBuilderSpec extends Specification {
             getPersistentEntity(CriteriaBuilderTestPerson.name) >> entityWithoutNameLookup
         }
         def criteria = new CriteriaBuilder<CriteriaBuilderTestPerson>(CriteriaBuilderTestPerson, queryCreator, idOnlyMappingContext)
-        criteria.@query = query
 
         when:
         def result = criteria.eq('id', 1L)
@@ -818,7 +842,6 @@ class CriteriaBuilderSpec extends Specification {
             getPersistentEntity(CriteriaBuilderTestPerson.name) >> entityWithNoProperties
         }
         def criteria = new CriteriaBuilder<CriteriaBuilderTestPerson>(CriteriaBuilderTestPerson, queryCreator, emptyMappingContext)
-        criteria.@query = query
 
         when:
         criteria.eq('missing', 1L)
@@ -889,7 +912,6 @@ class CriteriaBuilderSpec extends Specification {
             isSchemaless() >> true
         }
         def criteria = new CriteriaBuilder<CriteriaBuilderTestPerson>(CriteriaBuilderTestPerson, schemalessQueryCreator, emptyMappingContext)
-        criteria.@query = query
 
         when:
         def result = criteria.eq('missing', 1L)
@@ -985,6 +1007,104 @@ class CriteriaBuilderSpec extends Specification {
         then:
         result == ['a']
         1 * query.add(_)
+    }
+
+    void "scroll with more than one argument is not treated as a criteria construction call"() {
+        given:
+        def criteria = newBuilder()
+
+        when:
+        // Deliberately not scroll(): CriteriaBuilder.scroll(Closure) unconditionally re-enters
+        // invokeMethod with its (possibly null) argument, and Groovy's meta-method lookup keeps
+        // matching a single-null-arg call back to that same method - an infinite recursion this
+        // test must not trip. Two non-null args can never match that one-arg method, so this
+        // safely misses it and exercises the "wrong arg count" branch without the loop.
+        criteria.scroll('not-a-closure', 'extra')
+
+        then:
+        thrown(MissingMethodException)
+    }
+
+    void "scroll with a non-closure argument is not treated as a criteria construction call"() {
+        given:
+        def criteria = newBuilder()
+
+        when:
+        criteria.scroll('not-a-closure')
+
+        then:
+        thrown(MissingMethodException)
+    }
+
+    void "call with a non-closure argument executes the query without evaluating any closure"() {
+        given:
+        def criteria = newBuilder()
+        query.list() >> ['a']
+
+        when:
+        def result = criteria.call('not-a-closure')
+
+        then:
+        result == ['a']
+        0 * query.add(_)
+    }
+
+    void "and tolerates a null closure and still adds an empty conjunction"() {
+        given:
+        def criteria = newBuilder()
+
+        when:
+        def result = criteria.and(null)
+
+        then:
+        result.is(criteria)
+        1 * query.add(_)
+    }
+
+    void "invoking an association whose associated entity cannot be resolved still evaluates the nested closure"() {
+        given:
+        Association association = Stub(Association) {
+            getName() >> 'books'
+            getAssociatedEntity() >> null
+        }
+        PersistentEntity ownerEntity = Stub(PersistentEntity) {
+            getIdentity() >> idProperty
+            getPropertyByName('books') >> association
+        }
+        MappingContext ownerMappingContext = Stub(MappingContext) {
+            getPersistentEntity(CriteriaBuilderTestPerson.name) >> ownerEntity
+        }
+        AssociationQuery associationQuery = Mock(AssociationQuery)
+        query.createQuery('books') >> associationQuery
+        def criteria = new CriteriaBuilder<CriteriaBuilderTestPerson>(CriteriaBuilderTestPerson, queryCreator, ownerMappingContext)
+        boolean invoked = false
+
+        when:
+        criteria.books {
+            invoked = true
+            eq('title', 'a')
+        }
+
+        then:
+        invoked
+        noExceptionThrown()
+    }
+
+    void "ensureQueryIsInitialized resolves the query meta class only once across multiple criteria construction calls"() {
+        given:
+        // Each "call" invocation resets the query to null afterwards (a fresh query per call), so
+        // this must construct via queryCreator (stubbed to always hand back the same query mock)
+        // rather than newBuilder()'s pre-set query, which has no way to be recreated a second time.
+        def criteria = new CriteriaBuilder<CriteriaBuilderTestPerson>(CriteriaBuilderTestPerson, queryCreator, mappingContext)
+        query.list() >> ['a']
+
+        when:
+        criteria.call { eq('name', 'a') }
+        criteria.call { eq('name', 'b') }
+
+        then:
+        noExceptionThrown()
+        2 * query.add(_)
     }
 }
 
