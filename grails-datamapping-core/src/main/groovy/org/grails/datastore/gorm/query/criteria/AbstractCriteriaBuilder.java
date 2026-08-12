@@ -119,6 +119,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
         return this;
     }
 
+    @Override
     public Query.ProjectionList id() {
         if (projectionList != null) {
             projectionList.id();
@@ -131,6 +132,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * @return The project list
      */
 
+    @Override
     public Query.ProjectionList count() {
         if (projectionList != null) {
             projectionList.count();
@@ -144,6 +146,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * @param property The name of the property
      * @return The projection list
      */
+    @Override
     public ProjectionList countDistinct(String property) {
         if (projectionList != null) {
             projectionList.countDistinct(property);
@@ -171,6 +174,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      *
      * @return The projection list
      */
+    @Override
     public ProjectionList distinct() {
         if (projectionList != null) {
             projectionList.distinct();
@@ -184,6 +188,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * @param property The name of the property
      * @return The projection list
      */
+    @Override
     public ProjectionList distinct(String property) {
         if (projectionList != null) {
             projectionList.distinct(property);
@@ -195,6 +200,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * Count the number of records returned
      * @return The project list
      */
+    @Override
     public ProjectionList rowCount() {
         return count();
     }
@@ -204,6 +210,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * @param name The name of the property
      * @return The projection list
      */
+    @Override
     public ProjectionList property(String name) {
         if (projectionList != null) {
             projectionList.property(name);
@@ -217,6 +224,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * @param name The name of the property
      * @return The projection list
      */
+    @Override
     public ProjectionList sum(String name) {
         if (projectionList != null) {
             projectionList.sum(name);
@@ -230,6 +238,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * @param name The name of the property
      * @return The projection list
      */
+    @Override
     public ProjectionList min(String name) {
         if (projectionList != null) {
             projectionList.min(name);
@@ -243,6 +252,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * @param name The name of the property
      * @return The PropertyProjection instance
      */
+    @Override
     public ProjectionList max(String name) {
         if (projectionList != null) {
             projectionList.max(name);
@@ -256,6 +266,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * @param name The name of the property
      * @return The PropertyProjection instance
      */
+    @Override
     public ProjectionList avg(String name) {
         if (projectionList != null) {
             projectionList.avg(name);
@@ -304,7 +315,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
                 PersistentEntity previousEntity = persistentEntity;
                 List<Query.Junction> previousLogicalExpressionStack = logicalExpressionStack;
 
-                Query associationQuery = null;
+                Query associationQuery;
                 try {
                     associationQuery = query.createQuery(property.getName());
                     if (associationQuery instanceof AssociationQuery) {
@@ -361,6 +372,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
         return this;
     }
 
+    @Override
     public Criteria idEquals(Object value) {
         addToCriteria(Restrictions.idEq(value));
         return this;
@@ -378,24 +390,28 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
         return this;
     }
 
+    @Override
     public Criteria isEmpty(String propertyName) {
         validatePropertyName(propertyName, "isEmpty");
         addToCriteria(Restrictions.isEmpty(propertyName));
         return this;
     }
 
+    @Override
     public Criteria isNotEmpty(String propertyName) {
         validatePropertyName(propertyName, "isNotEmpty");
         addToCriteria(Restrictions.isNotEmpty(propertyName));
         return this;
     }
 
+    @Override
     public Criteria isNull(String propertyName) {
         validatePropertyName(propertyName, "isNull");
         addToCriteria(Restrictions.isNull(propertyName));
         return this;
     }
 
+    @Override
     public Criteria isNotNull(String propertyName) {
         validatePropertyName(propertyName, "isNotNull");
         addToCriteria(Restrictions.isNotNull(propertyName));
@@ -410,6 +426,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      *
      * @return A Criterion instance
      */
+    @Override
     public Criteria eq(String propertyName, Object propertyValue) {
         validatePropertyName(propertyName, "eq");
         addToCriteria(Restrictions.eq(propertyName, propertyValue));
@@ -659,6 +676,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      *
      * @return A Criterion instance
      */
+    @Override
     public Criteria idEq(Object propertyValue) {
         addToCriteria(Restrictions.idEq(propertyValue));
         return this;
@@ -672,6 +690,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      *
      * @return A Criterion instance
      */
+    @Override
     public Criteria ne(String propertyName, Object propertyValue) {
         validatePropertyName(propertyName, "ne");
         addToCriteria(Restrictions.ne(propertyName, propertyValue));
@@ -687,6 +706,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * @param finish The end of the range
      * @return A Criterion instance
      */
+    @Override
     public Criteria between(String propertyName, Object start, Object finish) {
         validatePropertyName(propertyName, "between");
         addToCriteria(Restrictions.between(propertyName, start, finish));
@@ -699,6 +719,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * @param value The value
      * @return The Criterion instance
      */
+    @Override
     public Criteria gte(String property, Object value) {
         validatePropertyName(property, "gte");
         addToCriteria(Restrictions.gte(property, value));
@@ -711,6 +732,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * @param value The value
      * @return The Criterion instance
      */
+    @Override
     public Criteria ge(String property, Object value) {
         gte(property, value);
         return this;
@@ -722,6 +744,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * @param value The value
      * @return The Criterion instance
      */
+    @Override
     public Criteria gt(String property, Object value) {
         validatePropertyName(property, "gt");
         addToCriteria(Restrictions.gt(property, value));
@@ -734,6 +757,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * @param value The value
      * @return The Criterion instance
      */
+    @Override
     public Criteria lte(String property, Object value) {
         validatePropertyName(property, "lte");
         addToCriteria(Restrictions.lte(property, value));
@@ -746,6 +770,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * @param value The value
      * @return The Criterion instance
      */
+    @Override
     public Criteria le(String property, Object value) {
         lte(property, value);
         return this;
@@ -757,6 +782,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * @param value The value
      * @return The Criterion instance
      */
+    @Override
     public Criteria lt(String property, Object value) {
         validatePropertyName(property, "lt");
         addToCriteria(Restrictions.lt(property, value));
@@ -771,6 +797,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      *
      * @return A Criterion instance
      */
+    @Override
     public Criteria like(String propertyName, Object propertyValue) {
         validatePropertyName(propertyName, "like");
         Assert.notNull(propertyValue, "Cannot use like expression with null value");
@@ -786,6 +813,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      *
      * @return A Criterion instance
      */
+    @Override
     public Criteria ilike(String propertyName, Object propertyValue) {
         validatePropertyName(propertyName, "ilike");
         Assert.notNull(propertyValue, "Cannot use ilike expression with null value");
@@ -801,6 +829,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      *
      * @return A Criterion instance
      */
+    @Override
     public Criteria rlike(String propertyName, Object propertyValue) {
         validatePropertyName(propertyName, "like");
         Assert.notNull(propertyValue, "Cannot use like expression with null value");
@@ -816,6 +845,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      *
      * @return A Criterion instance
      */
+    @Override
     public Criteria in(String propertyName, Collection values) {
         validatePropertyName(propertyName, "in");
         Assert.notNull(values, "Cannot use in expression with null values");
@@ -831,6 +861,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      *
      * @return A Criterion instance
      */
+    @Override
     public Criteria inList(String propertyName, Collection values) {
         in(propertyName, values);
         return this;
@@ -844,6 +875,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      *
      * @return A Criterion instance
      */
+    @Override
     public Criteria inList(String propertyName, Object[] values) {
         return in(propertyName, Arrays.asList(values));
     }
@@ -856,10 +888,12 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      *
      * @return A Criterion instance
      */
+    @Override
     public Criteria in(String propertyName, Object[] values) {
         return in(propertyName, Arrays.asList(values));
     }
 
+    @Override
     public Criteria sizeEq(String propertyName, int size) {
         validatePropertyName(propertyName, "sizeEq");
         addToCriteria(Restrictions.sizeEq(propertyName, size));
@@ -867,30 +901,35 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
 
     }
 
+    @Override
     public Criteria sizeGt(String propertyName, int size) {
         validatePropertyName(propertyName, "sizeGt");
         addToCriteria(Restrictions.sizeGt(propertyName, size));
         return this;
     }
 
+    @Override
     public Criteria sizeGe(String propertyName, int size) {
         validatePropertyName(propertyName, "sizeGe");
         addToCriteria(Restrictions.sizeGe(propertyName, size));
         return this;
     }
 
+    @Override
     public Criteria sizeLe(String propertyName, int size) {
         validatePropertyName(propertyName, "sizeLe");
         addToCriteria(Restrictions.sizeLe(propertyName, size));
         return this;
     }
 
+    @Override
     public Criteria sizeLt(String propertyName, int size) {
         validatePropertyName(propertyName, "sizeLt");
         addToCriteria(Restrictions.sizeLt(propertyName, size));
         return this;
     }
 
+    @Override
     public Criteria sizeNe(String propertyName, int size) {
         validatePropertyName(propertyName, "sizeNe");
         addToCriteria(Restrictions.sizeNe(propertyName, size));
@@ -904,6 +943,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * @param otherPropertyName The other property
      * @return This criteria
      */
+    @Override
     public Criteria eqProperty(String propertyName, String otherPropertyName) {
         validatePropertyName(propertyName, "eqProperty");
         validatePropertyName(otherPropertyName, "eqProperty");
@@ -918,6 +958,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * @param otherPropertyName The other property
      * @return This criteria
      */
+    @Override
     public Criteria neProperty(String propertyName, String otherPropertyName) {
         validatePropertyName(propertyName, "neProperty");
         validatePropertyName(otherPropertyName, "neProperty");
@@ -933,6 +974,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * @param otherPropertyName The other property
      * @return This criteria
      */
+    @Override
     public Criteria gtProperty(String propertyName, String otherPropertyName) {
         validatePropertyName(propertyName, "gtProperty");
         validatePropertyName(otherPropertyName, "gtProperty");
@@ -948,6 +990,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * @param otherPropertyName The other property
      * @return This criteria
      */
+    @Override
     public Criteria geProperty(String propertyName, String otherPropertyName) {
         validatePropertyName(propertyName, "geProperty");
         validatePropertyName(otherPropertyName, "geProperty");
@@ -962,6 +1005,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * @param otherPropertyName The other property
      * @return This criteria
      */
+    @Override
     public Criteria ltProperty(String propertyName, String otherPropertyName) {
         validatePropertyName(propertyName, "ltProperty");
         validatePropertyName(otherPropertyName, "ltProperty");
@@ -976,6 +1020,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * @param otherPropertyName The other property
      * @return This criteria
      */
+    @Override
     public Criteria leProperty(String propertyName, String otherPropertyName) {
         validatePropertyName(propertyName, "leProperty");
         validatePropertyName(otherPropertyName, "leProperty");
@@ -989,6 +1034,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * @param propertyName The property name to order by
      * @return A Order instance
      */
+    @Override
     public Criteria order(String propertyName) {
         Query.Order o = Query.Order.asc(propertyName);
         if (paginationEnabledList) {
@@ -1025,9 +1071,10 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      *
      * @return A Order instance
      */
+    @Override
     public Criteria order(String propertyName, String direction) {
         Query.Order o;
-        if (direction.equals(CriteriaBuilder.ORDER_DESCENDING)) {
+        if (CriteriaBuilder.ORDER_DESCENDING.equals(direction)) {
             o = Query.Order.desc(propertyName);
         }
         else {
@@ -1069,9 +1116,9 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
     }
 
     private boolean isCriteriaConstructionMethod(String name, Object[] args) {
-        return (name.equals(CriteriaBuilder.ROOT_CALL) ||
-                name.equals(CriteriaBuilder.ROOT_DO_CALL) ||
-                name.equals(CriteriaBuilder.SCROLL_CALL) && args.length == 1 && args[0] instanceof Closure);
+        return (CriteriaBuilder.ROOT_CALL.equals(name) ||
+                CriteriaBuilder.ROOT_DO_CALL.equals(name) ||
+                CriteriaBuilder.SCROLL_CALL.equals(name) && args.length == 1 && args[0] instanceof Closure);
     }
 
     protected void invokeClosureNode(Object args) {
