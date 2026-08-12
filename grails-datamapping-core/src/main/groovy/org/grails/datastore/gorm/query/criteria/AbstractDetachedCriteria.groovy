@@ -116,7 +116,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      */
     Criteria createAlias(String associationPath, String alias) {
         initialiseIfNecessary(targetClass)
-        PersistentProperty prop
+        PersistentProperty prop = null
         if (associationPath.contains('.')) {
             def tokens = associationPath.split(/\./)
             def entity = this.persistentEntity
@@ -203,7 +203,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
         try {
             dynamicFinders = targetClass.gormDynamicFinders
             persistentEntity = targetClass.gormPersistentEntity
-        } catch (MissingPropertyException mpe) {
+        } catch (MissingPropertyException ignored) {
             throw new IllegalArgumentException("Class [$targetClass.name] is not a domain class")
         }
     }
@@ -216,7 +216,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
             }
         }
         if (junctions)  {
-            junctions[-1].add(criterion)
+            junctions.getLast().add(criterion)
         }
         else {
             criteria << criterion
@@ -871,21 +871,21 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     @Override
     @CompileStatic
     AbstractDetachedCriteria<T> clone() {
-        AbstractDetachedCriteria criteria = newInstance()
-        criteria.@criteria = new ArrayList(this.criteria)
+        AbstractDetachedCriteria cloned = newInstance()
+        cloned.@criteria = new ArrayList(this.criteria)
         final projections = new ArrayList(this.projections)
-        criteria.@projections = projections
-        criteria.projectionList = new DetachedProjections(projections)
-        criteria.@orders = new ArrayList(this.orders)
-        criteria.defaultMax = defaultMax
-        criteria.defaultOffset = defaultOffset
-        criteria.@fetchStrategies = new HashMap<>(this.fetchStrategies)
-        criteria.@joinTypes = new HashMap<>(this.joinTypes)
-        criteria.@junctions = new ArrayList(this.junctions)
-        criteria.@connectionName = this.connectionName
-        criteria.@lazyQuery = this.lazyQuery
-        criteria.@associationCriteriaMap = new LinkedHashMap<>(this.associationCriteriaMap)
-        return criteria
+        cloned.@projections = projections
+        cloned.projectionList = new DetachedProjections(projections)
+        cloned.@orders = new ArrayList(this.orders)
+        cloned.defaultMax = defaultMax
+        cloned.defaultOffset = defaultOffset
+        cloned.@fetchStrategies = new HashMap<>(this.fetchStrategies)
+        cloned.@joinTypes = new HashMap<>(this.joinTypes)
+        cloned.@junctions = new ArrayList(this.junctions)
+        cloned.@connectionName = this.connectionName
+        cloned.@lazyQuery = this.lazyQuery
+        cloned.@associationCriteriaMap = new LinkedHashMap<>(this.associationCriteriaMap)
+        return cloned
     }
 
     protected abstract AbstractDetachedCriteria newInstance()
@@ -1057,7 +1057,8 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
             throw new MissingMethodException(methodName, AbstractDetachedCriteria, args)
         }
 
-        def alias = args[0] instanceof CharSequence ? args[0].toString() : null
+        Object[] argsArray = (Object[]) args
+        def alias = argsArray[0] instanceof CharSequence ? argsArray[0].toString() : null
 
         // Explicit null checks: Groovy truth on a DetachedCriteria invokes asBoolean(),
         // which executes the criteria as a query - a spurious query for a repeated
@@ -1073,7 +1074,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
         associationCriteriaMap[methodName] = associationCriteria
         add(associationCriteria)
 
-        def lastArg = args[-1]
+        def lastArg = argsArray[-1]
         if (lastArg instanceof Closure) {
             Closure callable = lastArg
             callable.resolveStrategy = Closure.DELEGATE_FIRST
