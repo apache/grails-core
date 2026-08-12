@@ -19,6 +19,7 @@
 package org.grails.gorm.rx.api
 
 import grails.gorm.rx.DetachedCriteria
+import jakarta.persistence.criteria.JoinType
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
@@ -261,6 +262,19 @@ class DetachedCriteriaQuerySpec extends Specification {
         then:
         1 * mockQuery.join('books')
         1 * mockQuery.select('author')
+    }
+
+    void "prepareQuery passes a custom JoinType through to the query"() {
+        given:
+        def criteria = new DetachedCriteria(QueryTestEntity)
+        criteria.join('books', JoinType.LEFT)
+
+        when:
+        criteria.findAll()
+
+        then:
+        1 * mockQuery.join('books', JoinType.LEFT)
+        0 * mockQuery.join('books')
     }
 
     void "prepareQuery merges an additional criteria closure"() {
