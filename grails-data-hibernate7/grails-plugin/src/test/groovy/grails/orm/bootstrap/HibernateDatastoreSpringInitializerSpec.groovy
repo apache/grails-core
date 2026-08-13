@@ -113,6 +113,44 @@ class HibernateDatastoreSpringInitializerSpec extends Specification{
         datastoreInitializer.dataSources == ['primary'] as Set<String>
     }
 
+    void "Test applyEnableReloadFallback injects a fallback when customized and not already configured"() {
+        given:
+        def datastoreInitializer = new HibernateDatastoreSpringInitializer([:], Person)
+        datastoreInitializer.enableReload = true
+
+        when:
+        datastoreInitializer.applyEnableReloadFallback()
+
+        then:
+        datastoreInitializer.configuration.getProperty('enableReload', Boolean) == true
+    }
+
+    void "Test applyEnableReloadFallback does not override an already-configured value"() {
+        given:
+        def datastoreInitializer = new HibernateDatastoreSpringInitializer(['enableReload': 'false'], Person)
+        datastoreInitializer.enableReload = true
+
+        when:
+        datastoreInitializer.applyEnableReloadFallback()
+
+        then:
+        datastoreInitializer.configuration.getProperty('enableReload', Boolean) == false
+    }
+
+    void "Test enableReload is honored end-to-end as a fallback on the default connection's settings"() {
+        given: "an initializer with enableReload customized and no explicit config for it"
+        def datastoreInitializer = new HibernateDatastoreSpringInitializer(
+                ['dataSource.url': 'jdbc:h2:mem:enableReloadFallback;LOCK_TIMEOUT=10000'], Person)
+        datastoreInitializer.enableReload = true
+
+        when: "the application is configured"
+        applicationContext = (ConfigurableApplicationContext) datastoreInitializer.configure()
+        def settings = applicationContext.getBean(HibernateDatastore).connectionSources.defaultConnectionSource.settings
+
+        then: "the fallback reaches the datastore's own connection source settings"
+        settings.enableReload
+    }
+
     void "Test the Map/Collection<Class> constructor bootstraps GORM"() {
         given: "An initializer built from a Collection of persistent classes"
         def datastoreInitializer = new HibernateDatastoreSpringInitializer(

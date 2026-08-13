@@ -23,6 +23,7 @@ import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.support.GenericApplicationContext
 import org.springframework.core.env.ConfigurableEnvironment
+import org.springframework.core.env.MapPropertySource
 import org.springframework.core.env.PropertyResolver
 import org.springframework.transaction.PlatformTransactionManager
 
@@ -54,7 +55,6 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
     String defaultDataSourceBeanName = ConnectionSource.DEFAULT
     Set<String> dataSources = [defaultDataSourceBeanName] as Set<String>
     boolean enableReload = false
-    boolean grailsPlugin = false
 
     HibernateDatastoreSpringInitializer(PropertyResolver configuration, Collection<Class> persistentClasses) {
         super(configuration, persistentClasses)
@@ -128,7 +128,27 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
         return applicationContext
     }
 
+    /**
+     * Applies {@link #enableReload} as an {@code enableReload} fallback on {@link #configuration}
+     * when it was customized away from its default and the configuration does not already specify
+     * it explicitly.
+     */
+    protected void applyEnableReloadFallback() {
+        if (!enableReload || configuration.containsProperty('enableReload')) {
+            return
+        }
+        if (configuration instanceof ConfigurableEnvironment) {
+            ((ConfigurableEnvironment) configuration).propertySources.addFirst(
+                    new MapPropertySource('hibernateDatastoreSpringInitializer.enableReload', [enableReload: true])
+            )
+        }
+        else if (configuration instanceof Map) {
+            ((Map) configuration).put('enableReload', true)
+        }
+    }
+
     Closure getBeanDefinitions(BeanDefinitionRegistry beanDefinitionRegistry) {
+        applyEnableReloadFallback()
         ApplicationEventPublisher eventPublisher = super.findEventPublisher(beanDefinitionRegistry)
         Closure beanDefinitions = {
             def common = getCommonConfiguration(beanDefinitionRegistry, 'hibernate')
