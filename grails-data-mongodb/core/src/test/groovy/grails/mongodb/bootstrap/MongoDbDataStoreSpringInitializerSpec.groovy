@@ -61,6 +61,45 @@ class MongoDbDataStoreSpringInitializerSpec extends AutoStartedMongoSpec {
         mongoDatastore.destroy()
     }
 
+    void "Test setDatabaseName is honored as a fallback when no explicit grails.mongodb.databaseName is configured"() {
+        given: "an initializer with a customized database name and no explicit database name config"
+        def initializer = makeInitializer([
+                (MongoSettings.SETTING_HOST): mongoHost,
+                (MongoSettings.SETTING_PORT): mongoPort,
+        ], Person)
+        initializer.setDatabaseName('fallbackDb')
+
+        when: "the initializer is configured"
+        def applicationContext = initializer.configure()
+        def mongoDatastore = applicationContext.getBean(MongoDatastore)
+
+        then: "the fallback database name is used"
+        mongoDatastore.getDefaultDatabase() == 'fallbackDb'
+
+        cleanup:
+        mongoDatastore.destroy()
+    }
+
+    void "Test setDatabaseName is ignored when grails.mongodb.databaseName is explicitly configured"() {
+        given: "an initializer with both a customized database name and an explicit database name config"
+        def initializer = makeInitializer([
+                (MongoSettings.SETTING_DATABASE_NAME): 'explicit',
+                (MongoSettings.SETTING_HOST)         : mongoHost,
+                (MongoSettings.SETTING_PORT)         : mongoPort,
+        ], Person)
+        initializer.setDatabaseName('fallbackDb')
+
+        when: "the initializer is configured"
+        def applicationContext = initializer.configure()
+        def mongoDatastore = applicationContext.getBean(MongoDatastore)
+
+        then: "the explicit configuration wins over the fallback"
+        mongoDatastore.getDefaultDatabase() == 'explicit'
+
+        cleanup:
+        mongoDatastore.destroy()
+    }
+
     void "Test that MongoDbDatastoreSpringInitializer can setup GORM for MongoDB from scratch"() {
         when: "the initializer used to setup GORM for MongoDB"
         def initializer = makeInitializer([

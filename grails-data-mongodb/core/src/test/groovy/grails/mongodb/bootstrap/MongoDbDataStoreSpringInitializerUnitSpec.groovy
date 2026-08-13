@@ -21,6 +21,8 @@ package grails.mongodb.bootstrap
 import com.mongodb.MongoClientSettings
 import com.mongodb.client.MongoClient
 import grails.mongodb.MongoEntity
+import org.grails.datastore.mapping.mongo.config.MongoSettings
+import org.springframework.core.env.PropertyResolver
 import spock.lang.Specification
 
 /**
@@ -108,6 +110,126 @@ class MongoDbDataStoreSpringInitializerUnitSpec extends Specification {
 
         then:
         initializer.mongo.is(client)
+    }
+
+    void 'applyDatabaseNameFallback does nothing when the database name was never customized'() {
+        given:
+        def initializer = new MongoDbDataStoreSpringInitializer()
+
+        expect:
+        !initializer.configuration.containsProperty(MongoSettings.SETTING_DATABASE_NAME)
+
+        when:
+        initializer.applyDatabaseNameFallback()
+
+        then:
+        !initializer.configuration.containsProperty(MongoSettings.SETTING_DATABASE_NAME)
+    }
+
+    void 'applyDatabaseNameFallback injects the customized database name into a ConfigurableEnvironment when not already set'() {
+        given:
+        def initializer = new MongoDbDataStoreSpringInitializer()
+        initializer.setDatabaseName('customDb')
+
+        when:
+        initializer.applyDatabaseNameFallback()
+
+        then:
+        initializer.configuration.getProperty(MongoSettings.SETTING_DATABASE_NAME) == 'customDb'
+    }
+
+    void 'applyDatabaseNameFallback does not override an already-configured database name on a ConfigurableEnvironment'() {
+        given:
+        def initializer = new MongoDbDataStoreSpringInitializer()
+        initializer.configuration.propertySources.addFirst(
+                new org.springframework.core.env.MapPropertySource('test', [(MongoSettings.SETTING_DATABASE_NAME): 'explicit']))
+        initializer.setDatabaseName('customDb')
+
+        when:
+        initializer.applyDatabaseNameFallback()
+
+        then:
+        initializer.configuration.getProperty(MongoSettings.SETTING_DATABASE_NAME) == 'explicit'
+    }
+
+    void 'applyDatabaseNameFallback injects the customized database name into a Map-based PropertyResolver when not already set'() {
+        given:
+        def initializer = new MongoDbDataStoreSpringInitializer()
+        def config = new MapPropertyResolver()
+        initializer.configuration = config
+        initializer.setDatabaseName('customDb')
+
+        when:
+        initializer.applyDatabaseNameFallback()
+
+        then:
+        config.get(MongoSettings.SETTING_DATABASE_NAME) == 'customDb'
+    }
+
+    void 'applyDatabaseNameFallback does not override an already-configured database name on a Map-based PropertyResolver'() {
+        given:
+        def initializer = new MongoDbDataStoreSpringInitializer()
+        def config = new MapPropertyResolver((MongoSettings.SETTING_DATABASE_NAME): 'explicit')
+        initializer.configuration = config
+        initializer.setDatabaseName('customDb')
+
+        when:
+        initializer.applyDatabaseNameFallback()
+
+        then:
+        config.get(MongoSettings.SETTING_DATABASE_NAME) == 'explicit'
+    }
+}
+
+/**
+ * Minimal {@link PropertyResolver} backed directly by a {@link Map}, standing in for
+ * Grails' own {@code Config} type (which is both a {@code Map} and a {@code PropertyResolver})
+ * without requiring a dependency on grails-core, which this module deliberately excludes.
+ */
+class MapPropertyResolver extends LinkedHashMap<String, Object> implements PropertyResolver {
+
+    boolean containsProperty(String key) {
+        containsKey(key)
+    }
+
+    @Override
+    String getProperty(String key) {
+        get(key) as String
+    }
+
+    @Override
+    String getProperty(String key, String defaultValue) {
+        containsKey(key) ? get(key) as String : defaultValue
+    }
+
+    @Override
+    def <T> T getProperty(String key, Class<T> targetType) {
+        get(key) as T
+    }
+
+    @Override
+    def <T> T getProperty(String key, Class<T> targetType, T defaultValue) {
+        containsKey(key) ? get(key) as T : defaultValue
+    }
+
+    @Override
+    String getRequiredProperty(String key) {
+        get(key) as String
+    }
+
+    @Override
+    def <T> T getRequiredProperty(String key, Class<T> targetType) {
+        get(key) as T
+    }
+
+    @Override
+    String resolvePlaceholders(String text) {
+        text
+    }
+
+    @Override
+    String resolveRequiredPlaceholders(String text) {
+        text
     }
 }
 
