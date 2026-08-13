@@ -47,7 +47,6 @@ class AbstractDatastoreInitializerSpec extends Specification {
         initializer.persistentClasses == []
         initializer.configuration instanceof StandardEnvironment
         initializer.originalConfiguration == null
-        initializer.registerApplicationIfNotPresent
     }
 
     void 'a package-name constructor records the given packages'() {

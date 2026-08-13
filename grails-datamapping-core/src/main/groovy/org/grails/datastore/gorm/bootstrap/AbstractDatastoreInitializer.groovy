@@ -77,7 +77,6 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
     Collection<Class> persistentClasses = []
     Collection<String> packages = []
     PropertyResolver configuration = new StandardEnvironment()
-    boolean registerApplicationIfNotPresent = true
     Object originalConfiguration
 
     protected ClassLoader classLoader = Thread.currentThread().contextClassLoader
