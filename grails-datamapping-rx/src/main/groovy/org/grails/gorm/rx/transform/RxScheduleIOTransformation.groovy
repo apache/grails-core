@@ -25,6 +25,7 @@ import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.MethodNode
+import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.VariableScope
 import org.codehaus.groovy.ast.expr.ArgumentListExpression
 import org.codehaus.groovy.ast.expr.CastExpression
@@ -48,6 +49,7 @@ import static org.grails.datastore.mapping.reflect.AstUtils.ZERO_PARAMETERS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.castX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.classX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
 
 /**
  * A transformation that will convert a blocking GORM operation into an Observable that runs on the RxJava {@link rx.schedulers.Schedulers#io()} scheduler
@@ -164,6 +166,16 @@ class RxScheduleIOTransformation extends AbstractMethodDecoratingTransformation 
         else {
             return makeDelegatingClosureCall(classX(RxServiceSupport), 'create', args, ZERO_PARAMETERS, originalMethodCallExpr, variableScope)
         }
+    }
+
+    @Override
+    protected Statement createDelegingMethodBody(Parameter[] parameters, MethodCallExpression originalMethodCall) {
+        // RxServiceSupport.create(Callable<T>) accepts a callable that returns either a single T or an
+        // Iterable<T> to flatten, a distinction it resolves at runtime via instanceof, not through T. Returning
+        // the call result as-is here would let the static compiler infer T from the closure's surrounding
+        // context (the wrapped return type, e.g. Book) and inject a narrowing cast that fails whenever the
+        // delegate actually returns an Iterable<Book> to flatten - so erase the static type to Object instead.
+        return returnS(castX(ClassHelper.OBJECT_TYPE, originalMethodCall))
     }
 
     @Override
