@@ -24,7 +24,6 @@ import org.grails.datastore.gorm.services.implementers.DeleteImplementer
 import org.grails.datastore.mapping.simple.SimpleMapDatastore
 import rx.Single
 import spock.lang.AutoCleanup
-import spock.lang.PendingFeature
 import spock.lang.Specification
 
 class RxServiceImplSpec extends Specification {
@@ -150,7 +149,6 @@ class RxServiceImplSpec extends Specification {
 
     }
 
-    @PendingFeature(reason="groovy.lang.MissingMethodException: No signature of method: grails.gorm.services.BookServiceImplementation.findBookAuthor() is applicable for argument types: (String) values: [The Stand] -- BookService does not declare findBookAuthor (see the commented-out interface method below); unrelated to the RX cast bugs.")
     void "test simple projection"() {
 
         given:
@@ -176,8 +174,7 @@ class Book {
 @Service(value = Book)
 interface BookService {
 
-//    Cannot implement method for argument [title]. No property exists on domain class [java.lang.String]
-    //Single<String> findBookAuthor(String title)
+    Single<String> findBookAuthor(String title)
 
 //    No implementations possible for method 'rx.Observable updateBook(java.lang.String, java.lang.String)'. Please use an abstract class instead and provide an implementation.
     //@Query("update ${Book b} set $b.title = $title where $b.title = $oldTitle")
