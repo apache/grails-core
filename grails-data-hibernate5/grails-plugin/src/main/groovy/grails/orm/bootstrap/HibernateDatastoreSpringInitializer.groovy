@@ -97,7 +97,7 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
             }
             Map dataSource = (Map) config.getProperty(DEFAULT_DATA_SOURCE_NAME, Map, Collections.emptyMap())
             if (dataSource != null && !dataSource.isEmpty()) {
-                dataSourceNames.add(ConnectionSource.DEFAULT)
+                dataSourceNames.add(defaultDataSourceBeanName)
             }
         }
         this.dataSources = dataSourceNames

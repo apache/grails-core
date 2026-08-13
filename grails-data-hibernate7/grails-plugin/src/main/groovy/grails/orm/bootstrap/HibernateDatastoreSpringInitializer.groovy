@@ -101,7 +101,7 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
             }
             Map dataSource = (Map) config.getProperty(DEFAULT_DATA_SOURCE_NAME, Map, Collections.emptyMap())
             if (dataSource != null && !dataSource.isEmpty()) {
-                dataSourceNames.add(ConnectionSource.DEFAULT)
+                dataSourceNames.add(defaultDataSourceBeanName)
             }
         }
         this.dataSources = dataSourceNames
@@ -182,7 +182,7 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
             getBeanDefinition('transactionManager').beanClass = PlatformTransactionManager
 
             for (String dataSourceName in dataSources) {
-                if (dataSourceName == ConnectionSource.DEFAULT) continue
+                if (dataSourceName == defaultDataSourceBeanName) continue
 
                 "dataSource_$dataSourceName"(hibernateDatastore: 'getDataSource', dataSourceName)
                 "sessionFactory_$dataSourceName"(hibernateDatastore: 'getSessionFactory', dataSourceName)

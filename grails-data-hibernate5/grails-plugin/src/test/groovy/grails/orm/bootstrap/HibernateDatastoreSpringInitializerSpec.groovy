@@ -103,6 +103,18 @@ class HibernateDatastoreSpringInitializerSpec extends Specification{
 
     }
 
+    void "Test configureDataSources uses the customized default data source bean name consistently"() {
+        given: "an initializer with a customized default data source bean name"
+        def datastoreInitializer = new HibernateDatastoreSpringInitializer([:], Person)
+        datastoreInitializer.defaultDataSourceBeanName = 'primary'
+
+        when: "data sources are configured from a resolver with only the default data source present"
+        datastoreInitializer.configureDataSources(DatastoreUtils.createPropertyResolver(['dataSource.url': 'jdbc:h2:mem:customDefaultDsName;LOCK_TIMEOUT=10000']))
+
+        then: "the default entry is recorded under the custom name, not the literal ConnectionSource.DEFAULT"
+        datastoreInitializer.dataSources == ['primary'] as Set<String>
+    }
+
     void "Test the Map/Collection<Class> constructor bootstraps GORM"() {
         given: "An initializer built from a Collection of persistent classes"
         def datastoreInitializer = new HibernateDatastoreSpringInitializer(
