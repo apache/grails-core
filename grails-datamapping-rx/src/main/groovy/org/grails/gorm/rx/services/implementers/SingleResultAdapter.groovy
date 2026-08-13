@@ -109,8 +109,6 @@ class SingleResultAdapter implements ServiceImplementer, Ordered, AdaptedImpleme
         if (!isRxEntity(returnType)) {
             def ann = addAnnotationOrGetExisting(newMethodNode, RxSchedule)
             ann.setMember(RxScheduleIOTransformation.ANN_SINGLE_RESULT, ConstantExpression.TRUE)
-            newMethodNode.addAnnotation(ann)
-
         }
     }
 

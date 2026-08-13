@@ -50,14 +50,13 @@ class IdentifierObservableProxyMethodHandler extends AbstractObservableProxyMeth
 
     protected Observable resolveObservable() {
         Observable observable = ((RxDatastoreClientImplementor) client).get(type, proxyKey, queryState);
-        observable.map(new Func1() {
+        return observable.map(new Func1() {
             @Override
             public Object call(Object o) {
                 target = o;
                 return o;
             }
         });
-        return observable;
     }
 
     @Override

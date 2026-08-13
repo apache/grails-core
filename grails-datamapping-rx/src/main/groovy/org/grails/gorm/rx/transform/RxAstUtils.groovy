@@ -49,7 +49,7 @@ class RxAstUtils extends AstUtils {
      * @return True if is an {@link RxEntity}
      */
     static boolean isRxEntity(ClassNode classNode) {
-        isSubclassOf(classNode, RX_ENTITY.name)
+        isSubclassOfOrImplementsInterface(classNode, RX_ENTITY.name)
     }
     /**
      * Return if the given class is an Observable of domain class

@@ -16,249 +16,265 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+
 package grails.gorm.rx
 
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.query.QueryCreator
 import org.grails.datastore.rx.query.RxQuery
+import org.springframework.core.convert.support.DefaultConversionService
 import rx.Observable
 import spock.lang.Specification
 
-/**
- * Exercises {@link CriteriaBuilder}'s own reactive terminal operations. The shared query-DSL
- * methods it inherits from AbstractCriteriaBuilder (eq, gt, and/or/not, projections, etc.) are
- * already fully covered by grails.gorm.CriteriaBuilderSpec in grails-datamapping-core, against
- * the same base class -- coverage there applies regardless of which subclass exercises it, so
- * this spec only needs to cover the methods declared directly on this class.
- */
 class CriteriaBuilderSpec extends Specification {
 
-    PersistentProperty idProperty = Stub(PersistentProperty) {
-        getName() >> 'id'
-    }
-    PersistentProperty nameProperty = Stub(PersistentProperty) {
-        getName() >> 'name'
-    }
-    PersistentEntity persistentEntity = Stub(PersistentEntity) {
-        getIdentity() >> idProperty
-        getPropertyByName(_) >> nameProperty
-    }
-    MappingContext mappingContext = Stub(MappingContext) {
-        getPersistentEntity(CriteriaBuilderTestPerson.name) >> persistentEntity
-    }
-    Query query = Mock(Query, additionalInterfaces: [RxQuery])
-    QueryCreator queryCreator = Stub(QueryCreator) {
-        createQuery(CriteriaBuilderTestPerson) >> query
-        isSchemaless() >> false
-    }
+    Query query
+    QueryCreator queryCreator
+    MappingContext mappingContext
+    PersistentEntity persistentEntity
 
-    def setup() {
-        // Field initializers run top-to-bottom, so this mutual reference has to be wired up
-        // after both fields exist rather than inside either Stub() block.
+    void setup() {
+        persistentEntity = Stub(PersistentEntity)
+        mappingContext = Stub(MappingContext)
+        queryCreator = Stub(QueryCreator)
+        query = Mock(Query, additionalInterfaces: [RxQuery])
+
+        mappingContext.getPersistentEntity(_) >> persistentEntity
+        mappingContext.getConversionService() >> new DefaultConversionService()
         persistentEntity.getMappingContext() >> mappingContext
+        queryCreator.createQuery(_) >> query
+        queryCreator.isSchemaless() >> false
         query.getEntity() >> persistentEntity
     }
 
-    CriteriaBuilder<CriteriaBuilderTestPerson> newBuilder() {
-        new CriteriaBuilder<CriteriaBuilderTestPerson>(CriteriaBuilderTestPerson, queryCreator, mappingContext)
+    private CriteriaBuilder<Book> newCriteria() {
+        new CriteriaBuilder<Book>(Book, queryCreator, mappingContext)
     }
 
-    void "get(Closure) evaluates the closure, flags a unique result and returns a single observable"() {
+    void "get(Closure) initializes the query, applies the closure and returns a single reactive result"() {
         given:
-        def criteria = newBuilder()
-        Observable<CriteriaBuilderTestPerson> observable = Observable.just(new CriteriaBuilderTestPerson())
-        ((RxQuery) query).singleResult() >> observable
+        CriteriaBuilder<Book> criteria = newCriteria()
+        Observable<Book> observable = Observable.just(new Book(title: 'Groovy in Action'))
 
         when:
-        def result = criteria.get { eq('name', 'a') }
+        Observable<Book> result = criteria.get { eq('title', 'Groovy in Action') }
 
         then:
+        1 * query.singleResult() >> observable
         result.is(observable)
         criteria.uniqueResult
-        1 * query.add(_)
     }
 
-    void "get() flags a unique result and returns a single observable without evaluating a closure"() {
+    void "get() marks the query as a unique result and delegates to the underlying query"() {
         given:
-        def criteria = newBuilder()
-        Observable<CriteriaBuilderTestPerson> observable = Observable.just(new CriteriaBuilderTestPerson())
-        query.singleResult() >> observable
+        CriteriaBuilder<Book> criteria = newCriteria()
+        Observable<Book> observable = Observable.just(new Book(title: 'Effective Java'))
 
         when:
-        def result = criteria.get()
+        Observable<Book> result = criteria.get()
 
         then:
+        1 * query.singleResult() >> observable
         result.is(observable)
         criteria.uniqueResult
     }
 
     void "find(Closure) delegates to get(Closure)"() {
         given:
-        def criteria = newBuilder()
-        Observable<CriteriaBuilderTestPerson> observable = Observable.just(new CriteriaBuilderTestPerson())
-        ((RxQuery) query).singleResult() >> observable
+        CriteriaBuilder<Book> criteria = newCriteria()
+        Observable<Book> observable = Observable.just(new Book(title: 'Domain Driven Design'))
 
         when:
-        def result = criteria.find { eq('name', 'a') }
+        Observable<Book> result = criteria.find { eq('title', 'Domain Driven Design') }
 
         then:
+        1 * query.singleResult() >> observable
         result.is(observable)
-        1 * query.add(_)
-    }
-
-    void "find() with no closure delegates to get() with a null closure"() {
-        given:
-        def criteria = newBuilder()
-        query.singleResult() >> Observable.empty()
-
-        when:
-        def result = criteria.find()
-
-        then:
-        result != null
         criteria.uniqueResult
     }
 
-    void "findAll(Closure) delegates to findAll with an empty argument map"() {
+    void "find() with no closure still delegates to get()"() {
         given:
-        def criteria = newBuilder()
-        Observable<CriteriaBuilderTestPerson> observable = Observable.just(new CriteriaBuilderTestPerson())
-        ((RxQuery) query).findAll([:]) >> observable
+        CriteriaBuilder<Book> criteria = newCriteria()
+        Observable<Book> observable = Observable.just(new Book(title: 'Refactoring'))
 
         when:
-        def result = criteria.findAll { eq('name', 'a') }
+        Observable<Book> result = criteria.find()
 
         then:
+        1 * query.singleResult() >> observable
         result.is(observable)
-        1 * query.add(_)
+        criteria.uniqueResult
     }
 
-    void "findAll(Map, Closure) prepares the query and returns the observable results"() {
+    void "findAll(Closure) delegates to findAll(Map, Closure) with an empty argument map"() {
         given:
-        def criteria = newBuilder()
-        Observable<CriteriaBuilderTestPerson> observable = Observable.just(new CriteriaBuilderTestPerson())
-        ((RxQuery) query).findAll([:]) >> observable
+        CriteriaBuilder<Book> criteria = newCriteria()
+        Book book = new Book(title: 'A')
+        Observable<Book> observable = Observable.just(book)
 
         when:
-        def result = criteria.findAll([:]) { eq('name', 'a') }
+        Observable<Book> result = criteria.findAll { eq('title', 'A') }
 
         then:
+        1 * query.findAll(Collections.emptyMap()) >> observable
         result.is(observable)
-        1 * query.add(_)
     }
 
-    void "findAll applies any pre-populated order entries before executing"() {
+    void "findAll(Map, Closure) populates query arguments and returns the reactive results for those arguments"() {
         given:
-        def criteria = newBuilder()
-        criteria.orderEntries << Query.Order.asc('name')
-        ((RxQuery) query).findAll([:]) >> Observable.empty()
+        CriteriaBuilder<Book> criteria = newCriteria()
+        Book book = new Book(title: 'A')
+        Observable<Book> observable = Observable.just(book)
+        Map args = [max: 5]
+
+        when:
+        Observable<Book> result = criteria.findAll(args) { eq('title', 'A') }
+
+        then:
+        1 * query.findAll(args) >> observable
+        result.is(observable)
+    }
+
+    void "findAll(Map, Closure) applies order clauses declared in the closure to the underlying query before executing"() {
+        given:
+        CriteriaBuilder<Book> criteria = newCriteria()
+        Book book = new Book(title: 'A')
+        Observable<Book> observable = Observable.just(book)
+
+        when:
+        Observable<Book> result = criteria.findAll([:]) { order('title') }
+
+        then:
+        1 * query.order(_ as Query.Order) >> query
+        1 * query.findAll([:]) >> observable
+        result.is(observable)
+    }
+
+    void "findAll() applies any pre-populated order entries before executing"() {
+        given:
+        CriteriaBuilder<Book> criteria = newCriteria()
+        criteria.orderEntries << Query.Order.asc('title')
 
         when:
         criteria.findAll()
 
         then:
-        1 * query.order(_)
+        1 * query.order(_ as Query.Order) >> query
+        1 * query.findAll(Collections.emptyMap()) >> Observable.empty()
     }
 
-    void "list(Map, Closure) collects findAll's results into a single observable list"() {
+    void "list(Map, Closure) converts the found results into a list observable"() {
         given:
-        def criteria = newBuilder()
-        ((RxQuery) query).findAll([:]) >> Observable.from(['a', 'b'])
+        CriteriaBuilder<Book> criteria = newCriteria()
+        Book first = new Book(title: 'A')
+        Book second = new Book(title: 'B')
 
         when:
-        Observable<List> result = criteria.list([:]) { eq('name', 'a') }
+        Observable<List<Book>> result = criteria.list([:]) { eq('title', 'A') }
 
         then:
-        result.toBlocking().first() == ['a', 'b']
+        1 * query.findAll([:]) >> Observable.just(first, second)
+        result.toBlocking().single() == [first, second]
     }
 
-    void "list(Closure) collects findAll's results into a single observable list"() {
+    void "list(Closure) converts the found results into a list observable using an empty argument map"() {
         given:
-        def criteria = newBuilder()
-        ((RxQuery) query).findAll([:]) >> Observable.from(['a', 'b'])
+        CriteriaBuilder<Book> criteria = newCriteria()
+        Book book = new Book(title: 'A')
 
         when:
-        Observable<List> result = criteria.list { eq('name', 'a') }
+        Observable<List<Book>> result = criteria.list { eq('title', 'A') }
 
         then:
-        result.toBlocking().first() == ['a', 'b']
+        1 * query.findAll(Collections.emptyMap()) >> Observable.just(book)
+        result.toBlocking().single() == [book]
     }
 
-    void "count(Map, Closure) applies a count projection and returns a single observable result"() {
+    void "count(Map, Closure) applies a count projection and returns the reactive count without throwing"() {
         given:
-        def criteria = newBuilder()
-        Query.ProjectionList projectionList = Mock(Query.ProjectionList)
-        query.projections() >> projectionList
-        ((RxQuery) query).singleResult([:]) >> Observable.just(5)
+        CriteriaBuilder<Book> criteria = newCriteria()
+        Query.ProjectionList projectionList = new Query.ProjectionList()
+        Map args = [:]
 
         when:
-        Observable<Number> result = criteria.count([:]) { eq('name', 'a') }
+        Observable<Number> result = criteria.count(args) { eq('title', 'A') }
 
         then:
-        result.toBlocking().first() == 5
-        1 * projectionList.count()
+        1 * query.projections() >> projectionList
+        1 * query.singleResult(args) >> Observable.just(3)
+        result.toBlocking().single() == 3
+        projectionList.projectionList.size() == 1
+        projectionList.projectionList[0] instanceof Query.CountProjection
     }
 
-    void "count(Closure) delegates to count with an empty argument map"() {
+    void "count(Closure) delegates to count(Map, Closure) with an empty argument map"() {
         given:
-        def criteria = newBuilder()
-        Query.ProjectionList projectionList = Mock(Query.ProjectionList)
-        query.projections() >> projectionList
-        ((RxQuery) query).singleResult([:]) >> Observable.just(5)
+        CriteriaBuilder<Book> criteria = newCriteria()
+        Query.ProjectionList projectionList = new Query.ProjectionList()
 
         when:
-        Observable<Number> result = criteria.count { eq('name', 'a') }
+        Observable<Number> result = criteria.count { eq('title', 'A') }
 
         then:
-        result.toBlocking().first() == 5
+        1 * query.projections() >> projectionList
+        1 * query.singleResult(Collections.emptyMap()) >> Observable.just(7)
+        result.toBlocking().single() == 7
+        projectionList.projectionList[0] instanceof Query.CountProjection
     }
 
-    void "listDistinct(Map, Closure) applies a distinct projection and collects the results"() {
+    void "listDistinct(Map, Closure) applies a distinct projection and returns the reactive results as a list"() {
         given:
-        def criteria = newBuilder()
-        Query.ProjectionList projectionList = Mock(Query.ProjectionList)
-        query.projections() >> projectionList
-        ((RxQuery) query).findAll([:]) >> Observable.from(['a'])
+        CriteriaBuilder<Book> criteria = newCriteria()
+        Query.ProjectionList projectionList = new Query.ProjectionList()
+        Book book = new Book(title: 'A')
+        Map args = [:]
 
         when:
-        Observable<List> result = criteria.listDistinct([:]) { eq('name', 'a') }
+        Observable<List<Book>> result = criteria.listDistinct(args) { eq('title', 'A') }
 
         then:
-        result.toBlocking().first() == ['a']
-        1 * projectionList.distinct()
+        1 * query.projections() >> projectionList
+        1 * query.findAll(args) >> Observable.just(book)
+        result.toBlocking().single() == [book]
+        projectionList.projectionList.size() == 1
+        projectionList.projectionList[0] instanceof Query.DistinctProjection
     }
 
-    void "listDistinct(Closure) delegates to listDistinct with an empty argument map"() {
+    void "listDistinct(Closure) delegates to listDistinct(Map, Closure) with an empty argument map"() {
         given:
-        def criteria = newBuilder()
-        Query.ProjectionList projectionList = Mock(Query.ProjectionList)
-        query.projections() >> projectionList
-        ((RxQuery) query).findAll([:]) >> Observable.from(['a'])
+        CriteriaBuilder<Book> criteria = newCriteria()
+        Query.ProjectionList projectionList = new Query.ProjectionList()
+        Book book = new Book(title: 'A')
 
         when:
-        Observable<List> result = criteria.listDistinct { eq('name', 'a') }
+        Observable<List<Book>> result = criteria.listDistinct { eq('title', 'A') }
 
         then:
-        result.toBlocking().first() == ['a']
+        1 * query.projections() >> projectionList
+        1 * query.findAll(Collections.emptyMap()) >> Observable.just(book)
+        result.toBlocking().single() == [book]
+        projectionList.projectionList[0] instanceof Query.DistinctProjection
     }
 
-    void "a call-style invocation resolves through the reactive invokeList override"() {
+    void "call(Closure) applies the closure then executes the RX invokeList override for a non-unique result"() {
         given:
-        def criteria = newBuilder()
-        ((RxQuery) query).findAll() >> Observable.from(['a'])
+        CriteriaBuilder<Book> criteria = newCriteria()
+        Book book = new Book(title: 'A')
+        Observable<Book> observable = Observable.just(book)
 
         when:
-        def result = criteria.call { eq('name', 'a') }
+        Object result = criteria.call { eq('title', 'A') }
 
         then:
-        result.toBlocking().first() == 'a'
+        1 * query.findAll() >> observable
+        result.is(observable)
+        !criteria.uniqueResult
     }
 }
 
-class CriteriaBuilderTestPerson {
-    Long id
-    String name
+class Book {
+    String title
 }
