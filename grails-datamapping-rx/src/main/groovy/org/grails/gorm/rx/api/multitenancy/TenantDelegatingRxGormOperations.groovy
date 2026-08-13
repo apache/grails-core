@@ -324,7 +324,7 @@ class TenantDelegatingRxGormOperations<D> implements RxGormAllOperations<D> {
     @Override
     Observable<D> findAllWhere(Map queryMap, Map args) {
         Tenants.withId(datastoreClientClass, tenantId) {
-            delegateOperations.findAllWhere(queryMap)
+            delegateOperations.findAllWhere(queryMap, args)
         }
     }
 

@@ -118,31 +118,37 @@ class RxPersistentSortedSet<T> extends PersistentSortedSet implements RxPersiste
 
     @Override
     Comparator comparator() {
+        initialize()
         return ((SortedSet)collection).comparator()
     }
 
     @Override
     SortedSet subSet(Object fromElement, Object toElement) {
+        initialize()
         return ((SortedSet)collection).subSet(fromElement, toElement)
     }
 
     @Override
     SortedSet headSet(Object toElement) {
+        initialize()
         return ((SortedSet)collection).headSet(toElement)
     }
 
     @Override
     SortedSet tailSet(Object fromElement) {
+        initialize()
         return ((SortedSet)collection).tailSet(fromElement)
     }
 
     @Override
     Object first() {
+        initialize()
         return ((SortedSet)collection).first()
     }
 
     @Override
     Object last() {
+        initialize()
         return ((SortedSet)collection).last()
     }
 

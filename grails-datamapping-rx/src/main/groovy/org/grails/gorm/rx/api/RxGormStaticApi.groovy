@@ -556,7 +556,7 @@ class RxGormStaticApi<D> implements RxGormAllOperations<D> {
     @Override
     Observable<D> insert(D instance, Map arguments) {
         String connectionSourceName = datastoreClient.connectionSources.defaultConnectionSource.name
-        RxGormEnhancer.<D> findInstanceApi(persistentClass, connectionSourceName).save(instance, arguments)
+        RxGormEnhancer.<D> findInstanceApi(persistentClass, connectionSourceName).insert(instance, arguments)
     }
 
     @Override

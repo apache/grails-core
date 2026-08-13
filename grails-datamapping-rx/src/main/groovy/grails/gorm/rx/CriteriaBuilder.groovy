@@ -140,7 +140,7 @@ class CriteriaBuilder<T> extends AbstractCriteriaBuilder {
      * @return The total results
      */
     Observable<Number> count(Map args, @DelegatesTo(CriteriaBuilder) Closure additionalCriteria = null) {
-        Query query = prepareQuery(args, additionalCriteria)
+        prepareQuery(args, additionalCriteria)
         query.projections().count()
         return ((RxQuery)query).singleResult(args)
     }

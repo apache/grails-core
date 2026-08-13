@@ -122,7 +122,6 @@ class ObservableResultAdapter  implements ServiceImplementer, Ordered, AdaptedIm
         if (!isRxEntity(domainClassNode)) {
             def ann = addAnnotationOrGetExisting(newMethodNode, RxSchedule)
             ann.setMember(RxScheduleIOTransformation.ANN_SINGLE_RESULT, ConstantExpression.TRUE)
-            newMethodNode.addAnnotation(ann)
         }
     }
 
