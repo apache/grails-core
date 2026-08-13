@@ -116,7 +116,7 @@ class HibernateDatastoreSpringInitializerSpec extends Specification{
 
     void "Test configureForDataSource bootstraps GORM around a pre-existing DataSource"() {
         given: "a DataSource created ahead of time"
-        def dataSource = new DriverManagerDataSource('jdbc:h2:mem:configureForDataSource;LOCK_TIMEOUT=10000', 'sa', '')
+        def dataSource = new DriverManagerDataSource(HibernateDatastoreSpringInitializer.TEST_DB_URL, 'sa', '')
         dataSource.driverClassName = 'org.h2.Driver'
         def datastoreInitializer = new HibernateDatastoreSpringInitializer(['hibernate.hbm2ddl.auto': 'create'], Person)
 

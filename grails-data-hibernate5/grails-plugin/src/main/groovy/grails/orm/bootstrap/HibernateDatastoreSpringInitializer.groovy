@@ -53,7 +53,6 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
     public static final String TEST_DB_URL = 'jdbc:h2:mem:grailsDb;LOCK_TIMEOUT=10000;DB_CLOSE_DELAY=-1'
 
     String defaultDataSourceBeanName = ConnectionSource.DEFAULT
-    String defaultSessionFactoryBeanName = SESSION_FACTORY_BEAN_NAME
     Set<String> dataSources = [defaultDataSourceBeanName] as Set<String>
     boolean enableReload = false
     boolean grailsPlugin = false
@@ -107,7 +106,7 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
 
     @Override
     protected Class<AbstractDatastorePersistenceContextInterceptor> getPersistenceInterceptorClass() {
-        getClass().classLoader.loadClass('org.grails.plugin.hibernate.support.HibernatePersistenceContextInterceptor')
+        getClass().classLoader.loadClass('org.grails.plugin.hibernate.support.HibernatePersistenceContextInterceptor') as Class<AbstractDatastorePersistenceContextInterceptor>
     }
 
     /**
@@ -119,10 +118,6 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
         configureForBeanDefinitionRegistry(applicationContext)
         applicationContext.refresh()
         return applicationContext
-    }
-
-    protected String getTestDbUrl() {
-        TEST_DB_URL
     }
 
     @CompileStatic

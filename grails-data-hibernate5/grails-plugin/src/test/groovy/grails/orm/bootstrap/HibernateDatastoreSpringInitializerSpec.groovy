@@ -19,6 +19,7 @@
 package grails.orm.bootstrap
 
 import grails.gorm.annotation.Entity
+import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.Session
 import org.hibernate.SessionFactory
@@ -116,9 +117,58 @@ class HibernateDatastoreSpringInitializerSpec extends Specification{
         Person.withNewSession { Person.count() == 0 }
     }
 
+    void "Test the PropertyResolver/Collection<Class> constructor bootstraps GORM"() {
+        given: "An initializer built from a PropertyResolver and a Collection of persistent classes"
+        def resolver = DatastoreUtils.createPropertyResolver([
+                'dataSource.url'        : 'jdbc:h2:mem:propertyResolverCollectionCtor;LOCK_TIMEOUT=10000',
+                'hibernate.hbm2ddl.auto': 'create'
+        ])
+        def datastoreInitializer = new HibernateDatastoreSpringInitializer(resolver, [Person] as Collection<Class>)
+
+        when: "the application is configured"
+        applicationContext = (ConfigurableApplicationContext) datastoreInitializer.configure()
+
+        then: "GORM is bootstrapped with the given entity"
+        applicationContext.getBean(HibernateDatastore).mappingContext.getPersistentEntity(Person.name) != null
+        Person.withNewSession { Person.count() == 0 }
+    }
+
+    void "Test the PropertyResolver/Class... constructor bootstraps GORM"() {
+        given: "An initializer built from a PropertyResolver and an array of persistent classes"
+        def resolver = DatastoreUtils.createPropertyResolver([
+                'dataSource.url'        : 'jdbc:h2:mem:propertyResolverClassCtor;LOCK_TIMEOUT=10000',
+                'hibernate.hbm2ddl.auto': 'create'
+        ])
+        def datastoreInitializer = new HibernateDatastoreSpringInitializer(resolver, Person)
+
+        when: "the application is configured"
+        applicationContext = (ConfigurableApplicationContext) datastoreInitializer.configure()
+
+        then: "GORM is bootstrapped with the given entity"
+        applicationContext.getBean(HibernateDatastore).mappingContext.getPersistentEntity(Person.name) != null
+        Person.withNewSession { Person.count() == 0 }
+    }
+
+    void "Test the PropertyResolver/String... packages constructor discovers entities via classpath scan"() {
+        given: "an initializer configured with a package name rather than explicit classes; the scan also picks up Book and Author, which require the 'books'/'moreBooks' datasources"
+        def resolver = DatastoreUtils.createPropertyResolver([
+                'dataSource.url'        : 'jdbc:h2:mem:propertyResolverPackageCtor;LOCK_TIMEOUT=10000',
+                'hibernate.hbm2ddl.auto': 'create',
+                'dataSources.books.url' : 'jdbc:h2:mem:propertyResolverPackageCtorBooks;LOCK_TIMEOUT=10000',
+                'dataSources.moreBooks.url': 'jdbc:h2:mem:propertyResolverPackageCtorMoreBooks;LOCK_TIMEOUT=10000'
+        ])
+        def datastoreInitializer = new HibernateDatastoreSpringInitializer(resolver, Person.package.name)
+
+        when: "the application is configured"
+        applicationContext = (ConfigurableApplicationContext) datastoreInitializer.configure()
+
+        then: "the Person entity declared in the scanned package was discovered and mapped"
+        applicationContext.getBean(HibernateDatastore).mappingContext.getPersistentEntity(Person.name) != null
+    }
+
     void "Test configureForDataSource bootstraps GORM around a pre-existing DataSource"() {
         given: "a DataSource created ahead of time"
-        def dataSource = new DriverManagerDataSource('jdbc:h2:mem:configureForDataSource;LOCK_TIMEOUT=10000', 'sa', '')
+        def dataSource = new DriverManagerDataSource(HibernateDatastoreSpringInitializer.TEST_DB_URL, 'sa', '')
         dataSource.driverClassName = 'org.h2.Driver'
         def datastoreInitializer = new HibernateDatastoreSpringInitializer(['hibernate.hbm2ddl.auto': 'create'], Person)
 
