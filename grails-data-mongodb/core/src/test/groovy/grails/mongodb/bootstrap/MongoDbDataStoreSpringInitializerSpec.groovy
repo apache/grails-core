@@ -75,6 +75,26 @@ class MongoDbDataStoreSpringInitializerSpec extends AutoStartedMongoSpec {
         Person.count() == 0
     }
 
+    void "Test setMongoBeanName is honored when building a new MongoClient from scratch"() {
+        given: "an initializer with a customized mongo bean name"
+        def initializer = makeInitializer([
+                (MongoSettings.SETTING_HOST): mongoHost,
+                (MongoSettings.SETTING_PORT): mongoPort,
+        ], Person)
+        initializer.setMongoBeanName('customMongo')
+
+        when: "the initializer is configured"
+        def applicationContext = initializer.configure()
+        def mongoDatastore = applicationContext.getBean(MongoDatastore)
+
+        then: "the client is registered under the customized bean name and not the default"
+        applicationContext.getBean('customMongo', MongoClient) == mongoDatastore.getMongoClient()
+        !applicationContext.containsBean('mongo')
+
+        cleanup:
+        mongoDatastore.destroy()
+    }
+
     void "Test the alias is created when it is the primary datastore"() {
         when: "the initializer used to setup GORM for MongoDB"
         def initializer = makeInitializer([
