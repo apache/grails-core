@@ -21,6 +21,11 @@ package org.grails.datastore.rx.query
 
 import spock.lang.Specification
 
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+
 class QueryStateSpec extends Specification {
 
     void "test getLoadedEntity returns null when no entity of the given type has been loaded"() {
@@ -87,5 +92,30 @@ class QueryStateSpec extends Specification {
         then:
         queryState.getLoadedEntity(String, "1") == "one"
         queryState.getLoadedEntity(Integer, "1") == 1
+    }
+
+    void "test concurrent addLoadedEntity calls for a not-yet-seen type do not lose entries racing to create the per-type map"() {
+        given: "many threads racing to be the first to add an entity for the same, brand new type"
+        QueryState queryState = new QueryState()
+        int threadCount = 50
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount)
+        CountDownLatch ready = new CountDownLatch(threadCount)
+        CountDownLatch start = new CountDownLatch(1)
+
+        when:
+        (1..threadCount).each { int i ->
+            executor.submit {
+                ready.countDown()
+                start.await()
+                queryState.addLoadedEntity(String, i as String, "entity-$i".toString())
+            }
+        }
+        ready.await(5, TimeUnit.SECONDS)
+        start.countDown()
+        executor.shutdown()
+        executor.awaitTermination(5, TimeUnit.SECONDS)
+
+        then: "every entity survives, none were dropped by a lost racing map creation"
+        (1..threadCount).every { int i -> queryState.getLoadedEntity(String, i as String) == "entity-$i".toString() }
     }
 }

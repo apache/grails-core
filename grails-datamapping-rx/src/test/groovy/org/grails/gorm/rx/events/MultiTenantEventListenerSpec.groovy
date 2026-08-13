@@ -338,6 +338,7 @@ class MultiTenantEventListenerSpec extends Specification {
         1 * reflector.setProperty(entityObject, 'tenantId', 'tenant-a') >> { throw new IllegalStateException('type mismatch') }
         TenantException e = thrown(TenantException)
         e.message.contains('tenant-a')
+        e.message.startsWith('Could not assign tenant id')
         e.cause instanceof IllegalStateException
     }
 

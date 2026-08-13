@@ -35,15 +35,8 @@ class QueryState {
     private final Map<Class, Map<Serializable, Object>> loadedEntities = new ConcurrentHashMap<>()
 
     void addLoadedEntity(Class type, Serializable id, Object object) {
-        def loadedByType = loadedEntities.get(type)
-        if (loadedByType == null) {
-            loadedByType = new ConcurrentHashMap<Serializable, Object>()
-            loadedByType.put(id, object)
-            loadedEntities.put(type, loadedByType)
-        }
-        else {
-            loadedByType.put(id, object)
-        }
+        Map<Serializable, Object> loadedByType = loadedEntities.computeIfAbsent(type) { new ConcurrentHashMap<Serializable, Object>() }
+        loadedByType.put(id, object)
     }
 
     public <T> T getLoadedEntity(Class<T> type, Serializable id) {
