@@ -33,6 +33,7 @@ import org.springframework.web.context.WebApplicationContext
 import org.springframework.web.context.request.RequestAttributes
 import org.springframework.web.context.request.ServletRequestAttributes
 import org.springframework.web.multipart.MultipartException
+import org.springframework.web.multipart.MultipartHttpServletRequest
 import org.springframework.web.servlet.DispatcherServlet
 
 import grails.util.Holders
@@ -65,6 +66,7 @@ class GrailsDispatcherServlet extends DispatcherServlet implements ServletContex
         else {
             GrailsWebRequest webRequest = (GrailsWebRequest) previousAttributes
             if (webRequest.isActive()) {
+                propagateMultipartRequest(webRequest, request)
                 return webRequest
             }
             else {
@@ -75,8 +77,17 @@ class GrailsDispatcherServlet extends DispatcherServlet implements ServletContex
 
     protected GrailsWebRequest buildGrailsWebRequest(HttpServletRequest request, HttpServletResponse response) {
         def webRequest = new GrailsWebRequest(request, response, request.getServletContext())
+        propagateMultipartRequest(webRequest, request)
         webRequest.informParameterCreationListeners()
         return webRequest
+    }
+
+    private void propagateMultipartRequest(GrailsWebRequest webRequest, HttpServletRequest request) {
+        def multipartRequest =
+                org.springframework.web.util.WebUtils.getNativeRequest(request, MultipartHttpServletRequest)
+        if (multipartRequest != null) {
+            webRequest.multipartRequest = multipartRequest
+        }
     }
 
     @Override
@@ -89,6 +100,7 @@ class GrailsDispatcherServlet extends DispatcherServlet implements ServletContex
                 if (webRequest != null) {
                     webRequest.multipartRequest = processedRequest
                 }
+                return processedRequest
             }
         }
         return request

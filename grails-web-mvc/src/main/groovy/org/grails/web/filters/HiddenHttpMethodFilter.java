@@ -71,12 +71,20 @@ public class HiddenHttpMethodFilter extends OncePerRequestFilter {
     }
 
     protected String getHttpMethodOverride(HttpServletRequest request) {
-        String httpMethod = request.getParameter(methodParam);
+        String httpMethod = null;
+        if (!isMultipart(request)) {
+            httpMethod = request.getParameter(methodParam);
+        }
 
         if (httpMethod == null) {
             httpMethod = request.getHeader(HEADER_X_HTTP_METHOD_OVERRIDE);
         }
         return httpMethod == null ? null : httpMethod.toUpperCase();
+    }
+
+    private boolean isMultipart(HttpServletRequest request) {
+        var contentType = request.getContentType();
+        return contentType != null && contentType.regionMatches(true, 0, "multipart/", 0, "multipart/".length());
     }
 
     /**

@@ -31,6 +31,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.web.filter.RequestContextFilter;
+import org.springframework.web.multipart.MultipartHttpServletRequest;
 
 import grails.web.mvc.FlashScope;
 import org.grails.web.util.WebUtils;
@@ -58,6 +59,9 @@ public class GrailsWebRequestFilter extends RequestContextFilter implements Appl
         boolean isIncludeOrForward = WebUtils.isForwardOrInclude(request);
         GrailsWebRequest previous = isIncludeOrForward ? GrailsWebRequest.lookup(request) : null;
         GrailsWebRequest webRequest = new GrailsWebRequest(request, response, getServletContext());
+        if (request instanceof MultipartHttpServletRequest) {
+            webRequest.setMultipartRequest(request);
+        }
         configureParameterCreationListeners(webRequest);
 
         if (logger.isDebugEnabled()) {

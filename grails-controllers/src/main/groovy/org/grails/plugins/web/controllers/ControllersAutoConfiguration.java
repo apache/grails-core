@@ -40,6 +40,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.util.ClassUtils;
 import org.springframework.web.filter.CharacterEncodingFilter;
+import org.springframework.web.multipart.support.MultipartFilter;
 import org.springframework.web.servlet.DispatcherServlet;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -99,6 +100,20 @@ public class ControllersAutoConfiguration {
         characterEncodingFilter.setForceEncoding(filtersForceEncoding);
         characterEncodingFilter.setOrder(GrailsFilters.CHARACTER_ENCODING_FILTER.getOrder());
         return characterEncodingFilter;
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(MultipartFilter.class)
+    public FilterRegistrationBean<Filter> multipartFilter() {
+        var registrationBean = new FilterRegistrationBean<>();
+        var multipartFilter = new MultipartFilter();
+        multipartFilter.setMultipartResolverBeanName(GrailsApplication.MULTIPART_RESOLVER_BEAN);
+        registrationBean.setFilter(multipartFilter);
+        registrationBean.addUrlPatterns(Settings.DEFAULT_WEB_SERVLET_PATH);
+        // Resolve multipart requests before HiddenHttpMethodFilter and security filters access parameters.
+        // Otherwise, the servlet container parses the parts first and oversized uploads bypass the multipart resolver.
+        registrationBean.setOrder(GrailsFilters.FIRST.getOrder());
+        return registrationBean;
     }
 
     @Bean
