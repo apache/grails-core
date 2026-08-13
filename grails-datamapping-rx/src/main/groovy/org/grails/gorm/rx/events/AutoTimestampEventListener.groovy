@@ -26,7 +26,6 @@ import org.grails.datastore.rx.RxDatastoreClient
 /**
  * An auto timestamp event listener for RxGORM
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 @CompileStatic

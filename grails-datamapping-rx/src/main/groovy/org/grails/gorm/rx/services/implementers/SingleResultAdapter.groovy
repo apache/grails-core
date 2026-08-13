@@ -44,7 +44,6 @@ import static org.grails.gorm.rx.transform.RxAstUtils.isRxEntity
 /**
  * Adapts existing implementers for RxJava
  *
- * @author Graeme Rocher
  * @since 6.1.1
  */
 @CompileStatic

@@ -35,7 +35,6 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * Enhances {@link grails.gorm.rx.RxEntity} instances with behaviour necessary at runtime
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 @CompileStatic

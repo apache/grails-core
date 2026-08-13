@@ -26,7 +26,6 @@ import org.grails.datastore.rx.RxDatastoreClient
 /**
  * Implementation of findBy* dynamic finder for RxGORM
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 @CompileStatic

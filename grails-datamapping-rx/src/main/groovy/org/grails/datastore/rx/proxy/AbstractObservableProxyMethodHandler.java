@@ -33,7 +33,6 @@ import org.grails.datastore.rx.query.QueryState;
 /**
  * Abstract proxy generator for ObservableProxy instances
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 public abstract class AbstractObservableProxyMethodHandler extends EntityProxyMethodHandler {

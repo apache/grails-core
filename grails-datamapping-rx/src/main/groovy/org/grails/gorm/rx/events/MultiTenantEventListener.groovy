@@ -38,7 +38,6 @@ import org.springframework.util.Assert
 /**
  * Multi tenant event listener for RxGORM
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 @CompileStatic

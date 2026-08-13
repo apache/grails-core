@@ -28,7 +28,6 @@ import org.grails.datastore.rx.RxDatastoreClient
 /**
  * RxGORM version of validation API
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 @CompileStatic

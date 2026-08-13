@@ -28,7 +28,6 @@ import rx.Observable
 /**
  * Static methods allowed by RxGORM
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 interface RxGormStaticOperations<D> {

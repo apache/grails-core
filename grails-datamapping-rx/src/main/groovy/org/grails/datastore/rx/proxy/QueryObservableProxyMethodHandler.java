@@ -35,7 +35,6 @@ import org.grails.datastore.rx.query.RxQuery;
 /**
  * A proxy {@link javassist.util.proxy.MethodHandler} that uses a query to resolve the target using a query
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 public class QueryObservableProxyMethodHandler extends AbstractObservableProxyMethodHandler {

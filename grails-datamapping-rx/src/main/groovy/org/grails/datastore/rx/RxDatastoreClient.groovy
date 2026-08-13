@@ -36,7 +36,6 @@ import rx.Observable
 /**
  * Represents a client connection pool that can be used to interact with a backing implementation in RxGORM
  *
- * @author Graeme Rocher
  * @since 6.0
  *
  * @param The native client interface

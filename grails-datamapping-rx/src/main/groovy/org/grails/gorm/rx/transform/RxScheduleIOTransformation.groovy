@@ -54,7 +54,6 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
  *
  * @see {@link rx.schedulers.Schedulers#io()}
  *
- * @author Graeme Rocher
  * @since 6.1
  */
 @CompileStatic

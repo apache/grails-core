@@ -45,7 +45,6 @@ import static org.grails.gorm.rx.transform.RxAstUtils.isRxEntity
 /**
  * Adapts results for queries that return an {@link rx.Observable}
  *
- * @author Graeme Rocher
  * @since 6.1.1
  */
 @CompileStatic

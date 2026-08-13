@@ -38,7 +38,6 @@ import rx.Subscription
 /**
  * Reactive version of {@link grails.gorm.DetachedCriteria}
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 @CompileStatic

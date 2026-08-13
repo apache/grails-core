@@ -29,7 +29,6 @@ import org.grails.datastore.gorm.services.implementers.SingleResultServiceImplem
  * Adapts {@link ServiceImplementer} implementations for use in RxJava
  *
  * @since 6.1.1
- * @author Graeme Rocher
  */
 @CompileStatic
 class ObservableServiceImplementerAdapter implements ServiceImplementerAdapter {

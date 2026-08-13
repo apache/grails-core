@@ -27,7 +27,6 @@ import org.grails.datastore.rx.RxDatastoreClient;
 import org.grails.datastore.rx.query.QueryState;
 
 /**
- * @author Graeme Rocher
  * @since 6.0
  */
 public interface ProxyFactory extends ProxyHandler {

@@ -54,7 +54,6 @@ import rx.Subscriber
 /**
  * Bridge to the implementation of the static method level operations for RX GORM
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 @CompileStatic

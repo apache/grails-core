@@ -27,7 +27,6 @@ import java.util.concurrent.ConcurrentHashMap
  *
  * Used to maintain query state and avoid hitting the database again when loading associations
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 @CompileStatic
