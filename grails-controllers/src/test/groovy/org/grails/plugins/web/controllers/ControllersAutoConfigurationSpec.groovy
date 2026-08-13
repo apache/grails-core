@@ -21,6 +21,8 @@ package org.grails.plugins.web.controllers
 
 import java.util.function.Supplier
 
+import jakarta.servlet.Filter
+
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
 
@@ -38,6 +40,7 @@ import org.springframework.mock.web.MockServletContext
 import org.springframework.web.context.WebApplicationContext
 import org.springframework.web.context.support.StaticWebApplicationContext
 import org.springframework.web.filter.RequestContextFilter
+import org.springframework.web.multipart.support.MultipartFilter
 import org.springframework.web.servlet.handler.SimpleMappingExceptionResolver
 
 import org.grails.web.config.http.GrailsFilters
@@ -73,6 +76,15 @@ class ControllersAutoConfigurationSpec extends Specification {
         then: 'the same filter instance is registered ahead of the Spring Security chain'
         registrationBean.filter.is(filter)
         registrationBean.order == GrailsFilters.GRAILS_WEB_REQUEST_FILTER.order
+    }
+
+    void 'multipartFilter registers before the other Grails filters'() {
+        when: 'the multipart filter is created'
+        def registrationBean = autoConfiguration.multipartFilter()
+
+        then: 'it is registered at the first Grails filter order'
+        registrationBean.filter instanceof MultipartFilter
+        registrationBean.order == GrailsFilters.FIRST.order
     }
 
     void 'Boot WebMvcAutoConfiguration registers its own requestContextFilter when the Grails controllers auto-config is absent'() {

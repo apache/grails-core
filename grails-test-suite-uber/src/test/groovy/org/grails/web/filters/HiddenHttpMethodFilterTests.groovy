@@ -18,7 +18,6 @@
  */
 package org.grails.web.filters
 
-import org.grails.web.filters.HiddenHttpMethodFilter
 import org.junit.jupiter.api.Test
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
@@ -70,5 +69,24 @@ class HiddenHttpMethodFilterTests {
         filter.doFilter(req, res, { req2, res2 -> method = req2.method } as FilterChain)
 
         assertEquals "DELETE", method
+    }
+
+    @Test
+    void testMultipartRequestDoesNotParseParameters() {
+        def filter = new HiddenHttpMethodFilter()
+        def req = new MockHttpServletRequest() {
+            @Override
+            String getParameter(String name) {
+                throw new IllegalStateException('Multipart request parameters must not be parsed by this filter')
+            }
+        }
+        req.contentType = 'multipart/form-data; boundary=test'
+        req.method = 'POST'
+        def res = new MockHttpServletResponse()
+        String method = null
+
+        filter.doFilter(req, res, { req2, res2 -> method = req2.method } as FilterChain)
+
+        assertEquals('POST', method)
     }
 }
