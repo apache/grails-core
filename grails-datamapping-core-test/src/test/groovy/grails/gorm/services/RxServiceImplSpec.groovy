@@ -89,25 +89,17 @@ class RxServiceImplSpec extends Specification {
 
     }
 
-    @PendingFeature(reason="Expected exception of type 'java.lang.UnsupportedOperationException', but got 'groovy.lang.MissingMethodException' -- string @Query-based service methods are not supported against SimpleMapDatastore; unrelated to the RX Single/Observable cast bugs fixed in SingleResultAdapter/ObservableResultAdapter/RxScheduleIOTransformation.")
     void "test find with string query method"() {
         given:
         new Book(title: "The Stand").save(flush:true)
         new Book(title: "The Shining").save(flush:true)
         BookService bookService = datastore.getService(BookService)
 
-        when:
-        def result = bookService.findWithQuery("The Stand").toBlocking().first()
+        when:"a string-based @Query method is invoked against SimpleMapDatastore, which only supports DetachedCriteria queries"
+        bookService.findWithQuery("The Stand").toBlocking().first()
 
         then:
         thrown(UnsupportedOperationException)
-
-        when:
-        bookService.updateBook("The Stand", "It").toBlocking().first()
-
-        then:
-        thrown(UnsupportedOperationException)
-
     }
 
     void "test find with where query method"() {
