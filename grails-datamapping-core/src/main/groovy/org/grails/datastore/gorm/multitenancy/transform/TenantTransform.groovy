@@ -33,6 +33,8 @@ import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.control.CompilePhase
 import org.codehaus.groovy.control.SourceUnit
+import org.codehaus.groovy.control.messages.SyntaxErrorMessage
+import org.codehaus.groovy.syntax.SyntaxException
 import org.codehaus.groovy.transform.GroovyASTTransformation
 
 import grails.gorm.multitenancy.CurrentTenant
@@ -136,7 +138,11 @@ class TenantTransform extends AbstractDatastoreMethodDecoratingTransformation {
                 return makeDelegatingClosureCall(tenantServiceVar, 'withId', args(tenantIdVar), params(param(serializableClassNode, VAR_TENANT_ID)), originalMethodCallExpr, variableScope)
             }
             else {
-                addError('@Tenant value should be a closure', annotationNode)
+                sourceUnit.getErrorCollector().addErrorAndContinue(
+                    new SyntaxErrorMessage(new SyntaxException('@Tenant value should be a closure',
+                        annotationNode.getLineNumber(), annotationNode.getColumnNumber(),
+                        annotationNode.getLastLineNumber(), annotationNode.getLastColumnNumber()), sourceUnit)
+                )
                 return makeDelegatingClosureCall(tenantServiceVar, 'withCurrent', params(param(serializableClassNode, VAR_TENANT_ID)), originalMethodCallExpr, variableScope)
             }
         }
