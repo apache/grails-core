@@ -60,6 +60,8 @@ class OrderedGormTransformation extends AbstractASTTransformation implements Com
             throw new RuntimeException("Internal error: wrong types: ${astNodes[0].getClass()} / ${astNodes[1].getClass()}")
         }
 
+        init(astNodes, source)
+
         AnnotatedNode annotatedNode = (AnnotatedNode) astNodes[1]
         Iterable<TransformationInvocation> astTransformations = collectAndOrderGormTransformations(annotatedNode)
         for (transform in astTransformations) {
