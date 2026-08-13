@@ -103,11 +103,23 @@ class SingleResultAdapter implements ServiceImplementer, Ordered, AdaptedImpleme
     void implement(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, ClassNode targetClassNode) {
         ClassNode returnType = resolveSingleGenericType(abstractMethodNode.returnType)
         newMethodNode.setNodeMetaData(RETURN_TYPE, returnType)
+
+        boolean requiresScheduling = !isRxEntity(returnType)
+        ClassNode wrappedReturnType = newMethodNode.returnType
+        if (requiresScheduling) {
+            // Narrow to the unwrapped synchronous type (e.g. Number instead of Single<Number>) so that any
+            // decorator applied by the adapted implementer (such as the automatic @Transactional wrapping)
+            // builds its delegating call against the type the synchronous body actually returns. Restored to
+            // the Rx-wrapped type by RxScheduleIOTransformation once it weaves this method.
+            newMethodNode.setReturnType(returnType)
+        }
+
         adapted.implement(domainClassNode, abstractMethodNode, newMethodNode, targetClassNode)
 
-        if (!isRxEntity(returnType)) {
+        if (requiresScheduling) {
             def ann = addAnnotationOrGetExisting(newMethodNode, RxSchedule)
             ann.setMember(RxScheduleIOTransformation.ANN_SINGLE_RESULT, ConstantExpression.TRUE)
+            newMethodNode.setNodeMetaData(RxScheduleIOTransformation.WRAPPED_RETURN_TYPE, wrappedReturnType)
         }
     }
 

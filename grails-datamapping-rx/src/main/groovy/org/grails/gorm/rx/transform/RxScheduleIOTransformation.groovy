@@ -68,6 +68,15 @@ class RxScheduleIOTransformation extends AbstractMethodDecoratingTransformation 
     public static final String ANN_SINGLE_RESULT = 'singleResult'
     public static final String ANN_SCHEDULER = 'scheduler'
 
+    /**
+     * Node metadata key used to stash the original (Rx-wrapped, e.g. {@code Single<Number>}) return type of a
+     * method while it is temporarily narrowed to its unwrapped synchronous type (e.g. {@code Number}) so that
+     * decorators applied by the underlying implementer (such as the automatic {@code @Transactional} wrapping)
+     * build their delegating call against the type the synchronous body actually returns, rather than the
+     * Rx-wrapped type the public method exposes. See {@code SingleResultAdapter} / {@code ObservableResultAdapter}.
+     */
+    public static final String WRAPPED_RETURN_TYPE = 'rxWrappedReturnType'
+
     @Override
     protected ClassNode getAnnotationType() {
         return ANNOTATION_TYPE
@@ -91,6 +100,15 @@ class RxScheduleIOTransformation extends AbstractMethodDecoratingTransformation 
         }
         if (methodNode.isAbstract()) {
             return methodNode
+        }
+
+        ClassNode wrappedReturnType = (ClassNode) methodNode.getNodeMetaData(WRAPPED_RETURN_TYPE)
+        if (wrappedReturnType != null) {
+            // Restore the Rx-wrapped return type (e.g. Single<Number>) that SingleResultAdapter/
+            // ObservableResultAdapter temporarily narrowed to the unwrapped synchronous type before other
+            // decorators (e.g. @Transactional) wove this method, so this transform builds its own delegating
+            // cast, and the renamed/decorated methods below, against the correct wrapped type.
+            methodNode.setReturnType(wrappedReturnType)
         }
 
         List<MethodNode> decorated = (List<MethodNode>)methodNode.getNodeMetaData(DECORATED_METHODS)

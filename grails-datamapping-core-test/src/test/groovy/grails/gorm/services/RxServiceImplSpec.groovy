@@ -32,7 +32,7 @@ class RxServiceImplSpec extends Specification {
         Book
     )
 
-    @PendingFeature(reason="bookService.countByTitleLike(The%).toBlocking().value() == 1")
+    @PendingFeature(reason="org.codehaus.groovy.runtime.typehandling.GroovyCastException: Cannot cast object '[grails.gorm.services.Book : 1]' with class 'java.util.ArrayList' to class 'grails.gorm.services.Book' due to: groovy.lang.GroovyRuntimeException: Could not find matching constructor for: grails.gorm.services.Book(grails.gorm.services.Book) -- a separate bug in the multi-result (Observable) query path, unrelated to the Single-wrapping cast bug fixed in SingleResultAdapter/ObservableResultAdapter/RxScheduleIOTransformation")
     void "test find method that returns an observable"() {
         given:
         new Book(title: "The Stand").save(flush:true)
@@ -47,7 +47,7 @@ class RxServiceImplSpec extends Specification {
         bookService.findByTitleLike("The%").toBlocking().first().title == "The Stand"
     }
 
-    @PendingFeature(reason="org.codehaus.groovy.runtime.typehandling.GroovyCastException: Cannot cast object '1' with class 'java.lang.Long' to class 'rx.Single'")
+    @PendingFeature(reason="Expected exception of type 'java.util.NoSuchElementException', but no exception was thrown -- bookService.find(String) does not filter by title (a pre-existing, unrelated implementer gap: 'find' has no property suffix to build a filter from), so a lookup for the just-deleted title still matches the other saved Book. The original GroovyCastException that used to abort this test before reaching this assertion is fixed.")
     void "test delete method"() {
         given:
         new Book(title: "The Stand").save(flush:true)
@@ -70,7 +70,7 @@ class RxServiceImplSpec extends Specification {
 
     }
 
-    @PendingFeature(reason="org.codehaus.groovy.runtime.typehandling.GroovyCastException: Cannot cast object 'grails.gorm.services.Book : 1' with class 'grails.gorm.services.Book' to class 'rx.Single'")
+    @PendingFeature(reason="Expected exception of type 'java.util.NoSuchElementException', but no exception was thrown -- bookService.find(String) does not filter by title (see 'test delete method'), so a lookup for the just-deleted title still matches the other saved Book. The original GroovyCastException that used to abort this test before reaching this assertion is fixed.")
     void "test find and delete method"() {
         given:
         new Book(title: "The Stand").save(flush:true)
@@ -92,7 +92,7 @@ class RxServiceImplSpec extends Specification {
 
     }
 
-    @PendingFeature(reason="Expected exception of type 'java.lang.UnsupportedOperationException', but got 'groovy.lang.MissingMethodException'")
+    @PendingFeature(reason="Expected exception of type 'java.lang.UnsupportedOperationException', but got 'groovy.lang.MissingMethodException' -- string @Query-based service methods are not supported against SimpleMapDatastore; unrelated to the RX cast bug.")
     void "test find with string query method"() {
         given:
         new Book(title: "The Stand").save(flush:true)
@@ -113,7 +113,7 @@ class RxServiceImplSpec extends Specification {
 
     }
 
-    @PendingFeature(reason="org.codehaus.groovy.runtime.typehandling.GroovyCastException: Cannot cast object '[grails.gorm.services.Book : 2]' with class 'java.util.ArrayList' to class 'rx.Observable' due to: groovy.lang.GroovyRuntimeException: Could not find matching constructor for: rx.Observable(grails.gorm.services.Book)")
+    @PendingFeature(reason="org.codehaus.groovy.runtime.typehandling.GroovyCastException: Cannot cast object '[grails.gorm.services.Book : 2]' with class 'java.util.ArrayList' to class 'grails.gorm.services.Book' due to: groovy.lang.GroovyRuntimeException: Could not find matching constructor for: grails.gorm.services.Book(grails.gorm.services.Book) -- the same separate multi-result (Observable) bug as 'test find method that returns an observable'")
     void "test find with where query method"() {
         given:
         new Book(title: "The Stand").save(flush:true)
@@ -129,7 +129,7 @@ class RxServiceImplSpec extends Specification {
 
     }
 
-    @PendingFeature(reason="org.codehaus.groovy.runtime.typehandling.GroovyCastException: Cannot cast object 'grails.gorm.services.Book : 1' with class 'grails.gorm.services.Book' to class 'rx.Single'")
+    @PendingFeature(reason="org.codehaus.groovy.runtime.typehandling.GroovyCastException: Cannot cast object '[grails.gorm.services.Book : 1]' with class 'java.util.ArrayList' to class 'grails.gorm.services.Book' due to: groovy.lang.GroovyRuntimeException: Could not find matching constructor for: grails.gorm.services.Book(grails.gorm.services.Book) -- saveBook/updateBook (Single-returning) now work; the remaining failure is the same separate findWhereTitle multi-result (Observable) bug as 'test find with where query method'")
     void "test save method"() {
         given:
         BookService bookService = datastore.getService(BookService)
@@ -163,7 +163,7 @@ class RxServiceImplSpec extends Specification {
 
     }
 
-    @PendingFeature(reason="groovy.lang.MissingMethodException: No signature of method: grails.gorm.services.BookServiceImplementation.findBookAuthor() is applicable for argument types: (String) values: [The Stand]")
+    @PendingFeature(reason="groovy.lang.MissingMethodException: No signature of method: grails.gorm.services.BookServiceImplementation.findBookAuthor() is applicable for argument types: (String) values: [The Stand] -- BookService does not declare findBookAuthor (see the commented-out interface method below); unrelated to the RX cast bug.")
     void "test simple projection"() {
 
         given:

@@ -34,6 +34,7 @@ import org.grails.datastore.gorm.services.implementers.IterableInterfaceProjecti
 import org.grails.datastore.gorm.services.implementers.IterableProjectionServiceImplementer
 import org.grails.datastore.gorm.services.implementers.IterableServiceImplementer
 import org.grails.datastore.mapping.core.Ordered
+import org.grails.gorm.rx.transform.RxScheduleIOTransformation
 import rx.Observable
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -206,6 +207,51 @@ class ObservableResultAdapterSpec extends Specification {
 
         then:
         newMethod.getAnnotations(ClassHelper.make(RxSchedule)).empty
+    }
+
+    def "implement narrows the new method's return type to Iterable before delegating so decorators applied by the adapted implementer see the synchronous type"() {
+        given:
+        DomainIterableImplementer implementer = new DomainIterableImplementer(prefix: 'find')
+        ObservableResultAdapter adapter = new ObservableResultAdapter(implementer)
+        MethodNode abstractMethodNode = methodNode('find', observableOf(ClassHelper.make(RxDomainFixture)))
+        MethodNode newMethod = methodNode('find', ClassHelper.OBJECT_TYPE)
+
+        when:
+        adapter.implement(ClassHelper.make(String), abstractMethodNode, newMethod, ClassHelper.make(Object))
+
+        then: 'the adapted implementer saw the unwrapped Iterable return type, not the Observable-wrapped one'
+        implementer.implementNewMethodNode.returnType.name == Iterable.name
+    }
+
+    def "implement stashes the original wrapped return type as node metadata so RxScheduleIOTransformation can restore it, and leaves the method's return type narrowed until then"() {
+        given:
+        DomainIterableImplementer implementer = new DomainIterableImplementer(prefix: 'find')
+        ObservableResultAdapter adapter = new ObservableResultAdapter(implementer)
+        MethodNode abstractMethodNode = methodNode('find', observableOf(ClassHelper.make(RxDomainFixture)))
+        MethodNode newMethod = methodNode('find', ClassHelper.OBJECT_TYPE)
+
+        when:
+        adapter.implement(ClassHelper.make(String), abstractMethodNode, newMethod, ClassHelper.make(Object))
+
+        then:
+        newMethod.getNodeMetaData(RxScheduleIOTransformation.WRAPPED_RETURN_TYPE).is(ClassHelper.OBJECT_TYPE)
+        newMethod.returnType.name == Iterable.name
+    }
+
+    def "implement does not narrow the return type or stash wrapped-type metadata when the resolved domain class is itself a reactive entity"() {
+        given:
+        DomainIterableImplementer implementer = new DomainIterableImplementer(prefix: 'find')
+        ObservableResultAdapter adapter = new ObservableResultAdapter(implementer)
+        MethodNode abstractMethodNode = methodNode('find', observableOf(ClassHelper.make(RxEntity)))
+        MethodNode newMethod = methodNode('find', ClassHelper.OBJECT_TYPE)
+
+        when:
+        adapter.implement(ClassHelper.make(String), abstractMethodNode, newMethod, ClassHelper.make(Object))
+
+        then: 'no rescheduling is needed, so the return type is left untouched for the adapted implementer'
+        implementer.implementNewMethodNode.returnType.is(ClassHelper.OBJECT_TYPE)
+        newMethod.returnType.is(ClassHelper.OBJECT_TYPE)
+        newMethod.getNodeMetaData(RxScheduleIOTransformation.WRAPPED_RETURN_TYPE) == null
     }
 
     def "implement delegates to the adapted implementer with the resolved arguments and sets the Iterable return type metadata"() {

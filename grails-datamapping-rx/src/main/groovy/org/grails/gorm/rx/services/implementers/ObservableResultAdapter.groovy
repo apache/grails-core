@@ -116,11 +116,23 @@ class ObservableResultAdapter  implements ServiceImplementer, Ordered, AdaptedIm
 
         ClassNode iterableType = GenericsUtils.makeClassSafeWithGenerics(Iterable, returnType)
         newMethodNode.setNodeMetaData(RETURN_TYPE, iterableType)
+
+        boolean requiresScheduling = !isRxEntity(domainClassNode)
+        ClassNode wrappedReturnType = newMethodNode.returnType
+        if (requiresScheduling) {
+            // Narrow to the unwrapped synchronous type (e.g. Iterable<Book> instead of Observable<Book>) so
+            // that any decorator applied by the adapted implementer (such as the automatic @Transactional
+            // wrapping) builds its delegating call against the type the synchronous body actually returns.
+            // Restored to the Rx-wrapped type by RxScheduleIOTransformation once it weaves this method.
+            newMethodNode.setReturnType(iterableType)
+        }
+
         adapted.implement(domainClassNode, abstractMethodNode, newMethodNode, targetClassNode)
 
-        if (!isRxEntity(domainClassNode)) {
+        if (requiresScheduling) {
             def ann = addAnnotationOrGetExisting(newMethodNode, RxSchedule)
             ann.setMember(RxScheduleIOTransformation.ANN_SINGLE_RESULT, ConstantExpression.TRUE)
+            newMethodNode.setNodeMetaData(RxScheduleIOTransformation.WRAPPED_RETURN_TYPE, wrappedReturnType)
         }
     }
 

@@ -34,6 +34,7 @@ import org.grails.datastore.gorm.services.implementers.SingleResultInterfaceProj
 import org.grails.datastore.gorm.services.implementers.SingleResultProjectionServiceImplementer
 import org.grails.datastore.gorm.services.implementers.SingleResultServiceImplementer
 import org.grails.datastore.mapping.core.Ordered
+import org.grails.gorm.rx.transform.RxScheduleIOTransformation
 import rx.Single
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -143,6 +144,20 @@ class SingleResultAdapterSpec extends Specification {
         ((ClassNode) newMethod.getNodeMetaData(ServiceImplementer.RETURN_TYPE)).name == RxSingleDomainFixture.name
     }
 
+    def "implement narrows the new method's return type to the unwrapped type before delegating so decorators applied by the adapted implementer see the synchronous type"() {
+        given:
+        DomainSingleImplementer implementer = new DomainSingleImplementer(prefix: 'find')
+        SingleResultAdapter adapter = new SingleResultAdapter(implementer)
+        MethodNode abstractMethodNode = methodNode('find', singleOf(ClassHelper.make(RxSingleDomainFixture)))
+        MethodNode newMethod = methodNode('find', ClassHelper.OBJECT_TYPE)
+
+        when:
+        adapter.implement(ClassHelper.make(String), abstractMethodNode, newMethod, ClassHelper.make(Object))
+
+        then: 'the adapted implementer saw the unwrapped return type, not the Single-wrapped one'
+        implementer.implementNewMethodNode.returnType.name == RxSingleDomainFixture.name
+    }
+
     def "implement adds an RxSchedule annotation marking a single result when the resolved return type is not a reactive entity"() {
         given:
         DomainSingleImplementer implementer = new DomainSingleImplementer(prefix: 'find')
@@ -159,6 +174,21 @@ class SingleResultAdapterSpec extends Specification {
         annotations[0].getMember('singleResult') == ConstantExpression.TRUE
     }
 
+    def "implement stashes the original wrapped return type as node metadata so RxScheduleIOTransformation can restore it, and leaves the method's return type narrowed until then"() {
+        given:
+        DomainSingleImplementer implementer = new DomainSingleImplementer(prefix: 'find')
+        SingleResultAdapter adapter = new SingleResultAdapter(implementer)
+        MethodNode abstractMethodNode = methodNode('find', singleOf(ClassHelper.make(RxSingleDomainFixture)))
+        MethodNode newMethod = methodNode('find', ClassHelper.OBJECT_TYPE)
+
+        when:
+        adapter.implement(ClassHelper.make(String), abstractMethodNode, newMethod, ClassHelper.make(Object))
+
+        then:
+        newMethod.getNodeMetaData(RxScheduleIOTransformation.WRAPPED_RETURN_TYPE).is(ClassHelper.OBJECT_TYPE)
+        newMethod.returnType.name == RxSingleDomainFixture.name
+    }
+
     def "implement does not add an RxSchedule annotation when the resolved return type is itself a reactive entity"() {
         given:
         DomainSingleImplementer implementer = new DomainSingleImplementer(prefix: 'find')
@@ -171,6 +201,22 @@ class SingleResultAdapterSpec extends Specification {
 
         then:
         newMethod.getAnnotations(ClassHelper.make(RxSchedule)).empty
+    }
+
+    def "implement does not narrow the return type or stash wrapped-type metadata when the resolved return type is itself a reactive entity"() {
+        given:
+        DomainSingleImplementer implementer = new DomainSingleImplementer(prefix: 'find')
+        SingleResultAdapter adapter = new SingleResultAdapter(implementer)
+        MethodNode abstractMethodNode = methodNode('find', singleOf(ClassHelper.make(RxEntity)))
+        MethodNode newMethod = methodNode('find', ClassHelper.OBJECT_TYPE)
+
+        when:
+        adapter.implement(ClassHelper.make(String), abstractMethodNode, newMethod, ClassHelper.make(Object))
+
+        then: 'no rescheduling is needed, so the return type is left untouched for the adapted implementer'
+        implementer.implementNewMethodNode.returnType.is(ClassHelper.OBJECT_TYPE)
+        newMethod.returnType.is(ClassHelper.OBJECT_TYPE)
+        newMethod.getNodeMetaData(RxScheduleIOTransformation.WRAPPED_RETURN_TYPE) == null
     }
 
     def "getOrder delegates to the adapted implementer when it implements Ordered"() {
