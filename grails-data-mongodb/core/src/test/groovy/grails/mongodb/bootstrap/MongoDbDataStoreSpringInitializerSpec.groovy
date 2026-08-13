@@ -19,6 +19,7 @@
 package grails.mongodb.bootstrap
 
 import com.mongodb.client.MongoClient
+import com.mongodb.client.MongoClients
 import grails.mongodb.MongoEntity
 import grails.mongodb.geo.Point
 import grails.persistence.Entity
@@ -26,6 +27,7 @@ import org.apache.grails.testing.mongo.AutoStartedMongoSpec
 import org.bson.Document
 import org.grails.datastore.gorm.mongo.Birthday
 import org.grails.datastore.gorm.mongo.BirthdayCodec
+import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.engine.types.AbstractMappingAwareCustomTypeMarshaller
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentProperty
@@ -103,6 +105,50 @@ class MongoDbDataStoreSpringInitializerSpec extends AutoStartedMongoSpec {
 
         then:
         !applicationContext.containsBean("grailsDomainClassMappingContext")
+
+        cleanup:
+        mongoDatastore.destroy()
+    }
+
+    void "Test configure reuses a pre-existing MongoClient instead of creating a new one"() {
+        given: "a MongoClient created ahead of time"
+        def mongoClient = MongoClients.create("mongodb://${mongoHost}:${mongoPort}".toString())
+        def initializer = makeInitializer([
+                (MongoSettings.SETTING_DATABASE_NAME): 'foo',
+        ], Person)
+        initializer.setMongoClient(mongoClient)
+
+        when: "the initializer is configured"
+        def applicationContext = initializer.configure()
+
+        then: "the pre-existing client is registered and reused rather than a new one being built"
+        applicationContext.getBean('mongo', MongoClient).is(mongoClient)
+        applicationContext.getBean(MongoDatastore).getMongoClient().is(mongoClient)
+
+        cleanup:
+        applicationContext.getBean(MongoDatastore).destroy()
+        mongoClient.close()
+    }
+
+    void "Test the package-scanning constructor discovers entities via classpath scan"() {
+        given: "an initializer configured with a package name rather than explicit classes"
+        def resolver = DatastoreUtils.createPropertyResolver([
+                (MongoSettings.SETTING_HOST): mongoHost,
+                (MongoSettings.SETTING_PORT): mongoPort,
+        ])
+        def initializer = new MongoDbDataStoreSpringInitializer(resolver, Person.package.name) {
+            @Override
+            protected Map<String, Class<?>> loadDataServices(String secondaryDatastore = null) {
+                [:]
+            }
+        }
+
+        when: "the application is configured"
+        def applicationContext = initializer.configure()
+        def mongoDatastore = applicationContext.getBean(MongoDatastore)
+
+        then: "the Person entity declared in the scanned package was discovered and mapped"
+        mongoDatastore.mappingContext.getPersistentEntity(Person.name) != null
 
         cleanup:
         mongoDatastore.destroy()
