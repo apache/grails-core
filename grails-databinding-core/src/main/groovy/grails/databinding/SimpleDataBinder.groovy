@@ -333,16 +333,29 @@ class SimpleDataBinder implements DataBinder {
         }
 
         if (propertyType.isArray()) {
-            def index = Integer.parseInt(indexedPropertyReferenceDescriptor.index)
+            Integer index = parseIndexedPropertyIndex(obj, indexedPropertyReferenceDescriptor, val, listener, errors)
+            if (index == null) {
+                return
+            }
             def array = initializeArray(obj, propName, propertyType.componentType, index)
             if (array != null) {
                 addElementToArrayAt(array, index, val)
             }
         } else if (Collection.isAssignableFrom(propertyType)) {
-            def index = Integer.parseInt(indexedPropertyReferenceDescriptor.index)
+            // Sets use the bracket key only as a grouping token; the parsed index is never
+            // consumed (isOkToAddElementAt / addElementToCollectionAt ignore it). Require a
+            // non-negative integer index only for List/Collection paths that actually use it.
+            boolean isSet = Set.isAssignableFrom(propertyType)
+            Integer index = 0
+            if (!isSet) {
+                index = parseIndexedPropertyIndex(obj, indexedPropertyReferenceDescriptor, val, listener, errors)
+                if (index == null) {
+                    return
+                }
+            }
             Collection collectionInstance = initializeCollection(obj, propName, propertyType)
             def indexedInstance = null
-            if (!(Set.isAssignableFrom(propertyType))) {
+            if (!isSet) {
                 indexedInstance = collectionInstance[index]
             }
             if (indexedInstance == null) {
@@ -392,6 +405,42 @@ class SimpleDataBinder implements DataBinder {
                 }
             }
         }
+    }
+
+    /**
+     * Parses an indexed binding path segment as a non-negative integer.
+     * <p>
+     * Indexed properties follow the JavaBeans model (spec v1.01, section 7.2):
+     * array-typed properties with paired {@code int}-indexed accessors. Grails
+     * extends that model to positional collection binding; negative indexes are
+     * rejected because they are not part of the beans model (the prior
+     * {@code [-1]} behavior was Groovy list semantics leaking through the binder).
+     * </p>
+     *
+     * @return the parsed index, or {@code null} when the segment is rejected as a binding error
+     */
+    protected Integer parseIndexedPropertyIndex(obj, IndexedPropertyReferenceDescriptor indexedPropertyReferenceDescriptor,
+        val, DataBindingListener listener, errors) {
+
+        String rawIndex = indexedPropertyReferenceDescriptor.index
+        Integer index = null
+        try {
+            index = Integer.parseInt(rawIndex)
+        }
+        catch (NumberFormatException ignored) {
+            // handled below, with the same error as a negative index
+        }
+
+        if (index == null || index < 0) {
+            // Intentional: malformed and negative indexes are reported identically, so
+            // untrusted request data cannot tell that negative indexes are handled by a
+            // separate check. Do not "improve" this into two distinct messages.
+            // GrailsWebDataBindingListener copies cause.message into FieldError.defaultMessage.
+            addBindingError(obj, indexedPropertyReferenceDescriptor.toString(), val,
+                    new NumberFormatException("For input string: \"${rawIndex}\""), listener, errors)
+            return null
+        }
+        index
     }
 
     @CompileStatic(TypeCheckingMode.SKIP)

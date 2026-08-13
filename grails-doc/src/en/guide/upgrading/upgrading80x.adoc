@@ -825,6 +825,9 @@ The Spring annotations still work, so this is non-blocking, but new code should 
 * **Namespaced link generation is namespace-aware.**
 When a link, form action, pagination link, sortable column link, redirect, chain, or include targets a controller without an explicit `namespace`, Grails now resolves the namespace automatically. In the normal case, where only one controller has the target name, `controller` and `action` generate the correct namespaced or non-namespaced URL. Ambiguity only occurs when multiple controllers share the same name. In that case, specify `namespace` to choose the target explicitly. Pass `namespace: null` from Groovy code or `namespace=""` in a GSP tag to target the non-namespaced controller explicitly.
 
+* **Indexed data binding rejects negative and malformed indexes.**
+Array, List, and other positional collection or association binding now requires a non-negative integer index, aligning with the JavaBeans indexed-property model (spec v1.01, section 7.2). Request parameters such as `books[-1].title` or `albums[bogus]` become binding errors and no longer select a different element or throw an uncaught exception. Audit existing form markup and request parameters for negative or non-numeric indexes on arrays and Lists. `Set` association keys remain arbitrary grouping tokens (selection is by `id`), so `authors[foo]` and `authors[-1]` continue to work for Sets.
+
 ==== 21. Tag Library Test Cleanup Changes
 
 Grails 8 removes the `purgeTagLibMetaClass` test hook used by some web and TagLib unit tests.
