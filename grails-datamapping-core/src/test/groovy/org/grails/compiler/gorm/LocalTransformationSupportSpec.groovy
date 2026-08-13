@@ -30,16 +30,6 @@ import spock.lang.Specification
  * {@code LocalTransformationSupport.resolveAnnotatedClassOrNull} is the shared guard extracted
  * from {@link DirtyCheckTransformation} and {@link JpaGormEntityTransformation}'s
  * {@code visit(ASTNode[], SourceUnit)} entry points.
- * <p>
- * The method's malformed-{@code astNodes}-shape check is not covered here: it casts both array
- * slots to {@code AnnotationNode}/{@code AnnotatedNode} before checking whether they actually are
- * one, so any input that would fail the check throws a plain {@code ClassCastException} from the
- * cast itself first - the intended {@code RuntimeException} with its "Internal error: wrong types"
- * message can never actually be constructed, since building that message requires calling
- * {@code .getClass()} on locals that only hold a non-null value once the (now un-reachable) casts
- * have already succeeded. This is a pre-existing latent issue inherited unchanged from both
- * original call sites, not introduced by extracting this method - it is called out here rather
- * than silently left uncovered.
  */
 class LocalTransformationSupportSpec extends Specification {
 

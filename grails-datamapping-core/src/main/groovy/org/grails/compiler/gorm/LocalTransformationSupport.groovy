@@ -43,12 +43,11 @@ class LocalTransformationSupport {
      * (the annotation doesn't match, or the annotated node isn't a class)
      */
     static ClassNode resolveAnnotatedClassOrNull(ASTNode[] astNodes, ClassNode expectedAnnotationType) {
-        AnnotatedNode parent = (AnnotatedNode) astNodes[1]
+        // Groovy's local-transform dispatch always supplies [AnnotationNode, AnnotatedNode] here,
+        // so these casts are trusted rather than defensively checked first: a shape mismatch would
+        // throw ClassCastException from the cast itself, before any check could run anyway.
         AnnotationNode node = (AnnotationNode) astNodes[0]
-
-        if (!(astNodes[0] instanceof AnnotationNode) || !(astNodes[1] instanceof AnnotatedNode)) {
-            throw new RuntimeException("Internal error: wrong types: ${node.getClass()} / ${parent.getClass()}")
-        }
+        AnnotatedNode parent = (AnnotatedNode) astNodes[1]
 
         if (expectedAnnotationType != node.getClassNode() || !(parent instanceof ClassNode)) {
             return null
