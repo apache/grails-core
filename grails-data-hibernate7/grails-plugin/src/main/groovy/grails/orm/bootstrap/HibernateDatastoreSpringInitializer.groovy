@@ -49,13 +49,11 @@ import org.grails.orm.hibernate.support.HibernateDatastoreConnectionSourcesRegis
  */
 class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
 
-    public static final String SESSION_FACTORY_BEAN_NAME = 'sessionFactory'
     public static final String DEFAULT_DATA_SOURCE_NAME = Settings.SETTING_DATASOURCE
     public static final String DATA_SOURCES = Settings.SETTING_DATASOURCES
     public static final String TEST_DB_URL = 'jdbc:h2:mem:grailsDb;LOCK_TIMEOUT=10000;DB_CLOSE_DELAY=-1'
 
     String defaultDataSourceBeanName = ConnectionSource.DEFAULT
-    String defaultSessionFactoryBeanName = SESSION_FACTORY_BEAN_NAME
     Set<String> dataSources = [defaultDataSourceBeanName] as Set<String>
     boolean enableReload = false
     boolean grailsPlugin = false
@@ -137,10 +135,6 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
         if (!beanDefinitionRegistry.containsBeanDefinition('hibernateDatastore')) {
             throw new IllegalStateException('Failed to register hibernateDatastore bean!')
         }
-    }
-
-    protected String getTestDbUrl() {
-        TEST_DB_URL
     }
 
     @CompileStatic
