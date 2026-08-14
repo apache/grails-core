@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.jspecify.annotations.NonNull;
+
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -291,8 +293,8 @@ public class DomainEventListener extends AbstractPersistenceEventListener
      * @see org.springframework.context.event.SmartApplicationListener#supportsEventType(
      *     java.lang.Class)
      */
-    public boolean supportsEventType(Class<? extends ApplicationEvent> eventType) {
-        return eventType != null && AbstractPersistenceEvent.class.isAssignableFrom(eventType);
+    public boolean supportsEventType(@NonNull Class<? extends ApplicationEvent> eventType) {
+        return AbstractPersistenceEvent.class.isAssignableFrom(eventType);
     }
 
     private boolean invokeEvent(String eventName, PersistentEntity entity, EntityAccess ea) {

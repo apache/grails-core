@@ -123,12 +123,15 @@ class DomainEventListenerSpec extends Specification {
         !listener.supportsEventType(PayloadApplicationEvent)
     }
 
-    void "supportsEventType rejects a null event type rather than throwing, matching SmartApplicationListener's nullable contract"() {
+    void "supportsEventType throws on a null event type, per its @NonNull contract"() {
         given:
         DomainEventListener listener = new DomainEventListener(plainDatastore(Stub(MappingContext) { getPersistentEntities() >> [] }))
 
-        expect:
-        !listener.supportsEventType(null)
+        when:
+        listener.supportsEventType(null)
+
+        then:
+        thrown(NullPointerException)
     }
 
     void "beforeInsert sets an initial numeric version to 0 when the entity is versioned"() {
