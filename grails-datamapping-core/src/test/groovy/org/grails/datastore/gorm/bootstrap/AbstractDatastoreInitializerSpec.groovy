@@ -321,6 +321,23 @@ class AbstractDatastoreInitializerSpec extends Specification {
         registry.getBeanDefinition('transactionManager').beanClassName == Object.name
     }
 
+    void 'GrailsBeanBuilderInit registers beans via grails.spring.BeanBuilder when used directly'() {
+        given:
+        def registry = new DefaultListableBeanFactory()
+        def initializer = new TestDatastoreInitializer()
+
+        expect:
+        AbstractDatastoreInitializer.GrailsBeanBuilderInit.isAvailable()
+
+        when:
+        def beanDefinitions = initializer.getAdditionalBeansConfiguration(registry, 'foo')
+        AbstractDatastoreInitializer.GrailsBeanBuilderInit.registerBeans(registry, beanDefinitions)
+
+        then:
+        registry.containsBeanDefinition('fooTransactionManager')
+        registry.containsBeanDefinition('fooPersistenceInterceptor')
+    }
+
     void 'configure builds a fully refreshed application context containing the declared beans'() {
         given:
         def initializer = new TestDatastoreInitializer()

@@ -22,7 +22,9 @@ import com.mongodb.MongoClientSettings
 import com.mongodb.client.MongoClient
 import grails.mongodb.MongoEntity
 import org.grails.datastore.mapping.mongo.config.MongoSettings
+import org.springframework.core.env.ConfigurableEnvironment
 import org.springframework.core.env.PropertyResolver
+import org.springframework.core.env.StandardEnvironment
 import spock.lang.Specification
 
 /**
@@ -115,6 +117,7 @@ class MongoDbDataStoreSpringInitializerUnitSpec extends Specification {
     void 'applyDatabaseNameFallback does nothing when the database name was never customized'() {
         given:
         def initializer = new MongoDbDataStoreSpringInitializer()
+        removeSystemPropertySources(initializer)
 
         expect:
         !initializer.configuration.containsProperty(MongoSettings.SETTING_DATABASE_NAME)
@@ -129,6 +132,7 @@ class MongoDbDataStoreSpringInitializerUnitSpec extends Specification {
     void 'applyDatabaseNameFallback injects the customized database name into a ConfigurableEnvironment when not already set'() {
         given:
         def initializer = new MongoDbDataStoreSpringInitializer()
+        removeSystemPropertySources(initializer)
         initializer.setDatabaseName('customDb')
 
         when:
@@ -179,6 +183,32 @@ class MongoDbDataStoreSpringInitializerUnitSpec extends Specification {
         then:
         config.get(MongoSettings.SETTING_DATABASE_NAME) == 'explicit'
     }
+
+    void 'applyDatabaseNameFallback does nothing when configuration is neither a ConfigurableEnvironment nor a Map'() {
+        given:
+        def initializer = new MongoDbDataStoreSpringInitializer()
+        def config = new PlainPropertyResolver()
+        initializer.configuration = config
+        initializer.setDatabaseName('customDb')
+
+        when:
+        initializer.applyDatabaseNameFallback()
+
+        then:
+        noExceptionThrown()
+        !config.containsProperty(MongoSettings.SETTING_DATABASE_NAME)
+    }
+
+    /**
+     * The default {@code configuration} is a {@code StandardEnvironment}, which reads system
+     * properties and environment variables. Strips those sources so tests asserting on its
+     * contents aren't at the mercy of the environment they happen to run in.
+     */
+    private static void removeSystemPropertySources(MongoDbDataStoreSpringInitializer initializer) {
+        def propertySources = ((ConfigurableEnvironment) initializer.configuration).propertySources
+        propertySources.remove(StandardEnvironment.SYSTEM_PROPERTIES_PROPERTY_SOURCE_NAME)
+        propertySources.remove(StandardEnvironment.SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME)
+    }
 }
 
 /**
@@ -220,6 +250,59 @@ class MapPropertyResolver extends LinkedHashMap<String, Object> implements Prope
     @Override
     def <T> T getRequiredProperty(String key, Class<T> targetType) {
         get(key) as T
+    }
+
+    @Override
+    String resolvePlaceholders(String text) {
+        text
+    }
+
+    @Override
+    String resolveRequiredPlaceholders(String text) {
+        text
+    }
+}
+
+/**
+ * A {@link PropertyResolver} that is neither a {@link ConfigurableEnvironment} nor a {@link Map},
+ * exercising the fallthrough branch of {@code applyDatabaseNameFallback()}.
+ */
+class PlainPropertyResolver implements PropertyResolver {
+
+    private final Map<String, Object> values = [:]
+
+    boolean containsProperty(String key) {
+        values.containsKey(key)
+    }
+
+    @Override
+    String getProperty(String key) {
+        values.get(key) as String
+    }
+
+    @Override
+    String getProperty(String key, String defaultValue) {
+        values.containsKey(key) ? values.get(key) as String : defaultValue
+    }
+
+    @Override
+    def <T> T getProperty(String key, Class<T> targetType) {
+        values.get(key) as T
+    }
+
+    @Override
+    def <T> T getProperty(String key, Class<T> targetType, T defaultValue) {
+        values.containsKey(key) ? values.get(key) as T : defaultValue
+    }
+
+    @Override
+    String getRequiredProperty(String key) {
+        values.get(key) as String
+    }
+
+    @Override
+    def <T> T getRequiredProperty(String key, Class<T> targetType) {
+        values.get(key) as T
     }
 
     @Override
