@@ -38,6 +38,7 @@ import org.springframework.util.ClassUtils;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.multipart.MultipartHttpServletRequest;
 import org.springframework.web.servlet.handler.DispatcherServletWebRequest;
 import org.springframework.web.servlet.support.RequestContextUtils;
 import org.springframework.web.util.UrlPathHelper;
@@ -123,7 +124,13 @@ public class GrailsWebRequest extends DispatcherServletWebRequest {
      * @param multipartRequest The multipart request
      */
     public void setMultipartRequest(HttpServletRequest multipartRequest) {
-        this.multipartRequest = multipartRequest;
+        if (multipartRequest instanceof MultipartHttpServletRequest resolvedMultipartRequest &&
+            multipartRequest != getRequest()) {
+            this.multipartRequest = new GrailsMultipartHttpServletRequest(getRequest(), resolvedMultipartRequest);
+        }
+        else {
+            this.multipartRequest = multipartRequest;
+        }
         this.originalParams = null; // originalParams will need to be re-initialized. See https://github.com/apache/grails-core/issues/13837
     }
 

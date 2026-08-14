@@ -23,6 +23,7 @@ import jakarta.servlet.http.HttpServletRequest
 
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
+import org.springframework.mock.web.MockMultipartFile
 import org.springframework.mock.web.MockMultipartHttpServletRequest
 import org.springframework.mock.web.MockServletContext
 import org.springframework.web.context.request.RequestContextHolder
@@ -42,11 +43,16 @@ class GrailsDispatcherServletSpec extends Specification {
     void 'buildRequestAttributes propagates a multipart request nested in a wrapper'() {
         given:
         def servletContext = new MockServletContext()
-        def request = new MockHttpServletRequest(servletContext)
         def response = new MockHttpServletResponse()
         def multipartRequest = new MockMultipartHttpServletRequest(servletContext)
-        def wrappedRequest = new HttpServletRequestWrapper(multipartRequest)
-        def webRequest = new GrailsWebRequest(request, response, servletContext)
+        multipartRequest.addFile(new MockMultipartFile('file', 'test.txt', 'text/plain', 'content'.bytes))
+        def wrappedRequest = new HttpServletRequestWrapper(multipartRequest) {
+            @Override
+            String getMethod() {
+                'PUT'
+            }
+        }
+        def webRequest = new GrailsWebRequest(wrappedRequest, response, servletContext)
         def servlet = new TestGrailsDispatcherServlet()
 
         when:
@@ -54,7 +60,9 @@ class GrailsDispatcherServletSpec extends Specification {
 
         then:
         result.is(webRequest)
-        webRequest.currentRequest.is(multipartRequest)
+        !webRequest.currentRequest.is(multipartRequest)
+        webRequest.currentRequest.method == 'PUT'
+        webRequest.currentRequest.getFile('file').originalFilename == 'test.txt'
     }
 
     void 'checkMultipart returns and stores a newly resolved multipart request'() {
@@ -64,6 +72,7 @@ class GrailsDispatcherServletSpec extends Specification {
         def servletContext = new MockServletContext()
         def webRequest = new GrailsWebRequest(request, response, servletContext)
         def multipartRequest = new MockMultipartHttpServletRequest(servletContext)
+        multipartRequest.addFile(new MockMultipartFile('file', 'test.txt', 'text/plain', 'content'.bytes))
         def resolver = Mock(MultipartResolver)
         def servlet = new TestGrailsDispatcherServlet(multipartResolverForTest: resolver)
         RequestContextHolder.setRequestAttributes(webRequest)
@@ -75,7 +84,8 @@ class GrailsDispatcherServletSpec extends Specification {
         1 * resolver.isMultipart(request) >> true
         1 * resolver.resolveMultipart(request) >> multipartRequest
         result.is(multipartRequest)
-        webRequest.currentRequest.is(multipartRequest)
+        !webRequest.currentRequest.is(multipartRequest)
+        webRequest.currentRequest.getFile('file').originalFilename == 'test.txt'
 
     }
 
