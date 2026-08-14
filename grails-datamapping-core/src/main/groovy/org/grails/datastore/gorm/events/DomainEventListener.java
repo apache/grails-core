@@ -163,7 +163,7 @@ public class DomainEventListener extends AbstractPersistenceEventListener
             }
         }
 
-        return invokeEvent(EVENT_BEFORE_INSERT, entity, ea, event);
+        return invokeEvent(EVENT_BEFORE_INSERT, entity, ea);
     }
 
     protected void setVersion(final EntityAccess ea) {
@@ -180,19 +180,19 @@ public class DomainEventListener extends AbstractPersistenceEventListener
     }
 
     public boolean beforeUpdate(final PersistentEntity entity, final EntityAccess ea) {
-        return invokeEvent(EVENT_BEFORE_UPDATE, entity, ea, null);
+        return invokeEvent(EVENT_BEFORE_UPDATE, entity, ea);
     }
 
     public boolean beforeUpdate(final PersistentEntity entity, final EntityAccess ea, PreUpdateEvent event) {
-        return invokeEvent(EVENT_BEFORE_UPDATE, entity, ea, event);
+        return invokeEvent(EVENT_BEFORE_UPDATE, entity, ea);
     }
 
     public boolean beforeDelete(final PersistentEntity entity, final EntityAccess ea) {
-        return invokeEvent(EVENT_BEFORE_DELETE, entity, ea, null);
+        return invokeEvent(EVENT_BEFORE_DELETE, entity, ea);
     }
 
     public boolean beforeDelete(final PersistentEntity entity, final EntityAccess ea, PreDeleteEvent event) {
-        return invokeEvent(EVENT_BEFORE_DELETE, entity, ea, event);
+        return invokeEvent(EVENT_BEFORE_DELETE, entity, ea);
     }
 
     public void beforeLoad(final PersistentEntity entity, final EntityAccess ea) {
@@ -200,7 +200,7 @@ public class DomainEventListener extends AbstractPersistenceEventListener
     }
 
     public void beforeLoad(final PersistentEntity entity, final EntityAccess ea, PreLoadEvent event) {
-        invokeEvent(EVENT_BEFORE_LOAD, entity, ea, event);
+        invokeEvent(EVENT_BEFORE_LOAD, entity, ea);
     }
 
     public void afterDelete(final PersistentEntity entity, final EntityAccess ea) {
@@ -208,7 +208,7 @@ public class DomainEventListener extends AbstractPersistenceEventListener
     }
 
     public void afterDelete(final PersistentEntity entity, final EntityAccess ea, PostDeleteEvent event) {
-        invokeEvent(EVENT_AFTER_DELETE, entity, ea, event);
+        invokeEvent(EVENT_AFTER_DELETE, entity, ea);
     }
 
     public void afterInsert(final PersistentEntity entity, final EntityAccess ea) {
@@ -217,7 +217,7 @@ public class DomainEventListener extends AbstractPersistenceEventListener
 
     public void afterInsert(final PersistentEntity entity, final EntityAccess ea, PostInsertEvent event) {
         activateDirtyChecking(ea);
-        invokeEvent(EVENT_AFTER_INSERT, entity, ea, event);
+        invokeEvent(EVENT_AFTER_INSERT, entity, ea);
     }
 
     private void activateDirtyChecking(EntityAccess ea) {
@@ -233,7 +233,7 @@ public class DomainEventListener extends AbstractPersistenceEventListener
 
     public void afterUpdate(final PersistentEntity entity, final EntityAccess ea, PostUpdateEvent event) {
         activateDirtyChecking(ea); // reset dirty checking
-        invokeEvent(EVENT_AFTER_UPDATE, entity, ea, event);
+        invokeEvent(EVENT_AFTER_UPDATE, entity, ea);
     }
 
     public void afterLoad(final PersistentEntity entity, final EntityAccess ea) {
@@ -245,7 +245,7 @@ public class DomainEventListener extends AbstractPersistenceEventListener
         if (autowireEntities || (entity != null && entity.getMapping().getMappedForm().isAutowire())) {
             autowireBeanProperties(ea.getEntity());
         }
-        invokeEvent(EVENT_AFTER_LOAD, entity, ea, event);
+        invokeEvent(EVENT_AFTER_LOAD, entity, ea);
     }
 
     protected void autowireBeanProperties(final Object entity) {
@@ -274,7 +274,7 @@ public class DomainEventListener extends AbstractPersistenceEventListener
         return AbstractPersistenceEvent.class.isAssignableFrom(eventType);
     }
 
-    private boolean invokeEvent(String eventName, PersistentEntity entity, EntityAccess ea, ApplicationEvent event) {
+    private boolean invokeEvent(String eventName, PersistentEntity entity, EntityAccess ea) {
         final Map<String, Method> events = entityEvents.get(entity);
         if (events == null) {
             return true;
@@ -287,14 +287,7 @@ public class DomainEventListener extends AbstractPersistenceEventListener
 
         final Object result;
         if (ea != null) {
-            final Object o = ea.getEntity();
-
-            if (eventMethod.getParameterTypes().length == 1) {
-                result = ReflectionUtils.invokeMethod(eventMethod, o, event);
-            }
-            else {
-                result = ReflectionUtils.invokeMethod(eventMethod, o);
-            }
+            result = ReflectionUtils.invokeMethod(eventMethod, ea.getEntity());
         }
         else {
             result = null;

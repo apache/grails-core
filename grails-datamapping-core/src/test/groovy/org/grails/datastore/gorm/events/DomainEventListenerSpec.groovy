@@ -60,14 +60,14 @@ import org.grails.datastore.mapping.model.config.GormProperties
  * - {@code invokeEvent}'s {@code ea != null} branch is always true through every public before-
  *   and after-hook method, which never passes a null {@code EntityAccess}; the {@code ea == null}
  *   path is unreachable via the public API.
- * - {@code invokeEvent}'s {@code eventMethod.getParameterTypes().length == 1} branch can never be
- *   taken: {@code findAndCacheEvent} caches hooks via Spring's {@code ReflectionUtils.findMethod(Class, String)},
- *   which (confirmed via decompiling spring-core) only ever matches zero-argument methods, so a
- *   cached {@code eventMethod} can never have one parameter. Event-argument-accepting hooks appear
- *   to be an unreachable, effectively dead capability.
  * - The protected {@code DomainEventListener(ConnectionSourcesProvider, MappingContext)}
  *   constructor exists solely for subclassing (e.g. {@code grails.gorm.rx.events.DomainEventListener}),
  *   which is covered by its own module's spec; exercising it here would duplicate that coverage.
+ *
+ * {@code invokeEvent} previously also branched on {@code eventMethod.getParameterTypes().length == 1}
+ * to invoke a hook with the triggering event as an argument. That branch was confirmed dead (via
+ * decompiling spring-core's {@code ReflectionUtils.findMethod(Class, String)}, which only ever
+ * matches zero-argument methods) and removed.
  */
 class DomainEventListenerSpec extends Specification {
 
