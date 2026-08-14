@@ -21,12 +21,12 @@ package org.grails.plugins.web.controllers
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 
+import org.jspecify.annotations.NonNull
+import spock.lang.Specification
+
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.mock.web.MockMultipartHttpServletRequest
-import org.springframework.web.multipart.MultipartHttpServletRequest
 import org.springframework.web.multipart.MultipartResolver
-
-import spock.lang.Specification
 
 class GrailsMultipartFilterSpec extends Specification {
 
@@ -63,7 +63,7 @@ class GrailsMultipartFilterSpec extends Specification {
         }
 
         @Override
-        protected MultipartResolver lookupMultipartResolver(HttpServletRequest request) {
+        protected MultipartResolver lookupMultipartResolver(@NonNull HttpServletRequest request) {
             resolver
         }
     }

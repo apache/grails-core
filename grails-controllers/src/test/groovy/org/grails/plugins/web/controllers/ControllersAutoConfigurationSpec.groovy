@@ -28,6 +28,7 @@ import org.springframework.boot.test.context.runner.WebApplicationContextRunner
 import org.springframework.boot.web.servlet.AbstractFilterRegistrationBean
 import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.boot.web.servlet.ServletContextInitializerBeans
+import org.springframework.boot.servlet.autoconfigure.MultipartAutoConfiguration
 import org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ConfigurableApplicationContext
@@ -104,6 +105,24 @@ class ControllersAutoConfigurationSpec extends Specification {
                     def registrations = multipartFilterRegistrations(context)
                     assert registrations.size() == 1
                     assert registrations[0].filter.is(userRegistration.filter)
+                }
+    }
+
+    void 'disabling servlet multipart support prevents Boot from creating a multipart resolver'() {
+        given:
+        def grailsApplication = Mock(GrailsApplication) {
+            getClassLoader() >> getClass().classLoader
+        }
+        Supplier<GrailsApplication> grailsApplicationSupplier = () -> grailsApplication
+
+        expect:
+        new WebApplicationContextRunner()
+                .withPropertyValues('spring.servlet.multipart.enabled=false')
+                .withBean(GrailsApplication, grailsApplicationSupplier)
+                .withConfiguration(AutoConfigurations.of(MultipartAutoConfiguration, ControllersAutoConfiguration))
+                .run { context ->
+                    assert !context.containsBean('multipartResolver')
+                    assert !context.containsBean('multipartFilter')
                 }
     }
 

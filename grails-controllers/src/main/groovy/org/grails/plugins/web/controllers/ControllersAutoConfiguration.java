@@ -28,6 +28,7 @@ import jakarta.servlet.MultipartConfigElement;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.servlet.autoconfigure.HttpEncodingAutoConfiguration;
@@ -103,6 +104,7 @@ public class ControllersAutoConfiguration {
     }
 
     @Bean
+    @ConditionalOnBooleanProperty(name = "spring.servlet.multipart.enabled", matchIfMissing = true)
     @ConditionalOnMissingBean(value = MultipartFilter.class, parameterizedContainer = FilterRegistrationBean.class)
     public FilterRegistrationBean<Filter> multipartFilter() {
         var registrationBean = new FilterRegistrationBean<>();
