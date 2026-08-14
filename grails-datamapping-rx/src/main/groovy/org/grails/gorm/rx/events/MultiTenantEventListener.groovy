@@ -62,18 +62,18 @@ class MultiTenantEventListener implements PersistenceEventListener {
     @Override
     void onApplicationEvent(ApplicationEvent event) {
         if (supportsEventType(event.getClass())) {
-            RxDatastoreClient datastoreClient = (RxDatastoreClient) event.getSource()
-            Assert.notNull(datastoreClient, 'Datastore client should never be null from source event')
+            RxDatastoreClient sourceClient = (RxDatastoreClient) event.getSource()
+            Assert.notNull(sourceClient, 'Datastore client should never be null from source event')
             if (event instanceof PreQueryEvent) {
                 PreQueryEvent preQueryEvent = (PreQueryEvent) event
                 Query query = preQueryEvent.getQuery()
 
                 PersistentEntity entity = query.getEntity()
                 if (entity.isMultiTenant()) {
-                    if (supportsSourceType(datastoreClient.getClass()) && this.datastoreClient.equals(datastoreClient)) {
+                    if (supportsSourceType(sourceClient.getClass()) && datastoreClient == sourceClient) {
                         TenantId tenantId = entity.getTenantId()
                         if (tenantId != null) {
-                            Serializable currentId = Tenants.currentId(datastoreClient.getClass())
+                            Serializable currentId = Tenants.currentId(sourceClient.getClass())
                             query.eq(tenantId.getName(), currentId)
                         }
                     }
@@ -85,8 +85,8 @@ class MultiTenantEventListener implements PersistenceEventListener {
                 if (entity.isMultiTenant()) {
                     TenantId tenantId = entity.getTenantId()
                     EntityReflector reflector = entity.getReflector()
-                    if (supportsSourceType(datastoreClient.getClass()) && this.datastoreClient.equals(datastoreClient)) {
-                        Serializable currentId = Tenants.currentId(datastoreClient.getClass())
+                    if (supportsSourceType(sourceClient.getClass()) && datastoreClient == sourceClient) {
+                        Serializable currentId = Tenants.currentId(sourceClient.getClass())
                         if (currentId != null) {
                             try {
                                 if (currentId == ConnectionSource.DEFAULT) {
