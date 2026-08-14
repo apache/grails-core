@@ -20,14 +20,14 @@ package org.grails.web.servlet.mvc
 
 import groovy.transform.CompileStatic
 
-import io.micrometer.observation.Observation
-import io.micrometer.observation.ObservationRegistry
 import jakarta.servlet.ServletContext
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 
+import io.micrometer.observation.Observation
+import io.micrometer.observation.ObservationRegistry
+
 import org.springframework.context.ApplicationContext
-import org.springframework.web.servlet.ModelAndView
 import org.springframework.web.context.ServletContextAware
 import org.springframework.web.context.WebApplicationContext
 import org.springframework.web.context.request.RequestAttributes
@@ -35,6 +35,8 @@ import org.springframework.web.context.request.ServletRequestAttributes
 import org.springframework.web.multipart.MultipartException
 import org.springframework.web.multipart.MultipartHttpServletRequest
 import org.springframework.web.servlet.DispatcherServlet
+import org.springframework.web.servlet.ModelAndView
+import org.springframework.web.util.WebUtils as SpringWebUtils
 
 import grails.util.Holders
 import org.grails.web.context.ServletEnvironmentGrailsApplicationDiscoveryStrategy
@@ -83,8 +85,7 @@ class GrailsDispatcherServlet extends DispatcherServlet implements ServletContex
     }
 
     private void propagateMultipartRequest(GrailsWebRequest webRequest, HttpServletRequest request) {
-        def multipartRequest =
-                org.springframework.web.util.WebUtils.getNativeRequest(request, MultipartHttpServletRequest)
+        def multipartRequest = SpringWebUtils.getNativeRequest(request, MultipartHttpServletRequest)
         if (multipartRequest != null) {
             webRequest.multipartRequest = multipartRequest
         }
