@@ -106,7 +106,7 @@ public class ControllersAutoConfiguration {
     @ConditionalOnMissingBean(value = MultipartFilter.class, parameterizedContainer = FilterRegistrationBean.class)
     public FilterRegistrationBean<Filter> multipartFilter() {
         var registrationBean = new FilterRegistrationBean<>();
-        var multipartFilter = new MultipartFilter();
+        var multipartFilter = new GrailsMultipartFilter();
         multipartFilter.setMultipartResolverBeanName(GrailsApplication.MULTIPART_RESOLVER_BEAN);
         registrationBean.setFilter(multipartFilter);
         registrationBean.addUrlPatterns(Settings.DEFAULT_WEB_SERVLET_PATH);
