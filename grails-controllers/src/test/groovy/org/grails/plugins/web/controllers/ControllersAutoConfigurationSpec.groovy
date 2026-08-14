@@ -78,13 +78,14 @@ class ControllersAutoConfigurationSpec extends Specification {
         registrationBean.order == GrailsFilters.GRAILS_WEB_REQUEST_FILTER.order
     }
 
-    void 'multipartFilter registers before the other Grails filters'() {
+    void 'multipartFilter registers after character encoding and before parameter-reading filters'() {
         when: 'the multipart filter is created'
         def registrationBean = autoConfiguration.multipartFilter()
 
-        then: 'it is registered at the first Grails filter order'
+        then: 'it is registered between character encoding and hidden method filters'
         registrationBean.filter instanceof MultipartFilter
-        registrationBean.order == GrailsFilters.FIRST.order
+        registrationBean.order > GrailsFilters.CHARACTER_ENCODING_FILTER.order
+        registrationBean.order < GrailsFilters.HIDDEN_HTTP_METHOD_FILTER.order
     }
 
     void 'a user-defined multipart filter registration makes the auto-configured one back off'() {

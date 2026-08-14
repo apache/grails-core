@@ -112,9 +112,10 @@ public class ControllersAutoConfiguration {
         multipartFilter.setMultipartResolverBeanName(GrailsApplication.MULTIPART_RESOLVER_BEAN);
         registrationBean.setFilter(multipartFilter);
         registrationBean.addUrlPatterns(Settings.DEFAULT_WEB_SERVLET_PATH);
-        // Resolve multipart requests before HiddenHttpMethodFilter and security filters access parameters.
+        // Resolve multipart requests after character encoding is applied but before HiddenHttpMethodFilter
+        // and security filters access parameters.
         // Otherwise, the servlet container parses the parts first and oversized uploads bypass the multipart resolver.
-        registrationBean.setOrder(GrailsFilters.FIRST.getOrder());
+        registrationBean.setOrder(GrailsFilters.CHARACTER_ENCODING_FILTER.getOrder() + 1);
         return registrationBean;
     }
 
