@@ -21,6 +21,7 @@ package org.grails.web.filters
 import org.junit.jupiter.api.Test
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
+import org.springframework.mock.web.MockMultipartHttpServletRequest
 
 import jakarta.servlet.FilterChain
 
@@ -88,5 +89,20 @@ class HiddenHttpMethodFilterTests {
         filter.doFilter(req, res, { req2, res2 -> method = req2.method } as FilterChain)
 
         assertEquals('POST', method)
+    }
+
+    @Test
+    void testResolvedMultipartRequestSupportsParameterOverride() {
+        def filter = new HiddenHttpMethodFilter()
+        def req = new MockMultipartHttpServletRequest()
+        req.contentType = 'multipart/form-data; boundary=test'
+        req.addParameter('_method', 'DELETE')
+        req.method = 'POST'
+        def res = new MockHttpServletResponse()
+        String method = null
+
+        filter.doFilter(req, res, { req2, res2 -> method = req2.method } as FilterChain)
+
+        assertEquals('DELETE', method)
     }
 }

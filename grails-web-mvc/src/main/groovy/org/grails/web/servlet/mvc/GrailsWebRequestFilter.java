@@ -59,8 +59,10 @@ public class GrailsWebRequestFilter extends RequestContextFilter implements Appl
         boolean isIncludeOrForward = WebUtils.isForwardOrInclude(request);
         GrailsWebRequest previous = isIncludeOrForward ? GrailsWebRequest.lookup(request) : null;
         GrailsWebRequest webRequest = new GrailsWebRequest(request, response, getServletContext());
-        if (request instanceof MultipartHttpServletRequest) {
-            webRequest.setMultipartRequest(request);
+        MultipartHttpServletRequest multipartRequest = org.springframework.web.util.WebUtils.getNativeRequest(
+                request, MultipartHttpServletRequest.class);
+        if (multipartRequest != null) {
+            webRequest.setMultipartRequest(multipartRequest);
         }
         configureParameterCreationListeners(webRequest);
 

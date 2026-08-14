@@ -72,7 +72,7 @@ public class HiddenHttpMethodFilter extends OncePerRequestFilter {
 
     protected String getHttpMethodOverride(HttpServletRequest request) {
         String httpMethod = null;
-        if (!isMultipart(request)) {
+        if (!isMultipart(request) || isResolvedMultipart(request)) {
             httpMethod = request.getParameter(methodParam);
         }
 
@@ -80,6 +80,11 @@ public class HiddenHttpMethodFilter extends OncePerRequestFilter {
             httpMethod = request.getHeader(HEADER_X_HTTP_METHOD_OVERRIDE);
         }
         return httpMethod == null ? null : httpMethod.toUpperCase();
+    }
+
+    private boolean isResolvedMultipart(HttpServletRequest request) {
+        return org.springframework.web.util.WebUtils.getNativeRequest(
+                request, org.springframework.web.multipart.MultipartHttpServletRequest.class) != null;
     }
 
     private boolean isMultipart(HttpServletRequest request) {
