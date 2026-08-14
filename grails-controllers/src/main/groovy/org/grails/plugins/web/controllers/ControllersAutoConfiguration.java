@@ -103,7 +103,7 @@ public class ControllersAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnMissingBean(MultipartFilter.class)
+    @ConditionalOnMissingBean(value = MultipartFilter.class, parameterizedContainer = FilterRegistrationBean.class)
     public FilterRegistrationBean<Filter> multipartFilter() {
         var registrationBean = new FilterRegistrationBean<>();
         var multipartFilter = new MultipartFilter();

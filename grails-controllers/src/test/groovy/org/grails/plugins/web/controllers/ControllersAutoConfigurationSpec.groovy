@@ -21,10 +21,7 @@ package org.grails.plugins.web.controllers
 
 import java.util.function.Supplier
 
-import jakarta.servlet.Filter
-
-import grails.core.DefaultGrailsApplication
-import grails.core.GrailsApplication
+import spock.lang.Specification
 
 import org.springframework.boot.autoconfigure.AutoConfigurations
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner
@@ -34,6 +31,8 @@ import org.springframework.boot.web.servlet.ServletContextInitializerBeans
 import org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ConfigurableApplicationContext
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.mock.web.MockServletContext
@@ -43,11 +42,11 @@ import org.springframework.web.filter.RequestContextFilter
 import org.springframework.web.multipart.support.MultipartFilter
 import org.springframework.web.servlet.handler.SimpleMappingExceptionResolver
 
+import grails.core.DefaultGrailsApplication
+import grails.core.GrailsApplication
 import org.grails.web.config.http.GrailsFilters
 import org.grails.web.errors.GrailsExceptionResolver
 import org.grails.web.servlet.mvc.GrailsWebRequestFilter
-
-import spock.lang.Specification
 
 class ControllersAutoConfigurationSpec extends Specification {
 
@@ -85,6 +84,27 @@ class ControllersAutoConfigurationSpec extends Specification {
         then: 'it is registered at the first Grails filter order'
         registrationBean.filter instanceof MultipartFilter
         registrationBean.order == GrailsFilters.FIRST.order
+    }
+
+    void 'a user-defined multipart filter registration makes the auto-configured one back off'() {
+        given: 'a GrailsApplication, required by the controllers auto-config'
+        def grailsApplication = Mock(GrailsApplication) {
+            getClassLoader() >> getClass().classLoader
+        }
+        Supplier<GrailsApplication> grailsApplicationSupplier = () -> grailsApplication
+
+        expect: 'the custom registration is installed instead of the auto-configured multipart filter'
+        new WebApplicationContextRunner()
+                .withBean(GrailsApplication, grailsApplicationSupplier)
+                .withUserConfiguration(UserMultipartFilterConfiguration)
+                .withConfiguration(AutoConfigurations.of(ControllersAutoConfiguration))
+                .run { context ->
+                    assert context.containsBean('userMultipartFilter')
+                    FilterRegistrationBean<MultipartFilter> userRegistration = context.getBean('userMultipartFilter')
+                    def registrations = multipartFilterRegistrations(context)
+                    assert registrations.size() == 1
+                    assert registrations[0].filter.is(userRegistration.filter)
+                }
     }
 
     void 'Boot WebMvcAutoConfiguration registers its own requestContextFilter when the Grails controllers auto-config is absent'() {
@@ -229,6 +249,22 @@ class ControllersAutoConfigurationSpec extends Specification {
         new ServletContextInitializerBeans(context.beanFactory).count { initializer ->
             initializer instanceof AbstractFilterRegistrationBean &&
                     ((AbstractFilterRegistrationBean) initializer).filter instanceof GrailsWebRequestFilter
+        }
+    }
+
+    private static List<AbstractFilterRegistrationBean> multipartFilterRegistrations(ConfigurableApplicationContext context) {
+        new ServletContextInitializerBeans(context.beanFactory).findAll { initializer ->
+            initializer instanceof AbstractFilterRegistrationBean &&
+                    ((AbstractFilterRegistrationBean) initializer).filter instanceof MultipartFilter
+        } as List<AbstractFilterRegistrationBean>
+    }
+
+    @Configuration
+    static class UserMultipartFilterConfiguration {
+
+        @Bean
+        FilterRegistrationBean<MultipartFilter> userMultipartFilter() {
+            new FilterRegistrationBean<>(new MultipartFilter())
         }
     }
 }
