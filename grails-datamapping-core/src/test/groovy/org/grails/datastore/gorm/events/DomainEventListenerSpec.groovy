@@ -123,6 +123,14 @@ class DomainEventListenerSpec extends Specification {
         !listener.supportsEventType(PayloadApplicationEvent)
     }
 
+    void "supportsEventType rejects a null event type rather than throwing, matching SmartApplicationListener's nullable contract"() {
+        given:
+        DomainEventListener listener = new DomainEventListener(plainDatastore(Stub(MappingContext) { getPersistentEntities() >> [] }))
+
+        expect:
+        !listener.supportsEventType(null)
+    }
+
     void "beforeInsert sets an initial numeric version to 0 when the entity is versioned"() {
         given:
         PersistentEntity entity = entityFor(NoHooksDomain, true, Long)
@@ -232,6 +240,34 @@ class DomainEventListenerSpec extends Specification {
 
         when:
         listener."$methodName"(entity, ea)
+
+        then:
+        domain.invoked == [hookName]
+
+        where:
+        methodName     | hookName
+        'beforeInsert'  | 'beforeInsert'
+        'beforeUpdate'  | 'beforeUpdate'
+        'beforeDelete'  | 'beforeDelete'
+        'beforeLoad'    | 'beforeLoad'
+        'afterInsert'   | 'afterInsert'
+        'afterUpdate'   | 'afterUpdate'
+        'afterDelete'   | 'afterDelete'
+        'afterLoad'     | 'afterLoad'
+    }
+
+    @Unroll
+    @SuppressWarnings('deprecation')
+    void "the deprecated 3-arg #methodName(entity, ea, event) overload delegates to the 2-arg overload, ignoring the event argument"() {
+        given:
+        RecordingDomain domain = new RecordingDomain()
+        PersistentEntity entity = entityFor(RecordingDomain)
+        DomainEventListener listener = new DomainEventListener(plainDatastore(Stub(MappingContext) { getPersistentEntities() >> [] }))
+        listener.persistentEntityAdded(entity)
+        EntityAccess ea = Stub(EntityAccess) { getEntity() >> domain }
+
+        when:
+        listener."$methodName"(entity, ea, null)
 
         then:
         domain.invoked == [hookName]
