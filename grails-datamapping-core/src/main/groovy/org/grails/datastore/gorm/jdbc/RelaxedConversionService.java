@@ -105,7 +105,7 @@ class RelaxedConversionService implements ConversionService {
             implements ConverterFactory<String, Enum> {
 
         @Override
-        public <T extends Enum> Converter<String, T> getConverter(Class<T> targetType) {
+        public <T extends Enum> Converter<String, ? extends @Nullable T> getConverter(Class<T> targetType) {
             Class<?> enumType = targetType;
             while (enumType != null && !enumType.isEnum()) {
                 enumType = enumType.getSuperclass();
@@ -115,10 +115,10 @@ class RelaxedConversionService implements ConversionService {
             return new StringToEnum(enumType);
         }
 
-        private record StringToEnum<T extends Enum>(Class<T> enumType) implements Converter<String, T> {
+        private record StringToEnum<T extends Enum>(Class<T> enumType) implements Converter<String, @Nullable T> {
 
             @Override
-            public T convert(String source) {
+            public @Nullable T convert(String source) {
                 if (source.isEmpty()) {
                     // It's an empty enum identifier: reset the enum value to null.
                     return null;
