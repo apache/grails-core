@@ -208,8 +208,7 @@ include(
         'grails-datamapping-core-test',
 
         // RX projects
-        // until this can be finished being ported to the current Grails release, we are disabling
-        //'grails-datamapping-rx',
+        'grails-datamapping-rx',
 
         // Spring Security
         // Note: Spring Security documentation is now part of grails-doc (grails-doc/src/en/guide/security).
@@ -297,9 +296,8 @@ project(':grails-undertow').projectDir = file('grails-undertow/plugin')
 // Data Mapping - Documentation
 include 'grails-data-docs-guide-developer'
 project(':grails-data-docs-guide-developer').projectDir = file('grails-data-docs/guide-developer')
-// until this can be finished being ported to the current Grails release, we are disabling
-// include 'grails-data-docs-guide-rx'
-// project(':grails-data-docs-guide-rx').projectDir = file('docs/guide-rx')
+include 'grails-data-docs-guide-rx'
+project(':grails-data-docs-guide-rx').projectDir = file('grails-data-docs/guide-rx')
 include 'grails-data-docs-guide-whats-new'
 project(':grails-data-docs-guide-whats-new').projectDir = file('grails-data-docs/guide-whats-new')
 include 'grails-data-docs-stage'

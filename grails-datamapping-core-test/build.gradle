@@ -116,8 +116,7 @@ dependencies {
     }
     testImplementation 'org.spockframework:spock-core'
 
-    // Commented out since we aren't building / publishing
-    //testImplementation project(":grails-datamapping-rx")
+    testImplementation project(":grails-datamapping-rx")
 
     // Use the simple datastore to ensure the base implementation works correctly
     api project(':grails-data-simple')
