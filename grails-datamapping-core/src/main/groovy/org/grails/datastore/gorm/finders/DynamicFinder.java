@@ -428,8 +428,7 @@ public class DynamicFinder implements FinderGrammar {
      * @param query The query
      * @param argMap The query arguments
      */
-    //TODO: Change {code}Class<? extends Object>{code} to {class<?>} once GROOVY-9460 is fixed.
-    public static void populateArgumentsForCriteria(@SuppressWarnings("unused") Class<? extends Object> targetClass, Query query, Map argMap) {
+    public static void populateArgumentsForCriteria(@SuppressWarnings("unused") Class<?> targetClass, Query query, Map argMap) {
         if (argMap == null) {
             return;
         }
