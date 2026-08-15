@@ -156,6 +156,14 @@ class SingleResultFinderSpec extends Specification {
         thrown(IllegalStateException)
     }
 
+    void "findByBoolean invoke throws IllegalStateException when constructed in stateless mode"() {
+        when:
+        SingleResultFinder.findByBoolean(mappingContext).invoke(FinderTestEntity, 'findActiveByName', ['Bob'] as Object[])
+
+        then:
+        thrown(IllegalStateException)
+    }
+
     void "findOrCreateBy rejects the Or operator without ever touching the datastore"() {
         given:
         Datastore datastoreThatMustNotBeUsed = Mock(Datastore) {
@@ -212,6 +220,14 @@ class SingleResultFinderSpec extends Specification {
         !result.saved
     }
 
+    void "findOrCreateBy invoke throws IllegalStateException when constructed in stateless mode"() {
+        when:
+        SingleResultFinder.findOrCreateBy(mappingContext).invoke(FinderTestEntity, 'findOrCreateByName', ['Bob'] as Object[])
+
+        then:
+        thrown(IllegalStateException)
+    }
+
     void "findOrCreateBy throws MissingMethodException on the null-result path when a non-Equal expression reached it"() {
         given:
         // validate only rejects GT/LT/GTE/LTE - Like/InList/etc slip past it, so this defensive
@@ -260,6 +276,14 @@ class SingleResultFinderSpec extends Specification {
         result instanceof FinderTestEntity
         result.name == 'Bob'
         result.saved
+    }
+
+    void "findOrSaveBy invoke throws IllegalStateException when constructed in stateless mode"() {
+        when:
+        SingleResultFinder.findOrSaveBy(mappingContext).invoke(FinderTestEntity, 'findOrSaveByName', ['Bob'] as Object[])
+
+        then:
+        thrown(IllegalStateException)
     }
 
     void "findOrSaveBy throws MissingMethodException on the null-result path when a non-Equal expression reached it"() {

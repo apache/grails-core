@@ -35,7 +35,6 @@ import org.springframework.core.convert.ConversionException;
 import grails.gorm.DetachedCriteria;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.Session;
-import org.grails.datastore.mapping.core.SessionCallback;
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.query.Query;
@@ -135,7 +134,7 @@ public class SingleResultFinder implements FinderMethod, QueryBuildingFinder {
      * it too when {@code save} is true. The single implementation this helper provides is what
      * prevents the two finder kinds from ever diverging into duplicate, driftable copies.
      */
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings({"rawtypes", "unchecked"})
     private static Object constructFromEqualExpressions(DynamicFinderInvocation invocation, boolean save) {
         Map m = new HashMap();
         List<MethodExpression> expressions = invocation.getExpressions();
@@ -166,11 +165,13 @@ public class SingleResultFinder implements FinderMethod, QueryBuildingFinder {
     }
 
     @Override
+    @SuppressWarnings("rawtypes")
     public Object invoke(Class clazz, String methodName, Object[] arguments) {
         return invoke(clazz, methodName, (Closure) null, arguments);
     }
 
     @Override
+    @SuppressWarnings("rawtypes")
     public Object invoke(Class clazz, String methodName, Closure additionalCriteria, Object[] arguments) {
         DynamicFinderInvocation invocation = grammar.createFinderInvocation(clazz, methodName, additionalCriteria, arguments);
         return doInvoke(invocation);
@@ -188,6 +189,7 @@ public class SingleResultFinder implements FinderMethod, QueryBuildingFinder {
      * @param arguments The method call arguments
      * @return The result of the method call
      */
+    @SuppressWarnings("rawtypes")
     public Object invoke(Class clazz, String methodName, DetachedCriteria detachedCriteria, Object[] arguments) {
         DynamicFinderInvocation invocation = grammar.createFinderInvocation(clazz, methodName, null, arguments);
         if (detachedCriteria != null) {
@@ -200,25 +202,22 @@ public class SingleResultFinder implements FinderMethod, QueryBuildingFinder {
         if (validate != null) {
             validate.accept(invocation);
         }
-        return FinderSupport.execute(datastore, new SessionCallback<Object>() {
-            @Override
-            public Object doInSession(Session session) {
-                Object result;
-                if (onNullResult != null) {
-                    try {
-                        result = buildQuery(invocation, session).singleResult();
-                    } catch (ConversionException e) {
-                        throw new MissingMethodException(invocation.getMethodName(), invocation.getJavaClass(), invocation.getArguments());
-                    }
-                    if (result == null) {
-                        result = onNullResult.apply(invocation);
-                    }
-                }
-                else {
+        return FinderSupport.execute(datastore, session -> {
+            Object result;
+            if (onNullResult != null) {
+                try {
                     result = buildQuery(invocation, session).singleResult();
+                } catch (ConversionException e) {
+                    throw new MissingMethodException(invocation.getMethodName(), invocation.getJavaClass(), invocation.getArguments());
                 }
-                return result;
+                if (result == null) {
+                    result = onNullResult.apply(invocation);
+                }
             }
+            else {
+                result = buildQuery(invocation, session).singleResult();
+            }
+            return result;
         });
     }
 
