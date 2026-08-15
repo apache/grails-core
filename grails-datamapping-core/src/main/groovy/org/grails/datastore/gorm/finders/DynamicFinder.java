@@ -35,7 +35,7 @@ import org.springframework.core.convert.ConversionException;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.util.StringUtils;
 
-import grails.gorm.DetachedCriteria;
+import grails.gorm.CriteriaBuilder;
 import org.grails.datastore.gorm.finders.MethodExpression.Between;
 import org.grails.datastore.gorm.finders.MethodExpression.Equal;
 import org.grails.datastore.gorm.finders.MethodExpression.GreaterThan;
@@ -54,7 +54,6 @@ import org.grails.datastore.gorm.finders.MethodExpression.NotEqual;
 import org.grails.datastore.gorm.finders.MethodExpression.NotInList;
 import org.grails.datastore.gorm.finders.MethodExpression.Rlike;
 import org.grails.datastore.gorm.query.criteria.AbstractDetachedCriteria;
-import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
@@ -66,13 +65,16 @@ import org.grails.datastore.mapping.reflect.ClassUtils;
 import org.grails.datastore.mapping.reflect.NameUtils;
 
 /**
- * Abstract base class for dynamic finders.
+ * Parses a dynamic finder method name into a {@link DynamicFinderInvocation}, builds the AND/OR
+ * junction of criteria for it, and exposes the shared argument-map/fetch/sort/detached-criteria
+ * handling used by every finder implementation. Composed (not extended) by the concrete finder
+ * classes in this package and in {@code grails-datamapping-rx} - see {@link FinderGrammar}.
  *
  * @author Graeme Rocher
  * @since 1.0
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
-public abstract class DynamicFinder extends AbstractFinder implements QueryBuildingFinder {
+public class DynamicFinder implements FinderGrammar {
 
     public static final String ARGUMENT_FETCH_SIZE = "fetchSize";
     public static final String ARGUMENT_TIMEOUT = "timeout";
@@ -104,6 +106,7 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
     private static final String NOT = "Not";
     private static final Map<String, Constructor> methodExpressions = new LinkedHashMap<String, Constructor>();
     protected final MappingContext mappingContext;
+    private final boolean firstExpressionIsRequiredBoolean;
 
     static {
         defaultOperationPatterns = new Pattern[2];
@@ -132,21 +135,20 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
         resetMethodExpressionPattern();
     }
 
-    protected DynamicFinder(final Pattern pattern, final String[] operators, final Datastore datastore) {
-        super(datastore);
-        this.mappingContext = datastore.getMappingContext();
-        this.pattern = pattern;
-        this.operators = operators;
-        this.operatorPatterns = new Pattern[operators.length];
-        populateOperators(operators);
-    }
-
-    protected DynamicFinder(final Pattern pattern, final String[] operators, final MappingContext mappingContext) {
-        super(null);
+    /**
+     * @param pattern The method-name pattern this grammar matches
+     * @param operators The junction operators this grammar splits on (e.g. {@code {"And", "Or"}})
+     * @param mappingContext The mapping context used to resolve persistent entities/properties
+     * @param firstExpressionIsRequiredBoolean Whether the first parsed expression is a required
+     * boolean clause (the "find&lt;booleanProperty&gt;By*"/"findAll&lt;booleanProperty&gt;By*" forms)
+     */
+    public DynamicFinder(final Pattern pattern, final String[] operators, final MappingContext mappingContext,
+            final boolean firstExpressionIsRequiredBoolean) {
         this.mappingContext = mappingContext;
         this.pattern = pattern;
         this.operators = operators;
         this.operatorPatterns = new Pattern[operators.length];
+        this.firstExpressionIsRequiredBoolean = firstExpressionIsRequiredBoolean;
         populateOperators(operators);
     }
 
@@ -250,23 +252,12 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
      * @param methodName The method name
      * @return True if it is
      */
+    @Override
     public boolean isMethodMatch(String methodName) {
         return pattern.matcher(methodName.subSequence(0, methodName.length())).find();
     }
 
-    public Object invoke(final Class clazz, String methodName, Closure additionalCriteria, Object[] arguments) {
-        DynamicFinderInvocation invocation = createFinderInvocation(clazz, methodName, additionalCriteria, arguments);
-        return doInvokeInternal(invocation);
-    }
-
-    public Object invoke(final Class clazz, String methodName, DetachedCriteria detachedCriteria, Object[] arguments) {
-        DynamicFinderInvocation invocation = createFinderInvocation(clazz, methodName, null, arguments);
-        if (detachedCriteria != null) {
-            invocation.setDetachedCriteria(detachedCriteria);
-        }
-        return doInvokeInternal(invocation);
-    }
-
+    @Override
     public DynamicFinderInvocation createFinderInvocation(Class clazz, String methodName,
             Closure additionalCriteria, Object[] arguments) {
 
@@ -391,10 +382,6 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
 
         return new DynamicFinderInvocation(clazz, methodName, remainingArguments,
                 expressions, additionalCriteria, operatorInUse);
-    }
-
-    public Object invoke(final Class clazz, String methodName, Object[] arguments) {
-        return invoke(clazz, methodName, (Closure) null, arguments);
     }
 
     /**
@@ -613,7 +600,21 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
         }
     }
 
-    protected abstract Object doInvokeInternal(DynamicFinderInvocation invocation);
+    /**
+     * Applies the given additional-criteria closure to the given query by building it through a
+     * {@link CriteriaBuilder} for the query's entity/session.
+     *
+     * @param query The query
+     * @param additionalCriteria The additional criteria closure, or null for a no-op
+     */
+    public static void applyAdditionalCriteria(Query query, Closure additionalCriteria) {
+        if (additionalCriteria == null) {
+            return;
+        }
+
+        CriteriaBuilder builder = new CriteriaBuilder(query.getEntity().getJavaClass(), query.getSession(), query);
+        builder.build(additionalCriteria);
+    }
 
     private static void handleFetchType(Query q, String associationName, FetchType fetchType) {
         switch (fetchType) {
@@ -732,7 +733,7 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
         }
     }
 
-    protected void configureQueryWithArguments(Class clazz, Query query, Object[] arguments) {
+    public static void configureQueryWithArguments(Class clazz, Query query, Object[] arguments) {
         if (arguments.length == 0 || !(arguments[0] instanceof Map)) {
             populateArgumentsForCriteria(clazz, query, Collections.emptyMap());
             return;
@@ -773,14 +774,16 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
         return expression;
     }
 
+    @Override
     public boolean firstExpressionIsRequiredBoolean() {
-        return false;
+        return firstExpressionIsRequiredBoolean;
     }
 
-    protected Query.Junction getJunction(DynamicFinderInvocation invocation) {
+    @Override
+    public Query.Junction getJunction(DynamicFinderInvocation invocation) {
         var criteria = invocation.getExpressions().stream().map(MethodExpression::createCriterion).collect(Collectors.toList());
         Query.Junction junction;
-        if (FindAllByFinder.OPERATOR_OR.equals(invocation.getOperator())) {
+        if (OPERATOR_OR.equals(invocation.getOperator())) {
             if (firstExpressionIsRequiredBoolean()) {
                 junction = new Query.Conjunction();
                 junction.add(criteria.remove(0));
@@ -800,6 +803,16 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
         return junction;
     }
 
+    /**
+     * Builds a query for the given invocation using this grammar's {@link #getJunction} and the
+     * shared additional-criteria/detached-criteria/argument-map handling. This is the default,
+     * {@code Session}-based query builder used by the synchronous single-result and list finders;
+     * {@link CountFinder} builds its own query independently of this method.
+     *
+     * @param invocation The invocation
+     * @param session The session
+     * @return The built query
+     */
     public Query buildQuery(DynamicFinderInvocation invocation, Session session) {
         final Class<?> clazz = invocation.getJavaClass();
         var query = session.createQuery(clazz);

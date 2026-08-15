@@ -40,13 +40,9 @@ import org.grails.datastore.mapping.validation.ValidationException
 import org.grails.datastore.rx.RxDatastoreClient
 import org.grails.datastore.rx.query.RxQuery
 import org.grails.gorm.rx.api.multitenancy.TenantDelegatingRxGormOperations
-import org.grails.gorm.rx.finders.CountByFinder
-import org.grails.gorm.rx.finders.FindAllByBooleanFinder
-import org.grails.gorm.rx.finders.FindAllByFinder
-import org.grails.gorm.rx.finders.FindByBooleanFinder
-import org.grails.gorm.rx.finders.FindByFinder
-import org.grails.gorm.rx.finders.FindOrCreateByFinder
-import org.grails.gorm.rx.finders.FindOrSaveByFinder
+import org.grails.gorm.rx.finders.RxCountFinder
+import org.grails.gorm.rx.finders.RxListResultFinder
+import org.grails.gorm.rx.finders.RxSingleResultFinder
 import org.springframework.beans.PropertyAccessorFactory
 import rx.Observable
 import rx.Subscriber
@@ -499,13 +495,13 @@ class RxGormStaticApi<D> implements RxGormAllOperations<D> {
     }
 
     protected List<FinderMethod> createDynamicFinders() {
-        [new FindOrCreateByFinder(datastoreClient),
-         new FindOrSaveByFinder(datastoreClient),
-         new FindByFinder(datastoreClient),
-         new FindAllByFinder(datastoreClient),
-         new CountByFinder(datastoreClient),
-         new FindByBooleanFinder(datastoreClient),
-         new FindAllByBooleanFinder(datastoreClient)] as List<FinderMethod>
+        [RxSingleResultFinder.findOrCreateBy(datastoreClient),
+         RxSingleResultFinder.findOrSaveBy(datastoreClient),
+         RxSingleResultFinder.findBy(datastoreClient),
+         RxListResultFinder.findAllBy(datastoreClient),
+         RxCountFinder.countBy(datastoreClient),
+         RxSingleResultFinder.findByBoolean(datastoreClient),
+         RxListResultFinder.findAllByBoolean(datastoreClient)] as List<FinderMethod>
     }
 
     @Override

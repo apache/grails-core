@@ -19,50 +19,54 @@
 
 package org.grails.gorm.rx.finders
 
-import org.grails.datastore.gorm.finders.DynamicFinderInvocation
-import org.grails.datastore.gorm.finders.MethodExpression
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.query.Query
-import org.grails.datastore.mapping.query.Restrictions
 import org.grails.datastore.rx.RxDatastoreClient
 import org.springframework.core.convert.support.DefaultConversionService
 import spock.lang.Specification
 
-class CountByFinderSpec extends Specification {
+/**
+ * Exercises {@link RxCountFinder} - the rx-module mirror of {@link
+ * org.grails.datastore.gorm.finders.CountFinder}, reusing that class's {@code
+ * applyCriteriaAndCount} helper rather than duplicating its independent And/Or criteria handling.
+ */
+class RxCountFinderSpec extends Specification {
 
     RxDatastoreClient datastoreClient = Mock()
     MappingContext mappingContext = Mock()
     PersistentEntity entity = Mock()
     Query query = Mock()
 
+    PersistentProperty nameProperty = Stub(PersistentProperty) {
+        getName() >> 'name'
+        getType() >> String
+    }
+
     def setup() {
         entity.getMappingContext() >> mappingContext
-        entity.getJavaClass() >> Person
         mappingContext.getConversionService() >> new DefaultConversionService()
+        mappingContext.getPersistentEntity(_) >> entity
+        entity.getPropertyByName('name') >> nameProperty
         query.getEntity() >> entity
         query.projections() >> new Query.ProjectionList()
+        datastoreClient.getMappingContext() >> mappingContext
     }
 
-    def "obtains its mapping context from the datastore client when constructed"() {
-        when:
-        def finder = new CountByFinder(datastoreClient)
-
-        then:
-        1 * datastoreClient.getMappingContext() >> mappingContext
-        finder.datastoreClient.is(datastoreClient)
+    void "isMethodMatch matches countBy* method names"() {
+        expect:
+        RxCountFinder.countBy(datastoreClient).isMethodMatch('countByName')
+        !RxCountFinder.countBy(datastoreClient).isMethodMatch('somethingElse')
     }
 
-    def "counts by building and executing a query via the RX datastore client instead of a session"() {
+    void "counts by building and executing a query via the RX datastore client instead of a session"() {
         given:
-        def finder = new CountByFinder(datastoreClient)
-        def nameExpression = new MethodExpression.Equal(Person, 'name')
-        nameExpression.setArguments(['Fred'] as Object[])
-        def invocation = new DynamicFinderInvocation(Person, 'countByName', [] as Object[], [nameExpression], null, null)
+        def finder = RxCountFinder.countBy(datastoreClient)
 
         when:
-        def result = finder.doInvokeInternal(invocation)
+        def result = finder.invoke(Person, 'countByName', ['Fred'] as Object[])
 
         then:
         1 * datastoreClient.createQuery(Person) >> query
@@ -71,39 +75,39 @@ class CountByFinderSpec extends Specification {
         result == 4L
     }
 
-    def "applies detached criteria to the query when present"() {
+    void "invoke(Class, methodName, DetachedCriteria, Object[]) merges the detached criteria onto the built query"() {
         given:
-        def finder = new CountByFinder(datastoreClient)
-        def invocation = new DynamicFinderInvocation(Person, 'countByName', [] as Object[], [], null, null)
+        // Called reflectively (dynamic Groovy dispatch, not part of FinderMethod) by
+        // AbstractDetachedCriteria#methodMissing.
+        def finder = RxCountFinder.countBy(datastoreClient)
         def detachedCriteria = Stub(grails.gorm.DetachedCriteria) {
             getFetchStrategies() >> [:]
-            getCriteria() >> [Restrictions.eq('active', true)]
+            getCriteria() >> [org.grails.datastore.mapping.query.Restrictions.eq('active', true)]
             getProjections() >> []
             getOrders() >> []
         }
-        invocation.setDetachedCriteria(detachedCriteria)
 
         when:
-        finder.doInvokeInternal(invocation)
+        def result = finder.invoke(Person, 'countByName', detachedCriteria, ['Fred'] as Object[])
 
         then:
         1 * datastoreClient.createQuery(Person) >> query
-        1 * query.add({ Query.Criterion it -> it instanceof Query.PropertyCriterion })
-        1 * query.singleResult()
+        2 * query.add({ Query.Criterion it -> it instanceof Query.PropertyCriterion })
+        1 * query.singleResult() >> 4L
+        result == 4L
     }
 
-    def "applies additional criteria to the query when present"() {
+    void "applies additional criteria to the query when present"() {
         given:
-        def finder = new CountByFinder(datastoreClient)
-        def invocation = new DynamicFinderInvocation(Person, 'countByName', [] as Object[], [], { -> }, null)
+        def finder = RxCountFinder.countBy(datastoreClient)
         def session = Stub(Session) {
             getMappingContext() >> mappingContext
         }
-        mappingContext.getPersistentEntity(_) >> entity
         query.getSession() >> session
+        entity.getJavaClass() >> Person
 
         when:
-        finder.doInvokeInternal(invocation)
+        finder.invoke(Person, 'countByName', { -> }, ['Fred'] as Object[])
 
         then:
         1 * datastoreClient.createQuery(Person) >> query
@@ -112,13 +116,12 @@ class CountByFinderSpec extends Specification {
         noExceptionThrown()
     }
 
-    def "applies query arguments to the query when present"() {
+    void "applies query arguments to the query when present"() {
         given:
-        def finder = new CountByFinder(datastoreClient)
-        def invocation = new DynamicFinderInvocation(Person, 'countByName', [[max: 5]] as Object[], [], null, null)
+        def finder = RxCountFinder.countBy(datastoreClient)
 
         when:
-        finder.doInvokeInternal(invocation)
+        finder.invoke(Person, 'countByName', ['Fred', [max: 5]] as Object[])
 
         then:
         1 * datastoreClient.createQuery(Person) >> query

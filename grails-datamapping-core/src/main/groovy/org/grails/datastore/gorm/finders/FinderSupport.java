@@ -18,54 +18,50 @@
  */
 package org.grails.datastore.gorm.finders;
 
-import groovy.lang.Closure;
-
-import grails.gorm.CriteriaBuilder;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.DatastoreUtils;
 import org.grails.datastore.mapping.core.SessionCallback;
 import org.grails.datastore.mapping.core.VoidSessionCallback;
-import org.grails.datastore.mapping.query.Query;
 
 /**
- * Abstract base class for finders.
- *
- * @author Burt Beckwith
+ * Shared session-execution helper for the synchronous finder implementations in this package.
+ * Not a base class - each finder holds a {@link Datastore} field and calls these statically,
+ * rather than inheriting an {@code execute} method.
  */
-@SuppressWarnings("rawtypes")
-public abstract class AbstractFinder implements FinderMethod {
+public final class FinderSupport {
 
-    protected final Datastore datastore;
-
-    public AbstractFinder(final Datastore datastore) {
-        this.datastore = datastore;
+    private FinderSupport() {
     }
 
-    protected <T> T execute(final SessionCallback<T> callback) {
+    /**
+     * Executes the given callback within a session bound to the given datastore.
+     *
+     * @param datastore The datastore, or null for stateless mode
+     * @param callback The callback
+     * @param <T> The callback's result type
+     * @return The callback's result
+     * @throws IllegalStateException if datastore is null (stateless mode)
+     */
+    public static <T> T execute(final Datastore datastore, final SessionCallback<T> callback) {
         if (datastore != null) {
             return DatastoreUtils.execute(datastore, callback);
         }
-        else {
-            throw new IllegalStateException("Cannot execute session query in stateless mode");
-        }
+        throw new IllegalStateException("Cannot execute session query in stateless mode");
     }
 
-    protected void execute(final VoidSessionCallback callback) {
+    /**
+     * Executes the given void callback within a session bound to the given datastore.
+     *
+     * @param datastore The datastore, or null for stateless mode
+     * @param callback The callback
+     * @throws IllegalStateException if datastore is null (stateless mode)
+     */
+    public static void execute(final Datastore datastore, final VoidSessionCallback callback) {
         if (datastore != null) {
             DatastoreUtils.execute(datastore, callback);
         }
         else {
             throw new IllegalStateException("Cannot execute session query in stateless mode");
         }
-
-    }
-
-    protected void applyAdditionalCriteria(Query query, Closure additionalCriteria) {
-        if (additionalCriteria == null) {
-            return;
-        }
-
-        CriteriaBuilder builder = new CriteriaBuilder(query.getEntity().getJavaClass(), query.getSession(), query);
-        builder.build(additionalCriteria);
     }
 }

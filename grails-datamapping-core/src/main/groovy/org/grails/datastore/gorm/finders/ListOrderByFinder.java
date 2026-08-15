@@ -38,25 +38,34 @@ import org.grails.datastore.mapping.reflect.NameUtils;
  * Account.listOrderByHolder();
  * Account.listOrderByHolder(max); // max results
  *
+ * <p>Never shared {@link DynamicFinder}'s grammar (no And/Or/operator-suffix parsing - just a
+ * single trailing property name), so it stays its own standalone implementation, composing
+ * nothing beyond {@link FinderSupport} for session execution.
+ *
  * @author Graeme Rocher
  */
-public class ListOrderByFinder extends AbstractFinder {
+public class ListOrderByFinder implements FinderMethod {
+
     private static final Pattern METHOD_PATTERN = Pattern.compile("(listOrderBy)(\\w+)");
+    private final Datastore datastore;
     private Pattern pattern = METHOD_PATTERN;
 
     public ListOrderByFinder(Datastore datastore) {
-        super(datastore);
+        this.datastore = datastore;
     }
 
+    @Override
     public void setPattern(String pattern) {
         this.pattern = Pattern.compile(pattern);
     }
 
+    @Override
     @SuppressWarnings("rawtypes")
     public Object invoke(final Class clazz, final String methodName, final Object[] arguments) {
         return invoke(clazz, methodName, null, arguments);
     }
 
+    @Override
     @SuppressWarnings("rawtypes")
     public Object invoke(final Class clazz, final String methodName, final Closure additionalCriteria, final Object[] arguments) {
 
@@ -66,10 +75,10 @@ public class ListOrderByFinder extends AbstractFinder {
         String nameInSignature = match.group(2);
         final String propertyName = NameUtils.decapitalizeFirstChar(nameInSignature);
 
-        return execute(new SessionCallback<>() {
+        return FinderSupport.execute(datastore, new SessionCallback<>() {
             public Object doInSession(final Session session) {
                 Query q = session.createQuery(clazz);
-                applyAdditionalCriteria(q, additionalCriteria);
+                DynamicFinder.applyAdditionalCriteria(q, additionalCriteria);
 
                 boolean ascending = true;
                 if (arguments.length > 0 && (arguments[0] instanceof Map)) {
@@ -83,17 +92,13 @@ public class ListOrderByFinder extends AbstractFinder {
 
                 q.order(ascending ? Query.Order.asc(propertyName) : Query.Order.desc(propertyName));
                 q.projections().distinct();
-                return invokeQuery(q);
+                return q.list();
             }
         });
     }
 
-    protected Object invokeQuery(Query q) {
-        return q.list();
-    }
-
+    @Override
     public boolean isMethodMatch(String methodName) {
         return pattern.matcher(methodName.subSequence(0, methodName.length())).find();
     }
-
 }
