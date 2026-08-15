@@ -54,6 +54,18 @@ class DataSourceConnectionSourceSpec extends Specification {
         1 * closeable.close()
     }
 
+    void "close does not fail when a DelegatingDataSource has no target set"() {
+        given:
+        def delegating = new DelegatingDataSource()
+        def source = new DataSourceConnectionSource('test', delegating, new DataSourceSettings())
+
+        when:
+        source.close()
+
+        then:
+        noExceptionThrown()
+    }
+
     void "close does not fail when the DataSource has no close() method"() {
         given:
         def dataSource = Mock(DataSource)
