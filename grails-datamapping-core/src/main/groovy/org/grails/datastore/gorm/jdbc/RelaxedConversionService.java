@@ -22,6 +22,8 @@ package org.grails.datastore.gorm.jdbc;
 import java.util.EnumSet;
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.core.convert.ConversionFailedException;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.TypeDescriptor;
@@ -59,14 +61,14 @@ class RelaxedConversionService implements ConversionService {
     }
 
     @Override
-    public boolean canConvert(Class<?> sourceType, Class<?> targetType) {
+    public boolean canConvert(@Nullable Class<?> sourceType, Class<?> targetType) {
         return (this.conversionService != null &&
                 this.conversionService.canConvert(sourceType, targetType)) ||
                 this.additionalConverters.canConvert(sourceType, targetType);
     }
 
     @Override
-    public boolean canConvert(TypeDescriptor sourceType, TypeDescriptor targetType) {
+    public boolean canConvert(@Nullable TypeDescriptor sourceType, TypeDescriptor targetType) {
         return (this.conversionService != null &&
                 this.conversionService.canConvert(sourceType, targetType)) ||
                 this.additionalConverters.canConvert(sourceType, targetType);
@@ -74,14 +76,14 @@ class RelaxedConversionService implements ConversionService {
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T> T convert(Object source, Class<T> targetType) {
+    public <T> @Nullable T convert(@Nullable Object source, Class<T> targetType) {
         Assert.notNull(targetType, "The targetType to convert to cannot be null");
         return (T) convert(source, TypeDescriptor.forObject(source),
                 TypeDescriptor.valueOf(targetType));
     }
 
     @Override
-    public Object convert(Object source, TypeDescriptor sourceType,
+    public @Nullable Object convert(@Nullable Object source, @Nullable TypeDescriptor sourceType,
                           TypeDescriptor targetType) {
         if (this.conversionService != null) {
             try {
@@ -113,17 +115,11 @@ class RelaxedConversionService implements ConversionService {
             return new StringToEnum(enumType);
         }
 
-        private class StringToEnum<T extends Enum> implements Converter<String, T> {
-
-            private final Class<T> enumType;
-
-            StringToEnum(Class<T> enumType) {
-                this.enumType = enumType;
-            }
+        private record StringToEnum<T extends Enum>(Class<T> enumType) implements Converter<String, T> {
 
             @Override
             public T convert(String source) {
-                if (source.length() == 0) {
+                if (source.isEmpty()) {
                     // It's an empty enum identifier: reset the enum value to null.
                     return null;
                 }
@@ -148,7 +144,7 @@ class RelaxedConversionService implements ConversionService {
 
     }
 
-    private class StringToCharArrayConverter implements Converter<String, char[]> {
+    private static class StringToCharArrayConverter implements Converter<String, char[]> {
         @Override
         public char[] convert(String source) {
             return source.toCharArray();
