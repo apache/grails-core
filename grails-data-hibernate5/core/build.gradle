@@ -74,6 +74,9 @@ dependencies {
     testImplementation 'org.apache.groovy:groovy-json'
     testImplementation 'org.apache.tomcat:tomcat-jdbc'
     testImplementation 'org.spockframework:spock-core'
+
+    testCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
     testRuntimeOnly 'org.hibernate:hibernate-ehcache', {
         // exclude javax variant of hibernate-core 5.6
         exclude group: 'org.hibernate', module: 'hibernate-core'

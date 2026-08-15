@@ -34,12 +34,16 @@ dependencies {
     implementation 'org.apache.grails:grails-data-hibernate5'
     implementation 'org.apache.grails:grails-core'
 
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'com.zaxxer:HikariCP'
     runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
 
     testImplementation 'org.apache.grails.testing:grails-testing-support-core'
+
+    testCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 }
 
 apply {

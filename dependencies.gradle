@@ -25,6 +25,7 @@ ext {
             'ant.version'                   : '1.10.17',
             'asciidoctor-gradle-jvm.version': '4.0.5',
             'asciidoctorj.version'          : '3.0.0',
+            'asm.version'                   : '9.10.1',
             'asset-pipeline-gradle.version' : '5.2.0-M1',
             'commons-text.version'          : '1.15.0',
             'directory-watcher.version'     : '0.19.1',

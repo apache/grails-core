@@ -60,7 +60,35 @@ Arguments:
 * `includesExcludes` - (Optional) A map with 'include' and/or 'exclude' lists containing the names of properties to either include or exclude.
 * `prefix` - (Optional) A string representing a prefix to use to filter parameters. The method will automatically append a '.' when matching the prefix to parameters, so you can use 'author' to filter for parameters such as 'author.name'.
 
-NOTE: Note that if an empty List or no List is provided as a value for the `include` parameter then all statically typed instance properties will be subject to binding if they are not explicitly excluded. See the link:{constraintsRefFromRef}bindable.html[bindable] constraint documentation for more information on how to control what is bindable and what is not.
+If no `include` list is supplied, `bindData` uses the target class default binding behavior.  By default, statically typed instance properties bind for compatibility unless they are marked `bindable: false`.  Existing `bindable: true` declarations and explicit `include` lists continue to bind exactly the properties they name without configuration changes.  An empty `include` list binds no properties.
+
+In compatibility mode, supplying only `exclude` binds all other eligible properties without intersecting them with the generated allowlist.  In secure mode, the generated allowlist is still applied when only `exclude` is supplied.
+
+For typed `Map` properties, each value is converted to the declared generic value type.  Conversion failures are recorded as binding errors and binding listeners are notified.
+
+Use `include` to allow only the properties needed for a request:
+
+[source,groovy]
+----
+bindData(target, params, [include: ['firstName', 'lastName']])
+----
+
+For controller action command object parameters, use `grails.web.databinding.BindAllowed` to allow request binding for only the listed properties:
+
+[source,groovy]
+----
+import grails.web.databinding.BindAllowed
+
+class PersonController {
+    def save(@BindAllowed(['firstName', 'lastName']) PersonCommand command) {
+        // command.email, command.admin, etc. are not bound by this action
+    }
+}
+----
+
+See the link:{constraintsRefFromRef}bindable.html[bindable] constraint documentation for more information on controlling default bindability.  Applications may set `grails.databinding.denyByDefault=true` to opt into deny-by-default binding allowlists.  In secure mode, permit a property with `bindable: true`, an explicit `include` list, or `@BindAllowed` on a controller action command object parameter.
+
+Only boolean values and the strings `'true'` and `'false'` are recognised for `grails.databinding.denyByDefault`.  String matching ignores case and surrounding whitespace.  An unrecognised value logs a warning and enables secure binding.
 
 The underlying implementation uses Spring's Data Binding framework. If the target is a domain class, type conversion errors are stored in the `errors` property of the domain class.
 

@@ -107,6 +107,7 @@ def skipMicronautProjects = explicitlySkipMicronaut || (!buildJdkSupportsMicrona
 
 include(
         'grails-bootstrap',
+        'grails-beans-dsl',
         'grails-cache',
         'grails-codecs-core',
         'grails-codecs',
@@ -390,6 +391,9 @@ project(':grails-data-mongodb-spring-boot').projectDir = new File(settingsDir, '
 include 'grails-data-mongodb-spring-data'
 project(':grails-data-mongodb-spring-data').projectDir = new File(settingsDir, 'grails-data-mongodb/spring-data')
 
+include 'grails-data-mongodb-embedded'
+project(':grails-data-mongodb-embedded').projectDir = new File(settingsDir, 'grails-data-mongodb/embedded')
+
 include 'grails-data-mongodb'
 project(':grails-data-mongodb').projectDir = new File(settingsDir, 'grails-data-mongodb/grails-plugin')
 
@@ -529,6 +533,8 @@ include(
         'grails-test-examples-app4',
         'grails-test-examples-app5',
         'grails-test-examples-async-events-pubsub-demo',
+        'grails-test-examples-beans-dsl',
+        'grails-test-examples-beans-dsl-plugin',
         'grails-test-examples-cache',
         'grails-test-examples-database-cleanup',
         'grails-test-examples-datasources',
@@ -566,6 +572,8 @@ include(
         'grails-test-examples-views-functional-tests-plugin',
 )
 project(':grails-test-examples-async-events-pubsub-demo').projectDir = file('grails-test-examples/async-events-pubsub-demo')
+project(':grails-test-examples-beans-dsl').projectDir = file('grails-test-examples/beans-dsl')
+project(':grails-test-examples-beans-dsl-plugin').projectDir = file('grails-test-examples/beans-dsl-plugin')
 project(':grails-test-examples-app1').projectDir = file('grails-test-examples/app1')
 project(':grails-test-examples-app2').projectDir = file('grails-test-examples/app2')
 project(':grails-test-examples-app3').projectDir = file('grails-test-examples/app3')

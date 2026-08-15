@@ -455,6 +455,64 @@ hello
     }
 
     @Test
+    void testEscapedExpressionRendersLiteralDollarBrace() {
+        def gpte = new GroovyPagesTemplateEngine()
+        gpte.afterPropertiesSet()
+
+        def t = gpte.createTemplate('Hello \\${foo}', "escaped_expression_test")
+        def w = t.make(foo: "World")
+
+        def sw = new StringWriter()
+        w.writeTo(new PrintWriter(sw))
+
+        assertEquals 'Hello ${foo}', sw.toString()
+    }
+
+    @Test
+    void testEscapedExpressionNextToEvaluatedExpression() {
+        def gpte = new GroovyPagesTemplateEngine()
+        gpte.afterPropertiesSet()
+
+        def t = gpte.createTemplate('${foo} \\${foo}', "escaped_and_evaluated_test")
+        def w = t.make(foo: "World")
+
+        def sw = new StringWriter()
+        w.writeTo(new PrintWriter(sw))
+
+        assertEquals 'World ${foo}', sw.toString()
+    }
+
+    @Test
+    void testEscapedExpressionInJavaScriptTemplateLiteral() {
+        def gpte = new GroovyPagesTemplateEngine()
+        gpte.afterPropertiesSet()
+
+        def t = gpte.createTemplate(
+                '<script>console.log(`Hello \\${name}`);</script>', "escaped_js_template_literal_test")
+        def w = t.make()
+
+        def sw = new StringWriter()
+        w.writeTo(new PrintWriter(sw))
+
+        assertEquals '<script>console.log(`Hello ${name}`);</script>', sw.toString()
+    }
+
+    @Test
+    void testBackslashBeforeEscapedExpressionIsPreserved() {
+        def gpte = new GroovyPagesTemplateEngine()
+        gpte.afterPropertiesSet()
+
+        // Only the backslash doing the escaping is dropped: \\${foo} renders \${foo}
+        def t = gpte.createTemplate('\\\\${foo}', "double_backslash_expression_test")
+        def w = t.make(foo: "World")
+
+        def sw = new StringWriter()
+        w.writeTo(new PrintWriter(sw))
+
+        assertEquals '\\${foo}', sw.toString()
+    }
+
+    @Test
     void testInlineScriptWithValidUnmatchedBrackets() {
         def gpte = new GroovyPagesTemplateEngine()
         gpte.afterPropertiesSet()

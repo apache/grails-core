@@ -24,35 +24,36 @@ import groovy.cli.commons.CliBuilder
 
 /**
  * This script finds the test class that's causing test pollution in other tests.
- * To use it, gradle must be configured to run sequentially, without retries, and output a specific line
- * so the script knows the test order. The script will pass the property `testBisect` for gradle to detect when being called
- * by this script. For example:
+ * To use it, Gradle must be configured to run sequentially, without retries, and output a specific line
+ * so the script knows the test order. The script will pass the property `testBisect` for Gradle to detect when
+ * being called by this script. For example:
  *
- *     if(hasProperty('testBisect')) {
- *          tasks.withType(Test).configureEach {
- *              maxParallelForks = 1
- *              forkEvery = 0
- *               develocity {
- *                   testDistribution {
- *                       enabled.set(false)
- *                       retryInSameJvm.set(true)
- *                  }
- *                   testRetry {
- *                       maxRetries = 1
- *                       maxFailures = 1
- *                       failOnPassedAfterRetry = true
- *                   }
- *               }
- *              beforeTest { testDescriptor ->
- *                  logger.info "STARTED TEST: ${testDescriptor.className} > ${testDescriptor.name}"
- *              }
- *               afterSuite { desc, result ->
- *                   if (!desc.parent) {
- *                       logger.info("FINISHED - ${result.failedTestCount == 0 && result.testCount > 1} ? 'PASSED' : 'FAILED'} - ${result.testCount} tests executed, ${result.failedTestCount} failed")
- *                   }
- *               }
- *          }
- *      }
+ *     if (hasProperty('testBisect')) {
+ *         tasks.withType(Test).configureEach {
+ *             maxParallelForks = 1
+ *             forkEvery = 0
+ *             develocity {
+ *                 testDistribution {
+ *                     enabled.set(false)
+ *                     retryInSameJvm.set(true)
+ *                 }
+ *                 testRetry {
+ *                     maxRetries = 1
+ *                     maxFailures = 1
+ *                     failOnPassedAfterRetry = true
+ *                 }
+ *             }
+ *             addTestListener([
+ *                 beforeTest: { testDescriptor ->
+ *                     logger.info("STARTED TEST: ${testDescriptor.className} > ${testDescriptor.name}")
+ *                 }
+ *                 afterSuite: { desc, result ->
+ *                     if (!desc.parent) {
+ *                        logger.info("FINISHED - ${result.failedTestCount == 0 && result.testCount > 1} ? 'PASSED' : 'FAILED'} - ${result.testCount} tests executed, ${result.failedTestCount} failed")
+ *                     }
+ *             ] as TestListener)
+ *         }
+ *     }
  */
 class TestPollution {
 

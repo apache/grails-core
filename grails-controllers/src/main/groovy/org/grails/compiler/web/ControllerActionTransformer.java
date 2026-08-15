@@ -42,6 +42,7 @@ import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.ast.ModuleNode;
 import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.PropertyNode;
+import org.codehaus.groovy.ast.Variable;
 import org.codehaus.groovy.ast.expr.ArgumentListExpression;
 import org.codehaus.groovy.ast.expr.BinaryExpression;
 import org.codehaus.groovy.ast.expr.BooleanExpression;
@@ -93,6 +94,7 @@ import grails.validation.Validateable;
 import grails.web.Action;
 import grails.web.RequestParameter;
 import grails.web.controllers.ControllerMethod;
+import grails.web.databinding.BindAllowed;
 import org.grails.compiler.injection.GrailsASTUtils;
 import org.grails.compiler.injection.TraitInjectionUtils;
 import org.grails.core.DefaultGrailsControllerClass;
@@ -185,6 +187,7 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
             GrailsResourceUtils.GRAILS_APP_DIR + "/controllers/(.+)Controller\\.groovy");
     private static final String ALLOWED_METHODS_HANDLED_ATTRIBUTE_NAME = "ALLOWED_METHODS_HANDLED";
     private static final ClassNode OBJECT_CLASS = new ClassNode(Object.class);
+    private static final ClassNode BIND_ALLOWED_CLASS_NODE = new ClassNode(BindAllowed.class);
     public static final AnnotationNode ACTION_ANNOTATION_NODE = new AnnotationNode(
             new ClassNode(Action.class));
     private static final String ACTION_MEMBER_TARGET = "commandObjects";
@@ -722,6 +725,7 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
         String requestParameterName = paramName;
         List<AnnotationNode> requestParameters = param.getAnnotations(
                 new ClassNode(RequestParameter.class));
+        List<AnnotationNode> bindAllowedAnnotations = param.getAnnotations(BIND_ALLOWED_CLASS_NODE);
 
         //Check to see if the method was inherited from a trait
         if (actionNode instanceof MethodNode && paramName.startsWith("arg")) {
@@ -743,6 +747,7 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
                             //Set the request parameter name based off of the parameter in the trait helper method
                             requestParameterName = helperParam.getName();
                             requestParameters = helperParam.getAnnotations(new ClassNode(RequestParameter.class));
+                            bindAllowedAnnotations = helperParam.getAnnotations(BIND_ALLOWED_CLASS_NODE);
                         }
                     }
                 }
@@ -759,14 +764,15 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
         } else if (paramTypeClassNode.equals(new ClassNode(String.class))) {
             initializeStringParameter(classNode, wrapper, param, requestParameterName);
         } else if (!paramTypeClassNode.equals(OBJECT_CLASS)) {
+            final Expression bindAllowedExpression = getBindAllowedExpression(source, param, bindAllowedAnnotations);
             initializeAndValidateCommandObjectParameter(wrapper, classNode, paramTypeClassNode,
-                    actionNode, actionName, paramName, source, context);
+                    actionNode, actionName, paramName, bindAllowedExpression, source, context);
         }
     }
 
     protected void initializeAndValidateCommandObjectParameter(final BlockStatement wrapper,
             final ClassNode controllerNode, final ClassNode commandObjectNode,
-            final ASTNode actionNode, final String actionName, final String paramName,
+            final ASTNode actionNode, final String actionName, final String paramName, final Expression bindAllowedExpression,
             final SourceUnit source, final GeneratorContext context) {
         final DeclarationExpression declareCoExpression = declX(localVarX(paramName, commandObjectNode), new EmptyExpression());
         wrapper.addStatement(stmt(declareCoExpression));
@@ -778,7 +784,7 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
                     "].  Interface types and abstract class types are not supported as command objects.  This parameter will be ignored.";
             GrailsASTUtils.warning(source, actionNode, warningMessage);
         } else {
-            initializeCommandObjectParameter(wrapper, commandObjectNode, paramName, source);
+            initializeCommandObjectParameter(wrapper, commandObjectNode, paramName, bindAllowedExpression, source);
 
             @SuppressWarnings("unchecked")
             boolean argumentIsValidateable = GrailsASTUtils.hasAnyAnnotations(
@@ -854,12 +860,100 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
     }
 
     protected void initializeCommandObjectParameter(final BlockStatement wrapper,
-            final ClassNode commandObjectNode, final String paramName, SourceUnit source) {
+            final ClassNode commandObjectNode, final String paramName, final Expression bindAllowedExpression, SourceUnit source) {
         final ArgumentListExpression initializeCommandObjectArguments = args(classX(commandObjectNode), constX(paramName));
+        if (bindAllowedExpression != null) {
+            initializeCommandObjectArguments.addExpression(bindAllowedExpression);
+        }
         final MethodCallExpression initializeCommandObjectMethodCall = callThisX("initializeCommandObject", initializeCommandObjectArguments);
         applyDefaultMethodTarget(initializeCommandObjectMethodCall, commandObjectNode);
         final Expression assignCommandObjectToParameter = assignX(varX(paramName), initializeCommandObjectMethodCall);
         wrapper.addStatement(stmt(assignCommandObjectToParameter));
+    }
+
+    private Expression getBindAllowedExpression(final SourceUnit source, final Parameter param, final List<AnnotationNode> bindAllowedAnnotations) {
+        if (bindAllowedAnnotations == null || bindAllowedAnnotations.isEmpty()) {
+            return null;
+        }
+        final AnnotationNode bindAllowedAnnotation = bindAllowedAnnotations.get(0);
+        final Expression valueExpression = bindAllowedAnnotation.getMember("value");
+        final ListExpression allowedProperties = resolveBindAllowedProperties(valueExpression);
+        if (allowedProperties == null) {
+            GrailsASTUtils.error(source, param, "@BindAllowed requires a literal list of property names or a static final constant list.");
+            return new ListExpression();
+        }
+        return allowedProperties;
+    }
+
+    private ListExpression resolveBindAllowedProperties(final Expression expression) {
+        if (expression instanceof ConstantExpression) {
+            final Object value = ((ConstantExpression) expression).getValue();
+            if (value instanceof String) {
+                final ListExpression listExpression = new ListExpression();
+                listExpression.addExpression(new ConstantExpression(value));
+                return listExpression;
+            }
+        }
+        if (expression instanceof ListExpression) {
+            return copyStringLiteralList((ListExpression) expression);
+        }
+        final FieldNode constantField = resolveStaticFinalField(expression);
+        if (constantField != null) {
+            return resolveBindAllowedProperties(constantField.getInitialExpression());
+        }
+        return null;
+    }
+
+    private ListExpression copyStringLiteralList(final ListExpression sourceList) {
+        final ListExpression listExpression = new ListExpression();
+        for (Expression element : sourceList.getExpressions()) {
+            final Object value = resolveBindAllowedStringValue(element);
+            if (!(value instanceof String)) {
+                return null;
+            }
+            listExpression.addExpression(new ConstantExpression(value));
+        }
+        return listExpression;
+    }
+
+    private Object resolveBindAllowedStringValue(final Expression expression) {
+        if (expression instanceof ConstantExpression) {
+            return ((ConstantExpression) expression).getValue();
+        }
+        final FieldNode constantField = resolveStaticFinalField(expression);
+        if (constantField != null && constantField.getInitialExpression() instanceof ConstantExpression) {
+            return ((ConstantExpression) constantField.getInitialExpression()).getValue();
+        }
+        return null;
+    }
+
+    private FieldNode resolveStaticFinalField(final Expression expression) {
+        if (expression instanceof VariableExpression) {
+            final Variable accessedVariable = ((VariableExpression) expression).getAccessedVariable();
+            if (accessedVariable instanceof FieldNode) {
+                return staticFinalFieldOrNull((FieldNode) accessedVariable);
+            }
+        }
+        if (expression instanceof PropertyExpression) {
+            final PropertyExpression propertyExpression = (PropertyExpression) expression;
+            final Expression objectExpression = propertyExpression.getObjectExpression();
+            if (objectExpression instanceof ClassExpression) {
+                final FieldNode fieldNode = ((ClassExpression) objectExpression).getType().getField(propertyExpression.getPropertyAsString());
+                return staticFinalFieldOrNull(fieldNode);
+            }
+        }
+        return null;
+    }
+
+    private FieldNode staticFinalFieldOrNull(final FieldNode fieldNode) {
+        if (fieldNode == null) {
+            return null;
+        }
+        final int modifiers = fieldNode.getModifiers();
+        if (Modifier.isStatic(modifiers) && Modifier.isFinal(modifiers)) {
+            return fieldNode;
+        }
+        return null;
     }
 
     /**

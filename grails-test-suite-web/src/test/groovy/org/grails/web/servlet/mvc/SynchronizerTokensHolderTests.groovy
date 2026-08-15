@@ -18,6 +18,11 @@
  */
 package org.grails.web.servlet.mvc
 
+import java.util.concurrent.Callable
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
+
 import org.junit.jupiter.api.Test
 
 import static org.junit.jupiter.api.Assertions.*
@@ -74,6 +79,85 @@ class SynchronizerTokensHolderTests {
     }
 
     @Test
+    void testGeneratedTokensAreBoundedByUrlCount() {
+        SynchronizerTokensHolder holder = new SynchronizerTokensHolder()
+
+        String firstUrl = 'url0'
+        String firstToken = holder.generateToken(firstUrl)
+        (1..SynchronizerTokensHolder.DEFAULT_MAX_TOKEN_URLS).each { Integer index ->
+            holder.generateToken("url${index}".toString())
+        }
+
+        assertEquals SynchronizerTokensHolder.DEFAULT_MAX_TOKEN_URLS, holder.currentTokens.size()
+        assertFalse holder.isValid(firstUrl, firstToken)
+    }
+
+    @Test
+    void testExistingOversizedUrlMapIsTrimmedWhenGeneratingToken() {
+        SynchronizerTokensHolder holder = new SynchronizerTokensHolder()
+        String firstUrl = 'url0'
+        holder.currentTokens[firstUrl] = [UUID.randomUUID()] as LinkedHashSet<UUID>
+        (1..(SynchronizerTokensHolder.DEFAULT_MAX_TOKEN_URLS + 5)).each { Integer index ->
+            holder.currentTokens["url${index}".toString()] = [UUID.randomUUID()] as LinkedHashSet<UUID>
+        }
+
+        String newToken = holder.generateToken('new-url')
+
+        assertEquals SynchronizerTokensHolder.DEFAULT_MAX_TOKEN_URLS, holder.currentTokens.size()
+        assertFalse holder.currentTokens.containsKey(firstUrl)
+        assertTrue holder.isValid('new-url', newToken)
+    }
+
+    @Test
+    void testExistingOversizedUrlMapKeepsUrlReceivingNewToken() {
+        SynchronizerTokensHolder holder = new SynchronizerTokensHolder()
+        String refreshedUrl = 'url1'
+        holder.currentTokens['url0'] = [UUID.randomUUID()] as LinkedHashSet<UUID>
+        holder.currentTokens[refreshedUrl] = [UUID.randomUUID()] as LinkedHashSet<UUID>
+        (2..(SynchronizerTokensHolder.DEFAULT_MAX_TOKEN_URLS + 5)).each { Integer index ->
+            holder.currentTokens["url${index}".toString()] = [UUID.randomUUID()] as LinkedHashSet<UUID>
+        }
+
+        String newToken = holder.generateToken(refreshedUrl)
+
+        assertEquals SynchronizerTokensHolder.DEFAULT_MAX_TOKEN_URLS, holder.currentTokens.size()
+        assertTrue holder.currentTokens.containsKey(refreshedUrl)
+        assertTrue holder.isValid(refreshedUrl, newToken)
+    }
+
+    @Test
+    void testGeneratedTokensAreBoundedPerUrl() {
+        SynchronizerTokensHolder holder = new SynchronizerTokensHolder()
+        String url = 'url1'
+        String firstToken = holder.generateToken(url)
+        String lastToken = null
+        (1..SynchronizerTokensHolder.DEFAULT_MAX_TOKENS_PER_URL).each {
+            lastToken = holder.generateToken(url)
+        }
+
+        assertEquals SynchronizerTokensHolder.DEFAULT_MAX_TOKENS_PER_URL, holder.currentTokens[url].size()
+        assertFalse holder.isValid(url, firstToken)
+        assertTrue holder.isValid(url, lastToken)
+    }
+
+    @Test
+    void testExistingOversizedTokenSetIsTrimmedWhenGeneratingToken() {
+        SynchronizerTokensHolder holder = new SynchronizerTokensHolder()
+        String url = 'url1'
+        UUID firstToken = UUID.randomUUID()
+        holder.currentTokens[url] = [firstToken] as LinkedHashSet<UUID>
+        (1..(SynchronizerTokensHolder.DEFAULT_MAX_TOKENS_PER_URL + 5)).each {
+            holder.currentTokens[url].add(UUID.randomUUID())
+        }
+
+        String newToken = holder.generateToken(url)
+
+        assertEquals SynchronizerTokensHolder.DEFAULT_MAX_TOKENS_PER_URL, holder.currentTokens[url].size()
+        assertFalse holder.currentTokens[url].contains(firstToken)
+        assertTrue holder.isValid(url, newToken)
+    }
+
+    @Test
     void testIsValid() {
         SynchronizerTokensHolder holder = new SynchronizerTokensHolder()
         assertTrue holder.empty
@@ -83,6 +167,67 @@ class SynchronizerTokensHolderTests {
         String token = holder.generateToken(url)
         assertTrue holder.isValid(url, token)
         assertFalse holder.isValid(url, token + '!')
+    }
+
+    @Test
+    void testValidTokenCanOnlyBeConsumedOnce() {
+        SynchronizerTokensHolder holder = new SynchronizerTokensHolder()
+        String url = 'url1'
+        String token = holder.generateToken(url)
+
+        assertTrue holder.isValidAndResetToken(url, token)
+        assertFalse holder.isValidAndResetToken(url, token)
+        assertTrue holder.empty
+    }
+
+    @Test
+    void testInvalidTokensAreNotConsumed() {
+        SynchronizerTokensHolder holder = new SynchronizerTokensHolder()
+        String url = 'url1'
+        String token = holder.generateToken(url)
+
+        assertFalse holder.isValidAndResetToken(url, null)
+        assertFalse holder.isValidAndResetToken(url, '')
+        assertFalse holder.isValidAndResetToken(url, token + '!')
+        assertTrue holder.isValidAndResetToken(url, token)
+    }
+
+    @Test
+    void testConsumingOneTokenKeepsSiblingTokensForSameUrl() {
+        SynchronizerTokensHolder holder = new SynchronizerTokensHolder()
+        String url = 'url1'
+        String token1 = holder.generateToken(url)
+        String token2 = holder.generateToken(url)
+
+        assertTrue holder.isValidAndResetToken(url, token1)
+        assertFalse holder.isValidAndResetToken(url, token1)
+        assertTrue holder.isValidAndResetToken(url, token2)
+        assertTrue holder.empty
+    }
+
+    @Test
+    void testConcurrentTokenConsumeAllowsOneSuccess() {
+        SynchronizerTokensHolder holder = new SynchronizerTokensHolder()
+        String url = 'url1'
+        String token = holder.generateToken(url)
+        CountDownLatch start = new CountDownLatch(1)
+        def executor = Executors.newFixedThreadPool(2)
+
+        try {
+            List<Future<Boolean>> results = (1..2).collect {
+                executor.submit({ ->
+                    start.await()
+                    holder.isValidAndResetToken(url, token)
+                } as Callable<Boolean>)
+            }
+            start.countDown()
+
+            assertEquals 1, results.count { Future<Boolean> result -> result.get() }
+            assertTrue holder.empty
+        }
+        finally {
+            executor.shutdownNow()
+        }
     }
 
     @Test
