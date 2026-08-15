@@ -43,6 +43,9 @@ class SpringBootStarterSecuritySpec extends ApplicationContextSpec implements Co
         user.contains('static hasMany = [roles: String]')
         user.contains('new SimpleGrantedAuthority(it)')
 
+        and: 'the password field is marked as a password so scaffolding masks it'
+        user.contains('password blank: false, password: true')
+
         and: 'the scaffolded controller and UserDetailsService-backed service are generated'
         output['grails-app/controllers/example/grails/UserController.groovy'].contains('@Scaffold(RestfulServiceController<User>)')
         def service = output['grails-app/services/example/grails/UserService.groovy']
@@ -50,23 +53,37 @@ class SpringBootStarterSecuritySpec extends ApplicationContextSpec implements Co
         service.contains('class UserService implements UserDetailsService')
         service.contains("User.findByUsername(username, [fetch: [roles: 'join']])")
 
-        and: 'SecurityConfig enables form login with a delegating password encoder'
-        def config = output['src/main/groovy/example/grails/SecurityConfig.groovy']
-        config.contains('@EnableWebSecurity')
-        config.contains('PasswordEncoderFactories.createDelegatingPasswordEncoder()')
-        config.contains('.formLogin { }')
-        config.contains(".logout { it.logoutSuccessUrl('/') }")
+        and: 'no separate configuration class is generated'
+        !output.containsKey('src/main/groovy/example/grails/SecurityConfig.groovy')
 
-        and: 'Application imports the security configuration'
+        and: 'Application declares the security beans through the beans DSL'
         def application = output['grails-app/init/example/grails/Application.groovy']
-        application.contains('import org.springframework.context.annotation.Import')
-        application.contains('@Import(SecurityConfig)')
+        application.contains('import org.springframework.security.web.SecurityFilterChain')
+        application.contains('@EnableWebSecurity')
+        application.contains('def beans = {')
+        application.contains('bean(PasswordEncoder) {')
+        application.contains('PasswordEncoderFactories.createDelegatingPasswordEncoder()')
+        application.contains("bean('filterChain', SecurityFilterChain) { HttpSecurity http ->")
+        application.contains('.formLogin { }')
+        application.contains(".logout { it.logoutSuccessUrl('/') }")
+        !application.contains('@Import(SecurityConfig)')
+
+        and: 'the home page and static assets are public, the user admin is ROLE_ADMIN, the rest requires login'
+        application.contains("it.requestMatchers('/', '/index', '/index.gsp', '/error', '/assets/**').permitAll()")
+        application.contains(".requestMatchers('/user/**').hasRole('ADMIN')")
+        application.contains('.anyRequest().authenticated()')
+        !application.contains('anyRequest().permitAll()')
 
         and: 'BootStrap seeds an admin user with a generated password'
         def bootStrap = output['grails-app/init/example/grails/BootStrap.groovy']
         bootStrap.contains('import org.springframework.security.crypto.factory.PasswordEncoderFactories')
-        bootStrap.contains('PasswordEncoderFactories.createDelegatingPasswordEncoder().encode(password)')
+        bootStrap.contains('PasswordEncoderFactories.createDelegatingPasswordEncoder()')
+        bootStrap.contains('passwordEncoder.encode(password)')
         bootStrap.contains('Generated admin credentials: admin')
+
+        and: 'BootStrap also seeds a non-admin account so the ROLE_ADMIN rules are exercised'
+        bootStrap.contains("roles: ['ROLE_USER']")
+        bootStrap.contains('Generated user credentials: user')
 
         and: 'a domain spec covering constraints and authorities is generated'
         def userSpec = output['src/test/groovy/example/grails/UserSpec.groovy']
@@ -91,7 +108,8 @@ class SpringBootStarterSecuritySpec extends ApplicationContextSpec implements Co
 
         then:
         !output['build.gradle'].contains('spring-boot-starter-security')
-        !output['grails-app/init/example/grails/Application.groovy'].contains('@Import(SecurityConfig)')
+        !output['grails-app/init/example/grails/Application.groovy'].contains('def beans = {')
+        !output['grails-app/init/example/grails/Application.groovy'].contains('@EnableWebSecurity')
         !output['grails-app/init/example/grails/BootStrap.groovy'].contains('Generated admin credentials')
         !output.containsKey('grails-app/domain/example/grails/User.groovy')
         !output.containsKey('src/main/groovy/example/grails/SecurityConfig.groovy')

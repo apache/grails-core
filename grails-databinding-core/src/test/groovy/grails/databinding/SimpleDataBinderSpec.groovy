@@ -602,6 +602,30 @@ class SimpleDataBinderSpec extends Specification {
         obj.map.two == 2
     }
 
+    void 'Test binding an indexed typed map with a Map-constructor-only value type'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def target = new MapConstructorValueHolder()
+
+        when:
+        binder.bind(target, ['values[one]': [name: 'First']] as SimpleMapDataBindingSource)
+
+        then:
+        target.values.one.name == 'First'
+    }
+
+    void 'Test an empty whiteList binds no properties'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def target = new MapConstructorValue(name: 'Original')
+
+        when:
+        binder.bind(target, [name: 'Changed'] as SimpleMapDataBindingSource, [])
+
+        then:
+        target.name == 'Original'
+    }
+
     @Issue('https://github.com/apache/grails-core/issues/11140')
     void 'Test bind a Integer on a List<Long>'() {
         given:
@@ -773,6 +797,18 @@ abstract class AbstractClassWithTypedCollection {
 }
 
 class ClassWithInheritedTypedCollection extends AbstractClassWithTypedCollection {}
+
+class MapConstructorValueHolder {
+    Map<String, MapConstructorValue> values
+}
+
+class MapConstructorValue {
+    String name
+
+    MapConstructorValue(Map values) {
+        name = values.name
+    }
+}
 
 class DateCollection {
     List<Date> dates

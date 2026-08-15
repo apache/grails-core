@@ -1,0 +1,178 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+=== Embedded MongoDB
+
+`grails-data-mongodb-embedded` starts a MongoDB server as the application starts, so
+development and testing need neither a MongoDB installation nor Docker. Applications created
+by Grails Forge with MongoDB selected include it, asked for by the development and test
+environments.
+
+A server is asked for by the URL, the way an in-memory SQL database is. Where an application
+would name a host, it names `embedded` instead:
+
+[source,groovy]
+----
+implementation "org.apache.grails:grails-data-mongodb-embedded"
+----
+
+[source,yaml]
+----
+environments:
+    development:
+        grails:
+            mongodb:
+                url: mongodb://embedded/bookstore
+    test:
+        grails:
+            mongodb:
+                url: mongodb://embedded/bookstore
+    production:
+        grails:
+            mongodb:
+                url: mongodb://localhost:27017/bookstore
+----
+
+Nothing else switches it on and nothing switches it off. A URL naming a host is served by the
+driver and no server is started, so adding the dependency alone never changes how an
+application connects — in the same way that an application with `h2` on its classpath and a
+PostgreSQL URL never starts H2.
+
+A port may be given as `mongodb://embedded:27018/bookstore`. Without one, the port is 27017
+offset by however far `server.port` has moved from 8080, so two applications run side by side
+without colliding.
+
+NOTE: A host genuinely named `embedded` cannot be reached this way. Name it by its address or
+its fully qualified name instead.
+
+==== Choosing a backend
+
+Two backends are supported.
+
+[cols="1,3,3"]
+|===
+| |`in-memory` |`flapdoodle`
+
+|Included
+|Yes, with this module
+|No, add `de.flapdoodle.embed:de.flapdoodle.embed.mongo`
+
+|Startup
+|Milliseconds, inside this JVM
+|About a second, after downloading a MongoDB binary once to `~/.embedmongo`
+
+|Fidelity
+|Reimplements the wire protocol, so transactions, change streams, `$text` and some `$expr`
+operators are unsupported
+|A real `mongod`, so everything behaves as it does in production
+
+|Keeps data
+|No
+|Yes, with `embedded.mongodb.database-dir`
+
+|Reported version
+|`5.0.0`
+|The version started, `8.0` by default
+|===
+
+`in-memory` is used unless flapdoodle is on the classpath, in which case flapdoodle is
+preferred, so adding the dependency is all that is needed to move to a real `mongod`.
+Set `embedded.mongodb.backend` to choose explicitly.
+
+Flapdoodle is not a dependency of this module because it requires `jgrapht`, which is
+offered under LGPL-2.1 or EPL-2.0 and so cannot be required by an Apache release. An
+application adds it in the same way it chooses a SQL driver:
+
+[source,groovy]
+----
+implementation "de.flapdoodle.embed:de.flapdoodle.embed.mongo:4.33.0"
+----
+
+==== Configuration
+
+Whether to start a server, which port, and which database are all read from the URL. These
+configure the server behind it.
+
+[cols="1,2"]
+|===
+|Property |Description
+
+|`embedded.mongodb.backend`
+|`in-memory` or `flapdoodle`. Defaults to flapdoodle when it is on the classpath,
+otherwise `in-memory`.
+
+|`embedded.mongodb.database-dir`
+|Where to keep the data so it outlives the server. Only the flapdoodle backend supports
+this; the `in-memory` backend reports an error rather than discarding the data silently.
+
+|`embedded.mongodb.version`
+|The MongoDB version for backends that can choose one, such as `V8_0` for flapdoodle.
+
+|`embedded.mongodb.property-names`
+|Comma separated properties that may name an embedded server. Defaults to
+`grails.mongodb.url`.
+|===
+
+==== Production
+
+A generated application names a real host in production, so nothing is started there.
+
+Where an embedded server in production is genuinely wanted, ask for one in that
+environment's url and use flapdoodle with a directory, so the data survives a restart:
+
+[source,yaml]
+----
+environments:
+    production:
+        grails:
+            mongodb:
+                url: mongodb://embedded/bookstore
+        embedded:
+            mongodb:
+                backend: flapdoodle
+                database-dir: ./prodMongoDb
+----
+
+==== Restarts and ports
+
+A server started by this module runs until the JVM exits, so a Spring Boot DevTools
+restart reuses it instead of starting another. Only a server this module started is
+reused: if anything else is already holding the port, startup fails with an error naming
+the port rather than connecting to an unrelated service. To use a MongoDB started by hand,
+name its host in `grails.mongodb.url` as usual.
+
+==== Outside Grails
+
+The module is plain Java and knows nothing about Grails beyond the default property name,
+so `embedded.mongodb.property-names` makes it usable from any Spring application:
+
+[source,yaml]
+----
+spring:
+    data:
+        mongodb:
+            uri: mongodb://embedded/bookstore
+embedded:
+    mongodb:
+        property-names: spring.data.mongodb.uri
+----
+
+Spring Data MongoDB applications are usually better served by flapdoodle's own
+`de.flapdoodle.embed.mongo.spring3x` auto configuration, which this module deliberately
+does not duplicate.

@@ -107,7 +107,7 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
         column.getCustomRead() == "r"
         column.getCustomWrite() == "w"
 
-        1 * numericBinder.bindNumericColumnConstraints(column, cc, _)
+        1 * numericBinder.bindNumericColumnConstraints(column, cc, _, Integer)
         1 * keyCreator.createKeyForProps(prop, "p", table, "num_col")
         1 * indexBinder.bindIndex("num_col", column, cc, table)
     }

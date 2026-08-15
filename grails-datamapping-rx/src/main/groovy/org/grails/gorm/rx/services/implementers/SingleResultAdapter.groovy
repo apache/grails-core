@@ -44,7 +44,6 @@ import static org.grails.gorm.rx.transform.RxAstUtils.isRxEntity
 /**
  * Adapts existing implementers for RxJava
  *
- * @author Graeme Rocher
  * @since 6.1.1
  */
 @CompileStatic
@@ -63,31 +62,31 @@ class SingleResultAdapter implements ServiceImplementer, Ordered, AdaptedImpleme
     @Override
     boolean doesImplement(ClassNode domainClass, MethodNode methodNode) {
         def alreadyImplemented = methodNode.getNodeMetaData(IMPLEMENTED)
-        if(!alreadyImplemented) {
+        if (!alreadyImplemented) {
             boolean isObservableOfReturnType
 
             ClassNode methodReturnType = methodNode.returnType
-            if(isDomainReturnType) {
+            if (isDomainReturnType) {
                 isObservableOfReturnType = RxAstUtils.isSingleOfDomainClass(methodReturnType) && !methodReturnType.isArray()
             }
-            else if(returnType != null) {
+            else if (returnType != null) {
                 isObservableOfReturnType = RxAstUtils.isSingleOf(methodReturnType, returnType) && !methodReturnType.isArray()
             }
             else {
                 isObservableOfReturnType = RxAstUtils.isSingleOf(methodReturnType, Object) && !methodReturnType.isArray()
             }
 
-            if(!isObservableOfReturnType && (adapted instanceof SingleResultInterfaceProjectionBuilder) && RxAstUtils.isSingle(methodReturnType)) {
+            if (!isObservableOfReturnType && (adapted instanceof SingleResultInterfaceProjectionBuilder) && RxAstUtils.isSingle(methodReturnType)) {
                 ClassNode genericType = resolveSingleGenericType(methodReturnType)
-                isObservableOfReturnType =  ((SingleResultInterfaceProjectionBuilder)adapted).isInterfaceProjection(domainClass, methodNode, genericType )
+                isObservableOfReturnType =  ((SingleResultInterfaceProjectionBuilder)adapted).isInterfaceProjection(domainClass, methodNode, genericType)
             }
 
-            if(adapted instanceof AnnotatedServiceImplementer) {
+            if (adapted instanceof AnnotatedServiceImplementer) {
                 return ((AnnotatedServiceImplementer)adapted).isAnnotated(domainClass, methodNode) && isObservableOfReturnType
             }
             else {
                 String prefix = adapted.resolvePrefix(methodNode)
-                if(adapted instanceof SingleResultProjectionServiceImplementer) {
+                if (adapted instanceof SingleResultProjectionServiceImplementer) {
                     ClassNode genericType = resolveSingleGenericType(methodReturnType)
                     return ((SingleResultProjectionServiceImplementer)adapted).isCompatibleReturnType(domainClass, methodNode, genericType, prefix)
                 }
@@ -103,20 +102,30 @@ class SingleResultAdapter implements ServiceImplementer, Ordered, AdaptedImpleme
     @Override
     void implement(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, ClassNode targetClassNode) {
         ClassNode returnType = resolveSingleGenericType(abstractMethodNode.returnType)
-        newMethodNode.setNodeMetaData(RETURN_TYPE, returnType )
+        newMethodNode.setNodeMetaData(RETURN_TYPE, returnType)
+
+        boolean requiresScheduling = !isRxEntity(returnType)
+        ClassNode wrappedReturnType = newMethodNode.returnType
+        if (requiresScheduling) {
+            // Narrow to the unwrapped synchronous type (e.g. Number instead of Single<Number>) so that any
+            // decorator applied by the adapted implementer (such as the automatic @Transactional wrapping)
+            // builds its delegating call against the type the synchronous body actually returns. Restored to
+            // the Rx-wrapped type by RxScheduleIOTransformation once it weaves this method.
+            newMethodNode.setReturnType(returnType)
+        }
+
         adapted.implement(domainClassNode, abstractMethodNode, newMethodNode, targetClassNode)
 
-        if(!isRxEntity(returnType)) {
+        if (requiresScheduling) {
             def ann = addAnnotationOrGetExisting(newMethodNode, RxSchedule)
             ann.setMember(RxScheduleIOTransformation.ANN_SINGLE_RESULT, ConstantExpression.TRUE)
-            newMethodNode.addAnnotation(ann)
-
+            newMethodNode.setNodeMetaData(RxScheduleIOTransformation.WRAPPED_RETURN_TYPE, wrappedReturnType)
         }
     }
 
     @Override
     int getOrder() {
-        if(adapted instanceof Ordered) {
+        if (adapted instanceof Ordered) {
             return ((Ordered)adapted).getOrder()
         }
         return 0

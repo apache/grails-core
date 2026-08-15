@@ -49,11 +49,12 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot' // For @ConfigurationProperties
 
     compileOnly 'jakarta.annotation:jakarta.annotation-api' // Provided
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     testImplementation project(':grails-web-url-mappings')
     testImplementation 'org.spockframework:spock-core'
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
-    testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during test task
+    testImplementation 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation and tests
 }
 
 apply {

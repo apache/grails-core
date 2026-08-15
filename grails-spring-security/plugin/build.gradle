@@ -58,6 +58,8 @@ dependencies {
 	// GrailsConsole (used by the s2-* commands) needs jline at compile time
 	cliImplementation 'org.jline:jline'
 
+    cliCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
 	api project(':grails-spring-security-compat')
 	api project(':grails-async') // AsyncGrailsWebRequest is used in public API
 	api project(':grails-mimetypes')
@@ -100,6 +102,8 @@ dependencies {
 	testFixturesImplementation(platform(project(':grails-bom')))
 	testFixturesImplementation 'org.springframework.security:spring-security-core'
 	testFixturesImplementation 'org.springframework.security:spring-security-config'
+
+    testFixturesCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
 	testImplementation project(':grails-testing-support-datamapping')
 	testImplementation project(':grails-testing-support-web')

@@ -44,7 +44,11 @@ class SimpleValueBinderSpec extends Specification {
     }
 
     def namingStrategy = Mock(PersistentEntityNamingStrategy)
-    def jdbcEnvironment = Mock(org.hibernate.engine.jdbc.env.spi.JdbcEnvironment)
+    def jdbcEnvironment = Mock(org.hibernate.engine.jdbc.env.spi.JdbcEnvironment) {
+        // NumericColumnConstraintsBinder needs a real Dialect - a real Hibernate bootstrap never
+        // produces a null one, so ColumnBinder(namingStrategy, dialect) isn't null-guarded for it.
+        getDialect() >> new org.hibernate.dialect.H2Dialect()
+    }
     def metadataBuildingContext = Mock(org.hibernate.boot.spi.MetadataBuildingContext)
 
     def binder = new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment)

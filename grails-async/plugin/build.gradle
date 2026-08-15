@@ -52,12 +52,12 @@ dependencies {
     implementation 'org.springframework:spring-web'
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api' // Provided
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
+    testImplementation 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation and tests
     testImplementation 'org.spockframework:spock-core'
     testImplementation 'org.springframework:spring-test'
-
-    testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during test task
 
 }
 

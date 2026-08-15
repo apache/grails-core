@@ -20,14 +20,19 @@ package org.grails.plugins.domain
 
 import groovy.transform.CompileStatic
 
-import org.springframework.beans.factory.BeanRegistrar
-import org.springframework.beans.factory.BeanRegistry
-import org.springframework.core.env.Environment
+import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.boot.autoconfigure.AutoConfiguration
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication
+import org.springframework.context.MessageSource
 
-import grails.config.Config
+import grails.core.GrailsApplication
 import grails.plugins.Plugin
 import grails.util.GrailsUtil
-import org.grails.datastore.mapping.config.Settings as DatastoreSettings
+import org.grails.datastore.gorm.validation.constraints.factory.ConstraintFactory
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.plugins.domain.support.DefaultConstraintEvaluatorFactoryBean
+import org.grails.plugins.domain.support.DefaultMappingContextFactoryBean
+import org.grails.plugins.domain.support.ValidatorRegistryFactoryBean
 
 /**
  * Configures the domain classes in the spring context.
@@ -36,6 +41,11 @@ import org.grails.datastore.mapping.config.Settings as DatastoreSettings
  * @since 0.4
  */
 @CompileStatic
+// TODO: datasource plugin is supposed to always load after this (currently will because this is a configuration)
+// Ordered by name, not by class literal: I18nGrailsPlugin's @GrailsBeans-generated
+// I18nAutoConfiguration doesn't exist as a compilable class for this class to reference.
+@AutoConfiguration(afterName = ['org.grails.plugins.i18n.I18nAutoConfiguration'])
+@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 class DomainClassGrailsPlugin extends Plugin {
 
     def watchedResources = ['file:./grails-app/domain/**/*.groovy',
@@ -45,15 +55,22 @@ class DomainClassGrailsPlugin extends Plugin {
     def dependsOn = [i18n: version]
     def loadAfter = ['controllers', 'dataSource']
 
-    @Override
-    BeanRegistrar beanRegistrar() {
-        return { BeanRegistry registry, Environment environment ->
-            // Set default for auto-timestamp annotation caching based on environment if not explicitly configured
-            Config config = grailsApplication.config
-            if (!config.containsProperty(DatastoreSettings.SETTING_AUTO_TIMESTAMP_CACHE_ANNOTATIONS)) {
-                // Not configured - disable caching in development mode to support class reloading
-                config.put(DatastoreSettings.SETTING_AUTO_TIMESTAMP_CACHE_ANNOTATIONS,
-                        !grails.util.Environment.isDevelopmentMode())
+    def beans = {
+        bean('grailsDomainClassMappingContext', DefaultMappingContextFactoryBean).lazy() { GrailsApplication grailsApplication, List<MessageSource> messageSources, List<ConstraintFactory> factories ->
+            new DefaultMappingContextFactoryBean(grailsApplication, messageSources).tap {
+                constraintFactories = factories ?: []
+            }
+        }
+
+        bean('validateableConstraintsEvaluator', DefaultConstraintEvaluatorFactoryBean).lazy() {
+                List<MessageSource> messageSources,
+                @Qualifier('grailsDomainClassMappingContext') MappingContext mappingContext,
+                GrailsApplication grailsApplication ->
+        }
+
+        bean('gormValidatorRegistry', ValidatorRegistryFactoryBean).lazy() { @Qualifier('grailsDomainClassMappingContext') MappingContext mappingContext ->
+            new ValidatorRegistryFactoryBean().tap {
+                it.mappingContext = mappingContext
             }
         }
     }

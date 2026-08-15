@@ -97,7 +97,6 @@ components:
     out_of_model_reason: "Separate Micronaut-based service deployed independently from any application built with Grails (§3)."
     representative_files:
       - grails-forge/grails-forge-api/src/main/java/org/grails/forge/api/create/zip/ZipCreateController.java
-      - grails-forge/grails-forge-api/src/main/java/org/grails/forge/api/create/github/GitHubCreateController.java
   - name: generated_scaffolding_demo_apps
     in_model: false
     out_of_model_reason: "Separately authored; not shipped in framework distributions (§3)."
