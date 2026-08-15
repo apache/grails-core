@@ -28,23 +28,5 @@ import org.springframework.core.env.PropertySource;
  * @author Andy Wilkinson
  * @since 1.3.0
  */
-class PropertyOrigin {
-
-    private final PropertySource<?> source;
-
-    private final String name;
-
-    PropertyOrigin(PropertySource<?> source, String name) {
-        this.name = name;
-        this.source = source;
-    }
-
-    public PropertySource<?> getSource() {
-        return this.source;
-    }
-
-    public String getName() {
-        return this.name;
-    }
-
+record PropertyOrigin(PropertySource<?> source, String name) {
 }

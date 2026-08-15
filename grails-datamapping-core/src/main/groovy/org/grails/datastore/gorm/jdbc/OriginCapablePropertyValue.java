@@ -50,9 +50,9 @@ class OriginCapablePropertyValue extends PropertyValue {
 
     @Override
     public @NonNull String toString() {
-        String name = this.origin != null ? this.origin.getName() : this.getName();
-        String source = (this.origin != null && this.origin.getSource() != null) ?
-                this.origin.getSource().getName() : "unknown";
+        String name = this.origin != null ? this.origin.name() : this.getName();
+        String source = (this.origin != null && this.origin.source() != null) ?
+                this.origin.source().getName() : "unknown";
         return "'" + name + "' from '" + source + "'";
     }
 
