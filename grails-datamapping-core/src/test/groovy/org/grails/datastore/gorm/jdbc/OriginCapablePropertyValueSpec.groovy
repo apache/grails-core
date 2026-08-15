@@ -61,6 +61,14 @@ class OriginCapablePropertyValueSpec extends Specification {
         propertyValue.toString() == "'original.name' from 'unknown'"
     }
 
+    void "toString does not fail when constructed with a null origin"() {
+        given:
+        def propertyValue = new OriginCapablePropertyValue('bound.name', 'boundValue', null)
+
+        expect:
+        propertyValue.toString() == "'bound.name' from 'unknown'"
+    }
+
     void "static getOrigin returns the origin of an OriginCapablePropertyValue directly"() {
         given:
         def origin = new PropertyOrigin(namedSource('myPropertySource'), 'original.name')
