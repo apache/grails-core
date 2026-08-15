@@ -17,3 +17,16 @@ specific language governing permissions and limitations
 under the License.
 ////
 
+=== Data Binding Defaults
+
+Grails 8 retains permissive mass data binding by default for compatibility, so properties without a `bindable` constraint continue to bind.  Properties marked `bindable: false` remain non-bindable in either mode.  Empty `include` lists bind no properties.
+
+Applications can opt into deny-by-default mass data binding by setting `grails.databinding.denyByDefault=true`.  In secure mode, declare each permitted property with `bindable: true`, add it to an explicit `include` list, or list it in `@BindAllowed`; only in this mode does `bindable: true` act as a restrictive allowlist.
+
+An empty include list passed directly to `SimpleDataBinder` now binds no properties.  The `grails.databinding.denyByDefault` setting does not change this direct binder behavior.
+
+In compatibility mode, a `bindData` call that supplies only `exclude` continues to bind every other eligible property.  Secure mode also applies the generated allowlist when only `exclude` is supplied.
+
+Values of typed `Map` properties are converted to the declared value type.  Conversion failures are added to the binding errors and data binding listeners receive the corresponding events.
+
+The values `true`, `false`, `'true'`, and `'false'` are accepted for `grails.databinding.denyByDefault`, ignoring case and surrounding whitespace for strings.  An unrecognised value logs a warning and enables secure deny-by-default binding.

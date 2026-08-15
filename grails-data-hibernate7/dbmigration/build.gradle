@@ -82,6 +82,7 @@ dependencies {
     cliImplementation project(':grails-data-hibernate7')
     cliCompileOnly 'org.apache.groovy:groovy-sql'
     cliCompileOnly 'org.apache.groovy:groovy-xml'
+    cliCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
     cliImplementation(project(':grails-shell-cli')) {
         exclude group: 'org.slf4j', module: 'slf4j-simple'
 

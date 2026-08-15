@@ -111,8 +111,8 @@ dependencies {
     testImplementation 'org.spockframework:spock-core'
 
     testImplementation 'com.zaxxer:HikariCP'
+    testImplementation 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation and tests
     testRuntimeOnly 'com.h2database:h2'
-    testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during tests
 }
 
 //compileGroovy.groovyOptions.forkOptions.jvmArgs = ['-Xdebug', '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005']

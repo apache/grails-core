@@ -21,6 +21,7 @@ package org.grails.forge.feature.database
 
 import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.BuildBuilder
+import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.feature.Features
 import org.grails.forge.fixture.CommandOutputFixture
 
@@ -43,6 +44,23 @@ class MongoSyncSpec extends ApplicationContextSpec implements CommandOutputFixtu
 
         then:
         features.contains("mongo-sync")
+    }
+
+    void "test each environment gets its own database on the configured server"() {
+        when:
+        GeneratorContext ctx = buildGeneratorContext(['mongo-sync'])
+
+        then: 'the same names a generated SQL application uses, rather than one database shared ' +
+                'by every environment'
+        ctx.configuration.get("environments.development.grails.mongodb.url") ==
+                'mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/devDb'
+        ctx.configuration.get("environments.test.grails.mongodb.url") ==
+                'mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/testDb'
+
+        and: 'production stays the default, so deploying with MONGO_HOST set reaches that database'
+        !ctx.configuration.containsKey("environments.production.grails.mongodb.url")
+        ctx.configuration.get("grails.mongodb.url") ==
+                'mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/prodDb'
     }
 
     void "test mongo sync dependencies are present for gradle"() {

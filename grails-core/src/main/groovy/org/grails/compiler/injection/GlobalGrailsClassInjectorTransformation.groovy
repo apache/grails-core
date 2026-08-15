@@ -35,7 +35,13 @@ import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.PropertyNode
+import org.codehaus.groovy.ast.expr.ClosureExpression
 import org.codehaus.groovy.ast.expr.ConstantExpression
+import org.codehaus.groovy.ast.expr.Expression
+import org.codehaus.groovy.ast.expr.MethodCallExpression
+import org.codehaus.groovy.ast.stmt.BlockStatement
+import org.codehaus.groovy.ast.stmt.ExpressionStatement
+import org.codehaus.groovy.ast.stmt.Statement
 import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.ASTTransformation
@@ -83,6 +89,11 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
     public static final ClassNode ARTEFACT_CLASS_NODE = new ClassNode(Artefact)
     public static final ClassNode ARTEFACT_HANDLER_CLASS = ClassHelper.make('grails.core.ArtefactHandler')
     public static final ClassNode TRAIT_INJECTOR_CLASS = ClassHelper.make('grails.compiler.traits.TraitInjector')
+
+    private static final String GRAILS_AUTO_CONFIGURATION_CLASS_NAME = 'grails.boot.config.GrailsAutoConfiguration'
+    private static final String BEANS_PROPERTY = 'beans'
+    private static final ClassNode GRAILS_BEANS_ANNOTATION = ClassHelper.make('grails.compiler.beans.GrailsBeans')
+    private static final Set<String> BEANS_DSL_ROOT_CALLS = ['bean', 'field', 'method'].toSet()
 
     private static final AntPathMatcher ANT_PATH_MATCHER = new AntPathMatcher()
 
@@ -136,7 +147,11 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
                 pluginClassNode = classNode
                 pluginVersion = resolvePluginVersion(classNode, projectVersion?.toString())
                 addPluginVersionProperty(classNode, pluginVersion)
+                compileBeansDsl(classNode, source)
                 continue
+            }
+            if (GrailsASTUtils.isSubclassOfOrImplementsInterface(classNode, GRAILS_AUTO_CONFIGURATION_CLASS_NAME)) {
+                compileBeansDsl(classNode, source)
             }
             if (updateGrailsFactoriesWithTypes(classNode, [ARTEFACT_HANDLER_CLASS, TRAIT_INJECTOR_CLASS], compilationTargetDirectory)) {
                 continue
@@ -326,6 +341,87 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
             return false
         }
         true
+    }
+
+    /**
+     * Compiles a plugin descriptor's or application class's {@code beans} closure into {@code @Bean}
+     * factory methods, so {@code @GrailsBeans} does not have to be written out - the {@code beans}
+     * property is a convention here in the same way {@code doWithSpring} and {@code watchedResources}
+     * already are.
+     *
+     * <p>The transformation is invoked directly rather than by adding the annotation: annotation-driven
+     * transformations are collected during semantic analysis, so an annotation added at
+     * {@code CANONICALIZATION} would never fire. A class that already declares {@code @GrailsBeans}
+     * is skipped, since its own transformation has run; a class without a {@code beans} property is
+     * skipped too, which is every plugin that does not use the DSL.</p>
+     *
+     * <p>Because the annotation is implicit here, the property has to look like the DSL before it is
+     * claimed. A pre-existing descriptor may already declare an unrelated {@code beans} property -
+     * a Map, or a closure of something else entirely - and compiling that would fail it with a DSL
+     * error it never asked for, which would be a source-incompatible change for third-party plugins.
+     * Only a closure whose every top-level statement is a {@code bean}/{@code field}/{@code method}
+     * call is taken; anything else is left alone. Writing {@code @GrailsBeans} explicitly opts back
+     * in to the strict errors, which is the right behaviour when the author has said what they mean.</p>
+     */
+    private void compileBeansDsl(ClassNode classNode, SourceUnit source) {
+        PropertyNode beansProperty = classNode.getProperty(BEANS_PROPERTY)
+        if (beansProperty == null || !classNode.getAnnotations(GRAILS_BEANS_ANNOTATION).isEmpty()) {
+            return
+        }
+        if (!looksLikeBeansDsl(beansProperty)) {
+            return
+        }
+
+        ASTTransformation transformation
+        try {
+            transformation = (ASTTransformation) getClass().classLoader
+                    .loadClass('org.grails.compiler.beans.GrailsBeansASTTransformation')
+                    .getDeclaredConstructor()
+                    .newInstance()
+        }
+        catch (ClassNotFoundException ignored) {
+            // grails-beans-dsl is off the compile classpath, so the beans property is left alone -
+            // silently, which is only acceptable because it cannot happen: grails-core declares the
+            // module api (see grails-core/build.gradle), so it reaches every project that has
+            // grails-core at all. Narrowing that scope would turn this branch into a live path where
+            // a DSL-shaped beans block registers nothing and says nothing about it.
+            return
+        }
+
+        if (transformation instanceof CompilationUnitAware) {
+            ((CompilationUnitAware) transformation).compilationUnit = compilationUnit
+        }
+        transformation.visit([new AnnotationNode(GRAILS_BEANS_ANNOTATION), classNode] as ASTNode[], source)
+    }
+
+    private static boolean looksLikeBeansDsl(PropertyNode beansProperty) {
+        Expression initial = beansProperty.field?.initialExpression
+        if (!(initial instanceof ClosureExpression)) {
+            return false
+        }
+        Statement code = ((ClosureExpression) initial).code
+        if (!(code instanceof BlockStatement)) {
+            return false
+        }
+        List<Statement> statements = ((BlockStatement) code).statements
+        if (statements.isEmpty()) {
+            // an empty block is a no-op either way, and claiming it keeps the two spellings agreeing
+            return true
+        }
+        statements.every { Statement statement ->
+            if (!(statement instanceof ExpressionStatement)) {
+                return false
+            }
+            Expression expression = ((ExpressionStatement) statement).expression
+            while (expression instanceof MethodCallExpression) {
+                MethodCallExpression call = (MethodCallExpression) expression
+                if (call.methodAsString in BEANS_DSL_ROOT_CALLS) {
+                    return true
+                }
+                expression = call.objectExpression
+            }
+            false
+        }
     }
 
     /**

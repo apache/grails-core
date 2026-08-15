@@ -56,6 +56,7 @@ class GrailsDataMongoDBSpec extends ApplicationContextSpec implements CommandOut
 
         then:
         template.contains("implementation \"org.apache.grails:grails-data-mongodb\"")
+        template.contains("implementation \"org.apache.grails:grails-data-mongodb-embedded\"")
     }
 
     void "test config"() {
@@ -64,6 +65,29 @@ class GrailsDataMongoDBSpec extends ApplicationContextSpec implements CommandOut
 
         then:
         ctx.configuration.containsKey("grails.mongodb.url")
+    }
+
+    void "test the embedded MongoDB is enabled for development and test only"() {
+        when:
+        GeneratorContext ctx = buildGeneratorContext(['gorm-mongodb'])
+
+        then: 'development and test name the server where they would name a host, so the app runs ' +
+                'with no MongoDB installed'
+        ctx.configuration.get("environments.development.grails.mongodb.url") == 'mongodb://embedded/devDb'
+        ctx.configuration.get("environments.test.grails.mongodb.url") == 'mongodb://embedded/testDb'
+
+        and: 'production keeps the configured url, so deploying with MONGO_HOST set reaches that database'
+        !ctx.configuration.containsKey("environments.production.grails.mongodb.url")
+        ctx.configuration.get("grails.mongodb.url") == 'mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/prodDb'
+    }
+
+    void "test no initializer is copied into the generated application"() {
+        when:
+        Map<String, String> output = generate(['gorm-mongodb'])
+
+        then: 'the embedded support arrives as a dependency, not as generated source'
+        !output.keySet().any { it.endsWith('EmbeddedMongoConfig.groovy') }
+        !output.containsKey('src/main/resources/META-INF/spring.factories')
     }
 
     void "test a SQL driver combined with MongoDB still adds Hibernate 5 as the default SQL implementation"() {

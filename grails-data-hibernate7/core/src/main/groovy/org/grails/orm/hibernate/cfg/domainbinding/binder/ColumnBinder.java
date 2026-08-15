@@ -119,7 +119,7 @@ public class ColumnBinder {
                 stringColumnConstraintsBinder.bindStringColumnConstraints(column, mappedForm);
             } else if (type != null && Number.class.isAssignableFrom(type)) {
                 PropertyConfig mappedForm = property.getHibernateMappedForm();
-                numericColumnConstraintsBinder.bindNumericColumnConstraints(column, cc, mappedForm);
+                numericColumnConstraintsBinder.bindNumericColumnConstraints(column, cc, mappedForm, type);
             }
         }
 

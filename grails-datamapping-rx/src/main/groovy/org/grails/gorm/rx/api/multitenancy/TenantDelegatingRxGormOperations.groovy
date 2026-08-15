@@ -31,11 +31,11 @@ import rx.Observable
 /**
  * Delegates to a RxGORM API ensuring the tenant id is correct
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 @CompileStatic
 class TenantDelegatingRxGormOperations<D> implements RxGormAllOperations<D> {
+
     final RxDatastoreClient datastoreClient
     final Serializable tenantId
     final RxGormAllOperations<D> delegateOperations
@@ -323,7 +323,7 @@ class TenantDelegatingRxGormOperations<D> implements RxGormAllOperations<D> {
     @Override
     Observable<D> findAllWhere(Map queryMap, Map args) {
         Tenants.withId(datastoreClientClass, tenantId) {
-            delegateOperations.findAllWhere(queryMap)
+            delegateOperations.findAllWhere(queryMap, args)
         }
     }
 

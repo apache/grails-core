@@ -1085,6 +1085,6 @@ def p = new Person()
 bindData(p, params, [include: ['firstName', 'lastName']])
 ----
 
-NOTE: If an empty List is provided as a value for the `include` parameter then all fields will be subject to binding if they are not explicitly excluded.
+NOTE: If an empty List is provided as a value for the `include` parameter then no fields will be bound.
 
-The link:{constraintsRef}bindable.html[bindable] constraint can be used to globally prevent data binding for certain properties.
+Grails 8 retains permissive request data binding by default for compatibility, so properties without a `bindable` constraint continue to bind.  Properties marked link:{constraintsRef}bindable.html[`bindable: false`] remain non-bindable in either mode.  Applications can opt into deny-by-default binding allowlists by setting `grails.databinding.denyByDefault=true`.  In secure mode, add `bindable: true`, an explicit `include` list, or `@BindAllowed` for each intended property; only in this mode does `bindable: true` act as a restrictive allowlist.

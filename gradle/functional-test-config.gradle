@@ -27,7 +27,8 @@ if (!rootProject.ext.has('substitutableFunctionalTestProjectsCache')) {
                 // ensure that the artifactId and cliArtifactId properties are available for substitution.
                 project.evaluationDependsOn(subproject.path)
                 return [
-                        project: subproject,
+                        name: subproject.name,
+                        group: subproject.group,
                         artifactId: subproject.findProperty('pomArtifactId') ?: subproject.name,
                         cliArtifactId: subproject.findProperty('cliArtifactId')
                 ]
@@ -36,39 +37,41 @@ if (!rootProject.ext.has('substitutableFunctionalTestProjectsCache')) {
 }
 def substitutableProjects = rootProject.ext.get('substitutableFunctionalTestProjectsCache')
 configurations.configureEach {
-    resolutionStrategy.dependencySubstitution {
+    resolutionStrategy.dependencySubstitution { substitution ->
         // Test projects will often include dependencies from local projects. This will ensure any dependencies
         // included will be substituted with the local projects in this repository instead of pulling upstream.
         for (def substitutionInfo : substitutableProjects) {
-            def substitutableProject = substitutionInfo.project as Project
-            def substitutedArtifact = "$substitutableProject.group:${substitutionInfo.artifactId}"
+            def substitutedArtifact = "${substitutionInfo.group}:${substitutionInfo.artifactId}" as String
             //TODO: This does not handle libraries that are both test fixtures & a libraries like grails-data-mongodb,
             // see grails-test-examples-mongodb-base, & grails-test-examples-mongodb-hibernate5 for project() workaround
-            if (substitutableProject.name == 'grails-bom') {
+            if (substitutionInfo.name == 'grails-bom') {
                 substitute module(substitutedArtifact) using platform(project(':grails-bom'))
             }
-            else if(substitutableProject.name == 'grails-geb') {
-                def selector = it.variant(module(substitutedArtifact)) { VariantSelectionDetails details ->
-                    details.capabilities { ModuleDependencyCapabilitiesHandler handler ->
+            else if(substitutionInfo.name == 'grails-geb') {
+                def selector = substitution.variant(module(substitutedArtifact)) { details ->
+                    details.capabilities { handler ->
                         handler.requireCapability("${substitutedArtifact}-test-fixtures" as String)
                     }
                 }
-
-                def replacement = it.variant(project(":$substitutableProject.name")) { v ->
-                    v.capabilities { it.requireCapability("${substitutedArtifact}-test-fixtures") }
+                def replacement = substitution.variant(project(":${substitutionInfo.name}")) { details ->
+                    details.capabilities { handler ->
+                        handler.requireCapability("${substitutedArtifact}-test-fixtures" as String)
+                    }
                 }
                 substitute selector using replacement
             }
             else {
-                substitute module(substitutedArtifact) using project(":$substitutableProject.name")
+                substitute module(substitutedArtifact) using project(":${substitutionInfo.name}")
             }
 
             // companion cli artifacts are additional publications of the same project,
             // reachable locally through the project's cli capability
             if (substitutionInfo.cliArtifactId) {
-                def cliCoordinate = "$substitutableProject.group:$substitutionInfo.cliArtifactId" as String
-                def cliReplacement = it.variant(project(":$substitutableProject.name")) { v ->
-                    v.capabilities { it.requireCapability(cliCoordinate) }
+                def cliCoordinate = "${substitutionInfo.group}:${substitutionInfo.cliArtifactId}" as String
+                def cliReplacement = substitution.variant(project(":${substitutionInfo.name}")) { details ->
+                    details.capabilities { handler ->
+                        handler.requireCapability(cliCoordinate)
+                    }
                 }
                 substitute module(cliCoordinate) using cliReplacement
             }

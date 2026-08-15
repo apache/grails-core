@@ -30,11 +30,10 @@ import grails.gorm.rx.collection.ObservableCollection
 /**
  * A trait that can be implemented by collection types to make them observable
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 @CompileStatic
-trait RxCollection<T> implements ObservableCollection<T>{
+trait RxCollection<T> implements ObservableCollection<T> {
 
     /**
      * The underlying observable

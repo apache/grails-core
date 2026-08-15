@@ -102,6 +102,17 @@ jobs:
           retention-days: 1
   build_grails:
     needs: [build_groovy]
+    name: "Build Grails with Groovy snapshot (shard ${{ matrix.shard_index }})"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard_index: 0
+            gradle_task: build
+          - shard_index: 1
+            gradle_task: testShard
+          - shard_index: 2
+            gradle_task: testShard
     runs-on: ubuntu-latest
     services:
       mongodb:
@@ -133,10 +144,22 @@ jobs:
         with:
           java-version: 21
           distribution: liberica
+      - name: "🗄️ Restore dependency jar cache"
+        id: dependency-cache
+        uses: actions/cache/restore@v4
+        with:
+          # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
+          # Keyed by branch version so each release branch maintains its own warm cache.
+          path: |
+            ~/.gradle/caches/modules-2
+            ~/.gradle/wrapper
+          key: gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-${{ hashFiles('**/dependencies.gradle', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:
-          cache-disabled: true # this workflow rebuilds Groovy each run; a Gradle home cache is not useful here
+          cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
       - name: "🔍 Setup TestLens"
         uses: testlens-app/setup-testlens@3f82d2dc6cd5c03f02ce5f7885a21195d85f8d14 # v1.9.3
@@ -155,12 +178,22 @@ jobs:
         # which is incompatible with the Groovy 4.x snapshot this job swaps in above.
         # See https://github.com/apache/grails-core/issues/15613.
         run: >
-          ./gradlew build
+          ./gradlew ${{ matrix.gradle_task }}
           --continue
           --stacktrace
           -x groovydoc
           -PskipCodeStyle
           -PskipMicronautProjects
           -PmaxTestParallel=3
+          -PtestShardCount=3
+          -PtestShardIndex=${{ matrix.shard_index }}
         env:
           GRAILS_INCLUDE_MAVEN_LOCAL: true
+      - name: "🗄️ Save dependency jar cache"
+        if: ${{ success() && matrix.shard_index == 0 && steps.dependency-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.gradle/caches/modules-2
+            ~/.gradle/wrapper
+          key: gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-${{ hashFiles('**/dependencies.gradle', '**/gradle-wrapper.properties') }}
