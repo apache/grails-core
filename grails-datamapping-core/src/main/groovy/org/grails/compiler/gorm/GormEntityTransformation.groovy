@@ -114,6 +114,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
     private static MethodNode REMOVE_FROM_METHOD_NODE = GORM_ENTITY_CLASS_NODE.getMethods('removeFrom').get(0)
     private static MethodNode GET_ASSOCIATION_ID_METHOD_NODE = GORM_ENTITY_CLASS_NODE.getMethods('getAssociationId').get(0)
     public static final Parameter[] ADD_TO_PARAMETERS = [new Parameter(AstUtils.OBJECT_CLASS_NODE, 'obj')] as Parameter[]
+    public static final ClassNode SERIALIZABLE_CLASS_NODE = ClassHelper.make(Serializable).getPlainNodeReference()
     private static final Object APPLIED_MARKER = new Object()
     private static final ListExpression IGNORED_PROPERTIES = new ListExpression()
 
@@ -444,7 +445,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
         }
     }
 
-    protected static void injectVersionProperty(ClassNode classNode) {
+    protected void injectVersionProperty(ClassNode classNode) {
         final boolean hasVersion = AstUtils.hasOrInheritsProperty(classNode, GormProperties.VERSION)
 
         if (!hasVersion) {
@@ -453,7 +454,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
         }
     }
 
-    protected static void injectIdProperty(ClassNode classNode) {
+    protected void injectIdProperty(ClassNode classNode) {
         final boolean hasId = AstUtils.hasOrInheritsProperty(classNode, GormProperties.IDENTITY)
 
         if (!hasId) {
@@ -477,7 +478,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
         }
     }
 
-    private static void injectAssociations(ClassNode classNode, MethodNode addToMethodNode, MethodNode removeFromMethodNode, MethodNode getAssociationMethodNode) {
+    private void injectAssociations(ClassNode classNode, MethodNode addToMethodNode, MethodNode removeFromMethodNode, MethodNode getAssociationMethodNode) {
 
         List<PropertyNode> propertiesToAdd = []
         for (PropertyNode propertyNode in classNode.getProperties()) {
@@ -519,7 +520,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
         }
     }
 
-    static ListExpression getOrCreateListProperty(ClassNode classNode, String name) {
+    ListExpression getOrCreateListProperty(ClassNode classNode, String name) {
         def transientProperty = classNode.getProperty(name)
         ListExpression listExpression = null
         if (transientProperty != null && Modifier.isStatic(transientProperty.modifiers)) {

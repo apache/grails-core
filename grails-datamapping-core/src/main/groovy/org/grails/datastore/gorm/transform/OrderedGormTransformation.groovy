@@ -56,10 +56,6 @@ class OrderedGormTransformation extends AbstractASTTransformation implements Com
 
     @Override
     void visit(ASTNode[] astNodes, SourceUnit source) {
-        if (!(astNodes[0] instanceof AnnotationNode) || !(astNodes[1] instanceof AnnotatedNode)) {
-            throw new RuntimeException("Internal error: wrong types: ${astNodes[0].getClass()} / ${astNodes[1].getClass()}")
-        }
-
         init(astNodes, source)
 
         AnnotatedNode annotatedNode = (AnnotatedNode) astNodes[1]

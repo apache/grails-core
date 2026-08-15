@@ -373,7 +373,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
         }
     }
 
-    protected static boolean isAnnotatedWithJavaValidationApi(List<AnnotationNode> annotationNodes) {
+    protected boolean isAnnotatedWithJavaValidationApi(List<AnnotationNode> annotationNodes) {
         VALIDATION_CONSTRAINT_NODE != null && annotationNodes.any { AnnotationNode an -> an.classNode.getAnnotations(VALIDATION_CONSTRAINT_NODE) }
     }
 
@@ -421,7 +421,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
         }
         return copiedReturnType
     }
-    protected static void weaveIntoExistingSetter(String propertyName, GetterAndSetter getterAndSetter, MethodNode markDirtyMethodNode) {
+    protected void weaveIntoExistingSetter(String propertyName, GetterAndSetter getterAndSetter, MethodNode markDirtyMethodNode) {
         final MethodNode setterMethod = getterAndSetter.setter
         if (setterMethod.annotations.any { AnnotationNode an -> an.classNode.name == 'grails.persistence.PersistenceMethod' }) return
 
@@ -446,14 +446,14 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
         setterMethod.code = newBody
     }
 
-    protected static MethodCallExpression createMarkDirtyMethodCall(MethodNode markDirtyMethodNode, String propertyName, Variable value) {
+    protected MethodCallExpression createMarkDirtyMethodCall(MethodNode markDirtyMethodNode, String propertyName, Variable value) {
         def args = args(constX(propertyName), varX(value))
         final markDirtyMethodCall = callX(varX('this'), markDirtyMethodNode.name, args)
         markDirtyMethodCall.methodTarget = markDirtyMethodNode
         return markDirtyMethodCall
     }
 
-    protected static GetterAndSetter getGetterAndSetterForPropertyName(LinkedHashMap<String, GetterAndSetter> gettersAndSetters, String propertyName) {
+    protected GetterAndSetter getGetterAndSetterForPropertyName(LinkedHashMap<String, GetterAndSetter> gettersAndSetters, String propertyName) {
         def getterAndSetter = gettersAndSetters[propertyName]
         if (getterAndSetter == null) {
             getterAndSetter = new GetterAndSetter()
@@ -475,7 +475,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
     }
 
     @CompileStatic
-    static class GetterAndSetter {
+    class GetterAndSetter {
         MethodNode getter
         MethodNode setter
 

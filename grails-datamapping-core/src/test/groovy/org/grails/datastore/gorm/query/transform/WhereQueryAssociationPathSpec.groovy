@@ -18,7 +18,19 @@
  */
 package org.grails.datastore.gorm.query.transform
 
+import org.codehaus.groovy.ast.ASTNode
+import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.CodeVisitorSupport
+import org.codehaus.groovy.ast.ModuleNode
+import org.codehaus.groovy.ast.expr.ArgumentListExpression
+import org.codehaus.groovy.ast.expr.ClosureExpression
+import org.codehaus.groovy.ast.expr.ConstantExpression
+import org.codehaus.groovy.ast.expr.Expression
+import org.codehaus.groovy.ast.expr.MethodCallExpression
+import org.codehaus.groovy.ast.expr.VariableExpression
+import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
+import org.codehaus.groovy.control.Phases
 
 import spock.lang.Specification
 
@@ -29,7 +41,9 @@ import spock.lang.Specification
  * dynamic (routed through {@code AbstractDetachedCriteria#methodMissing}) and need the target class to be
  * GORM-enhanced against a live datastore to resolve - something this module deliberately has none of - so
  * these associations are verified structurally: the source compiles (or fails to, for the invalid-property
- * cases) and a nested closure is synthesized per association segment walked.
+ * cases) and by compiling to the CANONICALIZATION phase - the phase the transform itself runs in - and
+ * inspecting the resulting AST for the actual nested {@code delegate.<association> { ... }} calls generated,
+ * same as {@link WhereQueryEmbeddedPropertyPathSpec}.
  */
 class WhereQueryAssociationPathSpec extends Specification {
 
@@ -89,40 +103,78 @@ class AssocPathMultiPublisher {
 }
 '''
 
-    private static List<Class<?>> findQueryClosures(GroovyClassLoader gcl, String methodName) {
-        gcl.loadedClasses.findAll { it.name.contains("_${methodName}_") }
+    private static ClassNode compileToClassNode(String source, String className) {
+        CompilationUnit unit = new CompilationUnit(new GroovyClassLoader())
+        def sourceUnit = unit.addSource('Source.groovy', source)
+        unit.compile(Phases.CANONICALIZATION)
+        ModuleNode moduleNode = sourceUnit.getAST()
+        (ClassNode) moduleNode.classes.find { ClassNode cn -> cn.name == className }
     }
 
-    void "a single-level association property path compiles and generates one nested association closure"() {
-        given:
-        GroovyClassLoader gcl = new GroovyClassLoader()
-
-        when:
-        gcl.parseClass(SINGLE_LEVEL_SOURCE)
-
-        then:
-        noExceptionThrown()
-
-        and: 'one closure for the outer where-block and one nested closure for the association segment walked'
-        List<Class<?>> queryClosures = findQueryClosures(gcl, 'findByAuthorName').sort { it.name.count('$_closure') }
-        queryClosures.size() == 2
-        queryClosures.last().name.count('$_closure') == 1
+    private static List<MethodCallExpression> methodCallsIn(ASTNode node) {
+        List<MethodCallExpression> calls = []
+        CodeVisitorSupport visitor = new CodeVisitorSupport() {
+            @Override
+            void visitMethodCallExpression(MethodCallExpression call) {
+                calls << call
+                super.visitMethodCallExpression(call)
+            }
+        }
+        node.visit(visitor)
+        calls
     }
 
-    void "a multi-level association property path compiles and generates a closure per path segment"() {
+    private static List<MethodCallExpression> delegateCallsIn(ASTNode node) {
+        methodCallsIn(node).findAll {
+            it.objectExpression instanceof VariableExpression && ((VariableExpression) it.objectExpression).name == 'delegate'
+        }
+    }
+
+    private static ClosureExpression closureArgOf(MethodCallExpression call) {
+        (ClosureExpression) ((ArgumentListExpression) call.arguments).expressions.find { it instanceof ClosureExpression }
+    }
+
+    private static String constantArg(MethodCallExpression call, int index) {
+        Expression arg = ((ArgumentListExpression) call.arguments).getExpression(index)
+        ((ConstantExpression) arg).value as String
+    }
+
+    void "a single-level association property path rewrites to a delegate.author { } call with an eq on the association property name"() {
         given:
-        GroovyClassLoader gcl = new GroovyClassLoader()
+        ClassNode classNode = compileToClassNode(SINGLE_LEVEL_SOURCE, 'AssocPathSingleQueryService')
 
         when:
-        gcl.parseClass(MULTI_LEVEL_SOURCE)
+        def method = classNode.methods.find { it.name == 'findByAuthorName' }
+        MethodCallExpression authorCall = delegateCallsIn(method.code).find { it.methodAsString == 'author' }
 
-        then:
-        noExceptionThrown()
+        then: 'the single association segment was walked via a delegate.author { ... } call'
+        authorCall != null
 
-        and: 'one closure for the outer where-block, one for each of the two association segments walked'
-        List<Class<?>> queryClosures = findQueryClosures(gcl, 'findByPublisherName').sort { it.name.count('$_closure') }
-        queryClosures.size() == 3
-        queryClosures.last().name.count('$_closure') == 2
+        and: 'the comparison inside it used the association property name, not the full "author.name" path'
+        List<MethodCallExpression> eqCalls = methodCallsIn(closureArgOf(authorCall).code).findAll { it.methodAsString == 'eq' }
+        eqCalls.any { constantArg(it, 0) == 'name' }
+    }
+
+    void "a multi-level association property path rewrites to nested delegate calls, one per path segment"() {
+        given:
+        ClassNode classNode = compileToClassNode(MULTI_LEVEL_SOURCE, 'AssocPathMultiQueryService')
+
+        when:
+        def method = classNode.methods.find { it.name == 'findByPublisherName' }
+        MethodCallExpression authorCall = delegateCallsIn(method.code).find { it.methodAsString == 'author' }
+
+        then: 'the first association segment was walked via a delegate.author { ... } call'
+        authorCall != null
+
+        when:
+        MethodCallExpression publisherCall = delegateCallsIn(closureArgOf(authorCall).code).find { it.methodAsString == 'publisher' }
+
+        then: 'the second association segment was walked via a delegate.publisher { ... } call nested inside the first'
+        publisherCall != null
+
+        and: 'the comparison at the innermost segment used the association property name only'
+        List<MethodCallExpression> eqCalls = methodCallsIn(closureArgOf(publisherCall).code).findAll { it.methodAsString == 'eq' }
+        eqCalls.any { constantArg(it, 0) == 'name' }
     }
 
     void "querying an unknown property on a single-level association fails to compile"() {

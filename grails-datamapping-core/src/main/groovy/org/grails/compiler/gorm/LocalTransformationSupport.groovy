@@ -29,6 +29,9 @@ import org.codehaus.groovy.ast.ClassNode
  * Shared guard logic for local, annotation-driven AST transformations in this package whose
  * {@code visit(ASTNode[], SourceUnit)} entry point only applies when the visited node is a class
  * carrying one specific annotation type.
+ *
+ * <p>Used by {@link DirtyCheckTransformation}, {@link JpaGormEntityTransformation} and
+ * {@link GormEntityTransformation}.
  */
 @CompileStatic
 class LocalTransformationSupport {
