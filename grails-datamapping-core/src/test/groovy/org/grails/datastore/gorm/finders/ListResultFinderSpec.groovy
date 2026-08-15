@@ -136,4 +136,12 @@ class ListResultFinderSpec extends Specification {
         then:
         thrown(IllegalStateException)
     }
+
+    void "findAllByBoolean invoke throws IllegalStateException when constructed in stateless mode"() {
+        when:
+        ListResultFinder.findAllByBoolean(mappingContext).invoke(FinderTestEntity, 'findAllActiveByName', ['Bob'] as Object[])
+
+        then:
+        thrown(IllegalStateException)
+    }
 }

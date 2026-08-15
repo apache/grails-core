@@ -79,11 +79,13 @@ public class ListResultFinder implements FinderMethod, QueryBuildingFinder {
     }
 
     @Override
+    @SuppressWarnings("rawtypes")
     public Object invoke(Class clazz, String methodName, Object[] arguments) {
         return invoke(clazz, methodName, (Closure) null, arguments);
     }
 
     @Override
+    @SuppressWarnings("rawtypes")
     public Object invoke(Class clazz, String methodName, Closure additionalCriteria, Object[] arguments) {
         DynamicFinderInvocation invocation = grammar.createFinderInvocation(clazz, methodName, additionalCriteria, arguments);
         return doInvoke(invocation);
@@ -100,6 +102,7 @@ public class ListResultFinder implements FinderMethod, QueryBuildingFinder {
      * @param arguments The method call arguments
      * @return The result of the method call
      */
+    @SuppressWarnings("rawtypes")
     public Object invoke(Class clazz, String methodName, DetachedCriteria detachedCriteria, Object[] arguments) {
         DynamicFinderInvocation invocation = grammar.createFinderInvocation(clazz, methodName, null, arguments);
         if (detachedCriteria != null) {
@@ -109,13 +112,10 @@ public class ListResultFinder implements FinderMethod, QueryBuildingFinder {
     }
 
     private Object doInvoke(final DynamicFinderInvocation invocation) {
-        return FinderSupport.execute(datastore, new SessionCallback<Object>() {
-            @Override
-            public Object doInSession(Session session) {
-                Query query = buildQuery(invocation, session);
-                query.projections().distinct();
-                return query.list();
-            }
+        return FinderSupport.execute(datastore, (SessionCallback<Object>) session -> {
+            Query query = buildQuery(invocation, session);
+            query.projections().distinct();
+            return query.list();
         });
     }
 
