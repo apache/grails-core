@@ -96,12 +96,16 @@ class RxSingleResultFinderSpec extends Specification {
         def finder = RxSingleResultFinder.findBy(datastoreClient)
 
         when:
-        def result = finder.invoke(Book, 'findByTitle', ['Shogun'] as Object[])
+        // query.singleResult() returns an Observable in production (RxQuery#singleResult) - findBy
+        // passes it through unchanged rather than unwrapping it, so the caller (e.g.
+        // RxGormStaticApi.methodMissing) receives an Observable, not the raw entity.
+        Observable observable = finder.invoke(Book, 'findByTitle', ['Shogun'] as Object[]) as Observable
+        Book result = observable.toBlocking().first() as Book
 
         then:
         1 * datastoreClient.createQuery(Book) >> query
         1 * query.add({ Query.Criterion it -> it instanceof Query.Junction })
-        1 * query.singleResult() >> new Book(title: 'Shogun')
+        1 * query.singleResult() >> Observable.just(new Book(title: 'Shogun'))
         result.title == 'Shogun'
     }
 
@@ -118,13 +122,14 @@ class RxSingleResultFinderSpec extends Specification {
         }
 
         when:
-        def result = finder.invoke(Book, 'findByTitle', detachedCriteria, ['Shogun'] as Object[])
+        Observable observable = finder.invoke(Book, 'findByTitle', detachedCriteria, ['Shogun'] as Object[]) as Observable
+        Book result = observable.toBlocking().first() as Book
 
         then:
         1 * datastoreClient.createQuery(Book) >> query
         1 * query.add({ Query.Criterion it -> it instanceof Query.PropertyCriterion })
         1 * query.add({ Query.Criterion it -> it instanceof Query.Junction })
-        1 * query.singleResult() >> new Book(title: 'Shogun')
+        1 * query.singleResult() >> Observable.just(new Book(title: 'Shogun'))
         result.title == 'Shogun'
     }
 
@@ -170,12 +175,13 @@ class RxSingleResultFinderSpec extends Specification {
         def finder = RxSingleResultFinder.findByBoolean(datastoreClient)
 
         when:
-        def result = finder.invoke(Person, 'findActiveByNameOrCity', ['Fred', 'London'] as Object[])
+        Observable observable = finder.invoke(Person, 'findActiveByNameOrCity', ['Fred', 'London'] as Object[]) as Observable
+        Person result = observable.toBlocking().first() as Person
 
         then:
         1 * datastoreClient.createQuery(Person) >> query
         1 * query.add({ Query.Criterion it -> it instanceof Query.Conjunction && ((Query.Junction) it).criteria.size() == 2 })
-        1 * query.singleResult() >> new Person(name: 'Fred', active: true)
+        1 * query.singleResult() >> Observable.just(new Person(name: 'Fred', active: true))
         result.name == 'Fred'
     }
 

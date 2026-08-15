@@ -26,6 +26,7 @@ import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.rx.RxDatastoreClient
 import org.springframework.core.convert.support.DefaultConversionService
+import rx.Observable
 import spock.lang.Specification
 
 /**
@@ -66,12 +67,15 @@ class RxCountFinderSpec extends Specification {
         def finder = RxCountFinder.countBy(datastoreClient)
 
         when:
-        def result = finder.invoke(Person, 'countByName', ['Fred'] as Object[])
+        // query.singleResult() returns an Observable in production (RxQuery#singleResult) - countBy
+        // passes it through unchanged rather than unwrapping it.
+        Observable observable = finder.invoke(Person, 'countByName', ['Fred'] as Object[]) as Observable
+        def result = observable.toBlocking().first()
 
         then:
         1 * datastoreClient.createQuery(Person) >> query
         1 * query.add({ Query.Criterion it -> it instanceof Query.PropertyCriterion })
-        1 * query.singleResult() >> 4L
+        1 * query.singleResult() >> Observable.just(4L)
         result == 4L
     }
 
@@ -88,12 +92,13 @@ class RxCountFinderSpec extends Specification {
         }
 
         when:
-        def result = finder.invoke(Person, 'countByName', detachedCriteria, ['Fred'] as Object[])
+        Observable observable = finder.invoke(Person, 'countByName', detachedCriteria, ['Fred'] as Object[]) as Observable
+        def result = observable.toBlocking().first()
 
         then:
         1 * datastoreClient.createQuery(Person) >> query
         2 * query.add({ Query.Criterion it -> it instanceof Query.PropertyCriterion })
-        1 * query.singleResult() >> 4L
+        1 * query.singleResult() >> Observable.just(4L)
         result == 4L
     }
 
