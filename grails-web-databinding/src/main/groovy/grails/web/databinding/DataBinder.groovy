@@ -72,7 +72,8 @@ trait DataBinder {
             includeList = [DefaultASTDatabindingHelper.NO_BINDABLE_PROPERTIES]
         }
         List excludeList = convertToListIfCharSequence(includeExclude?.exclude)
-        DataBindingUtils.bindObjectToInstance(target, bindingSource, includeList, excludeList, filter)
+        boolean clearMissing = includeExclude?.clearMissing == true
+        DataBindingUtils.bindObjectToInstance(target, bindingSource, includeList, excludeList, filter, clearMissing)
     }
 
     @Generated

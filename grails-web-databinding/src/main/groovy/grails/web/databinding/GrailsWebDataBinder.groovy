@@ -42,6 +42,7 @@ import org.springframework.validation.ObjectError
 import grails.core.GrailsApplication
 import grails.databinding.BindingFormat
 import grails.databinding.DataBindingSource
+import grails.databinding.FrameworkPropertyNames
 import grails.databinding.SimpleDataBinder
 import grails.databinding.SimpleMapDataBindingSource
 import grails.databinding.TypedStructuredBindingEditor
@@ -83,10 +84,6 @@ class GrailsWebDataBinder extends SimpleDataBinder {
     private static final Logger LOG = LoggerFactory.getLogger(GrailsWebDataBinder)
     private static final int MAX_WARNED_BINDING_SHAPES = 1024
     private static final Set<String> WARNED_BINDING_SHAPES = new LinkedHashSet<>()
-    private static final Set<String> FRAMEWORK_MANAGED_PROPERTIES = [
-        'class', 'errors', 'id', 'version', 'dateCreated', 'lastUpdated'
-    ] as Set<String>
-
     protected GrailsApplication grailsApplication
     protected MessageSource messageSource
     boolean trimStrings = true
@@ -146,10 +143,18 @@ class GrailsWebDataBinder extends SimpleDataBinder {
         if (includeList == null) {
             return getBindingIncludeList(object)
         }
-        if (includeList.isEmpty() && !isBindAllBindingIncludeList(includeList)) {
+        if (includeList.isEmpty() && !isBindAllIncludeList(includeList)) {
             return [DefaultASTDatabindingHelper.NO_BINDABLE_PROPERTIES]
         }
         includeList
+    }
+
+    static List bindAllBindingIncludeList() {
+        SimpleDataBinder.getBindAllBindingIncludeList()
+    }
+
+    static boolean isBindAllIncludeList(List includeList) {
+        SimpleDataBinder.isBindAllBindingIncludeList(includeList)
     }
 
     @Override
@@ -243,7 +248,7 @@ class GrailsWebDataBinder extends SimpleDataBinder {
         boolean allowed = super.isOkToBind(property, whiteList, blackList)
         if (!allowed && DataBindingUtils.isGeneratedBindingIncludeList(whiteList) &&
                 super.isOkToBind(property, null, blackList) &&
-                !FRAMEWORK_MANAGED_PROPERTIES.contains(property.name)) {
+                !FrameworkPropertyNames.FRAMEWORK_MANAGED_PROPERTIES.contains(property.name)) {
             warnAboutIgnoredBindingProperty(bindingTargetType.get(), property.name)
         }
         allowed
@@ -634,7 +639,7 @@ class GrailsWebDataBinder extends SimpleDataBinder {
             instance = referencedType.getDeclaredConstructor().newInstance()
         } catch (NoSuchMethodException | IllegalAccessException ignored) {
             if (value instanceof Map) {
-                if (isBindAllBindingIncludeList(includeList) ||
+                if (isBindAllIncludeList(includeList) ||
                         !DataBindingUtils.isDenyByDefaultEnabled()) {
                     return referencedType.newInstance(filterUnbindableMapConstructorArguments(referencedType, (Map) value))
                 }
