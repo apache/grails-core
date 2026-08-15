@@ -288,6 +288,20 @@ class DynamicFinderSpec extends Specification {
         thrown(MissingMethodException)
     }
 
+    void "createFinderInvocation's naive literal split on the And/Or operator can split inside an unrelated property name"() {
+        when:
+        // Mirrors the "buildMatchSpec's naive literal split..." test above, but through the actual
+        // runtime entry point real finders call, proving the split logic really is identical - not
+        // merely asserted to be by comment. "findByAndroidVersionAndTitle" is meant to be
+        // "androidVersion And title", but querySequence.split("And") splits on every literal
+        // occurrence of "And", including the one starting "AndroidVersion" itself, producing an
+        // empty leading segment.
+        findByGrammar.createFinderInvocation(FinderTestEntity, 'findByAndroidVersionAndTitle', null, ['x', 'y'] as Object[])
+
+        then:
+        thrown(IllegalArgumentException)
+    }
+
     void "createFinderInvocation rethrows a ConversionException as MissingMethodException for a non-Basic property"() {
         given:
         // "age" (a plain Integer, non-Basic property) with an argument that genuinely needs

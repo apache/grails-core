@@ -92,6 +92,9 @@ class RxListResultFinderSpec extends Specification {
         1 * query.add({ Query.Criterion it -> it instanceof Query.Junction })
         1 * query.findAll() >> observable
         0 * query.findAll(_)
+        // Unlike the synchronous ListResultFinder, RxListResultFinder never applies a distinct()
+        // projection - a pre-existing sync/rx inconsistency this refactor preserves, not fixes.
+        0 * query.projections()
         result.is(observable)
     }
 

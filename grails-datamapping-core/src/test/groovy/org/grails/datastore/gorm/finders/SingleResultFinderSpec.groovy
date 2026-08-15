@@ -34,9 +34,10 @@ import spock.lang.Unroll
  * Exercises {@link SingleResultFinder} - the composed replacement for the deleted
  * AbstractFindByFinder/FindByFinder/FindByBooleanFinder/FindOrCreateByFinder/FindOrSaveByFinder
  * class hierarchy. Every factory method builds its own {@link DynamicFinder} grammar instance
- * (never shared across finders - see {@code DynamicFinderSpec}'s field-ordering note for why that
- * matters), so each test constructs the specific factory under test directly rather than reusing
- * a single shared field.
+ * (never shared across finders, since a shared instance would be a real thread-safety hazard
+ * given finder instances are long-lived and invoked from arbitrary request threads), so each
+ * test constructs the specific factory under test directly rather than reusing a single shared
+ * field.
  */
 class SingleResultFinderSpec extends Specification {
 
