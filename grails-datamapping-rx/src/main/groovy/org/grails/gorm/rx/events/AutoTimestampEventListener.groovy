@@ -41,11 +41,11 @@ class AutoTimestampEventListener extends org.grails.datastore.gorm.events.AutoTi
     @Override
     protected boolean isValidSource(AbstractPersistenceEvent event) {
         Object source = event.getSource()
-        return (source instanceof RxDatastoreClient) && source.equals(datastoreClient)
+        return (source instanceof RxDatastoreClient) && source == datastoreClient
     }
 
     @Override
     boolean supportsSourceType(Class<?> sourceType) {
-        datastoreClient.getClass().equals(sourceType)
+        datastoreClient.getClass() == sourceType
     }
 }
