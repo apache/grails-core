@@ -395,24 +395,22 @@ public class DynamicFinder implements FinderGrammar {
         Object sortObject = argMap.get(ARGUMENT_SORT);
         boolean ignoreCase = !argMap.containsKey(ARGUMENT_IGNORE_CASE) || ClassUtils.getBooleanFromMap(ARGUMENT_IGNORE_CASE, argMap);
 
-        if (sortObject != null) {
-            if (sortObject instanceof CharSequence) {
-                final String sort = sortObject.toString();
+        if (sortObject instanceof CharSequence) {
+            final String sort = sortObject.toString();
+            final Query.Order order = ORDER_DESC.equalsIgnoreCase(orderParam) ? Query.Order.desc(sort) : Query.Order.asc(sort);
+            if (ignoreCase) {
+                order.ignoreCase();
+            }
+            query.order(order);
+        }
+        else if (sortObject instanceof Map sortMap) {
+            for (Object key : sortMap.keySet()) {
+                String sort = key.toString();
                 final Query.Order order = ORDER_DESC.equalsIgnoreCase(orderParam) ? Query.Order.desc(sort) : Query.Order.asc(sort);
                 if (ignoreCase) {
                     order.ignoreCase();
                 }
                 query.order(order);
-            }
-            else if (sortObject instanceof Map sortMap) {
-                for (Object key : sortMap.keySet()) {
-                    String sort = key.toString();
-                    final Query.Order order = ORDER_DESC.equalsIgnoreCase(orderParam) ? Query.Order.desc(sort) : Query.Order.asc(sort);
-                    if (ignoreCase) {
-                        order.ignoreCase();
-                    }
-                    query.order(order);
-                }
             }
         }
 
@@ -463,15 +461,13 @@ public class DynamicFinder implements FinderGrammar {
         Object sortObject = argMap.get(ARGUMENT_SORT);
         boolean ignoreCase = !argMap.containsKey(ARGUMENT_IGNORE_CASE) || ClassUtils.getBooleanFromMap(ARGUMENT_IGNORE_CASE, argMap);
 
-        if (sortObject != null) {
-            if (sortObject instanceof CharSequence) {
-                final String sort = sortObject.toString();
-                final String order = ORDER_DESC.equalsIgnoreCase(orderParam) ? ORDER_DESC : ORDER_ASC;
-                addSimpleSort(query, sort, order, ignoreCase);
-            }
-            else if (sortObject instanceof Map sortMap) {
-                applySortForMap(query, sortMap, ignoreCase);
-            }
+        if (sortObject instanceof CharSequence) {
+            final String sort = sortObject.toString();
+            final String order = ORDER_DESC.equalsIgnoreCase(orderParam) ? ORDER_DESC : ORDER_ASC;
+            addSimpleSort(query, sort, order, ignoreCase);
+        }
+        else if (sortObject instanceof Map sortMap) {
+            applySortForMap(query, sortMap, ignoreCase);
         }
 
         if (query instanceof QueryArgumentsAware) {
@@ -743,21 +739,17 @@ public class DynamicFinder implements FinderGrammar {
     }
 
     /**
-     * Initializes the arguments of the specified expression with the specified arguments.  If the
-     * expression is an Equal expression and the argument is null then a new expression is created
-     * and returned of type IsNull.
+     * Initializes the arguments of the specified expression with the specified arguments.
      *
      * @param expression expression to initialize
      * @param arguments arguments to the expression
-     * @return the initialized expression
      */
-    private MethodExpression getInitializedExpression(MethodExpression expression, Object[] arguments) {
+    private void getInitializedExpression(MethodExpression expression, Object[] arguments) {
         // if (expression instanceof Equal && arguments.length == 1 && arguments[0] == null) { // logic moved directly to Equal.createCriterion
         //     expression = new IsNull(expression.propertyName);
         // } else {
         expression.setArguments(arguments);
         // }
-        return expression;
     }
 
     @Override
