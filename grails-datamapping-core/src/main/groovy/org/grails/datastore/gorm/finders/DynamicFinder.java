@@ -537,9 +537,6 @@ public class DynamicFinder implements FinderGrammar {
         if (name.equalsIgnoreCase(FetchType.EAGER.toString()) || name.equalsIgnoreCase("join")) {
             return FetchType.EAGER;
         }
-        if (name.equalsIgnoreCase(FetchType.LAZY.toString()) || name.equalsIgnoreCase("select")) {
-            return FetchType.LAZY;
-        }
         return FetchType.LAZY;
     }
 
