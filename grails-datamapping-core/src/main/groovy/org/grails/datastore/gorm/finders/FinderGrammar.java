@@ -29,6 +29,7 @@ import org.grails.datastore.mapping.query.Query;
  * implementations (in this package and in {@code grails-datamapping-rx}) hold a {@code DynamicFinder}
  * instance as a composed collaborator rather than extending it.
  */
+@SuppressWarnings("rawtypes")
 public interface FinderGrammar {
 
     /**
