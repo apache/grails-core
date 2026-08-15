@@ -149,6 +149,7 @@ tasks.named('rat') {
             '**/*.log', // exclude log files
             'local-tasks.gradle', // exclude local helper scripts
             '**/spring-configuration-metadata.json', // JSON files cannot contain license headers
+            'grails-benchmarks/src/reportTest/resources/jmh-golden/**', // byte-exact JMH report fixtures; a license header would alter the compared bytes
     ] + rootProject.subprojects.collect{"${rootProject.projectDir.relativePath(it.layout.buildDirectory.get().asFile).toString()}/**/*" }
     // logger.lifecycle("Excludes for RAT task: ${allExcludes.join(', \n')}")
     excludes = allExcludes
