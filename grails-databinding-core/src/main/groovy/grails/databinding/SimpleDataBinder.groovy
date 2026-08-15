@@ -271,19 +271,25 @@ class SimpleDataBinder implements DataBinder {
     }
 
     protected boolean isOkToBind(String propName, List whiteList, List blackList) {
-        'class' != propName && 'classLoader' != propName && 'protectionDomain' != propName && 'metaClass' != propName && 'metaPropertyValues' != propName && 'properties' != propName && !blackList?.contains(propName) && (whiteList == null || isBindAllBindingIncludeList(whiteList) || whiteList.contains(propName) || whiteList.find { it -> it?.toString()?.startsWith(propName + '.') })
+        // Only intrinsic runtime properties are hard-denied here. Grails-managed domain
+        // properties (id, version, dateCreated, lastUpdated, errors) may still bind when
+        // explicitly allowlisted (e.g. bindable: true); intrinsic runtime properties remain
+        // hard-denied while Grails-managed properties follow the explicit binding allowlist.
+        !FrameworkPropertyNames.INTRINSIC_RUNTIME_PROPERTIES.contains(propName) && !blackList?.contains(propName) &&
+                (whiteList == null || isBindAllBindingIncludeList(whiteList) || whiteList.contains(propName) ||
+                        whiteList.any { item -> item?.toString()?.startsWith(propName + '.') })
     }
 
     /**
      * Marker include list meaning "bind every eligible property". Used when an
      * explicit exclude-only bind must not intersect the class allowlist.
      */
-    static List getBindAllBindingIncludeList() {
+    protected static List getBindAllBindingIncludeList() {
         BIND_ALL_BINDING_INCLUDE_LIST
     }
 
-    static boolean isBindAllBindingIncludeList(List includeList) {
-        includeList instanceof BindAllBindingIncludeList
+    protected static boolean isBindAllBindingIncludeList(List includeList) {
+        includeList.is(BIND_ALL_BINDING_INCLUDE_LIST)
     }
 
     private static final class BindAllBindingIncludeList extends ArrayList {

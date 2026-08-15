@@ -45,6 +45,9 @@ bindData(target, params, [exclude: ['firstName', 'lastName']], "author")
 
 // using inclusive map
 bindData(target, params, [include: ['firstName', 'lastName']], "author")
+
+// clear included properties omitted from the source
+bindData(target, params, [include: ['firstName', 'lastName'], clearMissing: true])
 ----
 
 
@@ -57,7 +60,7 @@ Arguments:
 
 * `target` - The target object to bind to
 * `params` - A `Map` of source parameters, often the link:params.html[params] object when used in a controller
-* `includesExcludes` - (Optional) A map with 'include' and/or 'exclude' lists containing the names of properties to either include or exclude.
+* `includesExcludes` - (Optional) A map with 'include' and/or 'exclude' lists containing the names of properties to either include or exclude. Set `clearMissing: true` with an `include` list to clear included properties that are omitted from the binding source.
 * `prefix` - (Optional) A string representing a prefix to use to filter parameters. The method will automatically append a '.' when matching the prefix to parameters, so you can use 'author' to filter for parameters such as 'author.name'.
 
 If no `include` list is supplied, `bindData` uses the target class default binding behavior.  By default, statically typed instance properties bind for compatibility unless they are marked `bindable: false`.  Existing `bindable: true` declarations and explicit `include` lists continue to bind exactly the properties they name without configuration changes.  An empty `include` list binds no properties.
@@ -73,6 +76,19 @@ Use `include` to allow only the properties needed for a request:
 bindData(target, params, [include: ['firstName', 'lastName']])
 ----
 
+Include entries may use wildcard suffixes for nested properties. `address.*` includes all
+properties nested under `address`, while `address_*` is the corresponding underscore-form
+used for nested binding paths and generated binding allowlists:
+
+[source,groovy]
+----
+bindData(target, params, [include: ['address.*']])
+bindData(target, params, [include: ['address_*']])
+----
+
+When `clearMissing: true` is used, omitted properties matched by either wildcard form are
+cleared, subject to the normal `exclude` and bindability rules.
+
 For controller action command object parameters, use `grails.web.databinding.BindAllowed` to allow request binding for only the listed properties:
 
 [source,groovy]
@@ -87,6 +103,8 @@ class PersonController {
 ----
 
 See the link:{constraintsRefFromRef}bindable.html[bindable] constraint documentation for more information on controlling default bindability.  Applications may set `grails.databinding.denyByDefault=true` to opt into deny-by-default binding allowlists.  In secure mode, permit a property with `bindable: true`, an explicit `include` list, or `@BindAllowed` on a controller action command object parameter.
+
+`clearMissing` is opt-in and only applies when an `include` list is provided. This is useful for update forms where an omitted allowed field should clear an existing value instead of leaving stale persisted data. Excluded properties are not cleared.
 
 Only boolean values and the strings `'true'` and `'false'` are recognised for `grails.databinding.denyByDefault`.  String matching ignores case and surrounding whitespace.  An unrecognised value logs a warning and enables secure binding.
 

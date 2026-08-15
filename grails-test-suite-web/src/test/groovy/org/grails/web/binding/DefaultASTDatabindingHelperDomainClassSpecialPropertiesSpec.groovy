@@ -18,41 +18,44 @@
  */
 package org.grails.web.binding
 
+import groovy.transform.CompileStatic
+
+import spock.lang.Issue
+import spock.lang.Specification
+
 import grails.config.Settings
 import grails.gorm.dirty.checking.DirtyCheck
 import grails.persistence.Entity
 import grails.util.Holders
-import groovy.transform.CompileStatic
+import grails.web.databinding.DataBindingUtils
+import grails.web.databinding.GrailsWebDataBinder
 import org.grails.config.PropertySourcesConfig
 import org.grails.validation.ConstraintEvalUtils
-import spock.lang.Issue
-import spock.lang.Specification
 
-class DefaultASTDatabindingHelperDomainClassSpecialPropertiesSpec extends
-        Specification {
+class DefaultASTDatabindingHelperDomainClassSpecialPropertiesSpec extends Specification {
 
     private def originalConfig
 
     def setup() {
         ConstraintEvalUtils.clearDefaultConstraints()
         originalConfig = Holders.config
-        Holders.setConfig(new PropertySourcesConfig([(Settings.DATABINDING_DENY_BY_DEFAULT): true]))
-        grails.web.databinding.DataBindingUtils.clearBindingCaches()
-        grails.web.databinding.GrailsWebDataBinder.resetWarnedBindingShapes()
+        Holders.config = new PropertySourcesConfig([(Settings.DATABINDING_DENY_BY_DEFAULT): true])
+        DataBindingUtils.clearBindingCaches()
+        GrailsWebDataBinder.resetWarnedBindingShapes()
     }
 
     def cleanup() {
         ConstraintEvalUtils.clearDefaultConstraints()
-        Holders.setConfig(originalConfig)
-        grails.web.databinding.DataBindingUtils.clearBindingCaches()
-        grails.web.databinding.GrailsWebDataBinder.resetWarnedBindingShapes()
+        Holders.config = originalConfig
+        DataBindingUtils.clearBindingCaches()
+        GrailsWebDataBinder.resetWarnedBindingShapes()
     }
 
     @Issue('GRAILS-11173')
     void 'Test binding to special properties in a domain class'() {
         when:
-        Date now = new Date()
-        SomeDomainClass obj = new SomeDomainClass(dateCreated: now, lastUpdated: now)
+        def now = new Date()
+        def obj = new SomeDomainClass(dateCreated: now, lastUpdated: now)
         
         then:
         obj.dateCreated == null
@@ -140,8 +143,7 @@ class DefaultASTDatabindingHelperDomainClassSpecialPropertiesSpec extends
 
     void 'Test unconfigured binding remains permissive and preserves bindable false'() {
         given:
-        def configuredConfig = Holders.config
-        Holders.setConfig(null)
+        Holders.config = null
 
         when:
         def obj = new DomainWithSecureBindableDefault(name: 'Grace', title: 'Admiral', role: 'Admin')
@@ -150,9 +152,6 @@ class DefaultASTDatabindingHelperDomainClassSpecialPropertiesSpec extends
         obj.name == 'Grace'
         obj.title == 'Admiral'
         obj.role == null
-
-        cleanup:
-        Holders.setConfig(configuredConfig)
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15795')
