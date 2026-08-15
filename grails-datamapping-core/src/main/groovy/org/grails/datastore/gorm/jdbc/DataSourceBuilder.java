@@ -37,7 +37,6 @@ import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
 
 /**
  * NOTE: Forked from Spring Boot logic to avoid hard dependency on Boot.
- *
  * Convenience class for building a {@link DataSource} with common implementations and
  * properties. If Tomcat, HikariCP or Commons DBCP are on the classpath one of them will
  * be selected (in that order with Tomcat first). In the interest of a uniform interface,
