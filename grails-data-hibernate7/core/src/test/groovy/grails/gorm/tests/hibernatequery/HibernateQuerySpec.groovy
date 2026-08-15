@@ -963,6 +963,47 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         bob == oldBob
     }
 
+    def "countByXOrY exercises disjunction() through a dynamic finder"() {
+        given: "one person matching only the age side of the Or, one matching only the name side, and one matching neither"
+        new Person(firstName: "Fred", lastName: "Rogers", age: 51).save(flush: true)
+        new Person(firstName: "Walt", lastName: "Disney", age: 52).save(flush: true)
+
+        when: "counting by a condition oldBob satisfies through age and Fred satisfies through firstName"
+        def count = Person.countByFirstNameOrAge("Fred", 50)
+
+        then: "only the two matching rows are counted; a disjunction dropped onto the unused base criteria field would count every row"
+        count == 2
+    }
+
+    def "conjunction() combines added criteria so only rows matching all of them are returned"() {
+        given: "a second person who satisfies only one of the two criteria added to the conjunction"
+        new Person(firstName: "Fred", lastName: "Rogers", age: 50).save(flush: true)
+
+        when: "adding two criteria directly to the Junction returned by conjunction()"
+        def conjunction = hibernateQuery.conjunction()
+        conjunction.add(new Query.Equals("firstName", "Bob"))
+        conjunction.add(new Query.Equals("age", 50))
+        def results = hibernateQuery.list()
+
+        then: "only the row matching both criteria is returned; a conjunction dropped onto the unused base criteria field would return every row"
+        results.size() == 1
+        results[0] == oldBob
+    }
+
+    def "negation() excludes rows matching the added criterion"() {
+        given: "a second person who would incorrectly remain excluded if the negation were silently dropped"
+        def fred = new Person(firstName: "Fred", lastName: "Rogers", age: 51).save(flush: true)
+
+        when: "negating a criterion that matches oldBob"
+        def negation = hibernateQuery.negation()
+        negation.add(new Query.Equals("firstName", "Bob"))
+        def results = hibernateQuery.list()
+
+        then: "oldBob is excluded and only the non-matching row remains; a negation dropped onto the unused base criteria field would return every row"
+        results.size() == 1
+        results[0] == fred
+    }
+
     def andList() {
         given:
         hibernateQuery.and([new Query.Equals("firstName", "Bob"), new Query.Equals("age", 50)])

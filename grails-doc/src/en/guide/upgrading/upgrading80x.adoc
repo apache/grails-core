@@ -2327,3 +2327,46 @@ CurrentTenantHolder.get(datastore)
 ----
 
 See <<multiTenancy,Multi-Tenancy>> for the full multi-tenancy API.
+
+===== Tenants.withId(Class, Serializable, Closure)
+
+`grails.gorm.multitenancy.Tenants` had two distinct 3-argument `withId` overloads that both erased to
+`withId(Class, Serializable, Closure)` at the bytecode level:
+
+[source,groovy]
+----
+// removed - resolved a datastore by its own type
+static <T> T withId(Class<? extends Datastore> datastoreClass, Serializable tenantId, Closure<T> callable)
+
+// kept - resolves the datastore that maps a domain class
+static <T> T withId(Class domainClass, Serializable tenantId, Closure<T> callable)
+----
+
+The datastore-class overload relied on `GormEnhancer.findDatastoreByType(Class)`, which was one of the internal
+per-method-dispatch helpers removed as part of the registry migration (see <<_gormenhancer,GormEnhancer>>
+above), so it could not be carried forward under its own name. Only the domain-class overload remains.
+
+Because both overloads share one erased signature, a call site that used to pass a datastore class -
+`Tenants.withId(SomeDatastore, tenantId) { ... }` - still compiles unchanged against the domain-class overload.
+It no longer resolves the datastore you named: `getDatastoreForDomain(SomeDatastore)` looks `SomeDatastore` up as
+if it were a *domain class*, finds no entity registered under that name, and falls through to the application's
+`DEFAULT` datastore. On a single-datastore application this is indistinguishable from the old behaviour. On a
+multi-datastore application it silently binds the tenant against the wrong datastore - no exception, no log -
+which can surface much later as a cross-database read or write.
+
+If you have a call site that passes a `Datastore` subclass to this method, migrate it to look the datastore up
+explicitly and call the datastore-instance overload instead. `Tenants.datastoreLocator` still resolves a
+datastore by its type - only the `withId(Class, ..)` shortcut for it is gone:
+
+[source,groovy]
+----
+MultiTenantCapableDatastore datastore = Tenants.datastoreLocator.getDatastore(SomeDatastore) as MultiTenantCapableDatastore
+Tenants.withId(datastore, tenantId) { ... }
+----
+
+or pass an actual domain class if that is what you meant:
+
+[source,groovy]
+----
+Tenants.withId(SomeDomainClass, tenantId) { ... }
+----
