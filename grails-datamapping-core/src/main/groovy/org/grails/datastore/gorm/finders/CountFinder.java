@@ -25,7 +25,6 @@ import groovy.lang.Closure;
 import grails.gorm.DetachedCriteria;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.Session;
-import org.grails.datastore.mapping.core.SessionCallback;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.query.Query;
 
@@ -71,11 +70,13 @@ public class CountFinder implements FinderMethod, QueryBuildingFinder {
     }
 
     @Override
+    @SuppressWarnings("rawtypes")
     public Object invoke(Class clazz, String methodName, Object[] arguments) {
         return invoke(clazz, methodName, (Closure) null, arguments);
     }
 
     @Override
+    @SuppressWarnings("rawtypes")
     public Object invoke(Class clazz, String methodName, Closure additionalCriteria, Object[] arguments) {
         DynamicFinderInvocation invocation = grammar.createFinderInvocation(clazz, methodName, additionalCriteria, arguments);
         return doInvoke(invocation);
@@ -92,6 +93,7 @@ public class CountFinder implements FinderMethod, QueryBuildingFinder {
      * @param arguments The method call arguments
      * @return The result of the method call
      */
+    @SuppressWarnings("rawtypes")
     public Object invoke(Class clazz, String methodName, DetachedCriteria detachedCriteria, Object[] arguments) {
         DynamicFinderInvocation invocation = grammar.createFinderInvocation(clazz, methodName, null, arguments);
         if (detachedCriteria != null) {
@@ -101,12 +103,9 @@ public class CountFinder implements FinderMethod, QueryBuildingFinder {
     }
 
     private Object doInvoke(final DynamicFinderInvocation invocation) {
-        return FinderSupport.execute(datastore, new SessionCallback<Object>() {
-            @Override
-            public Object doInSession(Session session) {
-                Query query = buildQuery(invocation, session);
-                return query.singleResult();
-            }
+        return FinderSupport.execute(datastore, session -> {
+            Query query = buildQuery(invocation, session);
+            return query.singleResult();
         });
     }
 
@@ -129,7 +128,6 @@ public class CountFinder implements FinderMethod, QueryBuildingFinder {
      * @param query The already-created query to apply criteria to
      * @return The same query, for chaining
      */
-    @SuppressWarnings("unchecked")
     public static Query applyCriteriaAndCount(DynamicFinderInvocation invocation, Class<?> clazz, Query query) {
         DynamicFinder.applyAdditionalCriteria(query, invocation.getCriteria());
         DynamicFinder.applyDetachedCriteria(query, invocation.getDetachedCriteria());
