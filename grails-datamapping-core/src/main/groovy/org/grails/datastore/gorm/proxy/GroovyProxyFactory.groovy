@@ -18,6 +18,7 @@
  */
 package org.grails.datastore.gorm.proxy
 
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.runtime.HandleMetaClass
 import org.codehaus.groovy.runtime.InvokerHelper
@@ -70,7 +71,7 @@ class GroovyProxyFactory implements ProxyFactory {
         }
     }
 
-    @groovy.transform.CompileDynamic
+    @CompileDynamic
     protected Serializable getIdDynamic(obj) {
         if (obj.respondsTo('getId')) {
             return (Serializable)obj.invokeMethod('getId', null)
@@ -121,7 +122,7 @@ class GroovyProxyFactory implements ProxyFactory {
         return proxy
     }
 
-    @groovy.transform.CompileDynamic
+    @CompileDynamic
     protected void setMetaClassDynamic(Object proxy, MetaClass proxyMc) {
         proxy.setMetaClass(proxyMc)
     }
