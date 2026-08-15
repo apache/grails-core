@@ -72,7 +72,7 @@ class GroovyProxyFactory implements ProxyFactory {
     }
 
     @CompileDynamic
-    protected Serializable getIdDynamic(obj) {
+    protected static Serializable getIdDynamic(obj) {
         if (obj.respondsTo('getId')) {
             return (Serializable)obj.invokeMethod('getId', null)
         }
@@ -91,7 +91,7 @@ class GroovyProxyFactory implements ProxyFactory {
     @Override
     <T> T createProxy(Session session, Class<T> type, Serializable key) {
         EntityPersister persister = (EntityPersister) session.getPersister(type)
-        T proxy = type.newInstance()
+        T proxy = type.getDeclaredConstructor().newInstance()
         if (persister != null) {
             persister.setObjectIdentifier(proxy, key)
         } else {
@@ -123,7 +123,7 @@ class GroovyProxyFactory implements ProxyFactory {
     }
 
     @CompileDynamic
-    protected void setMetaClassDynamic(Object proxy, MetaClass proxyMc) {
+    protected static void setMetaClassDynamic(Object proxy, MetaClass proxyMc) {
         proxy.setMetaClass(proxyMc)
     }
 
@@ -162,7 +162,7 @@ class GroovyProxyFactory implements ProxyFactory {
         return object
     }
 
-    protected MetaClass unwrapHandleMetaClass(MetaClass mc) {
+    protected static MetaClass unwrapHandleMetaClass(MetaClass mc) {
         if (mc instanceof HandleMetaClass) {
             return ((HandleMetaClass) mc).getAdaptee()
         }
