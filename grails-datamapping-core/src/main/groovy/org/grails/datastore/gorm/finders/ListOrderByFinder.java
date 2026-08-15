@@ -26,14 +26,12 @@ import java.util.regex.Pattern;
 import groovy.lang.Closure;
 
 import org.grails.datastore.mapping.core.Datastore;
-import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.core.SessionCallback;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.reflect.NameUtils;
 
 /**
  * The "listOrderBy*" static persistent method. Allows ordered listing of instances based on their properties.
- *
  * eg.
  * Account.listOrderByHolder();
  * Account.listOrderByHolder(max); // max results
@@ -66,7 +64,7 @@ public class ListOrderByFinder implements FinderMethod {
     }
 
     @Override
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings({"rawtypes", "unchecked", "ResultOfMethodCallIgnored"})
     public Object invoke(final Class clazz, final String methodName, final Closure additionalCriteria, final Object[] arguments) {
 
         Matcher match = pattern.matcher(methodName);
@@ -75,25 +73,23 @@ public class ListOrderByFinder implements FinderMethod {
         String nameInSignature = match.group(2);
         final String propertyName = NameUtils.decapitalizeFirstChar(nameInSignature);
 
-        return FinderSupport.execute(datastore, new SessionCallback<>() {
-            public Object doInSession(final Session session) {
-                Query q = session.createQuery(clazz);
-                DynamicFinder.applyAdditionalCriteria(q, additionalCriteria);
+        return FinderSupport.execute(datastore, (SessionCallback<Object>) session -> {
+            Query q = session.createQuery(clazz);
+            DynamicFinder.applyAdditionalCriteria(q, additionalCriteria);
 
-                boolean ascending = true;
-                if (arguments.length > 0 && (arguments[0] instanceof Map)) {
-                    final Map args = new LinkedHashMap((Map) arguments[0]);
-                    final Object order = args.remove(DynamicFinder.ARGUMENT_ORDER);
-                    if (order != null && "desc".equalsIgnoreCase(order.toString())) {
-                        ascending = false;
-                    }
-                    DynamicFinder.populateArgumentsForCriteria(clazz, q, args);
+            boolean ascending = true;
+            if (arguments.length > 0 && (arguments[0] instanceof Map)) {
+                final Map args = new LinkedHashMap((Map) arguments[0]);
+                final Object order = args.remove(DynamicFinder.ARGUMENT_ORDER);
+                if (order != null && "desc".equalsIgnoreCase(order.toString())) {
+                    ascending = false;
                 }
-
-                q.order(ascending ? Query.Order.asc(propertyName) : Query.Order.desc(propertyName));
-                q.projections().distinct();
-                return q.list();
+                DynamicFinder.populateArgumentsForCriteria(clazz, q, args);
             }
+
+            q.order(ascending ? Query.Order.asc(propertyName) : Query.Order.desc(propertyName));
+            q.projections().distinct();
+            return q.list();
         });
     }
 
