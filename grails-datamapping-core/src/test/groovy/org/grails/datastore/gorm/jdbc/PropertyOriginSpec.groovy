@@ -16,17 +16,34 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+package org.grails.datastore.gorm.jdbc
 
-package org.grails.datastore.gorm.jdbc;
+import org.springframework.core.env.PropertySource
+import spock.lang.Specification
 
-import org.springframework.core.env.PropertySource;
+class PropertyOriginSpec extends Specification {
 
-/**
- * The origin of a property, specifically its source and its name before any prefix was
- * removed.
- *
- * @author Andy Wilkinson
- * @since 1.3.0
- */
-record PropertyOrigin(PropertySource<?> source, String name) {
+    void "getSource and getName return the values passed to the constructor"() {
+        given:
+        def source = new PropertySource<String>('mySource', 'value') {
+            @Override
+            Object getProperty(String name) { null }
+        }
+
+        when:
+        def origin = new PropertyOrigin(source, 'my.original.name')
+
+        then:
+        origin.source.is(source)
+        origin.name == 'my.original.name'
+    }
+
+    void "source may be null"() {
+        when:
+        def origin = new PropertyOrigin(null, 'my.original.name')
+
+        then:
+        origin.source == null
+        origin.name == 'my.original.name'
+    }
 }

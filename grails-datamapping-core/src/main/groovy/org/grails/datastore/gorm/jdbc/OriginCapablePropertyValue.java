@@ -18,6 +18,8 @@
  */
 package org.grails.datastore.gorm.jdbc;
 
+import org.jspecify.annotations.NonNull;
+
 import org.springframework.beans.PropertyValue;
 
 /**
@@ -47,9 +49,10 @@ class OriginCapablePropertyValue extends PropertyValue {
     }
 
     @Override
-    public String toString() {
-        String name = this.origin != null ? this.origin.getName() : this.getName();
-        String source = this.origin.getSource() != null ? this.origin.getSource().getName() : "unknown";
+    public @NonNull String toString() {
+        String name = this.origin != null ? this.origin.name() : this.getName();
+        String source = (this.origin != null && this.origin.source() != null) ?
+                this.origin.source().getName() : "unknown";
         return "'" + name + "' from '" + source + "'";
     }
 
