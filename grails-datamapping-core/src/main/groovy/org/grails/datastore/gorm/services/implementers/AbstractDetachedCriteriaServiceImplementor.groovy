@@ -153,6 +153,9 @@ abstract class AbstractDetachedCriteriaServiceImplementor extends AbstractReadOp
      * Whether lookup by id is allowed by this implementation
      * @return True if it is
      */
+    // Not static: AbstractProjectionImplementer overrides this to return false, and
+    // doImplement() dispatches on it polymorphically. A static method would break that override.
+    @SuppressWarnings('MethodMayBeStatic')
     protected boolean lookupById() {
         return true
     }
