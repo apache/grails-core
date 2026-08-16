@@ -21,7 +21,6 @@ package org.grails.datastore.gorm.services.implementers
 
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.AnnotationNode
-import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.Parameter
@@ -29,12 +28,10 @@ import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.transform.trait.Traits
 
 import grails.gorm.multitenancy.TenantService
-import grails.gorm.transactions.TransactionService
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.multitenancy.transform.TenantTransform
 import org.grails.datastore.gorm.services.ServiceImplementer
 import org.grails.datastore.gorm.transactions.transform.TransactionalTransform
-import org.grails.datastore.gorm.transform.AstMethodDispatchUtils
 import org.grails.datastore.gorm.transform.AstPropertyResolveUtils
 import org.grails.datastore.mapping.core.Ordered
 import org.grails.datastore.mapping.model.config.GormProperties
@@ -42,7 +39,6 @@ import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.reflect.AstUtils
 import org.grails.datastore.mapping.services.ServiceRegistry
-import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 
 import static org.codehaus.groovy.ast.ClassHelper.make
 import static org.codehaus.groovy.ast.tools.GeneralUtils.args
@@ -116,7 +112,7 @@ abstract class AbstractServiceImplementer implements PrefixedServiceImplementer,
      * @return True if it is
      */
     protected boolean isValidParameter(ClassNode domainClassNode, Parameter parameter, String parameterName) {
-        if (GormProperties.IDENTITY.equals(parameterName)) {
+        if (GormProperties.IDENTITY == parameterName) {
             return true
         }
         else {
@@ -138,15 +134,8 @@ abstract class AbstractServiceImplementer implements PrefixedServiceImplementer,
     /**
      * @return The datastore expression
      */
-    protected Expression transactionalDatastore() {
-        return castX(ClassHelper.make(TransactionCapableDatastore), propX(varX('this'), 'targetDatastore'))
-    }
-
-    /**
-     * @return The datastore expression
-     */
     protected Expression multiTenantDatastore() {
-        return castX(ClassHelper.make(MultiTenantCapableDatastore), propX(varX('this'), 'targetDatastore'))
+        return castX(make(MultiTenantCapableDatastore), propX(varX('this'), 'targetDatastore'))
     }
 
     /**
@@ -156,16 +145,9 @@ abstract class AbstractServiceImplementer implements PrefixedServiceImplementer,
         return callD(ServiceRegistry, 'targetDatastore', 'getService', classX(make(TenantService)))
     }
 
-    /**
-     * @return The transaction service
-     */
-    protected Expression transactionService() {
-        return callD(ServiceRegistry, 'targetDatastore', 'getService', classX(make(TransactionService)))
-    }
-
     protected Expression findConnectionId(MethodNode methodNode) {
         if (TenantTransform.hasTenantAnnotation(methodNode)) {
-            return callD(classX(ClassHelper.make(MultiTenancySettings)), 'resolveConnectionForTenantId', args(
+            return callD(classX(make(MultiTenancySettings)), 'resolveConnectionForTenantId', args(
                 propX(multiTenantDatastore(), 'multiTenancyMode'), callD(tenantService(), 'currentId')
             ))
         }
@@ -180,25 +162,15 @@ abstract class AbstractServiceImplementer implements PrefixedServiceImplementer,
     }
 
     protected Expression buildInstanceApiLookup(ClassNode domainClass, Expression connectionId) {
-        return AstMethodDispatchUtils.callD(
+        return callD(
             classX(GormEnhancer), 'findInstanceApi', args(classX(domainClass), connectionId)
         )
     }
 
     protected Expression buildStaticApiLookup(ClassNode domainClass, Expression connectionId) {
-        return AstMethodDispatchUtils.callD(
+        return callD(
                 classX(GormEnhancer), 'findStaticApi', args(classX(domainClass), connectionId)
         )
-    }
-
-    protected Expression findInstanceApiForConnectionId(ClassNode domainClass, MethodNode methodNode) {
-        Expression connectionId = findConnectionId(methodNode)
-        if (connectionId != null) {
-            return buildInstanceApiLookup(domainClass, connectionId)
-        }
-        else {
-            return classX(domainClass.plainNodeReference)
-        }
     }
 
     protected Expression findStaticApiForConnectionId(ClassNode domainClass, MethodNode methodNode) {
