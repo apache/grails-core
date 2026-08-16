@@ -159,6 +159,42 @@ class ProxyInstanceMetaClassSpec extends Specification {
         0 * session.retrieve(_, _)
     }
 
+    void "invokeMethod resolves the target for setMetaClass calls with a non-MetaClass argument"() {
+        given:
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+        delegate.invokeMethod(target, 'setMetaClass', ['not-a-metaclass'] as Object[]) >> null
+
+        when:
+        metaClass.invokeMethod(proxy, 'setMetaClass', ['not-a-metaclass'] as Object[])
+
+        then:
+        1 * session.retrieve(ProxyInstanceTestTarget, 11L) >> target
+    }
+
+    void "invokeMethod resolves the target for setMetaClass calls with an unexpected argument count"() {
+        given:
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+        delegate.invokeMethod(target, 'setMetaClass', [] as Object[]) >> null
+
+        when:
+        metaClass.invokeMethod(proxy, 'setMetaClass', [] as Object[])
+
+        then:
+        1 * session.retrieve(ProxyInstanceTestTarget, 11L) >> target
+    }
+
+    void "invokeMethod does not resolve the target for setMetaClass with a null argument"() {
+        given:
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+        delegate.invokeMethod(proxy, 'setMetaClass', [null] as Object[]) >> null
+
+        when:
+        metaClass.invokeMethod(proxy, 'setMetaClass', [null] as Object[])
+
+        then:
+        0 * session.retrieve(_, _)
+    }
+
     void "getProperty exposes proxy metadata without resolving the target"() {
         given:
         ProxyInstanceMetaClass metaClass = newMetaClass()
@@ -193,6 +229,26 @@ class ProxyInstanceMetaClassSpec extends Specification {
         propertyName << ['class', 'domainClass']
     }
 
+    void "getProperty resolves the target for the target property"() {
+        given:
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+        session.retrieve(ProxyInstanceTestTarget, 11L) >> target
+
+        expect:
+        metaClass.getProperty(proxy, 'target').is(target)
+    }
+
+    void "getProperty for class/domainClass resolves the target once already initiated"() {
+        given:
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+        session.retrieve(ProxyInstanceTestTarget, 11L) >> target
+        metaClass.getProxyTarget()
+        delegate.getProperty(target, 'class') >> ProxyInstanceTestTarget
+
+        expect:
+        metaClass.getProperty(proxy, 'class') == ProxyInstanceTestTarget
+    }
+
     void "getProperty resolves the target for regular properties"() {
         given:
         ProxyInstanceMetaClass metaClass = newMetaClass()
@@ -214,6 +270,30 @@ class ProxyInstanceMetaClassSpec extends Specification {
         then:
         1 * delegate.setProperty(proxy, 'metaClass', newMetaClassArg)
         0 * session.retrieve(_, _)
+    }
+
+    void "setProperty does not resolve the target when clearing the metaClass"() {
+        given:
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+
+        when:
+        metaClass.setProperty(proxy, 'metaClass', null)
+
+        then:
+        1 * delegate.setProperty(proxy, 'metaClass', null)
+        0 * session.retrieve(_, _)
+    }
+
+    void "setProperty resolves the target when setting metaClass to a non-MetaClass value"() {
+        given:
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+
+        when:
+        metaClass.setProperty(proxy, 'metaClass', 'not-a-metaclass')
+
+        then:
+        1 * session.retrieve(ProxyInstanceTestTarget, 11L) >> target
+        1 * delegate.setProperty(target, 'metaClass', 'not-a-metaclass')
     }
 
     void "setProperty resolves the target for regular properties"() {
@@ -240,6 +320,15 @@ class ProxyInstanceMetaClassSpec extends Specification {
         idResult == 11L
         initializedResult == false
         0 * session.retrieve(_, _)
+    }
+
+    void "getAttribute resolves the target for the target attribute"() {
+        given:
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+        session.retrieve(ProxyInstanceTestTarget, 11L) >> target
+
+        expect:
+        metaClass.getAttribute(proxy, 'target').is(target)
     }
 
     void "getAttribute resolves the target for other attributes"() {
