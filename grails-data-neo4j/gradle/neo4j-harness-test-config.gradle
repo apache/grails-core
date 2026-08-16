@@ -17,16 +17,19 @@
  *  under the License.
  */
 
-// Shared by every grails-data-neo4j module (core, boot-plugin, grails-plugin) that pulls in the
-// embedded Neo4j 3.5.x test harness (neo4j-harness). Applied via 'apply from:' rather than
-// duplicated per module.
+// Shared by every grails-data-neo4j module (core, boot-plugin, grails-plugin) and every
+// grails-test-examples/neo4j example app that pulls in the embedded Neo4j 3.5.x test harness
+// (neo4j-harness). Applied via 'apply from:' rather than duplicated per module/app.
 
 test {
     useJUnitPlatform()
+}
 
-    // The embedded Neo4j 3.5.x test harness reflectively pokes JDK internals (Throwable's
-    // message field, sun.nio.ch.FileChannelImpl's lock accessors) at startup; JDK 9+ strong
-    // encapsulation blocks that without these opens.
+// The embedded Neo4j 3.5.x test harness reflectively pokes JDK internals (Throwable's message
+// field, sun.nio.ch.FileChannelImpl's lock accessors) at startup; JDK 9+ strong encapsulation
+// blocks that without these opens. Applied to every Test-typed task (not just 'test') so it also
+// covers the example apps' 'integrationTest' task.
+tasks.withType(Test).configureEach {
     jvmArgs += [
             '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
             '--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED',
@@ -37,9 +40,18 @@ test {
 // 12.x platform version. The embedded Neo4j 3.5.x test harness (neo4j-harness, test-only) is
 // compiled against Jetty 9.4 and is binary-incompatible with Jetty 12's restructured
 // handler/server APIs. Scoped to the test classpaths only, since main code never touches Jetty
-// directly.
+// directly. Also covers integrationTestCompileClasspath/integrationTestRuntimeClasspath when
+// the applying project has an integrationTest source set (the plugin modules don't; the example
+// apps do).
 def neo4jHarnessJettyVersion = '9.4.43.v20210629'
-[configurations.testCompileClasspath, configurations.testRuntimeClasspath].each {
+def neo4jHarnessJettyConfigurations = [configurations.testCompileClasspath, configurations.testRuntimeClasspath]
+['integrationTestCompileClasspath', 'integrationTestRuntimeClasspath'].each { configurationName ->
+    def configuration = configurations.findByName(configurationName)
+    if (configuration != null) {
+        neo4jHarnessJettyConfigurations << configuration
+    }
+}
+neo4jHarnessJettyConfigurations.each {
     it.resolutionStrategy {
         force "org.eclipse.jetty:jetty-server:$neo4jHarnessJettyVersion",
                 "org.eclipse.jetty:jetty-servlet:$neo4jHarnessJettyVersion",
@@ -53,8 +65,8 @@ def neo4jHarnessJettyVersion = '9.4.43.v20210629'
     }
 }
 // Deliberately older than the BOM's Jetty version (see comment above) - exempt from
-// validateDependencyVersions. Declared here so it applies to every module that applies this
-// shared script (core, grails-plugin, boot-plugin) without repeating the list three times.
+// validateDependencyVersions. Declared here so it applies to every module/app that applies this
+// shared script without repeating the list per consumer.
 project.ext.allowedBomOverrides = [
         'org.eclipse.jetty:jetty-server',
         'org.eclipse.jetty:jetty-servlet',

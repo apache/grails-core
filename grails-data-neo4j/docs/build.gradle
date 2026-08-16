@@ -19,6 +19,10 @@
 
 import org.asciidoctor.gradle.jvm.AsciidoctorTask
 
+buildscript {
+    apply from: rootProject.layout.projectDirectory.file('dependencies.gradle')
+}
+
 plugins {
     id 'groovy'
     id 'org.asciidoctor.jvm.convert'
@@ -72,7 +76,7 @@ tasks.named('asciidoctor', AsciidoctorTask) { AsciidoctorTask it ->
             'reproducible' : '',
             'version'      : projectVersion,
             'pluginVersion': projectVersion,
-            'neo4jVersion' : neo4jVersion,
+            'neo4jVersion' : combinedVersions['neo4j-harness.version'],
             'exampledir'   : rootProject.findProject(':grails-test-examples-neo4j-base').layout.projectDirectory.asFile.absolutePath,
             'testsdir'     : rootProject.findProject(':grails-data-neo4j-core').layout.projectDirectory.dir('src/test/groovy').asFile.absolutePath
     ]

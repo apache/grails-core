@@ -46,7 +46,7 @@ dependencies {
     api project(':grails-data-neo4j-core')
     api 'org.springframework:spring-tx'
 
-    testRuntimeOnly "org.neo4j.test:neo4j-harness:$neo4jVersion"
+    testRuntimeOnly 'org.neo4j.test:neo4j-harness'
     testImplementation 'org.spockframework:spock-core'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }

@@ -82,7 +82,7 @@ dependencies {
     // grails-data-hibernate5/grails-plugin declares this for the same AbstractDatastoreInitializer
     // code path.
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
-    testImplementation "org.neo4j.test:neo4j-harness:$neo4jVersion"
+    testImplementation 'org.neo4j.test:neo4j-harness'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 

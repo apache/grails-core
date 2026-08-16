@@ -50,49 +50,11 @@ dependencies {
     integrationTestImplementation 'org.apache.grails:grails-testing-support-datamapping'
     integrationTestImplementation 'org.spockframework:spock-core'
 
-    testRuntimeOnly "org.neo4j.test:neo4j-harness:$neo4jVersion"
-}
-
-// The Spring Boot BOM (pulled in transitively via grails-neo4j-bom) force-upgrades Jetty to a
-// 12.x platform version, binary-incompatible with the embedded Neo4j 3.5.x test harness this
-// app's tests use. See grails-data-neo4j/core/build.gradle for the full
-// explanation.
-def neo4jHarnessJettyVersion = '9.4.43.v20210629'
-[configurations.testCompileClasspath, configurations.testRuntimeClasspath,
- configurations.integrationTestCompileClasspath, configurations.integrationTestRuntimeClasspath].each {
-    it.resolutionStrategy {
-        force "org.eclipse.jetty:jetty-server:$neo4jHarnessJettyVersion",
-                "org.eclipse.jetty:jetty-servlet:$neo4jHarnessJettyVersion",
-                "org.eclipse.jetty:jetty-webapp:$neo4jHarnessJettyVersion",
-                "org.eclipse.jetty:jetty-security:$neo4jHarnessJettyVersion",
-                "org.eclipse.jetty:jetty-http:$neo4jHarnessJettyVersion",
-                "org.eclipse.jetty:jetty-io:$neo4jHarnessJettyVersion",
-                "org.eclipse.jetty:jetty-util:$neo4jHarnessJettyVersion",
-                "org.eclipse.jetty:jetty-util-ajax:$neo4jHarnessJettyVersion",
-                "org.eclipse.jetty:jetty-xml:$neo4jHarnessJettyVersion"
-    }
-}
-// Deliberately older than the BOM's Jetty version (see comment above) - exempt from
-// validateDependencyVersions.
-project.ext.allowedBomOverrides = [
-        'org.eclipse.jetty:jetty-server',
-        'org.eclipse.jetty:jetty-servlet',
-        'org.eclipse.jetty:jetty-webapp',
-        'org.eclipse.jetty:jetty-security',
-        'org.eclipse.jetty:jetty-http',
-        'org.eclipse.jetty:jetty-io',
-        'org.eclipse.jetty:jetty-util',
-        'org.eclipse.jetty:jetty-util-ajax',
-        'org.eclipse.jetty:jetty-xml'
-]
-
-tasks.withType(Test) {
-    // The embedded Neo4j 3.5.x test harness reflectively pokes JDK internals at startup; JDK 9+
-    // strong encapsulation blocks that without these opens.
-    jvmArgs += ['--add-opens', 'java.base/java.lang=ALL-UNNAMED', '--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED']
+    testRuntimeOnly 'org.neo4j.test:neo4j-harness'
 }
 
 apply {
     from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
+    from rootProject.layout.projectDirectory.file('grails-data-neo4j/gradle/neo4j-harness-test-config.gradle')
 }

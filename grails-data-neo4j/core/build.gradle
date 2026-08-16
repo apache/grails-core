@@ -54,11 +54,11 @@ dependencies {
 
     // only needed for web dependencies
     compileOnly project(':grails-datastore-web')
-    compileOnly "org.neo4j.test:neo4j-harness:$neo4jVersion"
+    compileOnly 'org.neo4j.test:neo4j-harness'
 
     implementation 'org.javassist:javassist'
 
-    testImplementation "org.neo4j.test:neo4j-harness:$neo4jVersion"
+    testImplementation 'org.neo4j.test:neo4j-harness'
     testImplementation project(':grails-datamapping-core-test')
     testImplementation project(':grails-datamapping-tck')
     testImplementation 'org.spockframework:spock-core'
