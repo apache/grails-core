@@ -72,7 +72,8 @@ class GroovyProxyFactory implements ProxyFactory {
     }
 
     @CompileDynamic
-    protected static Serializable getIdDynamic(obj) {
+    @SuppressWarnings('GrMethodMayBeStatic')
+    protected Serializable getIdDynamic(obj) {
         if (obj.respondsTo('getId')) {
             return (Serializable)obj.invokeMethod('getId', null)
         }
@@ -123,7 +124,8 @@ class GroovyProxyFactory implements ProxyFactory {
     }
 
     @CompileDynamic
-    protected static void setMetaClassDynamic(Object proxy, MetaClass proxyMc) {
+    @SuppressWarnings('GrMethodMayBeStatic')
+    protected void setMetaClassDynamic(Object proxy, MetaClass proxyMc) {
         proxy.setMetaClass(proxyMc)
     }
 
@@ -162,7 +164,8 @@ class GroovyProxyFactory implements ProxyFactory {
         return object
     }
 
-    protected static MetaClass unwrapHandleMetaClass(MetaClass mc) {
+    @SuppressWarnings('GrMethodMayBeStatic')
+    protected MetaClass unwrapHandleMetaClass(MetaClass mc) {
         if (mc instanceof HandleMetaClass) {
             return ((HandleMetaClass) mc).getAdaptee()
         }
