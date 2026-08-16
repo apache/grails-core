@@ -51,7 +51,7 @@ class DefaultApplicationEventPublisher implements ConfigurableApplicationEventPu
         for (listener in applicationListeners) {
             if (listener instanceof SmartApplicationListener) {
                 SmartApplicationListener smartApplicationListener = (SmartApplicationListener) listener
-                if (!smartApplicationListener.supportsEventType((Class<ApplicationEvent>) event.getClass())) {
+                if (!smartApplicationListener.supportsEventType(event.getClass())) {
                     continue
                 }
                 else if (!smartApplicationListener.supportsSourceType(event.source.getClass())) {
