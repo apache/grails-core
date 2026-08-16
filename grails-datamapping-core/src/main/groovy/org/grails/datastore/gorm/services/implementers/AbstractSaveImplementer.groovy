@@ -51,7 +51,7 @@ import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.namedAr
 @CompileStatic
 abstract class AbstractSaveImplementer extends AbstractWriteOperationImplementer {
 
-    protected Statement bindParametersAndSave(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, Parameter[] parameters, BlockStatement body, VariableExpression entityVar) {
+    protected Statement bindParametersAndSave(ClassNode domainClassNode, MethodNode abstractMethodNode, Parameter[] parameters, BlockStatement body, VariableExpression entityVar) {
         Expression argsExpression = null
 
         for (Parameter parameter in parameters) {
