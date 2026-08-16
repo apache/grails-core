@@ -36,12 +36,22 @@ import org.springframework.context.event.SmartApplicationListener
 class DefaultApplicationEventPublisher implements ConfigurableApplicationEventPublisher {
 
     private List<ApplicationListener> applicationListeners = []
+
     @Override
     void publishEvent(ApplicationEvent event) {
+        dispatch(event)
+    }
+
+    @Override
+    void publishEvent(Object event) {
+        dispatch(new PayloadApplicationEvent<Object>(this, event))
+    }
+
+    private void dispatch(ApplicationEvent event) {
         for (listener in applicationListeners) {
             if (listener instanceof SmartApplicationListener) {
                 SmartApplicationListener smartApplicationListener = (SmartApplicationListener) listener
-                if (!smartApplicationListener.supportsEventType((Class<ApplicationEvent>) event.getClass())) {
+                if (!smartApplicationListener.supportsEventType(event.getClass())) {
                     continue
                 }
                 else if (!smartApplicationListener.supportsSourceType(event.source.getClass())) {
@@ -53,25 +63,7 @@ class DefaultApplicationEventPublisher implements ConfigurableApplicationEventPu
     }
 
     @Override
-    void publishEvent(Object event) {
-        for (listener in applicationListeners) {
-            def eventObject = new PayloadApplicationEvent<Object>(this, event)
-            if (listener instanceof SmartApplicationListener) {
-                SmartApplicationListener smartApplicationListener = (SmartApplicationListener) listener
-                if (!smartApplicationListener.supportsEventType((Class<ApplicationEvent>) eventObject.getClass())) {
-                    continue
-                }
-                else if (!smartApplicationListener.supportsSourceType(eventObject.source.getClass())) {
-                    continue
-                }
-            }
-
-            listener.onApplicationEvent(eventObject)
-        }
-    }
-
-    @Override
-    void addApplicationListener(ApplicationListener<?> listener) {
+    void addApplicationListener(ApplicationListener<? extends ApplicationEvent> listener) {
         applicationListeners.add(listener)
     }
 }
