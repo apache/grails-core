@@ -26,38 +26,45 @@ import java.util.regex.Pattern;
 import groovy.lang.Closure;
 
 import org.grails.datastore.mapping.core.Datastore;
-import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.core.SessionCallback;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.reflect.NameUtils;
 
 /**
  * The "listOrderBy*" static persistent method. Allows ordered listing of instances based on their properties.
- *
  * eg.
  * Account.listOrderByHolder();
  * Account.listOrderByHolder(max); // max results
  *
+ * <p>Never shared {@link DynamicFinder}'s grammar (no And/Or/operator-suffix parsing - just a
+ * single trailing property name), so it stays its own standalone implementation, composing
+ * nothing beyond {@link FinderSupport} for session execution.
+ *
  * @author Graeme Rocher
  */
-public class ListOrderByFinder extends AbstractFinder {
+public class ListOrderByFinder implements FinderMethod {
+
     private static final Pattern METHOD_PATTERN = Pattern.compile("(listOrderBy)(\\w+)");
+    private final Datastore datastore;
     private Pattern pattern = METHOD_PATTERN;
 
     public ListOrderByFinder(Datastore datastore) {
-        super(datastore);
+        this.datastore = datastore;
     }
 
+    @Override
     public void setPattern(String pattern) {
         this.pattern = Pattern.compile(pattern);
     }
 
+    @Override
     @SuppressWarnings("rawtypes")
     public Object invoke(final Class clazz, final String methodName, final Object[] arguments) {
         return invoke(clazz, methodName, null, arguments);
     }
 
-    @SuppressWarnings("rawtypes")
+    @Override
+    @SuppressWarnings({"rawtypes", "unchecked", "ResultOfMethodCallIgnored"})
     public Object invoke(final Class clazz, final String methodName, final Closure additionalCriteria, final Object[] arguments) {
 
         Matcher match = pattern.matcher(methodName);
@@ -66,34 +73,28 @@ public class ListOrderByFinder extends AbstractFinder {
         String nameInSignature = match.group(2);
         final String propertyName = NameUtils.decapitalizeFirstChar(nameInSignature);
 
-        return execute(new SessionCallback<>() {
-            public Object doInSession(final Session session) {
-                Query q = session.createQuery(clazz);
-                applyAdditionalCriteria(q, additionalCriteria);
+        return FinderSupport.execute(datastore, (SessionCallback<Object>) session -> {
+            Query q = session.createQuery(clazz);
+            DynamicFinder.applyAdditionalCriteria(q, additionalCriteria);
 
-                boolean ascending = true;
-                if (arguments.length > 0 && (arguments[0] instanceof Map)) {
-                    final Map args = new LinkedHashMap((Map) arguments[0]);
-                    final Object order = args.remove(DynamicFinder.ARGUMENT_ORDER);
-                    if (order != null && "desc".equalsIgnoreCase(order.toString())) {
-                        ascending = false;
-                    }
-                    DynamicFinder.populateArgumentsForCriteria(clazz, q, args);
+            boolean ascending = true;
+            if (arguments.length > 0 && (arguments[0] instanceof Map)) {
+                final Map args = new LinkedHashMap((Map) arguments[0]);
+                final Object order = args.remove(DynamicFinder.ARGUMENT_ORDER);
+                if (order != null && "desc".equalsIgnoreCase(order.toString())) {
+                    ascending = false;
                 }
-
-                q.order(ascending ? Query.Order.asc(propertyName) : Query.Order.desc(propertyName));
-                q.projections().distinct();
-                return invokeQuery(q);
+                DynamicFinder.populateArgumentsForCriteria(clazz, q, args);
             }
+
+            q.order(ascending ? Query.Order.asc(propertyName) : Query.Order.desc(propertyName));
+            q.projections().distinct();
+            return q.list();
         });
     }
 
-    protected Object invokeQuery(Query q) {
-        return q.list();
-    }
-
+    @Override
     public boolean isMethodMatch(String methodName) {
         return pattern.matcher(methodName.subSequence(0, methodName.length())).find();
     }
-
 }
