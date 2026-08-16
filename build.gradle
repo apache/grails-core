@@ -18,6 +18,8 @@
 plugins {
     id 'org.apache.grails.gradle.grails-violation-aggregation'
     id 'org.apache.grails.gradle.grails-ij-formatter'
+    id 'org.apache.grails.gradle.grails-validate-actions'
+    id 'org.apache.grails.buildsrc.test-task-sharding'
 }
 
 import java.time.Instant

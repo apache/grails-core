@@ -56,9 +56,10 @@ dependencies {
 	}
 	// GrailsConsole (used by init-o-auth2) needs jline at compile time
 	cliImplementation 'org.jline:jline'
-	cliImplementation 'org.fusesource.jansi:jansi'
 
-	api project(':grails-spring-security'), {
+    cliCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
+    api project(':grails-spring-security'), {
 		// api: GrailsUserDetailsService, SpringSecurityService
 		// impl: GormUserDetailsService, GrailsUser, ReflectionUtils, @Secured(runtime), SecurityContextHolder,
 		//       SpringSecurityUtils
@@ -86,7 +87,6 @@ dependencies {
 	implementation 'org.jline:jline', {
 		// comp: ConsoleReader
 	}
-	compileOnly 'org.fusesource.jansi:jansi' // required for Groovy static type checking of groovysh (Ansi) references
 	implementation project(':grails-datamapping-core'), {
 		// impl: @Transactional(runtime)
 	}

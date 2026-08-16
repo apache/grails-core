@@ -63,6 +63,8 @@ dependencies {
         // impl: @AutoConfiguration, @ConditionalOnClass/Bean, @AutoConfigureAfter
     }
 
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
     testImplementation 'org.spockframework:spock-core'
     testImplementation project(':grails-testing-support-mongodb')
     testImplementation 'org.springframework.boot:spring-boot-test', {
@@ -71,7 +73,7 @@ dependencies {
     testImplementation 'org.assertj:assertj-core', {
         // test: required by Spring Boot's AssertableApplicationContext
     }
-    testRuntimeOnly 'org.slf4j:slf4j-nop'
+    testImplementation 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation and tests
 }
 
 apply {

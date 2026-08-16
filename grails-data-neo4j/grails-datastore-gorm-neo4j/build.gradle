@@ -51,10 +51,12 @@ test {
     forkEvery = 10
 
     jvmArgs = ['-Xmx1028M']
-    afterSuite {
-        System.out.print('.')
-        System.out.flush()
-    }
+    addTestListener([
+        afterSuite: { desc, result ->
+            System.out.print('.')
+            System.out.flush()
+        }
+    ] as TestListener)
 }
 
 test.doFirst {

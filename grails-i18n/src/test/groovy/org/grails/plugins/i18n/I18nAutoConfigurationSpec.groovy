@@ -29,6 +29,7 @@ import grails.plugins.GrailsPluginManager
 
 import org.springframework.boot.autoconfigure.AutoConfigurations
 import org.springframework.boot.autoconfigure.context.PropertyPlaceholderAutoConfiguration
+import org.springframework.boot.test.context.runner.ApplicationContextRunner
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner
 import org.springframework.context.MessageSource
 import org.springframework.context.support.GenericApplicationContext
@@ -69,6 +70,31 @@ class I18nAutoConfigurationSpec extends Specification {
             assert context.getBean(LocaleChangeInterceptor) instanceof ParamsAwareLocaleChangeInterceptor
             assert context.getBean('messageSource') instanceof PluginAwareResourceBundleMessageSource
         }
+    }
+
+    void 'the Grails i18n beans do not register outside a servlet web application context'() {
+        given: "the same setup as contextRunner(), but a plain (non-web) ApplicationContextRunner"
+        GrailsApplication grailsApplication = new DefaultGrailsApplication()
+        GrailsPluginManager pluginManager = Mock(GrailsPluginManager) {
+            getAllPlugins() >> ([] as GrailsPlugin[])
+        }
+
+        expect: "@ConditionalOnWebApplication(SERVLET) on the generated I18nAutoConfiguration - the class Spring " +
+                "Boot actually evaluates, not I18nGrailsPlugin itself - backs the whole auto-configuration off, " +
+                "matching the hand-written I18nAutoConfiguration.java's behaviour before it moved into " +
+                "I18nGrailsPlugin.groovy's @GrailsBeans block"
+        new ApplicationContextRunner()
+                .withBean(GrailsApplication, () -> grailsApplication)
+                .withBean(GrailsPluginManager, () -> pluginManager)
+                .withConfiguration(AutoConfigurations.of(PropertyPlaceholderAutoConfiguration, I18nAutoConfiguration))
+                .run { context ->
+                    assert !context.containsBean('localeResolver')
+                    assert !context.containsBean('localeChangeInterceptor')
+                    assert !context.containsBean('availableLocaleResolver')
+                    // every ApplicationContext registers a fallback DelegatingMessageSource under this
+                    // name if nothing else defines one, so check the bean's type rather than presence
+                    assert !(context.getBean('messageSource') instanceof PluginAwareResourceBundleMessageSource)
+                }
     }
 
     void 'grails.i18n.localeResolver=cookie uses a CookieLocaleResolver and keeps the ?lang= interceptor'() {
@@ -158,6 +184,11 @@ class I18nAutoConfigurationSpec extends Specification {
     void 'the availableLocaleResolver bean registers by default and includes plugin bundles'() {
         expect:
         contextRunner().run { context ->
+            // bean(AvailableLocaleResolver) has no explicit name in the DSL - pins down that
+            // Introspector.decapitalize really does derive 'availableLocaleResolver', not just that
+            // some bean of the right type exists under an unrelated name
+            assert context.containsBean('availableLocaleResolver')
+
             def resolver = context.getBean(AvailableLocaleResolver)
             // without grails.i18n.default.locale the JVM default is included (same fallback the
             // fixed localeResolver uses), and includePlugins defaults to true so the

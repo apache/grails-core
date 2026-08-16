@@ -49,7 +49,6 @@ dependencies {
     runtimeOnly "cloud.wondrify:asset-pipeline-grails"
     runtimeOnly "com.h2database:h2"
     runtimeOnly "com.zaxxer:HikariCP"
-    runtimeOnly "org.fusesource.jansi:jansi"
     integrationTestImplementation testFixtures("org.apache.grails:grails-geb")
     testImplementation "org.apache.grails:grails-testing-support-datamapping"
     testImplementation "org.apache.grails:grails-testing-support-web"

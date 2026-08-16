@@ -670,6 +670,9 @@ public class GroovyPageParser implements Tokens {
             return;
         }
 
+        // A \${ the scanner left in the text is an escaped expression: render a literal ${
+        text = text.replace("\\${", "${");
+
         // If we detect it is all whitespace, we need to keep it for later
         // If it is not whitespace, we need to flush any whitespace we do have
         boolean contentIsWhitespace = !NON_WHITESPACE_PATTERN.matcher(text).find();

@@ -53,7 +53,6 @@ dependencies {
     api 'org.apache.groovy:groovy-console'
     api 'org.apache.groovy:groovy-swing'
     api 'org.apache.groovy:groovy-groovysh'
-    implementation 'org.fusesource.jansi:jansi'
     implementation 'org.jline:jline'
     implementation 'net.java.dev.jna:jna'
 
@@ -63,6 +62,8 @@ dependencies {
     api 'org.springframework:spring-web'
 
     api 'jakarta.servlet:jakarta.servlet-api'
+
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'

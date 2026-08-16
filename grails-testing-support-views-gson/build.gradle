@@ -53,6 +53,8 @@ dependencies {
     implementation 'org.apache.groovy:groovy-json'
     implementation 'org.apache.groovy:groovy-templates'
     implementation 'org.springframework:spring-webmvc'
+
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 }
 
 apply {

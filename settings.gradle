@@ -33,7 +33,7 @@ pluginManagement {
 }
 
 plugins {
-    id 'com.gradle.develocity' version '4.3.2'
+    id 'com.gradle.develocity' version '4.5.0'
     id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.4.0'
     id 'org.apache.grails.buildsrc.repo'
 }
@@ -106,7 +106,9 @@ def buildJdkSupportsMicronaut = Runtime.version().feature() >= 25
 def skipMicronautProjects = explicitlySkipMicronaut || (!buildJdkSupportsMicronaut && !explicitlyIncludeMicronaut)
 
 include(
+        'grails-benchmarks',
         'grails-bootstrap',
+        'grails-beans-dsl',
         'grails-cache',
         'grails-codecs-core',
         'grails-codecs',
@@ -115,6 +117,7 @@ include(
         'grails-controllers',
         'grails-converters',
         'grails-core',
+        'grails-core-cli-legacy',
         'grails-databinding-core',
         'grails-databinding',
         'grails-datasource',
@@ -391,6 +394,9 @@ project(':grails-data-mongodb-spring-boot').projectDir = new File(settingsDir, '
 include 'grails-data-mongodb-spring-data'
 project(':grails-data-mongodb-spring-data').projectDir = new File(settingsDir, 'grails-data-mongodb/spring-data')
 
+include 'grails-data-mongodb-embedded'
+project(':grails-data-mongodb-embedded').projectDir = new File(settingsDir, 'grails-data-mongodb/embedded')
+
 include 'grails-data-mongodb'
 project(':grails-data-mongodb').projectDir = new File(settingsDir, 'grails-data-mongodb/grails-plugin')
 
@@ -530,6 +536,8 @@ include(
         'grails-test-examples-app4',
         'grails-test-examples-app5',
         'grails-test-examples-async-events-pubsub-demo',
+        'grails-test-examples-beans-dsl',
+        'grails-test-examples-beans-dsl-plugin',
         'grails-test-examples-cache',
         'grails-test-examples-database-cleanup',
         'grails-test-examples-datasources',
@@ -567,6 +575,8 @@ include(
         'grails-test-examples-views-functional-tests-plugin',
 )
 project(':grails-test-examples-async-events-pubsub-demo').projectDir = file('grails-test-examples/async-events-pubsub-demo')
+project(':grails-test-examples-beans-dsl').projectDir = file('grails-test-examples/beans-dsl')
+project(':grails-test-examples-beans-dsl-plugin').projectDir = file('grails-test-examples/beans-dsl-plugin')
 project(':grails-test-examples-app1').projectDir = file('grails-test-examples/app1')
 project(':grails-test-examples-app2').projectDir = file('grails-test-examples/app2')
 project(':grails-test-examples-app3').projectDir = file('grails-test-examples/app3')
@@ -607,20 +617,6 @@ project(':grails-test-examples-test-phases').projectDir = file('grails-test-exam
 project(':grails-test-examples-jetty').projectDir = file('grails-test-examples/jetty')
 project(':grails-test-examples-undertow').projectDir = file('grails-test-examples/undertow')
 project(':grails-test-examples-latency').projectDir = file('grails-test-examples/latency')
-
-// The Spring Dependency Management example imports grails-bom as a Maven BOM through
-// io.spring.dependency-management, which resolves BOM imports with its own detached
-// configurations. Those bypass the local-project substitution rules in
-// gradle/functional-test-config.gradle, so the import only works when
-// org.apache.grails:grails-bom:<projectVersion> is already published to a repository.
-// During a release (reproducible build, SOURCE_DATE_EPOCH set) the version being staged
-// is not published anywhere yet, so the example cannot resolve its dependencies -
-// exclude it from the build graph entirely. It still builds and runs on every regular
-// CI build, where the -SNAPSHOT BOM is available from the Apache snapshots repository.
-if (!isReproducibleBuild) {
-    include 'grails-test-examples-spring-dependency-management'
-    project(':grails-test-examples-spring-dependency-management').projectDir = file('grails-test-examples/spring-dependency-management')
-}
 
 includeBuild('./grails-gradle') {
     name = 'grails-gradle'

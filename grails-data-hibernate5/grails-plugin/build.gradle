@@ -54,6 +54,7 @@ dependencies {
             requireCapability('org.apache.grails:grails-core-cli')
         }
     }
+    cliCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     // TODO: Clarify and clean up dependencies
     implementation platform(project(':grails-hibernate5-bom'))
@@ -77,6 +78,7 @@ dependencies {
     compileOnly project(':grails-bootstrap')
     compileOnly project(':grails-core')
 
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
     compileOnly 'org.spockframework:spock-core', {
         exclude group: 'junit', module: 'junit-dep'
         exclude group: 'org.codehaus.groovy', module: 'groovy-all'
@@ -86,6 +88,8 @@ dependencies {
     testImplementation project(':grails-testing-support-datamapping')
     testImplementation 'org.spockframework:spock-core'
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
+
+    testCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     testRuntimeOnly 'com.h2database:h2'
     testRuntimeOnly 'org.apache.tomcat:tomcat-jdbc'

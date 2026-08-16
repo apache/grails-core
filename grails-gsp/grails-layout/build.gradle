@@ -45,6 +45,7 @@ dependencies {
     api project(':grails-web-taglib')
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api' // Provided
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     implementation 'org.apache.groovy:groovy'
     implementation platform(project(':grails-bom'))
@@ -61,6 +62,9 @@ dependencies {
         // impl: MockHttpServletRequest
     }
     testImplementation project(':grails-testing-support-web')
+
+    testCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
     testRuntimeOnly 'net.bytebuddy:byte-buddy' // Required by Spock's mocking support
     testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during test task
 }

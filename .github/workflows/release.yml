@@ -124,7 +124,7 @@ jobs:
           echo "Generated checksum for grails wrapper ZIP:"
           cat ${DIST_NAME}-wrapper-${VERSION}-bin.zip.sha512
       - name: "📤 Upload grails-wrapper ZIP"
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
           tag_name: ${{ env.TAG }}
           files: |
@@ -149,7 +149,7 @@ jobs:
           echo "Generated checksum for grails cli ZIP:"
           cat ${DIST_NAME}-${VERSION}-bin.zip.sha512
       - name: "📤 Upload grails-cli ZIP"
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
           tag_name: ${{ env.TAG }}
           files: |
@@ -306,7 +306,7 @@ jobs:
       - name: "📅 Generate build date file"
         run: echo "$SOURCE_DATE_EPOCH" >> build/BUILD_DATE.txt
       - name: "📤 Upload build date, checksums and published artifact files"
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
           tag_name: ${{ env.TAG }}
           files: |
@@ -398,7 +398,7 @@ jobs:
       - name: "📦 Create source distribution checksum"
         run: sha512sum ${DIST_NAME}-${VERSION}-src.zip > ${DIST_NAME}-${VERSION}-src.zip.sha512
       - name: "🚀 Upload ZIP and Signature to GitHub Release"
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
           tag_name: ${{ env.TAG }}
           files: |
@@ -525,7 +525,7 @@ jobs:
           cd dev-repo
           svn info ${VERSION} > DIST_SVN_REVISION.txt
       - name: "📤 Upload Distribution SVN revision"
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
           tag_name: ${{ env.TAG }}
           files: dev-repo/DIST_SVN_REVISION.txt
@@ -646,6 +646,12 @@ jobs:
     name: "VOTE SUCCEEDED - Publish Documentation"
     needs: [ publish, source, upload, release ]
     runs-on: ubuntu-24.04
+    # Documentation publishing targets a shared resource (the apache/grails-website repo).
+    # Use a static, branch-independent group so only one documentation publish can run at a
+    # time across every branch and across the snapshot publish in gradle.yml; the rest queue.
+    concurrency:
+      group: grails-docs-publish
+      cancel-in-progress: false
     steps:
       - name: "📝 Establish release version"
         run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"

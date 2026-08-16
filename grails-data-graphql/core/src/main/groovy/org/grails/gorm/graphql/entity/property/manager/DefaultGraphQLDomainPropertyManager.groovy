@@ -49,7 +49,7 @@ class DefaultGraphQLDomainPropertyManager implements GraphQLDomainPropertyManage
     static {
         try {
             derivedMethod = Property.getMethod('isDerived', (Class<?>[]) null)
-        } catch (NoSuchMethodException | SecurityException e) { }
+        } catch (NoSuchMethodException | SecurityException ignored) { }
     }
 
     @Override

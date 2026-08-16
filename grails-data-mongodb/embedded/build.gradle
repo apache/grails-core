@@ -1,0 +1,83 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'groovy'
+    id 'java-library'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
+    id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-jacoco'
+}
+
+version = projectVersion
+group = 'org.apache.grails'
+
+ext {
+    pomTitle = 'Embedded MongoDB for Grails Data'
+    pomDescription = 'Starts a real mongod before the application context refreshes and publishes its URL into the configured properties'
+}
+
+dependencies {
+
+    implementation platform(project(':grails-bom'))
+
+    api 'org.springframework:spring-context', {
+        // api: ApplicationContextInitializer, ConfigurableApplicationContext
+    }
+    api "de.bwaldvogel:mongo-java-server:$mongoJavaServerVersion", { // Candidate for grails-bom?
+        // api: MongoServer, MemoryBackend — the default backend, so it ships with the module
+    }
+
+    implementation 'org.springframework:spring-core', {
+        // impl: ConfigurableEnvironment, MapPropertySource, ClassUtils
+    }
+    implementation 'org.slf4j:slf4j-api', {
+        // impl: Logger, LoggerFactory
+    }
+
+    // This module is written in Java so that a plain Spring Boot application can use it,
+    // but every published module still produces a groovydoc jar, and groovydoc needs
+    // Groovy on the compile classpath to infer its own.
+    compileOnly 'org.apache.groovy:groovy'
+
+    // Flapdoodle runs a real mongod but pulls in jgrapht, offered under LGPL-2.1 or
+    // EPL-2.0, which an Apache release should not require. Applications that want a real
+    // mongod add it themselves, the way they pick a SQL driver; FlapdoodleMongoBackend
+    // keeps every reference to it behind an isAvailable() check.
+    compileOnly "de.flapdoodle.embed:de.flapdoodle.embed.mongo:$flapdoodleVersion", {
+        // comp: Mongod, ImmutableMongod, Net, Version, DatabaseDir, MongodArguments
+    }
+
+    testImplementation "de.flapdoodle.embed:de.flapdoodle.embed.mongo:$flapdoodleVersion"
+    testImplementation 'org.apache.groovy:groovy'
+    testImplementation 'org.spockframework:spock-core'
+    testImplementation 'org.mongodb:mongodb-driver-sync' // proves each backend answers a real driver
+
+    testRuntimeOnly 'org.slf4j:slf4j-nop'
+}
+
+apply {
+    // Starts a real mongod, so these belong with the other MongoDB suites and skip together.
+    from rootProject.layout.projectDirectory.file('gradle/mongodb-test-config.gradle')
+}

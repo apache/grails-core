@@ -59,20 +59,22 @@ dependencies {
     compileOnly project(':grails-services')
     compileOnly project(':grails-domain-class')
 
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
     runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
 
     testImplementation project(':grails-testing-support-web')
     testImplementation 'org.spockframework:spock-core'
+
+    testCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 }
 
 // Ship the plugin views as templates (used by the s2ui-override command).
-// 'copyTemplates' is registered by the grails-plugin gradle plugin in afterEvaluate,
-// so it can only be configured from a later afterEvaluate block.
-afterEvaluate {
-    tasks.named('copyTemplates', Copy) {
-        from(layout.projectDirectory.dir('grails-app/views')) {
-            into('views')
-        }
+// 'copyTemplates' is registered by the grails-plugin gradle plugin when the plugin is applied;
+// it stages META-INF/templates into a directory of its own that is packaged into the plugin jar.
+tasks.named('copyTemplates', Copy) {
+    from(layout.projectDirectory.dir('grails-app/views')) {
+        into('views')
     }
 }
 
