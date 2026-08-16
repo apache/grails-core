@@ -227,8 +227,7 @@ class PreferredDatastoreSelector {
                 if (ds != null) {
                     return ds
                 }
-            } catch (Throwable e) {
-                // ignore
+            } catch (Throwable ignored) {
             }
         }
         return null
@@ -272,8 +271,7 @@ class QualifiedDatastoreSelector {
                 if (ds != null && ds != defaultDs) {
                     return ds
                 }
-            } catch (Throwable e) {
-                // ignore
+            } catch (Throwable ignored) {
             } finally {
                 stateRegistry.setResolvingDatastoreDepth(depth)
             }
@@ -285,8 +283,7 @@ class QualifiedDatastoreSelector {
                 if (ds != null && ds != defaultDs) {
                     return ds
                 }
-            } catch (Throwable e) {
-                // ignore
+            } catch (Throwable ignored) {
             } finally {
                 stateRegistry.setResolvingDatastoreDepth(depth)
             }

@@ -331,7 +331,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
             if (ds != null && ds.hasCurrentSession()) {
                 try {
                     ds.getCurrentSession().setAttribute(instance, GormProperties.ERRORS, errors)
-                } catch (IllegalStateException e) {
+                } catch (IllegalStateException ignored) {
                     // Ignore, session might be disconnected
                 }
             }

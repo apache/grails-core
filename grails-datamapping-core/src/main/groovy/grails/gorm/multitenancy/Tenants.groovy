@@ -290,8 +290,7 @@ class Tenants {
         org.grails.datastore.mapping.core.Datastore childDatastore = null
         try {
             childDatastore = multiTenantCapableDatastore.getDatastoreForTenantId(tenantId)
-        } catch (Throwable e) {
-            // ignore
+        } catch (Throwable ignored) {
         }
         // Only reuse an already-bound per-tenant session for non-shared-connection modes
         // (e.g. DATABASE), where getDatastoreForTenantId yields a distinct child datastore.

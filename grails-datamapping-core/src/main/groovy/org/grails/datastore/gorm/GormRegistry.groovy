@@ -742,7 +742,7 @@ class GormRegistry {
                     if (resolved != null) {
                         qualifierDatastore = resolved
                     }
-                } catch (Throwable e) {
+                } catch (Throwable ignored) {
                     // qualifier is not a datasource connection name; keep defaultDatastore
                 }
             }
