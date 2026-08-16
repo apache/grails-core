@@ -396,8 +396,9 @@ abstract class ConfigurationBuilder<B, C> {
                         } catch (ConversionFailedException e) {
                             value = handleConversionException(e, argType, propertyPathForArg)
                         } catch (ConverterNotFoundException e) {
-                            // Groovy 5 / Spring 6 - handle types with @Builder(builderStrategy = SimpleStrategy)
-                            // where Spring can't auto-convert from Map
+                            // Spring 7 nested-map conversion fallback: handle types with
+                            // @Builder(builderStrategy = SimpleStrategy) where Spring cannot
+                            // auto-convert from Map. Independent of the Groovy version.
                             value = handleConverterNotFoundException(e, argType, propertyPathForArg, fallBackValue)
                         }
                         if (value != null) {

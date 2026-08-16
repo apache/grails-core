@@ -408,6 +408,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         setObjectToReadOnly target
         if (entity) {
             for (Association association in entity.associations) {
+                // Groovy 6.0.0-beta-2 requires parentheses around the negated instanceof expression.
                 if (association instanceof ToOne && !(association instanceof Embedded)) {
                     def bean = new BeanWrapperImpl(target)
                     def propertyValue = bean.getPropertyValue(association.name)

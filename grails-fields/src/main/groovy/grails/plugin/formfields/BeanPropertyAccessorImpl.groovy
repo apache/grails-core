@@ -40,7 +40,7 @@ import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.scaffolding.model.property.Constrained
 
-// Groovy 6.0.0-SNAPSHOT: @Canonical no longer auto-generates @MapConstructor
+// Groovy 6.0.0-beta-2: @Canonical no longer auto-generates @MapConstructor
 // under @CompileStatic, so the named-argument call site in
 // `BeanPropertyAccessorFactory.resolvePropertyFromPath` (`new BeanPropertyAccessorImpl(params)`)
 // can't bind to a constructor and the compiler reports

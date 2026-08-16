@@ -42,7 +42,7 @@ class TemplateRenderer {
     }
 
     // Explicit forwarders for the 5 GrailsJsonViewHelper#render(...) overloads.
-    // Under Groovy 6.0.0-SNAPSHOT the @Delegate AST transform no longer satisfies
+    // Under Groovy 6.0.0-beta-2 the @Delegate AST transform no longer satisfies
     // the abstract-method-implementation check for interface methods whose return
     // type is an inner class (here JsonOutput.JsonWritable): the @CompileStatic
     // verifier runs before @Delegate generates the forwarders, so the compiler

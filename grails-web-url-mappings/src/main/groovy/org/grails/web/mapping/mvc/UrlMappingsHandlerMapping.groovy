@@ -251,7 +251,7 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
 
         @Override
         void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
-            request.removeAttribute(UrlMappingsHandlerMapping.MATCHED_REQUEST)
+            request.removeAttribute(MATCHED_REQUEST)
         }
     }
 

@@ -21,9 +21,9 @@ package grails.core
 import spock.lang.Specification
 
 /**
- * Guards the Java default {@link GrailsApplicationLifeCycle#beanRegistrar()} against the
- * Groovy 6 classic-callsite bug where a Groovy interface default method referenced a missing
- * {@code $1} CallSite holder and broke app boot under {@code -PgrailsIndy=false}.
+ * Guards the Groovy interface default {@link GrailsApplicationLifeCycle#beanRegistrar()} against
+ * the Groovy 6 classic-callsite regression where a default method referenced a missing {@code $1}
+ * CallSite holder and broke app boot under {@code -PgrailsIndy=false}.
  */
 class GrailsApplicationLifeCycleDefaultMethodSpec extends Specification {
 

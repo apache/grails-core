@@ -170,9 +170,7 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
                     if (!classNode.getAnnotations(ARTEFACT_CLASS_NODE)) {
                         transformedClassNames.add(classNode.name)
                         addArtefactAnnotation(classNode, handler.type)
-                        // Keep .get() not subscript: under @CompileStatic the subscript binds to
-                        // DefaultGroovyMethods.getAt(Map,String), removed in Groovy 6 (NoSuchMethodError at transform time).
-                        def classInjectors = classInjectorCache.get(handler.type)
+                        def classInjectors = classInjectorCache[handler.type]
                         for (def classInjector : classInjectors) {
                             if (classInjector instanceof CompilationUnitAware) {
                                 ((CompilationUnitAware) classInjector).compilationUnit = compilationUnit

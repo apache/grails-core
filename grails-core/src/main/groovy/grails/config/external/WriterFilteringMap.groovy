@@ -26,13 +26,7 @@ class WriteFilteringMap implements Map<String, Object> {
     String keyPrefix
     private Map<String, Object> proxied // source map
 
-    // Groovy 6 / Spock workaround: exclude the mutating Map methods this class already overrides.
-    // Otherwise @Delegate also generates put(Object,Object)/remove(Object)/putAll(Map) forwarding
-    // straight to `overlap`, competing with the tracking overrides below. Under Groovy 6 (notably
-    // when specs are compiled by the Spock groovy-5.0 artifact) a put(...) call can dispatch to the
-    // generated delegate method instead of the override, so writes land in `overlap` but never in
-    // nestedDestinationMap and getWrittenValues() comes back empty. Excluding them leaves only the
-    // overrides (plus their bridge methods), so every mutation is tracked regardless of dispatch.
+    // Groovy 6.0.0-beta-2: exclude delegated mutators so tracking overrides are always invoked.
     @Delegate(excludes = ['put', 'putAll', 'remove'])
     private Map<String, Object> overlap  // written values, flattened -- shared
     private Map<String, Object> nestedDestinationMap // written keys at this level
@@ -102,4 +96,3 @@ class WriteFilteringMap implements Map<String, Object> {
         }
     }
 }
-

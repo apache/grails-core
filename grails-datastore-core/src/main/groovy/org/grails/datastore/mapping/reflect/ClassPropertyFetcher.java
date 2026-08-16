@@ -225,6 +225,7 @@ public class ClassPropertyFetcher {
         Class javaClass = cachedClass.getTheClass();
         List<T> values = new ArrayList<>(hierarchy.size());
         for (ClassInfo current : hierarchy) {
+            // Groovy 6.0.0-beta-2: trait hierarchy entries may be interfaces without static accessors.
             if (current.getCachedClass().isInterface()) continue;
             MetaProperty metaProperty = current.getMetaClass().getMetaProperty(name);
             if (metaProperty != null && Modifier.isStatic(metaProperty.getModifiers())) {

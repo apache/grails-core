@@ -46,7 +46,7 @@ interface GrailsJsonViewHelper extends GrailsViewHelper {
      * @return The unescaped JSON
      */
     // Groovy 6 Verifier workaround (blocker #6): declared as `default` (concrete) rather than
-    // abstract. Under Groovy 6.0.0-SNAPSHOT the concrete render(...) overrides in
+    // abstract. Under Groovy 6.0.0-beta-2 the concrete render(...) overrides in
     // DefaultGrailsJsonViewHelper get a different return-type descriptor than these interface
     // methods (inner-class return type JsonOutput.JsonWritable; groovy.json.JsonOutput.JsonWritable
     // was removed in Groovy 6), so the abstract-method check in

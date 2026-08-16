@@ -347,6 +347,7 @@ class MyValidateable implements Validateable {
     String town
     private String _someProperty = 'default value'
 
+    // Groovy 6.0.0-beta-2: explicitly implement static trait methods to generate legal Java stubs.
     static Map<String, Constrained> getConstraintsMap() {
         Validateable$Trait$Helper.getConstraintsMap(MyValidateable)
     }
