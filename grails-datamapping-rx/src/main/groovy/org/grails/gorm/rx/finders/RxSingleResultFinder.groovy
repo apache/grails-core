@@ -145,40 +145,49 @@ class RxSingleResultFinder implements FinderMethod {
         Observable observable = (Observable) result
         return observable.switchIfEmpty(Observable.create({ Subscriber s ->
             Thread.start {
-                Map m = [:]
-                List<MethodExpression> expressions = invocation.expressions
-                for (MethodExpression me in expressions) {
-                    if (!(me instanceof MethodExpression.Equal)) {
-                        throw new MissingMethodException(invocation.methodName, invocation.javaClass, invocation.arguments)
+                try {
+                    Map m = [:]
+                    List<MethodExpression> expressions = invocation.expressions
+                    for (MethodExpression me in expressions) {
+                        if (!(me instanceof MethodExpression.Equal)) {
+                            throw new MissingMethodException(invocation.methodName, invocation.javaClass, invocation.arguments)
+                        }
+                        String propertyName = me.propertyName
+                        Object[] meArguments = me.getArguments()
+                        m.put(propertyName, meArguments[0])
                     }
-                    String propertyName = me.propertyName
-                    Object[] meArguments = me.getArguments()
-                    m.put(propertyName, meArguments[0])
+
+                    def newInstance = invocation.javaClass.newInstance(m)
+                    if (save) {
+                        def saveObservable = ((RxEntity) newInstance).save()
+                        saveObservable.subscribe(new Subscriber() {
+                            @Override
+                            void onCompleted() {
+                                s.onCompleted()
+                            }
+
+                            @Override
+                            void onError(Throwable e) {
+                                s.onError(e)
+                            }
+
+                            @Override
+                            void onNext(Object o) {
+                                s.onNext o
+                            }
+                        })
+                    }
+                    else {
+                        s.onNext newInstance
+                        s.onCompleted()
+                    }
                 }
-
-                def newInstance = invocation.javaClass.newInstance(m)
-                if (save) {
-                    def saveObservable = ((RxEntity) newInstance).save()
-                    saveObservable.subscribe(new Subscriber() {
-                        @Override
-                        void onCompleted() {
-                            s.onCompleted()
-                        }
-
-                        @Override
-                        void onError(Throwable e) {
-                            s.onError(e)
-                        }
-
-                        @Override
-                        void onNext(Object o) {
-                            s.onNext o
-                        }
-                    })
-                }
-                else {
-                    s.onNext newInstance
-                    s.onCompleted()
+                catch (Throwable e) {
+                    // Without this, a thrown exception (e.g. MissingMethodException from the
+                    // non-Equal-expression check above, or a failure constructing newInstance)
+                    // kills this spawned Thread silently: it never reaches the Observable's error
+                    // channel, so any blocking call on the returned Observable hangs forever.
+                    s.onError(e)
                 }
             }
         } as Observable.OnSubscribe))

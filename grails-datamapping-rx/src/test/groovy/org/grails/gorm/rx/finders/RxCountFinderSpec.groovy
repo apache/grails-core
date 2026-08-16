@@ -62,6 +62,22 @@ class RxCountFinderSpec extends Specification {
         !RxCountFinder.countBy(datastoreClient).isMethodMatch('somethingElse')
     }
 
+    void "setPattern delegates to the grammar"() {
+        given:
+        def finder = RxCountFinder.countBy(datastoreClient)
+
+        expect:
+        finder.isMethodMatch('countByName')
+        !finder.isMethodMatch('customPrefixName')
+
+        when:
+        finder.setPattern('(customPrefix)(\\w+)')
+
+        then:
+        finder.isMethodMatch('customPrefixName')
+        !finder.isMethodMatch('countByName')
+    }
+
     void "counts by building and executing a query via the RX datastore client instead of a session"() {
         given:
         def finder = RxCountFinder.countBy(datastoreClient)
@@ -98,6 +114,21 @@ class RxCountFinderSpec extends Specification {
         then:
         1 * datastoreClient.createQuery(Person) >> query
         2 * query.add({ Query.Criterion it -> it instanceof Query.PropertyCriterion })
+        1 * query.singleResult() >> Observable.just(4L)
+        result == 4L
+    }
+
+    void "invoke(Class, methodName, DetachedCriteria, Object[]) with a null detachedCriteria never merges anything onto the built query"() {
+        given:
+        def finder = RxCountFinder.countBy(datastoreClient)
+
+        when:
+        Observable observable = finder.invoke(Person, 'countByName', (grails.gorm.DetachedCriteria) null, ['Fred'] as Object[]) as Observable
+        def result = observable.toBlocking().first()
+
+        then:
+        1 * datastoreClient.createQuery(Person) >> query
+        1 * query.add({ Query.Criterion it -> it instanceof Query.PropertyCriterion })
         1 * query.singleResult() >> Observable.just(4L)
         result == 4L
     }

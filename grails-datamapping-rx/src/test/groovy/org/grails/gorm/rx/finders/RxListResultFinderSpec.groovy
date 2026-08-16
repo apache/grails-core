@@ -79,6 +79,22 @@ class RxListResultFinderSpec extends Specification {
         !RxListResultFinder.findAllBy(datastoreClient).isMethodMatch('somethingElse')
     }
 
+    void "setPattern delegates to the grammar"() {
+        given:
+        def finder = RxListResultFinder.findAllBy(datastoreClient)
+
+        expect:
+        finder.isMethodMatch('findAllByTitle')
+        !finder.isMethodMatch('customPrefixTitle')
+
+        when:
+        finder.setPattern('(customPrefix)([A-Z]\\w*)')
+
+        then:
+        finder.isMethodMatch('customPrefixTitle')
+        !finder.isMethodMatch('findAllByTitle')
+    }
+
     void "findAllBy finds all without remaining arguments by invoking findAll on the RX query"() {
         given:
         def finder = RxListResultFinder.findAllBy(datastoreClient)
@@ -119,6 +135,39 @@ class RxListResultFinderSpec extends Specification {
         1 * query.add({ Query.Criterion it -> it instanceof Query.PropertyCriterion })
         1 * query.add({ Query.Criterion it -> it instanceof Query.Junction })
         1 * query.findAll() >> observable
+        result.is(observable)
+    }
+
+    void "findAllBy invoke(Class, methodName, DetachedCriteria, Object[]) with a null detachedCriteria never merges anything onto the built query"() {
+        given:
+        def finder = RxListResultFinder.findAllBy(datastoreClient)
+        def observable = Observable.just(new Book(title: 'Shogun'))
+
+        when:
+        def result = finder.invoke(Book, 'findAllByTitle', (grails.gorm.DetachedCriteria) null, ['Shogun'] as Object[])
+
+        then:
+        1 * datastoreClient.createQuery(Book) >> query
+        0 * query.add({ Query.Criterion it -> it instanceof Query.PropertyCriterion })
+        1 * query.add({ Query.Criterion it -> it instanceof Query.Junction })
+        1 * query.findAll() >> observable
+        result.is(observable)
+    }
+
+    void "findAllBy finds all with a non-Map remaining argument by invoking the no-arg findAll on the RX query"() {
+        given:
+        // Mirrors the Map-argument test below, but proves a non-Map remaining argument is treated
+        // exactly like having no remaining arguments at all, rather than being passed through.
+        def finder = RxListResultFinder.findAllBy(datastoreClient)
+        def observable = Observable.just(new Book(title: 'Shogun'))
+
+        when:
+        def result = finder.invoke(Book, 'findAllByTitle', ['Shogun', 'unexpectedExtra'] as Object[])
+
+        then:
+        1 * datastoreClient.createQuery(Book) >> query
+        1 * query.findAll() >> observable
+        0 * query.findAll(_)
         result.is(observable)
     }
 

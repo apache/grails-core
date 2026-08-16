@@ -120,6 +120,19 @@ class CountFinderSpec extends Specification {
         !countFinder.isMethodMatch('somethingElse')
     }
 
+    void "setPattern delegates to the grammar"() {
+        expect:
+        countFinder.isMethodMatch('countByName')
+        !countFinder.isMethodMatch('customPrefixName')
+
+        when:
+        countFinder.setPattern('(customPrefix)(\\w+)')
+
+        then:
+        countFinder.isMethodMatch('customPrefixName')
+        !countFinder.isMethodMatch('countByName')
+    }
+
     void "invoke runs the full round trip through the real DatastoreUtils.execute seam and returns the count"() {
         given:
         Query.ProjectionList projectionList = Mock(Query.ProjectionList)
@@ -171,6 +184,29 @@ class CountFinderSpec extends Specification {
         result == 2L
         // One from the detached criteria's merged criterion, one from the real "name" expression.
         2 * query.add({ it instanceof Query.PropertyCriterion })
+        1 * projectionList.count()
+    }
+
+    void "invoke(Class, methodName, DetachedCriteria, Object[]) with a null detachedCriteria never merges anything onto the built query"() {
+        given:
+        Query.ProjectionList projectionList = Mock(Query.ProjectionList)
+        Query query = Mock(Query) {
+            getEntity() >> persistentEntity
+            projections() >> projectionList
+            singleResult() >> 2L
+        }
+        Session session = Stub(Session) {
+            createQuery(FinderTestEntity) >> query
+        }
+        datastore.hasCurrentSession() >> true
+        datastore.getCurrentSession() >> session
+
+        when:
+        Object result = countFinder.invoke(FinderTestEntity, 'countByName', (grails.gorm.DetachedCriteria) null, ['Bob'] as Object[])
+
+        then:
+        result == 2L
+        1 * query.add({ it instanceof Query.PropertyCriterion })
         1 * projectionList.count()
     }
 

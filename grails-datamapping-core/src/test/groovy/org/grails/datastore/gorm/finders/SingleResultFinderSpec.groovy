@@ -92,6 +92,22 @@ class SingleResultFinderSpec extends Specification {
         'somethingElse'    | false
     }
 
+    void "setPattern delegates to the grammar"() {
+        given:
+        SingleResultFinder finder = SingleResultFinder.findBy(datastore)
+
+        expect:
+        finder.isMethodMatch('findByName')
+        !finder.isMethodMatch('customPrefixName')
+
+        when:
+        finder.setPattern('(customPrefix)([A-Z]\\w*)')
+
+        then:
+        finder.isMethodMatch('customPrefixName')
+        !finder.isMethodMatch('findByName')
+    }
+
     void "findBy runs the full round trip through the real DatastoreUtils.execute seam and returns singleResult()"() {
         given:
         FinderTestEntity expected = new FinderTestEntity(name: 'Bob')
@@ -145,6 +161,31 @@ class SingleResultFinderSpec extends Specification {
         then:
         result.is(expected)
         1 * query.add({ it instanceof Query.PropertyCriterion })
+        1 * query.add({ it instanceof Query.Conjunction })
+    }
+
+    void "invoke(Class, methodName, DetachedCriteria, Object[]) with a null detachedCriteria never merges anything onto the built query"() {
+        given:
+        // Same reflective entry point as above, but for the case AbstractDetachedCriteria's own
+        // detached criteria has nothing to merge - proving the null-check actually guards the merge
+        // rather than it happening to be a no-op some other way.
+        FinderTestEntity expected = new FinderTestEntity(name: 'Bob')
+        Query query = Mock(Query) {
+            getEntity() >> persistentEntity
+            singleResult() >> expected
+        }
+        Session session = Stub(Session) {
+            createQuery(FinderTestEntity) >> query
+        }
+        datastore.hasCurrentSession() >> true
+        datastore.getCurrentSession() >> session
+
+        when:
+        Object result = SingleResultFinder.findBy(datastore).invoke(FinderTestEntity, 'findByName', (grails.gorm.DetachedCriteria) null, ['Bob'] as Object[])
+
+        then:
+        result.is(expected)
+        0 * query.add({ it instanceof Query.PropertyCriterion })
         1 * query.add({ it instanceof Query.Conjunction })
     }
 
@@ -218,6 +259,29 @@ class SingleResultFinderSpec extends Specification {
         result instanceof FinderTestEntity
         result.name == 'Bob'
         !result.saved
+    }
+
+    void "findOrCreateBy wraps a ConversionException from singleResult() into a MissingMethodException"() {
+        given:
+        // Guards the onNullResult-configured path (findOrCreateBy/findOrSaveBy only): if the query
+        // itself fails to convert an argument rather than simply returning null, that failure must
+        // still surface as a MissingMethodException, not propagate as a raw ConversionException.
+        Query query = Mock(Query) {
+            getEntity() >> persistentEntity
+            singleResult() >> { throw new org.springframework.core.convert.ConversionFailedException(
+                    org.springframework.core.convert.TypeDescriptor.valueOf(String), org.springframework.core.convert.TypeDescriptor.valueOf(Integer), 'Bob', new IllegalArgumentException()) }
+        }
+        Session session = Stub(Session) {
+            createQuery(FinderTestEntity) >> query
+        }
+        datastore.hasCurrentSession() >> true
+        datastore.getCurrentSession() >> session
+
+        when:
+        SingleResultFinder.findOrCreateBy(datastore).invoke(FinderTestEntity, 'findOrCreateByName', ['Bob'] as Object[])
+
+        then:
+        thrown(MissingMethodException)
     }
 
     void "findOrCreateBy invoke throws IllegalStateException when constructed in stateless mode"() {

@@ -73,6 +73,22 @@ class ListResultFinderSpec extends Specification {
         'somethingElse'       | false
     }
 
+    void "setPattern delegates to the grammar"() {
+        given:
+        ListResultFinder finder = ListResultFinder.findAllBy(datastore)
+
+        expect:
+        finder.isMethodMatch('findAllByName')
+        !finder.isMethodMatch('customPrefixName')
+
+        when:
+        finder.setPattern('(customPrefix)([A-Z]\\w*)')
+
+        then:
+        finder.isMethodMatch('customPrefixName')
+        !finder.isMethodMatch('findAllByName')
+    }
+
     void "findAllBy runs the full round trip, applies distinct and returns the full list"() {
         given:
         List<FinderTestEntity> expected = [new FinderTestEntity(name: 'Bob')]
@@ -125,6 +141,30 @@ class ListResultFinderSpec extends Specification {
         then:
         result.is(expected)
         1 * query.add({ it instanceof Query.PropertyCriterion })
+        1 * projectionList.distinct()
+        1 * query.list() >> expected
+    }
+
+    void "invoke(Class, methodName, DetachedCriteria, Object[]) with a null detachedCriteria never merges anything onto the built query"() {
+        given:
+        List<FinderTestEntity> expected = [new FinderTestEntity(name: 'Bob')]
+        Query.ProjectionList projectionList = Mock(Query.ProjectionList)
+        Query query = Mock(Query) {
+            getEntity() >> persistentEntity
+            projections() >> projectionList
+        }
+        Session session = Stub(Session) {
+            createQuery(FinderTestEntity) >> query
+        }
+        datastore.hasCurrentSession() >> true
+        datastore.getCurrentSession() >> session
+
+        when:
+        Object result = ListResultFinder.findAllBy(datastore).invoke(FinderTestEntity, 'findAllByName', (grails.gorm.DetachedCriteria) null, ['Bob'] as Object[])
+
+        then:
+        result.is(expected)
+        0 * query.add({ it instanceof Query.PropertyCriterion })
         1 * projectionList.distinct()
         1 * query.list() >> expected
     }

@@ -76,6 +76,58 @@ class ListOrderByFinderSpec extends Specification {
         0 * query.singleResult()
     }
 
+    void "invoke ignores a non-Map first argument, defaulting to ascending order without delegating to DynamicFinder.populateArgumentsForCriteria"() {
+        given:
+        // Only a Map first argument is ever inspected for order/criteria options - anything else
+        // (e.g. a plain scalar) must fall through exactly like the no-arguments case.
+        Query.ProjectionList projectionList = Mock(Query.ProjectionList)
+        Query query = Mock(Query) {
+            projections() >> projectionList
+        }
+        Session session = Stub(Session) {
+            createQuery(FinderTestEntity) >> query
+        }
+        datastore.hasCurrentSession() >> true
+        datastore.getCurrentSession() >> session
+
+        when:
+        finder.invoke(FinderTestEntity, 'listOrderByAge', ['not a map'] as Object[])
+
+        then:
+        1 * query.order({ Query.Order order -> order.property == 'age' && order.direction == Query.Order.Direction.ASC })
+        1 * projectionList.distinct()
+        1 * query.list()
+    }
+
+    @Unroll
+    void "invoke stays ascending when the Map's order entry is '#order'"() {
+        given:
+        Query.ProjectionList projectionList = Mock(Query.ProjectionList)
+        PersistentEntity persistentEntity = Stub(PersistentEntity) {
+            getMappingContext() >> mappingContext
+        }
+        Query query = Mock(Query) {
+            getEntity() >> persistentEntity
+            projections() >> projectionList
+        }
+        Session session = Stub(Session) {
+            createQuery(FinderTestEntity) >> query
+        }
+        datastore.hasCurrentSession() >> true
+        datastore.getCurrentSession() >> session
+
+        when:
+        finder.invoke(FinderTestEntity, 'listOrderByAge', [order != null ? [order: order] : [:]] as Object[])
+
+        then:
+        1 * query.order({ Query.Order o -> o.property == 'age' && o.direction == Query.Order.Direction.ASC })
+        1 * projectionList.distinct()
+        1 * query.list()
+
+        where:
+        order << [null, 'asc']
+    }
+
     void "invoke flips to descending order and delegates the remaining Map entries to DynamicFinder.populateArgumentsForCriteria"() {
         given:
         Query.ProjectionList projectionList = Mock(Query.ProjectionList)

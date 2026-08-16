@@ -88,6 +88,19 @@ class DynamicFinderSpec extends Specification {
         DynamicFinder.buildMatchSpec("findBy", "findByTitle", 0) == null
     }
 
+    void "buildMatchSpec returns null when the method name does not match the prefix pattern at all"() {
+        expect:
+        DynamicFinder.buildMatchSpec("findBy", "getSomethingUnrelated", 1) == null
+    }
+
+    void "buildMatchSpec returns null when an And-combined expression's total arguments exceed the given parameter count"() {
+        expect:
+        // "TitleAndAuthorBetween" splits into Equal(title, 1 arg) + Between(author, 2 args) = 3
+        // required arguments total - only reachable via the post-loop check since neither
+        // individual expression alone exceeds parameterCount.
+        DynamicFinder.buildMatchSpec("findBy", "findByTitleAndAuthorBetween", 2) == null
+    }
+
     void "buildMatchSpec resolves a GreaterThanEquals suffix without truncating it to GreaterThan"() {
         given:
         MatchSpec spec = DynamicFinder.buildMatchSpec("findBy", "findByAgeGreaterThanEquals", 1)
@@ -591,6 +604,28 @@ class DynamicFinderSpec extends Specification {
         0 * criteria.offset(_)
     }
 
+    void "populateArgumentsForCriteria(BuildableCriteria) applies a descending order for a single-field CharSequence sort"() {
+        given:
+        BuildableCriteria criteria = Mock(BuildableCriteria)
+
+        when:
+        DynamicFinder.populateArgumentsForCriteria(criteria, [sort: 'name', order: 'desc'])
+
+        then:
+        1 * criteria.order({ Query.Order order -> order.property == 'name' && order.direction == Query.Order.Direction.DESC && order.ignoreCase })
+    }
+
+    void "populateArgumentsForCriteria(BuildableCriteria) honours ignoreCase: false for a single-field CharSequence sort"() {
+        given:
+        BuildableCriteria criteria = Mock(BuildableCriteria)
+
+        when:
+        DynamicFinder.populateArgumentsForCriteria(criteria, [sort: 'name', ignoreCase: false])
+
+        then:
+        1 * criteria.order({ Query.Order order -> order.property == 'name' && order.direction == Query.Order.Direction.ASC && !order.ignoreCase })
+    }
+
     void "populateArgumentsForCriteria(BuildableCriteria) applies fetch strategies for EAGER and LAZY associations"() {
         given:
         BuildableCriteria criteria = Mock(BuildableCriteria)
@@ -806,5 +841,28 @@ class DynamicFinderSpec extends Specification {
 
         then:
         1 * query.max(5)
+    }
+
+    void "buildQuery ignores a remaining argument that is not a Map"() {
+        given:
+        // configureQueryWithArguments only inspects arguments[0] as a criteria Map when it actually
+        // is one - a non-Map remaining argument must fall through exactly like having no remaining
+        // arguments at all.
+        Query query = Mock(Query) {
+            getEntity() >> Stub(PersistentEntity) { getMappingContext() >> mappingContext }
+        }
+        Session session = Stub(Session) {
+            createQuery(FinderTestEntity) >> query
+            getMappingContext() >> mappingContext
+        }
+        DynamicFinderInvocation invocation = findByGrammar.createFinderInvocation(
+                FinderTestEntity, 'findByName', null, ['Bob', 'unexpectedExtra'] as Object[])
+
+        when:
+        findByGrammar.buildQuery(invocation, session)
+
+        then:
+        0 * query.max(_)
+        0 * query.offset(_)
     }
 }

@@ -91,6 +91,22 @@ class RxSingleResultFinderSpec extends Specification {
         !RxSingleResultFinder.findBy(datastoreClient).isMethodMatch('somethingElse')
     }
 
+    void "setPattern delegates to the grammar"() {
+        given:
+        def finder = RxSingleResultFinder.findBy(datastoreClient)
+
+        expect:
+        finder.isMethodMatch('findByTitle')
+        !finder.isMethodMatch('customPrefixTitle')
+
+        when:
+        finder.setPattern('(customPrefix)([A-Z]\\w*)')
+
+        then:
+        finder.isMethodMatch('customPrefixTitle')
+        !finder.isMethodMatch('findByTitle')
+    }
+
     void "findBy finds by building and executing a query via the RX datastore client instead of a session"() {
         given:
         def finder = RxSingleResultFinder.findBy(datastoreClient)
@@ -128,6 +144,22 @@ class RxSingleResultFinderSpec extends Specification {
         then:
         1 * datastoreClient.createQuery(Book) >> query
         1 * query.add({ Query.Criterion it -> it instanceof Query.PropertyCriterion })
+        1 * query.add({ Query.Criterion it -> it instanceof Query.Junction })
+        1 * query.singleResult() >> Observable.just(new Book(title: 'Shogun'))
+        result.title == 'Shogun'
+    }
+
+    void "findBy invoke(Class, methodName, DetachedCriteria, Object[]) with a null detachedCriteria never merges anything onto the built query"() {
+        given:
+        def finder = RxSingleResultFinder.findBy(datastoreClient)
+
+        when:
+        Observable observable = finder.invoke(Book, 'findByTitle', (grails.gorm.DetachedCriteria) null, ['Shogun'] as Object[]) as Observable
+        Book result = observable.toBlocking().first() as Book
+
+        then:
+        1 * datastoreClient.createQuery(Book) >> query
+        0 * query.add({ Query.Criterion it -> it instanceof Query.PropertyCriterion })
         1 * query.add({ Query.Criterion it -> it instanceof Query.Junction })
         1 * query.singleResult() >> Observable.just(new Book(title: 'Shogun'))
         result.title == 'Shogun'
@@ -239,16 +271,27 @@ class RxSingleResultFinderSpec extends Specification {
         (subscriber.onNextEvents[0] as Person).name == 'Fred'
     }
 
-    // NOTE: unlike SingleResultFinderSpec (core), there is deliberately no test here for a
-    // non-Equal expression reaching the empty-result construction path. In this async
-    // implementation that path runs inside a spawned Thread with no try/catch (preserved exactly
-    // from the original rx FindOrCreateByFinder - see the class Javadoc), so a thrown
-    // MissingMethodException never reaches the Observable's error channel at all: the thread dies
-    // silently and any blocking call on the Observable hangs forever. This is a genuine latent bug
-    // in the pre-existing rx implementation, not introduced by this refactor, and was never covered
-    // by the original test suite either - it is not safely testable without either fixing the
-    // production code (out of scope for this pass) or adding an artificial timeout that would not
-    // reflect real behavior.
+    void "findOrCreateBy signals an error rather than hanging when a non-Equal expression reaches the empty-result construction path"() {
+        given:
+        // The empty-result construction path runs inside a spawned Thread - unlike the
+        // synchronous SingleResultFinder, a thrown exception there does not propagate as a normal
+        // method-call exception, so it must be forwarded to the Observable's error channel
+        // explicitly (via Subscriber#onError) or it would kill the thread silently and hang any
+        // blocking call on the returned Observable forever.
+        def finder = RxSingleResultFinder.findOrCreateBy(datastoreClient)
+
+        when:
+        Observable observable = finder.invoke(Person, 'findOrCreateByNameLike', ['Fre%'] as Object[]) as Observable
+        def subscriber = new rx.observers.TestSubscriber()
+        observable.subscribe(subscriber)
+        subscriber.awaitTerminalEvent(5, java.util.concurrent.TimeUnit.SECONDS)
+
+        then:
+        1 * datastoreClient.createQuery(Person) >> query
+        1 * query.singleResult() >> Observable.empty()
+        subscriber.assertError(groovy.lang.MissingMethodException)
+        subscriber.onNextEvents.isEmpty()
+    }
 
     void "findOrSaveBy isMethodMatch matches findOrSaveBy method names only"() {
         expect:
