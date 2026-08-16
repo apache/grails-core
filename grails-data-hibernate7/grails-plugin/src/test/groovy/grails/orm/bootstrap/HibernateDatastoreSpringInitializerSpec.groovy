@@ -19,14 +19,21 @@
 package grails.orm.bootstrap
 
 import grails.gorm.annotation.Entity
+import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.Session
 import org.hibernate.SessionFactory
 import org.hibernate.dialect.H2Dialect
+import org.springframework.beans.factory.support.BeanDefinitionRegistry
+import org.springframework.beans.factory.support.RootBeanDefinition
 import org.springframework.context.ConfigurableApplicationContext
+import org.springframework.context.support.GenericApplicationContext
+import org.springframework.jdbc.datasource.DriverManagerDataSource
 import org.springframework.transaction.PlatformTransactionManager
 import spock.lang.AutoCleanup
 import spock.lang.Specification
+
+import javax.sql.DataSource
 
 /**
  * Created by graemerocher on 29/01/14.
@@ -92,6 +99,130 @@ class HibernateDatastoreSpringInitializerSpec extends Specification{
             assert s.doReturningWork { it.getMetaData().getURL() } == "jdbc:h2:mem:moreBooks"
             return true
         }
+    }
+
+    void "Test configureDataSources uses the customized default data source bean name consistently"() {
+        given: "an initializer with a customized default data source bean name"
+        def datastoreInitializer = new HibernateDatastoreSpringInitializer([:], Person)
+        datastoreInitializer.defaultDataSourceBeanName = 'primary'
+
+        when: "data sources are configured from a resolver with only the default data source present"
+        datastoreInitializer.configureDataSources(DatastoreUtils.createPropertyResolver(['dataSource.url': 'jdbc:h2:mem:customDefaultDsName;LOCK_TIMEOUT=10000']))
+
+        then: "the default entry is recorded under the custom name, not the literal ConnectionSource.DEFAULT"
+        datastoreInitializer.dataSources == ['primary'] as Set<String>
+    }
+
+    void "Test applyEnableReloadFallback injects a fallback when customized and not already configured"() {
+        given:
+        def datastoreInitializer = new HibernateDatastoreSpringInitializer([:], Person)
+        datastoreInitializer.enableReload = true
+
+        when:
+        datastoreInitializer.applyEnableReloadFallback()
+
+        then:
+        datastoreInitializer.configuration.getProperty('enableReload', Boolean) == true
+    }
+
+    void "Test applyEnableReloadFallback does not override an already-configured value"() {
+        given:
+        def datastoreInitializer = new HibernateDatastoreSpringInitializer(['enableReload': 'false'], Person)
+        datastoreInitializer.enableReload = true
+
+        when:
+        datastoreInitializer.applyEnableReloadFallback()
+
+        then:
+        datastoreInitializer.configuration.getProperty('enableReload', Boolean) == false
+    }
+
+    void "Test enableReload is honored end-to-end as a fallback on the default connection's settings"() {
+        given: "an initializer with enableReload customized and no explicit config for it"
+        def datastoreInitializer = new HibernateDatastoreSpringInitializer(
+                ['dataSource.url': 'jdbc:h2:mem:enableReloadFallback;LOCK_TIMEOUT=10000'], Person)
+        datastoreInitializer.enableReload = true
+
+        when: "the application is configured"
+        applicationContext = (ConfigurableApplicationContext) datastoreInitializer.configure()
+        def settings = applicationContext.getBean(HibernateDatastore).connectionSources.defaultConnectionSource.settings
+
+        then: "the fallback reaches the datastore's own connection source settings"
+        settings.enableReload
+    }
+
+    void "Test the Map/Collection<Class> constructor bootstraps GORM"() {
+        given: "An initializer built from a Collection of persistent classes"
+        def datastoreInitializer = new HibernateDatastoreSpringInitializer(
+                ['dataSource.url': 'jdbc:h2:mem:collectionCtor;LOCK_TIMEOUT=10000', 'hibernate.hbm2ddl.auto': 'create'],
+                [Person] as Collection<Class>)
+
+        when: "the application is configured"
+        applicationContext = (ConfigurableApplicationContext) datastoreInitializer.configure()
+
+        then: "GORM is bootstrapped with the given entity"
+        applicationContext.getBean(HibernateDatastore).mappingContext.getPersistentEntity(Person.name) != null
+        Person.withNewSession { Person.count() == 0 }
+    }
+
+    void "Test configureForDataSource bootstraps GORM around a pre-existing DataSource"() {
+        given: "a DataSource created ahead of time"
+        def dataSource = new DriverManagerDataSource(HibernateDatastoreSpringInitializer.TEST_DB_URL, 'sa', '')
+        dataSource.driverClassName = 'org.h2.Driver'
+        def datastoreInitializer = new HibernateDatastoreSpringInitializer(['hibernate.hbm2ddl.auto': 'create'], Person)
+
+        when: "the initializer is configured around that DataSource"
+        applicationContext = (ConfigurableApplicationContext) datastoreInitializer.configureForDataSource(dataSource)
+
+        then: "the pre-existing DataSource is registered and reused rather than a new one being built"
+        applicationContext.getBean(HibernateDatastoreSpringInitializer.DEFAULT_DATA_SOURCE_NAME, DataSource).is(dataSource)
+        Person.withNewSession { Person.count() == 0 }
+    }
+
+    void "Test configureForBeanDefinitionRegistry throws when the hibernateDatastore bean was not registered"() {
+        given: "an initializer whose bean definitions never register hibernateDatastore"
+        def datastoreInitializer = new HibernateDatastoreSpringInitializer([:], Person) {
+            @Override
+            Closure getBeanDefinitions(BeanDefinitionRegistry beanDefinitionRegistry) {
+                { -> }
+            }
+        }
+        def registry = new GenericApplicationContext()
+
+        when:
+        datastoreInitializer.configureForBeanDefinitionRegistry(registry)
+
+        then:
+        thrown(IllegalStateException)
+
+        cleanup:
+        registry.close()
+    }
+
+    void "Test the OSIV interceptor is registered when the registry is a web application"() {
+        given: "a registry that signals it belongs to a web application"
+        def datastoreInitializer = new HibernateDatastoreSpringInitializer(['dataSource.url': 'jdbc:h2:mem:osivEnabled;LOCK_TIMEOUT=10000'], Person)
+        def registry = new GenericApplicationContext()
+        registry.registerBeanDefinition('grailsControllerHelper', new RootBeanDefinition(Object))
+
+        when:
+        datastoreInitializer.configureForBeanDefinitionRegistry(registry)
+        registry.refresh()
+        applicationContext = registry
+
+        then:
+        registry.containsBean('openSessionInViewInterceptor')
+    }
+
+    void "Test the OSIV interceptor is not registered for a non-web application registry"() {
+        given: "An initializer instance configured against a plain, non-web registry"
+        def datastoreInitializer = new HibernateDatastoreSpringInitializer(['dataSource.url': 'jdbc:h2:mem:osivDisabled;LOCK_TIMEOUT=10000'], Person)
+
+        when:
+        applicationContext = (ConfigurableApplicationContext) datastoreInitializer.configure()
+
+        then:
+        !applicationContext.containsBean('openSessionInViewInterceptor')
     }
 }
 @Entity

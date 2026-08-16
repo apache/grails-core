@@ -23,6 +23,7 @@ import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.support.GenericApplicationContext
 import org.springframework.core.env.ConfigurableEnvironment
+import org.springframework.core.env.MapPropertySource
 import org.springframework.core.env.PropertyResolver
 import org.springframework.transaction.PlatformTransactionManager
 
@@ -47,16 +48,13 @@ import org.grails.orm.hibernate.support.HibernateDatastoreConnectionSourcesRegis
  */
 class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
 
-    public static final String SESSION_FACTORY_BEAN_NAME = 'sessionFactory'
     public static final String DEFAULT_DATA_SOURCE_NAME = Settings.SETTING_DATASOURCE
     public static final String DATA_SOURCES = Settings.SETTING_DATASOURCES
     public static final String TEST_DB_URL = 'jdbc:h2:mem:grailsDb;LOCK_TIMEOUT=10000;DB_CLOSE_DELAY=-1'
 
     String defaultDataSourceBeanName = ConnectionSource.DEFAULT
-    String defaultSessionFactoryBeanName = SESSION_FACTORY_BEAN_NAME
     Set<String> dataSources = [defaultDataSourceBeanName] as Set<String>
     boolean enableReload = false
-    boolean grailsPlugin = false
 
     HibernateDatastoreSpringInitializer(PropertyResolver configuration, Collection<Class> persistentClasses) {
         super(configuration, persistentClasses)
@@ -99,7 +97,7 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
             }
             Map dataSource = (Map) config.getProperty(DEFAULT_DATA_SOURCE_NAME, Map, Collections.emptyMap())
             if (dataSource != null && !dataSource.isEmpty()) {
-                dataSourceNames.add(ConnectionSource.DEFAULT)
+                dataSourceNames.add(defaultDataSourceBeanName)
             }
         }
         this.dataSources = dataSourceNames
@@ -107,7 +105,7 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
 
     @Override
     protected Class<AbstractDatastorePersistenceContextInterceptor> getPersistenceInterceptorClass() {
-        getClass().classLoader.loadClass('org.grails.plugin.hibernate.support.HibernatePersistenceContextInterceptor')
+        getClass().classLoader.loadClass('org.grails.plugin.hibernate.support.HibernatePersistenceContextInterceptor') as Class<AbstractDatastorePersistenceContextInterceptor>
     }
 
     /**
@@ -121,10 +119,6 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
         return applicationContext
     }
 
-    protected String getTestDbUrl() {
-        TEST_DB_URL
-    }
-
     @CompileStatic
     ApplicationContext configureForDataSource(DataSource dataSource) {
         GenericApplicationContext applicationContext = createApplicationContext()
@@ -134,7 +128,27 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
         return applicationContext
     }
 
+    /**
+     * Applies {@link #enableReload} as an {@code enableReload} fallback on {@link #configuration}
+     * when it was customized away from its default and the configuration does not already specify
+     * it explicitly.
+     */
+    protected void applyEnableReloadFallback() {
+        if (!enableReload || configuration.containsProperty('enableReload')) {
+            return
+        }
+        if (configuration instanceof ConfigurableEnvironment) {
+            ((ConfigurableEnvironment) configuration).propertySources.addFirst(
+                    new MapPropertySource('hibernateDatastoreSpringInitializer.enableReload', [enableReload: true])
+            )
+        }
+        else if (configuration instanceof Map) {
+            ((Map) configuration).put('enableReload', true)
+        }
+    }
+
     Closure getBeanDefinitions(BeanDefinitionRegistry beanDefinitionRegistry) {
+        applyEnableReloadFallback()
         ApplicationEventPublisher eventPublisher = super.findEventPublisher(beanDefinitionRegistry)
         Closure beanDefinitions = {
             def common = getCommonConfiguration(beanDefinitionRegistry, 'hibernate')
