@@ -361,4 +361,53 @@ class Foo {
         then:
         impl.getMethod('saveFoo', String).getAnnotation(grails.gorm.transactions.Transactional) != null
     }
+
+    void 'a @Where delete method with an incompatible return type fails to compile'() {
+        when:
+        new GroovyClassLoader().parseClass('''
+import grails.gorm.services.Service
+import grails.gorm.services.Where
+import grails.gorm.annotation.Entity
+
+@Service(Foo)
+interface FooService {
+    @Where({ title ==~ pattern })
+    String deleteByTitle(String pattern)
+}
+@Entity
+class Foo {
+    String title
+}
+''')
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('No implementations possible')
+    }
+
+    void 'a save method with an id-named parameter binds it directly onto the entity'() {
+        when:
+        Class service = new GroovyClassLoader().parseClass('''
+import grails.gorm.services.Service
+import grails.gorm.annotation.Entity
+
+@Service(Foo)
+interface FooService {
+    Foo save(Serializable id, String title)
+}
+@Entity
+class Foo {
+    String title
+}
+''')
+
+        then:
+        service.isInterface()
+
+        when:
+        Class impl = service.classLoader.loadClass("\$FooServiceImplementation")
+
+        then:
+        impl.getMethod('save', Serializable, String).getAnnotation(Implemented).by() == org.grails.datastore.gorm.services.implementers.SaveImplementer
+    }
 }
