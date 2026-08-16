@@ -136,7 +136,7 @@ class TenantTransform extends AbstractDatastoreMethodDecoratingTransformation {
                 return makeDelegatingClosureCall(tenantServiceVar, 'withId', args(tenantIdVar), params(param(serializableClassNode, VAR_TENANT_ID)), originalMethodCallExpr, variableScope)
             }
             else {
-                addError('@Tenant value should be a closure', annotationNode)
+                AstUtils.error(sourceUnit, annotationNode, '@Tenant value should be a closure')
                 return makeDelegatingClosureCall(tenantServiceVar, 'withCurrent', params(param(serializableClassNode, VAR_TENANT_ID)), originalMethodCallExpr, variableScope)
             }
         }
