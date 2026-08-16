@@ -66,6 +66,10 @@ class FindOneStringQueryImplementer extends AbstractStringQueryImplementer imple
         )
     }
 
+    // classNode/methodNode are unused here, but kept so subclasses (e.g.
+    // FindOneInterfaceProjectionStringQueryImplementer) can override this as a
+    // polymorphic extension point and vary the query method by domain class/method
+    @SuppressWarnings('unused')
     protected String getFindMethodToInvoke(ClassNode classNode, MethodNode methodNode, ClassNode returnType) {
         if (AstUtils.isDomainClass(returnType)) {
             return 'find'
