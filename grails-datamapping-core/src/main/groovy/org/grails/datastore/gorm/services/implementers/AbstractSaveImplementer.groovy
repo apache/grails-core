@@ -64,8 +64,8 @@ abstract class AbstractSaveImplementer extends AbstractWriteOperationImplementer
                 argsExpression = varX(parameter)
             } else {
                 AstUtils.error(
-                        newMethodNode.declaringClass.module.context,
-                        newMethodNode,
+                        abstractMethodNode.declaringClass.module.context,
+                        abstractMethodNode,
                         "Cannot implement method for argument [${parameterName}]. No property exists on domain class [$domainClassNode.name]"
                 )
             }
