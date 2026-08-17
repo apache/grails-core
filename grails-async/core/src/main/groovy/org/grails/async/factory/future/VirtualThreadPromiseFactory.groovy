@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.async.factory.future
 
 import java.util.concurrent.Callable
@@ -47,12 +46,12 @@ class VirtualThreadPromiseFactory extends AbstractPromiseFactory implements Clos
 
     @Override
     <T> Promise<T> createPromise(Class<T> returnType) {
-        return new BoundPromise<T>(null)
+        new BoundPromise<T>(null)
     }
 
     @Override
     Promise<Object> createPromise() {
-        return new BoundPromise<Object>(null)
+        new BoundPromise<Object>(null)
     }
 
     @Override
@@ -64,21 +63,21 @@ class VirtualThreadPromiseFactory extends AbstractPromiseFactory implements Clos
             return promise
         }
 
-        PromiseList<T> list = new PromiseList<>()
-        for (Closure<T> closure : closures) {
+        def list = new PromiseList<T>()
+        for (def closure : closures) {
             list.add(createPromise(closure) as Promise<T>)
         }
-        return list as Promise<T>
+        list as Promise<T>
     }
 
     @Override
     <T> List<T> waitAll(List<Promise<T>> promises) {
-        return promises.collect { Promise<T> promise -> promise.get() }
+        promises.collect { Promise<T> promise -> promise.get() }
     }
 
     @Override
     <T> List<T> waitAll(List<Promise<T>> promises, long timeout, TimeUnit units) {
-        return promises.collect { Promise<T> promise -> promise.get(timeout, units) }
+        promises.collect { Promise<T> promise -> promise.get(timeout, units) }
     }
 
     @Override
@@ -86,18 +85,18 @@ class VirtualThreadPromiseFactory extends AbstractPromiseFactory implements Clos
         // callable's return value is intentionally discarded: the resolved value of the
         // returned Promise is the waited-on values themselves (matching Promise<List<T>>),
         // not whatever the T-typed callback happens to return.
-        FutureTaskPromise<List<T>> promise = new FutureTaskPromise<List<T>>(this, {
-            List<T> values = waitAll(promises)
+        def promise = new FutureTaskPromise<List<T>>(this, {
+            def values = waitAll(promises)
             callable.call(values)
             return values
         } as Callable<List<T>>)
         executorService.execute(promise)
-        return promise
+        promise
     }
 
     @Override
     <T> Promise<List<T>> onError(List<Promise<T>> promises, Closure<?> callable) {
-        FutureTaskPromise<List<T>> promise = new FutureTaskPromise<List<T>>(this, {
+        def promise = new FutureTaskPromise<List<T>>(this, {
             try {
                 return waitAll(promises)
             }
@@ -107,7 +106,7 @@ class VirtualThreadPromiseFactory extends AbstractPromiseFactory implements Clos
             }
         } as Callable<List<T>>)
         executorService.execute(promise)
-        return promise
+        promise
     }
 
     @Override
