@@ -66,7 +66,7 @@ class VirtualThreadPromiseFactory extends AbstractPromiseFactory implements Clos
 
         PromiseList<T> list = new PromiseList<>()
         for (Closure<T> closure : closures) {
-            list.add(createPromise(closure))
+            list.add(createPromise(closure) as Promise<T>)
         }
         return list as Promise<T>
     }
