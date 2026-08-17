@@ -21,6 +21,7 @@ package grails.async
 import java.util.concurrent.ExecutionException
 
 import org.grails.async.factory.PromiseFactoryBuilder
+import org.grails.async.factory.SynchronousPromiseFactory
 import org.grails.async.factory.future.VirtualThreadPromiseFactory
 import spock.lang.Specification
 
@@ -67,6 +68,27 @@ class VirtualThreadPromiseFactorySpec extends Specification {
 
         then:
         promise.get() == 42
+
+        cleanup:
+        factory.close()
+    }
+
+    void 'multi-closure promises use the virtual thread executor'() {
+        given:
+        def factory = new VirtualThreadPromiseFactory()
+        // PromiseList normally delegates closure creation to the global factory. Using a
+        // synchronous factory makes the unfixed implementation run on this test thread,
+        // while the corrected implementation must still use this factory's virtual threads.
+        Promises.promiseFactory = new SynchronousPromiseFactory()
+
+        when:
+        List<Boolean> result = (factory.createPromise(
+            { Thread.currentThread().isVirtual() },
+            { Thread.currentThread().isVirtual() }
+        ) as Promise<List<Boolean>>).get()
+
+        then:
+        result == [true, true]
 
         cleanup:
         factory.close()
