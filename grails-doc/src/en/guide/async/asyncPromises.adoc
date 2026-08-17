@@ -93,11 +93,7 @@ def result = p.get(1,MINUTES)
 
 By default, the `Promises` static methods use an instance of `PromiseFactory`. This `PromiseFactory` interface has various implementations. The default implementation is link:{api}org/grails/async/factory/future/CachedThreadPoolPromiseFactory.html[CachedThreadPoolPromiseFactory] which uses a thread pool that will create threads as needed (the same as `java.util.concurrent.Executors.newCachedThreadPool()`)
 
-Grails 8 also includes an opt-in Java 21 virtual-thread seed implementation, `org.grails.async.factory.future.VirtualThreadPromiseFactory`.
-Set the JVM system property `grails.async.promiseFactory=virtual-thread` to select it when no service-loaded `PromiseFactory` is present.
-The GPars module remains available. New applications may also consider the core promise factories or the virtual-thread opt-in.
-
-However, the design of the Grails promises framework is such that you can swap out the underlying implementation for your own or one of the pre-supported implementations. For example to use RxJava 1.x simply add the RxJava dependency to `build.gradle`:
+However, the design of the Grails promises framework is such that you can swap out the underlying implementation for your own or one of the pre-supported implementations. For example to use RxJava 3 simply add the RxJava dependency to `build.gradle`:
 
 [source,groovy,subs="attributes"]
 .build.gradle
@@ -105,7 +101,11 @@ However, the design of the Grails promises framework is such that you can swap o
 runtimeOnly 'org.apache.grails.async:grails-async-rxjava3'
 ----
 
-With the above in place RxJava 1.x will be used to create `Promise` instances.
+With the above in place RxJava 3 will be used to create `Promise` instances.
+
+NOTE: Since Grails 8, an opt-in Java 21 virtual-thread promise factory is also available.
+To use it, set the JVM system property `grails.async.promiseFactory=virtual-thread`.
+This implementation is selected only when no service-loaded PromiseFactory is available.
 
 The following table summarizes the available implementation and the dependency that should be added to activate them:
 
@@ -132,7 +132,6 @@ The following table summarizes the available implementation and the dependency t
 |===
 
 You can also override the `grails.async.PromiseFactory` class used by `Promises` by setting the `promiseFactory` static field.
-
 
 One common use case for this is unit testing, typically you do not want promises to execute asynchronously during unit tests, as this makes tests harder to write. For this purpose Grails ships with a `org.grails.async.factory.SynchronousPromiseFactory` instance that makes it easier to test promises:
 
