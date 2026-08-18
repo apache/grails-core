@@ -55,18 +55,38 @@ abstract class AbstractGormASTTransformation extends AbstractASTTransformation i
             return
         }
 
-        Object appliedMarker = getAppliedMarker()
-        if (annotatedNode.getNodeMetaData(appliedMarker) == appliedMarker) {
+        if (isAlreadyApplied(annotatedNode)) {
             return
         }
 
         visit(source, annotationNode, annotatedNode)
 
-        annotatedNode.putNodeMetaData(appliedMarker, appliedMarker)
+        markApplied(annotatedNode)
     }
 
     protected boolean isValidAnnotation(AnnotationNode annotationNode, AnnotatedNode classNode) {
-        return getAnnotationType().equals(annotationNode.getClassNode()) || !(classNode instanceof ClassNode)
+        return getAnnotationType() == annotationNode.getClassNode() || !(classNode instanceof ClassNode)
+    }
+
+    /**
+     * Whether the given node already carries this transformation's applied marker.
+     *
+     * @param node The node
+     * @return true if {@link #visit} (or an equivalent per-method/per-class idempotency check in a subclass) has already run for this node
+     */
+    protected boolean isAlreadyApplied(AnnotatedNode node) {
+        Object appliedMarker = getAppliedMarker()
+        node.getNodeMetaData(appliedMarker) == appliedMarker
+    }
+
+    /**
+     * Marks the given node as having had this transformation applied, so a later {@link #isAlreadyApplied} check short-circuits.
+     *
+     * @param node The node
+     */
+    protected void markApplied(AnnotatedNode node) {
+        Object appliedMarker = getAppliedMarker()
+        node.putNodeMetaData(appliedMarker, appliedMarker)
     }
 
     abstract void visit(SourceUnit source, AnnotationNode annotationNode, AnnotatedNode annotatedNode)

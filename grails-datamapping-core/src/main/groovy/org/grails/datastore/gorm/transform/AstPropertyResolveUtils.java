@@ -20,7 +20,9 @@
 package org.grails.datastore.gorm.transform;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -47,7 +49,14 @@ import org.grails.datastore.mapping.reflect.NameUtils;
  * @since 6.1
  */
 public class AstPropertyResolveUtils {
-    protected static Map<String, Map<String, ClassNode>> cachedClassProperties = new HashMap<>();
+
+    // ClassNode#equals()/hashCode() compare by name, so two distinct ClassNode instances from
+    // separate compilations (as happens with dynamically-generated/test classes) can legitimately
+    // share a name. Keying by name alone would let one class's resolved properties leak into an
+    // unrelated class node that happens to share it, so the cache is keyed by ClassNode identity
+    // instead, and guarded so the check-then-populate-then-store sequence below is atomic.
+    protected static final Map<ClassNode, Map<String, ClassNode>> cachedClassProperties =
+            Collections.synchronizedMap(new IdentityHashMap<>());
 
     /**
      * Resolves the type of of the given property
@@ -57,7 +66,7 @@ public class AstPropertyResolveUtils {
      * @return The type
      */
     public static ClassNode getPropertyType(ClassNode classNode, String propertyName) {
-        if (propertyName == null || propertyName.length() == 0) {
+        if (propertyName == null || propertyName.isEmpty()) {
             return null;
         }
         Map<String, ClassNode> cachedProperties = getPropertiesFromCache(classNode);
@@ -94,22 +103,24 @@ public class AstPropertyResolveUtils {
     }
 
     private static Map<String, ClassNode> getPropertiesFromCache(ClassNode classNode) {
-        String className = classNode.getName();
-        Map<String, ClassNode> cachedProperties = cachedClassProperties.get(className);
-        if (cachedProperties == null) {
-            cachedProperties = new HashMap<>();
-            boolean isDomainClass = AstUtils.isDomainClass(classNode);
-            if (isDomainClass) {
-                cachedProperties.put(GormProperties.IDENTITY, new ClassNode(Long.class));
-                cachedProperties.put(GormProperties.VERSION, new ClassNode(Long.class));
+        synchronized (cachedClassProperties) {
+            Map<String, ClassNode> cachedProperties = cachedClassProperties.get(classNode);
+            if (cachedProperties == null) {
+                cachedProperties = new HashMap<>();
+                boolean isDomainClass = AstUtils.isDomainClass(classNode);
+                if (isDomainClass) {
+                    cachedProperties.put(GormProperties.IDENTITY, new ClassNode(Long.class));
+                    cachedProperties.put(GormProperties.VERSION, new ClassNode(Long.class));
+                }
+                cachedClassProperties.put(classNode, cachedProperties);
+                ClassNode currentNode = classNode;
+                while (currentNode != null && !currentNode.equals(ClassHelper.OBJECT_TYPE)) {
+                    populatePropertiesForClassNode(currentNode, cachedProperties, isDomainClass, !isDomainClass);
+                    currentNode = currentNode.getSuperClass();
+                }
             }
-            cachedClassProperties.put(className, cachedProperties);
-            ClassNode currentNode = classNode;
-            while (currentNode != null && !currentNode.equals(ClassHelper.OBJECT_TYPE)) {
-                populatePropertiesForClassNode(currentNode, cachedProperties, isDomainClass, !isDomainClass);
-                currentNode = currentNode.getSuperClass();
-            }
-        } return cachedProperties;
+            return cachedProperties;
+        }
     }
 
     private static void populatePropertiesForClassNode(ClassNode classNode, Map<String, ClassNode> cachedProperties, boolean isDomainClass, boolean allowAbstract) {
@@ -155,12 +166,11 @@ public class AstPropertyResolveUtils {
     private static void cachePropertiesForAssociationMetadata(Map<String, ClassNode> cachedProperties, ClassPropertyFetcher propertyFetcher, String associationMetadataName) {
         if (propertyFetcher.isReadableProperty(associationMetadataName)) {
             Object propertyValue = propertyFetcher.getPropertyValue(associationMetadataName);
-            if (propertyValue instanceof Map) {
-                Map hasManyMap = (Map) propertyValue;
+            if (propertyValue instanceof Map<?, ?> hasManyMap) {
                 for (Object propertyName : hasManyMap.keySet()) {
                     Object val = hasManyMap.get(propertyName);
-                    if (val instanceof Class) {
-                        cachedProperties.put(propertyName.toString(), ClassHelper.make((Class) val).getPlainNodeReference());
+                    if (val instanceof Class<?> valType) {
+                        cachedProperties.put(propertyName.toString(), ClassHelper.make(valType).getPlainNodeReference());
                     }
                 }
             }
@@ -168,8 +178,7 @@ public class AstPropertyResolveUtils {
     }
 
     private static void populatePropertiesForInitialExpression(Map<String, ClassNode> cachedProperties, Expression initialExpression) {
-        if (initialExpression instanceof MapExpression) {
-            MapExpression me = (MapExpression) initialExpression;
+        if (initialExpression instanceof MapExpression me) {
             List<MapEntryExpression> mapEntryExpressions = me.getMapEntryExpressions();
             for (MapEntryExpression mapEntryExpression : mapEntryExpressions) {
                 Expression keyExpression = mapEntryExpression.getKeyExpression();
