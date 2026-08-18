@@ -83,7 +83,7 @@ class OrderedGormTransformation extends AbstractASTTransformation implements Com
             String transformName = findTransformName(ann)
             if (transformName) {
                 try {
-                    def newTransform = ClassUtils.forName(transformName).newInstance()
+                    def newTransform = ClassUtils.forName(transformName).getDeclaredConstructor().newInstance()
                     if (newTransform instanceof ASTTransformation) {
                         if (newTransform instanceof CompilationUnitAware) {
                             ((CompilationUnitAware) newTransform).setCompilationUnit(compilationUnit)

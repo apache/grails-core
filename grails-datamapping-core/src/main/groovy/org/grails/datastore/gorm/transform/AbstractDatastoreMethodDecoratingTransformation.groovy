@@ -79,14 +79,13 @@ abstract class AbstractDatastoreMethodDecoratingTransformation extends AbstractM
 
     @Override
     protected void enhanceClassNode(SourceUnit source, AnnotationNode annotationNode, ClassNode declaringClassNode) {
-        def appliedMarker = getAppliedMarker()
-        if (declaringClassNode.getNodeMetaData(appliedMarker) == appliedMarker) {
+        if (isAlreadyApplied(declaringClassNode)) {
             return
         }
         if (declaringClassNode.isInterface()) {
             return
         }
-        declaringClassNode.putNodeMetaData(appliedMarker, appliedMarker)
+        markApplied(declaringClassNode)
 
         Expression connectionName = annotationNode.getMember('connection')
         boolean hasDataSourceProperty = connectionName != null

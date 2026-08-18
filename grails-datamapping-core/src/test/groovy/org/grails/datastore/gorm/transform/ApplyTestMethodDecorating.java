@@ -16,6 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+
 package org.grails.datastore.gorm.transform;
 
 import java.lang.annotation.ElementType;
@@ -23,15 +24,17 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import org.codehaus.groovy.transform.GroovyASTTransformationClass;
+
 /**
- * Marker meta-annotation that points a GORM annotation (e.g. {@code @Transactional}, {@code @Rollback},
- * {@code @Tenant}) at the {@link org.codehaus.groovy.transform.ASTTransformation} class that implements it.
- *
- * @author Graeme Rocher
- * @since 6.1
+ * Local marker annotation used only for testing {@link AbstractMethodDecoratingTransformation}
+ * through a real, live compilation - triggering {@link TestMethodDecoratingTransformation}, a
+ * pass-through decorator that renames and re-dispatches to the original method body without
+ * wrapping it in anything (unlike the real {@code Transactional}/{@code CurrentTenant} transforms),
+ * so the method-selection logic in {@code weaveClassNode} can be exercised in isolation.
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.ANNOTATION_TYPE)
-public @interface GormASTTransformationClass {
-    String value();
+@Target({ElementType.TYPE})
+@GroovyASTTransformationClass("org.grails.datastore.gorm.transform.TestMethodDecoratingTransformation")
+public @interface ApplyTestMethodDecorating {
 }

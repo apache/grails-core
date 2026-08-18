@@ -200,7 +200,7 @@ class TransactionalTransform extends AbstractDatastoreMethodDecoratingTransforma
 
     @Override
     protected void enhanceClassNode(SourceUnit source, AnnotationNode annotationNode, ClassNode declaringClassNode) {
-        weaveTransactionManagerAware(sourceUnit, annotationNode, declaringClassNode)
+        weaveTransactionManagerAware(annotationNode, declaringClassNode)
         super.enhanceClassNode(source, annotationNode, declaringClassNode)
     }
 
@@ -221,7 +221,7 @@ class TransactionalTransform extends AbstractDatastoreMethodDecoratingTransforma
 
     }
 
-    protected void weaveTransactionManagerAware(SourceUnit source, AnnotationNode annotationNode, ClassNode declaringClassNode) {
+    protected void weaveTransactionManagerAware(AnnotationNode annotationNode, ClassNode declaringClassNode) {
         if (declaringClassNode.getNodeMetaData(APPLIED_MARKER) == APPLIED_MARKER) {
             return
         }
@@ -419,7 +419,7 @@ class TransactionalTransform extends AbstractDatastoreMethodDecoratingTransforma
         final ClassNode rollbackRuleAttributeClassNode = make(RollbackRuleAttribute)
         final ClassNode noRollbackRuleAttributeClassNode = make(NoRollbackRuleAttribute)
         final Map<String, Expression> members = annotationNode.getMembers()
-        if (READ_ONLY_TYPE.equals(annotationNode.classNode)) {
+        if (READ_ONLY_TYPE == annotationNode.classNode) {
             methodBody.addStatement(
                 assignS(propX(transactionAttributeVar, 'readOnly'), ConstantExpression.TRUE)
             )
