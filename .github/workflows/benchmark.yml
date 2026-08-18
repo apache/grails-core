@@ -264,6 +264,68 @@ jobs:
           git worktree remove --force "$WORKTREE_ROOT/base" || true
           git worktree remove --force "$WORKTREE_ROOT/head" || true
 
+  app-bench:
+    name: "App indy benchmarks"
+    if: >-
+      contains(github.event.pull_request.labels.*.name, 'performance') &&
+      (github.event.action != 'labeled' || github.event.label.name == 'performance')
+    runs-on: ubuntu-24.04
+    env:
+      RESULT_DIR: ${{ github.workspace }}/app-bench-results
+      REPORT_DIR: ${{ github.workspace }}/app-bench-reports
+    steps:
+      - name: "Checkout repository"
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: "Setup JDK"
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: liberica
+          java-version: 21
+      - name: "Setup Gradle"
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        with:
+          cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: "Verify JMH comparison tool"
+        run: ./gradlew :grails-benchmarks:test --max-workers=4
+      - name: "Run app benchmarks without indy"
+        timeout-minutes: 90
+        run: |
+          mkdir -p "$RESULT_DIR/noindy"
+          ./gradlew --no-daemon :grails-test-examples-latency:integrationTest --tests "latencyapp.AppBenchFastPingSpec" -PgrailsIndy=false -PappBench=true -PappBenchWarmup=80 -PappBenchSamples=300 -PappBenchForks=2 -PappBenchOut="$RESULT_DIR/noindy/latency.json" --max-workers=4
+          ./gradlew --no-daemon :grails-test-examples-app1:integrationTest --tests "functionaltests.AppBenchInterceptorDemoSpec" -PgrailsIndy=false -PappBench=true -PappBenchWarmup=80 -PappBenchSamples=300 -PappBenchForks=2 -PappBenchOut="$RESULT_DIR/noindy/app1.json" --max-workers=4
+          ./gradlew --no-daemon :grails-test-examples-gsp-layout:integrationTest --tests "org.example.grails.layout.AppBenchDemoRenderTextSpec" -PgrailsIndy=false -PappBench=true -PappBenchWarmup=80 -PappBenchSamples=300 -PappBenchForks=2 -PappBenchOut="$RESULT_DIR/noindy/gsp-layout.json" --max-workers=4
+      - name: "Run app benchmarks with indy"
+        timeout-minutes: 90
+        run: |
+          mkdir -p "$RESULT_DIR/indy"
+          ./gradlew --no-daemon :grails-test-examples-latency:integrationTest --tests "latencyapp.AppBenchFastPingSpec" -PgrailsIndy=true -PappBench=true -PappBenchWarmup=80 -PappBenchSamples=300 -PappBenchForks=2 -PappBenchOut="$RESULT_DIR/indy/latency.json" --max-workers=4
+          ./gradlew --no-daemon :grails-test-examples-app1:integrationTest --tests "functionaltests.AppBenchInterceptorDemoSpec" -PgrailsIndy=true -PappBench=true -PappBenchWarmup=80 -PappBenchSamples=300 -PappBenchForks=2 -PappBenchOut="$RESULT_DIR/indy/app1.json" --max-workers=4
+          ./gradlew --no-daemon :grails-test-examples-gsp-layout:integrationTest --tests "org.example.grails.layout.AppBenchDemoRenderTextSpec" -PgrailsIndy=true -PappBench=true -PappBenchWarmup=80 -PappBenchSamples=300 -PappBenchForks=2 -PappBenchOut="$RESULT_DIR/indy/gsp-layout.json" --max-workers=4
+      - name: "Compare indy app benchmark results"
+        if: always()
+        continue-on-error: true
+        run: |
+          mkdir -p "$REPORT_DIR"
+          ./gradlew -q --console=plain :grails-benchmarks:jmhCompare --args="--base $RESULT_DIR/noindy --head $RESULT_DIR/indy --output $REPORT_DIR/indy-vs-noindy.md"
+      - name: "Publish app benchmark report in job summary"
+        if: always()
+        run: |
+          if [ -f "$REPORT_DIR/indy-vs-noindy.md" ]; then
+            cat "$REPORT_DIR/indy-vs-noindy.md" >> "$GITHUB_STEP_SUMMARY"
+          else
+            printf '## App indy benchmark comparison\n\nNo comparison report was produced.\n' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: "Upload app benchmark artifacts"
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: app-bench-results
+          path: |
+            app-bench-results/
+            app-bench-reports/
+          if-no-files-found: warn
+
   report:
     name: "Publish JMH benchmark comparison"
     needs: benchmark
