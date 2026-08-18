@@ -202,9 +202,9 @@ class GrailsExtension {
 
     /**
      * Whether to enable Groovy's invokedynamic (indy) bytecode instruction for dynamic Groovy method dispatch.
-     * Enabled by default on Grails 9 / Groovy 6. Groovy 4+ already prefers indy; Grails 7 disabled it
-     * for performance (#15293). Re-evaluate that default now that the line is on Groovy 6.
-     * To opt out: grails { indy = false }
+     * Enabled by default on Grails 9 / Groovy 6. Grails 7 disabled it for performance on Groovy 4
+     * (see GitHub issue #15293). Groovy uses JVM invokedynamic instead of classic callsite caching.
+     * To opt out in build.gradle: grails { indy = false }
      */
     final Property<Boolean> indy
 

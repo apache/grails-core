@@ -35,7 +35,7 @@ The standard Grails BOM remains on Groovy {groovyVersion} and Spock {spockVersio
 ==== Groovy invokedynamic enabled by default
 
 Grails 7 disabled Groovy invokedynamic for `GroovyCompile` tasks because of performance regressions on Groovy 4 (https://github.com/apache/grails-core/issues/15293[#15293]).
-Grails 9 turns invokedynamic back on by default (`grails { indy = true }`).
+Grails 9 turns invokedynamic back on by default. You do not need to set `grails { indy = true }`.
 That matches Groovy 6's preferred dispatch and is the mode CI already exercises on the Groovy 6 line.
 
 To keep classic callsite bytecode:
