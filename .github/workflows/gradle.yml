@@ -375,6 +375,9 @@ jobs:
   functional:
     name: "Functional Tests (${{ matrix.job_name }})"
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
+    # 8.0.x / 9.0.x history: shard 1 is 22-34 min, indy=true shard 0 is 48-55.
+    # Without a cap, a Gradle daemon teardown hang has sat past 3 hours.
+    timeout-minutes: 70
     strategy:
       fail-fast: false
       matrix:
@@ -456,6 +459,7 @@ jobs:
         # Java 21 entries skip it and the Java 25 entries include it (see comment on `build`).
         run: >
           ./gradlew ${{ matrix.gradle_task }}
+          --no-daemon
           --continue
           --rerun-tasks
           --stacktrace
