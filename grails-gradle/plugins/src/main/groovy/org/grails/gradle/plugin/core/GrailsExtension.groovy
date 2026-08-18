@@ -47,7 +47,7 @@ class GrailsExtension {
     GrailsExtension(Project project) {
         this.project = project
         this.pluginDefiner = new PluginDefiner(project)
-        this.indy = project.objects.property(Boolean).convention(false)
+        this.indy = project.objects.property(Boolean).convention(true)
         this.preserveParameterNames = project.objects.property(Boolean).convention(true)
         this.compileStatic = project.objects.newInstance(GrailsCompileStaticOptions)
         this.cliAutoProvision = project.objects.property(Boolean).convention(project.provider {
@@ -202,9 +202,9 @@ class GrailsExtension {
 
     /**
      * Whether to enable Groovy's invokedynamic (indy) bytecode instruction for dynamic Groovy method dispatch.
-     * Disabled by default to improve performance (see GitHub issue #15293).
-     * When enabled, Groovy uses JVM invokedynamic instead of traditional callsite caching.
-     * To enable invokedynamic in build.gradle: grails { indy = true }
+     * Enabled by default on Grails 9 / Groovy 6. Groovy 4+ already prefers indy; Grails 7 disabled it
+     * for performance (#15293). Re-evaluate that default now that the line is on Groovy 6.
+     * To opt out: grails { indy = false }
      */
     final Property<Boolean> indy
 

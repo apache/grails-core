@@ -185,4 +185,27 @@ class GrailsExtensionSpec extends Specification {
         !extension.compileStatic.services.get()
         !extension.compileStatic.tagLibs.get()
     }
+
+    def "indy defaults to enabled"() {
+        given:
+        Project project = ProjectBuilder.builder().build()
+
+        when:
+        GrailsExtension extension = new GrailsExtension(project)
+
+        then:
+        extension.indy.get()
+    }
+
+    def "indy can be opted out"() {
+        given:
+        Project project = ProjectBuilder.builder().build()
+        GrailsExtension extension = new GrailsExtension(project)
+
+        when:
+        extension.indy = false
+
+        then:
+        !extension.indy.get()
+    }
 }
