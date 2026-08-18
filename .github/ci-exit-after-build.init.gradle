@@ -1,0 +1,45 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+
+// Command-line init scripts also apply to included builds. Only the
+// invocation root should write the functional-suite sentinel.
+if (gradle.parent != null) {
+    return
+}
+
+// Available before projects are registered, unlike gradle.rootProject.
+File repoDir = gradle.startParameter.currentDir
+File dir = new File(repoDir, 'build')
+File tmp = new File(dir, 'ci-build-finished.txt.tmp')
+File marker = new File(dir, 'ci-build-finished.txt')
+tmp.delete()
+marker.delete()
+
+// Written after all tasks finish, before worker/daemon teardown. The CI
+// wrapper reads this if Gradle then hangs in MessageHub.stop.
+gradle.buildFinished { result ->
+    dir.mkdirs()
+    String status = result.failure == null ? 'SUCCESS' : 'FAILURE'
+    tmp.text = status
+    Files.move(tmp.toPath(), marker.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+    logger.lifecycle("CI_BUILD_FINISHED ${status}")
+}

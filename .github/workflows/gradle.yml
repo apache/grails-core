@@ -376,10 +376,10 @@ jobs:
     name: "Functional Tests (${{ matrix.job_name }})"
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     # 8.0.x history: shard 1 is 22-34 min, indy=true shard 0 is 48-55.
-    # On this Groovy 6 branch shard 1 is still running at 70 min (shard 0 passed
-    # in 40). Cap at 90 so a 3-hour teardown hang cannot happen, but the slower
-    # canary suite can finish.
-    timeout-minutes: 90
+    # On Groovy 6, shard 1 tests finish around 31 min then Gradle hangs in
+    # worker teardown. The init script exits after buildFinished so that hang
+    # cannot occupy a runner. This job cap is a last-resort backstop.
+    timeout-minutes: 80
     strategy:
       fail-fast: false
       matrix:
@@ -459,21 +459,49 @@ jobs:
       - name: "🏃 Run Functional Tests"
         # The Micronaut island is auto-pruned on a sub-25 JDK (settings.gradle), so the
         # Java 21 entries skip it and the Java 25 entries include it (see comment on `build`).
-        run: >
-          ./gradlew ${{ matrix.gradle_task }}
-          --no-daemon
-          --continue
-          --rerun-tasks
-          --stacktrace
-          -PgrailsIndy=${{ matrix.indy }}
-          -PonlyFunctionalTests
-          -PskipCodeStyle
-          -PskipHibernate5Tests
-          -PskipHibernate7Tests
-          -PskipMongodbTests
-          -PskipSpringSecurityTests
-          -PskipRedisTests
-          ${{ matrix.shard_arguments }}
+        # After all tasks finish, the init script writes build/ci-build-finished.txt
+        # before worker teardown. If the known hanging cell then sits in
+        # MessageHub.stop, timeout kills Gradle and a SUCCESS sentinel is accepted.
+        run: |
+          hanging=0
+          if [ "${{ matrix.java }}" = "21" ] && [ "${{ matrix.indy }}" = "true" ] && [ "${{ matrix.gradle_task }}" = "testShard" ]; then
+            hanging=1
+            limit=45m
+          else
+            limit=70m
+          fi
+          rm -f build/ci-build-finished.txt build/ci-build-finished.txt.tmp
+          set +e
+          timeout --kill-after=30s "$limit" ./gradlew ${{ matrix.gradle_task }} \
+            --init-script .github/ci-exit-after-build.init.gradle \
+            --no-daemon \
+            --continue \
+            --rerun-tasks \
+            --stacktrace \
+            -PgrailsIndy=${{ matrix.indy }} \
+            -PonlyFunctionalTests \
+            -PskipCodeStyle \
+            -PskipHibernate5Tests \
+            -PskipHibernate7Tests \
+            -PskipMongodbTests \
+            -PskipSpringSecurityTests \
+            -PskipRedisTests \
+            ${{ matrix.shard_arguments }}
+          code=$?
+          set -e
+          if [ "$code" -eq 0 ]; then
+            exit 0
+          fi
+          marker="build/ci-build-finished.txt"
+          if [ "$hanging" -eq 1 ] && { [ "$code" -eq 124 ] || [ "$code" -eq 137 ]; } && [ -f "$marker" ]; then
+            status=$(cat "$marker")
+            echo "Gradle timed out after CI_BUILD_FINISHED status=${status}"
+            if [ "$status" = "SUCCESS" ]; then
+              echo "Known hanging cell: build finished successfully; teardown hang treated as success."
+              exit 0
+            fi
+          fi
+          exit "$code"
       - name: "🗄️ Save dependency jar cache"
         if: ${{ success() && matrix.cache_writer && steps.dependency-cache.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@v4
