@@ -54,10 +54,9 @@ class RoleSpec extends SecurityUISpec {
 
 		then:
 		page.assertResults(1, 2, 2)
-		with(pageSource) {
-			contains('ROLE_ADMIN')
-			contains('ROLE_INSTEAD')
-		}
+			pageSource.contains('ROLE_ADMIN')
+			pageSource.contains('ROLE_INSTEAD')
+
 	}
 
 	void testUniqueName() {
