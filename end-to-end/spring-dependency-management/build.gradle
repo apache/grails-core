@@ -70,6 +70,9 @@ dependencyManagement {
 // app hitting the same CVE would override the Spring-managed version property directly; reproduce that here,
 // sourcing the number from dependencies.gradle so it stays the single source of truth.
 apply from: rootProject.layout.projectDirectory.file('../dependencies.gradle')
+// Spring DM lets spring-boot-dependencies' Groovy property override the Grails BOM import.
+// Keep the canary runtime aligned with the Groovy version used to compile the framework.
+ext['groovy.version'] = bomDependencyVersions['groovy.version']
 ext['logback.version'] = bomDependencyVersions['logback.version']
 // Same situation for the Jackson 3 security override (CVE-2026-59889) - see jackson3.version in dependencies.gradle.
 ext['jackson-bom.version'] = bomDependencyVersions['jackson3.version']

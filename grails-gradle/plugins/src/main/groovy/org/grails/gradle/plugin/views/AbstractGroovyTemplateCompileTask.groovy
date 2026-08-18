@@ -134,6 +134,15 @@ abstract class AbstractGroovyTemplateCompileTask extends AbstractCompile {
                         if (jvmArgs) {
                             javaExecSpec.jvmArgs(jvmArgs)
                         }
+
+                        // The view template classpath can carry Spock's global AST transform, which
+                        // aborts compilation when the building Groovy is newer than the Spock artifact's
+                        // groovy variant. Propagate the build JVM's opt-out flag (if set) into this fork so
+                        // the forked compiler matches the build's compile/test tasks. No-op when unset.
+                        String spockVersionCheckOptOut = System.getProperty('spock.iKnowWhatImDoing.disableGroovyVersionCheck')
+                        if (spockVersionCheckOptOut != null) {
+                            javaExecSpec.systemProperty('spock.iKnowWhatImDoing.disableGroovyVersionCheck', spockVersionCheckOptOut)
+                        }
                         javaExecSpec.maxHeapSize = compileOptions.forkOptions.memoryMaximumSize
                         javaExecSpec.minHeapSize = compileOptions.forkOptions.memoryInitialSize
 

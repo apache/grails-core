@@ -33,6 +33,15 @@ dependencies {
     add('testRuntimeOnly', 'org.objenesis:objenesis')
 }
 
+// Disable Spock's compile-time Groovy version check on ALL Groovy compile
+// tasks. Spock's SpockTransform is registered via META-INF services and
+// the Groovy compiler loads every AST transform on the classpath, so even
+// main source sets trip the version check when Groovy is newer than the
+// Spock artifact's groovy variant.
+tasks.withType(GroovyCompile).configureEach {
+    options.forkOptions.jvmArgs += ['-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true']
+}
+
 // Disable build cache for Groovy compilation in CI to ensure AST transformations are always applied.
 // AST transformers are applied at compile time, and Gradle's incremental compilation might not detect
 // when a transformer itself changes, leading to stale bytecode.

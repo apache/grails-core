@@ -42,6 +42,10 @@ dependencies {
 
     api 'org.apache.grails.gradle:grails-gradle-common'
     api 'org.apache.groovy:groovy'
+    // GROOVY-11158: Groovy 6 moved classic (non-invokedynamic) call-site bytecode generation into the
+    // optional groovy-callsite module. Grails compiles with indy disabled by default (see issue #15293),
+    // so the module has to be on the compile and runtime classpath of Grails and of every Grails application.
+    api 'org.apache.groovy:groovy-callsite'
     api 'org.slf4j:jcl-over-slf4j'
     api 'org.slf4j:slf4j-api'
     api 'org.springframework:spring-context', {

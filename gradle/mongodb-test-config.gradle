@@ -24,8 +24,12 @@ dependencies {
     add('testRuntimeOnly', 'org.objenesis:objenesis')
 }
 
+tasks.withType(GroovyCompile).configureEach {
+    options.forkOptions.jvmArgs += ['-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true']
+}
+
 tasks.named('compileTestGroovy', GroovyCompile) {
-    groovyOptions.forkOptions.jvmArgs = ['-Xmx768m']
+    groovyOptions.forkOptions.jvmArgs = ['-Xmx768m', '-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true']
 }
 
 tasks.withType(Test).configureEach {
@@ -51,7 +55,7 @@ tasks.withType(Test).configureEach {
 
     useJUnitPlatform()
     maxParallelForks = 1
-    jvmArgs = ['-Xmx1028M']
+    jvmArgs = ['-Xmx1028M', '-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true']
     addTestListener([
         afterSuite: { desc, result ->
             System.out.print('.')

@@ -33,6 +33,7 @@ import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.compile.GroovyCompile
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.javadoc.Javadoc
+import org.gradle.api.tasks.testing.Test
 import org.gradle.external.javadoc.StandardJavadocDocletOptions
 
 import static org.apache.grails.buildsrc.GradleUtils.lookupPropertyByType
@@ -112,7 +113,7 @@ class CompilePlugin implements Plugin<Project> {
                 it.options.fork = true
                 // always set an isolated build to ensure grails.factories aren't accidentally merged since every project
                 // in this mono repo should be an isolated projected
-                it.options.forkOptions.jvmArgs = ['-Xms128M', '-Xmx2G', '-Dgrails.isolated.build=true']
+                it.options.forkOptions.jvmArgs = ['-Xms128M', '-Xmx2G', '-Dgrails.isolated.build=true', '-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true']
                 // Publish THIS project's base.dir to the forked Groovy compiler. Gradle reuses a forked
                 // compiler daemon for a task whose requested fork arguments the daemon already satisfies,
                 // so a compile that does NOT request base.dir can be handed a daemon started for another
@@ -132,6 +133,9 @@ class CompilePlugin implements Plugin<Project> {
                 // when both are present.
                 it.groovyOptions.configurationScript =
                         GradleUtils.findRootGrailsCoreDir(project).file('gradle/groovy-compile-configscript.groovy').asFile
+            }
+            project.tasks.withType(Test).configureEach {
+                it.jvmArgs('-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true')
             }
         }
     }

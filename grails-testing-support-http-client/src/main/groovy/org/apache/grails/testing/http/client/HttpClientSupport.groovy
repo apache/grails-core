@@ -104,6 +104,7 @@ trait HttpClientSupport {
     private static final Map<String, String> EMPTY = Collections.emptyMap()
     private static final String APPLICATION_JSON = 'application/json'
     private static final String APPLICATION_XML = 'application/xml'
+    private static final String FORM_CONTENT_TYPE = 'application/x-www-form-urlencoded'
     private static final String CONTENT_TYPE = 'Content-Type'
     private static final String HTTP = 'http://'
     private static final String HTTPS = 'https://'
@@ -155,6 +156,10 @@ trait HttpClientSupport {
             throw new IllegalStateException('No baseUrl set')
         }
         baseUrl
+    }
+
+    String getFORM() {
+        FORM_CONTENT_TYPE
     }
 
     // region GET HELPERS
@@ -431,7 +436,7 @@ trait HttpClientSupport {
             Map<String, ?> formData,
             HttpClient client = null
     ) {
-        httpPost(headers, pathOrUrl, encodeFormData(formData), 'application/x-www-form-urlencoded', client)
+        httpPost(headers, pathOrUrl, encodeFormData(formData), FORM_CONTENT_TYPE, client)
     }
 
     // endregion

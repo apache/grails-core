@@ -472,7 +472,10 @@ class GrailsWebDataBinder extends SimpleDataBinder {
                 Class<?> componentType = metaProperty.type.componentType
                 List boundItems = []
                 ((Collection) val).each { item ->
-                    if (item == null || componentType.isAssignableFrom(item.getClass())) {
+                    // Groovy 6.0.0-beta-2: static type checking merges the flow state of a `||`
+                    // inside a closure to void, so the guard is hoisted into a boolean local.
+                    boolean matchesComponentType = item == null || componentType.isAssignableFrom(item.getClass())
+                    if (matchesComponentType) {
                         boundItems << item
                     } else if (item instanceof Map || item instanceof DataBindingSource) {
                         DataBindingSource itemBindingSource = item instanceof DataBindingSource ?
@@ -576,7 +579,9 @@ class GrailsWebDataBinder extends SimpleDataBinder {
                         try {
                             Map boundMap = new LinkedHashMap()
                             ((Map) val).each { key, item ->
-                                if (item == null || referencedType.isAssignableFrom(item.getClass())) {
+                                // Groovy 6.0.0-beta-2: see the `||` flow-state note on the array branch above.
+                                boolean matchesReferencedType = item == null || referencedType.isAssignableFrom(item.getClass())
+                                if (matchesReferencedType) {
                                     boundMap[key] = item
                                 } else if (item instanceof Map || item instanceof DataBindingSource) {
                                     def instance

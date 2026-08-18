@@ -36,6 +36,36 @@ import spock.lang.Issue
  */
 class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
 
+    void "Test that matched request is removed after completion"() {
+        given:
+        def grailsApplication = new DefaultGrailsApplication(FooController)
+        grailsApplication.initialise()
+        def holder = getUrlMappingsHolder {
+            "/foo/bar"(controller: "foo", action: "bar")
+        }
+        def handlerMapping = new UrlMappingsHandlerMapping(new GrailsControllerUrlMappings(grailsApplication, holder))
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        def request = webRequest.request
+        request.setRequestURI('/foo/bar')
+
+        when:
+        def handlerChain = handlerMapping.getHandler(request)
+
+        then:
+        request.getAttribute(UrlMappingsHandlerMapping.MATCHED_REQUEST) != null
+
+        when:
+        handlerChain.interceptorList.each { interceptor ->
+            assert interceptor.preHandle(request, webRequest.response, handlerChain.handler)
+        }
+        handlerChain.interceptorList.reverseEach { interceptor ->
+            interceptor.afterCompletion(request, webRequest.response, handlerChain.handler, null)
+        }
+
+        then:
+        request.getAttribute(UrlMappingsHandlerMapping.MATCHED_REQUEST) == null
+    }
+
     void "Test that when a request coming from a 404 forward is matched the correct action is executed"() {
         given:"A URL mapping definition that has a 404 mapping"
         def grailsApplication = new DefaultGrailsApplication(FooController)

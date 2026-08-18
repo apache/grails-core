@@ -104,7 +104,7 @@ class SbomPlugin implements Plugin<Project> {
             'pkg:maven/com.oracle.coherence.ce/coherence-bom@25.03.1?type=pom': 'UPL-1.0', // does not have map based on license id
             'pkg:maven/com.oracle.coherence.ce/coherence-bom@25.03.2?type=pom': 'UPL-1.0', // does not have map based on license id
             'pkg:maven/com.oracle.coherence.ce/coherence-bom@22.06.2?type=pom': 'UPL-1.0', // does not have map based on license id
-            'pkg:maven/jline/jline@2.14.6?type=jar'                           : 'BSD-2-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
+            'pkg:maven/jline/jline@2.14.6?type=jar'                           : 'BSD-2-Clause', // legacy jline:jline group, BSD-2; maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
             'pkg:maven/opensymphony/sitemesh@2.6.0?type=jar'                  : 'OpenSymphony', // custom license approved by legal LEGAL-707
             'pkg:maven/org.antlr/antlr4-runtime@4.7.2?type=jar'               : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
             // mongo-java-server declares only "The BSD License" so it maps to BSD-4-Clause for the same
@@ -115,7 +115,8 @@ class SbomPlugin implements Plugin<Project> {
             'pkg:maven/de.bwaldvogel/mongo-java-server-memory-backend@1.47.0?type=jar': 'BSD-3-Clause',
             // The whole org.jline group declares "The BSD License", which maps incorrectly because of
             // https://github.com/CycloneDX/cyclonedx-core-java/issues/205 - the POMs point at BSD-3-Clause.
-            // jline.version tracks the JLine version Groovy ships, so every module resolves to one version.
+            // jline.version tracks the JLine version Groovy ships for the gradle BOM (3.x); Groovy 6
+            // may also pull JLine 4, handled by forcedLicenseFor below.
             'pkg:maven/org.jline/jansi@3.30.9?type=jar'                       : 'BSD-3-Clause',
             'pkg:maven/org.jline/jline@3.30.9?type=jar'                       : 'BSD-3-Clause',
             'pkg:maven/org.jline/jline-builtins@3.30.9?type=jar'              : 'BSD-3-Clause',
@@ -135,6 +136,18 @@ class SbomPlugin implements Plugin<Project> {
             'pkg:maven/org.bouncycastle/bcprov-jdk18on@1.84?type=jar'         : 'MIT',
             'pkg:maven/org.bouncycastle/bcutil-jdk18on@1.84?type=jar'         : 'MIT',
     ]
+
+    private static String forcedLicenseFor(String bomRef) {
+        if (LICENSE_MAPPING.containsKey(bomRef)) {
+            return LICENSE_MAPPING[bomRef]
+        }
+        // JLine 4 LICENSE.txt confirms BSD-3-Clause, but CycloneDX misreports it as BSD-4-Clause
+        // (cyclonedx-core-java#205). This is limited to the org.jline Maven jar family resolved via Groovy 6.
+        if (bomRef.matches('pkg:maven/org\\.jline/[^/@?]+@4\\.[^?]+\\?type=jar')) {
+            return 'BSD-3-Clause'
+        }
+        null
+    }
 
     // we don't distribute these so these licenses are considered acceptable, but we still prefer ASF licenses.
     // Require a whitelist of any case of category X licenses to prevent accidental inclusion in a distributed artifact
@@ -471,10 +484,10 @@ class SbomPlugin implements Plugin<Project> {
         }
 
         logger.info('Picking license for {} from {} choices', bomRef, licenseChoices.size())
-        if (LICENSE_MAPPING.containsKey(bomRef)) {
+        def licenseId = forcedLicenseFor(bomRef)
+        if (licenseId) {
             // There are several reasons that cyclone will get the license wrong, usually due to upstream not publishing information or publishing it incorrectly
             // see the licenseMapping map above for details
-            def licenseId = LICENSE_MAPPING[bomRef]
             logger.info('Forcing license for {} to {}', bomRef, licenseId)
 
             def licenseBlock = LICENSES[licenseId]
