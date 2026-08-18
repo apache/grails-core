@@ -375,9 +375,11 @@ jobs:
   functional:
     name: "Functional Tests (${{ matrix.job_name }})"
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
-    # 8.0.x / 9.0.x history: shard 1 is 22-34 min, indy=true shard 0 is 48-55.
-    # Without a cap, a Gradle daemon teardown hang has sat past 3 hours.
-    timeout-minutes: 70
+    # 8.0.x history: shard 1 is 22-34 min, indy=true shard 0 is 48-55.
+    # On this Groovy 6 branch shard 1 is still running at 70 min (shard 0 passed
+    # in 40). Cap at 90 so a 3-hour teardown hang cannot happen, but the slower
+    # canary suite can finish.
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
