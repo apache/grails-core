@@ -132,7 +132,11 @@ tasks.withType(Test).configureEach {
     useJUnitPlatform()
     maxParallelForks = rootProject.ext.configuredTestParallel
     forkEvery = isCiBuild ? 50 : 100
-    maxHeapSize = isCiBuild ? '768m' : '1024m'
+    // Same per-fork budget as the tasks using the shared test configuration (see the root
+    // build.gradle; the mongodb configs and persistence keep documented exceptions). This suite
+    // carried its own copy of the old 768m/1024m literal, which would have exempted the
+    // heaviest suite in the build from the budget meant to keep forks within the machine.
+    maxHeapSize = "${rootProject.ext.testForkHeapMb}m"
     jvmArgs('--add-opens=java.base/java.lang=ALL-UNNAMED', '--add-opens=java.base/java.util=ALL-UNNAMED')
 }
 

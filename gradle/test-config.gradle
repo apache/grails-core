@@ -84,7 +84,16 @@ tasks.withType(Test).configureEach {
     }
     excludes = ['**/*TestCase.class', '**/*$*.class']
     maxParallelForks = rootProject.ext.configuredTestParallel
-    maxHeapSize = isCiBuild ? '768m' : '1024m'
+    // Test forks are child JVMs, not the Gradle daemon. The root build sizes their explicit
+    // per-fork memory budget from the worker-pool bound shared by parallel Test tasks.
+    //
+    // Not every Test task in this build honours it. gradle/mongodb-test-config.gradle and
+    // gradle/mongodb-forked-test-config.gradle ASSIGN jvmArgs wholesale with their own -Xmx,
+    // which beats maxHeapSize outright, and grails-test-suite-persistence sets a deliberate
+    // 2048m. Those are left exactly as they are here on purpose: folding them in would change
+    // CI heaps, and this change is deliberately CI-neutral. Unifying them is a follow-up that
+    // needs its own measurement.
+    maxHeapSize = "${rootProject.ext.testForkHeapMb}m"
     forkEvery = hasProperty('forkEveryUnitTest') ? getProperty('forkEveryUnitTest') as long : (isCiBuild ? 50 : 100)
     if (System.getProperty('debug.tests')) {
         jvmArgs += debugArguments
