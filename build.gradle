@@ -55,6 +55,77 @@ ext {
     // this does not reduce CI fork counts - though CI forks do see fewer processors, below.
     configuredTestParallel = findProperty('maxTestParallel') as Integer ?:
             (isCiBuild ? 4 : Math.max(1, (Runtime.runtime.availableProcessors() / 2) as int))
+    // Forked test JVMs are children of the daemon, so org.gradle.jvmargs does not limit their
+    // heaps - each one claimed a flat 1G locally no matter how much memory the machine had.
+    // Size them from a budget instead: physical memory, less the daemon's own heap, halved to
+    // leave room for the OS, the compiler workers and the Docker containers the mongodb, redis
+    // and geb suites start per fork, then split across the forks that can be alive at once.
+    //
+    // An explicit -PtestForkHeapMb wins everywhere, mirroring -PmaxTestParallel above, and CI
+    // keeps its measured 768m. Both of those settle the value WITHOUT running the probe below,
+    // so the CI path stays trivially neutral and does no fallible work.
+    def resolvedTestForkHeapMb = findProperty('testForkHeapMb') as Integer
+    if (resolvedTestForkHeapMb != null && resolvedTestForkHeapMb < 768) {
+        // Reject rather than silently clamp: the property promises an exact value, so quietly
+        // substituting a different one would be worse than refusing. Below 768 the forks that
+        // GrailsGradlePlugin gives minHeapSize = 768m would start as -Xms768m -Xmx<less>, which
+        // the JVM rejects outright - a confusing failure at test time instead of here.
+        throw new GradleException(
+                "-PtestForkHeapMb must be at least 768 (got ${resolvedTestForkHeapMb}). Grails test " +
+                        'tasks are given minHeapSize = 768m, so a smaller maximum produces an ' +
+                        'unstartable JVM. To use less memory overall, lower the fork count with ' +
+                        '-PmaxTestParallel or --max-workers instead.')
+    }
+    if (resolvedTestForkHeapMb == null && isCiBuild) {
+        resolvedTestForkHeapMb = 768
+    }
+    if (resolvedTestForkHeapMb == null) {
+        // This script runs IN the daemon, so the daemon's own max heap is simply its runtime
+        // value. Reading it beats parsing org.gradle.jvmargs, which may carry several -Xmx
+        // options (the JVM honours the LAST) or a unit a regex would miss.
+        long daemonMaxHeapMb = (Runtime.runtime.maxMemory() / (1024L * 1024L)) as long
+        long totalPhysicalMemoryMb = 0L
+        try {
+            def operatingSystemMxBean = java.lang.management.ManagementFactory.operatingSystemMXBean
+            if (operatingSystemMxBean instanceof com.sun.management.OperatingSystemMXBean) {
+                totalPhysicalMemoryMb =
+                        ((operatingSystemMxBean as com.sun.management.OperatingSystemMXBean).totalMemorySize / (1024L * 1024L)) as long
+            }
+        } catch (Exception | LinkageError ignored) {
+            // A non-HotSpot JVM, a restricted management bean, or a module-access denial (which
+            // surfaces as an Error, not an Exception) leaves the previous fixed default below.
+        }
+        // Budget against the BUILD-WIDE worker count, never a per-task fork cap. With
+        // org.gradle.parallel=true several Test tasks each start forks until the shared worker
+        // pool is full, so a build with four tasks capped at two forks apiece still runs up to
+        // maxWorkerCount forks at once. Budgeting off the smaller number would hand every fork
+        // a heap the machine cannot actually honour - the same bound, and the same reasoning,
+        // as ActiveProcessorCountArgumentProvider below.
+        int concurrentTestForks = Math.max(1, gradle.startParameter.maxWorkerCount)
+        if (totalPhysicalMemoryMb <= 0L) {
+            // The probe did not run or told us nothing, so there is no budget to compute -
+            // keep the value this build used before rather than guess from a missing number.
+            resolvedTestForkHeapMb = 1024
+        } else {
+            // A machine whose whole RAM is inside the daemon's own heap yields a non-positive
+            // remainder. That is a real reading, not a failed probe, so it must NOT fall back
+            // to the old 1G: give those forks the floor instead.
+            long forkBudgetMb = Math.max(0L, totalPhysicalMemoryMb - daemonMaxHeapMb) / 2L
+            // The floor is 768m, not something smaller, for two reasons. It is the value CI
+            // already runs, so it is known to carry these suites. And GrailsGradlePlugin gives
+            // every Grails Test task minHeapSize = 768m when nothing else has set one, so a
+            // smaller maximum here would hand those forks -Xms768m -Xmx<less>, which the JVM
+            // rejects outright before a single test runs.
+            //
+            // That floor wins whenever the computed share falls below it, so on a host with
+            // many workers and little memory the forks together still exceed this budget. Heap
+            // alone cannot fix that; the knob that has to come down there is the FORK COUNT
+            // (-PmaxTestParallel, or --max-workers which bounds them build-wide). This budget
+            // lowers memory pressure, it does not by itself prove a constrained machine fits.
+            resolvedTestForkHeapMb = Math.min(1024, Math.max(768, (forkBudgetMb / concurrentTestForks) as int))
+        }
+    }
+    testForkHeapMb = resolvedTestForkHeapMb
     excludeUnusedTransDeps = findProperty('excludeUnusedTransDeps')
 
     testProjectsStartWith = [
