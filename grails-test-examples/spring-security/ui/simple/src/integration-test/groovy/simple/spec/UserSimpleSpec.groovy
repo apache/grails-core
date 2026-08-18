@@ -156,13 +156,11 @@ class UserSimpleSpec extends SecurityUISpec {
         )
 
         then:
-        with(page) {
-            username.text == newUsername
-            enabled.checked
-            !accountExpired.checked
-            !accountLocked.checked
-            !passwordExpired.checked
-        }
+        page.username.text == newUsername
+        page.enabled.checked
+        !page.accountExpired.checked
+        !page.accountLocked.checked
+        !page.passwordExpired.checked
 
         // edit
         when:
@@ -184,13 +182,11 @@ class UserSimpleSpec extends SecurityUISpec {
         page = to(UserEditPage, userId)
 
         then:
-        with(page) {
-            username.text == updatedName
-            !enabled.checked
-            accountExpired.checked
-            accountLocked.checked
-            passwordExpired.checked
-        }
+        page.username.text == updatedName
+        !page.enabled.checked
+        page.accountExpired.checked
+        page.accountLocked.checked
+        page.passwordExpired.checked
 
         // delete
         when:
@@ -216,11 +212,9 @@ class UserSimpleSpec extends SecurityUISpec {
         page.rolesTab.select()
 
         then: '12 roles are listed and 1 is enabled'
-        with(page.rolesTab) {
-            totalRoles() == 12
-            totalEnabledRoles() == 1
-            hasEnabledRole('ROLE_USER')
-        }
+        page.rolesTab.totalRoles() == 12
+        page.rolesTab.totalEnabledRoles() == 1
+        page.rolesTab.hasEnabledRole('ROLE_USER')
 
         when: 'ROLE_ADMIN is enabled and the changes are saved'
         page.rolesTab.enableRole('ROLE_ADMIN')
@@ -228,11 +222,9 @@ class UserSimpleSpec extends SecurityUISpec {
         page.rolesTab.select()
 
         then: '12 roles are listed and 2 are enabled'
-        with(page.rolesTab) {
-             totalEnabledRoles() == 2
-             hasEnabledRoles(['ROLE_USER', 'ROLE_ADMIN'])
-             totalRoles() == 12
-        }
+        page.rolesTab.totalEnabledRoles() == 2
+        page.rolesTab.hasEnabledRoles(['ROLE_USER', 'ROLE_ADMIN'])
+        page.rolesTab.totalRoles() == 12
     }
 
     @Issue('https://github.com/grails-plugins/grails-spring-security-ui/issues/106')
@@ -244,11 +236,9 @@ class UserSimpleSpec extends SecurityUISpec {
         page.rolesTab.select()
 
         then: '12 roles are listed and 1 is enabled'
-        with(page.rolesTab) {
-            totalRoles() == 12
-            totalEnabledRoles() == 1
-            hasEnabledRole('ROLE_USER')
-        }
+        page.rolesTab.totalRoles() == 12
+        page.rolesTab.totalEnabledRoles() == 1
+        page.rolesTab.hasEnabledRole('ROLE_USER')
 
         when: 'ROLE_ADMIN is enabled and the changes are saved'
         page.rolesTab.enableRole('ROLE_ADMIN')
@@ -256,11 +246,9 @@ class UserSimpleSpec extends SecurityUISpec {
         page.rolesTab.select()
 
         then: '12 roles are listed and 2 are enabled'
-        with(page.rolesTab) {
-            totalEnabledRoles() == 2
-            hasEnabledRoles(['ROLE_USER', 'ROLE_ADMIN'])
-            totalRoles() == 12
-        }
+        page.rolesTab.totalEnabledRoles() == 2
+        page.rolesTab.hasEnabledRoles(['ROLE_USER', 'ROLE_ADMIN'])
+        page.rolesTab.totalRoles() == 12
 
         when: 'edit user 2'
         page = to(UserEditPage, '2')
@@ -269,27 +257,21 @@ class UserSimpleSpec extends SecurityUISpec {
         page.rolesTab.select()
 
         then: '12 roles are listed and 2 are enabled'
-        with(page.rolesTab) {
-            totalRoles() == 12
-            totalEnabledRoles() == 2
-            hasEnabledRole('ROLE_USER')
-        }
+        page.rolesTab.totalRoles() == 12
+        page.rolesTab.totalEnabledRoles() == 2
+        page.rolesTab.hasEnabledRole('ROLE_USER')
 
         when: 'ROLE_ADMIN is disabled and the changes are saved'
-        page.with {
-            rolesTab.disableRole('ROLE_ADMIN')
-            submitEdit(UserEditPage)
-        }
+        page.rolesTab.disableRole('ROLE_ADMIN')
+        page.submitEdit(UserEditPage)
         page = to(UserEditPage, '2')
 
         and: 'select Roles tab'
         page.rolesTab.select()
 
         then: '12 roles are listed and 1 is enabled'
-        with(page.rolesTab) {
-            totalEnabledRoles() == 1
-            hasEnabledRoles(['ROLE_USER'])
-            totalRoles() == 12
-        }
+        page.rolesTab.totalEnabledRoles() == 1
+        page.rolesTab.hasEnabledRoles(['ROLE_USER'])
+        page.rolesTab.totalRoles() == 12
     }
 }
