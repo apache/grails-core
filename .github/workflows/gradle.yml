@@ -459,9 +459,9 @@ jobs:
       - name: "🏃 Run Functional Tests"
         # The Micronaut island is auto-pruned on a sub-25 JDK (settings.gradle), so the
         # Java 21 entries skip it and the Java 25 entries include it (see comment on `build`).
-        # After all tasks finish, the init script writes build/ci-build-finished.txt
-        # before worker teardown. If the known hanging cell then sits in
-        # MessageHub.stop, timeout kills Gradle and a SUCCESS sentinel is accepted.
+        # The known hanging cell finishes tests, prints the wrapper:test /
+        # aggregate-report tail, then hangs before buildFinished. Timeout plus
+        # that end-of-walk log and green XML is treated as success.
         run: |
           hanging=0
           if [ "${{ matrix.java }}" = "21" ] && [ "${{ matrix.indy }}" = "true" ] && [ "${{ matrix.gradle_task }}" = "testShard" ]; then
@@ -486,18 +486,27 @@ jobs:
             -PskipMongodbTests \
             -PskipSpringSecurityTests \
             -PskipRedisTests \
-            ${{ matrix.shard_arguments }}
-          code=$?
+            ${{ matrix.shard_arguments }} \
+            2>&1 | tee gradle-functional.log
+          code=${PIPESTATUS[0]}
           set -e
           if [ "$code" -eq 0 ]; then
             exit 0
           fi
           marker="build/ci-build-finished.txt"
-          if [ "$hanging" -eq 1 ] && { [ "$code" -eq 124 ] || [ "$code" -eq 137 ]; } && [ -f "$marker" ]; then
-            status=$(cat "$marker")
-            echo "Gradle timed out after CI_BUILD_FINISHED status=${status}"
-            if [ "$status" = "SUCCESS" ]; then
-              echo "Known hanging cell: build finished successfully; teardown hang treated as success."
+          if [ "$hanging" -eq 1 ] && { [ "$code" -eq 124 ] || [ "$code" -eq 137 ]; }; then
+            if [ -f "$marker" ] && [ "$(cat "$marker")" = "SUCCESS" ]; then
+              echo "Known hanging cell: SUCCESS sentinel after teardown hang."
+              exit 0
+            fi
+            if grep -qE '> Task .+ FAILED' gradle-functional.log; then
+              echo "A Gradle task FAILED; not recovering from teardown hang."
+              exit 1
+            fi
+            if grep -q '> Task :grails-wrapper:test' gradle-functional.log \
+              && grep -q 'Markdown aggregate test report:' gradle-functional.log \
+              && python3 .github/ci-check-functional-reports.py; then
+              echo "Known hanging cell: suite walked to grails-wrapper:test with green XML; teardown hang treated as success."
               exit 0
             fi
           fi
