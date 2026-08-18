@@ -19,6 +19,8 @@
 
 package grails.gorm.tests
 
+import java.util.concurrent.atomic.AtomicReference
+
 import grails.gorm.annotation.Entity
 import org.grails.datastore.gorm.neo4j.Neo4jTransaction
 import org.grails.datastore.mapping.core.OptimisticLockingException
@@ -27,6 +29,7 @@ import org.grails.datastore.mapping.transactions.SessionHolder
 import org.neo4j.graphdb.GraphDatabaseService
 import org.neo4j.graphdb.Transaction
 import org.springframework.transaction.support.TransactionSynchronizationManager
+import spock.util.concurrent.PollingConditions
 
 /**
  * @author Burt Beckwith
@@ -96,11 +99,18 @@ class OptimisticLockingSpec extends GormDatastoreSpec {
                 }
             }
         }.join()
-        // The background thread's save is already synchronized via join() above; this sleep is
-        // headroom for the embedded Neo4j harness's own write durability, not thread completion.
-        // A noisy/loaded CI runner can push that past a couple of seconds - give it more room
-        // rather than risk a spurious failure (heisenbug).
-        sleep 5000
+        // The background thread's save is already synchronized via join() above; poll (rather
+        // than sleep a fixed duration) until an independent session observes it, since the
+        // embedded Neo4j harness's own write-durability/visibility lag can outlast any fixed
+        // guess (heisenbug) - a noisy/loaded CI runner has been seen pushing past 2s, and this
+        // adapts instead of gambling on a bigger number.
+        new PollingConditions(timeout: 10, initialDelay: 0.1, delay: 0.2).eventually {
+            def observedName
+            OptLockVersioned.withNewSession { s ->
+                observedName = OptLockVersioned.get(o.id).name
+            }
+            assert observedName == 'locked in new session'
+        }
 
         o.name += ' in main session'
         def ex
@@ -125,25 +135,41 @@ class OptimisticLockingSpec extends GormDatastoreSpec {
 
         given:
         def o = new OptLockNotVersioned(name: 'locked').save(flush: true)
+        session.transaction.commit()
+        session.transaction.nativeTransaction.close()
         session.clear()
 
         when:
         o = OptLockNotVersioned.get(o.id)
 
+        def failure = new AtomicReference<Throwable>()
         def backgroundUpdate = Thread.start {
-            OptLockNotVersioned.withNewSession { s ->
-                def reloaded = OptLockNotVersioned.get(o.id)
-                reloaded.name += ' in new session'
-                reloaded.save(flush: true)
+            try {
+                OptLockNotVersioned.withNewSession { s ->
+                    OptLockNotVersioned.withTransaction {
+                        def reloaded = OptLockNotVersioned.get(o.id)
+                        assert reloaded
+                        reloaded.name += ' in new session'
+                        reloaded.save(flush: true)
+                    }
+                }
+            } catch (Throwable t) {
+                failure.set(t)
             }
         }
-        // Unlike the unbounded join() above, join(timeout) can return before the thread
-        // finishes; assert completion explicitly so a slow runner fails loudly instead of
-        // silently racing the assertions below.
-        backgroundUpdate.join(5000)
-        assert !backgroundUpdate.isAlive()
-        // Same headroom rationale as "Test optimistic locking" above.
-        sleep 5000
+        backgroundUpdate.join()
+        // A thread that dies from an uncaught exception is also no longer alive, so join()
+        // alone can't distinguish a completed write from a crashed one; assert the captured
+        // outcome explicitly.
+        assert failure.get() == null
+        // Same cross-session visibility-lag rationale as "Test optimistic locking" above.
+        def nameAfterBackgroundUpdate
+        new PollingConditions(timeout: 10, initialDelay: 0.1, delay: 0.2).eventually {
+            OptLockNotVersioned.withNewSession { s ->
+                nameAfterBackgroundUpdate = OptLockNotVersioned.get(o.id).name
+            }
+            assert nameAfterBackgroundUpdate == 'locked in new session'
+        }
 
         o.name += ' in main session'
         def ex
@@ -159,6 +185,10 @@ class OptimisticLockingSpec extends GormDatastoreSpec {
         o = OptLockNotVersioned.get(o.id)
 
         then:
+        // Proves the background write actually landed before the main session's blind
+        // overwrite below; without it, these assertions would pass even if the background
+        // thread never ran.
+        nameAfterBackgroundUpdate == 'locked in new session'
         ex == null
         o.name == 'locked in main session'
     }
