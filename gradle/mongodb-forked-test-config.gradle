@@ -50,7 +50,7 @@ tasks.withType(Test).configureEach {
     }
 
     useJUnitPlatform()
-    maxParallelForks = configuredTestParallel
+    maxParallelForks = rootProject.ext.configuredTestParallel
     jvmArgs = ['-Xmx768M']
     addTestListener([
         afterSuite: { desc, result ->

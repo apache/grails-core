@@ -170,7 +170,7 @@ tasks.withType(Test).configureEach { Test task ->
         showStackTraces = true
     }
     if (findProperty('testForked')) {
-        task.maxParallelForks = configuredTestParallel
+        task.maxParallelForks = rootProject.ext.configuredTestParallel
         task.forkEvery = (findProperty('testForkEvery') ?: 0)
     }
     if (findProperty('testJvmArgs')) {

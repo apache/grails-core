@@ -53,7 +53,7 @@ dependencies {
 }
 
 def defaultTestConfig = {
-    maxParallelForks = configuredTestParallel
+    maxParallelForks = rootProject.ext.configuredTestParallel
     forkEvery = isCiBuild ? 50 : 100
     excludes = ['**/*TestCase.class', '**/*$*.class']
 }

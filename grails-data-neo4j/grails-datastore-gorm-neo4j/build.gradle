@@ -47,7 +47,7 @@ dependencies {
 
 test {
     useJUnitPlatform()
-    maxParallelForks = configuredTestParallel
+    maxParallelForks = rootProject.ext.configuredTestParallel
     forkEvery = 10
 
     jvmArgs = ['-Xmx1028M']
