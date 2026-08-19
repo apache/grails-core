@@ -83,6 +83,8 @@ allprojects {
 }
 
 subprojects {
+    apply from: rootProject.layout.projectDirectory.file('../gradle/groovy-indy.gradle')
+
     configurations.configureEach {
         resolutionStrategy {
             def cacheHours = isCiBuild || isReproducibleBuild ? 0 : 24

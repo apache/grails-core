@@ -72,6 +72,8 @@ final class ActiveProcessorCountArgumentProvider implements CommandLineArgumentP
 }
 
 subprojects {
+    apply from: rootProject.layout.projectDirectory.file('../gradle/groovy-indy.gradle')
+
     tasks.withType(Test).configureEach { testTask ->
         testTask.jvmArgumentProviders.add(new ActiveProcessorCountArgumentProvider(
                 Runtime.runtime.availableProcessors(), gradle.startParameter.maxWorkerCount))

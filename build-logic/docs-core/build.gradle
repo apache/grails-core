@@ -71,6 +71,13 @@ sourceSets {
     }
 }
 
+// docs-core does not apply org.apache.grails.buildsrc.compile. Keep the same
+// Grails 8 default (indy off) as CompilePlugin. See #15293.
+tasks.withType(GroovyCompile).configureEach {
+    groovyOptions.optimizationOptions.indy = project.hasProperty('grailsIndy') &&
+            Boolean.parseBoolean(project.property('grailsIndy') as String)
+}
+
 def docFilesJar = tasks.register('docFilesJar', Jar)
 docFilesJar.configure {Jar it ->
     it.description = 'Package up files used for generating documentation.'
