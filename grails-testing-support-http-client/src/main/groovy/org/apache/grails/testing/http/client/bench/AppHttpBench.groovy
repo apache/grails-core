@@ -91,9 +91,11 @@ final class AppHttpBench {
      * @param request closure that performs one successful request
      */
     static void measureAndWrite(String benchmark, Path out, Closure<?> request) {
-        int warmup = warmupCount()
+        int warmup = Math.max(0, warmupCount())
         int samples = sampleCount()
-        int forks = Math.max(1, forkCount())
+        if (samples < 1) {
+            throw new IllegalArgumentException("app.bench.samples must be >= 1, was ${samples}")
+        }
 
         for (int i = 0; i < warmup; i++) {
             request.call()
@@ -104,16 +106,19 @@ final class AppHttpBench {
             values[i] = (double) timeNanos(request)
         }
 
-        Map<String, Object> entry = toJmhEntry(benchmark, values, forks)
+        Map<String, Object> entry = toJmhEntry(benchmark, values, forkCount())
         appendEntry(out, entry)
     }
 
     static Map<String, Object> toJmhEntry(String benchmark, double[] values, int forks) {
+        if (values == null || values.length == 0) {
+            throw new IllegalArgumentException('values must contain at least one sample')
+        }
         double mean = mean(values)
         double stdev = stdev(values, mean)
         double scoreError = stdev * 1.96d / Math.sqrt((double) values.length)
 
-        int forkCount = Math.max(1, forks)
+        int forkCount = Math.min(Math.max(1, forks), values.length)
         int perFork = Math.max(1, values.length.intdiv(forkCount))
         List<List<Double>> rawData = new ArrayList<>(forkCount)
         int offset = 0
@@ -122,9 +127,6 @@ final class AppHttpBench {
             List<Double> chunk = new ArrayList<>(Math.max(0, end - offset))
             for (int i = offset; i < end; i++) {
                 chunk.add(values[i])
-            }
-            if (chunk.isEmpty() && !rawData.isEmpty()) {
-                chunk.addAll(rawData.get(rawData.size() - 1))
             }
             rawData.add(chunk)
             offset = end

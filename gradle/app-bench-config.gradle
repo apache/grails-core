@@ -21,14 +21,14 @@
 // Enable with -PappBench=true (and usually --tests '*AppBench*').
 // Optional: -PappBenchWarmup=200 -PappBenchSamples=1000 -PappBenchForks=2 -PappBenchOut=<json>
 
-def appBenchEnabled = providers.gradleProperty('appBench').orElse('false')
+def appBenchEnabled = providers.gradleProperty('appBench').map { Boolean.parseBoolean(it) }.orElse(false)
 def appBenchWarmup = providers.gradleProperty('appBenchWarmup').orElse('200')
 def appBenchSamples = providers.gradleProperty('appBenchSamples').orElse('1000')
 def appBenchForks = providers.gradleProperty('appBenchForks').orElse('2')
 def appBenchOut = providers.gradleProperty('appBenchOut').orElse('')
 
 tasks.withType(Test).configureEach { Test test ->
-    test.systemProperty('app.bench', appBenchEnabled.get())
+    test.systemProperty('app.bench', String.valueOf(appBenchEnabled.get()))
     test.systemProperty('app.bench.warmup', appBenchWarmup.get())
     test.systemProperty('app.bench.samples', appBenchSamples.get())
     test.systemProperty('app.bench.forks', appBenchForks.get())
@@ -36,7 +36,7 @@ tasks.withType(Test).configureEach { Test test ->
         test.systemProperty('app.bench.out', appBenchOut.get())
         test.outputs.file(appBenchOut.get())
     }
-    if (appBenchEnabled.get() == 'true') {
+    if (appBenchEnabled.get()) {
         test.outputs.upToDateWhen { false }
         test.outputs.cacheIf { false }
     }

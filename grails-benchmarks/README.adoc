@@ -61,6 +61,31 @@ Render a report from a JMH JSON result file with the Gradle comparison task:
 Add `--base <path>` to compare paired base and HEAD results. Add `--output <file>` to write the
 rendered Markdown report to a file as well as standard output.
 
+== App-level indy A/B benches
+
+Measure full-stack HTTP latency for `grailsIndy=false` then `grailsIndy=true` against
+`grails-test-examples` (latency, app1, gsp-layout) and compare with `:grails-benchmarks:jmhCompare`.
+The orchestrator is a Gradle task. There is no PowerShell or shell runner.
+
+[source,bash]
+----
+./gradlew :grails-benchmarks:appIndyBench
+----
+
+Optional properties:
+
+|===
+| Property | Default | Purpose
+
+| `appBenchWarmup` | `200` | Discarded warmup requests per spec
+| `appBenchSamples` | `1000` | Timed requests per spec
+| `appBenchForks` | `2` | JMH-shaped rawData chunks
+| `appBenchOutDir` | `build/app-bench` | JSON plus `indy-vs-noindy.md` output directory
+| `appBenchMaxWorkers` | `4` | `--max-workers` for each nested Gradle invocation
+|===
+
+CI on the `performance` label uses warmup 80 / samples 300 / forks 2.
+
 == Gradle properties
 
 |===

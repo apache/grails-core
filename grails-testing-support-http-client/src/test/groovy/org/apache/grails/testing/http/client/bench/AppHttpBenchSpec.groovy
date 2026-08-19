@@ -33,6 +33,9 @@ class AppHttpBenchSpec extends Specification {
     void cleanup() {
         System.clearProperty('app.bench')
         System.clearProperty('app.bench.out')
+        System.clearProperty('app.bench.samples')
+        System.clearProperty('app.bench.warmup')
+        System.clearProperty('app.bench.forks')
     }
 
     void 'enabled is off by default'() {
@@ -80,5 +83,39 @@ class AppHttpBenchSpec extends Specification {
         parsed[0].benchmark == 'one'
         parsed[1].benchmark == 'two'
         Files.size(out) > 0
+    }
+
+    void 'measureAndWrite rejects a sample count below 1'() {
+        given:
+        System.setProperty('app.bench.samples', '0')
+
+        when:
+        AppHttpBench.measureAndWrite('appbench.invalid', tempDir.resolve('empty.json')) { }
+
+        then:
+        IllegalArgumentException error = thrown()
+        error.message.contains('app.bench.samples must be >= 1')
+    }
+
+    void 'toJmhEntry rejects an empty sample array'() {
+        when:
+        AppHttpBench.toJmhEntry('appbench.empty', new double[0], 1)
+
+        then:
+        IllegalArgumentException error = thrown()
+        error.message.contains('at least one sample')
+    }
+
+    void 'toJmhEntry clamps forks to the sample count'() {
+        given:
+        double[] values = [1d, 2d, 3d] as double[]
+
+        when:
+        Map<String, Object> entry = AppHttpBench.toJmhEntry('appbench.clamp', values, 10)
+
+        then:
+        entry.forks == 3
+        ((List) ((Map) entry.primaryMetric).rawData).size() == 3
+        ((List) ((Map) entry.primaryMetric).rawData).every { List chunk -> !chunk.isEmpty() }
     }
 }
