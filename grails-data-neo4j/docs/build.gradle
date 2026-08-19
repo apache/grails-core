@@ -38,7 +38,6 @@ apply plugin: 'org.apache.grails.buildsrc.groovydoc'
 
 dependencies {
     documentation platform(project(':grails-neo4j-bom'))
-    documentation 'org.fusesource.jansi:jansi'
     documentation 'org.apache.groovy:groovy'
     documentation 'org.apache.groovy:groovy-ant'
     documentation 'org.apache.groovy:groovy-groovydoc'
