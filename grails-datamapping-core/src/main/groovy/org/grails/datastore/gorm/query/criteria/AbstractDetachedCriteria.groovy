@@ -216,7 +216,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
             }
         }
         if (junctions)  {
-            junctions.getLast().add(criterion)
+            junctions[-1].add(criterion)
         }
         else {
             criteria << criterion
