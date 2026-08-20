@@ -90,7 +90,7 @@ class Neo4jDataStoreSpringInitializer extends AbstractDatastoreInitializer {
     @Override
     Closure getBeanDefinitions(BeanDefinitionRegistry beanDefinitionRegistry) {
         refuseWhereTheConfigurationWouldBeWrittenOut()
-        { ->
+        return { ->
             def callable = getCommonConfiguration(beanDefinitionRegistry, DATASTORE_TYPE)
             callable.delegate = delegate
             callable.call()
