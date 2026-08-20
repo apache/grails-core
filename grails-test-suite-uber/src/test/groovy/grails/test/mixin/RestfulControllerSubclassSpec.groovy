@@ -138,6 +138,38 @@ class RestfulControllerSubclassSpec extends Specification implements ControllerU
     }
 
     @Issue('GRAILS-11958')
+    // With the hidden HTTP method override disabled, a 'resources' mapping routes a browser form's POST to
+    // the update and delete actions, so RestfulController must accept POST for both as well as their REST
+    // method. Update already did; delete did not.
+    void 'Test that update accepts a plain form POST'() {
+        given:
+        def album = new Album(title: 'Red', artist: 'King Crimson').save(flush: true)
+
+        when: 'the update action is reached by a form POST rather than a PUT'
+        request.method = 'POST'
+        request.format = 'form'
+        params.id = album.id
+        controller.update()
+
+        then: 'the request is dispatched rather than rejected as a disallowed method'
+        response.status != 405
+    }
+
+    void 'Test that delete accepts a plain form POST'() {
+        given:
+        def album = new Album(title: 'Red', artist: 'King Crimson').save(flush: true)
+
+        when: 'the delete action is reached by a form POST rather than a DELETE'
+        request.method = 'POST'
+        request.format = 'form'
+        params.id = album.id
+        controller.delete()
+
+        then: 'the request is dispatched rather than rejected as a disallowed method'
+        response.status != 405
+        Album.count() == 0
+    }
+
     void 'test compiling a subclass of a subclass of RestfulController'() {
         given:
         def gcl = new GroovyClassLoader()

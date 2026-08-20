@@ -37,3 +37,27 @@ The best way to accomplish this is to use a form submit:
 
 Grails supports overriding the request method via the hidden `_method` parameter. This is for browser compatibility purposes. This is useful when using restful resource mappings to create powerful web interfaces.
 To make a link fire this type of event, perhaps capture all click events for links with a `data-method` attribute and issue a form submit via JavaScript.
+
+The same override can be requested with an `X-HTTP-Method-Override` header, for clients that cannot send a
+`PUT`, `PATCH` or `DELETE` directly.
+
+The override is applied by default. An application whose clients send real HTTP methods — a REST API, or a
+front end that submits with `fetch` — can switch it off so the request method is dispatched exactly as sent:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    web:
+        hiddenmethod:
+            filter:
+                enabled: false
+----
+
+With the override disabled, a `resources` mapping generates POST variant routes -- `POST /books/$id` for
+`update` and `POST /books/$id/delete` for `delete` -- and `g:form` targets them automatically. Scaffolded views
+and existing templates therefore keep working in either mode without edits; only the rendered form action and
+the presence of the `_method` field differ.
+
+WARNING: With the override disabled, the `update` and `delete` actions become reachable by `POST` as well as by
+`PUT` and `DELETE`. Authorization rules or interceptors that match on the HTTP method must cover both routes.

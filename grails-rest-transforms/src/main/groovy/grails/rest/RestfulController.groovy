@@ -41,7 +41,7 @@ import static org.springframework.http.HttpStatus.OK
 @ReadOnly
 class RestfulController<T> {
 
-    static allowedMethods = [save: 'POST', update: ['PUT', 'POST'], patch: 'PATCH', delete: 'DELETE']
+    static allowedMethods = [save: 'POST', update: ['PUT', 'POST'], patch: 'PATCH', delete: ['DELETE', 'POST']]
 
     Class<T> resource
     String resourceName

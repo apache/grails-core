@@ -7,7 +7,7 @@ class ${className}Controller {
 
     ${className}Service ${propertyName}Service
 
-    static allowedMethods = [save: "POST", update: "PUT", delete: "DELETE"]
+    static allowedMethods = [save: "POST", update: ["PUT", "POST"], delete: ["DELETE", "POST"]]
 
     def index(Integer max) {
         params.max = Math.min(max ?: 10, 100)

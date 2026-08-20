@@ -54,6 +54,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.util.Assert;
 import org.springframework.web.context.WebApplicationContext;
 
+import grails.config.Settings;
 import grails.core.GrailsApplication;
 import grails.core.support.ClassLoaderAware;
 import grails.gorm.validation.ConstrainedProperty;
@@ -134,6 +135,18 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
 
     private final ConstraintRegistry constraintRegistry;
     private final ConstraintsEvaluator constraintsEvaluator;
+
+    /**
+     * Whether a "resources" mapping should also generate POST routes for the update and delete actions.
+     * Browsers submit only GET and POST, so with the hidden HTTP method override switched off a form can
+     * no longer reach the PUT and DELETE routes. The POST variants give those two actions a route a plain
+     * form submit can reach, without a request-method rewrite. Only generated when the override is off, so
+     * an application that leaves it enabled keeps exactly the mappings it has today.
+     */
+    private boolean isPostOverrideVariantEnabled() {
+        return grailsApplication != null && !grailsApplication.getConfig()
+                .getProperty(Settings.WEB_HIDDEN_METHOD_FILTER_ENABLED, Boolean.class, Boolean.TRUE);
+    }
 
     public DefaultUrlMappingEvaluator(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
@@ -941,6 +954,11 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
                 // PUT /$controller/$id -> action:'update'
                 var updateUrlMapping = createUpdateActionResourcesRestfulMapping(controllerName, pluginName, namespace, version, urlData, constrainedList);
                 configureUrlMapping(updateUrlMapping);
+                if (isPostOverrideVariantEnabled()) {
+                    // POST /$controller/$id -> action:'update'
+                    var updatePostUrlMapping = createUpdatePostActionResourcesRestfulMapping(controllerName, pluginName, namespace, version, urlData, constrainedList);
+                    configureUrlMapping(updatePostUrlMapping);
+                }
             }
             if (includes.contains(ACTION_PATCH)) {
                 // PATCH /$controller/$id -> action:'patch'
@@ -951,6 +969,11 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
                 // DELETE /$controller/$id -> action:'delete'
                 var deleteUrlMapping = createDeleteActionResourcesRestfulMapping(controllerName, pluginName, namespace, version, urlData, constrainedList);
                 configureUrlMapping(deleteUrlMapping);
+                if (isPostOverrideVariantEnabled()) {
+                    // POST /$controller/$id/delete -> action:'delete'
+                    var deletePostUrlMapping = createDeletePostActionResourcesRestfulMapping(controllerName, pluginName, namespace, version, urlData, constrainedList);
+                    configureUrlMapping(deletePostUrlMapping);
+                }
             }
         }
 
@@ -958,6 +981,24 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
             var deleteUrlMappingData = createRelativeUrlDataWithIdAndFormat(urlData);
             var deleteUrlMappingConstraints = createConstraintsWithIdAndFormat(constrainedList);
             return new RegexUrlMapping(deleteUrlMappingData, controllerName, ACTION_DELETE, namespace, pluginName, null, HttpMethod.DELETE.toString(), version, deleteUrlMappingConstraints.toArray(new ConstrainedProperty[0]), grailsApplication);
+        }
+
+        // Shares the update route's URL: a form already posts to /$controller/$id, so only the request
+        // method differs and no new URL is introduced for the update action.
+        protected UrlMapping createUpdatePostActionResourcesRestfulMapping(String controllerName, Object pluginName, Object namespace, String version, UrlMappingData urlData, List<ConstrainedProperty> constrainedList) {
+            var updateUrlMappingData = createRelativeUrlDataWithIdAndFormat(urlData);
+            var updateUrlMappingConstraints = createConstraintsWithIdAndFormat(constrainedList);
+            return new RegexUrlMapping(updateUrlMappingData, controllerName, ACTION_UPDATE, namespace, pluginName, null, HttpMethod.POST.toString(), version, updateUrlMappingConstraints.toArray(new ConstrainedProperty[0]), grailsApplication);
+        }
+
+        // Needs a segment of its own because POST /$controller/$id is taken by the update variant above.
+        // Mirrors the shape of the edit mapping: /$controller/$id/edit renders the form, /$controller/$id/delete
+        // receives the submit.
+        protected UrlMapping createDeletePostActionResourcesRestfulMapping(String controllerName, Object pluginName, Object namespace, String version, UrlMappingData urlData, List<ConstrainedProperty> constrainedList) {
+            var deleteUrlMappingData = urlData.createRelative('/' + CAPTURING_WILD_CARD + "/delete");
+            var deleteUrlMappingConstraints = new ArrayList<>(constrainedList);
+            deleteUrlMappingConstraints.add(new DefaultConstrainedProperty(UrlMapping.class, "id", String.class, constraintRegistry));
+            return new RegexUrlMapping(deleteUrlMappingData, controllerName, ACTION_DELETE, namespace, pluginName, null, HttpMethod.POST.toString(), version, deleteUrlMappingConstraints.toArray(new ConstrainedProperty[0]), grailsApplication);
         }
 
         protected UrlMapping createUpdateActionResourcesRestfulMapping(String controllerName, Object pluginName, Object namespace, String version, UrlMappingData urlData, List<ConstrainedProperty> constrainedList) {
@@ -1069,6 +1110,11 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
                 // PUT /$controller -> action:'update'
                 var updateUrlMapping = createUpdateActionResourceRestfulMapping(controllerName, pluginName, namespace, version, urlData, constrainedList);
                 configureUrlMapping(updateUrlMapping);
+                if (isPostOverrideVariantEnabled()) {
+                    // POST /$controller/update -> action:'update'
+                    var updatePostUrlMapping = createUpdatePostActionResourceRestfulMapping(controllerName, pluginName, namespace, version, urlData, constraintArray);
+                    configureUrlMapping(updatePostUrlMapping);
+                }
             }
 
             if (includes.contains(ACTION_PATCH)) {
@@ -1081,7 +1127,24 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
                 // DELETE /$controller -> action:'delete'
                 var deleteUrlMapping = createDeleteActionResourceRestfulMapping(controllerName, pluginName, namespace, version, urlData, constrainedList);
                 configureUrlMapping(deleteUrlMapping);
+                if (isPostOverrideVariantEnabled()) {
+                    // POST /$controller/delete -> action:'delete'
+                    var deletePostUrlMapping = createDeletePostActionResourceRestfulMapping(controllerName, pluginName, namespace, version, urlData, constraintArray);
+                    configureUrlMapping(deletePostUrlMapping);
+                }
             }
+        }
+
+        // A single resource has no id segment, so POST /$controller is already the save route. Update and
+        // delete therefore each take a segment of their own, mirroring the /$controller/edit shape.
+        protected UrlMapping createUpdatePostActionResourceRestfulMapping(String controllerName, Object pluginName, Object namespace, String version, UrlMappingData urlData, ConstrainedProperty[] constraintArray) {
+            var updateUrlMappingData = urlData.createRelative("/update");
+            return new RegexUrlMapping(updateUrlMappingData, controllerName, ACTION_UPDATE, namespace, pluginName, null, HttpMethod.POST.toString(), version, constraintArray, grailsApplication);
+        }
+
+        protected UrlMapping createDeletePostActionResourceRestfulMapping(String controllerName, Object pluginName, Object namespace, String version, UrlMappingData urlData, ConstrainedProperty[] constraintArray) {
+            var deleteUrlMappingData = urlData.createRelative("/delete");
+            return new RegexUrlMapping(deleteUrlMappingData, controllerName, ACTION_DELETE, namespace, pluginName, null, HttpMethod.POST.toString(), version, constraintArray, grailsApplication);
         }
 
         protected UrlMapping createDeleteActionResourceRestfulMapping(String controllerName, Object pluginName, Object namespace, String version, UrlMappingData urlData, List<ConstrainedProperty> constrainedList) {

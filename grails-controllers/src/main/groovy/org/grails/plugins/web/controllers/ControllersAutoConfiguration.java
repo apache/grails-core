@@ -26,9 +26,14 @@ import jakarta.servlet.DispatcherType;
 import jakarta.servlet.Filter;
 import jakarta.servlet.MultipartConfigElement;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.servlet.autoconfigure.HttpEncodingAutoConfiguration;
 import org.springframework.boot.servlet.filter.OrderedCharacterEncodingFilter;
@@ -59,6 +64,12 @@ import org.grails.web.servlet.mvc.GrailsWebRequestFilter;
 )
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class ControllersAutoConfiguration {
+
+    private static final Logger logger = LoggerFactory.getLogger(ControllersAutoConfiguration.class);
+
+    // Spring Boot's own hidden-method property, registering its OrderedHiddenHttpMethodFilter under the
+    // same "hiddenHttpMethodFilter" bean name this auto-configuration uses.
+    private static final String SPRING_HIDDEN_METHOD_FILTER_ENABLED = "spring.mvc.hiddenmethod.filter.enabled";
 
     @Value("${" + Settings.FILTER_ENCODING + ":utf-8}")
     private String filtersEncoding;
@@ -101,14 +112,53 @@ public class ControllersAutoConfiguration {
         return characterEncodingFilter;
     }
 
+    // Lets a browser form request PUT, PATCH or DELETE by POSTing a "_method" parameter or an
+    // "X-HTTP-Method-Override" header. Enabled by default for backwards compatibility, and gated on
+    // a Grails-owned property rather than Spring Boot's "spring.mvc.hiddenmethod.filter.enabled":
+    // this is not Spring's filter, and it does not share its behaviour. Spring's is restricted to
+    // PUT, PATCH and DELETE and reads the parameter only, while this one accepts any method name and
+    // also trusts the header. Gated on the bean name as well as the filter type, so an application that
+    // supplies either its own filter or its own registration under this name makes the framework one back
+    // off cleanly rather than relying on bean-definition overriding.
+    //
+    // Backs off when Boot's property is explicitly enabled: Boot registers its filter under this same bean
+    // name, and since bean-definition overriding is disabled by default the two definitions would otherwise
+    // collide and fail application startup. An application that opts into Spring's filter gets Spring's
+    // filter -- narrower than this one, and ordered by Boot rather than by GrailsFilters.
     @Bean
-    @ConditionalOnMissingBean(HiddenHttpMethodFilter.class)
+    @ConditionalOnMissingBean(value = HiddenHttpMethodFilter.class, name = "hiddenHttpMethodFilter")
+    @ConditionalOnBooleanProperty(name = Settings.WEB_HIDDEN_METHOD_FILTER_ENABLED, matchIfMissing = true)
+    @ConditionalOnProperty(name = SPRING_HIDDEN_METHOD_FILTER_ENABLED, havingValue = "false", matchIfMissing = true)
     public FilterRegistrationBean<Filter> hiddenHttpMethodFilter() {
         FilterRegistrationBean<Filter> registrationBean = new FilterRegistrationBean<>();
         registrationBean.setFilter(new HiddenHttpMethodFilter());
         registrationBean.addUrlPatterns(Settings.DEFAULT_WEB_SERVLET_PATH);
         registrationBean.setOrder(GrailsFilters.HIDDEN_HTTP_METHOD_FILTER.getOrder());
         return registrationBean;
+    }
+
+    // Warns, once at startup, that hidden HTTP method override has been switched off, so a deliberate
+    // opt-out is visible rather than surfacing later as an unexplained 404: a "resources" mapping
+    // generates PUT, PATCH and DELETE routes for /$controller/$id but no POST route, so a scaffolded
+    // form that relied on "_method" no longer matches any mapping.
+    @Bean
+    @ConditionalOnMissingBean(HiddenHttpMethodFilter.class)
+    @ConditionalOnBooleanProperty(name = Settings.WEB_HIDDEN_METHOD_FILTER_ENABLED, havingValue = false)
+    @ConditionalOnProperty(name = SPRING_HIDDEN_METHOD_FILTER_ENABLED, havingValue = "false", matchIfMissing = true)
+    public HiddenHttpMethodDisabledWarning hiddenHttpMethodDisabledWarning() {
+        logger.warn("Hidden HTTP method override is disabled ({}=false): a POST carrying a '{}' " +
+                        "parameter or an '{}' header is no longer rewritten to PUT, PATCH or DELETE. " +
+                        "Forms rendered by <g:form method=\"PUT|PATCH|DELETE\"> will not match a " +
+                        "'resources' URL mapping. Clients must send the real HTTP method instead.",
+                Settings.WEB_HIDDEN_METHOD_FILTER_ENABLED,
+                HiddenHttpMethodFilter.DEFAULT_METHOD_PARAM,
+                HiddenHttpMethodFilter.HEADER_X_HTTP_METHOD_OVERRIDE);
+        return new HiddenHttpMethodDisabledWarning();
+    }
+
+    // Marker bean whose creation emits the startup warning above; present only when hidden HTTP
+    // method override has been explicitly disabled.
+    public static final class HiddenHttpMethodDisabledWarning {
     }
 
     // Auto-configured rather than registered by the plugin descriptor so an application- or

@@ -38,6 +38,7 @@ import org.springframework.web.servlet.support.RequestDataValueProcessor
 
 import grails.artefact.TagLibrary
 import grails.config.Config
+import grails.config.Settings
 import grails.core.support.GrailsConfigurationAware
 import grails.gsp.TagLib
 import grails.web.mapping.LinkGenerator
@@ -88,6 +89,19 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
 
     // Set if Spring Security is being used and the CsrfFilter is in the Filter Chain
     Class<?> springSecurityCsrfTokenClass
+
+    // The action a form's method maps to when the hidden HTTP method override is disabled and the form has
+    // to target a POST variant route instead. PATCH maps to update because RestfulController.patch()
+    // delegates to update() and no separate POST route is generated for it.
+    private static final Map<String, String> POST_VARIANT_ACTIONS = [
+            (HttpMethod.PUT.name()): 'update',
+            (HttpMethod.PATCH.name()): 'update',
+            (HttpMethod.DELETE.name()): 'delete'
+    ].asImmutable()
+
+    private static final List<String> RESOURCE_MUTATION_ACTIONS = ['update', 'patch', 'delete'].asImmutable()
+
+    private boolean hiddenHttpMethodOverrideEnabled = true
 
     void afterPropertiesSet() {
         if (applicationContext.containsBean('requestDataValueProcessor')) {
@@ -463,10 +477,34 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
 
         def linkAttrs = attrs.subMap(LinkGenerator.LINK_ATTRIBUTES)
 
+        // default to post. Resolved before the link is generated: with the hidden HTTP method override
+        // disabled the link has to target the POST variant of the update or delete route instead of the
+        // PUT, PATCH or DELETE one, so the method has to be known first.
+        def method
+        if (linkAttrs[LinkGenerator.ATTRIBUTE_RESOURCE] && linkAttrs[LinkGenerator.ATTRIBUTE_ACTION]) {
+            method = LinkGenerator.REST_RESOURCE_ACTION_TO_HTTP_METHOD_MAP.get(linkAttrs[LinkGenerator.ATTRIBUTE_ACTION].toString())
+        } else {
+            method = linkAttrs[LinkGenerator.ATTRIBUTE_METHOD]?.toUpperCase() ?: 'POST'
+        }
+        def httpMethod = method != null ? HttpMethod.valueOf(method) : HttpMethod.POST
+        boolean notGet = httpMethod != HttpMethod.GET
+        boolean overriddenMethod = notGet && httpMethod != HttpMethod.POST
+
+        Map postVariantAttrs = null
+        if (overriddenMethod && !hiddenHttpMethodOverrideEnabled) {
+            postVariantAttrs = postVariantLinkAttrs(linkAttrs, httpMethod)
+            if (postVariantAttrs == null) {
+                log.warn('<g:form> requests the {} method but the hidden HTTP method override is disabled ' +
+                        "({}=false), and this form does not target a 'resources' update or delete action, so " +
+                        'there is no POST route to submit to. The form will submit a POST to its declared URL.',
+                        httpMethod, Settings.WEB_HIDDEN_METHOD_FILTER_ENABLED)
+            }
+        }
+
         writer << '<form action="'
 
         // Call RequestDataValueProcessor to modify url if necessary
-        def link = createLink(linkAttrs)
+        def link = createLink(postVariantAttrs ?: linkAttrs)
         if (requestDataValueProcessor != null) {
             link = requestDataValueProcessor.processAction(request, link, request.method)
         }
@@ -481,16 +519,6 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
         else {
             attrs.remove('url')
         }
-
-        // default to post
-        def method
-        if (linkAttrs[LinkGenerator.ATTRIBUTE_RESOURCE] && linkAttrs[LinkGenerator.ATTRIBUTE_ACTION]) {
-            method = LinkGenerator.REST_RESOURCE_ACTION_TO_HTTP_METHOD_MAP.get(linkAttrs[LinkGenerator.ATTRIBUTE_ACTION].toString())
-        } else {
-            method = linkAttrs[LinkGenerator.ATTRIBUTE_METHOD]?.toUpperCase() ?: 'POST'
-        }
-        def httpMethod = method != null ? HttpMethod.valueOf(method) : HttpMethod.POST
-        boolean notGet = httpMethod != HttpMethod.GET
 
         if (notGet) {
             writer << 'method="post" '
@@ -510,7 +538,9 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
             hiddenFieldImpl(writer, [name: 'execution', value: request['flowExecutionKey']])
         }
 
-        if (notGet && httpMethod != HttpMethod.POST) {
+        // Only emitted when something will read it: with the override disabled the field is inert, and the
+        // form has already been retargeted at a POST route above.
+        if (overriddenMethod && hiddenHttpMethodOverrideEnabled) {
             hiddenFieldImpl(writer, [name: '_method', value: httpMethod.toString()])
         }
         if (notGet && springSecurityCsrfTokenClass) {
@@ -1574,10 +1604,54 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
         return requestDataValueProcessor.processUrl(request, link)
     }
 
+    /**
+     * Retargets a form's link attributes at the POST variant of a 'resources' update or delete route. Used
+     * when the hidden HTTP method override is disabled, so a browser form -- which can submit only GET and
+     * POST -- can still reach those actions.
+     *
+     * Returns null when there is no variant route to target: a literal URL, which has no mapping to resolve
+     * against, or a form that does not describe a resource action.
+     */
+    private Map postVariantLinkAttrs(Map linkAttrs, HttpMethod httpMethod) {
+        String variantAction = POST_VARIANT_ACTIONS[httpMethod.name()]
+        if (!variantAction) {
+            return null
+        }
+
+        def url = linkAttrs[LinkGenerator.ATTRIBUTE_URL]
+        if (url != null && !(url instanceof Map)) {
+            return null
+        }
+
+        Map retargeted = new LinkedHashMap(linkAttrs)
+        Map target = retargeted
+        if (url instanceof Map) {
+            target = new LinkedHashMap((Map) url)
+            retargeted[LinkGenerator.ATTRIBUTE_URL] = target
+        }
+
+        if (!resourceMutation(target)) {
+            return null
+        }
+
+        target[LinkGenerator.ATTRIBUTE_ACTION] = variantAction
+        target[LinkGenerator.ATTRIBUTE_METHOD] = HttpMethod.POST.name()
+        retargeted
+    }
+
+    private static boolean resourceMutation(Map linkAttrs) {
+        if (linkAttrs[LinkGenerator.ATTRIBUTE_RESOURCE]) {
+            return true
+        }
+        def action = linkAttrs[LinkGenerator.ATTRIBUTE_ACTION]
+        action != null && RESOURCE_MUTATION_ACTIONS.contains(action.toString())
+    }
+
     @Override
     void setConfiguration(Config co) {
         // Some attributes can be treated as boolean, but must be converted to the
         // expected value.
         booleanAttributes = co.getProperty('grails.tags.booleanToAttributes', List, DEFAULT_BOOLEAN_ATTRIBUTES)
+        hiddenHttpMethodOverrideEnabled = co.getProperty(Settings.WEB_HIDDEN_METHOD_FILTER_ENABLED, Boolean, Boolean.TRUE)
     }
 }

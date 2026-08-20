@@ -21,6 +21,9 @@ package org.grails.plugins.web.controllers
 
 import java.util.function.Supplier
 
+import jakarta.servlet.Filter
+
+import grails.config.Settings
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
 
@@ -37,11 +40,13 @@ import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.mock.web.MockServletContext
 import org.springframework.web.context.WebApplicationContext
 import org.springframework.web.context.support.StaticWebApplicationContext
+import org.springframework.web.filter.HiddenHttpMethodFilter as SpringHiddenHttpMethodFilter
 import org.springframework.web.filter.RequestContextFilter
 import org.springframework.web.servlet.handler.SimpleMappingExceptionResolver
 
 import org.grails.web.config.http.GrailsFilters
 import org.grails.web.errors.GrailsExceptionResolver
+import org.grails.web.filters.HiddenHttpMethodFilter
 import org.grails.web.servlet.mvc.GrailsWebRequestFilter
 
 import spock.lang.Specification
@@ -200,6 +205,114 @@ class ControllersAutoConfigurationSpec extends Specification {
                 }
     }
 
+    void 'hiddenHttpMethodFilter registers the Grails filter with the Grails hidden-method filter order'() {
+        when: 'the registration bean is created'
+        FilterRegistrationBean<Filter> registrationBean = autoConfiguration.hiddenHttpMethodFilter()
+
+        then: 'the Grails filter is registered ahead of the Spring Security chain'
+        registrationBean.filter instanceof HiddenHttpMethodFilter
+        registrationBean.order == GrailsFilters.HIDDEN_HTTP_METHOD_FILTER.order
+    }
+
+    void 'the hidden HTTP method filter is registered by default'() {
+        expect: 'existing applications keep the _method and X-HTTP-Method-Override behaviour'
+        hiddenMethodContextRunner()
+                .run { context ->
+                    assert hiddenHttpMethodFilterRegistrations(context) == 1
+                    assert context.getBeanNamesForType(
+                            ControllersAutoConfiguration.HiddenHttpMethodDisabledWarning).length == 0
+                }
+    }
+
+    void 'no hidden HTTP method filter is registered when the Grails property is false'() {
+        expect: 'the opt-out is a true off-switch — nothing rewrites the request method'
+        hiddenMethodContextRunner()
+                .withPropertyValues("${Settings.WEB_HIDDEN_METHOD_FILTER_ENABLED}=false")
+                .run { context ->
+                    assert hiddenHttpMethodFilterRegistrations(context) == 0
+                }
+    }
+
+    void 'a startup warning is registered when hidden HTTP method override is disabled'() {
+        expect: 'the opt-out is made visible rather than surfacing later as an unexplained 404'
+        hiddenMethodContextRunner()
+                .withPropertyValues("${Settings.WEB_HIDDEN_METHOD_FILTER_ENABLED}=false")
+                .run { context ->
+                    assert context.getBeanNamesForType(
+                            ControllersAutoConfiguration.HiddenHttpMethodDisabledWarning).length == 1
+                }
+    }
+
+    void 'the Grails hidden HTTP method filter ignores the Spring Boot property'() {
+        expect: 'Boot\'s filter being off is not an instruction to turn the different Grails one off too'
+        hiddenMethodContextRunner()
+                .withPropertyValues('spring.mvc.hiddenmethod.filter.enabled=false')
+                .run { context ->
+                    assert hiddenHttpMethodFilterRegistrations(context) == 1
+                }
+    }
+
+    void 'enabling the Spring Boot property makes the Grails filter back off instead of colliding on the bean name'() {
+        expect: 'Boot registers its filter under the same bean name, so only one definition may be contributed'
+        hiddenMethodContextRunner()
+                .withPropertyValues('spring.mvc.hiddenmethod.filter.enabled=true')
+                .run { context ->
+                    assert context.startupFailure == null
+                    assert hiddenHttpMethodFilterRegistrations(context) == 0
+                    assert context.getBeanNamesForType(SpringHiddenHttpMethodFilter).length == 1
+                }
+    }
+
+    void 'no disabled warning is logged when Spring\'s filter provides the override'() {
+        expect: 'an override is still in place, so the opt-out warning would be misleading'
+        hiddenMethodContextRunner()
+                .withPropertyValues("${Settings.WEB_HIDDEN_METHOD_FILTER_ENABLED}=false",
+                        'spring.mvc.hiddenmethod.filter.enabled=true')
+                .run { context ->
+                    assert context.getBeanNamesForType(
+                            ControllersAutoConfiguration.HiddenHttpMethodDisabledWarning).length == 0
+                    assert context.getBeanNamesForType(SpringHiddenHttpMethodFilter).length == 1
+                }
+    }
+
+    void 'a user-defined hiddenHttpMethodFilter registration bean makes the auto-configured one back off'() {
+        given: 'a user-defined registration bean under the auto-configured bean name'
+        FilterRegistrationBean<Filter> userRegistration = new FilterRegistrationBean<>()
+        Supplier<FilterRegistrationBean> userRegistrationSupplier = () -> userRegistration
+
+        expect: 'the user bean wins and the framework registration is never added'
+        hiddenMethodContextRunner()
+                .withBean('hiddenHttpMethodFilter', FilterRegistrationBean, userRegistrationSupplier)
+                .run { context ->
+                    assert context.getBean('hiddenHttpMethodFilter').is(userRegistration)
+                    assert hiddenHttpMethodFilterRegistrations(context) == 0
+                }
+    }
+
+    void 'a user-defined HiddenHttpMethodFilter bean makes the auto-configured registration back off'() {
+        given: 'an application-supplied filter under a name of its own choosing'
+        def userFilter = new HiddenHttpMethodFilter()
+        Supplier<HiddenHttpMethodFilter> userFilterSupplier = () -> userFilter
+
+        expect: 'only the user filter ends up on the chain, not a second framework copy'
+        hiddenMethodContextRunner()
+                .withBean('applicationHiddenHttpMethodFilter', HiddenHttpMethodFilter, userFilterSupplier)
+                .run { context ->
+                    assert !context.containsBean('hiddenHttpMethodFilter')
+                    assert hiddenHttpMethodFilterRegistrations(context) == 1
+                }
+    }
+
+    private WebApplicationContextRunner hiddenMethodContextRunner() {
+        def grailsApplication = Mock(GrailsApplication) {
+            getClassLoader() >> getClass().classLoader
+        }
+        Supplier<GrailsApplication> grailsApplicationSupplier = () -> grailsApplication
+        new WebApplicationContextRunner()
+                .withBean(GrailsApplication, grailsApplicationSupplier)
+                .withConfiguration(AutoConfigurations.of(ControllersAutoConfiguration, WebMvcAutoConfiguration))
+    }
+
     private static MockServletContext servletContextWithWebApplicationContext() {
         def servletContext = new MockServletContext()
         def webApplicationContext = new StaticWebApplicationContext()
@@ -217,6 +330,13 @@ class ControllersAutoConfigurationSpec extends Specification {
         new ServletContextInitializerBeans(context.beanFactory).count { initializer ->
             initializer instanceof AbstractFilterRegistrationBean &&
                     ((AbstractFilterRegistrationBean) initializer).filter instanceof GrailsWebRequestFilter
+        }
+    }
+
+    private static int hiddenHttpMethodFilterRegistrations(ConfigurableApplicationContext context) {
+        new ServletContextInitializerBeans(context.beanFactory).count { initializer ->
+            initializer instanceof AbstractFilterRegistrationBean &&
+                    ((AbstractFilterRegistrationBean) initializer).filter instanceof HiddenHttpMethodFilter
         }
     }
 }

@@ -5,7 +5,7 @@ import org.springframework.transaction.TransactionStatus
 
 class ${className}Controller {
 
-    static allowedMethods = [save: "POST", update: "PUT", delete: "DELETE"]
+    static allowedMethods = [save: "POST", update: ["PUT", "POST"], delete: ["DELETE", "POST"]]
 
     def index(Integer max) {
         params.max = Math.min(max ?: 10, 100)
