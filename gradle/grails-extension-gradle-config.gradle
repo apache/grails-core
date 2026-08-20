@@ -38,6 +38,6 @@ grails {
     // Framework modules that do not apply this plugin inherit the same default
     // from org.apache.grails.buildsrc.compile (CompilePlugin).
     if (project.hasProperty('grailsIndy')) {
-        indy = Boolean.parseBoolean(project.property('grailsIndy') as String)
+        indy = project.property('grailsIndy').toString().trim().toBoolean()
     }
 }

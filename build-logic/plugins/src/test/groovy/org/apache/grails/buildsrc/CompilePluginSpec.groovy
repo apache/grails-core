@@ -106,6 +106,16 @@ class CompilePluginSpec extends Specification {
         result.output.contains('TEST_INDY=true')
     }
 
+    def "trims whitespace when parsing grailsIndy"() {
+        when:
+        def result = runPrintIndy('-PgrailsIndy= true ')
+
+        then:
+        result.task(':printIndy').outcome == TaskOutcome.SUCCESS
+        result.output.contains('MAIN_INDY=true')
+        result.output.contains('TEST_INDY=true')
+    }
+
     private def runPrintIndy(String... extraArgs) {
         GradleRunner.create()
                 .withProjectDir(testProjectDir.toFile())

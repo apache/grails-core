@@ -24,7 +24,7 @@
 // Grails 9 / Groovy 6 can flip the default. CI can still opt in with -PgrailsIndy=true.
 boolean grailsIndyEnabled = false
 if (project.hasProperty('grailsIndy')) {
-    grailsIndyEnabled = Boolean.parseBoolean(project.property('grailsIndy') as String)
+    grailsIndyEnabled = project.property('grailsIndy').toString().trim().toBoolean()
 }
 
 project.pluginManager.withPlugin('groovy') {
