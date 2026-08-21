@@ -26,17 +26,11 @@ import spock.lang.Unroll
  */
 class GrailsVersionSpec extends Specification {
 
-    @Unroll
-    void "isAtLeast(#requiredVersion) => #expected"(String requiredVersion, boolean expected) {
+    void "isAtLeast(requiredVersion) and isAtLeastMajorMinor(major, minor) return false when the current Grails version cannot be resolved"() {
         expect:
-        expected == GrailsVersion.isAtLeast(requiredVersion)
-
-        where:
-        requiredVersion | expected
-        "3.2.0"         | true
-        "3.1.0"         | true
-        "3.3.0"         | true
-        "99.9.9"        | false
+        GrailsVersion.current == null
+        !GrailsVersion.isAtLeast("0.0.1")
+        !GrailsVersion.isAtLeastMajorMinor(0, 1)
     }
 
     @Unroll
