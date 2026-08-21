@@ -67,10 +67,10 @@ class ValidationEventListener extends AbstractPersistenceEventListener {
                 FlushModeType previousFlushMode = currentSession.flushMode
                 try {
                     currentSession.setFlushMode(FlushModeType.COMMIT)
-                    boolean hasErrors = false
+                    boolean hasErrors
                     if (source instanceof ConnectionSourcesProvider) {
                         def connectionSourceName = ((ConnectionSourcesProvider) source).connectionSources.defaultConnectionSource.name
-                        GormValidationApi validationApi = GormEnhancer.findValidationApi((Class<Object>) entityObject.getClass(), connectionSourceName)
+                        GormValidationApi validationApi = GormEnhancer.findValidationApi((Class<Object>) (Class) entityObject.getClass(), connectionSourceName)
                         hasErrors = !validationApi.validate((Object) entityObject)
                     }
                     else {
