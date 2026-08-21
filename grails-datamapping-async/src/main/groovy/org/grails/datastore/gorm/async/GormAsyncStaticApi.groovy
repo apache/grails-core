@@ -37,8 +37,8 @@ class GormAsyncStaticApi<D> implements PromiseDecoratorProvider {
     /**
      * Wraps each promise in a new persistence session
      */
-    private List<PromiseDecorator> decorators = [ { Closure callable ->
-        return { args -> staticApi.withNewSession { callable.call(*args) } }
+    private List<PromiseDecorator> decorators = [ { Closure<?> callable ->
+        return { Object[] args -> staticApi.withNewSession { callable.call(*args) } }
     } as PromiseDecorator ]
 
     GormAsyncStaticApi(GormStaticApi<D> staticApi) {
