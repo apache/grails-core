@@ -47,7 +47,7 @@ class GormValidatorAdapter extends SpringValidatorAdapter {
     }
 
     @Override
-    def <T> Set<ConstraintViolation<T>> validate(T object, Class<?>[] groups) {
+    <T> Set<ConstraintViolation<T>> validate(T object, Class<?>[] groups) {
         def constraintViolations = super.validate(object, groups)
         if (object instanceof GormValidateable) {
             def errors = ((GormValidateable) object).getErrors()

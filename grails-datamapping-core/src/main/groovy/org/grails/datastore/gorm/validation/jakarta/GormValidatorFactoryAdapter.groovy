@@ -87,7 +87,7 @@ class GormValidatorFactoryAdapter implements ValidatorFactory  {
     }
 
     @Override
-    def <T> T unwrap(Class<T> type) {
+    <T> T unwrap(Class<T> type) {
         return factory.unwrap(type)
     }
 
