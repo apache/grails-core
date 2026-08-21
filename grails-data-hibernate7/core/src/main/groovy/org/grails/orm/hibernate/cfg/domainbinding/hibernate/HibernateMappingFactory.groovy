@@ -167,10 +167,13 @@ class HibernateMappingFactory extends AbstractGormMappingFactory<Mapping, Proper
             PersistentEntity entity, MappingContext context, PropertyDescriptor property, Class collectionType) {
         if (entity instanceof GrailsHibernatePersistentEntity) {
             GrailsHibernatePersistentEntity ghpEntity = (GrailsHibernatePersistentEntity) entity
-            HibernateBasicProperty basic = new HibernateBasicProperty(ghpEntity, context, property)
+            boolean isEnumCollection = collectionType != null && collectionType.isEnum()
+            HibernateBasicProperty basic = isEnumCollection
+                    ? new HibernateBasicEnumProperty(ghpEntity, context, property)
+                    : new HibernateBasicProperty(ghpEntity, context, property)
             basic.setMapping(createPropertyMapping(basic, entity))
             CustomTypeMarshaller customTypeMarshaller = findCustomType(context, property.propertyType)
-            if (collectionType != null && collectionType.isEnum()) {
+            if (isEnumCollection) {
                 customTypeMarshaller = findCustomType(context, collectionType)
                 if (customTypeMarshaller == null) {
                     customTypeMarshaller = findCustomType(context, Enum)

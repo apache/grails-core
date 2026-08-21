@@ -37,7 +37,7 @@ class PropertyBinderSpec extends HibernateGormDatastoreSpec {
     @Shared PropertyBinder binder = new PropertyBinder(new CascadeBehaviorFetcher())
 
     void setupSpec() {
-        manager.registerDomainClasses(PBEntity, PBAuthor)
+        manager.registerDomainClasses(PBEntity, PBAuthor, PBCascadeEntity)
     }
 
     void "test property binding with real objects"() {
@@ -98,6 +98,24 @@ class PropertyBinderSpec extends HibernateGormDatastoreSpec {
         new PropertyBinder() != null
     }
 
+    void "test cascade behavior for hasMany of enum matches hasMany of String"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(PBCascadeEntity.name)
+        def stringProperty = (HibernatePersistentProperty) entity.getPropertyByName("tags")
+        def enumProperty = (HibernatePersistentProperty) entity.getPropertyByName("statuses")
+        def table = new Table("PB_CASCADE_ENTITY")
+        def stringValue = new BasicValue(getGrailsDomainBinder().getMetadataBuildingContext(), table)
+        def enumValue = new BasicValue(getGrailsDomainBinder().getMetadataBuildingContext(), table)
+
+        when:
+        def stringBound = binder.bindProperty(stringProperty, stringValue)
+        def enumBound = binder.bindProperty(enumProperty, enumValue)
+
+        then: "a hasMany-of-enum collection cascades the same way as a hasMany-of-String collection"
+        stringBound.getCascade() == "all"
+        enumBound.getCascade() == stringBound.getCascade()
+    }
+
     void "test accessorName for field access"() {
         given:
         def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(PBEntity.name)
@@ -136,4 +154,12 @@ class PBEntity {
 class PBAuthor {
     Long id
     String name
+}
+
+enum PBStatus { ACTIVE, INACTIVE }
+
+@Entity
+class PBCascadeEntity {
+    Long id
+    static hasMany = [tags: String, statuses: PBStatus]
 }

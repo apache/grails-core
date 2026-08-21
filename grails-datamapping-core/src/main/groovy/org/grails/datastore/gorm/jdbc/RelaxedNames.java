@@ -142,7 +142,7 @@ final class RelaxedNames implements Iterable<String> {
             @Override
             public String apply(String value) {
                 Matcher matcher = CAMEL_CASE_PATTERN.matcher(value);
-                StringBuffer result = new StringBuffer();
+                StringBuilder result = new StringBuilder();
                 while (matcher.find()) {
                     matcher.appendReplacement(result, matcher.group(1) + '_' +
                             StringUtils.uncapitalize(matcher.group(2)));
@@ -156,7 +156,7 @@ final class RelaxedNames implements Iterable<String> {
             @Override
             public String apply(String value) {
                 Matcher matcher = CAMEL_CASE_PATTERN.matcher(value);
-                StringBuffer result = new StringBuffer();
+                StringBuilder result = new StringBuilder();
                 while (matcher.find()) {
                     matcher.appendReplacement(result, matcher.group(1) + '-' +
                             StringUtils.uncapitalize(matcher.group(2)));

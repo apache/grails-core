@@ -29,6 +29,12 @@ import org.springframework.beans.factory.config.ConfigurableBeanFactory
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
 import org.springframework.beans.factory.support.BeanDefinitionRegistry
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor
+import org.springframework.context.annotation.AnnotationConfigUtils
+import org.springframework.aot.AotDetector
+import org.springframework.beans.factory.support.RootBeanDefinition
+import org.springframework.beans.factory.config.BeanDefinition
+import org.springframework.context.annotation.CommonAnnotationBeanPostProcessor
+import org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor
 import org.springframework.beans.factory.support.BeanRegistryAdapter
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
@@ -238,6 +244,8 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
 
     @Override
     void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
+        registerAnnotationConfigProcessorsForGeneratedArtifacts(registry)
+
         def springConfig = new DefaultRuntimeSpringConfiguration()
         def application = grailsApplication
         Holders.setGrailsApplication(application)
@@ -248,7 +256,12 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
             pluginManager.doRuntimeConfiguration(springConfig)
         }
 
-        if (loadExternalBeans) {
+        // Running on generated artifacts these beans are already registered: the application's own
+        // definitions were read while the artifacts were being generated and what they declared was
+        // written out as code. Reading them again would register them a second time, and reading
+        // the Groovy one means compiling a script -- which an image cannot do at all, so an
+        // application that has a spring/resources.groovy did not start.
+        if (loadExternalBeans && !AotDetector.useGeneratedArtifacts()) {
             // now allow overriding via application
 
             def context = application.mainContext
@@ -320,6 +333,46 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
                         .register(registrar)
             }
         }
+    }
+
+    /**
+     * Restores the processors that read the injection annotations, when running on artifacts
+     * generated ahead of time.
+     *
+     * <p>Generating those artifacts normally makes these unnecessary: the generator reads the
+     * annotations itself and writes the field and method access into the code it emits, which is why
+     * a controller or a tag library arrives fully injected without them. It can only do that for a
+     * bean whose implementation it can see, and a bean contributed as an interface built by a
+     * supplier hides it -- the link generator is declared as {@code LinkGenerator} and built by a
+     * closure, so the {@code @Autowired} field on the implementation is generated for by nobody.
+     * Nothing fails at start-up; the first page that follows a link does.</p>
+     *
+     * <p>Only the two that inject are restored. Registering the whole set would bring back the
+     * processor that reads configuration classes, and reading them again in a context whose
+     * configuration has already been generated makes a second definition for beans the generated
+     * code has already contributed.</p>
+     *
+     * <p>They are registered under the names Spring uses itself, so a context that already has them
+     * keeps what it has, and a context running without generated artifacts is untouched.</p>
+     */
+    protected static void registerAnnotationConfigProcessorsForGeneratedArtifacts(BeanDefinitionRegistry registry) {
+        if (!AotDetector.useGeneratedArtifacts()) {
+            return
+        }
+        registerInfrastructureBean(registry, AnnotationConfigUtils.AUTOWIRED_ANNOTATION_PROCESSOR_BEAN_NAME,
+                AutowiredAnnotationBeanPostProcessor)
+        registerInfrastructureBean(registry, AnnotationConfigUtils.COMMON_ANNOTATION_PROCESSOR_BEAN_NAME,
+                CommonAnnotationBeanPostProcessor)
+    }
+
+    private static void registerInfrastructureBean(BeanDefinitionRegistry registry, String beanName,
+            Class<?> beanClass) {
+        if (registry.containsBeanDefinition(beanName)) {
+            return
+        }
+        RootBeanDefinition definition = new RootBeanDefinition(beanClass)
+        definition.role = BeanDefinition.ROLE_INFRASTRUCTURE
+        registry.registerBeanDefinition(beanName, definition)
     }
 
     @Override

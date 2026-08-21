@@ -19,7 +19,11 @@
 
 package org.apache.grails.web.layout
 
-import grails.config.Config
+import groovy.transform.CompileStatic
+
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
+
 import grails.config.Settings
 import grails.plugins.Plugin
 import grails.util.Environment
@@ -31,6 +35,7 @@ import org.grails.plugins.web.taglib.RenderGrailsLayoutTagLib
 /**
  * Plugin responsible for Grails Layout specific configuration.
  */
+@CompileStatic
 class LayoutGrailsPlugin extends Plugin {
 
     public static final String GSP_VIEW_LAYOUT_RESOLVER_ENABLED = 'grails.gsp.view.layoutViewResolver'
@@ -38,7 +43,7 @@ class LayoutGrailsPlugin extends Plugin {
     public static final String GRAILS_LAYOUT_ENABLE_NONGSP = 'grails.views.layout.enable.nongsp'
 
     def title = 'Layout'
-    def grailsVersion = '7.0.0-SNAPSHOT > *'
+    def grailsVersion = '8.0.0-SNAPSHOT > *'
     def dependsOn = [core: GrailsUtil.getGrailsVersion(), i18n: GrailsUtil.getGrailsVersion()]
     def observe = ['controllers']
     def loadAfter = ['groovyPages']
@@ -48,32 +53,33 @@ class LayoutGrailsPlugin extends Plugin {
             GrailsLayoutTagLib
     ]
 
-    Closure doWithSpring() {
-        { ->
-            def application = grailsApplication
-            Config config = application.config
-
+    @Override
+    BeanRegistrar beanRegistrar() {
+        return { BeanRegistry registry, org.springframework.core.env.Environment environment ->
             boolean developmentMode = Metadata.getCurrent().isDevelopmentEnvironmentAvailable()
             Environment env = Environment.current
 
             boolean enableReload = env.isReloadEnabled() ||
-                    config.getProperty(Settings.GSP_ENABLE_RELOAD, Boolean, false) ||
+                    environment.getProperty(Settings.GSP_ENABLE_RELOAD, Boolean, false) ||
                     (developmentMode && env == Environment.DEVELOPMENT)
 
             // "grails.gsp.view.layoutViewResolver=false" can be used to disable EmbeddedGrailsLayoutViewResolver
-            // containsKey check must be made to check existence of boolean false values in ConfigObject
-            boolean enableLayoutViewResolver = config.getProperty(GSP_VIEW_LAYOUT_RESOLVER_ENABLED, Boolean, true)
+            boolean enableLayoutViewResolver = environment.getProperty(GSP_VIEW_LAYOUT_RESOLVER_ENABLED, Boolean, true)
             if (enableLayoutViewResolver) {
-                String defaultDecoratorNameSetting = config.getProperty(DEFAULT_LAYOUT, '')
-                Boolean grailsLayoutEnableNonGspViews = config.getProperty(GRAILS_LAYOUT_ENABLE_NONGSP, Boolean, false)
-                groovyPageLayoutFinder(GroovyPageLayoutFinder) {
-                    gspReloadEnabled = enableReload
-                    defaultDecoratorName = defaultDecoratorNameSetting ?: null
-                    enableNonGspViews = grailsLayoutEnableNonGspViews
+                String defaultDecoratorNameSetting = environment.getProperty(DEFAULT_LAYOUT, '')
+                Boolean grailsLayoutEnableNonGspViews = environment.getProperty(GRAILS_LAYOUT_ENABLE_NONGSP, Boolean, false)
+                registry.registerBean('groovyPageLayoutFinder', GroovyPageLayoutFinder) {
+                    it.supplier {
+                        GroovyPageLayoutFinder layoutFinder = new GroovyPageLayoutFinder()
+                        layoutFinder.gspReloadEnabled = enableReload
+                        layoutFinder.defaultDecoratorName = defaultDecoratorNameSetting ?: null
+                        layoutFinder.enableNonGspViews = grailsLayoutEnableNonGspViews
+                        return layoutFinder
+                    }
                 }
-                grailsRenderViewMutator(GrailsLayoutRenderViewMutator)
-                grailsLayoutSelector(LayoutSelector)
-                grailsLayoutViewResolverPostProcessor(GrailsLayoutViewResolverPostProcessor)
+                registry.registerBean('grailsRenderViewMutator', GrailsLayoutRenderViewMutator)
+                registry.registerBean('grailsLayoutSelector', LayoutSelector)
+                registry.registerBean('grailsLayoutViewResolverPostProcessor', GrailsLayoutViewResolverPostProcessor)
             }
         }
     }

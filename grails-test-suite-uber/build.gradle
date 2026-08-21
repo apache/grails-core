@@ -122,11 +122,6 @@ isolatedTestPatterns.keySet().each { taskName ->
     }
 }
 
-tasks.named('isolatedTestsTwo', Test) {
-    maxParallelForks = 1
-    forkEvery = 100
-}
-
 tasks.withType(Test).configureEach {
     // Honor DO_NOT_CACHE_TESTS=1 so developers can repeatedly invoke the same test command
     // without --rerun-tasks (and without recompiling everything else).
@@ -135,10 +130,18 @@ tasks.withType(Test).configureEach {
 
     onlyIf { !testSkippingProperties.any {project.hasProperty(it) } }
     useJUnitPlatform()
-    maxParallelForks = configuredTestParallel
+    maxParallelForks = rootProject.ext.configuredTestParallel
     forkEvery = isCiBuild ? 50 : 100
     maxHeapSize = isCiBuild ? '768m' : '1024m'
     jvmArgs('--add-opens=java.base/java.lang=ALL-UNNAMED', '--add-opens=java.base/java.util=ALL-UNNAMED')
+}
+
+// Must be configured AFTER the tasks.withType(Test) block above. Both are deferred
+// configuration actions and Gradle runs them in registration order, so a tasks.named
+// block registered first would be silently overwritten by the later configureEach.
+tasks.named('isolatedTestsTwo', Test) {
+    maxParallelForks = 1
+    forkEvery = 100
 }
 
 tasks.named('test', Test) {

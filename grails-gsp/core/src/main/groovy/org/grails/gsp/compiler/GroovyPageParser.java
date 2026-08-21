@@ -27,11 +27,14 @@ import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.HexFormat;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -98,7 +101,7 @@ public class GroovyPageParser implements Tokens {
 
     public static final String CONSTANT_NAME_JSP_TAGS = "JSP_TAGS";
     public static final String CONSTANT_NAME_CONTENT_TYPE = "CONTENT_TYPE";
-    public static final String CONSTANT_NAME_LAST_MODIFIED = "LAST_MODIFIED";
+    public static final String CONSTANT_NAME_SOURCE_CHECKSUM = "SOURCE_CHECKSUM";
     public static final String CONSTANT_NAME_EXPRESSION_CODEC = "EXPRESSION_CODEC";
     public static final String CONSTANT_NAME_STATIC_CODEC = "STATIC_CODEC";
     public static final String CONSTANT_NAME_OUT_CODEC = "OUT_CODEC";
@@ -106,6 +109,8 @@ public class GroovyPageParser implements Tokens {
     public static final String CONSTANT_NAME_COMPILE_STATIC_MODE = "COMPILE_STATIC_MODE";
     public static final String CONSTANT_NAME_MODEL_FIELDS_MODE = "MODEL_FIELDS_MODE";
     public static final String DEFAULT_ENCODING = "UTF-8";
+
+    private static final String CHECKSUM_ALGORITHM = "SHA-256";
 
     private static final String MULTILINE_GROOVY_STRING_DOUBLEQUOTES = "\"\"\"";
     private static final String MULTILINE_GROOVY_STRING_SINGLEQUOTES = "'''";
@@ -185,7 +190,7 @@ public class GroovyPageParser implements Tokens {
     private String pluginAnnotation;
     public static final String GROOVY_SOURCE_CHAR_ENCODING = "UTF-8";
     private Map<String, String> jspTags = new HashMap<>();
-    private long lastModified;
+    private String sourceChecksum;
     private boolean precompileMode;
     private Boolean compileStaticMode;
     private boolean modelFieldsMode;
@@ -670,6 +675,9 @@ public class GroovyPageParser implements Tokens {
             return;
         }
 
+        // A \${ the scanner left in the text is an escaped expression: render a literal ${
+        text = text.replace("\\${", "${");
+
         // If we detect it is all whitespace, we need to keep it for later
         // If it is not whitespace, we need to flush any whitespace we do have
         boolean contentIsWhitespace = !NON_WHITESPACE_PATTERN.matcher(text).find();
@@ -902,8 +910,9 @@ public class GroovyPageParser implements Tokens {
                     CONSTANT_NAME_CONTENT_TYPE + " = '" +
                     escapeGroovy(contentType) + "'");
 
-            out.println("public static final long " +
-                    CONSTANT_NAME_LAST_MODIFIED + " = " + lastModified + "L");
+            out.println("public static final String " +
+                    CONSTANT_NAME_SOURCE_CHECKSUM + " = " +
+                    (this.sourceChecksum == null ? "null" : "'" + escapeGroovy(this.sourceChecksum) + "'"));
 
             out.println("public static final String " +
                     CONSTANT_NAME_EXPRESSION_CODEC + " = '" + escapeGroovy(expressionCodecDirectiveValue) + "'");
@@ -1372,12 +1381,48 @@ public class GroovyPageParser implements Tokens {
         }
     }
 
-    public long getLastModified() {
-        return lastModified;
+    /**
+     * Computes the checksum recorded in the {@code SOURCE_CHECKSUM} constant of a generated page.
+     * <p>
+     * Both the compiler that writes the constant and the runtime that compares against it use this method, so
+     * that the two can never disagree on how a GSP source is digested.
+     * <p>
+     * The argument must be the <strong>raw stored bytes</strong> of the page, exactly as they sit on disk or in
+     * the jar entry — not the decoded, re-encoded or otherwise decorated source the runtime parse path works
+     * with. That is the invariant that lets a checksum taken at compile time be compared against one taken by
+     * re-reading the resource at reload time.
+     *
+     * @param source the raw bytes of the GSP source
+     * @return the checksum as a lower-case hex string
+     * @since 8.0.0
+     */
+    public static String checksumOf(byte[] source) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance(CHECKSUM_ALGORITHM).digest(source));
+        }
+        catch (NoSuchAlgorithmException e) {
+            // every JVM is required to provide SHA-256
+            throw new IllegalStateException("Checksum algorithm " + CHECKSUM_ALGORITHM + " is not available", e);
+        }
     }
 
-    public void setLastModified(long lastModified) {
-        this.lastModified = lastModified;
+    /**
+     * @return a checksum of the GSP source this page was generated from, or {@code null} if none was recorded
+     * @since 8.0.0
+     */
+    public String getSourceChecksum() {
+        return this.sourceChecksum;
+    }
+
+    /**
+     * Records a checksum of the GSP source, emitted as the {@code SOURCE_CHECKSUM} constant so that the
+     * runtime can detect an edited source without depending on its modification time.
+     *
+     * @param sourceChecksum the checksum, or {@code null} to record none
+     * @since 8.0.0
+     */
+    public void setSourceChecksum(String sourceChecksum) {
+        this.sourceChecksum = sourceChecksum;
     }
 
     public List<String> getHtmlParts() {

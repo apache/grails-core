@@ -31,7 +31,6 @@ version = "0.0.1"
 group = "com.example"
 
 dependencies {
-    console "org.apache.grails:grails-console"
     implementation platform(project(':grails-bom'))
     implementation "org.springframework.boot:spring-boot-starter-logging"
     implementation "org.springframework.boot:spring-boot-starter-validation"
@@ -58,7 +57,6 @@ dependencies {
     implementation "org.apache.grails:grails-gsp"
     integrationTestImplementation testFixtures("org.apache.grails:grails-geb")
     profile "org.apache.grails.profiles:web"
-    runtimeOnly "org.fusesource.jansi:jansi"
     runtimeOnly "com.h2database:h2"
     runtimeOnly "com.zaxxer:HikariCP"
     runtimeOnly "cloud.wondrify:asset-pipeline-grails"

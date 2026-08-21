@@ -59,13 +59,13 @@ class NamespaceSecuritySpec extends AbstractSecuritySpec {
 		go 'api/v1/books' + format
 
 		then:
-		$('.errors').text() == "Sorry, you're not authorized to view this page."
+		$('.alert-danger p').text() == "Sorry, you're not authorized to view this page."
 
 		when:
 		go 'api/v1/movies' + format
 
 		then:
-		$('.errors').text() == "Sorry, you're not authorized to view this page."
+		$('.alert-danger p').text() == "Sorry, you're not authorized to view this page."
 
 		where:
 		format << ['', '.json']
@@ -88,7 +88,7 @@ class NamespaceSecuritySpec extends AbstractSecuritySpec {
 		go 'api/v1/movies' + format
 
 		then:
-		$('.errors').text() == "Sorry, you're not authorized to view this page."
+		$('.alert-danger p').text() == "Sorry, you're not authorized to view this page."
 
 		where:
 		format << ['', '.json']
@@ -105,7 +105,7 @@ class NamespaceSecuritySpec extends AbstractSecuritySpec {
 		go 'api/v1/books' + format
 
 		then:
-		$('.errors').text() == "Sorry, you're not authorized to view this page."
+		$('.alert-danger p').text() == "Sorry, you're not authorized to view this page."
 
 		when:
 		go 'api/v1/movies' + format

@@ -1,0 +1,89 @@
+// Plugin that publishes a companion -cli artifact. src/main/scripts must land in the companion
+// jar (META-INF/commands) and must not ship in the runtime plugin jar.
+plugins {
+    id 'org.apache.grails.gradle.grails-plugin'
+    id 'org.apache.grails.gradle.grails-plugin-cli'
+}
+
+group = 'org.example.test'
+
+grails {
+    bom = null
+    cliAutoProvision = false
+}
+
+cliArtifact {
+    defaultDependencies = false
+    automaticModuleName = 'org.example.test.plugin.with.cli'
+}
+
+// A consumer contributing extra sources to copyTemplates: paths stay relative to
+// META-INF/templates, exactly as before.
+tasks.named('copyTemplates', Copy) {
+    from(layout.projectDirectory.dir('grails-app/views')) {
+        into('views')
+    }
+}
+
+tasks.register('inspectCommandPackaging') {
+    dependsOn 'jar', 'cliJar'
+    def projectLayout = layout
+    doLast {
+        def runtimeJar = tasks.named('jar', Jar).get().archiveFile.get().asFile
+        def cliJarFile = tasks.named('cliJar', Jar).get().archiveFile.get().asFile
+        def runtimeEntries = jarEntries(runtimeJar)
+        def cliEntries = jarEntries(cliJarFile)
+        println "RUNTIME_JAR=${runtimeJar.name}"
+        println "CLI_JAR=${cliJarFile.name}"
+        println "RUNTIME_HAS_SCRIPT=${runtimeEntries.contains('META-INF/commands/example-script.groovy')}"
+        println "RUNTIME_HAS_YAML=${runtimeEntries.contains('META-INF/commands/example-multi-step.yml')}"
+        println "RUNTIME_HAS_HAND_AUTHORED=${runtimeEntries.contains('META-INF/commands/hand-authored.yml')}"
+        println "CLI_HAS_SCRIPT=${cliEntries.contains('META-INF/commands/example-script.groovy')}"
+        println "CLI_HAS_YAML=${cliEntries.contains('META-INF/commands/example-multi-step.yml')}"
+        println "RUNTIME_HAS_TEMPLATE=${runtimeEntries.contains('META-INF/templates/example.txt')}"
+
+        // GSP templates must survive: grails-app/views is a resource directory whose GSPs are
+        // excluded from processResources, but templates are staged outside that task.
+        println "RUNTIME_HAS_GSP_TEMPLATE=${runtimeEntries.contains('META-INF/templates/example.gsp')}"
+        println "RUNTIME_HAS_VIEW_TEMPLATE=${runtimeEntries.contains('META-INF/templates/views/sample/show.gsp')}"
+
+        // ...while the plugin's own views are still kept out of the runtime resources.
+        println "RUNTIME_HAS_RAW_VIEW=${runtimeEntries.contains('sample/show.gsp')}"
+
+        // Neither copy task writes into a process*Resources output directory.
+        def commandsDir = tasks.named('copyCommands', Copy).get().destinationDir
+        def templatesDir = tasks.named('copyTemplates', Copy).get().destinationDir
+        def mainResourcesDir = tasks.named('processResources', ProcessResources).get().destinationDir
+        def cliResourcesDir = tasks.named('processCliResources', ProcessResources).get().destinationDir
+        println "COPY_COMMANDS_DIR=${normalize(commandsDir)}"
+        println "COPY_TEMPLATES_DIR=${normalize(templatesDir)}"
+        println "STAGING_DIRS_DISTINCT=${commandsDir != templatesDir}"
+        println "COMMANDS_OUTSIDE_RESOURCES=${!isInside(commandsDir, mainResourcesDir) && !isInside(commandsDir, cliResourcesDir)}"
+        println "TEMPLATES_OUTSIDE_RESOURCES=${!isInside(templatesDir, mainResourcesDir) && !isInside(templatesDir, cliResourcesDir)}"
+
+        // Nothing is written into the runtime resources output for command/template staging.
+        def runtimeCommands = new File(mainResourcesDir, 'META-INF/commands')
+        println "RUNTIME_RESOURCES_COMMANDS=${runtimeCommands.exists() ? runtimeCommands.list().sort().join(',') : ''}"
+    }
+}
+
+static String normalize(File file) {
+    file.absolutePath.replace('\\', '/')
+}
+
+static boolean isInside(File candidate, File parent) {
+    candidate.canonicalPath.startsWith(parent.canonicalPath + File.separator)
+}
+
+static Set<String> jarEntries(File jarFile) {
+    def entries = new LinkedHashSet<String>()
+    jarFile.withInputStream { InputStream input ->
+        new java.util.jar.JarInputStream(input).withCloseable { java.util.jar.JarInputStream jar ->
+            java.util.jar.JarEntry entry
+            while ((entry = jar.nextJarEntry) != null) {
+                entries << entry.name
+            }
+        }
+    }
+    entries
+}

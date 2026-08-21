@@ -191,9 +191,9 @@ class SchemaSpec extends Specification implements GraphQLSchemaSpec {
         GraphQLInputObjectType type = schema.getType('ToOneCreate')
 
         expect:
-        unwrap(null, type.getFieldDefinition('circularOne').type) == schema.getType('CircularOneCreateNested')
-        unwrap(null, type.getFieldDefinition('one').type) == schema.getType('OneCreateNested')
-        unwrap(null, type.getFieldDefinition('anEnum').type) == schema.getType('Enum')
+        type.getFieldDefinition('circularOne').type == schema.getType('CircularOneCreateNested')
+        type.getFieldDefinition('one').type == schema.getType('OneCreateNested')
+        type.getFieldDefinition('anEnum').type == schema.getType('Enum')
 
         //everything else is a scalar.. not worth testing every property
     }

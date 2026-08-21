@@ -35,6 +35,12 @@
             "type": "java.lang.Boolean",
             "description": "Whether date parsing is lenient (accepting invalid dates like Feb 30).",
             "defaultValue": false
+        },
+        {
+            "name": "grails.databinding.denyByDefault",
+            "type": "java.lang.Boolean",
+            "description": "Whether mass data binding is denied for properties without an explicit bindable: true constraint or other allowlist entry.",
+            "defaultValue": false
         }
     ]
 }

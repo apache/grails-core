@@ -814,6 +814,9 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
                 List<String> associationPropertyNames = null;
                 ClassNode type = getPropertyType(methodName);
                 if (!AstUtils.isDomainClass(type)) {
+                    // A collection association carries its element type in its generics; an
+                    // embedded component does not, so keep its own type rather than
+                    // discarding it (which silently dropped the block's criteria).
                     ClassNode associationTypeFromGenerics = getAssociationTypeFromGenerics(type);
                     if (associationTypeFromGenerics != null) {
                         type = associationTypeFromGenerics;
@@ -826,13 +829,6 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
 
                 ClassNode existing = currentClassNode;
                 try {
-                    if (!associationPropertyNames.isEmpty() && !AstUtils.isDomainClass(type)) {
-
-                        type = getAssociationTypeFromGenerics(type);
-                        if (type != null) {
-                            associationPropertyNames = AstPropertyResolveUtils.getPropertyNames(type);
-                        }
-                    }
                     if (type != null) {
                         currentClassNode = type;
                         addBlockStatementToNewQuery((BlockStatement) associationCode, currentBody, associationPropertyNames.isEmpty(), associationPropertyNames, variableScope);

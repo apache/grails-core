@@ -1075,11 +1075,6 @@ include::security/securityPlugins.adoc[]
 
 include::security/securityPlugins/springSecurity.adoc[]
 
-[[shiro]]
-==== Shiro
-
-include::security/securityPlugins/shiro.adoc[]
-
 [[mail]]
 == Mail
 
@@ -2607,4 +2602,3 @@ include::ref/Tags/uploadForm.adoc[]
 ==== while
 
 include::ref/Tags/while.adoc[]
-

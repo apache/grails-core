@@ -21,9 +21,10 @@ package org.grails.plugins.web
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 
+import org.springframework.beans.factory.BeanRegistry
+import org.springframework.beans.factory.BeanRegistrar
 import org.springframework.beans.factory.config.PropertiesFactoryBean
 import org.springframework.boot.web.servlet.ServletRegistrationBean
-import org.springframework.core.io.Resource
 import org.springframework.util.ClassUtils
 import org.springframework.web.servlet.view.InternalResourceViewResolver
 
@@ -36,6 +37,8 @@ import grails.util.Environment
 import grails.util.GrailsUtil
 import grails.util.Metadata
 import grails.web.pages.GroovyPagesUriService
+import org.apache.grails.common.aot.AheadOfTimeProcessing
+import org.apache.grails.gsp.taglib.TagLibBeanDefinitionsPostProcessor
 import org.grails.core.artefact.gsp.TagLibArtefactHandler
 import org.grails.gsp.GroovyPageResourceLoader
 import org.grails.gsp.GroovyPagesTemplateEngine
@@ -104,6 +107,24 @@ class GroovyPagesGrailsPlugin extends Plugin {
     }
 
     /**
+     * Tag library beans autowire by name and are read from the artefacts the application knows
+     * about, which the {@link org.springframework.beans.factory.BeanRegistry} API cannot express, so
+     * their definitions are contributed by a dedicated post-processor. Contributing them here rather
+     * than from {@code doWithSpring()} leaves the definitions an ahead-of-time image generated, and
+     * the injection generated with them, in place.
+     */
+    @Override
+    BeanRegistrar beanRegistrar() {
+        { BeanRegistry registry, org.springframework.core.env.Environment environment ->
+            registry.registerBean('tagLibBeanDefinitionsPostProcessor', TagLibBeanDefinitionsPostProcessor) {
+                it.infrastructure().supplier {
+                    new TagLibBeanDefinitionsPostProcessor(grailsApplication)
+                }
+            }
+        } as BeanRegistrar
+    }
+
+    /**
      * Configures the various Spring beans required by GSP
      */
     Closure doWithSpring() {
@@ -166,26 +187,24 @@ class GroovyPagesGrailsPlugin extends Plugin {
                 }
             }
 
-            def deployed = !Metadata.getCurrent().isDevelopmentEnvironmentAvailable()
             groovyPageLocator(CachingGrailsConventionGroovyPageLocator) { bean ->
                 bean.lazyInit = true
                 if (customResourceLoader) {
                     resourceLoader = groovyPageResourceLoader
                 }
-                if (deployed) {
-                    Resource defaultViews = applicationContext?.getResource('gsp/views.properties')
-
-                    if (defaultViews != null) {
-                        if (!defaultViews.exists()) {
-                            defaultViews = applicationContext?.getResource('classpath:gsp/views.properties')
-                        }
-                    }
-
-                    if (defaultViews?.exists()) {
-                        precompiledGspMap = { PropertiesFactoryBean pfb ->
-                            ignoreResourceNotFound = true
-                            locations = [defaultViews] as Resource[]
-                        }
+                // Where the pages compiled at build time are listed, attached anywhere they are
+                // the pages that will be rendered: a deployed application, and one whose code is
+                // being written out. isDevelopmentMode() answers no to the second, so an image is
+                // not built believing it has to compile its pages -- which is the one thing it
+                // cannot do -- while a project on disk still reads its pages from source and
+                // recompiles them as they are edited.
+                //
+                // The locations are named rather than resolved here, so what is written down is
+                // somewhere to look and not a path on the machine that did the building.
+                if (!developmentMode) {
+                    precompiledGspMap = { PropertiesFactoryBean pfb ->
+                        ignoreResourceNotFound = true
+                        locations = ['gsp/views.properties', 'classpath:gsp/views.properties']
                     }
                 }
                 if (enableReload) {
@@ -250,24 +269,10 @@ class GroovyPagesGrailsPlugin extends Plugin {
             // Configure a Spring MVC view resolver if none is defined
             groovyPagesPostProcessor(GroovyPagesPostProcessor)
 
-            // Now go through tag libraries and configure them in Spring too. With AOP proxies and so on
-            for (taglib in application.tagLibClasses) {
-
-                final tagLibClass = taglib.clazz
-
-                "${taglib.fullName}"(tagLibClass) { bean ->
-                    bean.autowire = true
-                    bean.lazyInit = true
-
-                    // Taglib scoping support could be easily added here. Scope could be based on a static field in the taglib class.
-                    //bean.scope = 'request'
-                }
-            }
-
             errorsViewStackTracePrinter(ErrorsViewStackTracePrinter, ref('grailsResourceLocator'))
-            filteringCodecsByContentTypeSettings(FilteringCodecsByContentTypeSettings, application)
+            filteringCodecsByContentTypeSettings(FilteringCodecsByContentTypeSettings, ref('grailsApplication'))
 
-            groovyPagesServlet(ServletRegistrationBean, new GroovyPagesServlet(), '*.gsp') {
+            groovyPagesServlet(ServletRegistrationBean, bean(GroovyPagesServlet), '*.gsp') {
                 if (Environment.isDevelopmentMode()) {
                     initParameters = [showSource: '1']
                 }
@@ -277,7 +282,22 @@ class GroovyPagesGrailsPlugin extends Plugin {
         }
     }
 
+    /**
+     * Whether the application is being developed, which decides where its pages are read from and
+     * whether they are watched for change.
+     *
+     * <p>While code is being generated the answer is no, whatever the machine doing the generating
+     * looks like. Generation runs in the project directory, so a development environment is
+     * available there and the question would otherwise be answered for the machine that built the
+     * application rather than the one that runs it: the pages would be read from a directory that
+     * exists only on the build machine, whose path would be written into the artifact, and an image
+     * cannot compile a page it finds there in any case.</p>
+     */
+    @CompileStatic
     protected boolean isDevelopmentMode() {
+        if (AheadOfTimeProcessing.generatingCode) {
+            return false
+        }
         Metadata.getCurrent().isDevelopmentEnvironmentAvailable()
     }
 

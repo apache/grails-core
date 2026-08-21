@@ -1,0 +1,172 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+Spring's ahead-of-time (AOT) processing moves bean wiring from startup to build time. Instead of scanning the classpath, reading annotations and evaluating conditions on every boot, the build generates Java source that registers the bean definitions directly, and the application runs that.
+
+Two things follow from it: startup does less work, and the application becomes eligible for a GraalVM native image, which cannot perform the classpath scanning and reflection that normal startup relies on.
+
+AOT is opt-in.
+
+
+=== Enabling AOT
+
+
+Apply the Spring Boot AOT plugin alongside the Grails plugins:
+
+[source,groovy]
+----
+apply plugin: 'org.springframework.boot.aot'
+----
+
+This adds a `processAot` task, which `bootJar` then runs as part of the build. Nothing about a normal `bootRun` or `bootJar` changes until the application is started with AOT enabled:
+
+[source,bash]
+----
+java -Dspring.aot.enabled=true -jar build/libs/myapp.jar
+----
+
+An application started this way logs `Starting AOT-processed Application` rather than `Starting Application`.
+
+
+=== The environment the definitions are generated for
+
+
+`processAot` builds the bean definitions the packaged application will use, so it runs in the environment those definitions are meant for. The Grails Gradle plugin sets `grails.env` to `production` on the task; nothing needs to be configured for it.
+
+It matters because an application declares different beans in different environments. Under development the URL mappings holder is a proxy whose type cannot be determined without creating it, and generation fails naming a bean unrelated to anything in the application:
+
+[source]
+----
+Field urlMappings in org.grails.web.mapping.servlet.UrlMappingsErrorPageCustomizer
+required a bean of type 'grails.web.mapping.UrlMappings' that could not be found.
+----
+
+Reload-mode beans have no meaning in a packaged artifact, so generating in production is correct as well as necessary. To generate for a different environment, set the property on the task yourself:
+
+[source,groovy]
+----
+tasks.named('processAot') {
+    systemProperty 'grails.env', 'staging'
+}
+----
+
+
+=== What AOT changes at runtime
+
+
+An AOT-processed application registers the same beans as a normal one. The difference is the annotation-processing infrastructure it no longer needs, since the work those components do has already been done:
+
+* `internalConfigurationAnnotationProcessor`
+* `internalAutowiredAnnotationProcessor`
+* `internalCommonAnnotationProcessor`
+* Spring Boot's shared metadata reader factory
+* Grails' own configuration class post-processor
+
+Application beans, plugin beans and auto-configuration beans are all present as usual.
+
+
+=== Limitations
+
+
+Beans contributed from a plugin's `beanRegistrar()` are not generated. Spring marks them as registrar-owned and skips them, and they are registered again at runtime when Grails applies the plugin registrars. They behave correctly, but the plugin scan that produces them still runs on every start, so they do not benefit from generation.
+
+Writing bean definitions that hold live objects will fail generation. A definition is a recipe rather than an instance, and there is no general way to generate code that reconstructs an arbitrary object, so a constructor argument or property value holding one cannot be processed:
+
+[source]
+----
+UnsupportedTypeValueCodeGenerationException:
+    Code generation does not support com.example.SomeService
+----
+
+Reference another bean by name instead, or express the collaborator as a nested bean definition, and the generator can emit both.
+
+Abstract bean definitions — templates that exist only to be inherited through `bean.parent` — are excluded from generation, because Spring has no representation for them in generated code. Definitions that inherit from one are unaffected: they are generated from their merged definition, with the inherited values already folded in.
+
+AOT processing on its own does not make an application ready for a native image. A native image additionally requires reachability metadata covering the resources and reflection an application performs at runtime.
+
+==== Recording reflection for a native image
+
+Some of that metadata is written for you. The build reads its own output — the compiled artefacts, and the manifest naming each compiled page — and registers them, so a controller, a domain class or a GSP survives into an image without anything having to run.
+
+What that cannot describe is the framework reflecting on its own behalf while a request is served: a controller method reached through Groovy's dispatch, a conversion asked for while a form is bound. Those are not the application's classes, so nothing in the build output names them. An image built without them starts, serves its home page, and fails on the first request that takes such a path — with `MissingReflectionRegistrationError`, naming a method nobody wrote.
+
+`traceNativeMetadata` runs the application under GraalVM's tracing agent and records what it actually did:
+
+[source,groovy]
+----
+grails {
+    nativeMetadata {
+        paths = ['/', '/login', '/book', '/book/create']
+        forms = ['/book/create']
+    }
+}
+----
+
+[source,bash]
+----
+./gradlew traceNativeMetadata
+----
+
+The result is merged into `src/native/resources/META-INF/native-image`, alongside the source rather than under `build`, because which paths an image was built to cover is worth reviewing and worth committing.
+
+`paths` are asked for. `forms` are asked for *and submitted*: the page is read, the fields the form declares are filled in, and they are posted to the action the form names. Submitting matters separately from rendering, because binding a form is a different half of the framework from rendering one — and it is the half that converts. A checkbox arrives as a string and lands on a boolean property, so a form submitted without one never asks the conversion service anything, and the image is built without the answer.
+
+==== Pages behind a login
+
+Forms are submitted before paths are asked for, whichever order they appear in the configuration, and the session a form establishes is carried through the rest of the trace. That is what makes a protected page traceable: list its login form, and the pages named in `paths` are reached as a signed-in user.
+
+[source,groovy]
+----
+grails {
+    nativeMetadata {
+        forms = ['/login?username=admin&password=secret', '/book/create']
+        paths = ['/', '/book', '/book/show/1']
+    }
+}
+----
+
+A form may be told what to put in it with a query string, as `/login` is above. Only fields the form actually declares are set from it; a value naming a field that is not there is reported rather than posted, because it was meant for a form that has since changed.
+
+==== Choosing which form
+
+A page often carries more than one form — a layout's search box or sign-out button ahead of the page's own. The form declaring the most fields is the one submitted, and the trace output says which it was:
+
+[source]
+----
+POST /book/save -> 200  (4 fields, from /book/create form 2 of 2, the one with the most fields)
+----
+
+Where the wanted form is not the fullest, name it by its `id`:
+
+[source,groovy]
+----
+forms = ['/book/create#bookForm']
+----
+
+==== When the trace fails
+
+The task fails if what was recorded is not what was asked for: a request that answers with an error or a not-found, a page listed under `forms` that carries no form, a named form that is not on the page, or a form page that answered from somewhere else.
+
+That last one is the case worth knowing about. A form page reached without whatever makes it reachable answers from the login form instead, and every check after that passes — the page it landed on has a form, its fields are filled in, it posts, and it answers successfully. What would be reported is the login form submitted a second time under the name of the page that was wanted, while the binding the page was listed for went unexercised. So a form that answers from anywhere other than where it was asked for fails the trace, and the message names where it landed.
+
+Redirects are followed, so an application that sends `/` to its real home page records that page. A request that ends up somewhere other than where it was asked for is reported as a warning naming where it landed — usually the sign that a page needs its login form listed under `forms`.
+
+NOTE: The agent ships with GraalVM rather than with a JDK, and it must trace the archive the image will be built from — which is compiled for GraalVM's Java. The task uses the project toolchain, which for a project that builds an image is already a GraalVM; `grails.nativeMetadata.javaExecutable` points it elsewhere.
+
+WARNING: The agent records only what ran. A path that is not listed is not covered, and it will be missing in the way that only appears when somebody uses that page. Treat the list as the coverage it is, and extend it as the application grows.

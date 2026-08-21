@@ -163,10 +163,11 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
         }
         loadedCodecs << codecClass
         DefaultGrailsCodecClass grailsCodecClass = new DefaultGrailsCodecClass(codecClass)
-        grailsCodecClass.configureCodecMethods()
         grailsApplication.addArtefact(CodecArtefactHandler.TYPE, grailsCodecClass)
         if (reinitialize) {
             applicationContext.getBean(DefaultCodecLookup).reInitialize()
+        } else {
+            grailsCodecClass.configureCodecMethods()
         }
     }
 

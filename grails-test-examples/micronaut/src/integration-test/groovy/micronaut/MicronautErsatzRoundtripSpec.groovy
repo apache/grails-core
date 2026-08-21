@@ -20,10 +20,8 @@ package micronaut
 
 import io.github.cjstehno.ersatz.GroovyErsatzServer
 import io.github.cjstehno.ersatz.cfg.ServerConfig
-import io.micronaut.http.client.exceptions.HttpClientException
 import spock.lang.AutoCleanup
 import spock.lang.IgnoreIf
-import spock.lang.Retry
 import spock.lang.Specification
 import spock.lang.Tag
 
@@ -380,7 +378,6 @@ class MicronautErsatzRoundtripSpec extends Specification implements HttpClientSu
         ersatz.verify()
     }
 
-    @Retry(count = 2, delay = 200, exceptions = [HttpClientException])
     void "full roundtrip: ersatz mocks empty response body"() {
         given: 'ersatz mocks an endpoint returning 200 with an empty JSON object'
         ersatz.expectations {

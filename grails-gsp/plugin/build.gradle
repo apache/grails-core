@@ -136,6 +136,8 @@ dependencies {
     }
     implementation 'org.springframework:spring-beans' // PropertyEditorRegistry
 
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
     astImplementation project(':grails-web-core'), {
         // API dependencies in grails-web
         exclude group: 'org.apache.grails.web', module: 'grails-web-common'
@@ -154,14 +156,14 @@ dependencies {
         exclude group: 'org.springframework.boot', module: 'spring-boot-autoconfigure'
     }
 
+    astCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
     runtimeOnly project(':grails-web-jsp'), { // Provided by Application for JSP support
         // API dependencies in grails-web-jsp
         exclude group: 'org.apache.grails.views', module: 'grails-web-gsp'
     }
 
     api project(':grails-codecs') // Registers CodecLookup bean
-
-    testCompileOnly 'jakarta.annotation:jakarta.annotation-api'
 
     testImplementation project(':grails-web-jsp'), { // TagLibraryResolverImpl
         // API dependencies in grails-web-jsp
@@ -175,6 +177,9 @@ dependencies {
     testImplementation 'org.apache.grails:grails-testing-support-datamapping'
     testImplementation project(':grails-testing-support-core')
     testImplementation project(':grails-testing-support-web')
+
+    testCompileOnly 'jakarta.annotation:jakarta.annotation-api'
+    testCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     testRuntimeOnly 'org.glassfish.web:jakarta.servlet.jsp.jstl'
     testRuntimeOnly project(':grails-url-mappings')

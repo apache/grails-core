@@ -106,6 +106,7 @@ GORM:
   quickStartGuide:
     title: Quick Start Guide
     basicCRUD: Basic CRUD
+  multiTenancy: Multi-Tenancy
   furtherReading: Further Reading on GORM
     
 theWebLayer:
@@ -309,6 +310,7 @@ testing:
   integrationTesting: Integration Testing
   functionalTesting: Functional Testing
   testPhases: Custom Test Phases
+  testingMongodb: Testing GORM for MongoDB
 bestPractices:
   title: Building a Successful Application
   codeAnalysisGroovy: Code Analysis and Styling for Groovy
@@ -393,5 +395,7 @@ deployment:
   deploymentStandalone: Standalone
   deploymentContainer: Container Deployment (e.g. Tomcat)
   deploymentTasks: Deployment Configuration Tasks
+  deploymentAot: Ahead-of-Time Processing
+  deploymentAotCache: Ahead-of-Time Caching
 contributing:
   title: Contributing to Grails

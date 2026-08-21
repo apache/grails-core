@@ -256,7 +256,7 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
                     AvailableSettings.getField('ACQUIRE_CONNECTIONS')
                     props.put('hibernate.connection.release_mode', 'ON_CLOSE')
                 }
-                catch (NoSuchFieldException ex2) {
+                catch (NoSuchFieldException ignored) {
                     // on Hibernate 5.0.x or lower - no need to change the default there
                 }
             }

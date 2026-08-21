@@ -22,21 +22,11 @@
 	<s2ui:title messageCode='default.create.label' entityNameMessageCode='role.label' entityNameDefault='Role'/>
 </head>
 <body>
-<div class="body">
-	<s2ui:formContainer type='save' beanType='role' focus='authority' height='300'>
-		<s2ui:form useToken="true">
-			<div class="dialog">
-				<br/>
-				<table>
-					<tbody>
-					<s2ui:textFieldRow name='authority' size='50' labelCodeDefault='Authority'/>
-					<tr><td>&nbsp;</td></tr>
-					<tr class="prop"><td valign="top"><s2ui:submitButton/></td></tr>
-					</tbody>
-				</table>
-			</div>
-		</s2ui:form>
-	</s2ui:formContainer>
-</div>
+<s2ui:formContainer type='save' beanType='role' focus='authority' width='40rem'>
+	<s2ui:form useToken="true">
+		<s2ui:textFieldRow name='authority' labelCodeDefault='Authority'/>
+		<s2ui:submitButton/>
+	</s2ui:form>
+</s2ui:formContainer>
 </body>
 </html>

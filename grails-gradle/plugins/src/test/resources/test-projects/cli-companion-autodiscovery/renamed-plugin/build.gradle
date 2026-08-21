@@ -1,0 +1,13 @@
+// A command-bearing plugin whose companion coordinate is customized. Its cli variants must carry
+// the advertised capability (org.example.test:acme-cli-tools) in addition to the Gradle default,
+// so both auto-discovery and hand-written requireCapability against the advertised coordinate
+// resolve in-build.
+plugins {
+    id 'java-library'
+    id 'org.apache.grails.gradle.grails-plugin-cli'
+}
+
+cliArtifact {
+    artifactId = 'acme-cli-tools'
+    defaultDependencies = false
+}

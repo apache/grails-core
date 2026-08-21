@@ -33,7 +33,7 @@ pluginManagement {
 }
 
 plugins {
-    id 'com.gradle.develocity' version '4.3.2'
+    id 'com.gradle.develocity' version '4.5.0'
     id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.4.0'
     id 'org.apache.grails.buildsrc.repo'
 }
@@ -106,7 +106,9 @@ def buildJdkSupportsMicronaut = Runtime.version().feature() >= 25
 def skipMicronautProjects = explicitlySkipMicronaut || (!buildJdkSupportsMicronaut && !explicitlyIncludeMicronaut)
 
 include(
+        'grails-benchmarks',
         'grails-bootstrap',
+        'grails-beans-dsl',
         'grails-cache',
         'grails-codecs-core',
         'grails-codecs',
@@ -115,6 +117,7 @@ include(
         'grails-controllers',
         'grails-converters',
         'grails-core',
+        'grails-core-cli-legacy',
         'grails-databinding-core',
         'grails-databinding',
         'grails-datasource',
@@ -132,6 +135,8 @@ include(
         'grails-shell-cli',
         'grails-spring',
         'grails-test-core',
+        'grails-undertow',
+        'grails-undertow-spring-boot',
         'grails-url-mappings',
         'grails-validation',
         'grails-views-core',
@@ -152,6 +157,7 @@ include(
         'grails-bom', // the default bom
         'grails-hibernate5-bom',
         'grails-hibernate7-bom',
+        'grails-neo4j-bom',
 
         // Docs
         'grails-doc',
@@ -254,6 +260,7 @@ project(':grails-bom').projectDir = file('grails-bom/default')
 project(':grails-base-bom').projectDir = file('grails-bom/base')
 project(':grails-hibernate5-bom').projectDir = file('grails-bom/hibernate5')
 project(':grails-hibernate7-bom').projectDir = file('grails-bom/hibernate7')
+project(':grails-neo4j-bom').projectDir = file('grails-bom/neo4j')
 
 // Instead of using : to separate nested projects, fix the project directories by setting the projectDir explicitly
 // (Preserve the parent directory name as part of the nested project name)
@@ -287,6 +294,9 @@ project(':grails-web-gsp-taglib').projectDir = file('grails-gsp/grails-web-gsp-t
 project(':grails-web-jsp').projectDir = file('grails-gsp/grails-web-jsp')
 project(':grails-web-taglib').projectDir = file('grails-gsp/grails-web-taglib')
 project(':grails-gsp-spring-boot').projectDir = file('grails-gsp/spring-boot')
+
+project(':grails-undertow-spring-boot').projectDir = file('grails-undertow/spring-boot')
+project(':grails-undertow').projectDir = file('grails-undertow/plugin')
 
 // Data Mapping - Documentation
 include 'grails-data-docs-guide-developer'
@@ -386,11 +396,31 @@ project(':grails-data-mongodb-spring-boot').projectDir = new File(settingsDir, '
 include 'grails-data-mongodb-spring-data'
 project(':grails-data-mongodb-spring-data').projectDir = new File(settingsDir, 'grails-data-mongodb/spring-data')
 
+include 'grails-data-mongodb-embedded'
+project(':grails-data-mongodb-embedded').projectDir = new File(settingsDir, 'grails-data-mongodb/embedded')
+
 include 'grails-data-mongodb'
 project(':grails-data-mongodb').projectDir = new File(settingsDir, 'grails-data-mongodb/grails-plugin')
 
 include 'grails-data-mongodb-gson-templates'
 project(':grails-data-mongodb-gson-templates').projectDir = new File(settingsDir, 'grails-data-mongodb/gson-templates')
+
+// Neo4j
+// core
+include 'grails-data-neo4j-core'
+project(':grails-data-neo4j-core').projectDir = new File(settingsDir, 'grails-data-neo4j/core')
+
+// documentation
+include 'grails-data-neo4j-docs'
+project(':grails-data-neo4j-docs').projectDir = new File(settingsDir, 'grails-data-neo4j/docs')
+
+// boot plugin
+include 'grails-data-neo4j-spring-boot'
+project(':grails-data-neo4j-spring-boot').projectDir = new File(settingsDir, 'grails-data-neo4j/boot-plugin')
+
+// plugin
+include 'grails-data-neo4j'
+project(':grails-data-neo4j').projectDir = new File(settingsDir, 'grails-data-neo4j/grails-plugin')
 
 // GraphQL
 // core
@@ -423,6 +453,22 @@ project(':grails-test-examples-mongodb-test-data-service').projectDir = new File
 
 include 'grails-test-examples-mongodb-gson-templates'
 project(':grails-test-examples-mongodb-gson-templates').projectDir = new File(settingsDir, 'grails-test-examples/mongodb/gson-templates')
+
+// functional tests - neo4j examples
+include 'grails-test-examples-neo4j-base'
+project(':grails-test-examples-neo4j-base').projectDir = new File(settingsDir, 'grails-test-examples/neo4j/base')
+
+include 'grails-test-examples-neo4j-hibernate5'
+project(':grails-test-examples-neo4j-hibernate5').projectDir = new File(settingsDir, 'grails-test-examples/neo4j/hibernate5')
+
+include 'grails-test-examples-neo4j-spring-boot'
+project(':grails-test-examples-neo4j-spring-boot').projectDir = new File(settingsDir, 'grails-test-examples/neo4j/spring-boot')
+
+include 'grails-test-examples-neo4j-standalone'
+project(':grails-test-examples-neo4j-standalone').projectDir = new File(settingsDir, 'grails-test-examples/neo4j/neo4j-standalone')
+
+include 'grails-test-examples-neo4j-test-data-service'
+project(':grails-test-examples-neo4j-test-data-service').projectDir = new File(settingsDir, 'grails-test-examples/neo4j/test-data-service')
 
 // functional tests - graphql examples
 include 'grails-test-examples-graphql-grails-test-app'
@@ -519,12 +565,15 @@ project(':grails-test-examples-redis').projectDir = new File(settingsDir, 'grail
 
 // Functional Tests
 include(
+        'grails-test-examples-aot',
         'grails-test-examples-app1',
         'grails-test-examples-app2',
         'grails-test-examples-app3',
         'grails-test-examples-app4',
         'grails-test-examples-app5',
         'grails-test-examples-async-events-pubsub-demo',
+        'grails-test-examples-beans-dsl',
+        'grails-test-examples-beans-dsl-plugin',
         'grails-test-examples-cache',
         'grails-test-examples-database-cleanup',
         'grails-test-examples-datasources',
@@ -557,10 +606,14 @@ include(
         'grails-test-examples-scaffolding',
         'grails-test-examples-scaffolding-fields',
         'grails-test-examples-test-phases',
+        'grails-test-examples-undertow',
         'grails-test-examples-views-functional-tests',
         'grails-test-examples-views-functional-tests-plugin',
 )
 project(':grails-test-examples-async-events-pubsub-demo').projectDir = file('grails-test-examples/async-events-pubsub-demo')
+project(':grails-test-examples-beans-dsl').projectDir = file('grails-test-examples/beans-dsl')
+project(':grails-test-examples-beans-dsl-plugin').projectDir = file('grails-test-examples/beans-dsl-plugin')
+project(':grails-test-examples-aot').projectDir = file('grails-test-examples/aot')
 project(':grails-test-examples-app1').projectDir = file('grails-test-examples/app1')
 project(':grails-test-examples-app2').projectDir = file('grails-test-examples/app2')
 project(':grails-test-examples-app3').projectDir = file('grails-test-examples/app3')
@@ -599,21 +652,8 @@ project(':grails-test-examples-views-functional-tests').projectDir = file('grail
 project(':grails-test-examples-views-functional-tests-plugin').projectDir = file('grails-test-examples/views-functional-tests-plugin')
 project(':grails-test-examples-test-phases').projectDir = file('grails-test-examples/test-phases')
 project(':grails-test-examples-jetty').projectDir = file('grails-test-examples/jetty')
+project(':grails-test-examples-undertow').projectDir = file('grails-test-examples/undertow')
 project(':grails-test-examples-latency').projectDir = file('grails-test-examples/latency')
-
-// The Spring Dependency Management example imports grails-bom as a Maven BOM through
-// io.spring.dependency-management, which resolves BOM imports with its own detached
-// configurations. Those bypass the local-project substitution rules in
-// gradle/functional-test-config.gradle, so the import only works when
-// org.apache.grails:grails-bom:<projectVersion> is already published to a repository.
-// During a release (reproducible build, SOURCE_DATE_EPOCH set) the version being staged
-// is not published anywhere yet, so the example cannot resolve its dependencies -
-// exclude it from the build graph entirely. It still builds and runs on every regular
-// CI build, where the -SNAPSHOT BOM is available from the Apache snapshots repository.
-if (!isReproducibleBuild) {
-    include 'grails-test-examples-spring-dependency-management'
-    project(':grails-test-examples-spring-dependency-management').projectDir = file('grails-test-examples/spring-dependency-management')
-}
 
 includeBuild('./grails-gradle') {
     name = 'grails-gradle'

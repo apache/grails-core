@@ -58,6 +58,7 @@ tasks.named('rat') {
             'grails-doc/src/en/ref/Versions/Grails BOM Hibernate5.adoc', // exclude generated data
             'grails-doc/src/en/ref/Versions/Grails BOM Hibernate7.adoc', // exclude generated data
             'grails-doc/src/en/ref/Versions/Grails BOM Micronaut.adoc', // exclude generated data
+            'grails-doc/src/en/ref/Versions/Grails BOM Hibernate7 Micronaut.adoc', // exclude generated data
             'grails-profiles/**/templates/**', // template files that people are expected to use in the end application
             'grails-profiles/**/commands/**', // template files that people are expected to use in the end application
             'grails-profiles/**/features/**', // template files that people are expected to use in the end application
@@ -149,6 +150,8 @@ tasks.named('rat') {
             '**/*.log', // exclude log files
             'local-tasks.gradle', // exclude local helper scripts
             '**/spring-configuration-metadata.json', // JSON files cannot contain license headers
+            'grails-test-examples/spring-security/cas/test1/src/main/resources/cas/services/*.json', // CAS service registry definitions; JSON files cannot contain license headers
+            'grails-benchmarks/src/reportTest/resources/jmh-golden/**', // byte-exact JMH report fixtures; a license header would alter the compared bytes
     ] + rootProject.subprojects.collect{"${rootProject.projectDir.relativePath(it.layout.buildDirectory.get().asFile).toString()}/**/*" }
     // logger.lifecycle("Excludes for RAT task: ${allExcludes.join(', \n')}")
     excludes = allExcludes

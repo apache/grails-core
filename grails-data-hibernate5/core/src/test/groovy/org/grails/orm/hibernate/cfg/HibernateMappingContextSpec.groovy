@@ -18,17 +18,15 @@
  */
 package org.grails.orm.hibernate.cfg
 
+import spock.lang.Specification
+
 import grails.gorm.annotation.Entity
 import org.grails.datastore.mapping.engine.types.AbstractMappingAwareCustomTypeMarshaller
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.ValueGenerator
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings
-import spock.lang.Specification
 
-/**
- * Created by graemerocher on 07/10/2016.
- */
 class HibernateMappingContextSpec extends Specification {
 
     void "test entity with custom id generator"() {
@@ -55,6 +53,51 @@ class HibernateMappingContextSpec extends Specification {
         and:"The type is registered as a custom type with the mapping factory"
         mappingContext.mappingFactory.isCustomType(MyUUIDGenerator)
     }
+
+    void "unconstrained properties are nullable in the Hibernate mapping"() {
+        when:
+        def entity = new HibernateMappingContext().addPersistentEntity(MappingContextNullableByDefaultEntity)
+
+        then:
+        entity.getPropertyByName("name").mapping.mappedForm.nullable
+    }
+
+    void "explicit constraints do not prevent the default nullable mapping"() {
+        when:
+        def entity = new HibernateMappingContext().addPersistentEntity(MappingContextConstrainedEntity)
+
+        then:
+        entity.getPropertyByName("name").mapping.mappedForm.nullable
+    }
+
+    void "wildcard mappings do not prevent the default nullable mapping"() {
+        when:
+        def entity = new HibernateMappingContext().addPersistentEntity(MappingContextWildcardMappedEntity)
+
+        then:
+        entity.getPropertyByName("name").mapping.mappedForm.nullable
+    }
+
+    void "composite id components are nullable by default"() {
+        when:
+        def entity = new HibernateMappingContext().addPersistentEntity(MappingContextCompositeIdEntity)
+
+        then:
+        entity.getPropertyByName("tenantId").mapping.mappedForm.nullable
+        entity.getPropertyByName("code").mapping.mappedForm.nullable
+    }
+
+    void "default nullable can be disabled"() {
+        given:
+        def settings = new HibernateConnectionSourceSettings()
+        settings.default.nullable = false
+
+        when:
+        def entity = new HibernateMappingContext(settings).addPersistentEntity(MappingContextNullableByDefaultEntity)
+
+        then:
+        !entity.getPropertyByName("name").mapping.mappedForm.nullable
+    }
 }
 
 @Entity
@@ -62,6 +105,39 @@ class CustomIdGeneratorEntity {
     String name
     static mapping = {
         id(generator: "org.grails.orm.hibernate.cfg.MyUUIDGenerator", type: "uuid-binary")
+    }
+}
+
+@Entity
+class MappingContextNullableByDefaultEntity {
+    String name
+}
+
+@Entity
+class MappingContextConstrainedEntity {
+    String name
+
+    static constraints = {
+        name maxSize: 100
+    }
+}
+
+@Entity
+class MappingContextWildcardMappedEntity {
+    String name
+
+    static mapping = {
+        '*' cache: true
+    }
+}
+
+@Entity
+class MappingContextCompositeIdEntity {
+    String tenantId
+    String code
+
+    static mapping = {
+        id composite: ['tenantId', 'code']
     }
 }
 

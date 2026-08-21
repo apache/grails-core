@@ -2,15 +2,38 @@
   "properties": [
     {
       "name": "grails.banner.art.display",
-        "description": "Whether to display the Grails banner art.",
+      "description": "Whether to display the Grails banner art.",
       "type": "java.lang.Boolean",
       "defaultValue": true
     },
     {
-        "name": "grails.banner.art.file",
-        "description": "The file path on the classpath to the Grails banner art to display.",
-        "type": "java.lang.String",
-        "defaultValue": "grails-banner.txt"
+      "name": "grails.banner.art.file",
+      "description": "The file path on the classpath to the Grails banner art to display.",
+      "type": "java.lang.String",
+      "defaultValue": "grails-banner.txt"
+    },
+    {
+      "name": "grails.banner.art.color",
+      "type": "java.lang.String",
+      "description": "The colour to show the banner art in, where the terminal colours output at all. A number selects one of the 256 colours a terminal offers; a name selects one of the eight it has always had, such as red or bright_blue; none leaves the art uncoloured. A value that is neither falls back to the default.",
+      "defaultValue": "214"
+    },
+    {
+      "name": "grails.banner.mark.display",
+      "type": "java.lang.Boolean",
+      "description": "Whether to say under the banner art how the application was started: NATIVE for an image, AOT CACHE for a JVM given a cache to read, AOT for one running generated bean definitions. An ordinary start says nothing.",
+      "defaultValue": true
+    },
+    {
+      "name": "grails.banner.mark.color",
+      "type": "java.lang.String",
+      "description": "The colour to show the mark in, separate from the art so it is not read as part of it. Takes the same values as grails.banner.art.color: a number for one of the 256 colours a terminal offers, a name for one of the eight it has always had, or none.",
+      "defaultValue": "226"
+    },
+    {
+      "name": "grails.banner.mark.text",
+      "type": "java.lang.String",
+      "description": "Says this instead of what was detected. Shown spaced and in upper case, and an empty value shows nothing."
     },
     {
       "name": "grails.banner.versions.display",
@@ -50,16 +73,49 @@
       "description": "The locale resolution strategy. 'session' and 'cookie' are mutable (the ?lang= switch works); 'acceptHeader' and 'fixed' are read-only (the ?lang= switch is ignored).",
       "type": "java.lang.String",
       "defaultValue": "session"
+    },
+    {
+      "name": "grails.i18n.include-plugin-bundles",
+      "description": "Whether message bundles contributed by plugins participate, both in message resolution and in the locales offered by a language selector. Bundle caching, encoding and locale fallback are configured through spring.messages.* instead.",
+      "type": "java.lang.Boolean",
+      "defaultValue": true
+    },
+    {
+      "name": "grails.i18n.default.locale",
+      "description": "The locale of the base message bundle, always offered by a language selector and used by the 'fixed' locale resolver. Falls back to the JVM default when unset.",
+      "type": "java.lang.String"
+    },
+    {
+      "name": "grails.i18n.cache.seconds",
+      "description": "How long (in seconds) resolved message bundles are cached. Honoured only when reload is enabled, as before.",
+      "type": "java.lang.Integer",
+      "deprecation": {
+        "level": "warning",
+        "reason": "Spring Boot owns the message source; its cache duration is configured with spring.messages.cache-duration.",
+        "replacement": "spring.messages.cache-duration"
+      }
     }
   ],
   "hints": [
     {
       "name": "grails.i18n.localeResolver",
       "values": [
-        { "value": "session", "description": "Resolve the locale from the HTTP session (mutable; ?lang= switching works). The default." },
-        { "value": "cookie", "description": "Resolve the locale from a cookie (mutable; ?lang= switching works)." },
-        { "value": "acceptHeader", "description": "Resolve the locale from the Accept-Language header (read-only; ?lang= is ignored)." },
-        { "value": "fixed", "description": "Use a fixed locale from grails.i18n.default.locale, falling back to the JVM default (read-only; ?lang= is ignored)." }
+        {
+          "value": "session",
+          "description": "Resolve the locale from the HTTP session (mutable; ?lang= switching works). The default."
+        },
+        {
+          "value": "cookie",
+          "description": "Resolve the locale from a cookie (mutable; ?lang= switching works)."
+        },
+        {
+          "value": "acceptHeader",
+          "description": "Resolve the locale from the Accept-Language header (read-only; ?lang= is ignored)."
+        },
+        {
+          "value": "fixed",
+          "description": "Use a fixed locale from grails.i18n.default.locale, falling back to the JVM default (read-only; ?lang= is ignored)."
+        }
       ]
     }
   ]

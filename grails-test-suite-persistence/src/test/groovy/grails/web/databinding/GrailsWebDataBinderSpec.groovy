@@ -18,22 +18,28 @@
  */
 package grails.web.databinding
 
+import groovy.transform.CompileStatic
 import groovy.transform.Sortable
 
+import spock.lang.Issue
+import spock.lang.Specification
+import spock.lang.Unroll
+
+import org.springframework.context.support.StaticMessageSource
+
+import grails.config.Settings
 import grails.databinding.BindUsing
 import grails.databinding.BindingFormat
 import grails.databinding.DataBindingSource
 import grails.databinding.SimpleMapDataBindingSource
+import grails.databinding.converters.ValueConverter
 import grails.databinding.errors.BindingError
 import grails.databinding.events.DataBindingListenerAdapter
 import grails.persistence.Entity
 import grails.testing.gorm.DataTest
 import grails.validation.DeferredBindingActions
 import grails.validation.Validateable
-import org.springframework.context.support.StaticMessageSource
-import spock.lang.Issue
-import spock.lang.Specification
-import spock.lang.Unroll
+import org.grails.config.PropertySourcesConfig
 
 class GrailsWebDataBinderSpec extends Specification implements DataTest {
 
@@ -43,8 +49,9 @@ class GrailsWebDataBinderSpec extends Specification implements DataTest {
 
     void setupSpec() {
         mockDomains(
-            AssociationBindingAuthor, AssociationBindingBook, AssociationBindingPage, Author, Child,
-            CollectionContainer, DataBindingBook, Fidget, Foo, Parent, Publication, Publisher, Team, Widget
+                AssociationBindingAuthor, AssociationBindingBook, AssociationBindingPage, Author, BinderNullabilityEntity,
+                Child, CollectionContainer, DataBindingBook, Fidget, Foo, GeneratedBindingChild, GeneratedBindingParent,
+                Parent, Publication, Publisher, Team, Widget
         )
     }
 
@@ -54,6 +61,16 @@ class GrailsWebDataBinderSpec extends Specification implements DataTest {
     
     void cleanup() {
         Locale.setDefault(defaultLocale)
+        binder.convertEmptyStringsToNull = true
+        grailsApplication.config.setAt(Settings.DATABINDING_DENY_BY_DEFAULT, null)
+        DataBindingUtils.clearBindingCaches()
+        GrailsWebDataBinder.resetWarnedBindingShapes()
+    }
+
+    @CompileStatic
+    private static void bindWithNullIncludeList(GrailsWebDataBinder binder, Object target,
+            DataBindingSource source) {
+        binder.bind(target, source, (List) null)
     }
 
     void 'Test binding an invalid String to an object reference does not result in an empty instance being bound'() {
@@ -291,7 +308,7 @@ class GrailsWebDataBinderSpec extends Specification implements DataTest {
 
         when:
         publication.title = null
-        def whiteList = []
+        List whiteList = null
         def blackList = ['author']
         binder.bind(publication, new SimpleMapDataBindingSource([
             title: 'Infinite Jest',
@@ -456,6 +473,219 @@ class GrailsWebDataBinderSpec extends Specification implements DataTest {
 
         // this is what we are really testing...
         pub.publisher.publications[0] == pub
+    }
+
+    void 'Test generated parent allowlist applies persisted association child allowlist'() {
+        given:
+        grailsApplication.config.setAt(Settings.DATABINDING_DENY_BY_DEFAULT, true)
+        def child = new GeneratedBindingChild(name: 'Original').save(flush: true, failOnError: true)
+        def parent = new GeneratedBindingParent(child: child).save(flush: true, failOnError: true)
+
+        when:
+        binder.bind(parent, new SimpleMapDataBindingSource([
+            child: [id: child.id, name: 'Allowed', admin: true]
+        ]))
+
+        then:
+        parent.child.is(child)
+        parent.child.name == 'Allowed'
+        !parent.child.admin
+    }
+
+    void 'Test generated allowlist applies to persisted domain instances in typed arrays'() {
+        given:
+        grailsApplication.config.setAt(Settings.DATABINDING_DENY_BY_DEFAULT, true)
+        def child = new GeneratedBindingChild(name: 'Original').save(flush: true, failOnError: true)
+        def holder = new GeneratedBindingArrayHolder()
+
+        when:
+        binder.bind(holder, new SimpleMapDataBindingSource([
+            children: [[id: child.id, name: 'Allowed', admin: true]]
+        ]))
+
+        then:
+        holder.children.length == 1
+        holder.children[0].is(child)
+        holder.children[0].id == child.id
+        holder.children[0].name == 'Allowed'
+        !holder.children[0].admin
+    }
+
+    void 'Test null public include list resolves generated allowlist'() {
+        given:
+        grailsApplication.config.setAt(Settings.DATABINDING_DENY_BY_DEFAULT, true)
+        def child = new GeneratedBindingChild(name: 'Original')
+
+        when:
+        bindWithNullIncludeList(binder, child, new SimpleMapDataBindingSource([
+            name: 'Allowed', admin: true
+        ]))
+
+        then:
+        child.name == 'Allowed'
+        !child.admin
+    }
+
+    void 'Test empty public include list binds no properties'() {
+        given:
+        def child = new GeneratedBindingChild(name: 'Original')
+
+        when:
+        binder.bind(child, new SimpleMapDataBindingSource([
+            name: 'Changed', admin: true
+        ]), [])
+
+        then:
+        child.name == 'Original'
+        !child.admin
+    }
+
+    void 'Test explicit nested wildcard binds all nested properties'() {
+        given:
+        def parent = new GeneratedBindingParent(child: new GeneratedBindingChild(name: 'Original'))
+
+        when:
+        binder.bind(parent, new SimpleMapDataBindingSource([
+            child: [name: 'Changed', admin: true]
+        ]), ['child'])
+
+        then:
+        parent.child.name == 'Changed'
+        parent.child.admin
+    }
+
+    void 'Test Map constructor fallback fails closed without a no-arg constructor'() {
+        given:
+        grailsApplication.config.setAt(Settings.DATABINDING_DENY_BY_DEFAULT, true)
+        def holder = new SecureMapConstructorHolder()
+        def indexedHolder = new SecureMapConstructorHolder()
+        def arrayHolder = new SecureMapConstructorHolder()
+        List<String> warnings = []
+        def warningBinder = new GrailsWebDataBinder(grailsApplication) {
+            @Override
+            protected boolean isBindingWarningEnabled() {
+                true
+            }
+
+            @Override
+            protected void logBindingWarning(String message) {
+                warnings << message
+            }
+        }
+
+        when:
+        warningBinder.bind(holder, new SimpleMapDataBindingSource([
+            values: [first: [name: 'Allowed', admin: true]]
+        ]))
+        warningBinder.bind(indexedHolder, new SimpleMapDataBindingSource([
+            'values[second]': [name: 'Also Allowed', admin: true]
+        ]))
+        warningBinder.bind(arrayHolder, new SimpleMapDataBindingSource([
+            arrayValues: [[name: 'Array Allowed', admin: true]]
+        ]))
+
+        then:
+        holder.values.isEmpty()
+        indexedHolder.values.isEmpty()
+        arrayHolder.arrayValues.length == 0
+        warnings == [GrailsWebDataBinder.missingNoArgConstructorMessage(SecureMapConstructorValue)]
+    }
+
+    void 'Test Map constructor fallback remains permissive in compatibility mode'() {
+        given:
+        grailsApplication.config.setAt(Settings.DATABINDING_DENY_BY_DEFAULT, false)
+        def holder = new SecureMapConstructorHolder()
+
+        when:
+        binder.bind(holder, new SimpleMapDataBindingSource([
+            values: [first: [name: 'Legacy', admin: true]],
+            arrayValues: [[name: 'Array Legacy', admin: true]]
+        ]))
+
+        then:
+        holder.values.first.name == 'Legacy'
+        !holder.values.first.admin
+        holder.arrayValues*.name == ['Array Legacy']
+        !holder.arrayValues[0].admin
+
+        cleanup:
+        grailsApplication.config.setAt(Settings.DATABINDING_DENY_BY_DEFAULT, null)
+    }
+
+    void 'Test Map constructor fallback binds unconfigured properties but not bindable false by default'() {
+        given:
+        def configuredConfig = grailsApplication.config
+        grailsApplication.config = new PropertySourcesConfig([:])
+        def holder = new SecureMapConstructorHolder()
+
+        when:
+        binder.bind(holder, new SimpleMapDataBindingSource([
+            values: [first: [name: 'Default', admin: true]]
+        ]))
+
+        then:
+        holder.values.first.name == 'Default'
+        !holder.values.first.admin
+
+        cleanup:
+        grailsApplication.config = configuredConfig
+    }
+
+    void 'Test Map constructor fallback remains permissive for explicit bind-all'() {
+        given:
+        def holder = new SecureMapConstructorHolder()
+
+        when:
+        binder.bind(holder, new SimpleMapDataBindingSource([
+            values: [first: [name: 'Explicit', admin: true]]
+        ]), ['values'])
+
+        then:
+        holder.values.first.name == 'Explicit'
+        !holder.values.first.admin
+    }
+
+    void 'Test Map constructor fallback fails closed for a narrow explicit include'() {
+        given:
+        grailsApplication.config.setAt(Settings.DATABINDING_DENY_BY_DEFAULT, true)
+        def holder = new SecureMapConstructorHolder()
+
+        when:
+        binder.bind(holder, new SimpleMapDataBindingSource([
+            values: [first: [name: 'Explicit', admin: true]]
+        ]), ['values.name'])
+
+        then:
+        holder.values.isEmpty()
+    }
+
+    void 'Test typed Map binding in default mode notifies listeners and records value conversion errors'() {
+        given:
+        def holder = new TypedMapBindingHolder()
+        List<String> afterBindingProperties = []
+        List<BindingError> bindingErrors = []
+        def listener = new DataBindingListenerAdapter() {
+            @Override
+            void afterBinding(Object object, String propertyName, Object errors) {
+                afterBindingProperties << propertyName
+            }
+
+            @Override
+            void bindingError(BindingError error, Object errors) {
+                bindingErrors << error
+            }
+        }
+
+        when:
+        binder.bind(holder, new SimpleMapDataBindingSource([
+            values: [first: [quantity: 'not-a-number']]
+        ]), listener)
+
+        then:
+        holder.values.first.hasErrors()
+        holder.values.first.errors.getFieldError('quantity').code == 'typeMismatch'
+        afterBindingProperties.contains('values')
+        bindingErrors*.propertyName.contains('quantity')
     }
 
     void 'Test binding to a hasMany List'() {
@@ -1129,6 +1359,38 @@ class GrailsWebDataBinderSpec extends Specification implements DataTest {
         afterBindingArgs[0]['propertyName'] == 'someNumber'
     }
     
+    void 'blank binding errors respect domain property nullability'() {
+
+        given:
+        binder.convertEmptyStringsToNull = false
+        binder.registerConverter(new ValueConverter() {
+            boolean canConvert(Object value) {
+                value instanceof String
+            }
+
+            Object convert(Object value) {
+                throw new IllegalArgumentException('Blank status')
+            }
+
+            Class<?> getTargetType() {
+                BinderNullabilityStatus
+            }
+        })
+        def entity = new BinderNullabilityEntity()
+
+        when:
+        binder.bind(entity, new SimpleMapDataBindingSource(
+            optionalStatus: '',
+            requiredStatus: ''
+        ))
+
+        then:
+        entity.hasErrors()
+        entity.errors.errorCount == 1
+        entity.errors.getFieldError('requiredStatus').code == 'typeMismatch'
+        entity.errors.getFieldError('optionalStatus') == null
+    }
+
     void 'Test binding a List<String>'() {
 
         given:
@@ -1754,6 +2016,10 @@ class Publication {
     String title
     Author author
 
+    static constraints = {
+        publisher nullable: true
+    }
+
     @SuppressWarnings('unused')
     static belongsTo = [publisher: Publisher]
 }
@@ -1851,6 +2117,67 @@ class Child {
     Date birthDate
 
     static hasMany = [someOtherIds: Integer]
+
+}
+
+@Entity
+class GeneratedBindingParent {
+    GeneratedBindingChild child
+
+    static constraints = {
+        child bindable: true
+    }
+}
+
+@Entity
+class GeneratedBindingChild {
+    String name
+    boolean admin
+
+    static constraints = {
+        name bindable: true
+    }
+}
+
+class GeneratedBindingArrayHolder implements Validateable {
+    GeneratedBindingChild[] children = []
+
+    static constraints = {
+        children bindable: true
+    }
+}
+
+class SecureMapConstructorHolder implements Validateable {
+    Map<String, SecureMapConstructorValue> values
+    SecureMapConstructorValue[] arrayValues = []
+
+    static constraints = {
+        values bindable: true
+        arrayValues bindable: true
+    }
+}
+
+class SecureMapConstructorValue implements Validateable {
+    String name
+    boolean admin
+
+    SecureMapConstructorValue(Map values) {
+        name = values.name
+        admin = values.admin as boolean
+    }
+
+    static constraints = {
+        name bindable: true
+        admin bindable: false
+    }
+}
+
+class TypedMapBindingHolder {
+    Map<String, TypedMapBindingValue> values = [:]
+}
+
+class TypedMapBindingValue implements Validateable {
+    Integer quantity
 }
 
 @Entity
@@ -1915,6 +2242,20 @@ class PrimitiveContainer implements Validateable {
 @SuppressWarnings('unused')
 class SomeValidateableClass implements Validateable {
     Integer someNumber
+}
+
+@Entity
+class BinderNullabilityEntity {
+    BinderNullabilityStatus optionalStatus
+    BinderNullabilityStatus requiredStatus
+
+    static constraints = {
+        requiredStatus nullable: false
+    }
+}
+
+enum BinderNullabilityStatus {
+    ACTIVE
 }
 
 @Entity

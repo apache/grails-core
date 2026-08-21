@@ -117,7 +117,7 @@ Adds Quartz job scheduling features
     ]
     def scm = [ url: "https://github.com/apache/grails-quartz" ]
 
-    Closure doWithSpring()......
+    BeanRegistrar beanRegistrar()......
 ----
 
 ==== Plugin Configuration
@@ -473,7 +473,7 @@ Adds Quartz job scheduling features
     ]
     def scm = [ url: "https://github.com/apache/grails-quartz" ]
 
-    Closure doWithSpring()......
+    BeanRegistrar beanRegistrar()......
 ----
 
 === Plugin Configuration

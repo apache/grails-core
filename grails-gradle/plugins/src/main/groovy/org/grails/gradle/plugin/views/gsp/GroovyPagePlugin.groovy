@@ -26,12 +26,15 @@ import org.gradle.api.file.CopySpec
 import org.gradle.api.file.Directory
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.file.FileCollection
+import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetOutput
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.bundling.War
+import org.gradle.jvm.toolchain.JavaLauncher
+import org.gradle.jvm.toolchain.JavaToolchainService
 
 import org.grails.gradle.plugin.util.SourceSets
 
@@ -54,9 +57,6 @@ class GroovyPagePlugin implements Plugin<Project> {
     private void configureProject(Project project) {
         TaskContainer tasks = project.tasks
 
-        project.configurations.register('gspCompile')
-        project.dependencies.add('gspCompile', 'jakarta.servlet:jakarta.servlet-api:6.0.0')
-
         SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
         SourceSetOutput output = mainSourceSet?.output
         FileCollection classesDirs = resolveClassesDirs(output, project)
@@ -67,11 +67,17 @@ class GroovyPagePlugin implements Plugin<Project> {
         FileCollection allClasspath = project.getObjects().fileCollection().from(
                 [
                         project.configurations.named('compileClasspath'),
-                        project.configurations.named('gspCompile'),
                         classesDirs,
                         project.configurations.findByName('providedCompile') ?: null
                 ].findAll { it }
         )
+
+        // The Java the rest of the project is built with, so that pages are built with it too.
+        // Absent a toolchain this resolves to the JVM running Gradle, which is what compiling
+        // pages fell back to before and remains the right answer when nothing else was asked for.
+        JavaPluginExtension javaExtension = project.extensions.getByType(JavaPluginExtension)
+        JavaToolchainService toolchains = project.extensions.getByType(JavaToolchainService)
+        Provider<JavaLauncher> launcher = toolchains.launcherFor(javaExtension.toolchain)
 
         def compileGroovyPages = tasks.register('compileGroovyPages', GroovyPageForkCompileTask) {
             it.destinationDirectory.set(destDir)
@@ -79,6 +85,7 @@ class GroovyPagePlugin implements Plugin<Project> {
             it.source = project.layout.projectDirectory.dir('grails-app/views')
             it.serverpath.set('/WEB-INF/grails-app/views/')
             it.classpath = allClasspath
+            it.javaLauncher.convention(launcher)
         }
 
         def compileWebappGroovyPages = tasks.register('compileWebappGroovyPages', GroovyPageForkCompileTask) {
@@ -87,6 +94,7 @@ class GroovyPagePlugin implements Plugin<Project> {
             it.tmpDirPath = getTmpDirPath(project)
             it.serverpath.set('/')
             it.classpath = allClasspath
+            it.javaLauncher.convention(launcher)
         }
 
         compileGroovyPages.configure {
