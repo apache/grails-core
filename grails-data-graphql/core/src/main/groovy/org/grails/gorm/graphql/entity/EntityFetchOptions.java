@@ -47,7 +47,7 @@ import org.grails.datastore.mapping.model.types.ToOne;
  */
 public class EntityFetchOptions {
 
-    private final Map<String, Association> associations = new LinkedHashMap<>();
+    private final Map<String, Association<?>> associations = new LinkedHashMap<>();
     protected final PersistentEntity entity;
     protected final Set<String> associationNames;
     protected final String propertyName;
@@ -81,7 +81,7 @@ public class EntityFetchOptions {
 
         this.entity = entity;
         this.propertyName = projectionName;
-        for (Association association : entity.getAssociations()) {
+        for (Association<?> association : entity.getAssociations()) {
             associations.put(association.getName(), association);
         }
 
@@ -92,12 +92,12 @@ public class EntityFetchOptions {
      * @return The associations of the {@link PersistentEntity}. The key
      * is the property name and the value is the association.
      */
-    public Map<String, Association> getAssociations() {
+    public Map<String, Association<?>> getAssociations() {
         return associations;
     }
 
-    protected boolean isForeignKeyInChild(Association association) {
-        return association instanceof ToOne toOne && toOne.isForeignKeyInChild() || association instanceof ToMany;
+    protected boolean isForeignKeyInChild(Association<?> association) {
+        return association instanceof ToOne<?> toOne && toOne.isForeignKeyInChild() || association instanceof ToMany;
     }
 
     protected void handleField(String parentName, Field selectedField, Set<String> joinProperties) {
@@ -109,7 +109,7 @@ public class EntityFetchOptions {
             resolvedName = selectedField.getName();
         }
 
-        Association association = associations.get(selectedField.getName());
+        Association<?> association = associations.get(selectedField.getName());
 
         PersistentEntity entity = association.getAssociatedEntity();
 
@@ -119,6 +119,9 @@ public class EntityFetchOptions {
         }
 
         final SelectionSet set = selectedField.getSelectionSet();
+        // SelectionSet#getSelections() is declared to return a raw List<Selection> in graphql-java itself,
+        // so there's no parameterized type available to hold its result without an unchecked cast.
+        @SuppressWarnings("rawtypes")
         List<Selection> selections = (set == null ? new ArrayList<>() : set.getSelections());
 
         if (!association.isEmbedded()) {
@@ -208,19 +211,17 @@ public class EntityFetchOptions {
      * @return The list of properties to eagerly fetch
      */
     public Set<String> getJoinProperties(DataFetchingEnvironment environment, boolean skipCollections) {
-        List<Field> fields = new ArrayList<>();
+
         MergedField environmentMergedField = environment.getMergedField();
 
-        if (environmentMergedField != null) {
-            fields = environmentMergedField
-                    .getFields()
-                    .stream()
-                    .filter(field -> field.getSelectionSet() != null)
-                    .flatMap(field -> field.getSelectionSet().getSelections().stream())
-                    .filter(Field.class::isInstance)
-                    .map(Field.class::cast)
-                    .collect(Collectors.toList());
-        }
+        List<Field> fields = environmentMergedField
+            .getFields()
+            .stream()
+            .filter(field -> field.getSelectionSet() != null)
+            .flatMap(field -> field.getSelectionSet().getSelections().stream())
+            .filter(Field.class::isInstance)
+            .map(Field.class::cast)
+            .collect(Collectors.toList());
 
         return getJoinProperties(fields, skipCollections);
     }
