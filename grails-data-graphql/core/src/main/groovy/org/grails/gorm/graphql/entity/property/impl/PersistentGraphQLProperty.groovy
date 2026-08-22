@@ -173,16 +173,10 @@ class PersistentGraphQLProperty extends OrderedGraphQLProperty {
             graphQLType = typeManager.getEnumType(type, nullable)
         }
         else {
-            boolean embedded = false
-            PersistentEntity entity
-            if (property instanceof Association) {
-                Association association = ((Association)property)
-                entity = association.associatedEntity
-                embedded = association.embedded
-            }
-            if (entity == null) {
-                entity = mappingContext.getPersistentEntity(type.name)
-            }
+            Association association = property instanceof Association ? (Association) property : null
+            boolean embedded = association != null && association.embedded
+            PersistentEntity entity = association?.associatedEntity ?: mappingContext.getPersistentEntity(type.name)
+
             if (entity != null) {
                 if (propertyType.operationType == GraphQLOperationType.OUTPUT) {
                     if (embedded) {
