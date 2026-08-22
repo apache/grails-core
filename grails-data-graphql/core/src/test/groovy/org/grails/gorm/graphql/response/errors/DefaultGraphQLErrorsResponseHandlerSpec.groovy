@@ -27,6 +27,7 @@ import graphql.schema.GraphQLFieldDefinition
 import graphql.schema.GraphQLNonNull
 import graphql.schema.GraphQLObjectType
 import org.grails.datastore.gorm.GormValidateable
+import org.grails.gorm.graphql.fetcher.context.LocaleAwareContext
 import org.grails.gorm.graphql.testing.GraphQLSchemaSpec
 import org.grails.gorm.graphql.testing.MockDataFetchingEnvironment
 import org.grails.gorm.graphql.types.GraphQLTypeManager
@@ -107,6 +108,24 @@ class DefaultGraphQLErrorsResponseHandlerSpec extends Specification implements G
         then:
         fieldFetcher.get(mockFieldEnv) == 'book'
         messageFetcher.get(mockFieldEnv) == 'hello'
+    }
+
+    void "test getLocale uses the locale from a LocaleAwareContext when no map locale is present"() {
+        given:
+        Locale contextLocale = Locale.CANADA_FRENCH
+        FieldError fieldError = Mock(FieldError)
+        1 * messageSource.getMessage(fieldError, contextLocale) >> 'bonjour'
+        DataFetchingEnvironment mockFieldEnv = new MockDataFetchingEnvironment(
+                source: fieldError,
+                context: new LocaleAwareContext() {
+                    @Override
+                    Locale getLocale() {
+                        contextLocale
+                    }
+                })
+
+        expect:
+        handler.messageFetcher.get(mockFieldEnv) == 'bonjour'
     }
 
     class MockValidateable implements GormValidateable {
