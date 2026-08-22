@@ -46,17 +46,43 @@ abstract class EmbeddedReplicaSetSpec extends Specification {
     @Shared
     protected String mongoUrl
 
+    /**
+     * A port that is free when it is offered can be taken before mongod binds it, because the
+     * specifications using this run in forks beside each other and each fork asks the same
+     * operating system for the same range. The loser sees the start fail rather than the port
+     * quietly shared - only a server the asking JVM started is ever reused - so asking again is
+     * what recovers it.
+     */
+    private static final int START_ATTEMPTS = 3
+
     void setupSpec() {
-        int port = freePort()
-        this.embedded = new GenericApplicationContext()
-        this.embedded.environment.propertySources.addFirst(new MapPropertySource('embeddedMongoTest', [
+        IllegalStateException portLost = null
+        for (int attempt = 0; attempt < START_ATTEMPTS; attempt++) {
+            GenericApplicationContext context = contextOnPort(freePort())
+            try {
+                new EmbeddedMongoInitializer().initialize(context)
+            }
+            catch (IllegalStateException failedToStart) {
+                portLost = failedToStart
+                context.close()
+                continue
+            }
+            this.embedded = context
+            this.mongoUrl = context.environment.getProperty('grails.mongodb.url')
+            return
+        }
+        throw portLost
+    }
+
+    private static GenericApplicationContext contextOnPort(int port) {
+        GenericApplicationContext context = new GenericApplicationContext()
+        context.environment.propertySources.addFirst(new MapPropertySource('embeddedMongoTest', [
                 (EmbeddedMongoInitializer.BACKEND): FlapdoodleMongoBackend.NAME,
                 (EmbeddedMongoInitializer.REPLICA_SET): 'rs0',
                 (EmbeddedMongoInitializer.VERSION): serverVersion(),
                 'grails.mongodb.url': "mongodb://${EmbeddedMongoInitializer.EMBEDDED_HOST}:${port}/myDb".toString(),
         ]))
-        new EmbeddedMongoInitializer().initialize(this.embedded)
-        this.mongoUrl = this.embedded.environment.getProperty('grails.mongodb.url')
+        context
     }
 
     /**
@@ -77,11 +103,11 @@ abstract class EmbeddedReplicaSetSpec extends Specification {
 
     /**
      * Asked for rather than fixed, because the specifications that use this run beside each other in
-     * a build: a port named in advance is a port another fork may hold.
+     * a build: a port named in advance is a port another fork may hold. The socket is closed before
+     * the port is handed on, which is a race {@link #START_ATTEMPTS} covers rather than avoids.
      */
     private static int freePort() {
         new ServerSocket(0).withCloseable { ServerSocket socket ->
-            socket.reuseAddress = true
             socket.localPort
         }
     }

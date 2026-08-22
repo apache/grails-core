@@ -206,11 +206,18 @@ public class FlapdoodleMongoBackend implements EmbeddedMongoBackend {
          * The replacement binds the same port because {@code Net} was fixed when the server
          * was first configured. Only a persistent {@code database-dir} carries data across;
          * mongod is a separate process, so a checkpoint image does not contain it.
+         *
+         * <p>A server that is somehow still up is torn down first rather than left: the
+         * replacement binds the port the old process is holding, so starting one beside the
+         * other only fails on the port. Ordinarily there is nothing to tear down, because the
+         * lifecycle bean stops the server before the checkpoint that this restores from.
          */
         @Override
         public synchronized void restart() {
-            if (this.running != null) {
-                return;
+            TransitionWalker.ReachedState<RunningMongodProcess> current = this.running;
+            if (current != null) {
+                this.running = null;
+                current.close();
             }
             this.running = this.mongod.start(this.version);
             initiateReplicaSet();

@@ -153,6 +153,28 @@ class EmbeddedMongoLifecycleSpec extends Specification {
         conditions.eventually { assert !listening(27979) }
     }
 
+    void 'a running server is replaced by a restart rather than fought with for its port'() {
+        given: 'a real mongod told to keep its data, so a replacement can be seen holding it'
+        String databaseDir = temp.resolve('restartDb').toString()
+        RunningEmbeddedMongo running = new FlapdoodleMongoBackend()
+                .start(new EmbeddedMongoSettings(27977, null, databaseDir))
+        String url = 'mongodb://localhost:27977/bookstore'
+        write(url, 'Grails in Action')
+        long before = processId(url)
+
+        when: 'a restore starts a server that whatever took the checkpoint never stopped'
+        running.restart()
+
+        then: 'the port was released and taken again, rather than bound twice or left alone'
+        conditions.eventually { assert processId(url) != before }
+
+        and:
+        titles(url) == ['Grails in Action']
+
+        cleanup:
+        running?.stop()
+    }
+
     void 'an in-memory server is stopped twice by the same pair'() {
         given:
         RunningEmbeddedMongo running = new InMemoryMongoBackend()
@@ -206,6 +228,12 @@ class EmbeddedMongoLifecycleSpec extends Specification {
     private static void write(String url, String title) {
         try (MongoClient client = MongoClients.create(url)) {
             client.getDatabase('bookstore').getCollection('books').insertOne(new Document('title', title))
+        }
+    }
+
+    private static long processId(String url) {
+        try (MongoClient client = MongoClients.create(url)) {
+            client.getDatabase('admin').runCommand(new Document('serverStatus', 1)).get('pid') as long
         }
     }
 
