@@ -89,7 +89,7 @@ class DateCoercion implements Coercing<Date, Date> {
     protected Optional<Date> parseDate(String value) {
         Date dateValue
         if (!value || !formats) {
-            return null
+            return Optional.empty()
         }
         Exception firstException
         for (String format: formats) {

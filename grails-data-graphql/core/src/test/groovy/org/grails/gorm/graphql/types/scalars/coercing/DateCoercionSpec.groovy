@@ -116,4 +116,23 @@ class DateCoercionSpec extends Specification {
         expect:
         multiFormat.parseLiteral(new StringValue('2020-01-15')) == parse('yyyy-MM-dd', '2020-01-15')
     }
+
+    void "test parseLiteral with a StringValue returns null instead of throwing when no formats are configured"() {
+        given:
+        DateCoercion noFormats = new DateCoercion([], false)
+
+        expect:
+        noFormats.parseLiteral(new StringValue('2020-01-15')) == null
+    }
+
+    void "test serialize with a string and no configured formats throws a CoercingSerializeException instead of an NPE"() {
+        given:
+        DateCoercion noFormats = new DateCoercion([], false)
+
+        when:
+        noFormats.serialize('2020-01-15')
+
+        then:
+        thrown(CoercingSerializeException)
+    }
 }
