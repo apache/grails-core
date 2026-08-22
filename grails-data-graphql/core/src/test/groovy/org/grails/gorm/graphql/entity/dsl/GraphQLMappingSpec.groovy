@@ -43,6 +43,8 @@ import org.grails.gorm.graphql.types.DefaultGraphQLTypeManager
 import org.grails.gorm.graphql.types.GraphQLTypeManager
 import spock.lang.Specification
 
+import static graphql.schema.FieldCoordinates.coordinates
+
 class GraphQLMappingSpec extends Specification implements GraphQLSchemaSpec {
 
     void "test exclude"() {
@@ -207,14 +209,19 @@ class GraphQLMappingSpec extends Specification implements GraphQLSchemaSpec {
         }
 
         when:
-        GraphQLFieldDefinition foo = mapping.customQueryOperations.find { it.name == 'foo' }.createField(entity, serviceManager, null, [:]).build()
-        GraphQLFieldDefinition bar = mapping.customQueryOperations.find { it.name == 'bar' }.createField(entity, serviceManager, null, [:]).build()
-        GraphQLFieldDefinition xyz = mapping.customMutationOperations.find { it.name == 'xyz' }.createField(entity, serviceManager, null, [:]).build()
+        GraphQLFieldDefinition foo = mapping.customQueryOperations.find { it.name == 'foo' }.createField(entity, serviceManager, null, [:], 'Query').build()
+        GraphQLFieldDefinition bar = mapping.customQueryOperations.find { it.name == 'bar' }.createField(entity, serviceManager, null, [:], 'Query').build()
+        GraphQLFieldDefinition xyz = mapping.customMutationOperations.find { it.name == 'xyz' }.createField(entity, serviceManager, null, [:], 'Mutation').build()
 
         and:
         codeRegistry.build()
 
         then:
+        codeRegistry.getDataFetcher(coordinates('Query', 'foo'), foo) instanceof InterceptingDataFetcher
+        codeRegistry.getDataFetcher(coordinates('Query', 'bar'), bar) instanceof InterceptingDataFetcher
+        codeRegistry.getDataFetcher(coordinates('Mutation', 'xyz'), xyz) instanceof InterceptingDataFetcher
+
+        and:
         foo.description == 'Foo Query'
         foo.deprecated
         foo.deprecationReason == 'Foo Query is deprecated'
