@@ -20,11 +20,15 @@
 package org.grails.gorm.graphql.fetcher.impl
 
 import graphql.schema.DataFetchingEnvironment
-import spock.lang.Specification
+import org.grails.gorm.graphql.HibernateSpec
+import org.grails.gorm.graphql.domain.general.toone.One
+import org.grails.gorm.graphql.entity.EntityFetchOptions
 import spock.lang.Subject
 
 @Subject(ClosureDataFetcher)
-class ClosureDataFetcherSpec extends Specification {
+class ClosureDataFetcherSpec extends HibernateSpec {
+
+    List<Class> getDomainClasses() { [One] }
 
     void "test closure is called with the source argument"() {
         given:
@@ -56,5 +60,37 @@ class ClosureDataFetcherSpec extends Specification {
 
         then:
         result == 'hello'
+    }
+
+    void "test buildFetchOptions returns null when no domain type is supplied"() {
+        given:
+        ClosureDataFetcher fetcher = new ClosureDataFetcher({})
+
+        expect:
+        fetcher.buildFetchOptions() == null
+    }
+
+    void "test buildFetchOptions returns null when the domain type is not a GORM entity"() {
+        given:
+        ClosureDataFetcher fetcher = new ClosureDataFetcher({}, String)
+
+        expect:
+        fetcher.buildFetchOptions() == null
+    }
+
+    void "test buildFetchOptions returns fetch options for a GORM entity domain type"() {
+        given:
+        ClosureDataFetcher fetcher = new ClosureDataFetcher({}, One)
+
+        expect:
+        fetcher.buildFetchOptions() instanceof EntityFetchOptions
+    }
+
+    void "test buildFetchOptions caches the result"() {
+        given:
+        ClosureDataFetcher fetcher = new ClosureDataFetcher({}, One)
+
+        expect:
+        fetcher.buildFetchOptions().is(fetcher.buildFetchOptions())
     }
 }

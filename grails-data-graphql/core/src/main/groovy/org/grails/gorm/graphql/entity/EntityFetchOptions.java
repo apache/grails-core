@@ -211,17 +211,22 @@ public class EntityFetchOptions {
      * @return The list of properties to eagerly fetch
      */
     public Set<String> getJoinProperties(DataFetchingEnvironment environment, boolean skipCollections) {
-
         MergedField environmentMergedField = environment.getMergedField();
 
-        List<Field> fields = environmentMergedField
-            .getFields()
-            .stream()
-            .filter(field -> field.getSelectionSet() != null)
-            .flatMap(field -> field.getSelectionSet().getSelections().stream())
-            .filter(Field.class::isInstance)
-            .map(Field.class::cast)
-            .collect(Collectors.toList());
+        List<Field> fields;
+        if (environmentMergedField == null) {
+            fields = new ArrayList<>();
+        }
+        else {
+            fields = environmentMergedField
+                    .getFields()
+                    .stream()
+                    .filter(field -> field.getSelectionSet() != null)
+                    .flatMap(field -> field.getSelectionSet().getSelections().stream())
+                    .filter(Field.class::isInstance)
+                    .map(Field.class::cast)
+                    .collect(Collectors.toList());
+        }
 
         return getJoinProperties(fields, skipCollections);
     }
