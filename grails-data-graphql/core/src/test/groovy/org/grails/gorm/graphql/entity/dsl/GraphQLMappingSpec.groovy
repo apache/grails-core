@@ -112,6 +112,28 @@ class GraphQLMappingSpec extends Specification implements GraphQLSchemaSpec {
         mapping.propertyMappings.get('fooBar').dataFetcher != null
     }
 
+    void "test calling a missing method with no arguments throws MissingMethodException"() {
+        given:
+        GraphQLMapping mapping = new GraphQLMapping()
+
+        when:
+        mapping.foo()
+
+        then:
+        thrown(MissingMethodException)
+    }
+
+    void "test calling a missing method with an unsupported argument type throws MissingMethodException"() {
+        given:
+        GraphQLMapping mapping = new GraphQLMapping()
+
+        when:
+        mapping.foo(42)
+
+        then:
+        thrown(MissingMethodException)
+    }
+
     void "test modify existing property with property method"() {
         when:
         GraphQLMapping mapping = GraphQLMapping.build {
