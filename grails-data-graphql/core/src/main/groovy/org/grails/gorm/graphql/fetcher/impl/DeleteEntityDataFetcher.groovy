@@ -53,15 +53,12 @@ class DeleteEntityDataFetcher<T> extends DefaultGormDataFetcher<T> implements De
 
     @Override
     T get(DataFetchingEnvironment environment) {
-        boolean success = false
-        Exception exception
         try {
             delete(environment)
-            success = true
-        } catch (Exception e) {
-            exception = e
+            (T) responseHandler.createResponse(environment, true, null)
         }
-
-        (T)responseHandler.createResponse(environment, success, exception)
+        catch (Exception e) {
+            (T) responseHandler.createResponse(environment, false, e)
+        }
     }
 }
