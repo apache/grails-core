@@ -544,6 +544,7 @@ class Schema {
             schema.query(query)
             return schema.build()
         }
+        null
     }
 
 }
