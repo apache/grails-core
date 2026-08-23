@@ -93,7 +93,7 @@ class MockDataFetchingEnvironment implements DataFetchingEnvironment {
 
     @Override
     MergedField getMergedField() {
-        MergedField.newMergedField(fields).build()
+        mergedField ?: MergedField.newMergedField(fields).build()
     }
 
     @Override
@@ -102,7 +102,7 @@ class MockDataFetchingEnvironment implements DataFetchingEnvironment {
     }
 
     @Override
-    def <K, V> DataLoader<K,V> getDataLoader(String dataLoaderName) {
+    <K, V> DataLoader<K,V> getDataLoader(String dataLoaderName) {
         dataLoaderRegistry ? dataLoaderRegistry.getDataLoader(dataLoaderName) : null
     }
 
