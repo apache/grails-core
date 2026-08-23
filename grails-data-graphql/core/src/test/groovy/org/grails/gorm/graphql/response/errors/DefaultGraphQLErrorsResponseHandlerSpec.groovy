@@ -117,7 +117,7 @@ class DefaultGraphQLErrorsResponseHandlerSpec extends Specification implements G
         1 * messageSource.getMessage(fieldError, contextLocale) >> 'bonjour'
         DataFetchingEnvironment mockFieldEnv = new MockDataFetchingEnvironment(
                 source: fieldError,
-                context: new LocaleAwareContext() {
+                root: new LocaleAwareContext() {
                     @Override
                     Locale getLocale() {
                         contextLocale
@@ -126,6 +126,31 @@ class DefaultGraphQLErrorsResponseHandlerSpec extends Specification implements G
 
         expect:
         handler.messageFetcher.get(mockFieldEnv) == 'bonjour'
+    }
+
+    void "test getLocale uses the locale from a root Map"() {
+        given:
+        Locale mapLocale = Locale.CANADA_FRENCH
+        FieldError fieldError = Mock(FieldError)
+        1 * messageSource.getMessage(fieldError, mapLocale) >> 'bonjour'
+        DataFetchingEnvironment mockFieldEnv = new MockDataFetchingEnvironment(
+                source: fieldError,
+                root: [locale: mapLocale])
+
+        expect:
+        handler.messageFetcher.get(mockFieldEnv) == 'bonjour'
+    }
+
+    void "test getLocale falls back to the default locale when the root Map has no locale entry"() {
+        given:
+        FieldError fieldError = Mock(FieldError)
+        1 * messageSource.getMessage(fieldError, Locale.default) >> 'hello'
+        DataFetchingEnvironment mockFieldEnv = new MockDataFetchingEnvironment(
+                source: fieldError,
+                root: [:])
+
+        expect:
+        handler.messageFetcher.get(mockFieldEnv) == 'hello'
     }
 
     class MockValidateable implements GormValidateable {

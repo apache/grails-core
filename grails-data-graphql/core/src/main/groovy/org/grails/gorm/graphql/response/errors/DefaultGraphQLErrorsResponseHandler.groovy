@@ -66,17 +66,21 @@ class DefaultGraphQLErrorsResponseHandler implements GraphQLErrorsResponseHandle
     }
 
     protected Locale getLocale(DataFetchingEnvironment environment) {
-        if (environment.context instanceof Map) {
-            Map context = (Map)environment.context
+        // environment.context is deprecated in favor of environment.graphQlContext, but the latter
+        // can only carry Map entries - it cannot hold an arbitrary GraphQLContextBuilder result such
+        // as a LocaleAwareContext. GraphqlController sets both context and root to the same object
+        // for this reason, so environment.root is used here instead as the non-deprecated equivalent.
+        if (environment.root instanceof Map) {
+            Map context = (Map) environment.root
             if (context.containsKey('locale')) {
                 Object localContext = context.get('locale')
                 if (localContext instanceof Locale) {
-                    return (Locale)localContext
+                    return (Locale) localContext
                 }
             }
         }
-        if (environment.context instanceof LocaleAwareContext) {
-            return ((LocaleAwareContext) environment.context).locale
+        if (environment.root instanceof LocaleAwareContext) {
+            return ((LocaleAwareContext) environment.root).locale
         }
         Locale.default
     }
