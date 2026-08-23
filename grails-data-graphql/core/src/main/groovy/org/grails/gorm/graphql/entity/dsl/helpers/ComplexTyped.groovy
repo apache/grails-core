@@ -19,6 +19,7 @@
 
 package org.grails.gorm.graphql.entity.dsl.helpers
 
+import graphql.schema.GraphQLInputObjectField
 import graphql.schema.GraphQLInputObjectType
 import graphql.schema.GraphQLInputType
 import graphql.schema.GraphQLList
@@ -107,11 +108,16 @@ trait ComplexTyped<T> extends ExecutesClosures {
 
             for (Field field: fields) {
                 if (field.input) {
-                    builder.field(newInputObjectField()
+                    GraphQLInputObjectField.Builder fieldBuilder = newInputObjectField()
                             .name(field.name)
                             .description(field.description)
-                            .defaultValue(field.defaultValue)
-                            .type(field.getInputType(typeManager, mappingContext)))
+                            .type(field.getInputType(typeManager, mappingContext))
+
+                    if (field.defaultValue != null) {
+                        fieldBuilder.defaultValueProgrammatic(field.defaultValue)
+                    }
+
+                    builder.field(fieldBuilder)
                 }
             }
             GraphQLInputType type = builder.build()
@@ -132,7 +138,9 @@ trait ComplexTyped<T> extends ExecutesClosures {
     private void handleField(@DelegatesTo(strategy = Closure.DELEGATE_ONLY)Closure closure, Field field) {
         field.nullable(defaultNull)
         // GROOVY-12106: STC could not resolve this inherited ExecutesClosures static from a sub-trait
-        // body; fixed in Groovy 5.0.7, so the plain inherited-static call compiles again.
+        // body; fixed in Groovy 5.0.7, so the plain inherited-static call compiles again. Qualifying
+        // this call (e.g. ExecutesClosures.withDelegate(...)) does NOT resolve under STC either - only
+        // the unqualified form works, so leave it as-is despite IDE inspections suggesting otherwise.
         withDelegate(closure, (Object) field)
         handleField(field)
     }
