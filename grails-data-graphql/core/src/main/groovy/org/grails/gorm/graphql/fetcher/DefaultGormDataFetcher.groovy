@@ -48,7 +48,7 @@ import org.grails.gorm.graphql.entity.EntityFetchOptions
 @Slf4j
 abstract class DefaultGormDataFetcher<T> implements DataFetcher<T> {
 
-    protected Map<String, Association> associations = [:]
+    protected Map<String, Association<?>> associations = [:]
     protected PersistentEntity entity
     protected String propertyName
     protected EntityFetchOptions entityFetchOptions
@@ -61,10 +61,10 @@ abstract class DefaultGormDataFetcher<T> implements DataFetcher<T> {
         this.entity = entity
         this.propertyName = projectionName
         this.entityFetchOptions = new EntityFetchOptions(entity, projectionName)
-        initializeEntity(entity)
+        initializeEntity()
     }
 
-    protected void initializeEntity(PersistentEntity entity) {
+    protected void initializeEntity() {
         this.associations = this.entityFetchOptions.associations
     }
 
@@ -120,20 +120,20 @@ abstract class DefaultGormDataFetcher<T> implements DataFetcher<T> {
     }
 
     protected Object withTransaction(boolean readOnly, Closure closure) {
-        Datastore datastore
-        if (entity.multiTenant && this.datastore instanceof MultiTenantCapableDatastore) {
-            MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore)this.datastore
-            Serializable currentTenantId = Tenants.currentId(multiTenantCapableDatastore)
-            datastore = multiTenantCapableDatastore.getDatastoreForTenantId(currentTenantId)
-        }
-        else {
-            datastore = this.datastore
-        }
-
-        TransactionService txService = datastore.getService(TransactionService)
+        TransactionService txService = resolveDatastore().getService(TransactionService)
         CustomizableRollbackTransactionAttribute transactionAttribute = new CustomizableRollbackTransactionAttribute()
         transactionAttribute.setReadOnly(readOnly)
         txService.withTransaction(transactionAttribute, closure)
+    }
+
+    private Datastore resolveDatastore() {
+        Datastore datastore = this.datastore
+        if (entity.multiTenant && datastore instanceof MultiTenantCapableDatastore) {
+            MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore) datastore
+            Serializable currentTenantId = Tenants.currentId(multiTenantCapableDatastore)
+            return multiTenantCapableDatastore.getDatastoreForTenantId(currentTenantId)
+        }
+        datastore
     }
 
     protected Datastore getDatastore() {
