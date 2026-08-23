@@ -81,7 +81,7 @@ class EntityDataFetcher<T> extends DefaultGormDataFetcher<T> implements ReadingG
     }
 
     protected T executeQuery(DataFetchingEnvironment environment, Map queryArgs) {
-        buildCriteria(environment).list(queryArgs)
+        (T) buildCriteria(environment).list(queryArgs)
     }
 
     @Override
