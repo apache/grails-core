@@ -73,35 +73,48 @@ class GraphQLEntityHelper {
         if (mappings.containsKey(entity)) {
             return mappings.get(entity)
         }
-        Object graphql
-        for (Method method: entity.javaClass.declaredMethods) {
-            if (Modifier.isStatic(method.modifiers) && method.name.equalsIgnoreCase('getgraphql')) {
-                graphql = method.invoke(null)
-                break
-            }
-        }
-        GraphQLMapping mapping = null
-        if (graphql != null) {
-            if (graphql == Boolean.TRUE) {
-                mapping = new GraphQLMapping()
-            }
-            else if (graphql instanceof Closure) {
-                mapping = new GraphQLMapping().build((Closure)graphql)
-            }
-            else if (graphql instanceof LazyGraphQLMapping) {
-                mapping = ((LazyGraphQLMapping)graphql).initialize()
-            }
-            else if (graphql instanceof GraphQLMapping) {
-                mapping = (GraphQLMapping)graphql
-            }
-
-            if (!(mapping instanceof GraphQLMapping)) {
-                throw new IllegalMappingException("The static graphql property on ${entity.name} is not a Boolean, Closure, or GraphQLMapping")
-            }
-            verifyMapping(mapping, entity)
-        }
+        GraphQLMapping mapping = buildMapping(entity)
         mappings.put(entity, mapping)
         mapping
+    }
+
+    private static GraphQLMapping buildMapping(PersistentEntity entity) {
+        Object graphql = findGraphqlProperty(entity)
+        if (graphql == null) {
+            return null
+        }
+
+        GraphQLMapping mapping = toGraphQLMapping(graphql)
+        if (!(mapping instanceof GraphQLMapping)) {
+            throw new IllegalMappingException("The static graphql property on ${entity.name} is not a Boolean, Closure, or GraphQLMapping")
+        }
+        verifyMapping(mapping, entity)
+        mapping
+    }
+
+    private static Object findGraphqlProperty(PersistentEntity entity) {
+        for (Method method: entity.javaClass.declaredMethods) {
+            if (Modifier.isStatic(method.modifiers) && method.name.equalsIgnoreCase('getgraphql')) {
+                return method.invoke(null)
+            }
+        }
+        null
+    }
+
+    private static GraphQLMapping toGraphQLMapping(Object graphql) {
+        if (graphql == Boolean.TRUE) {
+            return new GraphQLMapping()
+        }
+        if (graphql instanceof Closure) {
+            return new GraphQLMapping().build((Closure) graphql)
+        }
+        if (graphql instanceof LazyGraphQLMapping) {
+            return ((LazyGraphQLMapping) graphql).initialize()
+        }
+        if (graphql instanceof GraphQLMapping) {
+            return (GraphQLMapping) graphql
+        }
+        null
     }
 
     static void verifyMapping(GraphQLMapping mapping, PersistentEntity entity) {
