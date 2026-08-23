@@ -19,6 +19,8 @@
 
 package org.grails.gorm.graphql.types.scalars.coercing
 
+import graphql.GraphQLContext
+import graphql.execution.CoercedVariables
 import graphql.language.ArrayValue
 import graphql.language.StringValue
 import spock.lang.Specification
@@ -31,13 +33,13 @@ class CharacterArrayCoercionSpec extends Specification {
         CharacterArrayCoercion coercion = new CharacterArrayCoercion()
 
         when:
-        def result = coercion.parseLiteral(value)
+        def result = coercion.parseLiteral(value, CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default)
 
         then:
         result == ['x', 'y', 'z', 'a'] as Character[]
 
         when: 'the values are too long for Character'
-        result = coercion.parseLiteral(new ArrayValue([new StringValue('xy'), new StringValue('a')]))
+        result = coercion.parseLiteral(new ArrayValue([new StringValue('xy'), new StringValue('a')]), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default)
 
         then:
         result == [null, 'a'] as Character[]

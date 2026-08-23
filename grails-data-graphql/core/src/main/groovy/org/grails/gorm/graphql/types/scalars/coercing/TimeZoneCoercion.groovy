@@ -19,7 +19,10 @@
 
 package org.grails.gorm.graphql.types.scalars.coercing
 
+import graphql.GraphQLContext
+import graphql.execution.CoercedVariables
 import graphql.language.StringValue
+import graphql.language.Value
 import graphql.schema.Coercing
 import graphql.schema.CoercingParseValueException
 import graphql.schema.CoercingSerializeException
@@ -47,21 +50,21 @@ class TimeZoneCoercion implements Coercing<TimeZone, TimeZone> {
     }
 
     @Override
-    TimeZone serialize(Object input) {
+    TimeZone serialize(Object input, GraphQLContext graphQLContext, Locale locale) {
         convert(input).orElseThrow {
             throw new CoercingSerializeException("Could not convert ${input.class.name} to a java.util.TimeZone")
         }
     }
 
     @Override
-    TimeZone parseValue(Object input) {
+    TimeZone parseValue(Object input, GraphQLContext graphQLContext, Locale locale) {
         convert(input).orElseThrow {
             throw new CoercingParseValueException("Could not convert ${input.class.name} to a java.util.TimeZone")
         }
     }
 
     @Override
-    TimeZone parseLiteral(Object input) {
+    TimeZone parseLiteral(Value<?> input, CoercedVariables variables, GraphQLContext graphQLContext, Locale locale) {
         if (input instanceof StringValue) {
             parseTimeZone(((StringValue)input).value).orElse(null)
         }

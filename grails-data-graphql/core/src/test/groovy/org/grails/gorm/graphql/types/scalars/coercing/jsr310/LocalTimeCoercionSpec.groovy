@@ -19,6 +19,8 @@
 
 package org.grails.gorm.graphql.types.scalars.coercing.jsr310
 
+import graphql.GraphQLContext
+import graphql.execution.CoercedVariables
 import graphql.language.IntValue
 import graphql.language.StringValue
 import graphql.schema.CoercingParseValueException
@@ -36,17 +38,17 @@ class LocalTimeCoercionSpec extends Specification {
         LocalTime time = LocalTime.of(10, 15, 30)
 
         expect:
-        coercion.serialize(time).is(time)
+        coercion.serialize(time, GraphQLContext.default, Locale.default).is(time)
     }
 
     void "test serialize with a string matching a configured format"() {
         expect:
-        coercion.serialize('10:15:30') == LocalTime.of(10, 15, 30)
+        coercion.serialize('10:15:30', GraphQLContext.default, Locale.default) == LocalTime.of(10, 15, 30)
     }
 
     void "test serialize with an unsupported type throws"() {
         when:
-        coercion.serialize(42)
+        coercion.serialize(42, GraphQLContext.default, Locale.default)
 
         then:
         thrown(CoercingSerializeException)
@@ -54,7 +56,7 @@ class LocalTimeCoercionSpec extends Specification {
 
     void "test serialize with a non matching string throws"() {
         when:
-        coercion.serialize('not a time')
+        coercion.serialize('not a time', GraphQLContext.default, Locale.default)
 
         then:
         thrown(CoercingSerializeException)
@@ -65,12 +67,12 @@ class LocalTimeCoercionSpec extends Specification {
         LocalTime time = LocalTime.of(10, 15, 30)
 
         expect:
-        coercion.parseValue(time).is(time)
+        coercion.parseValue(time, GraphQLContext.default, Locale.default).is(time)
     }
 
     void "test parseValue with an unsupported type throws"() {
         when:
-        coercion.parseValue(42)
+        coercion.parseValue(42, GraphQLContext.default, Locale.default)
 
         then:
         thrown(CoercingParseValueException)
@@ -78,16 +80,16 @@ class LocalTimeCoercionSpec extends Specification {
 
     void "test parseLiteral with a StringValue matching a configured format"() {
         expect:
-        coercion.parseLiteral(new StringValue('10:15:30')) == LocalTime.of(10, 15, 30)
+        coercion.parseLiteral(new StringValue('10:15:30'), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == LocalTime.of(10, 15, 30)
     }
 
     void "test parseLiteral with a StringValue that matches no configured format returns null"() {
         expect:
-        coercion.parseLiteral(new StringValue('not a time')) == null
+        coercion.parseLiteral(new StringValue('not a time'), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == null
     }
 
     void "test parseLiteral with a non StringValue returns null"() {
         expect:
-        coercion.parseLiteral(new IntValue(BigInteger.ONE)) == null
+        coercion.parseLiteral(new IntValue(BigInteger.ONE), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == null
     }
 }

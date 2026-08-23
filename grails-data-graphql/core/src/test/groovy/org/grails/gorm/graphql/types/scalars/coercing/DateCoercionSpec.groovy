@@ -19,6 +19,8 @@
 
 package org.grails.gorm.graphql.types.scalars.coercing
 
+import graphql.GraphQLContext
+import graphql.execution.CoercedVariables
 import graphql.language.ArrayValue
 import graphql.language.IntValue
 import graphql.language.StringValue
@@ -41,17 +43,17 @@ class DateCoercionSpec extends Specification {
         Date date = new Date()
 
         expect:
-        coercion.serialize(date).is(date)
+        coercion.serialize(date, GraphQLContext.default, Locale.default).is(date)
     }
 
     void "test serialize with a string matching a configured format"() {
         expect:
-        coercion.serialize('2020-01-15') == parse('yyyy-MM-dd', '2020-01-15')
+        coercion.serialize('2020-01-15', GraphQLContext.default, Locale.default) == parse('yyyy-MM-dd', '2020-01-15')
     }
 
     void "test serialize with an unsupported type throws"() {
         when:
-        coercion.serialize(42)
+        coercion.serialize(42, GraphQLContext.default, Locale.default)
 
         then:
         thrown(CoercingSerializeException)
@@ -59,7 +61,7 @@ class DateCoercionSpec extends Specification {
 
     void "test serialize with a non matching string throws"() {
         when:
-        coercion.serialize('not a date')
+        coercion.serialize('not a date', GraphQLContext.default, Locale.default)
 
         then:
         thrown(CoercingSerializeException)
@@ -70,17 +72,17 @@ class DateCoercionSpec extends Specification {
         Date date = new Date()
 
         expect:
-        coercion.parseValue(date).is(date)
+        coercion.parseValue(date, GraphQLContext.default, Locale.default).is(date)
     }
 
     void "test parseValue with a string matching a configured format"() {
         expect:
-        coercion.parseValue('2020-01-15') == parse('yyyy-MM-dd', '2020-01-15')
+        coercion.parseValue('2020-01-15', GraphQLContext.default, Locale.default) == parse('yyyy-MM-dd', '2020-01-15')
     }
 
     void "test parseValue with an unsupported type throws"() {
         when:
-        coercion.parseValue(42)
+        coercion.parseValue(42, GraphQLContext.default, Locale.default)
 
         then:
         thrown(CoercingParseValueException)
@@ -91,22 +93,22 @@ class DateCoercionSpec extends Specification {
         long millis = 1600000000000
 
         expect:
-        coercion.parseLiteral(new IntValue(BigInteger.valueOf(millis))) == new Date(millis)
+        coercion.parseLiteral(new IntValue(BigInteger.valueOf(millis)), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == new Date(millis)
     }
 
     void "test parseLiteral with a StringValue matching a configured format"() {
         expect:
-        coercion.parseLiteral(new StringValue('2020-01-15')) == parse('yyyy-MM-dd', '2020-01-15')
+        coercion.parseLiteral(new StringValue('2020-01-15'), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == parse('yyyy-MM-dd', '2020-01-15')
     }
 
     void "test parseLiteral with a StringValue that matches no configured format returns null"() {
         expect:
-        coercion.parseLiteral(new StringValue('not a date')) == null
+        coercion.parseLiteral(new StringValue('not a date'), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == null
     }
 
     void "test parseLiteral with an unsupported value type returns null"() {
         expect:
-        coercion.parseLiteral(new ArrayValue([])) == null
+        coercion.parseLiteral(new ArrayValue([]), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == null
     }
 
     void "test parseLiteral falls back to a later format when an earlier one fails to match"() {
@@ -114,7 +116,7 @@ class DateCoercionSpec extends Specification {
         DateCoercion multiFormat = new DateCoercion(['yyyy/MM/dd', 'yyyy-MM-dd'], false)
 
         expect:
-        multiFormat.parseLiteral(new StringValue('2020-01-15')) == parse('yyyy-MM-dd', '2020-01-15')
+        multiFormat.parseLiteral(new StringValue('2020-01-15'), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == parse('yyyy-MM-dd', '2020-01-15')
     }
 
     void "test parseLiteral with a StringValue returns null instead of throwing when no formats are configured"() {
@@ -122,7 +124,7 @@ class DateCoercionSpec extends Specification {
         DateCoercion noFormats = new DateCoercion([], false)
 
         expect:
-        noFormats.parseLiteral(new StringValue('2020-01-15')) == null
+        noFormats.parseLiteral(new StringValue('2020-01-15'), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == null
     }
 
     void "test serialize with a string and no configured formats throws a CoercingSerializeException instead of an NPE"() {
@@ -130,7 +132,7 @@ class DateCoercionSpec extends Specification {
         DateCoercion noFormats = new DateCoercion([], false)
 
         when:
-        noFormats.serialize('2020-01-15')
+        noFormats.serialize('2020-01-15', GraphQLContext.default, Locale.default)
 
         then:
         thrown(CoercingSerializeException)

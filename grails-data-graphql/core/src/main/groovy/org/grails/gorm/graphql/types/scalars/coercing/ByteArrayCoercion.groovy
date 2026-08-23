@@ -19,6 +19,8 @@
 
 package org.grails.gorm.graphql.types.scalars.coercing
 
+import graphql.GraphQLContext
+import graphql.execution.CoercedVariables
 import graphql.language.ArrayValue
 import graphql.language.IntValue
 import graphql.language.Value
@@ -67,14 +69,14 @@ class ByteArrayCoercion implements Coercing<Byte[], Byte[]> {
     }
 
     @Override
-    Byte[] serialize(Object input) {
+    Byte[] serialize(Object input, GraphQLContext graphQLContext, Locale locale) {
         convert(input).orElseThrow {
             throw new CoercingSerializeException("Could not convert ${input.class.name} to a Byte[]")
         }
     }
 
     @Override
-    Byte[] parseValue(Object input) {
+    Byte[] parseValue(Object input, GraphQLContext graphQLContext, Locale locale) {
         convert(input).orElseThrow {
             throw new CoercingParseValueException("Could not convert ${input.class.name} to a Byte[]")
         }
@@ -93,7 +95,7 @@ class ByteArrayCoercion implements Coercing<Byte[], Byte[]> {
     }
 
     @Override
-    Byte[] parseLiteral(Object input) {
+    Byte[] parseLiteral(Value<?> input, CoercedVariables variables, GraphQLContext graphQLContext, Locale locale) {
         if (input instanceof ArrayValue) {
             List<Byte> returnList = []
             List<Value> values = ((ArrayValue) input).values
@@ -101,7 +103,7 @@ class ByteArrayCoercion implements Coercing<Byte[], Byte[]> {
                 Byte parsedValue = parse(value)
                 returnList.add(parsedValue)
             }
-            (Byte[])returnList.toArray()
+            returnList.toArray(new Byte[0])
         }
         else {
             null

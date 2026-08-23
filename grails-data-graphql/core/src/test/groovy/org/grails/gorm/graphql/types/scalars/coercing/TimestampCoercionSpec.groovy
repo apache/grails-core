@@ -19,6 +19,8 @@
 
 package org.grails.gorm.graphql.types.scalars.coercing
 
+import graphql.GraphQLContext
+import graphql.execution.CoercedVariables
 import graphql.language.ArrayValue
 import graphql.language.IntValue
 import graphql.language.StringValue
@@ -37,17 +39,17 @@ class TimestampCoercionSpec extends Specification {
         Timestamp timestamp = Timestamp.valueOf('2020-01-15 10:15:30')
 
         expect:
-        coercion.serialize(timestamp).is(timestamp)
+        coercion.serialize(timestamp, GraphQLContext.default, Locale.default).is(timestamp)
     }
 
     void "test serialize with a valid timestamp string"() {
         expect:
-        coercion.serialize('2020-01-15 10:15:30') == Timestamp.valueOf('2020-01-15 10:15:30')
+        coercion.serialize('2020-01-15 10:15:30', GraphQLContext.default, Locale.default) == Timestamp.valueOf('2020-01-15 10:15:30')
     }
 
     void "test serialize with an unsupported type throws"() {
         when:
-        coercion.serialize(true)
+        coercion.serialize(true, GraphQLContext.default, Locale.default)
 
         then:
         thrown(CoercingSerializeException)
@@ -55,7 +57,7 @@ class TimestampCoercionSpec extends Specification {
 
     void "test serialize with an invalid timestamp string throws"() {
         when:
-        coercion.serialize('not a timestamp')
+        coercion.serialize('not a timestamp', GraphQLContext.default, Locale.default)
 
         then:
         thrown(CoercingSerializeException)
@@ -66,12 +68,12 @@ class TimestampCoercionSpec extends Specification {
         Timestamp timestamp = Timestamp.valueOf('2020-01-15 10:15:30')
 
         expect:
-        coercion.parseValue(timestamp).is(timestamp)
+        coercion.parseValue(timestamp, GraphQLContext.default, Locale.default).is(timestamp)
     }
 
     void "test parseValue with an unsupported type throws"() {
         when:
-        coercion.parseValue(true)
+        coercion.parseValue(true, GraphQLContext.default, Locale.default)
 
         then:
         thrown(CoercingParseValueException)
@@ -82,21 +84,21 @@ class TimestampCoercionSpec extends Specification {
         long millis = 1600000000000
 
         expect:
-        coercion.parseLiteral(new IntValue(BigInteger.valueOf(millis))) == new Timestamp(millis)
+        coercion.parseLiteral(new IntValue(BigInteger.valueOf(millis)), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == new Timestamp(millis)
     }
 
     void "test parseLiteral with a valid StringValue"() {
         expect:
-        coercion.parseLiteral(new StringValue('2020-01-15 10:15:30')) == Timestamp.valueOf('2020-01-15 10:15:30')
+        coercion.parseLiteral(new StringValue('2020-01-15 10:15:30'), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == Timestamp.valueOf('2020-01-15 10:15:30')
     }
 
     void "test parseLiteral with an invalid StringValue returns null"() {
         expect:
-        coercion.parseLiteral(new StringValue('not a timestamp')) == null
+        coercion.parseLiteral(new StringValue('not a timestamp'), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == null
     }
 
     void "test parseLiteral with an unsupported value type returns null"() {
         expect:
-        coercion.parseLiteral(new ArrayValue([])) == null
+        coercion.parseLiteral(new ArrayValue([]), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == null
     }
 }

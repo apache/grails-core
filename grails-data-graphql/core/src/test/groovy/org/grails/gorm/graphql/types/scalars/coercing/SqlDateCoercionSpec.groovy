@@ -19,6 +19,8 @@
 
 package org.grails.gorm.graphql.types.scalars.coercing
 
+import graphql.GraphQLContext
+import graphql.execution.CoercedVariables
 import graphql.language.ArrayValue
 import graphql.language.IntValue
 import graphql.language.StringValue
@@ -37,12 +39,12 @@ class SqlDateCoercionSpec extends Specification {
         Date date = Date.valueOf('2020-01-15')
 
         expect:
-        coercion.serialize(date).is(date)
+        coercion.serialize(date, GraphQLContext.default, Locale.default).is(date)
     }
 
     void "test serialize with a valid date string"() {
         expect:
-        coercion.serialize('2020-01-15') == Date.valueOf('2020-01-15')
+        coercion.serialize('2020-01-15', GraphQLContext.default, Locale.default) == Date.valueOf('2020-01-15')
     }
 
     void "test serialize with a millis Long"() {
@@ -50,12 +52,12 @@ class SqlDateCoercionSpec extends Specification {
         long millis = 1600000000000
 
         expect:
-        coercion.serialize(millis) == new Date(millis)
+        coercion.serialize(millis, GraphQLContext.default, Locale.default) == new Date(millis)
     }
 
     void "test serialize with an unsupported type throws"() {
         when:
-        coercion.serialize(true)
+        coercion.serialize(true, GraphQLContext.default, Locale.default)
 
         then:
         thrown(CoercingSerializeException)
@@ -63,7 +65,7 @@ class SqlDateCoercionSpec extends Specification {
 
     void "test serialize with an invalid date string throws"() {
         when:
-        coercion.serialize('not a date')
+        coercion.serialize('not a date', GraphQLContext.default, Locale.default)
 
         then:
         thrown(CoercingSerializeException)
@@ -74,12 +76,12 @@ class SqlDateCoercionSpec extends Specification {
         Date date = Date.valueOf('2020-01-15')
 
         expect:
-        coercion.parseValue(date).is(date)
+        coercion.parseValue(date, GraphQLContext.default, Locale.default).is(date)
     }
 
     void "test parseValue with an unsupported type throws"() {
         when:
-        coercion.parseValue(true)
+        coercion.parseValue(true, GraphQLContext.default, Locale.default)
 
         then:
         thrown(CoercingParseValueException)
@@ -90,21 +92,21 @@ class SqlDateCoercionSpec extends Specification {
         long millis = 1600000000000
 
         expect:
-        coercion.parseLiteral(new IntValue(BigInteger.valueOf(millis))) == new Date(millis)
+        coercion.parseLiteral(new IntValue(BigInteger.valueOf(millis)), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == new Date(millis)
     }
 
     void "test parseLiteral with a valid StringValue"() {
         expect:
-        coercion.parseLiteral(new StringValue('2020-01-15')) == Date.valueOf('2020-01-15')
+        coercion.parseLiteral(new StringValue('2020-01-15'), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == Date.valueOf('2020-01-15')
     }
 
     void "test parseLiteral with an invalid StringValue returns null"() {
         expect:
-        coercion.parseLiteral(new StringValue('not a date')) == null
+        coercion.parseLiteral(new StringValue('not a date'), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == null
     }
 
     void "test parseLiteral with an unsupported value type returns null"() {
         expect:
-        coercion.parseLiteral(new ArrayValue([])) == null
+        coercion.parseLiteral(new ArrayValue([]), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == null
     }
 }

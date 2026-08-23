@@ -19,6 +19,8 @@
 
 package org.grails.gorm.graphql.types.scalars.coercing
 
+import graphql.GraphQLContext
+import graphql.execution.CoercedVariables
 import graphql.language.IntValue
 import graphql.language.StringValue
 import graphql.schema.CoercingParseValueException
@@ -34,17 +36,17 @@ class CurrencyCoercionSpec extends Specification {
         Currency currency = Currency.getInstance('USD')
 
         expect:
-        coercion.serialize(currency).is(currency)
+        coercion.serialize(currency, GraphQLContext.default, Locale.default).is(currency)
     }
 
     void "test serialize with a currency code string"() {
         expect:
-        coercion.serialize('USD') == Currency.getInstance('USD')
+        coercion.serialize('USD', GraphQLContext.default, Locale.default) == Currency.getInstance('USD')
     }
 
     void "test serialize with an unsupported type throws"() {
         when:
-        coercion.serialize(42)
+        coercion.serialize(42, GraphQLContext.default, Locale.default)
 
         then:
         thrown(CoercingSerializeException)
@@ -55,17 +57,17 @@ class CurrencyCoercionSpec extends Specification {
         Currency currency = Currency.getInstance('EUR')
 
         expect:
-        coercion.parseValue(currency).is(currency)
+        coercion.parseValue(currency, GraphQLContext.default, Locale.default).is(currency)
     }
 
     void "test parseValue with a currency code string"() {
         expect:
-        coercion.parseValue('EUR') == Currency.getInstance('EUR')
+        coercion.parseValue('EUR', GraphQLContext.default, Locale.default) == Currency.getInstance('EUR')
     }
 
     void "test parseValue with an unsupported type throws"() {
         when:
-        coercion.parseValue(42)
+        coercion.parseValue(42, GraphQLContext.default, Locale.default)
 
         then:
         thrown(CoercingParseValueException)
@@ -73,11 +75,11 @@ class CurrencyCoercionSpec extends Specification {
 
     void "test parseLiteral with a StringValue"() {
         expect:
-        coercion.parseLiteral(new StringValue('GBP')) == Currency.getInstance('GBP')
+        coercion.parseLiteral(new StringValue('GBP'), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == Currency.getInstance('GBP')
     }
 
     void "test parseLiteral with a non StringValue returns null"() {
         expect:
-        coercion.parseLiteral(new IntValue(BigInteger.ONE)) == null
+        coercion.parseLiteral(new IntValue(BigInteger.ONE), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == null
     }
 }
