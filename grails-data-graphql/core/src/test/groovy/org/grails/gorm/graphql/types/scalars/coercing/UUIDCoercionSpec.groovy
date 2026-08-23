@@ -19,6 +19,8 @@
 
 package org.grails.gorm.graphql.types.scalars.coercing
 
+import graphql.GraphQLContext
+import graphql.execution.CoercedVariables
 import graphql.language.IntValue
 import graphql.language.StringValue
 import graphql.schema.CoercingParseValueException
@@ -34,7 +36,7 @@ class UUIDCoercionSpec extends Specification {
         UUID uuid = UUID.randomUUID()
 
         expect:
-        coercion.serialize(uuid).is(uuid)
+        coercion.serialize(uuid, GraphQLContext.default, Locale.default).is(uuid)
     }
 
     void "test serialize with a valid uuid string"() {
@@ -42,12 +44,12 @@ class UUIDCoercionSpec extends Specification {
         UUID uuid = UUID.randomUUID()
 
         expect:
-        coercion.serialize(uuid.toString()) == uuid
+        coercion.serialize(uuid.toString(), GraphQLContext.default, Locale.default) == uuid
     }
 
     void "test serialize with an unsupported type throws"() {
         when:
-        coercion.serialize(42)
+        coercion.serialize(42, GraphQLContext.default, Locale.default)
 
         then:
         thrown(CoercingSerializeException)
@@ -55,7 +57,7 @@ class UUIDCoercionSpec extends Specification {
 
     void "test serialize with an invalid uuid string throws"() {
         when:
-        coercion.serialize('not-a-uuid')
+        coercion.serialize('not-a-uuid', GraphQLContext.default, Locale.default)
 
         then:
         thrown(CoercingSerializeException)
@@ -66,12 +68,12 @@ class UUIDCoercionSpec extends Specification {
         UUID uuid = UUID.randomUUID()
 
         expect:
-        coercion.parseValue(uuid).is(uuid)
+        coercion.parseValue(uuid, GraphQLContext.default, Locale.default).is(uuid)
     }
 
     void "test parseValue with an unsupported type throws"() {
         when:
-        coercion.parseValue(42)
+        coercion.parseValue(42, GraphQLContext.default, Locale.default)
 
         then:
         thrown(CoercingParseValueException)
@@ -82,16 +84,16 @@ class UUIDCoercionSpec extends Specification {
         UUID uuid = UUID.randomUUID()
 
         expect:
-        coercion.parseLiteral(new StringValue(uuid.toString())) == uuid
+        coercion.parseLiteral(new StringValue(uuid.toString()), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == uuid
     }
 
     void "test parseLiteral with an invalid StringValue returns null"() {
         expect:
-        coercion.parseLiteral(new StringValue('not-a-uuid')) == null
+        coercion.parseLiteral(new StringValue('not-a-uuid'), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == null
     }
 
     void "test parseLiteral with a non StringValue returns null"() {
         expect:
-        coercion.parseLiteral(new IntValue(BigInteger.ONE)) == null
+        coercion.parseLiteral(new IntValue(BigInteger.ONE), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == null
     }
 }

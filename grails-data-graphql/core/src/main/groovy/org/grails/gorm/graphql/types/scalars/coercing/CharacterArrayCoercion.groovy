@@ -19,6 +19,8 @@
 
 package org.grails.gorm.graphql.types.scalars.coercing
 
+import graphql.GraphQLContext
+import graphql.execution.CoercedVariables
 import graphql.language.ArrayValue
 import graphql.language.StringValue
 import graphql.language.Value
@@ -45,14 +47,14 @@ class CharacterArrayCoercion implements Coercing<Character[], Character[]> {
             Collection c = (Collection) input
             Character[] converted = new Character[c.size()]
             for (int i = 0; i < c.size(); i++) {
-                converted[i] = new Character((char)c[i])
+                converted[i] = Character.valueOf((char)c[i])
             }
             Optional.of(converted)
         }
         else if (input.class.array) {
             Character[] chars = new Character[Array.getLength(input)]
             for (int i = 0; i < chars.length; i++) {
-                chars[i] = new Character((char)Array.get(input, i))
+                chars[i] = Character.valueOf((char)Array.get(input, i))
             }
             Optional.of(chars)
         }
@@ -62,14 +64,14 @@ class CharacterArrayCoercion implements Coercing<Character[], Character[]> {
     }
 
     @Override
-    Character[] serialize(Object input) {
+    Character[] serialize(Object input, GraphQLContext graphQLContext, Locale locale) {
         convert(input).orElseThrow {
             throw new CoercingSerializeException("Could not convert ${input.class.name} to a Character[]")
         }
     }
 
     @Override
-    Character[] parseValue(Object input) {
+    Character[] parseValue(Object input, GraphQLContext graphQLContext, Locale locale) {
         convert(input).orElseThrow {
             throw new CoercingParseValueException("Could not convert ${input.class.name} to a Character[]")
         }
@@ -83,11 +85,11 @@ class CharacterArrayCoercion implements Coercing<Character[], Character[]> {
         if (value.length() != 1) {
             return null
         }
-        new Character(value.charAt(0))
+        Character.valueOf(value.charAt(0))
     }
 
     @Override
-    Character[] parseLiteral(Object input) {
+    Character[] parseLiteral(Value<?> input, CoercedVariables variables, GraphQLContext graphQLContext, Locale locale) {
         if (input instanceof ArrayValue) {
             List<Value> values = ((ArrayValue) input).values
             Character[] returnArray = new Character[values.size()]

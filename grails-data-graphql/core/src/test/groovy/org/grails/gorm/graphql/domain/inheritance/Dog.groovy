@@ -17,25 +17,13 @@
  *  under the License.
  */
 
-package org.grails.gorm.graphql.types.scalars.coercing
+package org.grails.gorm.graphql.domain.inheritance
 
-import graphql.GraphQLContext
-import graphql.execution.CoercedVariables
-import graphql.language.ArrayValue
-import graphql.language.IntValue
-import spock.lang.Specification
+import grails.gorm.annotation.Entity
 
-class ByteArrayCoercionSpec extends Specification {
+@Entity
+class Dog extends Animal {
+    String breed
 
-    void "test parseLiteral"() {
-        given:
-        def value = new ArrayValue([new IntValue(BigInteger.valueOf(1)), new IntValue(BigInteger.valueOf(22)), new IntValue(BigInteger.valueOf(32)), new IntValue(BigInteger.valueOf(54))])
-        ByteArrayCoercion coercion = new ByteArrayCoercion()
-
-        when:
-        def result = coercion.parseLiteral(value, CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default)
-
-        then:
-        result == [1,22,32,54] as Byte[]
-    }
+    static graphql = true
 }

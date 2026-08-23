@@ -19,6 +19,8 @@
 
 package org.grails.gorm.graphql.types.scalars.coercing.jsr310
 
+import graphql.GraphQLContext
+import graphql.execution.CoercedVariables
 import graphql.language.IntValue
 import graphql.language.StringValue
 import graphql.schema.CoercingParseValueException
@@ -37,17 +39,17 @@ class ZonedDateTimeCoercionSpec extends Specification {
         ZonedDateTime dateTime = ZonedDateTime.of(2020, 1, 15, 10, 15, 30, 0, ZoneOffset.ofHours(2))
 
         expect:
-        coercion.serialize(dateTime).is(dateTime)
+        coercion.serialize(dateTime, GraphQLContext.default, Locale.default).is(dateTime)
     }
 
     void "test serialize with a string matching a configured format"() {
         expect:
-        coercion.serialize('2020-01-15T10:15:30+02:00') == ZonedDateTime.of(2020, 1, 15, 10, 15, 30, 0, ZoneOffset.ofHours(2))
+        coercion.serialize('2020-01-15T10:15:30+02:00', GraphQLContext.default, Locale.default) == ZonedDateTime.of(2020, 1, 15, 10, 15, 30, 0, ZoneOffset.ofHours(2))
     }
 
     void "test serialize with an unsupported type throws"() {
         when:
-        coercion.serialize(42)
+        coercion.serialize(42, GraphQLContext.default, Locale.default)
 
         then:
         thrown(CoercingSerializeException)
@@ -55,7 +57,7 @@ class ZonedDateTimeCoercionSpec extends Specification {
 
     void "test serialize with a non matching string throws"() {
         when:
-        coercion.serialize('not a date time')
+        coercion.serialize('not a date time', GraphQLContext.default, Locale.default)
 
         then:
         thrown(CoercingSerializeException)
@@ -66,12 +68,12 @@ class ZonedDateTimeCoercionSpec extends Specification {
         ZonedDateTime dateTime = ZonedDateTime.of(2020, 1, 15, 10, 15, 30, 0, ZoneOffset.ofHours(2))
 
         expect:
-        coercion.parseValue(dateTime).is(dateTime)
+        coercion.parseValue(dateTime, GraphQLContext.default, Locale.default).is(dateTime)
     }
 
     void "test parseValue with an unsupported type throws"() {
         when:
-        coercion.parseValue(42)
+        coercion.parseValue(42, GraphQLContext.default, Locale.default)
 
         then:
         thrown(CoercingParseValueException)
@@ -79,16 +81,16 @@ class ZonedDateTimeCoercionSpec extends Specification {
 
     void "test parseLiteral with a StringValue matching a configured format"() {
         expect:
-        coercion.parseLiteral(new StringValue('2020-01-15T10:15:30+02:00')) == ZonedDateTime.of(2020, 1, 15, 10, 15, 30, 0, ZoneOffset.ofHours(2))
+        coercion.parseLiteral(new StringValue('2020-01-15T10:15:30+02:00'), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == ZonedDateTime.of(2020, 1, 15, 10, 15, 30, 0, ZoneOffset.ofHours(2))
     }
 
     void "test parseLiteral with a StringValue that matches no configured format returns null"() {
         expect:
-        coercion.parseLiteral(new StringValue('not a date time')) == null
+        coercion.parseLiteral(new StringValue('not a date time'), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == null
     }
 
     void "test parseLiteral with a non StringValue returns null"() {
         expect:
-        coercion.parseLiteral(new IntValue(BigInteger.ONE)) == null
+        coercion.parseLiteral(new IntValue(BigInteger.ONE), CoercedVariables.emptyVariables(), GraphQLContext.default, Locale.default) == null
     }
 }
