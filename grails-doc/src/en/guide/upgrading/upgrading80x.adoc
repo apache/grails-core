@@ -2577,6 +2577,22 @@ application's. Rename it into the plugin's namespace.
 
 Applications are unaffected — there is only one application, so its base names cannot collide.
 
+A plugin that genuinely cannot rename — a base name that is part of a published contract, or a bundle
+vendored from somewhere else — can downgrade the failure to a build warning:
+
+[source,groovy]
+----
+grails {
+    i18n {
+        enforceNamespace = false
+    }
+}
+----
+
+This silences the build, not the collision. Spring still resolves a base name to the first matching
+resource on the classpath, so the bundle will shadow, or be shadowed by, any other artifact shipping
+that name, and nothing at runtime reports which won. Rename where you can.
+
 A namespaced bundle still works under Grails 7, so a plugin does not need a separate source branch to
 support both. Grails 7 discovers a plugin's bundles by scanning the plugin jar's root for
 `*.properties` and matching locale suffixes; it never inspects the base name, so

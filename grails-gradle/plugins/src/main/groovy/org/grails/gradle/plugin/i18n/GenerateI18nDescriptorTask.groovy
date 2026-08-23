@@ -105,9 +105,21 @@ abstract class GenerateI18nDescriptorTask extends DefaultTask {
     @Input
     abstract ListProperty<String> getDeclaredBasenames()
 
+    /**
+     * Whether a base name outside the plugin's namespace fails the build, from
+     * {@code grails { i18n { enforceNamespace } }}. When false the same diagnosis is logged as a
+     * warning and the descriptor is written as it stands.
+     */
+    @Input
+    abstract Property<Boolean> getEnforceNamespace()
+
     /** Directory contributed to {@code processResources}; holds {@link #DESCRIPTOR_PATH}. */
     @OutputDirectory
     abstract DirectoryProperty getOutputDirectory()
+
+    GenerateI18nDescriptorTask() {
+        enforceNamespace.convention(true)
+    }
 
     @TaskAction
     void generate() {
@@ -123,7 +135,13 @@ abstract class GenerateI18nDescriptorTask extends DefaultTask {
         String type = artifactType.get()
         String name = artifactName.get()
         if (type == TYPE_PLUGIN) {
-            validatePluginNamespace(index.basenames, name)
+            String problem = describeNamespaceViolation(index.basenames, name)
+            if (problem) {
+                if (enforceNamespace.get()) {
+                    throw new InvalidUserDataException(problem)
+                }
+                logger.warn('{}', problem)
+            }
         }
 
         File descriptor = outputDirectory.get().file(DESCRIPTOR_PATH).asFile
@@ -148,20 +166,26 @@ abstract class GenerateI18nDescriptorTask extends DefaultTask {
     }
 
     /**
-     * Requires every plugin base name to be {@code <plugin-name>} or {@code <plugin-name>-*}.
+     * Describes any plugin base name that is neither {@code <plugin-name>} nor {@code <plugin-name>-*},
+     * or {@code null} when every base name sits within the plugin's namespace.
      *
      * <p>Spring Boot's {@code ResourceBundleMessageSource} resolves a base name to the first matching
      * resource on the classpath, so two plugins sharing a base name would shadow one another instead
      * of both contributing. Plugin names are already unique within an application, so namespacing
      * base names on the plugin name makes collisions impossible while still allowing a plugin to ship
      * several logical bundles.</p>
+     *
+     * <p>Whether that is fatal is the caller's decision — see {@code enforceNamespace}. The wording is
+     * the same either way: what is wrong and how to fix it does not change with the severity.</p>
      */
-    private static void validatePluginNamespace(List<String> basenames, String pluginName) {
+    private static String describeNamespaceViolation(List<String> basenames, String pluginName) {
         List<String> offenders = basenames.findAll { String base ->
             base != pluginName && !base.startsWith(pluginName + '-')
         }
-        if (offenders) {
-            throw new InvalidUserDataException("""\
+        if (!offenders) {
+            return null
+        }
+        """\
 Plugin '${pluginName}' ships message bundles outside its own namespace: \
 ${offenders.collect { "'${it}${I18nBundleIndex.PROPERTIES_SUFFIX}'" }.join(', ')}.
 A plugin's base names must be '${pluginName}' or '${pluginName}-*' so they cannot collide with an \
@@ -171,7 +195,9 @@ Rename '${offenders.first()}${I18nBundleIndex.PROPERTIES_SUFFIX}' to \
 '${pluginName}${I18nBundleIndex.PROPERTIES_SUFFIX}', or to \
 '${pluginName}-<name>${I18nBundleIndex.PROPERTIES_SUFFIX}' if the plugin ships more than one bundle. \
 Locale variants follow the base name, so '${pluginName}_fr${I18nBundleIndex.PROPERTIES_SUFFIX}'.
-${I18nBundleIndex.UPGRADE_REFERENCE}""")
-        }
+A plugin that cannot rename — a base name that is part of a published contract, or a bundle vendored \
+from elsewhere — can downgrade this to a warning with \
+'grails { i18n { enforceNamespace = false } }'. That silences the build, not the collision.
+${I18nBundleIndex.UPGRADE_REFERENCE}"""
     }
 }

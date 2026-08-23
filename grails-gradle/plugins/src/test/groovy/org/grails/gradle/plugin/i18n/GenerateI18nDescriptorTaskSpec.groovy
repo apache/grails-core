@@ -29,7 +29,7 @@ class GenerateI18nDescriptorTaskSpec extends Specification {
     File projectDir
 
     private GenerateI18nDescriptorTask task(String type, String name, List<String> bundleNames,
-            List<String> declared = []) {
+            List<String> declared = [], Boolean enforceNamespace = null) {
         File bundles = new File(projectDir, 'grails-app/i18n')
         bundles.mkdirs()
         bundleNames.each { new File(bundles, it).text = 'a.code=value\n' }
@@ -41,6 +41,9 @@ class GenerateI18nDescriptorTaskSpec extends Specification {
             it.artifactName.set(name)
             it.artifactVersion.set('1.0.0')
             it.declaredBasenames.set(declared)
+            if (enforceNamespace != null) {
+                it.enforceNamespace.set(enforceNamespace)
+            }
             it.outputDirectory.set(new File(projectDir, 'out'))
         }
         project.tasks.named('generateI18nDescriptor', GenerateI18nDescriptorTask).get()
@@ -90,6 +93,36 @@ class GenerateI18nDescriptorTaskSpec extends Specification {
         InvalidUserDataException e = thrown()
         e.message.contains("ships message bundles outside its own namespace")
         e.message.contains("'messages.properties'")
+    }
+
+    void 'the namespace check is on unless a plugin turns it off'() {
+        when: 'nothing sets enforceNamespace, so the convention applies'
+        descriptorOf(task(GenerateI18nDescriptorTask.TYPE_PLUGIN, 'spring-security-oauth2',
+                ['messages.properties']))
+
+        then:
+        thrown(InvalidUserDataException)
+    }
+
+    void 'a plugin that cannot rename may downgrade the namespace check to a warning'() {
+        when: 'enforceNamespace = false, for a base name the plugin does not control'
+        Properties descriptor = descriptorOf(task(GenerateI18nDescriptorTask.TYPE_PLUGIN,
+                'spring-security-oauth2', ['messages.properties'], [], false))
+
+        then: 'the build carries on and the bundle is still recorded'
+        notThrown(InvalidUserDataException)
+        descriptor.basenames == 'messages'
+    }
+
+    void 'the opt-out says how to reach it, and that it silences the build rather than the collision'() {
+        when:
+        descriptorOf(task(GenerateI18nDescriptorTask.TYPE_PLUGIN, 'spring-security-oauth2',
+                ['messages.properties']))
+
+        then:
+        InvalidUserDataException e = thrown()
+        e.message.contains('enforceNamespace = false')
+        e.message.contains('silences the build, not the collision')
     }
 
     void 'an application is free to use any base name'() {

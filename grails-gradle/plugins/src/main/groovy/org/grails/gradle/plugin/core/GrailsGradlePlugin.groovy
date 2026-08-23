@@ -1309,6 +1309,7 @@ ${importStatements}
             task.artifactName.set(grailsArtifactName(project))
             task.artifactVersion.set(project.provider { project.version?.toString() })
             task.declaredBasenames.set(grailsExt.i18n.basenames)
+            task.enforceNamespace.set(grailsExt.i18n.enforceNamespace)
             task.outputDirectory.set(project.layout.buildDirectory.dir('generated-resources/grails-i18n'))
         }
 

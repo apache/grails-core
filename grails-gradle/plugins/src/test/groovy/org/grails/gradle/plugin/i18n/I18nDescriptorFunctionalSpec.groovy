@@ -25,7 +25,8 @@ import org.grails.gradle.plugin.core.GradleSpecification
  * Exercises the i18n descriptor through the plugins an application or plugin author actually applies,
  * rather than by invoking the task directly: automatic registration, application-versus-plugin
  * dispatch, plugin-name derivation from the {@code *GrailsPlugin.groovy} descriptor, the
- * {@code grails { i18n { } }} block, and inclusion in {@code processResources}.
+ * {@code grails { i18n { } }} block including the namespace opt-out, and inclusion in
+ * {@code processResources}.
  */
 class I18nDescriptorFunctionalSpec extends GradleSpecification {
 
@@ -85,6 +86,21 @@ class I18nDescriptorFunctionalSpec extends GradleSpecification {
 
         then:
         result.output.contains('ships message bundles outside its own namespace')
+    }
+
+    void 'a plugin may downgrade the namespace check to a warning through the i18n block'() {
+        given: 'the same colliding bundle, with enforceNamespace = false'
+        GradleRunner runner = setupTestResourceProject('i18n-descriptor-plugin-namespace-off')
+
+        when:
+        BuildResult result = executeTask('processResources')
+
+        then: 'the build succeeds, and still says what the collision is'
+        assertTaskSuccess('generateI18nDescriptor', result)
+        result.output.contains('ships message bundles outside its own namespace')
+
+        and: 'the bundle is recorded as it stands'
+        descriptorFrom(runner).basenames == 'messages'
     }
 
     void 'declared base names override the inference the file names would produce'() {

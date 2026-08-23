@@ -1,0 +1,9 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-plugin'
+}
+
+grails {
+    i18n {
+        enforceNamespace = false
+    }
+}

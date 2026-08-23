@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic
 
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.Property
 
 /**
  * Message-bundle options, configured through the nested {@code grails { i18n { } }} block:
@@ -29,6 +30,7 @@ import org.gradle.api.provider.ListProperty
  * <pre><code>grails {
  *     i18n {
  *         basenames = ['api', 'api_errors']
+ *         enforceNamespace = false
  *     }
  * }</code></pre>
  *
@@ -56,9 +58,25 @@ class GrailsI18nOptions implements Serializable {
      */
     final ListProperty<String> basenames
 
+    /**
+     * Whether a plugin's base names must sit within its own namespace. Enabled by default; has no
+     * effect on an application, whose base names cannot collide with a sibling.
+     *
+     * <p>Turning it off downgrades the failure to a build warning and is meant for the plugin that
+     * cannot rename: a base name that is part of a published contract, or a bundle vendored from
+     * somewhere else. It does not make the collision safe. Spring still resolves a base name to the
+     * first match on the classpath, so such a bundle will shadow, or be shadowed by, any other
+     * artifact shipping that name — with no error at runtime to say which won:</p>
+     *
+     * <pre><code>grails { i18n { enforceNamespace = false } }</code></pre>
+     */
+    final Property<Boolean> enforceNamespace
+
     @Inject
     GrailsI18nOptions(ObjectFactory objects) {
         this.basenames = objects.listProperty(String)
         this.basenames.convention([])
+        this.enforceNamespace = objects.property(Boolean)
+        this.enforceNamespace.convention(true)
     }
 }
