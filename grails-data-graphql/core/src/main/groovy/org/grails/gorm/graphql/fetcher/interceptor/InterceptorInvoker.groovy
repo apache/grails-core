@@ -19,6 +19,7 @@
 
 package org.grails.gorm.graphql.fetcher.interceptor
 
+import graphql.execution.MergedField
 import graphql.schema.DataFetchingEnvironment
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -37,7 +38,8 @@ import org.grails.gorm.graphql.interceptor.GraphQLFetcherInterceptor
 abstract class InterceptorInvoker {
 
     protected String getName(DataFetchingEnvironment environment) {
-        environment.fields.empty ? 'UNKNOWN' : environment.fields[0].name
+        MergedField mergedField = environment.mergedField
+        mergedField == null ? 'UNKNOWN' : mergedField.name
     }
 
     /**
