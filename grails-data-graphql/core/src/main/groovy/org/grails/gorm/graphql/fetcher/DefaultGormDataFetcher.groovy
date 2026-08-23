@@ -48,6 +48,10 @@ import org.grails.gorm.graphql.entity.EntityFetchOptions
 @Slf4j
 abstract class DefaultGormDataFetcher<T> implements DataFetcher<T> {
 
+    // Association<?> (not Association<? extends Property>, its declared bound) to match the
+    // exact generic type EntityFetchOptions#getAssociations() returns - Groovy's static type
+    // checker treats the bounded and unbounded wildcard forms as distinct types, so writing out
+    // the bound here would make the assignment in initializeEntity() fail to compile.
     protected Map<String, Association<?>> associations = [:]
     protected PersistentEntity entity
     protected String propertyName
