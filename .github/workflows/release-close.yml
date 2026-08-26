@@ -79,6 +79,9 @@ jobs:
       - name: '📧 Announcement Email'
         run: |
           echo "::group::Announcement Email"
+          echo "If this candidate was staged on ATR, do NOT send this mail to announce@apache.org"
+          echo "(ATR already announced there once). Send only the extra lists. If this candidate did"
+          echo "not use ATR, send to announce@ plus the project lists as shown."
           echo ""
           echo "TO:"
           echo "*************************************************"
@@ -94,4 +97,25 @@ jobs:
           echo "*************************************************"
           cat .github/vote_templates/announce.txt | envsubst
           echo "*************************************************"
+          echo "::endgroup::"
+      - name: "📧 Optional ATR announce (experimental)"
+        # Alpha behavior and the action contract are documented at
+        # https://release-test.apache.org/docs/ and https://github.com/apache/tooling-actions.
+        run: |
+          echo "::group::Apache Trusted Releases (opt-in)"
+          echo "If this candidate was staged on ATR, send the announcement via:"
+          echo "  Actions → Release - ATR Announce (experimental) → version ${VERSION}"
+          echo "Run that workflow once (default announce@apache.org). Do not rerun it for"
+          echo "other lists — ATR promotes the release on the first announce. Then send"
+          echo "dev@grails.apache.org, users@grails.apache.org, and dev@groovy.apache.org"
+          echo "by hand from your @apache.org address."
+          echo "After that successful announce, use svn/svnmucc to move exactly:"
+          echo "  https://dist.apache.org/repos/dist/atr/grails/core/${VERSION}"
+          echo "to:"
+          echo "  https://dist.apache.org/repos/dist/release/grails/core/${VERSION}"
+          echo "Move the version tree, not dist/atr/grails. Do not run releaseDistributions.sh"
+          echo "or copy dist/dev for an ATR candidate."
+          echo "After Maven Central is live, also run:"
+          echo "  Actions → Release - ATR Record Distribution (experimental) with platform=MAVEN"
+          echo "See RELEASE.md section 'Experimental: Apache Trusted Releases'."
           echo "::endgroup::"

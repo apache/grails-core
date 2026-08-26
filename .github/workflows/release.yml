@@ -551,6 +551,9 @@ jobs:
           export DIST_SVN_REVISION=$(awk '/Last Changed Rev:/ {print $4}' dev-repo/DIST_SVN_REVISION.txt)
           
           echo "::group::Grails PMC Vote Email"
+          echo "If this candidate will be voted on ATR, discard this dist/dev vote email."
+          echo "Do not send it. ATR starts the sole vote against the ATR candidate after upload."
+          echo "If this candidate is the default dist/dev path, send the generated email below."
           echo ""
           echo "TO:"
           echo "*************************************************"
@@ -565,6 +568,91 @@ jobs:
           echo "*************************************************"
           cat ${REPO_NAME}/.github/vote_templates/staged.txt | envsubst
           echo "*************************************************"
+          echo "::endgroup::"
+      - name: "📧 Optional ATR vote (experimental)"
+        run: |
+          echo "::group::Apache Trusted Releases (opt-in)"
+          echo "To stage this candidate on ATR as well as dist/dev, either set repository"
+          echo "variable ATR_ENABLED=true (the atr_upload job then runs automatically) or"
+          echo "run workflow 'Release - ATR Upload (experimental)' with version ${VERSION}."
+          echo "ATR has no GitHub Action for starting a vote — after upload, start it from"
+          echo "the ATR UI (https://release-test.apache.org/) or the ATR client."
+          echo "When starting the vote, set the download path suffix to core/${VERSION}"
+          echo "(or core/{{VERSION}} if the UI uses that token)."
+          echo "If you are voting on ATR, discard the printed dist/dev [VOTE] email above;"
+          echo "do not start a second PMC vote against dist/dev."
+          echo "See RELEASE.md section 'Experimental: Apache Trusted Releases'."
+          echo "::endgroup::"
+  atr_upload:
+    name: "Optional - Upload distributions to ATR (experimental)"
+    # Off by default. Set repository variable ATR_ENABLED=true after Trusted
+    # Publishing is configured on ATR. See https://tooling.apache.org/ and
+    # https://github.com/apache/tooling-asf-example/blob/main/.github/workflows/build-and-rsync-to-atr.yaml.
+    if: ${{ vars.ATR_ENABLED == 'true' }}
+    needs: [ publish, source ]
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write # required for GitHub OIDC → ATR
+      contents: read
+    env:
+      ATR_HOST: ${{ vars.ATR_HOST != '' && vars.ATR_HOST || 'release-test.apache.org' }}
+      ATR_PROJECT: ${{ vars.ATR_PROJECT != '' && vars.ATR_PROJECT || 'grails' }}
+      ATR_SSH_PORT: ${{ vars.ATR_SSH_PORT != '' && vars.ATR_SSH_PORT || '2222' }}
+    steps:
+      - name: "📝 Establish release version"
+        run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
+      - name: "📥 Download GitHub Release distributions"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p atr-dist/sources atr-dist/distribution
+          download_into() {
+            local dest="$1"
+            shift
+            local asset
+            for asset in "$@"; do
+              echo "Downloading ${asset} -> ${dest}"
+              gh release download "${TAG}" \
+                --repo "${REPO_SLUG}" \
+                --pattern "${asset}" \
+                --dir "${dest}" \
+                --clobber
+            done
+          }
+          download_into atr-dist/sources \
+            "${DIST_NAME}-${VERSION}-src.zip" \
+            "${DIST_NAME}-${VERSION}-src.zip.sha512" \
+            "${DIST_NAME}-${VERSION}-src.zip.asc"
+          download_into atr-dist/distribution \
+            "${DIST_NAME}-${VERSION}-bin.zip" \
+            "${DIST_NAME}-${VERSION}-bin.zip.sha512" \
+            "${DIST_NAME}-${VERSION}-bin.zip.asc" \
+            "${DIST_NAME}-wrapper-${VERSION}-bin.zip" \
+            "${DIST_NAME}-wrapper-${VERSION}-bin.zip.sha512" \
+            "${DIST_NAME}-wrapper-${VERSION}-bin.zip.asc"
+          echo "Downloaded the following files:"
+          find atr-dist -type f -print | sort
+      - name: "📤 Upload to ATR"
+        # Pin to a full SHA; apache/tooling-actions does not publish tags.
+        # SHA is apache/tooling-actions@e8594ee9cc5ef5fbb48c367a9ab87042c0ccbbc5 (2026-08-24)
+        uses: apache/tooling-actions/upload-to-atr@e8594ee9cc5ef5fbb48c367a9ab87042c0ccbbc5
+        with:
+          project: ${{ env.ATR_PROJECT }}
+          version: ${{ env.VERSION }}
+          src: atr-dist
+          atr-host: ${{ env.ATR_HOST }}
+          ssh-port: ${{ env.ATR_SSH_PORT }}
+      - name: "📧 Next step — start the ATR vote"
+        run: |
+          echo "::group::Start the vote on ATR"
+          echo "Compose is complete. Start the vote from the ATR UI or the ATR client:"
+          echo "  https://${ATR_HOST}/"
+          echo "  atr vote start ${ATR_PROJECT} ${VERSION} <REVISION> -m \"<ASF_UID>@apache.org\""
+          echo "When starting the vote, set the download path suffix to core/${VERSION}"
+          echo "(or core/{{VERSION}} if the UI uses that token). During Alpha, a committer moves"
+          echo "the exact version tree from dist/atr to dist/release after the successful announce."
+          echo "After the vote passes, run workflow 'Release - ATR Resolve Vote (experimental)'."
           echo "::endgroup::"
   release:
     environment: release
@@ -612,15 +700,39 @@ jobs:
           cat .github/vote_templates/vote_succeeded.txt | envsubst
           echo "*************************************************"
           echo "::endgroup::"
+      - name: "📧 Optional ATR resolve (experimental)"
+        run: |
+          echo "::group::Apache Trusted Releases (opt-in)"
+          echo "If this candidate was staged on ATR, resolve the vote instead of sending"
+          echo "the RESULT email by hand:"
+          echo "  Actions → Release - ATR Resolve Vote (experimental) → version ${VERSION}"
+          echo "Promote Nexus staging through Actions → Release - Promote Nexus Staging"
+          echo "with version ${VERSION}; then, once Maven Central is live, run ATR Record Distribution (platform=MAVEN)."
+          echo "Do NOT run releaseDistributions.sh for an ATR candidate — that promotes dist/dev,"
+          echo "which is not the set of files under vote. After the one successful ATR announce,"
+          echo "move exactly dist/atr/grails/core/${VERSION} to dist/release/grails/core/${VERSION}."
+          echo "See RELEASE.md section 'Experimental: Apache Trusted Releases'."
+          echo "::endgroup::"
       - name: "🚀 MANUAL - Release JAR files"
         run: |
           echo "::group::Manual Jar Promotion"
-          echo "Run .github/scripts/releaseJarFiles.sh ${REPO_NAME}:${VERSION} <ASF_USER>"
+          echo "Prefer Actions → Release - Promote Nexus Staging with version ${VERSION}"
+          echo "(environment: release). Local fallback:"
+          echo "  .github/scripts/releaseJarFiles.sh ${REPO_NAME}:${VERSION} <ASF_USER>"
           echo "::endgroup::"
-      - name: "🚀 MANUAL - Release distribution artifacts"
+      - name: "🚀 MANUAL - Promote distribution artifacts"
+        # ATR Alpha promotion guidance: https://release-test.apache.org/docs/promoting-to-release
         run: |
           echo "::group::Manual ASF Artifact Promotion"
-          echo "Run .github/scripts/releaseDistributions.sh ${TAG} ${SVN_FOLDER} <ASF_USER>"
+          echo "If this candidate was staged on ATR (standalone ATR Upload workflow or atr_upload / ATR_ENABLED),"
+          echo "after the one successful ATR announce, use svn/svnmucc to move exactly:"
+          echo "  https://dist.apache.org/repos/dist/atr/grails/core/${VERSION}"
+          echo "to:"
+          echo "  https://dist.apache.org/repos/dist/release/grails/core/${VERSION}"
+          echo "Move the version tree, not dist/atr/grails. Do not run releaseDistributions.sh"
+          echo "or copy dist/dev for an ATR candidate."
+          echo "If this candidate used dist/dev (the default), run:"
+          echo "  .github/scripts/releaseDistributions.sh ${TAG} ${SVN_FOLDER} <ASF_USER>"
           echo "::endgroup::"
       - name: "✅ MANUAL - Update ASF Reporter"
         run: |
@@ -805,6 +917,9 @@ jobs:
       - name: '📧 Announcement Email'
         run: |
           echo "::group::Announcement Email"
+          echo "If this candidate was staged on ATR, do NOT send this mail to announce@apache.org"
+          echo "(ATR already announced there once). Send only the extra lists. If this candidate did"
+          echo "not use ATR, send to announce@ plus the project lists as shown."
           echo ""
           echo "TO:"
           echo "*************************************************"
@@ -820,4 +935,21 @@ jobs:
           echo "*************************************************"
           cat .github/vote_templates/announce.txt | envsubst
           echo "*************************************************"
+          echo "::endgroup::"
+      - name: "📧 Optional ATR announce (experimental)"
+        # Alpha behavior and the action contract are documented at https://tooling.apache.org/
+        # and https://github.com/apache/tooling-asf-example/blob/main/.github/workflows/announce-release-on-atr.yaml.
+        run: |
+          echo "::group::Apache Trusted Releases (opt-in)"
+          echo "If this candidate was staged on ATR, send the announcement via:"
+          echo "  Actions → Release - ATR Announce (experimental) → version ${VERSION}"
+          echo "Run that workflow once (default announce@apache.org). Do not rerun it for"
+          echo "other lists — ATR promotes the release on the first announce. Then send"
+          echo "dev@grails.apache.org, users@grails.apache.org, and dev@groovy.apache.org"
+          echo "by hand from your @apache.org address."
+          echo "After that successful announce, move exactly dist/atr/grails/core/${VERSION}"
+          echo "to dist/release/grails/core/${VERSION}; do not use releaseDistributions.sh."
+          echo "After Maven Central is live, also run:"
+          echo "  Actions → Release - ATR Record Distribution (experimental) with platform=MAVEN"
+          echo "See RELEASE.md section 'Experimental: Apache Trusted Releases'."
           echo "::endgroup::"
