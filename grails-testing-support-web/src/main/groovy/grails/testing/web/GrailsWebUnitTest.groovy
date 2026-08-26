@@ -100,7 +100,7 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
     }
 
     @CompileDynamic
-    Object mockTagLib(Class<?> tagLibClass) {
+    <T> T mockTagLib(Class<T> tagLibClass) {
         GrailsTagLibClass tagLib = grailsApplication.addArtefact(TagLibArtefactHandler.TYPE, tagLibClass)
         final tagLookup = applicationContext.getBean(TagLibraryLookup)
 
@@ -118,13 +118,13 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
         TagLibraryMetaUtils.enhanceTagLibMetaClass(tagLib, tagLookup)
         TagLibraryMetaUtils.enhanceTagLibMetaClass(taglibObject.metaClass, tagLookup, tagLib.namespace)
         if (taglibObject instanceof TagLibrary) {
-            ((TagLibrary) taglibObject).setTagLibraryLookup(tagLookup)
+            ((TagLibrary) taglibObject).tagLibraryLookup = tagLookup
         }
-        taglibObject
+        taglibObject as T
     }
 
     @CompileDynamic
-    Object mockController(Class<?> controllerClass) {
+    <T> T mockController(Class<T> controllerClass) {
         createAndEnhanceController(controllerClass)
         defineBeans {
             "$controllerClass.name"(controllerClass) { bean ->
@@ -142,7 +142,7 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
         webRequest.request.setAttribute(GrailsApplicationAttributes.CONTROLLER, controller)
         webRequest.controllerName = GrailsNameUtils.getLogicalPropertyName(controller.class.name, ControllerArtefactHandler.TYPE)
 
-        controller
+        controller as T
     }
 
     private GrailsClass createAndEnhanceController(Class controllerClass) {
@@ -180,7 +180,7 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
         String uri = null
         Map model
         if (args.containsKey('model')) {
-            model = (Map) args.model
+            model = args.model as Map
         } else {
             model = [:]
         }

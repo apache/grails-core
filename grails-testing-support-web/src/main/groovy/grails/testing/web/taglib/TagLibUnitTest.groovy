@@ -22,15 +22,18 @@ import java.lang.reflect.ParameterizedType
 
 import groovy.transform.CompileStatic
 
+import grails.artefact.TagLibrary
 import grails.core.gsp.GrailsTagLibClass
 import grails.testing.web.GrailsWebUnitTest
-import org.grails.testing.ParameterizedGrailsUnitTest
 import org.grails.taglib.TagLibraryLookup
+import org.grails.testing.ParameterizedGrailsUnitTest
 
 @CompileStatic
 trait TagLibUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWebUnitTest {
 
-    private static final Map<Class<?>, Set<Class<?>>> MOCKED_TAG_LIB_CLASSES_BY_SPEC = [:].withDefault { [] as LinkedHashSet<Class<?>> }
+    private static final Map<Class<T>, Set<Class<?>>> MOCKED_TAG_LIB_CLASSES_BY_SPEC = [:].withDefault {
+        [] as LinkedHashSet<Class<?>>
+    }
     private boolean hasBeenMocked = false
 
     /**
@@ -58,12 +61,12 @@ trait TagLibUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWebUnit
      * @return The tag library instance
      */
     void mockArtefact(Class<?> tagLibClass) {
-        mockTagLib(tagLibClass)
+        mockTagLib((Class<? extends TagLibrary>) tagLibClass)
     }
 
-    Object mockTagLib(Class<?> tagLibClass) {
+    <U> U mockTagLib(Class<U> tagLibClass) {
         getMockedTagLibClasses().add(tagLibClass)
-        GrailsWebUnitTest.super.mockTagLib(tagLibClass)
+        (U) GrailsWebUnitTest.super.mockTagLib(tagLibClass)
     }
 
     void mockTagLibs(Class<?>... tagLibClasses) {
@@ -81,8 +84,7 @@ trait TagLibUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWebUnit
             genericInterface instanceof ParameterizedType &&
                     TagLibUnitTest.isAssignableFrom((Class)((ParameterizedType)genericInterface).rawType)
         }
-
-        parameterizedType?.actualTypeArguments[0]
+        parameterizedType?.actualTypeArguments[0] as Class<T>
     }
 
     T getTagLib() {

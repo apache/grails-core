@@ -36,7 +36,7 @@ trait ParameterizedGrailsUnitTest<T> extends GrailsUnitTest {
         }
 
         if (parameterizedType?.actualTypeArguments != null) {
-            parameterizedType.actualTypeArguments[0]
+            parameterizedType.actualTypeArguments[0] as Class<T>
         } else {
             null
         }
@@ -49,10 +49,14 @@ trait ParameterizedGrailsUnitTest<T> extends GrailsUnitTest {
                 mockArtefact(cutType)
                 final String beanName = getBeanName(cutType)
                 if (beanName != null && applicationContext.containsBean(beanName)) {
-                    _artefactInstance = applicationContext.getBean(beanName, T)
+                    _artefactInstance = applicationContext.getBean(beanName, cutType)
                 } else {
-                    _artefactInstance = cutType.newInstance()
-                    applicationContext.autowireCapableBeanFactory.autowireBeanProperties(_artefactInstance, AutowireCapableBeanFactory.AUTOWIRE_BY_NAME, false)
+                    _artefactInstance = cutType.getDeclaredConstructor().newInstance()
+                    applicationContext.autowireCapableBeanFactory.autowireBeanProperties(
+                            _artefactInstance,
+                            AutowireCapableBeanFactory.AUTOWIRE_BY_NAME,
+                            false
+                    )
                 }
             }
         }

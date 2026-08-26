@@ -18,11 +18,13 @@
  */
 package grails.testing.web.controllers
 
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import groovy.transform.TypeCheckingMode
 
 import javassist.util.proxy.ProxyFactory
+import org.jspecify.annotations.Nullable
 
+import grails.artefact.Controller
 import grails.testing.web.GrailsWebUnitTest
 import grails.web.mime.MimeType
 import org.grails.testing.ParameterizedGrailsUnitTest
@@ -51,27 +53,25 @@ trait ControllerUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWeb
     /**
      * @return The model of the current controller
      */
-    @CompileStatic(TypeCheckingMode.SKIP)
+    @CompileDynamic
     Map getModel() {
         Map model = request.getAttribute(GrailsApplicationAttributes.CONTROLLER)?.modelAndView?.model
         if (model == null) {
-            model = request.getAttribute(GrailsApplicationAttributes.TEMPLATE_MODEL)
+            model = request.getAttribute(GrailsApplicationAttributes.TEMPLATE_MODEL) as Map
         }
-        return model ?: [:]
+        model ?: [:]
     }
 
     /**
      * @return The view of the current controller
      */
-    @CompileStatic(TypeCheckingMode.SKIP)
-    String getView() {
+    @CompileDynamic
+    @Nullable String getView() {
         final controller = request.getAttribute(GrailsApplicationAttributes.CONTROLLER)
-
         final viewName = controller?.modelAndView?.viewName
         if (viewName != null) {
             return viewName
         }
-
         if (webRequest.controllerName && webRequest.actionName) {
             new GroovyPagesUriSupport().getViewURI(webRequest.controllerName, webRequest.actionName)
         } else {
@@ -86,7 +86,7 @@ trait ControllerUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWeb
      * @return An instance of the controller
      */
     void mockArtefact(Class<?> controllerClass) {
-        mockController(controllerClass)
+        mockController(controllerClass as Class<Controller>)
     }
 
     String getBeanName(Class<?> controllerClass) {
