@@ -25,6 +25,7 @@ import groovy.transform.CompileStatic
 import org.springframework.mock.web.MockHttpSession
 import org.springframework.mock.web.MockServletContext
 
+import grails.artefact.Controller
 import grails.artefact.TagLibrary
 import grails.core.GrailsClass
 import grails.core.GrailsControllerClass
@@ -55,15 +56,15 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
     GrailsWebRequest webRequest
 
     GrailsMockHttpServletRequest getRequest() {
-        return (GrailsMockHttpServletRequest) getWebRequest().getCurrentRequest()
+        webRequest.currentRequest as GrailsMockHttpServletRequest
     }
 
     GrailsMockHttpServletResponse getResponse() {
-        return (GrailsMockHttpServletResponse) getWebRequest().getCurrentResponse()
+        webRequest.currentResponse as GrailsMockHttpServletResponse
     }
 
     MockServletContext getServletContext() {
-        (MockServletContext) optionalServletContext
+        optionalServletContext as MockServletContext
     }
 
     Map<String, String> getViews() {
@@ -74,7 +75,7 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
      * The {@link org.springframework.mock.web.MockHttpSession} instance
      */
     MockHttpSession getSession() {
-        (MockHttpSession) request.session
+        request.session as MockHttpSession
     }
 
     /**
@@ -88,7 +89,7 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
      * The Grails 'params' object which is an instance of {@link grails.web.servlet.mvc.GrailsParameterMap}
      */
     GrailsParameterMap getParams() {
-        webRequest.getParams()
+        webRequest.params
     }
 
     /**
@@ -96,13 +97,13 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
      * @return
      */
     FlashScope getFlash() {
-        webRequest.getFlashScope()
+        webRequest.flashScope
     }
 
     @CompileDynamic
     <T> T mockTagLib(Class<T> tagLibClass) {
-        GrailsTagLibClass tagLib = grailsApplication.addArtefact(TagLibArtefactHandler.TYPE, tagLibClass)
-        final tagLookup = applicationContext.getBean(TagLibraryLookup)
+        def tagLib = grailsApplication.addArtefact(TagLibArtefactHandler.TYPE, tagLibClass) as GrailsTagLibClass
+        def tagLookup = applicationContext.getBean(TagLibraryLookup)
 
         if (!applicationContext.containsBean(tagLib.fullName)) {
             defineBeans {
@@ -124,11 +125,11 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
     }
 
     @CompileDynamic
-    <T> T mockController(Class<T> controllerClass) {
+    <T extends Controller> T mockController(Class<T> controllerClass) {
         createAndEnhanceController(controllerClass)
         defineBeans {
             "$controllerClass.name"(controllerClass) { bean ->
-                bean.scope = 'prototype'
+                bean.scope = 'prototype' // A new instance is created for each request in tests to avoid state leakage between tests
                 bean.autowire = true
             }
         }
@@ -136,7 +137,10 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
         def controller = applicationContext.getBean(controllerClass.name)
 
         if (webRequest == null) {
-            throw new IllegalAccessException('Cannot access the controller outside of a request. Is the controller referenced in a where: block?')
+            throw new IllegalAccessException(
+                    'Cannot access the controller outside of a request. ' +
+                    'Is the controller referenced in a where: block?'
+            )
         }
 
         webRequest.request.setAttribute(GrailsApplicationAttributes.CONTROLLER, controller)
@@ -146,13 +150,13 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
     }
 
     private GrailsClass createAndEnhanceController(Class controllerClass) {
-        final GrailsControllerClass controllerArtefact = (GrailsControllerClass) grailsApplication.addArtefact(ControllerArtefactHandler.TYPE, controllerClass)
-        controllerArtefact.initialize()
-        return controllerArtefact
+        (grailsApplication.addArtefact(ControllerArtefactHandler.TYPE, controllerClass) as GrailsControllerClass).tap {
+            initialize()
+        }
     }
 
     void mockTagLibs(Class<?>... tagLibClasses) {
-        for (Class c : tagLibClasses) {
+        for (def c : tagLibClasses) {
             mockTagLib(c)
         }
     }
@@ -162,8 +166,9 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
             return
         }
         loadedCodecs << codecClass
-        DefaultGrailsCodecClass grailsCodecClass = new DefaultGrailsCodecClass(codecClass)
-        grailsCodecClass.configureCodecMethods()
+        def grailsCodecClass = new DefaultGrailsCodecClass(codecClass).tap {
+            configureCodecMethods()
+        }
         grailsApplication.addArtefact(CodecArtefactHandler.TYPE, grailsCodecClass)
         if (reinitialize) {
             applicationContext.getBean(DefaultCodecLookup).reInitialize()
@@ -184,18 +189,18 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
         } else {
             model = [:]
         }
-        final attributes = webRequest.attributes
+        def attributes = webRequest.attributes
         if (args.template) {
             uri = attributes.getTemplateUri(args.template as String, request)
         } else if (args.view) {
             uri = attributes.getViewUri(args.view as String, request)
         }
         if (uri != null) {
-            GroovyPagesTemplateEngine engine = applicationContext.getBean(GroovyPagesTemplateEngine)
-            final Template t = engine.createTemplate(uri)
-            if (t != null) {
+            def engine = applicationContext.getBean(GroovyPagesTemplateEngine)
+            def template = engine.createTemplate(uri)
+            if (template != null) {
                 def sw = new StringWriter()
-                renderTemplateToStringWriter(sw, t, model)
+                renderTemplateToStringWriter(sw, template, model)
                 return sw.toString()
             }
         }
@@ -222,21 +227,20 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
      * @param contents The contents
      * @param model The model
      */
-    void applyTemplate(StringWriter sw, String template, Map params = [:]) {
+    void applyTemplate(StringWriter sw, String templateText, Map params = [:]) {
         def engine = applicationContext.getBean(GroovyPagesTemplateEngine)
-
-        def t = engine.createTemplate(template, 'test_' + System.currentTimeMillis(), false)
-        renderTemplateToStringWriter(sw, t, params)
+        def template = engine.createTemplate(templateText, 'test_' + System.currentTimeMillis(), false)
+        renderTemplateToStringWriter(sw, template, params)
     }
 
-    private renderTemplateToStringWriter(StringWriter sw, Template t, Map params) {
+    private renderTemplateToStringWriter(StringWriter sw, Template template, Map params) {
         if (!webRequest.controllerName) {
             webRequest.controllerName = 'test'
         }
         if (!webRequest.actionName) {
             webRequest.actionName = 'index'
         }
-        def w = t.make(params)
+        def w = template.make(params)
         def previousOut = webRequest.out
         try {
             def out = new GrailsPrintWriter(sw)

@@ -67,8 +67,8 @@ trait ControllerUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWeb
      */
     @CompileDynamic
     @Nullable String getView() {
-        final controller = request.getAttribute(GrailsApplicationAttributes.CONTROLLER)
-        final viewName = controller?.modelAndView?.viewName
+        def controller = request.getAttribute(GrailsApplicationAttributes.CONTROLLER)
+        def viewName = controller?.modelAndView?.viewName
         if (viewName != null) {
             return viewName
         }

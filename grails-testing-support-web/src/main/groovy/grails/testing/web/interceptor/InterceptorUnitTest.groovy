@@ -28,7 +28,6 @@ import org.jspecify.annotations.Nullable
 import org.springframework.web.servlet.ModelAndView
 
 import grails.artefact.Interceptor
-import grails.core.GrailsClass
 import grails.testing.web.GrailsWebUnitTest
 import grails.util.GrailsNameUtils
 import grails.web.mapping.UrlMappingInfo
@@ -52,7 +51,7 @@ trait InterceptorUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
      */
     @CompileDynamic
     <I extends Interceptor> I mockInterceptor(Class<I> interceptorClass) {
-        GrailsClass artefact = grailsApplication.addArtefact(InterceptorArtefactHandler.TYPE, interceptorClass)
+        def artefact = grailsApplication.addArtefact(InterceptorArtefactHandler.TYPE, interceptorClass)
         defineBeans {
             "${artefact.propertyName}"(artefact.clazz) { bean ->
                 bean.autowire = true
@@ -72,12 +71,10 @@ trait InterceptorUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
      */
     @Nullable Object withInterceptors(Map<String, Object> arguments, Closure callable) {
         ensureInterceptorHasBeenMocked()
-        UrlMappingInfo info = withRequest(arguments)
-
-        def hi = getHandlerInterceptor()
-
+        def urlMappingInfo = withRequest(arguments)
+        def handlerInterceptor = getHandlerInterceptor()
         try {
-            if (hi.preHandle(request, response, this)) {
+            if (handlerInterceptor.preHandle(request, response, this)) {
                 def result = callable.call()
                 ModelAndView modelAndView = null
                 def modelAndViewObject = request.getAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW)
@@ -85,16 +82,16 @@ trait InterceptorUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
                     modelAndView = (ModelAndView) modelAndViewObject
                 }
                 else if (result instanceof Map) {
-                    modelAndView =  new ModelAndView(info?.actionName ?: 'index', new HashMap<String, Object>((Map) result))
+                    modelAndView =  new ModelAndView(urlMappingInfo?.actionName ?: 'index', new HashMap<String, Object>((Map) result))
                 }
                 else if (result instanceof ModelAndView) {
                     return (ModelAndView) result
                 }
-                hi.postHandle(request, response, this, modelAndView)
+                handlerInterceptor.postHandle(request, response, this, modelAndView)
                 return result
             }
         } catch (Exception e) {
-            hi.afterCompletion(request, response, this, e)
+            handlerInterceptor.afterCompletion(request, response, this, e)
         }
         null
     }
@@ -118,7 +115,7 @@ trait InterceptorUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
             request.setAttribute(UrlMappingsHandlerMapping.MATCHED_REQUEST, urlMappingInfo)
         }
 
-        for (String name in request.attributeNames.findAll() { String n -> n.endsWith(InterceptorArtefactHandler.MATCH_SUFFIX) }) {
+        for (String name : request.attributeNames.findAll { String candidate -> candidate.endsWith(InterceptorArtefactHandler.MATCH_SUFFIX) }) {
             request.removeAttribute(name)
         }
         urlMappingInfo
@@ -137,10 +134,10 @@ trait InterceptorUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
     }
 
     private Class<T> getInterceptorTypeUnderTest() {
-        ParameterizedType parameterizedType = (ParameterizedType) getClass().genericInterfaces.find { genericInterface ->
+        def parameterizedType = getClass().genericInterfaces.find { genericInterface ->
             genericInterface instanceof ParameterizedType &&
                     InterceptorUnitTest.isAssignableFrom((Class)((ParameterizedType)genericInterface).rawType)
-        }
+        } as ParameterizedType
         parameterizedType?.actualTypeArguments[0] as Class<T>
     }
 
