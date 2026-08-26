@@ -45,12 +45,6 @@ import jakarta.servlet.http.HttpServletResponse
  */
 class ControllerUnitTestMixinTests extends Specification implements ControllerUnitTest<TestController> {
 
-    @CompileStatic
-    void "mockController returns the typed controller"() {
-        expect: "no compilation error"
-        AnnotationOnlyTestController c = mockController(AnnotationOnlyTestController)
-    }
-
     // Cache the static field helper interface for performance
     private static final Class<?> STATIC_FIELD_HELPER = Class.forName('grails.validation.Validateable$Trait$StaticFieldHelper')
 
@@ -74,6 +68,12 @@ class ControllerUnitTestMixinTests extends Specification implements ControllerUn
             def setterMethod = clazz.getMethod('grails_validation_Validateable__constraintsMapInternal$set', Map)
             setterMethod.invoke(null, (Map) null)
         }
+    }
+
+    @CompileStatic
+    void "mockController returns the typed controller"() {
+        expect: "no compilation error"
+        AnnotationOnlyTestController c = mockController(AnnotationOnlyTestController)
     }
 
     void testRenderText() {
