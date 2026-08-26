@@ -54,7 +54,7 @@ dependencies {
         // impl: TagLibraryResolverImpl
     }
 
-    compileOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during compilation
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 }
 
 apply {

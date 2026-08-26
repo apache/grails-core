@@ -116,6 +116,9 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
         tagLookup.registerTagLib(tagLib)
 
         def taglibObject = applicationContext.getBean(tagLib.fullName)
+        // Kept for tests, which call tag methods directly: the installed methods substitute an empty
+        // body for a missing one, so tagLib.someTag(attrs, null) works. A running application does not
+        // rely on these, resolving tags through the lookup instead.
         TagLibraryMetaUtils.enhanceTagLibMetaClass(tagLib, tagLookup)
         TagLibraryMetaUtils.enhanceTagLibMetaClass(taglibObject.metaClass, tagLookup, tagLib.namespace)
         if (taglibObject instanceof TagLibrary) {
@@ -166,12 +169,12 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
             return
         }
         loadedCodecs << codecClass
-        def grailsCodecClass = new DefaultGrailsCodecClass(codecClass).tap {
-            configureCodecMethods()
-        }
+        DefaultGrailsCodecClass grailsCodecClass = new DefaultGrailsCodecClass(codecClass)
         grailsApplication.addArtefact(CodecArtefactHandler.TYPE, grailsCodecClass)
         if (reinitialize) {
             applicationContext.getBean(DefaultCodecLookup).reInitialize()
+        } else {
+            grailsCodecClass.configureCodecMethods()
         }
     }
 

@@ -21,20 +21,9 @@ micronaut:
             - ${CORS_ALLOWED_ORIGIN_APACHE:'https://grails.apache.org'}
           allowedMethods:
             - GET
-  http:
-    services:
-      github-oauth:
-        url: https://github.com
-      github-api-v3:
-        url: https://api.github.com
 grails:
   forge:
-      redirect-url: ${GITHUB_REDIRECT_URL:'https://start.grails.org/'}
-      github:
-        client-id: ${GITHUB_OAUTH_APP_CLIENT_ID}
-        client-secret: ${GITHUB_OAUTH_APP_CLIENT_SECRET}
-        token-permissions: public_repo,read:user,workflow
-        user-agent: ${GITHUB_USER_AGENT:'https://start.grails.org/'}
+    redirect-url: ${GITHUB_REDIRECT_URL:'https://start.grails.org/'}
 gcp:
   http:
     client:

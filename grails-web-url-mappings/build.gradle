@@ -57,6 +57,7 @@ dependencies {
     // jline comes with it: the renderer reads GrailsConsole, whose signature Groovy has to resolve.
     cliImplementation 'org.jline:jline'
     cliCompileOnly 'jakarta.servlet:jakarta.servlet-api'
+    cliCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     api project(':grails-web-common')
     implementation 'io.micrometer:micrometer-observation'
@@ -75,6 +76,7 @@ dependencies {
     testImplementation project(':grails-test-suite-base')
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
     compileOnly 'org.springframework:spring-test', {
         // MockHttpServletRequest/Response/Context used in many classes
     }

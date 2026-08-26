@@ -24,7 +24,7 @@ env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   GRAILS_PUBLISH_RELEASE: 'true'
   JAVA_DISTRIBUTION: liberica
-  JAVA_VERSION: 21.0.7 # this must be a specific version for reproducible builds, keep it synced with .sdkmanrc and verification container
+  JAVA_VERSION: 21.0.12 # this must be a specific version for reproducible builds, keep it synced with .sdkmanrc and verification container
   JAVA_VERSION_MICRONAUT: 25.0.3 # the Grails-Micronaut "island" (grails-micronaut, grails-micronaut-bom) is built against Micronaut 5 which targets JVM 25 bytecode. Keep this synced with the secondary JDK installed in etc/bin/Dockerfile and the JDK_25_HOME branch in etc/bin/verify-reproducible.sh.
   PROJECT_DESC: >
     Grails is a powerful Groovy-based web application framework for the JVM,
@@ -124,7 +124,7 @@ jobs:
           echo "Generated checksum for grails wrapper ZIP:"
           cat ${DIST_NAME}-wrapper-${VERSION}-bin.zip.sha512
       - name: "📤 Upload grails-wrapper ZIP"
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
           tag_name: ${{ env.TAG }}
           files: |
@@ -149,7 +149,7 @@ jobs:
           echo "Generated checksum for grails cli ZIP:"
           cat ${DIST_NAME}-${VERSION}-bin.zip.sha512
       - name: "📤 Upload grails-cli ZIP"
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
           tag_name: ${{ env.TAG }}
           files: |
@@ -306,7 +306,7 @@ jobs:
       - name: "📅 Generate build date file"
         run: echo "$SOURCE_DATE_EPOCH" >> build/BUILD_DATE.txt
       - name: "📤 Upload build date, checksums and published artifact files"
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
           tag_name: ${{ env.TAG }}
           files: |
@@ -398,7 +398,7 @@ jobs:
       - name: "📦 Create source distribution checksum"
         run: sha512sum ${DIST_NAME}-${VERSION}-src.zip > ${DIST_NAME}-${VERSION}-src.zip.sha512
       - name: "🚀 Upload ZIP and Signature to GitHub Release"
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
           tag_name: ${{ env.TAG }}
           files: |
@@ -525,7 +525,7 @@ jobs:
           cd dev-repo
           svn info ${VERSION} > DIST_SVN_REVISION.txt
       - name: "📤 Upload Distribution SVN revision"
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
           tag_name: ${{ env.TAG }}
           files: dev-repo/DIST_SVN_REVISION.txt

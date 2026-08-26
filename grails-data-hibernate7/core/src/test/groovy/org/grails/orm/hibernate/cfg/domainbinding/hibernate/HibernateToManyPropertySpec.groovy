@@ -356,8 +356,8 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
         def property = createTestHibernateToManyProperty(HTMPEntityWithEnum, "statuses")
         def namingStrategy = getGrailsDomainBinder().namingStrategy
 
-        expect:
-        property.joinTableColumName(namingStrategy) != null
+        expect: "the column is named from the enum's simple name, not its fully-qualified name"
+        property.joinTableColumName(namingStrategy) == "htmpstatus"
     }
 
     void "joinTableColumName uses explicit join table column name when present"() {

@@ -44,6 +44,8 @@ dependencies {
     // in-memory ldap server for testing
     implementation 'com.unboundid:unboundid-ldapsdk'
 
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
     runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'com.zaxxer:HikariCP'

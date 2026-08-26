@@ -30,6 +30,14 @@ plugins {
 version = "0.0.1"
 group = "com.example"
 
+// The scaffolded views are expanded from their templates at build time and compiled with the
+// rest, so this is the project that proves a scaffolded page can be compiled statically.
+grails {
+    compileStatic {
+        gsp = true
+    }
+}
+
 dependencies {
     implementation platform(project(':grails-bom'))
     implementation "org.springframework.boot:spring-boot-starter-logging"

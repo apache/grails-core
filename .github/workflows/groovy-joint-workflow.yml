@@ -58,17 +58,18 @@ jobs:
       - name: "📝 Derive matching Apache Groovy branch from dependencies.gradle"
         id: groovy-branch
         run: |
-          # Extract the major version of `groovy.version` declared in this branch's
-          # dependencies.gradle (e.g. '5.0.5' -> '5', '4.0.31' -> '4') and use it to
-          # pick the matching Apache Groovy development branch (GROOVY_<major>_0_X).
+          # Extract the major and minor version of `groovy.version` declared in this
+          # branch's dependencies.gradle (e.g. '5.0.5' -> '5_0', '4.0.31' -> '4_0')
+          # and use it to pick the matching Apache Groovy development branch
+          # (GROOVY_<major>_<minor>_X).
           # This keeps `7.0.x` PRs validating against Groovy 4 and `8.0.x` PRs
           # validating against Groovy 5 without hard-coding the branch here.
-          GROOVY_MAJOR=$(grep -m 1 "'groovy\.version'" dependencies.gradle | sed -E "s/.*'([0-9]+)\.[0-9]+\.[0-9]+.*/\1/" | tr -d '[:space:]')
-          if [ -z "$GROOVY_MAJOR" ]; then
-            echo "::error::Could not determine Apache Groovy major version from dependencies.gradle"
+          GROOVY_MAJOR_MINOR=$(sed -nE "s/.*'groovy\.version'.*'([0-9]+)\.([0-9]+)\.[0-9]+'.*/\1_\2/p" dependencies.gradle | head -n 1)
+          if [ -z "$GROOVY_MAJOR_MINOR" ]; then
+            echo "::error::Could not determine Apache Groovy major/minor version from dependencies.gradle"
             exit 1
           fi
-          GROOVY_BRANCH="GROOVY_${GROOVY_MAJOR}_0_X"
+          GROOVY_BRANCH="GROOVY_${GROOVY_MAJOR_MINOR}_X"
           echo "Validating against Apache Groovy branch: $GROOVY_BRANCH"
           echo "value=$GROOVY_BRANCH" >> $GITHUB_OUTPUT
           rm dependencies.gradle
@@ -102,17 +103,18 @@ jobs:
           retention-days: 1
   build_grails:
     needs: [build_groovy]
+    name: "Build Grails with Groovy snapshot (shard ${{ matrix.shard_index }})"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard_index: 0
+            gradle_task: build
+          - shard_index: 1
+            gradle_task: testShard
+          - shard_index: 2
+            gradle_task: testShard
     runs-on: ubuntu-latest
-    services:
-      mongodb:
-        image: mongo:8
-        ports:
-          - 27017:27017
-        options: >-
-          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     steps:
       - name: "⚙️ Maximize build space"
         run: |
@@ -133,10 +135,29 @@ jobs:
         with:
           java-version: 21
           distribution: liberica
+      - name: "🗄️ Restore dependency jar cache"
+        id: dependency-cache
+        uses: actions/cache/restore@v4
+        with:
+          # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
+          # Keyed by branch version so each release branch maintains its own warm cache.
+          path: |
+            ~/.gradle/caches/modules-2
+            ~/.gradle/wrapper
+          key: gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-${{ hashFiles('**/dependencies.gradle', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
+      - name: "🗄️ Cache the mongod the embedded server runs"
+        uses: actions/cache@v4
+        with:
+          # Separate from the dependency jars, for the reasons given on the same step in
+          # gradle.yml. The version is the one -PmongodbContainerVersion asks for below.
+          path: ~/.embedmongo
+          key: embedmongo-${{ runner.os }}-8.0
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:
-          cache-disabled: true # this workflow rebuilds Groovy each run; a Gradle home cache is not useful here
+          cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
       - name: "🔍 Setup TestLens"
         uses: testlens-app/setup-testlens@3f82d2dc6cd5c03f02ce5f7885a21195d85f8d14 # v1.9.3
@@ -154,13 +175,29 @@ jobs:
         # That island intentionally pins Groovy 5 / Spock 2.4-groovy-5.0 via grails-micronaut-bom,
         # which is incompatible with the Groovy 4.x snapshot this job swaps in above.
         # See https://github.com/apache/grails-core/issues/15613.
+        #
+        # -PmongodbContainerVersion names the MongoDB the specifications bring themselves: a
+        # container for most of them, an embedded server for the ones that need a replica set. It
+        # keeps those two on the same release. This workflow validates Grails against a Groovy
+        # snapshot rather than against a range of MongoDB releases, which is gradle.yml's matrix.
         run: >
-          ./gradlew build
+          ./gradlew ${{ matrix.gradle_task }}
           --continue
           --stacktrace
           -x groovydoc
           -PskipCodeStyle
           -PskipMicronautProjects
           -PmaxTestParallel=3
+          -PtestShardCount=3
+          -PtestShardIndex=${{ matrix.shard_index }}
+          -PmongodbContainerVersion=8.0
         env:
           GRAILS_INCLUDE_MAVEN_LOCAL: true
+      - name: "🗄️ Save dependency jar cache"
+        if: ${{ success() && matrix.shard_index == 0 && steps.dependency-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.gradle/caches/modules-2
+            ~/.gradle/wrapper
+          key: gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-${{ hashFiles('**/dependencies.gradle', '**/gradle-wrapper.properties') }}

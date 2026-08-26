@@ -18,6 +18,7 @@
  */
 
 import org.apache.tools.ant.filters.ReplaceTokens
+import org.gradle.process.CommandLineArgumentProvider
 
 plugins {
     id 'groovy'
@@ -41,6 +42,15 @@ cliArtifact {
     automaticModuleName = 'org.apache.grails.bootstrap.cli'
     // the console tier wires its own dependencies below
     defaultDependencies = false
+}
+
+configurations {
+    // the optional native macOS watcher library, resolved for DirectoryWatcherSpec's isolated class
+    // loaders without joining any compile or runtime classpath
+    optionalWatcher {
+        canBeConsumed = false
+        canBeResolved = true
+    }
 }
 
 dependencies {
@@ -88,11 +98,31 @@ dependencies {
     // Testing
     testImplementation 'org.slf4j:slf4j-simple'
     testImplementation 'org.spockframework:spock-core'
+
+    // JNA without directory-watcher is the classpath shape DirectoryWatcherSpec pins: applications
+    // routinely pick JNA up transitively, and it must not be mistaken for native watcher support.
+    testImplementation 'net.java.dev.jna:jna'
+
+    // Resolved but deliberately kept off the test runtime classpath, so the watcher selected by
+    // default in tests matches an application that has not opted into the native implementation.
+    // DirectoryWatcherSpec builds isolated class loaders from these jars to cover the opted-in paths.
+    optionalWatcher platform(project(':grails-bom'))
+    optionalWatcher 'io.methvin:directory-watcher'
 }
 
 processResources {
     inputs.property 'version', version
     filter(ReplaceTokens, tokens: [version: version])
+}
+
+tasks.named('test') {
+    // Hand the optional watcher jars to DirectoryWatcherSpec as a path rather than a classpath entry.
+    // Resolution stays deferred to execution time so configuring this project does not resolve it.
+    Provider<String> optionalWatcherPath = configurations.named('optionalWatcher').map { it.asPath }
+    inputs.files(configurations.named('optionalWatcher')).withPropertyName('optionalWatcher')
+    jvmArgumentProviders.add({
+        ["-Dgrails.test.optionalWatcherClasspath=${optionalWatcherPath.get()}".toString()]
+    } as CommandLineArgumentProvider)
 }
 
 apply {
