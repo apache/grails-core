@@ -18,6 +18,8 @@
  */
 package grails.test.mixin
 
+import groovy.transform.CompileStatic
+
 import grails.artefact.Interceptor
 import grails.testing.web.interceptor.InterceptorUnitTest
 import spock.lang.Specification
@@ -26,6 +28,12 @@ import spock.lang.Specification
  * Created by graemerocher on 02/09/15.
  */
 class InterceptorUnitTestMixinSpec extends Specification implements InterceptorUnitTest<TestInterceptor> {
+
+    @CompileStatic
+    void "mockInterceptor returns the typed interceptor"() {
+        expect: "no compilation error"
+        TypedTestInterceptor i = mockInterceptor(TypedTestInterceptor)
+    }
 
     void "Test interceptor matching"() {
         when:"A request matches the interceptor"
@@ -59,3 +67,5 @@ class TestInterceptor implements Interceptor {
         match(controller:"foo", action:"bar")
     }
 }
+
+class TypedTestInterceptor implements Interceptor {}

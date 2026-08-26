@@ -19,6 +19,8 @@
 
 package grails.test.mixin
 
+import groovy.transform.CompileStatic
+
 import grails.artefact.Artefact
 import grails.converters.JSON
 import grails.converters.XML
@@ -42,6 +44,12 @@ import jakarta.servlet.http.HttpServletResponse
  * @author Graeme Rocher
  */
 class ControllerUnitTestMixinTests extends Specification implements ControllerUnitTest<TestController> {
+
+    @CompileStatic
+    void "mockController returns the typed controller"() {
+        expect: "no compilation error"
+        AnnotationOnlyTestController c = mockController(AnnotationOnlyTestController)
+    }
 
     // Cache the static field helper interface for performance
     private static final Class<?> STATIC_FIELD_HELPER = Class.forName('grails.validation.Validateable$Trait$StaticFieldHelper')
@@ -729,6 +737,13 @@ class TestCommand {
 class SubController extends TestController {
     def method1() {
         super.method1()
+    }
+}
+
+@Artefact('Controller')
+class AnnotationOnlyTestController {
+    def hello() {
+        render('Hello')
     }
 }
 
