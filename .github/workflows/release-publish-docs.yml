@@ -33,6 +33,19 @@ jobs:
     environment: docs
     name: "Publish Documentation"
     runs-on: ubuntu-24.04
+    # Documentation publishing targets a shared resource (the apache/grails-website repo).
+    # Share the static group used by the release documentation publish (release.yml) and the
+    # snapshot publish (gradle.yml) so only one documentation publish can run at a time across
+    # every branch; the rest queue. This workflow is the manual recovery path, so it is the
+    # most likely to be started while a release publish is already queued.
+    concurrency:
+      group: grails-docs-publish
+      queue: max
+      # `queue: max` is REQUIRED here. A concurrency group otherwise holds only ONE pending
+      # job, and a third entrant CANCELS the pending one instead of lining up behind it -- with
+      # several release lines (7.0.x/7.1.x/7.2.x/8.0.x) publishing docs at once, that silently
+      # killed releases. `queue: max` raises the queue to 100 and processes entrants FIFO. It
+      # cannot be combined with `cancel-in-progress: true`; the default (false) is required.
     steps:
       - name: "⚙️ Maximize build space"
         run: |

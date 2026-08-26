@@ -576,7 +576,12 @@ jobs:
     # time across every branch and across the snapshot publish in gradle.yml; the rest queue.
     concurrency:
       group: grails-docs-publish
-      cancel-in-progress: false
+      queue: max
+      # `queue: max` is REQUIRED here. A concurrency group otherwise holds only ONE pending
+      # job, and a third entrant CANCELS the pending one instead of lining up behind it -- with
+      # several release lines (7.0.x/7.1.x/7.2.x/8.0.x) publishing docs at once, that silently
+      # killed releases. `queue: max` raises the queue to 100 and processes entrants FIFO. It
+      # cannot be combined with `cancel-in-progress: true`; the default (false) is required.
     steps:
       - name: "📝 Establish release version"
         run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
