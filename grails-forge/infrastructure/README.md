@@ -20,7 +20,7 @@ aws ec2 describe-subnets \
   --output text
 ```
 
-Use a concrete Corretto 17 Elastic Beanstalk platform ARN because it is the current runtime for the 7.0.x baseline. Use `Architecture=arm64` and `InstanceType=t4g.small` when the selected platform advertises arm64. Otherwise, use `Architecture=x86_64` and `InstanceType=t3.small` with a matching x86_64 platform ARN.
+Use a concrete Corretto 25 Elastic Beanstalk platform ARN. Grails 7 and Grails 8 both run on Java 25, so this avoids older Corretto platform deprecations. Use `Architecture=arm64` and `InstanceType=t4g.small` when the selected platform advertises arm64. Otherwise, use `Architecture=x86_64` and `InstanceType=t3.small` with a matching x86_64 platform ARN.
 
 ```bash
 aws cloudformation deploy \
@@ -32,8 +32,7 @@ aws cloudformation deploy \
     VpcId=<vpc-id> \
     PublicSubnets='<subnet-id-1>,<subnet-id-2>' \
     CertificateArn=<acm-certificate-arn> \
-    GitHubOidcProviderArn=<github-oidc-provider-arn> \
-    GitHubOAuthAppClientSecretArn=<github-oauth-secret-arn>
+    GitHubOidcProviderArn=<github-oidc-provider-arn>
 ```
 
 Deploy five environment stacks with distinct `Slot`, `HostName`, and `ListenerRulePriority` values. Every listener priority must be unique in the range 1-50000. The command below deploys the `latest` slot.
@@ -49,16 +48,15 @@ aws cloudformation deploy \
     HostName=latest.grails.org \
     ListenerRulePriority=10 \
     InstanceSubnets='<subnet-id-1>,<subnet-id-2>' \
-    PlatformArn=<corretto-17-platform-arn> \
+    PlatformArn=<corretto-25-platform-arn> \
     Architecture=arm64 \
     InstanceType=t4g.small \
-    CorsAllowedOrigin=https://start.grails.org \
-    GitHubOAuthAppClientId=<github-oauth-client-id>
+    CorsAllowedOrigin=https://start.grails.org
 ```
 
 Repeat the environment deployment for `snapshot`, `next`, `prev`, and `prev-snapshot`, supplying each existing `*.grails.org` hostname and a unique priority. `CorsAllowedOrigin` is the browser UI origin and is intentionally independent of the API slot hostname.
 
-Store the GitHub OAuth client secret in AWS Secrets Manager before deploying the shared stack. Use the default AWS managed KMS key so the instance role needs only `secretsmanager:GetSecretValue`. The selected Corretto 17 platform must be a release from March 26, 2025 or later because older Elastic Beanstalk platform releases do not support the `aws:elasticbeanstalk:application:environmentsecrets` namespace. Never pass the secret value to CloudFormation or store it as a plain Elastic Beanstalk environment property.
+Do not create a GitHub OAuth app secret or pass OAuth client credentials to these stacks. The start.grails.org UI removed Push to GitHub, and the unused server-side create/OAuth integration is not deployed. Analytics is also omitted.
 
 Current DNS cutover is manual in Cloudflare. After all five environments are healthy, retrieve the exported ALB DNS name and create DNS-only CNAME records for `latest.grails.org`, `snapshot.grails.org`, `next.grails.org`, `prev.grails.org`, and `prev-snapshot.grails.org` that point to it. Keep Cloudflare proxying disabled during validation. Do not create or modify `start.grails.org`.
 

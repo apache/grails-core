@@ -26,7 +26,7 @@ git log --oneline origin/7.0.x..HEAD
 
 Replace the five Grails Forge API deployments on Google Cloud Run with five ordinary JVM applications on AWS Elastic Beanstalk. The environments share one Application Load Balancer and use host-header routing for the existing slot hostnames.
 
-The migration deliberately avoids native images, Docker deployment, the unused analytics service, and its database.
+The migration deliberately avoids native images, Docker deployment, the unused GitHub create/OAuth integration, the unused analytics service, and its database.
 
 ## Confirmed Decisions
 
@@ -34,7 +34,7 @@ The migration deliberately avoids native images, Docker deployment, the unused a
 | --- | --- |
 | AWS region | `us-east-1` |
 | Network | ASF account default VPC and public default subnets |
-| Runtime | Elastic Beanstalk Corretto 17 Java SE platform |
+| Runtime | Elastic Beanstalk Corretto 25 Java SE platform |
 | Preferred instances | ARM64 `t4g.small` when the selected platform supports ARM64 |
 | Fallback instances | x86_64 `t3.small` with the matching platform |
 | API slots | `latest`, `snapshot`, `next`, `prev`, `prev-snapshot` |
@@ -43,6 +43,7 @@ The migration deliberately avoids native images, Docker deployment, the unused a
 | AWS authentication | GitHub Actions OIDC, not long-lived AWS keys |
 | Current DNS | Manual Cloudflare DNS-only CNAME cutover |
 | Future DNS | Optional Route 53 template after authoritative DNS moves |
+| GitHub OAuth / Push to GitHub | Completely omitted; leftover server-side create/OAuth code removed |
 | Analytics | Completely omitted, with no service, RDS, endpoint, or environment variables |
 
 ## Implemented Architecture
@@ -100,8 +101,9 @@ Collect these before deploying anything:
 - At least two public default-subnet IDs in different Availability Zones.
 - An ACM certificate ARN in `us-east-1` covering all five API hostnames.
 - The AWS account GitHub OIDC provider ARN.
-- The GitHub OAuth application client ID and the ARN of its secret stored in Secrets Manager with the default AWS managed KMS key.
-- Confirmation that the chosen Corretto 17 Elastic Beanstalk platform and EC2 instance architecture match.
+- Confirmation that the chosen Corretto 25 Elastic Beanstalk platform and EC2 instance architecture match.
+
+Do not collect GitHub OAuth app credentials. Push to GitHub was removed from the UI, and the leftover server-side OAuth integration is not deployed.
 
 Do not place these values in this file or commit them to the repository.
 

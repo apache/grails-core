@@ -30,9 +30,6 @@ Parameters:
   GitHubOidcProviderArn:
     Type: String
     Description: ARN of the GitHub Actions IAM OpenID Connect provider.
-  GitHubOAuthAppClientSecretArn:
-    Type: String
-    Description: ARN of the GitHub OAuth client secret stored in Secrets Manager with its default KMS key.
   GitHubRepository:
     Type: String
     Default: apache/grails-core
@@ -193,15 +190,6 @@ Resources:
       ManagedPolicyArns:
         - Fn::Sub: arn:${AWS::Partition}:iam::aws:policy/AWSElasticBeanstalkWebTier
         - Fn::Sub: arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
-      Policies:
-        - PolicyDocument:
-            Statement:
-              - Action: secretsmanager:GetSecretValue
-                Effect: Allow
-                Resource:
-                  Ref: GitHubOAuthAppClientSecretArn
-            Version: '2012-10-17'
-          PolicyName: ReadGrailsForgeGitHubOAuthSecret
 
   ElasticBeanstalkInstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -295,13 +283,6 @@ Outputs:
     Export:
       Name:
         Fn::Sub: ${AWS::StackName}:ArtifactBucketName
-  GitHubOAuthAppClientSecretArn:
-    Description: Secrets Manager ARN used for the GitHub OAuth client secret.
-    Value:
-      Ref: GitHubOAuthAppClientSecretArn
-    Export:
-      Name:
-        Fn::Sub: ${AWS::StackName}:GitHubOAuthAppClientSecretArn
   SharedLoadBalancerArn:
     Description: Shared public application load balancer ARN.
     Value:

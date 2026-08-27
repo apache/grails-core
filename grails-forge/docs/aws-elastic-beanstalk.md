@@ -50,20 +50,20 @@ aws ec2 describe-subnets \
 
 Create or identify a GitHub Actions OIDC provider and record its ARN. Set the repository variable `AWS_FORGE_DEPLOY_ROLE_ARN` to the shared stack's `DeployRoleArn`. It is an OIDC role ARN, not an AWS access-key secret.
 
-Store the GitHub OAuth client secret in AWS Secrets Manager with the default AWS managed KMS key and record the full secret ARN. The shared stack grants its instance role access to that ARN, and each environment imports it through Elastic Beanstalk's `aws:elasticbeanstalk:application:environmentsecrets` namespace. Never pass the secret value to CloudFormation or store it as a plain Elastic Beanstalk environment property.
+Do not store a GitHub OAuth app client ID or secret. The start.grails.org UI removed Push to GitHub, and the unused server-side create/OAuth integration is not part of this deployment. Keep `GITHUB_REDIRECT_URL` as the browser redirect to the Forge UI.
 
-Grails 7 and the current Forge build use Java 17, so select a concrete Corretto 17 Elastic Beanstalk `PlatformArn`. Use a platform release from March 26, 2025 or later because older releases do not support environment secrets. Prefer an `arm64` platform with `t4g.small` only when that platform supports `arm64`; otherwise select an `x86_64` platform with `t3.small`.
+Grails 7 and Grails 8 both run on Java 25, so select a concrete Corretto 25 Elastic Beanstalk `PlatformArn`. Prefer an `arm64` platform with `t4g.small` only when that platform supports `arm64`; otherwise select an `x86_64` platform with `t3.small`.
 
 ```bash
 aws elasticbeanstalk list-platform-versions \
   --region us-east-1 \
-  --filters Type=PlatformName,Operator=contains,Values="Corretto 17" \
+  --filters Type=PlatformName,Operator=contains,Values="Corretto 25" \
   --query 'PlatformSummaryList[].PlatformArn' \
   --output table
 
 aws elasticbeanstalk describe-configuration-options \
   --region us-east-1 \
-  --platform-arn <CORRETTO_17_PLATFORM_ARN> \
+  --platform-arn <CORRETTO_25_PLATFORM_ARN> \
   --options Namespace=aws:ec2:instances,OptionName=SupportedArchitectures \
   --query 'Options[0].ValueOptions' \
   --output table
@@ -85,7 +85,7 @@ Create one environment stack for each row. The five listener priorities must rem
 
 ## Stack Deployment Order
 
-Deploy `grails-forge/infrastructure/shared.yaml` first. Its exact required parameters are `VpcId`, `PublicSubnets`, `CertificateArn`, `GitHubOidcProviderArn`, and `GitHubOAuthAppClientSecretArn`; `ApplicationName` defaults to `grails-forge` and may be supplied explicitly. The workflow derives each environment name as `<ApplicationName>-<slot>`. Do not use `StackPrefix` or `PublicSubnetIds`.
+Deploy `grails-forge/infrastructure/shared.yaml` first. Its exact required parameters are `VpcId`, `PublicSubnets`, `CertificateArn`, and `GitHubOidcProviderArn`; `ApplicationName` defaults to `grails-forge` and may be supplied explicitly. The workflow derives each environment name as `<ApplicationName>-<slot>`. Do not use `StackPrefix` or `PublicSubnetIds`.
 
 ```bash
 aws cloudformation deploy \
@@ -98,11 +98,10 @@ aws cloudformation deploy \
     PublicSubnets='<SUBNET_ID_1>,<SUBNET_ID_2>' \
     CertificateArn=<ACM_CERTIFICATE_ARN> \
     GitHubOidcProviderArn=<GITHUB_OIDC_PROVIDER_ARN> \
-    GitHubOAuthAppClientSecretArn=<GITHUB_OAUTH_SECRET_ARN> \
     ApplicationName=grails-forge
 ```
 
-Deploy five `environment.yaml` stacks next, using the slot values in the table. The command parameters are `SharedStackName`, `Slot`, `HostName`, `ListenerRulePriority`, `InstanceSubnets`, `PlatformArn`, `InstanceType`, `Architecture`, and `GitHubOAuthAppClientId`. The environment imports the secret ARN from the shared stack. `GitHubRedirectUrl` and `GitHubUserAgent` are optional template parameters that default to `https://start.grails.org/`.
+Deploy five `environment.yaml` stacks next, using the slot values in the table. The command parameters are `SharedStackName`, `Slot`, `HostName`, `ListenerRulePriority`, `InstanceSubnets`, `PlatformArn`, `InstanceType`, and `Architecture`. `GitHubRedirectUrl` is an optional template parameter that defaults to `https://start.grails.org/`.
 
 ```bash
 aws cloudformation deploy \
@@ -115,10 +114,9 @@ aws cloudformation deploy \
     HostName=latest.grails.org \
     ListenerRulePriority=10 \
     InstanceSubnets='<SUBNET_ID_1>,<SUBNET_ID_2>' \
-    PlatformArn=<CORRETTO_17_PLATFORM_ARN> \
+    PlatformArn=<CORRETTO_25_PLATFORM_ARN> \
     InstanceType=<t4g.small_OR_t3.small> \
-    Architecture=<arm64_OR_x86_64> \
-    GitHubOAuthAppClientId=<GITHUB_OAUTH_CLIENT_ID>
+    Architecture=<arm64_OR_x86_64>
 ```
 
 Repeat that command for the other four rows. Before the first Forge deployment, require only `Status=Ready` for each environment. With no `VersionLabel`, Elastic Beanstalk may run its Sample Application, which can be unhealthy because it does not provide `/versions`. Dispatch the first deployment workflow next; after it completes, require `Status=Ready` and `Health=Green`. Do not try to pass an application version or version label to CloudFormation.

@@ -48,7 +48,7 @@ Parameters:
     Description: Public instance subnets for this Elastic Beanstalk environment.
   PlatformArn:
     Type: String
-    Description: Required concrete Elastic Beanstalk Corretto 17 platform ARN for the selected architecture.
+    Description: Required concrete Elastic Beanstalk Corretto 25 platform ARN for the selected architecture.
   InstanceType:
     Type: String
     Default: t4g.small
@@ -70,18 +70,10 @@ Parameters:
     Default: 2
     MinValue: 1
     Description: Maximum API instances.
-  GitHubOAuthAppClientId:
-    Type: String
-    NoEcho: true
-    Description: GitHub OAuth application client ID.
   GitHubRedirectUrl:
     Type: String
     Default: https://start.grails.org/
-    Description: Browser URL used after GitHub OAuth authorization.
-  GitHubUserAgent:
-    Type: String
-    Default: https://start.grails.org/
-    Description: User agent sent to GitHub APIs.
+    Description: Browser redirect target for the Forge UI.
 
 Resources:
   Environment:
@@ -179,22 +171,9 @@ Resources:
           OptionName: CORS_ALLOWED_ORIGIN_APACHE
           Value: https://grails.apache.org
         - Namespace: aws:elasticbeanstalk:application:environment
-          OptionName: GITHUB_OAUTH_APP_CLIENT_ID
-          Value:
-            Ref: GitHubOAuthAppClientId
-        - Namespace: aws:elasticbeanstalk:application:environmentsecrets
-          OptionName: GITHUB_OAUTH_APP_CLIENT_SECRET
-          Value:
-            Fn::ImportValue:
-              Fn::Sub: ${SharedStackName}:GitHubOAuthAppClientSecretArn
-        - Namespace: aws:elasticbeanstalk:application:environment
           OptionName: GITHUB_REDIRECT_URL
           Value:
             Ref: GitHubRedirectUrl
-        - Namespace: aws:elasticbeanstalk:application:environment
-          OptionName: GITHUB_USER_AGENT
-          Value:
-            Ref: GitHubUserAgent
         - Namespace: aws:elasticbeanstalk:application:environment
           OptionName: HOSTNAME
           Value:
