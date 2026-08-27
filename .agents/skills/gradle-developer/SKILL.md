@@ -288,7 +288,7 @@ For POM property generation, **map key must be the dependency name prefix**:
 
 ```groovy
 bomDependencyVersions = [
-    'groovy.version': '5.0.7',
+    'groovy.version': '5.1.1',
 ]
 bomDependencies = [
     'groovy': "org.apache.groovy:groovy:${bomDependencyVersions['groovy.version']}",
