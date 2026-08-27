@@ -74,6 +74,8 @@ dependencies {
     testImplementation 'org.yakworks:hibernate-groovy-proxy', {
         // groovy proxy fixes bytebuddy to be a bit smarter when it comes to groovy metaClass
         exclude group: 'org.codehaus.groovy', module: 'groovy'
+        // exclude javax variant of hibernate-core 5.6
+        exclude group: 'org.hibernate', module: 'hibernate-core'
     }
 
     testRuntimeOnly 'org.hibernate:hibernate-ehcache', {

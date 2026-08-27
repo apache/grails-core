@@ -20,8 +20,8 @@ import grails.plugins.Plugin
 class MailGrailsPlugin extends Plugin {
     
     def grailsVersion = '7.0.0 > *'
-    def author = 'The Grails team'
-    def authorEmail = 'info@grails.org'
+    def author = 'Apache Grails Team'
+    def authorEmail = ''
     def title = 'Provides Mail support to a running Grails application'
     def description = '''\
         This plugin provides a MailService class as well as configuring the necessary beans within
@@ -41,16 +41,6 @@ class MailGrailsPlugin extends Plugin {
     def documentation = 'https://grails-plugins.github.io/grails-mail'
     def license = 'Apache 2.0 License'
     def organization = [name: 'Grails Plugins', url: 'https://github.com/grails-plugins']
-    def developers = [
-        [name: 'Craig Andrews', email: 'candrews@integralblue.com'],
-        [name: 'Luke Daley', email: 'ld@ldaley.com'],
-        [name: 'Peter Ledbrook', email: 'p.ledbrook@cacoethes.co.uk'],
-        [name: 'Jeff Brown', email: 'brownj@ociweb.com'],
-        [name: 'Graeme Rocher', email: 'rocherg@ociweb.com'],
-        [name: 'Marc Palmer', email: 'marc@grailsrocks.com'],
-        [name: 'Søren Berg Glasius', email: 'soeren@glasius.dk'],
-        [name: 'Mattias Reichel', email: 'mattias.reichel@gmail.com']
-    ]
     def issueManagement = [
         system: 'GitHub',
         url: 'https://github.com/grails-plugins/grails-mail/issues'

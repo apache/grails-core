@@ -40,12 +40,11 @@ class GormGraphqlGrailsPlugin extends Plugin {
 
     def grailsVersion = "4.0.0 > *"
     def title = "Gorm GraphQL"
-    def author = "James Kleeh"
-    def authorEmail = "james.kleeh@gmail.com"
+    def author = 'Apache Grails Team'
+    def authorEmail = ""
     def profiles = ['web']
-    def documentation = "https://grails.github.io/grails-data-graphql/3.0.x/hibernate/guide/index.html"
+    def documentation = 'https://grails.apache.org/documentation.html'
     def license = "APACHE"
-    def developers = [ [ name: "Puneet Behl", email: "behlp@objectcomputing.com" ]]
     def issueManagement = [ system: "GitHub", url: "https://github.com/apache/grails-core/issues" ]
     def scm = [ url: "https://github.com/apache/grails-core/" ]
 

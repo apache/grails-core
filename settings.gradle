@@ -33,7 +33,7 @@ pluginManagement {
 }
 
 plugins {
-    id 'com.gradle.develocity' version '4.2.2'
+    id 'com.gradle.develocity' version '4.5.0'
     id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.3'
     id 'org.apache.grails.buildsrc.repo'
 }
@@ -189,6 +189,9 @@ include(
 
         // Mail
         'grails-mail',
+
+        // Quartz
+        'grails-quartz',
 
         // Redis
         'grails-redis',
@@ -483,6 +486,7 @@ include(
         'grails-test-examples-plugins-micronaut-singleton',
         'grails-test-examples-cache',
         'grails-test-examples-config-report',
+        'grails-test-examples-quartz',
         'grails-test-examples-scaffolding',
         'grails-test-examples-scaffolding-fields',
         'grails-test-examples-views-functional-tests',
@@ -497,6 +501,7 @@ project(':grails-test-examples-external-configuration').projectDir = file('grail
 project(':grails-test-examples-exploded').projectDir = file('grails-test-examples/exploded')
 project(':grails-test-examples-datasources').projectDir = file('grails-test-examples/datasources')
 project(':grails-test-examples-database-cleanup').projectDir = file('grails-test-examples/database-cleanup')
+project(':grails-test-examples-quartz').projectDir = file('grails-test-examples/quartz')
 project(':grails-test-examples-geb').projectDir = file('grails-test-examples/geb')
 project(':grails-test-examples-geb-gebconfig').projectDir = file('grails-test-examples/geb-gebconfig')
 project(':grails-test-examples-namespaces').projectDir = file('grails-test-examples/namespaces')

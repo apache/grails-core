@@ -101,4 +101,16 @@ For dependency-coordinate mappings and Spring Security 6.x migration details, se
 NOTE: Documentation for earlier, independently-versioned releases &#8212; including the historical version selector &#8212; remains available at the https://apache.github.io/grails-spring-security/[legacy Spring Security plugin documentation site].
 
 
+=== Quartz Plugin Merged into Grails
+
+The Quartz plugin was previously developed and released independently from the https://github.com/apache/grails-quartz[grails-quartz] repository.
+As of Grails 7 its source has been merged into Grails core, and its reference documentation is now published as part of this guide under the xref:backgroundJobs.adoc#backgroundJobsAdvanced[Background Jobs > Advanced Scheduling] section.
+
+The plugin now shares the Grails version and is managed by the Grails BOM, so you no longer need to specify a plugin version. It is published under the `org.apache.grails` group &#8212; `org.grails.plugins:quartz` is now `org.apache.grails:grails-quartz`.
+
+For dependency-coordinate mappings, see the xref:upgrading#upgrading60x[Upgrading the Quartz Plugin] section.
+
+NOTE: Documentation for earlier, independently-versioned releases remains available at the https://apache.github.io/grails-quartz/[legacy Quartz plugin documentation site].
+
+
 

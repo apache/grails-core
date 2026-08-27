@@ -271,7 +271,7 @@ Please see the page of the [ASF Security Team](https://www.apache.org/security/)
 ## Resources
 
 - **Grails 7 Guide**: https://grails.apache.org/docs/latest/guide/single.html
-- **Groovy 4 Docs**: https://docs.groovy-lang.org/docs/groovy-4.0.30/html/documentation/
+- **Groovy 4 Docs**: https://groovy-lang.org/documentation.html#all-versions (select latest 4.0.x)
 - **Spock 2.3 Docs**: https://spockframework.org/spock/docs/2.3/all_in_one.html
 - **GORM Docs**: https://grails.apache.org/docs/latest/grails-data/
 - **Issues**: https://github.com/apache/grails-core/issues

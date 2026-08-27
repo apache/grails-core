@@ -1,0 +1,175 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+The `triggers` block of a job is a small DSL supporting three kinds of trigger. A job may declare as many triggers as it needs.
+
+[source,groovy]
+----
+class MyJob {
+
+    static triggers = {
+        simple(
+            name: 'simpleTrigger',
+            startDelay: 10000,
+            repeatInterval: 30000,
+            repeatCount: 10
+        )
+        cron(
+            name: 'cronTrigger',
+            startDelay: 10000,
+            cronExpression: '0/6 * 15 * * ?',
+            timeZone: TimeZone.getTimeZone('GMT-8') // optional
+        )
+        custom(
+            name: 'customTrigger',
+            triggerClass: MyTriggerClass,
+            myParam: myValue,
+            myAnotherParam: myAnotherValue
+        )
+    }
+
+    void execute() {
+        println 'Job run!'
+    }
+}
+----
+
+With that configuration the job runs 11 times at 30-second intervals, starting 10 seconds after the scheduler starts (the simple trigger); it also runs every 6 seconds during the 15th hour — 15:00:00, 15:00:06, 15:00:12, … (the cron trigger); and it runs every time the custom trigger fires.
+
+===== simple
+
+Executes repeatedly on a fixed interval.
+
+[cols="1,1,3"]
+|===
+| Attribute | Default | Description
+
+| `name`
+| `<jobName><n>`
+| Uniquely identifies the trigger. Must be unique across the whole application.
+
+| `group`
+| `GRAILS_TRIGGERS`
+| The trigger group.
+
+| `startDelay`
+| `0`
+| Delay in milliseconds between scheduler startup and the first execution. Must be a non-negative `Integer` or `Long`.
+
+| `repeatInterval`
+| `60000`
+| Interval in milliseconds between consecutive executions.
+
+| `repeatCount`
+| `-1`
+| The trigger fires `1 + repeatCount` times and then stops. Use `0` for a one-shot job, or `-1` to repeat indefinitely.
+|===
+
+===== cron
+
+Executes according to a cron expression. See <<quartzScheduling,Writing Jobs>> for the expression format.
+
+[cols="1,1,3"]
+|===
+| Attribute | Default | Description
+
+| `name`
+| `<jobName><n>`
+| Uniquely identifies the trigger. Must be unique across the whole application.
+
+| `group`
+| `GRAILS_TRIGGERS`
+| The trigger group.
+
+| `startDelay`
+| `0`
+| Delay in milliseconds between scheduler startup and the first execution.
+
+| `cronExpression`
+| `0 0 6 * * ?`
+| The cron expression that determines the firing schedule. An invalid expression fails at startup.
+
+| `timeZone`
+| The system default
+| The `java.util.TimeZone` the cron expression is evaluated in.
+|===
+
+===== custom
+
+Delegates the firing schedule to your own implementation of the Quartz https://www.quartz-scheduler.org/api/2.5.0/org/quartz/Trigger.html[`Trigger`] interface. This is how you use any Quartz trigger type the DSL does not model directly, such as `DailyTimeIntervalTriggerImpl` or `CalendarIntervalTriggerImpl`.
+
+[cols="1,1,3"]
+|===
+| Attribute | Default | Description
+
+| `triggerClass`
+| _required_
+| A class implementing `org.quartz.Trigger`. Omitting it, or supplying a class that does not implement `Trigger`, fails at startup.
+
+| `name`
+| `<jobName><n>`
+| Uniquely identifies the trigger.
+
+| `group`
+| `GRAILS_TRIGGERS`
+| The trigger group.
+
+| `startDelay`
+| `0`
+| Delay in milliseconds between scheduler startup and the first execution.
+|===
+
+Any further attributes are set as properties on the trigger instance, so you can configure the trigger with whatever its class exposes:
+
+[source,groovy]
+----
+class MyJob {
+
+    static triggers = {
+        custom(
+            name: 'dailyTrigger',
+            triggerClass: DailyTimeIntervalTriggerImpl,
+            startTimeOfDay: new TimeOfDay(9, 0, 0),
+            endTimeOfDay: new TimeOfDay(17, 0, 0),
+            repeatIntervalUnit: DateBuilder.IntervalUnit.HOUR,
+            repeatInterval: 1
+        )
+    }
+
+    void execute() {
+        println 'Job run!'
+    }
+}
+----
+
+The `triggers` closure is given access to the `grailsApplication` object, so trigger attributes can be driven from configuration:
+
+[source,groovy]
+----
+class MyJob {
+
+    static triggers = {
+        simple repeatInterval: grailsApplication.config.getProperty('myapp.myJob.interval', Long, 60000L)
+    }
+
+    void execute() {
+        println 'Job run!'
+    }
+}
+----

@@ -36,8 +36,8 @@ class MarkupViewGrailsPlugin extends Plugin {
     def grailsVersion = '7.0.0-SNAPSHOT > *'
 
     def title = 'Markup Views' // Headline display name of the plugin
-    def author = 'Graeme Rocher'
-    def authorEmail = 'graeme.rocher@gmail.com'
+    def author = 'Apache Grails Team'
+    def authorEmail = ''
     def description = 'A plugin that allows rendering of markup views'
     def profiles = ['web']
 
@@ -50,10 +50,7 @@ class MarkupViewGrailsPlugin extends Plugin {
     def license = 'APACHE'
 
     // Details of company behind the plugin (if there is one)
-    def organization = [name: 'Grails', url: 'https://grails.apache.org']
-
-    // Any additional developers beyond the author specified above.
-    def developers = [ [ name: 'Graeme Rocher', email: 'graeme.rocher@gmail.com' ]]
+    def organization = [name: 'Apache Grails', url: 'https://grails.apache.org']
 
     // Location of the plugin's issue tracker.
     def issueManagement = [ system: 'Github', url: 'https://github.com/apache/grails-core/issues' ]

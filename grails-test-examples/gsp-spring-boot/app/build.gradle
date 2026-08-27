@@ -35,6 +35,7 @@ apply plugin: 'org.apache.grails.gradle.grails-gsp'
 apply from: rootProject.layout.projectDirectory.file('dependencies.gradle')
 ext['logback.version'] = bomDependencyVersions['logback.version']
 ext['jackson-bom.version'] = bomDependencyVersions['jackson.version']
+ext['log4j2.version'] = gradleBomDependencyVersions['log4j2.version']
 
 jar {
     processResources.exclude('**/*.gsp')

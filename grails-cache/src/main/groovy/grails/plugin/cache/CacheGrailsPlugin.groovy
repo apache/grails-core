@@ -33,7 +33,7 @@ class CacheGrailsPlugin extends Plugin {
     def grailsVersion = '7.0.0-SNAPSHOT > *'
     def observe = ['controllers', 'services']
     def loadAfter = ['controllers', 'services']
-    def authorEmail = 'brownj@objectcomputing.com'
+    def authorEmail = ''
     def description = 'Grails Cache Plugin'
 
     def pluginExcludes = [

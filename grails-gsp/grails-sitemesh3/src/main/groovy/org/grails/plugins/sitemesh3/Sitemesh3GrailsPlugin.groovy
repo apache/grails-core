@@ -36,14 +36,12 @@ class Sitemesh3GrailsPlugin extends Plugin {
     def grailsVersion = '7.0.0-SNAPSHOT > *'
 
     def title = 'SiteMesh 3'
-    def author = 'Scott Murphy'
+    def author = 'Apache Grails Team'
     def authorEmail = ''
     def description = 'Configures Grails to use SiteMesh 3 instead of SiteMesh 2'
     def profiles = ['web']
 
     def license = 'APACHE'
-
-    def developers = [[name: 'Scott Murphy']]
 
     def loadBefore = ['groovyPages']
 

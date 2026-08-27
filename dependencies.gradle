@@ -23,10 +23,11 @@
 ext {
     gradleBomDependencyVersions = [
             'ant.version'                   : '1.10.15',
-            'asm.version'                   : '9.10',
+            'asm.version'                   : '9.10.1',
             'asciidoctor-gradle-jvm.version': '4.0.5',
             'asciidoctorj.version'          : '3.0.0',
             'asset-pipeline-gradle.version' : '5.0.34',
+            'bnd.version'                   : '7.1.0',
             'byte-buddy.version'            : '1.18.3',
             'commons-text.version'          : '1.15.0',
             'directory-watcher.version'     : '0.19.1',
@@ -37,6 +38,8 @@ ext {
             'jline.version'                 : '2.14.6',
             'jna.version'                   : '5.17.0',
             'jquery.version'                : '3.7.1',
+            // Security: overrides spring-boot-dependencies (2.24.3). 2.25.5 fixes CVE-2026-49844 flagged against log4j-api.
+            'log4j2.version'                : '2.25.5',
             'objenesis.version'             : '3.4',
             'spring-boot.version'           : '3.5.16',
     ]
@@ -44,6 +47,7 @@ ext {
     // Note: the name of the dependency must be the prefix of the property name so properties in the pom are resolved correctly
     gradleBomPlatformDependencies = [
             'spring-boot-bom' : "org.springframework.boot:spring-boot-dependencies:${gradleBomDependencyVersions['spring-boot.version']}",
+            'log4j2-bom'      : "org.apache.logging.log4j:log4j-bom:${gradleBomDependencyVersions['log4j2.version']}",
             'gradle-spock-bom': "org.spockframework:spock-bom:${gradleBomDependencyVersions['gradle-spock.version']}",
     ]
 
@@ -56,6 +60,7 @@ ext {
             'asciidoctor-gradle-jvm': "org.asciidoctor:asciidoctor-gradle-jvm:${gradleBomDependencyVersions['asciidoctor-gradle-jvm.version']}",
             'asciidoctorj'          : "org.asciidoctor:asciidoctorj:${gradleBomDependencyVersions['asciidoctorj.version']}",
             'asset-pipeline-gradle' : "cloud.wondrify:asset-pipeline-gradle:${gradleBomDependencyVersions['asset-pipeline-gradle.version']}",
+            'bnd-annotation'        : "biz.aQute.bnd:biz.aQute.bnd.annotation:${gradleBomDependencyVersions['bnd.version']}",
             'byte-buddy'            : "net.bytebuddy:byte-buddy:${gradleBomDependencyVersions['byte-buddy.version']}",
             'commons-text'          : "org.apache.commons:commons-text:${gradleBomDependencyVersions['commons-text.version']}",
             'directory-watcher'     : "io.methvin:directory-watcher:${gradleBomDependencyVersions['directory-watcher.version']}",
@@ -64,6 +69,12 @@ ext {
             'javaparser-core'       : "com.github.javaparser:javaparser-core:${gradleBomDependencyVersions['javaparser-core.version']}",
             'jline'                 : "jline:jline:${gradleBomDependencyVersions['jline.version']}",
             'jna'                   : "net.java.dev.jna:jna:${gradleBomDependencyVersions['jna.version']}",
+            // Security override of spring-boot-dependencies - see log4j2.version
+            'log4j2-api'            : "org.apache.logging.log4j:log4j-api:${gradleBomDependencyVersions['log4j2.version']}",
+            'log4j2-core'           : "org.apache.logging.log4j:log4j-core:${gradleBomDependencyVersions['log4j2.version']}",
+            'log4j2-jul'            : "org.apache.logging.log4j:log4j-jul:${gradleBomDependencyVersions['log4j2.version']}",
+            'log4j2-slf4j2-impl'    : "org.apache.logging.log4j:log4j-slf4j2-impl:${gradleBomDependencyVersions['log4j2.version']}",
+            'log4j2-to-slf4j'       : "org.apache.logging.log4j:log4j-to-slf4j:${gradleBomDependencyVersions['log4j2.version']}",
             'objenesis'             : "org.objenesis:objenesis:${gradleBomDependencyVersions['objenesis.version']}",
             'spring-boot-cli'       : "org.springframework.boot:spring-boot-cli:${gradleBomDependencyVersions['spring-boot.version']}",
             'spring-boot-gradle'    : "org.springframework.boot:spring-boot-gradle-plugin:${gradleBomDependencyVersions['spring-boot.version']}",
@@ -78,22 +89,41 @@ ext {
             'commons-compress.version'      : '1.28.0',
             'commons-lang3.version'         : '3.20.0',
             'geb-spock.version'             : '8.0.1',
-            'groovy.version'                : '4.0.32',
+            'groovy.version'                : '4.0.33',
             'guava.version'                 : '33.6.0-jre',
             'h2.version'                    : '2.4.240',
+            // Security: overrides spring-boot-dependencies (5.5.2). 5.6.4 fixes CVE-2026-64607, a connection leak in
+            // the classic i/o model when a response carries an unsupported Content-Encoding. 5.6.4 still targets
+            // httpcore5 5.4.3, so it needs no companion httpcore5 change.
+            'httpclient5.version'           : '5.6.4',
             // Security: overrides spring-boot-dependencies (5.3.6). 5.4.3 fixes CVE-2026-54399 (httpcore5) and CVE-2026-54428 (httpcore5-h2).
             'httpcore5.version'             : '5.4.3',
-            // Security: 2.21.5 fixes CVE-2026-14683/14684/14685/14686 and CVE-2026-54515 flagged against 2.21.4.
-            'jackson.version'               : '2.21.5',
-            // Security: overrides spring-boot-dependencies (1.5.34). 1.5.37 fixes CVE-2026-13006 flagged against logback-core.
-            'logback.version'               : '1.5.37',
+            // Security: 2.21.6 fixes CVE-2026-19032 (unrestricted URI schemes in Path deserialization) and
+            // CVE-2026-68497 (unbounded number length in GregorianCalendar/Duration) flagged against 2.21.5.
+            'jackson.version'               : '2.21.6',
+            // Security: overrides spring-boot-dependencies (1.5.34). 1.5.38 is the newest release of the 1.5.x line
+            // and matches what Spring Boot 4.1.x manages. See the CVE-2026-19880 note in VulnerabilityScanPlugin
+            // for the one logback advisory this version does not clear.
+            'logback.version'               : '1.5.38',
             'jquery.version'                : '3.7.1',
+            // Overrides spring-boot-dependencies (1.0.0): micrometer 1.16.x annotates its API with JSpecify and
+            // pulls 1.0.1, so the BOM has to manage at least that - see micrometer.version.
+            'jspecify.version'              : '1.0.1',
+            // Security: pulled transitively via groovy-console. 2.6.0 fixes CVE-2026-26032, a path traversal in the
+            // PackagerResolver where '../' in module coordinates escapes the configured buildRoot.
+            'ivy.version'                   : '2.6.0',
             'hibernate-groovy-proxy.version': '1.1',
             'jakarta-servlet-api.version'   : '6.1.0',
             'jakarta-validation-api.version': '3.1.1',
             'junit.version'                 : '5.13.3',
             'junit-platform.version'        : '1.13.3',
-            'mongodb.version'               : '5.5.2',
+            // Security: overrides spring-boot-dependencies (1.15.12). 1.16.7 is the oldest open source release that
+            // fixes CVE-2026-59295 (DoS in the Apache HttpAsyncClient instrumentation) and CVE-2026-59296 (metric
+            // name/tag injection via unsanitised newlines); the 1.15.13 patch is Enterprise Support only.
+            'micrometer.version'            : '1.16.7',
+            // Security: 5.9.2 fixes CVE-2026-18710, where ProxySettings.toString() renders the SOCKS5 proxy
+            // username and password into application logs.
+            'mongodb.version'               : '5.9.2',
             'nimbus-jose-jwt.version'       : '10.5',
             'opentelemetry.version'         : '1.62.0',
             'plexus-utils.version'          : '4.0.3',
@@ -166,10 +196,16 @@ ext {
             'groovy-yaml'                 : "org.apache.groovy:groovy-yaml:${bomDependencyVersions['groovy.version']}",
             // end - restate the groovy-bom here because the spring dependency management
             'guava'                       : "com.google.guava:guava:${bomDependencyVersions['guava.version']}",
+            // Security override of spring-boot-dependencies - see httpclient5.version
+            'httpclient5'                 : "org.apache.httpcomponents.client5:httpclient5:${bomDependencyVersions['httpclient5.version']}",
             // Security override of spring-boot-dependencies - see httpcore5.version
             'httpcore5'                   : "org.apache.httpcomponents.core5:httpcore5:${bomDependencyVersions['httpcore5.version']}",
             'httpcore5-h2'                : "org.apache.httpcomponents.core5:httpcore5-h2:${bomDependencyVersions['httpcore5.version']}",
+            // Security override of the version groovy-console pulls in - see ivy.version
+            'ivy'                         : "org.apache.ivy:ivy:${bomDependencyVersions['ivy.version']}",
             'jquery'                      : "org.webjars.npm:jquery:${bomDependencyVersions['jquery.version']}",
+            // Version override of spring-boot-dependencies - see jspecify.version
+            'jspecify'                    : "org.jspecify:jspecify:${bomDependencyVersions['jspecify.version']}",
             // Security override of spring-boot-dependencies - see logback.version
             'logback-classic'            : "ch.qos.logback:logback-classic:${bomDependencyVersions['logback.version']}",
             'logback-core'               : "ch.qos.logback:logback-core:${bomDependencyVersions['logback.version']}",
@@ -192,6 +228,11 @@ ext {
             'junit-platform-suite-engine' : "org.junit.platform:junit-platform-suite-engine:${bomDependencyVersions['junit-platform.version']}",
             // end - boot & spock conflict, so pin the version we want (newest)
             'hibernate-groovy-proxy'      : "org.yakworks:hibernate-groovy-proxy:${bomDependencyVersions['hibernate-groovy-proxy.version']}",
+            // Security override of spring-boot-dependencies - see micrometer.version
+            'micrometer-commons'          : "io.micrometer:micrometer-commons:${bomDependencyVersions['micrometer.version']}",
+            'micrometer-core'             : "io.micrometer:micrometer-core:${bomDependencyVersions['micrometer.version']}",
+            'micrometer-jakarta9'         : "io.micrometer:micrometer-jakarta9:${bomDependencyVersions['micrometer.version']}",
+            'micrometer-observation'      : "io.micrometer:micrometer-observation:${bomDependencyVersions['micrometer.version']}",
             'mongodb-bson'                : "org.mongodb:bson:${bomDependencyVersions['mongodb.version']}",
             'mongodb-driver-core'         : "org.mongodb:mongodb-driver-core:${bomDependencyVersions['mongodb.version']}",
             'mongodb-driver-sync'         : "org.mongodb:mongodb-driver-sync:${bomDependencyVersions['mongodb.version']}",
@@ -225,7 +266,10 @@ ext {
 
     // Because pom exclusions aren't properly supported by gradle, we can't inherit the grails-gradle-bom
     // this requires copying the platforms selectively to the grails-bom. Create a combined version for convenience.
-    combinedPlatforms = ['spring-boot-bom': gradleBomPlatformDependencies['spring-boot-bom']] + bomPlatformDependencies
+    combinedPlatforms = [
+            'spring-boot-bom': gradleBomPlatformDependencies['spring-boot-bom'],
+            'log4j2-bom'     : gradleBomPlatformDependencies['log4j2-bom'],
+    ] + bomPlatformDependencies
     combinedDependencies = gradleBomDependencies + bomDependencies
     combinedVersions = gradleBomDependencyVersions + bomDependencyVersions
 
@@ -258,7 +302,7 @@ ext {
     else if (project.name == 'grails-micronaut-bom') {
         customBomVersions = [
                 'javaparser-core.version': '3.27.0', // micronaut requires 3.27, groovy 4 ships with 3.28 but is compatible with 3.27
-                'asm.version'            : '9.10',
+                'asm.version'            : '9.10.1',
         ]
         combinedVersions += customBomVersions
         customBomDependencies = [

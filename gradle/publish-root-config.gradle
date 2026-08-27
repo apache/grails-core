@@ -71,6 +71,7 @@ def publishedProjects = [
         'grails-mail',
         'grails-micronaut',
         'grails-mimetypes',
+        'grails-quartz',
         'grails-redis',
         'grails-rest-transforms',
         'grails-scaffolding',

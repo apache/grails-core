@@ -66,6 +66,7 @@ def overriddenModules = customBomDependencies.values().collect { String coord ->
 Set<String> overriddenCoords = overriddenModules.collect { "${it.group}:${it.module}".toString() } as Set
 
 dependencies {
+    api platform(gradleBomPlatformDependencies['log4j2-bom'])
     api(platform(project(':grails-bom'))) {
         overriddenModules.each { ovr ->
             exclude group: ovr.group, module: ovr.module

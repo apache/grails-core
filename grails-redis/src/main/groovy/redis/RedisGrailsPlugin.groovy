@@ -35,27 +35,14 @@ class RedisGrailsPlugin extends Plugin {
     ]
 
     def title = 'Redis Plugin' // Headline display name of the plugin
-    def author = 'Ted Naleid'
-    def authorEmail = 'contact@naleid.com'
+    def author = 'Apache Grails Team'
+    def authorEmail = ''
 
     def description = '''The Redis plugin provides integration with a Redis datastore. Redis is a lightning fast 'data structure server'.  The plugin enables a number of memoization techniques to cache results from complex operations in Redis.'''
     def issueManagement = [system: 'github', url: 'https://github.com/grails-plugins/grails-redis/issues']
-    def scm = [url: 'https://github.com/grails-plugins/grails-redis']
-    def documentation = 'http://grails.org/plugin/grails-redis'
+    def scm = [ url: 'https://github.com/apache/grails-core']
+    def documentation = 'https://grails.apache.org/documentation.html'
     def license = 'APACHE'
-
-    def developers = [
-            [name: 'Burt Beckwith'],
-            [name: 'Christian Oestreich'],
-            [name: 'Brian Coles'],
-            [name: 'Michael Cameron'],
-            [name: 'John Engelman'],
-            [name: 'David Seiler'],
-            [name: 'Jordon Saardchit'],
-            [name: 'Florian Langenhahn'],
-            [name: 'German Sancho'],
-            [name: 'John Mulhern'],
-            [name: 'Shaun Jurgemeyer']]
 
     Closure doWithSpring() {
         { ->
