@@ -133,7 +133,7 @@ The output is `grails-forge-web-netty/build/distributions/grails-forge-web-netty
 
 ## First Deployment Before DNS
 
-GitHub registers `workflow_dispatch` from the repository's default branch. After `.github/workflows/forge-deploy-aws.yml` exists there, dispatch from that branch and set `source_ref` to the maintenance line or tag to build. The workflow reads `javaVersion` from that ref's `gradle.properties`. The deploy role trusts `refs/heads/*.x` and `refs/tags/v*` in `apache/grails-core`, so a new version branch does not require a CloudFormation or workflow edit.
+GitHub registers `workflow_dispatch` from the default branch. Choose **Use workflow from** as the maintenance line to build, then choose the slot. Region, stack name, and JDK are not inputs. The deploy role trusts `refs/heads/*.x` and `refs/tags/v*` in `apache/grails-core`.
 
 After the shared and five environment stacks exist, manually dispatch the workflow once per slot. The workflow reads `AWS_FORGE_DEPLOY_ROLE_ARN` as a repository variable, assumes it with GitHub OIDC, derives `<ApplicationName>-<slot>`, packages the bundle, uploads it to the shared artifact bucket, creates the application version, and waits for that version to be `Processed` before updating the environment.
 

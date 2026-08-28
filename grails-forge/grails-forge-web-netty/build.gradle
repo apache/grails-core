@@ -22,7 +22,6 @@ plugins {
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'io.micronaut.application' version "$micronautApplicationPluginVersion"
-    id 'com.gradleup.shadow' version '8.3.6'
 }
 
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
@@ -124,20 +123,23 @@ tasks.named('dockerBuild') {
     images = [findProperty('dockerImageName') ?: 'grailsforge']
 }
 
-TaskProvider<ShadowJar> shadowJarTask = tasks.named('shadowJar', ShadowJar)
-shadowJarTask.configure {
-    reproducibleFileOrder = true
-    preserveFileTimestamps = false
+['com.gradleup.shadow', 'com.github.johnrengelman.shadow'].each { pluginId ->
+    pluginManager.withPlugin(pluginId) {
+        tasks.named('shadowJar', ShadowJar).configure {
+            reproducibleFileOrder = true
+            preserveFileTimestamps = false
+        }
+    }
 }
 
 TaskProvider<Zip> awsElasticBeanstalk = tasks.register('awsElasticBeanstalk', Zip) {
-    dependsOn(shadowJarTask)
+    dependsOn('shadowJar')
     archiveFileName.set('grails-forge-web-netty-aws.zip')
     destinationDirectory.set(layout.buildDirectory.dir('distributions'))
     reproducibleFileOrder = true
     preserveFileTimestamps = false
 
-    from(shadowJarTask.flatMap { it.archiveFile }) {
+    from({ tasks.named('shadowJar').get().archiveFile.get() }) {
         rename { 'app.jar' }
     }
     from(layout.projectDirectory.dir('aws')) {
