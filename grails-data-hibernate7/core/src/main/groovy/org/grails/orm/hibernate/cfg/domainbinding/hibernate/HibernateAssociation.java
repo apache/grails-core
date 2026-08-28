@@ -27,9 +27,7 @@ import org.hibernate.mapping.Property;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.orm.hibernate.cfg.Mapping;
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
-import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
 
 /**
  * Common interface for all Hibernate association properties (both ToOne and ToMany). Extends {@link
@@ -80,15 +78,6 @@ public interface HibernateAssociation extends HibernatePersistentProperty {
 
     default String getReferencedEntityName() {
         return getHibernateAssociatedEntity().getName();
-    }
-
-    default String resolveAssociatedEntityTableName(PersistentEntityNamingStrategy namingStrategy) {
-        // Every caller of this method uses the result as a column-identifier fragment (a join-table foreign-key
-        // or element column name), never as a literal, quotable SQL identifier - so the Groovy backtick-quoting
-        // convention is always invalid there and must be stripped once at the source, rather than trusted to
-        // each caller (a prior bug left one caller emitting a malformed column like `quoted_table`_id).
-        return new BackticksRemover().apply(
-                getHibernateAssociatedEntity().getHibernateRootEntity().getTableName(namingStrategy));
     }
 
     @Override

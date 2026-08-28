@@ -24,7 +24,7 @@ import groovy.util.logging.Slf4j
 
 import jakarta.persistence.criteria.JoinType
 
-import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.query.GormOperations
@@ -556,7 +556,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
      * @return The total number deleted
      */
     Number deleteAll() {
-        GormEnhancer.findStaticApi(targetClass, connectionName).withDatastoreSession { Session session ->
+        GormRegistry.instance.findStaticApi(targetClass, connectionName).withDatastoreSession { Session session ->
             applyLazyCriteria()
             session.deleteAll(this)
         }
@@ -568,7 +568,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
      * @return The total number updated
      */
     Number updateAll(Map properties) {
-        GormEnhancer.findStaticApi(targetClass, connectionName).withDatastoreSession { Session session ->
+        GormRegistry.instance.findStaticApi(targetClass, connectionName).withDatastoreSession { Session session ->
             applyLazyCriteria()
             session.updateAll(this, properties)
         }
@@ -737,7 +737,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
 
     private withPopulatedQuery(Map args, Closure additionalCriteria, Closure callable)  {
 
-        GormStaticApi staticApi = persistentEntity.isMultiTenant() ? GormEnhancer.findStaticApi(targetClass) : GormEnhancer.findStaticApi(targetClass, connectionName)
+        GormStaticApi staticApi = GormRegistry.instance.findStaticApi(targetClass, connectionName)
         staticApi.withDatastoreSession { Session session ->
             applyLazyCriteria()
             Query query
@@ -767,7 +767,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
 
             DynamicFinder.populateArgumentsForCriteria(targetClass, query, args)
 
-            callable.call(query)
+            return callable.call(query)
         }
     }
 

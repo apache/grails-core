@@ -23,6 +23,8 @@ import groovy.transform.Generated
 
 import org.springframework.validation.BindingResult
 
+import org.grails.web.databinding.DefaultASTDatabindingHelper
+
 import grails.databinding.CollectionDataBindingSource
 
 /**
@@ -66,8 +68,12 @@ trait DataBinder {
     @Generated
     BindingResult bindData(target, bindingSource, Map includeExclude, String filter) {
         List includeList = convertToListIfCharSequence(includeExclude?.include)
+        if (includeExclude?.containsKey('include') && includeList != null && includeList.isEmpty()) {
+            includeList = [DefaultASTDatabindingHelper.NO_BINDABLE_PROPERTIES]
+        }
         List excludeList = convertToListIfCharSequence(includeExclude?.exclude)
-        DataBindingUtils.bindObjectToInstance(target, bindingSource, includeList, excludeList, filter)
+        boolean clearMissing = includeExclude?.clearMissing == true
+        DataBindingUtils.bindObjectToInstance(target, bindingSource, includeList, excludeList, filter, clearMissing)
     }
 
     @Generated

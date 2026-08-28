@@ -196,6 +196,27 @@ class BuildSettings {
     public static final String COMPILE_STATIC_TAGLIBS = 'grails.compile.artefacts.taglibs.static'
 
     /**
+     * A property name that, when set to {@code true}, compiles every GSP page statically.
+     *
+     * <p>Unlike the artefact opt-ins above this is not a name of its own: it is the configuration
+     * setting {@code grails.views.gsp.compileStatic}, stated as a system property so that it reaches
+     * both the build's page compiler and the running application, which compiles a page again when it
+     * changes. A page compiled one way by the build and another way while being developed would be
+     * worse than not offering the build option at all.</p>
+     */
+    public static final String COMPILE_STATIC_GSP = 'grails.views.gsp.compileStatic'
+
+    /**
+     * A property name that, when set to {@code true}, holds every page to the names it declares
+     * rather than only the pages that declare a model.
+     *
+     * <p>As with {@link #COMPILE_STATIC_GSP} this is the configuration setting
+     * {@code grails.views.gsp.compileStaticConfig.strict} stated as a system property, so that it
+     * reaches both the build's page compiler and the running application.</p>
+     */
+    public static final String COMPILE_STATIC_GSP_STRICT = 'grails.views.gsp.compileStaticConfig.strict'
+
+    /**
      * The base directory of the project
      */
     public static final File BASE_DIR

@@ -246,7 +246,6 @@ class GrailsConventionGroovyPageLocatorSpec extends Specification {
         GroovyPageParser gpp = new GroovyPageParser("binaryView", "/test/binaryView.gsp", "/test/binaryView.gsp", new ByteArrayInputStream("hello world".bytes), "UTF-8", "HTML", null)
         gpp.packageName = "foo.bar"
         gpp.className = "test_binary_view"
-        gpp.lastModified = System.currentTimeMillis()
         final sw = new StringWriter()
         gpp.generateGsp(sw)
 

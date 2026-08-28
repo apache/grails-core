@@ -5,7 +5,7 @@
 # $JAVA_VERSION_MICRONAUT in release.yml; for local verification, install that JDK 25
 # alongside this one (sdk install java <version>-librca) and follow the dual-JDK
 # instructions in RELEASE.md "Manual Verification: Reproducible Jar Files".
-java=21.0.7-librca
+java=21.0.12-librca
 # Keep gradle version synced with gradle.properties (gradleToolingApiVersion).
 # Update the gradle-bootstrap project to propagate the version to all gradle-wrapper.properties files.
 gradle=9.6.0

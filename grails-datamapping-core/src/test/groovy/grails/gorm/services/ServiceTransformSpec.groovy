@@ -225,7 +225,7 @@ class Foo {
 
         then:"The impl is valid - protected methods should have no transaction"
         impl.getMethod("readFoo", Serializable).getAnnotation(ReadOnly) != null
-        impl.getMethod("findFoo", Serializable).getAnnotation(ReadOnly) == null
+        impl.getDeclaredMethod("findFoo", Serializable).getAnnotation(ReadOnly) == null
         org.grails.datastore.mapping.services.Service.isAssignableFrom(impl)
 
     }
@@ -583,6 +583,50 @@ class Foo {
  @ line 8, column 19.
        @Query("from $String as f where f.title like $pattern") 
                      ^'''
+    }
+
+    void "test @Query constant string containing the literal substring 'wrong' compiles successfully"() {
+        when:"a constant (non-GString) @Query value happens to contain the substring 'wrong'"
+        Class service = new GroovyClassLoader().parseClass('''
+import grails.gorm.services.*
+import grails.gorm.annotation.Entity
+
+@Service(Foo)
+interface MyService {
+
+    @Query('from Foo as f where f.title = wrong and f.price > $5')
+    Foo searchByTitle()
+}
+@Entity
+class Foo {
+    String title
+}
+''')
+
+        then:"no compilation error occurs"
+        service.isInterface()
+    }
+
+    void "test @Query constant string containing the literal substring 'java.lang.String' compiles successfully"() {
+        when:"a constant (non-GString) @Query value happens to contain the substring 'java.lang.String'"
+        Class service = new GroovyClassLoader().parseClass('''
+import grails.gorm.services.*
+import grails.gorm.annotation.Entity
+
+@Service(Foo)
+interface MyService {
+
+    @Query('from Foo as f where f.notes = java.lang.String and f.price > $5')
+    Foo searchByTitle()
+}
+@Entity
+class Foo {
+    String title
+}
+''')
+
+        then:"no compilation error occurs"
+        service.isInterface()
     }
 
     void "test simple @Query annotation"() {

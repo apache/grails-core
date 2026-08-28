@@ -59,6 +59,8 @@ dependencies {
         exclude module: 'asm'
     }
 
+    testCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
     testRuntimeOnly 'org.objenesis:objenesis' // Required by Spock for mocking classes without default constructor
 }
 

@@ -22,7 +22,7 @@ class PlainTextMailTagLib {
 
     static namespace = 'text'
 
-    def newLine = {
+    def newLine(Map attrs) {
         out << '\n'
     }
 }

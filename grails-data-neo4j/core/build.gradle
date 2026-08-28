@@ -1,0 +1,97 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'groovy'
+    id 'java-library'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.gradle.grails-code-style'
+}
+
+version = projectVersion
+group = 'org.apache.grails.data'
+
+ext {
+    gormApiDocs = true
+    pomTitle = 'GORM for Neo4j'
+    pomDescription = 'Provides a GORM Object Mapping implementation for the Neo4j Graph Database'
+}
+
+sourceSets.main.java.srcDirs = []
+sourceSets.main.groovy.srcDirs += ["src/main/java"]
+
+dependencies {
+
+    implementation platform(project(':grails-neo4j-bom'))
+
+    // Version comes from grails-neo4j-bom's neo4j-driver constraint (dependencies.gradle),
+    // declared 'strictly' there so it out-ranks the newer, binary-incompatible version Spring
+    // Boot's BOM would otherwise offer. Scoped to grails-neo4j-bom (not the default grails-bom)
+    // so apps that don't use grails-data-neo4j keep Spring Boot's managed driver version.
+    api 'org.neo4j.driver:neo4j-java-driver'
+    api project(':grails-datamapping-validation')
+    api project(':grails-datamapping-core')
+
+    // only needed for web dependencies
+    compileOnly project(':grails-datastore-web')
+    compileOnly 'org.neo4j.test:neo4j-harness'
+
+    implementation 'org.javassist:javassist'
+
+    testImplementation 'org.neo4j.test:neo4j-harness'
+    testImplementation project(':grails-datamapping-core-test')
+    testImplementation project(':grails-datamapping-tck')
+    testImplementation 'org.spockframework:spock-core'
+    testImplementation 'jakarta.validation:jakarta.validation-api'
+    testImplementation 'org.hibernate.validator:hibernate-validator'
+    testImplementation "org.codehaus.gpars:gpars:$gparsVersion"
+    testImplementation 'org.objenesis:objenesis'
+
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // Spock's Mock() support needs this at runtime but spock-core doesn't declare it as a dependency
+    testRuntimeOnly "io.leangen.geantyref:geantyref:$geantyrefVersion"
+    testRuntimeOnly 'net.bytebuddy:byte-buddy' // Required by Spock's mocking support (cglib doesn't work on JDK 21+)
+    testRuntimeOnly 'org.springframework:spring-aop'
+    testRuntimeOnly 'ch.qos.logback:logback-classic'
+    testRuntimeOnly "jakarta.el:jakarta.el-api:$elApiVersion"
+    testRuntimeOnly "org.glassfish.expressly:expressly:$defaultElImplementationVersion"
+}
+
+// Jetty/JUnit-platform/reflection-opens config for the embedded Neo4j 3.5.x test harness is
+// shared across every grails-data-neo4j module - see neo4j-harness-test-config.gradle, applied
+// below. The neo4j-java-driver version comes from grails-neo4j-bom's 'strictly' constraint
+// (dependencies.gradle); no local resolutionStrategy.force is needed for it.
+test {
+    systemProperty('neo4j.gorm.suite', System.getProperty('neo4j.gorm.suite') ?: true)
+    maxParallelForks = rootProject.ext.configuredTestParallel
+    forkEvery = 10
+    jvmArgs = ['-Xmx1028M']
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/grails-data-tck-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('grails-data-neo4j/gradle/neo4j-harness-test-config.gradle')
+}
+

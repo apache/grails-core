@@ -18,25 +18,35 @@
  */
 package org.grails.orm.hibernate.cfg
 
+import org.springframework.validation.Errors
+
 import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.HibernateEntity
 import grails.gorm.tests.HibernateGormDatastoreSpec
+import grails.gorm.transactions.Rollback
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.engine.types.AbstractMappingAwareCustomTypeMarshaller
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.ValueGenerator
 import org.grails.datastore.mapping.model.config.JpaMappingConfigurationStrategy
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsJpaMappingConfigurationStrategy
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings
-import org.springframework.validation.Errors
-import org.grails.datastore.mapping.core.connections.ConnectionSource
 
 class HibernateMappingContextSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.registerDomainClasses(MappingContextBook, MappingContextAuthor, MappingContextAddress)
+        manager.registerDomainClasses(
+                MappingContextBook,
+                MappingContextAuthor,
+                MappingContextAddress,
+                MappingContextNullableByDefaultEntity,
+                MappingContextConstrainedEntity,
+                MappingContextWildcardMappedEntity,
+                MappingContextCompositeIdEntity
+        )
     }
 
     // --- unit-style tests (no datastore required) ---
@@ -114,6 +124,25 @@ class HibernateMappingContextSpec extends HibernateGormDatastoreSpec {
         mappingContext instanceof HibernateMappingContext
     }
 
+    void "composite id components are nullable by default"() {
+        given:
+        PersistentEntity entity = mappingContext.getPersistentEntity(MappingContextCompositeIdEntity.name)
+
+        expect:
+        entity.getPropertyByName('tenantId').nullable
+        entity.getPropertyByName('code').nullable
+    }
+
+    @Rollback
+    void "saving an entity with an unset unconstrained property succeeds"() {
+        when:
+        def entity = new MappingContextNullableByDefaultEntity().save(flush: true)
+
+        then:
+        entity != null
+        !entity.hasErrors()
+    }
+
     void "registered domain classes appear as persistent entities"() {
         expect:
         mappingContext.getPersistentEntity(MappingContextBook.name) != null
@@ -181,6 +210,42 @@ class HibernateMappingContextSpec extends HibernateGormDatastoreSpec {
         noExceptionThrown()
     }
 
+    void "unconstrained properties are nullable in the Hibernate mapping"() {
+        when:
+        def entity = new HibernateMappingContext().addPersistentEntity(MappingContextNullableByDefaultEntity)
+
+        then:
+        entity.getPropertyByName("name").mapping.mappedForm.nullable
+    }
+
+    void "explicit non-null constraints do not prevent the default nullable mapping"() {
+        when:
+        def entity = new HibernateMappingContext().addPersistentEntity(MappingContextConstrainedEntity)
+
+        then:
+        entity.getPropertyByName("name").mapping.mappedForm.nullable
+    }
+
+    void "wildcard mappings do not prevent the default nullable mapping"() {
+        when:
+        def entity = new HibernateMappingContext().addPersistentEntity(MappingContextWildcardMappedEntity)
+
+        then:
+        entity.getPropertyByName("name").mapping.mappedForm.nullable
+    }
+
+    void "default nullable can be disabled"() {
+        given:
+        def settings = new HibernateConnectionSourceSettings()
+        settings.default.nullable = false
+
+        when:
+        def entity = new HibernateMappingContext(settings).addPersistentEntity(MappingContextNullableByDefaultEntity)
+
+        then:
+        !entity.getPropertyByName("name").mapping.mappedForm.nullable
+    }
+
     void "createPersistentEntity returns null for non-GormEntity class"() {
         given:
         def ctx = new HibernateMappingContext()
@@ -223,6 +288,39 @@ class MappingContextAuthor implements HibernateEntity<MappingContextAuthor> {
 class MappingContextAddress {
     String street
     String city
+}
+
+@Entity
+class MappingContextNullableByDefaultEntity implements HibernateEntity<MappingContextNullableByDefaultEntity> {
+    String name
+}
+
+@Entity
+class MappingContextConstrainedEntity implements HibernateEntity<MappingContextConstrainedEntity> {
+    String name
+
+    static constraints = {
+        name maxSize: 100
+    }
+}
+
+@Entity
+class MappingContextWildcardMappedEntity implements HibernateEntity<MappingContextWildcardMappedEntity> {
+    String name
+
+    static mapping = {
+        '*' cache: true
+    }
+}
+
+@Entity
+class MappingContextCompositeIdEntity implements HibernateEntity<MappingContextCompositeIdEntity> {
+    String tenantId
+    String code
+
+    static mapping = {
+        id composite: ['tenantId', 'code']
+    }
 }
 
 // --- helpers for unit tests ---

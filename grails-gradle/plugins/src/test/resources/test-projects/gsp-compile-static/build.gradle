@@ -1,0 +1,32 @@
+// Verifies that grails { compileStatic { gsp } } reaches both places a page is compiled: the forked
+// page compiler the build runs, and the JVM the application runs in, which compiles a page again
+// when it changes.
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+    id 'org.apache.grails.gradle.grails-gsp'
+}
+
+grails {
+    compileStatic {
+        gsp = true
+        strictGsp = true
+    }
+}
+
+tasks.register('runsTheApplication', JavaExec) {
+    classpath = files()
+    mainClass = 'does.not.Matter'
+}
+
+tasks.register('inspectGspCompileStatic') {
+    doLast {
+        println "PAGE_COMPILER=${tasks.named('compileGroovyPages').get().compileStatic.get()}"
+        println "WEBAPP_PAGE_COMPILER=${tasks.named('compileWebappGroovyPages').get().compileStatic.get()}"
+
+        def jvmArgs = tasks.named('runsTheApplication', JavaExec).get()
+                .jvmArgumentProviders.collectMany { it.asArguments().toList() }
+        println "RUNNING_APPLICATION=${jvmArgs.contains('-Dgrails.views.gsp.compileStatic=true')}"
+        println "PAGE_COMPILER_STRICT=${tasks.named('compileGroovyPages').get().compileStaticStrict.get()}"
+        println "RUNNING_APPLICATION_STRICT=${jvmArgs.contains('-Dgrails.views.gsp.compileStaticConfig.strict=true')}"
+    }
+}

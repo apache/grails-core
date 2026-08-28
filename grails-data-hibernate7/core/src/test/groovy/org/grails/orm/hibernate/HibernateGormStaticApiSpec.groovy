@@ -23,6 +23,7 @@ package org.grails.orm.hibernate
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.annotation.Entity
 import grails.gorm.tests.entities.Club
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.hibernate.jpa.AvailableHints
 
 class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
@@ -34,7 +35,7 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
     void "Test that HibernateGormStaticApi uses the shared template from the datastore"() {
         given:
         def enhancer = manager.hibernateDatastore.gormEnhancer
-        def api = enhancer.getStaticApi(HibernateGormStaticApiEntity)
+        def api = enhancer.getStaticApi(HibernateGormStaticApiEntity, ConnectionSource.DEFAULT)
 
         expect:
         api.hibernateTemplate.is(manager.hibernateDatastore.getHibernateTemplate())

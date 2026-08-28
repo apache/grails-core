@@ -18,13 +18,20 @@
  */
 package grails.boot
 
+import java.lang.management.ManagementFactory
+
 import groovy.transform.CompileStatic
 import groovy.transform.MapConstructor
-import groovy.transform.stc.ClosureParams
-import groovy.transform.stc.SimpleType
+import groovy.util.logging.Slf4j
 
 import org.springframework.boot.Banner
+import org.springframework.boot.ansi.Ansi8BitColor
+import org.springframework.boot.ansi.AnsiColor
+import org.springframework.boot.ansi.AnsiElement
+import org.springframework.boot.ansi.AnsiOutput
 import org.springframework.boot.SpringBootVersion
+import org.springframework.aot.AotDetector
+import org.springframework.core.NativeDetector
 import org.springframework.core.SpringVersion
 import org.springframework.core.env.Environment
 import org.springframework.core.io.ClassPathResource
@@ -36,12 +43,47 @@ import grails.util.BuildSettings
  *
  * @since 7.1
  */
+@Slf4j
 @CompileStatic
 @MapConstructor(noArg = true)
 class GrailsBanner implements Banner {
 
     private static final int FALLBACK_BANNER_WIDTH = 0
     private static final String DEFAULT_BANNER_FILE = 'grails-banner.txt'
+
+    private static final String ART_COLOR_PROPERTY = 'grails.banner.art.color'
+
+    private static final String MARK_DISPLAY_PROPERTY = 'grails.banner.mark.display'
+
+    private static final String MARK_TEXT_PROPERTY = 'grails.banner.mark.text'
+
+    private static final String MARK_COLOR_PROPERTY = 'grails.banner.mark.color'
+
+    /** Bright yellow, so the mark reads as its own thing rather than the last line of the art. */
+    private static final String DEFAULT_MARK_COLOR = '226'
+
+    /** What an application was started as, strongest first. */
+    private static final String NATIVE_MARK = 'NATIVE'
+    private static final String CACHE_MARK = 'AOT CACHE'
+    private static final String AOT_MARK = 'AOT'
+
+    /** One of the 256 colours a terminal offers: the amber the framework is shown in. */
+    private static final String DEFAULT_ART_COLOR = '214'
+
+    private static final String NO_COLOR = 'none'
+
+    /** Shown where an application asked for a version by name and it could not be determined. */
+    private static final String UNKNOWN_VERSION = 'unknown'
+
+    private static final String ORDER_PROPERTY = 'grails.banner.versions.order'
+
+    private static final String EXCLUDE_PROPERTY = 'grails.banner.versions.exclude'
+
+    private static final String INCLUDE_PROPERTY = 'grails.banner.versions.include'
+
+    /** Everywhere an application names a version option, and so everywhere one can be misspelt. */
+    private static final List<String> VERSION_PROPERTIES =
+            [ORDER_PROPERTY, EXCLUDE_PROPERTY, INCLUDE_PROPERTY].asImmutable()
 
     String bannerFile = DEFAULT_BANNER_FILE
     int bannerPaddingTop = 1
@@ -63,15 +105,190 @@ class GrailsBanner implements Banner {
         bannerPaddingTop.times { out.println() }
         if (shouldDisplayArt(environment)) {
             def art = createBannerArt(environment)
+            // measured before colouring, so the escapes do not count towards the width the
+            // versions below are centred on
             bannerWidth = longestLineLength(art) ?: FALLBACK_BANNER_WIDTH
-            out.println(art)
+            out.println(colour(art, environment))
             artPaddingBottom.times { out.println() }
         }
-        if (shouldDisplayVersions(environment)) {
+        printMark(environment, out, bannerWidth)
+        boolean displayVersions = shouldDisplayVersions(environment)
+        if (displayVersions) {
             createVersionsFormatter().format(createBannerVersions(environment), bannerWidth)
                     .forEach { out.println(it) }
         }
         bannerPaddingBottom.times { out.println() }
+        if (displayVersions) {
+            warnAboutUnrecognisedVersions(environment)
+        }
+    }
+
+    /**
+     * Says which of the version options an application configured were not recognised.
+     *
+     * <p>An option that names nothing is dropped, and was dropped without a word -- so a name with
+     * a typo in it reads as a banner that quietly ignores what it was told, and the only way to
+     * find out is to notice a line that is not there.</p>
+     *
+     * <p>Said after the banner rather than while one is being built. A line logged partway through
+     * arrives between the mark and the versions, which is the very thing reading a version without
+     * initialising the library it belongs to was for.</p>
+     */
+    protected void warnAboutUnrecognisedVersions(Environment env) {
+        List<String> unrecognised = unrecognisedVersionOptions(env)
+        if (unrecognised) {
+            log.warn('Ignoring unknown banner version option(s) {}; the known options are {}',
+                    unrecognised, VersionOption.values()*.key)
+        }
+    }
+
+    /**
+     * The configured version options that name none of {@link VersionOption}, in the order they
+     * were written.
+     *
+     * <p>Which list an option belongs to is not asked. An option is named by an application to say
+     * that it wants it or does not, and moving one between the shown-by-default set and the
+     * asked-for set is a decision of this class -- so an application that asked for a version that
+     * has since become one of the defaults said something recognisable, and is told nothing.</p>
+     */
+    protected List<String> unrecognisedVersionOptions(Environment env) {
+        List<String> known = VersionOption.values()*.key
+        VERSION_PROPERTIES.collectMany { String property ->
+            readVersionOptions(env, property).findAll { String option -> !(option in known) }
+        }.unique()
+    }
+
+    /**
+     * Marks how the application was started, centred under the art and above the versions.
+     *
+     * <p>Only where it is worth saying: an image, a JVM given a cache to read, or one running bean
+     * definitions that were generated. An ordinary start says nothing.</p>
+     *
+     * <p>Written plainly, and deliberately: a banner is printed on the thread that is starting the
+     * application, which cannot get on until this returns. Anything drawn over time here is time the
+     * application is not starting, and an image that starts in two thirds of a second should not
+     * spend a third of it on its own announcement.</p>
+     */
+    protected void printMark(Environment environment, PrintStream out, int bannerWidth) {
+        if (!environment.getProperty(MARK_DISPLAY_PROPERTY, Boolean, true)) {
+            return
+        }
+        String mark = resolveMark(environment)
+        if (!mark) {
+            return
+        }
+        String label = spaced(mark)
+        String indent = ' ' * Math.max(0, (bannerWidth - label.length()).intdiv(2))
+        AnsiElement colour = resolveMarkColour(environment)
+        out.println(indent + (colour == null ? label : AnsiOutput.toString(colour, label, AnsiColor.DEFAULT)))
+    }
+
+    /**
+     * What to say, strongest first, or nothing where an application started the ordinary way.
+     *
+     * <p>An image has already done all of it. A cache means the JDK was handed what a previous run
+     * worked out. Generated bean definitions are the smaller half of the same idea, and worth
+     * saying on their own because an application can be run either with them or without.</p>
+     */
+    protected String resolveMark(Environment environment) {
+        String configured = environment.getProperty(MARK_TEXT_PROPERTY, String)
+        if (configured != null) {
+            return configured.trim() ?: null
+        }
+        if (isNativeImage()) {
+            return NATIVE_MARK
+        }
+        if (readsAotCache()) {
+            return CACHE_MARK
+        }
+        AotDetector.useGeneratedArtifacts() ? AOT_MARK : null
+    }
+
+    /**
+     * Whether the JDK was given a cache to read.
+     *
+     * <p>Asked of the arguments the JVM was started with rather than of the cache: a JVM handed one
+     * it cannot use declines it and starts as it would have anyway, and this is the banner rather
+     * than a diagnostic.</p>
+     */
+    protected boolean readsAotCache() {
+        ManagementFactory.runtimeMXBean.inputArguments.any { String argument ->
+            argument.startsWith('-XX:AOTCache=') || argument.startsWith('-XX:AOTMode=')
+        }
+    }
+
+    /**
+     * Spaced so it reads as a mark rather than a word.
+     *
+     * <p>Spaced as written rather than shouted: the marks this draws are already upper case, and
+     * an application that says what it wants the mark to be gets what it said. A name whose case
+     * is part of it -- CRaC -- keeps it.</p>
+     */
+    private static String spaced(String word) {
+        word.toCharArray().join(' ')
+    }
+
+    /** Whether this is running as an image. A seam, so the mark can be covered without being one. */
+    protected boolean isNativeImage() {
+        NativeDetector.inNativeImage()
+    }
+
+    /**
+     * The art in the configured colour, or as it stands where none is wanted.
+     *
+     * <p>{@link AnsiOutput} writes the escapes only where colour has been enabled, so this is the
+     * same string on a terminal that cannot colour, in a redirected log, and wherever an application
+     * has turned colour off.</p>
+     */
+    protected String colour(String art, Environment environment) {
+        AnsiElement colour = resolveArtColour(environment)
+        colour == null ? art : AnsiOutput.toString(colour, art, AnsiColor.DEFAULT)
+    }
+
+    /**
+     * The colour to show the art in, read from {@code grails.banner.art.color}.
+     *
+     * <p>Takes a number for one of the 256 colours a terminal offers, a name for one of the eight
+     * it has always had ({@code red}, {@code bright_blue}), or {@code none} to leave the art as it
+     * stands. A value that is neither falls back to the default rather than failing to start over
+     * the colour of a banner.</p>
+     */
+    protected AnsiElement resolveArtColour(Environment environment) {
+        resolveColour(environment, ART_COLOR_PROPERTY, DEFAULT_ART_COLOR)
+    }
+
+    /**
+     * The colour to show the mark in, read from {@code grails.banner.mark.color}.
+     *
+     * <p>Its own colour rather than the art's, and brighter, so that what an application was started
+     * as is not read as the last line of the drawing above it. Takes the same values as
+     * {@code grails.banner.art.color}.</p>
+     */
+    protected AnsiElement resolveMarkColour(Environment environment) {
+        resolveColour(environment, MARK_COLOR_PROPERTY, DEFAULT_MARK_COLOR)
+    }
+
+    private AnsiElement resolveColour(Environment environment, String property, String fallback) {
+        String configured = environment.getProperty(property, String, fallback)
+        if (!configured || configured.equalsIgnoreCase(NO_COLOR)) {
+            return null
+        }
+        if (configured.isInteger()) {
+            int code = configured.toInteger()
+            // A terminal offers 256 of them, and anything else writes an escape it does not
+            // understand -- which shows as the escape itself, printed into the banner.
+            return code in 0..255 ? Ansi8BitColor.foreground(code) : defaultColour(fallback)
+        }
+        try {
+            return AnsiColor.valueOf(configured.toUpperCase())
+        }
+        catch (IllegalArgumentException ignored) {
+            return defaultColour(fallback)
+        }
+    }
+
+    private static AnsiElement defaultColour(String fallback) {
+        Ansi8BitColor.foreground(fallback.toInteger())
     }
 
     /**
@@ -104,12 +321,11 @@ class GrailsBanner implements Banner {
      * @param env the current env
      * @return a map of version labels to version values
      */
-    @SuppressWarnings('GrMethodMayBeStatic')
     protected Map<String,String> createBannerVersions(Environment env) {
         def defaultIncluded = (DefaultVersionOption.values()).collect { it.key }
-        def sortOrder = findConfiguredVersions(env, 'grails.banner.versions.order') { it in VersionOption.values()*.key }
-        def configExcluded = findConfiguredVersions(env, 'grails.banner.versions.exclude') { it in DefaultVersionOption.values()*.key }
-        def configIncluded = findConfiguredVersions(env, 'grails.banner.versions.include') { it in OptionalVersionOption.values()*.key }
+        def sortOrder = findConfiguredVersions(env, ORDER_PROPERTY)
+        def configExcluded = findConfiguredVersions(env, EXCLUDE_PROPERTY)
+        def configIncluded = findConfiguredVersions(env, INCLUDE_PROPERTY)
         def includedVersions = defaultIncluded
                 .tap { removeAll(configExcluded) }
                 .tap { addAll(configIncluded) }
@@ -129,75 +345,173 @@ class GrailsBanner implements Banner {
                 }
             }
         }
-        includedVersions.collectEntries { key ->
-            switch (VersionOption.fromString(key)) {
-                case VersionOption.APP:
-                    [(env.getProperty('info.app.name') ?: 'app'): env.getProperty('info.app.version') ?: 'unknown']
-                    break
-                case VersionOption.JVM:
-                    ['JVM': System.getProperty('java.vendor') + ' ' + System.getProperty('java.version')]
-                    break
-                case VersionOption.GRAILS:
-                    ['Grails': BuildSettings.grailsVersion]
-                    break
-                case VersionOption.GROOVY:
-                    ['Groovy': GroovySystem.version]
-                    break
-                case VersionOption.SPRING_BOOT:
-                    ['Spring Boot': SpringBootVersion.version]
-                    break
-                case VersionOption.SPRING:
-                    ['Spring': SpringVersion.version]
-                    break
-                case VersionOption.SPRING_SECURITY:
-                    ['Spring Security': findVersion('org.springframework.security.core.SpringSecurityCoreVersion')]
-                    break
-                case VersionOption.TOMCAT:
-                    ['Tomcat': findVersion('org.apache.catalina.util.ServerInfo')]
-                    break
-                case VersionOption.JETTY:
-                    ['Jetty': findVersion('org.eclipse.jetty.util.Jetty')]
-                    break
-                case VersionOption.UNDERTOW:
-                    ['Undertow': findVersion('io.undertow.Undertow')]
-                    break
-                default:
-                    null
+        // A version that cannot be determined is left out where it is shown by default, and shown
+        // as unknown where the application asked for it by name. Leaving out a default is what
+        // lets one be on at all -- an application without Spring Security says nothing about it
+        // rather than saying it does not know -- but leaving out one that was asked for reads as
+        // the option having been ignored, which is the thing an unrecognised option is warned about.
+        Map<String, String> versions = [:]
+        for (String key : includedVersions) {
+            versionsFor(key, env).each { String label, String version ->
+                if (version != null) {
+                    versions[label] = version
+                }
+                else if (key in configIncluded) {
+                    versions[label] = UNKNOWN_VERSION
+                }
             }
-        } as Map<String, String>
+        }
+        versions
     }
 
     /**
-     * Finds the implementation version of the specified class.
+     * What one version option contributes, as the labels it is shown under and what each records.
      *
-     * @param className the fully qualified class name
-     * @return the implementation version, or 'unknown' if not found
+     * <p>A value of {@code null} is a library that is absent or records nothing; the caller decides
+     * whether that is left out or shown as unknown. An option that contributes nothing at all --
+     * the container, where none of them is there -- contributes no label to decide about.</p>
      */
-    private static String findVersion(String className) {
-        try {
-            def pkg = Class.forName(className).package
-            return pkg?.implementationVersion ?: 'unknown'
-        } catch (ClassNotFoundException ignore) {
-            return 'unknown'
+    protected Map<String, String> versionsFor(String key, Environment env) {
+        switch (VersionOption.fromString(key)) {
+            case VersionOption.APP:
+                String appName = env.getProperty('info.app.name') ?: 'app'
+                return [(appName): env.getProperty('info.app.version') ?: UNKNOWN_VERSION]
+            case VersionOption.JVM:
+                return ['JVM': System.getProperty('java.vendor') + ' ' + System.getProperty('java.version')]
+            case VersionOption.GRAILS:
+                return ['Grails': BuildSettings.grailsVersion]
+            case VersionOption.GROOVY:
+                return ['Groovy': GroovySystem.version]
+            case VersionOption.SPRING_BOOT:
+                return ['Spring Boot': SpringBootVersion.version]
+            case VersionOption.SPRING:
+                return ['Spring': SpringVersion.version]
+            case VersionOption.SPRING_SECURITY:
+                return ['Spring Security': findVersion('org.springframework.security.core.SpringSecurityCoreVersion')]
+            case VersionOption.CONTAINER:
+                return findContainerVersion()
+            case VersionOption.TOMCAT:
+                return ['Tomcat': findTomcatVersion()]
+            case VersionOption.JETTY:
+                return ['Jetty': findJettyVersion()]
+            case VersionOption.UNDERTOW:
+                return ['Undertow': findUndertowVersion()]
+            default:
+                return [:]
         }
     }
 
     /**
-     * Finds the configured versions from the environment.
+     * The servlet container the application is running on, and the version it records.
+     *
+     * <p>An application runs on one container: choosing another is done by excluding the starter
+     * for this one, so two are not on the classpath together. They are therefore tried in the order
+     * they are commonly used and the first one found is the answer -- an application on Tomcat
+     * never goes looking for Jetty.</p>
+     *
+     * <p>On a container that records no version, or on none of these, this is empty and the banner
+     * leaves the line out rather than saying it does not know.</p>
+     */
+    protected Map<String, String> findContainerVersion() {
+        String tomcat = findTomcatVersion()
+        if (tomcat != null) {
+            return ['Tomcat': tomcat]
+        }
+        String jetty = findJettyVersion()
+        if (jetty != null) {
+            return ['Jetty': jetty]
+        }
+        String undertow = findUndertowVersion()
+        if (undertow != null) {
+            return ['Undertow': undertow]
+        }
+        return [:]
+    }
+
+    /**
+     * Tomcat's version, read from the resource it ships rather than only from its manifest.
+     *
+     * <p>A resource survives being repackaged into an executable jar or built into an image, where
+     * the manifest's attributes are no longer attached to the package -- which is why the manifest
+     * route reads as nothing in exactly the two places a version is most worth having.</p>
+     */
+    protected String findTomcatVersion() {
+        findVersionInResource('org/apache/catalina/util/ServerInfo.properties', 'server.number')
+                ?: findVersion('org.apache.catalina.util.ServerInfo')
+    }
+
+    protected String findJettyVersion() {
+        findVersion('org.eclipse.jetty.util.Jetty')
+    }
+
+    protected String findUndertowVersion() {
+        findVersion('io.undertow.Undertow')
+    }
+
+    /**
+     * A version a library records in a resource it ships, read without loading any of its classes.
+     *
+     * <p>The manifest route only works while a jar is a plain entry on the classpath. Repackaged
+     * into an executable jar its attributes are no longer attached to the package, and an image has
+     * no jars at all -- which is why a container version read that way reads as nothing in exactly
+     * the two places it is most worth having. A resource is still a resource in both.</p>
+     *
+     * @param resource the classpath location of the resource to read
+     * @param key the property within it that carries the version
+     * @return the version, or {@code null} where the resource or the property is absent
+     */
+    protected static String findVersionInResource(String resource, String key) {
+        InputStream stream = GrailsBanner.classLoader.getResourceAsStream(resource)
+        if (stream == null) {
+            return null
+        }
+        try {
+            Properties properties = new Properties()
+            stream.withCloseable { properties.load(it) }
+            return properties.getProperty(key)
+        }
+        catch (IOException ignored) {
+            return null
+        }
+    }
+
+    /**
+     * The version a library records in the manifest of the jar it ships in.
+     *
+     * <p>Loaded without being initialised. A version is read <em>about</em> a library rather than
+     * <em>from</em> it, and running a static initialiser to find one lets the library do whatever it
+     * does on the way -- Spring Security logs a line of its own from there, which arrived in the
+     * middle of the banner, between the mark and the very versions it was being read for. The
+     * manifest is attached to the package when the class is loaded, and loading is all this
+     * needs.</p>
+     *
+     * @param className the fully qualified name of a class the library ships
+     * @return the version, or {@code null} where the class is absent or records none
+     */
+    protected static String findVersion(String className) {
+        try {
+            Package pkg = Class.forName(className, false, GrailsBanner.classLoader).package
+            return pkg?.implementationVersion
+        } catch (ClassNotFoundException ignore) {
+            return null
+        }
+    }
+
+    /**
+     * The version options configured under the given property that name something.
      *
      * @param env the current environment
      * @param propertyName the property name to look for
-     * @param filter the filter closure
-     * @return a list of configured versions
+     * @return the options that name a {@link VersionOption}, in the order they were written
      */
-    private static List<String> findConfiguredVersions(
-            Environment env,
-            String propertyName,
-            @ClosureParams(
-                    value = SimpleType,
-                    options = ['java.lang.String']
-            ) Closure<Boolean> filter) {
-        env.getProperty(propertyName, List<String>, [] as List<String>).findAll(filter)
+    private static List<String> findConfiguredVersions(Environment env, String propertyName) {
+        List<String> known = VersionOption.values()*.key
+        readVersionOptions(env, propertyName).findAll { String option -> option in known }
+    }
+
+    /** What an application wrote under the given property, or nothing where it wrote none. */
+    private static List<String> readVersionOptions(Environment env, String propertyName) {
+        env.getProperty(propertyName, List<String>, [] as List<String>)
     }
 
     /**
@@ -323,6 +637,7 @@ class GrailsBanner implements Banner {
         SPRING_BOOT,
         SPRING,
         SPRING_SECURITY,
+        CONTAINER,
         TOMCAT,
         JETTY,
         UNDERTOW
@@ -352,7 +667,9 @@ class GrailsBanner implements Banner {
         GRAILS,
         GROOVY,
         SPRING_BOOT,
-        SPRING
+        SPRING,
+        SPRING_SECURITY,
+        CONTAINER
 
         final String key
 
@@ -363,10 +680,13 @@ class GrailsBanner implements Banner {
 
     /**
      * Enumeration of optional version options.
+     *
+     * <p>The container being run is shown by default under {@code container}, which is the one an
+     * application is on. These name a particular container instead, for an application that wants
+     * to be told about one whether or not it is the one serving.</p>
      */
     @CompileStatic
     enum OptionalVersionOption {
-        SPRING_SECURITY,
         TOMCAT,
         JETTY,
         UNDERTOW

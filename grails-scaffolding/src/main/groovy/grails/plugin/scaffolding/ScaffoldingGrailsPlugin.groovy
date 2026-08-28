@@ -47,8 +47,8 @@ class ScaffoldingGrailsPlugin extends Plugin {
     ]
 
     def title = 'Scaffolding Plugin' // Headline display name of the plugin
-    def author = 'Graeme Rocher'
-    def authorEmail = 'info@grails.org'
+    def author = 'Apache Grails Team'
+    def authorEmail = ''
     def description = '''\
 Plugin that generates scaffolded controllers and views for a Grails application.
 '''
@@ -62,10 +62,10 @@ Plugin that generates scaffolded controllers and views for a Grails application.
     def license = 'APACHE'
 
     // Location of the plugin's issue tracker.
-    def issueManagement = [system: 'Github', url: 'https://github.com/grails3-plugins/scaffolding/issues']
+    def issueManagement = [system: 'Github', url: 'https://github.com/apache/grails-core/issues']
 
     // Online location of the plugin's browseable source code.
-    def scm = [ url: 'https://github.com/grails3-plugins/scaffolding']
+    def scm = [ url: 'https://github.com/apache/grails-core']
 
     def loadAfter = ['groovyPages']
 

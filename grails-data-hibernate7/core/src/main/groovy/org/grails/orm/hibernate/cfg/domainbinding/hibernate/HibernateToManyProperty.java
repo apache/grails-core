@@ -31,6 +31,7 @@ import org.springframework.util.StringUtils;
 
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
+import org.grails.datastore.mapping.model.types.EmbeddedCollection;
 import org.grails.datastore.mapping.model.types.mapping.PropertyWithMapping;
 import org.grails.orm.hibernate.cfg.CacheConfig;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
@@ -39,11 +40,15 @@ import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
+import org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior;
 
 import static java.util.Optional.ofNullable;
 import static org.grails.orm.hibernate.cfg.GrailsHibernateUtil.qualify;
 import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.UNDERSCORE;
+import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.ALL;
 import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.ALL_DELETE_ORPHAN;
+import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.NONE;
+import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.SAVE_UPDATE;
 
 /** Marker interface for Hibernate to-many associations */
 public interface HibernateToManyProperty extends PropertyWithMapping<PropertyConfig>, HibernateAssociation {
@@ -90,6 +95,38 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
 
     default boolean isOneToMany() {
         return this instanceof HibernateOneToManyProperty;
+    }
+
+    /**
+     * The cascade behavior implied by this to-many property's shape, absent an explicit {@code
+     * cascade} mapping. Self-contained: every fact this needs (basic-ness, Map-typedness, embedded
+     * collection-ness, ownership, circularity) is already exposed by this interface or inherited
+     * from the GORM {@code Association} hierarchy, so no external dispatch is required.
+     */
+    default CascadeBehavior getImpliedCascadeBehavior() {
+        if (!(this instanceof Association<?> association)) {
+            throw new MappingException("Unrecognized to-many association type " + getType());
+        }
+        if (isBasic()) {
+            return ALL;
+        }
+        if (Map.class.isAssignableFrom(getType())) {
+            return association.isCorrectlyOwned() ? ALL : SAVE_UPDATE;
+        }
+        if (this instanceof EmbeddedCollection) {
+            return ALL;
+        }
+        // Fail-fast only for entity relationships that are truly missing an association
+        if (getAssociatedEntity() == null) {
+            throw new MappingException("Relationship " + this + " has no associated entity");
+        }
+        if (isOneToMany()) {
+            return association.isCorrectlyOwned() ? ALL : SAVE_UPDATE;
+        }
+        if (isManyToMany()) {
+            return association.isCorrectlyOwned() || isCircular() ? SAVE_UPDATE : NONE;
+        }
+        throw new MappingException("Unrecognized to-many association type " + getType());
     }
 
     /**
@@ -221,6 +258,18 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
                         GrailsDomainBinder.FOREIGN_KEY_SUFFIX);
     }
 
+    /**
+     * Resolves the associated root entity's table name for use as a join-table foreign-key column
+     * prefix. The result is a column-identifier fragment, never a literal, quotable SQL identifier -
+     * so the Groovy backtick-quoting convention is always invalid there and must be stripped once
+     * here, rather than trusted to the caller (a prior bug left the foreign key malformed as
+     * {@code `quoted_table`_id}).
+     */
+    default String resolveAssociatedEntityTableName(PersistentEntityNamingStrategy namingStrategy) {
+        return new BackticksRemover().apply(
+                getHibernateAssociatedEntity().getHibernateRootEntity().getTableName(namingStrategy));
+    }
+
     default String joinTableColumName(PersistentEntityNamingStrategy namingStrategy) {
         final Class<?> referencedType = getComponentType();
         var joinColumnMappingOptional = getColumnConfigOptional();
@@ -228,15 +277,17 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
         String columnName;
         if (present) {
             columnName = joinColumnMappingOptional.get().getName();
+        } else if (referencedType.isEnum()) {
+            // Use the enum's simple name, not its fully-qualified name, so the column
+            // isn't named after the enum's package.
+            columnName = namingStrategy.resolveColumnName(referencedType.getSimpleName());
         } else {
             // Both callers of joinTableColumName (BasicCollectionElementBinder, EnumTypeBinder) operate on
             // a HibernateBasicProperty, so referencedType is always the collection's basic element type here,
             // never an associated entity - resolveAssociatedEntityTableName does not apply to this path.
             var clazz = namingStrategy.resolveColumnName(referencedType.getName());
             var prop = namingStrategy.resolveColumnName(getName());
-            columnName = referencedType.isEnum() ?
-                    clazz :
-                    new BackticksRemover().apply(prop) + UNDERSCORE + new BackticksRemover().apply(clazz);
+            columnName = new BackticksRemover().apply(prop) + UNDERSCORE + new BackticksRemover().apply(clazz);
         }
         return columnName;
     }
