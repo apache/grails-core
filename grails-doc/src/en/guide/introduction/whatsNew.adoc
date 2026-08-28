@@ -364,3 +364,65 @@ base name an application configures itself, neither of which Spring Boot's own r
 Plugin message bundles must now be namespaced on the plugin name — `spring-security-core.properties`
 rather than `messages.properties` — so that two plugins cannot shadow one another. See
 <<upgrading80x>> for the details.
+
+==== Quartz Scheduling Survives a Bad Schedule
+
+The Quartz plugin no longer lets one broken schedule take an application with it. A trigger that can
+never fire — a cron expression whose last occurrence has passed, an end time
+already gone by — is reported in the log and left unscheduled instead of stopping startup, and
+`quartz.failOnNeverFiringTriggers` restores the old behaviour for anyone who wants a bad schedule to fail
+a deployment.
+
+Jobs are also stamped with the application that registered them, so an application starting up removes
+only its own jobs from the job store. Two applications, or a clustered application and code scheduling
+through the Quartz API, can now share Quartz tables without one deleting the other's jobs and triggers.
+
+The scheduling methods a job class gets say what is wrong when they are misused: a null repeat interval,
+cron expression, date or trigger names the argument that is missing, and calling them on a job the
+scheduler does not know about explains why it is not registered — neither ends in a `NullPointerException`
+any more. See <<quartzLongRunningJobs,Long-Running Jobs>> for what a job that outlives its trigger's
+interval needs, and <<upgrading80x>> for the details.
+
+==== Compiled Tag Resolution
+
+Tag libraries are now described when they are compiled, and that description resolves tag calls in
+pages, tag libraries and controllers compiled afterwards. In a tag library or a controller, a call
+whose namespace and tag are known is compiled into a direct invocation rather than being dispatched
+through the metaclass, and no tag methods are installed onto tag library, page or dispatcher
+metaclasses to make dispatch work:
+
+[source,groovy]
+----
+class BookController {
+    def index() {
+        String markup = g.link(controller: 'book')   // compiled into a direct invocation
+    }
+}
+----
+
+The same applies to a call written without a namespace, to calls written inside a closure such as a
+tag body, and to a tag expression in a GSP declaring `compileStatic`. The tag itself is still selected
+by name when the call runs, so a tag library that overrides another, one registered while the
+application is running, and the order tag libraries are registered in all behave exactly as before. A
+namespace no compiled tag library declares, and a name something else in scope answers to, are left to
+dispatch as they did.
+
+A tag that no compiled tag library declares is left to resolve at runtime with nothing reported, since
+a namespace can legitimately hold tag libraries carrying no description. An application whose tag
+libraries are all described can ask for an error instead:
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    compileStatic {
+        strictTags = true
+        dynamicTagNamespaces = ['legacy']   // registered while the application runs
+    }
+}
+----
+
+Defining a tag as a `Closure` field remains supported but is deprecated and now warns at compile time:
+a closure carries no signature, so nothing about a call to such a tag can be checked. Define tags as
+methods taking `Map attrs` and, where a body is needed, `Closure body`. See
+link:theWebLayer.html#compiledTags[Compiled Tag Resolution].

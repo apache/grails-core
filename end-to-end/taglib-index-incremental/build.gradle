@@ -1,0 +1,54 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+// Whether a tag library that has been renamed or deleted can survive in what a build publishes.
+//
+// Answering it needs a real application built twice against real published artifacts, without a
+// clean in between, because what is being tested is incremental behaviour: Gradle does not recompile
+// a source that has not changed, so anything written per class as it compiled would simply stay. The
+// core build cannot express that - its own test projects are built once, by the build running the
+// test - so it lives here, where an application resolves Grails the way an application does.
+plugins {
+    id 'groovy'
+    id 'org.apache.grails.buildsrc.properties'
+}
+
+dependencies {
+    // Versions come from the same BOM the framework publishes, so this harness never pins its own.
+    testImplementation platform("org.apache.grails:grails-bom:${project.findProperty('projectVersion') ?: version}")
+    // Deliberately not gradleTestKit(): it carries Gradle's own Groovy 4 onto the test classpath,
+    // which the Groovy 5 Spock this repository builds against cannot compile against. The nested
+    // build is driven through the repository's own wrapper instead, which is also the Gradle an
+    // application would use.
+    testImplementation 'org.spockframework:spock-core'
+    testImplementation 'org.apache.groovy:groovy'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
+    // The application the test builds resolves Grails from the same place this build does.
+    systemProperty 'grails.e2e.localMavenRepo',
+            rootProject.layout.projectDirectory.dir('../build/local-maven').asFile.absolutePath
+    systemProperty 'grails.e2e.version', project.findProperty('projectVersion') ?: version
+    systemProperty 'grails.e2e.gradlew',
+            rootProject.layout.projectDirectory.file('../gradlew').asFile.absolutePath
+    // Each case builds an application from scratch, so this is slow by nature. It belongs to a build
+    // that is already opt-in and already requires a publish, so it is not gated further.
+}

@@ -42,6 +42,7 @@ tasks.named('rat') {
             '**/.sdkmanrc', // tool selection files aren't code
             '.github/**', // github configuration isn't shipped in the source distro
             '**/.gitignore', // git configuration isn't code
+            'scratch/**', // gitignored scratch space for local working notes, never shipped
             '**/.gitkeep', // git configuration isn't code
             '**/.classpath', // Eclipse generated files
             '**/.project', // Eclipse generated files
@@ -59,10 +60,12 @@ tasks.named('rat') {
             'grails-doc/src/en/ref/Versions/Grails BOM Hibernate7.adoc', // exclude generated data
             'grails-doc/src/en/ref/Versions/Grails BOM Micronaut.adoc', // exclude generated data
             'grails-doc/src/en/ref/Versions/Grails BOM Hibernate7 Micronaut.adoc', // exclude generated data
+            'grails-doc/src/en/ref/Versions/Grails BOM Neo4j.adoc', // exclude generated data
             'grails-profiles/**/templates/**', // template files that people are expected to use in the end application
             'grails-profiles/**/commands/**', // template files that people are expected to use in the end application
             'grails-profiles/**/features/**', // template files that people are expected to use in the end application
             'grails-profiles/**/skeleton/**', // template files that people are expected to use in the end application
+            'grails-quartz/src/main/templates/**', // template files that people are expected to use in the end application
             'grails-scaffolding/src/main/templates/scaffolding/**/*', // template files that people are expected to use in the end application
             'bin/**', // scripts generated during build for grails-shell-cli
             'build-logic/plugins/build/**', // exclude build artifacts
@@ -125,6 +128,7 @@ tasks.named('rat') {
             'grails-forge/**/src/main/resources/**', // src/main/resources are included in generated application and should not include a license
             'grails-forge/**/src/test/resources/**', // src/test/resources are used in tests against files included in generated application and should not include a license
             'grails-gradle/**/build/**', // grails-gradle does not have a build package name so exclude any build directories
+            'end-to-end/**/build/**', // its own build, so its build directories are not covered by the root exclude
             'grails-forge/*/build/**', // grails-forge build directories
             'grails-forge/build/**', // grails-forge build directories
             'grails-spring-security/plugin/src/main/templates/**', // template files that people are expected to use in the end application

@@ -1,3 +1,4 @@
+@{ model="List<${fullName}> ${propertyName}List; Integer ${propertyName}Count" }
 <!DOCTYPE html>
 <html>
 <head>

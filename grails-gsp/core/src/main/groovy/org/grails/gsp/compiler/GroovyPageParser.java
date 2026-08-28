@@ -29,9 +29,11 @@ import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.HexFormat;
@@ -114,9 +116,40 @@ public class GroovyPageParser implements Tokens {
 
     private static final String MULTILINE_GROOVY_STRING_DOUBLEQUOTES = "\"\"\"";
     private static final String MULTILINE_GROOVY_STRING_SINGLEQUOTES = "'''";
+    private static final String SET_TAG_NAME = "set";
+    private static final String TYPE_ATTRIBUTE = "type";
+    private static final String VAR_ATTRIBUTE = "var";
+
     public static final String MODEL_DIRECTIVE = "model";
     public static final String COMPILE_STATIC_DIRECTIVE = "compileStatic";
     public static final String TAGLIBS_DIRECTIVE = "taglibs";
+    /**
+     * The names the framework binds into every page, and the type each holds.
+     *
+     * <p>Written into the page rather than declared on the class it extends, because the page is
+     * compiled with the application's classpath and that class is not: the flash scope and the web
+     * request are declared in a module that depends on the one holding the page's base class, so
+     * they can be named here and not there. A page declaring one of these in its model gets its own
+     * declaration and none of this, which is what lets it choose a different type.</p>
+     */
+    private static final Map<String, String> FRAMEWORK_SUPPLIED_TYPES;
+
+    static {
+        Map<String, String> types = new LinkedHashMap<>();
+        types.put("params", "grails.util.TypeConvertingMap");
+        types.put("flash", "grails.web.mvc.FlashScope");
+        types.put("request", "jakarta.servlet.http.HttpServletRequest");
+        types.put("response", "jakarta.servlet.http.HttpServletResponse");
+        types.put("session", "jakarta.servlet.http.HttpSession");
+        types.put("application", "jakarta.servlet.ServletContext");
+        types.put("servletContext", "jakarta.servlet.ServletContext");
+        types.put("webRequest", "org.grails.web.servlet.mvc.GrailsWebRequest");
+        types.put("controllerName", "java.lang.String");
+        types.put("actionName", "java.lang.String");
+        types.put("namespace", "java.lang.String");
+        FRAMEWORK_SUPPLIED_TYPES = Collections.unmodifiableMap(types);
+    }
+
     public static final List<String> DEFAULT_TAGLIB_NAMESPACES = Collections.unmodifiableList(Arrays.asList(new String[]{"g", "tmpl", "f", "asset", "plugin"}));
 
     private GroovyPageScanner scan;
@@ -175,6 +208,7 @@ public class GroovyPageParser implements Tokens {
     public static final String CONFIG_PROPERTY_GSP_GRAILS_LAYOUT_PREPROCESS = "grails.views.gsp.layout.preprocess";
     public static final String CONFIG_PROPERTY_GSP_COMPILESTATIC = "grails.views.gsp.compileStatic";
     public static final String CONFIG_PROPERTY_GSP_ALLOWED_TAGLIB_NAMESPACES = "grails.views.gsp.compileStaticConfig.taglibs";
+    public static final String CONFIG_PROPERTY_GSP_COMPILESTATIC_STRICT = "grails.views.gsp.compileStaticConfig.strict";
     public static final String CONFIG_PROPERTY_GSP_CODECS = "grails.views.gsp.codecs";
 
     private static final String IMPORT_DIRECTIVE = "import";
@@ -204,6 +238,39 @@ public class GroovyPageParser implements Tokens {
     private boolean enableGrailsLayoutProcessing = true;
     private File keepGeneratedDirectory;
     private Set<String> allowedTaglibNamespaces = new LinkedHashSet<>(DEFAULT_TAGLIB_NAMESPACES);
+
+    /**
+     * The {@code var} and {@code status} attributes of the tags this page calls, which are the names
+     * the page introduces for itself.
+     */
+    private final Set<String> pageScopeVariables = new LinkedHashSet<>();
+
+    /**
+     * The names a typed {@code g:set} has declared, one frame per block the page emits.
+     *
+     * <p>A later set assigns to a name an enclosing frame declared and declares one nothing did.
+     * Frames rather than a flat set because two sibling blocks are two scopes: a name declared in one
+     * is not in scope in the other, so assigning there would write to a variable that does not exist.
+     */
+    private final Deque<Set<String>> typedSetScopes = new ArrayDeque<>(
+            Collections.singletonList(new LinkedHashSet<>()));
+
+    /** Whether what a page never declared fails the compilation rather than resolving at render time. */
+    private boolean compileStaticStrict;
+
+    /**
+     * Matches the {@code var} and {@code status} attributes of a namespaced tag, which is how a page
+     * names something it introduces: {@code <g:set var="total"/>}, {@code <g:each var="book"
+     * status="i">}, {@code <g:eachError var="error">}.
+     *
+     * <p>Read from the page source rather than from the parsed attributes because attributes are
+     * parsed only on the pass that writes the class, by which point the annotation carrying these
+     * names has already been written. Matching a name that turns out not to be a page scope variable
+     * costs only that the name resolves dynamically, so the pattern errs towards matching.</p>
+     */
+    private static final Pattern PAGE_SCOPE_VARIABLE_PATTERN = Pattern.compile(
+            "<\\w+:(?:[^>\"']|\"[^\"]*\"|'[^']*')*?\\b(?:var|status)\\s*=\\s*[\"']([A-Za-z_$][\\w$]*)[\"']",
+            Pattern.DOTALL);
 
     public String getContentType() {
         return contentType;
@@ -264,6 +331,7 @@ public class GroovyPageParser implements Tokens {
         if (configMap != null) {
             configure(configMap);
         }
+        applyCompileStaticSystemProperty();
 
         Map<String, String> directives = parseDirectives(gspSource);
         if (isGrailsLayoutPreprocessingEnabled(directives.get(GRAILS_LAYOUT_PREPROCESS_DIRECTIVE))) {
@@ -271,11 +339,51 @@ public class GroovyPageParser implements Tokens {
             gspSource = grailsLayoutPreprocessor.addGspGrailsLayoutCapturing(gspSource);
             grailsLayoutPreprocessMode = true;
         }
+        collectPageScopeVariables(gspSource);
         scan = new GroovyPageScanner(gspSource, uri);
         pageName = uri;
         environment = Environment.getCurrent();
         makeName(name);
         makeSourceName(filename);
+    }
+
+    /**
+     * Records the names this page introduces through the {@code var} and {@code status} attributes of
+     * the tags it calls, so that a statically compiled page can read one without declaring it again.
+     *
+     * @param gspSource the page source
+     */
+    private void collectPageScopeVariables(String gspSource) {
+        Matcher matcher = PAGE_SCOPE_VARIABLE_PATTERN.matcher(gspSource);
+        while (matcher.find()) {
+            pageScopeVariables.add(matcher.group(1));
+        }
+    }
+
+    /**
+     * Applies {@value #CONFIG_PROPERTY_GSP_COMPILESTATIC} where the build states it as a system
+     * property rather than in configuration.
+     *
+     * <p>Pages are compiled in two places -- ahead of time by the build, and again while the
+     * application runs and a page is changed -- and a build that asks for static compilation has to
+     * reach both, or a page would compile one way while being developed and another way when
+     * packaged. Stating it as a system property reaches both, under the same name it carries in
+     * configuration.</p>
+     *
+     * <p>It is read after configuration and replaces it, for the same reason a system property
+     * outranks {@code application.yml} in the running application: leaving the two paths disagreeing
+     * about precedence would be worse than either order. A {@code compileStatic} page directive is
+     * read afterwards and still decides for the page that carries it.</p>
+     */
+    private void applyCompileStaticSystemProperty() {
+        String value = System.getProperty(CONFIG_PROPERTY_GSP_COMPILESTATIC);
+        if (!GrailsStringUtils.isBlank(value)) {
+            compileStaticMode = GrailsStringUtils.toBoolean(value.trim());
+        }
+        String strict = System.getProperty(CONFIG_PROPERTY_GSP_COMPILESTATIC_STRICT);
+        if (!GrailsStringUtils.isBlank(strict)) {
+            compileStaticStrict = GrailsStringUtils.toBoolean(strict.trim());
+        }
     }
 
     /**
@@ -285,6 +393,7 @@ public class GroovyPageParser implements Tokens {
      */
     private void configure(ConfigMap config) {
         compileStaticMode = config.getProperty(GroovyPageParser.CONFIG_PROPERTY_GSP_COMPILESTATIC, Boolean.class);
+        compileStaticStrict = config.getProperty(CONFIG_PROPERTY_GSP_COMPILESTATIC_STRICT, Boolean.class, Boolean.FALSE);
 
         Object allowedTagLibsConfigValue = config.getProperty(CONFIG_PROPERTY_GSP_ALLOWED_TAGLIB_NAMESPACES, Object.class);
         if (allowedTagLibsConfigValue instanceof Iterable) {
@@ -798,7 +907,23 @@ public class GroovyPageParser implements Tokens {
             if (isCompileStaticMode()) {
                 out.println("@groovy.transform.CompileStatic(extensions = ['" + GroovyPageTypeCheckingExtension.class.getName() + "'])");
                 if (allowedTaglibNamespaces != null && !allowedTaglibNamespaces.isEmpty()) {
-                    out.println("@" + GroovyPageTypeCheckingConfig.class.getName() + "(taglibs = ['" + DefaultGroovyMethods.join((Iterable) allowedTaglibNamespaces, "','") + "'])");
+                    StringBuilder config = new StringBuilder("@")
+                            .append(GroovyPageTypeCheckingConfig.class.getName())
+                            .append("(taglibs = ['")
+                            .append(DefaultGroovyMethods.join((Iterable) allowedTaglibNamespaces, "','"))
+                            .append("']");
+                    if (!pageScopeVariables.isEmpty()) {
+                        config.append(", pageScopeVariables = ['")
+                                .append(DefaultGroovyMethods.join((Iterable) pageScopeVariables, "','"))
+                                .append("']");
+                    }
+                    // A page that declares its model has said what it is rendered with, so a name it
+                    // did not declare is a mistake rather than something to defer. A page that
+                    // declares nothing has said nothing, and is read the way a dynamic page reads it.
+                    if (compileStaticStrict || modelFieldsMode) {
+                        config.append(", strict = true");
+                    }
+                    out.println(config.append(')').toString());
                 }
             }
             out.print("class ");
@@ -811,6 +936,7 @@ public class GroovyPageParser implements Tokens {
                 out.println(modelDirectiveValue);
                 out.println("// end model fields");
             }
+            writeFrameworkSuppliedAccessors();
             out.println("public String getGroovyPageFileName() { \"" +
                     pageName.replaceAll("\\\\", "/") + "\" }");
             out.println("public Object run() {");
@@ -945,6 +1071,48 @@ public class GroovyPageParser implements Tokens {
         }
     }
 
+    /**
+     * Writes an accessor for each name the framework binds that this page has not declared itself,
+     * so that a statically compiled page can read them without declaring anything.
+     */
+    private void writeFrameworkSuppliedAccessors() {
+        if (!isCompileStaticMode()) {
+            return;
+        }
+        Set<String> declared = declaredModelNames();
+        for (Map.Entry<String, String> supplied : FRAMEWORK_SUPPLIED_TYPES.entrySet()) {
+            String name = supplied.getKey();
+            if (declared.contains(name)) {
+                continue;
+            }
+            String type = supplied.getValue();
+            String accessor = "get" + Character.toUpperCase(name.charAt(0)) + name.substring(1);
+            out.println(type + " " + accessor + "() { (" + type + ") resolveProperty('" + name + "') }");
+        }
+    }
+
+    /**
+     * The names this page's model directive declares, which are the ones it has spoken for.
+     */
+    private Set<String> declaredModelNames() {
+        Set<String> names = new LinkedHashSet<>();
+        if (modelDirectiveValue == null) {
+            return names;
+        }
+        for (String declaration : modelDirectiveValue.split("[;\n]")) {
+            String withoutValue = declaration.split("=", 2)[0].trim();
+            if (withoutValue.isEmpty()) {
+                continue;
+            }
+            String[] tokens = WHITESPACE_PATTERN.split(withoutValue);
+            String candidate = tokens[tokens.length - 1].trim();
+            if (!candidate.isEmpty()) {
+                names.add(candidate);
+            }
+        }
+        return names;
+    }
+
     private String resolveGspSuperClassName() {
         Class<?> gspSuperClass = isCompileStaticMode() ? CompileStaticGroovyPage.class : (isModelRecordingModeEnabled() ? ModelRecordingGroovyPage.class : GroovyPage.class);
         return gspSuperClass.getName();
@@ -1013,6 +1181,20 @@ public class GroovyPageParser implements Tokens {
         return newLineNumbers;
     }
 
+    /**
+     * @return true when the name has to be declared here, false when an enclosing block already
+     *         declared it and this occurrence assigns to that declaration
+     */
+    private boolean declareTypedSetVariable(String var) {
+        for (Set<String> scope : typedSetScopes) {
+            if (scope.contains(var)) {
+                return false;
+            }
+        }
+        typedSetScopes.peek().add(var);
+        return true;
+    }
+
     private void endTag() {
         if (!finalPass) return;
 
@@ -1025,6 +1207,9 @@ public class GroovyPageParser implements Tokens {
                     getCurrentOutputLineNumber());
 
         TagMeta tm = tagMetaStack.pop();
+        if (!tm.emptyTag && typedSetScopes.size() > 1) {
+            typedSetScopes.pop();
+        }
         String lastInStack = tm.name;
         String lastNamespaceInStack = tm.namespace;
 
@@ -1157,6 +1342,10 @@ public class GroovyPageParser implements Tokens {
         tm.emptyTag = emptyTag;
         tm.tagIndex = tagIndex;
         tagMetaStack.push(tm);
+        if (!emptyTag) {
+            // The body is emitted inside a block, so a name declared in it belongs to that block.
+            typedSetScopes.push(new LinkedHashSet<>());
+        }
 
         if (GroovyPage.DEFAULT_NAMESPACE.equals(ns) && tagRegistry.isSyntaxTag(tagName)) {
             if (tagContext == null) {
@@ -1186,6 +1375,8 @@ public class GroovyPageParser implements Tokens {
             // Custom taglibs have to always flush the whitespace, there's no
             // "allowPrecedingWhitespace" property on tags yet
             flushBufferedWhiteSpace();
+
+            writeTypedSetDeclaration(ns, tagName, attrs);
 
             if (attrs.size() > 0) {
                 FastStringWriter buffer = new FastStringWriter();
@@ -1239,6 +1430,64 @@ public class GroovyPageParser implements Tokens {
             appendHtmlPart(null);
         }
         currentlyBufferingWhitespace = false;
+    }
+
+    /**
+     * Declares the variable a {@code <g:set type="...">} names, so that the rest of the page reads it
+     * with a type rather than through the page binding.
+     *
+     * <p>The tag keeps doing what it did: the declaration is written first and the tag is then called
+     * with the declared variable as its value, so the write into the scope still happens and
+     * {@code scope} still decides where. What it adds is that the page itself no longer has to look
+     * the name up to read it.</p>
+     *
+     * <p>Only a {@code value} can be typed. Where the value is the tag's body or a {@code bean}, there
+     * is no expression to declare the variable from -- both are produced when the tag runs -- so
+     * asking for a type there is rejected rather than quietly ignored.</p>
+     */
+    private void writeTypedSetDeclaration(String ns, String tagName, Map<String, String> attrs) {
+        if (!GroovyPage.DEFAULT_NAMESPACE.equals(ns) || !SET_TAG_NAME.equals(tagName)) {
+            return;
+        }
+        String type = attributeText(attrs, TYPE_ATTRIBUTE);
+        if (type == null) {
+            return;
+        }
+        String var = attributeText(attrs, VAR_ATTRIBUTE);
+        if (GrailsStringUtils.isBlank(var)) {
+            throw new GrailsTagException("Tag [set] with a [type] needs a [var] naming what to declare",
+                    pageName, getCurrentOutputLineNumber());
+        }
+        Object value = attrs.get("\"value\"");
+        if (value == null) {
+            throw new GrailsTagException("Tag [set] can only be given a [type] together with a [value]; " +
+                    "the body and the [bean] attribute are produced when the tag runs, so there is nothing " +
+                    "to declare the variable from", pageName, getCurrentOutputLineNumber());
+        }
+        attrs.remove("\"" + TYPE_ATTRIBUTE + "\"");
+        // A name typed once is declared; typing it again assigns to what was declared. Declaring it
+        // twice would not compile, where the untyped tag simply writes the scope again.
+        String declaration = declareTypedSetVariable(var) ? type + " " + var : var;
+        // A Groovy cast rather than Class.cast, which only accepts what is already of the type: a
+        // long declared from an integer literal, a String from a GString and a List from an array are
+        // all ordinary things to write, and all of them are conversions rather than instances.
+        out.println(declaration + " = (" + type + ") (" + getExpressionText(value.toString()) + ")");
+        // and the tag is called with what was just declared, so it writes the same value into the scope
+        attrs.put("\"value\"", var);
+    }
+
+    /** The plain text of a quoted attribute, or {@code null} where the page did not give one. */
+    private static String attributeText(Map<String, String> attrs, String name) {
+        Object raw = attrs.get("\"" + name + "\"");
+        if (raw == null) {
+            return null;
+        }
+        String text = raw.toString().trim();
+        if (text.length() > 1 && (text.startsWith("\"") || text.startsWith("'")) &&
+                text.charAt(0) == text.charAt(text.length() - 1)) {
+            return text.substring(1, text.length() - 1).trim();
+        }
+        return text;
     }
 
     private void populateMapWithAttributes(Map<String, String> attrs, String attrTokens) {

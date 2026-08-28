@@ -51,9 +51,6 @@ ext {
 }
 
 dependencies {
-    // Import Log4j ahead of Spring Boot so Maven consumers resolve the full Log4j family to the
-    // BOM-managed 2.25.5 (CVE-2026-49844) instead of Spring Boot's older managed Log4j version.
-    api platform(gradleBomPlatformDependencies['log4j2-bom'])
     api platform(gradleBomPlatformDependencies['spring-boot-bom']), {
         exclude group: 'org.apache.groovy'
         exclude group: 'org.spockframework'
@@ -63,9 +60,6 @@ dependencies {
     }
 
     for (def entry : bomPlatformDependencies.entrySet()) {
-        if (entry.key == 'log4j2-bom') {
-            continue
-        }
         api platform(entry.value)
     }
 

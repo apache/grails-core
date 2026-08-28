@@ -15,11 +15,11 @@
  * limitations under the License.
  */
 
-// Gradle init-script applied during the Groovy joint-validation build.
+// Gradle init-script applied during the Groovy Snapshot Canary validation build.
 // Overrides Develocity and build-cache configuration injected by Groovy's own
 // build-scans.gradle without modifying any of Groovy's source files.
 //
-// Applied via: ./gradlew --init-script <path>/groovy-joint-build.init.gradle
+// Applied via: ./gradlew --init-script <path>/groovy-snapshot-canary-build.init.gradle
 //
 // Defensive: the pluginManager.withPlugin guard makes this a no-op when the
 // Develocity plugin is absent, so the script never crashes Groovy's build.

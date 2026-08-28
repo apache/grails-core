@@ -30,7 +30,8 @@ if (!rootProject.ext.has('substitutableFunctionalTestProjectsCache')) {
                         name: subproject.name,
                         group: subproject.group,
                         artifactId: subproject.findProperty('pomArtifactId') ?: subproject.name,
-                        cliArtifactId: subproject.findProperty('cliArtifactId')
+                        cliArtifactId: subproject.findProperty('cliArtifactId'),
+                        hasTestFixtures: subproject.plugins.hasPlugin('java-test-fixtures')
                 ]
             }
     )
@@ -42,12 +43,9 @@ configurations.configureEach {
         // included will be substituted with the local projects in this repository instead of pulling upstream.
         for (def substitutionInfo : substitutableProjects) {
             def substitutedArtifact = "${substitutionInfo.group}:${substitutionInfo.artifactId}" as String
-            //TODO: This does not handle libraries that are both test fixtures & a libraries like grails-data-mongodb,
-            // see grails-test-examples-mongodb-base, & grails-test-examples-mongodb-hibernate5 for project() workaround
             if (substitutionInfo.name == 'grails-bom') {
                 substitute module(substitutedArtifact) using platform(project(':grails-bom'))
-            }
-            else if(substitutionInfo.name == 'grails-geb') {
+            } else if (substitutionInfo.hasTestFixtures) {
                 def selector = substitution.variant(module(substitutedArtifact)) { details ->
                     details.capabilities { handler ->
                         handler.requireCapability("${substitutedArtifact}-test-fixtures" as String)
@@ -59,8 +57,7 @@ configurations.configureEach {
                     }
                 }
                 substitute selector using replacement
-            }
-            else {
+            } else {
                 substitute module(substitutedArtifact) using project(":${substitutionInfo.name}")
             }
 
@@ -199,6 +196,13 @@ tasks.withType(Test).configureEach { Test task ->
     systemProperty('geb.build.reportsDir', reporting.file("$projectDir/build/geb-reports"))
     systemProperty('grails.geb.reporting.directory', reporting.file("$projectDir/build/geb-reports").canonicalFile.absolutePath)
     systemProperty('TESTCONFIG', System.getProperty('TESTCONFIG'))
+
+    if (isMongo && rootProject.hasProperty('mongodbContainerVersion')) {
+        // The version the build asks for reaches the Gradle JVM as a project property and stops
+        // there, while the application under test reads a system property: without this a matrix
+        // asking for one version and an application defaulting to another agree only by accident.
+        systemProperty('mongodbContainerVersion', rootProject.property('mongodbContainerVersion'))
+    }
 }
 
 tasks.named('groovydoc').configure {

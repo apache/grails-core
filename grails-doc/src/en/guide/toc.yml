@@ -143,6 +143,7 @@ theWebLayer:
       formsAndFields: Forms and Fields
       tagsAsMethodCalls: Tags as Method Calls
     viewsAndTemplates: Views and Templates
+    gspStaticCompilation: Static Compilation
     layouts:
       title: Layouts
       contentBlocks: Content Blocks
@@ -155,6 +156,7 @@ theWebLayer:
       logicalTags: Logical Tags
       iterativeTags: Iterative Tags
       namespaces: Tag Namespaces
+      compiledTags: Compiled Tag Resolution
       usingJSPTagLibraries: Using JSP Tag Libraries
       tagReturnValue: Tag return value
   fields:
@@ -344,6 +346,21 @@ mail:
   mailMessageContent: Message Content
   mailAttachments: Attachments
   mailTesting: Testing
+backgroundJobs:
+  title: Background Jobs
+  backgroundJobsBasic: Basic Scheduling
+  backgroundJobsAdvanced:
+    title: Advanced Scheduling
+    quartzInstallation: Installation
+    quartzScheduling: Writing Jobs
+    quartzTriggers: Triggers
+    quartzJobProperties: Job Properties
+    quartzDynamicScheduling: Dynamic Job Scheduling
+    quartzJobManagerService: Managing Jobs at Runtime
+    quartzLongRunningJobs: Long-Running Jobs
+    quartzConfiguration: Configuration
+    quartzClustering: Clustering
+    quartzUsefulLinks: Useful Links
 redis:
   title: Redis
   redisInstallation: Installation and Configuration

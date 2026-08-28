@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: "CI - Groovy Joint Validation Build"
+name: "Groovy Snapshot Canary Build"
 on:
   push:
     branches:
@@ -31,6 +31,7 @@ permissions:
 jobs:
   build_groovy:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
+    name: "Build Groovy Snapshot"
     runs-on: ubuntu-latest
     outputs:
       groovyVersion: ${{ steps.groovy-version.outputs.value }}
@@ -43,10 +44,10 @@ jobs:
       - name: "📥 Checkout Grails Core to fetch Gradle Plugin versions it uses"
         # Sparse-checkout fetches only the two paths this job actually needs:
         #   - dependencies.gradle: parsed below to derive the matching Apache
-        #     Groovy branch (GROOVY_<major>_0_X) for this Grails branch.
-        #   - .github/scripts/groovy-joint-build.init.gradle: passed to
+        #     Groovy branch (GROOVY_<major>_<minor>_X) for this Grails branch.
+        #   - .github/scripts/groovy-snapshot-canary-build.init.gradle: passed to
         #     ./gradlew --init-script when publishing Groovy to local Maven so
-        #     the joint build reuses our Develocity / build-cache settings.
+        #     the canary build reuses our Develocity / build-cache settings.
         # Both paths must be listed here; otherwise the init-script step fails
         # with "The specified initialization script ... does not exist."
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -54,7 +55,7 @@ jobs:
           sparse-checkout-cone-mode: false
           sparse-checkout: |
             dependencies.gradle
-            .github/scripts/groovy-joint-build.init.gradle
+            .github/scripts/groovy-snapshot-canary-build.init.gradle
       - name: "📝 Derive matching Apache Groovy branch from dependencies.gradle"
         id: groovy-branch
         run: |
@@ -93,7 +94,7 @@ jobs:
         run: |
           cd groovy
           ./gradlew pTML -x groovydoc -x javadoc -x javadocAll -x groovydocAll -x asciidoc -x docGDK \
-            --init-script $GITHUB_WORKSPACE/.github/scripts/groovy-joint-build.init.gradle
+            --init-script $GITHUB_WORKSPACE/.github/scripts/groovy-snapshot-canary-build.init.gradle
       - name: "📤 Share locally built Groovy artifacts with the build_grails job"
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -103,7 +104,7 @@ jobs:
           retention-days: 1
   build_grails:
     needs: [build_groovy]
-    name: "Build Grails with Groovy snapshot (shard ${{ matrix.shard_index }})"
+    name: "Build Grails (shard ${{ matrix.shard_index }})"
     strategy:
       fail-fast: false
       matrix:
@@ -115,16 +116,6 @@ jobs:
           - shard_index: 2
             gradle_task: testShard
     runs-on: ubuntu-latest
-    services:
-      mongodb:
-        image: mongo:8
-        ports:
-          - 27017:27017
-        options: >-
-          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     steps:
       - name: "⚙️ Maximize build space"
         run: |
@@ -157,6 +148,13 @@ jobs:
           key: gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-${{ hashFiles('**/dependencies.gradle', '**/gradle-wrapper.properties') }}
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
+      - name: "🗄️ Cache the mongod the embedded server runs"
+        uses: actions/cache@v4
+        with:
+          # Separate from the dependency jars, for the reasons given on the same step in
+          # gradle.yml. The version is the one -PmongodbContainerVersion asks for below.
+          path: ~/.embedmongo
+          key: embedmongo-${{ runner.os }}-8.0
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:
@@ -178,6 +176,11 @@ jobs:
         # That island intentionally pins Groovy 5 / Spock 2.4-groovy-5.0 via grails-micronaut-bom,
         # which is incompatible with the Groovy 4.x snapshot this job swaps in above.
         # See https://github.com/apache/grails-core/issues/15613.
+        #
+        # -PmongodbContainerVersion names the MongoDB the specifications bring themselves: a
+        # container for most of them, an embedded server for the ones that need a replica set. It
+        # keeps those two on the same release. This workflow validates Grails against a Groovy
+        # snapshot rather than against a range of MongoDB releases, which is gradle.yml's matrix.
         run: >
           ./gradlew ${{ matrix.gradle_task }}
           --continue
@@ -188,6 +191,7 @@ jobs:
           -PmaxTestParallel=3
           -PtestShardCount=3
           -PtestShardIndex=${{ matrix.shard_index }}
+          -PmongodbContainerVersion=8.0
         env:
           GRAILS_INCLUDE_MAVEN_LOCAL: true
       - name: "🗄️ Save dependency jar cache"

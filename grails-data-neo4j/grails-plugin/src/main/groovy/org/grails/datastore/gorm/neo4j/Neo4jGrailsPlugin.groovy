@@ -50,10 +50,7 @@ class Neo4jGrailsPlugin extends Plugin {
 
     def license = 'Apache 2.0 License'
     def organization = [ name: 'Grails', url: 'https://grails.apache.org/' ]
-    def developers = [
-        [ name: 'Graeme Rocher', email: 'graeme@grails.org'],
-        [ name: 'Stefan Armbruster', email: 'stefan@armbruster-it.de' ] ]
-    def issueManagement = [ system: 'JIRA', url: 'https://github.com/apache/grails-core/issues' ]
+    def issueManagement = [ system: 'Github', url: 'https://github.com/apache/grails-core/issues' ]
     def scm = [ url: 'https://github.com/apache/grails-core' ]
 
     def grailsVersion = '3.3.0 > *'
@@ -61,8 +58,8 @@ class Neo4jGrailsPlugin extends Plugin {
     //def loadBefore = ['dataSource']
     def observe = ['services', 'domainClass']
 
-    def author = 'Graeme Rocher'
-    def authorEmail = 'graeme@grails.org'
+    def author = 'Apache Grails Team'
+    def authorEmail = ''
     def title = 'Neo4j GORM'
     def description = 'A plugin that integrates the Neo4j graph database into Grails, providing a GORM API onto it'
 

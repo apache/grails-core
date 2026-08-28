@@ -161,6 +161,32 @@ grails {
 }
 ----
 
+`all` is what an artefact type falls back to where it states nothing of its own. An artefact type that states a value keeps it, so a single type can be held back from the shortcut:
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    compileStatic {
+        all = true
+        services = false   // every artefact type except services
+    }
+}
+----
+
+GSP pages have an opt-in in the same block, `gsp`, documented under link:theWebLayer.html#gspStaticCompilation[Static Compilation] for Groovy Server Pages. It is deliberately not covered by `all` and has to be asked for on its own:
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    compileStatic {
+        all = true   // controllers, services and tag libraries
+        gsp = true   // and pages, which `all` does not include
+    }
+}
+----
+
 When an opt-in is enabled, every matching artefact is compiled exactly as if it were annotated with `@GrailsCompileStatic`, including the Grails-specific dispatch that the annotation already permits — dynamic finders, constraints and mapping DSLs, and tag library calls in both controllers and tag libraries.
 
 [NOTE]

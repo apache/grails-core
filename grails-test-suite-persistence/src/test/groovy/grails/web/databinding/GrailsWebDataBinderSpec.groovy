@@ -28,6 +28,7 @@ import spock.lang.Unroll
 import org.springframework.context.support.StaticMessageSource
 
 import grails.config.Settings
+import grails.util.Holders
 import grails.databinding.BindUsing
 import grails.databinding.BindingFormat
 import grails.databinding.DataBindingSource
@@ -51,7 +52,7 @@ class GrailsWebDataBinderSpec extends Specification implements DataTest {
         mockDomains(
                 AssociationBindingAuthor, AssociationBindingBook, AssociationBindingPage, Author, BinderNullabilityEntity,
                 Child, CollectionContainer, DataBindingBook, Fidget, Foo, GeneratedBindingChild, GeneratedBindingParent,
-                Parent, Publication, Publisher, Team, Widget
+                Parent, Publication, Publisher, RawCollectionContainer, Team, Widget
         )
     }
 
@@ -1962,6 +1963,96 @@ class GrailsWebDataBinderSpec extends Specification implements DataTest {
         obj.publishers.find { it.name == 'Pub One' }
         obj.publishers.find { it.name == 'Pub Three' }
     }
+
+    void 'test binding maps into a raw collection preserves the map elements'() {
+        given: 'a domain with a raw (non-generic) collection, whose component type falls back to Object'
+        def obj = new RawCollectionContainer()
+
+        when: 'a list of maps is bound to it'
+        binder.bind(obj, new SimpleMapDataBindingSource([
+            rawList: [[label: 'Answered', param: 'status=resolved'],
+                      [label: 'Pending', param: 'status=pending']]
+        ]))
+
+        then: 'the maps survive binding rather than being replaced by empty Object instances'
+        obj.rawList.size() == 2
+        obj.rawList.every { it instanceof Map }
+        obj.rawList[0].label == 'Answered'
+        obj.rawList[0].param == 'status=resolved'
+        obj.rawList[1].label == 'Pending'
+        obj.rawList[1].param == 'status=pending'
+    }
+
+    void 'test binding maps into a raw Set property preserves the map elements'() {
+        given:
+        def obj = new RawCollectionContainer()
+
+        when:
+        binder.bind(obj, new SimpleMapDataBindingSource([
+            rawSet: [[label: 'Answered', param: 'status=resolved']]
+        ]))
+
+        then:
+        obj.rawSet.every { it instanceof Map }
+        obj.rawSet.first().label == 'Answered'
+    }
+
+    void 'test binding maps into a raw Collection-typed property'() {
+        given:
+        def obj = new RawCollectionContainer()
+
+        when:
+        binder.bind(obj, new SimpleMapDataBindingSource([rawCollection: [[label: 'Answered']]]))
+
+        then:
+        obj.rawCollection.every { it instanceof Map }
+        obj.rawCollection[0].label == 'Answered'
+    }
+
+    void 'test binding DataBindingSource items into a raw collection'() {
+        given:
+        def obj = new RawCollectionContainer()
+
+        when:
+        binder.bind(obj, new SimpleMapDataBindingSource([
+            rawList: [new SimpleMapDataBindingSource([label: 'Answered'])]
+        ]))
+
+        then:
+        obj.rawList.size() == 1
+        obj.rawList[0].getClass() != Object
+    }
+
+    void 'test binding maps into a raw collection with deny-by-default enabled'() {
+        given: 'the opt-in hardening turned on, and the property explicitly allowlisted'
+        def originalConfig = Holders.config
+        Holders.setConfig(new PropertySourcesConfig([(Settings.DATABINDING_DENY_BY_DEFAULT): true]))
+        DataBindingUtils.clearBindingCaches()
+        def obj = new RawCollectionContainer()
+
+        when:
+        binder.bind(obj, new SimpleMapDataBindingSource([
+            rawList: [[label: 'Answered', param: 'status=resolved']]
+        ]), null, ['rawList'], null, null)
+
+        then: 'the elements are still maps, as they are with the hardening off'
+        obj.rawList.size() == 1
+        obj.rawList[0] instanceof Map
+        obj.rawList[0].label == 'Answered'
+
+        cleanup:
+        Holders.setConfig(originalConfig)
+        DataBindingUtils.clearBindingCaches()
+    }
+}
+
+@Entity
+class RawCollectionContainer {
+
+    List rawList = []
+    Map rawMap = [:]
+    Set rawSet = []
+    Collection rawCollection = []
 }
 
 @Entity

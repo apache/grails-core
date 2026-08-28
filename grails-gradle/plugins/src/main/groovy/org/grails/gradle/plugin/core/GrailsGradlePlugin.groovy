@@ -939,6 +939,10 @@ ${importStatements}
             // Use a CommandLineArgumentProvider so that the absolute project directory path
             // is normalized for build cache relocatability (PathSensitivity.RELATIVE).
             task.jvmArgumentProviders.add(new GrailsAppBaseDirProvider(project.projectDir))
+            // The application compiles a page again when it changes, so the page opt-in has to reach
+            // the JVM running it as well as the one the build compiles pages in.
+            task.jvmArgumentProviders.add(new GrailsGspCompileStaticProvider(
+                    project.extensions.getByType(GrailsExtension).compileStatic))
             task.systemProperty(BuildSettings.PROJECT_TARGET_DIR, project.layout.buildDirectory.get().asFile.name)
             task.systemProperty(Environment.KEY, defaultGrailsEnv)
             task.systemProperty(Environment.FULL_STACKTRACE, System.getProperty(Environment.FULL_STACKTRACE) ?: '')

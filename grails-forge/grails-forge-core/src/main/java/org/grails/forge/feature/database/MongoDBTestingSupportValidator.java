@@ -33,7 +33,7 @@ public class MongoDBTestingSupportValidator implements FeatureValidator {
     public void validatePreProcessing(Options options, ApplicationType applicationType, Set<Feature> features) {
         if (features.stream().anyMatch(f -> f instanceof MongoDBTestingSupport)) {
             boolean hasMongo = features.stream().anyMatch(f ->
-                    f instanceof MongoFeature || f instanceof MongoGorm);
+                    f instanceof MongoFeature || f instanceof GrailsDataMongoDB);
             if (!hasMongo) {
                 throw new IllegalArgumentException(
                         "mongodb-testing-support requires mongo-sync or gorm-mongodb to be selected.");

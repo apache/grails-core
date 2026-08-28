@@ -679,6 +679,17 @@ jobs:
           key: gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-${{ hashFiles('**/dependencies.gradle', '**/gradle-wrapper.properties') }}
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
+      - name: "🗄️ Cache the mongod the embedded server runs"
+        uses: actions/cache@v4
+        with:
+          # Kept apart from the dependency jars: this holds an immutable download from
+          # fastdl.mongodb.org - the archive and the binary extracted out of it - and no database,
+          # so it belongs to no branch and does not change when a dependency version does.
+          # Keyed by the version this entry asks for, because the matrix runs more than one and a
+          # single key would keep whichever job missed first and leave the other restoring 250MB
+          # of a binary it cannot use. No restore-keys, for that same reason.
+          path: ~/.embedmongo
+          key: embedmongo-${{ runner.os }}-${{ matrix.mongodb-version }}
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:

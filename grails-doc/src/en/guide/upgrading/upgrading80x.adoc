@@ -748,6 +748,35 @@ If your test infrastructure registers it explicitly, remove the registration; Sp
 Update the import.
 A new `RestTestClient` and corresponding `@AutoConfigureRestTestClient` annotation are also available as a fluent alternative.
 
+==== 17.1 Test Helpers Moved to Test Fixtures
+
+Several legacy Grails test helpers are no longer included in the production classpath.
+They are published as Gradle test fixtures instead, so applications and plugins that use them directly must request the fixture variant explicitly.
+
+This affects the following helpers:
+
+* `grails.plugin.json.view.test.JsonViewTest` and related JSON view test helpers
+* `org.grails.gorm.graphql.testing.GraphQLSchemaSpec`
+* `org.grails.gorm.graphql.testing.MockDataFetchingEnvironment`
+* `grails.util.GrailsWebMockUtil`
+* Mock resource and plugin helpers from `grails-core`, including `MockResourceLoader`, `MockStringResourceLoader`, `MockFileResource`, `MockPluginDiscovery`, and `MockGrailsPluginManager`
+
+If your tests import one of these classes, add the corresponding `testFixtures(...)` dependency to the configuration that compiles those tests:
+
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    testImplementation testFixtures('org.apache.grails:grails-core')
+    testImplementation testFixtures('org.apache.grails.web:grails-web-common')
+    testImplementation testFixtures('org.apache.grails:grails-views-gson')
+    testImplementation testFixtures('org.apache.grails.data:grails-data-graphql-core')
+}
+----
+
+Only add the fixture dependencies that provide helpers used by the project.
+Do not add them to `implementation`, because these artifacts contain test infrastructure and should not be part of the application runtime classpath.
+
 ==== 18. DevTools Live Reload Disabled by Default
 
 Spring Boot 4 changed the default of `spring.devtools.livereload.enabled` from `true` to `false`.
@@ -1313,6 +1342,60 @@ GORM's `createCriteria()` and `withCriteria()` DSL are implemented on top of the
 *Boolean type mappings*: If your schema used string-based boolean type names (e.g. `type: 'yes_no'`), migrate to the corresponding converter class (`YesNoConverter`).
 
 *`javax.persistence` → `jakarta.persistence`*: This migration was already required for Grails 7; Grails 8 continues to require `jakarta.*`.
+
+[[_join_table_foreign_key_column_names]]
+===== 26.9 Join-Table Foreign-Key Column Names
+
+This change affects only a *unidirectional* `hasMany` — a collection with no `belongsTo` and no reciprocal `hasMany` on the other side. A *bidirectional* many-to-many association (both sides declare `hasMany`, or one side uses `belongsTo`) is **not** affected: both of its join-table foreign-key columns are still derived from the class names, identical to Grails 7.
+
+In Grails 7 (Hibernate 5), the default foreign-key column that referenced the associated entity in a unidirectional `hasMany` join table was derived from the simple name of that entity's domain class, after applying the column naming strategy.
+For example, the domain class `Book` produced the foreign-key column `book_id`, even when its physical table was mapped to a different name.
+
+In Grails 8 (Hibernate 7), that foreign-key column is instead derived from the physical table name of the associated domain class.
+The physical name includes an explicit `table` mapping and any transformation made by a custom physical naming strategy.
+For example, given the following mapping:
+
+[source,groovy]
+----
+class Book {
+    static mapping = {
+        table 'catalog_book'
+    }
+}
+
+class Shelf {
+    String label
+
+    static hasMany = [books: Book] // unidirectional: no belongsTo, no reciprocal hasMany
+}
+----
+
+Grails 7 used `book_id` by default in the `shelf_books` join table, whereas Grails 8 uses `catalog_book_id`. The other column in that same join table (`shelf_id`, derived from the owning `Shelf` class) is unchanged.
+This is a breaking schema change for an existing database if its join table still uses the Grails 7 column name.
+
+To keep the existing schema unchanged, configure the join table and its foreign-key column explicitly in the `static mapping` block:
+
+[source,groovy]
+----
+class Shelf {
+    String label
+
+    static hasMany = [books: Book]
+
+    static mapping = {
+        books joinTable: [
+            name: 'shelf_books',
+            key: 'shelf_id',
+            column: 'book_id'
+        ]
+    }
+}
+----
+
+Replace `shelf_books`, `shelf_id`, and `book_id` with the table and column names already used by your database.
+Declaring all three names prevents the naming strategy from changing the mapping during the upgrade.
+
+Separately, the element column of a *basic (non-enum) collection* (e.g. `static hasMany = [items: String]`) is now resolved through the naming strategy's *column* naming rules instead of its *table* naming rules for the property-name prefix, producing a `<property>_<element-type identifier>` column name. An enum collection is unaffected: its element column has no property-name prefix and already used the column naming rules before this change. Most naming strategies apply the same transformation to both, so this only matters if your custom `PhysicalNamingStrategy` implements `toPhysicalColumnName` and `toPhysicalTableName` differently.
 
 ==== 27. GORM Properties Are Nullable by Default
 
@@ -2699,3 +2782,221 @@ between modification times, which comparing content does not need; setting it no
 A GSP precompiled by Grails 7 and shipped inside a binary plugin carries no checksum. Such a page is served
 normally; it is simply never reload-checked, which was already the case for views resolved out of a plugin
 jar.
+
+==== 50. Tag Libraries Are Described When Compiled
+
+Tag calls are resolved against a description each tag library contributes as it is compiled, and a
+resolved call is compiled into a direct invocation. The tag itself is still selected by name when the
+call runs, through the same lookup dynamic dispatch uses, so a tag library that overrides another and
+the order tag libraries are registered in behave as before. A call into a namespace no compiled tag
+library declares — a tag library from a plugin built against an earlier version of Grails, or one
+registered while the application runs — is left to dispatch exactly as it did.
+
+Three things are worth knowing when upgrading.
+
+A tag that no compiled tag library declares is left to resolve at runtime, and nothing is reported.
+Setting `grails { compileStatic { strictTags = true } }` makes it a compilation error instead, which
+is worth doing once to find misspelled tags, but is not the default because a namespace can
+legitimately hold tag libraries that carry no description. Where an application registers tag
+libraries while it runs, name their namespaces in
+`grails { compileStatic { dynamicTagNamespaces = [...] } }` so that they are never checked.
+
+Strict checking applies only where the source says a call is a tag: one naming its namespace, and one
+written as markup. A call written without a namespace is never checked, and a namespaced expression in
+a page is checked only when that page declares `compileStatic`.
+
+A call written without a namespace is not compiled at all unless the build asks for it with
+`grails { compileStatic { unqualifiedTagCalls = true } }`. Whether a bare name is a tag depends on what
+else answers to it, and not all of that is visible when compiling — a method Groovy gives every object,
+a delegate an enclosing closure is handed, an overload the tag library also declares — so by default
+such a call is dispatched exactly as it was before this release.
+
+Where it is turned on, a call written without a namespace reaches a tag only when nothing nearer
+answers to the name: not a method of the class, not one it inherits, not a field, property or local,
+not a method Groovy provides, and not a name inside a closure, whose delegate is only known when it
+runs. A method added to a controller or tag library *while the application runs*, through a plugin's
+`doWithDynamicMethods`, is not visible when the calling code is compiled, so a call that used to reach
+such a method and shares its name with a tag would reach the tag instead. Declare the method on the
+class, name the namespace in `dynamicTagNamespaces`, or call the tag with its namespace.
+
+Naming a namespace in `dynamicTagNamespaces` turns rewriting off for it entirely, not just the
+reporting: calls into it are dispatched exactly as they were before this release. That is the escape
+hatch for a namespace whose tags are decided while the application runs.
+
+Tags defined as closures now warn at compile time. They still work and are called the same way, but a
+closure carries no signature, so nothing about a call to such a tag can be checked. This covers the
+`def` form as well as the explicitly typed one, and the `def` form is the one most tag libraries are
+written in:
+
+[source,groovy]
+----
+// Before - both forms warn
+def hello = { attrs ->
+    out << "Hello ${attrs.name}"
+}
+
+Closure goodbye = { Map attrs ->
+    out << "Goodbye ${attrs.name}"
+}
+
+// After
+def hello(Map attrs) {
+    out << "Hello ${attrs.name}"
+}
+
+def goodbye(Map attrs) {
+    out << "Goodbye ${attrs.name}"
+}
+----
+
+A tag taking a body becomes a method with a second `Closure body` parameter:
+
+[source,groovy]
+----
+// Before
+def wrapped = { attrs, body ->
+    out << '<div>' << body() << '</div>'
+}
+
+// After
+def wrapped(Map attrs, Closure body) {
+    out << '<div>' << body() << '</div>'
+}
+----
+
+===== Tags Are No Longer Installed Onto Metaclasses
+
+Dispatching a tag no longer works by installing a method for every tag, and a property for every
+namespace, onto the metaclass of every tag library, controller and page. Tags are resolved through the
+tag library lookup instead. Calling a tag — from a page, a tag library or a controller, with or
+without its namespace — is unaffected.
+
+What changes is code that inspected the metaclass to find tags. A check such as
+
+[source,groovy]
+----
+tagLib.metaClass.respondsTo(tagLib, 'someTag')
+----
+
+answered `true` before because the tag had been installed there, and now answers `false`. Call the tag,
+or consult the tag library lookup, instead of asking the metaclass what it holds.
+
+The methods that performed the installation are deprecated or removed:
+
+[cols="2,3"]
+|===
+|Member |Replacement
+
+|`NamespacedTagDispatcher.initializeMetaClass()`
+|Removed. Nothing needs to be initialised.
+
+|`NamespacedTagDispatcher.registerTagMetaMethods(ExpandoMetaClass)`
+|Removed.
+
+|`TemplateNamespacedTagDispatcher.registerTagMetaMethods(ExpandoMetaClass)`
+|Removed.
+
+|`GroovyPagesMetaUtils.registerMethodMissingForGSP(...)`
+|Retained but does nothing. A page now declares `methodMissing` itself.
+
+|`TagLibraryMetaUtils.enhanceTagLibMetaClass`, `registerTagMetaMethods`, `registerMethodMissingForTags`, `registerNamespaceMetaProperties`, `registerPropertyMissingForTag`, `addTagLibMethodToMetaClass`
+|Deprecated. Unit test support still uses them so that a tag method can be called directly on a tag library under test.
+|===
+
+`TagLibraryMetaUtils.methodMissingForTagLib` is not deprecated — it is the dynamic dispatch path a call
+into an undescribed namespace still takes.
+
+===== A Method-Declared Tag Called Without a Namespace Returns Its Output
+
+A class that can call tags but is not a tag library — a controller — reaches a tag written without a
+namespace through `methodMissing` on the `TagLibraryInvoker` trait. That used to end in a direct call
+on the tag library bean. For a tag declared as a closure this made no difference, because the call
+landed on a generated wrapper that captured output anyway; for one declared as a method there was no
+wrapper, so the method ran with nothing captured and its own return value came back.
+
+Both forms now capture, so a method-declared tag returns what it wrote:
+
+[source,groovy]
+----
+class ReportTagLib {
+    static namespace = 'g'
+
+    def summary(Map attrs) {
+        out << 'the output'
+        'the return value'      // <1>
+    }
+}
+
+class ReportController {
+    def index() {
+        String result = summary(id: 1)   // 'the output', previously 'the return value'
+    }
+}
+----
+<1> a tag's return value is not what a caller receives; what it writes is
+
+A tag called *with* its namespace, and any tag called from a GSP, already captured, so only an
+unqualified call from a controller to a method-declared tag changes.
+
+==== 51. Quartz Job Scheduling Behavior Changes
+
+Three behaviors of the Quartz plugin changed in this release. All three concern what happens when
+something about a schedule is wrong; none of them require a change to a job class.
+
+===== 51.1 A trigger that can never fire no longer stops startup
+
+A job whose trigger has no possible fire time — a cron expression whose last occurrence is in the past,
+or an end time that has already passed — used to make the application fail to start, because the
+scheduler rejects such a trigger:
+
+----
+org.quartz.SchedulerException: Based on configured schedule, the given trigger will never fire.
+----
+
+The plugin now reports the trigger as an error in the log and leaves it unscheduled, so the rest of the
+application's jobs and triggers are scheduled and the application starts. The job itself is still
+registered, so it can be triggered and rescheduled at runtime.
+
+To go back to a failing startup, set `quartz.failOnNeverFiringTriggers`:
+
+[source,yaml]
+.application.yml
+----
+quartz:
+    failOnNeverFiringTriggers: true
+----
+
+===== 51.2 An application only removes the jobs it registered itself
+
+When an application starts, the plugin removes the jobs in the job store which are no longer enabled job
+artefacts of the application. It used to consider *every* job in the store, which with a persistent job
+store deleted the jobs and triggers of anything else using it — another application, or code that
+schedules through the Quartz API.
+
+Every job the plugin registers now carries the name of the application that registered it, taken from
+`info.app.name` or from the application metadata when that is unset, and only jobs carrying that name are
+removed. Two consequences for an application with `quartz.jdbcStore` enabled:
+
+* **Two applications sharing a job store must not share an application name.** Instances of one
+application do share it — that is what makes a clustered deployment clean up after itself — but two
+different applications on the same Quartz tables each need their own `info.app.name`. An application which
+does not name itself registers its jobs under the default name, which every unnamed application shares;
+with `quartz.jdbcStore` enabled the plugin warns about that at startup.
+* **A job written to the store by Grails 7 or earlier carries no application name**, so it is never
+removed automatically. A job class you deleted while running an older version leaves a row behind; remove
+it with `jobManagerService.removeJob(group, name)` or from the Quartz tables.
+
+===== 51.3 Scheduling methods report what is wrong instead of failing with a null pointer
+
+The static scheduling methods every job class gets — `schedule`, `reschedule`, `unschedule`,
+`triggerNow`, `removeJob` — used to fail with a `NullPointerException` when called with a null argument,
+or on a job the scheduler does not know about. They now raise:
+
+* an `IllegalArgumentException` naming the argument that is null. Note that a null argument resolves to
+`schedule(Trigger)` whichever method the caller meant, because the runtime type of `null` carries no
+information, so the message points at the other arguments too.
+* an `IllegalStateException` when the job is not registered with a scheduler — the plugin is disabled, the
+job is disabled with `jobEnabled = false`, or the class is not a job artefact of the application.
+
+An application that caught `NullPointerException` around these calls has to catch those instead. See
+<<quartzDynamicScheduling,Dynamic Job Scheduling>>.

@@ -55,7 +55,6 @@ import org.grails.plugins.web.taglib.UrlMappingTagLib
 import org.grails.plugins.web.taglib.ValidationTagLib
 import org.grails.spring.RuntimeSpringConfiguration
 import org.grails.taglib.TagLibraryLookup
-import org.grails.taglib.TagLibraryMetaUtils
 import org.grails.web.errors.ErrorsViewStackTracePrinter
 import org.grails.web.gsp.GroovyPagesTemplateRenderer
 import org.grails.web.gsp.io.CachingGrailsConventionGroovyPageLocator
@@ -326,8 +325,9 @@ class GroovyPagesGrailsPlugin extends Plugin {
                 // The tag library lookup class caches 'tag -> taglib class'
                 // so we need to update it now.
                 def lookup = applicationContext.getBean('gspTagLibraryLookup', TagLibraryLookup)
+                // Registering with the lookup is enough: tags are resolved through it rather than
+                // installed onto each tag library's metaclass.
                 lookup.registerTagLib(taglibClass)
-                TagLibraryMetaUtils.enhanceTagLibMetaClass(taglibClass, lookup)
             }
         }
         // clear uri cache after changes

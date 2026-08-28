@@ -67,4 +67,11 @@ tasks.withType(Test).configureEach {
     }
     // Used in the TCK test to selectively enable/disable tests
     systemProperty('mongodb.gorm.suite', 'true')
+
+    // The version the build asks for reaches the Gradle JVM as a project property and stops there,
+    // while the test reads a system property: without this a matrix asking for one version and a
+    // test defaulting to another agree only by accident. CI passes -PmongodbContainerVersion.
+    if (rootProject.hasProperty('mongodbContainerVersion')) {
+        systemProperty('mongodbContainerVersion', rootProject.property('mongodbContainerVersion'))
+    }
 }

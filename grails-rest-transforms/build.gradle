@@ -52,6 +52,7 @@ dependencies {
     }
     implementation 'com.github.ben-manes.caffeine:caffeine'
 
+    testImplementation testFixtures(project(':grails-web-common'))
     testImplementation project(':grails-url-mappings')
     testImplementation project(':grails-test-suite-base')
 
@@ -59,9 +60,6 @@ dependencies {
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
     compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
-    compileOnly 'org.springframework:spring-test', {
-        // MockHttpServletRequest/Response/Context used in many classes
-    }
 
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
     testImplementation 'org.springframework:spring-test'

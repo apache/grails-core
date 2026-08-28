@@ -1105,6 +1105,66 @@ include::mail/mailAttachments.adoc[]
 
 include::mail/mailTesting.adoc[]
 
+[[backgroundJobs]]
+== Background Jobs
+
+include::backgroundJobs.adoc[]
+
+[[backgroundJobsBasic]]
+=== Basic Scheduling
+
+include::backgroundJobs/backgroundJobsBasic.adoc[]
+
+[[backgroundJobsAdvanced]]
+=== Advanced Scheduling
+
+include::backgroundJobs/backgroundJobsAdvanced.adoc[]
+
+[[quartzInstallation]]
+==== Installation
+
+include::backgroundJobs/backgroundJobsAdvanced/quartzInstallation.adoc[]
+
+[[quartzScheduling]]
+==== Writing Jobs
+
+include::backgroundJobs/backgroundJobsAdvanced/quartzScheduling.adoc[]
+
+[[quartzTriggers]]
+==== Triggers
+
+include::backgroundJobs/backgroundJobsAdvanced/quartzTriggers.adoc[]
+
+[[quartzJobProperties]]
+==== Job Properties
+
+include::backgroundJobs/backgroundJobsAdvanced/quartzJobProperties.adoc[]
+
+[[quartzDynamicScheduling]]
+==== Dynamic Job Scheduling
+
+include::backgroundJobs/backgroundJobsAdvanced/quartzDynamicScheduling.adoc[]
+
+[[quartzJobManagerService]]
+==== Managing Jobs at Runtime
+
+include::backgroundJobs/backgroundJobsAdvanced/quartzJobManagerService.adoc[]
+
+[[quartzConfiguration]]
+==== Configuration
+
+include::backgroundJobs/backgroundJobsAdvanced/quartzConfiguration.adoc[]
+
+[[quartzClustering]]
+==== Clustering
+
+include::backgroundJobs/backgroundJobsAdvanced/quartzClustering.adoc[]
+
+[[quartzUsefulLinks]]
+==== Useful Links
+
+include::backgroundJobs/backgroundJobsAdvanced/quartzUsefulLinks.adoc[]
+
 [[redis]]
 == Redis
 
@@ -1355,6 +1415,11 @@ include::ref/Command Line/create-integration-test.adoc[]
 ==== create-interceptor
 
 include::ref/Command Line/create-interceptor.adoc[]
+
+[[ref-command-line-create-job]]
+==== create-job
+
+include::ref/Command Line/create-job.adoc[]
 
 [[ref-command-line-create-plugin]]
 ==== create-plugin
@@ -2602,3 +2667,23 @@ include::ref/Tags/uploadForm.adoc[]
 ==== while
 
 include::ref/Tags/while.adoc[]
+
+[[ref-triggers]]
+=== Triggers
+
+include::ref/Triggers.adoc[]
+
+[[ref-triggers-cron]]
+==== cron
+
+include::ref/Triggers/cron.adoc[]
+
+[[ref-triggers-custom]]
+==== custom
+
+include::ref/Triggers/custom.adoc[]
+
+[[ref-triggers-simple]]
+==== simple
+
+include::ref/Triggers/simple.adoc[]

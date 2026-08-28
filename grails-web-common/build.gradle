@@ -20,6 +20,7 @@
 plugins {
     id 'groovy'
     id 'java-library'
+    id 'java-test-fixtures'
     id 'project-report'
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
@@ -37,31 +38,25 @@ group = 'org.apache.grails.web'
 dependencies {
 
     implementation platform(project(':grails-bom'))
+    testFixturesImplementation platform(project(':grails-bom'))
 
     api project(':grails-core'), {
         exclude group:'org.apache.grails', module:'grails-spring'
     }
     api project(':grails-databinding-core')
     api project(':grails-encoder')
-    compileOnly 'org.apache.grails.views:grails-gsp-core', {
-        exclude group:'org.apache.grails', module: 'grails-encoder'
-        exclude group:'org.apache.grails', module: 'grails-core'
+    api project(':grails-gsp-core'), {
+        // api: ResourceAwareTemplateEngine
     }
 
     api 'org.apache.groovy:groovy'
     api 'org.apache.groovy:groovy-templates'
-    compileOnly 'jakarta.servlet:jakarta.servlet-api'
-    testCompileOnly 'org.springframework:spring-test'
 
     api 'org.springframework:spring-webmvc'
     api 'org.springframework:spring-context-support'
     implementation 'com.github.ben-manes.caffeine:caffeine'
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
-    compileOnly 'org.springframework:spring-test', {
-        // MockHttpServletRequest/Response/Context used in many classes
-    }
-
     compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
@@ -80,6 +75,9 @@ dependencies {
     // Testing
     testImplementation 'org.slf4j:slf4j-simple'
     testImplementation 'org.spockframework:spock-core'
+
+    testFixturesApi 'jakarta.servlet:jakarta.servlet-api'
+    testFixturesApi 'org.springframework:spring-test'
 }
 
 apply {
