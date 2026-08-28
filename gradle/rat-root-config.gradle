@@ -125,6 +125,7 @@ tasks.named('rat') {
             'grails-data-hibernate7/dbmigration-core/src/test/java/liquibase/ext/hibernate/database/**',
             'grails-data-hibernate7/dbmigration-core/src/test/java/liquibase/ext/hibernate/snapshot/HibernateColumnSnapshotGeneratorTest.java',
             'grails-data-hibernate7/dbmigration-core/src/test/java/liquibase/harness/**',
+            'grails-forge/grails-forge-web-netty/aws/Procfile', // Elastic Beanstalk Procfile cannot contain comments
             'grails-forge/**/src/main/resources/**', // src/main/resources are included in generated application and should not include a license
             'grails-forge/**/src/test/resources/**', // src/test/resources are used in tests against files included in generated application and should not include a license
             'grails-gradle/**/build/**', // grails-gradle does not have a build package name so exclude any build directories

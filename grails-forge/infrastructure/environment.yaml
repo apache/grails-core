@@ -1,0 +1,291 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements. See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License. You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+AWSTemplateFormatVersion: '2010-09-09'
+Description: One Grails Forge Elastic Beanstalk API environment behind the shared ALB.
+
+Parameters:
+  SharedStackName:
+    Type: String
+    Default: grails-forge-shared
+    Description: Name of the shared Grails Forge infrastructure stack.
+  Slot:
+    Type: String
+    AllowedValues:
+      - latest
+      - snapshot
+      - next
+      - prev
+      - prev-snapshot
+    Description: Deployment slot. One environment stack is required for each slot.
+  HostName:
+    Type: String
+    Description: Exact DNS hostname matched by the shared HTTPS listener rule.
+  CorsAllowedOrigin:
+    Type: String
+    Default: https://start.grails.org
+    Description: Browser origin permitted by the API CORS policy.
+  ListenerRulePriority:
+    Type: Number
+    MinValue: 1
+    MaxValue: 50000
+    Description: Unique shared HTTPS listener rule priority for this slot.
+  InstanceSubnets:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Public instance subnets for this Elastic Beanstalk environment.
+  PlatformArn:
+    Type: String
+    Description: Required concrete Elastic Beanstalk Corretto 25 platform ARN for the selected architecture.
+  InstanceType:
+    Type: String
+    Default: t4g.small
+    Description: EC2 instance type for the API environment.
+  Architecture:
+    Type: String
+    AllowedValues:
+      - arm64
+      - x86_64
+    Default: arm64
+    Description: Instance architecture supported by PlatformArn and InstanceType.
+  MinSize:
+    Type: Number
+    Default: 1
+    MinValue: 1
+    Description: Minimum API instances.
+  MaxSize:
+    Type: Number
+    Default: 2
+    MinValue: 1
+    Description: Maximum API instances.
+  GitHubRedirectUrl:
+    Type: String
+    Default: https://start.grails.org/
+    Description: Browser redirect target for the Forge UI.
+
+Resources:
+  Environment:
+    Type: AWS::ElasticBeanstalk::Environment
+    Properties:
+      ApplicationName:
+        Fn::ImportValue:
+          Fn::Sub: ${SharedStackName}:ApplicationName
+      Description:
+        Fn::Sub: Grails Forge ${Slot} API environment.
+      EnvironmentName:
+        Fn::Sub:
+        - ${ApplicationName}-${Slot}
+        - ApplicationName:
+            Fn::ImportValue:
+              Fn::Sub: ${SharedStackName}:ApplicationName
+      PlatformArn:
+        Ref: PlatformArn
+      OptionSettings:
+        - Namespace: aws:autoscaling:asg
+          OptionName: MinSize
+          Value:
+            Fn::Sub: ${MinSize}
+        - Namespace: aws:autoscaling:asg
+          OptionName: MaxSize
+          Value:
+            Fn::Sub: ${MaxSize}
+        - Namespace: aws:autoscaling:launchconfiguration
+          OptionName: DisableDefaultEC2SecurityGroup
+          Value: 'true'
+        - Namespace: aws:autoscaling:launchconfiguration
+          OptionName: DisableIMDSv1
+          Value: 'true'
+        - Namespace: aws:autoscaling:launchconfiguration
+          OptionName: IamInstanceProfile
+          Value:
+            Fn::ImportValue:
+              Fn::Sub: ${SharedStackName}:InstanceProfileName
+        - Namespace: aws:autoscaling:launchconfiguration
+          OptionName: RootVolumeType
+          Value: gp3
+        - Namespace: aws:autoscaling:launchconfiguration
+          OptionName: SecurityGroups
+          Value:
+            Fn::ImportValue:
+              Fn::Sub: ${SharedStackName}:InstanceSecurityGroupId
+        - Namespace: aws:autoscaling:trigger
+          OptionName: BreachDuration
+          Value: '5'
+        - Namespace: aws:autoscaling:trigger
+          OptionName: LowerThreshold
+          Value: '20'
+        - Namespace: aws:autoscaling:trigger
+          OptionName: MeasureName
+          Value: CPUUtilization
+        - Namespace: aws:autoscaling:trigger
+          OptionName: Period
+          Value: '1'
+        - Namespace: aws:autoscaling:trigger
+          OptionName: Statistic
+          Value: Average
+        - Namespace: aws:autoscaling:trigger
+          OptionName: Unit
+          Value: Percent
+        - Namespace: aws:autoscaling:trigger
+          OptionName: UpperThreshold
+          Value: '70'
+        - Namespace: aws:ec2:vpc
+          OptionName: AssociatePublicIpAddress
+          Value: 'true'
+        - Namespace: aws:ec2:vpc
+          OptionName: Subnets
+          Value:
+            Fn::Join:
+              - ','
+              - Ref: InstanceSubnets
+        - Namespace: aws:ec2:vpc
+          OptionName: VPCId
+          Value:
+            Fn::ImportValue:
+              Fn::Sub: ${SharedStackName}:VpcId
+        - Namespace: aws:ec2:instances
+          OptionName: InstanceTypes
+          Value:
+            Ref: InstanceType
+        - Namespace: aws:ec2:instances
+          OptionName: SupportedArchitectures
+          Value:
+            Ref: Architecture
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: CORS_ALLOWED_ORIGIN
+          Value:
+            Ref: CorsAllowedOrigin
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: CORS_ALLOWED_ORIGIN_APACHE
+          Value: https://grails.apache.org
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: GITHUB_REDIRECT_URL
+          Value:
+            Ref: GitHubRedirectUrl
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: HOSTNAME
+          Value:
+            Ref: HostName
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: MICRONAUT_ENV_DEDUCTION
+          Value: 'false'
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: MICRONAUT_ENVIRONMENTS
+          Value: aws
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: MICRONAUT_SERVER_PORT
+          Value: '5000'
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: SERVER_PORT
+          Value: '5000'
+        - Namespace: aws:elasticbeanstalk:cloudwatch:logs
+          OptionName: DeleteOnTerminate
+          Value: 'true'
+        - Namespace: aws:elasticbeanstalk:cloudwatch:logs
+          OptionName: RetentionInDays
+          Value: '14'
+        - Namespace: aws:elasticbeanstalk:cloudwatch:logs
+          OptionName: StreamLogs
+          Value: 'true'
+        - Namespace: aws:elasticbeanstalk:command
+          OptionName: DeploymentPolicy
+          Value: Immutable
+        - Namespace: aws:elasticbeanstalk:environment
+          OptionName: EnvironmentType
+          Value: LoadBalanced
+        - Namespace: aws:elasticbeanstalk:environment
+          OptionName: LoadBalancerType
+          Value: application
+        - Namespace: aws:elasticbeanstalk:environment
+          OptionName: LoadBalancerIsShared
+          Value: 'true'
+        - Namespace: aws:elasticbeanstalk:environment
+          OptionName: ServiceRole
+          Value:
+            Fn::ImportValue:
+              Fn::Sub: ${SharedStackName}:ServiceRoleArn
+        - Namespace: aws:elasticbeanstalk:environment:process:default
+          OptionName: HealthCheckPath
+          Value: /versions
+        - Namespace: aws:elasticbeanstalk:environment:process:default
+          OptionName: MatcherHTTPCode
+          Value: '200'
+        - Namespace: aws:elasticbeanstalk:environment:process:default
+          OptionName: Port
+          Value: '80'
+        - Namespace: aws:elasticbeanstalk:environment:process:default
+          OptionName: Protocol
+          Value: HTTP
+        - Namespace: aws:elasticbeanstalk:healthreporting:system
+          OptionName: SystemType
+          Value: enhanced
+        - Namespace: aws:elasticbeanstalk:managedactions
+          OptionName: ManagedActionsEnabled
+          Value: 'true'
+        - Namespace: aws:elasticbeanstalk:managedactions
+          OptionName: PreferredStartTime
+          Value: 'SUN:09:00'
+        - Namespace: aws:elasticbeanstalk:managedactions
+          OptionName: ServiceRoleForManagedUpdates
+          Value:
+            Fn::ImportValue:
+              Fn::Sub: ${SharedStackName}:ServiceRoleArn
+        - Namespace: aws:elasticbeanstalk:managedactions:platformupdate
+          OptionName: UpdateLevel
+          Value: minor
+        - Namespace: aws:elbv2:listener:443
+          OptionName: Rules
+          Value: HostRule
+        - Namespace: aws:elbv2:listenerrule:HostRule
+          OptionName: HostHeaders
+          Value:
+            Ref: HostName
+        - Namespace: aws:elbv2:listenerrule:HostRule
+          OptionName: Priority
+          Value:
+            Fn::Sub: ${ListenerRulePriority}
+        - Namespace: aws:elbv2:listenerrule:HostRule
+          OptionName: Process
+          Value: default
+        - Namespace: aws:elbv2:loadbalancer
+          OptionName: SharedLoadBalancer
+          Value:
+            Fn::ImportValue:
+              Fn::Sub: ${SharedStackName}:SharedLoadBalancerArn
+
+Outputs:
+  EnvironmentName:
+    Description: Elastic Beanstalk environment name for this slot.
+    Value:
+      Ref: Environment
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}:EnvironmentName
+  URL:
+    Description: Elastic Beanstalk endpoint URL for this slot.
+    Value:
+      Fn::GetAtt:
+        - Environment
+        - EndpointURL
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}:URL
+  HostName:
+    Description: Public hostname routed to this environment.
+    Value:
+      Ref: HostName
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}:HostName
