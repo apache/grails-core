@@ -20,6 +20,8 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.tests.HibernateGormDatastoreSpec
+import org.apache.grails.data.testing.tck.domains.ChildEntity
+import org.apache.grails.data.testing.tck.domains.TestEntity
 import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
 import org.hibernate.generator.GeneratorCreationContext
 import org.hibernate.mapping.BasicValue
@@ -32,6 +34,11 @@ import spock.lang.Subject
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIdentityGenerator
 
 class GrailsIdentityGeneratorSpec extends HibernateGormDatastoreSpec {
+
+    @Override
+    void setupSpec() {
+        manager.registerDomainClasses(TestEntity, ChildEntity)
+    }
 
     def "should configure identity generator and set column as identity"() {
         given:

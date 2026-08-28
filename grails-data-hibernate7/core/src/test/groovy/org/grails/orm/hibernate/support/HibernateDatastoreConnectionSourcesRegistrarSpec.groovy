@@ -30,6 +30,18 @@ import javax.sql.DataSource
 
 class HibernateDatastoreConnectionSourcesRegistrarSpec extends HibernateGormDatastoreSpec {
 
+    /**
+     * What a definition says it will produce, without producing it.
+     *
+     * <p>These are factory beans, so the bean a definition stands for is the factory's type
+     * argument rather than the factory. Naming it on the definition is what lets the type be known
+     * from the definition alone -- which is what generating bean definitions as code requires, and
+     * what asking the factory would have prevented, since asking it means creating it.</p>
+     */
+    private static Class<?> produces(def definition) {
+        definition.targetType == InstanceFactoryBean ? definition.resolvableType.getGeneric(0).resolve() : null
+    }
+
     def "test postProcessBeanDefinitionRegistry registers expected beans"() {
         given:
         def registry = new DefaultListableBeanFactory()
@@ -44,28 +56,28 @@ class HibernateDatastoreConnectionSourcesRegistrarSpec extends HibernateGormData
         registry.containsBeanDefinition(Settings.SETTING_DATASOURCE)
         def defaultDs = registry.getBeanDefinition(Settings.SETTING_DATASOURCE)
         defaultDs.beanClass == InstanceFactoryBean
-        defaultDs.targetType == DataSource
+        produces(defaultDs) == DataSource
         defaultDs.constructorArgumentValues.genericArgumentValues[0].value == "#{dataSourceConnectionSourceFactory.create('dataSource', environment).source}"
 
         // Secondary dataSource bean
         registry.containsBeanDefinition("${Settings.SETTING_DATASOURCE}_readOnly")
         def readOnlyDs = registry.getBeanDefinition("${Settings.SETTING_DATASOURCE}_readOnly")
         readOnlyDs.beanClass == InstanceFactoryBean
-        readOnlyDs.targetType == DataSource
+        produces(readOnlyDs) == DataSource
         readOnlyDs.constructorArgumentValues.genericArgumentValues[0].value == "#{dataSourceConnectionSourceFactory.create('readOnly', environment).source}"
 
         // Secondary sessionFactory bean
         registry.containsBeanDefinition("sessionFactory_readOnly")
         def readOnlySf = registry.getBeanDefinition("sessionFactory_readOnly")
         readOnlySf.beanClass == InstanceFactoryBean
-        readOnlySf.targetType == SessionFactory
+        produces(readOnlySf) == SessionFactory
         readOnlySf.constructorArgumentValues.genericArgumentValues[0].value == "#{hibernateDatastore.getDatastoreForConnection('readOnly').sessionFactory}"
 
         // Secondary transactionManager bean
         registry.containsBeanDefinition("transactionManager_readOnly")
         def readOnlyTm = registry.getBeanDefinition("transactionManager_readOnly")
         readOnlyTm.beanClass == InstanceFactoryBean
-        readOnlyTm.targetType == PlatformTransactionManager
+        produces(readOnlyTm) == PlatformTransactionManager
         readOnlyTm.constructorArgumentValues.genericArgumentValues[0].value == "#{hibernateDatastore.getDatastoreForConnection('readOnly').transactionManager}"
 
         // Default sessionFactory and transactionManager should NOT be registered by this registrar

@@ -1050,6 +1050,38 @@ new SomeClass()
         then:
         noExceptionThrown()
     }
+
+    void "test a method redundantly re-annotated with the same annotation as the class is not double-decorated"() {
+        when: "hasLocalAnnotation(method, classAnnotation) should skip re-decorating this method"
+        def someClass = new GroovyShell().evaluate('''
+package demo
+
+    import grails.gorm.transactions.*
+    import org.springframework.transaction.support.*
+
+@Transactional
+class SomeClass {
+
+    @Transactional
+    void explicitlyAnnotated() {
+        assert TransactionSynchronizationManager.isActualTransactionActive()
+    }
+
+    void implicitlyDecorated() {
+        assert TransactionSynchronizationManager.isActualTransactionActive()
+    }
+}
+new SomeClass()
+''')
+
+        final transactionManager = getPlatformTransactionManager()
+        someClass.transactionManager = transactionManager
+        someClass.explicitlyAnnotated()
+        someClass.implicitlyDecorated()
+
+        then:
+        noExceptionThrown()
+    }
 }
 
 

@@ -85,6 +85,13 @@ class PagedResultSpec extends GrailsDataTckSpec {
         results.totalCount == 0
     }
 
+    @IgnoreIf({
+        // Unlike list(), Neo4j's criteria query has no implicit ORDER BY, so a criteria-based
+        // page with no explicit sort is not guaranteed to return rows in insertion order. Neo4j's
+        // own adapted copy of this test (grails.gorm.tests.PagedResultSpec in grails-data-neo4j-core)
+        // covers the same scenario with an explicit sort added for exactly this reason.
+        Boolean.getBoolean('neo4j.gorm.suite')
+    })
     void 'Test that a paged result list is returned from the critera with pagination params'() {
         given: 'Some people'
         createPeople()

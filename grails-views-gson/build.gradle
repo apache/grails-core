@@ -18,6 +18,7 @@
  */
 
 plugins {
+    id 'java-test-fixtures'
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.gradle.grails-plugin'
@@ -38,6 +39,7 @@ ext {
 
 dependencies {
     implementation platform(project(':grails-bom'))
+    testFixturesImplementation platform(project(':grails-bom'))
 
     api project(':grails-views-core') // Used in public API
     api project(':grails-rest-transforms') // Used in public API

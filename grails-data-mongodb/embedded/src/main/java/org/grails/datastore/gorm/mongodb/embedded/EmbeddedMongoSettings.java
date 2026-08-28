@@ -18,11 +18,12 @@
  */
 package org.grails.datastore.gorm.mongodb.embedded;
 
+import java.util.Objects;
+
 /**
  * What to start a server with. Not every backend honours every setting; one that cannot
  * says so rather than starting a server that quietly behaves differently than asked.
  *
- * @author Grails
  * @since 8.0
  */
 public final class EmbeddedMongoSettings {
@@ -33,10 +34,27 @@ public final class EmbeddedMongoSettings {
 
     private final String databaseDir;
 
+    private final String replicaSet;
+
     public EmbeddedMongoSettings(int port, String version, String databaseDir) {
+        this(port, version, databaseDir, null);
+    }
+
+    public EmbeddedMongoSettings(int port, String version, String databaseDir, String replicaSet) {
         this.port = port;
-        this.version = version;
-        this.databaseDir = databaseDir;
+        this.version = unset(version);
+        this.databaseDir = unset(databaseDir);
+        this.replicaSet = unset(replicaSet);
+    }
+
+    /**
+     * A setting written as empty is a setting that was not made - {@code database-dir:} with nothing
+     * after it is how a property ends up as an empty string rather than absent. They describe the
+     * same server, so they are the same settings, which matters where two of them are compared to
+     * decide whether the server already running is the one being asked for.
+     */
+    private static String unset(String value) {
+        return value == null || value.isEmpty() ? null : value;
     }
 
     /**
@@ -61,9 +79,54 @@ public final class EmbeddedMongoSettings {
     }
 
     /**
+     * @return the name of the replica set to run as, or null for a standalone server
+     */
+    public String getReplicaSet() {
+        return this.replicaSet;
+    }
+
+    /**
+     * @return whether the server is meant to be a replica set, which is what a transaction,
+     *         a change stream and a causally consistent read all need
+     */
+    public boolean isReplicaSet() {
+        return this.replicaSet != null && !this.replicaSet.isEmpty();
+    }
+
+    /**
      * @return whether the data is meant to outlive the server
      */
     public boolean isPersistent() {
         return this.databaseDir != null && !this.databaseDir.isEmpty();
+    }
+
+    /**
+     * Two settings are the same when they describe the same server, which is how a restarted
+     * application decides whether the server already running is the one it asked for.
+     */
+    @Override
+    public boolean equals(Object other) {
+        if (this == other) {
+            return true;
+        }
+        if (!(other instanceof EmbeddedMongoSettings)) {
+            return false;
+        }
+        EmbeddedMongoSettings that = (EmbeddedMongoSettings) other;
+        return this.port == that.port &&
+                Objects.equals(this.version, that.version) &&
+                Objects.equals(this.databaseDir, that.databaseDir) &&
+                Objects.equals(this.replicaSet, that.replicaSet);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(this.port, this.version, this.databaseDir, this.replicaSet);
+    }
+
+    @Override
+    public String toString() {
+        return "port=" + this.port + ", version=" + this.version +
+                ", database-dir=" + this.databaseDir + ", replica-set=" + this.replicaSet;
     }
 }

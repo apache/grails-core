@@ -24,7 +24,7 @@ env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   GRAILS_PUBLISH_RELEASE: 'true'
   JAVA_DISTRIBUTION: liberica
-  JAVA_VERSION: 21.0.7 # this must be a specific version for reproducible builds, keep it synced with .sdkmanrc and verification container
+  JAVA_VERSION: 21.0.12 # this must be a specific version for reproducible builds, keep it synced with .sdkmanrc and verification container
   JAVA_VERSION_MICRONAUT: 25.0.3 # the Grails-Micronaut "island" (grails-micronaut, grails-micronaut-bom) is built against Micronaut 5 which targets JVM 25 bytecode. Keep this synced with the secondary JDK installed in etc/bin/Dockerfile and the JDK_25_HOME branch in etc/bin/verify-reproducible.sh.
   PROJECT_DESC: >
     Grails is a powerful Groovy-based web application framework for the JVM,

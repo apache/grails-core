@@ -1,0 +1,48 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+Advanced scheduling in Grails is provided by the Quartz plugin, which adds a `Job` artefact type backed by the https://www.quartz-scheduler.org/[Quartz Enterprise Job Scheduler].
+
+Use it when you have a scheduling requirement Spring's `@Scheduled` cannot meet: a schedule that changes at runtime, a schedule that must survive a restart, jobs that operators need to pause and resume, work that must be recovered after a crash — or, most commonly, a deployment of more than one instance, where the schedule must fire exactly once across the cluster.
+
+IMPORTANT: If your application runs as a single instance and its schedules are fixed, you do not need this section. Spring's `@Scheduled` covers that case with no dependencies and nothing to configure — see xref:backgroundJobs.adoc#backgroundJobsBasic[Basic Scheduling].
+
+==== Clustering is opt-in
+
+Adding the plugin does *not* make your schedules cluster-safe.
+
+Out of the box Quartz uses its in-memory `RAMJobStore`: the schedule is rebuilt from your source at every startup and lives entirely inside a single process, with no knowledge of any other instance. In that default configuration Quartz duplicates work across instances exactly as `@Scheduled` does.
+
+Clustering has to be turned on deliberately, and it has three requirements — a JDBC job store, a shared set of Quartz tables, and explicit clustering properties. All of it is covered in <<quartzClustering,Clustering>>. *If you adopted this plugin in order to run on several instances, that section is the part that actually solves your problem.*
+
+==== What the plugin provides
+
+A job is an artefact: a class in `grails-app/jobs` whose name ends in `Job` and which declares an `execute` method. The plugin discovers those classes, builds the Quartz `JobDetail` and `Trigger` objects described by their `triggers` block, and registers them with a `Scheduler` bean named `quartzScheduler`.
+
+* A `triggers` DSL supporting <<quartzTriggers,simple, cron, and custom triggers>>, with multiple triggers per job.
+* <<quartzDynamicScheduling,Dynamic scheduling>> — schedule, reschedule, unschedule, and fire jobs at runtime from anywhere in your application.
+* A <<quartzJobManagerService,`jobManagerService`>> for inspecting, pausing, and resuming jobs and triggers.
+* Optional JDBC persistence, so a schedule survives a restart.
+* Optional <<quartzClustering,clustering>>, so a trigger fires exactly once across a multi-instance deployment.
+* Recovery of jobs that were executing when an instance died.
+* Binding of a Hibernate `Session` to each job's execution thread, so jobs can use GORM the same way a controller or service does.
+
+Nothing prevents using Quartz and `@Scheduled` in the same application — they are independent schedulers — but a given piece of work should belong to exactly one of them.
+
+Start with <<quartzInstallation,Installation>>.

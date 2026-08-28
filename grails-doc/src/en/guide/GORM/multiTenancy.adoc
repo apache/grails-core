@@ -1,0 +1,129 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+A multi-tenant application serves several tenants from one deployment. GORM resolves the tenant for each
+operation from the tenant bound to the current thread, so the entry points below are how application code
+says "run this work as tenant X".
+
+=== Running Work As a Tenant
+
+`grails.gorm.multitenancy.Tenants` is the entry point.
+
+==== withId
+
+`Tenants.withId(tenantId) { ... }` runs the closure as the given tenant *and manages the session for it*: a
+session is opened for the scope of the call and closed on exit. In `DATABASE` mode that is also what selects
+the tenant's connection, so this is the method to reach for in almost all application code.
+
+[source,groovy]
+----
+import grails.gorm.multitenancy.Tenants
+
+Tenants.withId('acme') {
+    new Person(name: 'Fred').save()
+    Person.count()
+}
+----
+
+The closure may take up to two parameters — the tenant id and the session:
+
+[source,groovy]
+----
+Tenants.withId('acme') { String tenantId -> Person.count() }
+Tenants.withId('acme') { String tenantId, session -> Person.count() }
+----
+
+An overload selects which datastore the tenant applies to by the domain class that maps to it, useful when an
+application has more than one datastore:
+
+[source,groovy]
+----
+Tenants.withId(Person, 'acme') { Person.count() }
+----
+
+==== withTenant
+
+`Tenants.withTenant(tenantId) { ... }` binds the tenant to the current thread and nothing more. It opens no
+session and manages no connection — the closure runs in whatever session the caller has already established,
+and the caller remains responsible for opening and closing it.
+
+[source,groovy]
+----
+Person.withNewSession {
+    Tenants.withTenant('acme') {
+        Person.count()
+    }
+}
+----
+
+Reach for `withTenant` when a session already exists and you only need to change which tenant the enclosed
+work resolves to; reach for `withId` when the work needs a session of its own. As with `withId`, a
+`withTenant(Class, tenantId, closure)` overload picks the datastore by domain class.
+
+==== Other Entry Points
+
+[cols="1,3"]
+|===
+|Method |Description
+
+|`Tenants.currentId()`
+|The tenant id currently in effect, resolved from the bound tenant or, failing that, the configured tenant resolver. Throws if none can be found.
+
+|`Tenants.withCurrent { ... }`
+|Runs the closure under the tenant `currentId()` resolves to.
+
+|`Tenants.withoutId { ... }`
+|Runs the closure with no tenant. In `DATABASE` mode this targets the default data source; in the shared-connection modes it drops the tenant filter from queries. Use with care — it sees every tenant's data.
+
+|`Tenants.eachTenant { ... }`
+|Runs the closure once per tenant.
+|===
+
+=== Reading the Bound Tenant
+
+`grails.gorm.multitenancy.CurrentTenantHolder` holds the tenant bound to the current thread. A thread can
+hold a different tenant for each datastore in play, so lookups are scoped by datastore:
+
+[source,groovy]
+----
+import grails.gorm.multitenancy.CurrentTenantHolder
+
+Serializable tenantId = CurrentTenantHolder.get(datastore)
+----
+
+`get()` without a datastore returns the bound tenant when the answer is unambiguous, `null` when no tenant is
+bound, and throws `TenantException` when different datastores hold different tenants — returning an arbitrary
+one of them is how cross-tenant reads and writes happen. Prefer `get(Datastore)`.
+
+The remaining methods bind and unbind:
+
+[source,groovy]
+----
+CurrentTenantHolder.set(datastore, 'acme')
+CurrentTenantHolder.remove(datastore)
+
+CurrentTenantHolder.withTenant(datastore, 'acme') { /* bound for this closure only */ }
+CurrentTenantHolder.withoutTenant(datastore) { /* no tenant for this closure only */ }
+----
+
+Bindings may also be made against a datastore *type* rather than an instance; a binding for a specific
+instance wins over one for its type.
+
+TIP: Prefer `Tenants` in application code. `CurrentTenantHolder` is the lower-level thread binding that
+`Tenants` is built on, and is useful mainly when integrating with code that manages sessions itself.

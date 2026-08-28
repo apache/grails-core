@@ -603,7 +603,7 @@ the following workflows:
 2. `codestyle.yml` - Runs checkstyle on our build to ensure code style requirements are met against any submitted code.
 3. `forge-*.yml` - Workflows to build & publish our public App Generation website.
 4. `gradle.yml` - Our main CI workflow & snapshot publishing.
-5. `groovy-joint-workflow.yml` - A workflow that runs with the latest snapshot of Groovy to ensure we are forward
+5. `groovy-snapshot-canary.yml` - A workflow that runs with the latest snapshot of Groovy to ensure we are forward
    compatible and give the Groovy team early feedback.
 6. `rat.yml` - A workflow that runs the Apache RAT license audit to ensure license compliance. We use the Gradle plugin
    org.nosphere.apache.rat` to perform the audit.

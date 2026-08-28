@@ -47,7 +47,14 @@ ext {
     // needing --rerun-tasks. Useful for repeatedly running the same test command while
     // chasing flaky tests across runs.
     doNotCacheTests = System.getenv('DO_NOT_CACHE_TESTS')?.toBoolean()
-    configuredTestParallel = findProperty('maxTestParallel') as Integer ?: (isCiBuild ? 4 : Runtime.runtime.availableProcessors() * 3 / 4 as int ?: 1)
+    // availableProcessors() reports LOGICAL processors: SMT threads on x64, and on Apple silicon
+    // every efficiency core as well as every performance core. Taking 3/4 of that therefore
+    // asked for more concurrent Grails/Spring test JVMs than the machine has real capacity for
+    // (each fork also holds a 1G heap, and the mongodb, redis and geb suites start a Docker
+    // container per fork). Half is the conservative fraction. CI keeps its existing budget, so
+    // this does not reduce CI fork counts - though CI forks do see fewer processors, below.
+    configuredTestParallel = findProperty('maxTestParallel') as Integer ?:
+            (isCiBuild ? 4 : Math.max(1, (Runtime.runtime.availableProcessors() / 2) as int))
     excludeUnusedTransDeps = findProperty('excludeUnusedTransDeps')
 
     testProjectsStartWith = [
@@ -60,7 +67,52 @@ ext {
     profileProjects = [ /* Will be populated by subprojects loop below */]
 }
 
+/**
+ * Tells a forked test JVM how many processors it may size its GC and JIT thread pools from.
+ *
+ * Every forked JVM otherwise sizes those pools for the WHOLE machine, because no fork knows the
+ * others exist. On a 20-processor host that is 15 ParallelGCThreads + 4 ConcGCThreads + 12
+ * CICompilerCount = 31 threads per fork before a single test runs, so N concurrent forks become
+ * N*31 threads competing for the same cores. Gradle cannot see this: it charges each fork one
+ * worker lease, as though a fork were a single thread.
+ *
+ * The share is availableProcessors / maxWorkerCount, i.e. the BUILD-WIDE worker limit, because
+ * that - not any one task's maxParallelForks - is what bounds how many forks can run at once.
+ * With org.gradle.parallel=true, Test tasks from several projects execute concurrently, so a
+ * per-task share would still oversubscribe the machine.
+ *
+ * Supplied as an argument provider rather than through jvmArgs because several modules assign
+ * jvmArgs wholesale in their own build scripts, which would discard anything added here first.
+ */
+final class ActiveProcessorCountArgumentProvider implements CommandLineArgumentProvider {
+
+    @Input
+    final int processorCount
+
+    ActiveProcessorCountArgumentProvider(int availableProcessorCount, int maxWorkerCount) {
+        // Floor of 2: at ActiveProcessorCount=1 HotSpot's ergonomics select Serial GC, which
+        // costs more on a 1G test heap than the contention it saves. Two keeps G1 with a
+        // bounded worker count.
+        //
+        // That floor also means -PmaxTestParallel=1 still advertises 2 processors to the
+        // single fork whenever maxWorkerCount is larger than availableProcessors/2 (the
+        // usual local case: org.gradle.parallel=true with no org.gradle.workers.max).
+        // It is not a "give the one fork the whole machine" switch.
+        this.processorCount = Math.max(2, (availableProcessorCount / Math.max(1, maxWorkerCount)) as int)
+    }
+
+    @Override
+    Iterable<String> asArguments() {
+        ["-XX:ActiveProcessorCount=$processorCount".toString()]
+    }
+}
+
 subprojects {
+
+    tasks.withType(Test).configureEach { testTask ->
+        testTask.jvmArgumentProviders.add(new ActiveProcessorCountArgumentProvider(
+                Runtime.runtime.availableProcessors(), gradle.startParameter.maxWorkerCount))
+    }
 
     for (String testPrefix : testProjectsStartWith) {
         if (name.startsWith(testPrefix)) {

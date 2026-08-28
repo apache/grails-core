@@ -31,7 +31,6 @@ import org.grails.datastore.mapping.reflect.EntityReflector;
 import org.grails.orm.hibernate.access.TraitPropertyAccessStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateAssociation;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehaviorFetcher;
 
@@ -86,8 +85,11 @@ public class PropertyBinder {
         prop.setPropertyAccessorName(accessorName);
 
         prop.setOptional(persistentProperty.isNullable());
-        if (persistentProperty instanceof Association<?> association &&
-                !(persistentProperty instanceof HibernateEnumProperty)) {
+        // No enum type is excluded here on its own account: a plain scalar enum property is never an
+        // Association, so instanceof Association<?> already excludes it. A hasMany-of-enum collection IS
+        // an Association (Basic), and CascadeBehaviorFetcher already dispatches Basic -> ALL correctly,
+        // so it must go through the same path as every other collection type.
+        if (persistentProperty instanceof Association<?> association) {
             prop.setCascade(cascadeBehaviorFetcher.getCascadeBehaviour(association));
         }
 
