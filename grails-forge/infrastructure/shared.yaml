@@ -170,6 +170,10 @@ Resources:
       Policies:
         - PolicyDocument:
             Statement:
+              - Action: elasticbeanstalk:DeleteApplicationVersion
+                Effect: Allow
+                Resource:
+                  Fn::Sub: arn:${AWS::Partition}:elasticbeanstalk:${AWS::Region}:${AWS::AccountId}:applicationversion/${ApplicationName}/*
               - Action: s3:DeleteObject
                 Effect: Allow
                 Resource:
