@@ -318,18 +318,27 @@ the date you moved the distribution artifacts and report the release.
 
 ### Deploy the release to Grails Forge
 
-Publish the released version to [Grails Forge](https://start.grails.org) using one of the [GCP Deploy Actions](https://github.com/apache/grails-core/actions) available in the `grails-core` repository.
+Publish the released version to [Grails Forge](https://start.grails.org) using [Forge - AWS Elastic Beanstalk Deploy](https://github.com/apache/grails-core/actions/workflows/forge-deploy-aws.yml).
 
-Grails Forge organizes deployments into version slots as follows:
+There is one workflow and two choices: **Use workflow from** (the maintenance branch to build) and **slot**.
 
-- **RELEASE** - Full Final Releases - https://github.com/apache/grails-core/actions/workflows/forge-deploy-release.yml
-- **NEXT** - Milestones and Release Candidate for Next Release (also Next version snapshot prior to Milestone) - https://github.com/apache/grails-core/actions/workflows/forge-deploy-next.yml
-- **SNAPSHOT** - current or next version snapshot - https://github.com/apache/grails-core/actions/workflows/forge-deploy-snapshot.yml
-- **PREV** - previous release version - https://github.com/apache/grails-core/actions/workflows/forge-deploy-prev.yml
-- **PREV-SNAPSHOT** - previous version snapshot - https://github.com/apache/grails-core/actions/workflows/forge-deploy-prev-snapshot.yml
+| Slot | Host | Typical branch |
+| --- | --- | --- |
+| `latest` | `latest.grails.org` | current release line, for example `7.2.x` |
+| `snapshot` | `snapshot.grails.org` | current snapshot line, for example `8.0.x` |
+| `next` | `next.grails.org` | milestone / RC line |
+| `prev` | `prev.grails.org` | previous release line |
+| `prev-snapshot` | `prev-snapshot.grails.org` | previous snapshot line |
 
-Use the action whose name matches the slot you want to deploy to.\
-In the **“Run workflow/Use workflow from”** dropdown, choose the release tag you just created.
+Do not select a historical git tag in **Use workflow from**. The AWS workflow file is not on old tags. Snapshot slots can deploy from the maintenance branch.
+
+A tagged release that must match an exact tag is packaged locally, then uploaded to Elastic Beanstalk. From a checkout of that tag, copy `grails-forge/grails-forge-web-netty/aws/` from the matching maintenance branch, then from `grails-forge` run:
+
+```bash
+./gradlew grails-forge-web-netty:awsElasticBeanstalk
+```
+
+The bundle is `grails-forge-web-netty/build/distributions/grails-forge-web-netty-aws.zip`. See [AWS Elastic Beanstalk Deployment Runbook](grails-forge/docs/aws-elastic-beanstalk.md).
 
 (The `release` job in the `Release` workflow includes a step titled `🚀 MANUAL - Deploy Grails Forge` that serves as a reminder to perform the deployment described above.)
 
@@ -347,7 +356,7 @@ version from Maven Central.
 
 The last step in the `grails-core` release workflow is to run the `Close Release` step.  This will create a merge branch for the original tag with version number and then open a PR to merge back into the next branch.  You will need to merge this PR into the branch after correcting any merge conflict.
 
-After this PR is merged, deploy the new SNAPSHOT to Forge via: https://github.com/apache/grails-core/actions/workflows/forge-deploy-snapshot.yml
+After this PR is merged, deploy the new SNAPSHOT to Forge via https://github.com/apache/grails-core/actions/workflows/forge-deploy-aws.yml (Use workflow from the snapshot branch, slot `snapshot`).
 
 ### Update the `grails-static-website`
 
@@ -603,7 +612,7 @@ the following workflows:
 2. `codestyle.yml` - Runs checkstyle on our build to ensure code style requirements are met against any submitted code.
 3. `forge-*.yml` - Workflows to build & publish our public App Generation website.
 4. `gradle.yml` - Our main CI workflow & snapshot publishing.
-5. `groovy-joint-workflow.yml` - A workflow that runs with the latest snapshot of Groovy to ensure we are forward
+5. `groovy-snapshot-canary.yml` - A workflow that runs with the latest snapshot of Groovy to ensure we are forward
    compatible and give the Groovy team early feedback.
 6. `rat.yml` - A workflow that runs the Apache RAT license audit to ensure license compliance. We use the Gradle plugin
    org.nosphere.apache.rat` to perform the audit.
