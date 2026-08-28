@@ -72,7 +72,7 @@ Repeat the environment deployment for `snapshot`, `next`, `prev`, and `prev-snap
 
 Do not create a GitHub OAuth app secret or pass OAuth client credentials to these stacks. The start.grails.org UI removed Push to GitHub, and the unused server-side create/OAuth integration is not deployed. Analytics is also omitted.
 
-Current DNS cutover is manual in Cloudflare. After all five environments are healthy, retrieve the exported ALB DNS name and create DNS-only CNAME records for `latest.grails.org`, `snapshot.grails.org`, `next.grails.org`, `prev.grails.org`, and `prev-snapshot.grails.org` that point to it. Keep Cloudflare proxying disabled during validation. Do not create or modify `start.grails.org`.
+Cloudflare DNS-only CNAME records for `latest.grails.org`, `snapshot.grails.org`, `next.grails.org`, `prev.grails.org`, and `prev-snapshot.grails.org` already point at the shared ALB. Do not proxy those records. Do not create or modify `start.grails.org`.
 
 ```bash
 aws cloudformation list-exports \

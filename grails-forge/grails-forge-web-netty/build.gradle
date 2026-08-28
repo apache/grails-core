@@ -22,6 +22,7 @@ plugins {
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'io.micronaut.application' version "$micronautApplicationPluginVersion"
+    id 'com.gradleup.shadow'
 }
 
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
@@ -144,11 +145,6 @@ TaskProvider<Zip> awsElasticBeanstalk = tasks.register('awsElasticBeanstalk', Zi
     }
     from(layout.projectDirectory.dir('aws')) {
         includeEmptyDirs = false
-        filesMatching('start.sh') {
-            filePermissions {
-                unix(0755)
-            }
-        }
     }
 }
 

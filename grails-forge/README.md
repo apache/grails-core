@@ -27,31 +27,31 @@ The CLI application comes in various flavours from a universal Java applications
 If you prefer not to install an application to create Grails applications you can do so with `curl` directly from the API:
 
 ```bash
-$ curl 'https://grailsforge-latest-cjmq3uyfcq-uc.a.run.app/demo.zip' -o demo.zip
+$ curl 'https://latest.grails.org/demo.zip' -o demo.zip
 $ unzip demo.zip -d demo
 $ cd demo
 $ ./gradlew run
 ```
 
-Run `curl https://grailsforge-latest-cjmq3uyfcq-uc.a.run.app/` for more information on how to use the API or see the API documentation referenced below.
+Run `curl https://latest.grails.org/` for more information on how to use the API or see the API documentation referenced below.
 
 ## UI
 
 If you prefer a browser based user interface you can visit [Grails Forge](https://start.grails.org).
 
-The user interface is [written in React](https://github.com/apache/grails-forge-ui/tree/main/app/launch) and is a static single page application that simply interacts with the https://start.grails.org API.
+The user interface is [written in React](https://github.com/apache/grails-forge-ui/tree/main/app/launch) and is a static single page application. It lives at https://start.grails.org and calls the Forge APIs at `latest.grails.org`, `snapshot.grails.org`, `next.grails.org`, `prev.grails.org`, and `prev-snapshot.grails.org`.
 
 ## API
 
 API documentation for the production instance can be found at:
 
-* [Swagger / OpenAPI Doc](https://grailsforge-latest-cjmq3uyfcq-uc.a.run.app/swagger-ui/index.html)
-* [RAPI Doc](https://grailsforge-latest-cjmq3uyfcq-uc.a.run.app/rapidoc/index.html)
+* [Swagger / OpenAPI Doc](https://latest.grails.org/swagger-ui/index.html)
+* [RAPI Doc](https://latest.grails.org/rapidoc/index.html)
 
-API documentation for the snapshot /development instance can be found at:
+API documentation for the snapshot / development instance can be found at:
 
-* [Swagger / OpenAPI Doc](https://grailsforge-snapshot-cjmq3uyfcq-uc.a.run.app/swagger-ui/index.html)
-* [RAPI Doc](https://grailsforge-snapshot-cjmq3uyfcq-uc.a.run.app/rapidoc/index.html)
+* [Swagger / OpenAPI Doc](https://snapshot.grails.org/swagger-ui/index.html)
+* [RAPI Doc](https://snapshot.grails.org/rapidoc/index.html)
 
 ## Snapshots and Releases
 
@@ -69,12 +69,12 @@ A release is performed with the following steps:
 
 ## Distribution to AWS Elastic Beanstalk
 
-AWS migration configuration is available in this repository for five Forge API slots on separate Elastic Beanstalk environments behind one shared application load balancer. The UI remains at `https://start.grails.org`; this documentation does not claim that migration is live.
+The five Forge API slots run on AWS Elastic Beanstalk behind one shared application load balancer. The UI remains at `https://start.grails.org`.
 
-The target slots are `latest.grails.org`, `snapshot.grails.org`, `next.grails.org`, `prev.grails.org`, and `prev-snapshot.grails.org`. GitHub Actions authenticates to AWS through OIDC using the repository variable `AWS_FORGE_DEPLOY_ROLE_ARN`; it does not use static AWS access keys.
+The API hosts are `latest.grails.org`, `snapshot.grails.org`, `next.grails.org`, `prev.grails.org`, and `prev-snapshot.grails.org`. GitHub Actions authenticates to AWS through OIDC using the repository variable `AWS_FORGE_DEPLOY_ROLE_ARN`; it does not use static AWS access keys.
 
 Deployments package the normal Forge executable JAR in a ZIP source bundle. Analytics is not deployed. When its endpoint and analytics environment variables are absent, reporting is disabled without affecting application generation. The unused server-side GitHub create / OAuth integration is also omitted.
 
-For bootstrap, deployment, pre-cutover checks, DNS cutover, rollback, monitoring, and GCP decommissioning procedures, see [AWS Elastic Beanstalk Deployment Runbook](docs/aws-elastic-beanstalk.md).
+For deployment, rollback, monitoring, and GCP decommissioning, see [AWS Elastic Beanstalk Deployment Runbook](docs/aws-elastic-beanstalk.md).
 
 

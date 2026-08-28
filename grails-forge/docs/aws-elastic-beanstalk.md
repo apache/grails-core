@@ -16,7 +16,7 @@ limitations under the License.
 
 # AWS Elastic Beanstalk Deployment Runbook
 
-This runbook describes the AWS migration configuration in this repository. It is an operating procedure, not a statement that production traffic has already moved.
+This runbook describes operating the five Forge API slots on AWS Elastic Beanstalk. Public DNS for `latest.grails.org`, `snapshot.grails.org`, `next.grails.org`, `prev.grails.org`, and `prev-snapshot.grails.org` points at the shared ALB. The UI remains at `https://start.grails.org`.
 
 ## Architecture
 
@@ -131,13 +131,13 @@ From `grails-forge`, build the Elastic Beanstalk bundle with the repository task
 
 The output is `grails-forge-web-netty/build/distributions/grails-forge-web-netty-aws.zip`. Its ZIP root contains `app.jar`, `Procfile`, `start.sh`, and `.platform`. Do not create an `application.jar` archive manually. The workflow uploads this ZIP and creates a distinct immutable Elastic Beanstalk application version for the selected slot; it does not require the same artifact to be deployed to all five slots.
 
-## First Deployment Before DNS
+## GitHub Actions Deployment
 
 GitHub registers `workflow_dispatch` from the default branch. Choose **Use workflow from** as the maintenance line to build, then choose the slot. Region, stack name, and JDK are not inputs. The deploy role trusts `refs/heads/*.x` and `refs/tags/v*` in `apache/grails-core`.
 
-After the shared and five environment stacks exist, manually dispatch the workflow once per slot. The workflow reads `AWS_FORGE_DEPLOY_ROLE_ARN` as a repository variable, assumes it with GitHub OIDC, derives `<ApplicationName>-<slot>`, packages the bundle, uploads it to the shared artifact bucket, creates the application version, and waits for that version to be `Processed` before updating the environment.
+The workflow reads `AWS_FORGE_DEPLOY_ROLE_ARN` as a repository variable, assumes it with GitHub OIDC, derives `<ApplicationName>-<slot>`, packages the bundle, uploads it to the shared artifact bucket, creates the application version, and waits for that version to be `Processed` before updating the environment.
 
-Before Cloudflare cutover, the workflow first waits for the expected version label to reach `Ready` and `Green`, then smoke-tests `/versions` through the shared ALB with `curl --connect-to`, preserving the slot hostname for TLS SNI and the host-header rule. Either failure triggers rollback when a prior real Forge application version exists. Automatic rollback is unavailable only when no prior real Forge version exists, including when the current environment version is the Elastic Beanstalk Sample Application.
+It then waits for `Ready` and `Green` and smoke-tests `/versions` through the shared ALB. Either failure triggers rollback when a prior real Forge application version exists. Automatic rollback is unavailable only when no prior real Forge version exists, including when the current environment version is the Elastic Beanstalk Sample Application.
 
 Verify each environment after its workflow completes:
 
@@ -149,7 +149,7 @@ aws elasticbeanstalk describe-environments \
   --output table
 ```
 
-## Host-Header and SNI Pre-Cutover Verification
+## Host-Header and SNI Verification
 
 Get `SharedLoadBalancerDnsName` from the shared stack output. `--connect-to` reaches that ALB while preserving the slot hostname for TLS SNI and the host header.
 
@@ -163,13 +163,11 @@ curl --fail --show-error --silent \
   "https://${SLOT_HOSTNAME}/versions"
 ```
 
-Repeat for all five hostnames. Success proves certificate selection, SNI, the host rule, target reachability, and the slot response before public DNS changes.
+Repeat for all five hostnames. Success proves certificate selection, SNI, the host rule, and target reachability. Public DNS already CNAME's these hostnames to the ALB, so the same check works without `--connect-to`.
 
-## Cloudflare Cutover
+## Cloudflare DNS
 
-After all five pre-cutover checks pass, lower the Cloudflare TTL for each API hostname. Create a CNAME for each of `latest.grails.org`, `snapshot.grails.org`, `next.grails.org`, `prev.grails.org`, and `prev-snapshot.grails.org` that targets the exported ALB DNS name. Set every record to DNS-only, not proxied. Do not create or change `start.grails.org`.
-
-After DNS propagation, smoke-test every public hostname at `/versions` without `--connect-to`. Keep the previous service available for the observation window so a DNS reversal remains possible.
+The five API hostnames already have DNS-only CNAME records targeting the shared ALB. Keep them unproxied. Do not create or change `start.grails.org`. To reverse traffic, restore the previous CNAME targets. Keep GCP available through the observation window so that reversal remains possible.
 
 ## Optional Future Route 53 DNS
 
@@ -205,6 +203,6 @@ Reintroduce analytics only as an independent project with its own infrastructure
 
 ## GCP Decommission
 
-Do not decommission GCP at Cloudflare cutover. Retain Cloud Run, Cloud SQL, credentials, and the prior DNS configuration through the agreed observation window while comparing availability, generation success, latency, error rates, and cost.
+Do not decommission GCP immediately. Retain Cloud Run, Cloud SQL, credentials, and the prior configuration through the observation window while comparing availability, generation success, latency, error rates, and cost.
 
 After the observation window closes and rollback is no longer required, remove traffic and credentials, verify that no client or scheduled job still depends on GCP, archive required configuration and logs, then decommission GCP through the approved change process.
