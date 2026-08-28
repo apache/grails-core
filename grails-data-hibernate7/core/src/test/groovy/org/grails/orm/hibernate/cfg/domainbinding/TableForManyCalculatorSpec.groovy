@@ -181,6 +181,31 @@ class TableForManyCalculatorSpec extends HibernateGormDatastoreSpec {
         schema2 == "explicit_schema"
         catalog2 == "explicit_catalog"
     }
+
+    def "getJoinTableSchema falls back to the owning entity's table schema when no default schema exists"() {
+        given: "a metadata collector whose default namespace has no schema"
+        def namingStrategy = getGrailsDomainBinder().getNamingStrategy()
+        def collector = Mock(InFlightMetadataCollector)
+        def database = Mock(Database)
+        def namespace = Mock(Namespace)
+        collector.getDatabase() >> database
+        database.getDefaultNamespace() >> namespace
+        namespace.getName() >> new Namespace.Name(null, null)
+        def calculator = new TableForManyCalculator(namingStrategy, collector)
+
+        and: "a property whose owning entity's table carries a schema"
+        def ownerTable = new org.hibernate.mapping.Table("owner_table")
+        ownerTable.setSchema("owner_schema")
+        def rootClass = new org.hibernate.mapping.RootClass(getGrailsDomainBinder().metadataBuildingContext)
+        rootClass.setTable(ownerTable)
+        def property = Mock(HibernateToManyProperty)
+        property.getHibernateMappedForm() >> new PropertyConfig()
+        property.getPersistentClass() >> rootClass
+
+        expect: "the schema comes from the owning entity's table, not from property.getTable()"
+        calculator.getJoinTableSchema(property) == "owner_schema"
+    }
+
     def "calculateTableForMany Map property with explicit joinTable name returns joinTable name (L103)"() {
         given:
         def namingStrategy = getGrailsDomainBinder().getNamingStrategy()

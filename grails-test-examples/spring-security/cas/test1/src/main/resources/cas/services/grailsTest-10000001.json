@@ -1,0 +1,12 @@
+{
+  "@class": "org.apereo.cas.services.CasRegisteredService",
+  "serviceId": "^https?://.*",
+  "name": "grailsTest",
+  "id": 10000001,
+  "evaluationOrder": 1,
+  "description": "Permits the http test application and allows it to obtain proxy-granting tickets.",
+  "proxyPolicy": {
+    "@class": "org.apereo.cas.services.RegexMatchingRegisteredServiceProxyPolicy",
+    "pattern": "^https?://.*"
+  }
+}

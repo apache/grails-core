@@ -72,6 +72,14 @@ Get a bean from the applicationContext by type:
 <g:set var="messageSource" bean="${MessageSource}"/>
 ----
 
+Give the variable a type, so that a statically compiled page knows what it holds:
+
+[,xml]
+----
+<g:set type="int" var="counter" value="${1}"/>
+${counter + 1}
+----
+
 
 === Description
 
@@ -82,4 +90,5 @@ Attributes
 * `value` - The initial value
 * `bean` -  The name or the type of a bean in the applicationContext; the type can be an interface or superclass
 * `scope` - Scope to set variable in, one of `request`, `page`, `flash` or `session`. Defaults to `page`.
+* `type` - The type to declare the variable as, so that a page compiled statically can apply an operator to it. The value is converted to the type. Only valid alongside `value`, since a body or a `bean` produces its value as the tag runs.
 

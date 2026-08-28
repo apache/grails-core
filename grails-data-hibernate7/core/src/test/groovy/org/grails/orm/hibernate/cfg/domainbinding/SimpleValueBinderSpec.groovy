@@ -29,6 +29,7 @@ import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.PropertyConfig
 
+import org.hibernate.Length
 import org.hibernate.mapping.Column
 import org.hibernate.mapping.SimpleValue
 import spock.lang.Specification
@@ -239,6 +240,69 @@ class SimpleValueBinderSpec extends Specification {
         _ * prop.getTypeName(sv) >> 'Z'
         _ * prop.getTypeParameters(sv) >> null
         2 * sv.addColumn(_ as Column)
+    }
+
+    def "unbounded text type defaults column length to Length.LONG32 when no explicit length is configured"() {
+        given:
+        def prop = Mock(HibernatePersistentProperty)
+        def owner = Mock(GrailsHibernatePersistentEntity)
+        def mapping = Mock(Mapping)
+        def pc = Mock(PropertyConfig)
+        def sv = Mock(SimpleValue)
+        sv.getTable() >> null
+
+        prop.getMappedForm() >> pc
+        prop.getHibernateMappedForm() >> pc
+        prop.getOwner() >> owner
+        prop.getHibernateOwner() >> owner
+        owner.getMappedForm() >> mapping
+        owner.getHibernateMappedForm() >> mapping
+        _ * prop.getHibernateMappedForm() >> pc
+        _ * owner.getHibernateMappedForm() >> mapping
+        prop.getTypeName(sv) >> 'text'
+        pc.isDerived() >> false
+        pc.getColumns() >> null
+        prop.getType() >> String
+        prop.isNullable() >> true
+        namingStrategy.resolveColumnName(_) >> 'body'
+
+        when:
+        binder.bindSimpleValue(prop, null, sv, 'path')
+
+        then:
+        1 * sv.addColumn({ Column column -> column.getLength() == Length.LONG32 as Long })
+    }
+
+    def "unbounded text type keeps an explicit maxSize bound instead of defaulting to Length.LONG32"() {
+        given:
+        def prop = Mock(HibernatePersistentProperty)
+        def owner = Mock(GrailsHibernatePersistentEntity)
+        def mapping = Mock(Mapping)
+        def pc = Mock(PropertyConfig)
+        def sv = Mock(SimpleValue)
+        sv.getTable() >> null
+
+        prop.getMappedForm() >> pc
+        prop.getHibernateMappedForm() >> pc
+        prop.getOwner() >> owner
+        prop.getHibernateOwner() >> owner
+        owner.getMappedForm() >> mapping
+        owner.getHibernateMappedForm() >> mapping
+        _ * prop.getHibernateMappedForm() >> pc
+        _ * owner.getHibernateMappedForm() >> mapping
+        prop.getTypeName(sv) >> 'text'
+        pc.isDerived() >> false
+        pc.getColumns() >> null
+        pc.getMaxSize() >> 500
+        prop.getType() >> String
+        prop.isNullable() >> true
+        namingStrategy.resolveColumnName(_) >> 'body'
+
+        when:
+        binder.bindSimpleValue(prop, null, sv, 'path')
+
+        then:
+        1 * sv.addColumn({ Column column -> column.getLength() == 500L })
     }
 
     def "bindSimpleValue creates and returns BasicValue"() {

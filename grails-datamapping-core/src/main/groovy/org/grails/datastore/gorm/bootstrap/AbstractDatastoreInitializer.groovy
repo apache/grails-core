@@ -24,6 +24,7 @@ import java.beans.Introspector
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
+import org.springframework.beans.factory.config.RuntimeBeanReference
 import org.springframework.beans.factory.support.BeanDefinitionRegistry
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationEventPublisher
@@ -43,6 +44,7 @@ import org.springframework.core.type.classreading.CachingMetadataReaderFactory
 import org.springframework.util.ClassUtils
 
 import grails.gorm.annotation.Entity
+import org.apache.grails.common.aot.AheadOfTimeProcessing
 import org.grails.datastore.gorm.events.ConfigurableApplicationContextEventPublisher
 import org.grails.datastore.gorm.events.DefaultApplicationEventPublisher
 import org.grails.datastore.gorm.plugin.support.PersistenceContextInterceptorAggregator
@@ -126,6 +128,32 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
     }
 
     /**
+     * What a bean definition should hold in place of the configuration itself.
+     *
+     * <p>A definition holding the resolver is a definition holding everything the resolver can
+     * reach, and generating code for such a definition writes those values out: an environment
+     * carries the machine's own variables, so the generated source ends up containing the
+     * environment of whatever machine built it, along with whatever was in it -- credentials among
+     * them -- and the application then reads its settings from there rather than from where it
+     * runs.</p>
+     *
+     * <p>So while code is being generated, and only then, the context's environment is named
+     * instead, which leaves the lookup to be made where the application runs. Every other time the
+     * resolver is held as it always was, which matters for a datastore brought up on its own: its
+     * configuration is whatever the caller passed and there is no environment holding it.</p>
+     */
+    protected Object configurationReference(BeanDefinitionRegistry registry) {
+        if (!AheadOfTimeProcessing.generatingCode) {
+            return configuration
+        }
+        boolean insideContainer = registry instanceof ConfigurableApplicationContext ||
+                resourcePatternResolver.resourceLoader instanceof ConfigurableApplicationContext
+        insideContainer
+                ? new RuntimeBeanReference(ConfigurableApplicationContext.ENVIRONMENT_BEAN_NAME)
+                : configuration
+    }
+
+    /**
      * Finds the event publisher to use
      *
      * @param beanDefinitionRegistry The event publisher
@@ -143,6 +171,26 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
             eventPublisher = new DefaultApplicationEventPublisher()
         }
         return eventPublisher
+    }
+
+    /**
+     * Finds the publisher class a datastore definition should name, in place of a publisher itself.
+     *
+     * <p>The same choice {@link #findEventPublisher} makes -- one that publishes through the
+     * surrounding context, or the one that publishes nowhere -- but left to the container to build.
+     * A definition holding an already-constructed publisher is a definition that cannot be generated
+     * ahead of time: generating one means writing out what it holds, and a publisher bound to a
+     * running context is not something there is any way to write down.</p>
+     *
+     * @param beanDefinitionRegistry the registry the definitions are being contributed to
+     * @return the class to register the publisher bean under
+     */
+    protected Class<? extends ApplicationEventPublisher> findEventPublisherClass(BeanDefinitionRegistry beanDefinitionRegistry) {
+        if (beanDefinitionRegistry instanceof ConfigurableApplicationContext ||
+                resourcePatternResolver.resourceLoader instanceof ConfigurableApplicationContext) {
+            return ConfigurableApplicationContextEventPublisher
+        }
+        return DefaultApplicationEventPublisher
     }
 
     /**
@@ -266,11 +314,38 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
         return {}
     }
 
+    /**
+     * The classes this datastore maps.
+     *
+     * @param datastoreType the datastore the classes are being collected for
+     * @return the classes, which a datastore's definition takes through {@link #mappedClasses}
+     */
     protected Collection<Class> collectMappedClasses(String datastoreType) {
-        def classes = !secondaryDatastore ? persistentClasses : persistentClasses.findAll() { Class cls ->
+        !secondaryDatastore ? persistentClasses : persistentClasses.findAll() { Class cls ->
             isMappedClass(datastoreType, cls)
         }
-        return classes
+    }
+
+    /**
+     * The classes this datastore maps, as the array its constructor takes.
+     *
+     * <p>The array type is what makes this survive ahead-of-time processing. A datastore takes its
+     * classes as a variable-argument parameter, so the constructor argument the generator writes out
+     * is looked up by that parameter's type when the bean is rebuilt. A collection does not answer to
+     * {@code Class[]}, so the lookup misses it and the argument is resolved as a dependency instead,
+     * which for an array type means every {@code Class} bean in the context: none. The datastore is
+     * then built mapping nothing, and the first call on a domain class reports that it is not one.</p>
+     *
+     * <p>Kept apart from {@link #collectMappedClasses} rather than folded into it, because that one
+     * is the seam a datastore outside this repository overrides to say which classes are its own.
+     * Changing what it returns would leave such an override no longer overriding anything, and
+     * silently unasked.</p>
+     *
+     * @param datastoreType the datastore the classes are being collected for
+     * @return the classes, as the array a datastore's constructor takes
+     */
+    protected Class[] mappedClasses(String datastoreType) {
+        collectMappedClasses(datastoreType) as Class[]
     }
 
     protected boolean isMappedClass(String datastoreType, Class cls) {

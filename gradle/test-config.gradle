@@ -57,6 +57,7 @@ tasks.withType(Test).configureEach {
                 'onlyHibernate5Tests',
                 'onlyHibernate7Tests',
                 'onlyMongodbTests',
+                'onlyNeo4jTests',
                 'onlyRedisTests',
                 'onlySpringSecurityTests',
                 'skipCoreTests',
@@ -83,7 +84,7 @@ tasks.withType(Test).configureEach {
         showStackTraces = true
     }
     excludes = ['**/*TestCase.class', '**/*$*.class']
-    maxParallelForks = configuredTestParallel
+    maxParallelForks = rootProject.ext.configuredTestParallel
     maxHeapSize = isCiBuild ? '768m' : '1024m'
     forkEvery = hasProperty('forkEveryUnitTest') ? getProperty('forkEveryUnitTest') as long : (isCiBuild ? 50 : 100)
     if (System.getProperty('debug.tests')) {

@@ -116,17 +116,17 @@ class SbomPlugin implements Plugin<Project> {
             // The whole org.jline group declares "The BSD License", which maps incorrectly because of
             // https://github.com/CycloneDX/cyclonedx-core-java/issues/205 - the POMs point at BSD-3-Clause.
             // jline.version tracks the JLine version Groovy ships, so every module resolves to one version.
-            'pkg:maven/org.jline/jansi@3.30.9?type=jar'                       : 'BSD-3-Clause',
-            'pkg:maven/org.jline/jline@3.30.9?type=jar'                       : 'BSD-3-Clause',
-            'pkg:maven/org.jline/jline-builtins@3.30.9?type=jar'              : 'BSD-3-Clause',
-            'pkg:maven/org.jline/jline-console@3.30.9?type=jar'               : 'BSD-3-Clause',
-            'pkg:maven/org.jline/jline-native@3.30.9?type=jar'                : 'BSD-3-Clause',
-            'pkg:maven/org.jline/jline-reader@3.30.9?type=jar'                : 'BSD-3-Clause',
-            'pkg:maven/org.jline/jline-style@3.30.9?type=jar'                 : 'BSD-3-Clause',
-            'pkg:maven/org.jline/jline-terminal@3.30.9?type=jar'              : 'BSD-3-Clause',
-            'pkg:maven/org.jline/jline-terminal-jansi@3.30.9?type=jar'        : 'BSD-3-Clause',
-            'pkg:maven/org.jline/jline-terminal-jna@3.30.9?type=jar'          : 'BSD-3-Clause',
-            'pkg:maven/org.jline/jline-terminal-jni@3.30.9?type=jar'          : 'BSD-3-Clause',
+            'pkg:maven/org.jline/jansi@3.30.16?type=jar'                       : 'BSD-3-Clause',
+            'pkg:maven/org.jline/jline@3.30.16?type=jar'                       : 'BSD-3-Clause',
+            'pkg:maven/org.jline/jline-builtins@3.30.16?type=jar'              : 'BSD-3-Clause',
+            'pkg:maven/org.jline/jline-console@3.30.16?type=jar'               : 'BSD-3-Clause',
+            'pkg:maven/org.jline/jline-native@3.30.16?type=jar'                : 'BSD-3-Clause',
+            'pkg:maven/org.jline/jline-reader@3.30.16?type=jar'                : 'BSD-3-Clause',
+            'pkg:maven/org.jline/jline-style@3.30.16?type=jar'                 : 'BSD-3-Clause',
+            'pkg:maven/org.jline/jline-terminal@3.30.16?type=jar'              : 'BSD-3-Clause',
+            'pkg:maven/org.jline/jline-terminal-jansi@3.30.16?type=jar'        : 'BSD-3-Clause',
+            'pkg:maven/org.jline/jline-terminal-jna@3.30.16?type=jar'          : 'BSD-3-Clause',
+            'pkg:maven/org.jline/jline-terminal-jni@3.30.16?type=jar'          : 'BSD-3-Clause',
             'pkg:maven/org.jruby/jzlib@1.1.5?type=jar'                        : 'BSD-3-Clause', // https://web.archive.org/web/20240822213507/http://www.jcraft.com/jzlib/LICENSE.txt shows it's a 3 clause
             'pkg:maven/org.liquibase.ext/liquibase-hibernate5@4.27.0?type=jar': 'Apache-2.0', // maps incorrectly because of https://github.com/liquibase/liquibase/issues/2445 & the base pom does not define a license
             'pkg:maven/org.json/json@20251224?type=jar'                       : 'Public-Domain', // required due to jedis, https://issues.apache.org/jira/browse/LEGAL-666 approves this usage

@@ -169,18 +169,6 @@
             "defaultValue": false
         },
         {
-            "name": "grails.i18n.cache.seconds",
-            "type": "java.lang.Integer",
-            "description": "How long (in seconds) to cache resolved message bundles with -1 to cache indefinitely and 0 to disable caching.",
-            "defaultValue": -1
-        },
-        {
-            "name": "grails.i18n.filecache.seconds",
-            "type": "java.lang.Integer",
-            "description": "How long (in seconds) to cache the message bundle file lookup with -1 to cache indefinitely.",
-            "defaultValue": -1
-        },
-        {
             "name": "grails.gorm.failOnError",
             "type": "java.lang.Boolean",
             "description": "When true, save() throws ValidationException on validation failure instead of returning null and can also be a list of package names to apply selectively.",

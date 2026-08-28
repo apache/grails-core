@@ -465,6 +465,7 @@ jobs:
           -PskipHibernate5Tests
           -PskipHibernate7Tests
           -PskipMongodbTests
+          -PskipNeo4jTests
           -PskipSpringSecurityTests
           -PskipRedisTests
           ${{ matrix.shard_arguments }}
@@ -567,6 +568,47 @@ jobs:
           --stacktrace
           -DTESTCONFIG=${{ matrix.test-config }}
           -PskipCodeStyle
+  casSecurityConfig:
+    name: "Spring Security CAS Functional Tests"
+    if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # The CAS test app authenticates against a real Apereo CAS server started via Testcontainers.
+        # 'cas' leaves the proxy settings unset; 'casProxy' exercises the proxy-granting-ticket
+        # callback; 'casNoSingleSignout' asserts the shipped default, where single signout is off.
+        # TESTCONFIG is applied at app startup, so every config must be its own run. The specs are
+        # gated on a config being selected, so the broad 'security' job skips them and no config is
+        # run twice.
+        # Carried over from the standalone grails-spring-security CI convention - add, don't remove.
+        test-config: [ 'cas', 'casProxy', 'casNoSingleSignout' ]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: liberica
+          java-version: 21
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        with:
+          cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
+      - name: "🔍 Setup TestLens"
+        uses: testlens-app/setup-testlens@3f82d2dc6cd5c03f02ce5f7885a21195d85f8d14 # v1.9.3
+      - name: "🏃 Run Spring Security CAS Functional Tests (TESTCONFIG=${{ matrix.test-config }})"
+        run: >
+          ./gradlew
+          :grails-test-examples-spring-security-cas-test1:check
+          --continue
+          --rerun-tasks
+          --stacktrace
+          -DTESTCONFIG=${{ matrix.test-config }}
+          -PskipCodeStyle
   redis:
     name: "Redis Tests"
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
@@ -637,6 +679,17 @@ jobs:
           key: gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-${{ hashFiles('**/dependencies.gradle', '**/gradle-wrapper.properties') }}
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
+      - name: "🗄️ Cache the mongod the embedded server runs"
+        uses: actions/cache@v4
+        with:
+          # Kept apart from the dependency jars: this holds an immutable download from
+          # fastdl.mongodb.org - the archive and the binary extracted out of it - and no database,
+          # so it belongs to no branch and does not change when a dependency version does.
+          # Keyed by the version this entry asks for, because the matrix runs more than one and a
+          # single key would keep whichever job missed first and leave the other restoring 250MB
+          # of a binary it cannot use. No restore-keys, for that same reason.
+          path: ~/.embedmongo
+          key: embedmongo-${{ runner.os }}-${{ matrix.mongodb-version }}
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:
@@ -777,6 +830,44 @@ jobs:
           -PonlyHibernate7Tests
           -PskipCodeStyle
           ${{ matrix.shard_arguments }}
+  neo4jFunctional:
+    if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
+    name: "Neo4j Functional Tests (Java ${{ matrix.java }}, indy=${{ matrix.indy }})"
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        java: [ 21, 25 ]
+        indy: [ false ]
+        include:
+          - java: 21
+            indy: true
+    steps:
+      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
+      - name: "📥 Checkout the repository"
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: liberica
+          java-version: ${{ matrix.java }}
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        with:
+          cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: "🏃 Run Functional Tests"
+        env:
+          GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: >
+          ./gradlew bootJar check
+          --continue
+          --rerun-tasks
+          --stacktrace
+          -PgrailsIndy=${{ matrix.indy }}
+          -PonlyNeo4jTests
+          -PskipCodeStyle
   publishGradle:
     if: github.repository_owner == 'apache' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     needs: [ buildGradle ]
@@ -831,7 +922,7 @@ jobs:
           name: grails-gradle-artifacts.txt
           path: grails-gradle/build/grails-gradle-artifacts.txt
   publish:
-    needs: [ publishGradle, build, functional, security, securityConfig, redis, hibernate5Functional, hibernate7Functional, mongodbFunctional ]
+    needs: [ publishGradle, build, functional, security, securityConfig, redis, hibernate5Functional, hibernate7Functional, mongodbFunctional, neo4jFunctional ]
     if: >-
       ${{ always() &&
           github.repository_owner == 'apache' &&
@@ -844,7 +935,8 @@ jobs:
           (needs.redis.result == 'success' || needs.redis.result == 'skipped') &&
           (needs.hibernate5Functional.result == 'success' || needs.hibernate5Functional.result == 'skipped') &&
           (needs.hibernate7Functional.result == 'success' || needs.hibernate7Functional.result == 'skipped') &&
-          (needs.mongodbFunctional.result == 'success' || needs.mongodbFunctional.result == 'skipped')
+          (needs.mongodbFunctional.result == 'success' || needs.mongodbFunctional.result == 'skipped') &&
+          (needs.neo4jFunctional.result == 'success' || needs.neo4jFunctional.result == 'skipped')
       }}
     runs-on: ubuntu-24.04
     steps:

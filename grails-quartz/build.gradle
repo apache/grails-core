@@ -1,0 +1,89 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'groovy'
+    id 'java-library'
+    id 'project-report'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
+    id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-plugin'
+}
+
+version = projectVersion
+group = 'org.apache.grails'
+
+ext {
+    pomTitle = 'Grails Quartz Plugin'
+    pomDescription = 'This plugin allows your Grails application to schedule jobs to be executed using a specified interval or cron expression.'
+}
+
+dependencies {
+
+    implementation platform(project(':grails-bom'))
+
+    api 'org.quartz-scheduler:quartz', {
+        // api: InterruptableJob, JobDetail, JobExecutionContext, JobExecutionException, Scheduler, Trigger,
+        //      TriggerKey, UnableToInterruptJobException, MutableTrigger
+        // impl: CronScheduleBuilder, JobBuilder, SimpleScheduleBuilder, TriggerBuilder, CronTriggerImpl,
+        //       SimpleTriggerImpl, GroupMatcher, KeyMatcher, JobListenerSupport
+        // runtime: @DisallowConcurrentExecution, @PersistJobDataAfterExecution
+    }
+
+    api 'org.springframework:spring-context-support', {
+        // api: AdaptableJobFactory (superclass of GrailsJobFactory)
+        // impl: SchedulerFactoryBean (the quartzScheduler bean)
+        //
+        // Required at runtime. It is NOT safely inherited from the rest of the stack: grails-gsp
+        // excludes it from its transitive graph, so an application that depends on this plugin
+        // alone fails to start with a NoClassDefFoundError without this declaration.
+    }
+
+    compileOnly project(':grails-core'), { // Provided as this is a Grails plugin
+        // api: ArtefactHandlerAdapter, GrailsApplication, GrailsClass, PersistenceContextInterceptor, Plugin
+        // impl: AbstractGrailsClass, GrailsASTUtils, GrailsClassUtils, GrailsUtil, TraitInjector
+    }
+    compileOnly 'org.apache.grails.gradle:grails-gradle-model' // GrailsResourceUtils, Metadata
+    compileOnly 'org.apache.groovy:groovy' // Provided as this is a Grails plugin
+    compileOnly 'org.apache.groovy:groovy-sql' // groovy.sql.Sql (JdbcCleanup)
+    compileOnly 'jakarta.annotation:jakarta.annotation-api' // @PostConstruct
+    compileOnly 'org.springframework:spring-beans' // BeanUtils, BeanWrapper, FactoryBean, MethodInvokingFactoryBean
+    compileOnly 'org.springframework:spring-context' // ApplicationContext, ApplicationContextAware
+    compileOnly 'org.springframework:spring-core' // Assert, ReflectionUtils
+    compileOnly 'org.slf4j:slf4j-api' // @Slf4j, Logger
+
+    testImplementation project(':grails-core')
+    testImplementation 'org.apache.groovy:groovy'
+    testImplementation 'org.springframework:spring-beans'
+    testImplementation 'org.spockframework:spock-core'
+
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testRuntimeOnly 'org.slf4j:slf4j-nop' // Remove the warning about a missing slf4j implementation during tests
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+}

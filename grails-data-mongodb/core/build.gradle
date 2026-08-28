@@ -133,6 +133,15 @@ dependencies {
     testImplementation 'org.apache.grails.testing:grails-testing-support-core'
     testImplementation 'org.spockframework:spock-core'
     testImplementation project(':grails-testing-support-mongodb')
+
+    // The transaction specifications need a replica set, which the embedded server provides without
+    // a container; flapdoodle runs the real mongod behind it.
+    testImplementation project(':grails-data-mongodb-embedded')
+    testImplementation "de.flapdoodle.embed:de.flapdoodle.embed.mongo:$flapdoodleVersion"
+    testImplementation project(':grails-data-simple'), {
+        // test: SimpleMapDatastore, used as a cheap non-Mongo Datastore to exercise
+        // MongoStaticApi's "not a MongoDatastore" constructor branch without needing a real Mongo
+    }
     testImplementation project(':grails-datastore-web'), {
         // test: OpenSessionInViewInterceptor, spring-web's GenericWebApplicationContext
     }

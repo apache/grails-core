@@ -124,10 +124,49 @@ this; the `in-memory` backend reports an error rather than discarding the data s
 |`embedded.mongodb.version`
 |The MongoDB version for backends that can choose one, such as `V8_0` for flapdoodle.
 
+|`embedded.mongodb.replica-set`
+|The name of the replica set to run as, such as `rs0`. Unset, the server is standalone
+unless `grails.mongodb.transactional` is `true`, which asks for one implicitly.
+
 |`embedded.mongodb.property-names`
 |Comma separated properties that may name an embedded server. Defaults to
 `grails.mongodb.url`.
 |===
+
+==== Transactions
+
+A multi-document transaction, a change stream and a causally consistent read are all refused
+by a standalone MongoDB server: every one of them needs a replica set. An application that
+asks GORM for transactions is therefore given one - a set of a single node, which is what a
+single machine has to offer, and enough for all three:
+
+[source,yaml]
+----
+grails:
+    mongodb:
+        url: mongodb://embedded/bookstore
+        transactional: true
+----
+
+The server runs as the replica set `rs0` and is handed to the application only once it has
+elected itself primary, so the first query does not race the election. Name the set with
+`embedded.mongodb.replica-set` to call it something else, or to run one without asking GORM
+for transactions:
+
+[source,yaml]
+----
+embedded:
+    mongodb:
+        replica-set: rs0
+----
+
+Only the flapdoodle backend can do this, because only a real `mongod` has replication. The
+`in-memory` backend reimplements the wire protocol and refuses transactions whatever it is
+configured with.
+
+NOTE: A replica set is initiated by a command a driver sends rather than by a setting, so
+`org.mongodb:mongodb-driver-sync` has to be on the classpath. Any application talking to
+MongoDB already has it; a standalone embedded server does not need it.
 
 ==== Production
 
@@ -154,7 +193,13 @@ environments:
 A server started by this module runs until the JVM exits, so a Spring Boot DevTools
 restart reuses it instead of starting another. Only a server this module started is
 reused: if anything else is already holding the port, startup fails with an error naming
-the port rather than connecting to an unrelated service. To use a MongoDB started by hand,
+the port rather than connecting to an unrelated service.
+
+A restart that carries a different setting - a database directory, a version, a replica set,
+or transactions being switched on - is given a server that matches it, which means the
+previous one is replaced and anything it held in memory goes with it. Data in a
+`database-dir` outlives the replacement, except across a change of `version`: MongoDB
+refuses to start against a directory written by a different release. To use a MongoDB started by hand,
 name its host in `grails.mongodb.url` as usual.
 
 ==== Outside Grails

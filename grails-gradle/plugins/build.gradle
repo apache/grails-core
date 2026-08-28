@@ -189,3 +189,10 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 }
+
+// A variable that is present and empty, which is what a Gradle daemon keeps after a build that set
+// one has finished. TrainAotCacheTask drops those rather than passing them to the training run, and
+// there is no way to make one from inside a test: an environment is inherited, not written.
+tasks.named('test') {
+    environment 'GRAILS_TRAINING_LEFTOVER', ''
+}

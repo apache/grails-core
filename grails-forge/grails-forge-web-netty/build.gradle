@@ -24,6 +24,8 @@ plugins {
     id 'io.micronaut.application' version "$micronautApplicationPluginVersion"
 }
 
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+
 version = projectVersion
 group = 'org.apache.grails.forge'
 
@@ -119,6 +121,36 @@ tasks.named('dockerBuildNative') {
 
 tasks.named('dockerBuild') {
     images = [findProperty('dockerImageName') ?: 'grailsforge']
+}
+
+TaskProvider<ShadowJar> shadowJarTask = tasks.named('shadowJar', ShadowJar)
+shadowJarTask.configure {
+    reproducibleFileOrder = true
+    preserveFileTimestamps = false
+}
+
+TaskProvider<Zip> awsElasticBeanstalk = tasks.register('awsElasticBeanstalk', Zip) {
+    dependsOn(shadowJarTask)
+    archiveFileName.set('grails-forge-web-netty-aws.zip')
+    destinationDirectory.set(layout.buildDirectory.dir('distributions'))
+    reproducibleFileOrder = true
+    preserveFileTimestamps = false
+
+    from(shadowJarTask.flatMap { it.archiveFile }) {
+        rename { 'app.jar' }
+    }
+    from(layout.projectDirectory.dir('aws')) {
+        includeEmptyDirs = false
+        filesMatching('start.sh') {
+            filePermissions {
+                unix(0755)
+            }
+        }
+    }
+}
+
+tasks.named('assemble') {
+    dependsOn(awsElasticBeanstalk)
 }
 
 apply from: rootProject.layout.projectDirectory.file('gradle/groovy-version-pin.gradle')
