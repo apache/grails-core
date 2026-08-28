@@ -30,6 +30,7 @@ import java.util.Set;
 import groovy.lang.Binding;
 import groovy.lang.Closure;
 import groovy.lang.GroovyObject;
+import groovy.lang.MissingMethodException;
 import groovy.lang.Script;
 import org.codehaus.groovy.runtime.InvokerHelper;
 
@@ -49,6 +50,7 @@ import org.grails.taglib.GrailsTagException;
 import org.grails.taglib.GroovyPageAttributes;
 import org.grails.taglib.TagBodyClosure;
 import org.grails.taglib.TagLibraryLookup;
+import org.grails.taglib.TagLibraryMetaUtils;
 import org.grails.taglib.TagMethodContext;
 import org.grails.taglib.TagMethodInvoker;
 import org.grails.taglib.TagOutput;
@@ -256,6 +258,19 @@ public abstract class GroovyPage extends Script {
     }
 
     /**
+     * The tag libraries this page can reach.
+     *
+     * <p>Named as the tag library invoker trait names it, so that a tag call compiled into a direct
+     * invocation reads the same whether it was written in a page, a tag library or a controller.
+     *
+     * @return the lookup, or {@code null} before the page has been initialised
+     * @since 8.0.0
+     */
+    public TagLibraryLookup getTagLibraryLookup() {
+        return this.gspTagLibraryLookup;
+    }
+
+    /**
      * Obtains a reference to the JSP tag library resolver instance
      *
      * @return The JSP TagLibraryResolver instance
@@ -294,6 +309,38 @@ public abstract class GroovyPage extends Script {
         if (BINDING.equals(property)) return getBinding();
 
         return resolveProperty(property);
+    }
+
+    /**
+     * Resolves a tag called without a namespace, as {@code ${message(code: 'x')}} is.
+     *
+     * <p>A real method rather than one installed onto this page's metaclass. Installing it, along with
+     * a method for every tag and a property for every namespace, meant writing to an
+     * ExpandoMetaClass for every page compiled and made every later tag call a read of an initialised
+     * metaclass, which is guarded by a lock.
+     *
+     * @param name the tag name
+     * @param args the arguments the tag was called with
+     * @return whatever the tag produces
+     * @throws MissingMethodException when there is no tag library lookup to resolve the name against
+     */
+    public Object methodMissing(String name, Object args) {
+        if (gspTagLibraryLookup == null) {
+            // Without a lookup there is nothing to resolve the name against, which is a missing
+            // method. Dispatching anyway arrives at the same answer, but only because a dynamic call
+            // on a null receiver happens to yield no tag library rather than because anything says
+            // so; this states the contract for a field documented as null before initialisation.
+            throw new MissingMethodException(name, getClass(), makeArgumentArray(args));
+        }
+        return TagLibraryMetaUtils.methodMissingForTagLib(getMetaClass(), getClass(), gspTagLibraryLookup,
+                DEFAULT_NAMESPACE, name, args, false);
+    }
+
+    private static Object[] makeArgumentArray(Object args) {
+        if (args == null) {
+            return new Object[0];
+        }
+        return args instanceof Object[] ? (Object[]) args : new Object[] { args };
     }
 
     protected Object resolveProperty(String property) {

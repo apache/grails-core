@@ -84,7 +84,8 @@ public class SimpleValueBinder {
             String path) {
 
         PropertyConfig propertyConfig = property.getHibernateMappedForm();
-        simpleValue.setTypeName(property.getTypeName(simpleValue));
+        String typeName = property.getTypeName(simpleValue);
+        simpleValue.setTypeName(typeName);
         simpleValue.setTypeParameters(property.getTypeParameters(simpleValue));
 
         if (propertyConfig.isDerived() && !(property instanceof TenantId)) {
@@ -100,7 +101,7 @@ public class SimpleValueBinder {
                     .forEach(cc -> {
                         Column column = new Column();
                         columnConfigToColumnBinder.bindColumnConfigToColumn(column, cc, propertyConfig);
-                        columnBinder.bindColumn(property, parentProperty, column, cc, path, table);
+                        columnBinder.bindColumn(property, parentProperty, column, cc, path, table, typeName);
                         if (simpleValue instanceof DependantValue) {
                             column.setNullable(true);
                         }

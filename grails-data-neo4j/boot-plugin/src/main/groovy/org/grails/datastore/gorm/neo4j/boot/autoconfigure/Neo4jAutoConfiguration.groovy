@@ -29,7 +29,7 @@ import org.springframework.beans.factory.BeanFactoryAware
 import org.springframework.boot.autoconfigure.AutoConfigurationPackages
 import org.springframework.boot.autoconfigure.AutoConfigureBefore
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
-import org.springframework.boot.autoconfigure.web.servlet.DispatcherServletAutoConfiguration
+import org.springframework.boot.webmvc.autoconfigure.DispatcherServletAutoConfiguration
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
 import org.springframework.context.ConfigurableApplicationContext
@@ -62,9 +62,9 @@ class Neo4jAutoConfiguration implements BeanFactoryAware, ResourceLoaderAware, A
     Neo4jDatastore neo4jDatastore() {
         List<String> packageNames = AutoConfigurationPackages.get(beanFactory)
         List<Package> packages = []
-        for(name in packageNames) {
+        for (name in packageNames) {
             Package pkg = Package.getPackage(name)
-            if(pkg != null) {
+            if (pkg != null) {
                 packages.add(pkg)
             }
         }
@@ -76,14 +76,14 @@ class Neo4jAutoConfiguration implements BeanFactoryAware, ResourceLoaderAware, A
                 packages as Package[]
         )
 
-        for(Service service in datastore.getServices()) {
+        for (Service service in datastore.getServices()) {
             Class serviceClass = service.getClass()
             grails.gorm.services.Service ann = serviceClass.getAnnotation(grails.gorm.services.Service)
             String serviceName = ann?.name()
-            if(serviceName == null) {
+            if (serviceName == null) {
                 serviceName = Introspector.decapitalize(serviceClass.simpleName)
             }
-            if(!context.containsBean(serviceName)) {
+            if (!context.containsBean(serviceName)) {
                 context.beanFactory.registerSingleton(
                         serviceName,
                         service
@@ -100,8 +100,8 @@ class Neo4jAutoConfiguration implements BeanFactoryAware, ResourceLoaderAware, A
 
     @Override
     void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        if(!(applicationContext instanceof ConfigurableApplicationContext)) {
-            throw new IllegalArgumentException("Neo4jAutoConfiguration requires an instance of ConfigurableApplicationContext")
+        if (!(applicationContext instanceof ConfigurableApplicationContext)) {
+            throw new IllegalArgumentException('Neo4jAutoConfiguration requires an instance of ConfigurableApplicationContext')
         }
         this.applicationContext = (ConfigurableApplicationContext)applicationContext
     }

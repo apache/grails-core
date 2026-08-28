@@ -36,9 +36,7 @@ public class CodecsConfiguration {
 
     @Bean("codecLookup")
     @Primary
-    public CodecLookup codecLookup(GrailsApplication grailsApplication) throws Exception {
-        final DefaultCodecLookup defaultCodecLookup = new DefaultCodecLookup(grailsApplication);
-        defaultCodecLookup.reInitialize();
-        return defaultCodecLookup;
+    public CodecLookup codecLookup(GrailsApplication grailsApplication) {
+        return new DefaultCodecLookup(grailsApplication);
     }
 }

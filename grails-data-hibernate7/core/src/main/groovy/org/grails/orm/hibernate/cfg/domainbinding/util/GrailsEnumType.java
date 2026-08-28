@@ -18,13 +18,42 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.util;
 
+import jakarta.persistence.EnumType;
+
 import org.hibernate.MappingException;
+import org.hibernate.mapping.BasicValue;
+
+import org.grails.orm.hibernate.cfg.IdentityEnumType;
 
 public enum GrailsEnumType {
-    DEFAULT("default"),
-    STRING("string"),
-    ORDINAL("ordinal"),
-    IDENTITY("identity");
+    DEFAULT("default") {
+        @Override
+        public void configure(BasicValue simpleValue, Class<?> propertyType) {
+            STRING.configure(simpleValue, propertyType);
+        }
+    },
+    // Hibernate 7 native string enum mapping: store by Enum.name() as VARCHAR.
+    STRING("string") {
+        @Override
+        public void configure(BasicValue simpleValue, Class<?> propertyType) {
+            simpleValue.setImplicitJavaTypeAccess(tc -> propertyType);
+            simpleValue.setEnumerationStyle(EnumType.STRING);
+        }
+    },
+    // Hibernate 7 native ordinal enum mapping: store by Enum.ordinal() as INTEGER.
+    ORDINAL("ordinal") {
+        @Override
+        public void configure(BasicValue simpleValue, Class<?> propertyType) {
+            simpleValue.setImplicitJavaTypeAccess(tc -> propertyType);
+            simpleValue.setEnumerationStyle(EnumType.ORDINAL);
+        }
+    },
+    IDENTITY("identity") {
+        @Override
+        public void configure(BasicValue simpleValue, Class<?> propertyType) {
+            simpleValue.setTypeName(IdentityEnumType.class.getName());
+        }
+    };
 
     private final String type;
 
@@ -48,4 +77,7 @@ public enum GrailsEnumType {
     public String getType() {
         return type;
     }
+
+    /** Configures the given {@link BasicValue} to store {@code propertyType} per this enum type. */
+    public abstract void configure(BasicValue simpleValue, Class<?> propertyType);
 }

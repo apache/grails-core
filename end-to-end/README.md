@@ -36,6 +36,7 @@ applications at via `GRAILS_REPO_URL`.
 | `legacy-commands-plugin` | A Grails 8 plugin whose legacy commands are recompiled under Groovy 5. |
 | `legacy-commands` | A Grails 8 application that consumes both and runs their commands through the registry. |
 | `spring-dependency-management` | A Grails 8 application that manages its versions with the legacy `io.spring.dependency-management` plugin instead of the Grails Gradle plugin's native `platform(grails-bom)`, as an upgraded Grails 7 application does. |
+| `taglib-index-incremental` | Builds a Grails 8 application **twice, without a clean**, to prove a renamed or deleted tag library cannot survive in the published tag library index. Incremental behaviour is the whole point, so it cannot be expressed by a project the core build builds once for itself. |
 
 `legacy-g7-command-plugin` is deliberately excluded from `settings.gradle`. An included build would
 substitute `org.apache.grails:grails-core` for this repository's Groovy 5 project, which is exactly

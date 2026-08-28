@@ -40,6 +40,9 @@ ext {
 
 dependencies {
     implementation platform(project(':grails-bom'))
+    astCompileOnly platform(project(':grails-bom'))
+
+    astCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     api project(':grails-core')
     api project(':grails-web-boot')
@@ -50,12 +53,15 @@ dependencies {
     api "com.googlecode.concurrentlinkedhashmap:concurrentlinkedhashmap-lru:$concurrentlinkedhashmapLruVersion"
 
     compileOnly project(':grails-domain-class')
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     console project(':grails-console')
 
     testImplementation project(':grails-testing-support-datamapping')
     testImplementation project(':grails-testing-support-web')
     testImplementation 'org.spockframework:spock-core'
+
+    testCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     testRuntimeOnly 'net.bytebuddy:byte-buddy' // Required by Spock's mocking support
 }

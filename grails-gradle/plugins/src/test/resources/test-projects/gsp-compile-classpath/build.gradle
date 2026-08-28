@@ -14,6 +14,8 @@ dependencies {
 tasks.register('inspectGspCompileClasspath') {
     doLast {
         println "HAS_GSP_COMPILE_CONFIGURATION=${configurations.findByName('gspCompile') != null}"
+        println "PAGE_COMPILER_STATIC=${tasks.named('compileGroovyPages').get().compileStatic.get()}"
+        println "WEBAPP_PAGE_COMPILER_STATIC=${tasks.named('compileWebappGroovyPages').get().compileStatic.get()}"
 
         def mainPaths = classpathOf('compileGroovyPages')
         def webappPaths = classpathOf('compileWebappGroovyPages')

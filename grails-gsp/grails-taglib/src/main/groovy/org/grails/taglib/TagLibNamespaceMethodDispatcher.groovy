@@ -64,6 +64,6 @@ class TagLibNamespaceMethodDispatcher {
     }
 
     private Object invokeTagMethodCall(String namespace, String name, Map attrs, Object body) {
-        TagOutput.captureTagOutput(lookup, namespace, name, attrs, body, outputContext)
+        CompiledTagInvocation.invoke(lookup, namespace, name, attrs, body, outputContext)
     }
 }

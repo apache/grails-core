@@ -41,7 +41,7 @@ ext {
 dependencies {
     implementation platform(project(':grails-bom'))
 
-    api project(':grails-views-gson') // Used in public API
+    api testFixtures(project(':grails-views-gson')) // Used in public API
     api 'org.springframework:spring-web' // Used in public API
     api project(':grails-datastore-core') // Used in public API
     api 'org.spockframework:spock-core' // Used in public API
@@ -53,6 +53,8 @@ dependencies {
     implementation 'org.apache.groovy:groovy-json'
     implementation 'org.apache.groovy:groovy-templates'
     implementation 'org.springframework:spring-webmvc'
+
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 }
 
 apply {

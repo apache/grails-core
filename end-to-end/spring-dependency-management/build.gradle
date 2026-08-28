@@ -65,14 +65,15 @@ dependencyManagement {
     }
 }
 
-// io.spring.dependency-management lets spring-boot-dependencies' own logback.version property win over
-// the grails-bom import, so the security-patched logback isn't applied automatically. A migrated Grails 7
-// app hitting the same CVE would override the Spring-managed version property directly; reproduce that here,
-// sourcing the number from dependencies.gradle so it stays the single source of truth.
+// Spring Dependency Management may let Spring Boot's version properties win over the Grails BOM
+// import. Apply Grails' version map and mirror these security overrides when they are present.
 apply from: rootProject.layout.projectDirectory.file('../dependencies.gradle')
-ext['logback.version'] = bomDependencyVersions['logback.version']
-// Same situation for the Jackson 3 security override (CVE-2026-59889) - see jackson3.version in dependencies.gradle.
-ext['jackson-bom.version'] = bomDependencyVersions['jackson3.version']
+if (bomDependencyVersions.containsKey('logback.version')) {
+    ext['logback.version'] = bomDependencyVersions['logback.version']
+}
+if (bomDependencyVersions.containsKey('jackson3.version')) {
+    ext['jackson-bom.version'] = bomDependencyVersions['jackson3.version']
+}
 
 dependencies {
     implementation 'org.apache.grails:grails-dependencies-starter-web'
