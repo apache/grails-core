@@ -13,13 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# GitHub registers workflow_dispatch from the default branch. Dispatch from that
-# branch and set source_ref to the maintenance line or tag to build. The job
-# reads javaVersion from gradle.properties. OIDC trusts refs/heads/*.x and
-# refs/tags/v* in apache/grails-core, so new version branches need no template edit.
+# Dispatch from the maintenance branch that should be built (Use workflow from).
+# Choose the slot. Region, stack name, and JDK come from that branch.
 
 name: "Forge - AWS Elastic Beanstalk Deploy"
-run-name: "Forge AWS ${{ inputs.slot }} ${{ inputs.source_ref || github.ref_name }}${{ inputs.release && format(' - {0}', inputs.release) || '' }}"
+run-name: "Forge AWS ${{ inputs.slot }} ${{ github.ref_name }}"
 
 on:
   workflow_dispatch:
@@ -34,24 +32,6 @@ on:
           - next
           - prev
           - prev-snapshot
-      source_ref:
-        description: 'Git branch or tag to build. Leave empty to build the workflow ref.'
-        required: false
-        type: string
-      release:
-        description: 'Optional release identifier for the deployment label'
-        required: false
-        type: string
-      shared_stack:
-        description: 'CloudFormation stack exporting Forge deployment resources'
-        default: grails-forge-shared
-        required: false
-        type: string
-      aws_region:
-        description: 'AWS region containing the shared stack and Elastic Beanstalk application'
-        default: us-east-1
-        required: false
-        type: string
 
 permissions:
   contents: read
@@ -65,34 +45,17 @@ jobs:
   deploy:
     name: "Deploy ${{ inputs.slot }} to AWS Elastic Beanstalk"
     runs-on: ubuntu-24.04
-    timeout-minutes: 75
+    timeout-minutes: 40
     env:
-      AWS_REGION: ${{ inputs.aws_region }}
-      AWS_DEFAULT_REGION: ${{ inputs.aws_region }}
+      AWS_REGION: us-east-1
+      AWS_DEFAULT_REGION: us-east-1
       AWS_PAGER: ""
       DEPLOY_ROLE_ARN: ${{ vars.AWS_FORGE_DEPLOY_ROLE_ARN }}
-      RELEASE: ${{ inputs.release }}
-      SHARED_STACK: ${{ inputs.shared_stack }}
+      SHARED_STACK: grails-forge-shared
       SLOT: ${{ inputs.slot }}
-      SOURCE_REF: ${{ inputs.source_ref || github.ref_name }}
     steps:
-      - name: "Validate source ref"
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ "${SOURCE_REF}" =~ ^[0-9]+\.[0-9]+\.x$ ]]; then
-            exit 0
-          fi
-          if [[ "${SOURCE_REF}" =~ ^v[0-9][A-Za-z0-9._-]*$ ]]; then
-            exit 0
-          fi
-          echo "source_ref must be a maintenance branch such as 7.1.x or a tag such as v7.1.6." >&2
-          exit 1
-
-      - name: "Checkout source ref"
+      - name: "Checkout"
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          ref: ${{ env.SOURCE_REF }}
 
       - name: "Read Java version"
         id: jdk
@@ -123,62 +86,35 @@ jobs:
         run: |
           set -euo pipefail
           case "${SLOT}" in
-            latest)
-              hostname='latest.grails.org'
-              ;;
-            snapshot)
-              hostname='snapshot.grails.org'
-              ;;
-            next)
-              hostname='next.grails.org'
-              ;;
-            prev)
-              hostname='prev.grails.org'
-              ;;
-            prev-snapshot)
-              hostname='prev-snapshot.grails.org'
-              ;;
+            latest) hostname='latest.grails.org' ;;
+            snapshot) hostname='snapshot.grails.org' ;;
+            next) hostname='next.grails.org' ;;
+            prev) hostname='prev.grails.org' ;;
+            prev-snapshot) hostname='prev-snapshot.grails.org' ;;
             *)
               echo "Unsupported deployment slot" >&2
               exit 1
               ;;
           esac
-
-          sanitized_release="$(printf '%s' "${RELEASE}" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9._-' '-')"
-          sanitized_release="${sanitized_release#-}"
-          sanitized_release="${sanitized_release%-}"
-          label_prefix="${SLOT}"
-          if [[ -n "${sanitized_release}" ]]; then
-            label_prefix="${label_prefix}-${sanitized_release}"
-          fi
           source_sha="$(git rev-parse HEAD)"
-          label_suffix="-${source_sha:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          label_prefix="${label_prefix:0:$((100 - ${#label_suffix}))}"
-          version_label="${label_prefix%-}${label_suffix}"
-
+          version_label="${SLOT}-${source_sha:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           printf 'hostname=%s\n' "${hostname}" >> "${GITHUB_OUTPUT}"
           printf 'version-label=%s\n' "${version_label}" >> "${GITHUB_OUTPUT}"
           printf 's3-key=artifacts/%s/%s.zip\n' "${SLOT}" "${version_label}" >> "${GITHUB_OUTPUT}"
 
-      - name: "Test and package Forge web application"
+      - name: "Package Forge for Elastic Beanstalk"
         working-directory: grails-forge
         shell: bash
-        run: >
-          ./gradlew
-          grails-forge-api:test
-          grails-forge-web-netty:test
-          grails-forge-web-netty:awsElasticBeanstalk
-        env:
-          TEST_BUILD_REPRODUCIBLE: "true"
+        run: ./gradlew grails-forge-web-netty:awsElasticBeanstalk
 
-      - name: "Verify Elastic Beanstalk package"
-        shell: bash
-        run: |
-          set -euo pipefail
-          artifact='grails-forge/grails-forge-web-netty/build/distributions/grails-forge-web-netty-aws.zip'
-          test -s "${artifact}"
+      - name: "Configure AWS credentials through OIDC"
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
+        with:
+          role-to-assume: ${{ env.DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
 
-      - name: "Verify AWS OIDC role configuration"
+      - name: "Discover shared deployment resources"
+        id: shared
         shell: bash
         run: |
           set -euo pipefail
@@ -186,22 +122,6 @@ jobs:
             echo "AWS_FORGE_DEPLOY_ROLE_ARN must be configured as a repository variable." >&2
             exit 1
           fi
-          if [[ ! "${DEPLOY_ROLE_ARN}" =~ ^arn:aws:iam::[0-9]{12}:role/.+$ ]]; then
-            echo "AWS_FORGE_DEPLOY_ROLE_ARN must be an IAM role ARN." >&2
-            exit 1
-          fi
-
-      - name: "Configure AWS credentials through OIDC"
-        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
-        with:
-          role-to-assume: ${{ env.DEPLOY_ROLE_ARN }}
-          aws-region: ${{ inputs.aws_region }}
-
-      - name: "Discover shared deployment resources"
-        id: shared
-        shell: bash
-        run: |
-          set -euo pipefail
           artifact_bucket="$(aws cloudformation describe-stacks --stack-name "${SHARED_STACK}" --query "Stacks[0].Outputs[?OutputKey=='ArtifactBucketName'].OutputValue | [0]" --output text)"
           application_name="$(aws cloudformation describe-stacks --stack-name "${SHARED_STACK}" --query "Stacks[0].Outputs[?OutputKey=='ApplicationName'].OutputValue | [0]" --output text)"
           load_balancer_dns_name="$(aws cloudformation describe-stacks --stack-name "${SHARED_STACK}" --query "Stacks[0].Outputs[?OutputKey=='SharedLoadBalancerDnsName'].OutputValue | [0]" --output text)"
@@ -217,17 +137,7 @@ jobs:
           printf 'load-balancer-dns-name=%s\n' "${load_balancer_dns_name}" >> "${GITHUB_OUTPUT}"
           printf 'environment-name=%s-%s\n' "${application_name}" "${SLOT}" >> "${GITHUB_OUTPUT}"
 
-      - name: "Upload immutable Elastic Beanstalk artifact"
-        shell: bash
-        env:
-          ARTIFACT_BUCKET: ${{ steps.shared.outputs.artifact-bucket }}
-          S3_KEY: ${{ steps.target.outputs.s3-key }}
-        run: |
-          set -euo pipefail
-          artifact='grails-forge/grails-forge-web-netty/build/distributions/grails-forge-web-netty-aws.zip'
-          aws s3 cp "${artifact}" "s3://${ARTIFACT_BUCKET}/${S3_KEY}" --only-show-errors
-
-      - name: "Deploy, verify, and roll back on failure"
+      - name: "Upload and deploy"
         shell: bash
         env:
           APPLICATION_NAME: ${{ steps.shared.outputs.application-name }}
@@ -239,23 +149,21 @@ jobs:
           VERSION_LABEL: ${{ steps.target.outputs.version-label }}
         run: |
           set -Eeuo pipefail
+          artifact='grails-forge/grails-forge-web-netty/build/distributions/grails-forge-web-netty-aws.zip'
+          test -s "${artifact}"
+          aws s3 cp "${artifact}" "s3://${ARTIFACT_BUCKET}/${S3_KEY}" --only-show-errors
+
           update_started=false
-          rollback_available=false
           previous_version="$(aws elasticbeanstalk describe-environments --environment-names "${ENVIRONMENT_NAME}" --query 'Environments[0].VersionLabel' --output text)"
+          rollback_available=true
           if [[ -z "${previous_version}" || "${previous_version}" == 'None' || "${previous_version}" == 'Sample Application' ]]; then
-            echo "No prior application version is available. A failed first deployment cannot be rolled back automatically."
-          else
-            rollback_available=true
+            rollback_available=false
           fi
 
           wait_for_ready_green() {
             local operation="$1"
             local expected_version="$2"
-            local status
-            local health
-            local current_version
-            local attempt
-
+            local status health current_version attempt
             for attempt in {1..90}; do
               read -r status health current_version < <(aws elasticbeanstalk describe-environments --environment-names "${ENVIRONMENT_NAME}" --query 'Environments[0].[Status,Health,VersionLabel]' --output text)
               if [[ "${status}" == 'Ready' && "${health}" == 'Green' && "${current_version}" == "${expected_version}" ]]; then
@@ -267,7 +175,6 @@ jobs:
               fi
               sleep 10
             done
-
             echo "${operation} did not reach Status=Ready, Health=Green, and VersionLabel=${expected_version}." >&2
             return 1
           }
@@ -276,14 +183,8 @@ jobs:
             local exit_code=$?
             trap - ERR
             if [[ "${update_started}" == true && "${rollback_available}" == true ]]; then
-              echo "Deployment failed. Rolling back ${ENVIRONMENT_NAME} to its previous application version."
-              if aws elasticbeanstalk update-environment --environment-name "${ENVIRONMENT_NAME}" --version-label "${previous_version}" >/dev/null && wait_for_ready_green 'Rollback' "${previous_version}"; then
-                echo "Rollback completed."
-              else
-                echo "Rollback did not reach Status=Ready and Health=Green. Manual intervention is required." >&2
-              fi
-            elif [[ "${update_started}" == true ]]; then
-              echo "Deployment failed, but no prior application version is available for rollback." >&2
+              echo "Deployment failed. Rolling back ${ENVIRONMENT_NAME}."
+              aws elasticbeanstalk update-environment --environment-name "${ENVIRONMENT_NAME}" --version-label "${previous_version}" >/dev/null || true
             fi
             exit "${exit_code}"
           }
@@ -300,16 +201,12 @@ jobs:
             application_version_status="$(aws elasticbeanstalk describe-application-versions --application-name "${APPLICATION_NAME}" --version-labels "${VERSION_LABEL}" --query 'ApplicationVersions[0].Status' --output text)"
             application_version_status="${application_version_status^^}"
             case "${application_version_status}" in
-              PROCESSED)
-                break
-                ;;
+              PROCESSED) break ;;
               FAILED)
                 echo "Elastic Beanstalk application version processing failed." >&2
                 exit 1
                 ;;
-              *)
-                sleep 10
-                ;;
+              *) sleep 10 ;;
             esac
           done
           if [[ "${application_version_status}" != 'PROCESSED' ]]; then

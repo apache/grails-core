@@ -285,7 +285,10 @@ Resources:
                   - Fn::Sub: arn:${AWS::Partition}:elasticbeanstalk:${AWS::Region}:${AWS::AccountId}:environment/${ApplicationName}/${ApplicationName}-prev
                   - Fn::Sub: arn:${AWS::Partition}:elasticbeanstalk:${AWS::Region}:${AWS::AccountId}:environment/${ApplicationName}/${ApplicationName}-prev-snapshot
                   - Fn::Sub: arn:${AWS::Partition}:elasticbeanstalk:${AWS::Region}:${AWS::AccountId}:applicationversion/${ApplicationName}/*
-              - Action: cloudformation:DescribeStacks
+              - Action:
+                  - cloudformation:DescribeStacks
+                  - cloudformation:DescribeStackResources
+                  - cloudformation:GetTemplate
                 Effect: Allow
                 Resource: '*'
             Version: '2012-10-17'
