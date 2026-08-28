@@ -246,6 +246,7 @@ Resources:
               - Action:
                   - s3:GetObject
                   - s3:GetObjectVersion
+                  - s3:GetObjectAcl
                   - s3:PutObject
                 Effect: Allow
                 Resource:
@@ -287,6 +288,7 @@ Resources:
                   - Fn::Sub: arn:${AWS::Partition}:elasticbeanstalk:${AWS::Region}:${AWS::AccountId}:applicationversion/${ApplicationName}/*
               - Action:
                   - cloudformation:DescribeStacks
+                  - cloudformation:DescribeStackResource
                   - cloudformation:DescribeStackResources
                   - cloudformation:GetTemplate
                 Effect: Allow

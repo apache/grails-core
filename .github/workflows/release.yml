@@ -632,14 +632,9 @@ jobs:
       - name: "🚀 MANUAL - Deploy Grails Forge"
         run: |
           echo "::group::Manual Grails Forge deployment"
-          echo "Kick off Forge-* workflow for version ${VERSION} based on the below rules:"
-          cat <<'EOF'
-          * RELEASE - Full Final Releases - https://github.com/apache/grails-core/actions/workflows/forge-deploy-release.yml
-          * NEXT - Milestones and Release Candidate for Next Release (also Next version snapshot prior to Milestone) - https://github.com/apache/grails-core/actions/workflows/forge-deploy-next.yml
-          * SNAPSHOT - current or next version snapshot - https://github.com/apache/grails-core/actions/workflows/forge-deploy-snapshot.yml
-          * PREV - previous release version - https://github.com/apache/grails-core/actions/workflows/forge-deploy-prev.yml
-          * PREV-SNAPSHOT - previous version snapshot - https://github.com/apache/grails-core/actions/workflows/forge-deploy-prev-snapshot.yml
-          EOF
+          echo "Deploy Forge via https://github.com/apache/grails-core/actions/workflows/forge-deploy-aws.yml"
+          echo "Use workflow from the maintenance branch. Choose slot latest, snapshot, next, prev, or prev-snapshot."
+          echo "Do not run this workflow from a historical git tag."
           echo "::endgroup::"
   docs:
     environment: docs
@@ -792,7 +787,8 @@ jobs:
         run: |
           echo "::group::Deploy the new SNAPSHOT to Forge - MANUAL"
           echo "After the Close Release PR is merged, deploy the new SNAPSHOT to Forge via:"
-          echo "https://github.com/apache/grails-core/actions/workflows/forge-deploy-snapshot.yml"
+          echo "https://github.com/apache/grails-core/actions/workflows/forge-deploy-aws.yml"
+          echo "Use workflow from the snapshot branch. Slot: snapshot."
           echo "::endgroup::"
       - name: "🌎 MANUAL - Add version to the Grails Website"
         run: |
