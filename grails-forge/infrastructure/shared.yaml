@@ -249,7 +249,17 @@ Resources:
                   - s3:PutObject
                 Effect: Allow
                 Resource:
-                  Fn::Sub: ${ArtifactBucket.Arn}/*
+                  - Fn::Sub: ${ArtifactBucket.Arn}/*
+                  - Fn::Sub: arn:${AWS::Partition}:s3:::elasticbeanstalk-${AWS::Region}-${AWS::AccountId}/*
+              - Action:
+                  - s3:ListBucket
+                  - s3:GetBucketLocation
+                Effect: Allow
+                Resource:
+                  Fn::Sub: arn:${AWS::Partition}:s3:::elasticbeanstalk-${AWS::Region}-${AWS::AccountId}
+              - Action: elasticbeanstalk:CreateStorageLocation
+                Effect: Allow
+                Resource: '*'
               - Action:
                   - elasticbeanstalk:CreateApplicationVersion
                 Effect: Allow
