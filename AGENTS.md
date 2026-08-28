@@ -55,6 +55,7 @@ export GRADLE_OPTS="-Xms2G -Xmx5G"
 12. **Clean violations before commit** - Before every automated commit, run `./gradlew clean aggregateViolations :grails-test-report:check --continue` from the root and ensure that `build/reports/violations/CHECKSTYLE_VIOLATIONS.md`, `build/reports/violations/CODENARC_VIOLATIONS.md`, `build/reports/violations/PMD_VIOLATIONS.md`, and `build/reports/violations/SPOTBUGS_VIOLATIONS.md` report no issues. Also review the test result reports under `grails-test-report/build/reports/tests/` and ensure there are no failures. The aggregate reports are wired as test finalizers and will be attempted after failures, but `--continue` is required for comprehensive full-suite reports.
 13. **Mandatory test coverage** - Any class touched in a commit MUST be covered with tests that verify all behavior. You must run ALL tests in the affected module(s) and ensure they pass before committing.
 14. **The BOM must manage the latest version** - `validateDependencyVersions` enforces that the BOM (`dependencies.gradle`) manages a version `>=` every transitively-resolved version. When it fails, **bump the version in `dependencies.gradle`** so the BOM wins — never silence it with `allowedBomOverrides` or an exclusion unless there is an explicit, documented conflict or an agreed-upon workaround. See [Dependency Management](#dependency-management).
+15. **GitHub Actions must use ASF-approved pins** - Every third-party action SHA must appear in the ASF allowlist. See [GitHub Actions](#github-actions).
 
 ## Available Skills
 
@@ -238,6 +239,21 @@ class MyService { }
 | Style check | `./gradlew codeStyle` |
 | Build docs | `./gradlew :grails-doc:publishGuide -x aggregateGroovydoc` |
 | Debug | `./gradlew bootRun --debug-jvm` |
+
+## GitHub Actions
+
+Apache GitHub Actions policy blocks third-party actions unless they are on the organization allowlist. A workflow that uses an unlisted `uses:` SHA fails at **startup** before any job runs.
+
+The allowlist source of truth is:
+
+https://github.com/apache/infrastructure-actions/blob/main/approved_patterns.yml
+
+Rules:
+
+- Pin every third-party action to a **full commit SHA** that appears in that file, with a trailing `# version` comment.
+- `actions/*`, `github/*`, and `apache/*` are allowed by namespace. Still SHA-pin them for supply-chain consistency.
+- Do not use a newer SHA, tag, or major version until it is on the allowlist. If you need a new pin, open a PR against `apache/infrastructure-actions` (`actions.yml`, not the generated `approved_patterns.yml`).
+- Before adding or bumping a `uses:` line, search `approved_patterns.yml` for that action and copy an approved SHA.
 
 ## Branch Naming (Auto-Labels PRs)
 

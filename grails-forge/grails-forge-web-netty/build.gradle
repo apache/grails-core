@@ -22,6 +22,7 @@ plugins {
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'io.micronaut.application' version "$micronautApplicationPluginVersion"
+    id 'com.gradleup.shadow' version '8.3.6'
 }
 
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
