@@ -27,10 +27,14 @@ class ConfigurationMetadataSpec extends Specification {
         given:
         Map metadata = configurationMetadata()
         Map<String, Map> properties = metadata.get('properties').collectEntries { Map property -> [(property.get('name')): property] }
+        Map overlay = curatedOverlay()
+        Set<String> generatedGroupNames = (metadata.get('groups') ?: []).collect { Map group -> group.get('name') as String } as Set
+        List<String> curatedGroupNames = (overlay.get('groups') ?: []).collect { Map group -> group.get('name') as String }
+        List<String> curatedPropertyNames = (overlay.get('properties') ?: []).collect { Map property -> property.get('name') as String }
 
-        expect: 'the complete curated metadata contract is retained'
-        metadata.get('groups').size() == 14
-        properties.size() == 145
+        expect: 'every curated group and property is present in the canonical generated metadata'
+        (curatedGroupNames - generatedGroupNames).empty
+        (curatedPropertyNames - properties.keySet()).empty
 
         and: 'literal DSL defaults are present'
         properties['grails.plugin.springsecurity.active'].type == 'java.lang.Boolean'
@@ -55,6 +59,22 @@ class ConfigurationMetadataSpec extends Specification {
                 .findAll { URL candidate ->
                     Map metadata = new JsonSlurper().parse(candidate) as Map
                     (metadata.get('groups') ?: []).any { Map group -> group.get('name') == 'grails.plugin.springsecurity' }
+                }
+        assert resources.size() == 1
+        new JsonSlurper().parse(resources.first()) as Map
+    }
+
+    /**
+     * Several modules publish their own curated overlay under the same resource name, so this
+     * mirrors {@link #configurationMetadata()}'s disambiguation: find the one whose own
+     * "groups" declares the Spring Security prefix, rather than assuming classpath order.
+     */
+    private static Map curatedOverlay() {
+        List<URL> resources = ConfigurationMetadataSpec.classLoader
+                .getResources('META-INF/additional-spring-configuration-metadata.json')
+                .findAll { URL candidate ->
+                    Map overlay = new JsonSlurper().parse(candidate) as Map
+                    (overlay.get('groups') ?: []).any { Map group -> group.get('name') == 'grails.plugin.springsecurity' }
                 }
         assert resources.size() == 1
         new JsonSlurper().parse(resources.first()) as Map
