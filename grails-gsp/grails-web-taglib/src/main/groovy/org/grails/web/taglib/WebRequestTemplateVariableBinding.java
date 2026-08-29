@@ -72,6 +72,13 @@ public class WebRequestTemplateVariableBinding extends AbstractTemplateVariableB
                 return webRequest.getServletContext();
             }
         });
+        // The same object as `application`, under the name the servlet API calls it. A page reading
+        // servletContext got nothing at all before, since nothing bound the name.
+        m.put("servletContext", new LazyRequestBasedValue() {
+            public Object evaluate(GrailsWebRequest webRequest) {
+                return webRequest.getServletContext();
+            }
+        });
         m.put("applicationContext", new LazyRequestBasedValue() {
             public Object evaluate(GrailsWebRequest webRequest) {
                 return webRequest.getAttributes().getApplicationContext();

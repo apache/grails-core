@@ -44,7 +44,10 @@ import org.gradle.api.attributes.Category
 import org.gradle.api.file.CopySpec
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.file.FileCollection
+import org.gradle.api.file.Directory
 import org.gradle.api.file.RegularFile
+import org.gradle.api.plugins.BasePlugin
+import org.gradle.api.plugins.ExtensionAware
 import org.gradle.api.plugins.ExtraPropertiesExtension
 import org.gradle.api.plugins.GroovyPlugin
 import org.gradle.api.plugins.JavaPluginExtension
@@ -52,10 +55,12 @@ import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.AbstractCopyTask
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSet
+import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.compile.GroovyCompile
 import org.gradle.api.tasks.testing.Test
+import org.gradle.jvm.toolchain.JavaLauncher
 import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.process.JavaForkOptions
@@ -65,6 +70,13 @@ import org.grails.gradle.plugin.commands.GrailsCliGradlePlugin
 import org.grails.gradle.plugin.exploded.ExplodedCompatibilityRule
 import org.grails.gradle.plugin.exploded.ExplodedDisambiguationRule
 import org.grails.gradle.plugin.exploded.GrailsExplodedPlugin
+import org.grails.gradle.plugin.i18n.GenerateI18nDescriptorTask
+import org.apache.grails.gradle.plugin.aot.AotCacheExtension
+import org.apache.grails.gradle.plugin.aot.ExtractApplicationTask
+import org.apache.grails.gradle.plugin.aot.GenerateNativeMetadataTask
+import org.apache.grails.gradle.plugin.aot.NativeMetadataExtension
+import org.apache.grails.gradle.plugin.aot.TraceNativeMetadataTask
+import org.apache.grails.gradle.plugin.aot.TrainAotCacheTask
 import org.grails.gradle.plugin.model.GrailsClasspathToolingModelBuilder
 import org.grails.gradle.plugin.run.FindMainClassTask
 import org.grails.gradle.plugin.util.SourceSets
@@ -82,6 +94,25 @@ import javax.inject.Inject
  */
 @CompileStatic
 class GrailsGradlePlugin implements Plugin<Project> {
+
+    private static final String NATIVE_IMAGE_PLUGIN = 'org.graalvm.buildtools.native'
+
+    /** The plugin that compiles the pages, which are half of what a native image has to be told about. */
+    private static final String GSP_PLUGIN = 'org.apache.grails.gradle.grails-gsp'
+
+    private static final String SPRING_BOOT_PLUGIN = 'org.springframework.boot'
+
+    private static final String ASSET_COMPILE_TASK = 'assetCompile'
+
+    /** Where an executable jar reads its classpath from, and so where assets have to be to be found. */
+    private static final String CLASSPATH_ASSETS_PATH = 'BOOT-INF/classes/assets'
+
+    private static final int TRAINING_PORT = 18080
+
+    /** Not the training port: a trace and a training run are both a started application. */
+    private static final int TRACING_PORT = 18081
+
+    private static final int TRAINING_START_TIMEOUT_SECONDS = 180
 
     private static final String CLI_PID_FILE_PROPERTY = 'grails.cli.pid.file'
     private static final String RUN_APP_PID_FILE_NAME = 'run-app.pid'
@@ -132,6 +163,10 @@ class GrailsGradlePlugin implements Plugin<Project> {
 
         enableNative2Ascii(project, grailsVersion)
 
+        configureI18nDescriptor(project)
+        configureNativeMetadata(project)
+        configureAotCache(project)
+
         configureTemplateResources(project)
 
         configureAssetCompilation(project)
@@ -143,6 +178,10 @@ class GrailsGradlePlugin implements Plugin<Project> {
         configureForkSettings(project, grailsVersion)
 
         configureBootRunPidFile(project)
+
+        configureAheadOfTimeProcessing(project)
+
+        configureNativeImage(project)
 
         configureJavaCompatibilityArgs(project)
 
@@ -553,6 +592,7 @@ ${importStatements}
             'grails-base-bom',
             'grails-hibernate5-bom',
             'grails-hibernate7-bom',
+            'grails-neo4j-bom',
             'grails-micronaut-bom',
             'grails-hibernate5-micronaut-bom',
             'grails-hibernate7-micronaut-bom',
@@ -836,6 +876,48 @@ ${importStatements}
                 it.destinationDirectory = project.layout.buildDirectory.dir('assetCompile/assets')
             }
         }
+        configureAssetsOnTheClasspath(project)
+    }
+
+    /**
+     * Packages the compiled assets where an executable jar can read them.
+     *
+     * <p>The asset pipeline plugin puts them at the root of whatever archive is built, which is
+     * where a war serves its web content from and is therefore right for a war. An executable jar
+     * has no web content: it serves assets by reading them off the classpath, and its classpath is
+     * {@code BOOT-INF/classes} -- so the same assets, at the same place, in a jar rather than a war,
+     * are packaged but unreachable, and every asset a page asks for is a 404 while the page itself
+     * renders. Adding them under the classpath directory is what makes them found.</p>
+     *
+     * <p>Only for {@code bootJar}. A war already serves them from the root, and putting them on its
+     * classpath as well would ship the same bytes twice.</p>
+     */
+    private void configureAssetsOnTheClasspath(Project project) {
+        project.pluginManager.withPlugin(SPRING_BOOT_PLUGIN) {
+            // Asked for by name when the archive needs it, rather than matched out of the task
+            // container in advance.
+            //
+            // A matching {} collection is live. Handed to project.files() it became part of
+            // bootJar's input files, so the container was reachable from the archive's state -- and
+            // resolving those inputs ran the predicate against every task registered, realizing all
+            // of them to find the one. Asking the names costs nothing and realizes nothing; only
+            // the task that is actually there is then looked up, and the file collection it returns
+            // carries the dependency on it.
+            //
+            // Still by name rather than by the plugin that registers it: the pipeline's plugin id
+            // has changed once already and the task name has not, and an application is free to
+            // register the task itself.
+            FileCollection compiledAssets = project.files(project.provider {
+                project.tasks.names.contains(ASSET_COMPILE_TASK)
+                        ? project.tasks.named(ASSET_COMPILE_TASK).get().outputs.files
+                        : project.files()
+            })
+            project.tasks.named('bootJar', AbstractCopyTask).configure { AbstractCopyTask task ->
+                task.from(compiledAssets) { CopySpec spec ->
+                    spec.into(CLASSPATH_ASSETS_PATH)
+                }
+            }
+        }
     }
 
     protected <T extends JavaForkOptions & DefaultTask> void configureForkSettings(Project project, String grailsVersion) {
@@ -857,6 +939,10 @@ ${importStatements}
             // Use a CommandLineArgumentProvider so that the absolute project directory path
             // is normalized for build cache relocatability (PathSensitivity.RELATIVE).
             task.jvmArgumentProviders.add(new GrailsAppBaseDirProvider(project.projectDir))
+            // The application compiles a page again when it changes, so the page opt-in has to reach
+            // the JVM running it as well as the one the build compiles pages in.
+            task.jvmArgumentProviders.add(new GrailsGspCompileStaticProvider(
+                    project.extensions.getByType(GrailsExtension).compileStatic))
             task.systemProperty(BuildSettings.PROJECT_TARGET_DIR, project.layout.buildDirectory.get().asFile.name)
             task.systemProperty(Environment.KEY, defaultGrailsEnv)
             task.systemProperty(Environment.FULL_STACKTRACE, System.getProperty(Environment.FULL_STACKTRACE) ?: '')
@@ -884,6 +970,93 @@ ${importStatements}
         tasks.withType(JavaExec).configureEach(systemPropertyConfigurer.curry(grailsEnvSystemProperty ?: Environment.DEVELOPMENT.getName()))
 
         configureToolchainForForkTasks(project)
+    }
+
+    /**
+     * Generates the application's bean definitions for the environment it will be run in.
+     *
+     * <p>Generation reads the definitions to write them out as code, and an application declares
+     * different ones in different environments -- development declares reloadable beans, which
+     * cannot be expressed as generated code. Left at the default the definitions written out are
+     * development's, and an application built from them is not the application that was asked
+     * for.</p>
+     *
+     * <p>Nothing here runs unless the application applies Spring Boot's AOT plugin, which is what
+     * asks for generated definitions in the first place.</p>
+     */
+    protected void configureAheadOfTimeProcessing(Project project) {
+        project.pluginManager.withPlugin('org.springframework.boot.aot') {
+            project.tasks.named('processAot', JavaExec) { JavaExec task ->
+                task.systemProperty(Environment.KEY, Environment.PRODUCTION.name)
+            }
+        }
+    }
+
+    /**
+     * What a Grails application needs of a native image that an image cannot work out for itself.
+     *
+     * <p>Applications resolve calls through invokedynamic here, because the classic call site
+     * defines a class as it runs and an image has no way to define one. The framework has to be
+     * built the same way. This is a convention, so an application that has said otherwise keeps
+     * what it said.</p>
+     *
+     * <p>Nothing here runs unless the application applies GraalVM's plugin, which is what asks for
+     * an image in the first place. An application that never builds one is untouched.</p>
+     */
+    protected void configureNativeImage(Project project) {
+        project.pluginManager.withPlugin('org.graalvm.buildtools.native') {
+            GrailsExtension grailsExt = project.extensions.getByType(GrailsExtension)
+            grailsExt.indy.convention(true)
+        }
+        configureNativeMetadataTrace(project)
+    }
+
+    /**
+     * Records the reflection a running application does, which is the half of an image's metadata
+     * that reading the build output cannot supply.
+     *
+     * <p>{@code generateNativeMetadata} writes down the application's own artefacts without running
+     * anything. What it cannot see is the framework reflecting along a request path -- a controller
+     * method reached through Groovy's dispatch, a conversion asked for while binding a form -- and an
+     * image built without those starts, serves its home page, and fails on the first request that
+     * needs one.</p>
+     *
+     * <p>Run deliberately rather than as part of a build: it starts the application, and what it
+     * writes belongs in the sources beside the code, where the next person can see which paths an
+     * image was built to cover.</p>
+     */
+    protected void configureNativeMetadataTrace(Project project) {
+        NativeMetadataExtension extension = ((ExtensionAware) project.extensions.getByName('grails'))
+                .extensions.create('nativeMetadata', NativeMetadataExtension)
+        extension.paths.convention(['/'])
+        extension.forms.convention([])
+        extension.jvmArguments.convention(['-Dgrails.env=production'])
+        extension.port.convention(TRACING_PORT)
+        extension.startTimeoutSeconds.convention(TRAINING_START_TIMEOUT_SECONDS)
+        extension.outputDirectory.convention(project.layout.projectDirectory
+                .dir('src/native/resources/META-INF/native-image'))
+
+        project.pluginManager.withPlugin(SPRING_BOOT_PLUGIN) {
+            TaskProvider<?> bootJar = project.tasks.named('bootJar')
+            Provider<JavaLauncher> launcher = trainingLauncher(project)
+
+            project.tasks.register('traceNativeMetadata', TraceNativeMetadataTask) { TraceNativeMetadataTask task ->
+                task.group = BasePlugin.BUILD_GROUP
+                task.description = 'Runs the application under the tracing agent and records the reflection it does'
+                task.dependsOn(bootJar)
+                task.archiveFile.set(archiveFileOf(bootJar))
+                // The project's toolchain unless told otherwise, which for a project that builds an
+                // image is the GraalVM the image is built with -- and the agent is only there.
+                task.javaExecutable.set(extension.javaExecutable
+                        .orElse(launcher.map { JavaLauncher java -> java.executablePath.asFile.absolutePath }))
+                task.jvmArguments.set(extension.jvmArguments)
+                task.paths.set(extension.paths)
+                task.forms.set(extension.forms)
+                task.port.set(extension.port)
+                task.startTimeoutSeconds.set(extension.startTimeoutSeconds)
+                task.outputDirectory.set(extension.outputDirectory)
+            }
+        }
     }
 
     protected void configureBootRunPidFile(Project project) {
@@ -1113,6 +1286,247 @@ ${importStatements}
                 spec.into('META-INF/templates')
             }
         }
+    }
+
+    /**
+     * Records the message bundles this artifact ships into {@code META-INF/grails/i18n.properties}.
+     *
+     * <p>Spring Boot's message source is configured with an explicit base-name list, which nothing at
+     * runtime can discover without scanning the classpath. Writing the answer here lets the runtime
+     * read it back through an exact-name resource lookup instead — no {@code classpath*:*.properties}
+     * scan, and therefore no wildcard resource metadata needed for a native image.</p>
+     *
+     * <p>The task reads the bundle <em>sources</em>, not the processed resources: {@code native2ascii}
+     * and {@code EscapeUnicode} rewrite bundle contents but never file names, so there is no need to
+     * order this after them and no risk of a {@code processResources} dependency cycle.</p>
+     */
+    protected void configureI18nDescriptor(Project project) {
+        SourceSet sourceSet = SourceSets.findMainSourceSet(project)
+        GrailsExtension grailsExt = project.extensions.getByType(GrailsExtension)
+
+        TaskProvider<GenerateI18nDescriptorTask> descriptorTask = project.tasks.register(
+                'generateI18nDescriptor', GenerateI18nDescriptorTask) { GenerateI18nDescriptorTask task ->
+            task.group = BasePlugin.BUILD_GROUP
+            task.description = 'Records the message bundle base names and locales this artifact contributes'
+            task.bundleDirectory.set(project.layout.projectDirectory.dir('grails-app/i18n'))
+            task.artifactType.set(grailsArtifactType())
+            task.artifactName.set(grailsArtifactName(project))
+            task.artifactVersion.set(project.provider { project.version?.toString() })
+            task.declaredBasenames.set(grailsExt.i18n.basenames)
+            task.outputDirectory.set(project.layout.buildDirectory.dir('generated-resources/grails-i18n'))
+        }
+
+        project.tasks.named(sourceSet.processResourcesTaskName, ProcessResources).configure { ProcessResources task ->
+            task.from(descriptorTask)
+        }
+    }
+
+    /**
+     * Wires up the cache the JDK can write for an application, so the next start reads what a
+     * training run worked out rather than working it out again.
+     *
+     * <p>Three steps, because the cache is only usable against the layout it was trained on: the
+     * archive is extracted, the extracted application is run and asked for its pages, and what the
+     * run recorded is left beside it. An application asks for this with
+     * {@code grails.aotCache.enabled}, and says which of its pages matter.</p>
+     */
+    protected void configureAotCache(Project project) {
+        AotCacheExtension extension = ((ExtensionAware) project.extensions.getByName('grails'))
+                .extensions.create('aotCache', AotCacheExtension)
+        extension.enabled.convention(false)
+        extension.paths.convention([])
+        extension.jvmArguments.convention(['-Dspring.aot.enabled=true', '-Dgrails.env=production'])
+        extension.port.convention(TRAINING_PORT)
+        extension.startTimeoutSeconds.convention(TRAINING_START_TIMEOUT_SECONDS)
+
+        project.pluginManager.withPlugin(SPRING_BOOT_PLUGIN) {
+            TaskProvider<?> bootJar = project.tasks.named('bootJar')
+            Provider<Directory> application = project.layout.buildDirectory.dir('aot-cache/application')
+            Provider<JavaLauncher> launcher = trainingLauncher(project)
+
+            TaskProvider<ExtractApplicationTask> extract = project.tasks.register(
+                    'extractAotCacheApplication', ExtractApplicationTask) { ExtractApplicationTask task ->
+                task.group = BasePlugin.BUILD_GROUP
+                task.description = 'Extracts the application, which is the form the cache is read against'
+                task.onlyIf { extension.enabled.get() }
+                task.archiveFile.set(archiveFileOf(bootJar))
+                // The launcher rather than its path: this task is cacheable, and a path is where a
+                // JDK happens to live on the machine that ran the build. Set as the provider it is,
+                // so the toolchain is not resolved -- and a JDK not provisioned -- by every build
+                // that merely reads this project.
+                task.javaLauncher.set(launcher)
+                task.destination.set(application)
+            }
+
+            project.tasks.register('trainAotCache', TrainAotCacheTask) { TrainAotCacheTask task ->
+                task.group = BasePlugin.BUILD_GROUP
+                task.description = 'Runs the application once so the JDK can write down what starting it needs'
+                task.onlyIf { extension.enabled.get() }
+                task.dependsOn(extract)
+                task.applicationDirectory.set(application)
+                task.archiveFileName.set(archiveFileOf(bootJar).map { RegularFile file -> file.asFile.name })
+                // Beside the extracted application rather than inside it. Inside, the cache and its
+                // metadata land in the directory this task declares as its input, so writing them
+                // changes that input and the task can never be up to date -- every build would run
+                // the application again to record what the last one already recorded.
+                Provider<Directory> beside = project.layout.buildDirectory.dir('aot-cache')
+                // Read here rather than inside the closure below. A provider is queried when the
+                // property is finalized or the task runs, so a closure that reaches through
+                // project carries the project into the task's state -- which the configuration
+                // cache refuses. The name is a string by then, which it does not mind.
+                String cacheName = project.name
+                task.cacheFile.set(beside.map { Directory dir -> dir.file("${cacheName}.aot") })
+                task.metadataFile.set(beside.map { Directory dir -> dir.file('aot-cache.properties') })
+                task.javaExecutable.set(launcher.map { JavaLauncher java -> java.executablePath.asFile.absolutePath })
+                // Recorded from the JDK that will run the training, not the one running the build.
+                // A cache is read only by the JDK build that wrote it, and this is what a deployment
+                // checks that against -- so naming the wrong one is worse than naming none.
+                task.javaVersion.set(launcher.map { JavaLauncher java -> java.metadata.jvmVersion })
+                task.javaVendor.set(launcher.map { JavaLauncher java -> java.metadata.vendor })
+                task.jvmArguments.set(extension.jvmArguments)
+                task.paths.set(extension.paths)
+                task.port.set(extension.port)
+                task.startTimeoutSeconds.set(extension.startTimeoutSeconds)
+            }
+        }
+    }
+
+    /**
+     * The archive a task should consume, as something to be resolved when it runs.
+     *
+     * <p>A provider rather than a file: asking the task for its archive resolves the task, and a
+     * task resolved while the build is configured is one every build pays for whether or not it
+     * asked for an archive.</p>
+     */
+    private static Provider<RegularFile> archiveFileOf(TaskProvider<?> bootJar) {
+        bootJar.flatMap { Task task -> (Provider<RegularFile>) task.property('archiveFile') }
+    }
+
+    /**
+     * The JDK the cache will be trained on, which is the project's toolchain where it declares one.
+     *
+     * <p>A cache is read only by the JDK build that wrote it, so training has to happen on the JDK
+     * the application is compiled for rather than whichever one happens to be running Gradle. A
+     * project on the Java 21 baseline with a Java 25 toolchain compiles with 25 and would otherwise
+     * have trained with 21, where the cache options do not exist -- and the failure it reported was
+     * that the training run ended before it started serving.</p>
+     *
+     * <p>Where no toolchain is declared this resolves to the JDK running the build, which is also
+     * the one that compiled the application.</p>
+     */
+    private static Provider<JavaLauncher> trainingLauncher(Project project) {
+        JavaToolchainService toolchains = project.extensions.getByType(JavaToolchainService)
+        JavaPluginExtension java = project.extensions.getByType(JavaPluginExtension)
+        toolchains.launcherFor(java.toolchain)
+    }
+
+    /**
+     * Records the application's own classes and pages so a native image keeps them usable. The build
+     * output already names both, so an application does not have to be traced to be buildable.
+     */
+    protected void configureNativeMetadata(Project project) {
+        // Only where an image is actually being built. The metadata is read by nothing else, and
+        // generating it means reading the compiled classes and the pages compiled into every
+        // dependency -- so wiring it into processResources unconditionally made a build that only
+        // wanted to write a resource compile its sources and resolve its whole runtime classpath
+        // first, which a project that had declared no repositories could not do.
+        project.pluginManager.withPlugin(NATIVE_IMAGE_PLUGIN) {
+            configureNativeMetadataTask(project)
+        }
+    }
+
+    private void configureNativeMetadataTask(Project project) {
+        SourceSet sourceSet = SourceSets.findMainSourceSet(project)
+
+        TaskProvider<GenerateNativeMetadataTask> metadataTask = project.tasks.register(
+                'generateNativeMetadata', GenerateNativeMetadataTask) { GenerateNativeMetadataTask task ->
+            task.group = BasePlugin.BUILD_GROUP
+            task.description = 'Records the application classes and pages a native image must keep'
+            // The classes directory is written by more than one task, so the dependency has to be
+            // stated. Against the compilations rather than the classes task, because what reads
+            // this task's output has to run after the pages are compiled, and compiling the pages
+            // runs the classes task -- see where the output is consumed, below.
+            task.dependsOn(project.tasks.named(sourceSet.compileJavaTaskName))
+            // Asked of the names rather than of the tasks: findByName creates the task in order to
+            // answer whether it exists, so a build pays for one it may not have depended on.
+            ['compileGroovy', 'copyAstClasses'].each { String name ->
+                if (project.tasks.names.contains(name)) {
+                    task.dependsOn(project.tasks.named(name))
+                }
+            }
+            task.classesDirs.from(sourceSet.output.classesDirs)
+            task.pageClassesDirs.from(project.layout.buildDirectory.dir('gsp-classes/main'))
+            // Leniently: the pages compiled into dependencies are worth finding, but not at the
+            // price of making every build that writes a resource resolve the whole runtime
+            // classpath first. A dependency that cannot be resolved contributes no pages rather
+            // than failing a build that never asked for a native image.
+            task.pageClasspath.from(project.configurations.named('runtimeClasspath').map { conf ->
+                conf.incoming.artifactView { view -> view.lenient(true) }.files
+            })
+            task.outputDirectory.set(project.layout.buildDirectory.dir('generated-resources/grails-native'))
+        }
+
+        // The pages are half of what this records, and they are compiled by compileGroovyPages.
+        project.pluginManager.withPlugin(GSP_PLUGIN) {
+            metadataTask.configure { GenerateNativeMetadataTask task ->
+                task.dependsOn(project.tasks.named('compileGroovyPages'))
+            }
+        }
+
+        // Consumed after the classes exist rather than through processResources.
+        //
+        // processResources looks like the natural home for a generated resource, and it was the
+        // home until it turned out to invert the order this task needs: compileGroovyPages depends
+        // on classes, classes runs processResources, and processResources consuming this task put
+        // it ahead of all three. The pages were therefore compiled after the task that reads them
+        // had already run -- so the page half of the metadata was empty on a clean build and stale
+        // on any other, and an image built from it was missing every page. Nothing failed; the
+        // pages were simply not found at runtime.
+        //
+        // No ordering satisfies both directions, so the output goes to what runs after the pages
+        // are compiled: the archive, and the image being built from it. Adding it to the source
+        // set output instead would put the cycle back, because the classes task builds those.
+        project.tasks.withType(Jar).configureEach { Jar jar ->
+            if (jar.name == 'bootJar') {
+                jar.from(metadataTask) { CopySpec spec -> spec.into('BOOT-INF/classes') }
+            }
+        }
+        addToNativeImageClasspath(project, metadataTask)
+    }
+
+    /**
+     * Puts the recorded metadata on the classpath the image is built from.
+     *
+     * <p>Dynamically, because the plugin that defines the extension is not on this plugin's compile
+     * classpath -- and it is only asked for inside {@code withPlugin}, so an application that never
+     * builds an image never reaches it.</p>
+     */
+    @CompileDynamic
+    private static void addToNativeImageClasspath(Project project,
+                                                  TaskProvider<GenerateNativeMetadataTask> metadataTask) {
+        def graalvm = project.extensions.findByName('graalvmNative')
+        graalvm?.binaries?.configureEach { binary ->
+            binary.classpath(metadataTask)
+        }
+    }
+
+    /**
+     * The {@code artifact.type} recorded in the i18n descriptor. Applications and plugins are
+     * distinguished so that message precedence can put the application's own bundles ahead of every
+     * plugin's, which classloader enumeration order can never express.
+     */
+    protected String grailsArtifactType() {
+        GenerateI18nDescriptorTask.TYPE_APPLICATION
+    }
+
+    /**
+     * The {@code artifact.name} recorded in the i18n descriptor. For an application this is only
+     * diagnostic; {@link GrailsPluginGradlePlugin} overrides it with the Grails plugin name, which
+     * both namespaces the plugin's base names and links the descriptor to the plugin the runtime
+     * discovers.
+     */
+    protected Provider<String> grailsArtifactName(Project project) {
+        project.provider { project.name }
     }
 
     /**

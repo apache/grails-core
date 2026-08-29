@@ -32,7 +32,11 @@ import io.micronaut.spring.boot.starter.EnableMicronaut
 
 }
 @if(features.contains("spring-boot-starter-security")) {
-import org.springframework.context.annotation.Import
+import org.springframework.security.config.annotation.web.builders.HttpSecurity
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
+import org.springframework.security.crypto.factory.PasswordEncoderFactories
+import org.springframework.security.crypto.password.PasswordEncoder
+import org.springframework.security.web.SecurityFilterChain
 
 }
 import grails.boot.GrailsApp
@@ -50,10 +54,32 @@ import grails.plugins.metadata.PluginSource
 @@EnableMicronaut
 }
 @if(features.contains("spring-boot-starter-security")) {
-@@Import(SecurityConfig)
+@@EnableWebSecurity
 }
 class Application extends GrailsAutoConfiguration {
     static void main(String[] args) {
         GrailsApp.run(Application, args)
     }
+@if(features.contains("spring-boot-starter-security")) {
+
+
+    def beans = {
+
+        bean(PasswordEncoder) {
+            PasswordEncoderFactories.createDelegatingPasswordEncoder()
+        }
+
+        bean('filterChain', SecurityFilterChain) { HttpSecurity http ->
+            http
+                .authorizeHttpRequests {
+                    it.requestMatchers('/', '/index', '/index.gsp', '/error', '/assets/**').permitAll()
+                      .requestMatchers('/user/**').hasRole('ADMIN')
+                      .anyRequest().authenticated()
+                }
+                .formLogin { }
+                .logout { it.logoutSuccessUrl('/') }
+            http.build()
+        }
+    }
+}
 }

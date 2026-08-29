@@ -174,6 +174,15 @@ out.print(messageClosure('World'))
         noExceptionThrown()
     }
 
+    def "an escaped expression is invisible to static compilation"() {
+        given:
+        def template = '''<%@ compileStatic="true"%>console.log(`Hello \\${undeclaredJsVariable}`);'''
+        when:
+        def rendered = renderTemplate(template, [:], true)
+        then:
+        rendered == 'console.log(`Hello ${undeclaredJsVariable}`);'
+    }
+
     def "should support multi-line model declaration"() {
         given:
         def template = '''<%@ model="""

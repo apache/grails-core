@@ -64,6 +64,39 @@ public class ScanTests {
     }
 
     @Test
+    public void testExpressionIsTokenized() {
+        GroovyPageScanner s = new GroovyPageScanner("a ${foo} b");
+        Assertions.assertEquals(Tokens.HTML, s.nextToken());
+        Assertions.assertEquals("a ", s.getToken());
+        Assertions.assertEquals(Tokens.GEXPR, s.nextToken());
+        Assertions.assertEquals("foo", s.getToken());
+        Assertions.assertEquals(Tokens.HTML, s.nextToken());
+        Assertions.assertEquals(" b", s.getToken());
+        Assertions.assertEquals(Tokens.EOF, s.nextToken());
+    }
+
+    @Test
+    public void testEscapedExpressionStaysInHtml() {
+        String gsp = "console.log(`Hello \\${name}`);";
+        GroovyPageScanner s = new GroovyPageScanner(gsp);
+        Assertions.assertEquals(Tokens.HTML, s.nextToken());
+        Assertions.assertEquals(gsp, s.getToken());
+        Assertions.assertEquals(Tokens.EOF, s.nextToken());
+    }
+
+    @Test
+    public void testEscapedAndUnescapedExpressionsSideBySide() {
+        GroovyPageScanner s = new GroovyPageScanner("\\${literal}${expr}");
+        Assertions.assertEquals(Tokens.HTML, s.nextToken());
+        Assertions.assertEquals("\\${literal}", s.getToken());
+        Assertions.assertEquals(Tokens.GEXPR, s.nextToken());
+        Assertions.assertEquals("expr", s.getToken());
+        Assertions.assertEquals(Tokens.HTML, s.nextToken());
+        Assertions.assertEquals("", s.getToken());
+        Assertions.assertEquals(Tokens.EOF, s.nextToken());
+    }
+
+    @Test
     public void testMaxHtmlLength() {
         String gsp = "0123456789ABCDEFGHIJK";
         GroovyPageScanner scanner = new GroovyPageScanner(gsp);
