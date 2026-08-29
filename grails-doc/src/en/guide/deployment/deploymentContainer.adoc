@@ -46,3 +46,105 @@ testImplementation "org.springframework.boot:spring-boot-starter-tomcat"
 == Application servers
 
 The Grails framework requires that runtime containers support Servlet 6.0.0 and above. By default, Grails framework applications are bundled with an embeddable Tomcat and testing is primarily done with Tomcat.  Any servlet container meeting the minimum requirements should be able to run Grails framework applications, but some workarounds may be required for container-specific bugs or configurations.
+
+== Container Deployments with Layered Builds
+
+For optimized container deployments, Grails applications can take advantage of Spring Boot's layered JAR functionality. This approach splits the application into different layers (dependencies, snapshot dependencies, and application code), which allows for more efficient Docker image builds and better layer caching.
+
+To enable layered builds, you can configure your `build.gradle` file:
+
+[source,gradle]
+----
+springBoot {
+    layout = 'ZIP'
+}
+
+jar {
+    enabled = true
+    archiveClassifier = 'plain'
+}
+
+bootJar {
+    enabled = true
+    archiveClassifier = 'exec'
+}
+
+// Configure layered JAR for container optimization
+bootBuildImage {
+    builder = 'docker.io/paketobuildpacks/builder-jammy-base:latest'
+}
+----
+
+This configuration creates layered builds that are ideal for container deployments, as Docker can cache unchanged layers (like dependencies) and only rebuild the layers that have changed.
+
+=== Docker Build Best Practices
+
+When building Docker images for Grails applications, consider using multi-stage builds to optimize the final image size:
+
+[source,Dockerfile]
+----
+# Multi-stage build for Grails application
+FROM docker.io/library/eclipse-temurin:17-jdk-jammy AS builder
+WORKDIR /workspace/app
+
+COPY gradlew .
+COPY gradle gradle
+COPY build.gradle .
+COPY settings.gradle .
+RUN chmod +x ./gradlew
+RUN ./gradlew --version
+
+COPY src src
+RUN ./gradlew assemble -x test
+
+FROM docker.io/library/eclipse-temurin:17-jre-jammy
+VOLUME /tmp
+COPY --from=builder /workspace/app/build/libs/*.jar app.jar
+ENTRYPOINT ["java","-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar"]
+----
+
+=== Using Spring Boot's Layered JAR Feature
+
+For even more optimized Docker builds, you can create layered JARs that separate application code from dependencies:
+
+[source,gradle]
+----
+// In build.gradle, add the layered plugin
+plugins {
+    id 'org.springframework.boot' version '3.x.x' apply false
+    id 'io.spring.dependency-management' version '1.x.x'
+    id 'org.grails.grails-web' version '7.x.x'
+    id 'org.grails.plugins:hibernate5' version '7.x.x'
+}
+
+// Configure layered JAR
+jar {
+    enabled = true
+    archiveClassifier = 'plain'
+}
+
+bootJar {
+    enabled = true
+    archiveClassifier = 'exec'
+    layered {
+        enabled = true
+    }
+}
+
+// Add the Spring Boot layered plugin dependency
+configurations.all {
+    resolutionStrategy {
+        force 'org.springframework.boot:spring-boot-gradle-plugin:3.x.x'
+    }
+}
+----
+
+Then you can use the `org.springframework.boot:jarmap` tool to inspect and work with the layers:
+
+[source,bash]
+----
+# Extract layers for Docker multi-stage build
+java -jar build/libs/myapp-1.0.0-exec.jar extract --layers --destination build/extracted/
+----
+
+This approach significantly reduces Docker image build times and image sizes by enabling layer caching for unchanged dependencies.

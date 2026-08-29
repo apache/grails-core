@@ -1335,6 +1335,11 @@ include::deployment/deploymentStandalone.adoc[]
 
 include::deployment/deploymentContainer.adoc[]
 
+[[deploymentLayeredBuilds]]
+=== Layered Builds for Container Deployments
+
+include::deployment/deploymentLayeredBuilds.adoc[]
+
 [[deploymentTasks]]
 === Deployment Configuration Tasks
 

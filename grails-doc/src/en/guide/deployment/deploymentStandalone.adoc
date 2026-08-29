@@ -64,6 +64,81 @@ java -Dgrails.env=prod -jar build/libs/mywar-0.1.war    (or .jar)
 WARNING: Note: TAR/ZIP distribution assembly has been removed from Grails 3.1.
 
 
+=== Advanced Container Deployment with Layered Builds
+
+For production deployments in containerized environments, Grails applications can leverage Spring Boot's layered JAR functionality. This approach separates the application into distinct layers (dependencies, snapshots, and application code), optimizing Docker image builds and storage.
+
+==== Creating Layered JARs
+
+To create a layered executable JAR, configure your `build.gradle`:
+
+[source,gradle]
+----
+bootJar {
+    enabled = true
+    archiveClassifier = 'exec'
+    layered {
+        enabled = true
+    }
+}
+
+jar {
+    enabled = true
+    archiveClassifier = 'plain'
+}
+----
+
+==== Building Optimized Docker Images
+
+Once you have a layered JAR, you can create an optimized Docker image using the extracted layers:
+
+[source,Dockerfile]
+----
+FROM eclipse-temurin:17-jre-jammy
+
+VOLUME /tmp
+
+ARG DEPENDENCY=target/dependency
+COPY ${DEPENDENCY}/BOOT-INF/lib /app/lib
+COPY ${DEPENDENCY}/META-INF /app/META-INF
+COPY ${DEPENDENCY}/BOOT-INF/classes /app
+
+ENTRYPOINT ["java","-cp","app:app/lib/*","example.Application"]
+----
+
+To prepare the layers for Docker:
+
+[source,bash]
+----
+grails package
+java -Djarmode=layertools -jar build/libs/myapp-*-exec.jar extract
+----
+
+==== Benefits of Layered Builds
+
+* **Reduced image sizes**: Only changed layers need to be rebuilt
+* **Faster deployments**: Docker layer caching improves build times
+* **Optimized storage**: Shared layers across applications reduce total storage requirements
+
+==== Production Deployment Commands
+
+For production deployments, consider using these optimized approaches:
+
+[source,bash]
+----
+# Create layered JAR for container deployment
+grails package
+
+# Run with specific memory settings
+java -server -Xmx768M -Dgrails.env=prod -jar build/libs/myapp-*-exec.jar
+
+# Or with specific JVM options for container environments
+java -XX:+UseContainerSupport \
+     -XX:MaxRAMPercentage=75.0 \
+     -Dgrails.env=prod \
+     -jar build/libs/myapp-*-exec.jar
+----
+
 === "./gradlew bootRun"
 
 
