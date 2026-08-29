@@ -30,6 +30,7 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
 import org.springframework.beans.factory.support.BeanDefinitionRegistry
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor
 import org.springframework.context.annotation.AnnotationConfigUtils
+import org.springframework.context.annotation.ConfigurationClassPostProcessor
 import org.springframework.aot.AotDetector
 import org.springframework.beans.factory.support.RootBeanDefinition
 import org.springframework.beans.factory.config.BeanDefinition
@@ -81,6 +82,13 @@ import org.apache.grails.core.plugins.PluginDiscovery
 class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware, ApplicationListener<ApplicationContextEvent> {
 
     static final boolean RELOADING_ENABLED = Environment.isReloadingAgentEnabled()
+
+    /**
+     * Name under which a second {@link ConfigurationClassPostProcessor} is registered to parse
+     * {@code @Configuration} classes contributed after Spring's own processor has already run.
+     * See {@link #registerLateConfigurationClassPostProcessor}.
+     */
+    private static final String LATE_CONFIGURATION_CLASS_POST_PROCESSOR_BEAN_NAME = 'grailsLateConfigurationClassPostProcessor'
 
     final GrailsApplication grailsApplication
     final GrailsApplicationLifeCycle lifeCycle
@@ -313,6 +321,35 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
                         .register(registrar)
             }
         }
+
+        registerLateConfigurationClassPostProcessor(registry)
+    }
+
+    /**
+     * Registers a second {@link ConfigurationClassPostProcessor} so that {@code @Configuration}
+     * classes contributed by {@code resources.groovy}, {@code resources.xml}, or the application's
+     * own {@code doWithSpring}/{@code beanRegistrar()} -- all drained above -- get parsed.
+     *
+     * <p>This class is discovered as an ordinary registry bean (see
+     * {@link GrailsAutoConfiguration#grailsApplicationPostProcessor}), not added manually like
+     * {@link GrailsEarlyPluginRegistrationPostProcessor}, so Spring always invokes it after its own
+     * {@code ConfigurationClassPostProcessor} has already completed its one and only pass over the
+     * registry. Without a second pass, the {@code @Configuration} classes registered above are added
+     * as plain bean definitions but never expanded. Spring marks every bean definition a processor
+     * has already parsed with {@code CONFIGURATION_CLASS_ATTRIBUTE}, so this second pass skips
+     * everything the first one handled and only expands what arrived here.</p>
+     *
+     * <p>Skipped for an AOT-optimized context, matching {@link org.grails.plugins.CoreGrailsPlugin}:
+     * the configuration classes it would otherwise re-parse were already parsed at build time, and
+     * {@code loadExternalBeans} above skips {@code resources.groovy}/{@code resources.xml} entirely
+     * in that case.</p>
+     */
+    private static void registerLateConfigurationClassPostProcessor(BeanDefinitionRegistry registry) {
+        if (AotDetector.useGeneratedArtifacts()) {
+            return
+        }
+        registerInfrastructureBean(registry, LATE_CONFIGURATION_CLASS_POST_PROCESSOR_BEAN_NAME,
+                ConfigurationClassPostProcessor)
     }
 
     /**
