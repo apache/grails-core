@@ -383,6 +383,11 @@ class ConfigurationMetadataPluginSpec extends Specification {
                     } else {
                         retries = 1
                     }
+                    if (System.getProperty('env') == 'test') {
+                        timeout = 'PT30S'
+                    } else {
+                        timeout = 5
+                    }
                 }
             }
         '''.stripIndent())
@@ -395,14 +400,57 @@ class ConfigurationMetadataPluginSpec extends Specification {
         then: 'the build succeeds instead of failing on a spurious conflict'
         result.task(':generateConfigurationMetadata').outcome == TaskOutcome.SUCCESS
 
-        and: 'a property with disagreeing branch types is kept, with no type and no default'
+        and: 'a null branch carries no type information, so the other branch\'s type still applies'
         Map keyProperty = property(metadata, 'grails.plugin.springsecurity.password.key')
-        keyProperty != null
-        !keyProperty.containsKey('type')
+        keyProperty.type == 'java.lang.String'
         !keyProperty.containsKey('defaultValue')
 
         and: 'a property with agreeing branch types and values keeps its inferred type'
         property(metadata, 'grails.plugin.springsecurity.authentication.retries').type == 'java.lang.Integer'
+
+        and: 'branches disagreeing on a concrete, non-null type drop the type entirely'
+        !property(metadata, 'grails.plugin.springsecurity.authentication.timeout').containsKey('type')
+        !property(metadata, 'grails.plugin.springsecurity.authentication.timeout').containsKey('defaultValue')
+    }
+
+    def "keeps the unconditional default when a conditional branch overrides it"() {
+        given: 'an unconditional assignment is overridden only under some environments'
+        write('src/dsl/fixture/UnconditionalDefaultConfig.groovy', '''
+            security {
+                foo = 'default'
+                if (System.getProperty('env') == 'test') {
+                    foo = 'test'
+                }
+            }
+        '''.stripIndent())
+        configureDslMetadata('src/dsl/fixture/UnconditionalDefaultConfig.groovy')
+
+        when:
+        BuildResult result = run('generateConfigurationMetadata')
+        Map metadata = readMetadata()
+
+        then: 'the unconditional default and agreeing type both survive'
+        result.task(':generateConfigurationMetadata').outcome == TaskOutcome.SUCCESS
+        Map fooProperty = property(metadata, 'grails.plugin.springsecurity.foo')
+        fooProperty.type == 'java.lang.String'
+        fooProperty.defaultValue == 'default'
+    }
+
+    def "still fails on two genuinely conflicting unconditional assignments"() {
+        given: 'the same property is assigned two different unconditional values'
+        write('src/dsl/fixture/GenuineConflictConfig.groovy', '''
+            security {
+                foo = 'first'
+                foo = 'second'
+            }
+        '''.stripIndent())
+        configureDslMetadata('src/dsl/fixture/GenuineConflictConfig.groovy')
+
+        when:
+        BuildResult result = runner('generateConfigurationMetadata').buildAndFail()
+
+        then:
+        result.output.contains("Conflicting DSL properties metadata for 'grails.plugin.springsecurity.foo'")
     }
 
     def "reports the actual source file for malformed DSL"() {

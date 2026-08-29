@@ -58,38 +58,39 @@ final class GroovyDslConfigurationMetadataParser {
     /**
      * Reconciles multiple entries for the same property name before they reach the stricter
      * cross-source conflict check. Mutually exclusive branches (if/else) commonly assign a
-     * property differently per branch, e.g. a different literal type or null in one branch;
-     * those aren't authoring conflicts so they're merged, dropping any field the branches
-     * disagree on. Two unconditional assignments to the same name are still a real conflict.
+     * property differently per branch, e.g. a different literal type or null in one branch, or
+     * override an unconditional default only under some environments; neither is an authoring
+     * conflict. Two *unconditional* assignments to the same name disagreeing is still a real
+     * conflict, regardless of how many conditional entries for that name sit between them.
      */
     private static List<Map<String, Object>> mergeBranches(List<Map<String, Object>> properties) {
-        Map<String, Map<String, Object>> merged = new LinkedHashMap<>()
-        properties.each { Map<String, Object> property ->
-            String name = property.name as String
-            Map<String, Object> existing = merged[name]
-            merged[name] = existing == null ? property : mergeProperty(existing, property, name)
-        }
-        merged.values().collect { Map<String, Object> property ->
-            Map<String, Object> entry = new LinkedHashMap<>(property)
-            entry.remove('conditional')
-            entry
-        }.sort { Map<String, Object> property -> property.name as String }
+        properties.groupBy { Map<String, Object> property -> property.name as String }
+                .collect { String name, List<Map<String, Object>> entries -> mergeGroup(name, entries) }
+                .sort { Map<String, Object> property -> property.name as String }
     }
 
-    private static Map<String, Object> mergeProperty(Map<String, Object> first, Map<String, Object> second, String name) {
-        boolean lenient = (first.conditional as boolean) || (second.conditional as boolean)
-        if (!lenient && first != second) {
+    private static Map<String, Object> mergeGroup(String name, List<Map<String, Object>> entries) {
+        List<Map<String, Object>> unconditional = (entries.findAll { Map<String, Object> entry ->
+            !(entry.conditional as boolean)
+        }.collect { Map<String, Object> entry -> stripConditional(entry) } as Set).toList()
+        if (unconditional.size() > 1) {
             throw new IllegalArgumentException("Conflicting DSL properties metadata for '${name}'")
         }
-        Map<String, Object> merged = [name: name, conditional: true]
-        if (first.type != null && first.type == second.type) {
-            merged.type = first.type
+        Map<String, Object> merged = [name: name]
+        Set<String> types = (entries*.type.findAll { String type -> type != null } as Set)
+        if (types.size() == 1) {
+            merged.type = types.first()
         }
-        if (first.containsKey('defaultValue') && second.containsKey('defaultValue') &&
-                first.defaultValue == second.defaultValue) {
-            merged.defaultValue = first.defaultValue
+        if (unconditional && unconditional[0].containsKey('defaultValue')) {
+            merged.defaultValue = unconditional[0].defaultValue
         }
         merged
+    }
+
+    private static Map<String, Object> stripConditional(Map<String, Object> entry) {
+        Map<String, Object> stripped = new LinkedHashMap<>(entry)
+        stripped.remove('conditional')
+        stripped
     }
 
     private static void parseFile(File file, Map<String, String> rootPrefixes,
