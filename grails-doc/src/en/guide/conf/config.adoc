@@ -125,10 +125,16 @@ transformation stores metadata independently in each compiled `@ConfigurationPro
 those class payloads after compilation. Java configuration classes are inspected from their compiled bytecode. This
 avoids Java annotation processing on Groovy sources, which would interfere with incremental Groovy compilation.
 
+Framework modules can also register legacy Groovy configuration DSL sources for static metadata discovery. Grails
+inspects the source syntax without executing the configuration script. Literal values can provide generated defaults,
+while values from method calls, environment branches, and other dynamic expressions are discovered without treating a
+build-specific result as the default.
+
 The generated metadata describes bindable fields and bean properties. A module can also provide
 `META-INF/additional-spring-configuration-metadata.json` for descriptions, hints, legacy or indirect properties, and
-other details that cannot be derived safely from bytecode. Curated values override generated values for the same
-property.
+other details that cannot be derived safely from bytecode or static DSL syntax. Curated values override generated values
+for the same property. The module build merges all generated and curated entries into the single standard
+`META-INF/spring-configuration-metadata.json` resource published in the module JAR.
 
 Only compile-time constant Groovy initializers are emitted as generated defaults. Defaults calculated by constructors,
 method calls, environment checks, system properties, or other dynamic expressions are intentionally omitted unless a

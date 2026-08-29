@@ -1,122 +1,452 @@
 {
-  "properties": [
-    {
-      "name": "grails.banner.art.display",
-      "description": "Whether to display the Grails banner art.",
-      "type": "java.lang.Boolean",
-      "defaultValue": true
-    },
-    {
-      "name": "grails.banner.art.file",
-      "description": "The file path on the classpath to the Grails banner art to display.",
-      "type": "java.lang.String",
-      "defaultValue": "grails-banner.txt"
-    },
-    {
-      "name": "grails.banner.art.color",
-      "type": "java.lang.String",
-      "description": "The colour to show the banner art in, where the terminal colours output at all. A number selects one of the 256 colours a terminal offers; a name selects one of the eight it has always had, such as red or bright_blue; none leaves the art uncoloured. A value that is neither falls back to the default.",
-      "defaultValue": "214"
-    },
-    {
-      "name": "grails.banner.mark.display",
-      "type": "java.lang.Boolean",
-      "description": "Whether to say under the banner art how the application was started: NATIVE for an image, AOT CACHE for a JVM given a cache to read, AOT for one running generated bean definitions. An ordinary start says nothing.",
-      "defaultValue": true
-    },
-    {
-      "name": "grails.banner.mark.color",
-      "type": "java.lang.String",
-      "description": "The colour to show the mark in, separate from the art so it is not read as part of it. Takes the same values as grails.banner.art.color: a number for one of the 256 colours a terminal offers, a name for one of the eight it has always had, or none.",
-      "defaultValue": "226"
-    },
-    {
-      "name": "grails.banner.mark.text",
-      "type": "java.lang.String",
-      "description": "Says this instead of what was detected. Shown spaced and in upper case, and an empty value shows nothing."
-    },
-    {
-      "name": "grails.banner.versions.display",
-      "description": "Whether to display version information in the Grails banner.",
-      "type": "java.lang.Boolean",
-      "defaultValue": true
-    },
-    {
-      "name": "grails.banner.versions.include",
-      "description": "A list of optional versions to include in the banner.",
-      "type": "java.util.List<grails.boot.GrailsBanner.OptionalVersionOption>"
-    },
-    {
-      "name": "grails.banner.versions.exclude",
-      "description": "A list of versions to exclude from the banner.",
-      "type": "java.util.List<grails.boot.GrailsBanner.DefaultVersionOption>"
-    },
-    {
-      "name": "grails.banner.versions.order",
-      "description": "A sorted list of versions to put first in the banner versions.",
-      "type": "java.util.List<grails.boot.GrailsBanner.VersionOption>"
-    },
-    {
-      "name": "grails.web.removeDefaultViewResolverBean",
-      "description": "Whether to remove Spring Boot's defaultViewResolver bean so Grails' own view resolution is used.",
-      "type": "java.lang.Boolean",
-      "defaultValue": true
-    },
-    {
-      "name": "grails.web.removeWelcomePageMapping",
-      "description": "Whether to remove Spring Boot's welcome-page handler mapping so Grails' URL mappings own the root path ('/') rather than serving a static index.html for it.",
-      "type": "java.lang.Boolean",
-      "defaultValue": true
-    },
-    {
-      "name": "grails.i18n.localeResolver",
-      "description": "The locale resolution strategy. 'session' and 'cookie' are mutable (the ?lang= switch works); 'acceptHeader' and 'fixed' are read-only (the ?lang= switch is ignored).",
-      "type": "java.lang.String",
-      "defaultValue": "session"
-    },
-    {
-      "name": "grails.i18n.include-plugin-bundles",
-      "description": "Whether message bundles contributed by plugins participate, both in message resolution and in the locales offered by a language selector. Bundle caching, encoding and locale fallback are configured through spring.messages.* instead.",
-      "type": "java.lang.Boolean",
-      "defaultValue": true
-    },
-    {
-      "name": "grails.i18n.default.locale",
-      "description": "The locale of the base message bundle, always offered by a language selector and used by the 'fixed' locale resolver. Falls back to the JVM default when unset.",
-      "type": "java.lang.String"
-    },
-    {
-      "name": "grails.i18n.cache.seconds",
-      "description": "How long (in seconds) resolved message bundles are cached. Honoured only when reload is enabled, as before.",
-      "type": "java.lang.Integer",
-      "deprecation": {
-        "level": "warning",
-        "reason": "Spring Boot owns the message source; its cache duration is configured with spring.messages.cache-duration.",
-        "replacement": "spring.messages.cache-duration"
-      }
-    }
-  ],
-  "hints": [
-    {
-      "name": "grails.i18n.localeResolver",
-      "values": [
+    "groups": [
         {
-          "value": "session",
-          "description": "Resolve the locale from the HTTP session (mutable; ?lang= switching works). The default."
+            "name": "grails",
+            "description": "Core Properties"
         },
         {
-          "value": "cookie",
-          "description": "Resolve the locale from a cookie (mutable; ?lang= switching works)."
+            "name": "grails.codegen",
+            "description": "Core Properties"
         },
         {
-          "value": "acceptHeader",
-          "description": "Resolve the locale from the Accept-Language header (read-only; ?lang= is ignored)."
+            "name": "grails.bootstrap",
+            "description": "Core Properties"
         },
         {
-          "value": "fixed",
-          "description": "Use a fixed locale from grails.i18n.default.locale, falling back to the JVM default (read-only; ?lang= is ignored)."
+            "name": "grails.spring",
+            "description": "Core Properties"
+        },
+        {
+            "name": "grails.plugin",
+            "description": "Core Properties"
+        },
+        {
+            "name": "grails.reload",
+            "description": "Development & Reloading"
+        },
+        {
+            "name": "grails.events",
+            "description": "Events"
+        },
+        {
+            "name": "grails.json",
+            "description": "JSON & Converters"
+        },
+        {
+            "name": "grails.converters.json",
+            "description": "JSON & Converters"
+        },
+        {
+            "name": "grails.converters.xml",
+            "description": "JSON & Converters"
+        },
+        {
+            "name": "grails.i18n",
+            "description": "Internationalization"
+        },
+        {
+            "name": "grails.gorm",
+            "description": "GORM"
+        },
+        {
+            "name": "grails.gorm.reactor",
+            "description": "GORM"
+        },
+        {
+            "name": "grails.gorm.events",
+            "description": "GORM"
+        },
+        {
+            "name": "grails.gorm.multiTenancy",
+            "description": "GORM"
+        },
+        {
+            "name": "dataSource",
+            "description": "DataSource"
         }
-      ]
-    }
-  ]
+    ],
+    "properties": [
+        {
+            "name": "grails.profile",
+            "type": "java.lang.String",
+            "description": "The active Grails application profile (e.g., web, rest-api, plugin).",
+            "defaultValue": "Set by project template"
+        },
+        {
+            "name": "grails.codegen.defaultPackage",
+            "type": "java.lang.String",
+            "description": "The default package used when generating artefacts with grails create-* commands.",
+            "defaultValue": "Set by project template"
+        },
+        {
+            "name": "grails.serverURL",
+            "type": "java.lang.String",
+            "description": "The server URL used to generate absolute links (e.g., https://my.app.com) and used by redirects.",
+            "defaultValue": "derived from request"
+        },
+        {
+            "name": "grails.enable.native2ascii",
+            "type": "java.lang.Boolean",
+            "description": "Whether to perform native2ascii conversion of i18n properties files.",
+            "defaultValue": true
+        },
+        {
+            "name": "grails.bootstrap.skip",
+            "type": "java.lang.Boolean",
+            "description": "Whether to skip execution of BootStrap.groovy classes on startup.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.spring.bean.packages",
+            "type": "java.util.List<java.lang.String>",
+            "description": "List of packages to scan for Spring beans.",
+            "defaultValue": []
+        },
+        {
+            "name": "grails.spring.disable.aspectj.autoweaving",
+            "type": "java.lang.Boolean",
+            "description": "Whether to disable AspectJ auto-weaving.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.spring.placeholder.prefix",
+            "type": "java.lang.String",
+            "description": "The prefix for property placeholder resolution.",
+            "defaultValue": "${"
+        },
+        {
+            "name": "grails.spring.transactionManagement.proxies",
+            "type": "java.lang.Boolean",
+            "description": "Whether to enable Spring proxy-based transaction management since @Transactional uses an AST transform and proxies are typically redundant.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.plugin.includes",
+            "type": "java.util.List<java.lang.String>",
+            "description": "List of plugin names to include in the plugin manager (all others excluded).",
+            "defaultValue": []
+        },
+        {
+            "name": "grails.plugin.excludes",
+            "type": "java.util.List<java.lang.String>",
+            "description": "List of plugin names to exclude from the plugin manager.",
+            "defaultValue": []
+        },
+        {
+            "name": "grails.reload.includes",
+            "type": "java.util.List<java.lang.String>",
+            "description": "List of fully qualified class names to include in development reloading, when set only these classes are reloaded.",
+            "defaultValue": []
+        },
+        {
+            "name": "grails.reload.excludes",
+            "type": "java.util.List<java.lang.String>",
+            "description": "List of fully qualified class names to exclude from development reloading.",
+            "defaultValue": []
+        },
+        {
+            "name": "grails.events.spring",
+            "type": "java.lang.Boolean",
+            "description": "Whether to bridge GORM/Grails events to the Spring ApplicationEventPublisher, allowing EventListener methods to receive domain events.",
+            "defaultValue": true
+        },
+        {
+            "name": "grails.json.legacy.builder",
+            "type": "java.lang.Boolean",
+            "description": "Whether to use the legacy JSON builder.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.converters.json.domain.include.class",
+            "type": "java.lang.Boolean",
+            "description": "Whether to include the class property when marshalling domain objects to JSON.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.converters.xml.domain.include.class",
+            "type": "java.lang.Boolean",
+            "description": "Whether to include the class attribute when marshalling domain objects to XML.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.gorm.failOnError",
+            "type": "java.lang.Boolean",
+            "description": "When true, save() throws ValidationException on validation failure instead of returning null and can also be a list of package names to apply selectively.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.gorm.autoFlush",
+            "type": "java.lang.Boolean",
+            "description": "Whether to automatically flush the Hibernate session between queries.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.gorm.flushMode",
+            "type": "java.lang.String",
+            "description": "The default Hibernate flush mode (AUTO, COMMIT, MANUAL).",
+            "defaultValue": "AUTO"
+        },
+        {
+            "name": "grails.gorm.markDirty",
+            "type": "java.lang.Boolean",
+            "description": "Whether to mark a domain instance as dirty on an explicit save() call.",
+            "defaultValue": true
+        },
+        {
+            "name": "grails.gorm.autowire",
+            "type": "java.lang.Boolean",
+            "description": "Whether to autowire Spring beans into domain class instances.",
+            "defaultValue": true
+        },
+        {
+            "name": "grails.gorm.default.mapping",
+            "type": "java.util.Map<java.lang.String,java.lang.Object>",
+            "description": "A closure applied as the default mapping block for all domain classes.",
+            "defaultValue": {}
+        },
+        {
+            "name": "grails.gorm.default.constraints",
+            "type": "java.util.Map<java.lang.String,java.lang.Object>",
+            "description": "A closure applied as the default constraints for all domain classes.",
+            "defaultValue": {}
+        },
+        {
+            "name": "grails.gorm.default.nullable",
+            "type": "java.lang.Boolean",
+            "description": "Whether an unconstrained persistent property is nullable by default (Grails 8). Set to false to restore the legacy required-by-default behaviour.",
+            "defaultValue": true
+        },
+        {
+            "name": "grails.gorm.custom.types",
+            "type": "java.util.Map<java.lang.String,java.lang.Object>",
+            "description": "Map of custom GORM types.",
+            "defaultValue": {}
+        },
+        {
+            "name": "grails.gorm.reactor.events",
+            "type": "java.lang.Boolean",
+            "description": "Whether to translate GORM events into Reactor events, which is disabled by default for performance.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.gorm.events.autoTimestampInsertOverwrite",
+            "type": "java.lang.Boolean",
+            "description": "Whether auto-timestamp (dateCreated) overwrites a user-provided value on insert.",
+            "defaultValue": true
+        },
+        {
+            "name": "grails.gorm.multiTenancy.mode",
+            "type": "java.lang.String",
+            "description": "The multi-tenancy mode: DISCRIMINATOR, DATABASE, SCHEMA, or NONE.",
+            "defaultValue": "NONE"
+        },
+        {
+            "name": "grails.gorm.multiTenancy.tenantResolverClass",
+            "type": "java.lang.String",
+            "description": "Fully qualified class name of the TenantResolver implementation.",
+            "defaultValue": "required when mode is not NONE"
+        },
+        {
+            "name": "dataSource.driverClassName",
+            "type": "java.lang.String",
+            "description": "The JDBC driver class name.",
+            "defaultValue": "org.h2.Driver"
+        },
+        {
+            "name": "dataSource.username",
+            "type": "java.lang.String",
+            "description": "The database username.",
+            "defaultValue": "sa"
+        },
+        {
+            "name": "dataSource.password",
+            "type": "java.lang.String",
+            "description": "The database password.",
+            "defaultValue": ""
+        },
+        {
+            "name": "dataSource.url",
+            "type": "java.lang.String",
+            "description": "The JDBC connection URL.",
+            "defaultValue": "jdbc:h2:mem:devDb"
+        },
+        {
+            "name": "dataSource.dbCreate",
+            "type": "java.lang.String",
+            "description": "The schema generation strategy: create-drop, create, update, validate, or none, use none in production with a migration tool.",
+            "defaultValue": "create-drop (dev), none (prod)"
+        },
+        {
+            "name": "dataSource.pooled",
+            "type": "java.lang.Boolean",
+            "description": "Whether to use a connection pool.",
+            "defaultValue": true
+        },
+        {
+            "name": "dataSource.logSql",
+            "type": "java.lang.Boolean",
+            "description": "Whether to log SQL statements to stdout.",
+            "defaultValue": false
+        },
+        {
+            "name": "dataSource.formatSql",
+            "type": "java.lang.Boolean",
+            "description": "Whether to format logged SQL for readability.",
+            "defaultValue": false
+        },
+        {
+            "name": "dataSource.dialect",
+            "type": "java.lang.String",
+            "description": "The Hibernate dialect class name or class.",
+            "defaultValue": "auto-detected from driver"
+        },
+        {
+            "name": "dataSource.readOnly",
+            "type": "java.lang.Boolean",
+            "description": "Whether the DataSource is read-only (calls setReadOnly(true) on connections).",
+            "defaultValue": false
+        },
+        {
+            "name": "dataSource.transactional",
+            "type": "java.lang.Boolean",
+            "description": "For additional datasources, whether to include in the chained transaction manager.",
+            "defaultValue": true
+        },
+        {
+            "name": "dataSource.persistenceInterceptor",
+            "type": "java.lang.Boolean",
+            "description": "For additional datasources, whether to wire up the persistence interceptor (the default datasource is always wired).",
+            "defaultValue": false
+        },
+        {
+            "name": "dataSource.jmxExport",
+            "type": "java.lang.Boolean",
+            "description": "Whether to register JMX MBeans for the DataSource.",
+            "defaultValue": true
+        },
+        {
+            "name": "dataSource.type",
+            "type": "java.lang.String",
+            "description": "The connection pool implementation class when multiple are on the classpath.",
+            "defaultValue": "com.zaxxer.hikari.HikariDataSource"
+        },
+        {
+            "name": "grails.banner.art.display",
+            "description": "Whether to display the Grails banner art.",
+            "type": "java.lang.Boolean",
+            "defaultValue": true
+        },
+        {
+            "name": "grails.banner.art.file",
+            "description": "The file path on the classpath to the Grails banner art to display.",
+            "type": "java.lang.String",
+            "defaultValue": "grails-banner.txt"
+        },
+        {
+            "name": "grails.banner.art.color",
+            "type": "java.lang.String",
+            "description": "The colour to show the banner art in, where the terminal colours output at all. A number selects one of the 256 colours a terminal offers; a name selects one of the eight it has always had, such as red or bright_blue; none leaves the art uncoloured. A value that is neither falls back to the default.",
+            "defaultValue": "214"
+        },
+        {
+            "name": "grails.banner.mark.display",
+            "type": "java.lang.Boolean",
+            "description": "Whether to say under the banner art how the application was started: NATIVE for an image, AOT CACHE for a JVM given a cache to read, AOT for one running generated bean definitions. An ordinary start says nothing.",
+            "defaultValue": true
+        },
+        {
+            "name": "grails.banner.mark.color",
+            "type": "java.lang.String",
+            "description": "The colour to show the mark in, separate from the art so it is not read as part of it. Takes the same values as grails.banner.art.color: a number for one of the 256 colours a terminal offers, a name for one of the eight it has always had, or none.",
+            "defaultValue": "226"
+        },
+        {
+            "name": "grails.banner.mark.text",
+            "type": "java.lang.String",
+            "description": "Says this instead of what was detected. Shown spaced and in upper case, and an empty value shows nothing."
+        },
+        {
+            "name": "grails.banner.versions.display",
+            "description": "Whether to display version information in the Grails banner.",
+            "type": "java.lang.Boolean",
+            "defaultValue": true
+        },
+        {
+            "name": "grails.banner.versions.include",
+            "description": "A list of optional versions to include in the banner.",
+            "type": "java.util.List<grails.boot.GrailsBanner.OptionalVersionOption>"
+        },
+        {
+            "name": "grails.banner.versions.exclude",
+            "description": "A list of versions to exclude from the banner.",
+            "type": "java.util.List<grails.boot.GrailsBanner.DefaultVersionOption>"
+        },
+        {
+            "name": "grails.banner.versions.order",
+            "description": "A sorted list of versions to put first in the banner versions.",
+            "type": "java.util.List<grails.boot.GrailsBanner.VersionOption>"
+        },
+        {
+            "name": "grails.web.removeDefaultViewResolverBean",
+            "description": "Whether to remove Spring Boot's defaultViewResolver bean so Grails' own view resolution is used.",
+            "type": "java.lang.Boolean",
+            "defaultValue": true
+        },
+        {
+            "name": "grails.web.removeWelcomePageMapping",
+            "description": "Whether to remove Spring Boot's welcome-page handler mapping so Grails' URL mappings own the root path ('/') rather than serving a static index.html for it.",
+            "type": "java.lang.Boolean",
+            "defaultValue": true
+        },
+        {
+            "name": "grails.i18n.localeResolver",
+            "description": "The locale resolution strategy. 'session' and 'cookie' are mutable (the ?lang= switch works); 'acceptHeader' and 'fixed' are read-only (the ?lang= switch is ignored).",
+            "type": "java.lang.String",
+            "defaultValue": "session"
+        },
+        {
+            "name": "grails.i18n.include-plugin-bundles",
+            "description": "Whether message bundles contributed by plugins participate, both in message resolution and in the locales offered by a language selector. Bundle caching, encoding and locale fallback are configured through spring.messages.* instead.",
+            "type": "java.lang.Boolean",
+            "defaultValue": true
+        },
+        {
+            "name": "grails.i18n.default.locale",
+            "description": "The locale of the base message bundle, always offered by a language selector and used by the 'fixed' locale resolver. Falls back to the JVM default when unset.",
+            "type": "java.lang.String"
+        },
+        {
+            "name": "grails.i18n.cache.seconds",
+            "description": "How long (in seconds) resolved message bundles are cached. Honoured only when reload is enabled, as before.",
+            "type": "java.lang.Integer",
+            "deprecation": {
+                "level": "warning",
+                "reason": "Spring Boot owns the message source; its cache duration is configured with spring.messages.cache-duration.",
+                "replacement": "spring.messages.cache-duration"
+            }
+        }
+    ],
+    "hints": [
+        {
+            "name": "grails.i18n.localeResolver",
+            "values": [
+                {
+                    "value": "session",
+                    "description": "Resolve the locale from the HTTP session (mutable; ?lang= switching works). The default."
+                },
+                {
+                    "value": "cookie",
+                    "description": "Resolve the locale from a cookie (mutable; ?lang= switching works)."
+                },
+                {
+                    "value": "acceptHeader",
+                    "description": "Resolve the locale from the Accept-Language header (read-only; ?lang= is ignored)."
+                },
+                {
+                    "value": "fixed",
+                    "description": "Use a fixed locale from grails.i18n.default.locale, falling back to the JVM default (read-only; ?lang= is ignored)."
+                }
+            ]
+        }
+    ]
 }
