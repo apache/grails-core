@@ -366,6 +366,45 @@ class ConfigurationMetadataPluginSpec extends Specification {
         !property(metadata, 'grails.plugin.springsecurity.literals.unsupportedMap').containsKey('defaultValue')
     }
 
+    def "merges same-name properties assigned differently across if/else branches"() {
+        given: 'branches assign different literal types, and one branch assigns null, under the same name'
+        write('src/dsl/fixture/BranchTypeConfig.groovy', '''
+            security {
+                password {
+                    if (System.getProperty('env') == 'test') {
+                        key = 'test-key'
+                    } else {
+                        key = null
+                    }
+                }
+                authentication {
+                    if (System.getProperty('env') == 'test') {
+                        retries = 1
+                    } else {
+                        retries = 1
+                    }
+                }
+            }
+        '''.stripIndent())
+        configureDslMetadata('src/dsl/fixture/BranchTypeConfig.groovy')
+
+        when:
+        BuildResult result = run('generateConfigurationMetadata')
+        Map metadata = readMetadata()
+
+        then: 'the build succeeds instead of failing on a spurious conflict'
+        result.task(':generateConfigurationMetadata').outcome == TaskOutcome.SUCCESS
+
+        and: 'a property with disagreeing branch types is kept, with no type and no default'
+        Map keyProperty = property(metadata, 'grails.plugin.springsecurity.password.key')
+        keyProperty != null
+        !keyProperty.containsKey('type')
+        !keyProperty.containsKey('defaultValue')
+
+        and: 'a property with agreeing branch types and values keeps its inferred type'
+        property(metadata, 'grails.plugin.springsecurity.authentication.retries').type == 'java.lang.Integer'
+    }
+
     def "reports the actual source file for malformed DSL"() {
         given:
         File malformedDsl = write('src/dsl/fixture/BrokenConfig.groovy', '''

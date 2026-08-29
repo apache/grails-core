@@ -52,7 +52,44 @@ final class GroovyDslConfigurationMetadataParser {
         files.findAll { File file -> file.isFile() }.sort { File file -> file.absolutePath }.each { File file ->
             parseFile(file, rootPrefixes, properties)
         }
-        properties.sort { Map<String, Object> property -> property.name as String }
+        mergeBranches(properties)
+    }
+
+    /**
+     * Reconciles multiple entries for the same property name before they reach the stricter
+     * cross-source conflict check. Mutually exclusive branches (if/else) commonly assign a
+     * property differently per branch, e.g. a different literal type or null in one branch;
+     * those aren't authoring conflicts so they're merged, dropping any field the branches
+     * disagree on. Two unconditional assignments to the same name are still a real conflict.
+     */
+    private static List<Map<String, Object>> mergeBranches(List<Map<String, Object>> properties) {
+        Map<String, Map<String, Object>> merged = new LinkedHashMap<>()
+        properties.each { Map<String, Object> property ->
+            String name = property.name as String
+            Map<String, Object> existing = merged[name]
+            merged[name] = existing == null ? property : mergeProperty(existing, property, name)
+        }
+        merged.values().collect { Map<String, Object> property ->
+            Map<String, Object> entry = new LinkedHashMap<>(property)
+            entry.remove('conditional')
+            entry
+        }.sort { Map<String, Object> property -> property.name as String }
+    }
+
+    private static Map<String, Object> mergeProperty(Map<String, Object> first, Map<String, Object> second, String name) {
+        boolean lenient = (first.conditional as boolean) || (second.conditional as boolean)
+        if (!lenient && first != second) {
+            throw new IllegalArgumentException("Conflicting DSL properties metadata for '${name}'")
+        }
+        Map<String, Object> merged = [name: name, conditional: true]
+        if (first.type != null && first.type == second.type) {
+            merged.type = first.type
+        }
+        if (first.containsKey('defaultValue') && second.containsKey('defaultValue') &&
+                first.defaultValue == second.defaultValue) {
+            merged.defaultValue = first.defaultValue
+        }
+        merged
     }
 
     private static void parseFile(File file, Map<String, String> rootPrefixes,
@@ -112,7 +149,7 @@ final class GroovyDslConfigurationMetadataParser {
         }
         String name = "${prefix}.${segments.join('.')}"
         Inference inference = infer(assignment.rightExpression)
-        Map<String, Object> property = [name: name]
+        Map<String, Object> property = [name: name, conditional: conditional]
         if (inference.type != null) {
             property.type = inference.type
         }
