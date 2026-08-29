@@ -135,9 +135,28 @@ final class GroovyDslConfigurationMetadataParser {
             } else if (expression instanceof MethodCallExpression) {
                 ClosureExpression closure = closureArgument(expression)
                 String nestedName = expression.methodAsString
-                if (closure != null && nestedName != null) {
+                if (closure != null && nestedName == 'environments') {
+                    parseEnvironments(closure.code, prefix, properties)
+                } else if (closure != null && nestedName != null) {
                     parseStatements(closure.code, "${prefix}.${nestedName}", conditional, properties)
                 }
+            }
+        }
+    }
+
+    /**
+     * A ConfigSlurper {@code environments { production { ... } } } block picks exactly one named
+     * environment closure at runtime; unlike an ordinary nested section, its name is not part of
+     * the property path. Each environment closure is parsed under the unchanged prefix, marked
+     * conditional the same way an if/else branch is.
+     */
+    private static void parseEnvironments(Statement statement, String prefix, List<Map<String, Object>> properties) {
+        if (statement instanceof BlockStatement) {
+            statement.statements.each { Statement child -> parseEnvironments(child, prefix, properties) }
+        } else if (statement instanceof ExpressionStatement && statement.expression instanceof MethodCallExpression) {
+            ClosureExpression closure = closureArgument(statement.expression as MethodCallExpression)
+            if (closure != null) {
+                parseStatements(closure.code, prefix, true, properties)
             }
         }
     }

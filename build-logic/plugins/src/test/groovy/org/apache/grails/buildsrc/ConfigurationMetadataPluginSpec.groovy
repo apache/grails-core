@@ -453,6 +453,37 @@ class ConfigurationMetadataPluginSpec extends Specification {
         result.output.contains("Conflicting DSL properties metadata for 'grails.plugin.springsecurity.foo'")
     }
 
+    def "parses an environments block under the unchanged prefix instead of as a nested section"() {
+        given: 'a ConfigSlurper environments block picks one environment at runtime'
+        write('src/dsl/fixture/EnvironmentsConfig.groovy', '''
+            security {
+                environments {
+                    production {
+                        foo = 'prod-value'
+                    }
+                    test {
+                        foo = 'test-value'
+                    }
+                }
+            }
+        '''.stripIndent())
+        configureDslMetadata('src/dsl/fixture/EnvironmentsConfig.groovy')
+
+        when:
+        BuildResult result = run('generateConfigurationMetadata')
+        Map metadata = readMetadata()
+
+        then: 'the environment name is not folded into the property path'
+        result.task(':generateConfigurationMetadata').outcome == TaskOutcome.SUCCESS
+        Map fooProperty = property(metadata, 'grails.plugin.springsecurity.foo')
+        fooProperty != null
+        fooProperty.type == 'java.lang.String'
+        !fooProperty.containsKey('defaultValue')
+
+        and: 'no property is emitted under the environments/production/test path'
+        !metadata.properties*.name.any { String name -> name.contains('.environments.') }
+    }
+
     def "reports the actual source file for malformed DSL"() {
         given:
         File malformedDsl = write('src/dsl/fixture/BrokenConfig.groovy', '''
