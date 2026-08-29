@@ -1,0 +1,156 @@
+////
+SPDX-License-Identifier: Apache-2.0
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+////
+
+= Grails Benchmarks
+
+JMH microbenchmarks for Grails framework hot paths - the code that runs on every request or
+every bound object, where a regression directly costs users latency.
+
+This module is a build-time-only harness. It is *not published*, is not part of the BOM, and
+nothing at runtime depends on it.
+
+JMH is licensed under GPLv2 with the Classpath Exception, an ASF Category X license. Its use is
+acceptable here because this build-time-only module is never published or included in Grails runtime
+artifacts.
+
+== Running locally
+
+The repository baseline is JDK 21, so point `JAVA_HOME` at a JDK 21 if it is not your default.
+Run everything from the repository root:
+
+[source,bash]
+----
+JAVA_HOME=/path/to/jdk-21 ./gradlew --no-daemon :grails-benchmarks:jmh
+----
+
+A full run at default settings takes several minutes. While iterating, narrow it to one class
+and cut the iteration counts:
+
+[source,bash]
+----
+JAVA_HOME=/path/to/jdk-21 ./gradlew --no-daemon :grails-benchmarks:jmh \
+  -Pjmh.include=UrlMappingsBenchmark \
+  -Pjmh.forks=1 -Pjmh.warmupIterations=1 -Pjmh.iterations=1
+----
+
+Add allocation profiling with `-Pjmh.profilers=gc`, which populates the `gc.alloc.rate.norm`
+(bytes per operation) metric the CI report shows as an advisory column.
+
+== Comparing results locally
+
+Render a report from a JMH JSON result file with the Gradle comparison task:
+
+[source,bash]
+----
+./gradlew -q :grails-benchmarks:jmhCompare --args="--head build/results/jmh/results.json"
+----
+
+Add `--base <path>` to compare paired base and HEAD results. Add `--output <file>` to write the
+rendered Markdown report to a file as well as standard output.
+
+== Gradle properties
+
+|===
+| Property | Default | Purpose
+
+| `jmh.include` | `.*` | Comma-separated benchmark include patterns (regex)
+| `jmh.forks` | `1` | JVM forks per benchmark. CI uses `2`
+| `jmh.warmupIterations` | `1` | Warmup iterations. CI uses `3`
+| `jmh.iterations` | `1` | Measurement iterations. CI uses `5`
+| `jmh.warmupTime` | `1s` | Duration of each warmup iteration
+| `jmh.iterationTime` | `1s` | Duration of each measurement iteration
+| `jmh.resultFormat` | `JSON` | JMH result format
+| `jmh.resultFile` | `build/results/jmh/results.json` | Absolute path for the result file
+| `jmh.profilers` | none | Comma-separated JMH profilers, for example `gc`
+| `jmh.failOnError` | `true` | Fail the build when a benchmark throws
+|===
+
+`jmh.failOnError` defaults to `true` deliberately. JMH otherwise drops a benchmark that throws
+during `@Setup` from the results file while still reporting build success, which would silently
+shrink the comparison set in CI.
+
+== Layout
+
+Benchmarks are Java, under `src/jmh/java`. Setup fixtures are Groovy, under `src/main/groovy`.
+The comparison tool is Groovy in the `report` source set, under `src/report/groovy`.
+
+That split is intentional. A benchmark written in Groovy measures Groovy's dynamic call-site
+machinery as much as the Grails API under test, so the measured method stays in Java. Fixtures
+are Groovy only where the Grails API genuinely requires it - the URL mappings DSL and view
+templates are closure-based, and `grails.artefact.Interceptor` is a Groovy trait. Fixtures live in `main` rather
+than `src/jmh/groovy` because the `me.champeau.jmh` plugin puts the main source set's output on
+the jmh compile classpath, which keeps the benchmark source set pure Java and preserves normal
+JMH annotation processing.
+
+The `report` source set depends on Groovy alone and on no Grails project. The CI reporting job
+runs it after a bare checkout, so it must render Markdown without compiling the framework.
+
+Benchmarks are grouped by package, and the CI report aggregates per group:
+
+|===
+| Package | Covers
+
+| `urlmappings` | Request URI matching (warm and cold cache) and reverse URL creation
+| `databinding` | Binding a map onto an object, with and without type conversion
+| `gsp` | GSP parsing (template text to generated Groovy source)
+| `interceptors` | Interceptor URI match decisions
+| `views` | JSON and markup view rendering
+| `ruler` | Pure-JDK probes used to detect an unstable CI runner
+|===
+
+The `ruler` benchmarks touch no Grails or Groovy code. Because CI measures the base and head
+revisions on the *same* runner, a ruler that moves between the two halves of a run means the
+runner itself was unstable and the whole comparison is untrustworthy. They are excluded from
+verdicts and group summaries.
+
+== Known gap: validation
+
+`Validateable.validate()` is a genuine hot path and belongs in this suite, but it is not here yet.
+A benchmark was written and then withdrawn because it was too unstable to be useful: measured at
+2 forks x 5 iterations it showed 80-160% relative error, against 15-20% for the pure-JDK rulers on
+the same otherwise-idle machine. At that spread the confidence intervals can never separate, so the
+comparison would report `no clear change` no matter what happened to validation performance, while
+still consuming CI time and contributing a meaningless number to a group geometric mean.
+
+Two things were ruled out. Object construction was moved into `@Setup`, so the map constructor is
+not being measured. Errors were reset between invocations, because `doValidate()` copies an
+object's existing errors into the new error set and repeated validation of a failing object
+otherwise grows that set without bound. Neither brought the variance down to a usable level, which
+points at bimodal behaviour across forks rather than at the fixture.
+
+Anyone picking this up should start by raising the fork count to see whether the distribution is
+bimodal, and by checking whether `findConstraintsEvaluator()` and `evaluator.evaluate()` are
+re-doing work on every call.
+
+== Adding a benchmark
+
+Prefer paths that are hot per request, cheap to construct without a Spring context or servlet
+container, and meaningful to users. Anything with an internal cache is a good candidate, since
+cache-effectiveness regressions are exactly what this suite is meant to catch.
+
+Keep the total benchmark count modest. CI runs the whole suite twice per shard, so every added
+benchmark costs roughly double its runtime on every performance-labelled pull request.
+
+Every `@Benchmark` method must return its result or consume it through a `Blackhole`, otherwise
+the JIT can eliminate the work being measured.
+
+== CI
+
+`.github/workflows/benchmark.yml` runs this suite on pull requests labelled `performance`,
+measuring the merge commit against the pull request's base commit on a single runner, and posts
+the comparison produced by `:grails-benchmarks:jmhCompare`. The Groovy tool lives in
+`grails-benchmarks/src/report/groovy`, uses the `report` source set, and is covered by
+`./gradlew :grails-benchmarks:test`. The check is advisory and never fails a build.

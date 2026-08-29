@@ -476,6 +476,9 @@ class AddressOwner {
     Long id
     EntityAddress address
     static embedded = ['address']
+    static constraints = {
+        address nullable: false
+    }
 }
 
 class EntityAddress implements Serializable {

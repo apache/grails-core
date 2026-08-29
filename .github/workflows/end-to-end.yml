@@ -133,7 +133,7 @@ jobs:
           echo "class-file major version: ${actual_major} (expected ${expected_major} for Java ${fixture_java})"
           [ "$actual_major" -eq "$expected_major" ]
       - name: "🔍 Setup TestLens"
-        uses: testlens-app/setup-testlens@d96a555133c275a00949d2cc77b70fe9a4242ebf # v1.9.2
+        uses: testlens-app/setup-testlens@3f82d2dc6cd5c03f02ce5f7885a21195d85f8d14 # v1.9.3
       - name: "🧪 Run the end-to-end tests"
         # Only the end-to-end build. grails-core's own unit and functional suites are the CI
         # workflow's job; nothing here re-runs them. The publish steps above are setup, not tests.

@@ -17,64 +17,82 @@
  *  under the License.
  */
 
-sourceCompatibility = "1.11"
-targetCompatibility = "1.11"
+plugins {
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.gradle.grails-plugin'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.gradle.grails-code-style'
+}
 
-// TODO: Use bom
-//configurations.configureEach {
-//    exclude group: 'org.apache.grails.data', module: 'grails-data-simple'
-//    resolutionStrategy.eachDependency { DependencyResolveDetails details ->
-//        if (details.requested.group == 'org.apache.grails.data'
-//                && details.requested.name.startsWith('grails-datastore')
-//                && !details.requested.name.contains('neo4j')) {
-//
-//            details.useVersion(datastoreVersion)
-//        } else if (details.requested.group == 'org.apache.groovy' && details.requested.name.startsWith('groovy')) {
-//            details.useVersion(groovyVersion)
-//        } else if (details.requested.group == 'org.springframework') {
-//            details.useVersion(springVersion)
-//        }
-//    }
-//}
+version = projectVersion
+group = 'org.apache.grails'
+
+// GrailsGradlePlugin (applied by org.apache.grails.gradle.grails-plugin) otherwise
+// auto-applies the default grails-bom as an *external* org.apache.grails:grails-bom:$version
+// coordinate to every declarable configuration that doesn't already declare a Grails BOM by
+// hand. grails-neo4j-bom is new and not yet published anywhere resolvable, so suppress that
+// automatic application and rely solely on the platform(project(':grails-neo4j-bom')) below,
+// matching the escape hatch documented on GrailsExtension.bom.
+grails {
+    bom = null
+}
+
+ext {
+    gormApiDocs = true
+    pomTitle = 'GORM for Neo4j'
+    pomDescription = 'Provides a GORM Object Mapping implementation for the Neo4j Graph Database'
+}
 
 dependencies {
-    compileOnly "org.apache.grails:grails-core"
-    compileOnly "org.apache.grails.bootstrap:grails-bootstrap"
-    compileOnly "org.spockframework:spock-core:$spockVersion", {
-        exclude group: "junit", module: "junit-dep"
-        exclude group: 'org.codehaus.groovy', module: 'groovy-all'
-        exclude group: 'org.hamcrest', module: 'hamcrest-core'
+
+    implementation platform(project(':grails-neo4j-bom'))
+
+    compileOnly 'org.apache.grails:grails-core'
+    compileOnly 'org.apache.grails.bootstrap:grails-bootstrap'
+    compileOnly 'org.spockframework:spock-core'
+
+    runtimeOnly project(':grails-datastore-web')
+
+    api project(':grails-datamapping-support'), {
+        exclude group: 'org.springframework', module: 'spring-context'
+        exclude group: 'org.springframework', module: 'spring-core'
+        exclude group: 'org.springframework', module: 'spring-beans'
+        exclude group: 'org.springframework', module: 'spring-tx'
+        exclude group: 'org.apache.grails.bootstrap', module: 'grails-bootstrap'
+        exclude group: 'org.apache.grails', module: 'grails-core'
+    }
+    api project(':grails-data-neo4j-core'), {
+        exclude group: 'org.springframework', module: 'spring-context'
+        exclude group: 'org.springframework', module: 'spring-core'
+        exclude group: 'org.springframework', module: 'spring-beans'
+        exclude group: 'org.springframework', module: 'spring-tx'
+        exclude group: 'org.apache.grails.bootstrap', module: 'grails-bootstrap'
+        exclude group: 'org.apache.grails', module: 'grails-core'
     }
 
-    runtimeOnly "org.apache.grails.data:grails-datastore-web:$datastoreVersion"
-
-    api "org.apache.grails.data:grails-datamapping-support:$datastoreVersion", {
-        exclude group:'org.springframework', module:'spring-context'
-        exclude group:'org.springframework', module:'spring-core'
-        exclude group:'org.springframework', module:'spring-beans'
-        exclude group:'org.springframework', module:'spring-tx'
-        exclude group:'org.apache.grails.bootstrap', module:'grails-bootstrap'
-        exclude group:'org.codehaus.groovy', module:'groovy-all'
-        exclude group:'org.apache.grails', module:'grails-core'
-        exclude group:'javax.transaction', module:'jta'
-    }
-    api project(":grails-datastore-gorm-neo4j"), {
-        exclude group:'org.springframework', module:'spring-context'
-        exclude group:'org.springframework', module:'spring-core'
-        exclude group:'org.springframework', module:'spring-beans'
-        exclude group:'org.springframework', module:'spring-tx'
-        exclude group:'org.apache.grails.bootstrap', module:'grails-bootstrap'
-        exclude group:'org.codehaus.groovy', module:'groovy-all'
-        exclude group:'org.apache.grails', module:'grails-core'
-        exclude group:'javax.transaction', module:'jta'
-    }
-
-    testImplementation "org.apache.grails:grails-core"
-    testImplementation "org.apache.grails.bootstrap:grails-bootstrap"
-    testImplementation "org.neo4j.test:neo4j-harness:$neo4jVersion"
-
+    testImplementation 'org.apache.grails:grails-core'
+    testImplementation 'org.apache.grails.bootstrap:grails-bootstrap'
+    testImplementation 'org.spockframework:spock-core'
+    // Neo4jDataStoreSpringInitializer#isWebApplicationRegistry type-checks the bean registry
+    // against WebApplicationContext; Groovy's bean introspection of that check needs
+    // ServletContext on the classpath even outside a real web app - same reason
+    // grails-data-hibernate5/grails-plugin declares this for the same AbstractDatastoreInitializer
+    // code path.
+    testImplementation 'jakarta.servlet:jakarta.servlet-api'
+    testImplementation 'org.neo4j.test:neo4j-harness'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 springBoot {
-    mainClass  = "grails.plugins.neo4j.Application"
+    mainClass = 'grails.plugins.neo4j.Application'
 }
+
+// Jetty/JUnit-platform/reflection-opens config for the embedded Neo4j 3.5.x test harness is
+// shared across every grails-data-neo4j module - see neo4j-harness-test-config.gradle. The
+// neo4j-java-driver version comes from grails-neo4j-bom's 'strictly' constraint (dependencies.gradle);
+// no local resolutionStrategy.force is needed for it.
+apply from: rootProject.layout.projectDirectory.file('grails-data-neo4j/gradle/neo4j-harness-test-config.gradle')
+

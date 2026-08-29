@@ -44,6 +44,8 @@ dependencies {
     api 'org.springframework.boot:spring-boot-autoconfigure'
     api 'org.springframework:spring-context'
 
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
     testImplementation 'org.springframework.boot:spring-boot-test'
     testImplementation 'org.springframework:spring-test'
     testImplementation 'org.assertj:assertj-core'
@@ -54,6 +56,8 @@ dependencies {
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
     testImplementation 'org.spockframework:spock-core'
     testRuntimeOnly 'org.slf4j:slf4j-simple'
+
+    testCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     // functional-test-config.gradle does not supply the launcher that test-config.gradle does,
     // and these modules hold plain unit tests

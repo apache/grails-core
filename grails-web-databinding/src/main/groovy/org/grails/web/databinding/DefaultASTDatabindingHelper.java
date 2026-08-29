@@ -50,9 +50,11 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
     public static final String BINDABLE_CONSTRAINT_NAME = "bindable";
 
     public static final String DEFAULT_DATABINDING_WHITELIST = "$defaultDatabindingWhiteList";
+    public static final String LEGACY_DATABINDING_WHITELIST = "$legacyDatabindingWhiteList";
     public static final String NO_BINDABLE_PROPERTIES = "$_NO_BINDABLE_PROPERTIES_$";
-
     private static Map<ClassNode, Set<String>> CLASS_NODE_TO_WHITE_LIST_PROPERTY_NAMES = new HashMap<>();
+
+    private static Map<ClassNode, Set<String>> CLASS_NODE_TO_LEGACY_WHITE_LIST_PROPERTY_NAMES = new HashMap<>();
 
     private static Map<ClassNode, Set<String>> CLASS_NODE_TO_EXPLICITLY_BINDABLE_SPECIAL_PROPERTY_NAMES = new HashMap<>();
 
@@ -90,12 +92,19 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
 
     private void addDefaultDatabindingWhitelistField(final SourceUnit sourceUnit, final ClassNode classNode) {
         final FieldNode defaultWhitelistField = classNode.getDeclaredField(DEFAULT_DATABINDING_WHITELIST);
-        if (defaultWhitelistField != null) {
-            return;
+        if (defaultWhitelistField == null) {
+            final Set<String> propertyNamesToIncludeInWhiteList = getPropertyNamesToIncludeInWhiteList(sourceUnit, classNode);
+            addWhitelistField(classNode, DEFAULT_DATABINDING_WHITELIST, propertyNamesToIncludeInWhiteList, true);
         }
 
-        final Set<String> propertyNamesToIncludeInWhiteList = getPropertyNamesToIncludeInWhiteList(sourceUnit, classNode);
+        final FieldNode legacyWhitelistField = classNode.getDeclaredField(LEGACY_DATABINDING_WHITELIST);
+        if (legacyWhitelistField == null) {
+            final Set<String> legacyPropertyNamesToIncludeInWhiteList = getLegacyPropertyNamesToIncludeInWhiteList(sourceUnit, classNode);
+            addWhitelistField(classNode, LEGACY_DATABINDING_WHITELIST, legacyPropertyNamesToIncludeInWhiteList, true);
+        }
+    }
 
+    private void addWhitelistField(final ClassNode classNode, final String fieldName, final Set<String> propertyNamesToIncludeInWhiteList, final boolean denyWhenEmpty) {
         final ListExpression listExpression = new ListExpression();
         if (propertyNamesToIncludeInWhiteList.size() > 0) {
             for (String propertyName : propertyNamesToIncludeInWhiteList) {
@@ -114,11 +123,11 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
                     listExpression.addExpression(new ConstantExpression(propertyName + ".*"));
                 }
             }
-        } else {
+        } else if (denyWhenEmpty) {
             listExpression.addExpression(new ConstantExpression(NO_BINDABLE_PROPERTIES));
         }
 
-        classNode.addField(DEFAULT_DATABINDING_WHITELIST,
+        classNode.addField(fieldName,
                 Modifier.STATIC | Modifier.PUBLIC | Modifier.FINAL, new ClassNode(List.class),
                 listExpression);
     }
@@ -222,6 +231,86 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
             }
         }
 
+        propertyNamesToIncludeInWhiteList.addAll(bindablePropertyNames);
+        CLASS_NODE_TO_WHITE_LIST_PROPERTY_NAMES.put(classNode, propertyNamesToIncludeInWhiteList);
+        CLASS_NODE_TO_EXPLICITLY_BINDABLE_SPECIAL_PROPERTY_NAMES.put(classNode, explicitlyBindableSpecialPropertyNames);
+        return propertyNamesToIncludeInWhiteList;
+    }
+
+    private Set<String> getLegacyPropertyNamesToIncludeInWhiteListForParentClass(final SourceUnit sourceUnit, final ClassNode parentClassNode) {
+        final Set<String> propertyNames;
+        if (CLASS_NODE_TO_LEGACY_WHITE_LIST_PROPERTY_NAMES.containsKey(parentClassNode)) {
+            propertyNames = CLASS_NODE_TO_LEGACY_WHITE_LIST_PROPERTY_NAMES.get(parentClassNode);
+        } else {
+            propertyNames = getLegacyPropertyNamesToIncludeInWhiteList(sourceUnit, parentClassNode);
+        }
+        return propertyNames;
+    }
+
+    private Set<String> getLegacyPropertyNamesToIncludeInWhiteList(final SourceUnit sourceUnit, final ClassNode classNode) {
+        final Set<String> propertyNamesToIncludeInWhiteList = new HashSet<>();
+        final Set<String> unbindablePropertyNames = new HashSet<>();
+        final Set<String> bindablePropertyNames = new HashSet<>();
+
+        final Set<String> explicitlyBindableSpecialPropertyNames = new HashSet<>();
+        final boolean isDomainClass = GrailsASTUtils.isDomainClass(classNode, sourceUnit);
+        if (!classNode.getSuperClass().equals(new ClassNode(Object.class))) {
+            final Set<String> parentClassPropertyNames = getLegacyPropertyNamesToIncludeInWhiteListForParentClass(sourceUnit, classNode.getSuperClass());
+            final Set<String> parentExplicitlyBindableSpecialPropertyNames = getExplicitlyBindableSpecialPropertyNamesForParentClass(sourceUnit, classNode.getSuperClass());
+            explicitlyBindableSpecialPropertyNames.addAll(parentExplicitlyBindableSpecialPropertyNames);
+            for (final String parentPropertyName : parentClassPropertyNames) {
+                if (isDomainClass && DOMAIN_CLASS_PROPERTIES_TO_EXCLUDE_BY_DEFAULT.contains(parentPropertyName) &&
+                        !parentExplicitlyBindableSpecialPropertyNames.contains(parentPropertyName)) {
+                    continue;
+                }
+                bindablePropertyNames.add(parentPropertyName);
+            }
+        }
+
+        final FieldNode constraintsFieldNode = classNode.getDeclaredField(CONSTRAINTS_FIELD_NAME);
+        if (constraintsFieldNode != null && constraintsFieldNode.hasInitialExpression()) {
+            final Expression constraintsInitialExpression = constraintsFieldNode.getInitialExpression();
+            if (constraintsInitialExpression instanceof ClosureExpression) {
+
+                final Map<String, Map<String, Expression>> constraintsInfo = GrailsASTUtils.getConstraintMetadata((ClosureExpression) constraintsInitialExpression);
+
+                for (Entry<String, Map<String, Expression>> constraintConfig : constraintsInfo.entrySet()) {
+                    final String propertyName = constraintConfig.getKey();
+                    final Map<String, Expression> mapEntryExpressions = constraintConfig.getValue();
+                    for (Entry<String, Expression> entry : mapEntryExpressions.entrySet()) {
+                        final String constraintName = entry.getKey();
+                        if (BINDABLE_CONSTRAINT_NAME.equals(constraintName)) {
+                            final Expression valueExpression = entry.getValue();
+                            Boolean bindableValue = null;
+                            if (valueExpression instanceof ConstantExpression) {
+                                final Object constantValue = ((ConstantExpression) valueExpression).getValue();
+                                if (constantValue instanceof Boolean) {
+                                    bindableValue = (Boolean) constantValue;
+                                }
+                            }
+                            if (bindableValue != null) {
+                                if (Boolean.TRUE.equals(bindableValue)) {
+                                    unbindablePropertyNames.remove(propertyName);
+                                    bindablePropertyNames.add(propertyName);
+                                    if (DOMAIN_CLASS_PROPERTIES_TO_EXCLUDE_BY_DEFAULT.contains(propertyName)) {
+                                        explicitlyBindableSpecialPropertyNames.add(propertyName);
+                                    }
+                                } else {
+                                    bindablePropertyNames.remove(propertyName);
+                                    unbindablePropertyNames.add(propertyName);
+                                    explicitlyBindableSpecialPropertyNames.remove(propertyName);
+                                }
+                            } else {
+                                GrailsASTUtils.warning(sourceUnit, valueExpression, "The bindable constraint for property [" +
+                                        propertyName + "] in class [" + classNode.getName() +
+                                        "] has a value which is not a boolean literal and will be ignored.");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         final Set<String> fieldsInTransientsList = getPropertyNamesExpressedInTransientsList(classNode);
 
         propertyNamesToIncludeInWhiteList.addAll(bindablePropertyNames);
@@ -248,7 +337,7 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
                             final String restOfMethodName = methodName.substring(3);
                             final String propertyName = GrailsNameUtils.getPropertyName(restOfMethodName);
                             if (!unbindablePropertyNames.contains(propertyName) &&
-                                (!isDomainClass || !DOMAIN_CLASS_PROPERTIES_TO_EXCLUDE_BY_DEFAULT.contains(propertyName))) {
+                                    (!isDomainClass || !DOMAIN_CLASS_PROPERTIES_TO_EXCLUDE_BY_DEFAULT.contains(propertyName))) {
                                 propertyNamesToIncludeInWhiteList.add(propertyName);
                             }
                         }
@@ -256,8 +345,7 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
                 }
             }
         }
-        CLASS_NODE_TO_WHITE_LIST_PROPERTY_NAMES.put(classNode, propertyNamesToIncludeInWhiteList);
-        CLASS_NODE_TO_EXPLICITLY_BINDABLE_SPECIAL_PROPERTY_NAMES.put(classNode, explicitlyBindableSpecialPropertyNames);
+        CLASS_NODE_TO_LEGACY_WHITE_LIST_PROPERTY_NAMES.put(classNode, propertyNamesToIncludeInWhiteList);
         Map<String, ClassNode> allAssociationMap = GrailsASTUtils.getAllAssociationMap(classNode);
         for (String associationName : allAssociationMap.keySet()) {
             if (!propertyNamesToIncludeInWhiteList.contains(associationName) && !unbindablePropertyNames.contains(associationName)) {
@@ -305,4 +393,5 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
         }
         return transientFields;
     }
+
 }

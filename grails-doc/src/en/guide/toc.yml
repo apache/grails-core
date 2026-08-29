@@ -106,6 +106,7 @@ GORM:
   quickStartGuide:
     title: Quick Start Guide
     basicCRUD: Basic CRUD
+  multiTenancy: Multi-Tenancy
   furtherReading: Further Reading on GORM
     
 theWebLayer:
@@ -142,6 +143,7 @@ theWebLayer:
       formsAndFields: Forms and Fields
       tagsAsMethodCalls: Tags as Method Calls
     viewsAndTemplates: Views and Templates
+    gspStaticCompilation: Static Compilation
     layouts:
       title: Layouts
       contentBlocks: Content Blocks
@@ -154,6 +156,7 @@ theWebLayer:
       logicalTags: Logical Tags
       iterativeTags: Iterative Tags
       namespaces: Tag Namespaces
+      compiledTags: Compiled Tag Resolution
       usingJSPTagLibraries: Using JSP Tag Libraries
       tagReturnValue: Tag return value
   fields:
@@ -309,6 +312,7 @@ testing:
   integrationTesting: Integration Testing
   functionalTesting: Functional Testing
   testPhases: Custom Test Phases
+  testingMongodb: Testing GORM for MongoDB
 bestPractices:
   title: Building a Successful Application
   codeAnalysisGroovy: Code Analysis and Styling for Groovy
@@ -342,6 +346,21 @@ mail:
   mailMessageContent: Message Content
   mailAttachments: Attachments
   mailTesting: Testing
+backgroundJobs:
+  title: Background Jobs
+  backgroundJobsBasic: Basic Scheduling
+  backgroundJobsAdvanced:
+    title: Advanced Scheduling
+    quartzInstallation: Installation
+    quartzScheduling: Writing Jobs
+    quartzTriggers: Triggers
+    quartzJobProperties: Job Properties
+    quartzDynamicScheduling: Dynamic Job Scheduling
+    quartzJobManagerService: Managing Jobs at Runtime
+    quartzLongRunningJobs: Long-Running Jobs
+    quartzConfiguration: Configuration
+    quartzClustering: Clustering
+    quartzUsefulLinks: Useful Links
 redis:
   title: Redis
   redisInstallation: Installation and Configuration
@@ -393,5 +412,7 @@ deployment:
   deploymentStandalone: Standalone
   deploymentContainer: Container Deployment (e.g. Tomcat)
   deploymentTasks: Deployment Configuration Tasks
+  deploymentAot: Ahead-of-Time Processing
+  deploymentAotCache: Ahead-of-Time Caching
 contributing:
   title: Contributing to Grails

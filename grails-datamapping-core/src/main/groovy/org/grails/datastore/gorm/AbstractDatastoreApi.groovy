@@ -31,30 +31,39 @@ import org.grails.datastore.mapping.core.VoidSessionCallback
 @CompileStatic
 abstract class AbstractDatastoreApi {
 
-    protected Datastore datastore
+    protected DatastoreResolver datastoreResolver
 
     protected AbstractDatastoreApi(Datastore datastore) {
-        this.datastore = datastore
+        this.datastoreResolver = new StaticDatastoreResolver(datastore)
+    }
+
+    protected AbstractDatastoreApi(DatastoreResolver datastoreResolver) {
+        this.datastoreResolver = datastoreResolver
     }
 
     protected <T> T execute(SessionCallback<T> callback) {
-        if (datastore == null) {
+        Datastore ds = getDatastore()
+        if (ds == null) {
             throw new IllegalStateException('Cannot execute session callback with null datastore')
         }
-        DatastoreUtils.execute(datastore, callback)
+        DatastoreUtils.execute(ds, callback)
     }
 
     protected void execute(VoidSessionCallback callback) {
-        if (datastore == null) {
+        Datastore ds = getDatastore()
+        if (ds == null) {
             throw new IllegalStateException('Cannot execute session callback with null datastore')
         }
-        DatastoreUtils.execute(datastore, callback)
+        DatastoreUtils.execute(ds, callback)
     }
 
     Datastore getDatastore() {
-        if (datastore == null) {
-            throw new IllegalStateException('No datastore configured in stateless mode')
-        }
-        return datastore
+        return datastoreResolver?.resolve()
+    }
+
+    private static class StaticDatastoreResolver implements DatastoreResolver {
+        private final Datastore datastore
+        StaticDatastoreResolver(Datastore datastore) { this.datastore = datastore }
+        @Override Datastore resolve() { datastore }
     }
 }

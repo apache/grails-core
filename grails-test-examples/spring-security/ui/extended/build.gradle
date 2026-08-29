@@ -42,7 +42,7 @@ dependencies {
 
     implementation 'org.apache.grails:grails-mail'
 
-    compileOnly 'org.slf4j:slf4j-nop' // Remove warning about missing slf4j implementation during gsp compilation
+    compileOnly 'org.slf4j:slf4j-nop' // Remove warning about missing slf4j implementation during compilation
 
     runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
     runtimeOnly 'com.h2database:h2'
@@ -55,6 +55,8 @@ dependencies {
 
     testImplementation 'org.apache.grails:grails-testing-support-datamapping'
     testImplementation 'org.spockframework:spock-core'
+
+    testCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     integrationTestImplementation testFixtures(project(':grails-test-examples-spring-security-ui-common'))
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')

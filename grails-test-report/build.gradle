@@ -24,12 +24,26 @@ plugins {
 // the cli tier runs its tests in dedicated source sets (test-cli / integration-test-cli), so those
 // phases are aggregated alongside the ordinary ones - otherwise their results would be invisible
 // to the aggregate reports and to CI
+//
+// the test-suite projects also run some classes in their own Test tasks, to keep a class that
+// pollutes static state away from the rest of the fork. A phase is matched by task name, so those
+// task names have to be named here too, or their results are invisible in exactly the same way -
+// which is how they came to run nothing at all without anyone noticing.
+def isolatedUnitTestPhases = [
+        'isolatedTestsOne',
+        'isolatedTestsTwo',
+        'isolatedRestRendererTests',
+        'isolatedPersonTests',
+        'isolatedRestfulControllerTests',
+        'execIsolatedTests',
+]
+
 def reportVariants = [
         test           : [
                 taskName    : 'testAggregateTestReport',
                 markdownTask: 'markdownAggregateTestReport',
                 title       : 'Grails Unit Test Report',
-                phases      : ['test', 'testCli'],
+                phases      : ['test', 'testCli'] + isolatedUnitTestPhases,
                 reportDir   : 'reports/tests/test',
                 markdownFile: 'reports/tests/test.md',
         ],
@@ -45,7 +59,7 @@ def reportVariants = [
                 taskName    : 'combinedAggregateTestReport',
                 markdownTask: 'markdownCombinedAggregateTestReport',
                 title       : 'Grails Combined Test Report',
-                phases      : ['test', 'testCli', 'integrationTest', 'integrationTestCli'],
+                phases      : ['test', 'testCli', 'integrationTest', 'integrationTestCli'] + isolatedUnitTestPhases,
                 reportDir   : 'reports/tests/combined',
                 markdownFile: 'reports/tests/combined.md',
         ],

@@ -28,6 +28,8 @@ import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProce
 import org.springframework.beans.factory.support.GenericBeanDefinition;
 import org.springframework.core.PriorityOrdered;
 
+import org.apache.grails.common.aot.AheadOfTimeProcessing;
+
 /**
  * Registers {@code abstractGrailsResourceLocator}, the abstract parent definition that
  * resource-locator beans inherit their search locations from.
@@ -61,8 +63,22 @@ public class AbstractResourceLocatorPostProcessor implements BeanDefinitionRegis
         }
         GenericBeanDefinition definition = new GenericBeanDefinition();
         definition.setAbstract(true);
-        definition.getPropertyValues().add("searchLocations", this.searchLocations);
+        definition.getPropertyValues().add("searchLocations", searchLocationsToInherit());
         registry.registerBeanDefinition(BEAN_NAME, definition);
+    }
+
+    /**
+     * The locations to be inherited, which while code is being generated are none.
+     *
+     * <p>These are directories on the machine this runs on, and a child definition merges them in.
+     * Generating code for that child writes them into it, so an application would carry the
+     * directory it was built in and look for its resources there -- a path that says where it was
+     * built and, wherever it then runs, is not where its resources are. A generated application
+     * reads them from its own contents instead, which is what is left when there is nowhere named
+     * to look.</p>
+     */
+    private List<String> searchLocationsToInherit() {
+        return AheadOfTimeProcessing.isGeneratingCode() ? List.of() : this.searchLocations;
     }
 
     /**

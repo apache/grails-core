@@ -57,6 +57,8 @@ dependencies {
 
     runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
 
+    testCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
 }
 
