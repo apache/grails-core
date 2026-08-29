@@ -17,11 +17,13 @@ specific language governing permissions and limitations
 under the License.
 ////
 
+= Built in options
+
 Grails has a set of core settings that are worth knowing about. Their defaults are suitable for most projects, but it's important to understand what they do because you may need one or more of them later.
 
 
 
-=== Runtime settings
+== Runtime settings
 
 
 On the runtime front, i.e. `grails-app/conf/application.yml`, there are quite a few more core settings:

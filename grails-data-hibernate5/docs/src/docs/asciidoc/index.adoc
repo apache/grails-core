@@ -190,9 +190,7 @@ include::querying/hql.adoc[]
 include::advancedGORMFeatures.adoc[]
 
 [[eventsAutoTimestamping]]
-=== Events and Auto Timestamping
-
-include::advancedGORMFeatures/eventsAutoTimestamping.adoc[]
+include::advancedGORMFeatures/eventsAutoTimestamping.adoc[leveloffset=+2]
 
 [[ormdsl]]
 === Custom ORM Mapping
@@ -265,9 +263,7 @@ include::advancedGORMFeatures/ormdsl/customNamingStrategy.adoc[]
 include::advancedGORMFeatures/defaultSortOrder.adoc[]
 
 [[programmaticTransactions]]
-== Programmatic Transactions
-
-include::programmaticTransactions.adoc[]
+include::programmaticTransactions.adoc[leveloffset=+1]
 
 [[dataServices]]
 == GORM Data Services

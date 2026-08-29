@@ -18,7 +18,9 @@ under the License.
 ////
 
 
-=== Creating Plugins
+= Creating and Installing Plugins
+
+== Creating Plugins
 
 Creating a Grails plugin is a simple matter of running one of the supported plugin generators:
 
@@ -120,7 +122,7 @@ Adds Quartz job scheduling features
     Closure doWithSpring()......
 ----
 
-==== Plugin Configuration
+=== Plugin Configuration
 
 A Grails plugin can be configured in one of the following files:
 
@@ -129,7 +131,7 @@ A Grails plugin can be configured in one of the following files:
 
 These files will be included in the plugin package while the `application.*` files are only used internally when developing the plugin. See <<excludedArtefacts>>.
 
-==== Reading configuration properties
+=== Reading configuration properties
 
 Instead of directly accessing Grails configuration as `grailsApplication.config.mail.hostName`, use a Spring Boot configuration bean (or a POJO) annotated with {springbootapi}org/springframework/boot/context/properties/ConfigurationProperties.html[ConfigurationProperties] annotation. Here is an example plugin configuration:
 
@@ -169,7 +171,7 @@ class MailService {
 
 Please read the {springBootReference}features/external-config.html[Spring Boot Externalized Configuration] section for more information.
 
-==== Installing Local Plugins
+=== Installing Local Plugins
 
 In order to install the Grails plugin to your local Maven, you could use Gradle https://docs.gradle.org/current/userguide/publishing_maven.html[Maven Publish] plugin. You may also need to configure the publishing extension as:
 
@@ -216,7 +218,7 @@ implementation "org.apache.grails:grails-quartz:0.1"
 
 NOTE: In Grails 2.x plugins were packaged as ZIP files, however from Grails 3.x+ plugins are simple JAR files that can be added to the classpath of the IDE.
 
-==== Plugins and Multi-Project Builds
+=== Plugins and Multi-Project Builds
 
 
 If you wish to setup a plugin as part of a multi project build then follow these steps.
@@ -314,7 +316,7 @@ Grails application running at http://localhost:8080 in environment: development
 
 
 [[excludedArtefacts]]
-==== Notes on excluded Artefacts
+=== Notes on excluded Artefacts
 
 
 Although the link:{commandLineRef}create-plugin.html[create-plugin] command creates certain files for you so that the plugin can be run as a Grails application, not all of these files are included when packaging a plugin. The following is a list of artefacts created, but not included by link:{commandLineRef}package-plugin.html[package-plugin]:
@@ -328,7 +330,7 @@ Although the link:{commandLineRef}create-plugin.html[create-plugin] command crea
 * Everything within `/src/test/\*\*`
 * SCM management files within `\*\*/.svn/\*\*` and `\*\*/CVS/\*\*`
 
-==== Customizing the plugin contents
+=== Customizing the plugin contents
 
 
 When developing a plugin you may create test classes and sources that are used during the development and testing of the plugin but should not be exported to the application.
@@ -352,7 +354,7 @@ jar {
 }
 ----
 
-==== Inline Plugins in Grails
+=== Inline Plugins in Grails
 
 
 In Grails 2.x it was possible to specify inline plugins in `BuildConfig`, from Grails 3.x+ this functionality has been replaced by Gradle's multi-project build feature.
@@ -387,7 +389,7 @@ NOTE: You can also declare the dependency within the `dependencies` block, howev
 
 Using this technique you have achieved the equivalent of inline plugins from Grails 2.x.
 
-==== Grails Forge Creating Plugins
+=== Grails Forge Creating Plugins
 
 
 Creating a Grails plugin is a simple matter of running the command:

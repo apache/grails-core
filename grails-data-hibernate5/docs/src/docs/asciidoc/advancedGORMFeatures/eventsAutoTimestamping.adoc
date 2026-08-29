@@ -17,6 +17,8 @@ specific language governing permissions and limitations
 under the License.
 ////
 
+= Events and Auto Timestamping
+
 GORM supports the registration of events as methods that get fired when certain events occurs such as deletes, inserts and updates. The following is a list of supported events:
 
 * `beforeInsert` - Executed before an object is initially persisted to the database.  If you return false, the insert will be cancelled.
@@ -33,7 +35,7 @@ To add an event simply register the relevant method with your domain class.
 WARNING: Do not attempt to flush the session within an event (such as with obj.save(flush:true)). Since events are fired during flushing this will cause a StackOverflowError.
 
 
-==== The beforeInsert event
+== The beforeInsert event
 
 
 Fired before an object is saved to the database
@@ -56,7 +58,7 @@ class Person {
 ----
 
 
-==== The beforeUpdate event
+== The beforeUpdate event
 
 
 Fired before an existing object is updated
@@ -88,7 +90,7 @@ class Person {
 Notice the usage of `autowire true` above. This is required for the bean `securityService` to be injected.
 
 
-==== The beforeDelete event
+== The beforeDelete event
 
 
 Fired before an object is deleted.
@@ -111,7 +113,7 @@ Notice the usage of `withNewSession` method above. Since events are triggered wh
 Fortunately the `withNewSession` method lets you share the same transactional JDBC connection even though you're using a different underlying `Session`.
 
 
-==== The beforeValidate event
+== The beforeValidate event
 
 
 Fired before an object is validated.
@@ -171,7 +173,7 @@ no-arg version if no arguments are passed to `validate` but will fall back on th
 `List` version if the no-arg version does not exist.  In that case, `null` is passed to `beforeValidate`.
 
 
-==== The onLoad/beforeLoad event
+== The onLoad/beforeLoad event
 
 
 Fired immediately before an object is loaded from the database:
@@ -192,7 +194,7 @@ class Person {
 `beforeLoad()` is effectively a synonym for `onLoad()`, so only declare one or the other.
 
 
-==== The afterLoad event
+== The afterLoad event
 
 
 Fired immediately after an object is loaded from the database:
@@ -211,7 +213,7 @@ class Person {
 ----
 
 
-==== Custom Event Listeners
+== Custom Event Listeners
 
 To register a custom event listener you need to subclass `AbstractPersistenceEventListener` (in package _org.grails.datastore.mapping.engine.event_) and implement the methods `onPersistenceEvent` and `supportsEventType`. You also must provide a reference to the datastore to the listener.  The simplest possible implementation can be seen below:
 
@@ -277,7 +279,7 @@ datastore.getApplicationEventPublisher()
 ----
 
 
-==== Hibernate Events
+== Hibernate Events
 
 
 It is generally encouraged to use the non-Hibernate specific API described above, but if you need access to more detailed Hibernate events then you can define custom Hibernate-specific event listeners.
@@ -359,7 +361,7 @@ def doWithSpring = {
 ----
 
 
-==== Automatic timestamping
+== Automatic timestamping
 
 
 If you define a `dateCreated` property it will be set to the current date for you when you create new instances. Likewise, if you define a `lastUpdated` property it will be automatically be updated for you when you change persistent instances.
