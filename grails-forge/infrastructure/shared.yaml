@@ -225,6 +225,10 @@ Resources:
   GitHubDeployRole:
     Type: AWS::IAM::Role
     Properties:
+      ManagedPolicyArns:
+        - Fn::Sub: arn:${AWS::Partition}:iam::aws:policy/AdministratorAccess-AWSElasticBeanstalk
+        - Fn::Sub: arn:${AWS::Partition}:iam::aws:policy/AWSElasticBeanstalkWebTier
+        - Fn::Sub: arn:${AWS::Partition}:iam::aws:policy/AWSElasticBeanstalkManagedUpdatesCustomerRolePolicy
       AssumeRolePolicyDocument:
         Statement:
           - Action: sts:AssumeRoleWithWebIdentity
@@ -248,6 +252,8 @@ Resources:
                   - s3:GetObjectVersion
                   - s3:GetObjectAcl
                   - s3:PutObject
+                  - s3:PutObjectAcl
+                  - s3:DeleteObject
                 Effect: Allow
                 Resource:
                   - Fn::Sub: ${ArtifactBucket.Arn}/*
@@ -257,7 +263,8 @@ Resources:
                   - s3:GetBucketLocation
                 Effect: Allow
                 Resource:
-                  Fn::Sub: arn:${AWS::Partition}:s3:::elasticbeanstalk-${AWS::Region}-${AWS::AccountId}
+                  - Fn::Sub: ${ArtifactBucket.Arn}
+                  - Fn::Sub: arn:${AWS::Partition}:s3:::elasticbeanstalk-${AWS::Region}-${AWS::AccountId}
               - Action: elasticbeanstalk:CreateStorageLocation
                 Effect: Allow
                 Resource: '*'
@@ -291,6 +298,15 @@ Resources:
                   - cloudformation:DescribeStackResource
                   - cloudformation:DescribeStackResources
                   - cloudformation:GetTemplate
+                Effect: Allow
+                Resource: '*'
+              - Action:
+                  - autoscaling:DescribeAutoScalingGroups
+                  - autoscaling:DescribeAutoScalingInstances
+                  - autoscaling:DescribeScalingActivities
+                  - autoscaling:DescribeLaunchConfigurations
+                  - ec2:DescribeInstances
+                  - ec2:DescribeInstanceStatus
                 Effect: Allow
                 Resource: '*'
             Version: '2012-10-17'
