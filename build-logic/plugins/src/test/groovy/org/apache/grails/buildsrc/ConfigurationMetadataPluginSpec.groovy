@@ -398,6 +398,181 @@ class ConfigurationMetadataPluginSpec extends Specification {
         result.output.contains("Conflicting overlay properties metadata for 'duplicate'")
     }
 
+    def "rejects any duplicate compiled class name across input directories"() {
+        given: 'a second source set compiles the same binary name as the main source set'
+        write('build.gradle', '''
+            plugins {
+                id 'groovy'
+                id 'org.apache.grails.buildsrc.configuration-metadata'
+            }
+
+            repositories { mavenCentral() }
+
+            dependencies {
+                implementation 'org.apache.groovy:groovy:5.0.7'
+                implementation 'org.springframework.boot:spring-boot:4.1.0'
+            }
+
+            sourceSets {
+                dup {
+                    java.srcDir 'src/dup/java'
+                }
+            }
+
+            dependencies {
+                dupImplementation 'org.apache.groovy:groovy:5.0.7'
+                dupImplementation 'org.springframework.boot:spring-boot:4.1.0'
+            }
+
+            tasks.named('generateConfigurationMetadata') {
+                classesDirs.from(sourceSets.dup.output.classesDirs)
+                dependsOn sourceSets.dup.output
+            }
+        '''.stripIndent())
+        write('src/main/java/fixture/Duplicate.java', '''
+            package fixture;
+
+            import org.springframework.boot.context.properties.ConfigurationProperties;
+
+            @ConfigurationProperties("fixture.dup")
+            public class Duplicate {
+                private String value;
+                public String getValue() { return value; }
+                public void setValue(String value) { this.value = value; }
+            }
+        '''.stripIndent())
+        write('src/dup/java/fixture/Duplicate.java', '''
+            package fixture;
+
+            import org.springframework.boot.context.properties.ConfigurationProperties;
+
+            @ConfigurationProperties("fixture.dup")
+            public class Duplicate {
+                private String value;
+                public String getValue() { return value; }
+                public void setValue(String value) { this.value = value; }
+            }
+        '''.stripIndent())
+
+        when: 'metadata generation runs over both output directories'
+        BuildResult result = runner('generateConfigurationMetadata').buildAndFail()
+
+        then: 'the duplicate binary name is rejected with both input origins reported'
+        result.output.contains("Duplicate compiled class 'fixture.Duplicate' in configuration metadata inputs " +
+                "(first seen in '${path(projectDir.resolve('build/classes/java/dup').toFile())}', " +
+                "also in '${path(projectDir.resolve('build/classes/java/main').toFile())}')")
+    }
+
+    def "preserves repeated group names from two configuration classes sharing a prefix"() {
+        given: 'two configuration classes declare the same prefix'
+        resetFixture()
+        writeSharedPrefixClasses(false)
+
+        when:
+        BuildResult result = run('generateConfigurationMetadata')
+
+        then: 'both groups survive because their provenance differs'
+        result.task(':generateConfigurationMetadata').outcome == TaskOutcome.SUCCESS
+        Map metadata = readMetadata()
+        List shared = metadata.groups.findAll { Map group -> group.name == 'fixture.shared' }
+        shared.size() == 2
+        shared*.sourceType as Set == ['fixture.SharedA', 'fixture.SharedB'] as Set
+        property(metadata, 'fixture.shared.firstValue').type == 'java.lang.String'
+        property(metadata, 'fixture.shared.secondValue').type == 'java.lang.String'
+    }
+
+    def "preserves repeated nested group names from different source types"() {
+        given: 'two configuration classes expose different nested types under the same property name'
+        resetFixture()
+        writeSharedPrefixClasses(true)
+
+        when:
+        BuildResult result = run('generateConfigurationMetadata')
+
+        then: 'the repeated nested group is kept per source type with its own properties'
+        result.task(':generateConfigurationMetadata').outcome == TaskOutcome.SUCCESS
+        Map metadata = readMetadata()
+        List nested = metadata.groups.findAll { Map group -> group.name == 'fixture.shared.nested' }
+        nested.size() == 2
+        nested*.sourceType as Set == ['fixture.SharedA', 'fixture.SharedB'] as Set
+        nested*.type as Set == ['fixture.NestedA', 'fixture.NestedB'] as Set
+        property(metadata, 'fixture.shared.nested.enabled').type == 'boolean'
+        property(metadata, 'fixture.shared.nested.label').type == 'java.lang.String'
+    }
+
+    def "rejects exact same group identity conflicts in an overlay"() {
+        given:
+        write('src/main/resources/META-INF/additional-spring-configuration-metadata.json', '''
+            {"groups":[
+              {"name":"fixture.java","sourceType":"fixture.JavaConfiguration","description":"one"},
+              {"name":"fixture.java","sourceType":"fixture.JavaConfiguration","description":"two"}
+            ]}
+        '''.stripIndent())
+
+        when:
+        BuildResult result = runner('generateConfigurationMetadata').buildAndFail()
+
+        then:
+        result.output.contains("Conflicting overlay groups metadata for 'fixture.java'")
+    }
+
+    def "name-only overlay augments all matching generated groups"() {
+        given: 'two classes share a prefix and the overlay carries no source qualification'
+        resetFixture()
+        writeSharedPrefixClasses(false)
+        write('src/main/resources/META-INF/additional-spring-configuration-metadata.json', '''
+            {"groups":[{"name":"fixture.shared","description":"shared overlay"}]}
+        '''.stripIndent())
+
+        when:
+        BuildResult result = run('generateConfigurationMetadata')
+
+        then: 'every generated group with that name receives the overlay fields'
+        result.task(':generateConfigurationMetadata').outcome == TaskOutcome.SUCCESS
+        Map metadata = readMetadata()
+        List shared = metadata.groups.findAll { Map group -> group.name == 'fixture.shared' }
+        shared.size() == 2
+        shared.every { Map group -> group.description == 'shared overlay' }
+    }
+
+    def "source-qualified overlay targets a single group identity"() {
+        given: 'two classes share a prefix and the overlay names one source type'
+        resetFixture()
+        writeSharedPrefixClasses(false)
+        write('src/main/resources/META-INF/additional-spring-configuration-metadata.json', '''
+            {"groups":[{"name":"fixture.shared","sourceType":"fixture.SharedA","description":"A only"}]}
+        '''.stripIndent())
+
+        when:
+        BuildResult result = run('generateConfigurationMetadata')
+
+        then: 'only the matching identity is augmented'
+        result.task(':generateConfigurationMetadata').outcome == TaskOutcome.SUCCESS
+        Map metadata = readMetadata()
+        List shared = metadata.groups.findAll { Map group -> group.name == 'fixture.shared' }
+        shared.find { Map group -> group.sourceType == 'fixture.SharedA' }.description == 'A only'
+        shared.find { Map group -> group.sourceType == 'fixture.SharedB' }.description == null
+    }
+
+    def "orders repeated group identities by name, sourceType, then sourceMethod"() {
+        given: 'the overlay contributes two identities that differ only by sourceMethod'
+        write('src/main/resources/META-INF/additional-spring-configuration-metadata.json', '''
+            {"groups":[
+              {"name":"fixture.shared","sourceType":"fixture.SharedA","sourceMethod":"beta","description":"beta"},
+              {"name":"fixture.shared","sourceType":"fixture.SharedA","sourceMethod":"alpha","description":"alpha"}
+            ]}
+        '''.stripIndent())
+
+        when:
+        run('generateConfigurationMetadata')
+
+        then: 'the two identities are kept distinct and ordered by their sourceMethod'
+        Map metadata = readMetadata()
+        List shared = metadata.groups.findAll { Map group -> group.name == 'fixture.shared' }
+        shared.size() == 2
+        shared*.sourceMethod == ['alpha', 'beta']
+    }
+
     def "generates metadata when no additional metadata file exists"() {
         given:
         projectDir.resolve('src/main/resources/META-INF/additional-spring-configuration-metadata.json').toFile().delete()
@@ -466,6 +641,74 @@ class ConfigurationMetadataPluginSpec extends Specification {
                 <T> GenericConstructor(T value) { }
             }
         """.stripIndent())
+    }
+
+    private void resetFixture() {
+        ['src/main/java/fixture/RootConfiguration.java',
+         'src/main/java/fixture/JavaConfiguration.java',
+         'src/main/groovy/fixture/GroovyConfiguration.groovy',
+         'src/main/resources/META-INF/additional-spring-configuration-metadata.json'].each { String relativePath ->
+            projectDir.resolve(relativePath).toFile().delete()
+        }
+    }
+
+    private void writeSharedPrefixClasses(boolean withNested) {
+        String nestedA = withNested ? '''
+                private NestedA nested;
+                public NestedA getNested() { return nested; }
+                public void setNested(NestedA nested) { this.nested = nested; }
+        ''' : ''
+        String nestedB = withNested ? '''
+                private NestedB nested;
+                public NestedB getNested() { return nested; }
+                public void setNested(NestedB nested) { this.nested = nested; }
+        ''' : ''
+        write('src/main/java/fixture/SharedA.java', """
+            package fixture;
+
+            import org.springframework.boot.context.properties.ConfigurationProperties;
+
+            @ConfigurationProperties("fixture.shared")
+            public class SharedA {
+                private String firstValue;
+                ${nestedA}
+                public String getFirstValue() { return firstValue; }
+                public void setFirstValue(String firstValue) { this.firstValue = firstValue; }
+            }
+        """.stripIndent())
+        write('src/main/java/fixture/SharedB.java', """
+            package fixture;
+
+            import org.springframework.boot.context.properties.ConfigurationProperties;
+
+            @ConfigurationProperties("fixture.shared")
+            public class SharedB {
+                private String secondValue;
+                ${nestedB}
+                public String getSecondValue() { return secondValue; }
+                public void setSecondValue(String secondValue) { this.secondValue = secondValue; }
+            }
+        """.stripIndent())
+        if (withNested) {
+            write('src/main/java/fixture/NestedA.java', '''
+                package fixture;
+
+                public class NestedA {
+                    private boolean enabled;
+                    public boolean isEnabled() { return enabled; }
+                    public void setEnabled(boolean enabled) { this.enabled = enabled; }
+                }
+            '''.stripIndent())
+            write('src/main/java/fixture/NestedB.java', '''
+                package fixture;
+
+                public class NestedB {
+                    private String label;
+                    public String getLabel() { return label; }
+                    public void setLabel(String label) { this.label = label; }
+                }
+            '''.stripIndent())
+        }
     }
 
     private void writeGroovyDslConfiguration(boolean includeSessionTimeout) {

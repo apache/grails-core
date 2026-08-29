@@ -21,6 +21,7 @@ package org.grails.gradle.plugin.commands
 import groovy.transform.CompileStatic
 
 import org.gradle.api.GradleException
+import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
@@ -31,9 +32,13 @@ import org.gradle.api.component.SoftwareComponentFactory
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.bundling.Jar
+import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.plugins.JavaPluginExtension
 
 import javax.inject.Inject
+
+import org.grails.gradle.plugin.core.TestPhase
+import org.grails.gradle.plugin.core.TestPhasesGradlePlugin
 
 import org.apache.grails.gradle.publish.AdditionalPublication
 import org.apache.grails.gradle.publish.GrailsPublishExtension
@@ -70,7 +75,17 @@ import org.apache.grails.gradle.publish.GrailsPublishExtension
 @CompileStatic
 abstract class GrailsCliArtifactGradlePlugin implements Plugin<Project> {
 
+    public static final String PLUGIN_ID = 'org.apache.grails.gradle.grails-plugin-cli'
     public static final String CLI_SOURCE_SET_NAME = 'cli'
+    public static final String CLI_TEST_SOURCE_SET_NAME = 'testCli'
+
+    /** Test phase for cli tests that need a booted application; sources in {@code src/integration-test-cli} */
+    public static final String CLI_INTEGRATION_TEST_PHASE_NAME = 'integrationTestCli'
+    public static final String CLI_INTEGRATION_TEST_SOURCE_FOLDER = 'src/integration-test-cli'
+
+    /** Application config and fixtures shared with the application's own integration test phase */
+    public static final String SHARED_INTEGRATION_TEST_RESOURCES = 'src/integration-test/resources'
+
     public static final String CLI_COMPONENT_NAME = 'cli'
     public static final String CLI_PUBLICATION_NAME = 'cli'
 
@@ -169,16 +184,62 @@ abstract class GrailsCliArtifactGradlePlugin implements Plugin<Project> {
         // coordinate (see CliPublishingSupport)
         CliPublishingSupport.rewritePublishedCliCapabilityDependencies(project)
 
-        // the plugin's tests exercise the cli classes through their public API: the cli output
-        // and the cli dependency buckets flow into the test configurations (dependency-based, so
-        // the wiring is immune to when test tasks snapshot their source set classpaths)
-        for (String testConfiguration : ['testImplementation', 'integrationTestImplementation']) {
-            project.configurations.matching { Configuration it -> it.name == testConfiguration }
-                    .configureEach { Configuration it ->
-                        project.dependencies.add(it.name, cliSourceSet.output)
-                        it.extendsFrom(project.configurations.getByName('cliApi'), project.configurations.getByName('cliImplementation'))
-                    }
+        // Both cli phases are ordinary test phases: the plugin builds the source set from the phase's
+        // source folder, inherits the module's test configurations, registers the Test task, wires it
+        // into check, and contributes the results to the merged report.
+        //
+        // The cli tier needs its own phases rather than leaking into `test`, which must stay a faithful
+        // stand-in for an application's production classpath: if a cli class or a cli-only dependency
+        // (jline, jansi) reaches main, that has to surface as a failure instead of being silently
+        // satisfied by cli wiring.
+        project.pluginManager.apply(TestPhasesGradlePlugin)
+        NamedDomainObjectContainer<TestPhase> testPhases =
+                project.extensions.getByName(TestPhasesGradlePlugin.EXTENSION_NAME) as NamedDomainObjectContainer<TestPhase>
+
+        // testCli's derived source folder is already src/test-cli, so it needs no override. A command
+        // boots an application the same way the shell does, so tests that need a real application context
+        // get the second phase - never the application's own integrationTest phase, which has to keep the
+        // production classpath shape.
+        addTestPhase(project, testPhases, CLI_TEST_SOURCE_SET_NAME, null)
+        addTestPhase(project, testPhases, CLI_INTEGRATION_TEST_PHASE_NAME, CLI_INTEGRATION_TEST_SOURCE_FOLDER)
+
+        // On top of the shared test wiring, both phases see the cli classes they exercise and the cli
+        // dependency buckets. The direction is one-way by design: a cli phase may read `test`, but `test`
+        // never sees cli.
+        for (String phaseName : [CLI_TEST_SOURCE_SET_NAME, CLI_INTEGRATION_TEST_PHASE_NAME]) {
+            SourceSet phaseSourceSet = sourceSets.getByName(phaseName)
+            project.dependencies.add(phaseSourceSet.implementationConfigurationName, cliSourceSet.output)
+            project.configurations.named(phaseSourceSet.implementationConfigurationName).configure { Configuration it ->
+                it.extendsFrom(
+                        project.configurations.getByName('cliApi'),
+                        project.configurations.getByName('cliImplementation'))
+            }
+            // compileOnly and the annotation processor path are part of the module's declared test
+            // toolchain too: a spec moved verbatim out of src/test must still compile against whatever
+            // `test` compiled against (Lombok-generated accessors, a type behind testCompileOnly), or the
+            // move fails with an error that points nowhere near the cause
+            project.configurations.named(phaseSourceSet.compileOnlyConfigurationName).configure { Configuration it ->
+                it.extendsFrom(project.configurations.getByName('testCompileOnly'))
+            }
+            project.configurations.named(phaseSourceSet.annotationProcessorConfigurationName).configure { Configuration it ->
+                it.extendsFrom(project.configurations.getByName('testAnnotationProcessor'))
+            }
         }
+
+        SourceSet cliIntegrationTestSourceSet = sourceSets.getByName(CLI_INTEGRATION_TEST_PHASE_NAME)
+        // both integration phases boot the same application, so its configuration and fixtures are
+        // shared rather than duplicated into the cli phase
+        File sharedResources = project.file(SHARED_INTEGRATION_TEST_RESOURCES)
+        if (sharedResources.directory) {
+            cliIntegrationTestSourceSet.resources.srcDir(sharedResources)
+        }
+        project.configurations.named(cliIntegrationTestSourceSet.implementationConfigurationName)
+                .configure { Configuration it ->
+                    project.dependencies.add(it.name, cliSourceSet.output)
+                    it.extendsFrom(
+                            project.configurations.getByName('cliApi'),
+                            project.configurations.getByName('cliImplementation'))
+                }
 
         project.tasks.named(cliSourceSet.jarTaskName, Jar).configure { Jar jar ->
             // the jar is the primary artifact of its own coordinate — publish it unclassified
@@ -215,6 +276,24 @@ abstract class GrailsCliArtifactGradlePlugin implements Plugin<Project> {
                         project.name, extension.artifactId.get())
             }
         }
+    }
+
+    /**
+     * Adds a {@link TestPhase} to the container, optionally overriding the source folder its name would
+     * otherwise derive.
+     *
+     * <p>The phase is configured before it is added, NOT through {@code create(name, action)}: the
+     * container fires its {@code configureEach} handler - which is what turns {@code sourceFolderName}
+     * into a source set - during {@code add()}, so anything a create-action sets arrives too late to be
+     * read.</p>
+     */
+    private static void addTestPhase(Project project, NamedDomainObjectContainer<TestPhase> testPhases,
+                                     String phaseName, String sourceFolder) {
+        TestPhase phase = project.objects.newInstance(TestPhase, phaseName)
+        if (sourceFolder != null) {
+            phase.sourceFolderName.set(sourceFolder)
+        }
+        testPhases.add(phase)
     }
 
     /**

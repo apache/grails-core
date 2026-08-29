@@ -23,9 +23,6 @@ plugins {
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
-    id 'org.apache.grails.buildsrc.publish'
-    id 'org.apache.grails.buildsrc.sbom'
-    id 'org.apache.grails.buildsrc.vulnerability-scan'
     id 'org.apache.grails.gradle.grails-code-style'
     id 'org.apache.grails.gradle.grails-jacoco'
 }
@@ -36,7 +33,6 @@ group = 'org.apache.grails'
 dependencies {
     implementation platform(project(':grails-bom'))
     api 'org.apache.groovy:groovy'
-    compileOnly 'org.springframework.boot:spring-boot'
     testImplementation 'org.springframework.boot:spring-boot'
     testImplementation 'org.apache.groovy:groovy-json'
     testImplementation 'org.spockframework:spock-core'

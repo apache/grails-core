@@ -19,6 +19,7 @@
 package org.apache.grails.configuration.metadata
 
 import groovy.transform.CompileStatic
+import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
@@ -30,7 +31,10 @@ import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.control.CompilePhase
 import org.codehaus.groovy.control.SourceUnit
+import org.codehaus.groovy.control.messages.WarningMessage
 import org.codehaus.groovy.syntax.SyntaxException
+import org.codehaus.groovy.syntax.Token
+import org.codehaus.groovy.syntax.Types
 import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
 
@@ -41,6 +45,7 @@ import static java.lang.reflect.Modifier.STATIC
 /**
  * Embeds configuration metadata in each annotated Groovy class. Aggregation is deliberately
  * deferred to the Gradle task so incremental Groovy compilation never writes shared output.
+ * This transformation runs during SEMANTIC_ANALYSIS, before {@code @Delegate} composes methods.
  */
 @CompileStatic
 @GroovyASTTransformation(phase = CompilePhase.SEMANTIC_ANALYSIS)
@@ -51,6 +56,8 @@ class ConfigurationMetadataTransformation implements ASTTransformation {
             'org.springframework.boot.context.properties.bind.ConstructorBinding'
     private static final int SYNTHETIC = 0x00001000
     private static final String CONFIGURATION_PROPERTIES = 'org.springframework.boot.context.properties.ConfigurationProperties'
+    private static final String NESTED_CONFIGURATION_PROPERTY =
+            'org.springframework.boot.context.properties.NestedConfigurationProperty'
 
     @Override
     void visit(ASTNode[] nodes, SourceUnit source) {
@@ -73,6 +80,7 @@ class ConfigurationMetadataTransformation implements ASTTransformation {
             return
         }
         String prefix = prefixExpression == null ? '' : String.valueOf(((ConstantExpression) prefixExpression).value)
+        warnForDelegateProperties(node, source)
         Map<String, List<Map<String, Object>>> metadata = metadata(
                 node, prefix, node.name, new LinkedHashSet<String>())
         String payload = toJson([
@@ -96,14 +104,16 @@ class ConfigurationMetadataTransformation implements ASTTransformation {
             PropertyNode propertyNode ->
             FieldNode field = propertyNode.field
             Map<String, Object> propertyMetadata = [
-                    propertyName: field.name, type: typeName(field.type), classNode: field.type, nested: true]
+                    propertyName: field.name, type: typeName(field.type), classNode: field.type,
+                    nested: isNestedConfigurationProperty(node, field.type, field.annotations),
+                    owner: node.name]
             Expression initialExpression = field.initialExpression
             if (initialExpression instanceof ConstantExpression && !initialExpression.isNullExpression()) {
                 propertyMetadata.put('defaultValue', ((ConstantExpression) initialExpression).value)
             }
             bindable.put(field.name, propertyMetadata)
         }
-        collectSetterProperties(node, bindable, new LinkedHashSet<String>())
+        collectAccessorProperties(node, bindable, new LinkedHashSet<String>())
 
         List<Map<String, Object>> groups = []
         List<Map<String, Object>> properties = []
@@ -112,7 +122,7 @@ class ConfigurationMetadataTransformation implements ASTTransformation {
             String propertyName = property.propertyName as String
             String name = prefix ? "${prefix}.${propertyName}" : propertyName
             ClassNode propertyType = property.classNode as ClassNode
-            if (property.nested && isNested(propertyType)) {
+            if (property.nested) {
                 Map<String, List<Map<String, Object>>> nested = metadata(propertyType, name, sourceType, visiting)
                 if (nested.get('groups') || nested.get('properties')) {
                     groups << [name: name, type: property.type, sourceType: sourceType]
@@ -145,9 +155,25 @@ class ConfigurationMetadataTransformation implements ASTTransformation {
         boolean constructorBound = !field.final || constructorBoundProperties(field.owner).contains(field.name)
         !field.static && constructorBound && !field.name.startsWith('$') &&
                 field.name != 'metaClass' && field.name != PAYLOAD_FIELD &&
-                !field.annotations.any { annotation ->
-                    annotation.classNode.name in ['groovy.lang.Delegate', 'groovy.transform.Delegate']
-                }
+                !isDelegate(field)
+    }
+
+    private static void warnForDelegateProperties(ClassNode node, SourceUnit source) {
+        node.fields.each { FieldNode field ->
+            if (isDelegate(field)) {
+                String warning = "Configuration properties class uses @Delegate field '${node.name}.${field.name}', " +
+                        'but SEMANTIC_ANALYSIS runs before @Delegate composition. ' +
+                        'Add metadata for delegated properties to additional-spring-configuration-metadata.json.'
+                source.errorCollector.addWarning(WarningMessage.LIKELY_ERRORS, warning,
+                        Token.newSymbol(Types.UNKNOWN, field.lineNumber, field.columnNumber), source)
+            }
+        }
+    }
+
+    private static boolean isDelegate(FieldNode field) {
+        field.annotations.any { AnnotationNode annotation ->
+            annotation.classNode.name in ['groovy.lang.Delegate', 'groovy.transform.Delegate']
+        }
     }
 
     private static Set<String> constructorBoundProperties(ClassNode owner) {
@@ -164,8 +190,8 @@ class ConfigurationMetadataTransformation implements ASTTransformation {
         bindingConstructor ? bindingConstructor.parameters*.name as Set<String> : Collections.emptySet()
     }
 
-    private static void collectSetterProperties(ClassNode node, Map<String, Map<String, Object>> bindable,
-                                                Set<String> visited) {
+    private static void collectAccessorProperties(ClassNode node, Map<String, Map<String, Object>> bindable,
+                                                  Set<String> visited) {
         if (node == null || node.name == Object.name || !visited.add(node.name)) {
             return
         }
@@ -173,18 +199,69 @@ class ConfigurationMetadataTransformation implements ASTTransformation {
             method.public && !method.static && method.name.startsWith('set') && method.name.length() > 3 &&
                     !(method.name in ['setGrailsApplication', 'setMetaClass']) && method.parameters.length == 1
         }.each { MethodNode method ->
-            String propertyName = decapitalize(method.name.substring(3))
+            String propertySuffix = method.name.substring(3)
+            String propertyName = decapitalize(propertySuffix)
             ClassNode propertyType = method.parameters[0].type
-            bindable.putIfAbsent(propertyName,
-                    [propertyName: propertyName, type: typeName(propertyType), classNode: propertyType, nested: true])
+            MethodNode getter = findGetter(node, propertySuffix, propertyType)
+            List<AnnotationNode> annotations = new ArrayList<AnnotationNode>(method.annotations)
+            if (getter != null) {
+                annotations.addAll(getter.annotations)
+            }
+            mergeAccessorProperty(node, bindable, propertyName, propertyType, annotations)
         }
-        collectSetterProperties(node.superClass, bindable, visited)
-        node.interfaces.each { ClassNode interfaceNode -> collectSetterProperties(interfaceNode, bindable, visited) }
+        node.methods.findAll { MethodNode method -> isStandardGetter(method) &&
+                isNestedConfigurationProperty(node, method.returnType, method.annotations) }.each { MethodNode getter ->
+            String propertySuffix = getter.name.startsWith('get') ? getter.name.substring(3) : getter.name.substring(2)
+            mergeAccessorProperty(node, bindable, decapitalize(propertySuffix), getter.returnType, getter.annotations)
+        }
+        collectAccessorProperties(node.superClass, bindable, visited)
+        node.interfaces.each { ClassNode interfaceNode -> collectAccessorProperties(interfaceNode, bindable, visited) }
     }
 
-    private static boolean isNested(ClassNode type) {
-        !type.array && !type.enum && !ClassHelper.isPrimitiveType(type) &&
-                !type.name.startsWith('java.') && !type.name.startsWith('groovy.')
+    private static void mergeAccessorProperty(ClassNode owner, Map<String, Map<String, Object>> bindable,
+                                              String propertyName, ClassNode propertyType,
+                                              List<AnnotationNode> annotations) {
+        Map<String, Object> existing = bindable.get(propertyName)
+        if (existing == null) {
+            bindable.put(propertyName, [propertyName: propertyName, type: typeName(propertyType), classNode: propertyType,
+                                        nested: isNestedConfigurationProperty(owner, propertyType, annotations),
+                                        owner: owner.name])
+        } else if (existing.get('owner') == owner.name && typesMatch(existing.get('classNode') as ClassNode, propertyType)) {
+            existing.put('nested', (existing.get('nested') as boolean) ||
+                    isNestedConfigurationProperty(owner, propertyType, annotations))
+        }
+    }
+
+    private static MethodNode findGetter(ClassNode node, String propertySuffix, ClassNode propertyType) {
+        String getterName = "get${propertySuffix}"
+        String booleanGetterName = "is${propertySuffix}"
+        node.methods.find { MethodNode method ->
+            method.name in [getterName, booleanGetterName] && isStandardGetter(method) &&
+                    typesMatch(method.returnType, propertyType)
+        }
+    }
+
+    private static boolean isStandardGetter(MethodNode method) {
+        if (!method.public || method.static || method.parameters.length != 0) {
+            return false
+        }
+        (method.name.startsWith('get') && method.name.length() > 3 && method.returnType != ClassHelper.VOID_TYPE) ||
+                (method.name.startsWith('is') && method.name.length() > 2 && method.returnType == ClassHelper.boolean_TYPE)
+    }
+
+    private static boolean typesMatch(ClassNode first, ClassNode second) {
+        first.name == second.name
+    }
+
+    private static boolean isNestedConfigurationProperty(ClassNode owner, ClassNode type,
+                                                          List<AnnotationNode> annotations) {
+        isInnerClassOf(type, owner) || annotations.any { AnnotationNode annotation ->
+            annotation.classNode.name == NESTED_CONFIGURATION_PROPERTY
+        }
+    }
+
+    private static boolean isInnerClassOf(ClassNode type, ClassNode owner) {
+        type.name.startsWith(owner.name + '$')
     }
 
     private static String typeName(ClassNode type) {

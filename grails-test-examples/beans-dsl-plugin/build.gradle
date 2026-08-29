@@ -1,0 +1,65 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'groovy'
+    id 'java-library'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
+    id 'org.apache.grails.buildsrc.autoconfiguration-imports'
+}
+
+version = projectVersion
+group = 'examples'
+
+dependencies {
+
+    implementation platform(project(':grails-bom'))
+
+    // Kept separate from grails-test-examples/beans-dsl: pulling grails-core onto a module's
+    // classpath at all activates Grails' own plugin-bootstrap ApplicationContextInitializer
+    // (registered unconditionally via spring.factories) for any SpringApplication.run() in
+    // that module, which would have changed the other example's existing test behaviour. It also
+    // carries grails-beans-dsl, so this module needs no declaration of its own.
+    implementation project(':grails-core')
+
+    api 'org.springframework.boot:spring-boot-autoconfigure'
+    api 'org.springframework:spring-context'
+
+    testImplementation 'org.springframework.boot:spring-boot-test'
+    testImplementation 'org.springframework:spring-test'
+    testImplementation 'org.assertj:assertj-core'
+
+    testImplementation 'org.apache.groovy:groovy-test-junit5'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'org.junit.platform:junit-platform-suite'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+    testImplementation 'org.spockframework:spock-core'
+    testRuntimeOnly 'org.slf4j:slf4j-simple'
+
+    // functional-test-config.gradle does not supply the launcher that test-config.gradle does,
+    // and these modules hold plain unit tests
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
+}
