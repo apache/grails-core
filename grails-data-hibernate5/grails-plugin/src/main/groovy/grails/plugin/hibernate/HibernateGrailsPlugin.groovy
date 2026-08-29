@@ -23,8 +23,6 @@ import groovy.transform.CompileStatic
 
 import org.springframework.beans.factory.support.BeanDefinitionRegistry
 import org.springframework.context.ConfigurableApplicationContext
-import org.springframework.core.convert.converter.Converter
-import org.springframework.core.convert.support.ConfigurableConversionService
 import org.springframework.core.env.PropertyResolver
 
 import grails.config.Config
@@ -33,8 +31,8 @@ import grails.core.GrailsClass
 import grails.orm.bootstrap.HibernateDatastoreSpringInitializer
 import grails.plugins.Plugin
 import grails.util.Environment
-import org.grails.config.PropertySourcesConfig
 import org.grails.core.artefact.DomainClassArtefactHandler
+import org.grails.datastore.gorm.plugin.support.ConfigSupport
 
 /**
  * Plugin that integrates Hibernate into a Grails application
@@ -72,16 +70,7 @@ class HibernateGrailsPlugin extends Plugin {
 
             GrailsApplication grailsApplication = grailsApplication
             Config config = grailsApplication.config
-            if (config instanceof PropertySourcesConfig) {
-                ConfigurableConversionService conversionService = applicationContext.getEnvironment().getConversionService()
-                conversionService.addConverter(new Converter<String, Class>() {
-                    @Override
-                    Class convert(String source) {
-                        Class.forName(source)
-                    }
-                })
-                ((PropertySourcesConfig) config).setConversionService(conversionService)
-            }
+            ConfigSupport.prepareConfig(config, applicationContext)
 
             def domainClasses = grailsApplication.getArtefacts(DomainClassArtefactHandler.TYPE)
                                                  .collect() { GrailsClass cls -> cls.clazz }
