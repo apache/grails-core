@@ -93,6 +93,26 @@ class FindOrCreateByFinderSpec extends Specification {
         result.name == 'Fred'
     }
 
+    def "signals completion after emitting the new instance when saving is not required"() {
+        given:
+        def finder = new FindOrCreateByFinder(datastoreClient)
+        def invocation = nameEqualsFredInvocation(Person)
+
+        when:
+        Observable observable = finder.doInvokeInternal(invocation) as Observable
+        def subscriber = new rx.observers.TestSubscriber()
+        observable.subscribe(subscriber)
+        subscriber.awaitTerminalEvent(5, java.util.concurrent.TimeUnit.SECONDS)
+
+        then:
+        1 * datastoreClient.createQuery(Person) >> query
+        1 * query.singleResult() >> Observable.empty()
+        subscriber.assertCompleted()
+        subscriber.assertNoErrors()
+        subscriber.onNextEvents.size() == 1
+        (subscriber.onNextEvents[0] as Person).name == 'Fred'
+    }
+
     def "creates, saves and returns a new instance when shouldSaveOnCreate is overridden to return true"() {
         given:
         def finder = new SavingFindOrCreateByFinder(datastoreClient)
@@ -108,7 +128,7 @@ class FindOrCreateByFinderSpec extends Specification {
         result.name == 'Fred'
     }
 
-    def "completes without emitting a result when saving the newly created instance fails"() {
+    def "propagates the error when saving the newly created instance fails"() {
         given:
         def finder = new SavingFindOrCreateByFinder(datastoreClient)
         def invocation = nameEqualsFredInvocation(PersonThatFailsToSave)
@@ -120,7 +140,8 @@ class FindOrCreateByFinderSpec extends Specification {
         then:
         1 * datastoreClient.createQuery(PersonThatFailsToSave) >> query
         1 * query.singleResult() >> Observable.empty()
-        thrown(NoSuchElementException)
+        def ex = thrown(IllegalStateException)
+        ex.message == 'save failed'
     }
 
     private static DynamicFinderInvocation nameEqualsFredInvocation(Class type) {

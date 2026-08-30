@@ -26,7 +26,6 @@ import org.grails.datastore.rx.RxDatastoreClient
 /**
  * Implementation of countBy* dynamic finder for RxGORM
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 @CompileStatic

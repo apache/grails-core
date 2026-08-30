@@ -48,7 +48,6 @@ import org.grails.gorm.rx.api.RxGormStaticApi
 /**
  * Represents a reactive GORM entity
  *
- * @author Graeme Rocher
  * @since 6.0
  *
  * @param <D> The entity type

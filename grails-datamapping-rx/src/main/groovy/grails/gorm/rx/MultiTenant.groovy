@@ -30,7 +30,6 @@ import org.grails.gorm.rx.api.RxGormEnhancer
 /**
  * A trait for domain classes that should be treated as multi tenant
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 @CompileStatic

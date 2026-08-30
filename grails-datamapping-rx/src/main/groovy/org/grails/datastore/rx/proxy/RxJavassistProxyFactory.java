@@ -43,7 +43,6 @@ import org.grails.datastore.rx.query.QueryState;
 /**
  * Creates observable proxy instances using Javassist
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 public class RxJavassistProxyFactory implements ProxyFactory, org.grails.datastore.mapping.proxy.ProxyFactory {

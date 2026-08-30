@@ -35,7 +35,6 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * Enhances {@link grails.gorm.rx.RxEntity} instances with behaviour necessary at runtime
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 @CompileStatic
@@ -75,9 +74,7 @@ class RxGormEnhancer {
         String defaultConnectionSource = ConnectionSourcesSupport.getDefaultConnectionSourceName(entity)
         RxDatastoreClientImplementor rxDatastoreClientImplementor = (RxDatastoreClientImplementor) client
 
-        if (!DATASTORE_CLIENTS.containsKey(client.getClass())) {
-            DATASTORE_CLIENTS.put((Class<? extends RxDatastoreClient>)client.getClass(), client)
-        }
+        DATASTORE_CLIENTS.putIfAbsent((Class<? extends RxDatastoreClient>) client.getClass(), client)
 
         if (MultiTenant.isAssignableFrom(entity.javaClass) || defaultConnectionSource == ConnectionSource.ALL) {
             for (ConnectionSource cs in client.getConnectionSources().getAllConnectionSources()) {

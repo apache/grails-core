@@ -24,7 +24,6 @@ import rx.Observable
 /**
  * Methods on instances
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 interface RxGormInstanceOperations<D> {

@@ -1,0 +1,24 @@
+// The order generateNativeMetadata runs in relative to the task that compiles the pages it reads.
+//
+// It reads build/gsp-classes/main, which compileGroovyPages writes. compileGroovyPages depends on
+// classes, and classes runs processResources -- so anything that reaches this task through
+// processResources puts it ahead of the pages it is supposed to record, and it records none.
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+    id 'org.apache.grails.gradle.grails-gsp'
+    id 'org.graalvm.buildtools.native' version '1.1.7'
+}
+
+tasks.register('inspectMetadataWiring') {
+    def resourceTask = tasks.named('processResources')
+    def bootJarTask = tasks.named('bootJar')
+    doLast {
+        // What processResources takes its input from, which must no longer include the metadata.
+        println "PROCESS_RESOURCES_DEPENDS_ON_METADATA=" +
+                resourceTask.get().taskDependencies.getDependencies(resourceTask.get())
+                        .any { it.name == 'generateNativeMetadata' }
+        println "BOOTJAR_DEPENDS_ON_METADATA=" +
+                bootJarTask.get().taskDependencies.getDependencies(bootJarTask.get())
+                        .any { it.name == 'generateNativeMetadata' }
+    }
+}

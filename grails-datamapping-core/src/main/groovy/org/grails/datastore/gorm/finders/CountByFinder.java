@@ -20,6 +20,8 @@ package org.grails.datastore.gorm.finders;
 
 import java.util.regex.Pattern;
 
+import grails.gorm.DetachedCriteria;
+import org.grails.datastore.gorm.DatastoreResolver;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.core.SessionCallback;
@@ -27,55 +29,49 @@ import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.query.Query;
 
 /**
- * Supports counting objects. For example Book.countByTitle("The Stand")
+ * Supports countBy* queries.
+ *
+ * @author Graeme Rocher
  */
 public class CountByFinder extends DynamicFinder implements QueryBuildingFinder {
 
-    private static final String OPERATOR_OR = "Or";
-    private static final String OPERATOR_AND = "And";
-
-    private static final Pattern METHOD_PATTERN = Pattern.compile("(countBy)(\\w+)");
-    private static final String[] OPERATORS = { OPERATOR_AND, OPERATOR_OR };
+    private static final String METHOD_PATTERN = "(countBy)([A-Z]\\w*)";
+    protected static final String[] OPERATORS = { "And", "Or" };
 
     public CountByFinder(final Datastore datastore) {
-        super(METHOD_PATTERN, OPERATORS, datastore);
+        super(Pattern.compile(METHOD_PATTERN), OPERATORS, datastore);
+    }
+
+    public CountByFinder(DatastoreResolver datastoreResolver, MappingContext mappingContext) {
+        super(Pattern.compile(METHOD_PATTERN), OPERATORS, datastoreResolver, mappingContext);
     }
 
     public CountByFinder(MappingContext mappingContext) {
-        super(METHOD_PATTERN, OPERATORS, mappingContext);
+        super(Pattern.compile(METHOD_PATTERN), OPERATORS, mappingContext);
     }
 
     @Override
     protected Object doInvokeInternal(final DynamicFinderInvocation invocation) {
         return execute(new SessionCallback<Object>() {
             public Object doInSession(final Session session) {
-                Query query = buildQuery(invocation, session);
-                return invokeQuery(query);
+                Query q = buildQuery(invocation, session);
+                q.projections().count();
+                return q.singleResult();
             }
         });
     }
 
-    protected Object invokeQuery(Query q) {
-        return q.singleResult();
-    }
-
+    @Override
     public Query buildQuery(DynamicFinderInvocation invocation, Session session) {
-        final Class<?> clazz = invocation.getJavaClass();
+        final Class clazz = invocation.getJavaClass();
         Query q = session.createQuery(clazz);
-        return buildQuery(invocation, clazz, q);
-    }
-
-    protected Query buildQuery(DynamicFinderInvocation invocation, Class<?> clazz, Query q) {
-        applyAdditionalCriteria(q, invocation.getCriteria());
         applyDetachedCriteria(q, invocation.getDetachedCriteria());
-        configureQueryWithArguments(clazz, q, invocation.getArguments());
 
-        String operatorInUse = invocation.getOperator();
-        if (operatorInUse != null && operatorInUse.equals(OPERATOR_OR)) {
+        final String operator = invocation.getOperator();
+        if (operator != null && operator.equals("Or")) {
             Query.Junction disjunction = q.disjunction();
-
             for (MethodExpression expression : invocation.getExpressions()) {
-                q.add(disjunction, expression.createCriterion());
+                disjunction.add(expression.createCriterion());
             }
         }
         else {
@@ -83,8 +79,13 @@ public class CountByFinder extends DynamicFinder implements QueryBuildingFinder 
                 q.add(expression.createCriterion());
             }
         }
-
-        q.projections().count();
         return q;
     }
+
+    protected void applyDetachedCriteria(Query q, DetachedCriteria detachedCriteria) {
+        if (detachedCriteria != null) {
+            DynamicFinder.applyDetachedCriteria(q, detachedCriteria);
+        }
+    }
+
 }

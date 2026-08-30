@@ -30,7 +30,6 @@ import org.grails.datastore.mapping.reflect.AstUtils
 /**
  * Utility methods for AST handling in RxGORM
  *
- * @author Graeme Rocher
  * @since 6.1
  */
 @CompileStatic

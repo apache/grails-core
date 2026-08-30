@@ -44,6 +44,12 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndP
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
 import org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator
+import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller
+import org.grails.datastore.mapping.model.ClassMapping
+import org.grails.datastore.mapping.model.PropertyMapping
+import org.grails.orm.hibernate.cfg.PropertyConfig
+
+import java.beans.PropertyDescriptor
 
 import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.EMPTY_PATH
 
@@ -116,6 +122,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         manager.registerDomainClasses(
             PropertyBinderSpecSimpleBook,
             PropertyBinderSpecEnumBook,
+            PropertyBinderSpecEnumCollection,
             PropertyBinderSpecAuthor,
             PropertyBinderSpecPet,
             PropertyBinderSpecEmployee,
@@ -164,6 +171,29 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         then:
         value instanceof BasicValue
         ((BasicValue)value).enumerationStyle == jakarta.persistence.EnumType.STRING
+    }
+
+    void "Test bind hasMany of enum falls through to the collection binder"() {
+        given:
+        def binder = getGrailsDomainBinder()
+        def propertyBinder = getBinders(binder).propertyBinder
+        def persistentEntity = getPersistentEntity(PropertyBinderSpecEnumCollection) as GrailsHibernatePersistentEntity
+        def rootClass = new RootClass(binder.getMetadataBuildingContext())
+        rootClass.setTable(new Table("ENUM_COLLECTION"))
+        persistentEntity.setPersistentClass(rootClass)
+
+        when:
+        def statusesProp = persistentEntity.getPropertyByName("statuses") as HibernatePersistentProperty
+
+        then: "the property is a HibernateEnumProperty, but flagged as a collection element"
+        statusesProp instanceof HibernateBasicEnumProperty
+        ((HibernateEnumProperty) statusesProp).isCollectionElement()
+
+        when:
+        Value value = propertyBinder.bindProperty(statusesProp, null, EMPTY_PATH)
+
+        then: "it is bound as a collection with a join table, not as a scalar enum BasicValue"
+        value instanceof org.hibernate.mapping.Set
     }
 
     void "Test bind many-to-one"() {
@@ -249,6 +279,37 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         when:
         def dataProp = persistentEntity.getPropertyByName("data") as HibernatePersistentProperty
         Value value = propertyBinder.bindProperty(dataProp, null, EMPTY_PATH)
+
+        then: "the type: mapping DSL routes this through isUserButNotCollectionType(), as a plain HibernateSimpleProperty"
+        !(dataProp instanceof HibernateCustomProperty)
+        dataProp.isUserButNotCollectionType()
+        value instanceof BasicValue
+    }
+
+    void "Test bind a genuine HibernateCustomProperty (GORM-detected custom type marshaller, no type: mapping)"() {
+        given: "a HibernateCustomProperty built the way HibernateMappingFactory#createCustom does: no type: " +
+                "mapping is set, so isUserButNotCollectionType() is false and the instanceof HibernateCustomProperty " +
+                "branch is the only one that can match"
+        def binder = getGrailsDomainBinder()
+        def propertyBinder = getBinders(binder).propertyBinder
+        def persistentEntity = getPersistentEntity(PropertyBinderSpecSimpleBook) as GrailsHibernatePersistentEntity
+        def rootClass = new RootClass(binder.getMetadataBuildingContext())
+        rootClass.setTable(new Table("SIMPLE_BOOK"))
+        persistentEntity.setPersistentClass(rootClass)
+
+        def propertyDescriptor = new PropertyDescriptor("title", PropertyBinderSpecSimpleBook)
+        def marshaller = Mock(CustomTypeMarshaller)
+        def customProp = new HibernateCustomProperty(persistentEntity, getMappingContext(), propertyDescriptor, marshaller)
+        customProp.setMapping(new PropertyMapping<PropertyConfig>() {
+            ClassMapping getClassMapping() { null }
+            PropertyConfig getMappedForm() { new PropertyConfig() }
+        })
+
+        expect: "no type: mapping means the isUserButNotCollectionType() branch cannot intercept it"
+        !customProp.isUserButNotCollectionType()
+
+        when:
+        Value value = propertyBinder.bindProperty(customProp, null, EMPTY_PATH)
 
         then:
         value instanceof BasicValue
@@ -351,6 +412,13 @@ class PropertyBinderSpecSimpleBook {
 class PropertyBinderSpecEnumBook {
     Long id
     java.util.concurrent.TimeUnit status
+}
+
+@Entity
+class PropertyBinderSpecEnumCollection {
+    Long id
+    Set<java.util.concurrent.TimeUnit> statuses
+    static hasMany = [statuses: java.util.concurrent.TimeUnit]
 }
 
 @Entity

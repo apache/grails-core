@@ -27,7 +27,6 @@ import org.grails.gorm.rx.api.RxGormEnhancer
 /**
  * Utility methods for RxCollections
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 @CompileStatic

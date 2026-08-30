@@ -92,12 +92,17 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
         return this.targetClass;
     }
 
+    public PersistentEntity getPersistentEntity() {
+        return this.persistentEntity;
+    }
+
     public void setUniqueResult(boolean uniqueResult) {
         this.uniqueResult = uniqueResult;
     }
 
     @Override
     public Criteria cache(boolean cache) {
+        ensureQueryIsInitialized();
         query.cache(cache);
         return this;
     }
@@ -109,11 +114,13 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
     }
 
     public Criteria join(String property) {
+        ensureQueryIsInitialized();
         query.join(property);
         return this;
     }
 
     public Criteria select(String property) {
+        ensureQueryIsInitialized();
         query.select(property);
         return this;
     }
@@ -360,6 +367,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
 
     protected Object invokeList() {
         Object result;
+        ensureQueryIsInitialized();
         result = query.list();
         return result;
     }
@@ -371,6 +379,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * @return The projections list
      */
     public ProjectionList projections(Closure<?> callable) {
+        ensureQueryIsInitialized();
         projectionList = query.projections();
         invokeClosureNode(callable);
         return projectionList;
@@ -1059,6 +1068,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      */
     @Override
     public Criteria order(String propertyName) {
+        ensureQueryIsInitialized();
         Query.Order o = Query.Order.asc(propertyName);
         if (paginationEnabledList) {
             orderEntries.add(o);
@@ -1077,6 +1087,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      */
     @Override
     public Criteria order(Query.Order o) {
+        ensureQueryIsInitialized();
         if (paginationEnabledList) {
             orderEntries.add(o);
         }
@@ -1096,6 +1107,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      */
     @Override
     public Criteria order(String propertyName, String direction) {
+        ensureQueryIsInitialized();
         Query.Order o;
         if (CriteriaBuilder.ORDER_DESCENDING.equals(direction)) {
             o = Query.Order.desc(propertyName);

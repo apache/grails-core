@@ -19,6 +19,12 @@
 
 package org.grails.gorm.rx.transform
 
+import org.codehaus.groovy.ast.ClassHelper
+import org.codehaus.groovy.ast.Parameter
+import org.codehaus.groovy.ast.expr.CastExpression
+import org.codehaus.groovy.ast.expr.MethodCallExpression
+import org.codehaus.groovy.ast.stmt.ReturnStatement
+import org.codehaus.groovy.ast.tools.GeneralUtils
 import org.grails.datastore.gorm.services.implementers.FindAllImplementer
 import org.grails.datastore.gorm.services.implementers.FindOneImplementer
 import org.grails.datastore.mapping.services.Service
@@ -150,5 +156,23 @@ return Book.classLoader
 
         and:"RxSchedule was not woven in automatically because the domain class is already an RxEntity"
         impl.declaredMethods*.name.every { !it.startsWith(RxScheduleIOTransformation.RENAMED_METHOD_PREFIX) }
+    }
+
+    // RxServiceSupport.create(Callable<T>) accepts a callable returning either T or an Iterable<T> to flatten, a
+    // distinction it resolves at runtime, not through T -- so the generated closure must not let the static
+    // compiler narrow its inferred return type down to the surrounding wrapped type (e.g. Book), or it will
+    // inject an invalid cast whenever the delegate actually returns an Iterable to flatten.
+    def "createDelegingMethodBody erases the delegating closure's return type to Object instead of returning the call result directly"() {
+        given:
+        RxScheduleIOTransformation transformation = new RxScheduleIOTransformation()
+        MethodCallExpression originalMethodCall = GeneralUtils.callX(GeneralUtils.varX('this'), 'find', GeneralUtils.args())
+
+        when:
+        ReturnStatement body = (ReturnStatement) transformation.createDelegingMethodBody([] as Parameter[], originalMethodCall)
+
+        then:
+        body.expression instanceof CastExpression
+        ((CastExpression) body.expression).type == ClassHelper.OBJECT_TYPE
+        ((CastExpression) body.expression).expression.is(originalMethodCall)
     }
 }

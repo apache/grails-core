@@ -33,7 +33,6 @@ import org.grails.datastore.gorm.transform.GormASTTransformationClass;
 /**
  * A transformation that transforms the body of a method to return an Observable that runs on the IO Scheduler
  *
- * @author Graeme Rocher
  * @since 6.1
  */
 @Target({ElementType.METHOD})

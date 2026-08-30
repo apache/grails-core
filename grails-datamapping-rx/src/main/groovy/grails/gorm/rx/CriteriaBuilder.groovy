@@ -33,7 +33,6 @@ import static org.grails.datastore.gorm.finders.DynamicFinder.populateArgumentsF
  *
  * @see grails.gorm.CriteriaBuilder
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 class CriteriaBuilder<T> extends AbstractCriteriaBuilder {

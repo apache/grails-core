@@ -33,7 +33,6 @@ import java.util.concurrent.Callable
 /**
  * Helper class for creating observables that run of the IO scheduler for blocking GORM operations
  *
- * @author Graeme Rocher
  * @since 6.1
  */
 @CompileStatic

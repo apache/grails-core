@@ -29,7 +29,6 @@ import rx.Observable
 /**
  * Bridge to the implementation of the instance method level operations
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 @CompileStatic

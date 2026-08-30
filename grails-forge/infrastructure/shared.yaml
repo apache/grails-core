@@ -1,0 +1,407 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements. See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License. You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Shared AWS resources for Grails Forge Elastic Beanstalk environments.
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC containing the shared load balancer and Elastic Beanstalk instances.
+  PublicSubnets:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: At least two public subnets for the internet-facing application load balancer.
+  CertificateArn:
+    Type: String
+    Description: ACM certificate ARN for the Grails Forge HTTPS listener.
+  GitHubOidcProviderArn:
+    Type: String
+    Description: ARN of the GitHub Actions IAM OpenID Connect provider.
+  GitHubRepository:
+    Type: String
+    Default: apache/grails-core
+    Description: GitHub repository trusted to assume the deployment role.
+  ApplicationName:
+    Type: String
+    Default: grails-forge
+    Description: Elastic Beanstalk application name.
+  ArtifactRetentionDays:
+    Type: Number
+    Default: 90
+    MinValue: 1
+    Description: Days to retain application versions and their deployment artifacts.
+
+Resources:
+  ArtifactBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireNoncurrentArtifacts
+            NoncurrentVersionExpiration:
+              NoncurrentDays:
+                Ref: ArtifactRetentionDays
+            Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+
+  AlbSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Public HTTPS and HTTP redirect access for Grails Forge.
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          Description: HTTPS access from the internet.
+          FromPort: 443
+          IpProtocol: tcp
+          ToPort: 443
+        - CidrIp: 0.0.0.0/0
+          Description: HTTP access redirected to HTTPS.
+          FromPort: 80
+          IpProtocol: tcp
+          ToPort: 80
+      VpcId:
+        Ref: VpcId
+
+  SharedLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      IpAddressType: ipv4
+      Scheme: internet-facing
+      SecurityGroups:
+        - Ref: AlbSecurityGroup
+      Subnets:
+        Ref: PublicSubnets
+      Type: application
+
+  HttpsListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      Certificates:
+        - CertificateArn:
+            Ref: CertificateArn
+      DefaultActions:
+        - FixedResponseConfig:
+            ContentType: text/plain
+            MessageBody: Not Found
+            StatusCode: '404'
+          Type: fixed-response
+      LoadBalancerArn:
+        Ref: SharedLoadBalancer
+      Port: 443
+      Protocol: HTTPS
+      SslPolicy: ELBSecurityPolicy-TLS13-1-2-2021-06
+
+  HttpListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - RedirectConfig:
+            Port: '443'
+            Protocol: HTTPS
+            StatusCode: HTTP_301
+          Type: redirect
+      LoadBalancerArn:
+        Ref: SharedLoadBalancer
+      Port: 80
+      Protocol: HTTP
+
+  ElasticBeanstalkApplication:
+    Type: AWS::ElasticBeanstalk::Application
+    Properties:
+      ApplicationName:
+        Ref: ApplicationName
+      Description: Grails Forge Micronaut API.
+      ResourceLifecycleConfig:
+        ServiceRole:
+          Fn::GetAtt:
+            - ElasticBeanstalkServiceRole
+            - Arn
+        VersionLifecycleConfig:
+          MaxAgeRule:
+            DeleteSourceFromS3: true
+            Enabled: true
+            MaxAgeInDays:
+              Ref: ArtifactRetentionDays
+
+  ElasticBeanstalkServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - elasticbeanstalk.amazonaws.com
+                - managedupdates.elasticbeanstalk.amazonaws.com
+        Version: '2012-10-17'
+      ManagedPolicyArns:
+        - Fn::Sub: arn:${AWS::Partition}:iam::aws:policy/service-role/AWSElasticBeanstalkEnhancedHealth
+        - Fn::Sub: arn:${AWS::Partition}:iam::aws:policy/AWSElasticBeanstalkManagedUpdatesCustomerRolePolicy
+      Policies:
+        - PolicyDocument:
+            Statement:
+              - Action: elasticbeanstalk:DeleteApplicationVersion
+                Effect: Allow
+                Resource:
+                  Fn::Sub: arn:${AWS::Partition}:elasticbeanstalk:${AWS::Region}:${AWS::AccountId}:applicationversion/${ApplicationName}/*
+              - Action: s3:DeleteObject
+                Effect: Allow
+                Resource:
+                  Fn::Sub: ${ArtifactBucket.Arn}/*
+            Version: '2012-10-17'
+          PolicyName: DeleteExpiredGrailsForgeSourceBundles
+
+  ElasticBeanstalkInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+        Version: '2012-10-17'
+      ManagedPolicyArns:
+        - Fn::Sub: arn:${AWS::Partition}:iam::aws:policy/AWSElasticBeanstalkWebTier
+        - Fn::Sub: arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Policies:
+        - PolicyDocument:
+            Statement:
+              - Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                Effect: Allow
+                Resource:
+                  Fn::Sub: ${ArtifactBucket.Arn}/*
+            Version: '2012-10-17'
+          PolicyName: ReadGrailsForgeSourceBundles
+
+  ElasticBeanstalkInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - Ref: ElasticBeanstalkInstanceRole
+
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Grails Forge Elastic Beanstalk instances reachable only through the ALB.
+      SecurityGroupIngress:
+        - Description: HTTP traffic from the shared application load balancer.
+          FromPort: 80
+          IpProtocol: tcp
+          SourceSecurityGroupId:
+            Ref: AlbSecurityGroup
+          ToPort: 80
+      VpcId:
+        Ref: VpcId
+
+  GitHubDeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+        - Fn::Sub: arn:${AWS::Partition}:iam::aws:policy/AdministratorAccess-AWSElasticBeanstalk
+        - Fn::Sub: arn:${AWS::Partition}:iam::aws:policy/AWSElasticBeanstalkWebTier
+        - Fn::Sub: arn:${AWS::Partition}:iam::aws:policy/AWSElasticBeanstalkManagedUpdatesCustomerRolePolicy
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+              StringLike:
+                token.actions.githubusercontent.com:sub:
+                  - Fn::Sub: repo:${GitHubRepository}:ref:refs/heads/*.x
+                  - Fn::Sub: repo:${GitHubRepository}:ref:refs/tags/v*
+            Effect: Allow
+            Principal:
+              Federated:
+                Ref: GitHubOidcProviderArn
+        Version: '2012-10-17'
+      Policies:
+        - PolicyDocument:
+            Statement:
+              - Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:GetObjectAcl
+                  - s3:PutObject
+                  - s3:PutObjectAcl
+                  - s3:DeleteObject
+                Effect: Allow
+                Resource:
+                  - Fn::Sub: ${ArtifactBucket.Arn}/*
+                  - Fn::Sub: arn:${AWS::Partition}:s3:::elasticbeanstalk-${AWS::Region}-${AWS::AccountId}/*
+              - Action:
+                  - s3:ListBucket
+                  - s3:GetBucketLocation
+                Effect: Allow
+                Resource:
+                  - Fn::Sub: ${ArtifactBucket.Arn}
+                  - Fn::Sub: arn:${AWS::Partition}:s3:::elasticbeanstalk-${AWS::Region}-${AWS::AccountId}
+              - Action: elasticbeanstalk:CreateStorageLocation
+                Effect: Allow
+                Resource: '*'
+              - Action:
+                  - elasticbeanstalk:CreateApplicationVersion
+                Effect: Allow
+                Resource:
+                  - Fn::Sub: arn:${AWS::Partition}:elasticbeanstalk:${AWS::Region}:${AWS::AccountId}:application/${ApplicationName}
+                  - Fn::Sub: arn:${AWS::Partition}:elasticbeanstalk:${AWS::Region}:${AWS::AccountId}:applicationversion/${ApplicationName}/*
+              - Action: elasticbeanstalk:DescribeApplicationVersions
+                Effect: Allow
+                Resource:
+                  Fn::Sub: arn:${AWS::Partition}:elasticbeanstalk:${AWS::Region}:${AWS::AccountId}:applicationversion/${ApplicationName}/*
+              - Action: elasticbeanstalk:DescribeApplications
+                Effect: Allow
+                Resource:
+                  Fn::Sub: arn:${AWS::Partition}:elasticbeanstalk:${AWS::Region}:${AWS::AccountId}:application/${ApplicationName}
+              - Action:
+                  - elasticbeanstalk:DescribeEnvironments
+                  - elasticbeanstalk:UpdateEnvironment
+                Effect: Allow
+                Resource:
+                  - Fn::Sub: arn:${AWS::Partition}:elasticbeanstalk:${AWS::Region}:${AWS::AccountId}:environment/${ApplicationName}/${ApplicationName}-latest
+                  - Fn::Sub: arn:${AWS::Partition}:elasticbeanstalk:${AWS::Region}:${AWS::AccountId}:environment/${ApplicationName}/${ApplicationName}-snapshot
+                  - Fn::Sub: arn:${AWS::Partition}:elasticbeanstalk:${AWS::Region}:${AWS::AccountId}:environment/${ApplicationName}/${ApplicationName}-next
+                  - Fn::Sub: arn:${AWS::Partition}:elasticbeanstalk:${AWS::Region}:${AWS::AccountId}:environment/${ApplicationName}/${ApplicationName}-prev
+                  - Fn::Sub: arn:${AWS::Partition}:elasticbeanstalk:${AWS::Region}:${AWS::AccountId}:environment/${ApplicationName}/${ApplicationName}-prev-snapshot
+                  - Fn::Sub: arn:${AWS::Partition}:elasticbeanstalk:${AWS::Region}:${AWS::AccountId}:applicationversion/${ApplicationName}/*
+              - Action:
+                  - cloudformation:DescribeStacks
+                  - cloudformation:DescribeStackResource
+                  - cloudformation:DescribeStackResources
+                  - cloudformation:GetTemplate
+                Effect: Allow
+                Resource: '*'
+              - Action:
+                  - autoscaling:DescribeAutoScalingGroups
+                  - autoscaling:DescribeAutoScalingInstances
+                  - autoscaling:DescribeScalingActivities
+                  - autoscaling:DescribeLaunchConfigurations
+                  - ec2:DescribeInstances
+                  - ec2:DescribeInstanceStatus
+                Effect: Allow
+                Resource: '*'
+            Version: '2012-10-17'
+          PolicyName: DeployGrailsForgeApplicationVersions
+
+Outputs:
+  ApplicationName:
+    Description: Elastic Beanstalk application name.
+    Value:
+      Ref: ElasticBeanstalkApplication
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}:ApplicationName
+  ArtifactBucketName:
+    Description: Versioned deployment artifact bucket name.
+    Value:
+      Ref: ArtifactBucket
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}:ArtifactBucketName
+  SharedLoadBalancerArn:
+    Description: Shared public application load balancer ARN.
+    Value:
+      Ref: SharedLoadBalancer
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}:SharedLoadBalancerArn
+  SharedLoadBalancerDnsName:
+    Description: Shared public application load balancer DNS name.
+    Value:
+      Fn::GetAtt:
+        - SharedLoadBalancer
+        - DNSName
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}:SharedLoadBalancerDnsName
+  SharedLoadBalancerCanonicalHostedZoneId:
+    Description: Canonical hosted zone ID for Route 53 ALIAS records.
+    Value:
+      Fn::GetAtt:
+        - SharedLoadBalancer
+        - CanonicalHostedZoneID
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}:SharedLoadBalancerCanonicalHostedZoneId
+  HttpsListenerArn:
+    Description: Shared HTTPS listener ARN for Elastic Beanstalk host-header rules.
+    Value:
+      Ref: HttpsListener
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}:HttpsListenerArn
+  AlbSecurityGroupId:
+    Description: Shared application load balancer security group ID.
+    Value:
+      Ref: AlbSecurityGroup
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}:AlbSecurityGroupId
+  InstanceSecurityGroupId:
+    Description: Elastic Beanstalk instance security group ID.
+    Value:
+      Ref: InstanceSecurityGroup
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}:InstanceSecurityGroupId
+  InstanceProfileName:
+    Description: Elastic Beanstalk EC2 instance profile name.
+    Value:
+      Ref: ElasticBeanstalkInstanceProfile
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}:InstanceProfileName
+  ServiceRoleArn:
+    Description: Elastic Beanstalk service role ARN.
+    Value:
+      Fn::GetAtt:
+        - ElasticBeanstalkServiceRole
+        - Arn
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}:ServiceRoleArn
+  DeployRoleArn:
+    Description: GitHub Actions deployment role ARN.
+    Value:
+      Fn::GetAtt:
+        - GitHubDeployRole
+        - Arn
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}:DeployRoleArn
+  VpcId:
+    Description: VPC ID used by shared and environment resources.
+    Value:
+      Ref: VpcId
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}:VpcId

@@ -25,6 +25,7 @@ import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.MethodNode
+import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.VariableScope
 import org.codehaus.groovy.ast.expr.ArgumentListExpression
 import org.codehaus.groovy.ast.expr.CastExpression
@@ -48,13 +49,13 @@ import static org.grails.datastore.mapping.reflect.AstUtils.ZERO_PARAMETERS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.castX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.classX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
 
 /**
  * A transformation that will convert a blocking GORM operation into an Observable that runs on the RxJava {@link rx.schedulers.Schedulers#io()} scheduler
  *
  * @see {@link rx.schedulers.Schedulers#io()}
  *
- * @author Graeme Rocher
  * @since 6.1
  */
 @CompileStatic
@@ -68,6 +69,15 @@ class RxScheduleIOTransformation extends AbstractMethodDecoratingTransformation 
     public static final AnnotationNode ANNOTATION = new AnnotationNode(ANNOTATION_TYPE)
     public static final String ANN_SINGLE_RESULT = 'singleResult'
     public static final String ANN_SCHEDULER = 'scheduler'
+
+    /**
+     * Node metadata key used to stash the original (Rx-wrapped, e.g. {@code Single<Number>}) return type of a
+     * method while it is temporarily narrowed to its unwrapped synchronous type (e.g. {@code Number}) so that
+     * decorators applied by the underlying implementer (such as the automatic {@code @Transactional} wrapping)
+     * build their delegating call against the type the synchronous body actually returns, rather than the
+     * Rx-wrapped type the public method exposes. See {@code SingleResultAdapter} / {@code ObservableResultAdapter}.
+     */
+    public static final String WRAPPED_RETURN_TYPE = 'rxWrappedReturnType'
 
     @Override
     protected ClassNode getAnnotationType() {
@@ -92,6 +102,15 @@ class RxScheduleIOTransformation extends AbstractMethodDecoratingTransformation 
         }
         if (methodNode.isAbstract()) {
             return methodNode
+        }
+
+        ClassNode wrappedReturnType = (ClassNode) methodNode.getNodeMetaData(WRAPPED_RETURN_TYPE)
+        if (wrappedReturnType != null) {
+            // Restore the Rx-wrapped return type (e.g. Single<Number>) that SingleResultAdapter/
+            // ObservableResultAdapter temporarily narrowed to the unwrapped synchronous type before other
+            // decorators (e.g. @Transactional) wove this method, so this transform builds its own delegating
+            // cast, and the renamed/decorated methods below, against the correct wrapped type.
+            methodNode.setReturnType(wrappedReturnType)
         }
 
         List<MethodNode> decorated = (List<MethodNode>)methodNode.getNodeMetaData(DECORATED_METHODS)
@@ -147,6 +166,16 @@ class RxScheduleIOTransformation extends AbstractMethodDecoratingTransformation 
         else {
             return makeDelegatingClosureCall(classX(RxServiceSupport), 'create', args, ZERO_PARAMETERS, originalMethodCallExpr, variableScope)
         }
+    }
+
+    @Override
+    protected Statement createDelegingMethodBody(Parameter[] parameters, MethodCallExpression originalMethodCall) {
+        // RxServiceSupport.create(Callable<T>) accepts a callable that returns either a single T or an
+        // Iterable<T> to flatten, a distinction it resolves at runtime via instanceof, not through T. Returning
+        // the call result as-is here would let the static compiler infer T from the closure's surrounding
+        // context (the wrapped return type, e.g. Book) and inject a narrowing cast that fails whenever the
+        // delegate actually returns an Iterable<Book> to flatten - so erase the static type to Object instead.
+        return returnS(castX(ClassHelper.OBJECT_TYPE, originalMethodCall))
     }
 
     @Override

@@ -42,6 +42,7 @@ dependencies {
     api 'org.apache.groovy:groovy'
 
     compileOnly project(':grails-core')
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     runtimeOnly 'io.undertow.ee:undertow-websockets'
 
@@ -52,6 +53,8 @@ dependencies {
     testImplementation 'org.springframework:spring-webmvc'
     testImplementation 'org.spockframework:spock-core'
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
+
+    testCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     testRuntimeOnly 'org.slf4j:slf4j-nop'
 }

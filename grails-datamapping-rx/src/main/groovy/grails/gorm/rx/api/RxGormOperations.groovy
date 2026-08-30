@@ -24,7 +24,6 @@ import rx.Observable
 /**
  * Interface for Reactive GORM operations on instances
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 interface RxGormOperations<D> {

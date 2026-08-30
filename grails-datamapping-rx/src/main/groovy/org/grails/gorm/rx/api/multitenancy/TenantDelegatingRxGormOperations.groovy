@@ -31,7 +31,6 @@ import rx.Observable
 /**
  * Delegates to a RxGORM API ensuring the tenant id is correct
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 @CompileStatic

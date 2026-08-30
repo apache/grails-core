@@ -37,7 +37,6 @@ import rx.Subscription
 /**
  * Represents a reactive sorted set that can be observed in order to allow non-blocking lazy loading of associations
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 

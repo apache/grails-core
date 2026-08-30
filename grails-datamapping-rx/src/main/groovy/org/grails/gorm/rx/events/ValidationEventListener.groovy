@@ -31,7 +31,6 @@ import org.springframework.context.ApplicationEvent
 /**
  * A validation event listener for RxGORM
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 @CompileStatic

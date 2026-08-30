@@ -25,7 +25,6 @@ import rx.Observable;
 import grails.gorm.rx.PersistentObservable;
 
 /**
- * @author Graeme Rocher
  * @since 6.0
  */
 public interface ObservableCollection<T> extends PersistentObservable<T> {

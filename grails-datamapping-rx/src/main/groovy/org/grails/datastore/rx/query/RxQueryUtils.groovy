@@ -40,7 +40,6 @@ import jakarta.persistence.FetchType
 /**
  * Utility methods for building Query implementations
  *
- * @author Graeme Rocher
  */
 @CompileStatic
 class RxQueryUtils {

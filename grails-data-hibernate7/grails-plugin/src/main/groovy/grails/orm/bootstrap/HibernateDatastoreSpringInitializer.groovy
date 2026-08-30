@@ -21,7 +21,6 @@ import groovy.transform.CompileStatic
 import org.springframework.beans.factory.support.BeanDefinitionRegistry
 import grails.spring.BeanBuilder
 import org.springframework.context.ApplicationContext
-import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.support.GenericApplicationContext
 import org.springframework.core.env.ConfigurableEnvironment
 import org.springframework.core.env.PropertyResolver
@@ -153,7 +152,6 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
     }
 
     Closure getBeanDefinitions(BeanDefinitionRegistry beanDefinitionRegistry) {
-        ApplicationEventPublisher eventPublisher = super.findEventPublisher(beanDefinitionRegistry)
         return { ->
             def common = getCommonConfiguration(beanDefinitionRegistry, 'hibernate')
             common.delegate = delegate
@@ -165,8 +163,14 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
             hibernateBytecodeProvider(GrailsBytecodeProvider)
 
             def config = this.configuration
+            Object configurationReference = configurationReference(beanDefinitionRegistry)
             final boolean isGrailsPresent = isGrailsPresent()
             def appContext = this.applicationContext
+            // Registered rather than built here, so what the datastore holds is a reference the
+            // container can build. Holding the publisher itself puts a live object in the
+            // definition, and generating code for a definition means writing out what it holds --
+            // which a publisher bound to a running context is not.
+            grailsDatastoreEventPublisher(findEventPublisherClass(beanDefinitionRegistry))
             dataSourceConnectionSourceFactory(CachedDataSourceConnectionSourceFactory)
             hibernateConnectionSourceFactory(HibernateConnectionSourceFactory, ref('hibernateBytecodeProvider'), persistentClasses as Class[]) { bean ->
                 bean.autowire = true
@@ -175,7 +179,7 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
                     applicationContext = appContext
                 }
             }
-            hibernateDatastore(HibernateDatastore, config, hibernateConnectionSourceFactory, eventPublisher) { bean ->
+            hibernateDatastore(HibernateDatastore, configurationReference, hibernateConnectionSourceFactory, ref('grailsDatastoreEventPublisher')) { bean ->
                 bean.primary = true
             }
             sessionFactory(hibernateDatastore: 'getSessionFactory') { bean ->

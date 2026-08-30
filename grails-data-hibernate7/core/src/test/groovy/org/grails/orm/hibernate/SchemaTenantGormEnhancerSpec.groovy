@@ -22,7 +22,6 @@ import java.lang.reflect.Modifier
 
 import grails.gorm.MultiTenant
 import grails.gorm.annotation.Entity
-import grails.gorm.multitenancy.CurrentTenant
 import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.multitenancy.AllTenantsResolver
@@ -162,7 +161,6 @@ class SchemaTenantGormEnhancerSpec extends Specification {
 }
 
 @Entity
-@CurrentTenant
 class SchemaTenantBook implements GormEntity<SchemaTenantBook>, MultiTenant<SchemaTenantBook> {
     String title
     static constraints = { title blank: false }

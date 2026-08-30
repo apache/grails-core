@@ -169,6 +169,35 @@ class RxGormEnhancerSpec extends Specification {
         RxGormEnhancer.findTenantId(TestMultiTenantEntity) == ConnectionSource.DEFAULT
     }
 
+    void "registerEntity does not replace an already registered client for the same client class"() {
+        given: "a first entity registered against a client of a given class"
+        Map firstRegistration = registerEntity(TestEntity)
+        RxDatastoreClientImplementor firstClient = (RxDatastoreClientImplementor) firstRegistration.client
+
+        and: "a second, different client instance of the very same class registering another entity"
+        RxDatastoreClientImplementor secondClient = Mock(RxDatastoreClientImplementor, additionalInterfaces: []) {
+            getConnectionSources() >> Stub(ConnectionSources) {
+                getAllConnectionSources() >> [Stub(ConnectionSource) { getName() >> ConnectionSource.DEFAULT }]
+            }
+            getMultiTenancyMode() >> MultiTenancySettings.MultiTenancyMode.NONE
+            getTenantResolver() >> Stub(TenantResolver)
+            createStaticApi(_, _) >> Stub(RxGormStaticApi)
+            createInstanceApi(_, _) >> Stub(RxGormInstanceApi)
+            createValidationApi(_, _) >> Stub(RxGormValidationApi)
+        }
+        PersistentEntity secondEntity = Stub(PersistentEntity) {
+            getMapping() >> Stub(ClassMapping) { getMappedForm() >> null }
+            getJavaClass() >> TestSecondEntity
+            getName() >> TestSecondEntity.name
+        }
+
+        when:
+        RxGormEnhancer.registerEntity(secondEntity, secondClient)
+
+        then: "the first client registered for that class wins, the second is not swapped in"
+        RxGormEnhancer.findDatastoreClientByType(firstClient.getClass()).is(firstClient)
+    }
+
     void "registerEntity registers each additional named connection source for a non multi tenant entity"() {
         given:
         RxGormStaticApi staticApi = Stub(RxGormStaticApi)

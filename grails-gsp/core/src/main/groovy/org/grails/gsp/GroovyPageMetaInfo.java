@@ -75,7 +75,8 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
     private boolean precompiledMode = false;
     private Class<?> pageClass;
     private Constructor<?> pageClassConstructor;
-    private long lastModified;
+    private String sourceChecksum;
+    private volatile SourceStamp checksumStamp;
     private InputStream groovySource;
     private String contentType;
     private int[] lineNumbers;
@@ -100,7 +101,6 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
     public static final String LINENUMBERS_DATA_POSTFIX = "_linenumbers.data";
 
     public static final long LASTMODIFIED_CHECK_INTERVAL = Long.getLong("grails.gsp.reload.interval", 5000).longValue();
-    private static final long LASTMODIFIED_CHECK_GRANULARITY = Long.getLong("grails.gsp.reload.granularity", 2000).longValue();
     private GrailsApplication grailsApplication;
 
     private String pluginPath;
@@ -128,7 +128,10 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
         }
         contentType = (String) ReflectionUtils.getField(ReflectionUtils.findField(pageClass, GroovyPageParser.CONSTANT_NAME_CONTENT_TYPE), null);
         jspTags = (Map) ReflectionUtils.getField(ReflectionUtils.findField(pageClass, GroovyPageParser.CONSTANT_NAME_JSP_TAGS), null);
-        lastModified = (Long) ReflectionUtils.getField(ReflectionUtils.findField(pageClass, GroovyPageParser.CONSTANT_NAME_LAST_MODIFIED), null);
+        Field sourceChecksumField = ReflectionUtils.findField(pageClass, GroovyPageParser.CONSTANT_NAME_SOURCE_CHECKSUM);
+        if (sourceChecksumField != null) {
+            sourceChecksum = (String) ReflectionUtils.getField(sourceChecksumField, null);
+        }
         expressionCodecName = (String) ReflectionUtils.getField(ReflectionUtils.findField(pageClass, GroovyPageParser.CONSTANT_NAME_EXPRESSION_CODEC), null);
         staticCodecName = (String) ReflectionUtils.getField(ReflectionUtils.findField(pageClass, GroovyPageParser.CONSTANT_NAME_STATIC_CODEC), null);
         outCodecName = (String) ReflectionUtils.getField(ReflectionUtils.findField(pageClass, GroovyPageParser.CONSTANT_NAME_OUT_CODEC), null);
@@ -315,12 +318,20 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
         initializePluginPath();
     }
 
-    public long getLastModified() {
-        return lastModified;
+    /**
+     * @return the checksum of the GSP source this page was compiled from, or {@code null} if none was recorded
+     * @since 8.0.0
+     */
+    public String getSourceChecksum() {
+        return this.sourceChecksum;
     }
 
-    public void setLastModified(long lastModified) {
-        this.lastModified = lastModified;
+    /**
+     * @param sourceChecksum the checksum of the GSP source this page was compiled from
+     * @since 8.0.0
+     */
+    public void setSourceChecksum(String sourceChecksum) {
+        this.sourceChecksum = sourceChecksum;
     }
 
     public InputStream getGroovySource() {
@@ -400,8 +411,85 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
         return this.htmlPartsSet;
     }
 
-    public void applyLastModifiedFromResource(Resource resource) {
-        this.lastModified = establishLastModified(resource);
+    /**
+     * The modification time and length a page's source had when it last matched the recorded checksum.
+     */
+    private record SourceStamp(long lastModified, long contentLength) {
+    }
+
+    /**
+     * Decides whether the given source still hashes to the checksum this page recorded.
+     * <p>
+     * Hashing means reading the page in full, so the modification time and length observed the last time the
+     * two matched are kept, and the read is skipped while neither has moved. That returns the steady-state
+     * cost of a reload-enabled application to one stat per page per check interval, which is what the
+     * timestamp comparison used to cost.
+     * <p>
+     * Note what role the timestamp plays here: it is a fast path for skipping work, never the thing that
+     * decides staleness. Anything that moves it without changing the page -- a fresh checkout, a copy, a
+     * touch -- costs one hash and then correctly reports no change, where the old comparison reported the
+     * page stale. The one edit this misses is an edit preserving both the modification time and the exact
+     * length, which no ordinary save produces.
+     *
+     * @param resource the source to compare against the recorded checksum
+     * @return true if the source no longer matches
+     */
+    private boolean hasSourceChecksumChanged(Resource resource) {
+        SourceStamp stamp = readSourceStamp(resource);
+        if (stamp != null && stamp.equals(this.checksumStamp)) {
+            return false;
+        }
+        String currentChecksum = establishChecksum(resource);
+        if (currentChecksum == null) {
+            return false;
+        }
+        if (this.sourceChecksum.equals(currentChecksum)) {
+            this.checksumStamp = stamp;
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * @param resource the Resource to stamp
+     * @return its modification time and length, or null if either could not be read -- in which case the
+     * caller must hash rather than assume the source is unchanged
+     */
+    private SourceStamp readSourceStamp(Resource resource) {
+        long modified = establishLastModified(resource);
+        if (modified <= 0) {
+            return null;
+        }
+        try {
+            long length = resource.contentLength();
+            return length >= 0 ? new SourceStamp(modified, length) : null;
+        }
+        catch (IOException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Attempts to checksum the given resource. If it cannot be read, {@code null} is returned, which is
+     * treated the same way an unobtainable modification time is: the page is left alone rather than
+     * reloaded on the strength of a failed read.
+     *
+     * @param resource the Resource to digest
+     * @return the checksum, or null if it could not be established
+     */
+    private String establishChecksum(Resource resource) {
+        if (resource == null) {
+            return null;
+        }
+        try {
+            return GroovyPageParser.checksumOf(resource.getContentAsByteArray());
+        }
+        catch (IOException e) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Unable to checksum GSP source [" + resource + "], leaving the compiled page in place", e);
+            }
+            return null;
+        }
     }
 
     /**
@@ -473,13 +561,10 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
         Callable<Resource> checkerCallable = new Callable<>() {
             public Resource call() {
                 Resource resource = resourceCallable.run();
-                if (resource != null && resource.exists()) {
-                    long currentLastmodified = establishLastModified(resource);
-                    // granularity is required since lastmodified information is rounded somewhere in copying & war (zip) file information
-                    // usually the lastmodified time is 1000L apart in files and in files extracted from the zip (war) file
-                    if (currentLastmodified > 0 && Math.abs(currentLastmodified - lastModified) > LASTMODIFIED_CHECK_GRANULARITY) {
-                        return resource;
-                    }
+                if (resource != null && resource.exists() && sourceChecksum != null) {
+                    // Staleness is decided by comparing content. A page that was merely touched is not stale,
+                    // and an edit is caught however close together the writes fall.
+                    return hasSourceChecksumChanged(resource) ? resource : null;
                 }
                 return null;
             }

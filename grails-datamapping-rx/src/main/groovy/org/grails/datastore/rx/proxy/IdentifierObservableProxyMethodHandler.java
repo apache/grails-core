@@ -33,7 +33,6 @@ import org.grails.datastore.rx.query.QueryState;
 /**
  * A proxy {@link javassist.util.proxy.MethodHandler} that uses the entity class and identifier to resolve the target
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 class IdentifierObservableProxyMethodHandler extends AbstractObservableProxyMethodHandler {

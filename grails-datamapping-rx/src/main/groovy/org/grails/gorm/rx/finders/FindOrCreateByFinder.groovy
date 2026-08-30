@@ -30,7 +30,6 @@ import rx.Subscriber
 /**
  * Implementation of findOrCreateBy* finder for RxGORM
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 @CompileStatic
@@ -68,7 +67,7 @@ class FindOrCreateByFinder extends FindByFinder {
 
                         @Override
                         void onError(Throwable e) {
-                            s.onCompleted()
+                            s.onError(e)
                         }
 
                         @Override
@@ -79,6 +78,7 @@ class FindOrCreateByFinder extends FindByFinder {
                     }
                     else {
                         s.onNext newInstance
+                        s.onCompleted()
                     }
                 }
 

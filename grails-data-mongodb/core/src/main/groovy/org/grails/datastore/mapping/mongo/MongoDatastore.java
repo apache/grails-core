@@ -46,6 +46,7 @@ import org.bson.codecs.configuration.CodecRegistry;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
+import org.springframework.context.SmartLifecycle;
 import org.springframework.context.support.StaticMessageSource;
 import org.springframework.core.env.PropertyResolver;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -114,7 +115,7 @@ import org.grails.datastore.mapping.validation.ValidatorRegistry;
  * @author Graeme Rocher
  * @since 1.0
  */
-public class MongoDatastore extends AbstractDatastore implements MappingContext.Listener, Closeable, StatelessDatastore, MultipleConnectionSourceCapableDatastore, MultiTenantCapableDatastore<MongoClient, MongoConnectionSourceSettings>, TransactionCapableDatastore {
+public class MongoDatastore extends AbstractDatastore implements MappingContext.Listener, Closeable, StatelessDatastore, MultipleConnectionSourceCapableDatastore, MultiTenantCapableDatastore<MongoClient, MongoConnectionSourceSettings>, TransactionCapableDatastore, SmartLifecycle {
 
     public static final String SETTING_DATABASE_NAME = MongoSettings.SETTING_DATABASE_NAME;
     public static final String SETTING_CONNECTION_STRING = MongoSettings.SETTING_CONNECTION_STRING;
@@ -149,7 +150,12 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
     private static final int INDEX_OPTIONS_CONFLICT_CODE = 85;
     public static final String CODEC_ENGINE = MongoConstants.CODEC_ENGINE;
 
-    protected final MongoClient mongo;
+    /**
+     * Not final because {@link #start()} replaces it after a CRaC restore. Everything other
+     * than construction reaches it through {@link #getMongoClient()}, so a replacement is
+     * picked up without anything else having to be told.
+     */
+    protected volatile MongoClient mongo;
     protected final String defaultDatabase;
     protected final Map<PersistentEntity, String> mongoCollections = new ConcurrentHashMap<>();
     protected final Map<PersistentEntity, String> mongoDatabases = new ConcurrentHashMap<>();
@@ -1158,9 +1164,74 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
         initializeIndices(entity);
     }
 
+    /**
+     * Below the web server's phase so the client outlives the requests using it, and above
+     * {@code EmbeddedMongoLifecycle.PHASE} so an embedded server outlives this client:
+     * Spring starts in ascending phase order and stops in descending.
+     */
+    public static final int LIFECYCLE_PHASE = -1000;
+
+    private volatile boolean running = true;
+
+    /**
+     * Closes the {@link MongoClient} so the process can be checkpointed.
+     *
+     * <p>CRaC refuses to checkpoint a process holding open sockets, and a connected driver
+     * holds one per pooled connection plus its server monitors. Closing the client shuts the
+     * monitor threads down and releases every socket, which nothing else in the driver
+     * offers: draining the pool leaves the monitors connected.
+     *
+     * <p>A client the application supplied is left alone. Its lifecycle belongs to whoever
+     * created it, and this datastore stays {@link #isRunning() running} so that
+     * {@link #start()} does not later replace something it does not own.
+     */
+    @Override
+    public void stop() {
+        if (!this.running || !ownsClient()) {
+            return;
+        }
+        this.mongo.close();
+        this.running = false;
+    }
+
+    /**
+     * Builds a replacement {@link MongoClient} after a restore, using the same factory and
+     * configuration the original was built from, so settings applied at startup still apply.
+     */
+    @Override
+    public void start() {
+        if (this.running) {
+            return;
+        }
+        this.mongo = connectionSources.getFactory()
+                .create(ConnectionSource.DEFAULT, connectionSources.getBaseConfiguration())
+                .getSource();
+        this.running = true;
+    }
+
+    @Override
+    public boolean isRunning() {
+        return this.running;
+    }
+
+    @Override
+    public int getPhase() {
+        return LIFECYCLE_PHASE;
+    }
+
+    /**
+     * Whether GORM created the client and may close it, as opposed to it having been handed
+     * in by the application.
+     */
+    private boolean ownsClient() {
+        ConnectionSource<MongoClient, MongoConnectionSourceSettings> source = connectionSources.getDefaultConnectionSource();
+        return !(source instanceof DefaultConnectionSource) || ((DefaultConnectionSource<?, ?>) source).isCloseable();
+    }
+
     @Override
     @PreDestroy
     public void close() {
+        MongoClient current = this.mongo;
         try {
             super.destroy();
         } catch (Exception e) {
@@ -1169,6 +1240,11 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
         try {
             if (connectionSources != null) {
                 connectionSources.close();
+            }
+            // connectionSources closes the client it was built with, which is no longer the
+            // one in use once a restore has replaced it.
+            if (current != null && ownsClient()) {
+                current.close();
             }
         } catch (IOException e) {
             LOG.error("There was an error shutting down GORM for an entity: " + e.getMessage(), e);

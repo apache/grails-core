@@ -25,7 +25,6 @@ import org.grails.datastore.mapping.model.PersistentEntity
 /**
  * Represents a batch operation
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 

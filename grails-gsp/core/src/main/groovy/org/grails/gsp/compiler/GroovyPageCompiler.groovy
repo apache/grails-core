@@ -215,30 +215,40 @@ class GroovyPageCompiler {
             File gspgroovyfile = new File(new File(generatedGroovyPagesDirectory, packageDir), className + '.groovy')
             // gspgroovyfile.getParentFile().mkdirs()
 
-            gspfile.withInputStream { InputStream gspinput ->
-                GroovyPageParser gpp = new GroovyPageParser(viewuri - '.gsp', viewuri, gspfile.absolutePath, gspinput, encoding, expressionCodec, configMap)
-                gpp.packageName = packageName
-                gpp.className = className
-                gpp.lastModified = gspfile.lastModified()
-                StringWriter gsptarget = new StringWriter()
-                gpp.generateGsp(gsptarget)
-                gsptarget.flush()
-                // write static html parts to data file (read from classpath at runtime)
-                File htmlDataFile = new File(new File(targetDir, packageDir), className + GroovyPageMetaInfo.HTML_DATA_POSTFIX)
-                htmlDataFile.parentFile.mkdirs()
-                gpp.writeHtmlParts(htmlDataFile)
-                // write linenumber mapping info to data file
-                File lineNumbersDataFile = new File(new File(targetDir, packageDir), className + GroovyPageMetaInfo.LINENUMBERS_DATA_POSTFIX)
-                gpp.writeLineNumbers(lineNumbersDataFile)
+            // Read the page once and keep the raw bytes: the checksum has to be taken over the source exactly
+            // as stored, since the runtime re-reads the resource raw when comparing.
+            byte[] gspSource = gspfile.bytes
 
-                // register viewuri -> classname mapping
-                compileGSPResults[viewuri] = fullClassName
+            GroovyPageParser gpp = new GroovyPageParser(viewuri - '.gsp', viewuri, gspfile.absolutePath,
+                    new String(gspSource, encoding ?: GroovyPageParser.DEFAULT_ENCODING), expressionCodec, configMap)
+            gpp.packageName = packageName
+            gpp.className = className
+            // Record what the source *is*, not when it was last touched. The page used to carry its
+            // source's modification time as a `static final long`, which belongs to the class's ABI and is
+            // inlined into callers -- something even Gradle's COMPILE_CLASSPATH normalization cannot see
+            // past. Git stores no modification times, so every checkout gave each .gsp a new one and
+            // identical sources compiled to different bytes, costing every downstream consumer of the jar
+            // its build cache. A checksum answers what the timestamp was only ever a proxy for -- has the
+            // source changed? -- and answers it identically on every machine.
+            gpp.sourceChecksum = GroovyPageParser.checksumOf(gspSource)
+            StringWriter gsptarget = new StringWriter()
+            gpp.generateGsp(gsptarget)
+            gsptarget.flush()
+            // write static html parts to data file (read from classpath at runtime)
+            File htmlDataFile = new File(new File(targetDir, packageDir), className + GroovyPageMetaInfo.HTML_DATA_POSTFIX)
+            htmlDataFile.parentFile.mkdirs()
+            gpp.writeHtmlParts(htmlDataFile)
+            // write linenumber mapping info to data file
+            File lineNumbersDataFile = new File(new File(targetDir, packageDir), className + GroovyPageMetaInfo.LINENUMBERS_DATA_POSTFIX)
+            gpp.writeLineNumbers(lineNumbersDataFile)
 
-                CompilationUnit unit = new CompilationUnit(compilerConfig, null, classLoader)
-                unit.addPhaseOperation(operation, Phases.CANONICALIZATION)
-                unit.addSource(gspgroovyfile.name, gsptarget.toString())
-                unit.compile()
-            }
+            // register viewuri -> classname mapping
+            compileGSPResults[viewuri] = fullClassName
+
+            CompilationUnit unit = new CompilationUnit(compilerConfig, null, classLoader)
+            unit.addPhaseOperation(operation, Phases.CANONICALIZATION)
+            unit.addSource(gspgroovyfile.name, gsptarget.toString())
+            unit.compile()
         } else {
             compileGSPResults[viewuri] = fullClassName
         }

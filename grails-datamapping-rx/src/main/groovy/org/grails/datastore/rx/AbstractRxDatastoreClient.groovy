@@ -77,7 +77,6 @@ import jakarta.persistence.CascadeType
 /**
  * Abstract implementation the {@link RxDatastoreClient} interface
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 @CompileStatic
