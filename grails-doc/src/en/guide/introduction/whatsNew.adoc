@@ -214,6 +214,45 @@ grails {
 
 All three options are disabled by default and independent, or `compileStatic { all = true }` can be used as a shortcut to enable all of them. Any class that declares its own `@CompileDynamic` (or `@GrailsCompileStatic`/`@CompileStatic`/`@GrailsTypeChecked`/`@TypeChecked`) annotation keeps that setting, so the opt-in never overrides an explicit per-class choice. Tag libraries that still declare tags as closure fields (the deprecated form) are skipped automatically by the `tagLibs` opt-in and left dynamically compiled with a build warning, so define tags as methods to opt them in. See the xref:staticTypeCheckingAndCompilation/grailsCompileStatic[GrailsCompileStatic] section for details.
 
+==== GORM Domain Classes Can Take Their Identity Type from the Datastore
+
+A domain class that declares no `id` has always been given a `Long` one. That is right for Hibernate and
+wrong for MongoDB, where a `String id` holding a generated `ObjectId` needs no sequence collection and
+shards cleanly — but declaring `String id` ties the source to MongoDB. The nested `gorm` block of the
+`grails` build configuration lets each domain class take the identity type of the GORM implementation it
+is mapped with instead:
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    gorm {
+        defaultIdType = 'native'
+    }
+}
+----
+
+A domain class mapped with MongoDB is then given a `String id` while one mapped with Hibernate keeps
+`Long`, so the same source works against either. The type is resolved when the domain class is compiled,
+from its `mapWith` property and the GORM implementations on the compilation classpath, so an application
+using more than one gets the right type for each domain class from the single setting. A domain class
+that declares an `id` keeps the type it declares.
+
+For a domain class shipped precompiled in a plugin, declare `Serializable id` in the plugin. The same
+build setting is packaged as `grails.gorm.defaultIdType` and selects the effective persistent type at
+runtime; no duplicate application configuration is required. Normal external configuration can still
+override that property.
+
+MongoDB maps that portable declaration to `String` for `native` and to `Long` for `long`; Hibernate
+maps it to its native `Long` identity either way. The resolved type is cached in GORM's mapping metadata,
+so this adds no per-operation type lookup. Concrete identity declarations remain authoritative.
+
+The default is `defaultIdType = 'long'`, which is the behaviour of every earlier release. Turning it on
+changes the type of a field that already holds data, so it is a choice to make when an application is
+written rather than one to switch on over an existing database. See the
+link:{mongodb5Guide}index.html#idGeneration[Identity Generation] section of the GORM for MongoDB guide for
+details.
+
 ==== Test HTTP Client Form Requests
 
 Integration tests that implement `HttpClientSupport` can now use `httpPostForm(...)` to send `application/x-www-form-urlencoded`
