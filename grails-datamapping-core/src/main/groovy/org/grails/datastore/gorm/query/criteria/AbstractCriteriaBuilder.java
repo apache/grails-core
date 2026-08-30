@@ -335,13 +335,6 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
         throw new MissingMethodException(name, getClass(), args);
     }
 
-    public List list(Closure callable) {
-        ensureQueryIsInitialized();
-        invokeClosureNode(callable);
-
-        return query.list();
-    }
-
     protected Object invokeList() {
         Object result;
         ensureQueryIsInitialized();
