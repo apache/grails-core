@@ -386,6 +386,39 @@ class SelectHqlQuerySpec extends HibernateGormDatastoreSpec {
         hqlQuery != null
     }
 
+    void "applyQuerySettings and getMax/getOffset use the fields set via the builder methods"() {
+        when: "max and offset are set directly via the fluent builder methods rather than query args"
+        def hqlQuery = buildHqlQuery("from SelectHqlQuerySpecBook order by title")
+        hqlQuery.max(2)
+        hqlQuery.offset(1)
+        def results = hqlQuery.list()
+
+        then:
+        results.size() == 2
+        hqlQuery.max == 2
+        hqlQuery.offset == 1
+    }
+
+    void "setReadOnly is a no-op compatibility method"() {
+        when:
+        def hqlQuery = buildHqlQuery("from SelectHqlQuerySpecBook")
+        hqlQuery.setReadOnly(true)
+
+        then:
+        noExceptionThrown()
+    }
+
+    void "executeQuery delegates to list"() {
+        given:
+        def hqlQuery = buildHqlQuery("from SelectHqlQuerySpecBook")
+
+        when: "executeQuery is called directly (protected, same-package access), ignoring its arguments"
+        def results = hqlQuery.executeQuery(null, null)
+
+        then:
+        results.size() == 3
+    }
+
     void "buildQuery handles hints"() {
         given:
         def entity = mappingContext.getPersistentEntity(SelectHqlQuerySpecBook.name)
