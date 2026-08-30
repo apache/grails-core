@@ -153,6 +153,19 @@ class CriteriaBuilderSpec extends Specification {
         result.is(observable)
     }
 
+    void "findAll() applies any pre-populated order entries before executing"() {
+        given:
+        CriteriaBuilder<Book> criteria = newCriteria()
+        criteria.orderEntries << Query.Order.asc('title')
+
+        when:
+        criteria.findAll()
+
+        then:
+        1 * query.order(_ as Query.Order) >> query
+        1 * query.findAll(Collections.emptyMap()) >> Observable.empty()
+    }
+
     void "list(Map, Closure) converts the found results into a list observable"() {
         given:
         CriteriaBuilder<Book> criteria = newCriteria()

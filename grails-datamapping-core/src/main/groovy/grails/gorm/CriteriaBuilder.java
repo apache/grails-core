@@ -71,22 +71,17 @@ public class CriteriaBuilder<T> extends AbstractCriteriaBuilder implements Build
 
     @Override
     public BuildableCriteria cache(boolean cache) {
-        ensureQueryIsInitialized();
-        query.cache(cache);
-        return this;
+        return (BuildableCriteria) super.cache(cache);
     }
 
     @Override
     public BuildableCriteria readOnly(boolean readOnly) {
-        this.readOnly = readOnly;
-        return this;
+        return (BuildableCriteria) super.readOnly(readOnly);
     }
 
     @Override
     public BuildableCriteria join(String property) {
-        ensureQueryIsInitialized();
-        query.join(property);
-        return this;
+        return (BuildableCriteria) super.join(property);
     }
 
     @Override
@@ -98,9 +93,7 @@ public class CriteriaBuilder<T> extends AbstractCriteriaBuilder implements Build
 
     @Override
     public BuildableCriteria select(String property) {
-        ensureQueryIsInitialized();
-        query.select(property);
-        return this;
+        return (BuildableCriteria) super.select(property);
     }
 
     /**
@@ -175,7 +168,7 @@ public class CriteriaBuilder<T> extends AbstractCriteriaBuilder implements Build
 
     @Override
     public Object scroll(@DelegatesTo(Criteria.class) Closure c) {
-        return invokeMethod(SCROLL_CALL, new Object[]{c});
+        return executeCriteriaConstruction(c);
     }
 
     /**
