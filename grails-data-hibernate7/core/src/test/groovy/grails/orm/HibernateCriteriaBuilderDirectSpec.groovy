@@ -21,7 +21,9 @@ package grails.orm
 import grails.gorm.DetachedCriteria
 import grails.gorm.annotation.Entity
 import grails.gorm.tests.HibernateGormDatastoreSpec
+import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.query.api.BuildableCriteria
+import org.grails.orm.hibernate.query.PredicateGenerator
 import org.hibernate.SessionFactory
 import org.grails.orm.hibernate.HibernateDatastore
 
@@ -231,11 +233,137 @@ class HibernateCriteriaBuilderDirectSpec extends HibernateGormDatastoreSpec {
     void "test idEquals and lte/gte"() {
         given:
         def e = CriteriaTestEntity.findByName("A")
-        
+
         expect:
         c.list { idEquals(e.id) }.size() == 1
         c.list { lte("amount", 10) }.size() == 1
         c.list { gte("amount", 40) }.size() == 1
+    }
+
+    void "test exists and notExists with an inline closure subquery"() {
+        expect: "exists/notExists build their subquery against the outer target class when given a closure"
+        c.list { exists { eq("category", "X") } }.size() == 4
+        c.list { notExists { eq("category", "does-not-exist") } }.size() == 4
+    }
+
+    void "test createAlias joins an association with the default and explicit join types"() {
+        given:
+        def a = CriteriaTestEntity.findByName("A")
+        a.addToChildren(new CriteriaTestChild(name: "c1"))
+        a.save(flush: true)
+        def b = CriteriaTestEntity.findByName("B")
+        b.addToChildren(new CriteriaTestChild(name: "c2"))
+        b.save(flush: true)
+
+        expect:
+        c.list { createAlias("children", "ch"); eq("ch.name", "c1") }*.name == ["A"]
+        c.list { createAlias("children", "chLeft", 1); eq("chLeft.name", "c2") }*.name == ["B"]
+        c.list { createAlias("children", "chRight", 2); eq("chRight.name", "c2") }*.name == ["B"]
+    }
+
+    void "test join lock cache and readOnly hints do not affect filtering"() {
+        given:
+        def a = CriteriaTestEntity.findByName("A")
+        a.addToChildren(new CriteriaTestChild(name: "c1"))
+        a.save(flush: true)
+
+        when:
+        def results = c.list {
+            join("children")
+            lock(false)
+            cache(true)
+            readOnly(true)
+            eq("name", "A")
+        }
+
+        then:
+        noExceptionThrown()
+        results*.name.unique() == ["A"]
+    }
+
+    void "test select projects onto a scalar property"() {
+        when:
+        def results = c.list {
+            select("name")
+        }
+
+        then:
+        results.sort() == ["A", "B", "C", "D"]
+    }
+
+    void "test count without an alias"() {
+        expect:
+        c.list { projections { count("name") } }.first() == 4L
+    }
+
+    void "test eqAll with a closure subquery"() {
+        expect: "only 'A' has amount equal to every value returned by the (single-row) subquery"
+        c.list {
+            eqAll("amount", {
+                projections { property("amount") }
+                eq("name", "A")
+            })
+        }*.name == ["A"]
+    }
+
+    void "test gtSome geSome ltSome and leSome with queryable criteria and closures"() {
+        given: "a subquery over the X category amounts [10, 20]"
+        def subquery = new DetachedCriteria(CriteriaTestEntity).build {
+            projections { property("amount") }
+            eq("category", "X")
+        }
+
+        expect:
+        c.list { gtSome("amount", subquery) }*.name.sort() == ["B", "C", "D"]
+        c.list { geSome("amount", subquery) }*.name.sort() == ["A", "B", "C", "D"]
+        c.list { ltSome("amount", subquery) }*.name.sort() == ["A"]
+        c.list { leSome("amount", subquery) }*.name.sort() == ["A", "B"]
+        c.list { gtSome("amount", { projections { property("amount") }; eq("category", "X") }) }*.name.sort() == ["B", "C", "D"]
+        c.list { geSome("amount", { projections { property("amount") }; eq("category", "X") }) }*.name.sort() == ["A", "B", "C", "D"]
+        c.list { ltSome("amount", { projections { property("amount") }; eq("category", "X") }) }*.name.sort() == ["A"]
+        c.list { leSome("amount", { projections { property("amount") }; eq("category", "X") }) }*.name.sort() == ["A", "B"]
+    }
+
+    void "test notIn with queryable criteria and a closure"() {
+        given:
+        def subquery = new DetachedCriteria(CriteriaTestEntity).build {
+            projections { property("category") }
+            eq("category", "X")
+        }
+
+        expect:
+        c.list { notIn("category", subquery) }*.name.sort() == ["C", "D"]
+        c.list { notIn("category", { projections { property("category") }; eq("category", "X") }) }*.name.sort() == ["C", "D"]
+    }
+
+    void "test inList with a collection and with varargs"() {
+        expect:
+        c.list { inList("category", ["X", "Y"]) }.size() == 4
+        c.list { inList("category", "X", "Y") }.size() == 4
+        c.list { inList("category", "Y") }*.name.sort() == ["C", "D"]
+    }
+
+    void "test eq with ignoreCase param delegates to a like criterion"() {
+        expect: "ignoreCase performs a substring match rather than an exact equality check"
+        c.list { eq("name", "A", [ignoreCase: true]) }*.name == ["A"]
+    }
+
+    void "test registerCriterionHandler overrides built-in criterion handling"() {
+        given: "a custom handler registered for the built-in Like criterion that always matches"
+        PredicateGenerator.registerCriterionHandler(Query.Like) { query, root, cb, criterion ->
+            cb.conjunction()
+        }
+
+        when: "a like criterion that would normally match nothing is used"
+        def results = c.list {
+            like("name", "does-not-exist%")
+        }
+
+        then: "the custom handler is invoked instead of the built-in like handling, matching everything"
+        results.size() == 4
+
+        cleanup:
+        PredicateGenerator.clearCustomCriterionHandlers()
     }
 }
 
