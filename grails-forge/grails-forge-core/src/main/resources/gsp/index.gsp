@@ -7,13 +7,13 @@
 <g:set var="pluginsWithOrder"
        value="${pluginManager.allPlugins.toList()
                .withIndex()
-               .collect { p, i -> [plugin: p, order: i + 1] }
+               .collect { p, i -> [plugin: p, order: ((int) i) + 1] }
                .sort { a, b -> a.plugin.name.toLowerCase() <=> b.plugin.name.toLowerCase() }}"
 />
-<g:set var="numControllers" value="${grailsApplication.controllerClasses.size()}"/>
-<g:set var="numDomains" value="${grailsApplication.domainClasses.size()}"/>
-<g:set var="numServices" value="${grailsApplication.serviceClasses.size()}"/>
-<g:set var="numTagLibs" value="${grailsApplication.tagLibClasses.size()}"/>
+<g:def type="int" var="numControllers" value="${grailsApplication.controllerClasses.size()}"/>
+<g:def type="int" var="numDomains" value="${grailsApplication.domainClasses.size()}"/>
+<g:def type="int" var="numServices" value="${grailsApplication.serviceClasses.size()}"/>
+<g:def type="int" var="numTagLibs" value="${grailsApplication.tagLibClasses.size()}"/>
 <!doctype html>
 <html>
 <head>
@@ -71,9 +71,13 @@
                                 </span>
                                 ${SpringVersion.getVersion()}
                             </li>
-                            <%-- Spring Security: only when the dependency is present --%>
+                            <%-- Spring Security: only when the dependency is present. The version comes
+                                 off the package the class was loaded from, the way the banner reads it,
+                                 so there is no reflection here for a native image to reject. --%>
+                            <g:set var="springSecurityCoreVersionClass"
+                                   value="${ClassUtils.isPresent('org.springframework.security.core.SpringSecurityCoreVersion', null) ? ClassUtils.forName('org.springframework.security.core.SpringSecurityCoreVersion', null) : null}"/>
                             <g:set var="springSecurityVersion"
-                                   value="${ClassUtils.isPresent('org.springframework.security.core.SpringSecurityCoreVersion', null) ? ClassUtils.forName('org.springframework.security.core.SpringSecurityCoreVersion', null).getMethod('getVersion').invoke(null) : null}"/>
+                                   value="${springSecurityCoreVersionClass?.package?.implementationVersion}"/>
                             <g:if test="${springSecurityVersion}">
                                 <li class="list-group-item d-flex justify-content-between align-items-center px-0">
                                     <span class="d-inline-flex align-items-center text-body-secondary">
@@ -368,7 +372,7 @@
                                              through a form using the method it allows, with the
                                              methods shown as a badge in place of the URL link. --%>
                                         <g:set var="ctrlMethods"
-                                               value="${c.getPropertyValue('allowedMethods') instanceof Map ? c.getPropertyValue('allowedMethods')[c.defaultAction ?: 'index'] : null}"/>
+                                               value="${c.getPropertyValue('allowedMethods') instanceof Map ? ((Map) c.getPropertyValue('allowedMethods')).get(c.defaultAction ?: 'index') : null}"/>
                                         <g:set var="ctrlGetOk"
                                                value="${ctrlMethods == null || 'GET' in [ctrlMethods].flatten()*.toString()*.toUpperCase()}"/>
                                         <g:set var="showBase"
@@ -557,7 +561,7 @@
                      Development-only: this card enumerates filter pipelines, security
                      chains and bean internals that a production home page should not expose. --%>
                 <g:if test="${Environment.current == Environment.DEVELOPMENT}">
-                <g:set var="appListeners"
+                <g:def type="List" var="appListeners"
                        value="${applicationContext.applicationListeners.toList()
                                .collect { l -> [name: (l.getClass().simpleName ?: l.getClass().name.tokenize('.').last()),
                                                 packageName: (l.getClass().package?.name ?: ''),
@@ -568,15 +572,15 @@
                                  [code: 'welcome.binding.formatted', beans: applicationContext.getBeansOfType(grails.databinding.converters.FormattedValueConverter)],
                                  [code: 'welcome.binding.structured', beans: applicationContext.getBeansOfType(grails.databinding.TypedStructuredBindingEditor)],
                                  [code: 'welcome.binding.listeners', beans: applicationContext.getBeansOfType(grails.databinding.events.DataBindingListener)]]}"/>
-                <g:set var="numBindingBeans" value="${bindingGroups.sum { g -> g.beans.size() } ?: 0}"/>
-                <g:set var="mimeTypeProviders"
+                <g:def type="int" var="numBindingBeans" value="${(bindingGroups.sum { g -> g.beans.size() } ?: 0)}"/>
+                <g:def type="List" var="mimeTypeProviders"
                        value="${applicationContext.getBeansOfType(grails.web.mime.MimeTypeProvider)
                                .entrySet().toList().sort { it.key.toLowerCase() }}"/>
                 <%-- The filters still on the call stack ARE this request's pipeline, in
                      execution order: walk the reversed stack, keep Filter classes, collapse
                      the extra frames a filter contributes through its abstract bases, and
                      number what remains. No registry can report this actual order. --%>
-                <g:set var="requestFilters"
+                <g:def type="List" var="requestFilters"
                        value="${Thread.currentThread().stackTrace.toList().reverse()
                                .findResults { ste ->
                                    def cls = null
@@ -584,14 +588,14 @@
                                    (cls != null && jakarta.servlet.Filter.isAssignableFrom(cls)) ? cls : null
                                }
                                .inject([]) { acc, cls ->
-                                   def prev = acc ? acc[-1] : null
+                                   Class prev = acc ? (Class) acc[-1] : null
                                    if (prev == cls) { return acc }
                                    if (prev != null && prev.isAssignableFrom(cls)) { acc[-1] = cls; return acc }
                                    if (prev != null && cls.isAssignableFrom(prev)) { return acc }
                                    acc << cls
                                }
                                .unique()}"/>
-                <g:set var="filterRegistrations"
+                <g:def type="List" var="filterRegistrations"
                        value="${applicationContext.getBeansOfType(org.springframework.boot.web.servlet.FilterRegistrationBean)
                                .entrySet().toList().sort { it.value.order }}"/>
                 <g:set var="filterChainProxyType"
@@ -603,9 +607,9 @@
                                .collect { chain, i ->
                                    def matcher = ''
                                    try { matcher = chain.requestMatcher?.toString() ?: '' } catch (Throwable ignored) { }
-                                   [index: i + 1, matcher: matcher, filters: chain.filters]
+                                   [index: ((int) i) + 1, matcher: matcher, filters: chain.filters]
                                } : []}"/>
-                <g:set var="numSecurityFilters" value="${securityFilterChains.sum { c -> c.filters.size() } ?: 0}"/>
+                <g:def type="int" var="numSecurityFilters" value="${(securityFilterChains.sum { c -> c.filters.size() } ?: 0)}"/>
 
                 <%-- URL MAPPINGS: the active mappings in evaluation order, plus a resolver
                      that replays UrlMappingsHolder.matchAll for a pasted URL and method.
@@ -625,7 +629,7 @@
                                def constraints = (mapping.constraints ?: []) as List
                                int ci = 0
                                StringBuilder pattern = new StringBuilder('/')
-                               def tokens = data.tokens
+                               String[] tokens = (String[]) data.tokens
                                tokens.eachWithIndex { token, i ->
                                    String finalToken = token
                                    while (finalToken.contains('(*)') || finalToken.contains('(**)')) {
@@ -663,7 +667,7 @@
                                m.pluginName ? target + ' (' + m.pluginName + ')' : target
                            } catch (Throwable ignored) { String.valueOf(m) }
                        } }"/>
-                <g:set var="urlMappingRows"
+                <g:def type="List" var="urlMappingRows"
                        value="${urlMappingsHolder ? urlMappingsHolder.urlMappings.toList().collect { m ->
                                [mapping: m, pattern: urlMappingPattern(m), method: (m.httpMethod ?: '*'), target: urlMappingTarget(m)]
                            } : []}"/>
@@ -706,7 +710,7 @@
                            if (request.contextPath && path.startsWith(request.contextPath + '/')) { path = path.substring(request.contextPath.length()) }
                            path.startsWith('/') ? path : '/' + path
                        }() }"/>
-                <g:set var="resolveMatches"
+                <g:def type="List" var="resolveMatches"
                        value="${ { ->
                            if (!urlMappingsHolder || !resolvePath) { return [] }
                            try { (urlMappingsHolder.matchAll(resolvePath, resolveMethodParam) ?: []).toList() }
@@ -776,7 +780,7 @@
                            urlMappingRows.findAll { r ->
                                try { r.mapping.urlData.hasProperty('responseCode') && r.mapping.urlData.responseCode == 404 }
                                catch (Throwable ignored) { false }
-                           }.withIndex().collect { r, i -> r + [rank: i + 1] }
+                           }.withIndex().collect { r, i -> ((Map) r) + [rank: ((int) i) + 1] }
                        }() }"/>
                 <%-- URL Mappings is the card's default panel whenever the holder exists;
                      it is computed server-side so resolver round-trips (plain GETs back

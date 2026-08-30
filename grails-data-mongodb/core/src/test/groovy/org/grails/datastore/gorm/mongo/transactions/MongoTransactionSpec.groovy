@@ -21,7 +21,7 @@ package org.grails.datastore.gorm.mongo.transactions
 import grails.gorm.annotation.Entity
 
 import com.mongodb.client.model.Filters
-import org.apache.grails.testing.mongo.AutoStartedMongoSpec
+import org.apache.grails.testing.mongo.EmbeddedReplicaSetSpec
 import org.grails.datastore.mapping.mongo.MongoDatastore
 import org.springframework.transaction.CannotCreateTransactionException
 import org.springframework.transaction.TransactionDefinition
@@ -34,20 +34,15 @@ import spock.lang.Shared
  * Tests that GORM uses real MongoDB multi-document transactions (a server-side ClientSession) when
  * {@code grails.mongodb.transactional} is enabled.
  */
-class MongoTransactionSpec extends AutoStartedMongoSpec {
+class MongoTransactionSpec extends EmbeddedReplicaSetSpec {
 
     @Shared
     @AutoCleanup
     MongoDatastore datastore
 
-    @Override
-    boolean shouldInitializeDatastore() {
-        false
-    }
-
     void setupSpec() {
         Map config = [
-                'grails.mongodb.url'          : dbContainer.getReplicaSetUrl('myDb'),
+                'grails.mongodb.url'          : mongoUrl,
                 'grails.mongodb.transactional': true
         ]
         datastore = new MongoDatastore(config, TxPerson, TxPet, TxCounter)

@@ -26,8 +26,6 @@ import jakarta.annotation.PostConstruct
 import org.springframework.web.context.request.RequestAttributes
 
 import grails.artefact.gsp.TagLibraryInvoker
-import grails.util.Environment
-import grails.util.GrailsMetaClassUtils
 import grails.web.api.ServletAttributes
 import grails.web.api.WebAttributes
 import org.grails.buffer.GrailsPrintWriter
@@ -35,7 +33,6 @@ import org.grails.encoder.Encoder
 import org.grails.taglib.GrailsTagException
 import org.grails.taglib.GroovyPageAttributes
 import org.grails.taglib.TagLibraryLookup
-import org.grails.taglib.TagLibraryMetaUtils
 import org.grails.taglib.TagMethodContext
 import org.grails.taglib.TagMethodInvoker
 import org.grails.taglib.TagOutput
@@ -59,11 +56,21 @@ trait TagLibrary implements WebAttributes, ServletAttributes, TagLibraryInvoker 
 
     private Encoder rawEncoder
 
+    /**
+     * Retained deliberately, and deliberately empty.
+     *
+     * <p>Every tag in every namespace used to be installed onto this tag library's metaclass here, so
+     * that a tag library calling another tag found a method rather than falling through to
+     * methodMissing. Tags are resolved through the tag library lookup instead, so there is nothing to
+     * install and nothing to initialise.
+     *
+     * <p>It cannot simply be deleted. A trait method is part of the binary contract: Groovy weaves a
+     * call to the generated helper into every implementing class, so a tag library from a plugin
+     * compiled against an earlier release calls this method by name at construction. Removing it
+     * raises NoSuchMethodError for every such tag library - which is what happened when it was.
+     */
     @PostConstruct
     void initializeTagLibrary() {
-        if (!Environment.isDevelopmentMode()) {
-            TagLibraryMetaUtils.enhanceTagLibMetaClass(GrailsMetaClassUtils.getExpandoMetaClass(getClass()), getTagLibraryLookup(), getTaglibNamespace())
-        }
     }
 
     Object raw(Object value) {
@@ -175,16 +182,6 @@ trait TagLibrary implements WebAttributes, ServletAttributes, TagLibraryInvoker 
                     }
                 }
             }
-            if (result != null && !Environment.isDevelopmentMode()) {
-                MetaClass mc = GrailsMetaClassUtils.getExpandoMetaClass(getClass())
-
-                // Register the property for the already-existing singleton instance of the taglib
-                TagLibraryMetaUtils.registerPropertyMissingForTag(this.metaClass, name, result)
-
-                // Register the property for the ExpandoMetaClass so that other tag libs that inherit from it benefit
-                TagLibraryMetaUtils.registerPropertyMissingForTag(mc, name, result)
-            }
-
             if (result != null) {
                 return result
             }

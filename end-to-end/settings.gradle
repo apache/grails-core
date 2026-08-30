@@ -104,6 +104,10 @@ rootProject.name = 'grails-end-to-end'
 include(
         'legacy-commands',
         'legacy-commands-plugin',
+        // Builds an application twice without a clean, to prove a renamed or deleted tag library
+        // cannot survive in the index that is published. Incremental behaviour against real
+        // published artifacts is not something the core build can express.
+        'taglib-index-incremental',
         // Belongs here rather than in grails-test-examples: it imports grails-bom as a Maven BOM
         // through io.spring.dependency-management, which resolves imports in its own detached
         // configuration. That bypasses any project substitution, so the import can only ever be

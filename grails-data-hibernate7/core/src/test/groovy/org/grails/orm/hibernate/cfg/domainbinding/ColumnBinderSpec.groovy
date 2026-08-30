@@ -60,7 +60,7 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
         columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "mtm_fk"
 
         when:
-        binder.bindColumn(prop, null, column, null, null, table)
+        binder.bindColumn(prop, null, column, null, null, table, null)
 
         then:
         column.getName() == "mtm_fk"
@@ -97,7 +97,7 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
         parentProp.isNullable() >> true // should make column initially nullable
 
         when:
-        binder.bindColumn(prop, parentProp, column, cc, "p", table)
+        binder.bindColumn(prop, parentProp, column, cc, "p", table, null)
 
         then:
         column.getName() == "num_col"
@@ -138,7 +138,7 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
         columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "fetched_col"
 
         when:
-        binder.bindColumn(prop, null, column, null, null, table)
+        binder.bindColumn(prop, null, column, null, null, table, null)
 
         then:
         column.getName() == "pre_existing" // should not overwrite existing name
@@ -171,12 +171,12 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
         columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "str_col"
 
         when:
-        binder.bindColumn(prop, null, column, null, null, table)
+        binder.bindColumn(prop, null, column, null, null, table, "text")
 
         then:
         column.getName() == "str_col"
         column.isNullable() == false
-        1 * stringBinder.bindStringColumnConstraints(column, _)
+        1 * stringBinder.bindStringColumnConstraints(column, _, "text")
         1 * keyCreator.createKeyForProps(prop, null, table, "str_col")
         1 * indexBinder.bindIndex("str_col", column, null, table)
     }
@@ -206,7 +206,7 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
         columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "one_to_one_fk"
 
         when:
-        binder.bindColumn(prop, null, column, null, null, table)
+        binder.bindColumn(prop, null, column, null, null, table, null)
 
         then:
         column.getName() == "one_to_one_fk"
@@ -239,7 +239,7 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
         columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "to_one_fk"
 
         when:
-        binder.bindColumn(prop, null, column, null, null, table)
+        binder.bindColumn(prop, null, column, null, null, table, null)
 
         then:
         column.getName() == "to_one_fk"
@@ -272,7 +272,7 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
         columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "assoc_fk"
 
         when:
-        binder.bindColumn(prop, null, column, null, null, table)
+        binder.bindColumn(prop, null, column, null, null, table, null)
 
         then:
         column.getName() == "assoc_fk"
@@ -307,7 +307,7 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
         parentProp.isNullable() >> false
 
         when:
-        binder.bindColumn(prop, parentProp, column, null, null, table)
+        binder.bindColumn(prop, parentProp, column, null, null, table, null)
 
         then:
         column.getName() == "na_col"
@@ -342,7 +342,7 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
         parentProp.isNullable() >> true
 
         when:
-        binder.bindColumn(prop, parentProp, column, null, null, table)
+        binder.bindColumn(prop, parentProp, column, null, null, table, null)
 
         then:
         column.getName() == "na_col2"
@@ -377,7 +377,7 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
         parentProp.isNullable() >> false
 
         when:
-        binder.bindColumn(prop, parentProp, column, null, null, table)
+        binder.bindColumn(prop, parentProp, column, null, null, table, null)
 
         then:
         column.getName() == "na_col3"
@@ -413,14 +413,14 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
         columnNameFetcher.getColumnNameForPropertyAndPath(propNotUnique, null, null) >> "nu_col"
 
         when:
-        binder.bindColumn(propUnique, null, column, null, null, table)
+        binder.bindColumn(propUnique, null, column, null, null, table, null)
 
         then:
         column.isUnique()
 
         when:
         def column2 = new Column("test2")
-        binder.bindColumn(propNotUnique, null, column2, null, null, table)
+        binder.bindColumn(propNotUnique, null, column2, null, null, table, null)
 
         then:
         !column2.isUnique()
@@ -450,7 +450,7 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
         columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "sub_col"
 
         when:
-        binder.bindColumn(prop, null, column, null, null, table)
+        binder.bindColumn(prop, null, column, null, null, table, null)
 
         then:
         column.getName() == "sub_col"
@@ -483,10 +483,10 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
         columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "data_col"
 
         when:
-        binder.bindColumn(prop, null, column, null, null, table)
+        binder.bindColumn(prop, null, column, null, null, table, null)
 
         then:
-        1 * stringBinder.bindStringColumnConstraints(column, _)
+        1 * stringBinder.bindStringColumnConstraints(column, _, null)
     }
 
     def "uniqueness is false when uniqueWithinGroup is true"() {
@@ -513,7 +513,7 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
         columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "g_col"
 
         when:
-        binder.bindColumn(prop, null, column, null, null, table)
+        binder.bindColumn(prop, null, column, null, null, table, null)
 
         then:
         !column.isUnique()

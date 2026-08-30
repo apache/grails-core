@@ -214,6 +214,45 @@ grails {
 
 All three options are disabled by default and independent, or `compileStatic { all = true }` can be used as a shortcut to enable all of them. Any class that declares its own `@CompileDynamic` (or `@GrailsCompileStatic`/`@CompileStatic`/`@GrailsTypeChecked`/`@TypeChecked`) annotation keeps that setting, so the opt-in never overrides an explicit per-class choice. Tag libraries that still declare tags as closure fields (the deprecated form) are skipped automatically by the `tagLibs` opt-in and left dynamically compiled with a build warning, so define tags as methods to opt them in. See the xref:staticTypeCheckingAndCompilation/grailsCompileStatic[GrailsCompileStatic] section for details.
 
+==== GORM Domain Classes Can Take Their Identity Type from the Datastore
+
+A domain class that declares no `id` has always been given a `Long` one. That is right for Hibernate and
+wrong for MongoDB, where a `String id` holding a generated `ObjectId` needs no sequence collection and
+shards cleanly — but declaring `String id` ties the source to MongoDB. The nested `gorm` block of the
+`grails` build configuration lets each domain class take the identity type of the GORM implementation it
+is mapped with instead:
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    gorm {
+        defaultIdType = 'native'
+    }
+}
+----
+
+A domain class mapped with MongoDB is then given a `String id` while one mapped with Hibernate keeps
+`Long`, so the same source works against either. The type is resolved when the domain class is compiled,
+from its `mapWith` property and the GORM implementations on the compilation classpath, so an application
+using more than one gets the right type for each domain class from the single setting. A domain class
+that declares an `id` keeps the type it declares.
+
+For a domain class shipped precompiled in a plugin, declare `Serializable id` in the plugin. The same
+build setting is packaged as `grails.gorm.defaultIdType` and selects the effective persistent type at
+runtime; no duplicate application configuration is required. Normal external configuration can still
+override that property.
+
+MongoDB maps that portable declaration to `String` for `native` and to `Long` for `long`; Hibernate
+maps it to its native `Long` identity either way. The resolved type is cached in GORM's mapping metadata,
+so this adds no per-operation type lookup. Concrete identity declarations remain authoritative.
+
+The default is `defaultIdType = 'long'`, which is the behaviour of every earlier release. Turning it on
+changes the type of a field that already holds data, so it is a choice to make when an application is
+written rather than one to switch on over an existing database. See the
+link:{mongodb5Guide}index.html#idGeneration[Identity Generation] section of the GORM for MongoDB guide for
+details.
+
 ==== Test HTTP Client Form Requests
 
 Integration tests that implement `HttpClientSupport` can now use `httpPostForm(...)` to send `application/x-www-form-urlencoded`
@@ -277,3 +316,152 @@ be enabled (`grails.mongodb.transactional = true`). Spring Data repositories are
 session are shared, and the two object-mapping models stay separate. See the
 link:{mongodb5Guide}index.html#springDataInterop[Spring Data MongoDB Interoperability] section of the GORM for MongoDB
 guide for details.
+
+==== Ahead-of-Time Processing
+
+A Grails application can now be processed by Spring's ahead-of-time engine. Applying Spring Boot's AOT plugin adds a
+`processAot` task, which generates the bean definitions as Java source at build time instead of deriving them from
+classpath scanning and annotations on every start:
+
+[source,groovy]
+.build.gradle
+----
+apply plugin: 'org.springframework.boot.aot'
+
+tasks.named('processAot') {
+    systemProperty 'grails.env', 'production'
+}
+----
+
+[source,bash]
+----
+java -Dspring.aot.enabled=true -jar build/libs/myapp.jar
+----
+
+AOT processing is also what a GraalVM native image requires: Spring Boot refuses to start an image without a
+build-time generated initializer. Reachability metadata for the application's own artefacts and compiled pages is
+written from the build output, and `traceNativeMetadata` records what the framework reflects on along a request path.
+
+See the xref:deployment/deploymentAot[Ahead-of-Time Processing] section for what it changes at runtime and what it
+does not yet cover.
+
+==== Ahead-of-Time Caching
+
+On JDK 25 or later, `grails.aotCache` trains a JDK AOT cache by running the packaged application once and recording
+the classes it loaded and linked and the methods it ran, so the next start reads that work rather than repeating it:
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    aotCache {
+        enabled = true
+        paths = ['/', '/login', '/book/index']
+    }
+}
+----
+
+See the xref:deployment/deploymentAotCache[Ahead-of-Time Caching] section, which includes measured figures and the
+conditions under which a JVM will decline a cache.
+
+==== Banner Colour, Container Version and Start Mark
+
+The startup banner is coloured, reports the servlet container it is running on, and says how the application was
+started where that is worth saying — `NATIVE` for an image, `AOT CACHE` for a JVM given a cache to read, `AOT` for one
+running generated bean definitions. An ordinary start says nothing.
+
+Spring Security and the servlet container are also shown by default now. What allows that is a smaller change
+underneath: a version shown by default that cannot be determined is left out rather than shown as `unknown`, so
+an application without Spring Security says nothing about it instead of saying it does not know. One asked for
+by name still reads `unknown`, because saying nothing about what was asked for reads as the option having been
+ignored. See
+xref:conf/applicationClass/customizing[Customizing the Application Class] for the full set of banner options, and the
+xref:upgrading#upgrading80x[upgrade guide] for how to restore the previous output.
+
+==== Message Bundles Resolved by Spring Boot
+
+Internationalization now runs on Spring Boot's own `MessageSourceAutoConfiguration`. Grails' custom
+message source is gone, and with it the `classpath*:*.properties` scan it performed at start-up.
+
+The base names Spring Boot needs are recorded at build time, per application and per plugin, so the
+whole `spring.messages.*` surface works as it does in any Boot application:
+
+[source,yaml]
+----
+spring:
+    messages:
+        cache-duration: 5s
+        use-code-as-default-message: true
+----
+
+Those properties were previously ignored, because Grails' own message source claimed the bean.
+
+Because discovery no longer scans, the message bundles an application and its plugins ship are known
+ahead of time. Grails registers the GraalVM resource hints for them — including plugin bundles and any
+base name an application configures itself, neither of which Spring Boot's own registrar covers.
+
+Plugin message bundles must now be namespaced on the plugin name — `spring-security-core.properties`
+rather than `messages.properties` — so that two plugins cannot shadow one another. See
+<<upgrading80x>> for the details.
+
+==== Quartz Scheduling Survives a Bad Schedule
+
+The Quartz plugin no longer lets one broken schedule take an application with it. A trigger that can
+never fire — a cron expression whose last occurrence has passed, an end time
+already gone by — is reported in the log and left unscheduled instead of stopping startup, and
+`quartz.failOnNeverFiringTriggers` restores the old behaviour for anyone who wants a bad schedule to fail
+a deployment.
+
+Jobs are also stamped with the application that registered them, so an application starting up removes
+only its own jobs from the job store. Two applications, or a clustered application and code scheduling
+through the Quartz API, can now share Quartz tables without one deleting the other's jobs and triggers.
+
+The scheduling methods a job class gets say what is wrong when they are misused: a null repeat interval,
+cron expression, date or trigger names the argument that is missing, and calling them on a job the
+scheduler does not know about explains why it is not registered — neither ends in a `NullPointerException`
+any more. See <<quartzLongRunningJobs,Long-Running Jobs>> for what a job that outlives its trigger's
+interval needs, and <<upgrading80x>> for the details.
+
+==== Compiled Tag Resolution
+
+Tag libraries are now described when they are compiled, and that description resolves tag calls in
+pages, tag libraries and controllers compiled afterwards. In a tag library or a controller, a call
+whose namespace and tag are known is compiled into a direct invocation rather than being dispatched
+through the metaclass, and no tag methods are installed onto tag library, page or dispatcher
+metaclasses to make dispatch work:
+
+[source,groovy]
+----
+class BookController {
+    def index() {
+        String markup = g.link(controller: 'book')   // compiled into a direct invocation
+    }
+}
+----
+
+The same applies to a call written without a namespace, to calls written inside a closure such as a
+tag body, and to a tag expression in a GSP declaring `compileStatic`. The tag itself is still selected
+by name when the call runs, so a tag library that overrides another, one registered while the
+application is running, and the order tag libraries are registered in all behave exactly as before. A
+namespace no compiled tag library declares, and a name something else in scope answers to, are left to
+dispatch as they did.
+
+A tag that no compiled tag library declares is left to resolve at runtime with nothing reported, since
+a namespace can legitimately hold tag libraries carrying no description. An application whose tag
+libraries are all described can ask for an error instead:
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    compileStatic {
+        strictTags = true
+        dynamicTagNamespaces = ['legacy']   // registered while the application runs
+    }
+}
+----
+
+Defining a tag as a `Closure` field remains supported but is deprecated and now warns at compile time:
+a closure carries no signature, so nothing about a call to such a tag can be checked. Define tags as
+methods taking `Map attrs` and, where a body is needed, `Closure body`. See
+link:theWebLayer.html#compiledTags[Compiled Tag Resolution].

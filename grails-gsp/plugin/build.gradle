@@ -146,6 +146,7 @@ dependencies {
         exclude group: 'org.apache.grails.web', module: 'grails-web-url-mappings'
         exclude group: 'org.apache.grails.views', module: 'grails-web-gsp'
     }
+    astImplementation project(':grails-web-taglib')
     astImplementation project(':grails-controllers'), {
         // API dependencies in grails-plugin-controllers
         //exclude group: 'org.apache.grails', module: 'grails-core' // TraitInjector
@@ -177,6 +178,10 @@ dependencies {
     testImplementation 'org.apache.grails:grails-testing-support-datamapping'
     testImplementation project(':grails-testing-support-core')
     testImplementation project(':grails-testing-support-web')
+    testImplementation testFixtures(project(':grails-core'))
+    testImplementation testFixtures(project(':grails-web-common')), {
+        // GrailsWebMockUtil
+    }
 
     testCompileOnly 'jakarta.annotation:jakarta.annotation-api'
     testCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation

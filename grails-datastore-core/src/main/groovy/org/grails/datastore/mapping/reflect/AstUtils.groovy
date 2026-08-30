@@ -357,15 +357,34 @@ class AstUtils {
     }
 
     static void copyAnnotations(final AnnotatedNode from, final AnnotatedNode to) {
-        copyAnnotations(from, to, null, null)
+        copyAnnotations(from, to, null, null, false)
     }
 
     static void copyAnnotations(final AnnotatedNode from, final AnnotatedNode to, final Set<String> included, final Set<String> excluded) {
+        copyAnnotations(from, to, included, excluded, false)
+    }
+
+    /**
+     * Copies the annotations of one node onto another.
+     *
+     * @param from The node to copy the annotations from
+     * @param to The node to copy the annotations to
+     * @param included If non-null, only annotations whose class name appears here are copied
+     * @param excluded If non-null, annotations whose class name appears here are not copied
+     * @param skipExisting When {@code true} an annotation is not copied if {@code to} already carries one of the
+     *        same type. Callers that may write onto a node they have already annotated themselves should opt in.
+     *        The default is {@code false}, because repeatable annotations legitimately occur more than once on the
+     *        same node and skipping them would silently produce an incomplete set.
+     */
+    static void copyAnnotations(final AnnotatedNode from, final AnnotatedNode to, final Set<String> included, final Set<String> excluded, final boolean skipExisting) {
         final List<AnnotationNode> annotationsToCopy = from.getAnnotations()
         for (final AnnotationNode node : annotationsToCopy) {
             String annotationClassName = node.getClassNode().getName()
             if ((excluded == null || !excluded.contains(annotationClassName)) &&
                     (included == null || included.contains(annotationClassName))) {
+                if (skipExisting && !to.getAnnotations(node.getClassNode()).isEmpty()) {
+                    continue
+                }
                 final AnnotationNode copyOfAnnotationNode = cloneAnnotation(node)
                 to.addAnnotation(copyOfAnnotationNode)
             }

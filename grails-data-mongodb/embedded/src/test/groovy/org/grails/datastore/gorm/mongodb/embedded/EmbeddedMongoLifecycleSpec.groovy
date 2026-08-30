@@ -139,6 +139,56 @@ class EmbeddedMongoLifecycleSpec extends Specification {
         lifecycle?.stop()
     }
 
+    void 'a server stopped by the context is stopped again by the shutdown hook'() {
+        given: 'a real mongod, whose process directory flapdoodle removes as it tears the server down'
+        RunningEmbeddedMongo running = new FlapdoodleMongoBackend()
+                .start(new EmbeddedMongoSettings(27979, null, null))
+
+        when: 'the context stops it, and the hook that covers a context that never closes follows'
+        running.stop()
+        running.stop()
+
+        then: 'the second stop finds the files the first one removed, and says nothing of it'
+        noExceptionThrown()
+        conditions.eventually { assert !listening(27979) }
+    }
+
+    void 'a running server is replaced by a restart rather than fought with for its port'() {
+        given: 'a real mongod told to keep its data, so a replacement can be seen holding it'
+        String databaseDir = temp.resolve('restartDb').toString()
+        RunningEmbeddedMongo running = new FlapdoodleMongoBackend()
+                .start(new EmbeddedMongoSettings(27977, null, databaseDir))
+        String url = 'mongodb://localhost:27977/bookstore'
+        write(url, 'Grails in Action')
+        long before = processId(url)
+
+        when: 'a restore starts a server that whatever took the checkpoint never stopped'
+        running.restart()
+
+        then: 'the port was released and taken again, rather than bound twice or left alone'
+        conditions.eventually { assert processId(url) != before }
+
+        and:
+        titles(url) == ['Grails in Action']
+
+        cleanup:
+        running?.stop()
+    }
+
+    void 'an in-memory server is stopped twice by the same pair'() {
+        given:
+        RunningEmbeddedMongo running = new InMemoryMongoBackend()
+                .start(new EmbeddedMongoSettings(27978, null, null))
+
+        when:
+        running.stop()
+        running.stop()
+
+        then:
+        noExceptionThrown()
+        conditions.eventually { assert !listening(27978) }
+    }
+
     void 'the flapdoodle backend keeps a persistent database across the same stop'() {
         given: 'a real mongod told to keep its data, which is how a production application runs'
         String databaseDir = temp.resolve('prodDb').toString()
@@ -175,9 +225,80 @@ class EmbeddedMongoLifecycleSpec extends Specification {
         lifecycle?.stop()
     }
 
+    void 'a replica set that never forms leaves no server behind'() {
+        given: 'a backend whose set does not come up, as it would not if the node never elected itself'
+        FlapdoodleMongoBackend backend = new FlapdoodleMongoBackend() {
+            @Override
+            void initiateReplicaSet(String host, int port, String replicaSet) {
+                throw new IllegalStateException('the set never formed')
+            }
+        }
+
+        when:
+        backend.start(new EmbeddedMongoSettings(27976, null, null, 'rs0'))
+
+        then: 'the failure is what the caller sees'
+        IllegalStateException failure = thrown()
+        failure.message == 'the set never formed'
+
+        and: 'and the mongod it started is not left holding the port, since nothing else can stop it'
+        conditions.eventually { assert !listening(27976) }
+    }
+
+    void 'a server the context stopped is started again for the context after it'() {
+        given: 'a server, and the bean the context that started it manages it with'
+        RunningEmbeddedMongo running = new InMemoryMongoBackend()
+                .start(new EmbeddedMongoSettings(27975, null, null))
+        EmbeddedMongoLifecycle first = new EmbeddedMongoLifecycle(running)
+
+        when: 'that context closes, as devtools closes it before reloading'
+        first.stop()
+
+        then:
+        !first.running
+        conditions.eventually { assert !listening(27975) }
+
+        when: 'the reloaded application manages the same server from a new context'
+        EmbeddedMongoLifecycle second = new EmbeddedMongoLifecycle(running)
+
+        then: 'the bean says what the server says, so Spring knows there is something to start'
+        !second.running
+
+        when:
+        second.start()
+
+        then: 'the application is given a server that is actually listening'
+        second.running
+        conditions.eventually { assert listening(27975) }
+
+        cleanup:
+        second?.stop()
+    }
+
+    void 'stopping a server that is already stopped is what a shutdown hook does'() {
+        given: 'an in-memory server the context has stopped'
+        RunningEmbeddedMongo running = new InMemoryMongoBackend()
+                .start(new EmbeddedMongoSettings(27974, null, null))
+        new Socket('localhost', 27974).withCloseable { }
+        running.stop()
+
+        when: 'the JVM shutdown hook stops it again on the way out'
+        running.stop()
+
+        then: 'it says nothing, because a hook has nowhere to report to'
+        noExceptionThrown()
+        !running.running
+    }
+
     private static void write(String url, String title) {
         try (MongoClient client = MongoClients.create(url)) {
             client.getDatabase('bookstore').getCollection('books').insertOne(new Document('title', title))
+        }
+    }
+
+    private static long processId(String url) {
+        try (MongoClient client = MongoClients.create(url)) {
+            client.getDatabase('admin').runCommand(new Document('serverStatus', 1)).get('pid') as long
         }
     }
 

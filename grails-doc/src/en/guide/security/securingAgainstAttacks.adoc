@@ -89,6 +89,15 @@ def reviewedAndSafe() {
 
 This check runs automatically against every Grails application that has `grails-datamapping-core` on its compile classpath — no configuration is required, and it covers every GORM implementation whose query methods follow this convention (Hibernate and Neo4j today).
 
+Because the check is intraprocedural, it cannot follow every possible way query text can be assembled. If a build hits a false positive with no reasonable per-call-site fix, disable the check for the whole compilation unit by setting the `protectSqlInjectionAttacks` system property to `false` (it defaults to `true`), for example via `gradle.properties`:
+
+[source,properties]
+----
+systemProp.protectSqlInjectionAttacks=false
+----
+
+This is a global kill switch of last resort, not a substitute for `@SuppressWarnings("GormUnsafeQueryString")` on the specific method that needs it.
+
 ===== Compile-time warnings for lower-confidence patterns
 
 Two related patterns are detected by the same check but reported as compile-time *warnings* rather than build failures, because the detection is less certain than the local-variable case above:

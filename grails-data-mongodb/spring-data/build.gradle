@@ -67,6 +67,11 @@ dependencies {
 
     testImplementation 'org.spockframework:spock-core'
     testImplementation project(':grails-testing-support-mongodb')
+
+    // The transaction specifications need a replica set, which the embedded server provides without
+    // a container; flapdoodle runs the real mongod behind it.
+    testImplementation project(':grails-data-mongodb-embedded')
+    testImplementation "de.flapdoodle.embed:de.flapdoodle.embed.mongo:$flapdoodleVersion"
     testImplementation 'org.springframework.boot:spring-boot-test', {
         // test: ApplicationContextRunner for verifying the auto-configuration
     }

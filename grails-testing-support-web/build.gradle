@@ -53,6 +53,7 @@ dependencies {
     implementation project(':grails-web-jsp'), {
         // impl: TagLibraryResolverImpl
     }
+    implementation testFixtures(project(':grails-web-common'))
 
     compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 }
