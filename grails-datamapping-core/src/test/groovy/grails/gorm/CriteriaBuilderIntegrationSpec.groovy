@@ -67,6 +67,7 @@ class CriteriaBuilderIntegrationSpec extends Specification {
         }
 
         then:
+        results instanceof List
         results.size() == 2
         results.every { it.title.contains('Action') }
     }

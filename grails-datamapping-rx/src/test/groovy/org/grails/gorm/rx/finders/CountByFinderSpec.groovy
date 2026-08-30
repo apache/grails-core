@@ -19,15 +19,16 @@
 
 package org.grails.gorm.rx.finders
 
-import org.grails.datastore.gorm.finders.DynamicFinderInvocation
-import org.grails.datastore.gorm.finders.MethodExpression
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.query.Restrictions
 import org.grails.datastore.rx.RxDatastoreClient
+import org.grails.datastore.rx.query.RxQuery
 import org.springframework.core.convert.support.DefaultConversionService
+import rx.Observable
 import spock.lang.Specification
 
 class CountByFinderSpec extends Specification {
@@ -35,14 +36,19 @@ class CountByFinderSpec extends Specification {
     RxDatastoreClient datastoreClient = Mock()
     MappingContext mappingContext = Mock()
     PersistentEntity entity = Mock()
-    Query query = Mock()
+    Query query = Mock(Query, additionalInterfaces: [RxQuery])
 
     def setup() {
+        PersistentProperty nameProperty = Stub(PersistentProperty) { getType() >> String }
+        PersistentProperty activeProperty = Stub(PersistentProperty) { getType() >> Boolean }
+        datastoreClient.getMappingContext() >> mappingContext
         entity.getMappingContext() >> mappingContext
         entity.getJavaClass() >> Person
+        entity.getPropertyByName('name') >> nameProperty
+        entity.getPropertyByName('active') >> activeProperty
+        mappingContext.getPersistentEntity(Person.name) >> entity
         mappingContext.getConversionService() >> new DefaultConversionService()
         query.getEntity() >> entity
-        query.projections() >> new Query.ProjectionList()
     }
 
     def "obtains its mapping context from the datastore client when constructed"() {
@@ -54,48 +60,46 @@ class CountByFinderSpec extends Specification {
         finder.datastoreClient.is(datastoreClient)
     }
 
-    def "counts by building and executing a query via the RX datastore client instead of a session"() {
+    def "countBy parses an Or expression and executes a projected RX query"() {
         given:
         def finder = new CountByFinder(datastoreClient)
-        def nameExpression = new MethodExpression.Equal(Person, 'name')
-        nameExpression.setArguments(['Fred'] as Object[])
-        def invocation = new DynamicFinderInvocation(Person, 'countByName', [] as Object[], [nameExpression], null, null)
+        Query.ProjectionList projectionList = new Query.ProjectionList()
 
         when:
-        def result = finder.doInvokeInternal(invocation)
+        def result = finder.invoke(Person, 'countByNameOrActive', ['Fred', true] as Object[])
 
         then:
         1 * datastoreClient.createQuery(Person) >> query
-        1 * query.add({ Query.Criterion it -> it instanceof Query.PropertyCriterion })
-        1 * query.singleResult() >> 4L
-        result == 4L
+        1 * query.add({ Query.Criterion it -> it instanceof Query.Disjunction })
+        1 * query.projections() >> projectionList
+        1 * query.singleResult() >> Observable.just(4L)
+        result.toBlocking().single() == 4L
+        projectionList.projectionList.size() == 1
+        projectionList.projectionList[0] instanceof Query.CountProjection
     }
 
     def "applies detached criteria to the query when present"() {
         given:
         def finder = new CountByFinder(datastoreClient)
-        def invocation = new DynamicFinderInvocation(Person, 'countByName', [] as Object[], [], null, null)
         def detachedCriteria = Stub(grails.gorm.DetachedCriteria) {
             getFetchStrategies() >> [:]
             getCriteria() >> [Restrictions.eq('active', true)]
             getProjections() >> []
             getOrders() >> []
         }
-        invocation.setDetachedCriteria(detachedCriteria)
-
         when:
-        finder.doInvokeInternal(invocation)
+        finder.invoke(Person, 'countByName', detachedCriteria, ['Fred'] as Object[])
 
         then:
         1 * datastoreClient.createQuery(Person) >> query
-        1 * query.add({ Query.Criterion it -> it instanceof Query.PropertyCriterion })
-        1 * query.singleResult()
+        2 * query.add(_ as Query.Criterion)
+        1 * query.projections() >> new Query.ProjectionList()
+        1 * query.singleResult() >> Observable.just(1L)
     }
 
     def "applies additional criteria to the query when present"() {
         given:
         def finder = new CountByFinder(datastoreClient)
-        def invocation = new DynamicFinderInvocation(Person, 'countByName', [] as Object[], [], { -> }, null)
         def session = Stub(Session) {
             getMappingContext() >> mappingContext
         }
@@ -103,27 +107,30 @@ class CountByFinderSpec extends Specification {
         query.getSession() >> session
 
         when:
-        finder.doInvokeInternal(invocation)
+        finder.invoke(Person, 'countByName', { -> }, ['Fred'] as Object[])
 
         then:
         1 * datastoreClient.createQuery(Person) >> query
         1 * query.getSession() >> session
-        1 * query.singleResult()
+        1 * query.add(_ as Query.Criterion)
+        1 * query.projections() >> new Query.ProjectionList()
+        1 * query.singleResult() >> Observable.just(1L)
         noExceptionThrown()
     }
 
     def "applies query arguments to the query when present"() {
         given:
         def finder = new CountByFinder(datastoreClient)
-        def invocation = new DynamicFinderInvocation(Person, 'countByName', [[max: 5]] as Object[], [], null, null)
 
         when:
-        finder.doInvokeInternal(invocation)
+        finder.invoke(Person, 'countByName', ['Fred', [max: 5]] as Object[])
 
         then:
         1 * datastoreClient.createQuery(Person) >> query
         1 * query.max(5)
-        1 * query.singleResult()
+        1 * query.add(_ as Query.Criterion)
+        1 * query.projections() >> new Query.ProjectionList()
+        1 * query.singleResult() >> Observable.just(1L)
     }
 
     private static class Person {
