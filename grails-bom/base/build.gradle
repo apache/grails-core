@@ -65,6 +65,7 @@ dependencies {
 
     constraints {
         for (def entry : gradleBomDependencies.entrySet()) {
+            if (entry.key in gradleBomBuildOnlyDependencyKeys) continue
             api entry.value
         }
 
