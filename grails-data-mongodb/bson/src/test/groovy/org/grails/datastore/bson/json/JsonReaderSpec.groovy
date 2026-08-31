@@ -237,10 +237,6 @@ class JsonReaderSpec extends Specification {
     @Unroll
     void "reads the double literal #literal as #expected"() {
         given:
-        // Scientific-notation literals are wrapped in an array: scanNumber's SAW_EXPONENT_DIGITS
-        // state has no branch for end-of-input (unlike its sibling states, which all treat EOF the
-        // same as a closing delimiter), so a bare exponent literal with nothing after it throws
-        // instead of completing - see the dedicated bug-documenting test below.
         JsonReader reader = new JsonReader("[${literal}]")
         reader.readBsonType()
         reader.readStartArray()
@@ -260,17 +256,16 @@ class JsonReaderSpec extends Specification {
         '1e+2'     | 100.0d
     }
 
-    void "a bare exponent-notation number with nothing following it throws, unlike other number forms - a known scanner limitation"() {
-        // SAW_EXPONENT_DIGITS is the only numeric scanner state whose terminator switch omits an
-        // explicit end-of-input case, so "1e2" alone fails while "1e2]"/"1e2,"/"1e2 " all succeed.
+    void "reads a bare exponent-notation number with nothing following it"() {
+        // Regression test: SAW_EXPONENT_DIGITS previously had no branch for end-of-input (unlike
+        // every sibling numeric scanner state, which all treat EOF the same as a closing
+        // delimiter), so "1e2" alone used to throw while "1e2]"/"1e2,"/"1e2 " all succeeded.
         given:
         JsonReader reader = new JsonReader('1e2')
 
-        when:
-        reader.readBsonType()
-
-        then:
-        thrown(JsonParseException)
+        expect:
+        reader.readBsonType() == BsonType.DOUBLE
+        reader.readDouble() == 100.0d
     }
 
     @Unroll
@@ -318,27 +313,23 @@ class JsonReaderSpec extends Specification {
         reader.readDouble() == Double.POSITIVE_INFINITY
     }
 
-    void "-Infinity always fails to parse, regardless of what follows it - a known scanner bug"() {
-        // scanNumber's SAW_MINUS_I case appends the character it reads on every iteration of its
-        // match loop, including the terminator read right after matching the final 'y' - so the
-        // buffer handed to Double.parseDouble always has one extra trailing character (whatever
-        // follows the literal: a delimiter, or the internal EOF marker), and parsing always throws.
-        // Confirmed to fail identically whether '-Infinity' is followed by end-of-input, a comma,
-        // or a closing bracket.
-        when:
-        new JsonReader('-Infinity').readBsonType()
-
-        then:
-        thrown(NumberFormatException)
+    void "reads -Infinity as negative infinity, at end-of-input and followed by a delimiter"() {
+        // Regression test: scanNumber's SAW_MINUS_I case used to append the character it reads on
+        // every iteration of its match loop, including the terminator read right after matching
+        // the final 'y' - so the buffer handed to Double.parseDouble always had one extra trailing
+        // character (whatever follows the literal: a delimiter, or the internal EOF marker), and
+        // parsing always threw regardless of what followed '-Infinity'.
+        expect:
+        new JsonReader('-Infinity').readBsonType() == BsonType.DOUBLE
 
         when:
         JsonReader reader = new JsonReader('[-Infinity]')
         reader.readBsonType()
         reader.readStartArray()
-        reader.readBsonType()
 
         then:
-        thrown(NumberFormatException)
+        reader.readBsonType() == BsonType.DOUBLE
+        reader.readDouble() == Double.NEGATIVE_INFINITY
     }
 
     void "reads a regular expression literal with no flags"() {
