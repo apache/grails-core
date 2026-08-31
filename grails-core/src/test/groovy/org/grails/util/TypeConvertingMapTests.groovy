@@ -156,6 +156,67 @@ class TypeConvertingMapTests {
         assert toTypeConverting(a: 1, b: 2).hashCode() != ["b": 2, a: 1].hashCode()
     }
 
+    // https://github.com/apache/grails-core/issues/16280
+    @Test
+    void testSubscriptAccessForKeysCollidingWithInheritedProperties() {
+        def map = toTypeConverting([:])
+
+        map['empty'] = 'e1'
+        map['class'] = 'c1'
+
+        assert map['empty'] == 'e1'
+        assert map['class'] == 'c1'
+        assert map.empty == 'e1'
+        assert map.class == 'c1'
+        assert !map.isEmpty()
+        assert map.getClass() == TypeConvertingMap
+    }
+
+    // https://github.com/apache/grails-core/issues/16280
+    @Test
+    void testSubscriptAccessForKeysCollidingWithASubclassGetter() {
+        def map = new IdentifiedTypeConvertingMap(id: 'abc')
+
+        map['identifier'] = 'other'
+
+        assert map.getIdentifier() == 'abc'
+        assert map['identifier'] == 'other'
+        assert map.identifier == 'other'
+        assert map['id'] == 'abc'
+    }
+
+    // https://github.com/apache/grails-core/issues/16280
+    @Test
+    void testPropertyAssignmentWritesToTheMap() {
+        def map = new IdentifiedTypeConvertingMap([:])
+
+        map.identifier = 'other'
+
+        assert map['identifier'] == 'other'
+        assert map.getIdentifier() == null
+    }
+
+    // https://github.com/apache/grails-core/issues/16280
+    @Test
+    void testMetaClassPropertyIsNotShadowedByTheMap() {
+        def map = toTypeConverting([:])
+
+        map['metaClass'] = 'mc'
+
+        assert map['metaClass'] == 'mc'
+        assert map.metaClass instanceof MetaClass
+    }
+
+    static class IdentifiedTypeConvertingMap extends TypeConvertingMap {
+        IdentifiedTypeConvertingMap(Map map) {
+            super(map)
+        }
+
+        Object getIdentifier() {
+            get('id')
+        }
+    }
+
     protected toTypeConverting(map) {
         new TypeConvertingMap(map)
     }

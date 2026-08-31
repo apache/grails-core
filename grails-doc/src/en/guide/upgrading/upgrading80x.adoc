@@ -1488,6 +1488,27 @@ def value = configObject.containsKey(key) ? configObject.get(key) : null
 
 Grails applies this guard internally when resolving Spring profile activation keys; you only need it in application code that navigates a raw `ConfigObject` by subscript.
 
+===== 28.3 `params` and `attrs` entries that share a name with an accessor
+
+Groovy 5 changed runtime method selection for classes that implement `Map`.
+For a `String` subscript key, and for dotted property access, Groovy now prefers a JavaBean property of the class over a map entry.
+On `params` (`GrailsParameterMap`) and on tag library `attrs` (`GroovyPageAttributes`) that made an entry named after an accessor unreachable: `params['request']` returned the `HttpServletRequest` instead of the submitted parameter, and `params['identifier'] = value` threw a `ReadOnlyPropertyException`.
+
+Grails 8 restores the Grails 7 rule.
+`params['name']`, `params.name`, `attrs['name']` and `attrs.name` always address a map entry; call the accessor method when you want the framework object:
+
+[source,groovy]
+----
+params['request']      // the request parameter named "request", or null when none was submitted
+params.request         // the same parameter
+params.getRequest()    // the HttpServletRequest
+----
+
+Two behaviors differ from Grails 7:
+
+* `params.getIdentifier()` returns a parameter literally named `identifier` when one was submitted, and otherwise falls back to the conventional `id` parameter as before.
+* `params.metaClass` always returns the Groovy `MetaClass`. In Grails 7 a request parameter named `metaClass` shadowed it; read such a parameter with `params['metaClass']`.
+
 ==== 29. MIME Types Are Now Framework Defaults
 
 Grails 8 ships the full set of supported MIME types as built-in framework defaults.

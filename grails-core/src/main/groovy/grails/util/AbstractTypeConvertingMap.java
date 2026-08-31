@@ -44,6 +44,8 @@ import org.apache.grails.core.internal.util.TypeConverters;
  */
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport implements Map, Cloneable {
+    private static final String METACLASS_PROPERTY = "metaClass";
+
     protected Map wrappedMap;
 
     public AbstractTypeConvertingMap() {
@@ -347,6 +349,72 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
 
     public Set entrySet() {
         return wrappedMap.entrySet();
+    }
+
+    /**
+     * Subscript access ({@code map['name']}) always addresses a map entry, never a JavaBean
+     * property of this class.
+     *
+     * <p>Groovy 5 changed runtime method selection for classes implementing {@link Map}: for a
+     * {@code String} key it prefers {@code DefaultGroovyMethods.getAt(Object, String)}, which
+     * reads a bean property, over {@code DefaultGroovyMethods.getAt(Map, Object)}, which reads a
+     * map entry. Declaring the {@code String} overload here keeps map semantics, so an entry that
+     * happens to share its name with a getter on this class remains reachable.
+     *
+     * @param key the map key
+     * @return the value stored under the key, or {@code null}
+     * @since 8.0.0
+     */
+    public Object getAt(String key) {
+        return get(key);
+    }
+
+    /**
+     * Subscript assignment ({@code map['name'] = value}) always writes a map entry, never a
+     * JavaBean property of this class. See {@link #getAt(String)} for why the overload is needed.
+     *
+     * @param key the map key
+     * @param value the value to store
+     * @return the previous value stored under the key, or {@code null}
+     * @since 8.0.0
+     */
+    public Object putAt(String key, Object value) {
+        return put(key, value);
+    }
+
+    /**
+     * Property access ({@code map.name}) reads a map entry rather than a JavaBean property, so
+     * that entries whose names collide with a getter on this class remain reachable. Getters such
+     * as {@code getRequest()} are still callable as methods. The {@code metaClass} property is
+     * excluded because Groovy relies on it.
+     *
+     * @param name the map key
+     * @return the value stored under the key, or {@code null}
+     * @since 8.0.0
+     */
+    @Override
+    public Object getProperty(String name) {
+        if (METACLASS_PROPERTY.equals(name)) {
+            return super.getProperty(name);
+        }
+        return get(name);
+    }
+
+    /**
+     * Property assignment ({@code map.name = value}) writes a map entry rather than a JavaBean
+     * property of this class. See {@link #getProperty(String)}.
+     *
+     * @param name the map key
+     * @param value the value to store
+     * @since 8.0.0
+     */
+    @Override
+    public void setProperty(String name, Object value) {
+        if (METACLASS_PROPERTY.equals(name)) {
+            super.setProperty(name, value);
+            return;
+        }
+        put(name, value);
     }
 
     @Override

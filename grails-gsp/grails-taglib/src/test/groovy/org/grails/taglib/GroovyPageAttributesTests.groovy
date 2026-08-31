@@ -94,6 +94,38 @@ class GroovyPageAttributesTests {
         assert '[one:foo]' == attrs.toString()
     }
 
+    // https://github.com/apache/grails-core/issues/16280
+    @Test
+    void testGspTagSyntaxCallAttributeIsAMapEntry() {
+        def attrs = toGroovyPageAttributes([:])
+
+        attrs['gspTagSyntaxCall'] = 'value'
+
+        assertEquals 'value', attrs['gspTagSyntaxCall']
+        assertEquals 'value', attrs.gspTagSyntaxCall
+        assertTrue attrs.isGspTagSyntaxCall()
+
+        attrs.setGspTagSyntaxCall(false)
+
+        assertFalse attrs.isGspTagSyntaxCall()
+        assertEquals 'value', attrs['gspTagSyntaxCall']
+    }
+
+    // https://github.com/apache/grails-core/issues/16280
+    @Test
+    void testAttributeNamesCollidingWithInheritedProperties() {
+        def attrs = toGroovyPageAttributes([:])
+
+        attrs['empty'] = 'e1'
+        attrs['class'] = 'container'
+
+        assertEquals 'e1', attrs['empty']
+        assertEquals 'container', attrs['class']
+        assertEquals 'container', attrs.class
+        assertFalse attrs.isEmpty()
+        assertEquals GroovyPageAttributes, attrs.getClass()
+    }
+
     protected toGroovyPageAttributes(map) {
         new GroovyPageAttributes(map)
     }

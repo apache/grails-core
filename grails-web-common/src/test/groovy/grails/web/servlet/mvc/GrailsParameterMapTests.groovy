@@ -395,6 +395,190 @@ class GrailsParameterMapTests {
     }
 
     @Test
+    @Issue("https://github.com/apache/grails-core/issues/16280")
+    void testAddingIdentifierParam() {
+        theMap = new GrailsParameterMap(mockRequest)
+
+        theMap['identifier'] = 'id1'
+
+        assertEquals 'id1', theMap['identifier']
+    }
+
+    @Test
+    @Issue("https://github.com/apache/grails-core/issues/16280")
+    void testSubscriptAccessForNamesThatCollideWithGetters() {
+        theMap = new GrailsParameterMap(mockRequest)
+
+        ['identifier', 'request', 'empty', 'class', 'metaClass', 'plain'].each { String name ->
+            theMap[name] = "value of $name".toString()
+        }
+
+        ['identifier', 'request', 'empty', 'class', 'metaClass', 'plain'].each { String name ->
+            assertEquals "value of $name".toString(), theMap[name], "subscript access for [$name] should read the parameter"
+            assertTrue theMap.containsKey(name), "[$name] should be a key of the map"
+        }
+    }
+
+    @Test
+    @Issue("https://github.com/apache/grails-core/issues/16280")
+    void testPropertyAccessForNamesThatCollideWithGetters() {
+        theMap = new GrailsParameterMap(mockRequest)
+
+        theMap.identifier = 'id1'
+        theMap.request = 'r1'
+        theMap.empty = 'e1'
+
+        assertEquals 'id1', theMap.identifier
+        assertEquals 'r1', theMap.request
+        assertEquals 'e1', theMap.empty
+        assertEquals 'id1', theMap['identifier']
+        assertEquals 'r1', theMap['request']
+        assertEquals 'e1', theMap['empty']
+    }
+
+    @Test
+    @Issue("https://github.com/apache/grails-core/issues/16280")
+    void testGetIdentifierStillReturnsTheIdParameter() {
+        mockRequest.addParameter("id", "abc")
+        theMap = new GrailsParameterMap(mockRequest)
+
+        assertEquals 'abc', theMap.getIdentifier()
+
+        // a parameter literally named "identifier" takes precedence over the "id" convention
+        theMap['identifier'] = 'other'
+
+        assertEquals 'other', theMap.getIdentifier()
+        assertEquals 'other', theMap['identifier']
+        assertEquals 'other', theMap.identifier
+        assertEquals 'abc', theMap['id']
+
+        // removing it falls back to the "id" parameter again
+        theMap.remove('identifier')
+
+        assertEquals 'abc', theMap.getIdentifier()
+    }
+
+    @Test
+    @Issue("https://github.com/apache/grails-core/issues/16280")
+    void testGetIdentifierReturnsNullWhenNeitherParameterIsPresent() {
+        theMap = new GrailsParameterMap(mockRequest)
+
+        assertNull theMap.getIdentifier()
+
+        theMap['identifier'] = null
+
+        assertNull theMap.getIdentifier()
+    }
+
+    @Test
+    @Issue("https://github.com/apache/grails-core/issues/16280")
+    void testGetRequestStillReturnsTheRequest() {
+        theMap = new GrailsParameterMap(mockRequest)
+
+        theMap['request'] = 'r1'
+
+        assertSame mockRequest, theMap.getRequest()
+        assertEquals 'r1', theMap['request']
+        assertEquals 'r1', theMap.request
+    }
+
+    @Test
+    @Issue("https://github.com/apache/grails-core/issues/16280")
+    void testCollidingNamesAreNullWhenNoSuchParameterWasSubmitted() {
+        theMap = new GrailsParameterMap(mockRequest)
+
+        // "request" and "identifier" name parameters, so with no such parameter submitted they
+        // read as null rather than falling back to getRequest()/getIdentifier()
+        assertNull theMap['request']
+        assertNull theMap.request
+        assertNull theMap['identifier']
+        assertNull theMap.identifier
+        assertNull theMap.nonexistent
+
+        // the accessors themselves are unaffected
+        assertSame mockRequest, theMap.getRequest()
+        assertNull theMap.getIdentifier()
+    }
+
+    @Test
+    @Issue("https://github.com/apache/grails-core/issues/16280")
+    void testCollidingParameterNamesArrivingFromTheRequest() {
+        mockRequest.addParameter("identifier", "id1")
+        mockRequest.addParameter("request", "r1")
+        theMap = new GrailsParameterMap(mockRequest)
+
+        assertEquals 'id1', theMap['identifier']
+        assertEquals 'r1', theMap['request']
+        assertEquals 'id1', theMap.identifier
+        assertEquals 'r1', theMap.request
+        assertSame mockRequest, theMap.getRequest()
+    }
+
+    @Test
+    @Issue("https://github.com/apache/grails-core/issues/16280")
+    void testMetaClassPropertyIsNotShadowedByTheMap() {
+        theMap = new GrailsParameterMap(mockRequest)
+
+        theMap['metaClass'] = 'mc'
+
+        assertEquals 'mc', theMap['metaClass']
+        assertNotNull theMap.metaClass
+        assertNotEquals 'mc', theMap.metaClass
+        assertEquals GrailsParameterMap, theMap.getClass()
+    }
+
+    @Test
+    @Issue("https://github.com/apache/grails-core/issues/16280")
+    void testSubscriptKeyTypePermutations() {
+        theMap = new GrailsParameterMap(mockRequest)
+        def prefix = 'ident'
+
+        theMap["${prefix}ifier"] = 'gstring'
+        theMap[42] = 'answer'
+        theMap['nil'] = null
+
+        assertEquals 'gstring', theMap["${prefix}ifier"]
+        assertEquals 'gstring', theMap['identifier']
+        assertEquals 'answer', theMap[42]
+        assertNull theMap['nil']
+        assertTrue theMap.containsKey('nil')
+
+        theMap.remove('identifier')
+        assertFalse theMap.containsKey('identifier')
+        assertNull theMap['identifier']
+    }
+
+    @Test
+    @Issue("https://github.com/apache/grails-core/issues/16280")
+    void testCollidingParameterNamesSurviveCloningAndQueryString() {
+        mockRequest.addParameter("identifier", "id1")
+        mockRequest.addParameter("request", "r1")
+        theMap = new GrailsParameterMap(mockRequest)
+
+        GrailsParameterMap theClone = theMap.clone()
+        assertEquals 'id1', theClone['identifier']
+        assertEquals 'r1', theClone['request']
+
+        def queryString = theMap.toQueryString()[1..-1].split('&')
+        assert queryString.find { it == 'identifier=id1' }
+        assert queryString.find { it == 'request=r1' }
+    }
+
+    @Test
+    @Issue("https://github.com/apache/grails-core/issues/16280")
+    void testCollidingParameterNamesInNestedMaps() {
+        mockRequest.addParameter("book.identifier", "id1")
+        mockRequest.addParameter("book.request", "r1")
+        theMap = new GrailsParameterMap(mockRequest)
+
+        assert theMap['book'] instanceof GrailsParameterMap
+        assertEquals 'id1', theMap['book']['identifier']
+        assertEquals 'r1', theMap['book']['request']
+        assertEquals 'id1', theMap.book.identifier
+        assertEquals 'r1', theMap.book.request
+    }
+
+    @Test
     void testToQueryStringWithMultiD() {
         mockRequest.addParameter("name", "Dierk Koenig")
         mockRequest.addParameter("dob", "01/01/1970")

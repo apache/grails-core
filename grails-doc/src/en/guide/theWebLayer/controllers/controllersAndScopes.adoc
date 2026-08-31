@@ -60,6 +60,13 @@ class BookController {
 
 This is one of the ways that Grails unifies access to the different scopes.
 
+Both forms always address a request parameter, even when the parameter name happens to match a
+method on `params` itself. `params.request` and `params['request']` read the request parameter
+named `request`, not the `HttpServletRequest`; use `params.getRequest()` when you want the
+request object. `params.getIdentifier()` returns the `identifier` parameter when one was
+submitted, and otherwise falls back to the conventional `id` parameter. The same rule applies to
+tag library attributes: `attrs.foo` and `attrs['foo']` always read the attribute named `foo`.
+
 
 ==== Using Flash Scope
 
