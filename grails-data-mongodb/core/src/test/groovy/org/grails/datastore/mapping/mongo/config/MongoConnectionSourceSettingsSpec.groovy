@@ -18,6 +18,7 @@
  */
 package org.grails.datastore.mapping.mongo.config
 
+import com.mongodb.ConnectionString
 import com.mongodb.ReadPreference
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.mongo.connections.MongoConnectionSourceSettings
@@ -64,6 +65,50 @@ class MongoConnectionSourceSettingsSpec extends Specification {
         settings.url.password == 'bar'.toCharArray()
         settings.url.maxConnectionPoolSize == 5
 
+    }
+
+    void "test getUrl builds a connection string from host, port and credentials when no url is set"() {
+        given:
+        MongoConnectionSourceSettings settings = new MongoConnectionSourceSettings(
+                host: 'mycompany', port: 1234, username: 'foo', password: 'bar', databaseName: 'mydb')
+
+        expect:
+        settings.url.toString() == 'mongodb://foo:bar@mycompany:1234/mydb'
+    }
+
+    void "test getUrl omits credentials when only one of username/password is set"() {
+        given:
+        MongoConnectionSourceSettings settings = new MongoConnectionSourceSettings(
+                host: 'mycompany', port: 1234, username: 'foo', password: null, databaseName: 'mydb')
+
+        expect:
+        settings.url.toString() == 'mongodb://mycompany:1234/mydb'
+    }
+
+    void "test getUrl omits the port when it is not set"() {
+        given:
+        MongoConnectionSourceSettings settings = new MongoConnectionSourceSettings(
+                host: 'mycompany', port: null, databaseName: 'mydb')
+
+        expect:
+        settings.url.toString() == 'mongodb://mycompany/mydb'
+    }
+
+    void "test getDatabase falls back to databaseName when no url is set"() {
+        given:
+        MongoConnectionSourceSettings settings = new MongoConnectionSourceSettings(databaseName: 'mydb')
+
+        expect:
+        settings.database == 'mydb'
+    }
+
+    void "test getDatabase falls back to databaseName when the url has no database segment"() {
+        given:
+        MongoConnectionSourceSettings settings = new MongoConnectionSourceSettings(databaseName: 'fallbackDb')
+        settings.url(new ConnectionString('mongodb://mycompany:1234'))
+
+        expect:
+        settings.database == 'fallbackDb'
     }
 
 }
