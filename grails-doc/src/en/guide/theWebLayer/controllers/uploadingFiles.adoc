@@ -91,7 +91,7 @@ class Image {
 
 ==== Increase Upload Max File Size
 
-Grails default size for file uploads is 128000 (~128KB). When this limit is exceeded you'll see the following exception:
+Spring Boot's default size for file uploads is 1MB and its default maximum multipart request size is 10MB. When a limit is exceeded you'll see the following exception:
 
 [source,java]
 ----
@@ -103,16 +103,19 @@ You can configure the limit in your `application.yml` as follows:
 [source,yml]
 .grails-app/conf/application.yml
 ----
-grails:
-    controllers:
-        upload:
-            maxFileSize: 2000000
-            maxRequestSize: 2000000
+spring:
+    servlet:
+        multipart:
+            maxFileSize: 200MB
+            maxRequestSize: 200MB
 ----
 
-`maxFileSize` = The maximum size allowed for uploaded files.
+`maxFileSize` = The maximum size allowed for an uploaded file.
 
-`maxRequestSize` =  The maximum size allowed for multipart/form-data requests.
+`maxRequestSize` = The maximum size allowed for a multipart/form-data request.
+
+The `spring.servlet.multipart` namespace also supports Spring Boot's `location`, `fileSizeThreshold`, `enabled`, `resolveLazily`, and `strictServletCompliance` properties. See the {springBootReference}../appendix/application-properties/index.html[Spring Boot multipart application properties] reference for the complete list.
+The former `grails.controllers.upload` configuration is no longer supported. Applications using it fail at startup with a message explaining how to migrate to `spring.servlet.multipart`.
 
 You should keep in mind https://www.owasp.org/index.php/Unrestricted_File_Upload[OWASP recommendations - Unrestricted File Upload]
 

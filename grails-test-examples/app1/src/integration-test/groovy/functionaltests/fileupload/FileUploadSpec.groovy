@@ -285,6 +285,37 @@ class FileUploadSpec extends Specification implements HttpClientSupport {
         ])
     }
 
+    def "upload over the configured multipart max file size is rejected"() {
+        given:
+        def content = 'X' * (2 * 1024 + 1)
+        def body = MultipartBody.builder()
+                .addPart('file', 'over-size-limit.txt', 'text/plain', content.bytes)
+                .build()
+
+        when:
+        def response = httpPostMultipart('/fileUploadTest/uploadSingle', body)
+
+        then:
+        response.assertStatus(413)
+    }
+
+    def "upload within the configured multipart max file size succeeds"() {
+        given:
+        def content = 'X' * 1536
+        def body = MultipartBody.builder()
+                .addPart('file', 'within-size-limit.txt', 'text/plain', content.bytes)
+                .build()
+
+        when:
+        def response = httpPostMultipart('/fileUploadTest/uploadSingle', body)
+
+        then:
+        response.assertJsonContains(200, [
+                success: true,
+                size   : content.bytes.length
+        ])
+    }
+
     def "upload json file with content"() {
         given:
         def jsonContent = '{"users":[{"name":"Alice","age":30},{"name":"Bob","age":25}]}'

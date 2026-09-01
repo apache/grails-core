@@ -109,7 +109,9 @@ org.springframework.boot.env.EnvironmentPostProcessor=com.example.MyPostProcesso
 org.springframework.boot.EnvironmentPostProcessor=com.example.MyPostProcessor
 ----
 
-==== 4. MongoDB Configuration Property Changes
+==== 4. Spring Boot Configuration Property Changes
+
+===== 4.1 MongoDB Configuration
 
 Spring Boot 4 renamed the MongoDB configuration property namespace for Spring Boot's own auto-configuration.
 If your `application.yml` or `application.groovy` uses `spring.data.mongodb.*` properties for Spring Boot auto-configuration, you must rename them to `spring.mongodb.*`.
@@ -135,6 +137,37 @@ spring:
         port: 27017
         database: mydb
 ----
+
+===== 4.2 Multipart Upload Configuration
+
+The `grails.controllers.upload.\*` configuration properties are no longer supported.
+Applications that still define any property under `grails.controllers.upload` fail at startup with migration instructions.
+Move those settings to Spring Boot's `spring.servlet.multipart.*` namespace:
+
+[source,yaml]
+.application.yml - Before (Grails 7)
+----
+grails:
+    controllers:
+        upload:
+            maxFileSize: 200000
+            maxRequestSize: 200000
+----
+
+[source,yaml]
+.application.yml - After (Grails 8)
+----
+spring:
+    servlet:
+        multipart:
+            maxFileSize: 200MB
+            maxRequestSize: 200MB
+----
+
+Spring Boot also provides `spring.servlet.multipart.location`, `spring.servlet.multipart.fileSizeThreshold`, `spring.servlet.multipart.enabled`, `spring.servlet.multipart.resolveLazily`, and `spring.servlet.multipart.strictServletCompliance` as replacements for the corresponding legacy settings. See the {springBootReference}../appendix/application-properties/index.html[Spring Boot multipart application properties] reference for the complete list.
+
+Unlike the Grails 7 default, the multipart location is not set to `System.getProperty("java.io.tmpdir")`; when `spring.servlet.multipart.location` is not configured, the resulting `MultipartConfigElement` has an empty location and uploads use the servlet container's temporary directory. This can matter when the container's temporary storage is constrained or when an application expects uploaded files in `java.io.tmpdir`.
+When no upload limits are configured, Spring Boot's defaults apply: 1MB per file and 10MB per request. Set `spring.servlet.multipart.maxFileSize` and `spring.servlet.multipart.maxRequestSize` explicitly if your application requires different limits.
 
 ==== 5. Hibernate ORM Package Relocations
 
