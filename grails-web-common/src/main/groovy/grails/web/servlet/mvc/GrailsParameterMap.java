@@ -73,8 +73,6 @@ public class GrailsParameterMap extends TypeConvertingMap implements Cloneable {
 
     public static final Object[] EMPTY_ARGS = new Object[0];
 
-    private static final String IDENTIFIER = "identifier";
-
     /**
      * Does not populate the GrailsParameterMap from the request but instead uses the supplied values.
      *
@@ -238,17 +236,16 @@ public class GrailsParameterMap extends TypeConvertingMap implements Cloneable {
     /**
      * Returns the identifier in the request.
      *
-     * <p>A request parameter literally named {@code identifier} takes precedence, so that a form
-     * field of that name stays reachable through this accessor as well as through
-     * {@code params['identifier']}. Otherwise the conventional {@code id} parameter is returned,
-     * which is the long-standing behaviour of this method.
+     * <p>This always reads the conventional {@code id} parameter. It deliberately ignores a
+     * parameter named {@code identifier}: the value is used by
+     * {@code Controller.initializeCommandObject()} to load a domain command object, so letting a
+     * submitted field named {@code identifier} take precedence would let a request address a
+     * different domain object than its {@code id} parameter names. Read such a parameter with
+     * {@code params['identifier']}.
      *
-     * @return the {@code identifier} parameter when one is present, otherwise the {@code id} parameter
+     * @return The identifier in the request
      */
     public Object getIdentifier() {
-        if (containsKey(IDENTIFIER)) {
-            return get(IDENTIFIER);
-        }
         return get(GormProperties.IDENTITY);
     }
 

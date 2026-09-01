@@ -438,34 +438,30 @@ class GrailsParameterMapTests {
 
     @Test
     @Issue("https://github.com/apache/grails-core/issues/16280")
-    void testGetIdentifierStillReturnsTheIdParameter() {
+    void testGetIdentifierAlwaysReadsTheIdParameter() {
         mockRequest.addParameter("id", "abc")
         theMap = new GrailsParameterMap(mockRequest)
 
         assertEquals 'abc', theMap.getIdentifier()
 
-        // a parameter literally named "identifier" takes precedence over the "id" convention
+        // a parameter named "identifier" is an ordinary map entry and must not divert
+        // getIdentifier(), which Controller.initializeCommandObject() uses to load a domain object
         theMap['identifier'] = 'other'
 
-        assertEquals 'other', theMap.getIdentifier()
+        assertEquals 'abc', theMap.getIdentifier()
         assertEquals 'other', theMap['identifier']
         assertEquals 'other', theMap.identifier
         assertEquals 'abc', theMap['id']
-
-        // removing it falls back to the "id" parameter again
-        theMap.remove('identifier')
-
-        assertEquals 'abc', theMap.getIdentifier()
     }
 
     @Test
     @Issue("https://github.com/apache/grails-core/issues/16280")
-    void testGetIdentifierReturnsNullWhenNeitherParameterIsPresent() {
+    void testGetIdentifierIsNullWhenNoIdParameterWasSubmitted() {
         theMap = new GrailsParameterMap(mockRequest)
 
         assertNull theMap.getIdentifier()
 
-        theMap['identifier'] = null
+        theMap['identifier'] = 'other'
 
         assertNull theMap.getIdentifier()
     }
@@ -497,7 +493,7 @@ class GrailsParameterMapTests {
 
         // the accessors themselves are unaffected
         assertSame mockRequest, theMap.getRequest()
-        assertNull theMap.getIdentifier()
+        assertNull theMap.getIdentifier()   // no "id" parameter was submitted
     }
 
     @Test

@@ -126,6 +126,34 @@ class CommandObjectInstantiationSpec extends Specification implements Controller
         where:
         requestMethod << ['POST', 'PUT', 'GET', 'DELETE']
     }
+
+    @Issue('https://github.com/apache/grails-core/issues/16280')
+    void 'Test a parameter named identifier does not divert domain command object resolution'() {
+        given:
+        def target = new DomainClassCommandObject(name: 'Target').save()
+        def decoy = new DomainClassCommandObject(name: 'Decoy').save()
+
+        expect:
+        target.id != null
+        decoy.id != null
+        target.id != decoy.id
+
+        when: 'a request carries both an id and a form field named identifier'
+        request.method = 'POST'
+        params.id = target.id
+        params.identifier = decoy.id
+        controller.domainCommandObject()
+
+        then: 'the command object is resolved from id, not from the identifier field'
+        response.status == HttpServletResponse.SC_OK
+        model.commandObject.id == target.id
+        model.commandObject.name == 'Target'
+
+        and: 'the identifier parameter is still readable as an ordinary map entry'
+        params.identifier == decoy.id
+        params['identifier'] == decoy.id
+        params.getIdentifier() == target.id
+    }
 }
 
 @Artefact('Controller')

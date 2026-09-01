@@ -1504,10 +1504,10 @@ params.request         // the same parameter
 params.getRequest()    // the HttpServletRequest
 ----
 
-Two behaviors differ from Grails 7:
+`params.getIdentifier()` is unchanged and still reads the conventional `id` parameter; a parameter named `identifier` is an ordinary map entry and does not divert it.
 
-* `params.getIdentifier()` returns a parameter literally named `identifier` when one was submitted, and otherwise falls back to the conventional `id` parameter as before.
-* `params.metaClass` always returns the Groovy `MetaClass`. In Grails 7 a request parameter named `metaClass` shadowed it; read such a parameter with `params['metaClass']`.
+One behavior differs from Grails 7: `params.metaClass` always returns the Groovy `MetaClass`.
+In Grails 7 a request parameter named `metaClass` shadowed it; read such a parameter with `params['metaClass']`.
 
 ==== 29. MIME Types Are Now Framework Defaults
 
