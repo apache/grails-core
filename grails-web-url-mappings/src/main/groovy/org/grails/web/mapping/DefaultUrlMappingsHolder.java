@@ -101,6 +101,7 @@ public class DefaultUrlMappingsHolder implements UrlMappings {
     private final Set<String> DEFAULT_ACTION_PARAMS = CollectionUtils.newSet(UrlMapping.ACTION);
     private final PathMatcher pathMatcher = new AntPathMatcher();
     private final AtomicInteger initCounter = new AtomicInteger();
+    private final UrlMappingsIndexProperties precomputedIndexProperties;
 
     public DefaultUrlMappingsHolder(List<UrlMapping> mappings) {
         this(mappings, null, false);
@@ -113,6 +114,7 @@ public class DefaultUrlMappingsHolder implements UrlMappings {
     public DefaultUrlMappingsHolder(List<UrlMapping> mappings, List excludePatterns, boolean doNotCallInit) {
         urlMappings = mappings;
         this.excludePatterns = excludePatterns;
+        this.precomputedIndexProperties = UrlMappingsIndexProperties.load(DefaultUrlMappingsHolder.class.getClassLoader());
         if (!doNotCallInit) {
             initialize();
         }
@@ -132,6 +134,9 @@ public class DefaultUrlMappingsHolder implements UrlMappings {
 
     public void initialize() {
         sortMappings();
+        if (precomputedIndexProperties.isPresent() && LOG.isDebugEnabled()) {
+            LOG.debug("Discovered " + UrlMappingsIndexProperties.LOCATION + "; runtime URL mapping fallback remains active");
+        }
 
         cachedMatches = Caffeine.newBuilder()
             .maximumSize(maxWeightedCacheCapacity)
@@ -231,6 +236,10 @@ public class DefaultUrlMappingsHolder implements UrlMappings {
 
     public List getExcludePatterns() {
         return excludePatterns;
+    }
+
+    public UrlMappingsIndexProperties getPrecomputedIndexProperties() {
+        return precomputedIndexProperties;
     }
 
     public UrlCreator getReverseMapping(final String controller, final String action, Map params) {
