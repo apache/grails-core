@@ -69,8 +69,9 @@ field named `identifier` cannot divert the domain object a command object resolv
 This holds for dynamically compiled Groovy. Under `@CompileStatic` or `@GrailsCompileStatic` the
 compiler binds property syntax to the declared accessor, so `params.identifier` and
 `params.request` call `getIdentifier()` and `getRequest()` rather than reading the parameter, and
-assigning to them does not compile. In statically compiled code read those two names with
-`params['identifier']` and `params['request']`, and write them with `params.put(name, value)`.
+assigning to them does not compile. The same applies to a tag library attribute named after an
+accessor. In statically compiled code use the subscript form to read such a name, and
+`params.put(name, value)` to write it.
 
 
 ==== Using Flash Scope

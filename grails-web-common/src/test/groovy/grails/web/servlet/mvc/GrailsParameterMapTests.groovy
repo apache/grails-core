@@ -22,6 +22,8 @@ import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 
 import groovy.transform.CompileStatic
+import org.codehaus.groovy.runtime.typehandling.GroovyCastException
+import org.junit.jupiter.api.function.Executable
 import org.junit.jupiter.api.Test
 import org.springframework.context.support.StaticMessageSource
 import org.springframework.mock.web.MockHttpServletRequest
@@ -545,9 +547,12 @@ class GrailsParameterMapTests {
         theMap['metaClass'] = 'mc'
 
         assertEquals 'mc', theMap['metaClass']
-        assertNotNull theMap.metaClass
-        assertNotEquals 'mc', theMap.metaClass
+        assertTrue theMap.metaClass instanceof MetaClass
         assertEquals GrailsParameterMap, theMap.getClass()
+
+        // the dotted form is reserved for Groovy's own machinery, so assigning to it throws
+        // rather than storing a parameter
+        assertThrows(GroovyCastException, { theMap.metaClass = 'mc' } as Executable)
     }
 
     @Test

@@ -19,6 +19,7 @@
 package org.grails.taglib
 
 
+import groovy.transform.CompileStatic
 import org.junit.jupiter.api.Test
 
 import static org.junit.jupiter.api.Assertions.*
@@ -124,6 +125,61 @@ class GroovyPageAttributesTests {
         assertEquals 'container', attrs.class
         assertFalse attrs.isEmpty()
         assertEquals GroovyPageAttributes, attrs.getClass()
+    }
+
+    // https://github.com/apache/grails-core/issues/16280
+    @Test
+    void testWritingAnAttributeNamedAfterASetterNoLongerInvokesThatSetter() {
+        def attrs = toGroovyPageAttributes([:])
+
+        // Grails 7 routed both of these to setGspTagSyntaxCall(); they now write a map entry and
+        // leave the flag alone, so an attribute of that name reaches the tag as an attribute
+        attrs.gspTagSyntaxCall = false
+        assertEquals false, attrs['gspTagSyntaxCall']
+        assertTrue attrs.isGspTagSyntaxCall()
+
+        def other = toGroovyPageAttributes([:])
+        other['gspTagSyntaxCall'] = false
+        assertEquals false, other['gspTagSyntaxCall']
+        assertTrue other.isGspTagSyntaxCall()
+
+        // the flag is still driven by its own accessors
+        other.setGspTagSyntaxCall(false)
+        assertFalse other.isGspTagSyntaxCall()
+        assertEquals false, other['gspTagSyntaxCall']
+    }
+
+    // https://github.com/apache/grails-core/issues/16280
+    @Test
+    void testStaticCompilationWritesTheFieldRatherThanTheMap() {
+        // Documented limitation: @CompileStatic binds property syntax to the declared setter, so
+        // unlike params — where the equivalent assignment fails to compile — this one compiles
+        // and silently drives the flag instead of the map. Use the subscript form in statically
+        // compiled taglibs.
+        def viaProperty = toGroovyPageAttributes([:])
+        StaticallyCompiledAccess.write(viaProperty)
+
+        assertFalse viaProperty.isGspTagSyntaxCall()             // the flag was written
+        assertFalse viaProperty.containsKey('gspTagSyntaxCall')  // the map was not
+
+        // the subscript form addresses the map under static compilation, as it does dynamically
+        def viaSubscript = toGroovyPageAttributes([:])
+        StaticallyCompiledAccess.writeViaSubscript(viaSubscript)
+
+        assertEquals false, viaSubscript['gspTagSyntaxCall']      // the map was written
+        assertTrue viaSubscript.isGspTagSyntaxCall()              // the flag was not
+    }
+
+    @CompileStatic
+    static class StaticallyCompiledAccess {
+
+        static void write(GroovyPageAttributes attrs) {
+            attrs.gspTagSyntaxCall = false
+        }
+
+        static void writeViaSubscript(GroovyPageAttributes attrs) {
+            attrs['gspTagSyntaxCall'] = false
+        }
     }
 
     protected toGroovyPageAttributes(map) {

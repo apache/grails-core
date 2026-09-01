@@ -128,7 +128,30 @@ class CommandObjectInstantiationSpec extends Specification implements Controller
     }
 
     @Issue('https://github.com/apache/grails-core/issues/16280')
-    void 'Test a parameter named identifier does not divert domain command object resolution'() {
+    void 'Test a parameter named identifier cannot resolve a domain command object'() {
+        given: 'a persisted domain object whose id is submitted only as an "identifier" parameter'
+        def decoy = new DomainClassCommandObject(name: 'Decoy').save()
+
+        expect:
+        decoy.id != null
+
+        when: '''no id is submitted, so Controller.initializeCommandObject falls back to params.getIdentifier()'''
+        request.method = 'GET'
+        params.identifier = decoy.id
+        controller.domainCommandObject()
+
+        then: 'the fallback reads the absent "id" parameter and resolves nothing'
+        response.status == HttpServletResponse.SC_OK
+        model.commandObject == null
+
+        and: 'the identifier parameter is still readable as an ordinary map entry'
+        params['identifier'] == decoy.id
+        params.identifier == decoy.id
+        params.getIdentifier() == null
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/16280')
+    void 'Test the id parameter resolves the command object when an identifier parameter is also present'() {
         given:
         def target = new DomainClassCommandObject(name: 'Target').save()
         def decoy = new DomainClassCommandObject(name: 'Decoy').save()
@@ -144,13 +167,13 @@ class CommandObjectInstantiationSpec extends Specification implements Controller
         params.identifier = decoy.id
         controller.domainCommandObject()
 
-        then: 'the command object is resolved from id, not from the identifier field'
+        then: 'the command object is resolved from id'
         response.status == HttpServletResponse.SC_OK
         model.commandObject.id == target.id
         model.commandObject.name == 'Target'
 
-        and: 'the identifier parameter is still readable as an ordinary map entry'
-        params.identifier == decoy.id
+        and: 'both parameters remain readable as ordinary map entries'
+        params['id'] == target.id
         params['identifier'] == decoy.id
         params.getIdentifier() == target.id
     }

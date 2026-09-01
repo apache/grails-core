@@ -1507,10 +1507,13 @@ params.getRequest()    // the HttpServletRequest
 [NOTE]
 ====
 This applies to dynamically compiled Groovy.
-Under `@CompileStatic` or `@GrailsCompileStatic` the compiler binds property syntax to the declared accessor rather than routing through `getProperty`, so for the two names that collide with an accessor on `params`, `params.identifier` calls `getIdentifier()` and `params.request` calls `getRequest()` instead of reading the map entry.
-Writing them that way does not compile: `params.identifier = value` fails with `Cannot set read-only property: identifier`, and `params['request'] = value` fails with `Cannot assign value of type java.lang.String to variable of type jakarta.servlet.http.HttpServletRequest`.
+Under `@CompileStatic` or `@GrailsCompileStatic` the compiler binds property syntax to the declared accessor rather than routing through `getProperty`, so a name that collides with an accessor is reached through that accessor instead of the map.
 
-In statically compiled code, read these two parameters with `params['identifier']` and `params['request']`, and write them with `params.put('identifier', value)` and `params.put('request', value)`:
+On `params` the two colliding names are `identifier` and `request`: `params.identifier` calls `getIdentifier()` and `params.request` calls `getRequest()`, and writing them does not compile — `params.identifier = value` fails with `Cannot set read-only property: identifier`, and `params['request'] = value` fails with `Cannot assign value of type java.lang.String to variable of type jakarta.servlet.http.HttpServletRequest`.
+
+On `attrs` the colliding name is `gspTagSyntaxCall`, and there the failure is silent rather than loud: that property has a real setter, so `attrs.gspTagSyntaxCall = value` compiles and drives the tag-output flag while leaving the map untouched.
+
+The subscript form is the portable one for an accessor-colliding name on either map, and reads identically under both compilation modes:
 
 [source,groovy]
 ----
@@ -1523,11 +1526,18 @@ class BookController {
 }
 ----
 
-Every other parameter name is unaffected, and the subscript form behaves the same under both compilation modes.
+Every other name on either map is unaffected.
 ====
 
-One behavior differs from Grails 7: `params.metaClass` always returns the Groovy `MetaClass`.
+Two behaviors differ from Grails 7.
+
+`params.metaClass` always returns the Groovy `MetaClass`.
 In Grails 7 a request parameter named `metaClass` shadowed it; read such a parameter with `params['metaClass']`.
+Assigning to the dotted form throws — `params.metaClass = 'mc'` raises a `GroovyCastException` — while `params['metaClass'] = 'mc'` stores an ordinary map entry.
+
+Assigning to a name backed by a real setter writes a map entry instead of invoking that setter.
+This affects `attrs`, where Grails 7 routed both `attrs.gspTagSyntaxCall = false` and `attrs['gspTagSyntaxCall'] = false` to `setGspTagSyntaxCall()`; both now write a map entry and leave the flag at its default, so an attribute of that name reaches the tag as an attribute.
+Nothing in the framework depends on the old routing — it drives the flag through the two-argument constructor and the explicit accessors — but a tag library that relied on the assignment form must call `setGspTagSyntaxCall()` directly.
 
 ==== 29. MIME Types Are Now Framework Defaults
 
