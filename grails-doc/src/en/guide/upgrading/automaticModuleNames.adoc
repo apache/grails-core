@@ -1,0 +1,7 @@
+=== Automatic module names
+
+Grails 8.1 starts publishing `Automatic-Module-Name` manifest entries for the main framework jars produced by the shared compile convention.
+By default the module name is derived from the Gradle project group and project name, replacing hyphens with dots.
+
+Examples include `org.apache.grails.grails.core` for `grails-core` and `org.apache.grails.web.grails.web.common` for `grails-web-common`.
+Individual modules may set an `automaticModuleName` project property when a shorter stable JPMS name is agreed for a follow-up slice.

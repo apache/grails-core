@@ -83,9 +83,25 @@ class CompilePlugin implements Plugin<Project> {
                     'Implementation-Version': lookupPropertyByType(project, 'grailsVersion', String),
                     'Implementation-Vendor': 'grails.apache.org'
             )
+            if (!jar.archiveClassifier.present) {
+                jar.manifest.attributes('Automatic-Module-Name': automaticModuleName(project))
+            }
             // Explicitly fail since duplicates indicate a double configuration that needs fixed
             jar.duplicatesStrategy = DuplicatesStrategy.FAIL
         }
+    }
+
+    static String automaticModuleName(Project project) {
+        String configuredModuleName = project.findProperty('automaticModuleName') as String
+        if (configuredModuleName) {
+            return configuredModuleName
+        }
+        String groupPrefix = project.group == null ? 'org.apache.grails' : project.group.toString()
+        return "${groupPrefix}.${project.name}"
+                .replace('-', '.')
+                .replaceAll('[^A-Za-z0-9_.]', '.')
+                .replaceAll('\\.+', '.')
+                .replaceAll('^\\.|\\.$', '')
     }
 
     private static void configureCompiler(Project project) {
