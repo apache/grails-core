@@ -95,6 +95,13 @@ dependencies {
         // Include MongoDB groovy extensions for applications
     }
 
+    testImplementation project(':grails-core'), {
+        // api: GrailsPlugin, GrailsPluginManager, GrailsApplication, Config
+        // impl: DomainClassArtefactHandler, GrailsClass, Metadata
+    }
+    testImplementation 'org.spockframework:spock-core'
+    testImplementation 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during tests
+
     testFixturesApi project(':grails-core'), {
         // api: Config
         // impl: PropertySourcesConfig
