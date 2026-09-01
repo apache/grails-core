@@ -83,8 +83,11 @@ render(contentType: "application/json") {
 // render with status code
 render(status: 503, text: "Failed to update book ${b.id}")
 
-// render a file
+// render a file as an attachment
 render(file: new File(absolutePath), fileName: "book.pdf")
+
+// render a file inline
+render(file: new File(absolutePath), inline: true)
 ----
 
 
@@ -92,6 +95,9 @@ render(file: new File(absolutePath), fileName: "book.pdf")
 
 
 A multi-purpose method for rendering responses to the client which is best illustrated with a few examples! Warning - this method does not always support multiple parameters. For example, if you specify both collection and model, the model parameter will be ignored.
+
+Rendering an arbitrary object, or a map without a recognized render argument, writes the Groovy `inspect()` value as `text/plain` by default.
+
 Parameters
 
 Parameters:
@@ -109,5 +115,6 @@ Parameters:
 * `encoding` (optional) - The encoding of the response
 * `plugin` (optional) - The plugin to look for the template in
 * `status` (optional) - The HTTP status code to use
-* `file` (optional) - The byte[], java.io.File, or inputStream you wish to send with the response
+* `file` (optional) - The byte[], java.io.File, or inputStream you wish to send with the response. File responses are rendered with `Content-Disposition: attachment` by default.
 * `fileName` (optional) - For specifying an attachment file name while rendering a file.
+* `inline` (optional) - Set to `true` while rendering a file to omit the default attachment `Content-Disposition` header.
