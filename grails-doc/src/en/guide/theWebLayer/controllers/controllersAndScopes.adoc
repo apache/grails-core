@@ -64,8 +64,7 @@ Both forms always address a request parameter, even when the parameter name happ
 method on `params` itself. `params.request` and `params['request']` read the request parameter
 named `request`, not the `HttpServletRequest`; use `params.getRequest()` when you want the
 request object. `params.getIdentifier()` always reads the conventional `id` parameter, so a form
-field named `identifier` cannot divert the domain object a command object resolves to. The same
-rule applies to tag library attributes: `attrs.foo` and `attrs['foo']` always read the attribute named `foo`.
+field named `identifier` cannot divert the domain object a command object resolves to.
 
 
 ==== Using Flash Scope

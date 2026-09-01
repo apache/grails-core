@@ -1504,8 +1504,6 @@ params.request         // the same parameter
 params.getRequest()    // the HttpServletRequest
 ----
 
-`params.getIdentifier()` is unchanged and still reads the conventional `id` parameter; a parameter named `identifier` is an ordinary map entry and does not divert it.
-
 One behavior differs from Grails 7: `params.metaClass` always returns the Groovy `MetaClass`.
 In Grails 7 a request parameter named `metaClass` shadowed it; read such a parameter with `params['metaClass']`.
 
