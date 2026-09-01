@@ -1495,7 +1495,7 @@ For a `String` subscript key, and for dotted property access, Groovy now prefers
 On `params` (`GrailsParameterMap`) and on tag library `attrs` (`GroovyPageAttributes`) that made an entry named after an accessor unreachable: `params['request']` returned the `HttpServletRequest` instead of the submitted parameter, and `params['identifier'] = value` threw a `ReadOnlyPropertyException`.
 
 Grails 8 restores the Grails 7 rule.
-`params['name']`, `params.name`, `attrs['name']` and `attrs.name` always address a map entry; call the accessor method when you want the framework object:
+In dynamically compiled Groovy, `params['name']`, `params.name`, `attrs['name']` and `attrs.name` all address a map entry; call the accessor method when you want the framework object:
 
 [source,groovy]
 ----
@@ -1503,6 +1503,28 @@ params['request']      // the request parameter named "request", or null when no
 params.request         // the same parameter
 params.getRequest()    // the HttpServletRequest
 ----
+
+[NOTE]
+====
+This applies to dynamically compiled Groovy.
+Under `@CompileStatic` or `@GrailsCompileStatic` the compiler binds property syntax to the declared accessor rather than routing through `getProperty`, so for the two names that collide with an accessor on `params`, `params.identifier` calls `getIdentifier()` and `params.request` calls `getRequest()` instead of reading the map entry.
+Writing them that way does not compile: `params.identifier = value` fails with `Cannot set read-only property: identifier`, and `params['request'] = value` fails with `Cannot assign value of type java.lang.String to variable of type jakarta.servlet.http.HttpServletRequest`.
+
+In statically compiled code, read these two parameters with `params['identifier']` and `params['request']`, and write them with `params.put('identifier', value)` and `params.put('request', value)`:
+
+[source,groovy]
+----
+@GrailsCompileStatic
+class BookController {
+    def save() {
+        params.put('request', 'submitted value')   // params['request'] = ... does not compile
+        def submitted = params['request']          // the parameter; params.request is the HttpServletRequest
+    }
+}
+----
+
+Every other parameter name is unaffected, and the subscript form behaves the same under both compilation modes.
+====
 
 One behavior differs from Grails 7: `params.metaClass` always returns the Groovy `MetaClass`.
 In Grails 7 a request parameter named `metaClass` shadowed it; read such a parameter with `params['metaClass']`.

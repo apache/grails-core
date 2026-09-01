@@ -21,6 +21,7 @@ package grails.web.servlet.mvc
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 
+import groovy.transform.CompileStatic
 import org.junit.jupiter.api.Test
 import org.springframework.context.support.StaticMessageSource
 import org.springframework.mock.web.MockHttpServletRequest
@@ -476,6 +477,32 @@ class GrailsParameterMapTests {
         assertSame mockRequest, theMap.getRequest()
         assertEquals 'r1', theMap['request']
         assertEquals 'r1', theMap.request
+    }
+
+    @Test
+    @CompileStatic
+    @Issue("https://github.com/apache/grails-core/issues/16280")
+    void testStaticCompilationBindsPropertySyntaxToTheAccessor() {
+        GrailsParameterMap params = new GrailsParameterMap(mockRequest)
+
+        // subscript access addresses the map under @CompileStatic as well, because getAt(String)
+        // and putAt(String, Object) are declared methods the static compiler resolves directly
+        params['identifier'] = 'id1'
+        assertEquals 'id1', params['identifier']
+        assertNull params['request']
+
+        // put() is the portable way to write a parameter whose name collides with an accessor;
+        // params['request'] = 'r1' does not compile, because the static compiler binds it to the
+        // HttpServletRequest-typed "request" property
+        params.put('request', 'r1')
+        assertEquals 'r1', params['request']
+
+        // property syntax binds to the declared accessor at compile time and bypasses
+        // getProperty, so it does NOT read the map entry under static compilation.
+        // Writing it does not compile at all: "params.identifier = value" fails with
+        // "Cannot set read-only property: identifier".
+        assertNull params.identifier            // getIdentifier() reads the absent "id" parameter
+        assertSame mockRequest, params.request  // getRequest()
     }
 
     @Test
