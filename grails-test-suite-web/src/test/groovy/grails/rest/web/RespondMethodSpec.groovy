@@ -24,7 +24,6 @@ import grails.persistence.Entity
 import grails.testing.gorm.DomainUnitTest
 import grails.testing.web.controllers.ControllerUnitTest
 import grails.web.mime.MimeType
-import org.grails.web.mime.HttpServletResponseExtension
 import org.grails.web.util.GrailsApplicationAttributes
 import org.springframework.web.servlet.ModelAndView
 import spock.lang.Issue
@@ -36,15 +35,6 @@ class RespondMethodSpec extends Specification implements ControllerUnitTest<Book
         // Access config to ensure grailsApplication is initialized and Holders is populated.
         // This triggers doWithConfig() which registers the custom MIME types.
         assert config != null
-        
-        // Clear the static mimeTypes cache to prevent test environment pollution.
-        // This must be done AFTER accessing config to ensure the new config is applied.
-        HttpServletResponseExtension.@mimeTypes = null
-    }
-
-    def cleanup() {
-        // Clear the static mimeTypes cache to prevent test environment pollution
-        HttpServletResponseExtension.@mimeTypes = null
     }
 
     Closure doWithConfig() {{ config ->

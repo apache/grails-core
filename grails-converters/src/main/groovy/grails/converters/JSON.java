@@ -393,6 +393,11 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         }
     }
 
+    /**
+     * @deprecated Inject {@link grails.converters.json.NamedJsonConfigurationRegistry} and call
+     * {@link grails.converters.json.NamedJsonConfigurationRegistry#writer(String)}.
+     */
+    @Deprecated(since = "8.0", forRemoval = false)
     public static ConverterConfiguration<JSON> getNamedConfig(String configName) throws ConverterException {
         ConverterConfiguration<JSON> cfg = ConvertersConfigurationHolder.getNamedConverterConfiguration(configName, JSON.class);
         if (cfg == null) {
@@ -401,6 +406,12 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         return cfg;
     }
 
+    /**
+     * @deprecated Inject {@link grails.converters.json.NamedJsonConfigurationRegistry} and call
+     * {@link grails.converters.json.NamedJsonConfigurationRegistry#writeValueAsString(String, Object)} or
+     * {@link grails.converters.json.NamedJsonConfigurationRegistry#writeValue(String, java.io.Writer, Object)}.
+     */
+    @Deprecated(since = "8.0", forRemoval = false)
     public static Object use(String configName, Closure<?> callable) throws ConverterException {
         ConverterConfiguration<JSON> old = ConvertersConfigurationHolder.getThreadLocalConverterConfiguration(JSON.class);
         ConverterConfiguration<JSON> cfg = getNamedConfig(configName);
@@ -413,6 +424,11 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         }
     }
 
+    /**
+     * @deprecated Inject {@link grails.converters.json.NamedJsonConfigurationRegistry} and select the
+     * configuration explicitly for each write. The replacement does not mutate thread-local state.
+     */
+    @Deprecated(since = "8.0", forRemoval = false)
     public static void use(String cfgName) throws ConverterException {
         if (cfgName == null || "default".equals(cfgName)) {
             ConvertersConfigurationHolder.setThreadLocalConverterConfiguration(JSON.class, null);
@@ -422,14 +438,32 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         }
     }
 
+    /**
+     * @deprecated Prefer a Spring Boot {@code JsonMapperBuilderCustomizer} that registers a Jackson
+     * {@code SimpleModule} or {@code ValueSerializer}. This method remains available for legacy
+     * {@code render ... as JSON} compatibility.
+     */
+    @Deprecated(since = "8.0", forRemoval = false)
     public static void registerObjectMarshaller(Class<?> clazz, Closure<?> callable) throws ConverterException {
         registerObjectMarshaller(new ClosureObjectMarshaller<>(clazz, callable));
     }
 
+    /**
+     * @deprecated Prefer a Spring Boot {@code JsonMapperBuilderCustomizer} that registers a Jackson
+     * {@code SimpleModule} or {@code ValueSerializer}. This method remains available for legacy
+     * {@code render ... as JSON} compatibility.
+     */
+    @Deprecated(since = "8.0", forRemoval = false)
     public static void registerObjectMarshaller(Class<?> clazz, int priority, Closure<?> callable) throws ConverterException {
         registerObjectMarshaller(new ClosureObjectMarshaller<>(clazz, callable), priority);
     }
 
+    /**
+     * @deprecated Prefer a Spring Boot {@code JsonMapperBuilderCustomizer} that registers a Jackson
+     * {@code SimpleModule} or {@code ValueSerializer}. This method remains available for legacy
+     * {@code render ... as JSON} compatibility.
+     */
+    @Deprecated(since = "8.0", forRemoval = false)
     public static void registerObjectMarshaller(ObjectMarshaller<JSON> om) throws ConverterException {
         ConverterConfiguration<JSON> cfg = ConvertersConfigurationHolder.getConverterConfiguration(JSON.class);
         if (cfg == null) {
@@ -442,6 +476,12 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         ((DefaultConverterConfiguration<JSON>) cfg).registerObjectMarshaller(om);
     }
 
+    /**
+     * @deprecated Prefer a Spring Boot {@code JsonMapperBuilderCustomizer} that registers a Jackson
+     * {@code SimpleModule} or {@code ValueSerializer}. This method remains available for legacy
+     * {@code render ... as JSON} compatibility.
+     */
+    @Deprecated(since = "8.0", forRemoval = false)
     public static void registerObjectMarshaller(ObjectMarshaller<JSON> om, int priority) throws ConverterException {
         ConverterConfiguration<JSON> cfg = ConvertersConfigurationHolder.getConverterConfiguration(JSON.class);
         if (cfg == null) {
@@ -454,6 +494,11 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         ((DefaultConverterConfiguration<JSON>) cfg).registerObjectMarshaller(om, priority);
     }
 
+    /**
+     * @deprecated Inject {@link grails.converters.json.NamedJsonConfigurationRegistry} and use
+     * {@link grails.converters.json.NamedJsonConfigurationRegistry#register(String, java.util.function.Consumer)}.
+     */
+    @Deprecated(since = "8.0", forRemoval = false)
     public static void createNamedConfig(String name, Closure<?> callable) throws ConverterException {
         DefaultConverterConfiguration<JSON> cfg = new DefaultConverterConfiguration<>(ConvertersConfigurationHolder.getConverterConfiguration(JSON.class));
         try {
@@ -465,6 +510,10 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         }
     }
 
+    /**
+     * @deprecated Prefer a Spring Boot {@code JsonMapperBuilderCustomizer} for application-wide JSON defaults.
+     */
+    @Deprecated(since = "8.0", forRemoval = false)
     public static void withDefaultConfiguration(Closure<?> callable) throws ConverterException {
         ConverterConfiguration<JSON> cfg = ConvertersConfigurationHolder.getConverterConfiguration(JSON.class);
         if (!(cfg instanceof DefaultConverterConfiguration<?>)) {

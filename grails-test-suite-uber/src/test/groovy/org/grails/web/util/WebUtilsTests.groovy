@@ -34,7 +34,6 @@ import org.springframework.context.support.GenericApplicationContext
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.mock.web.MockServletContext
-import org.grails.web.mime.HttpServletResponseExtension
 import org.springframework.web.context.request.RequestContextHolder
 
 import static org.junit.jupiter.api.Assertions.*
@@ -50,8 +49,6 @@ class WebUtilsTests {
     @BeforeEach
     void setUp() {
         RequestContextHolder.resetRequestAttributes()
-        // Clear the static mimeTypes cache to prevent test environment pollution
-        HttpServletResponseExtension.@mimeTypes = null
         config = new ConfigSlurper().parse("""
 grails.mime.file.extensions=false
 grails.mime.types = [ html: ['text/html','application/xhtml+xml'],
@@ -72,8 +69,6 @@ grails.mime.types = [ html: ['text/html','application/xhtml+xml'],
     @AfterEach
     void tearDown() {
         RequestContextHolder.resetRequestAttributes()
-        // Clear the static mimeTypes cache after each test for test isolation
-        HttpServletResponseExtension.@mimeTypes = null
     }
 
     @Test

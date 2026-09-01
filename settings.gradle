@@ -148,6 +148,7 @@ include(
         'grails-web-databinding',
         'grails-web-mvc',
         'grails-web-url-mappings',
+        'grails-xml',
 
         // POM / BOMs
         'grails-dependencies-starter-web',

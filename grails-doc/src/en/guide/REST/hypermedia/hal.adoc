@@ -67,7 +67,8 @@ https://stateless.co/hal_specification.html[HAL] is a standard exchange format c
 ==== Exposing Resources Using HAL
 
 
-To return HAL instead of regular JSON for a resource you can simply override the renderer in `grails-app/conf/spring/resources.groovy` with an instance of `grails.rest.render.hal.HalJsonRenderer` (or `HalXmlRenderer` for the XML variation):
+To return HAL instead of regular JSON for a resource you can override the renderer in
+`grails-app/conf/spring/resources.groovy` with an instance of `grails.rest.render.hal.HalJsonRenderer`:
 
 [source,groovy]
 ----
@@ -124,15 +125,10 @@ Content-Type: application/hal+json;charset=ISO-8859-1
 }
 ----
 
-To use HAL XML format simply change the renderer:
-
-[source,groovy]
-----
-import grails.rest.render.hal.*
-beans = {
-    halBookRenderer(HalXmlRenderer, rest.test.Book)
-}
-----
+HAL XML renderers are deprecated since Grails 8.0 and will be removed in a future major release. Existing
+clients can retain them temporarily by adding the optional `grails-xml` module. New development should
+use HAL JSON, either through the Grails HAL JSON renderer or Spring HATEOAS via
+`spring-boot-starter-hateoas`.
 
 
 ==== Rendering Collections Using HAL

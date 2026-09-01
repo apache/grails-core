@@ -40,6 +40,7 @@ dependencies {
     testImplementation project(':grails-testing-support-core')
     testImplementation project(':grails-interceptors')
     testImplementation project(':grails-rest-transforms')
+    testImplementation project(':grails-xml')
     testImplementation 'org.apache.groovy:groovy'
     testImplementation 'tools.jackson.core:jackson-databind'
     testImplementation project(':grails-testing-support-web'), {

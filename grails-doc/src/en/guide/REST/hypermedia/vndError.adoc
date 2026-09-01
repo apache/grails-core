@@ -17,7 +17,8 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-https://github.com/blongden/vnd.error[Vnd.Error] is a standardised way of expressing an error response.
+https://github.com/blongden/vnd.error[Vnd.Error] is a legacy error response format. New applications
+should use the default RFC 9457 `application/problem+json` validation response.
 
 By default when a validation error occurs when attempting to POST new resources then the errors object will be sent back allow with a 422 respond code:
 
@@ -41,17 +42,20 @@ Content-Type: application/json;charset=ISO-8859-1
 }
 ----
 
-If you wish to change the format to Vnd.Error then simply register `grails.rest.render.errors.VndErrorJsonRenderer` bean in `grails-app/conf/spring/resources.groovy`:
+If a compatibility client requires Vnd.Error JSON, explicitly register the
+`grails.rest.render.errors.VndErrorJsonRenderer` bean in `grails-app/conf/spring/resources.groovy`:
 
 
 [source,groovy]
 ----
 beans = {
     vndJsonErrorRenderer(grails.rest.render.errors.VndErrorJsonRenderer)
-    // for Vnd.Error XML format
-    vndXmlErrorRenderer(grails.rest.render.errors.VndErrorXmlRenderer)
 }
 ----
+
+The `VndErrorXmlRenderer` and legacy XML validation-error marshaller are deprecated since Grails 8.0
+and will be removed in a future major release. Keep them only for existing XML clients while migrating
+to Problem Details JSON. They remain available when the optional `grails-xml` module is installed.
 
 Then if you alter the client request to accept Vnd.Error you get an appropriate response:
 
