@@ -49,7 +49,7 @@ public class AggregateTimestampProvider implements TimestampProvider {
                 }
             }
         } else {
-            return createTimestamp(timestampProviders.iterator().next(), dateTimeClass);
+            return createTimestamp(timestampProviders.getFirst(), dateTimeClass);
         }
         throw new IllegalArgumentException("dateTimeClass given as parameter isn't supported by any TimestampProvider. You should call supportsCreating first.");
     }
