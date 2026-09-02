@@ -66,7 +66,9 @@ jobs:
           # line before a maintenance branch exists.
           # This keeps `7.0.x` PRs validating against Groovy 4 and `8.0.x` PRs
           # validating against Groovy 5 without hard-coding the branch here.
-          GROOVY_MAJOR_MINOR=$(sed -nE "s/.*'groovy\.version'.*'([0-9]+)\.([0-9]+)\.[0-9]+'.*/\1_\2/p" dependencies.gradle | head -n 1)
+          # Allow pre-release patches such as 6.0.0-beta-2. The previous `[0-9]+'` patch
+          # match skipped the root groovy.version and picked the Micronaut island's 5.x pin.
+          GROOVY_MAJOR_MINOR=$(sed -nE "s/.*'groovy\.version'[[:space:]]*:[[:space:]]*'([0-9]+)\.([0-9]+)\..*/\1_\2/p" dependencies.gradle | head -n 1)
           if [ -z "$GROOVY_MAJOR_MINOR" ]; then
             echo "::error::Could not determine Apache Groovy major/minor version from dependencies.gradle"
             exit 1

@@ -1012,8 +1012,9 @@ jobs:
         uses: testlens-app/setup-testlens@3f82d2dc6cd5c03f02ce5f7885a21195d85f8d14 # v1.9.3
       - name: "📤 Publish Grails-Core Snapshot Artifacts"
         # This Java 21 publish excludes the Micronaut 5 / JVM 25 island automatically -
-        # settings.gradle prunes it because this branch uses Groovy 6 while the island pins
-        # Groovy 5.
+        # settings.gradle prunes the Micronaut island if the JDK is older than 25
+        # or the Groovy major version is not 5; this branch is pruned because it
+        # uses Groovy 6.
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
         env:
           GRAILS_PUBLISH_RELEASE: 'false'
@@ -1214,3 +1215,4 @@ jobs:
           TARGET_REPOSITORY: 'apache/grails-website'
           TARGET_FOLDER: 'docs'
           DOCUMENTATION_BRANCH: 'asf-site-production'
+
