@@ -24,6 +24,8 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
 import org.springframework.beans.BeanUtils;
+import org.springframework.util.ClassUtils;
+import org.springframework.util.ReflectionUtils;
 
 import grails.converters.XML;
 import org.grails.web.converters.exceptions.ConverterException;
@@ -46,7 +48,9 @@ public class GenericJavaBeanMarshaller implements ObjectMarshaller<XML> {
                 Method readMethod = property.getReadMethod();
                 if (readMethod != null) {
                     if (Modifier.isStatic(readMethod.getModifiers())) continue;
-                    Object value = readMethod.invoke(o, (Object[]) null);
+                    Method invokableMethod = ClassUtils.getInterfaceMethodIfPossible(readMethod, o.getClass());
+                    ReflectionUtils.makeAccessible(invokableMethod);
+                    Object value = invokableMethod.invoke(o, (Object[]) null);
                     xml.startNode(name);
                     xml.convertAnother(value);
                     xml.end();
@@ -54,8 +58,9 @@ public class GenericJavaBeanMarshaller implements ObjectMarshaller<XML> {
             }
             for (Field field : o.getClass().getDeclaredFields()) {
                 int modifiers = field.getModifiers();
-                if (field.canAccess(o) && Modifier.isPublic(modifiers) &&
-                        !(Modifier.isStatic(modifiers) || Modifier.isTransient(modifiers))) {
+                if (Modifier.isPublic(modifiers) &&
+                        !(Modifier.isStatic(modifiers) || Modifier.isTransient(modifiers)) &&
+                        !field.isSynthetic() && field.canAccess(o)) {
                     xml.startNode(field.getName());
                     xml.convertAnother(field.get(o));
                     xml.end();

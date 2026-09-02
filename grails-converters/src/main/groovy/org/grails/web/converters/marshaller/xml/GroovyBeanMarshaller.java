@@ -27,6 +27,8 @@ import java.util.List;
 import groovy.lang.GroovyObject;
 
 import org.springframework.beans.BeanUtils;
+import org.springframework.util.ClassUtils;
+import org.springframework.util.ReflectionUtils;
 
 import grails.converters.XML;
 import grails.persistence.Entity;
@@ -66,7 +68,9 @@ public class GroovyBeanMarshaller extends IncludeExcludePropertyMarshaller<XML> 
                     if (Modifier.isStatic(readMethod.getModifiers())) continue;
                     if (readMethod.getAnnotation(PersistenceMethod.class) != null) continue;
                     if (readMethod.getAnnotation(ControllerMethod.class) != null) continue;
-                    Object value = readMethod.invoke(o, (Object[]) null);
+                    Method invokableMethod = ClassUtils.getInterfaceMethodIfPossible(readMethod, clazz);
+                    ReflectionUtils.makeAccessible(invokableMethod);
+                    Object value = invokableMethod.invoke(o, (Object[]) null);
                     xml.startNode(name);
                     xml.convertAnother(value);
                     xml.end();
@@ -74,10 +78,11 @@ public class GroovyBeanMarshaller extends IncludeExcludePropertyMarshaller<XML> 
             }
             for (Field field : o.getClass().getDeclaredFields()) {
                 int modifiers = field.getModifiers();
-                if (Modifier.isPublic(modifiers) && !(Modifier.isStatic(modifiers) || Modifier.isTransient(modifiers))) {
+                if (Modifier.isPublic(modifiers) && !(Modifier.isStatic(modifiers) || Modifier.isTransient(modifiers)) && !field.isSynthetic()) {
                     String name = field.getName();
                     if (!shouldInclude(includeExcludeSupport, includes, excludes, o, name)) continue;
                     if (isEntity && (name.equals(GormProperties.ATTACHED) || name.equals(GormProperties.ERRORS))) continue;
+                    ReflectionUtils.makeAccessible(field);
                     xml.startNode(name);
                     xml.convertAnother(field.get(o));
                     xml.end();

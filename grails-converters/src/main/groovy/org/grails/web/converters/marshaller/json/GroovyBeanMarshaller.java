@@ -27,6 +27,8 @@ import java.util.List;
 import groovy.lang.GroovyObject;
 
 import org.springframework.beans.BeanUtils;
+import org.springframework.util.ClassUtils;
+import org.springframework.util.ReflectionUtils;
 
 import grails.converters.JSON;
 import grails.persistence.PersistenceMethod;
@@ -66,16 +68,19 @@ public class GroovyBeanMarshaller extends IncludeExcludePropertyMarshaller<JSON>
                     if (Modifier.isStatic(readMethod.getModifiers())) continue;
                     if (readMethod.getAnnotation(PersistenceMethod.class) != null) continue;
                     if (readMethod.getAnnotation(ControllerMethod.class) != null) continue;
-                    Object value = readMethod.invoke(o, (Object[]) null);
+                    Method invokableMethod = ClassUtils.getInterfaceMethodIfPossible(readMethod, clazz);
+                    ReflectionUtils.makeAccessible(invokableMethod);
+                    Object value = invokableMethod.invoke(o, (Object[]) null);
                     writer.key(name);
                     json.convertAnother(value);
                 }
             }
             for (Field field : clazz.getDeclaredFields()) {
                 int modifiers = field.getModifiers();
-                if (Modifier.isPublic(modifiers) && !(Modifier.isStatic(modifiers) || Modifier.isTransient(modifiers))) {
+                if (Modifier.isPublic(modifiers) && !(Modifier.isStatic(modifiers) || Modifier.isTransient(modifiers)) && !field.isSynthetic()) {
                     String name = field.getName();
                     if (!shouldInclude(includeExcludeSupport, includes, excludes, o, name)) continue;
+                    ReflectionUtils.makeAccessible(field);
                     writer.key(name);
                     json.convertAnother(field.get(o));
                 }
