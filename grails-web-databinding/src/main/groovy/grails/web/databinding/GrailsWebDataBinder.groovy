@@ -548,7 +548,9 @@ class GrailsWebDataBinder extends SimpleDataBinder {
                                 }
                             }
                             if (persistentInstance == null) {
-                                if (item == null || referencedType.isAssignableFrom(item.getClass())) {
+                                // Groovy 6.0.0-beta-2: see the `||` flow-state note on the array branch above.
+                                boolean matchesReferencedType = item == null || referencedType.isAssignableFrom(item.getClass())
+                                if (matchesReferencedType) {
                                     // Already of the element type, so there is nothing to instantiate
                                     // and nothing to bind into. A raw collection always lands here:
                                     // Basic#componentType falls back to Object.class when a property

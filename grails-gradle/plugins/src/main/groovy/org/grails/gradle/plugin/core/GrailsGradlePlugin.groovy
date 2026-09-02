@@ -1282,7 +1282,7 @@ ${importStatements}
                 def overriddenMainClass = propertyMainClassName ?: springBootMainClassName
                 if (!overriddenMainClass) {
                     // the findMainClass task needs to set these values
-                    extraProperties.set('mainClassName', project.provider {
+                    extraProperties.set('mainClass', project.provider {
                         File cacheFile = findMainClassTask.get().mainClassCacheFile.orNull?.asFile
                         if (!cacheFile?.exists()) {
                             return null
