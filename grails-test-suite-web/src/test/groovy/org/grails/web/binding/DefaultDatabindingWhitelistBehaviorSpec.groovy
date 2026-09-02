@@ -29,13 +29,16 @@ class DefaultDatabindingWhitelistBehaviorSpec extends Specification implements C
 
     // Domain exclusion of id/version/dateCreated/lastUpdated is already pinned by
     // DefaultASTDatabindingHelperDomainClassSpecialPropertiesSpec (GRAILS-11173, #15681); this spec
-    // only covers the Object/def-typed exclusion and nested association binding.
-    void 'domain binding includes simple and association properties but excludes Object/def-typed properties'() {
+    // only covers nested association binding, auto-inclusion of extra typed properties, and
+    // Object/def-typed exclusion (DefaultASTDatabindingHelper#shouldFieldBeInWhiteList).
+    void 'domain binding includes simple, extra typed, and association properties but excludes Object/def-typed properties'() {
         given:
         Map source = [
                 name: 'Ada',
+                extra: 'typed extra',
                 address: [street: 'Analytical Engine Way'],
-                untypedProperty: 'not bindable'
+                untypedProperty: 'not bindable',
+                untypedDefProperty: 'also not bindable'
         ]
 
         when:
@@ -44,8 +47,10 @@ class DefaultDatabindingWhitelistBehaviorSpec extends Specification implements C
 
         then:
         domain.name == 'Ada'
+        domain.extra == 'typed extra'
         domain.address.street == 'Analytical Engine Way'
         domain.untypedProperty == null
+        domain.untypedDefProperty == null
     }
 
     void 'Validateable command binding includes declared special properties but excludes Object/def-typed properties'() {
@@ -53,32 +58,38 @@ class DefaultDatabindingWhitelistBehaviorSpec extends Specification implements C
         Date dateCreated = new Date()
         Date lastUpdated = new Date()
         params.name = 'Grace'
+        params.extra = 'typed extra'
         params.'address.street' = 'Compiler Lane'
         params.id = '99'
         params.version = '7'
         params.dateCreated = dateCreated
         params.lastUpdated = lastUpdated
         params.untypedProperty = 'not bindable'
+        params.untypedDefProperty = 'also not bindable'
 
         when:
         WhitelistCommand command = controller.bindCommand().command
 
         then:
         command.name == 'Grace'
+        command.extra == 'typed extra'
         command.address.street == 'Compiler Lane'
         command.id == 99L
         command.version == 7L
         command.dateCreated == dateCreated
         command.lastUpdated == lastUpdated
         command.untypedProperty == null
+        command.untypedDefProperty == null
     }
 }
 
 @Entity
 class WhitelistDomain {
     String name
+    String extra
     WhitelistAddress address = new WhitelistAddress()
     Object untypedProperty
+    def untypedDefProperty
 }
 
 @Entity
@@ -95,10 +106,12 @@ class WhitelistBehaviorController {
 
 class WhitelistCommand implements Validateable {
     String name
+    String extra
     WhitelistAddress address = new WhitelistAddress()
     Long id
     Long version
     Date dateCreated
     Date lastUpdated
     Object untypedProperty
+    def untypedDefProperty
 }
