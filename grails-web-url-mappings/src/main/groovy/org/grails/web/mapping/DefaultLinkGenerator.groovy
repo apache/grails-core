@@ -76,7 +76,13 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
 
     GrailsPluginManager pluginManager
 
-    @Autowired
+    /**
+     * The mappings a link to a controller and action is created from. An application that maps no
+     * URLs - one routing with Spring MVC, say - has none, and still generates links to a resource
+     * or to a path, so this is the one kind of link it cannot generate rather than a reason for it
+     * not to start.
+     */
+    @Autowired(required = false)
     @Qualifier('grailsUrlMappingsHolder')
     UrlMappingsHolder urlMappingsHolder
 
@@ -258,6 +264,11 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
                 }
                 def pluginName = attrs.get(UrlMapping.PLUGIN)?.toString()
                 String namespace = resolveNamespace(controller, pluginName, attrs)
+                if (urlMappingsHolder == null) {
+                    throw new IllegalStateException("Cannot create a link to [controller: ${controller}, " +
+                            "action: ${action}] because the application has no URL mappings. Only a link to a " +
+                            'resource or to a path can be created without them.')
+                }
                 UrlCreator mapping = urlMappingsHolder.getReverseMappingNoDefault(controller, action, namespace, pluginName, httpMethod, params)
                 if (mapping == null && isDefaultAction) {
                     mapping = urlMappingsHolder.getReverseMappingNoDefault(controller, null, namespace, pluginName, httpMethod, params)

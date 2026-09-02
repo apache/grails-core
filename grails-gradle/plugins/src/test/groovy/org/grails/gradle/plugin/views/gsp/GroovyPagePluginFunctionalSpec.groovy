@@ -93,4 +93,20 @@ class GroovyPagePluginFunctionalSpec extends GradleSpecification {
         result.output.contains('PAGE_COMPILER_STATIC=false')
         result.output.contains('WEBAPP_PAGE_COMPILER_STATIC=false')
     }
+
+    def "compiled pages are on the test runtime class path"() {
+        given: 'a project whose pages the plugin compiles'
+        setupTestResourceProject('gsp-compile-classpath')
+
+        when:
+        def result = executeTask('inspectGspRuntimeClasspath')
+
+        then: 'a test of the application loads the pages it would ship, the view registry included'
+        result.output.contains('TEST_RUNTIME_HAS_PAGES=true')
+        result.output.contains('TEST_RUNTIME_HAS_WEBAPP_PAGES=true')
+
+        and: 'they are off the main runtime class path, which a boot archive would package a second time'
+        result.output.contains('MAIN_RUNTIME_HAS_PAGES=false')
+        result.output.contains('MAIN_RUNTIME_HAS_WEBAPP_PAGES=false')
+    }
 }

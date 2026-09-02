@@ -379,8 +379,37 @@ class LinkGeneratorSpec extends Specification {
     }
 
     
+    def "an application that maps no URLs still links to a resource"() {
+        given: "a generator with no mappings, as a context that maps none has none to give it"
+        def generator = generatorWithoutMappings()
+
+        expect:
+        generator.resource(mainCssResource) == "$context/$mainCssResource.dir/$mainCssResource.file"
+    }
+
+    def "a link to a controller says what is missing when there are no URL mappings"() {
+        given:
+        def generator = generatorWithoutMappings()
+
+        when:
+        generator.link(controller: 'one', action: 'two')
+
+        then: "the one kind of link that needs mappings names them"
+        IllegalStateException e = thrown()
+        e.message.contains('no URL mappings')
+        e.message.contains('controller: one')
+        e.message.contains('action: two')
+    }
+
     void cleanup() {
         RequestContextHolder.resetRequestAttributes()
+    }
+
+    protected DefaultLinkGenerator generatorWithoutMappings() {
+        new DefaultLinkGenerator(baseUrl, context).tap {
+            it.grailsUrlConverter = new CamelCaseUrlConverter()
+            it.resourcePath = resourcePath
+        }
     }
 
     protected getGenerator(boolean cache=false) {

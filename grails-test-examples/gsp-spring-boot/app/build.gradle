@@ -35,23 +35,76 @@ plugins {
 // helper and does not provide dependency management - version management here is entirely
 // the responsibility of the Grails BOM below.
 apply plugin: 'org.apache.grails.gradle.grails-gsp'
+// The asset pipeline compiles the stylesheets and scripts this application serves, Bootstrap among
+// them, into build/assets at build time. Bootstrap is therefore an input to the build rather than a
+// library the application ships: it is declared on the assets configuration below, and what reaches
+// the artifact is the one compiled, minified, digest-named file the manifest asks for.
+apply plugin: 'cloud.wondrify.asset-pipeline'
 
+assets {
+    assetsPath = file("${project.projectDir}/src/main/assets")
+    // A webjar carries far more than an application uses - Bootstrap ships its scss sources, its
+    // source maps and every build variant - so none of it is served as it stands. What the two
+    // manifests require is compiled into application.css and application.js; the only files that
+    // ship beside them are the icon font's, which its stylesheet asks the browser for by name.
+    excludeWebjarsByDefault = true
+    includes = ['webjars/bootstrap-icons/*/font/fonts/*']
+    // A source map is for reading the sources of a page as it runs, and this application ships
+    // none of them.
+    enableSourceMaps = false
+}
+
+// Jasper compiles a JSP at run time with the Eclipse compiler, and an executable jar packages no JSP
+// to compile - src/main/webapp goes into a war. Jasper itself stays: the GSP form uses Spring's form
+// tag library, which is a JSP tag library and needs the JSP API Jasper carries. Excluding ecj from
+// Jasper outright would take the compiler from the war and from bootRun too, where a JSP does render,
+// so it is left out of this artifact rather than out of the dependency.
+bootJar {
+    classpath = classpath.filter { File entry -> !entry.name.startsWith('ecj-') }
+}
+
+// The packaged application renders the views compiled here, so the templates themselves are left out
+// of it. serverpath is the path each view is registered under in the view registry the task writes:
+// a standalone Spring Boot application looks a view up by its path below the template root, where a
+// Grails application looks it up below the default /WEB-INF/grails-app/views/.
 jar {
     processResources.exclude('**/*.gsp')
 }
 
 compileGroovyPages {
     source = project.file("${project.projectDir}/src/main/resources/templates")
+    serverpath = '/'
 }
 
 dependencies {
     implementation platform(project(':grails-bom'))
 
-    implementation project(':grails-gsp-spring-boot')
+    // GSP brings the Grails web tier with it. This application uses the part of it that renders a
+    // view, and each exclusion below names a part it does not: it routes and binds with Spring MVC,
+    // it has no domain classes, and it answers in HTML.
+    implementation(project(':grails-gsp-spring-boot')) {
+        exclude group: 'org.apache.grails.web', module: 'grails-web-databinding'
+        exclude group: 'org.apache.grails.databinding', module: 'grails-databinding-core'
+        exclude group: 'org.apache.grails.web', module: 'grails-web-mvc'
+        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-jackson'
+    }
 
     implementation 'org.hibernate.validator:hibernate-validator' // validation
 
-    implementation project(':grails-web-jsp')
+    assets platform(project(':grails-bom')) // the assets configuration takes its versions from the BOM too
+    assets 'org.webjars.npm:bootstrap' // compiled into application.css and application.js, not shipped
+    assets 'org.webjars.npm:bootstrap-icons' // the icons of the theme menu
+
+    // The <asset:...> tag library, the service behind it and the filter that serves what the
+    // pipeline compiled. The application declares them as beans, so it compiles against them.
+    implementation 'cloud.wondrify:asset-pipeline-grails'
+    implementation 'cloud.wondrify:asset-pipeline-core' // AssetPipelineConfigHolder
+
+    implementation(project(':grails-web-jsp')) {
+        exclude group: 'org.apache.grails.web', module: 'grails-web-databinding'
+        exclude group: 'org.apache.grails.databinding', module: 'grails-databinding-core'
+        exclude group: 'org.apache.grails.web', module: 'grails-web-mvc'
+    }
 
     implementation 'org.apache.tomcat.embed:tomcat-embed-jasper' // jsp
     implementation 'org.apache.tomcat.embed:tomcat-embed-el'

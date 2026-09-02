@@ -147,9 +147,13 @@ class Sitemesh3GrailsPlugin extends Plugin {
 
             // The SiteMesh 3 specific key wins; fall back to the legacy
             // grails.views.layout.default key so existing apps keep their
-            // configured default layout when switching.
+            // configured default layout when switching, and finally to SiteMesh's own
+            // sitemesh.decorator.default - the key a Spring Boot application using GSP for views
+            // configures, and the one Sitemesh3EnvironmentPostProcessor derives from the Grails
+            // keys above, so it only decides when neither of them is set.
             String defaultLayout = config.getProperty('grails.sitemesh.default.layout') ?:
-                    config.getProperty('grails.views.layout.default')
+                    config.getProperty('grails.views.layout.default') ?:
+                    config.getProperty('sitemesh.decorator.default')
 
             new Sitemesh3LayoutFinder(groovyPageLocator.ifAvailable).tap {
                 gspReloadEnabled = reloadEnabled

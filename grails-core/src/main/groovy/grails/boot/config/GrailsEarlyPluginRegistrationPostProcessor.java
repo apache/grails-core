@@ -62,6 +62,13 @@ import org.grails.spring.RuntimeSpringConfiguration;
  * guards — auto-configured defaults then back off in favour of the plugin beans, without any
  * override or removal afterwards.
  *
+ * <p>It runs for a Grails application only: {@link GrailsPluginLifecycleInitializer} is registered for
+ * every Spring Boot application that has grails-core on its class path, and this phase stands down
+ * unless {@link grails.boot.GrailsApp} launched the application or one of the context's sources is a
+ * {@link GrailsApplicationClass}. A Spring Boot application
+ * using a Grails library - GSP for its views, say - gets that library's auto-configuration and nothing
+ * else: no plugin manager, no {@link GrailsApplication}, and no beans from plugins it never asked for.
+ *
  * <p>It is added to the context programmatically (see {@link GrailsPluginLifecycleInitializer}), so its
  * {@code postProcessBeanDefinitionRegistry} runs ahead of Boot's {@code ConfigurationClassPostProcessor}
  * (which expands the {@code @AutoConfiguration} imports). Manually-added
@@ -120,6 +127,20 @@ public class GrailsEarlyPluginRegistrationPostProcessor
             return;
         }
 
+        // Two things make a context a Grails application: GrailsApp launched it, which it records by
+        // stashing the sources it was given, or one of its sources is a Grails application class.
+        // This initializer is registered for every Spring Boot application with grails-core on its
+        // class path, and the plugin lifecycle is not something the rest of them asked for: it would
+        // contribute a GrailsApplication, a plugin manager and the beans of every plugin found, over
+        // the top of whatever the libraries they did ask for auto-configure for themselves.
+        boolean launchedByGrails =
+                applicationContext.getBeanFactory().getSingleton(APPLICATION_SOURCE_CLASSES_BEAN_NAME) != null;
+        Class<?>[] applicationSources = resolveApplicationSourceClasses(registry);
+        if (!launchedByGrails && !containsApplicationClass(applicationSources)) {
+            LOG.debug("Not a Grails application — the plugin lifecycle does not run for this context");
+            return;
+        }
+
         // The initializing flag is a system property, so a leak on failure poisons every subsequent
         // context in the same JVM (test forks especially). Reset it if anything below throws; the
         // success path leaves it set and resets on refresh via the listener added at the end.
@@ -139,7 +160,7 @@ public class GrailsEarlyPluginRegistrationPostProcessor
             // register plugin provided classes first, this gives the opportunity
             // for application classes to override those provided by a plugin
             pluginManager.registerProvidedArtefacts(grailsApplication);
-            registerApplicationArtefacts(grailsApplication, registry);
+            registerApplicationArtefacts(grailsApplication, applicationSources);
             // the source-classes stash has been consumed; drop it so it does not linger as an
             // autowire-by-type candidate for the life of the context
             if (applicationContext.getBeanFactory() instanceof DefaultSingletonBeanRegistry singletonRegistry) {
@@ -189,8 +210,16 @@ public class GrailsEarlyPluginRegistrationPostProcessor
         }
     }
 
-    private void registerApplicationArtefacts(DefaultGrailsApplication grailsApplication, BeanDefinitionRegistry registry) {
-        Class<?>[] sources = resolveApplicationSourceClasses(registry);
+    private static boolean containsApplicationClass(Class<?>[] sources) {
+        for (Class<?> source : sources) {
+            if (GrailsApplicationClass.class.isAssignableFrom(source)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void registerApplicationArtefacts(DefaultGrailsApplication grailsApplication, Class<?>[] sources) {
         if (sources.length == 0) {
             LOG.debug("No application source classes available — proceeding without early application artefact discovery");
             return;

@@ -43,6 +43,9 @@ dependencies {
     // Spring Boot 4 modularized spring-boot-autoconfigure into domain-specific modules.
     // WebMvc auto-configuration classes (e.g., WebMvcAutoConfiguration) moved to spring-boot-webmvc.
     api 'org.springframework.boot:spring-boot-webmvc'
+
+    testImplementation 'org.spockframework:spock-core'
+    testRuntimeOnly 'org.slf4j:slf4j-nop'
 }
 
 apply {

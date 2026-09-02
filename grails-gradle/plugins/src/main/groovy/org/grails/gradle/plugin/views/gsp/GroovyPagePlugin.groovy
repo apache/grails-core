@@ -206,7 +206,6 @@ class GroovyPagePlugin implements Plugin<Project> {
         FileCollection classesDirs = resolveClassesDirs(output, project)
         Provider<Directory> destDir = project.layout.buildDirectory.dir('gsp-classes/main')
         Provider<Directory> webappDestDir = project.layout.buildDirectory.dir('gsp-classes/webapp')
-        output?.dir('gsp-classes')
 
         // The Java the rest of the project is built with, so that pages are built with it too.
         // Absent a toolchain this resolves to the JVM running Gradle, which is what compiling
@@ -435,6 +434,22 @@ class GroovyPagePlugin implements Plugin<Project> {
             } else {
                 war.classpath = project.files(destDir, webappDestDir)
             }
+        }
+
+        // The archives below take the compiled pages by copy. They belong on the test class path as
+        // well, so a test of the application loads the same pages it ships - the view registry among
+        // them. They cannot be registered as source set output: that output is what `classes` builds,
+        // and compileGroovyPages runs after `classes`, so it would cycle.
+        //
+        // The main runtime class path is deliberately left alone. A boot archive packages every
+        // directory of it into its own classes directory, and the pages are copied there already, so
+        // each page would arrive twice - and an application run from the build renders its templates
+        // as they are edited, which is what a page compiled ahead of the edit would stand in the way
+        // of.
+        FileCollection compiledPages = project.files(destDir, webappDestDir).builtBy(compileGroovyPages)
+        SourceSet testSourceSet = SourceSets.findSourceSet(project, SourceSet.TEST_SOURCE_SET_NAME)
+        if (testSourceSet != null) {
+            testSourceSet.runtimeClasspath = testSourceSet.runtimeClasspath + compiledPages
         }
 
         tasks.withType(Jar).configureEach { Jar jar ->

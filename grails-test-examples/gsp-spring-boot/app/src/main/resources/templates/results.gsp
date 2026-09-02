@@ -17,7 +17,20 @@
   ~  under the License.
   --%>
 <html>
-	<body>
-		Congratulations ${session.getAttribute("person").name}! You are old enough to sign up for this site.
-	</body>
+    <head>
+        <title>Signed up</title>
+    </head>
+    <body>
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="card-title h5 d-flex align-items-center gap-2">
+                    <i class="bi bi-check-circle-fill text-success"></i>Congratulations ${session.getAttribute("person").name}!
+                </h2>
+                <p class="card-text text-body-secondary mb-4">You are old enough to sign up for this site.</p>
+                <a class="btn btn-outline-primary" href="${request.contextPath}/">
+                    <i class="bi bi-arrow-left me-1"></i>Back to the form
+                </a>
+            </div>
+        </div>
+    </body>
 </html>

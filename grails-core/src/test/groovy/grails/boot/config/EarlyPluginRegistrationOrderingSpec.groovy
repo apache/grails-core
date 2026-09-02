@@ -55,11 +55,8 @@ class EarlyPluginRegistrationOrderingSpec extends Specification {
             def ctx = new AnnotationConfigApplicationContext()
             ctx.register(EarlyOrderingAutoConfigLikeConfig)
 
-        and: 'a plugin discovery promoted to the context, exactly as the bootstrap registry does'
-            def discovery = new DefaultPluginDiscovery([earlyOrderingPluginClass] as Class<?>[])
-            discovery.loadPluginsFromClasspath = false
-            discovery.init(ctx.environment)
-            ctx.beanFactory.registerSingleton(PluginDiscovery.BEAN_NAME, discovery)
+        and: 'a plugin discovery and an application class, exactly as a Grails application has'
+            registerDiscovery(ctx, earlyOrderingPluginClass)
 
         and: 'the early registration phase installed through its real entry point'
             new GrailsPluginLifecycleInitializer().initialize(ctx)
@@ -105,6 +102,51 @@ class EarlyPluginRegistrationOrderingSpec extends Specification {
 
         cleanup:
             ctx.close()
+    }
+
+    void 'an application GrailsApp launched gets the plugin lifecycle whatever its sources are'() {
+        given: 'the sources GrailsApp stashes, none of them a Grails application class'
+            def ctx = new AnnotationConfigApplicationContext()
+            ctx.register(EarlyOrderingAutoConfigLikeConfig)
+            promoteDiscovery(ctx, earlyOrderingPluginClass)
+            ctx.beanFactory.registerSingleton(GrailsEarlyPluginRegistrationPostProcessor.APPLICATION_SOURCE_CLASSES_BEAN_NAME,
+                    [EarlyOrderingAutoConfigLikeConfig] as Class<?>[])
+            new GrailsPluginLifecycleInitializer().initialize(ctx)
+
+        when:
+            ctx.refresh()
+
+        then: 'the plugin bean is registered, so the conditional default backed off'
+            ctx.getBean('myResolver') instanceof EarlyOrderingPluginResolver
+
+        cleanup:
+            ctx.close()
+            Holders.clear()
+            Environment.setInitializing(false)
+    }
+
+    void 'a context that is not a Grails application does not get the plugin lifecycle'() {
+        given: 'plugin discovery promoted to a context with no Grails application class in it'
+            def ctx = new AnnotationConfigApplicationContext()
+            ctx.register(EarlyOrderingAutoConfigLikeConfig)
+            promoteDiscovery(ctx, earlyOrderingPluginClass)
+            new GrailsPluginLifecycleInitializer().initialize(ctx)
+
+        when:
+            ctx.refresh()
+
+        then: 'no plugin contributed a bean, so the conditional default is the one created'
+            ctx.getBean('myResolver') instanceof EarlyOrderingBootDefaultResolver
+
+        and: 'and nothing of the Grails lifecycle was built for an application that did not ask for it'
+            !ctx.beanFactory.containsSingleton(GrailsApplication.APPLICATION_ID)
+            !ctx.beanFactory.containsSingleton(GrailsPluginManager.BEAN_NAME)
+            !Environment.isInitializing()
+
+        cleanup:
+            ctx.close()
+            Holders.clear()
+            Environment.setInitializing(false)
     }
 
     void 'a plugin beanRegistrar bean registered early makes a @ConditionalOnMissingBean auto-config bean defer'() {
@@ -258,7 +300,18 @@ class EarlyPluginRegistrationOrderingSpec extends Specification {
             Environment.setInitializing(false)
     }
 
+    /**
+     * Promotes plugin discovery the way the bootstrap registry does, and stashes an application
+     * class the way {@code GrailsApp} does. Both are what makes a context a Grails application, and
+     * the early phase runs for nothing else.
+     */
     private static void registerDiscovery(AnnotationConfigApplicationContext ctx, Class<?> pluginClass) {
+        promoteDiscovery(ctx, pluginClass)
+        ctx.beanFactory.registerSingleton(GrailsEarlyPluginRegistrationPostProcessor.APPLICATION_SOURCE_CLASSES_BEAN_NAME,
+                [EarlyOrderingApplication] as Class<?>[])
+    }
+
+    private static void promoteDiscovery(AnnotationConfigApplicationContext ctx, Class<?> pluginClass) {
         def discovery = new DefaultPluginDiscovery([pluginClass] as Class<?>[])
         discovery.loadPluginsFromClasspath = false
         discovery.init(ctx.environment)
@@ -286,6 +339,10 @@ class EarlyOrderingGrailsPlugin {
             new EarlyOrderingBootDefaultResolver()
         }
     }
+}
+
+/** Stands in for the application class of a Grails application, which is what GrailsApp stashes. */
+class EarlyOrderingApplication extends GrailsAutoConfiguration {
 }
 
 class EarlyOrderingBootDefaultResolver {
