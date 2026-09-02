@@ -242,6 +242,10 @@ class GrailsGradlePlugin implements Plugin<Project> {
             GrailsExtension grailsExtension = project.extensions.findByType(GrailsExtension)
             if (grailsExtension != null) {
                 c.groovyOptions.forkOptions.jvmArgumentProviders.add(new GrailsCompileStaticArtefactsProvider(grailsExtension.compileStatic))
+
+                // Publish grails { gorm { defaultIdType } } the same way, so GORM's entity
+                // transformation knows what type of id to add to a domain class that declares none.
+                c.groovyOptions.forkOptions.jvmArgumentProviders.add(new GrailsGormIdTypeProvider(grailsExtension.gorm))
             }
             Closure<String> userScriptGenerator = getGroovyCompilerScript(c, project)
             c.doFirst {
@@ -673,6 +677,7 @@ ${importStatements}
 
             Map<String, Object> buildPropertiesContents = [
                     'grails.env': Environment.isSystemSet() ? Environment.getCurrent().getName() : Environment.PRODUCTION.getName(),
+                    (BuildSettings.GORM_DEFAULT_ID_TYPE): project.extensions.getByType(GrailsExtension).gorm.defaultIdType.get(),
                     'info.app.name': project.name,
                     'info.app.version': project.version instanceof Serializable ? project.version : project.version.toString(),
                     'info.app.grailsVersion': project.findProperty('grailsVersion')

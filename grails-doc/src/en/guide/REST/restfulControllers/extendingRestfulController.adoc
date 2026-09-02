@@ -41,6 +41,7 @@ POST,/books,save
 GET,/books/${id},show
 GET,/books/${id}/edit,edit
 PUT,/books/${id},update
+PATCH,/books/${id},patch
 DELETE,/books/${id},delete
 |===
 

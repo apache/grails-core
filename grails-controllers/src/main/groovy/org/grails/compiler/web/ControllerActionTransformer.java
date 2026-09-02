@@ -19,6 +19,7 @@
 package org.grails.compiler.web;
 
 import java.io.File;
+import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URL;
@@ -187,6 +188,8 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
             GrailsResourceUtils.GRAILS_APP_DIR + "/controllers/(.+)Controller\\.groovy");
     private static final String ALLOWED_METHODS_HANDLED_ATTRIBUTE_NAME = "ALLOWED_METHODS_HANDLED";
     private static final ClassNode OBJECT_CLASS = new ClassNode(Object.class);
+    private static final ClassNode STRING_CLASS = new ClassNode(String.class);
+    private static final ClassNode SERIALIZABLE_CLASS = new ClassNode(Serializable.class);
     private static final ClassNode BIND_ALLOWED_CLASS_NODE = new ClassNode(BindAllowed.class);
     public static final AnnotationNode ACTION_ANNOTATION_NODE = new AnnotationNode(
             new ClassNode(Action.class));
@@ -761,7 +764,12 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
         if ((PRIMITIVE_CLASS_NODES.contains(paramTypeClassNode) ||
                 TYPE_WRAPPER_CLASS_TO_CONVERSION_METHOD_NAME.containsKey(paramTypeClassNode))) {
             initializePrimitiveOrTypeWrapperParameter(classNode, wrapper, param, requestParameterName);
-        } else if (paramTypeClassNode.equals(new ClassNode(String.class))) {
+        } else if (paramTypeClassNode.equals(STRING_CLASS) || paramTypeClassNode.equals(SERIALIZABLE_CLASS)) {
+            // Serializable is bound like String - it is the type a domain class identifier is declared
+            // as when the type itself is not known to the action (Long under Hibernate, String under
+            // MongoDB), and it is what GormEntity.get(Serializable) accepts. The comparison is on the
+            // declared type exactly, never assignability, so a command object that happens to
+            // implement Serializable - as many do - is still data bound as a command object.
             initializeStringParameter(classNode, wrapper, param, requestParameterName);
         } else if (!paramTypeClassNode.equals(OBJECT_CLASS)) {
             final Expression bindAllowedExpression = getBindAllowedExpression(source, param, bindAllowedAnnotations);

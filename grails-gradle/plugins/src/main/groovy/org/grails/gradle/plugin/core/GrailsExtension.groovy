@@ -50,6 +50,7 @@ class GrailsExtension {
         this.indy = project.objects.property(Boolean).convention(false)
         this.preserveParameterNames = project.objects.property(Boolean).convention(true)
         this.compileStatic = project.objects.newInstance(GrailsCompileStaticOptions)
+        this.gorm = project.objects.newInstance(GrailsGormOptions)
         this.i18n = project.objects.newInstance(GrailsI18nOptions)
         this.cliAutoProvision = project.objects.property(Boolean).convention(project.provider {
             def fromProperty = project.findProperty('grailsCliAutoProvision')
@@ -154,6 +155,33 @@ class GrailsExtension {
      */
     void compileStatic(@DelegatesTo(value = GrailsCompileStaticOptions, strategy = Closure.DELEGATE_FIRST) Closure<?> configureClosure) {
         configureClosure.delegate = this.compileStatic
+        configureClosure.resolveStrategy = Closure.DELEGATE_FIRST
+        configureClosure.call()
+    }
+
+    /**
+     * GORM compilation options, configured through the nested {@code gorm} block:
+     *
+     * <pre>
+     * grails {
+     *     gorm {
+     *         defaultIdType = 'native'
+     *     }
+     * }
+     * </pre>
+     *
+     * @since 8.0
+     */
+    final GrailsGormOptions gorm
+
+    /**
+     * Configures the nested {@link #gorm} options.
+     *
+     * @param configureClosure a closure applied to the {@link GrailsGormOptions}
+     * @since 8.0
+     */
+    void gorm(@DelegatesTo(value = GrailsGormOptions, strategy = Closure.DELEGATE_FIRST) Closure<?> configureClosure) {
+        configureClosure.delegate = this.gorm
         configureClosure.resolveStrategy = Closure.DELEGATE_FIRST
         configureClosure.call()
     }
