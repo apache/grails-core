@@ -53,6 +53,18 @@ Applications generated for Hibernate 7 consume `grails-hibernate7-bom` — or `g
 This avoids the dependency resolution conflicts that occur when an application generated for Hibernate 5 is manually switched to `grails-data-hibernate7` while the default `grails-bom` remains on the build classpath.
 The `database-migration` feature also selects the matching `grails-data-hibernate7-dbmigration` plugin automatically.
 
+==== Asynchronous Grails Data Application Generation
+
+Grails Forge offers a new `gorm-async` feature that adds the asynchronous programming model for Grails Data — the `AsyncEntity` trait and the `async` namespace — to a generated application:
+
+[source,console]
+----
+grails -t forge create-app --features=gorm-async com.example.demo
+----
+
+The feature layers on top of whichever GORM implementation is selected, defaulting to Hibernate when none is chosen.
+The `grails-datamapping-async` artifact it brings in is intended for direct consumption by applications and libraries, so it moved from the `org.apache.grails.data` group to `org.apache.grails`; see the xref:upgrading#upgrading80x[upgrade guide] for the coordinate change.
+
 ==== Plugin Beans Register Before Spring Boot Auto-Configuration
 
 Grails {grailsMajorVersion} unifies and retimes the plugin lifecycle so that the beans a plugin contributes are registered before Spring Boot processes its auto-configurations.

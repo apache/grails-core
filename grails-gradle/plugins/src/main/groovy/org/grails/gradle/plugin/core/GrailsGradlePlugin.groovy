@@ -18,7 +18,8 @@
  */
 package org.grails.gradle.plugin.core
 
-import java.util.zip.ZipFile
+import java.util.concurrent.Callable
+import java.util.concurrent.ConcurrentHashMap
 
 import grails.util.BuildSettings
 import grails.util.Environment
@@ -41,11 +42,13 @@ import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.attributes.AttributeMatchingStrategy
 import org.gradle.api.attributes.Category
+import org.gradle.api.execution.TaskExecutionGraph
 import org.gradle.api.file.CopySpec
+import org.gradle.api.file.Directory
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.file.FileCollection
-import org.gradle.api.file.Directory
 import org.gradle.api.file.RegularFile
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.plugins.BasePlugin
 import org.gradle.api.plugins.ExtensionAware
 import org.gradle.api.plugins.ExtraPropertiesExtension
@@ -55,9 +58,10 @@ import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.AbstractCopyTask
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSet
-import org.gradle.api.tasks.bundling.Jar
+import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskProvider
+import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.compile.GroovyCompile
 import org.gradle.api.tasks.testing.Test
 import org.gradle.jvm.toolchain.JavaLauncher
@@ -116,6 +120,21 @@ class GrailsGradlePlugin implements Plugin<Project> {
 
     private static final String CLI_PID_FILE_PROPERTY = 'grails.cli.pid.file'
     private static final String RUN_APP_PID_FILE_NAME = 'run-app.pid'
+
+    /**
+     * A {@code configurationScript} configured on a GroovyCompile task, keyed by compile task name
+     * and captured when the task graph is ready, for the generator task to fold into the combined
+     * script it writes. An instance field rather than a static one so it is scoped to this project
+     * and this build, and cannot leak a stale script into a later build in the same daemon.
+     */
+    private final Map<String, File> userGroovyCompilerConfigScripts = new ConcurrentHashMap<>()
+
+    /**
+     * The Grails half of the compiler configuration script, keyed by compile task name. Built while
+     * the compile task is configured so subclasses can declare inputs on it, and evaluated when the
+     * generator task builds its content.
+     */
+    private final Map<String, Closure<String>> grailsCompilerConfigScripts = new ConcurrentHashMap<>()
 
     List<Class<Plugin>> basePluginClasses = [IntegrationTestGradlePlugin] as List<Class<Plugin>>
     List<String> excludedGrailsAppSourceDirs = ['migrations', 'assets']
@@ -223,11 +242,12 @@ class GrailsGradlePlugin implements Plugin<Project> {
 
     private void configureGroovyCompiler(Project project) {
         project.tasks.withType(GroovyCompile).configureEach { GroovyCompile c ->
-            // Use a task-specific config file to avoid overlapping outputs when multiple
-            // GroovyCompile tasks exist in the same project (e.g. compileGroovy, compileTestGroovy).
-            Provider<RegularFile> groovyCompilerConfigFile = project.layout.buildDirectory.file("grailsGroovyCompilerConfig-${c.name}.groovy")
-            c.outputs.file(groovyCompilerConfigFile)
-
+            if (c.name == 'compileGroovy') {
+                // Resource-only changes do not ordinarily invalidate compilation. This file changes
+                // whether the compiler owns the generated imports resource, so adding or deleting it
+                // must run the transform even when no Groovy source changed.
+                AutoConfigurationImportsCompileInput.register(project, c)
+            }
             // Publish the project base directory to the Groovy compiler's worker daemon JVM so the
             // GlobalGrailsClassInjectorTransformation AST transform can locate
             // src/main/resources/META-INF/grails.factories without relying on hardcoded
@@ -247,35 +267,9 @@ class GrailsGradlePlugin implements Plugin<Project> {
                 // transformation knows what type of id to add to a domain class that declares none.
                 c.groovyOptions.forkOptions.jvmArgumentProviders.add(new GrailsGormIdTypeProvider(grailsExtension.gorm))
             }
-            Closure<String> userScriptGenerator = getGroovyCompilerScript(c, project)
-            c.doFirst {
-                // This isn't ideal - we're performing configuration at execution time, but the alternative would be having
-                // to maintain a clean / configuration task and then gradle would want to cache those tasks.  Since the inputs
-                // to those tasks would effectively be the runtimeClasspath, dependency problems can arise if another task
-                // changes the runtimeClasspath. To prevent having to add those tasks into the dependency chain, use doFirst
-                File combinedFile = groovyCompilerConfigFile.get().asFile
-                if (!combinedFile.exists()) {
-                    combinedFile.parentFile.mkdirs()
-                    combinedFile.createNewFile()
-                }
-
-                String configuredScript = null
-                if (c.groovyOptions.configurationScript) {
-                    configuredScript = c.groovyOptions.configurationScript.text?.trim() ?: null
-                }
-                String grailsScript = userScriptGenerator?.call()
-
-                String combinedScripts = """
-                    // Grails groovy compilation configuration to ensure ASTs are applied correctly
-                    
-                    ${grailsScript?.trim() ?: ''}
-
-                    ${configuredScript?.trim() ?: ''}
-                """
-                combinedFile.write(combinedScripts)
-                c.groovyOptions.configurationScript = combinedFile
-            }
         }
+
+        configureGroovyCompilerConfigScript(project)
 
         // Configure indy and log status after evaluation so user's grails { } block has been applied
         GrailsExtension grailsExtension = project.extensions.findByType(GrailsExtension)
@@ -299,39 +293,126 @@ class GrailsGradlePlugin implements Plugin<Project> {
         }
     }
 
+    /**
+     * Wires each {@link GroovyCompile} task to a combined Groovy compiler configuration script
+     * produced by a dedicated generator task.
+     *
+     * <p>The script cannot be written from a {@code doFirst} on the compile task: Gradle finalizes
+     * task properties before any task action runs, so assigning {@code groovyOptions.configurationScript}
+     * from {@code doFirst} fails from Gradle 9.7 on, where {@code GroovyCompileOptions} became a lazy
+     * property — "The value for task ':compileGroovy' property 'groovyOptions.configurationScriptFile'
+     * is final and cannot be changed any further." Once the property is assigned during configuration,
+     * Gradle also treats the script as an input file that has to exist before the compile task runs,
+     * which a producing task guarantees across a {@code clean build} and a {@code doFirst} cannot.</p>
+     */
+    private void configureGroovyCompilerConfigScript(Project project) {
+        // Generators for the source-set compile tasks are registered up front, from the source-set
+        // container: the hook is live, so a source set added after the project is evaluated is
+        // covered, and the tasks are there to be listed. Registering from a GroovyCompile
+        // configuration action instead is not an option — the task container is not mutable while
+        // one of its tasks is being configured, and the attempt throws TaskCreationException.
+        SourceSetContainer sourceSets = project.extensions.findByType(SourceSetContainer)
+        sourceSets?.configureEach { SourceSet sourceSet ->
+            groovyCompilerConfigGenerator(project, sourceSet.getCompileTaskName('groovy'))
+        }
+
+        project.tasks.withType(GroovyCompile).configureEach { GroovyCompile c ->
+            // Built while the compile task is being configured, which is what lets subclasses
+            // declare their own inputs on it (GrailsPluginGradlePlugin registers the project
+            // version and name that it bakes into compiled classes as AST metadata). The script
+            // no longer reads the compile classpath, so there is nothing here that must be
+            // deferred out of configuration.
+            grailsCompilerConfigScripts.put(c.name, getGroovyCompilerScript(c, project))
+
+            // Resolved while the task graph is built, after configuration — a point where the
+            // container is mutable again. That is what lets a GroovyCompile no source set owns,
+            // one a build registers directly, get its generator here rather than go without.
+            c.dependsOn({ groovyCompilerConfigGenerator(project, c.name) } as Callable)
+        }
+
+        // The combined script is assigned once the task graph is ready — the last point before
+        // execution and after every configuration callback has run. Assigning earlier (during
+        // afterEvaluate) loses a configurationScript that a later callback assigns, because that
+        // assignment simply overwrites ours and the Grails imports vanish silently. Only the
+        // compile tasks about to run are touched: nothing else consumes the script.
+        project.gradle.taskGraph.whenReady { TaskExecutionGraph graph ->
+            for (Task task : graph.allTasks) {
+                if (task instanceof GroovyCompile && task.project == project) {
+                    captureGroovyCompilerConfigScript(project, (GroovyCompile) task)
+                }
+            }
+        }
+    }
+
+    private void captureGroovyCompilerConfigScript(Project project, GroovyCompile c) {
+        def combinedFile = groovyCompilerConfigFile(project, c.name).get().asFile
+        // configurationScriptFile is the lazy property that supersedes the configurationScript
+        // File accessor (@ReplacedBy since Gradle 9.7); the eager setter delegates to it, so
+        // a script assigned either way is picked up here.
+        def configurationScriptFile = c.groovyOptions.configurationScriptFile
+        def configured = configurationScriptFile.asFile.getOrNull()
+        if (configured != null && configured != combinedFile) {
+            userGroovyCompilerConfigScripts.put(c.name, configured)
+        } else {
+            userGroovyCompilerConfigScripts.remove(c.name)
+        }
+        configurationScriptFile.set(combinedFile)
+    }
+
+    private TaskProvider<GrailsCompilerConfigScriptTask> groovyCompilerConfigGenerator(Project project, String compileTaskName) {
+        String generatorName = groovyCompilerConfigGeneratorName(compileTaskName)
+        if (project.tasks.names.contains(generatorName)) {
+            return project.tasks.named(generatorName, GrailsCompilerConfigScriptTask)
+        }
+        project.tasks.register(generatorName, GrailsCompilerConfigScriptTask) { GrailsCompilerConfigScriptTask t ->
+            t.description = "Generates the Grails Groovy compiler configuration script for $compileTaskName"
+            // Read when the generator runs. The compile task has been realized by then — resolving
+            // the producer dependency below realizes it — so its script closure is registered.
+            t.grailsScript.set(project.provider { grailsCompilerConfigScripts.get(compileTaskName)?.call() })
+            t.configurationScript.fileProvider(project.provider { userGroovyCompilerConfigScripts.get(compileTaskName) })
+            // Use a task-specific config file to avoid overlapping outputs when multiple
+            // GroovyCompile tasks exist in the same project (e.g. compileGroovy, compileTestGroovy).
+            t.outputFile.set(groovyCompilerConfigFile(project, compileTaskName))
+            // A build may point configurationScript at a file another task produces. Task graph
+            // construction happens before the property is taken over above, so at this point it
+            // still carries whatever the build set, and with it that producer. Wrapping it in a
+            // FileCollection asks Gradle for that producer without resolving the value: depending
+            // on the property directly tries to convert the file itself into a task, and building a
+            // collection from a property with no value fails while dependencies are resolved.
+            t.dependsOn({
+                RegularFileProperty configured = project.tasks.named(compileTaskName, GroovyCompile)
+                        .get().groovyOptions.configurationScriptFile
+                configured.present ? [project.files(configured)] : []
+            } as Callable)
+        }
+    }
+
+    private static String groovyCompilerConfigGeneratorName(String compileTaskName) {
+        "generate${compileTaskName.capitalize()}GrailsCompilerConfig"
+    }
+
+    private static Provider<RegularFile> groovyCompilerConfigFile(Project project, String compileTaskName) {
+        project.layout.buildDirectory.file("grailsGroovyCompilerConfig-${compileTaskName}.groovy")
+    }
+
     protected Closure<String> getGroovyCompilerScript(GroovyCompile compile, Project project) {
         GrailsExtension grails = project.extensions.findByType(GrailsExtension)
 
-        // Everything below runs inside the returned closure, invoked from the task's doFirst:
-        // the isClassOnClasspath probes resolve the compile classpath, which must not happen while
-        // the task is being configured. A GroovyCompile task can be realized from inside an
-        // in-flight resolution of compileClasspath (scheduling any task whose inputs include that
-        // configuration realizes the compile task through the target-JVM attribute's provider
-        // chain), and re-entering that resolution fails on Gradle 9.5+ with
-        // 'Cannot observe dependencies before markAsObserved(String) has been called'.
+        // Evaluated lazily so it reflects the grails { } block regardless of configuration ordering,
+        // but it reads only extension state — never the compile classpath.
         return { ->
             // Start with user-configured imports
             Set<String> starImports = new LinkedHashSet<>(grails.starImports)
 
-            // Add java.time if enabled
-            if (grails.importJavaTime) {
-                starImports.add('java.time')
-            }
-
-            // Add Grails annotation packages and common validation annotations if enabled
+            // Add Grails annotation packages and common validation annotations if enabled.
+            // These are added whether or not the packages are present: a star import of a package
+            // that is not on the classpath contributes no classes and is not an error in Groovy, so
+            // probing the classpath to decide bought nothing and forced the whole script to be
+            // computed at execution time. jakarta.validation.constraints was already unconditional.
             if (grails.importGrailsCommonAnnotations) {
-                // Always add jakarta.validation.constraints
                 starImports.add('jakarta.validation.constraints')
-
-                // Check for grails.gorm.annotation.* classes on classpath
-                if (isClassOnClasspath(compile.classpath, 'grails.gorm.annotation.CreatedDate')) {
-                    starImports.add('grails.gorm.annotation')
-                }
-
-                // Check for grails.plugin.scaffolding.annotation.* classes on classpath
-                if (isClassOnClasspath(compile.classpath, 'grails.plugin.scaffolding.annotation.Scaffold')) {
-                    starImports.add('grails.plugin.scaffolding.annotation')
-                }
+                starImports.add('grails.gorm.annotation')
+                starImports.add('grails.plugin.scaffolding.annotation')
             }
 
             // Return null if no imports are needed
@@ -347,33 +428,6 @@ ${importStatements}
                     }
                 }
             """ as String
-        }
-    }
-
-    /**
-     * Check if a class exists on the given classpath.
-     * This detects classes from any source: direct dependencies, transitive dependencies, or local jars.
-     *
-     * @param classpath The FileCollection representing the classpath to search
-     * @param className The fully qualified class name to look for (e.g., 'grails.gorm.annotation.CreatedDate')
-     * @return true if the class is found on the classpath
-     */
-    private static boolean isClassOnClasspath(FileCollection classpath, String className) {
-        def classEntry = className.replace('.', '/') + '.class'
-        classpath.files.any { f ->
-            try {
-                if (f.file && f.name.endsWith('.jar')) {
-                    new ZipFile(f).withCloseable { zip ->
-                        zip.getEntry(classEntry) != null
-                    }
-                } else if (f.directory) {
-                    new File(f, classEntry).exists()
-                } else {
-                    false
-                }
-            } catch (Exception ignored) {
-                false
-            }
         }
     }
 

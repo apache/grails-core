@@ -58,6 +58,8 @@ import grails.io.IOUtils
 import grails.plugins.metadata.GrailsPlugin
 import grails.util.GrailsNameUtils
 import org.apache.grails.common.compiler.GroovyTransformOrder
+import org.grails.compiler.beans.AutoConfigurationImportsWriter
+import org.grails.compiler.beans.GrailsBeansASTTransformation
 import org.grails.core.io.support.GrailsFactoriesLoader
 import org.grails.io.support.AntPathMatcher
 import org.grails.io.support.GrailsResourceUtils
@@ -140,6 +142,14 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
             )
         }
 
+        // Seeded before anything is transformed: an explicitly annotated descriptor is compiled by
+        // the local transform after this runs, and the directory resolved here is the only one that
+        // is right under Groovy-Eclipse.
+        for (def classNode : source.AST.classes) {
+            classNode.putNodeMetaData(
+                    GrailsBeansASTTransformation.RESOLVED_TARGET_DIRECTORY_METADATA, compilationTargetDirectory)
+        }
+
         for (def classNode : source.AST.classes.toList()) { // toList() to avoid concurrent modification exception
             def projectName = resolveProjectName(classNode)
             def projectVersion = resolveProjectVersion(classNode)
@@ -194,6 +204,12 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
             // create or update grails-plugin.xml
             generatePluginXml(pluginClassNode, pluginVersion, transformedClassNames, pluginXmlFile)
         }
+
+        // The generated auto-configurations register themselves as they are created, but a descriptor
+        // that was deleted, or that no longer has a beans closure, creates nothing and so says nothing
+        // about the entry it used to leave behind. This runs for every source unit of a Grails
+        // project, which is what makes the entry go when the class it names does.
+        AutoConfigurationImportsWriter.reconcile(compilationTargetDirectory, compilationUnit, source)
     }
 
     /**
@@ -372,25 +388,12 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
             return
         }
 
-        ASTTransformation transformation
-        try {
-            transformation = (ASTTransformation) getClass().classLoader
-                    .loadClass('org.grails.compiler.beans.GrailsBeansASTTransformation')
-                    .getDeclaredConstructor()
-                    .newInstance()
-        }
-        catch (ClassNotFoundException ignored) {
-            // grails-beans-dsl is off the compile classpath, so the beans property is left alone -
-            // silently, which is only acceptable because it cannot happen: grails-core declares the
-            // module api (see grails-core/build.gradle), so it reaches every project that has
-            // grails-core at all. Narrowing that scope would turn this branch into a live path where
-            // a DSL-shaped beans block registers nothing and says nothing about it.
-            return
-        }
-
-        if (transformation instanceof CompilationUnitAware) {
-            ((CompilationUnitAware) transformation).compilationUnit = compilationUnit
-        }
+        // Referenced directly, as the registering below already does. grails-core declares
+        // grails-beans-dsl api (see grails-core/build.gradle), so it reaches every project that has
+        // grails-core at all; loading it reflectively described a class path this cannot be compiled
+        // against, and guarded against something that would now fail on the next line regardless.
+        GrailsBeansASTTransformation transformation = new GrailsBeansASTTransformation()
+        transformation.compilationUnit = compilationUnit
         transformation.visit([new AnnotationNode(GRAILS_BEANS_ANNOTATION), classNode] as ASTNode[], source)
     }
 
