@@ -35,8 +35,7 @@ grails {
     // Allow CI to toggle Groovy invokedynamic (indy) via -PgrailsIndy=true
     // This enables testing functional tests with both indy enabled and disabled.
     // See: https://github.com/apache/grails-core/issues/15321
-    // Framework modules that do not apply this plugin inherit the same default
-    // from org.apache.grails.buildsrc.compile (CompilePlugin).
+    // Published framework modules inherit the same default from CompilePlugin.
     if (project.hasProperty('grailsIndy')) {
         indy = project.property('grailsIndy').toString().trim().toBoolean()
     }

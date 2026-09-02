@@ -57,10 +57,6 @@ tasks.named('test') {
     useJUnitPlatform()
 }
 
-// This project compiles CompilePlugin itself, so it cannot apply that plugin.
-// Keep the same Grails 8 default (indy off) as CompilePlugin. See #15293.
-apply from: layout.projectDirectory.file('../../gradle/groovy-indy.gradle')
-
 gradlePlugin {
     plugins {
         register('compilePlugin') {
