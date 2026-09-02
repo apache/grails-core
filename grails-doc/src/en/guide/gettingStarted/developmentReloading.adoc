@@ -25,6 +25,8 @@ Spring Boot Developer Tools is a feature of Spring Boot that provides automatic 
 
 For larger applications, you may need to adjust the default settings for optimal performance.  This works well until your application becomes very large, at which point restarts may take longer or fail.
 
+When Spring Boot Developer Tools is on the classpath, Grails bootstraps Hibernate with DevTools' restart class loader. That keeps domain class identity consistent with Hibernate's metamodel without moving GORM or Grails jars onto the restart loader. Without that alignment, GORM calls such as `Role.count()` and `save()` can fail with `IllegalArgumentException: Not an entity` while `get()` and HQL still work.
+
 Please see the Spring Boot documentation for more details: https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#using-boot-devtools[Spring Boot Developer Tools].
 
 NOTE: You can use Spring Developer Tools in combination with a browser extension to get automatic browser

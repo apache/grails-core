@@ -264,6 +264,30 @@ class HibernateMappingContextConfigurationSpec extends Specification {
         config.getProperties().get(AvailableSettings.CLASSLOADERS).is(cl)
     }
 
+    def "setApplicationContext prefers RestartClassLoader thread context class loader over the context class loader"() {
+        given:
+        def config = new HibernateMappingContextConfiguration()
+        ClassLoader contextLoader = new URLClassLoader([] as URL[], Thread.currentThread().contextClassLoader)
+        ApplicationContext appCtx = Stub(ApplicationContext) {
+            containsBean("dataSource") >> false
+            getClassLoader() >> contextLoader
+        }
+        ClassLoader restartLoader = new GroovyClassLoader().parseClass(
+                'class RestartClassLoader extends ClassLoader {}'
+        ).getDeclaredConstructor().newInstance() as ClassLoader
+        def originalCl = Thread.currentThread().contextClassLoader
+
+        when:
+        Thread.currentThread().contextClassLoader = restartLoader
+        config.setApplicationContext(appCtx)
+
+        then:
+        config.getProperties().get(AvailableSettings.CLASSLOADERS).is(restartLoader)
+
+        cleanup:
+        Thread.currentThread().contextClassLoader = originalCl
+    }
+
     def "setApplicationContext when datasource property already set does not overwrite it"() {
         given:
         def config = new HibernateMappingContextConfiguration()

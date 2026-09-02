@@ -76,6 +76,7 @@ import org.grails.datastore.gorm.GormEntity;
 import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.reflect.DevToolsClassLoaders;
 import org.grails.orm.hibernate.EventListenerIntegrator;
 import org.grails.orm.hibernate.GrailsSessionContext;
 import org.grails.orm.hibernate.HibernateEventListeners;
@@ -124,7 +125,7 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
             properties.put(Environment.DATASOURCE, applicationContext.getBean(dsName));
         }
         properties.put(Environment.CURRENT_SESSION_CONTEXT_CLASS, currentSessionContext.getName());
-        properties.put(AvailableSettings.CLASSLOADERS, applicationContext.getClassLoader());
+        properties.put(AvailableSettings.CLASSLOADERS, DevToolsClassLoaders.resolve(applicationContext.getClassLoader()));
     }
 
     /**
@@ -137,12 +138,8 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
         DataSource source = connectionSource.getSource();
         getProperties().put(Environment.DATASOURCE, source);
         getProperties().put(Environment.CURRENT_SESSION_CONTEXT_CLASS, GrailsSessionContext.class.getName());
-        final ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
-        if (contextClassLoader != null && contextClassLoader.getClass().getSimpleName().equalsIgnoreCase("RestartClassLoader")) {
-            getProperties().put(AvailableSettings.CLASSLOADERS, contextClassLoader);
-        } else {
-            getProperties().put(AvailableSettings.CLASSLOADERS, connectionSource.getClass().getClassLoader());
-        }
+        getProperties().put(AvailableSettings.CLASSLOADERS,
+                DevToolsClassLoaders.resolve(connectionSource.getClass().getClassLoader()));
     }
 
     /**
@@ -239,14 +236,9 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
         SessionFactory sessionFactory;
 
         Object classLoaderObject = getProperties().get(AvailableSettings.CLASSLOADERS);
-        ClassLoader appClassLoader;
-
-        if (classLoaderObject instanceof ClassLoader) {
-            appClassLoader = (ClassLoader) classLoaderObject;
-        }
-        else {
-            appClassLoader = getClass().getClassLoader();
-        }
+        ClassLoader storedClassLoader = classLoaderObject instanceof ClassLoader ?
+                (ClassLoader) classLoaderObject : getClass().getClassLoader();
+        ClassLoader appClassLoader = DevToolsClassLoaders.resolve(storedClassLoader);
 
         ConfigurationHelper.resolvePlaceHolders(getProperties());
 
