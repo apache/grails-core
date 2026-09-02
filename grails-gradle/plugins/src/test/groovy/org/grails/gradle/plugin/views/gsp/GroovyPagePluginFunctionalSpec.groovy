@@ -62,4 +62,35 @@ class GroovyPagePluginFunctionalSpec extends GradleSpecification {
         result.output.contains('WEBAPP_HAS_PROVIDED_COMPILE=true')
         result.output.contains('WEBAPP_HAS_CLASSES_DIR=true')
     }
+
+    def "the page opt-in reaches both the build's page compiler and the JVM running the application"() {
+        given:
+        setupTestResourceProject('gsp-compile-static')
+
+        when:
+        def result = executeTask('inspectGspCompileStatic')
+
+        then: 'the pages the build compiles ahead of time'
+        result.output.contains('PAGE_COMPILER=true')
+        result.output.contains('WEBAPP_PAGE_COMPILER=true')
+
+        and: 'and the pages compiled again while the application runs'
+        result.output.contains('RUNNING_APPLICATION=true')
+
+        and: 'strictness travels with it, to both'
+        result.output.contains('PAGE_COMPILER_STRICT=true')
+        result.output.contains('RUNNING_APPLICATION_STRICT=true')
+    }
+
+    def "pages compile the way configuration says where the opt-in is not set"() {
+        given:
+        setupTestResourceProject('gsp-compile-classpath')
+
+        when:
+        def result = executeTask('inspectGspCompileClasspath')
+
+        then: 'the option is read only where the grails extension exists, so this project keeps the default'
+        result.output.contains('PAGE_COMPILER_STATIC=false')
+        result.output.contains('WEBAPP_PAGE_COMPILER_STATIC=false')
+    }
 }

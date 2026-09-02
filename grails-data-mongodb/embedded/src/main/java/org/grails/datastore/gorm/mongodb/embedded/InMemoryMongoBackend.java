@@ -33,7 +33,6 @@ import org.springframework.util.ClassUtils;
  * anything. An application that needs those should add flapdoodle and let
  * {@link FlapdoodleMongoBackend} run a real mongod instead.
  *
- * @author Grails
  * @since 8.0
  */
 public class InMemoryMongoBackend implements EmbeddedMongoBackend {
@@ -59,6 +58,13 @@ public class InMemoryMongoBackend implements EmbeddedMongoBackend {
                     EmbeddedMongoInitializer.DATABASE_DIR + ". Add " +
                     "de.flapdoodle.embed:de.flapdoodle.embed.mongo to run a real mongod that can, or remove the " +
                     "directory to accept a database that is discarded when the server stops.");
+        }
+
+        if (settings.isReplicaSet()) {
+            throw new IllegalStateException("The " + NAME + " backend reimplements the wire protocol and cannot be a " +
+                    "replica set, which is what a transaction, a change stream and a causally consistent read need. " +
+                    "Add de.flapdoodle.embed:de.flapdoodle.embed.mongo to run a real mongod that can, or unset " +
+                    EmbeddedMongoInitializer.REPLICA_SET + " and " + EmbeddedMongoInitializer.TRANSACTIONAL + ".");
         }
 
         MemoryBackend backend = new RetainingMemoryBackend();
@@ -98,6 +104,8 @@ public class InMemoryMongoBackend implements EmbeddedMongoBackend {
 
         private volatile MongoServer server;
 
+        private volatile boolean running = true;
+
         /**
          * The port that was actually bound, which is not the requested one when that was 0.
          * Restarting reuses it so the url published into the environment stays correct.
@@ -123,6 +131,12 @@ public class InMemoryMongoBackend implements EmbeddedMongoBackend {
         @Override
         public void stop() {
             this.server.shutdownNow();
+            this.running = false;
+        }
+
+        @Override
+        public boolean isRunning() {
+            return this.running;
         }
 
         @Override
@@ -130,6 +144,7 @@ public class InMemoryMongoBackend implements EmbeddedMongoBackend {
             MongoServer restarted = new MongoServer(this.backend);
             restarted.bind("localhost", this.port);
             this.server = restarted;
+            this.running = true;
         }
     }
 }

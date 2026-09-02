@@ -1,0 +1,247 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+GSP pages are compiled dynamically by default. A page can instead be statically compiled, so that expressions and scriptlets in the page are type checked at compile time and dispatched without dynamic lookup at render time.
+
+Static compilation is enabled per page with the `compileStatic` page directive:
+
+[,xml]
+----
+<%@ page compileStatic="true" %>
+----
+
+==== Declaring the Model
+
+A page can state what it is rendered with, using the `model` page directive, which names and types each variable:
+
+[,xml]
+----
+<%@ page model="Book book" %>
+<h1>${book.title}</h1>
+----
+
+Separate multiple declarations with semicolons, or use a multi-line value:
+
+[,xml]
+----
+<%@ page model="Book book; List<Review> reviews" %>
+----
+
+Because a declared model is what makes a page type checkable, the `model` directive enables static compilation on its own — `compileStatic="true"` is implied and does not need to be given as well.
+
+Declaring a model also states that the model is complete, so reading any name outside it is reported rather than left to the render:
+
+----
+The variable [publisher] is undeclared.
+----
+
+A page that declares no model has stated nothing, and reads what it is rendered with exactly as a dynamically compiled page does. This is what makes static compilation adoptable for views that were never written with it in mind: what the page does say is checked, and what it does not say still works.
+
+==== Names Supplied by the Framework
+
+The names bound into every page do not need to be declared. Most carry their real types and are checked like anything else:
+
+[,xml]
+----
+<%@ page compileStatic="true" %>
+<g:if test="${params.id}">${request.contextPath} for ${controllerName}/${actionName}</g:if>
+----
+
+|===
+|Name |Type
+
+|`params`
+|link:{apiDocs}grails/util/TypeConvertingMap.html[TypeConvertingMap], so `params.id` and `params.int('max')` both resolve
+
+|`flash`
+|link:{apiDocs}grails/web/mvc/FlashScope.html[FlashScope]
+
+|`request`, `response`, `session`
+|`HttpServletRequest`, `HttpServletResponse`, `HttpSession`
+
+|`application`, `servletContext`
+|`ServletContext` — the same object under both names
+
+|`webRequest`
+|`GrailsWebRequest`
+
+|`controllerName`, `actionName`, `namespace`
+|`String`
+|===
+
+
+Being typed, they are checked: `${request.contextPathTypo}` is a compilation error. The typed attribute converters described in link:theWebLayer.html#typeConverters[Simple Type Converters] resolve on them for the same reason.
+
+`grailsApplication` and `applicationContext` are the exception and are resolved dynamically. What pages read from them is answered at runtime rather than declared — `grailsApplication.controllerClasses` is matched against the artefact types an application happens to have, which no type can enumerate — so they are read the way a dynamically compiled page reads them.
+
+A page may still declare a model variable using one of these names, and the declared type then applies for that page — declaring `Map params` gives the page a `Map`, with no other type imposed on it.
+
+==== Names a Page Introduces
+
+A page introduces names of its own through the `var` and `status` attributes of the tags it calls, and those do not need declaring either:
+
+[,xml]
+----
+<%@ page compileStatic="true" %>
+<g:set var="total" value="${books.size()}"/>
+<g:each in="${books}" var="book" status="i">${i}. ${book.title}</g:each>
+Total: ${total}
+----
+
+What such a name holds is decided by the tag when the page renders, so it is read dynamically rather than reported. Reading a member from it is fine; applying an operator to it is not, because nothing established what it holds:
+
+[,xml]
+----
+Total: ${total + 1}
+----
+----
+The type of [total] is not known here, and an operator cannot be applied to it.
+----
+
+Giving the name a type answers that, and the value is converted to it:
+
+[,xml]
+----
+<g:set type="int" var="total" value="${books.size()}"/>
+Total: ${total + 1}
+----
+
+`type` declares a local of that type and still writes the name into the page scope, so anything reading it afterwards is unaffected. It is only meaningful alongside `value`: a tag given a body or a `bean` produces its value as it runs, so there is nothing to declare from, and combining them is an error.
+
+Where the name is only read by the page itself, `<g:def>` declares it without the scope write:
+
+[,xml]
+----
+<g:def type="int" var="total" value="${books.size()}"/>
+----
+
+==== Requiring Every Page to Declare What It Reads
+
+Reporting a name a page never declared can be asked for everywhere, rather than only in the pages that declare a model:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    views:
+        gsp:
+            compileStatic: true
+            compileStaticConfig:
+                strict: true
+----
+
+or from the build:
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    compileStatic {
+        gsp = true
+        strictGsp = true
+    }
+}
+----
+
+With this on, every page is held to what it declares, which is the strongest guarantee available and the most work to adopt. Without it, only the pages that declare a model are.
+
+==== Enabling Static Compilation for Every Page
+
+Rather than adding the directive to each page, static compilation can be made the default for an entire application with the `grails.views.gsp.compileStatic` setting:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    views:
+        gsp:
+            compileStatic: true
+----
+
+The setting applies both to pages precompiled by the build and to pages compiled on the fly while the application runs in development mode, so a page behaves the same way in both.
+
+The same thing can be asked for from the build instead, which is useful where a project prefers to keep build options together:
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    compileStatic {
+        gsp = true
+    }
+}
+----
+
+This states the same `grails.views.gsp.compileStatic` setting, for both the pages the build compiles ahead of time and the application it runs, so a page compiles the same way in either. Where the build states it, it takes precedence over `application.yml` — the same order a system property takes over configuration in a running application. Set it in one place or the other rather than both.
+
+NOTE: `gsp` is not included in the `compileStatic { all = true }` shortcut described in link:staticTypeCheckingAndCompilation.html#grailsCompileStatic[GrailsCompileStatic]. The artefact opt-ins there fail on code that is doubtful anyway, whereas this one reports an operator applied to a value whose type nothing established, which most applications that never declared a page model have somewhere, so it is never enabled as a side effect of asking for everything.
+
+An individual page always wins over either, and can opt back out:
+
+[,xml]
+----
+<%@ page compileStatic="false" %>
+----
+
+[NOTE]
+====
+Enabling this for an existing application is not entirely transparent. A page that reads a model variable it has not declared still compiles -- it reads it the way a dynamically compiled page does -- but two things are reported that were not before, and `compileStatic="false"` turns a page back off while it is dealt with.
+
+The first accounts for most of the work: an operator applied to a value whose type nothing established, such as `${a + b}` or `${rows[0]}`, is reported whether or not strictness is on. Declare the value in the `model` directive, or give it a type where the page introduces it.
+
+A model variable sharing a name with one the framework supplies -- `params`, `request`, `response`, `session`, `application`, `servletContext`, `flash`, `webRequest`, `controllerName`, `actionName` or `namespace` -- is no longer read as the model supplied it: the page reads it with the type the framework value has. Reading a member that type does not have is a compilation error the build reports. Passing a value of another type is not: it fails at render with a `GroovyCastException`, so precompiling the views will not catch it. Rename the model key, or declare it in the `model` directive to keep your own type.
+====
+
+==== Tag Libraries
+
+Tags are dispatched dynamically even in a statically compiled page, but only for namespaces the page knows about. The `g`, `tmpl`, `f`, `asset` and `plugin` namespaces are allowed by default:
+
+[,xml]
+----
+<%@ page compileStatic="true" %>
+${g.message(code: 'book.list.title')}
+----
+
+A tag library compiled ahead of the page needs no declaration either: link:../guide/theWebLayer.html#compiledTags[the tag library index] states which namespaces exist, and every namespace on the compile classpath is allowed from it. What still needs declaring is a namespace filled in while the application runs -- one registered at runtime, or contributed by a plugin built before descriptors existed -- since nothing describes it when the page is compiled.
+
+Such a namespace is otherwise treated as an undeclared variable, which is reported in a page held to the names it declares and resolved dynamically in one that is not. Declare the extra namespaces for a single page with the `taglibs` page directive:
+
+[,xml]
+----
+<%@ page compileStatic="true" taglibs="myns, othertags" %>
+${myns.formatPrice(value: book.price)}
+----
+
+or for every page with the `grails.views.gsp.compileStaticConfig.taglibs` setting, given either as a list or as a comma separated string:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    views:
+        gsp:
+            compileStaticConfig:
+                taglibs:
+                    - myns
+                    - othertags
+----
+
+The declared namespaces are added to the defaults rather than replacing them.
+
+TIP: The other opt-ins in the `grails { compileStatic { } }` block described in link:staticTypeCheckingAndCompilation.html#grailsCompileStatic[GrailsCompileStatic] apply to controllers, services and tag library classes. `gsp` applies to pages, and is the one opt-in there that `all = true` does not include.

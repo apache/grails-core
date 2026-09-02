@@ -1,0 +1,10 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+    id 'org.graalvm.buildtools.native' version '1.1.7'
+}
+
+tasks.register('inspectDefaults') {
+    doLast {
+        println "INDY=${project.extensions.getByName('grails').indy.get()}"
+    }
+}

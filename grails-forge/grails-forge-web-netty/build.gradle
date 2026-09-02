@@ -25,6 +25,8 @@ plugins {
     id 'com.gradleup.shadow'
 }
 
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+
 version = projectVersion
 group = 'org.apache.grails.forge'
 
@@ -122,12 +124,22 @@ tasks.named('dockerBuild') {
     images = [findProperty('dockerImageName') ?: 'grailsforge']
 }
 
-tasks.register('awsElasticBeanstalk', Zip) {
+['com.gradleup.shadow', 'com.github.johnrengelman.shadow'].each { pluginId ->
+    pluginManager.withPlugin(pluginId) {
+        tasks.named('shadowJar', ShadowJar).configure {
+            reproducibleFileOrder = true
+            preserveFileTimestamps = false
+        }
+    }
+}
+
+TaskProvider<Zip> awsElasticBeanstalk = tasks.register('awsElasticBeanstalk', Zip) {
     dependsOn('shadowJar')
     archiveFileName.set('grails-forge-web-netty-aws.zip')
     destinationDirectory.set(layout.buildDirectory.dir('distributions'))
     reproducibleFileOrder = true
     preserveFileTimestamps = false
+
     from({ tasks.named('shadowJar').get().archiveFile.get() }) {
         rename { 'app.jar' }
     }

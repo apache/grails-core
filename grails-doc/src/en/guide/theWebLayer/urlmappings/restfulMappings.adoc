@@ -37,6 +37,7 @@ POST,/books,save
 GET,/books/${id},show
 GET,/books/${id}/edit,edit
 PUT,/books/${id},update
+PATCH,/books/${id},patch
 DELETE,/books/${id},delete
 |===
 
@@ -74,6 +75,7 @@ post "/books"(controller:"book", action:"save")
 get "/books/$id"(controller:"book", action:"show")
 get "/books/$id/edit"(controller:"book", action:"edit")
 put "/books/$id"(controller:"book", action:"update")
+patch "/books/$id"(controller:"book", action:"patch")
 delete "/books/$id"(controller:"book", action:"delete")
 ----
 
@@ -101,6 +103,7 @@ POST,/book,save
 GET,/book,show
 GET,/book/edit,edit
 PUT,/book,update
+PATCH,/book,patch
 DELETE,/book,delete
 |===
 
@@ -129,8 +132,9 @@ GET,/books/${bookId}/authors,index
 GET,/books/${bookId}/authors/create,create
 POST,/books/${bookId}/authors,save
 GET,/books/${bookId}/authors/${id},show
-GET,/books/${bookId}/authors/edit/${id},edit
+GET,/books/${bookId}/authors/${id}/edit,edit
 PUT,/books/${bookId}/authors/${id},update
+PATCH,/books/${bookId}/authors/${id},patch
 DELETE,/books/${bookId}/authors/${id},delete
 |===
 

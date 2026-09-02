@@ -41,6 +41,9 @@ dependencies {
     implementation 'org.webjars:bootstrap:3.3.6'
     implementation 'org.webjars:jquery:2.2.0'
 
+    // Starts the CAS server the app authenticates against; see CasContainerHolder
+    implementation 'org.testcontainers:testcontainers'
+
     compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
@@ -52,6 +55,28 @@ dependencies {
     runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
+
+    integrationTestImplementation 'org.apache.grails:grails-testing-support-web'
+    integrationTestImplementation 'org.spockframework:spock-core'
+}
+
+tasks.withType(Test).configureEach {
+    // Lets CI pin or matrix the CAS server version, mirroring -PredisContainerVersion
+    if (project.hasProperty('casContainerVersion')) {
+        systemProperty('casContainerVersion', project.property('casContainerVersion'))
+    }
+}
+
+tasks.named('bootRun') {
+    // bootRun forks its own JVM, so the properties that select a CAS configuration have to be
+    // forwarded explicitly. Without TESTCONFIG the proxy settings are never configured and
+    // /secure/proxyStatus can only report that no proxy ticket is available.
+    ['TESTCONFIG', 'casContainerVersion'].each { String name ->
+        String value = System.getProperty(name) ?: project.findProperty(name)
+        if (value) {
+            systemProperty(name, value)
+        }
+    }
 }
 
 apply {

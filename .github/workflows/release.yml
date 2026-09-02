@@ -101,7 +101,7 @@ jobs:
       - name: "🧩 Run grails-forge assemble"
         working-directory: grails-forge
         run: ./gradlew assemble -PgithubBranch=${TARGET_BRANCH}
-      - name: "📦 Generate grails-core docs (to assert that is works, before proceeding)"
+      - name: "📦 Generate grails-core docs (to assert that it works, before proceeding)"
         # grails-doc has no code dependency on the Micronaut island, and on this JDK 21
         # runner settings.gradle auto-prunes the island from the project graph so Gradle
         # does not try to resolve its JDK 25 deps during configuration.

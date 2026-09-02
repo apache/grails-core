@@ -26,7 +26,6 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.ToString
 import org.codehaus.groovy.ast.ASTNode
-import org.codehaus.groovy.ast.AnnotatedNode
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
@@ -58,6 +57,7 @@ import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.AbstractASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
 import org.codehaus.groovy.transform.TransformWithPriority
+import org.codehaus.groovy.transform.trait.TraitComposer
 
 import jakarta.persistence.Embeddable
 import jakarta.persistence.Id
@@ -109,6 +109,39 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
     public static final AnnotationNode JPA_TRANSIENT_ANNOTATION_NODE = new AnnotationNode(ClassHelper.make(Transient))
 
     private static final String CREATE_NAMED_QUERY = 'createNamedQuery'
+
+    /**
+     * The system property, published by the Grails Gradle plugin from
+     * {@code grails { gorm { defaultIdType = '...' } }}, that selects the type of the {@code id}
+     * property injected into an entity that declares none of its own.
+     *
+     * <p>{@link #DEFAULT_ID_TYPE_LONG}, the default, injects {@code Long} for every entity as every
+     * earlier release did. {@link #DEFAULT_ID_TYPE_NATIVE} asks the GORM implementation the entity is
+     * mapped with for its own default, through
+     * {@link GormEntityTraitProvider#getDefaultIdentityType()}, so a Mongo entity is given a
+     * {@code String} id while a Hibernate entity keeps {@code Long}.</p>
+     *
+     * <p>An entity that declares an {@code id} keeps the type it declares either way.</p>
+     *
+     * @since 8.0
+     */
+    public static final String DEFAULT_ID_TYPE_PROPERTY = 'grails.gorm.defaultIdType'
+
+    /**
+     * The {@link #DEFAULT_ID_TYPE_PROPERTY} value that gives every entity a {@code Long} id. The
+     * default where the property is unset.
+     *
+     * @since 8.0
+     */
+    public static final String DEFAULT_ID_TYPE_LONG = 'long'
+
+    /**
+     * The {@link #DEFAULT_ID_TYPE_PROPERTY} value that defers to the GORM implementation the entity is
+     * mapped with.
+     *
+     * @since 8.0
+     */
+    public static final String DEFAULT_ID_TYPE_NATIVE = 'native'
     private static ClassNode GORM_ENTITY_CLASS_NODE = ClassHelper.make(GormEntity)
     private static MethodNode ADD_TO_METHOD_NODE = GORM_ENTITY_CLASS_NODE.getMethods('addTo').get(0)
     private static MethodNode REMOVE_FROM_METHOD_NODE = GORM_ENTITY_CLASS_NODE.getMethods('removeFrom').get(0)
@@ -139,18 +172,10 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
 
     @Override
     void visit(ASTNode[] astNodes, SourceUnit sourceUnit) {
-        AnnotatedNode parent = (AnnotatedNode) astNodes[1]
-        AnnotationNode node = (AnnotationNode) astNodes[0]
-
-        if (!(astNodes[0] instanceof AnnotationNode) || !(astNodes[1] instanceof AnnotatedNode)) {
-            throw new RuntimeException("Internal error: wrong types: ${node.getClass()} / ${parent.getClass()}")
-        }
-
-        if (!MY_TYPE.equals(node.getClassNode()) || !(parent instanceof ClassNode)) {
+        ClassNode cNode = LocalTransformationSupport.resolveAnnotatedClassOrNull(astNodes, MY_TYPE)
+        if (cNode == null) {
             return
         }
-
-        ClassNode cNode = (ClassNode) parent
 
         visit(cNode, sourceUnit)
     }
@@ -180,7 +205,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
             AstUtils.addAnnotationIfNecessary(classNode, Entity)
             try {
                 AstUtils.addAnnotationIfNecessary(classNode, (Class<? extends Annotation>) getClass().classLoader.loadClass('grails.persistence.Entity'))
-            } catch (Throwable e) {
+            } catch (Throwable pluginClassLoaderFailure) {
                 try {
                     def cl = Thread.currentThread().contextClassLoader
                     AstUtils.addAnnotationIfNecessary(classNode, (Class<? extends Annotation>) Class.forName('grails.persistence.Entity', true, cl))
@@ -210,9 +235,14 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
         def rxEntityClassNode = AstUtils.findInterface(classNode, 'grails.gorm.rx.RxEntity')
         boolean isRxEntity = rxEntityClassNode != null
 
+        // Resolved once, and only where it was already being resolved: the same provider decides both
+        // the injected identity type and the entity trait, so the two cannot disagree. An RX entity
+        // picks no trait, so it resolves nothing and keeps the Long id it has always been given.
+        GormEntityTraitProvider traitProvider = isRxEntity ? null : resolveTraitProvider(classNode, sourceUnit)
+
         if (!isJpaEntity) {
             // Add default id
-            injectIdProperty(classNode)
+            injectIdProperty(classNode, sourceUnit, traitProvider)
         }
 
         if (!isRxEntity && !isJpaEntity) {
@@ -231,7 +261,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
         MethodNode getAssociationMethodNode = GET_ASSOCIATION_ID_METHOD_NODE
 
         if (!isRxEntity) {
-            def classGormEntityTrait = pickGormEntityTrait(classNode, sourceUnit)
+            Class<?> classGormEntityTrait = traitProvider?.entityTrait ?: GormEntity
             AstUtils.injectTrait(classNode, classGormEntityTrait)
         } else {
             addToMethodNode = rxEntityClassNode.getMethods('addTo').get(0)
@@ -241,7 +271,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
 
         // inject associations
         if (isJpaEntity) {
-            injectAssociationsForJpaEntity(classNode, addToMethodNode, removeFromMethodNode, getAssociationMethodNode)
+            injectAssociationsForJpaEntity(classNode, addToMethodNode, removeFromMethodNode)
         } else {
             injectAssociations(classNode, addToMethodNode, removeFromMethodNode, getAssociationMethodNode)
         }
@@ -326,7 +356,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
                                         Parameter[] newParams = hasParameters ? AstUtils.copyParameters(closureParams) : Parameter.EMPTY_ARRAY
                                         MethodNode existing = thisClassNode.getMethod(methodName, newParams)
 
-                                        if (existing == null || !existing.getDeclaringClass().equals(thisClassNode)) {
+                                        if (existing == null || existing.getDeclaringClass() != thisClassNode) {
                                             def queryOperationsClassNode = AstUtils.nonGeneric(ClassHelper.make(GormQueryOperations))
                                             final GenericsType[] genericsTypes = queryOperationsClassNode.getGenericsTypes()
                                             final Map<String, ClassNode> parameterNameToParameterValue = new LinkedHashMap<String, ClassNode>()
@@ -356,7 +386,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
 
                                                 String namedQueryGetter = NameUtils.getGetterName(methodName)
                                                 existing = thisClassNode.getMethod(namedQueryGetter, Parameter.EMPTY_ARRAY)
-                                                if (existing == null || !existing.getDeclaringClass().equals(thisClassNode)) {
+                                                if (existing == null || existing.getDeclaringClass() != thisClassNode) {
                                                     newMethod = new MethodNode(namedQueryGetter, Modifier.PUBLIC | Modifier.STATIC, queryOperationsClassNode, Parameter.EMPTY_ARRAY, ClassNode.EMPTY_ARRAY, methodBody)
                                                     markAsGenerated(thisClassNode, newMethod)
                                                     thisClassNode.addMethod(newMethod)
@@ -383,45 +413,50 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
         }
 
         if (compilationUnit != null && !isRxEntity) {
-            org.codehaus.groovy.transform.trait.TraitComposer.doExtendTraits(classNode, sourceUnit, compilationUnit)
+            TraitComposer.doExtendTraits(classNode, sourceUnit, compilationUnit)
         }
         classNode.putNodeMetaData(AstUtils.TRANSFORM_APPLIED_MARKER, APPLIED_MARKER)
     }
 
-    protected Class pickGormEntityTrait(ClassNode classNode, SourceUnit source) {
+    /**
+     * Resolves, at compile time, the GORM implementation an entity is mapped with, from the entity's
+     * {@code mapWith} property and the {@link GormEntityTraitProvider}s on the compilation classpath.
+     *
+     * <p>The result decides both the entity trait the class is given and, where the build has opted
+     * into native identity types, the type of the injected {@code id}.</p>
+     *
+     * @param classNode the entity
+     * @param source the source unit, warned against where the implementation is ambiguous
+     * @return the provider for the implementation, or {@code null} where none applies and the entity
+     *         falls back to the datastore-neutral {@link GormEntity} trait and a {@code Long} id
+     * @since 8.0
+     */
+    protected GormEntityTraitProvider resolveTraitProvider(ClassNode classNode, SourceUnit source) {
         def classLoader = getClass().classLoader
 
         // first try the `mapWithValue`
         def mapWith = AstUtils.getPropertyFromHierarchy(classNode, GormProperties.MAPPING_STRATEGY)
         String mapWithValue = mapWith?.initialExpression?.text
-        Class gormEntityTrait = null
         boolean isHibernatePresent = isHibernatePresent(classLoader)
         if (isHibernatePresent && mapWithValue == null) {
-            gormEntityTrait = GormEntity
-        } else {
-            List<GormEntityTraitProvider> allTraitProviders = findTraitProviders(GormEntityTraitProvider, classLoader)
-            if (allTraitProviders.isEmpty()) {
-                gormEntityTrait = GormEntity
-            } else {
-                if (mapWithValue == null) {
-                    if (allTraitProviders.size() > 1) {
-                        AstUtils.warning(source, classNode, 'There are multiple GORM implementations on the classpath. GORM cannot choose automatically which implementation to use. Please use \'mapWith\' on your entity to avoid this conflict and warning.')
-                        gormEntityTrait = GormEntity
-                    } else {
-                        gormEntityTrait = allTraitProviders.get(0).entityTrait
-                    }
-                } else {
-                    def mapWithDatastore = NameUtils.capitalize(mapWithValue)
-                    def candidate = allTraitProviders.find() { GormEntityTraitProvider provider -> provider.entityTrait?.simpleName?.startsWith(mapWithDatastore) }
-                    if (candidate != null) {
-                        gormEntityTrait = candidate.entityTrait
-                    } else {
-                        gormEntityTrait = GormEntity
-                    }
-                }
-            }
+            return null
         }
-        return gormEntityTrait
+
+        List<GormEntityTraitProvider> allTraitProviders = findTraitProviders(GormEntityTraitProvider, classLoader)
+        if (allTraitProviders.isEmpty()) {
+            return null
+        }
+
+        if (mapWithValue == null) {
+            if (allTraitProviders.size() > 1) {
+                AstUtils.warning(source, classNode, 'There are multiple GORM implementations on the classpath. GORM cannot choose automatically which implementation to use. Please use \'mapWith\' on your entity to avoid this conflict and warning.')
+                return null
+            }
+            return allTraitProviders.get(0)
+        }
+
+        String mapWithDatastore = NameUtils.capitalize(mapWithValue)
+        allTraitProviders.find { GormEntityTraitProvider provider -> provider.entityTrait?.simpleName?.startsWith(mapWithDatastore) }
     }
 
     @Memoized
@@ -448,7 +483,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
     private boolean isHibernatePresent(ClassLoader classLoader) {
         try {
             return Class.forName('org.hibernate.Hibernate', false, classLoader) != null
-        } catch (Throwable e) {
+        } catch (Throwable ignored) {
             return false
         }
     }
@@ -462,18 +497,48 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
         }
     }
 
-    protected void injectIdProperty(ClassNode classNode) {
+    protected void injectIdProperty(ClassNode classNode, SourceUnit sourceUnit, GormEntityTraitProvider traitProvider) {
         final boolean hasId = AstUtils.hasOrInheritsProperty(classNode, GormProperties.IDENTITY)
 
         if (!hasId) {
             // inject into furthest relative
             ClassNode parent = AstUtils.getFurthestUnresolvedParent(classNode)
 
-            parent.addProperty(GormProperties.IDENTITY, Modifier.PUBLIC, new ClassNode(Long), null, null, null)
+            Class<?> identityType = resolveIdentityType(classNode, sourceUnit, traitProvider)
+            parent.addProperty(GormProperties.IDENTITY, Modifier.PUBLIC, new ClassNode(identityType), null, null, null)
         }
     }
 
-    private void injectAssociationsForJpaEntity(ClassNode classNode, MethodNode addToMethodNode, MethodNode removeFromMethodNode, MethodNode getAssociationMethodNode) {
+    /**
+     * The type of the {@code id} injected into an entity that declares none.
+     *
+     * <p>{@code Long} unless the build opted into native identity types through
+     * {@link #DEFAULT_ID_TYPE_PROPERTY}, in which case the GORM implementation the entity is mapped
+     * with supplies its own default. An entity that resolved to no implementation - because several
+     * are on the classpath and it does not say which it means, or because it is mapped with Hibernate
+     * - keeps {@code Long}.</p>
+     *
+     * @param classNode the entity
+     * @param sourceUnit the source unit, warned against where the property states a value that is not
+     *        recognised
+     * @param traitProvider the resolved implementation, or {@code null} where none applies
+     * @return the identity type, never {@code null}
+     * @since 8.0
+     */
+    protected Class<?> resolveIdentityType(ClassNode classNode, SourceUnit sourceUnit, GormEntityTraitProvider traitProvider) {
+        String configured = System.getProperty(DEFAULT_ID_TYPE_PROPERTY, DEFAULT_ID_TYPE_LONG)
+        if (DEFAULT_ID_TYPE_LONG.equalsIgnoreCase(configured)) {
+            return Long
+        }
+        if (!DEFAULT_ID_TYPE_NATIVE.equalsIgnoreCase(configured)) {
+            AstUtils.warning(sourceUnit, classNode, "Unrecognised value [$configured] for $DEFAULT_ID_TYPE_PROPERTY. " +
+                    "Expected '$DEFAULT_ID_TYPE_LONG' or '$DEFAULT_ID_TYPE_NATIVE'. Injecting a Long id.")
+            return Long
+        }
+        traitProvider?.defaultIdentityType ?: Long
+    }
+
+    private static void injectAssociationsForJpaEntity(ClassNode classNode, MethodNode addToMethodNode, MethodNode removeFromMethodNode) {
         ClassNode oneToManyClassNode = ClassHelper.make(OneToMany)
         ClassNode manyToManyClassNode = ClassHelper.make(ManyToMany)
         def filter = { AnnotationNode an -> an.classNode == oneToManyClassNode || an.classNode == manyToManyClassNode }
@@ -491,17 +556,17 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
         List<PropertyNode> propertiesToAdd = []
         for (PropertyNode propertyNode in classNode.getProperties()) {
             final String name = propertyNode.name
-            final boolean isHasManyProperty = name.equals(GormProperties.HAS_MANY)
+            final boolean isHasManyProperty = name == GormProperties.HAS_MANY
             if (isHasManyProperty) {
                 Expression e = propertyNode.initialExpression
                 propertiesToAdd.addAll(createPropertiesForHasManyExpression(e, classNode))
             }
-            final boolean isBelongsToOrHasOne = name.equals(GormProperties.BELONGS_TO) || name.equals(GormProperties.HAS_ONE)
+            final boolean isBelongsToOrHasOne = name == GormProperties.BELONGS_TO || name == GormProperties.HAS_ONE
             if (isBelongsToOrHasOne) {
                 Expression initialExpression = propertyNode.getInitialExpression()
                 if ((!(initialExpression instanceof MapExpression)) &&
                         (!(initialExpression instanceof ClassExpression))) {
-                    if (name.equals(GormProperties.HAS_ONE)) {
+                    if (name == GormProperties.HAS_ONE) {
                         final String message = 'WARNING: The hasOne property in class [' + classNode.getName() + '] should have an initial expression of type Map or Class.'
                         System.err.println(message)
                     } else if (!(initialExpression instanceof ListExpression)) {
@@ -551,7 +616,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
         return listExpression
     }
 
-    private Collection<PropertyNode> createPropertiesForBelongsToOrHasOneExpression(Expression e, ClassNode classNode) {
+    private static Collection<PropertyNode> createPropertiesForBelongsToOrHasOneExpression(Expression e, ClassNode classNode) {
         List<PropertyNode> properties = []
         if (e instanceof MapExpression) {
             MapExpression me = (MapExpression) e
@@ -571,7 +636,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
         return properties
     }
 
-    private void addToOneIdProperty(String propertyName, ClassNode classNode, ListExpression listExpression, MethodNode getAssociationMethodNode) {
+    private static void addToOneIdProperty(String propertyName, ClassNode classNode, ListExpression listExpression, MethodNode getAssociationMethodNode) {
         String idProperty = "get${NameUtils.capitalize(propertyName)}Id"
         String idPropertyName = "${propertyName}Id"
         if (!AstUtils.hasOrInheritsProperty(classNode, idPropertyName)) {
@@ -594,7 +659,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
         }
     }
 
-    private void injectAssociationProperties(ClassNode classNode, List<PropertyNode> propertiesToAdd) {
+    private static void injectAssociationProperties(ClassNode classNode, List<PropertyNode> propertiesToAdd) {
         for (PropertyNode pn : propertiesToAdd) {
             if (!AstUtils.hasProperty(classNode, pn.getName())) {
                 classNode.addProperty(pn)
@@ -603,7 +668,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
         }
     }
 
-    private List<PropertyNode> createPropertiesForHasManyExpression(Expression e, ClassNode classNode) {
+    private static List<PropertyNode> createPropertiesForHasManyExpression(Expression e, ClassNode classNode) {
         List<PropertyNode> properties = []
         if (e instanceof MapExpression) {
             MapExpression me = (MapExpression) e
@@ -616,7 +681,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
         return properties
     }
 
-    private void addRelationshipManagementMethods(String propertyName, ClassNode classNode, MethodNode addToMethodNode, MethodNode removeFromMethodNode) {
+    private static void addRelationshipManagementMethods(String propertyName, ClassNode classNode, MethodNode addToMethodNode, MethodNode removeFromMethodNode) {
         def addToMethod = "addTo${NameUtils.capitalize(propertyName)}"
         def existing = classNode.getMethod(addToMethod, ADD_TO_PARAMETERS)
         if (existing == null) {
@@ -668,7 +733,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
      * @param expression the expression used to parameterize the {@link Set}.  Only used if a {@link ClassExpression}.  Otherwise ignored.
      * @return A {@link ClassNode} of type {@link Set} that is possibly parameterized by the expression that is passed in.
      */
-    private ClassNode findPropertyType(Expression expression) {
+    private static ClassNode findPropertyType(Expression expression) {
         ClassNode setNode = ClassHelper.make(Set).getPlainNodeReference()
         if (expression instanceof ClassExpression) {
             setNode.setGenericsTypes([new GenericsType(AstUtils.nonGeneric(expression.type))] as GenericsType[])
@@ -676,11 +741,11 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
         return setNode
     }
 
-    private void addAssociationForKey(String key, List<PropertyNode> properties, ClassNode declaringType, ClassNode propertyType) {
+    private static void addAssociationForKey(String key, List<PropertyNode> properties, ClassNode declaringType, ClassNode propertyType) {
         properties.add(new PropertyNode(key, Modifier.PUBLIC, propertyType, declaringType, null, null, null))
     }
 
-    private void injectToStringMethod(ClassNode classNode) {
+    private static void injectToStringMethod(ClassNode classNode) {
         final boolean hasToString = AstUtils.implementsOrInheritsZeroArgMethod(classNode, 'toString')
         final boolean hasToStringAnnotation = AstUtils.findAnnotation(classNode, ToString) != null
         final boolean isEnum = AstUtils.isEnum(classNode)

@@ -1,0 +1,91 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+Triggers declared in a job's `triggers` block are fixed at startup. To schedule work at runtime, the plugin adds a set of static methods to every job class:
+
+[source,groovy]
+----
+// fire the job immediately, once
+MyJob.triggerNow()
+MyJob.triggerNow(foo: 'It works!')
+
+// a simple trigger: repeat every `repeatInterval` ms, `1 + repeatCount` times
+MyJob.schedule(1000L)
+MyJob.schedule(1000L, 10)
+MyJob.schedule(1000L, 10, [foo: 'bar'])
+
+// a cron trigger
+MyJob.schedule('0 0 6 * * ?')
+MyJob.schedule('0 0 6 * * ?', [foo: 'bar'])
+
+// a single execution at a specific date and time
+MyJob.schedule(new Date() + 1)
+MyJob.schedule(new Date() + 1, [foo: 'bar'])
+
+// any Quartz trigger you have built yourself
+MyJob.schedule(myTrigger)
+MyJob.schedule(myTrigger, [foo: 'bar'])
+
+// replace an existing trigger with a new one
+MyJob.reschedule(myTrigger)
+
+// remove a named trigger, leaving the job registered
+MyJob.unschedule('myTriggerName')
+MyJob.unschedule('myTriggerName', 'myTriggerGroup')
+
+// remove the job and all of its triggers from the scheduler
+MyJob.removeJob()
+----
+
+Every method except `removeJob` and `unschedule` accepts an optional `Map` of parameters. Those entries are placed in the trigger's job data map and are available to the job through the execution context:
+
+[source,groovy]
+----
+class MyJob {
+
+    void execute(JobExecutionContext context) {
+        println context.mergedJobDataMap.foo
+    }
+}
+----
+
+[source,groovy]
+----
+class MyController {
+
+    def index() {
+        MyJob.triggerNow(foo: 'It works!')
+        render 'scheduled'
+    }
+}
+----
+
+When a trigger is passed directly to `schedule`, its job key is rewritten to point at the job class, so the trigger must be mutable — that is, an instance of `org.quartz.spi.MutableTrigger`, which every trigger implementation shipped with Quartz is. A trigger that is neither mutable nor already keyed to the job is rejected.
+
+The default trigger group used by `unschedule` is `GRAILS_TRIGGERS`.
+
+These methods only work on a job that the plugin has registered with the scheduler, which it does for every enabled job artefact while the application starts. Calling them on a job that is turned off with `jobEnabled = false`, or on a class the application does not manage as a job artefact, throws an `IllegalStateException` reporting that the job is not registered with a scheduler.
+
+A null argument is rejected with an `IllegalArgumentException` that names the argument which is missing. Since the runtime type of `null` carries no information, a null passed by a caller that is not statically compiled always resolves to `schedule(Trigger)`, whichever method the caller meant to reach:
+
+[source,groovy]
+----
+// reports a null trigger, even though the interval read from the configuration is what is null
+MyJob.schedule(grailsApplication.config.getProperty('my.job.repeatInterval', Long))
+----

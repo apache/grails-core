@@ -34,7 +34,6 @@ import org.grails.datastore.mapping.reflect.ClassPropertyFetcher
  * Implements the ORM mapping DSL constructing a model that can be evaluated by the
  * GrailsDomainBinder class which maps GORM classes onto the database.
  *
- * @author Graeme Rocher
  * @since 1.0
  */
 
@@ -468,7 +467,9 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
             property.ignoreNotFound = namedArgs.ignoreNotFound instanceof Boolean ? namedArgs.ignoreNotFound : property.ignoreNotFound
             property.typeParams = namedArgs.params ?: property.typeParams
             property.setUnique(namedArgs.unique ? namedArgs.unique : property.unique)
-            property.nullable = namedArgs.nullable instanceof Boolean ? namedArgs.nullable : property.nullable
+            if (namedArgs.nullable instanceof Boolean) {
+                property.nullable = namedArgs.nullable
+            }
             property.maxSize = namedArgs.maxSize instanceof Number ? namedArgs.maxSize : property.maxSize
             property.minSize = namedArgs.minSize instanceof Number ? namedArgs.minSize : property.minSize
             if (namedArgs.size instanceof IntRange) {
@@ -703,4 +704,3 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
         }
     }
 }
-
