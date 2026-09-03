@@ -84,7 +84,7 @@ ext {
             // extended-scalars compatibility. See https://github.com/apache/grails-core/issues/15674
             'graphql-java.version'          : '25.0',
             'graphql-java-extended-scalars.version': '24.0',
-            'groovy.version'                : '6.0.0-beta-2',
+            'groovy.version'                : '6.0.0-beta-3',
             'guava.version'                 : '33.7.1-jre',
             // Security: overrides spring-boot-dependencies (5.4.2). 5.4.3 fixes CVE-2026-54399 (httpcore5) and CVE-2026-54428 (httpcore5-h2).
             'httpcore5.version'             : '5.4.3',
