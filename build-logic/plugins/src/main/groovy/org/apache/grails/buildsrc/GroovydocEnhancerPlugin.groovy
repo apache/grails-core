@@ -85,6 +85,10 @@ class GroovydocEnhancerPlugin implements Plugin<Project> {
                 return
             }
 
+            // The external javadoc mapping changes the generated HTML, so a change to it has to
+            // invalidate the task's output.
+            gdoc.inputs.property('groovydocLinks', project.provider { resolveLinks(gdoc) })
+
             gdoc.actions.clear()
             gdoc.doLast {
                 def destDir = gdoc.destinationDir.tap { it.mkdirs() }
@@ -104,10 +108,17 @@ class GroovydocEnhancerPlugin implements Plugin<Project> {
                     )
                 }
 
+                // Groovydoc resolves references to types outside the documented sources with
+                // Class.forName against its own classloader; anything it cannot load becomes a
+                // link to a page that was never generated. Adding the documented sources'
+                // compile classpath lets those types resolve, at which point the 'links'
+                // below turn them into external javadoc URLs.
+                def antClasspath = gdoc.classpath ? classpath.plus(gdoc.classpath) : classpath
+
                 project.ant.taskdef(
                         name: 'groovydoc',
                         classname: 'org.codehaus.groovy.ant.Groovydoc',
-                        classpath: classpath.asPath
+                        classpath: antClasspath.asPath
                 )
 
                 def links = resolveLinks(gdoc)
@@ -166,7 +177,10 @@ class GroovydocEnhancerPlugin implements Plugin<Project> {
     @CompileDynamic
     private static List<Map<String, String>> resolveLinks(Groovydoc gdoc) {
         if (gdoc.ext.has('groovydocLinks')) {
-            return gdoc.ext.groovydocLinks as List<Map<String, String>>
+            def links = resolveGroovydocProperty(gdoc.ext.groovydocLinks)
+            if (links) {
+                return links as List<Map<String, String>>
+            }
         }
         []
     }
