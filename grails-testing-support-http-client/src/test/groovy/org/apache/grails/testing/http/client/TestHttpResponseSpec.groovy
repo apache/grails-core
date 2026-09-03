@@ -212,6 +212,20 @@ class TestHttpResponseSpec extends Specification {
         thrown(SAXParseException)
     }
 
+    void 'xml rejects doctype declarations with internal entities'() {
+        given:
+        def response = mockResponse(200, '''<!DOCTYPE root [
+<!ENTITY msg "safe">
+]>
+<root>&msg;</root>''')
+
+        when:
+        response.xml()
+
+        then:
+        thrown(SAXParseException)
+    }
+
     void 'withXmlSlurper allows overriding the parser without mutating the original wrapper'() {
         given:
         def response = mockResponse(200, '<root><item>value</item></root>')

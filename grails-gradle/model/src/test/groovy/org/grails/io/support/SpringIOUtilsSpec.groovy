@@ -41,4 +41,15 @@ class SpringIOUtilsSpec extends Specification {
         then:
         thrown(SAXParseException)
     }
+
+    void 'createXmlSlurper rejects doctype declarations with internal entities'() {
+        when:
+        SpringIOUtils.createXmlSlurper().parseText('''<!DOCTYPE root [
+<!ENTITY msg "safe">
+]>
+<root>&msg;</root>''')
+
+        then:
+        thrown(SAXParseException)
+    }
 }

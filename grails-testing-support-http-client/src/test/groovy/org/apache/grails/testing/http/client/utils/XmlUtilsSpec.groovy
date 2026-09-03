@@ -287,6 +287,17 @@ class XmlUtilsSpec extends Specification {
         thrown(SAXParseException)
     }
 
+    void 'newXmlSlurper rejects doctype declarations with internal entities'() {
+        when:
+        def parsed = XmlUtils.newXmlSlurper().parseText('''<!DOCTYPE root [
+<!ENTITY msg "safe">
+]>
+<root>&msg;</root>''')
+
+        then:
+        thrown(SAXParseException)
+    }
+
     void 'newXmlSlurper supports custom factory overrides'() {
         given:
         int factoryCalls = 0

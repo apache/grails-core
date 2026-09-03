@@ -223,7 +223,13 @@ class XmlUtils {
         def saxParserFactory = FactorySupport.createSaxParserFactory().tap {
             it.namespaceAware = true
             it.validating = false
-            it.XIncludeAware = false
+        }
+
+        try {
+            saxParserFactory.XIncludeAware = false
+        }
+        catch (UnsupportedOperationException ignored) {
+            // ignore, parser doesn't support
         }
 
         SECURE_XML_SLURPER_FEATURES.each { feature, enabled ->

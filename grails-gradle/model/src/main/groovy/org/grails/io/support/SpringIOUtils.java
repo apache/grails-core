@@ -423,7 +423,11 @@ public class SpringIOUtils {
             saxParserFactory = FactorySupport.createSaxParserFactory();
             saxParserFactory.setNamespaceAware(true);
             saxParserFactory.setValidating(false);
-            saxParserFactory.setXIncludeAware(false);
+            try {
+                saxParserFactory.setXIncludeAware(false);
+            } catch (UnsupportedOperationException e) {
+                // ignore, parser doesn't support
+            }
 
             try {
                 saxParserFactory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
