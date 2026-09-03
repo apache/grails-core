@@ -361,6 +361,7 @@ class JsonScanner {
                         case JsonToken.CLOSE_BRACE:
                         case JsonToken.CLOSE_BRACKET:
                         case JsonToken.CLOSE_PARENS:
+                        case -1:
                             state = JsonScanner.NumberState.DONE;
                             break;
                         default:
@@ -384,7 +385,9 @@ class JsonScanner {
                             break;
                         }
                         c = readCharacter();
-                        numberBuilder.append((char) c);
+                        if (i < NFINITY.length - 1) {
+                            numberBuilder.append((char) c);
+                        }
                     }
                     if (sawMinusInfinity) {
                         type = JsonTokenType.DOUBLE;

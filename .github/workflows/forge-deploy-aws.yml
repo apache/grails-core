@@ -15,6 +15,8 @@
 #
 # Dispatch from the maintenance branch that should be built (Use workflow from).
 # Choose the slot. Region, stack name, and JDK come from that branch.
+# GitHub lists these choices from the default branch; merge this file up before
+# the new next-snapshot and older options appear in the Actions UI.
 
 name: "Forge - AWS Elastic Beanstalk Deploy"
 run-name: "Forge AWS ${{ inputs.slot }} ${{ github.ref_name }}"
@@ -30,8 +32,10 @@ on:
           - latest
           - snapshot
           - next
+          - next-snapshot
           - prev
           - prev-snapshot
+          - older
 
 permissions:
   contents: read
@@ -89,8 +93,10 @@ jobs:
             latest) hostname='latest.grails.org' ;;
             snapshot) hostname='snapshot.grails.org' ;;
             next) hostname='next.grails.org' ;;
+            next-snapshot) hostname='next-snapshot.grails.org' ;;
             prev) hostname='prev.grails.org' ;;
             prev-snapshot) hostname='prev-snapshot.grails.org' ;;
+            older) hostname='older.grails.org' ;;
             *)
               echo "Unsupported deployment slot" >&2
               exit 1
