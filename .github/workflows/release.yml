@@ -633,7 +633,7 @@ jobs:
         run: |
           echo "::group::Manual Grails Forge deployment"
           echo "Deploy Forge via https://github.com/apache/grails-core/actions/workflows/forge-deploy-aws.yml"
-          echo "Use workflow from the maintenance branch. Choose slot latest, snapshot, next, prev, or prev-snapshot."
+          echo "Use workflow from the maintenance branch. Choose slot latest, snapshot, next, next-snapshot, prev, prev-snapshot, or older."
           echo "Do not run this workflow from a historical git tag."
           echo "::endgroup::"
   docs:
@@ -641,12 +641,6 @@ jobs:
     name: "VOTE SUCCEEDED - Publish Documentation"
     needs: [ publish, source, upload, release ]
     runs-on: ubuntu-24.04
-    # Documentation publishing targets a shared resource (the apache/grails-website repo).
-    # Use a static, branch-independent group so only one documentation publish can run at a
-    # time across every branch and across the snapshot publish in gradle.yml; the rest queue.
-    concurrency:
-      group: grails-docs-publish
-      cancel-in-progress: false
     steps:
       - name: "📝 Establish release version"
         run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
