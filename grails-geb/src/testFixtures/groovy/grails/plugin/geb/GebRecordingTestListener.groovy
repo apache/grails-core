@@ -67,6 +67,20 @@ class GebRecordingTestListener extends AbstractRunListener {
                 // Re-throw if it's a different type of NotFoundException
                 throw e
             }
+        } catch (NullPointerException e) {
+            // Thrown by BrowserWebDriverContainer#retainRecordingIfNeeded when
+            // WebDriverContainerHolder#restartVncRecordingContainer failed to start a
+            // replacement VNC recording container and cleared the field rather than leave
+            // it pointing at a container that was already stopped and removed.
+            if (containerHolder.settings.restartRecordingContainerPerTest) {
+                log.debug(
+                        'No VNC recording container available for test [{}] - the recording ' +
+                        'container failed to restart before this test ran',
+                        iteration.displayName
+                )
+            } else {
+                throw e
+            }
         }
         errorInfo = null
     }
