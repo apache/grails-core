@@ -28,6 +28,7 @@ import grails.converters.XML
 import grails.core.DefaultGrailsApplication
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
 import org.grails.datastore.mapping.model.MappingContext
+import org.grails.web.converters.beans.DynamicGroovyPersonFactory
 import org.grails.web.converters.beans.GroovyPersonFactory
 import org.grails.web.converters.beans.JavaPersonFactory
 import org.grails.web.converters.beans.SerializableJavaBean
@@ -195,5 +196,22 @@ class NonPublicClassMarshallingSpec extends Specification {
         then:
         xml.contains('<name>user</name>')
         xml.contains('<authority>ROLE_ADMIN</authority>')
+    }
+
+    void 'a dynamically compiled anonymous Groovy class is marshalled'() {
+        given:
+        def person = DynamicGroovyPersonFactory.anonymousPerson('user', 42)
+
+        expect:
+        !Modifier.isPublic(person.getClass().modifiers)
+
+        when:
+        String xml = new XML([user: person]).toString()
+
+        then:
+        xml.contains('<name>user</name>')
+        xml.contains('<age>42</age>')
+        xml.contains('<active>true</active>')
+        xml.count('<name>') == 1
     }
 }

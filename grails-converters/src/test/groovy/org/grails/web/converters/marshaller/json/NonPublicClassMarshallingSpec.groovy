@@ -28,6 +28,7 @@ import grails.converters.JSON
 import grails.core.DefaultGrailsApplication
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
 import org.grails.datastore.mapping.model.MappingContext
+import org.grails.web.converters.beans.DynamicGroovyPersonFactory
 import org.grails.web.converters.beans.GroovyPersonFactory
 import org.grails.web.converters.beans.JavaPersonFactory
 import org.grails.web.converters.beans.SerializableJavaBean
@@ -179,6 +180,20 @@ class NonPublicClassMarshallingSpec extends Specification {
         then:
         json.user == [active: true, age: 42, name: 'user']
         json.authorities == [[authority: 'ROLE_ADMIN', label: 'Administrator']]
+    }
+
+    void 'a dynamically compiled anonymous Groovy class is marshalled'() {
+        given:
+        def person = DynamicGroovyPersonFactory.anonymousPerson('user', 42)
+
+        expect:
+        !Modifier.isPublic(person.getClass().modifiers)
+
+        when:
+        Map json = parse(new JSON(person).toString())
+
+        then:
+        json == [active: true, age: 42, name: 'user']
     }
 
     private static Map parse(String json) {
