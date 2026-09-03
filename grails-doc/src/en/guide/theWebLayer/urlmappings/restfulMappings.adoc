@@ -82,6 +82,78 @@ delete "/books/$id"(controller:"book", action:"delete")
 Notice how the HTTP method name is prefixed prior to each URL mapping definition.
 
 
+==== Mapping every controller as a resource
+
+
+If every controller in an application follows the RESTful resource conventions, the mappings can be
+applied to all of them at once by capturing the controller in the URL and passing `*` as the
+`resources` argument:
+
+[source,groovy]
+----
+"/$controller"(resources: '*')
+----
+
+This generates the same mappings as a named `resources` mapping, but resolves the controller from the
+request instead of from the mapping, so the number of mappings does not grow with the number of
+controllers:
+
+[format="csv", options="header"]
+|===
+
+HTTP Method,URI,Grails Action
+GET,/${controller},index
+GET,/${controller}/create,create
+POST,/${controller},save
+GET,/${controller}/${id},show
+GET,/${controller}/${id}/edit,edit
+PUT,/${controller}/${id},update
+PATCH,/${controller}/${id},patch
+DELETE,/${controller}/${id},delete
+|===
+
+Because the controller and action are captured from the URL, they are subject to the same validation
+as any other wildcard mapping, described in link:theWebLayer.html#embeddedVariables[Embedded Variables]:
+a URI whose captured values do not correspond to a registered controller and action does not match.
+
+The `includes` and `excludes` parameters apply as they do for a named resource. An application that
+serves only JSON, for example, has no use for the two actions that render HTML forms:
+
+[source,groovy]
+----
+"/$controller"(resources: '*', excludes: ['create', 'edit'])
+----
+
+The mapping can also be placed inside a `group`:
+
+[source,groovy]
+----
+group "/api/v1", {
+    "/$controller"(resources: '*')
+}
+----
+
+A namespace can be captured from the URL in the same way, which maps every namespaced controller
+without naming the namespaces:
+
+[source,groovy]
+----
+"/$namespace/$controller"(resources: '*')
+----
+
+[format="csv", options="header"]
+|===
+
+HTTP Method,URI,Grails Action
+GET,/${namespace}/${controller},index
+GET,/${namespace}/${controller}/${id},show
+|===
+
+NOTE: The URL must capture the controller, and child resources cannot be nested within a wildcard
+`resources` mapping, because the controller is not known until a request is matched. Both are
+rejected when the mappings are evaluated.
+
+
 ==== Single resources
 
 
