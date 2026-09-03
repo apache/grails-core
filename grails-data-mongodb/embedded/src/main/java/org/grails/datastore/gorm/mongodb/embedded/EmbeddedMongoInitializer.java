@@ -211,9 +211,13 @@ public class EmbeddedMongoInitializer implements ApplicationContextInitializer<C
         String database = resolveDatabase(asked.group(2));
 
         EmbeddedMongoSettings settings = settings(environment, port);
+        // Resolved before the reuse check rather than inside start(): which backend is being asked
+        // for decides whether the running server is the one wanted, so it cannot wait until after
+        // that question has been answered.
+        EmbeddedMongoBackend backend = selectBackend(environment);
 
         String url;
-        StartedServer started = discard(STARTED.get(port), settings);
+        StartedServer started = discard(STARTED.get(port), settings, backend.getName());
         if (started != null) {
             // A devtools restart reuses this JVM and this class is loaded from a jar, so it
             // survives in the base classloader along with the server the previous
@@ -233,7 +237,7 @@ public class EmbeddedMongoInitializer implements ApplicationContextInitializer<C
             log.info("Reusing the embedded MongoDB this JVM already started at {}", url);
         }
         else {
-            url = start(environment, settings, database);
+            url = start(backend, settings, database);
         }
 
         Map<String, Object> published = new HashMap<>();
@@ -257,8 +261,7 @@ public class EmbeddedMongoInitializer implements ApplicationContextInitializer<C
      * properties pointing at whatever the application configured, which is exactly what
      * enabling this was meant to replace.
      */
-    private String start(ConfigurableEnvironment environment, EmbeddedMongoSettings settings, String database) {
-        EmbeddedMongoBackend backend = selectBackend(environment);
+    private String start(EmbeddedMongoBackend backend, EmbeddedMongoSettings settings, String database) {
         int port = settings.getPort();
 
         RunningEmbeddedMongo running;
@@ -275,7 +278,7 @@ public class EmbeddedMongoInitializer implements ApplicationContextInitializer<C
                     "instead of " + EMBEDDED_HOST + " to use an external MongoDB.", ex);
         }
 
-        STARTED.put(port, new StartedServer(running, settings));
+        STARTED.put(port, new StartedServer(running, settings, backend.getName()));
         stopEverythingAtExit();
 
         String url = "mongodb://" + running.getHost() + ":" + running.getPort() + "/" + database;
@@ -290,16 +293,17 @@ public class EmbeddedMongoInitializer implements ApplicationContextInitializer<C
 
     /**
      * A server is reused only when it is the server this application is asking for. A restart that
-     * switched transactions on, named a different version, or moved the database directory wants
-     * something the running server is not, and being handed it anyway would fail later and further
-     * away - a transaction refused by a standalone server, say.
+     * chose another backend, switched transactions on, named a different version, or moved the
+     * database directory wants something the running server is not, and being handed it anyway
+     * would fail later and further away - a transaction refused by a standalone server, say, or a
+     * {@code $text} query refused by the in-memory backend.
      */
-    private StartedServer discard(StartedServer started, EmbeddedMongoSettings settings) {
-        if (started == null || started.settings().equals(settings)) {
+    private StartedServer discard(StartedServer started, EmbeddedMongoSettings settings, String backend) {
+        if (started == null || (started.settings().equals(settings) && started.backend().equals(backend))) {
             return started;
         }
-        log.info("Replacing the embedded MongoDB this JVM started ({}): it is now asked for with {}",
-                started.settings(), settings);
+        log.info("Replacing the embedded MongoDB this JVM started ({} on the {} backend): it is now " +
+                "asked for with {} on the {} backend", started.settings(), started.backend(), settings, backend);
         started.running().stop();
         // Keyed removal, so a server another thread has just started on this port is not the one
         // taken out of the registry.
@@ -436,10 +440,13 @@ public class EmbeddedMongoInitializer implements ApplicationContextInitializer<C
     }
 
     /**
-     * A server this JVM started, and what it was asked for. The settings are what a later context
-     * compares against to decide whether the server it finds is the one it wants.
+     * A server this JVM started, and what it was asked for. The settings and the backend together
+     * are what a later context compares against to decide whether the server it finds is the one it
+     * wants. The backend is held beside the settings rather than within them because it selects the
+     * server rather than configures it, and {@link EmbeddedMongoSettings} is public API whose
+     * constructor should not change to carry it.
      */
-    private record StartedServer(RunningEmbeddedMongo running, EmbeddedMongoSettings settings) {
+    private record StartedServer(RunningEmbeddedMongo running, EmbeddedMongoSettings settings, String backend) {
     }
 
 }

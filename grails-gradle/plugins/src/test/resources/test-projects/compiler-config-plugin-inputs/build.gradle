@@ -1,0 +1,14 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-plugin'
+}
+version = '1.2.3'
+
+tasks.register('inspectPluginInputs') {
+    doLast {
+        def c = tasks.named('compileGroovy', GroovyCompile).get()
+        def keys = c.inputs.properties.keySet().sort()
+        println "COMPILE_INPUT_PROPERTY_KEYS=${keys}"
+        println "HAS_VERSION_INPUT=${keys.contains('version')}"
+        println "HAS_NAME_INPUT=${keys.contains('name')}"
+    }
+}

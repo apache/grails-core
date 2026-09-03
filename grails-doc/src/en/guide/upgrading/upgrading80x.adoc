@@ -1488,6 +1488,39 @@ def value = configObject.containsKey(key) ? configObject.get(key) : null
 
 Grails applies this guard internally when resolving Spring profile activation keys; you only need it in application code that navigates a raw `ConfigObject` by subscript.
 
+===== 28.3 A getter on a map no longer hides behind a map entry
+
+In Groovy 4, reading or writing a property on a class that implements `Map` always addressed a map entry.
+In Groovy 5 a public JavaBean accessor declared on such a class is resolved first, so an entry whose name matches an accessor becomes unreadable, and assigning to it throws `groovy.lang.ReadOnlyPropertyException`.
+This affected `params`, where `getRequest()` and `getIdentifier()` made request parameters named `request` and `identifier` unreachable.
+
+Grails 8 removes those accessors, so `params` behaves as it did in Grails 7 - every parameter name is an ordinary map entry, in dotted and subscript form, and under static compilation:
+
+[source,groovy]
+----
+params.identifier = 'id1'       // the request parameter, not a property
+params['request'] = 'req1'      // the request parameter, not the HttpServletRequest
+----
+
+Two methods changed as a result:
+
+[cols="1,1", options="header"]
+|===
+| Grails 7
+| Grails 8
+
+| `params.getRequest()`
+| `params.request()`
+
+| `params.getIdentifier()`
+| `params.id` -- it only ever read the `id` parameter
+|===
+
+The same change applies to the `attrs` map passed to a GSP tag, whose internal implementation renames `isGspTagSyntaxCall()` to `gspTagSyntaxCall()`.
+Its setter is retained, so assigning `attrs.gspTagSyntaxCall` still invokes that setter rather than storing an attribute - as in Grails 7. Store an attribute of that name with `attrs.put('gspTagSyntaxCall', value)`.
+
+NOTE: When adding a class that extends `grails.util.TypeConvertingMap`, do not declare a no-argument `getX()` or `isX()` method on it, or the entry `x` becomes unreachable for the same reason. Statically compiled callers bind directly to the accessor, so the collision cannot be corrected at runtime.
+
 ==== 29. MIME Types Are Now Framework Defaults
 
 Grails 8 ships the full set of supported MIME types as built-in framework defaults.
@@ -3000,3 +3033,67 @@ job is disabled with `jobEnabled = false`, or the class is not a job artefact of
 
 An application that caught `NullPointerException` around these calls has to catch those instead. See
 <<quartzDynamicScheduling,Dynamic Job Scheduling>>.
+
+==== 52. Coordinate Changes
+
+`grails-datamapping-async` provides the asynchronous programming model for Grails Data — the
+`AsyncEntity` trait and the `async` namespace — and is meant to be depended on directly by
+applications and libraries. Groups nested below `org.apache.grails` are reserved for implementation
+details of Grails, so the artifact moved from the `org.apache.grails.data` group to
+`org.apache.grails`. The artifact id is unchanged:
+
+[source,groovy]
+.build.gradle
+----
+implementation "org.apache.grails:grails-datamapping-async"
+----
+
+The https://github.com/apache/grails-core/blob/8.0.x/RENAME.md[RENAME.md] reference table in the
+grails-core repository maps previous coordinate names to new names. The `rename_gradle_artifacts.sh`
+script in the https://github.com/apache/grails-core/tree/8.0.x/etc/bin[etc/bin] directory of the
+grails-core repository rewrites both the Grails 6 (`org.grails:grails-datastore-gorm-async`) and the
+Grails 7 (`org.apache.grails.data:grails-datamapping-async`) coordinates in a project's Gradle files:
+
+[source,console]
+----
+./rename_gradle_artifacts.sh -l my/project/location
+----
+
+==== 53. `importJavaTime` Removed
+
+The `org.apache.grails.gradle.grails-app` plugin no longer accepts `importJavaTime`.
+
+The flag added `java.time` to the star imports of every Groovy compilation. Groovy 5, which Grails 8
+requires, imports that package by default, so on Grails 8 the flag added an import the compiler already
+had:
+
+[source,groovy]
+----
+// Grails 8, no configuration and no import statement
+class Book {
+    LocalDate published
+    Duration readingTime
+}
+----
+
+A build that sets it fails with `Could not set unknown property 'importJavaTime'`. Delete the line; there
+is no replacement:
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    // Grails 7
+    // importJavaTime = true
+
+    // Grails 8 - java.time is a Groovy 5 default import
+}
+----
+
+`importGrailsCommonAnnotations` and `starImports` are unchanged, and both still default to off.
+
+`importGrailsCommonAnnotations` no longer probes the compile classpath before adding
+`grails.gorm.annotation` and `grails.plugin.scaffolding.annotation`. When the flag is set both packages are
+imported whether or not they are present — a star import of an absent package contributes no classes and is
+not an error in Groovy, so the probe changed nothing it could observe. An application that relied on the
+import being *omitted* when the package was absent sees no difference in compiled output.

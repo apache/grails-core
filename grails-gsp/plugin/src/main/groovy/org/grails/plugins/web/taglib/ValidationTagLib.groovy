@@ -103,7 +103,7 @@ class ValidationTagLib implements TagLibrary {
             messageSource.getMessage("${valueMessagePrefix}.${field}", null, null, request.locale) :
             null
 
-        def tagSyntaxCall = (attrs instanceof GroovyPageAttributes) ? attrs.isGspTagSyntaxCall() : false
+        def tagSyntaxCall = (attrs instanceof GroovyPageAttributes) ? attrs.gspTagSyntaxCall() : false
 
         def rejectedValue = null
         if (valueMessage) {
@@ -298,7 +298,7 @@ class ValidationTagLib implements TagLibrary {
     @CompileStatic
     private def messageImpl(Map attrs) {
         Locale locale = FormatTagLib.resolveLocale(attrs.locale)
-        def tagSyntaxCall = (attrs instanceof GroovyPageAttributes) ? attrs.isGspTagSyntaxCall() : false
+        def tagSyntaxCall = (attrs instanceof GroovyPageAttributes) ? attrs.gspTagSyntaxCall() : false
 
         def text
         Object error = attrs.error ?: attrs.message

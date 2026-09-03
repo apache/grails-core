@@ -195,12 +195,18 @@ restart reuses it instead of starting another. Only a server this module started
 reused: if anything else is already holding the port, startup fails with an error naming
 the port rather than connecting to an unrelated service.
 
-A restart that carries a different setting - a database directory, a version, a replica set,
-or transactions being switched on - is given a server that matches it, which means the
-previous one is replaced and anything it held in memory goes with it. Data in a
+A restart that carries a different setting - a backend, a database directory, a version, a
+replica set, or transactions being switched on - is given a server that matches it, which
+means the previous one is replaced and anything it held in memory goes with it. Data in a
 `database-dir` outlives the replacement, except across a change of `version`: MongoDB
 refuses to start against a directory written by a different release. To use a MongoDB started by hand,
 name its host in `grails.mongodb.url` as usual.
+
+Switching `backend` counts as much as the rest: an application handed the in-memory server
+after asking for flapdoodle would not fail at the switch but later, at the first transaction
+or `$text` query it ran. Naming a `backend` whose library is not on the classpath fails the
+restart rather than handing back the server already listening, which is what that
+configuration does when nothing is running yet.
 
 ==== Outside Grails
 

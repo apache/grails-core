@@ -45,6 +45,7 @@ class HibernateMappingContextSpec extends HibernateGormDatastoreSpec {
                 MappingContextNullableByDefaultEntity,
                 MappingContextConstrainedEntity,
                 MappingContextWildcardMappedEntity,
+                MappingContextPortableIdentityEntity,
                 MappingContextCompositeIdEntity
         )
     }
@@ -246,6 +247,24 @@ class HibernateMappingContextSpec extends HibernateGormDatastoreSpec {
         !entity.getPropertyByName("name").mapping.mappedForm.nullable
     }
 
+    void "portable identities use Hibernate's native identity type"() {
+        when:
+        def entity = new HibernateMappingContext().addPersistentEntity(MappingContextPortableIdentityEntity)
+
+        then:
+        entity.identity.type == Long
+    }
+
+    @Rollback
+    void "portable identities persist with Hibernate's native generator"() {
+        when:
+        def entity = new MappingContextPortableIdentityEntity(name: 'portable').save(flush: true)
+
+        then:
+        entity.id instanceof Long
+        MappingContextPortableIdentityEntity.get(entity.id).name == 'portable'
+    }
+
     void "createPersistentEntity returns null for non-GormEntity class"() {
         given:
         def ctx = new HibernateMappingContext()
@@ -311,6 +330,12 @@ class MappingContextWildcardMappedEntity implements HibernateEntity<MappingConte
     static mapping = {
         '*' cache: true
     }
+}
+
+@Entity
+class MappingContextPortableIdentityEntity implements HibernateEntity<MappingContextPortableIdentityEntity> {
+    Serializable id
+    String name
 }
 
 @Entity
