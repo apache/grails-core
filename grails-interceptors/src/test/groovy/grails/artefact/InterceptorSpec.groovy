@@ -267,6 +267,19 @@ class InterceptorSpec extends Specification {
         '/foo/bar' | true
     }
 
+    void "Test URI matching uses the canonical request path"() {
+        given:
+        def interceptor = new TestAdminUriInterceptor()
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest(new MockServletContext(), new MockHttpServletRequest('', requestUri), new MockHttpServletResponse())
+        webRequest.request.setAttribute(UrlMappingsHandlerMapping.MATCHED_REQUEST, new ForwardUrlMappingInfo(controllerName: 'admin', action: 'deleteUser'))
+
+        expect:
+        interceptor.doesMatch()
+
+        where:
+        requestUri << ['/admin;x=1/deleteUser', '/%61dmin/deleteUser']
+    }
+
     void "Test match with uri and context path"() {
         given: "A test interceptor"
         def i = new TestUriInterceptor()
@@ -444,6 +457,12 @@ class TestUriInterceptor implements Interceptor {
     }
 }
 
+class TestAdminUriInterceptor implements Interceptor {
+    TestAdminUriInterceptor() {
+        match(uri: '/admin/**')
+    }
+}
+
 class TestContextUriInterceptor implements Interceptor {
     TestContextUriInterceptor() {
         match(uri: '/grails/bar/**')
@@ -460,7 +479,7 @@ class TestExcludeUriWithoutContextPathInterceptor implements Interceptor {
 
 class TestExcludeUriWithContextPathInterceptor implements Interceptor {
     TestExcludeUriWithContextPathInterceptor() {
-        matchAll().excludes(uri: "/grails/mgmt/*")
+        matchAll().excludes(uri: '/grails/mgmt/*')
     }
 }
 

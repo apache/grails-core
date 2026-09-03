@@ -26,12 +26,14 @@ import jakarta.servlet.ServletException
 import jakarta.servlet.ServletRequest
 import jakarta.servlet.ServletResponse
 import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletRequestWrapper
 import jakarta.servlet.http.HttpServletResponse
 
 import org.springframework.security.access.ConfigAttribute
 import org.springframework.security.web.util.matcher.IpAddressMatcher
 import org.springframework.util.AntPathMatcher
 import org.springframework.web.filter.GenericFilterBean
+import org.springframework.web.util.UrlPathHelper
 
 import grails.plugin.springsecurity.InterceptedUrl
 import grails.plugin.springsecurity.ReflectionUtils
@@ -54,6 +56,7 @@ class IpAddressFilter extends GenericFilterBean {
     protected static final String IPV6_LOOPBACK = '0:0:0:0:0:0:0:1'
 
     protected final AntPathMatcher pathMatcher = new AntPathMatcher()
+    protected final UrlPathHelper urlPathHelper = UrlPathHelper.defaultInstance
 
     protected List<InterceptedUrl> restrictions
 
@@ -112,14 +115,7 @@ class IpAddressFilter extends GenericFilterBean {
             return true
         }
 
-        String uri = request.getAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE)
-        if (!uri) {
-            uri = request.requestURI
-            String contextPath = request.contextPath
-            if (contextPath != '/' && uri.startsWith(contextPath)) {
-                uri = uri.substring(contextPath.length())
-            }
-        }
+        String uri = getPathWithinApplication(request)
 
         List<InterceptedUrl> matching = findMatchingRules(uri)
         if (!matching) {
@@ -136,6 +132,19 @@ class IpAddressFilter extends GenericFilterBean {
 
         log.warn 'disallowed request {} from {}', uri, ip
         false
+    }
+
+    protected String getPathWithinApplication(HttpServletRequest request) {
+        String forwardUri = request.getAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE) as String
+        if (forwardUri) {
+            return urlPathHelper.removeSemicolonContent(urlPathHelper.getPathWithinApplication(new HttpServletRequestWrapper(request) {
+                @Override
+                String getRequestURI() {
+                    forwardUri
+                }
+            }))
+        }
+        urlPathHelper.removeSemicolonContent(urlPathHelper.getPathWithinApplication(request))
     }
 
     protected List<InterceptedUrl> findMatchingRules(String uri) {

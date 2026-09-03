@@ -18,12 +18,15 @@
  */
 package org.grails.plugins.web.interceptors
 
+import java.nio.charset.StandardCharsets
 import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.util.HashCodeHelper
 
 import org.springframework.util.AntPathMatcher
+import org.springframework.web.util.UriUtils
+import org.springframework.web.util.UrlPathHelper
 
 import grails.artefact.Interceptor
 import grails.interceptors.Matcher
@@ -61,16 +64,20 @@ class UrlMappingMatcher implements Matcher {
     }
 
     boolean doesMatch(String uri, UrlMappingInfo info, String method) {
-        boolean hasUriPatterns = !uriPatterns.isEmpty()
+        doesMatch(uri, info, method, null)
+    }
 
-        boolean isExcluded = this.isExcluded(uri, info)
+    boolean doesMatch(String uri, UrlMappingInfo info, String method, String contextPath) {
+        boolean hasUriPatterns = !uriPatterns.isEmpty()
+        String path = canonicalizePath(uri)
+
+        boolean isExcluded = this.isExcluded(path, info, contextPath)
         if (matchAll && !isExcluded) return true
 
         if (!isExcluded) {
             if (hasUriPatterns) {
-                uri = uri.replace(';', '')
                 for (pattern in uriPatterns) {
-                    if (pathMatcher.match(pattern, uri)) {
+                    if (matchesPattern(pattern, path, contextPath)) {
                         return true
                     }
                 }
@@ -84,8 +91,12 @@ class UrlMappingMatcher implements Matcher {
     }
 
     protected boolean isExcluded(String uri, UrlMappingInfo info) {
+        isExcluded(uri, info, null)
+    }
+
+    protected boolean isExcluded(String uri, UrlMappingInfo info, String contextPath) {
         for (pattern in uriExcludePatterns) {
-            if (pathMatcher.match(pattern, uri)) {
+            if (matchesPattern(pattern, uri, contextPath)) {
                 return true
             }
         }
@@ -97,6 +108,30 @@ class UrlMappingMatcher implements Matcher {
             }
         }
         return false
+    }
+
+    private String canonicalizePath(String uri) {
+        if (uri == null || uri.isEmpty()) {
+            return '/'
+        }
+        String path = UrlPathHelper.defaultInstance.removeSemicolonContent(uri)
+        try {
+            path = UriUtils.decode(path, StandardCharsets.UTF_8)
+        } catch (IllegalArgumentException ignored) {
+            // keep the semicolon-stripped form when the URI is malformed
+        }
+        path = UrlPathHelper.defaultInstance.removeSemicolonContent(path)
+        path ?: '/'
+    }
+
+    private boolean matchesPattern(String pattern, String path, String contextPath) {
+        if (pathMatcher.match(pattern, path)) {
+            return true
+        }
+        if (contextPath && contextPath != '/' && (pattern == contextPath || pattern.startsWith(contextPath + '/'))) {
+            return pathMatcher.match(pattern.substring(contextPath.length()) ?: '/', path)
+        }
+        false
     }
 
     protected boolean doesMatchInternal(UrlMappingInfo info, String method) {
