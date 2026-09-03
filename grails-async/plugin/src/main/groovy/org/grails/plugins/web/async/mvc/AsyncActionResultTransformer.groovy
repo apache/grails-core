@@ -52,7 +52,7 @@ class AsyncActionResultTransformer implements ActionResultTransformer {
 
         if (actionResult instanceof Promise) {
 
-            final request = webRequest.getCurrentRequest()
+            final request = webRequest.getRequest()
             WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(request)
             final response = webRequest.getResponse()
 

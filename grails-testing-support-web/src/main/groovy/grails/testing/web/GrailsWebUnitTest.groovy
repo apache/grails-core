@@ -55,7 +55,7 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
     GrailsWebRequest webRequest
 
     GrailsMockHttpServletRequest getRequest() {
-        return (GrailsMockHttpServletRequest) getWebRequest().getCurrentRequest()
+        return (GrailsMockHttpServletRequest) getWebRequest().getRequest()
     }
 
     GrailsMockHttpServletResponse getResponse() {

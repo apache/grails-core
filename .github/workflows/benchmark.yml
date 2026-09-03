@@ -76,7 +76,7 @@ jobs:
       # comparison tool makes every number produced here untrustworthy. That is a tooling
       # failure rather than a performance finding, so regressions themselves stay advisory.
       - name: "🧪 Verify JMH comparison tool"
-        run: ./gradlew :grails-benchmarks:test --max-workers=4
+        run: ./gradlew :grails-test-examples-benchmarks:test --max-workers=4
       - name: "🌳 Prepare paired worktrees"
         run: |
           WORKTREE_ROOT="$RUNNER_TEMP/jmh-worktrees/$SHARD"
@@ -113,10 +113,10 @@ jobs:
         run: |
           base_build_ok=false
           head_build_ok=false
-          if [ "${BASE_BENCHMARKS_AVAILABLE:-true}" = "true" ] && [ -f "$BASE_DIR/grails-benchmarks/build.gradle" ]; then
+          if [ "${BASE_BENCHMARKS_AVAILABLE:-true}" = "true" ] && [ -f "$BASE_DIR/grails-test-examples/benchmarks/build.gradle" ]; then
             if (
               cd "$BASE_DIR"
-              ./gradlew :grails-benchmarks:jmhJar --max-workers=4
+              ./gradlew :grails-test-examples-benchmarks:jmhJar --max-workers=4
             ); then
               base_build_ok=true
               echo "Built base benchmark at $RESOLVED_BASE_SHA."
@@ -124,11 +124,11 @@ jobs:
               echo "BASE benchmark JAR build failed."
             fi
           else
-            echo "BASE does not contain grails-benchmarks; comparison will use HEAD-only mode."
+            echo "BASE does not contain the benchmarks project; comparison will use HEAD-only mode."
           fi
           if (
             cd "$HEAD_DIR"
-            ./gradlew :grails-benchmarks:jmhJar --max-workers=4
+            ./gradlew :grails-test-examples-benchmarks:jmhJar --max-workers=4
           ); then
             head_build_ok=true
             echo "Built HEAD benchmark at $HEAD_SHA."
@@ -161,7 +161,7 @@ jobs:
             local staging_file="$result_file.partial"
             rm -f "$staging_file" "$result_file"
             if (
-              cd "$revision_dir" && ./gradlew --no-daemon :grails-benchmarks:jmh \
+              cd "$revision_dir" && ./gradlew --no-daemon :grails-test-examples-benchmarks:jmh \
                 -Pjmh.include="$JMH_INCLUDE" \
                 -Pjmh.forks=2 \
                 -Pjmh.warmupIterations=3 \
@@ -234,10 +234,10 @@ jobs:
           if [ ! -f "$RESULT_DIR/head.json" ]; then
             printf 'HEAD benchmark result was not produced.\n' >> "$report_file"
           elif [ "${BASE_BUILD_OK:-false}" = "true" ] && [ -f "$RESULT_DIR/base.json" ]; then
-            ./gradlew -q --console=plain :grails-benchmarks:jmhCompare --args="--head $RESULT_DIR/head.json --base $RESULT_DIR/base.json --output $comparison_file"
+            ./gradlew -q --console=plain :grails-test-examples-benchmarks:jmhCompare --args="--head $RESULT_DIR/head.json --base $RESULT_DIR/base.json --output $comparison_file"
             cat "$comparison_file" >> "$report_file"
           else
-            ./gradlew -q --console=plain :grails-benchmarks:jmhCompare --args="--head $RESULT_DIR/head.json --output $comparison_file"
+            ./gradlew -q --console=plain :grails-test-examples-benchmarks:jmhCompare --args="--head $RESULT_DIR/head.json --output $comparison_file"
             cat "$comparison_file" >> "$report_file"
           fi
       - name: "📋 Publish JMH report in job summary"
@@ -372,12 +372,12 @@ jobs:
           should_post=false
           if [ "${#complete_shards[@]}" -gt 0 ]; then
             should_post=true
-            ./gradlew -q --console=plain :grails-benchmarks:jmhCompare --args="--head $pooled_head --base $pooled_base --expected-shards $expected_shard_files --output $comparison_file"
+            ./gradlew -q --console=plain :grails-test-examples-benchmarks:jmhCompare --args="--head $pooled_head --base $pooled_base --expected-shards $expected_shard_files --output $comparison_file"
             cat "$comparison_file" >> "$report_file"
           elif compgen -G "$head_only/*.json" > /dev/null; then
             should_post=true
             printf 'No complete same-runner base and HEAD shard pair was available. Reporting available HEAD results only.\n\n' >> "$report_file"
-            ./gradlew -q --console=plain :grails-benchmarks:jmhCompare --args="--head $head_only --output $comparison_file"
+            ./gradlew -q --console=plain :grails-test-examples-benchmarks:jmhCompare --args="--head $head_only --output $comparison_file"
             cat "$comparison_file" >> "$report_file"
           else
             printf '### JMH Benchmark Report\n\nNo HEAD benchmark results were produced for this run. The previous JMH report comment on this PR (if any) was left unchanged.\n' >> "$report_file"
@@ -391,4 +391,4 @@ jobs:
         env:
           REPORT_FILE: ${{ steps.compare.outputs.report_file }}
           GITHUB_TOKEN: ${{ github.token }}
-        run: ./gradlew -q --console=plain :grails-benchmarks:jmhCompare --args="--post-file $REPORT_FILE --repo $REPOSITORY --pr-number $PR_NUMBER"
+        run: ./gradlew -q --console=plain :grails-test-examples-benchmarks:jmhCompare --args="--post-file $REPORT_FILE --repo $REPOSITORY --pr-number $PR_NUMBER"

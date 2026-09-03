@@ -94,7 +94,7 @@ abstract class DefaultViewRenderer<T> extends DefaultHtmlRenderer<T> {
         }
 
         def webRequest = ((ServletRenderContext) context).getWebRequest()
-        def request = webRequest.currentRequest
+        def request = webRequest.request
         def response = webRequest.currentResponse
 
         AbstractUrlBasedView view

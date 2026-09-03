@@ -26,6 +26,7 @@ import grails.web.mime.MimeType
 import grails.web.servlet.mvc.GrailsParameterMap
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.GrailsApplicationAttributes
+import org.grails.web.util.HiddenHttpMethod
 import org.springframework.http.HttpMethod
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
@@ -117,5 +118,27 @@ class AbstractRequestBodyDataBindingSourceCreatorSpec extends Specification {
         then:
         source.dataBindingSources*.identifierValue == ['from the body']
     }
-}
 
+    void "the body is bound or not according to the method the request routed as"() {
+        given: "a POST the dispatcher resolved as DELETE, which is a method with no body to bind"
+        MockHttpServletRequest request = build("POST", "x")
+        request.setAttribute(HiddenHttpMethod.OVERRIDDEN_METHOD_ATTRIBUTE, "DELETE")
+
+        when:
+        DataBindingSource source = bindingSourceCreator.createDataBindingSource(MimeType.ALL, Object, request)
+
+        then: "the body is left alone, as it is when a servlet filter rewrote the method instead"
+        source.identifierValue == "url"
+    }
+
+    void "a POST that asked for nothing still binds its body"() {
+        given:
+        MockHttpServletRequest request = build("POST", "x")
+
+        when:
+        DataBindingSource source = bindingSourceCreator.createDataBindingSource(MimeType.ALL, Object, request)
+
+        then:
+        source.identifierValue == "request"
+    }
+}

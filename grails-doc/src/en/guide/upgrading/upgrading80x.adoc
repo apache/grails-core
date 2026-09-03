@@ -2816,7 +2816,123 @@ A GSP precompiled by Grails 7 and shipped inside a binary plugin carries no chec
 normally; it is simply never reload-checked, which was already the case for views resolved out of a plugin
 jar.
 
-==== 50. Tag Libraries Are Described When Compiled
+==== 50. The Hidden HTTP Method Filter Is Disabled by Default
+
+Grails has always registered a servlet filter that rewrites a `POST` into a `PUT`, `PATCH` or `DELETE` when the
+request carries a `_method` parameter or an `X-HTTP-Method-Override` header. It runs ahead of the dispatcher --
+and ahead of the Spring Security filter chain. **As of Grails 8 it is no longer registered by default.**
+
+Browser forms keep working. The `_method` parameter is still honoured; it is resolved inside the dispatcher
+instead, after multipart handling and after the filter chain. `<g:form method="DELETE">`, the scaffolded views
+and existing GSP templates need no changes.
+
+===== 50.1 Why the default changed
+
+The filter reads a request parameter before the dispatcher runs. Because a `MultipartConfigElement` is attached
+to the dispatcher servlet registration, the servlet container resolves it at filter time, so reading `_method`
+on a `multipart/form-data` POST forces the container to parse the entire body -- writing its temporary files --
+**before the request has been routed or authenticated**. An unauthenticated request can therefore cause uploads
+to be written to disk.
+
+Spring Boot disabled its equivalent filter by default in 2.2 for the same reason: it "causes early consumption
+of a request body if the body may contain parameters".
+
+The filter is also wider than Spring's. Spring's `HiddenHttpMethodFilter` reads only the `_method` parameter and
+honours only `PUT`, `PATCH` and `DELETE`. The Grails filter additionally trusts the `X-HTTP-Method-Override`
+header -- which any client can set -- and applies **any** method name it is given, including `GET`. The
+in-dispatcher resolution that replaces it accepts the parameter only, and only those three methods.
+
+===== 50.2 What changes for an application
+
+* **`POST` to a member URL now reaches `update`.** A `resources` mapping generates `POST /books/$id` alongside
+`PUT /books/$id`. `RestfulController` has permitted `POST` for `update` since Grails 3 (issue #9926, raised
+because AngularJS `$resource` and the clients modelled on it POST to save an existing object) but no mapping
+was ever generated for it. That is now fixed, and it is what lets a client submit without a `_method` parameter.
++
+This is a route that did not exist before, so a `POST` an application previously rejected at the member URL now
+reaches `update`. An authorization rule written to permit `POST` to the collection -- `POST /books` to create --
+will permit `POST /books/1` too wherever it is expressed as a prefix. **Review any rule that grants `POST` on a
+`resources` path before upgrading**, or keep the route out entirely by enabling the filter as described below.
+* **`<g:form>` is unchanged.** A form asking for `PUT`, `PATCH` or `DELETE` still submits a `POST` carrying a
+`_method` field, and the dispatcher resolves it. The route above is a fallback for a request that arrives
+without the parameter — an AngularJS-style client, or a hand-written form — rather than a replacement for it:
+it reaches `update` alone, so it answers for neither a `PATCH` nor a `DELETE` form, it is not generated for a
+singular `resource` mapping, and it says nothing about a URL an application has mapped to `PUT` itself.
+* **Servlet filters see the real request method.** This is the one consequence that fails silently. A `POST`
+carrying `_method=DELETE` now reaches Spring Security and every servlet filter as a `POST`, because the rewrite
+happens inside the dispatcher. A security rule matching `DELETE /books/**` **will no longer fire for a browser
+form submit**, and since the URL is unchanged, `update` and `delete` cannot be told apart by path either.
+**Review any authorization rule keyed on the HTTP method before upgrading.**
+* **`X-HTTP-Method-Override` is no longer honoured**, and a `_method` value other than `PUT`, `PATCH` or
+`DELETE` is ignored rather than applied. This one fails silently for a non-browser client: a proxy or SDK
+that rewrites `DELETE` into `POST` plus the header now has its `POST /books/1` answered by `update` with a
+`200`, while the caller believes it issued a `DELETE`. **Enable the filter for an application any such client
+talks to**, which restores both the header and the unrestricted method names.
+
+* **A filter registered by the application does not by itself select filter mode.** The mode is read from
+`grails.web.hiddenmethod.filter.enabled` and `spring.mvc.hiddenmethod.filter.enabled` only. An application
+that registers its own `HiddenHttpMethodFilter` bean without setting either property gets that filter *and*
+the dispatcher-mode behaviour described here, including the generated `POST` member route. Set the property
+alongside the bean.
+
+* **A controller's `request.method` reports `POST`.** The servlet request reports the method the request
+arrived as -- the one Spring Security saw and the access log recorded. That is deliberate: with the rewrite
+moved out of the filter chain, a request object that reported anything else would put back the divergence
+between what an application sees and what the infrastructure saw.
++
+Everything Grails resolves *from* the request answers with the overridden method instead, so that an
+application behaves the same whichever mode is in force:
++
+[cols="1,1"]
+|===
+|Reports the overridden method |Reports the method on the wire
+
+|URL mapping resolution, including a method-keyed `controller`/`action` name
+|`request.method`, and the servlet request generally
+
+|`allowedMethods`
+|Spring Security and every other servlet filter
+
+|Link generation, when no `method` attribute is given
+|The container's access log
+
+|`RenderContext.getHttpMethod()`
+|
+
+|Command object initialization, and whether a request body is bound
+|
+|===
++
+Anything branching on `request.method` itself for a `PUT`, `PATCH` or `DELETE` form submit needs
+`allowedMethods`, separate actions, or its own read of the parameter. Enabling the filter restores the old
+reading, as described below.
+
+===== 50.3 Restoring the previous behaviour
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    web:
+        hiddenmethod:
+            filter:
+                enabled: true
+----
+
+That restores the filter exactly as it behaved in Grails 7, including the header and the unrestricted method
+names, and suppresses the `POST` member route so the mappings a `resources` block generates are unchanged.
+
+Spring Boot's `spring.mvc.hiddenmethod.filter.enabled` selects the same mode, registering Spring's filter
+rather than the Grails one. Either property is enough: whichever is set, a filter is on the chain, the
+dispatcher stops resolving `_method` itself, and the `POST` member route is not generated.
+
+NOTE: Spring's filter is contributed by `WebMvcAutoConfiguration`, which backs off entirely for an application
+declaring `@EnableWebMvc`. Grails contributes its own filter in that case, so asking for Boot's still leaves a
+filter on the chain rather than silently leaving none. Previously the two definitions could also collide on the
+shared `hiddenHttpMethodFilter` bean name and fail application startup; they no longer can.
+
+
+==== 51. Tag Libraries Are Described When Compiled
 
 Tag calls are resolved against a description each tag library contributes as it is compiled, and a
 resolved call is compiled into a direct invocation. The tag itself is still selected by name when the
@@ -2971,7 +3087,7 @@ class ReportController {
 A tag called *with* its namespace, and any tag called from a GSP, already captured, so only an
 unqualified call from a controller to a method-declared tag changes.
 
-==== 51. Quartz Job Scheduling Behavior Changes
+==== 52. Quartz Job Scheduling Behavior Changes
 
 Three behaviors of the Quartz plugin changed in this release. All three concern what happens when
 something about a schedule is wrong; none of them require a change to a job class.
@@ -3034,7 +3150,254 @@ job is disabled with `jobEnabled = false`, or the class is not a job artefact of
 An application that caught `NullPointerException` around these calls has to catch those instead. See
 <<quartzDynamicScheduling,Dynamic Job Scheduling>>.
 
-==== 52. Coordinate Changes
+==== 53. `request` Is No Longer a `MultipartHttpServletRequest`
+
+The `request` object Grails exposes to controllers, tag libraries and GSPs is now always the outermost
+servlet request. Previously, for a file upload, Grails replaced it with the resolved
+`MultipartHttpServletRequest`, which discarded the request wrappers contributed by other filters — the
+hidden HTTP method filter, Spring Security, and any application filter.
+
+All file upload methods work exactly as before:
+
+[source,groovy]
+----
+def upload() {
+    def file = request.getFile('myFile')
+    if (file.empty) {
+        flash.message = 'file cannot be empty'
+        render(view: 'uploadForm')
+        return
+    }
+    file.transferTo(new File('/some/local/dir/myfile.txt'))
+}
+----
+
+`request.getFiles(name)`, `request.getFileNames()`, `request.getFileMap()`, `request.getMultiFileMap()`
+and `request.getMultipartContentType(name)` are likewise unchanged, as is binding a file through
+`params`:
+
+[source,groovy]
+----
+def img = new Image(params)
+----
+
+What no longer works is treating `request` as a `MultipartHttpServletRequest` by type:
+
+[source,groovy]
+----
+// Before
+if (request instanceof MultipartHttpServletRequest) {
+    def file = ((MultipartHttpServletRequest) request).getFile('myFile')
+}
+
+// After
+def file = request.getFile('myFile')
+----
+
+Calling one of the file methods on a request that is not a file upload throws `IllegalStateException`
+with a diagnostic message, the same way it previously failed with `MissingMethodException`.
+
+===== 53.1 Oversized uploads now reach the application's error handling
+
+An upload larger than `grails.controllers.upload.maxFileSize` or
+`grails.controllers.upload.maxRequestSize` (both 128000 bytes by default) fails when the servlet
+container parses the request parts, and every parameter read on that request fails with it from then
+on. Because Grails reads request parameters on paths that run before, alongside and after the handler
+— to resolve the `_method` override, whenever a filter such as Spring Security builds `params`, in the
+locale-change interceptor, and in the exception resolver's request log — that failure used to abort
+the request inside the filter chain, where no exception handler could see it. The application was left
+with the container's own error page.
+
+Those reads now tolerate a multipart request the container refuses to parse, so the failure surfaces
+where Spring raises it, as a
+`org.springframework.web.multipart.MultipartException`/`MaxUploadSizeExceededException` during
+dispatch. The exception is available to `HandlerExceptionResolver` beans, and the response is a `413`
+rendered through the application's error dispatch instead of the container's own error page.
+
+A `"413"` response code URL mapping handles it, the same way a `"404"` or `"500"` mapping handles those
+statuses:
+
+[source,groovy]
+----
+"413"(controller: 'errors', action: 'tooLarge')
+----
+
+The mapped action runs on the container's error dispatch, so `request.dispatcherType` is `ERROR` and
+`params` is empty — the container never parsed the request. `request.getFile(..)` is unavailable there
+for the same reason. The upload itself is gone by then; the action's job is to render the response.
+
+The parameters of such a request are empty everywhere, not just in the error handler. The request
+cannot reach the originally requested controller either way — `DispatcherServlet` rejects it before
+handler resolution — so outside the error handler this is only observable in a filter that inspects
+`params` ahead of the dispatch.
+
+====== Servlet container differences
+
+Tomcat and Jetty both surface the failure to the application as described above. Undertow applies the
+limit while it reads the request entity and refuses the request at the HTTP layer, so no application
+code runs at all: the response is a bare `413` with an empty body, and a `"413"` mapping is not
+consulted. Raising `grails.controllers.upload.maxRequestSize` raises the point at which Undertow
+refuses, but there is no way to render a body for a request the container never dispatches.
+
+===== 53.2 An error handler that fails is no longer forwarded to from inside itself
+
+A `"500"` (or exception-specific) URL mapping that names a controller is reached by forwarding to it.
+That forward re-enters the `DispatcherServlet`, and the forwarded dispatch resolves the same status
+code mapping again. An error handler that failed for a reason belonging to the request rather than to
+the moment — an unparseable multipart body, a missing collaborator — therefore failed again inside its
+own forward, and that failure forwarded to it once more, until the dispatch stack overflowed.
+
+The error handler is no longer forwarded to while a forward to it is already running. The repeat
+failure is logged and the exception is returned to the `DispatcherServlet`, which reports it through
+the container, so the response is a single container-level error rather than a dispatch that never
+terminates. Once the forward returns, a later error on the same request — from an enclosing request
+whose include failed, for instance — is forwarded to the error handler as before.
+
+==== 54. Request Processing Behaviour Changes
+
+Four changes fall out of Grails 8 delegating more of the request path to Spring.
+
+===== 54.1 API versioning headers are now emitted for Grails-mapped requests
+
+`UrlMappingsHandlerMapping` previously assembled its own handler execution chain rather than using
+Spring's. As a result, Grails-mapped requests skipped the interceptor Spring adds for API versioning,
+so the `Deprecation`, `Sunset` and `Link` headers configured through `spring.mvc.apiversion.*` were
+never sent. The chain is now assembled by Spring, and those headers are emitted as configured.
+
+If an application relied on those headers being absent, unset the corresponding
+`spring.mvc.apiversion.*` configuration.
+
+===== 54.2 The `LocaleContext` is restored rather than cleared
+
+At the end of a request Grails previously called `LocaleContextHolder.setLocale(null)`, which discarded
+any `LocaleContext` established earlier in the filter chain by non-Grails code. Grails now saves and
+restores the previous `LocaleContext`, matching Spring's own `RequestContextFilter`.
+
+===== 54.3 The application attributes object is shared per servlet context
+
+`GrailsApplicationAttributes` was constructed once per request. It is now created once per servlet
+context and reused, so the beans it caches are resolved once rather than on every request. It is
+rebuilt automatically if the `ApplicationContext` is replaced.
+
+Applications that implemented `GrailsApplicationAttributes` themselves must ensure their
+implementation holds no request-scoped state and is safe to use from multiple request threads.
+
+===== 54.4 `GrailsWebRequest.setMultipartRequest(..)` is deprecated
+
+`setMultipartRequest(HttpServletRequest)` installed the resolved multipart request on the web request. With
+the substitution gone the resolver publishes it as a request attribute instead, and Grails finds it there or
+by unwrapping. The method still works -- it publishes its argument and discards the cached params -- but a
+caller that has one should move to letting the resolver publish it, or set the attribute directly:
+
+[source,groovy]
+----
+// Before
+webRequest.setMultipartRequest(resolved)
+
+// After
+request.setAttribute(WebUtils.MULTIPART_HTTP_SERVLET_REQUEST_ATTRIBUTE, resolved)
+webRequest.multipartRequestResolved()
+----
+
+===== 54.5 `GrailsWebRequest.getCurrentRequest()` is deprecated
+
+`getCurrentRequest()` existed to hand back the resolved multipart request in place of the request Grails
+was bound to. That substitution is gone (see _52. `request` Is No Longer a `MultipartHttpServletRequest`_),
+so the method now returns exactly what `getRequest()` returns. It is deprecated; call `getRequest()`
+instead.
+
+[source,groovy]
+----
+// Before
+def uri = webRequest.currentRequest.requestURI
+
+// After
+def uri = webRequest.request.requestURI
+----
+
+Nothing about the value returned has changed, so this is a rename, not a behaviour change. Code that
+reaches for the uploaded files of a multipart request should use the `request.getFile(..)` methods
+described in section 53.
+
+Tests that mock a `GrailsWebRequest` and stub `getCurrentRequest()` need updating. `getRequest()` is
+`final` on Spring's `ServletRequestAttributes`, so `getCurrentRequest()` was the only stubbable request
+accessor, and framework code now calls `getRequest()` directly. Drive a real `GrailsWebRequest` over a
+`MockHttpServletRequest` rather than stubbing the accessor:
+
+[source,groovy]
+----
+// Before
+def webRequest = Mock(GrailsWebRequest)
+webRequest.getCurrentRequest() >> request
+
+// After
+def webRequest = new GrailsWebRequest(request, response, servletContext)
+----
+
+
+==== 55. URL Mapping Names Come From the URI, Not From Request Parameters
+
+A mapping that captures its controller, action or namespace from the URL — `"/$controller/$action?/$id?"`,
+the default mapping every application starts with — used to resolve those names by reading the request's
+parameters during dispatch. The values were normally the ones the URI supplied, because the match wrote its
+captures over the request parameters first. But a token the URI did *not* supply left whatever the request
+carried under that name in place, and the request's own value decided the route.
+
+A request for `/article?action=gallery` therefore reached `ArticleController.gallery()` instead of the
+controller's default action: the optional `$action` token captured nothing, and the query string filled the
+gap. The same held for `controller` and `namespace`, and for a form body as well as a query string.
+
+Captured names now come from the match itself. A token the URI does not supply is simply absent, and a
+request parameter of the same name has no say in routing:
+
+[source,groovy]
+.grails-app/controllers/UrlMappings.groovy
+----
+static mappings = {
+    "/$controller/$action?/$id?"()
+}
+----
+
+[cols="1,1,1", options="header"]
+|===
+| Request
+| Grails 7
+| Grails 8
+
+| `/article/gallery`
+| `ArticleController.gallery()`
+| `ArticleController.gallery()`
+
+| `/article?action=gallery`
+| `ArticleController.gallery()`
+| the default action of `ArticleController`
+|===
+
+`params.action` still holds `gallery` in both versions — only the routing decision changed.
+
+Choosing an action from a request parameter is still supported, by asking for it explicitly with a closure:
+
+[source,groovy]
+.grails-app/controllers/UrlMappings.groovy
+----
+static mappings = {
+    "/$controller" {
+        action = { params.goHere }
+    }
+}
+----
+
+A closure supplied by the mapping keeps reading request state, exactly as before, and mappings that use one
+are unaffected by this change.
+
+Two consequences beyond the routing fix. Request parameters are now built once per request rather than once
+per candidate mapping, since candidates no longer have to be configured onto the request to be identified.
+And `grails.web.mapping.UrlMappingInfo` gains a
+`isNameResolutionRequestDependent()` method for callers that resolve names themselves; it is a default
+method that reports `true`, so an implementation outside the framework keeps its current behaviour without
+changes.
+
+==== 56. Coordinate Changes
 
 `grails-datamapping-async` provides the asynchronous programming model for Grails Data — the
 `AsyncEntity` trait and the `async` namespace — and is meant to be depended on directly by
@@ -3059,7 +3422,7 @@ Grails 7 (`org.apache.grails.data:grails-datamapping-async`) coordinates in a pr
 ./rename_gradle_artifacts.sh -l my/project/location
 ----
 
-==== 53. `importJavaTime` Removed
+==== 57. `importJavaTime` Removed
 
 The `org.apache.grails.gradle.grails-app` plugin no longer accepts `importJavaTime`.
 

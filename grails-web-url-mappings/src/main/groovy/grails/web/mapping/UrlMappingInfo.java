@@ -147,4 +147,25 @@ public interface UrlMappingInfo {
     default boolean hasWildcardCaptures() {
         return false;
     }
+
+    /**
+     * Whether resolving {@link #getControllerName()}, {@link #getActionName()},
+     * {@link #getNamespace()} or {@link #getViewName()} depends on the state of the current request,
+     * and so requires {@link #configure(GrailsWebRequest)} to have run first.
+     *
+     * <p>A mapping such as <code>"/$controller/$action?"</code> captures its names from the URI and can
+     * answer them from the match alone. A mapping that computes a name with a closure of its own - for
+     * example <code>"/$controller" { action = { params.goHere } }</code> - reads whatever that closure
+     * reaches for, typically the parameters of the current request, and a caller that wants the name
+     * has to configure the request before asking for it.</p>
+     *
+     * <p>Implementations that cannot tell should leave this as the default, which asks callers to
+     * configure the request and preserves the behaviour of every release before this method existed.</p>
+     *
+     * @return true if the names can only be resolved once the request has been configured
+     * @since 8.0
+     */
+    default boolean isNameResolutionRequestDependent() {
+        return true;
+    }
 }

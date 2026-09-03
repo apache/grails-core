@@ -38,6 +38,7 @@ import org.springframework.web.servlet.support.RequestDataValueProcessor
 
 import grails.artefact.TagLibrary
 import grails.config.Config
+import grails.compiler.GrailsCompileStatic
 import grails.core.support.GrailsConfigurationAware
 import grails.gsp.TagLib
 import grails.web.mapping.LinkGenerator
@@ -510,6 +511,10 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
             hiddenFieldImpl(writer, [name: 'execution', value: request['flowExecutionKey']])
         }
 
+        // A browser submits only GET or POST, so any other method travels as this parameter - read by the
+        // servlet filter in one mode and by the dispatcher in the other. The POST route on a resources
+        // member URL is a fallback for clients that cannot send it, not a replacement: it reaches update
+        // alone, and covers neither a singular resource nor a URL an application mapped to PUT itself.
         if (notGet && httpMethod != HttpMethod.POST) {
             hiddenFieldImpl(writer, [name: '_method', value: httpMethod.toString()])
         }
@@ -1575,6 +1580,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
     }
 
     @Override
+    @GrailsCompileStatic
     void setConfiguration(Config co) {
         // Some attributes can be treated as boolean, but must be converted to the
         // expected value.

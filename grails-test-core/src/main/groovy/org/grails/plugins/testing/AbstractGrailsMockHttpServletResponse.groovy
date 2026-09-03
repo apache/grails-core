@@ -42,7 +42,7 @@ abstract class AbstractGrailsMockHttpServletResponse extends MockHttpServletResp
      * @param format The format of the response
      */
     void setFormat(String format) {
-        HttpServletRequest request = GrailsWebRequest.lookup().getCurrentRequest()
+        HttpServletRequest request = GrailsWebRequest.lookup().getRequest()
 
         request.setAttribute(GrailsApplicationAttributes.RESPONSE_FORMAT, format)
         // remove so that is can be repopulated
@@ -106,7 +106,7 @@ abstract class AbstractGrailsMockHttpServletResponse extends MockHttpServletResp
     @Override
     void reset() {
         final webRequest = GrailsWebRequest.lookup()
-        webRequest?.currentRequest?.removeAttribute(GrailsApplicationAttributes.REDIRECT_ISSUED)
+        webRequest?.request?.removeAttribute(GrailsApplicationAttributes.REDIRECT_ISSUED)
         setCommitted(false)
         super.reset()
         webRequest?.setOut(getWriter())
@@ -119,7 +119,7 @@ abstract class AbstractGrailsMockHttpServletResponse extends MockHttpServletResp
     @Override
     String getRedirectedUrl() {
         final webRequest = GrailsWebRequest.lookup()
-        final redirectURI = webRequest?.currentRequest?.getAttribute(GrailsApplicationAttributes.REDIRECT_ISSUED)
+        final redirectURI = webRequest?.request?.getAttribute(GrailsApplicationAttributes.REDIRECT_ISSUED)
 
         if (redirectURI != null) {
             return redirectURI

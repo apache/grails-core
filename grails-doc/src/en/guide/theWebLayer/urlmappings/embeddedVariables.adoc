@@ -72,6 +72,8 @@ static mappings = {
 
 Here the name of the controller, action and id are implicitly obtained from the variables `controller`, `action` and `id` embedded within the URL.
 
+These names come from the URL and from nowhere else. A request parameter named `controller`, `action` or `namespace` does not stand in for a token the URL leaves out: given the mapping above, `/product?action=delete` routes to `ProductController`'s default action, not to `delete`. The parameter is still bound, and is still readable as `params.action`; it just has no say in which action runs. To route on a request parameter, ask for it explicitly with a closure, as shown at the end of this section.
+
 ===== Wildcard Artefact Validation
 
 By default, when URL mappings use wildcard variables like `$controller`, `$action`, or `$namespace`, Grails validates the captured values against registered controller artefacts. If a captured value does not correspond to a real controller, action, or namespace, the mapping is skipped and the next mapping is tried.

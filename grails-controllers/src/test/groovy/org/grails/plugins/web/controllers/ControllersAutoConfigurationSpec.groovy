@@ -21,6 +21,8 @@ package org.grails.plugins.web.controllers
 
 import java.util.function.Supplier
 
+import jakarta.servlet.Filter
+
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
 
@@ -198,6 +200,16 @@ class ControllersAutoConfigurationSpec extends Specification {
                     assert context.getBean('exceptionHandler').is(userResolver)
                     assert context.getBeanNamesForType(GrailsExceptionResolver).length == 0
                 }
+    }
+
+    private WebApplicationContextRunner hiddenMethodContextRunner() {
+        def grailsApplication = Mock(GrailsApplication) {
+            getClassLoader() >> getClass().classLoader
+        }
+        Supplier<GrailsApplication> grailsApplicationSupplier = () -> grailsApplication
+        new WebApplicationContextRunner()
+                .withBean(GrailsApplication, grailsApplicationSupplier)
+                .withConfiguration(AutoConfigurations.of(ControllersAutoConfiguration, WebMvcAutoConfiguration))
     }
 
     private static MockServletContext servletContextWithWebApplicationContext() {

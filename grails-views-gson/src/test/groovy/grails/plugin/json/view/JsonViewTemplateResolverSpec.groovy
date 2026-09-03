@@ -29,12 +29,10 @@ import grails.web.http.HttpHeaders
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.GrailsApplicationAttributes
 import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.web.context.request.RequestContextHolder
 import spock.lang.Issue
 import spock.lang.Specification
-
-import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpServletResponse
 
 /**
  * Created by graemerocher on 24/08/15.
@@ -70,17 +68,13 @@ class JsonViewTemplateResolverSpec extends Specification {
         def applicationAttributes = Mock(GrailsApplicationAttributes)
         applicationAttributes.getControllerUri(_) >> "/test"
 
-        def webRequest = Mock(GrailsWebRequest)
-        webRequest.getAttributes() >> applicationAttributes
+        def request = new MockHttpServletRequest()
+        request.addHeader(HttpHeaders.ACCEPT_VERSION, "1.1")
+        request.addHeader(HttpHeaders.ACCEPT, "text/html")
+        request.preferredLocales = [Locale.ENGLISH]
+        def response = new MockHttpServletResponse()
+        def webRequest = new GrailsWebRequest(request, response, applicationAttributes)
         RequestContextHolder.setRequestAttributes(webRequest)
-        def request = Mock(HttpServletRequest)
-        def response = Mock(HttpServletResponse)
-        request.getHeader(HttpHeaders.ACCEPT_VERSION) >> "1.1"
-        request.getHeader(HttpHeaders.ACCEPT) >> "text/html"
-        request.getLocale() >> Locale.ENGLISH
-        // resolveView(viewName, request, response) and buildQualifiers use the request/response passed
-        // directly, so there is no need to stub GrailsWebRequest's final getRequest()/getResponse().
-        webRequest.getCurrentRequest() >> request
         def templateResolver = Mock(TemplateResolver)
         viewResolver.templateResolver = templateResolver
 
@@ -139,14 +133,11 @@ class JsonViewTemplateResolverSpec extends Specification {
         def viewResolver = new GenericGroovyTemplateViewResolver(smartResolver)
 
 
-        def webRequest = Mock(GrailsWebRequest)
-
         def applicationAttributes = Mock(GrailsApplicationAttributes)
         applicationAttributes.getControllerUri(_) >> "/test"
-        webRequest.getAttributes() >> applicationAttributes
         def currentRequest = new MockHttpServletRequest()
         currentRequest.addHeader('Accept', 'text/html')
-        webRequest.getCurrentRequest() >> currentRequest
+        def webRequest = new GrailsWebRequest(currentRequest, new MockHttpServletResponse(), applicationAttributes)
         RequestContextHolder.setRequestAttributes(webRequest)
         def templateResolver = Mock(TemplateResolver)
 
@@ -175,17 +166,14 @@ class JsonViewTemplateResolverSpec extends Specification {
         def smartResolver = new JsonViewResolver()
         def viewResolver = new GenericGroovyTemplateViewResolver(smartResolver)
 
-        def webRequest = Mock(GrailsWebRequest)
-
         and: 'the default controller URI'
         def applicationAttributes = Mock(GrailsApplicationAttributes)
         applicationAttributes.getControllerUri(_) >> "/test"
-        webRequest.getAttributes() >> applicationAttributes
 
         and: 'the actual URI because of a redirect'
         def currentRequest = new MockHttpServletRequest("", "/foo")
         currentRequest.addHeader('Accept', 'text/html')
-        webRequest.getCurrentRequest() >> currentRequest
+        def webRequest = new GrailsWebRequest(currentRequest, new MockHttpServletResponse(), applicationAttributes)
         RequestContextHolder.setRequestAttributes(webRequest)
         def templateResolver = Mock(TemplateResolver)
 

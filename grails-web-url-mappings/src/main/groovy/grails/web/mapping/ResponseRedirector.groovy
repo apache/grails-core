@@ -63,7 +63,7 @@ class ResponseRedirector {
 
     void redirect(Map arguments = Collections.emptyMap()) {
         def webRequest = GrailsWebRequest.lookup()
-        HttpServletRequest request = webRequest.currentRequest
+        HttpServletRequest request = webRequest.request
         HttpServletResponse response = webRequest.getCurrentResponse()
 
         redirect(request, response, arguments)

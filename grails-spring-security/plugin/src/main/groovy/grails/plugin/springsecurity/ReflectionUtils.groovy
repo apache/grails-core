@@ -39,6 +39,7 @@ import grails.web.mapping.UrlMappingsHolder
 import org.grails.config.PropertySourcesConfig
 import org.grails.web.mime.HttpServletResponseExtension
 import org.grails.web.servlet.mvc.GrailsWebRequest
+import org.grails.web.util.HiddenHttpMethod
 
 import static grails.web.http.HttpHeaders.ACCEPT_VERSION
 
@@ -206,7 +207,11 @@ class ReflectionUtils {
 
     static UrlMappingInfo[] matchAllUrlMappings(UrlMappingsHolder urlMappingsHolder, String requestUrl,
                                                 GrailsWebRequest grailsRequest, HttpServletResponseExtension extension) {
-        String method = grailsRequest.currentRequest.method
+        // The method the request will be routed as, not the one it arrived as. The dispatcher resolves a
+        // "_method" override after this chain has run, so matching on the raw POST would resolve this URL to
+        // the mapping for a different action than the one about to execute - and authorize that one instead.
+        // Under the servlet filter the request already reports the overridden method and this resolves to it.
+        String method = HiddenHttpMethod.resolveOverride(grailsRequest.request) ?: grailsRequest.request.method
         String version = grailsRequest.getHeader(ACCEPT_VERSION) ?: extension.getMimeTypeForRequest(grailsRequest).version
         urlMappingsHolder.matchAll requestUrl, method, version == null ? UrlMapping.ANY_VERSION : version
     }

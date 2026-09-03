@@ -106,7 +106,6 @@ def buildJdkSupportsMicronaut = Runtime.version().feature() >= 25
 def skipMicronautProjects = explicitlySkipMicronaut || (!buildJdkSupportsMicronaut && !explicitlyIncludeMicronaut)
 
 include(
-        'grails-benchmarks',
         'grails-bootstrap',
         'grails-beans-dsl',
         'grails-cache',
@@ -577,6 +576,7 @@ include(
         'grails-test-examples-async-events-pubsub-demo',
         'grails-test-examples-beans-dsl',
         'grails-test-examples-beans-dsl-plugin',
+        'grails-test-examples-benchmarks',
         'grails-test-examples-cache',
         'grails-test-examples-database-cleanup',
         'grails-test-examples-gsp-compile-static',
@@ -616,6 +616,7 @@ include(
         'grails-test-examples-views-functional-tests-plugin',
 )
 project(':grails-test-examples-async-events-pubsub-demo').projectDir = file('grails-test-examples/async-events-pubsub-demo')
+project(':grails-test-examples-benchmarks').projectDir = file('grails-test-examples/benchmarks')
 project(':grails-test-examples-beans-dsl').projectDir = file('grails-test-examples/beans-dsl')
 project(':grails-test-examples-beans-dsl-plugin').projectDir = file('grails-test-examples/beans-dsl-plugin')
 project(':grails-test-examples-aot').projectDir = file('grails-test-examples/aot')

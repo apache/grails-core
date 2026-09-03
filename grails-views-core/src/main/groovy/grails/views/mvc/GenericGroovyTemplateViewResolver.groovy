@@ -48,7 +48,7 @@ class GenericGroovyTemplateViewResolver implements ViewResolver {
     View resolveViewName(String viewName, Locale locale) throws Exception {
         def webRequest = GrailsWebRequest.lookup()
         if (webRequest != null) {
-            def currentRequest = webRequest?.currentRequest
+            def currentRequest = webRequest?.request
             if (viewName.startsWith('/')) {
                 def controller = webRequest.controllerClass
                 View view
@@ -96,7 +96,7 @@ class GenericGroovyTemplateViewResolver implements ViewResolver {
     }
 
     private View resolveViewWithController(String controllerUri, String viewName, GrailsWebRequest webRequest) {
-        HttpServletRequest currentRequest = webRequest?.currentRequest
+        HttpServletRequest currentRequest = webRequest?.request
         HttpServletResponse currentResponse = webRequest?.currentResponse
 
         if (controllerUri) {

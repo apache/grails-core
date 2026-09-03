@@ -34,6 +34,7 @@ import org.springframework.web.servlet.i18n.LocaleChangeInterceptor
 import org.springframework.web.servlet.support.RequestContextUtils
 
 import org.grails.web.servlet.mvc.GrailsWebRequest
+import org.grails.web.util.WebUtils
 
 /**
  * A LocaleChangeInterceptor instance that is aware of the Grails params object.
@@ -69,6 +70,12 @@ class ParamsAwareLocaleChangeInterceptor extends LocaleChangeInterceptor {
 
         def localeParam = params?.get(paramName)
         if (!localeParam) {
+            // super reads the parameter straight off the request. This also runs on the error dispatch,
+            // where an unparseable multipart body would make that read throw and replace the error being
+            // rendered. Probe tolerantly first; the container caches parameters, so super's read is a lookup.
+            if (WebUtils.readParameter(request, paramName) == null) {
+                return true
+            }
             return super.preHandle(request, response, handler)
         }
 
