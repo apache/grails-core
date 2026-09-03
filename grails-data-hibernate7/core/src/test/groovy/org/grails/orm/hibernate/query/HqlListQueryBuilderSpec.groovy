@@ -208,4 +208,39 @@ class HqlListQueryBuilderSpec extends Specification {
         [offset: 5]          | true
         [max: 10, offset: 5] | true
     }
+
+    void "test buildListHql rejects injected sort property"() {
+        when:
+        new HqlListQueryBuilder(entity, [(HibernateQueryArgument.SORT.value()): "name, e.id"]).buildListHql()
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains("Invalid sort property")
+    }
+
+    void "test buildListHql rejects unknown sort property"() {
+        when:
+        new HqlListQueryBuilder(entity, [(HibernateQueryArgument.SORT.value()): "notAProperty"]).buildListHql()
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains("Unknown sort property")
+    }
+
+    void "test buildListHql rejects injected sort direction"() {
+        given:
+        def prop = Mock(HibernatePersistentProperty)
+        prop.getType() >> String
+        entity.getHibernatePropertyByPath("name") >> prop
+
+        when:
+        new HqlListQueryBuilder(entity, [
+                (HibernateQueryArgument.SORT.value()) : "name",
+                (HibernateQueryArgument.ORDER.value()): "desc; delete"
+        ]).buildListHql()
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains("Invalid sort direction")
+    }
 }

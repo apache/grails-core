@@ -251,6 +251,39 @@ class DynamicFinderCoverageSpec extends Specification {
         then:
         results*.name.sort() == ['Alice', 'Charlie']
     }
+
+    void "list(sort) still sorts by a mapped property"() {
+        expect:
+        DynamicFinderThing.list(sort: 'age')*.age == [25, 30, 35]
+    }
+
+    void "list(sort) rejects injected property names"() {
+        when:
+        DynamicFinderThing.list(sort: 'age, id')
+
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    void "list(sort) rejects unknown property names"() {
+        when:
+        DynamicFinderThing.list(sort: 'notAProperty')
+
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    void "populateArgumentsForCriteria rejects injected sort map keys"() {
+        given:
+        def api = new org.grails.datastore.gorm.GormStaticApi(DynamicFinderThing, datastore, [])
+        def criteria = api.createCriteria()
+
+        when:
+        DynamicFinder.populateArgumentsForCriteria(criteria, [sort: ['age, id': 'asc']])
+
+        then:
+        thrown(IllegalArgumentException)
+    }
 }
 
 @Entity

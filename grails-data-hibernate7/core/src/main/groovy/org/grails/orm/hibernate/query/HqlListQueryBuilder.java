@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import org.grails.orm.hibernate.cfg.HibernateMappingContext;
 import org.grails.orm.hibernate.cfg.Mapping;
@@ -37,6 +38,8 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentP
  * @since 7.0.0
  */
 public class HqlListQueryBuilder {
+
+    private static final Pattern PROPERTY_PATH = Pattern.compile("[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*");
 
     private final GrailsHibernatePersistentEntity entity;
     private final Map<String, Object> params;
@@ -111,13 +114,35 @@ public class HqlListQueryBuilder {
     }
 
     private String buildSortPart(String propertyName, String direction, boolean ignoreCase) {
-        if (propertyName == null) return "";
-        String path = "e." + propertyName;
-        HibernatePersistentProperty prop = entity.getHibernatePropertyByPath(propertyName);
-        if (prop != null && prop.getType() == String.class && ignoreCase) {
-            return "upper(" + path + ") " + (direction != null ? direction : "asc");
+        if (propertyName == null || propertyName.isBlank()) {
+            return "";
         }
-        return path + " " + (direction != null ? direction : "asc");
+        if (!PROPERTY_PATH.matcher(propertyName).matches()) {
+            throw new IllegalArgumentException("Invalid sort property: " + propertyName);
+        }
+        HibernatePersistentProperty prop = entity.getHibernatePropertyByPath(propertyName);
+        if (prop == null) {
+            throw new IllegalArgumentException("Unknown sort property: " + propertyName);
+        }
+        String normalizedDirection = normalizeDirection(direction);
+        String path = "e." + propertyName;
+        if (prop.getType() == String.class && ignoreCase) {
+            return "upper(" + path + ") " + normalizedDirection;
+        }
+        return path + " " + normalizedDirection;
+    }
+
+    private static String normalizeDirection(String direction) {
+        if (direction == null || direction.isBlank()) {
+            return "asc";
+        }
+        if ("asc".equalsIgnoreCase(direction)) {
+            return "asc";
+        }
+        if ("desc".equalsIgnoreCase(direction)) {
+            return "desc";
+        }
+        throw new IllegalArgumentException("Invalid sort direction: " + direction);
     }
 
     public static boolean isPaged(Map<String, Object> params) {

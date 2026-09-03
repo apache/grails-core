@@ -61,6 +61,7 @@ import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.BuildableCriteria;
@@ -91,6 +92,7 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
     public static final String ARGUMENT_IGNORE_CASE = "ignoreCase";
     public static final String ARGUMENT_CACHE = "cache";
     public static final String ARGUMENT_LOCK = "lock";
+    private static final Pattern SORT_PROPERTY_PATTERN = Pattern.compile("[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*");
     protected Pattern pattern;
 
     private static final String OPERATOR_OR = "Or";
@@ -472,9 +474,11 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
         }
         boolean ignoreCase = !argMap.containsKey(ARGUMENT_IGNORE_CASE) || ClassUtils.getBooleanFromMap(ARGUMENT_IGNORE_CASE, argMap);
 
+        PersistentEntity sortEntity = resolvePersistentEntity(query);
         if (sortObject != null) {
             if (sortObject instanceof CharSequence) {
                 final String sort = sortObject.toString();
+                validateSortProperty(sortEntity, sort);
                 final Query.Order order = ORDER_DESC.equalsIgnoreCase(orderParam) ? Query.Order.desc(sort) : Query.Order.asc(sort);
                 if (ignoreCase) {
                     order.ignoreCase();
@@ -486,7 +490,9 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
                 for (Object key : sortMap.keySet()) {
                     Object value = sortMap.get(key);
                     String sort = key.toString();
-                    final Query.Order order = ORDER_DESC.equalsIgnoreCase(orderParam) ? Query.Order.desc(sort) : Query.Order.asc(sort);
+                    validateSortProperty(sortEntity, sort);
+                    String direction = value != null ? value.toString() : orderParam;
+                    final Query.Order order = ORDER_DESC.equalsIgnoreCase(direction) ? Query.Order.desc(sort) : Query.Order.asc(sort);
                     if (ignoreCase) {
                         order.ignoreCase();
                     }
@@ -767,7 +773,55 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
         methodExpressinPattern = Pattern.compile("\\p{Upper}[\\p{Lower}\\d]+(" + expressionPattern + ")");
     }
 
+    private static PersistentEntity resolvePersistentEntity(BuildableCriteria query) {
+        if (query instanceof AbstractCriteriaBuilder) {
+            return ((AbstractCriteriaBuilder) query).getPersistentEntity();
+        }
+        if (query instanceof AbstractDetachedCriteria) {
+            return ((AbstractDetachedCriteria) query).getPersistentEntity();
+        }
+        return null;
+    }
+
+    /**
+     * Rejects sort keys that are not identifier-shaped property paths, and when a
+     * mapping is available, keys that do not resolve to a persistent property.
+     *
+     * @param entity the entity being queried, or {@code null} when it cannot be resolved
+     * @param sort the requested sort property
+     */
+    public static void validateSortProperty(PersistentEntity entity, String sort) {
+        if (sort == null || !SORT_PROPERTY_PATTERN.matcher(sort).matches()) {
+            throw new IllegalArgumentException("Invalid sort property: " + sort);
+        }
+        if (entity == null) {
+            return;
+        }
+        PersistentEntity current = entity;
+        String[] parts = sort.split("\\.");
+        for (int i = 0; i < parts.length; i++) {
+            PersistentProperty prop = current.getPropertyByName(parts[i]);
+            if (prop == null) {
+                PersistentProperty identity = current.getIdentity();
+                if (identity != null && parts[i].equals(identity.getName()) && i == parts.length - 1) {
+                    return;
+                }
+                throw new IllegalArgumentException("Unknown sort property: " + sort);
+            }
+            if (i < parts.length - 1) {
+                if (!(prop instanceof Association)) {
+                    throw new IllegalArgumentException("Invalid sort property: " + sort);
+                }
+                current = ((Association) prop).getAssociatedEntity();
+                if (current == null) {
+                    throw new IllegalArgumentException("Invalid sort property: " + sort);
+                }
+            }
+        }
+    }
+
     private static void addSimpleSort(Query q, String sort, String order, boolean ignoreCase) {
+        validateSortProperty(q.getEntity(), sort);
         Query.Order o;
         if (ORDER_DESC.equalsIgnoreCase(order)) {
             o = Query.Order.desc(sort);
