@@ -36,36 +36,21 @@ import groovy.lang.Closure;
 import groovy.lang.GroovyObject;
 import groovy.lang.MissingMethodException;
 
-import grails.gsp.NotATag;
-import grails.gsp.Tag;
+import org.grails.taglib.discovery.ReflectedTagMethodView;
+import org.grails.taglib.discovery.TagDiscoveryRules;
 
 public final class TagMethodInvoker {
 
     /**
-     * Method names from framework traits, Spring lifecycle interfaces, and the like
-     * that must never be treated as tag methods regardless of the declaring class.
+     * Names that live on every tag library through the framework traits and are therefore never tags.
+     * <p>
+     * Exposed so that the compile-time tag library index derives the same tag names from the AST that
+     * this class derives by reflection at runtime. A name recorded in the index but rejected here
+     * would resolve when a GSP is compiled and then fail to dispatch when it renders.
+     *
+     * @since 8.0.0
      */
-    private static final Set<String> FRAMEWORK_METHOD_NAMES = Set.of(
-            "afterPropertiesSet",
-            "currentRequestAttributes",
-            "destroy",
-            "initializeTagLibrary",
-            "onApplicationEvent",
-            "raw",
-            "throwTagError",
-            "withCodec"
-    );
-
-    private static final Set<String> OBJECT_METHOD_SIGNATURES = collectSignatures(Object.class);
-    private static final Set<String> GROOVY_OBJECT_METHOD_SIGNATURES = collectSignatures(GroovyObject.class);
-
-    private static Set<String> collectSignatures(Class<?> type) {
-        Set<String> signatures = new HashSet<>();
-        for (Method method : type.getMethods()) {
-            signatures.add(signature(method));
-        }
-        return Collections.unmodifiableSet(signatures);
-    }
+    public static final Set<String> FRAMEWORK_METHOD_NAMES = TagDiscoveryRules.getFrameworkMethodNames();
 
     private static final ClassValue<Map<String, Field>> CLOSURE_FIELDS_BY_NAME = new ClassValue<>() {
         @Override
@@ -97,16 +82,16 @@ public final class TagMethodInvoker {
         }
     };
 
-    private static final ClassValue<Map<String, List<Method>>> INVOKABLE_METHODS_BY_NAME = new ClassValue<>() {
+    private static final ClassValue<Map<String, List<TagMethodBinding>>> INVOKABLE_METHODS_BY_NAME = new ClassValue<>() {
         @Override
-        protected Map<String, List<Method>> computeValue(Class<?> type) {
+        protected Map<String, List<TagMethodBinding>> computeValue(Class<?> type) {
             Map<String, List<Method>> methodsByName = new HashMap<>();
             for (Method method : type.getDeclaredMethods()) {
                 if (isTagMethodCandidate(method)) {
                     methodsByName.computeIfAbsent(method.getName(), ignored -> new ArrayList<>()).add(method);
                 }
             }
-            Map<String, List<Method>> immutableMethodsByName = new HashMap<>(methodsByName.size());
+            Map<String, List<TagMethodBinding>> immutableMethodsByName = new HashMap<>(methodsByName.size());
             for (Map.Entry<String, List<Method>> entry : methodsByName.entrySet()) {
                 // Sort methods by descending parameter count so that (Map, Closure) signatures
                 // are tried before (Map) signatures, preventing infinite recursion when a
@@ -118,11 +103,102 @@ public final class TagMethodInvoker {
                     int byArity = Integer.compare(b.getParameterCount(), a.getParameterCount());
                     return byArity != 0 ? byArity : signature(a).compareTo(signature(b));
                 });
-                immutableMethodsByName.put(entry.getKey(), Collections.unmodifiableList(sorted));
+                List<TagMethodBinding> bindings = new ArrayList<>(sorted.size());
+                for (Method method : sorted) {
+                    bindings.add(new TagMethodBinding(method));
+                }
+                immutableMethodsByName.put(entry.getKey(), Collections.unmodifiableList(bindings));
             }
             return Collections.unmodifiableMap(immutableMethodsByName);
         }
     };
+
+    /**
+     * How one parameter of a tag method is supplied when the tag is invoked.
+     */
+    private enum ParameterSource {
+        /** The whole attribute map. */
+        ATTRS,
+        /** The tag body, or an empty body when the tag was called without one. */
+        BODY,
+        /** A single named attribute, looked up by the parameter's own name. */
+        NAMED_ATTRIBUTE
+    }
+
+    /**
+     * A tag method together with everything needed to build its argument array.
+     *
+     * <p>Classifying parameters means reading {@code Method.getParameters()}, which allocates a fresh
+     * array and materialises reflection metadata on every access. Doing that per invocation showed up
+     * directly in profiles of tag-heavy pages, and the answer never changes for a given method, so it
+     * is computed once when the tag library class is first seen.
+     */
+    private static final class TagMethodBinding {
+
+        private final Method method;
+        private final ParameterSource[] sources;
+        private final String[] attributeNames;
+        private final boolean[] primitive;
+
+        private TagMethodBinding(Method method) {
+            this.method = method;
+            Parameter[] parameters = method.getParameters();
+            this.sources = new ParameterSource[parameters.length];
+            this.attributeNames = new String[parameters.length];
+            this.primitive = new boolean[parameters.length];
+            for (int i = 0; i < parameters.length; i++) {
+                Parameter parameter = parameters[i];
+                if (isAttrsParameter(parameter)) {
+                    sources[i] = ParameterSource.ATTRS;
+                } else if (isBodyParameter(parameter)) {
+                    sources[i] = ParameterSource.BODY;
+                } else {
+                    sources[i] = ParameterSource.NAMED_ATTRIBUTE;
+                    attributeNames[i] = parameter.getName();
+                    primitive[i] = parameter.getType().isPrimitive();
+                }
+            }
+            try {
+                // A public method on a Groovy class still pays an access check on every reflective
+                // call unless the check is suppressed once, here.
+                method.setAccessible(true);
+            } catch (RuntimeException ignored) {
+                // A module boundary may refuse; the call still works, it just keeps the access check.
+            }
+        }
+
+        private Method getMethod() {
+            return method;
+        }
+
+        /**
+         * @return the argument array for this method, or {@code null} when the attributes on hand
+         *         cannot satisfy it and another overload should be tried
+         */
+        private Object[] toArguments(Map<?, ?> attrs, Closure<?> body) {
+            Object[] args = new Object[sources.length];
+            for (int i = 0; i < sources.length; i++) {
+                switch (sources[i]) {
+                    case ATTRS -> args[i] = attrs;
+                    case BODY -> args[i] = body != null ? body : TagOutput.EMPTY_BODY_CLOSURE;
+                    case NAMED_ATTRIBUTE -> {
+                        // The attribute must be present in the map by parameter name. An absent
+                        // attribute rejects this overload so resolution can try a different one.
+                        if (attrs == null || !attrs.containsKey(attributeNames[i])) {
+                            return null;
+                        }
+                        Object value = attrs.get(attributeNames[i]);
+                        // null is a legal binding for reference-typed parameters; primitives can't take it.
+                        if (value == null && primitive[i]) {
+                            return null;
+                        }
+                        args[i] = value;
+                    }
+                }
+            }
+            return args;
+        }
+    }
 
     private TagMethodInvoker() {
     }
@@ -153,20 +229,20 @@ public final class TagMethodInvoker {
     }
 
     public static boolean hasInvokableTagMethod(GroovyObject tagLib, String tagName) {
-        List<Method> methods = INVOKABLE_METHODS_BY_NAME.get(tagLib.getClass()).get(tagName);
-        return methods != null && !methods.isEmpty();
+        List<TagMethodBinding> bindings = INVOKABLE_METHODS_BY_NAME.get(tagLib.getClass()).get(tagName);
+        return bindings != null && !bindings.isEmpty();
     }
 
     public static Object invokeTagMethod(GroovyObject tagLib, String tagName, Map<?, ?> attrs, Closure<?> body) {
-        List<Method> methods = INVOKABLE_METHODS_BY_NAME.get(tagLib.getClass()).get(tagName);
-        if (methods == null) {
+        List<TagMethodBinding> bindings = INVOKABLE_METHODS_BY_NAME.get(tagLib.getClass()).get(tagName);
+        if (bindings == null) {
             throw new MissingMethodException(tagName, tagLib.getClass(), new Object[] { attrs, body });
         }
-        for (Method method : methods) {
-            Object[] args = toMethodArguments(method, attrs, body);
+        for (TagMethodBinding binding : bindings) {
+            Object[] args = binding.toArguments(attrs, body);
             if (args != null) {
                 try {
-                    return method.invoke(tagLib, args);
+                    return binding.getMethod().invoke(tagLib, args);
                 } catch (IllegalAccessException e) {
                     throw new RuntimeException(e);
                 } catch (InvocationTargetException e) {
@@ -185,46 +261,7 @@ public final class TagMethodInvoker {
     }
 
     public static boolean isTagMethodCandidate(Method method) {
-        int modifiers = method.getModifiers();
-        if (!Modifier.isPublic(modifiers) || Modifier.isStatic(modifiers) || method.isBridge() || method.isSynthetic()) {
-            return false;
-        }
-        if (method.isAnnotationPresent(NotATag.class)) {
-            return false;
-        }
-        if (method.isAnnotationPresent(Tag.class)) {
-            return true;
-        }
-        String name = method.getName();
-        if (name.startsWith("get") && method.getParameterCount() == 0) {
-            return false;
-        }
-        if (name.startsWith("is") && method.getParameterCount() == 0 &&
-                (method.getReturnType() == boolean.class || method.getReturnType() == Boolean.class)) {
-            return false;
-        }
-        if (name.startsWith("set") && method.getParameterCount() == 1) {
-            return false;
-        }
-        if ("invokeMethod".equals(name) || "methodMissing".equals(name) || "propertyMissing".equals(name)) {
-            return false;
-        }
-        if (FRAMEWORK_METHOD_NAMES.contains(name)) {
-            return false;
-        }
-        String signature = signature(method);
-        if (OBJECT_METHOD_SIGNATURES.contains(signature) || GROOVY_OBJECT_METHOD_SIGNATURES.contains(signature)) {
-            return false;
-        }
-        return hasConventionalTagSignature(method);
-    }
-
-    private static boolean hasConventionalTagSignature(Method method) {
-        Parameter[] parameters = method.getParameters();
-        if (parameters.length == 1) {
-            return isAttrsParameter(parameters[0]) || isBodyParameter(parameters[0]);
-        }
-        return parameters.length == 2 && isAttrsParameter(parameters[0]) && isBodyParameter(parameters[1]);
+        return TagDiscoveryRules.isTagMethod(new ReflectedTagMethodView(method));
     }
 
     private static boolean isAttrsParameter(Parameter parameter) {
@@ -253,32 +290,4 @@ public final class TagMethodInvoker {
         return builder.append(')').toString();
     }
 
-    private static Object[] toMethodArguments(Method method, Map<?, ?> attrs, Closure<?> body) {
-        Parameter[] parameters = method.getParameters();
-        Object[] args = new Object[parameters.length];
-        for (int i = 0; i < parameters.length; i++) {
-            String parameterName = parameters[i].getName();
-            Class<?> parameterType = parameters[i].getType();
-            if (isAttrsParameter(parameters[i])) {
-                args[i] = attrs;
-                continue;
-            }
-            if (isBodyParameter(parameters[i])) {
-                args[i] = body != null ? body : TagOutput.EMPTY_BODY_CLOSURE;
-                continue;
-            }
-            // The attribute must be present in the map by parameter name. An absent
-            // attribute rejects this overload so resolution can try a different one.
-            if (attrs == null || !attrs.containsKey(parameterName)) {
-                return null;
-            }
-            Object value = attrs.get(parameterName);
-            // null is a legal binding for reference-typed parameters; primitives can't take it.
-            if (value == null && parameterType.isPrimitive()) {
-                return null;
-            }
-            args[i] = value;
-        }
-        return args;
-    }
 }

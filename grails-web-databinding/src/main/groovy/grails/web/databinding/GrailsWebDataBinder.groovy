@@ -505,7 +505,7 @@ class GrailsWebDataBinder extends SimpleDataBinder {
             } else if (Collection.isAssignableFrom(metaProperty.type)) {
                 def referencedType = getReferencedTypeForCollection(propName, obj)
                 if (referencedType) {
-                    def listValue
+                    List listValue
                     if (val instanceof List) {
                         listValue = (List) val
                     } else if (val instanceof GPathResultMap && ((GPathResultMap) val).size() == 1) {
@@ -545,7 +545,17 @@ class GrailsWebDataBinder extends SimpleDataBinder {
                                 }
                             }
                             if (persistentInstance == null) {
-                                if (item instanceof Map || item instanceof DataBindingSource) {
+                                if (item == null || referencedType.isAssignableFrom(item.getClass())) {
+                                    // Already of the element type, so there is nothing to instantiate
+                                    // and nothing to bind into. A raw collection always lands here:
+                                    // Basic#componentType falls back to Object.class when a property
+                                    // carries no generic signature, and Object is assignable from
+                                    // everything. The array branch above and the Map branch below ask
+                                    // the same question before instantiating; only this one did not,
+                                    // so a map element was replaced by an empty Object and its
+                                    // contents were dropped.
+                                    itemsWhichNeedBinding << item
+                                } else if (item instanceof Map || item instanceof DataBindingSource) {
                                     DataBindingSource itemBindingSource = item instanceof DataBindingSource ?
                                             (DataBindingSource) item : new SimpleMapDataBindingSource((Map) item)
                                     def instance = instantiateAndBindNestedOrUseMapConstructor(

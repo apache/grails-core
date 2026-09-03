@@ -102,6 +102,14 @@ tasks.withType(Test).configureEach { Test it ->
             return false
         }
 
+        if (project.hasProperty('skipNeo4jTests') && project.name.startsWith('grails-data-neo4j')) {
+            return false
+        }
+
+        if (project.hasProperty('onlyNeo4jTests') && !project.name.startsWith('grails-data-neo4j')) {
+            return false
+        }
+
         if (project.hasProperty('onlyCoreTests')) {
             return false
         }

@@ -1,0 +1,11 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+grails {
+    starImports = (findProperty('extraImport') ? [findProperty('extraImport')] : [])
+}
+tasks.register('inspectSourceSets') {
+    doLast {
+        println "GENERATORS=${tasks.names.findAll { it.startsWith('generate') && it.endsWith('GrailsCompilerConfig') }.sort()}"
+    }
+}

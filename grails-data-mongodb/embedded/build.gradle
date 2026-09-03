@@ -69,6 +69,10 @@ dependencies {
         // comp: Mongod, ImmutableMongod, Net, Version, DatabaseDir, MongodArguments
     }
 
+    // Initiating a replica set is a command a driver sends, so a server asked for one needs the
+    // driver the application talking to it already has. A standalone server needs none of it.
+    compileOnly 'org.mongodb:mongodb-driver-sync'
+
     testImplementation "de.flapdoodle.embed:de.flapdoodle.embed.mongo:$flapdoodleVersion"
     testImplementation 'org.apache.groovy:groovy'
     testImplementation 'org.spockframework:spock-core'

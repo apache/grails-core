@@ -20,6 +20,7 @@ package org.grails.datastore.gorm.finders;
 
 import java.util.regex.Pattern;
 
+import org.grails.datastore.gorm.DatastoreResolver;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.core.SessionCallback;
@@ -40,7 +41,11 @@ public class FindAllByFinder extends DynamicFinder {
         super(Pattern.compile(METHOD_PATTERN), OPERATORS, datastore);
     }
 
-    public FindAllByFinder(final MappingContext mappingContext) {
+    public FindAllByFinder(DatastoreResolver datastoreResolver, MappingContext mappingContext) {
+        super(Pattern.compile(METHOD_PATTERN), OPERATORS, datastoreResolver, mappingContext);
+    }
+
+    public FindAllByFinder(MappingContext mappingContext) {
         super(Pattern.compile(METHOD_PATTERN), OPERATORS, mappingContext);
     }
 
@@ -55,12 +60,12 @@ public class FindAllByFinder extends DynamicFinder {
         });
     }
 
-    protected Object invokeQuery(Query q) {
-        return q.list();
+    protected Object invokeQuery(Query query) {
+        return query.list();
     }
 
     protected void adjustQuery(Query query) {
-        query.projections().distinct();
+        // do nothing
     }
 
 }

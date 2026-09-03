@@ -19,6 +19,8 @@
 package grails.plugin.json.view
 
 import tools.jackson.databind.json.JsonMapper
+import grails.plugin.json.view.nullrendering.Child
+import grails.plugin.json.view.nullrendering.Player
 import grails.plugin.json.view.test.JsonViewTest
 import spock.lang.Shared
 import spock.lang.Specification
@@ -31,12 +33,12 @@ class NullRenderingSpec extends Specification implements JsonViewTest {
     void 'test rendering nulls with a domain'() {
         given:
         def templateText = '''
-            import grails.plugin.json.view.*
-            
+            import grails.plugin.json.view.nullrendering.Player
+
             model {
                 Player player
             }
-            
+
             json g.render(player)
         '''
 
@@ -51,12 +53,12 @@ class NullRenderingSpec extends Specification implements JsonViewTest {
     void 'test rendering nulls with a domain (renderNulls = true)'() {
         given:
         def templateText = '''
-            import grails.plugin.json.view.*
-            
+            import grails.plugin.json.view.nullrendering.Player
+
             model {
                 Player player
             }
-            
+
             json g.render(player, [renderNulls: true])
         '''
 
@@ -74,7 +76,7 @@ class NullRenderingSpec extends Specification implements JsonViewTest {
             model {
                 Map map
             }
-            
+
             json g.render(map)
         '''
 
@@ -92,13 +94,13 @@ class NullRenderingSpec extends Specification implements JsonViewTest {
             model {
                 Object obj
             }
-            
+
             json g.render(obj)
         '''
 
         when:
         mappingContext.addPersistentEntity(Player)
-        def renderResult = render(templateText, [obj: new Child2()])
+        def renderResult = render(templateText, [obj: new Child()])
 
         then: 'No fields are rendered because they are null'
         renderResult.jsonText == '{}'
@@ -110,13 +112,13 @@ class NullRenderingSpec extends Specification implements JsonViewTest {
             model {
                 Object obj
             }
-            
+
             json g.render(obj, [renderNulls: true])
         '''
 
         when:
         mappingContext.addPersistentEntity(Player)
-        def renderResult = render(templateText, [obj: new Child2()])
+        def renderResult = render(templateText, [obj: new Child()])
 
         then:
         objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('{"name": null, "parent": null}')

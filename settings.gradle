@@ -88,7 +88,7 @@ rootProject.name = 'grails.core.ROOT'
 //
 // Two presence-based overrides (matching project convention: skipFunctionalTests, skipCodeStyle):
 //   -PskipMicronautProjects    force-exclude the island on ANY JDK. Used by
-//                              groovy-joint-workflow.yml, where the island's Groovy 5 /
+//                              groovy-snapshot-canary.yml, where the island's Groovy 5 /
 //                              Spock 2.4-groovy-5.0 pin clashes with the Groovy 4.x snapshot
 //                              that build swaps in - a reason independent of the JDK (#15613).
 //   -PincludeMicronautProjects force-include the island on a sub-25 JDK. Escape hatch for
@@ -157,6 +157,7 @@ include(
         'grails-bom', // the default bom
         'grails-hibernate5-bom',
         'grails-hibernate7-bom',
+        'grails-neo4j-bom',
 
         // Docs
         'grails-doc',
@@ -232,6 +233,9 @@ include(
         // Mail
         'grails-mail',
 
+        // Quartz
+        'grails-quartz',
+
         // Redis
         'grails-redis',
 
@@ -259,6 +263,7 @@ project(':grails-bom').projectDir = file('grails-bom/default')
 project(':grails-base-bom').projectDir = file('grails-bom/base')
 project(':grails-hibernate5-bom').projectDir = file('grails-bom/hibernate5')
 project(':grails-hibernate7-bom').projectDir = file('grails-bom/hibernate7')
+project(':grails-neo4j-bom').projectDir = file('grails-bom/neo4j')
 
 // Instead of using : to separate nested projects, fix the project directories by setting the projectDir explicitly
 // (Preserve the parent directory name as part of the nested project name)
@@ -403,6 +408,23 @@ project(':grails-data-mongodb').projectDir = new File(settingsDir, 'grails-data-
 include 'grails-data-mongodb-gson-templates'
 project(':grails-data-mongodb-gson-templates').projectDir = new File(settingsDir, 'grails-data-mongodb/gson-templates')
 
+// Neo4j
+// core
+include 'grails-data-neo4j-core'
+project(':grails-data-neo4j-core').projectDir = new File(settingsDir, 'grails-data-neo4j/core')
+
+// documentation
+include 'grails-data-neo4j-docs'
+project(':grails-data-neo4j-docs').projectDir = new File(settingsDir, 'grails-data-neo4j/docs')
+
+// boot plugin
+include 'grails-data-neo4j-spring-boot'
+project(':grails-data-neo4j-spring-boot').projectDir = new File(settingsDir, 'grails-data-neo4j/boot-plugin')
+
+// plugin
+include 'grails-data-neo4j'
+project(':grails-data-neo4j').projectDir = new File(settingsDir, 'grails-data-neo4j/grails-plugin')
+
 // GraphQL
 // core
 include 'grails-data-graphql-core'
@@ -434,6 +456,22 @@ project(':grails-test-examples-mongodb-test-data-service').projectDir = new File
 
 include 'grails-test-examples-mongodb-gson-templates'
 project(':grails-test-examples-mongodb-gson-templates').projectDir = new File(settingsDir, 'grails-test-examples/mongodb/gson-templates')
+
+// functional tests - neo4j examples
+include 'grails-test-examples-neo4j-base'
+project(':grails-test-examples-neo4j-base').projectDir = new File(settingsDir, 'grails-test-examples/neo4j/base')
+
+include 'grails-test-examples-neo4j-hibernate5'
+project(':grails-test-examples-neo4j-hibernate5').projectDir = new File(settingsDir, 'grails-test-examples/neo4j/hibernate5')
+
+include 'grails-test-examples-neo4j-spring-boot'
+project(':grails-test-examples-neo4j-spring-boot').projectDir = new File(settingsDir, 'grails-test-examples/neo4j/spring-boot')
+
+include 'grails-test-examples-neo4j-standalone'
+project(':grails-test-examples-neo4j-standalone').projectDir = new File(settingsDir, 'grails-test-examples/neo4j/neo4j-standalone')
+
+include 'grails-test-examples-neo4j-test-data-service'
+project(':grails-test-examples-neo4j-test-data-service').projectDir = new File(settingsDir, 'grails-test-examples/neo4j/test-data-service')
 
 // functional tests - graphql examples
 include 'grails-test-examples-graphql-grails-test-app'
@@ -530,6 +568,7 @@ project(':grails-test-examples-redis').projectDir = new File(settingsDir, 'grail
 
 // Functional Tests
 include(
+        'grails-test-examples-aot',
         'grails-test-examples-app1',
         'grails-test-examples-app2',
         'grails-test-examples-app3',
@@ -540,6 +579,7 @@ include(
         'grails-test-examples-beans-dsl-plugin',
         'grails-test-examples-cache',
         'grails-test-examples-database-cleanup',
+        'grails-test-examples-gsp-compile-static',
         'grails-test-examples-datasources',
         'grails-test-examples-demo33',
         'grails-test-examples-enable-mvc-check',
@@ -567,6 +607,7 @@ include(
         'grails-test-examples-plugins-loadfirst',
         'grails-test-examples-plugins-loadsecond',
         'grails-test-examples-config-report',
+        'grails-test-examples-quartz',
         'grails-test-examples-scaffolding',
         'grails-test-examples-scaffolding-fields',
         'grails-test-examples-test-phases',
@@ -577,6 +618,7 @@ include(
 project(':grails-test-examples-async-events-pubsub-demo').projectDir = file('grails-test-examples/async-events-pubsub-demo')
 project(':grails-test-examples-beans-dsl').projectDir = file('grails-test-examples/beans-dsl')
 project(':grails-test-examples-beans-dsl-plugin').projectDir = file('grails-test-examples/beans-dsl-plugin')
+project(':grails-test-examples-aot').projectDir = file('grails-test-examples/aot')
 project(':grails-test-examples-app1').projectDir = file('grails-test-examples/app1')
 project(':grails-test-examples-app2').projectDir = file('grails-test-examples/app2')
 project(':grails-test-examples-app3').projectDir = file('grails-test-examples/app3')
@@ -586,6 +628,8 @@ project(':grails-test-examples-external-configuration').projectDir = file('grail
 project(':grails-test-examples-exploded').projectDir = file('grails-test-examples/exploded')
 project(':grails-test-examples-datasources').projectDir = file('grails-test-examples/datasources')
 project(':grails-test-examples-database-cleanup').projectDir = file('grails-test-examples/database-cleanup')
+project(':grails-test-examples-gsp-compile-static').projectDir = file('grails-test-examples/gsp-compile-static')
+project(':grails-test-examples-quartz').projectDir = file('grails-test-examples/quartz')
 project(':grails-test-examples-geb').projectDir = file('grails-test-examples/geb')
 project(':grails-test-examples-geb-context-path').projectDir = file('grails-test-examples/geb-context-path')
 project(':grails-test-examples-geb-gebconfig').projectDir = file('grails-test-examples/geb-gebconfig')

@@ -98,7 +98,7 @@ class GroovyPageToolchainSpec extends Specification {
     }
 
     void 'the Java that did the compiling is part of what the result is'() {
-        given: 'the task is cacheable, so an entry built by one Java must not be reused by another'
+        given: 'pages built by one Java must not be left standing when the build asks for another'
             Project project = projectWithPages()
 
         expect: 'declared as an input, which is what keeps the two apart'

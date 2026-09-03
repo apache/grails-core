@@ -57,7 +57,6 @@ dependencies {
         exclude group:'org.slf4j', module:'jcl-over-slf4j'
         exclude group:'org.slf4j', module:'slf4j-api'
         exclude group:'org.slf4j', module:'slf4j-log4j12'
-        exclude group:'xml-apis', module:'xml-apis'
     }
     api "org.hibernate.models:hibernate-models"
     api 'org.hibernate.validator:hibernate-validator', {
@@ -85,7 +84,6 @@ dependencies {
         exclude group:'org.slf4j', module:'jcl-over-slf4j'
         exclude group:'org.slf4j', module:'slf4j-api'
         exclude group:'org.slf4j', module:'slf4j-log4j12'
-        exclude group:'xml-apis', module:'xml-apis'
     }
 
     testImplementation 'org.testcontainers:testcontainers'

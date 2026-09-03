@@ -76,7 +76,8 @@ public abstract class SecurityFeature implements Feature {
     protected void applyClassicDomainModel(GeneratorContext generatorContext) {
         final Project project = generatorContext.getProject();
         generatorContext.addTemplate("securityUser",
-                new RockerTemplate("grails-app/domain/{packagePath}/User.groovy", userClassic.template(project)));
+                new RockerTemplate("grails-app/domain/{packagePath}/User.groovy",
+                        userClassic.template(project, generatorContext.getFeatures())));
         generatorContext.addTemplate("securityRole",
                 new RockerTemplate("grails-app/domain/{packagePath}/Role.groovy", role.template(project)));
         generatorContext.addTemplate("securityUserRole",
