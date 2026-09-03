@@ -64,4 +64,19 @@ class UrlMappingMatcherSpec extends Specification {
         then:
         !matcher.doesMatch(url, info)
     }
+
+    void "URI patterns and excludes ignore matrix parameters"() {
+        given:
+        def matcher = new UrlMappingMatcher(Mock(Interceptor))
+        matcher.matches(uri: '/admin/**').excludes(uri: '/admin/health')
+
+        expect:
+        matcher.doesMatch(uri, null) == matches
+
+        where:
+        uri                       | matches
+        '/admin;x=1/deleteUser'   | true
+        '/admin/health;x=1'       | false
+        '/%61dmin/deleteUser'     | true
+    }
 }

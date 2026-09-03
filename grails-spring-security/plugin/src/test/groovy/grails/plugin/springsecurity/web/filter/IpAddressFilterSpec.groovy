@@ -21,6 +21,7 @@ package grails.plugin.springsecurity.web.filter
 import jakarta.servlet.FilterChain
 
 import grails.plugin.springsecurity.AbstractUnitSpec
+import org.grails.web.util.WebUtils
 
 /**
  * Unit tests for <code>IpAddressFilter</code>.
@@ -188,5 +189,43 @@ class IpAddressFilterSpec extends AbstractUnitSpec {
         404 == response.status
 
         0 == chainCount
+    }
+
+    void 'doFilter canonicalizes restricted paths'() {
+        given:
+        filter.allowLocalhost = false
+        filter.ipRestrictions = [[pattern: '/admin/**', access: '10.0.0.0/8']]
+        int chainCount = 0
+        def chain = [doFilter: { req, res -> chainCount++ }] as FilterChain
+        request.remoteAddr = '192.168.1.123'
+
+        when:
+        request.requestURI = requestUri
+        response.reset()
+        filter.doFilter(request, response, chain)
+
+        then:
+        response.status == 404
+        chainCount == 0
+
+        where:
+        requestUri << ['/admin;x=1/deleteUser', '/admin%3Bx=1/deleteUser', '/%61dmin/deleteUser']
+    }
+
+    void 'doFilter canonicalizes forwarded restricted paths'() {
+        given:
+        filter.allowLocalhost = false
+        filter.ipRestrictions = [[pattern: '/admin/**', access: '10.0.0.0/8']]
+        def chain = Mock(FilterChain)
+        request.remoteAddr = '192.168.1.123'
+        request.requestURI = '/public'
+        request.setAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, '/admin;x=1/deleteUser')
+
+        when:
+        filter.doFilter(request, response, chain)
+
+        then:
+        response.status == 404
+        0 * chain.doFilter(_, _)
     }
 }

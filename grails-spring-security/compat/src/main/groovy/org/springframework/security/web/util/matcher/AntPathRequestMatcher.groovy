@@ -23,6 +23,7 @@ import groovy.transform.CompileStatic
 import jakarta.servlet.http.HttpServletRequest
 
 import org.springframework.util.AntPathMatcher
+import org.springframework.web.util.UrlPathHelper
 
 @CompileStatic
 class AntPathRequestMatcher implements RequestMatcher {
@@ -47,11 +48,7 @@ class AntPathRequestMatcher implements RequestMatcher {
         if (httpMethod && !httpMethod.equalsIgnoreCase(request.method)) {
             return false
         }
-        def path = request.requestURI ?: '/'
-        def contextPath = request.contextPath
-        if (contextPath && path.startsWith(contextPath)) {
-            path = path.substring(contextPath.length())
-        }
+        def path = UrlPathHelper.defaultInstance.removeSemicolonContent(UrlPathHelper.defaultInstance.getPathWithinApplication(request)) ?: '/'
         def candidate = caseSensitive ? path : path.toLowerCase(Locale.ENGLISH)
         def matcherPattern = caseSensitive ? pattern : pattern.toLowerCase(Locale.ENGLISH)
         pathMatcher.match(matcherPattern, candidate)

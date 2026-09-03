@@ -29,6 +29,7 @@ import jakarta.servlet.http.HttpServletResponse
 
 import org.springframework.core.Ordered
 import org.springframework.web.servlet.ModelAndView
+import org.springframework.web.util.UrlPathHelper
 
 import grails.artefact.controller.support.RequestForwarder
 import grails.artefact.controller.support.ResponseRedirector
@@ -89,25 +90,17 @@ trait Interceptor implements ResponseRenderer, ResponseRedirector, RequestForwar
             allMatchers << matcher
         }
 
-        HttpServletRequest req = request
-        String ctxPath = req.contextPath
-        String uri = req.requestURI
-        String noCtxUri = uri - ctxPath
-        boolean checkNoCtxUri = ctxPath && uri.startsWith(ctxPath)
+        String uri = UrlPathHelper.defaultInstance.getPathWithinApplication(request)
 
         def matchedInfo = request.getAttribute(UrlMappingsHandlerMapping.MATCHED_REQUEST)
 
         UrlMappingInfo grailsMappingInfo = (UrlMappingInfo) matchedInfo
 
         for (Matcher matcher in allMatchers) {
-            boolean matchUri = matcher.doesMatch(uri, grailsMappingInfo, req.method)
-            boolean matchNoCtxUri = matcher.doesMatch(noCtxUri, grailsMappingInfo, req.method)
-
-            if (matcher.isExclude() && matchUri && matchNoCtxUri) {
-                // Exclude interceptors are special because with only one of the conditions being false the interceptor
-                // won't be applied to the request
-                return true
-            } else if (!matcher.isExclude() && (matchUri || (checkNoCtxUri && matchNoCtxUri))) {
+            boolean matches = matcher instanceof UrlMappingMatcher
+                    ? ((UrlMappingMatcher) matcher).doesMatch(uri, grailsMappingInfo, request.method, request.contextPath)
+                    : matcher.doesMatch(uri, grailsMappingInfo, request.method)
+            if (matches) {
                 return true
             }
         }
