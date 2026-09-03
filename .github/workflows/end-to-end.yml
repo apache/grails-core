@@ -75,7 +75,7 @@ jobs:
             ${{ steps.jdks.outputs.fixture-java }}
             ${{ steps.jdks.outputs.build-java }}
       - name: "🗄️ Restore dependency jar cache"
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
           # Keyed by branch version so each release branch maintains its own warm cache.

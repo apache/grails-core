@@ -138,7 +138,7 @@ jobs:
           distribution: liberica
       - name: "🗄️ Restore dependency jar cache"
         id: dependency-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
           # Keyed by branch version so each release branch maintains its own warm cache.
@@ -149,7 +149,7 @@ jobs:
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
       - name: "🗄️ Cache the mongod the embedded server runs"
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           # Separate from the dependency jars, for the reasons given on the same step in
           # gradle.yml. The version is the one -PmongodbContainerVersion asks for below.
@@ -196,7 +196,7 @@ jobs:
           GRAILS_INCLUDE_MAVEN_LOCAL: true
       - name: "🗄️ Save dependency jar cache"
         if: ${{ success() && matrix.shard_index == 0 && steps.dependency-cache.outputs.cache-hit != 'true' }}
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: |
             ~/.gradle/caches/modules-2
