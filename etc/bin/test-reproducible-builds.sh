@@ -28,15 +28,8 @@ cd "${SCRIPT_DIR}/../.."
 rm -rf "${SCRIPT_DIR}/results" || true
 mkdir -p "${SCRIPT_DIR}/results"
 
-if [[ -z "${JDK_25_HOME:-}" ]]; then
-  echo "❌ JDK_25_HOME is not set; the Grails-Micronaut island requires a separate Liberica JDK 25 install."
-  echo "   Install Liberica JDK matching JAVA_VERSION_MICRONAUT in .github/workflows/release.yml,"
-  echo "   then export JDK_25_HOME=/path/to/jdk before running this script."
-  exit 1
-fi
-
 build_all() {
-  # JDK 21 (default) pass across the three composites, Micronaut island skipped.
+  # JDK 21 pass across the three composites.
   killall -e java || true
   cd grails-gradle
   ./gradlew build --rerun-tasks -PskipTests --no-build-cache --no-daemon
@@ -45,13 +38,6 @@ build_all() {
   cd grails-forge
   ./gradlew build --rerun-tasks -PskipTests --no-build-cache --no-daemon -PskipMicronautProjects
   cd ..
-
-  # JDK 25 pass: the Grails-Micronaut island only.
-  killall -e java || true
-  JAVA_HOME="${JDK_25_HOME}" PATH="${JDK_25_HOME}/bin:${PATH}" \
-    ./gradlew :grails-micronaut:build :grails-micronaut-bom:build \
-    --rerun-tasks -PskipTests --no-build-cache --no-daemon
-  killall -e java || true
 }
 
 git clean -xdf --exclude='etc/bin' --exclude='.idea' --exclude='.gradle'

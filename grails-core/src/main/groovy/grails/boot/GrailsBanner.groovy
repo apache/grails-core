@@ -511,7 +511,9 @@ class GrailsBanner implements Banner {
 
     /** What an application wrote under the given property, or nothing where it wrote none. */
     private static List<String> readVersionOptions(Environment env, String propertyName) {
-        env.getProperty(propertyName, List<String>, [] as List<String>)
+        // Groovy 6: class tokens cannot be parameterized (`List<String>`), so the
+        // runtime type is List and the generic is restored with a cast.
+        (List<String>) env.getProperty(propertyName, List, [])
     }
 
     /**

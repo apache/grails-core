@@ -1012,9 +1012,9 @@ jobs:
         uses: testlens-app/setup-testlens@3f82d2dc6cd5c03f02ce5f7885a21195d85f8d14 # v1.9.3
       - name: "📤 Publish Grails-Core Snapshot Artifacts"
         # This Java 21 publish excludes the Micronaut 5 / JVM 25 island automatically -
-        # settings.gradle prunes it on a sub-25 JDK. The island artifacts (grails-micronaut,
-        # grails-micronaut-bom) are published by the parallel publishMicronaut job below,
-        # which runs on JDK 25.
+        # settings.gradle prunes the Micronaut island if the JDK is older than 25
+        # or the Groovy major version is not 5; this branch is pruned because it
+        # uses Groovy 6.
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
         env:
           GRAILS_PUBLISH_RELEASE: 'false'
@@ -1048,54 +1048,6 @@ jobs:
         with:
           name: apache-grails-wrapper-SNAPSHOT-bin
           path: build/tmp/wrapper
-  publishMicronaut:
-    # Micronaut 5.0.0 publishes JARs targeting JVM 25 bytecode, so the Micronaut
-    # "island" (grails-micronaut, grails-micronaut-bom) must publish from a JDK 25
-    # runner. The sibling `publish` job runs on JDK 21, where settings.gradle
-    # auto-prunes the island, so it publishes everything else; this job publishes
-    # the two Micronaut artifacts. The two test-example projects in the island are
-    # not published.
-    needs: [ publishGradle, build, functional, hibernate5Functional, mongodbFunctional ]
-    if: >-
-      ${{ always() &&
-          github.repository_owner == 'apache' &&
-          (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
-          needs.publishGradle.result == 'success' &&
-          (needs.build.result == 'success' || needs.build.result == 'skipped') &&
-          (needs.functional.result == 'success' || needs.functional.result == 'skipped') &&
-          (needs.hibernate5Functional.result == 'success' || needs.hibernate5Functional.result == 'skipped') &&
-          (needs.mongodbFunctional.result == 'success' || needs.mongodbFunctional.result == 'skipped')
-      }}
-    runs-on: ubuntu-24.04
-    steps:
-      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
-        run: curl -s https://api.ipify.org
-      - name: "📥 Checkout repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
-        with:
-          distribution: liberica
-          java-version: 25
-      - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
-        with:
-          cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
-          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
-      - name: "🔍 Setup TestLens"
-        uses: testlens-app/setup-testlens@3f82d2dc6cd5c03f02ce5f7885a21195d85f8d14 # v1.9.3
-      - name: "📤 Publish Grails-Micronaut Snapshot Artifacts"
-        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
-        env:
-          GRAILS_PUBLISH_RELEASE: 'false'
-          MAVEN_PUBLISH_URL: ${{ secrets.GRAILS_NEXUS_PUBLISH_SNAPSHOT_URL }}
-          MAVEN_PUBLISH_USERNAME: ${{ secrets.NEXUS_USER }}
-          MAVEN_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PW  }}
-        with:
-          timeout_seconds: 1800 # headroom for slow Nexus uploads so a single attempt is not killed mid-publish (see `publish` job)
-          max_attempts: 3
-          retry_wait_seconds: 180
-          command: ./gradlew :grails-micronaut:publish :grails-micronaut-bom:publish --no-build-cache --rerun-tasks
   publishForge:
     if: github.repository_owner == 'apache' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     needs: [ buildForge, publishGradle, publish ]
@@ -1263,3 +1215,4 @@ jobs:
           TARGET_REPOSITORY: 'apache/grails-website'
           TARGET_FOLDER: 'docs'
           DOCUMENTATION_BRANCH: 'asf-site-production'
+

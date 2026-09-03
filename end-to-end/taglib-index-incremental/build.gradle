@@ -41,6 +41,10 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
+tasks.withType(GroovyCompile).configureEach {
+    options.forkOptions.jvmArgs += ['-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true']
+}
+
 tasks.named('test', Test) {
     useJUnitPlatform()
     // The application the test builds resolves Grails from the same place this build does.
