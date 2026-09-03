@@ -22,7 +22,6 @@ import java.net.http.HttpClient
 import java.net.http.HttpHeaders
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
-import java.nio.file.Files
 import java.util.regex.Pattern
 
 import javax.net.ssl.SSLSession
@@ -199,36 +198,18 @@ class TestHttpResponseSpec extends Specification {
         xmlResponse.xml().item.text() == 'value'
     }
 
-    void 'xml uses a secure default slurper that does not resolve external entities'() {
+    void 'xml rejects doctype declarations with external entities'() {
         given:
-        def secretFile = Files.createTempFile('test-http-response-xml', '.txt')
-        Files.writeString(secretFile, 'top-secret-token')
-        def uri = secretFile.toUri().toASCIIString()
-        def response = mockResponse(200, """<!DOCTYPE root [
-<!ENTITY ext SYSTEM '${uri}'>
-]>
-<root>&ext;</root>""")
+        def response = mockResponse(200, '''<!DOCTYPE root [
+ <!ENTITY ext SYSTEM "file:///not-resolved">
+ ]>
+<root>&ext;</root>''')
 
         when:
         response.xml()
 
         then:
-        def e = thrown(SAXParseException)
-        e.message.contains('External Entity')
-
-        cleanup:
-        Files.deleteIfExists(secretFile)
-    }
-
-    void 'xml secure default still allows inline doctype declarations with internal entities'() {
-        given:
-        def response = mockResponse(200, '''<!DOCTYPE root [
-<!ENTITY msg "safe">
-]>
-<root>&msg;</root>''')
-
-        expect:
-        response.xml().text() == 'safe'
+        thrown(SAXParseException)
     }
 
     void 'withXmlSlurper allows overriding the parser without mutating the original wrapper'() {

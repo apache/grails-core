@@ -19,8 +19,6 @@
 package org.apache.grails.testing.http.client.utils
 
 import java.nio.charset.StandardCharsets
-import java.nio.file.Files
-
 import groovy.xml.XmlSlurper
 
 import org.xml.sax.SAXParseException
@@ -278,37 +276,15 @@ class XmlUtilsSpec extends Specification {
         xml == "<?xml version='1.1' encoding='UTF-16'?><product />"
     }
 
-    void 'newXmlSlurper allows inline doctype declarations with internal entities'() {
+    void 'newXmlSlurper rejects doctype declarations with external entities'() {
         when:
         def parsed = XmlUtils.newXmlSlurper().parseText('''<!DOCTYPE root [
-<!ENTITY msg "safe">
-]>
-<root>&msg;</root>''')
+ <!ENTITY ext SYSTEM "file:///not-resolved">
+ ]>
+<root>&ext;</root>''')
 
         then:
-        parsed.text() == 'safe'
-    }
-
-    void 'newXmlSlurper blocks external entities'() {
-        given:
-        def secret = 'xml-utils-secret'
-        def secretFile = Files.createTempFile('xml-utils-secret', '.txt')
-        Files.writeString(secretFile, secret)
-        def uri = secretFile.toUri().toASCIIString()
-        def xml = """<!DOCTYPE root [
-<!ENTITY ext SYSTEM '${uri}'>
-]>
-<root>&ext;</root>"""
-
-        when:
-        XmlUtils.newXmlSlurper().parseText(xml)
-
-        then:
-        def e = thrown(SAXParseException)
-        e.message.contains('External Entity')
-
-        cleanup:
-        Files.deleteIfExists(secretFile)
+        thrown(SAXParseException)
     }
 
     void 'newXmlSlurper supports custom factory overrides'() {

@@ -45,12 +45,12 @@ import org.xml.sax.SAXException
 @CompileStatic
 class XmlUtils {
 
-    private static final String DISALLOW_DOCTYPE_DECL = 'https://apache.org/xml/features/disallow-doctype-decl'
-    private static final String EXTERNAL_GENERAL_ENTITIES = 'https://xml.org/sax/features/external-general-entities'
-    private static final String EXTERNAL_PARAMETER_ENTITIES = 'https://xml.org/sax/features/external-parameter-entities'
+    private static final String DISALLOW_DOCTYPE_DECL = 'http://apache.org/xml/features/disallow-doctype-decl'
+    private static final String EXTERNAL_GENERAL_ENTITIES = 'http://xml.org/sax/features/external-general-entities'
+    private static final String EXTERNAL_PARAMETER_ENTITIES = 'http://xml.org/sax/features/external-parameter-entities'
     private static final String FEATURE_SECURE_PROCESSING = XMLConstants.FEATURE_SECURE_PROCESSING
-    private static final String LOAD_DTD_GRAMMAR = 'https://apache.org/xml/features/nonvalidating/load-dtd-grammar'
-    private static final String LOAD_EXTERNAL_DTD = 'https://apache.org/xml/features/nonvalidating/load-external-dtd'
+    private static final String LOAD_DTD_GRAMMAR = 'http://apache.org/xml/features/nonvalidating/load-dtd-grammar'
+    private static final String LOAD_EXTERNAL_DTD = 'http://apache.org/xml/features/nonvalidating/load-external-dtd'
 
     private static final Pattern SPACE_AND_EMPTY_ELEMENT_CLOSE = ~/ \/>/
     private static final String EMPTY_ELEMENT_CLOSE = '/>'
@@ -59,7 +59,7 @@ class XmlUtils {
     private static final Pattern XML_DECLARATION = ~/^\s*(<\?xml\b.*?\?>)/
 
     private static final Map<String, Boolean> SECURE_XML_SLURPER_FEATURES = [
-            (DISALLOW_DOCTYPE_DECL): false,
+            (DISALLOW_DOCTYPE_DECL): true,
             (EXTERNAL_GENERAL_ENTITIES): false,
             (EXTERNAL_PARAMETER_ENTITIES): false,
             (FEATURE_SECURE_PROCESSING): true,
@@ -118,8 +118,7 @@ class XmlUtils {
     /**
      * Creates an {@link XmlSlurper} with secure defaults.
      * <p>
-     * The default parser is namespace aware, non-validating, permits inline DOCTYPE declarations,
-     * and disables external entity expansion plus external DTD loading.
+     * The default parser is namespace aware, non-validating, and rejects DOCTYPE declarations.
      *
      * @param slurperConfig optional XML parser configuration or custom factory
      * @return configured {@link XmlSlurper}
@@ -224,6 +223,7 @@ class XmlUtils {
         def saxParserFactory = FactorySupport.createSaxParserFactory().tap {
             it.namespaceAware = true
             it.validating = false
+            it.XIncludeAware = false
         }
 
         SECURE_XML_SLURPER_FEATURES.each { feature, enabled ->
