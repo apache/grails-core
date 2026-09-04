@@ -91,7 +91,7 @@ class UpdateOneImplementer extends AbstractSaveImplementer implements SingleResu
         )
         BlockStatement ifBody = block()
         Parameter[] propertyParameters = Arrays.copyOfRange(parameters, 1, parameters.length)
-        Statement saveStmt = bindParametersAndSave(domainClassNode, abstractMethodNode, propertyParameters, ifBody, entityVar)
+        Statement saveStmt = bindParametersAndSave(domainClassNode, abstractMethodNode, newMethodNode, propertyParameters, ifBody, entityVar)
         ifBody.addStatement(saveStmt)
         body.addStatement(
             ifS(notNullX(entityVar),
