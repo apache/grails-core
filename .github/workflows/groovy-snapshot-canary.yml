@@ -77,7 +77,7 @@ jobs:
       - name: "📥 Checkout Apache Groovy (${{ steps.groovy-branch.outputs.value }})"
         run: git clone --depth 1 https://github.com/apache/groovy.git -b ${{ steps.groovy-branch.outputs.value }} --single-branch
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-disabled: true # this workflow rebuilds Groovy each run; a Gradle home cache is not useful here
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
@@ -156,7 +156,7 @@ jobs:
           path: ~/.embedmongo
           key: embedmongo-${{ runner.os }}-8.0
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
