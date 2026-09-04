@@ -17,9 +17,15 @@
  *  under the License.
  */
 
-    package org.grails.forge.build.dependencies
+package org.grails.forge.build.dependencies
 
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import io.micronaut.context.ApplicationContext
+import io.micronaut.core.io.ResourceResolver
+import org.slf4j.LoggerFactory
 import spock.lang.AutoCleanup
 import spock.lang.Shared
 import spock.lang.Specification
@@ -38,5 +44,36 @@ class PomDependencyVersionResolverSpec extends Specification {
     void "PomDependencyVersionResolver exposes coordinates map"() {
         expect:
         pomDependencyVersionResolver.coordinates
+    }
+
+    void "PomDependencyVersionResolver skips malformed POM resources"() {
+        given:
+        def malformedPom = File.createTempFile('malformed-pom', '.xml')
+        malformedPom.text = '<project><dependencies><dependency></project>'
+        def resourceResolver = Mock(ResourceResolver)
+        resourceResolver.getResources('classpath:pom.xml') >> [malformedPom.toURI().toURL()].stream()
+        Logger logger = (Logger) LoggerFactory.getLogger(PomDependencyVersionResolver)
+        def originalLevel = logger.level
+        def appender = new ListAppender<ILoggingEvent>()
+        appender.start()
+        logger.addAppender(appender)
+        logger.level = Level.WARN
+
+        when:
+        def resolver = new PomDependencyVersionResolver(resourceResolver)
+
+        then:
+        resolver.coordinates.isEmpty()
+        !resolver.resolve('missing-artifact').present
+        appender.list.any {
+            it.level == Level.WARN &&
+                    it.formattedMessage.contains('Unable to read dependency versions from') &&
+                    it.throwableProxy.className == 'org.xml.sax.SAXParseException'
+        }
+
+        cleanup:
+        logger.detachAppender(appender)
+        logger.level = originalLevel
+        malformedPom?.delete()
     }
 }

@@ -82,7 +82,7 @@ jobs:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
           java-version: ${{ env.JAVA_VERSION }}
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
@@ -101,7 +101,7 @@ jobs:
       - name: "🧩 Run grails-forge assemble"
         working-directory: grails-forge
         run: ./gradlew assemble -PgithubBranch=${TARGET_BRANCH}
-      - name: "📦 Generate grails-core docs (to assert that is works, before proceeding)"
+      - name: "📦 Generate grails-core docs (to assert that it works, before proceeding)"
         # grails-doc has no code dependency on the Micronaut island, and on this JDK 21
         # runner settings.gradle auto-prunes the island from the project graph so Gradle
         # does not try to resolve its JDK 25 deps during configuration.
@@ -224,7 +224,7 @@ jobs:
         # staged from a JDK 25 runner. This is a NEW reproducibility pin -
         # keep $JAVA_VERSION_MICRONAUT synced with the secondary JDK in
         # etc/bin/Dockerfile so verifiers can reproduce the resulting JARs.
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
           distribution: liberica
           java-version: ${{ env.JAVA_VERSION_MICRONAUT }}
@@ -247,7 +247,7 @@ jobs:
         # downstream checksum/artifact-list combination steps all expect the
         # default JDK 21 toolchain. Also keeps any future steps that touch the
         # repository's own (non-Micronaut) Gradle config on the documented JDK.
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
           distribution: liberica
           java-version: ${{ env.JAVA_VERSION }}
@@ -744,26 +744,15 @@ jobs:
       - name: "🚀 MANUAL - Deploy Grails Forge"
         run: |
           echo "::group::Manual Grails Forge deployment"
-          echo "Kick off Forge-* workflow for version ${VERSION} based on the below rules:"
-          cat <<'EOF'
-          * RELEASE - Full Final Releases - https://github.com/apache/grails-core/actions/workflows/forge-deploy-release.yml
-          * NEXT - Milestones and Release Candidate for Next Release (also Next version snapshot prior to Milestone) - https://github.com/apache/grails-core/actions/workflows/forge-deploy-next.yml
-          * SNAPSHOT - current or next version snapshot - https://github.com/apache/grails-core/actions/workflows/forge-deploy-snapshot.yml
-          * PREV - previous release version - https://github.com/apache/grails-core/actions/workflows/forge-deploy-prev.yml
-          * PREV-SNAPSHOT - previous version snapshot - https://github.com/apache/grails-core/actions/workflows/forge-deploy-prev-snapshot.yml
-          EOF
+          echo "Deploy Forge via https://github.com/apache/grails-core/actions/workflows/forge-deploy-aws.yml"
+          echo "Use workflow from the maintenance branch. Choose slot latest, snapshot, next, next-snapshot, prev, prev-snapshot, or older."
+          echo "Do not run this workflow from a historical git tag."
           echo "::endgroup::"
   docs:
     environment: docs
     name: "VOTE SUCCEEDED - Publish Documentation"
     needs: [ publish, source, upload, release ]
     runs-on: ubuntu-24.04
-    # Documentation publishing targets a shared resource (the apache/grails-website repo).
-    # Use a static, branch-independent group so only one documentation publish can run at a
-    # time across every branch and across the snapshot publish in gradle.yml; the rest queue.
-    concurrency:
-      group: grails-docs-publish
-      cancel-in-progress: false
     steps:
       - name: "📝 Establish release version"
         run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
@@ -800,7 +789,7 @@ jobs:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
           java-version: ${{ env.JAVA_VERSION }}
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
@@ -840,7 +829,7 @@ jobs:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
           java-version: ${{ env.JAVA_VERSION }}
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
@@ -904,7 +893,8 @@ jobs:
         run: |
           echo "::group::Deploy the new SNAPSHOT to Forge - MANUAL"
           echo "After the Close Release PR is merged, deploy the new SNAPSHOT to Forge via:"
-          echo "https://github.com/apache/grails-core/actions/workflows/forge-deploy-snapshot.yml"
+          echo "https://github.com/apache/grails-core/actions/workflows/forge-deploy-aws.yml"
+          echo "Use workflow from the snapshot branch. Slot: snapshot."
           echo "::endgroup::"
       - name: "🌎 MANUAL - Add version to the Grails Website"
         run: |

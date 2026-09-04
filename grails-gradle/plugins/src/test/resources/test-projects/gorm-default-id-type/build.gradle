@@ -1,0 +1,33 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+grails {
+    gorm {
+        // Left at its default unless the build states one, so the same project covers both cases.
+        if (project.hasProperty('idType')) {
+            defaultIdType = project.property('idType')
+        }
+    }
+}
+
+tasks.register('inspectGormIdType') {
+    dependsOn tasks.named('buildProperties')
+
+    doLast {
+        // Read back what the compiler worker JVM would actually be started with. This is the wiring
+        // under test: the plugin has to attach the provider to compileGroovy for the setting to reach
+        // GORM's entity transformation at all.
+        def jvmArguments = tasks.named('compileGroovy').get()
+                .groovyOptions.forkOptions.jvmArgumentProviders
+                .collectMany { it.asArguments().toList() }
+        def idTypeArguments = jvmArguments.findAll { it.startsWith('-Dgrails.gorm.defaultIdType=') }
+        println "GORM_ID_TYPE_ARGS=${idTypeArguments}"
+
+        def buildInfo = new Properties()
+        sourceSets.main.output.resourcesDir.toPath().resolve('META-INF/grails.build.info').toFile().withInputStream {
+            buildInfo.load(it)
+        }
+        println "PACKAGED_GORM_ID_TYPE=${buildInfo.getProperty('grails.gorm.defaultIdType')}"
+    }
+}
