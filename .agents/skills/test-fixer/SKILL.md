@@ -24,6 +24,8 @@ Activate this skill when:
 - Triaging regressions after a dependency upgrade or refactor.
 - Reviewing aggregate test results from `:grails-test-report`.
 
+Once tests pass, that doesn't mean your changed lines are covered — see the `diff-coverage-check` skill for that; it's a separate question this skill doesn't answer.
+
 ---
 
 ## Key Tasks

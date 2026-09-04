@@ -1,7 +1,8 @@
 ---
 name: grails-developer
-description: Comprehensive guide for current Grails development, covering web applications, REST APIs, GORM, controllers, services, views, plugins, and testing with Spock and Geb
+description: Comprehensive guide for current Grails development, covering web applications, REST APIs, GORM, controllers, services, views, plugins, and testing with Spock and Geb. In this repo, grails-test-examples/ holds ~50 real functional test apps (one per framework feature — hibernate7, mongodb, micronaut, spring-security, geb, etc.) that this skill's app-development guidance applies to directly, as opposed to the framework-internals skills (hibernate-developer, mongodb-developer, etc.).
 license: Apache-2.0
+paths: grails-test-examples/**
 ---
 <!--
 SPDX-License-Identifier: Apache-2.0
@@ -64,6 +65,12 @@ myapp/
 ├── build.gradle              # Build configuration
 └── gradle.properties         # Project properties
 ```
+
+### In This Repo: `grails-test-examples/`
+
+The generic layout above is what any real Grails app looks like — including the ~50 functional test apps that live in `grails-test-examples/<name>/` in this monorepo (e.g. `hibernate7/`, `mongodb/`, `micronaut/`, `micronaut-hibernate7/`, `spring-security/`, `geb/`, `graphql/`, `scaffolding/`, `redis/`, plus a number of `issue-<n>/` regression-repro apps). Each one is a real, standalone Grails application exercising a specific framework feature or fixing/repro-ing a specific bug — this skill's guidance (domain classes, controllers, services, testing) applies directly to them, not the framework-internals skills (`hibernate-developer`, `mongodb-developer`, `micronaut-developer`) even though several share a name with a framework module.
+
+Gated by `-PonlyFunctionalTests` (run only these) / `-PskipFunctionalTests` (skip them) at the root build, per `grails-test-examples/README.md`.
 
 ## Domain Classes (GORM)
 
