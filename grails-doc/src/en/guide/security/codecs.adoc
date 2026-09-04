@@ -135,6 +135,8 @@ Performs Base64 encode/decode functions. Example of usage:
 Your registration code is: ${user.registrationCode.encodeAsBase64()}
 ----
 
+String values can be encoded with a specific source character set by passing a `java.nio.charset.Charset` to `encodeAsBase64`. The Base64 text itself is returned as UTF-8/ASCII-compatible text.
+
 *JavaScriptCodec*
 
 Escapes Strings so they can be used as valid JavaScript strings. For example:
