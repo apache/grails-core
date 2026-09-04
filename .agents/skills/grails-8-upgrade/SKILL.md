@@ -50,7 +50,7 @@ Start every Grails 8 upgrade by checking these platform requirements:
 
 - Use JDK 21 or later to build and run ordinary Grails 8 applications.
 - Use JDK 25 or later if the application uses `grails-micronaut`, `micronaut-http-client`, or other Micronaut features.
-- Update the Gradle wrapper to the Grails 8 managed line. Current 8.0.x snapshot docs use Gradle 9.6.0, while milestone docs may show an earlier Gradle 9.x version.
+- Update the Gradle wrapper to the Grails 8 managed line. Current 8.0.x snapshot docs use Gradle 9.7.1, while milestone docs may show an earlier Gradle 9.x version.
 - Expect Spring Boot 4.1.x, Spring Framework 7.0.x, Spring Security 7.1.x, Spring Data 2026.0.x, Micrometer 1.17.x, Jackson 3.1.x, Tomcat 11.0.x, and Jakarta Servlet 6.1.
 - Keep using `jakarta.*` APIs. Do not reintroduce `javax.*` packages.
 - Add `runtimeOnly 'org.springframework.boot:spring-boot-properties-migrator'` temporarily during the migration, boot once, fix reported configuration properties, then remove it.

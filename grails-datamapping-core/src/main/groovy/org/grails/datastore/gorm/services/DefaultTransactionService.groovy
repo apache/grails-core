@@ -29,6 +29,7 @@ import org.springframework.transaction.TransactionSystemException
 
 import grails.gorm.transactions.GrailsTransactionTemplate
 import grails.gorm.transactions.TransactionService
+import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.services.Service
 import org.grails.datastore.mapping.transactions.CustomizableRollbackTransactionAttribute
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
@@ -41,6 +42,18 @@ import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
  */
 @CompileStatic
 class DefaultTransactionService implements TransactionService, Service {
+
+    private Datastore datastore
+
+    @Override
+    Datastore getDatastore() {
+        return this.datastore
+    }
+
+    @Override
+    void setDatastore(Datastore datastore) {
+        this.datastore = datastore
+    }
 
     @Override
     def <T> T withTransaction(

@@ -18,6 +18,8 @@
  */
 package grails.plugin.json.view
 
+import grails.plugin.json.view.include.Player
+import grails.plugin.json.view.include.Team
 import grails.plugin.json.view.test.JsonViewTest
 import org.grails.testing.GrailsUnitTest
 import spock.lang.Specification
@@ -34,7 +36,7 @@ class IncludeAssociationsSpec extends Specification implements JsonViewTest, Gra
         when: "A collection type is rendered"
         def renderResult = render('''
 import groovy.transform.*
-import grails.plugin.json.view.*
+import grails.plugin.json.view.include.Player
 
 @Field Collection<Player> players
 

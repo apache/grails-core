@@ -336,7 +336,7 @@ class GlobalGrailsClassInjectorTransformationSpec extends Specification {
                     sourceFile,
                     '''
                         @org.springframework.boot.autoconfigure.AutoConfiguration
-                        class DslBeansGrailsPlugin {
+                        class DslBeansGrailsPlugin extends grails.plugins.Plugin {
                             def version = '1.0'
                             def beans = {
                                 bean('greeting', String) { 'hello' }
@@ -349,6 +349,101 @@ class GlobalGrailsClassInjectorTransformationSpec extends Specification {
 
         then: "the property is consumed by the transform, unlike the two cases above"
             classNode.getProperty('beans') == null
+
+        and: "the name settled by the local transform is registered at the global transform's target"
+            new File(targetDir,
+                    'META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports').text.trim() ==
+                    'DslBeansAutoConfiguration'
+    }
+
+    void "an explicitly annotated descriptor registers its sibling too"() {
+        given: "the entry path the convention does not take: the local transform runs after this one"
+            def sourceFile = new File(tempDir, 'AnnotatedBeansGrailsPlugin.groovy')
+            def targetDir = new File(tempDir, 'build/classes/groovy/main')
+
+        when:
+            def classNode = compileToFile(
+                    sourceFile,
+                    '''
+                        @grails.compiler.beans.GrailsBeans
+                        @org.springframework.boot.autoconfigure.AutoConfiguration
+                        class AnnotatedBeansGrailsPlugin extends grails.plugins.Plugin {
+                            def version = '1.0'
+                            def beans = {
+                                bean('greeting', String) { 'hello' }
+                            }
+                        }
+                    ''',
+                    targetDir
+            )
+
+        then: "the annotation's own transform consumed the closure"
+            classNode.getProperty('beans') == null
+
+        and: "and registered the sibling, which is what silently did not happen before"
+            new File(targetDir,
+                    'META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports').text.trim() ==
+                    'AnnotatedBeansAutoConfiguration'
+    }
+
+    void "the implicit beans convention claims the closure of a descriptor that is not a Plugin"() {
+        given: "the descriptor names itself *GrailsPlugin but does not extend Plugin, so nothing is generated"
+            def sourceFile = new File(tempDir, 'PlainDslBeansGrailsPlugin.groovy')
+            def targetDir = new File(tempDir, 'build/classes/groovy/main')
+
+        when:
+            def classNode = compileToFile(
+                    sourceFile,
+                    '''
+                        @org.springframework.boot.autoconfigure.AutoConfiguration
+                        class PlainDslBeansGrailsPlugin {
+                            def version = '1.0'
+                            def beans = {
+                                bean('greeting', String) { 'hello' }
+                                bean('lazyGreeting', String).lazy() { 'later' }
+                            }
+                        }
+                    ''',
+                    targetDir
+            )
+
+        then: "the closure is still compiled, onto the class itself rather than onto a sibling"
+            classNode.getProperty('beans') == null
+
+        and: "only the sibling generated for a plugin descriptor is registered, and there is none here"
+            !new File(targetDir,
+                    'META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports').exists()
+    }
+
+    void "a generated class missing from a hand-authored imports file is reported"() {
+        given: "a hand-authored file listing something else, and a descriptor whose sibling is not in it"
+            def targetDir = new File(tempDir, 'build/classes/groovy/main')
+            def handAuthored = new File(tempDir,
+                    'src/main/resources/META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports')
+            handAuthored.parentFile.mkdirs()
+            handAuthored.text = 'com.elsewhere.FromAnotherJar\n'
+
+        when: "it compiles"
+            def warnings = compileCollectingWarnings(
+                    new File(tempDir, 'WarnOnceGrailsPlugin.groovy'),
+                    '''
+                        @org.springframework.boot.autoconfigure.AutoConfiguration
+                        class WarnOnceGrailsPlugin extends grails.plugins.Plugin {
+                            def version = '1.0'
+                            def beans = {
+                                bean('greeting', String) { 'hello' }
+                            }
+                        }
+                    ''',
+                    targetDir
+            )
+
+        then: "the entry that has to be added by hand is named"
+            warnings.any { it.contains('WarnOnceAutoConfiguration') && it.contains('AutoConfiguration.imports') }
+
+        and: "and the module's own file is left as the only one"
+            !new File(targetDir,
+                    'META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports').exists()
     }
 
     void "the implicit beans convention claims an application class's DSL-shaped beans closure"() {
@@ -826,6 +921,15 @@ class GlobalGrailsClassInjectorTransformationSpec extends Specification {
      * own {@code CANONICALIZATION} pass runs, mirroring how the Grails Gradle plugin stamps project
      * name/version metadata via its own compiler customizer.
      */
+    private static List<String> compileCollectingWarnings(File sourceFile, String source, File targetDirectory) {
+        sourceFile.parentFile.mkdirs()
+        sourceFile.text = source
+        def cu = new CompilationUnit(new CompilerConfiguration(targetDirectory: targetDirectory))
+        cu.addSource(sourceFile)
+        cu.compile(Phases.CANONICALIZATION)
+        (cu.errorCollector.warnings ?: []).collect { it.message?.toString() ?: it.toString() }
+    }
+
     private static ClassNode compileToFile(File sourceFile, String source, File targetDirectory, Map<String, String> nodeMetaData = [:]) {
         sourceFile.parentFile.mkdirs()
         sourceFile.text = source

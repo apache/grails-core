@@ -84,6 +84,7 @@ public class ColumnBinder {
      * @param column The column to bind
      * @param path the path
      * @param table The table name
+     * @param typeName the property's resolved Hibernate type name
      */
     public void bindColumn(
             HibernatePersistentProperty property,
@@ -91,7 +92,8 @@ public class ColumnBinder {
             Column column,
             ColumnConfig cc,
             String path,
-            Table table) {
+            Table table,
+            String typeName) {
 
         if (cc != null) {
             column.setComment(cc.getComment());
@@ -116,7 +118,7 @@ public class ColumnBinder {
             Class<?> type = property.getType();
             if (type != null && (String.class.isAssignableFrom(type) || byte[].class.isAssignableFrom(type))) {
                 PropertyConfig mappedForm = property.getHibernateMappedForm();
-                stringColumnConstraintsBinder.bindStringColumnConstraints(column, mappedForm);
+                stringColumnConstraintsBinder.bindStringColumnConstraints(column, mappedForm, typeName);
             } else if (type != null && Number.class.isAssignableFrom(type)) {
                 PropertyConfig mappedForm = property.getHibernateMappedForm();
                 numericColumnConstraintsBinder.bindNumericColumnConstraints(column, cc, mappedForm, type);

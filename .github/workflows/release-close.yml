@@ -66,7 +66,8 @@ jobs:
         run: |
           echo "::group::Deploy the new SNAPSHOT to Forge - MANUAL"
           echo "After the Close Release PR is merged, deploy the new SNAPSHOT to Forge via:"
-          echo "https://github.com/apache/grails-core/actions/workflows/forge-deploy-snapshot.yml"
+          echo "https://github.com/apache/grails-core/actions/workflows/forge-deploy-aws.yml"
+          echo "Use workflow from the snapshot branch. Slot: snapshot."
           echo "::endgroup::"
       - name: "🌎 MANUAL - Add version to the Grails Website"
         run: |

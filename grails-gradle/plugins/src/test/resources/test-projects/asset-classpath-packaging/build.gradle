@@ -1,0 +1,42 @@
+// The asset pipeline plugin is not on the test classpath, and this does not need it: the wiring
+// under test reacts to the assetCompile task, so a stand-in that produces compiled assets the same
+// way exercises the same path.
+plugins {
+    id 'org.apache.grails.gradle.grails-web'
+}
+
+group = 'org.example.test'
+
+grails {
+    bom = null
+    cliAutoProvision = false
+}
+
+springBoot {
+    mainClass = 'org.example.test.Application'
+}
+
+def compiledAssets = layout.buildDirectory.dir('assets')
+
+tasks.register('assetCompile') {
+    outputs.dir(compiledAssets)
+    doLast {
+        def dir = compiledAssets.get().asFile
+        dir.mkdirs()
+        new File(dir, 'application-d41d8c.css').text = 'body { }'
+        new File(dir, 'grails-527fa9.svg').text = '<svg/>'
+    }
+}
+
+tasks.register('inspectAssetPackaging') {
+    dependsOn 'bootJar'
+    doLast {
+        def archive = tasks.named('bootJar', Jar).get().archiveFile.get().asFile
+        def entries = new java.util.zip.ZipFile(archive).withCloseable { zip ->
+            zip.entries().findAll { !it.directory }.collect { it.name } as Set
+        }
+        println "ON_CLASSPATH=${entries.contains('BOOT-INF/classes/assets/application-d41d8c.css')}"
+        println "ON_CLASSPATH_SVG=${entries.contains('BOOT-INF/classes/assets/grails-527fa9.svg')}"
+        println "ASSET_COUNT=${entries.count { it.startsWith('BOOT-INF/classes/assets/') }}"
+    }
+}

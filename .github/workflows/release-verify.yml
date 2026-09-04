@@ -104,7 +104,7 @@ jobs:
           echo "JDK_25_HOME=${JAVA_HOME_25_X64}" >> "${GITHUB_ENV}"
           "${JAVA_HOME_25_X64}/bin/java" -version
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           # verification must run against a pristine environment, never cached state
           cache-disabled: true

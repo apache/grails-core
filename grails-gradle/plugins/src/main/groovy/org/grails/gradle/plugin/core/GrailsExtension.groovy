@@ -50,6 +50,8 @@ class GrailsExtension {
         this.indy = project.objects.property(Boolean).convention(true)
         this.preserveParameterNames = project.objects.property(Boolean).convention(true)
         this.compileStatic = project.objects.newInstance(GrailsCompileStaticOptions)
+        this.gorm = project.objects.newInstance(GrailsGormOptions)
+        this.i18n = project.objects.newInstance(GrailsI18nOptions)
         this.cliAutoProvision = project.objects.property(Boolean).convention(project.provider {
             def fromProperty = project.findProperty('grailsCliAutoProvision')
             fromProperty == null ? Boolean.TRUE : Boolean.parseBoolean(fromProperty as String)
@@ -105,23 +107,18 @@ class GrailsExtension {
     boolean packageAssets = true
 
     /**
-     * Whether java.time.* package should be a default import package
-     */
-    boolean importJavaTime = false
-
-    /**
      * Whether grails annotation packages and common validation annotations should be default import packages.
      * When enabled, automatically imports:
      * - jakarta.validation.constraints.*
-     * - grails.gorm.annotation.* (if grails-datamapping-core is in classpath)
-     * - grails.plugin.scaffolding.annotation.* (if grails-scaffolding is in classpath)
+     * - grails.gorm.annotation.*
+     * - grails.plugin.scaffolding.annotation.*
      */
     boolean importGrailsCommonAnnotations = false
 
     /**
      * Custom star imports to add to Groovy compilation configuration.
      * Users can add their own package imports that will be combined with
-     * imports added by importJavaTime and importGrailsCommonAnnotations flags.
+     * imports added by the importGrailsCommonAnnotations flag.
      */
     List<String> starImports = []
 
@@ -153,6 +150,50 @@ class GrailsExtension {
      */
     void compileStatic(@DelegatesTo(value = GrailsCompileStaticOptions, strategy = Closure.DELEGATE_FIRST) Closure<?> configureClosure) {
         configureClosure.delegate = this.compileStatic
+        configureClosure.resolveStrategy = Closure.DELEGATE_FIRST
+        configureClosure.call()
+    }
+
+    /**
+     * GORM compilation options, configured through the nested {@code gorm} block:
+     *
+     * <pre>
+     * grails {
+     *     gorm {
+     *         defaultIdType = 'native'
+     *     }
+     * }
+     * </pre>
+     *
+     * @since 8.0
+     */
+    final GrailsGormOptions gorm
+
+    /**
+     * Configures the nested {@link #gorm} options.
+     *
+     * @param configureClosure a closure applied to the {@link GrailsGormOptions}
+     * @since 8.0
+     */
+    void gorm(@DelegatesTo(value = GrailsGormOptions, strategy = Closure.DELEGATE_FIRST) Closure<?> configureClosure) {
+        configureClosure.delegate = this.gorm
+        configureClosure.resolveStrategy = Closure.DELEGATE_FIRST
+        configureClosure.call()
+    }
+
+    /**
+     * Message-bundle options, configured through the nested {@code i18n} block. Only needed to
+     * disambiguate base names that cannot be inferred from file names alone.
+     */
+    final GrailsI18nOptions i18n
+
+    /**
+     * Configures the nested {@link #i18n} options.
+     *
+     * @param configureClosure a closure applied to the {@link GrailsI18nOptions}
+     */
+    void i18n(@DelegatesTo(value = GrailsI18nOptions, strategy = Closure.DELEGATE_FIRST) Closure<?> configureClosure) {
+        configureClosure.delegate = this.i18n
         configureClosure.resolveStrategy = Closure.DELEGATE_FIRST
         configureClosure.call()
     }

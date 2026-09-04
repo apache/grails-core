@@ -50,6 +50,7 @@ GET,/books/create,create
 GET,/books/${id}/edit,edit
 POST,/books,save
 PUT,/books/${id},update
+PATCH,/books/${id},patch
 DELETE,/books/${id},delete
 |===
 

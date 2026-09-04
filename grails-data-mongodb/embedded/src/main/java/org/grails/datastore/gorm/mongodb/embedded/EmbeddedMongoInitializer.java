@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -92,7 +93,6 @@ import org.springframework.util.ClassUtils;
  * by flapdoodle's own {@code de.flapdoodle.embed.mongo.spring3x} auto configuration,
  * which this deliberately does not duplicate.
  *
- * @author Grails
  * @since 8.0
  */
 public class EmbeddedMongoInitializer implements ApplicationContextInitializer<ConfigurableApplicationContext> {
@@ -109,6 +109,20 @@ public class EmbeddedMongoInitializer implements ApplicationContextInitializer<C
     public static final String DATABASE_DIR = "embedded.mongodb.database-dir";
 
     public static final String VERSION = "embedded.mongodb.version";
+
+    /**
+     * The name of the replica set to run as. A transaction, a change stream and a causally
+     * consistent read all need one; a standalone server refuses them. Left unset, the server is
+     * standalone unless the application asks GORM for transactions.
+     */
+    public static final String REPLICA_SET = "embedded.mongodb.replica-set";
+
+    /**
+     * What GORM is told, which is the reason an application would want a replica set at all.
+     */
+    public static final String TRANSACTIONAL = "grails.mongodb.transactional";
+
+    public static final String DEFAULT_REPLICA_SET = "rs0";
 
     public static final String DEFAULT_PROPERTY_NAME = "grails.mongodb.url";
 
@@ -135,7 +149,9 @@ public class EmbeddedMongoInitializer implements ApplicationContextInitializer<C
      * application contexts in one JVM can ask for different ports, and consulted so that a
      * devtools restart reuses its own server without mistaking any other listener for one.
      */
-    private static final Map<Integer, RunningEmbeddedMongo> STARTED = new ConcurrentHashMap<>();
+    private static final Map<Integer, StartedServer> STARTED = new ConcurrentHashMap<>();
+
+    private static final AtomicBoolean SHUTDOWN_HOOK_ADDED = new AtomicBoolean();
 
     /**
      * Flapdoodle first, so that adding it to an application is all it takes to move from
@@ -194,19 +210,34 @@ public class EmbeddedMongoInitializer implements ApplicationContextInitializer<C
         int port = resolvePort(environment, asked.group(1));
         String database = resolveDatabase(asked.group(2));
 
+        EmbeddedMongoSettings settings = settings(environment, port);
+        // Resolved before the reuse check rather than inside start(): which backend is being asked
+        // for decides whether the running server is the one wanted, so it cannot wait until after
+        // that question has been answered.
+        EmbeddedMongoBackend backend = selectBackend(environment);
+
         String url;
-        RunningEmbeddedMongo started = STARTED.get(port);
+        StartedServer started = discard(STARTED.get(port), settings, backend.getName());
         if (started != null) {
             // A devtools restart reuses this JVM and this class is loaded from a jar, so it
             // survives in the base classloader along with the server the previous
             // application context started. Only a server this initializer started is reused;
             // anything else holding the port makes the start below fail with an error that
             // says so, rather than publishing a MongoDB url pointing at an unrelated service.
-            url = "mongodb://" + started.getHost() + ":" + started.getPort() + "/" + database;
+            //
+            if (!started.running().isRunning()) {
+                // Started again here rather than left to the lifecycle bean, which Spring starts
+                // only once the context has refreshed: a datastore builds its indexes as it is
+                // constructed, which happens while beans are still being created, and a url
+                // published for a server that is not listening fails there first.
+                started.running().restart();
+            }
+            url = "mongodb://" + started.running().getHost() + ":" + started.running().getPort() +
+                    "/" + database;
             log.info("Reusing the embedded MongoDB this JVM already started at {}", url);
         }
         else {
-            url = start(environment, port, database);
+            url = start(backend, settings, database);
         }
 
         Map<String, Object> published = new HashMap<>();
@@ -218,10 +249,10 @@ public class EmbeddedMongoInitializer implements ApplicationContextInitializer<C
         // Registered as a singleton rather than a bean definition because this runs before
         // any definitions are read, and the server it manages already exists by now. The
         // JVM shutdown hook above still covers the case where the context never refreshes.
-        RunningEmbeddedMongo running = STARTED.get(port);
+        StartedServer running = STARTED.get(port);
         if (running != null) {
-            applicationContext.getBeanFactory()
-                    .registerSingleton(EmbeddedMongoLifecycle.BEAN_NAME, new EmbeddedMongoLifecycle(running));
+            applicationContext.getBeanFactory().registerSingleton(EmbeddedMongoLifecycle.BEAN_NAME,
+                    new EmbeddedMongoLifecycle(running.running()));
         }
     }
 
@@ -230,10 +261,8 @@ public class EmbeddedMongoInitializer implements ApplicationContextInitializer<C
      * properties pointing at whatever the application configured, which is exactly what
      * enabling this was meant to replace.
      */
-    private String start(ConfigurableEnvironment environment, int port, String database) {
-        EmbeddedMongoBackend backend = selectBackend(environment);
-        EmbeddedMongoSettings settings = new EmbeddedMongoSettings(port,
-                environment.getProperty(VERSION), environment.getProperty(DATABASE_DIR));
+    private String start(EmbeddedMongoBackend backend, EmbeddedMongoSettings settings, String database) {
+        int port = settings.getPort();
 
         RunningEmbeddedMongo running;
         try {
@@ -249,15 +278,50 @@ public class EmbeddedMongoInitializer implements ApplicationContextInitializer<C
                     "instead of " + EMBEDDED_HOST + " to use an external MongoDB.", ex);
         }
 
-        STARTED.put(port, running);
-
-        // Registered on the JVM rather than the application context so that it survives a
-        // devtools restart and fires only once, when the JVM itself exits.
-        Runtime.getRuntime().addShutdownHook(new Thread(running::stop));
+        STARTED.put(port, new StartedServer(running, settings, backend.getName()));
+        stopEverythingAtExit();
 
         String url = "mongodb://" + running.getHost() + ":" + running.getPort() + "/" + database;
         log.info("Embedded MongoDB started at {} using the {} backend", url, backend.getName());
         return url;
+    }
+
+    private EmbeddedMongoSettings settings(ConfigurableEnvironment environment, int port) {
+        return new EmbeddedMongoSettings(port, environment.getProperty(VERSION),
+                environment.getProperty(DATABASE_DIR), replicaSet(environment));
+    }
+
+    /**
+     * A server is reused only when it is the server this application is asking for. A restart that
+     * chose another backend, switched transactions on, named a different version, or moved the
+     * database directory wants something the running server is not, and being handed it anyway
+     * would fail later and further away - a transaction refused by a standalone server, say, or a
+     * {@code $text} query refused by the in-memory backend.
+     */
+    private StartedServer discard(StartedServer started, EmbeddedMongoSettings settings, String backend) {
+        if (started == null || (started.settings().equals(settings) && started.backend().equals(backend))) {
+            return started;
+        }
+        log.info("Replacing the embedded MongoDB this JVM started ({} on the {} backend): it is now " +
+                "asked for with {} on the {} backend", started.settings(), started.backend(), settings, backend);
+        started.running().stop();
+        // Keyed removal, so a server another thread has just started on this port is not the one
+        // taken out of the registry.
+        STARTED.remove(settings.getPort(), started);
+        return null;
+    }
+
+    /**
+     * An application that asks GORM for transactions is asking for a replica set, whether or not it
+     * knows that is what MongoDB calls it, so the server it is given is one - unless it named a
+     * replica set itself, which wins either way.
+     */
+    private String replicaSet(ConfigurableEnvironment environment) {
+        String named = environment.getProperty(REPLICA_SET);
+        if (named != null && !named.isEmpty()) {
+            return named;
+        }
+        return environment.getProperty(TRANSACTIONAL, Boolean.class, Boolean.FALSE) ? DEFAULT_REPLICA_SET : null;
     }
 
     private EmbeddedMongoBackend selectBackend(ConfigurableEnvironment environment) {
@@ -356,6 +420,33 @@ public class EmbeddedMongoInitializer implements ApplicationContextInitializer<C
      */
     private String resolveDatabase(String urlDatabase) {
         return urlDatabase == null || urlDatabase.isEmpty() ? DEFAULT_DATABASE : urlDatabase;
+    }
+
+    /**
+     * Registered on the JVM rather than the application context so that it survives a devtools
+     * restart and fires once, when the JVM itself exits. It reads the registry as it runs, so a
+     * server that was replaced along the way is not held by it, and a hook is not added for every
+     * server a long-running JVM starts. Stopping a server the context already stopped does nothing,
+     * which is the ordinary case.
+     */
+    private static void stopEverythingAtExit() {
+        if (SHUTDOWN_HOOK_ADDED.compareAndSet(false, true)) {
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                for (StartedServer started : STARTED.values()) {
+                    started.running().stop();
+                }
+            }));
+        }
+    }
+
+    /**
+     * A server this JVM started, and what it was asked for. The settings and the backend together
+     * are what a later context compares against to decide whether the server it finds is the one it
+     * wants. The backend is held beside the settings rather than within them because it selects the
+     * server rather than configures it, and {@link EmbeddedMongoSettings} is public API whose
+     * constructor should not change to carry it.
+     */
+    private record StartedServer(RunningEmbeddedMongo running, EmbeddedMongoSettings settings, String backend) {
     }
 
 }

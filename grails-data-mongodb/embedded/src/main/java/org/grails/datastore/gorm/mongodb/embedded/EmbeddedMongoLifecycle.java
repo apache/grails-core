@@ -33,7 +33,6 @@ import org.springframework.context.SmartLifecycle;
  * after the restore, so taking part costs no dependency on {@code org.crac}. It also means
  * the same bean covers an ordinary shutdown.
  *
- * @author Grails
  * @since 8.0
  */
 public class EmbeddedMongoLifecycle implements SmartLifecycle {
@@ -50,32 +49,33 @@ public class EmbeddedMongoLifecycle implements SmartLifecycle {
 
     private final RunningEmbeddedMongo running;
 
-    /** The server is already listening by the time this is constructed. */
-    private volatile boolean started = true;
-
     public EmbeddedMongoLifecycle(RunningEmbeddedMongo running) {
         this.running = running;
     }
 
+    /**
+     * A context that inherits a server stopped by the context before it - which is what a
+     * devtools reload leaves behind - starts it here. Spring asks {@link #isRunning()} first
+     * and skips anything that says yes, so the answer has to come from the server rather than
+     * from a flag set when this bean was made.
+     */
     @Override
     public void start() {
-        if (!this.started) {
+        if (!this.running.isRunning()) {
             this.running.restart();
-            this.started = true;
         }
     }
 
     @Override
     public void stop() {
-        if (this.started) {
+        if (this.running.isRunning()) {
             this.running.stop();
-            this.started = false;
         }
     }
 
     @Override
     public boolean isRunning() {
-        return this.started;
+        return this.running.isRunning();
     }
 
     @Override
