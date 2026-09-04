@@ -25,9 +25,10 @@ import groovy.transform.CompileStatic
 import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Property
 
 @CompileStatic
-class GrailsCodeAnalysisExtension {
+abstract class GrailsCodeAnalysisExtension {
 
     /**
      * Defaults to rootProject.layout.buildDirectory/code-analysis/pmd.
@@ -41,6 +42,10 @@ class GrailsCodeAnalysisExtension {
      */
     final DirectoryProperty reportsDirectory
 
+    abstract Property<Boolean> getPmdEnabled()
+
+    abstract Property<Boolean> getSpotbugsEnabled()
+
     @Inject
     GrailsCodeAnalysisExtension(ObjectFactory objects, Project project) {
         pmdDirectory = objects.directoryProperty().convention(
@@ -49,5 +54,7 @@ class GrailsCodeAnalysisExtension {
         reportsDirectory = objects.directoryProperty().convention(
                 project.rootProject.layout.buildDirectory.dir('reports/code-analysis')
         )
+        pmdEnabled.convention(false)
+        spotbugsEnabled.convention(false)
     }
 }

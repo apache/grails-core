@@ -19,7 +19,14 @@ apply plugin: 'org.nosphere.apache.rat'
 
 tasks.named('rat') {
     def allExcludes = [
-            '.asf.yaml', // ASF metadata for github integration excluded from src zip
+            '.asf.yaml', // ASF metadata for GitHub integration; kept in source archives, excluded from RAT only
+            '.omo/**', // local agent work state excluded from src zip
+            '.worktrees/**', // standard location for agent/tooling git worktrees, never shipped
+            '.claude/settings.json', // JSON files cannot contain license headers
+            // Symlinks to AGENTS.md and .agents/skills/**, which carry the license header. They ship in the
+            // src zip as links, but cannot be audited here: on platforms without symlink support git
+            // materializes them as plain text files containing the link target.
+            '.claude/skills/**', '.clinerules', '.cursorrules', '.windsurfrules', 'CLAUDE.md', 'GEMINI.md',
             '.mailmap', // authorship mapping for git history, will not be included in src zip
             'CODE_OF_CONDUCT.md',
             'BUILD_DATE', // build artifact for storing the build date / verifying
@@ -71,6 +78,7 @@ tasks.named('rat') {
             'build-logic/plugins/build/**', // exclude build artifacts
             'build-logic/docs-core/build/**', // exclude build artifacts
             'grails-test-examples/*/build/**', // build directories
+            'grails-test-examples/plugins/*/build/**', // nested plugin example build directories
             'grails-gsp/*/build/**', // build directories
             'grails-test-examples/gsp-spring-boot/app/build', // build directories
             '*/build', // root build directories
@@ -129,8 +137,11 @@ tasks.named('rat') {
             'grails-forge/**/src/main/resources/**', // src/main/resources are included in generated application and should not include a license
             'grails-forge/**/src/test/resources/**', // src/test/resources are used in tests against files included in generated application and should not include a license
             'grails-gradle/**/build/**', // grails-gradle does not have a build package name so exclude any build directories
+            'grails-gradle/plugins/bin/**', // generated IDE output for the Gradle plugin build
+            'grails-bom/micronaut/build/**', // excluded from the Java 21 project graph but still generated locally
             'end-to-end/**/build/**', // its own build, so its build directories are not covered by the root exclude
             'grails-forge/*/build/**', // grails-forge build directories
+            'grails-forge/grails-forge-*/bin/**', // generated IDE output for Grails Forge modules
             'grails-forge/build/**', // grails-forge build directories
             'grails-spring-security/plugin/src/main/templates/**', // template files that people are expected to use in the end application
             'grails-spring-security/ldap/examples/functional-test-app/grails-app/ldap-servers/d1/data/users.ldif', // test database that does not support comments
@@ -157,7 +168,11 @@ tasks.named('rat') {
             '**/spring-configuration-metadata.json', // JSON files cannot contain license headers
             'grails-test-examples/spring-security/cas/test1/src/main/resources/cas/services/*.json', // CAS service registry definitions; JSON files cannot contain license headers
             'grails-benchmarks/src/reportTest/resources/jmh-golden/**', // byte-exact JMH report fixtures; a license header would alter the compared bytes
-    ] + rootProject.subprojects.collect{"${rootProject.projectDir.relativePath(it.layout.buildDirectory.get().asFile).toString()}/**/*" }
+    ] + rootProject.subprojects.collectMany { project ->
+        String projectPath = rootProject.projectDir.relativePath(project.projectDir).toString().replace(File.separator, '/')
+        String buildPath = rootProject.projectDir.relativePath(project.layout.buildDirectory.get().asFile).toString().replace(File.separator, '/')
+        ["${buildPath}/**/*", "${projectPath}/bin/**/*"]
+    }
     // logger.lifecycle("Excludes for RAT task: ${allExcludes.join(', \n')}")
     excludes = allExcludes
     // never cache license audits

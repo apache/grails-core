@@ -34,6 +34,11 @@ plugins {
 version = projectVersion
 group = 'org.apache.grails'
 
+grailsCodeAnalysis {
+    // PMD baseline is clean for this module; keep it blocking.
+    pmdEnabled = true
+}
+
 dependencies {
 
     implementation platform(project(':grails-bom'))

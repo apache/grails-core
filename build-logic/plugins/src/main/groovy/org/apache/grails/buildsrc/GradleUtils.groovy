@@ -19,9 +19,15 @@
 
 package org.apache.grails.buildsrc
 
+import java.nio.charset.StandardCharsets
+import java.nio.file.Path
+import java.util.HexFormat
+
 import groovy.transform.CompileStatic
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.file.Directory
+import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
 
 @CompileStatic
@@ -35,13 +41,53 @@ class GradleUtils {
 
     static Directory findAsfRootDir(Directory currentDirectory) {
         def asfFile = currentDirectory.file('.asf.yaml').asFile
-        asfFile.exists() ? currentDirectory : findAsfRootDir(currentDirectory.dir('../'))
+        if (asfFile.exists()) {
+            return currentDirectory
+        }
+        File parent = currentDirectory.asFile.parentFile
+        parent && parent != currentDirectory.asFile ? findAsfRootDir(currentDirectory.dir('../')) : null
     }
 
     static Provider<Boolean> booleanProvider(Project project, String name, boolean defaultValue = false) {
         project.providers.gradleProperty(name)
                 .map { it.trim().toBoolean() }
                 .orElse(defaultValue)
+    }
+
+    static String projectPathKey(Project project) {
+        HexFormat.of().formatHex(project.path.getBytes(StandardCharsets.UTF_8))
+    }
+
+    static String projectPathFromKey(String key) {
+        new String(HexFormat.of().parseHex(key), StandardCharsets.UTF_8)
+    }
+
+    static String reportFileName(Project project, String taskName) {
+        "${projectPathKey(project)}-${taskName}.xml"
+    }
+
+    static Provider<RegularFile> reportMarker(Project project, String tool, String taskName) {
+        project.rootProject.layout.buildDirectory.file("reports/aggregation-markers/${tool}/${reportFileName(project, taskName)}.marker")
+    }
+
+    static void configureReportMarker(Task task, Directory rootDirectory, Provider<RegularFile> report,
+            Provider<RegularFile> marker) {
+        Path rootPath = rootDirectory.asFile.toPath().toAbsolutePath().normalize()
+        task.outputs.file(marker)
+        task.doFirst {
+            Path reportPath = report.get().asFile.toPath().toAbsolutePath().normalize()
+            Path relativeReportPath
+            try {
+                relativeReportPath = rootPath.relativize(reportPath)
+            } catch (IllegalArgumentException exception) {
+                throw new IllegalStateException("Cannot create a report marker for '${reportPath}' relative to '${rootPath}'", exception)
+            }
+            File reportFile = reportPath.toFile()
+            reportFile.delete()
+            File markerFile = marker.get().asFile
+            markerFile.parentFile.mkdirs()
+            markerFile.text = relativeReportPath.toString().replace(File.separator, '/')
+        }
     }
 
     static <T> T lookupProperty(Project project, String name, T defaultValue = null) {

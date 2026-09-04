@@ -32,6 +32,11 @@ plugins {
 version = projectVersion
 group = 'org.apache.grails'
 
+grailsCodeAnalysis {
+    // PMD baseline is clean for this module; keep it blocking.
+    pmdEnabled = true
+}
+
 ext {
     gormApiDocs = true
     pomTitle = 'GORM for MongoDB - Spring Data Integration'

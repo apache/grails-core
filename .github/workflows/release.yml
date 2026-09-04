@@ -334,6 +334,7 @@ jobs:
           path: grails
           ref: ${{ env.TAG }}
           token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: false
       - name: "🗑️ Remove unnecessary files"
         run: |
           rm -f grails/gradle/wrapper/gradle-wrapper.jar
@@ -371,13 +372,17 @@ jobs:
         run: |
           SOURCE_DATE_EPOCH=$(cat grails/BUILD_DATE)
           find . -depth \( -type f -o -type d \) -exec touch -d "@${SOURCE_DATE_EPOCH}" {} +
+          find . -depth -type l -exec touch -h -d "@${SOURCE_DATE_EPOCH}" {} +
       - name: "📦 Create source distribution ZIP"
         run: >
-          zip -r
+          zip -yr
           ${DIST_NAME}-${VERSION}-src.zip
           grails
           -x 'grails/.git/*'
           -x 'grails/.github/*'
+          -x 'grails/.omo/*'
+          -x 'grails/.worktrees/*'
+          -x 'grails/worktrees/*'
           -x 'grails/.mailmap'
       - name: "🔐 Set up GPG" # use env var to not expose the key
         env:
