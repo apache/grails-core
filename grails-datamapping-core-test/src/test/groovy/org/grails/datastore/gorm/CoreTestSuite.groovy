@@ -21,6 +21,7 @@ package org.grails.datastore.gorm
 import org.junit.platform.suite.api.SelectClasses
 import org.junit.platform.suite.api.Suite
 
+import org.apache.grails.data.testing.tck.tests.FindByExampleSpec
 import org.apache.grails.data.testing.tck.tests.NotInListSpec
 
 /**
@@ -29,6 +30,6 @@ import org.apache.grails.data.testing.tck.tests.NotInListSpec
  * @author graemerocher
  */
 @Suite
-@SelectClasses([NotInListSpec])
+@SelectClasses([NotInListSpec, FindByExampleSpec])
 class CoreTestSuite {
 }

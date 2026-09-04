@@ -25,7 +25,7 @@ under the License.
 === Purpose
 
 
-Generates an HTML select with ``Locale``s as values
+Renders a locale selector. Without a body it produces a control (a native `<select>` or a list of links); with a body it iterates the locales and renders your own markup for each.
 
 
 === Examples
@@ -33,22 +33,39 @@ Generates an HTML select with ``Locale``s as values
 
 [source,xml]
 ----
-<!-- create a locale select -->
+<!-- a native <select> of every JVM locale -->
 <g:localeSelect name="myLocale" value="${locale}" />
 
-<!-- list only the locales the application is translated into -->
-<g:localeSelect name="myLocale" available="true" />
+<!-- restrict to the locales the application is translated into, each labelled in its
+     own language and ordered by that label -->
+<g:localeSelect name="myLocale" available="true" labelType="autonym" sort="true" />
+
+<!-- a plain list of links that switch locale via ?lang= -->
+<g:localeSelect available="true" type="links" labelType="autonym" />
+
+<!-- body form: supply your own markup (e.g. a Bootstrap dropdown) and reuse the tag's
+     locale resolution, sorting, autonym labels and active/default detection -->
+<g:localeSelect available="true" pinDefault="true" var="loc">
+    <li><a class="dropdown-item${loc.active ? ' active' : ''}"
+           href="?lang=${loc.tag}">${loc.autonym}</a></li>
+</g:localeSelect>
 ----
 
 
 === Description
 
 
+Without a body the tag renders a control: a native `<select>` by default, or a plain list of `<a>` links with `type="links"`. With a body it renders that body once per locale, exposing a per-locale model under the `var` attribute so you supply your own markup (for example the Bootstrap dropdown in the `create-app` default layout).
+
 Attributes
 
-* `name` - The name to be used for the select box
+* `name` - The name to be used for the select box (select mode)
 * `value` (optional) - The selected {javase}java.base/java/util/Locale.html[Locale]; defaults to the current request locale if not specified
-* `locale` (optional) - The {javase}java.base/java/util/Locale.html[Locale] to use for formatting the locale names. Defaults to the current request locale and then the system default locale if not specified
 * `available` (optional) - If `true`, lists only the locales the application is actually translated into (those with a `messages_&#42;.properties` bundle on the classpath, as discovered by the i18n plugin) rather than every locale the JVM knows about. Defaults to `false`.
-
-
+* `type` (optional) - `select` (default) or `links`. Ignored when a body is supplied.
+* `labelType` (optional) - The option/link label: `autonym` (each locale in its own language, e.g. `Deutsch`), `name` (in the display locale, e.g. `German`), `both`, or omitted for the legacy `"language, [COUNTRY,] name"` label.
+* `sort` (optional) - If `true`, orders the locales by their label using a locale-independent collator.
+* `tags` (optional) - If `true`, option/link keys are BCP&#8209;47 language tags (`en-US`) rather than the legacy `en_US` form.
+* `pinDefault` (optional) - If `true` (body mode), emits the configured default locale (`grails.i18n.default.locale`, falling back to `spring.web.locale`) first, so it can be pinned to the top of a switcher.
+* `param` (optional) - The request parameter name used for `links`-mode hrefs. Defaults to `lang`.
+* `var` (optional) - Enables body mode: the name of the per-locale model variable exposed to the body. The model exposes `locale`, `tag` (BCP&#8209;47), `code` (`language_COUNTRY`), `autonym` (the name in its own language), `name` (the name in the display locale), `label`, `active` (matches the current locale), `default` (matches the configured default) and `index`.

@@ -208,3 +208,7 @@ ext {
         }
     }
 }
+
+// Companion cli artifact constraints — declared directly (not merely inherited via platform())
+// so enforcedPlatform() consumers of this derived BOM also receive forced companion versions.
+apply from: rootProject.layout.projectDirectory.file('gradle/cli-companion-bom-constraints.gradle')

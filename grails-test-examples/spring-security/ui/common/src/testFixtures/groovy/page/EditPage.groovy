@@ -24,12 +24,14 @@ abstract class EditPage extends LifecyclePage {
 		title == "Edit ${typeName()}"
 	}
 	static content = {
-		submitBtn { $('a', id: 'update') }
+		submitBtn { $('#update') }
 	}
 
 	def <T extends LifecyclePage> T submitDelete(Class<T> expectedPageType) {
 		def oldElement = submitBtn.firstElement()
-		js.exec('document.forms.deleteForm.submit()')
+		$('#deleteButton').click()
+		waitFor { $('#deleteConfirmModal').displayed }
+		$('#confirmDelete').click()
 		waitForStale(oldElement)
 		waitForPage(expectedPageType)
 	}

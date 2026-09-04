@@ -1,0 +1,58 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+== custom
+
+=== Purpose
+
+Declares a trigger backed by your own implementation of the Quartz `Trigger` interface. This is how any Quartz trigger type not modelled by `simple` or `cron` is used.
+
+=== Examples
+
+[source,groovy]
+----
+class MyJob {
+
+    static triggers = {
+        custom(
+            name: 'customTrigger',
+            triggerClass: MyTriggerClass,
+            myParam: myValue,
+            myAnotherParam: myAnotherValue
+        )
+    }
+
+    void execute() {
+        println 'Job run!'
+    }
+}
+----
+
+=== Description
+
+Accepted attributes:
+
+* `triggerClass` — *required*. A class implementing `org.quartz.Trigger`. Omitting it, or supplying a class that does not implement `Trigger`, fails at startup.
+* `name` — uniquely identifies the trigger; must be unique across the whole application. Defaults to the job name followed by a counter.
+* `group` — the trigger group. Defaults to `GRAILS_TRIGGERS`.
+* `startDelay` — delay in milliseconds between scheduler startup and the first execution. Defaults to `0`.
+
+Any further attributes are set as properties on the trigger instance, so the trigger can be configured with whatever its class exposes.
+
+Refer to the user guide topic on link:{guidePath}backgroundJobs.html#quartzTriggers[Triggers] for more information.

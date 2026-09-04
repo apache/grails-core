@@ -391,7 +391,7 @@ public class RegexUrlMapping extends AbstractUrlMapping {
             }
             m = DOUBLE_WILDCARD_PATTERN.matcher(token);
             if (m.find()) {
-                StringBuffer buf = new StringBuffer();
+                StringBuilder buf = new StringBuilder();
                 do {
                     ConstrainedProperty prop = constraints[paramIndex++];
                     String propName = prop.getPropertyName();

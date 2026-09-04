@@ -18,43 +18,45 @@
  */
 
 grails {
-	plugin {
-		springsecurity {
-			authority.className = 'com.test.Role'
-         cas {
-            loginUri         = '/login'
-            serverUrlPrefix  = 'http://localhost:9090/cas'
-            proxyReceptorUrl = '/secure/receptor'
-            serviceUrl       = 'http://localhost:${server.port}/login/cas'
-            proxyCallbackUrl = 'http://localhost:${server.port}/secure/receptor'
-         }
-			controllerAnnotations.staticRules = [
-				[pattern: '/',               access: 'permitAll'],
-				[pattern: '/error',          access: 'permitAll'],
-				[pattern: '/index',          access: 'permitAll'],
-				[pattern: '/index.gsp',      access: 'permitAll'],
-				[pattern: '/shutdown',       access: 'permitAll'],
-				[pattern: '/assets/**',      access: 'permitAll'],
-				[pattern: '/**/js/**',       access: 'permitAll'],
-				[pattern: '/**/css/**',      access: 'permitAll'],
-				[pattern: '/**/images/**',   access: 'permitAll'],
-				[pattern: '/**/favicon.ico', access: 'permitAll']
-			]
-         fii.rejectPublicInvocations = false
-			filterChain.chainMap = [
-				[pattern: '/assets/**',      filters: 'none'],
-				[pattern: '/**/js/**',       filters: 'none'],
-				[pattern: '/**/css/**',      filters: 'none'],
-				[pattern: '/**/images/**',   filters: 'none'],
-				[pattern: '/**/favicon.ico', filters: 'none'],
-				[pattern: '/**',             filters: 'JOINED_FILTERS']
-			]
-         logout.postOnly = false
-         rejectIfNoRule = false
-			userLookup {
-				userDomainClassName = 'com.test.User'
-				authorityJoinClassName = 'com.test.UserRole'
-			}
-		}
-	}
+    plugin {
+        springsecurity {
+            authority.className = 'grails.plugin.springsecurity.cas.test.Role'
+            cas {
+                // serverUrlPrefix, serviceUrl and (for TESTCONFIG=casProxy) proxyCallbackUrl /
+                // proxyReceptorUrl are supplied by CasTestEnvironmentPostProcessor, which starts the
+                // CAS server in a container and derives them from the ports actually in use.
+                loginUri = '/login'
+                // Opt in everywhere except the config that asserts the shipped default is off.
+                // Enabling it disables session fixation prevention; the plugin warns at startup.
+                useSingleSignout = System.getProperty('TESTCONFIG') != 'casNoSingleSignout'
+            }
+            controllerAnnotations.staticRules = [
+                    [pattern: '/', access: 'permitAll'],
+                    [pattern: '/error', access: 'permitAll'],
+                    [pattern: '/index', access: 'permitAll'],
+                    [pattern: '/index.gsp', access: 'permitAll'],
+                    [pattern: '/shutdown', access: 'permitAll'],
+                    [pattern: '/assets/**', access: 'permitAll'],
+                    [pattern: '/**/js/**', access: 'permitAll'],
+                    [pattern: '/**/css/**', access: 'permitAll'],
+                    [pattern: '/**/images/**', access: 'permitAll'],
+                    [pattern: '/**/favicon.ico', access: 'permitAll']
+            ]
+            fii.rejectPublicInvocations = false
+            filterChain.chainMap = [
+                    [pattern: '/assets/**', filters: 'none'],
+                    [pattern: '/**/js/**', filters: 'none'],
+                    [pattern: '/**/css/**', filters: 'none'],
+                    [pattern: '/**/images/**', filters: 'none'],
+                    [pattern: '/**/favicon.ico', filters: 'none'],
+                    [pattern: '/**', filters: 'JOINED_FILTERS']
+            ]
+            logout.postOnly = false
+            rejectIfNoRule = false
+            userLookup {
+                userDomainClassName = 'grails.plugin.springsecurity.cas.test.User'
+                authorityJoinClassName = 'grails.plugin.springsecurity.cas.test.UserRole'
+            }
+        }
+    }
 }

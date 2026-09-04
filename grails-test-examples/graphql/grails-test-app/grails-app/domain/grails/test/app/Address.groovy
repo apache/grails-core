@@ -26,5 +26,8 @@ class Address {
     Integer zip
 
     static constraints = {
+        city nullable: false
+        state nullable: false
+        zip nullable: false
     }
 }

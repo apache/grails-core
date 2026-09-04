@@ -149,6 +149,10 @@ tasks.named('assemble').configure {
     dependsOn(shadowJarTask)
 }
 
+// JLine loads a native terminal library via System::load, a restricted method under JEP 472;
+// without this grant JDK 24+ warns on every launch and a future JDK will refuse the call
+List<String> nativeAccessJvmOpts = ['--enable-native-access=ALL-UNNAMED']
+
 TaskProvider<CreateStartScripts> cliStartScripts = tasks.register('createCliStartScripts', CreateStartScripts)
 cliStartScripts.configure { CreateStartScripts t ->
     t.dependsOn jarTask, shadowJarTask
@@ -156,6 +160,7 @@ cliStartScripts.configure { CreateStartScripts t ->
     t.applicationName = 'grails'
     t.mainClass = project.findProperty('startMainClass') as String
     t.classpath = files(shadowJarTask)
+    t.defaultJvmOpts = nativeAccessJvmOpts
 }
 
 TaskProvider<CreateStartScripts> shellCliStartScripts = tasks.register('createShellCliStartScripts', CreateStartScripts)
@@ -165,6 +170,7 @@ shellCliStartScripts.configure { CreateStartScripts t ->
     t.applicationName = 'grails-shell-cli'
     t.mainClass = 'org.grails.cli.GrailsCli'
     t.classpath = files(shadowJarTask)
+    t.defaultJvmOpts = nativeAccessJvmOpts
 }
 
 TaskProvider<CreateStartScripts> forgeCliStartScripts = tasks.register('createForgeCliStartScripts', CreateStartScripts)
@@ -174,6 +180,7 @@ forgeCliStartScripts.configure { CreateStartScripts t ->
     t.applicationName = 'grails-forge-cli'
     t.mainClass = 'org.grails.forge.cli.Application'
     t.classpath = files(shadowJarTask)
+    t.defaultJvmOpts = nativeAccessJvmOpts
 }
 
 project.extensions.getByType(DistributionContainer).configureEach {

@@ -1,0 +1,4 @@
+rootProject.name = 'bom-cli-multiproject-race'
+
+include 'producer'
+include 'consumer'

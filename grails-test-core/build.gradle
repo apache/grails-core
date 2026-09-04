@@ -51,43 +51,21 @@ dependencies {
     api project(':grails-mimetypes')
     api project(':grails-web-core')
     api project(':grails-converters')
+
     api 'org.apache.groovy:groovy'
-
-    // command line requirements
-    api  'org.jline:jline'
-    api 'org.fusesource.jansi:jansi'
-
-    // Ant
-    api 'org.apache.ant:ant'
-    api 'org.apache.ant:ant-junit'
 
     // needed for Spock
     api 'org.objenesis:objenesis'
 
+    implementation testFixtures(project(':grails-web-common'))
+
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
-    compileOnly 'org.springframework:spring-test', {
-        // MockHttpServletRequest/Response/Context used in many classes
-    }
-
-    testImplementation 'jakarta.servlet:jakarta.servlet-api'
-    testImplementation 'org.springframework:spring-test'
-
-    testImplementation 'org.apache.groovy:groovy-test-junit5'
-    testImplementation 'org.junit.jupiter:junit-jupiter-api'
-    testImplementation 'org.junit.platform:junit-platform-suite'
-
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+    compileOnly 'org.jline:jline' // command line requirements
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     // Logging
     api 'org.slf4j:slf4j-api'
     api 'org.slf4j:jcl-over-slf4j'
-
-    // Testing
-    testImplementation 'org.slf4j:slf4j-simple'
-    testImplementation 'org.spockframework:spock-core'
-    // Required by Spock's Mocking
-    testRuntimeOnly 'net.bytebuddy:byte-buddy'
-    testImplementation 'org.objenesis:objenesis'
 }
 
 apply {

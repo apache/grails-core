@@ -38,7 +38,7 @@ class CreateAppCommandSpec extends Specification {
     PrintStream originalOut
 
     void setup() {
-        System.setProperty("org.fusesource.jansi.Ansi.disable", "true")
+        System.setProperty("spring.output.ansi.enabled", "never")
         originalOut = GrailsConsole.instance.out
         sps = new StringPrintStream()
         GrailsConsole.instance.out = sps
@@ -109,6 +109,67 @@ class CreateAppCommandSpec extends Specification {
         then:
         features.size() == 0
         sps.toString() == "Warning |\nFeature mongo does not exist in the profile web! Possible solutions: mongodb\n"
+    }
+
+    void "test createRepositoryList renders a local override through Gradle's uri() without extra quoting"() {
+        given: 'a local repository override, as used for source-distribution installs'
+        System.setProperty('grails.repo.url', '/tmp/local-repo')
+
+        and: 'a command whose template variables carry a release grails version'
+        CreateAppCommand command = new CreateAppCommand()
+        command.variables['grails.version'] = '8.0.0'
+
+        when:
+        def repositories = command.createRepositoryList(['https://repo1.maven.org/maven2'])
+
+        then: 'the local path is wrapped in uri(...) and emitted unquoted'
+        repositories[0].generate(0, '\n') == 'maven {\n    url = uri(\'/tmp/local-repo\')\n}'
+
+        and: 'plain remote urls remain quoted'
+        repositories[1].generate(0, '\n') == 'maven {\n    url = \'https://repo1.maven.org/maven2\'\n}'
+    }
+
+    void "test createRepositoryList accepts an HTTPS override verbatim"() {
+        given:
+        System.setProperty('grails.repo.url', 'https://localhost/releases')
+
+        and: 'a command whose template variables carry a release grails version'
+        CreateAppCommand command = new CreateAppCommand()
+        command.variables['grails.version'] = '8.0.0'
+
+        when:
+        def repositories = command.createRepositoryList([])
+
+        then:
+        repositories[0].generate(0, '\n') == 'maven {\n    url = \'https://localhost/releases\'\n}'
+    }
+
+    void "test createRepositoryList renders the Gradle repository aliases verbatim"() {
+        given:
+        System.setProperty('grails.repo.url', 'mavenLocal();mavenCentral()')
+
+        and: 'a command whose template variables carry a release grails version'
+        CreateAppCommand command = new CreateAppCommand()
+        command.variables['grails.version'] = '8.0.0'
+
+        when:
+        def repositories = command.createRepositoryList([])
+
+        then: 'the aliases are emitted as repository method calls, not maven blocks'
+        repositories[0].generate(0, '\n') == 'mavenLocal()'
+        repositories[1].generate(0, '\n') == 'mavenCentral()'
+    }
+
+    void "test createRepositoryList rejects a non-HTTPS remote override"() {
+        given:
+        System.setProperty('grails.repo.url', 'http://localhost/releases')
+
+        when:
+        new CreateAppCommand().createRepositoryList([])
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == 'Remote GRAILS_REPO_URL repositories must use HTTPS: http://localhost/releases'
     }
 
     class StringPrintStream extends StringMessagePrintStream {

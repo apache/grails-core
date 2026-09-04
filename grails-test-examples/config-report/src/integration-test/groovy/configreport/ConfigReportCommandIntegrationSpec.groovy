@@ -21,8 +21,8 @@ package configreport
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ConfigurableApplicationContext
 
-import grails.dev.commands.ConfigReportCommand
-import grails.dev.commands.ExecutionContext
+import org.apache.grails.core.cli.ConfigReportCommand
+import org.apache.grails.core.cli.ExecutionContext
 import grails.testing.mixin.integration.Integration
 import org.grails.build.parsing.CommandLine
 import spock.lang.Narrative

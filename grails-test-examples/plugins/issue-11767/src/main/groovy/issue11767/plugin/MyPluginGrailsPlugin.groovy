@@ -25,7 +25,7 @@ import grails.plugins.Plugin
 class Issue11767GrailsPlugin extends Plugin {
 
     def title = 'Issue 11767'
-    def author = 'Mattias Reichel'
+    def author = 'Apache Grails Team'
     def authorEmail = ''
     def description = ''
 
