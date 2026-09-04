@@ -1,0 +1,1 @@
+org.apache.grails.core.cli.ApplicationCommand=com.example.HelloWorldCommand

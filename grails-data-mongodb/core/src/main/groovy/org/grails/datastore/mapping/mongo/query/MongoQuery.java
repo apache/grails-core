@@ -202,10 +202,8 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
                 } else if (associatedEntity instanceof EmbeddedPersistentEntity || association instanceof Embedded) {
                     Document associatedEntityQuery = new Document();
                     populateMongoQuery(queryEncoder, associatedEntityQuery, criterion.getCriteria(), associatedEntity);
-                    for (String property : associatedEntityQuery.keySet()) {
-                        String propertyKey = getPropertyName(entity, association.getName());
-                        query.put(propertyKey + '.' + property, associatedEntityQuery.get(property));
-                    }
+                    String propertyKey = getPropertyName(entity, association.getName());
+                    prefixEmbeddedQuery(propertyKey, associatedEntityQuery, query);
                 } else {
                     throw new UnsupportedOperationException("Join queries are not supported by MongoDB");
                 }
@@ -747,6 +745,40 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
                 queryHandler.handle(queryEncoder, criterion, dbo, entity);
             } else {
                 throw new InvalidDataAccessResourceUsageException("Queries of type " + criterion.getClass().getSimpleName() + " are not supported by this implementation");
+            }
+        }
+    }
+
+    /**
+     * Rewrites a query built against an embedded entity so it applies to the owning document,
+     * qualifying each property name with the embedded property's path. Logical operators such as
+     * {@code $and} and {@code $or} must stay at the current level (a key like {@code extRef1.$and}
+     * matches nothing), so their nested documents are rewritten recursively instead.
+     */
+    private static void prefixEmbeddedQuery(String prefix, Document source, Document target) {
+        for (String key : source.keySet()) {
+            Object value = source.get(key);
+            if (key.charAt(0) == '$') {
+                if (!(value instanceof List)) {
+                    // A top-level operator whose value is not a rewritable list of clauses
+                    // (e.g. $where from a property-to-property comparison, or $text) cannot be
+                    // qualified with the embedded path - prefixing it would silently match nothing.
+                    throw new UnsupportedOperationException("Criterion [" + key +
+                            "] is not supported inside an embedded association query");
+                }
+                List<Object> rewritten = new ArrayList<>();
+                for (Object element : (List<?>) value) {
+                    if (element instanceof Document) {
+                        Document rewrittenElement = new Document();
+                        prefixEmbeddedQuery(prefix, (Document) element, rewrittenElement);
+                        rewritten.add(rewrittenElement);
+                    } else {
+                        rewritten.add(element);
+                    }
+                }
+                target.put(key, rewritten);
+            } else {
+                target.put(prefix + '.' + key, value);
             }
         }
     }

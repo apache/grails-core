@@ -473,12 +473,19 @@ public class WebUtils extends org.springframework.web.util.WebUtils {
     public static void clearGrailsWebRequest() {
         RequestAttributes reqAttrs = RequestContextHolder.getRequestAttributes();
         if (reqAttrs != null) {
-            // First remove the web request from the HTTP request attributes.
-            GrailsWebRequest webRequest = (GrailsWebRequest) reqAttrs;
-            webRequest.getRequest().removeAttribute(GrailsApplicationAttributes.WEB_REQUEST);
-
-            // Now remove it from RequestContextHolder.
-            RequestContextHolder.resetRequestAttributes();
+            try {
+                // First remove the web request from the HTTP request attributes.
+                GrailsWebRequest webRequest = (GrailsWebRequest) reqAttrs;
+                webRequest.getRequest().removeAttribute(GrailsApplicationAttributes.WEB_REQUEST);
+            }
+            finally {
+                // Now remove it from RequestContextHolder, whether or not the request could be
+                // reached. A thread handed back to the pool still carrying a finished request
+                // poisons the next one it serves, so this cannot be left to depend on the servlet
+                // request still being usable. Nothing is caught here: most callers clear a request
+                // they are still using, and a failure to reach one is theirs to see.
+                RequestContextHolder.resetRequestAttributes();
+            }
         }
     }
 

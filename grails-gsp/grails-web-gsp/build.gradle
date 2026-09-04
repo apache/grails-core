@@ -42,7 +42,10 @@ ext {
 dependencies {
 
     implementation platform(project(':grails-bom'))
+    testImplementation platform(project(':grails-bom'))
+    compileOnlyApi 'jakarta.servlet:jakarta.servlet-api' // api needed downstream to compile GSPs, and exposed by GroovyPageView/PageRenderer/GroovyPagesServlet
     compileOnly 'org.apache.ant:ant'
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
     api project(':grails-gsp-core')
     api project(':grails-web-common')
     api project(':grails-web-taglib')
@@ -115,9 +118,8 @@ dependencies {
 //    compileOnly 'org.apache.ant:ant' // BuildException, DirectoryScanner, MatchingTask, Path, Reference
 //    compileOnly 'org.apache.groovy:groovy'
 //
-    testImplementation 'jakarta.servlet:jakarta.servlet-api'
-    testImplementation 'net.bytebuddy:byte-buddy'
-    testImplementation project(':grails-web-common'), { // GrailsWebMockUtil
+    testImplementation testFixtures(project(':grails-core'))
+    testImplementation testFixtures(project(':grails-web-common')), { // GrailsWebMockUtil
         // API dependencies in grails-web-common
         exclude group: 'org.apache.grails', module: 'grails-core'
         exclude group: 'org.apache.grails', module: 'grails-databinding'
@@ -126,11 +128,12 @@ dependencies {
         exclude group: 'org.springframework', module: 'spring-webmvc'
         exclude group: 'org.springframework', module: 'spring-context-support'
     }
+    testImplementation 'jakarta.servlet:jakarta.servlet-api'
+    testImplementation 'net.bytebuddy:byte-buddy'
     testImplementation 'org.apache.groovy:groovy-xml'
+    testImplementation 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation and tests
     testImplementation 'org.spockframework:spock-core'
     testImplementation 'org.springframework:spring-test' // MockHttpServletRequest is transitively used by GrailsWebMockUtils in grails-web-common
-
-    testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during tests
 }
 
 apply {

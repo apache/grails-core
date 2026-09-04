@@ -48,6 +48,9 @@ include::gettingStarted/withHibernate.adoc[]
 [[advancedConfig]]
 include::gettingStarted/advancedConfig.adoc[]
 
+[[embeddedMongo]]
+include::gettingStarted/embeddedMongo.adoc[]
+
 [[springBoot]]
 include::gettingStarted/springBoot.adoc[]
 

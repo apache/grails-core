@@ -41,14 +41,14 @@ public class GrailsLayoutPreprocessor {
     public static final String XML_CLOSING_FOR_EMPTY_TAG_ATTRIBUTE_NAME = "gsp_sm_xmlClosingForEmptyTag";
 
     public String addGspGrailsLayoutCapturing(String gspSource) {
-        StringBuffer sb = addHeadCapturing(gspSource);
+        StringBuilder sb = addHeadCapturing(gspSource);
         sb = addBodyCapturing(sb);
         sb = addContentCapturing(sb);
         return sb.toString();
     }
 
-    StringBuffer addHeadCapturing(String gspSource) {
-        StringBuffer sb = new StringBuffer((int) (gspSource.length() * 1.2));
+    StringBuilder addHeadCapturing(String gspSource) {
+        StringBuilder sb = new StringBuilder((int) (gspSource.length() * 1.2));
         Matcher m = headPattern.matcher(gspSource);
         if (m.find()) {
             m.appendReplacement(sb, "");
@@ -83,13 +83,13 @@ public class GrailsLayoutPreprocessor {
         return m.replaceAll("<grailsLayout:wrapTitleTag><grailsLayout:captureTitle$1>$2</grailsLayout:captureTitle></grailsLayout:wrapTitleTag>");
     }
 
-    StringBuffer addBodyCapturing(StringBuffer sb) {
+    StringBuilder addBodyCapturing(StringBuilder sb) {
         Matcher m = bodyPattern.matcher(sb);
-        return new StringBuffer(m.replaceAll("<grailsLayout:captureBody$1>$2</grailsLayout:captureBody>"));
+        return new StringBuilder(m.replaceAll("<grailsLayout:captureBody$1>$2</grailsLayout:captureBody>"));
     }
 
-    StringBuffer addContentCapturing(StringBuffer sb) {
+    StringBuilder addContentCapturing(StringBuilder sb) {
         Matcher m = contentPattern.matcher(sb);
-        return new StringBuffer(m.replaceAll("<grailsLayout:captureContent$1>$2</grailsLayout:captureContent>"));
+        return new StringBuilder(m.replaceAll("<grailsLayout:captureContent$1>$2</grailsLayout:captureContent>"));
     }
 }

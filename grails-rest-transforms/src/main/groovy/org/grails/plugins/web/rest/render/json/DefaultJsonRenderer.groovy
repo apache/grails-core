@@ -21,6 +21,7 @@ package org.grails.plugins.web.rest.render.json
 import groovy.transform.CompileStatic
 
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus
 import org.springframework.validation.Errors
 
@@ -44,6 +45,8 @@ class DefaultJsonRenderer<T> implements Renderer<T> {
 
     final Class<T> targetType
     MimeType[] mimeTypes = [MimeType.JSON, MimeType.TEXT_JSON] as MimeType[]
+
+    @Value('${grails.converters.encoding:UTF-8}')
     String encoding = GrailsWebUtil.DEFAULT_ENCODING
 
     @Autowired(required = false)
@@ -86,6 +89,7 @@ class DefaultJsonRenderer<T> implements Renderer<T> {
             Renderer htmlRenderer = rendererRegistry?.findRenderer(MimeType.HTML, object)
             if (htmlRenderer == null) {
                 htmlRenderer = new DefaultHtmlRenderer(targetType)
+                htmlRenderer.encoding = encoding
             }
             htmlRenderer.render((Object) object, context)
         } else {

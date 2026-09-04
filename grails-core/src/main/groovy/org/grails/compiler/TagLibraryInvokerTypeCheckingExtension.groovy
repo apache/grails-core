@@ -69,6 +69,13 @@ import org.grails.core.artefact.ControllerArtefactHandler
  * without error. Type-safety for method calls on <em>declared</em> fields and
  * local variables is fully preserved.
  *
+ * <p>Calls to tags the tag library index knows never reach this extension at all: they are compiled
+ * into direct invocations before type checking runs, so the type checker sees ordinary resolved method
+ * calls. A misspelled tag is reported there instead, but only where the source says the call is a tag
+ * - one naming its namespace. An unqualified call is left dynamic and unjudged, here and there, since
+ * such a name may equally be a dynamic finder, an injected service method or anything else contributed
+ * while the application runs.
+ *
  * <p><strong>Composition with other extensions:</strong> because this is a catch-all
  * handler for unresolved calls in controllers and tag libraries, it must run <em>after</em> any other
  * type-checking extension that resolves DSL-style calls (e.g. a criteria extension).

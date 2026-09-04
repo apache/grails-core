@@ -18,16 +18,28 @@
  */
 package grails.async.services
 
-import grails.async.Promises
-import grails.async.web.WebPromises
-import grails.util.GrailsWebMockUtil
-import org.springframework.web.context.request.RequestContextHolder
+import jakarta.servlet.AsyncContext
+import jakarta.servlet.AsyncEvent
+
 import spock.lang.Specification
 
-/**
- * Created by graemerocher on 20/02/2017.
- */
+import org.springframework.mock.web.MockAsyncContext
+import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.mock.web.MockHttpServletResponse
+import org.springframework.mock.web.MockServletContext
+import org.springframework.web.context.request.RequestContextHolder
+
+import grails.async.Promises
+import grails.async.web.AsyncGrailsWebRequest
+import grails.async.web.WebPromises
+import grails.util.GrailsWebMockUtil
+import org.grails.web.servlet.mvc.GrailsWebRequest
+
 class WebPromisesSpec extends Specification {
+
+    void cleanup() {
+        RequestContextHolder.resetRequestAttributes()
+    }
 
     void 'Test web promises handling'() {
 
@@ -50,7 +62,59 @@ class WebPromisesSpec extends Specification {
         then: 'No request is bound'
             promise.get() == 'good'
 
-        cleanup:
-            RequestContextHolder.setRequestAttributes(null)
+    }
+
+    void 'a callback attached during async dispatch reuses the active request'() {
+        given:
+        def servletContext = new MockServletContext()
+        def response = new MockHttpServletResponse()
+        int starts = 0
+        def request = new MockHttpServletRequest(servletContext) {
+            @Override
+            boolean isAsyncStarted() {
+                false
+            }
+
+            @Override
+            AsyncContext startAsync() {
+                starts++
+                throw new IllegalStateException('The request is already dispatching')
+            }
+        }.tap {
+            asyncSupported = true
+        }
+        def asyncContext = new MockAsyncContext(request, response)
+        def asyncWebRequest = new AsyncGrailsWebRequest(request, response, servletContext)
+        asyncWebRequest.asyncContext = asyncContext
+        RequestContextHolder.setRequestAttributes(new GrailsWebRequest(request, response, servletContext))
+
+        when:
+        def promise = WebPromises.task {
+            RequestContextHolder.currentRequestAttributes()
+        }
+
+        then:
+        promise.get() instanceof GrailsWebRequest
+        starts == 0
+    }
+
+    void 'a callback attached after async completion still fails visibly'() {
+        given:
+        def servletContext = new MockServletContext()
+        def request = new MockHttpServletRequest(servletContext)
+        def response = new MockHttpServletResponse()
+        def asyncContext = new MockAsyncContext(request, response)
+        def asyncWebRequest = new AsyncGrailsWebRequest(request, response, servletContext).tap {
+            it.asyncContext = asyncContext
+        }
+        asyncWebRequest.onComplete(new AsyncEvent(asyncContext))
+        RequestContextHolder.setRequestAttributes(new GrailsWebRequest(request, response, servletContext))
+
+        when:
+        WebPromises.task { 'too late' }
+
+        then:
+        def exception = thrown(IllegalStateException)
+        exception.message == 'Cannot start a task once asynchronous request processing has completed'
     }
 }

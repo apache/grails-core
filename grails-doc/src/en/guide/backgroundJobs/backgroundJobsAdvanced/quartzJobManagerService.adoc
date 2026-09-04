@@ -1,0 +1,88 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+The plugin provides a `jobManagerService` bean for inspecting and controlling the scheduler at runtime. Inject it like any other Grails service:
+
+[source,groovy]
+----
+class JobAdminController {
+
+    JobManagerService jobManagerService
+
+    def index() {
+        [jobs: jobManagerService.allJobs, running: jobManagerService.runningJobs]
+    }
+}
+----
+
+===== Inspecting jobs
+
+[cols="2,3"]
+|===
+| Method | Description
+
+| `getAllJobs()`
+| Returns a `Map<String, List<JobDescriptor>>` of every registered job, keyed by job group.
+
+| `getJobs(String group)`
+| Returns the `JobDescriptor` list for a single job group.
+
+| `getRunningJobs()`
+| Returns the `JobExecutionContext` of every job currently executing.
+|===
+
+A `JobDescriptor` exposes the job's `name` and `group`, the underlying Quartz `jobDetail`, and a `triggerDescriptors` list. Each `TriggerDescriptor` carries the trigger's `name` and `group`, its current `state` as a `Trigger.TriggerState`, and the underlying Quartz `trigger` — from which the fire times and schedule details can be read.
+
+===== Controlling jobs and triggers
+
+[cols="2,3"]
+|===
+| Method | Description
+
+| `pauseJob(String group, String name)` +
+`resumeJob(String group, String name)`
+| Pauses or resumes a single job.
+
+| `pauseJobGroup(String group)` +
+`resumeJobGroup(String group)`
+| Pauses or resumes every job in a group.
+
+| `pauseTrigger(String group, String name)` +
+`resumeTrigger(String group, String name)`
+| Pauses or resumes a single trigger.
+
+| `pauseTriggerGroup(String group)` +
+`resumeTriggerGroup(String group)`
+| Pauses or resumes every trigger in a group.
+
+| `pauseAll()` +
+`resumeAll()`
+| Pauses or resumes the entire scheduler.
+
+| `unscheduleJob(String group, String name)`
+| Removes all of a job's triggers, leaving the job itself registered.
+
+| `removeJob(String group, String name)`
+| Removes the job and its triggers from the scheduler.
+
+| `interruptJob(String group, String name)`
+| Interrupts a currently executing job. The job class must declare an `interrupt()` method; if it does not, an `UnableToInterruptJobException` is raised.
+|===
+
+The Quartz `Scheduler` itself is also available as the `quartzScheduler` bean if you need an operation the service does not wrap.

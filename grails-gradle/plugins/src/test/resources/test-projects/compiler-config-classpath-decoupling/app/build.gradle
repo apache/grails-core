@@ -1,0 +1,20 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+dependencies {
+    implementation project(':producer')
+    runtimeOnly project(':runtime-only-producer')
+}
+
+tasks.register('inspectDecoupling') {
+    doLast {
+        def gen = tasks.named('generateCompileGroovyGrailsCompilerConfig').get()
+        def deps = gen.taskDependencies.getDependencies(gen)*.path
+        println "GENERATOR_DEPENDENCIES=${deps}"
+        println "GENERATOR_DEPENDS_ON_COMPILE_CLASSPATH=${deps.any { it == ':producer:jar' }}"
+        println "GENERATOR_DEPENDS_ON_RUNTIME_CLASSPATH=${deps.any { it == ':runtime-only-producer:jar' }}"
+        println "GENERATOR_DECLARED_INPUT_FILES=${gen.inputs.files.files.size()}"
+        println "GENERATOR_HAS_CONTENT_INPUT=${gen.inputs.properties.containsKey('grailsScript')}"
+    }
+}

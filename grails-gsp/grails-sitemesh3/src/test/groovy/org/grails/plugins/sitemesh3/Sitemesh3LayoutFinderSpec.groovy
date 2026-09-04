@@ -186,7 +186,7 @@ class Sitemesh3LayoutFinderSpec extends Specification {
     }
 
     void 'a configured default that is missing does not fall back to the application layout'() {
-        given: 'SiteMesh 2 parity: the explicit default replaces the implicit fallback'
+        given: 'the explicit default replaces the implicit fallback'
         finder.defaultDecoratorName = 'custom'
         bindController(new ConventionController(), 'sample', '/sample/edit')
         Content content = emptyContent()

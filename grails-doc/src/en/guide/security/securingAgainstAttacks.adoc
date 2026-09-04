@@ -18,6 +18,7 @@ under the License.
 ////
 
 
+[[sqlInjection]]
 ==== SQL injection
 
 
@@ -58,6 +59,61 @@ def safe() {
                           [title: params.title])
 }
 ----
+
+===== Compile-time detection of flattened GString queries
+
+Passing a `GString` *directly* to a GORM query method such as `find`, `findAll`, `executeQuery`, or `executeUpdate` is safe: GORM converts each interpolated value into a bound query parameter rather than embedding it as text. The risk is a subtler pattern that looks harmless:
+
+[source,groovy]
+----
+def vulnerable() {
+    String query = "from Book as b where b.title = ${params.title}"  // <1>
+    def books = Book.executeQuery(query)                              // <2>
+}
+----
+<1> Groovy coerces the `GString` to a plain `String` right here, because `query` is declared as `String`.
+<2> By the time `executeQuery` receives it, it is an ordinary `String` with no trace of ever having been a `GString` — the interpolated value is now raw, unescaped text, and this call is genuinely vulnerable to HQL injection.
+
+This is dangerous precisely because it can't be caught at runtime: once a `GString` is flattened to a `String`, there is nothing left to distinguish it from HQL text that was always safe. Grails detects this pattern at *compile time* instead, and fails the build with an error identifying the call site. To fix it, keep the value as a `GString` (recommended) or pass named/positional parameters explicitly, as shown above.
+
+If a flagged call site has been reviewed and is genuinely safe, suppress the check on the enclosing method:
+
+[source,groovy]
+----
+@SuppressWarnings("GormUnsafeQueryString")
+def reviewedAndSafe() {
+    String query = "from Book as b where b.title = ${params.title}"
+    def books = Book.executeQuery(query)
+}
+----
+
+This check runs automatically against every Grails application that has `grails-datamapping-core` on its compile classpath — no configuration is required, and it covers every GORM implementation whose query methods follow this convention (Hibernate and Neo4j today).
+
+===== Compile-time warnings for lower-confidence patterns
+
+Two related patterns are detected by the same check but reported as compile-time *warnings* rather than build failures, because the detection is less certain than the local-variable case above:
+
+[source,groovy]
+----
+class Book {
+    String title
+    String cachedQuery = "from Book where title = ${title}"  // <1>
+
+    def loadCached() {
+        executeQuery(this.cachedQuery)                         // <2>
+    }
+
+    def vulnerable(String title) {
+        String query = "from Book where title = " + title      // <3>
+        executeQuery(query)
+    }
+}
+----
+<1> A field initialized from an interpolated `GString` — unlike a local variable, a field can be reassigned from a constructor, another method, or a subclass that this check never sees, so this is flagged rather than failed.
+<2> Reading that field later through `this.cachedQuery` in a query call.
+<3> Query text built with `+` from a non-constant value and no `GString` involved at all. This is a real injection shape, but string concatenation is common enough for benign, non-query purposes that a hard build failure would be too blunt an instrument.
+
+Both warnings identify the call site and suppress the same way as the error above, with `@SuppressWarnings("GormUnsafeQueryString")` on the enclosing method. Concatenating a `GString` with additional text (e.g. `"...${title}..." + " order by title"`) is *not* one of these warnings — Groovy's `GString.plus` returns a plain `String`, so this flattens the interpolation immediately and is reported as the build-breaking error instead.
 
 
 ==== Phishing

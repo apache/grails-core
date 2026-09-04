@@ -359,8 +359,11 @@ grails:
                 format: simple
 ----
 
-If you need to restore the legacy behavior temporarily, the deprecated marshallers remain available but will be removed in a future release.
+The legacy `org.grails.web.converters.marshaller.json.EnumMarshaller` and `org.grails.web.converters.marshaller.xml.EnumMarshaller` classes were removed in Grails 8.
+There is no Grails 8 configuration switch that restores the verbose enum-object shape.
+If an external API contract still requires that shape, register a custom object marshaller explicitly.
 
+[[jackson3-default]]
 ==== 9. Jackson 3 is the New Default
 
 Spring Boot 4 ships Jackson 3 (`tools.jackson.*`) and auto-configures a `JsonMapper` bean instead of the Jackson 2 `ObjectMapper`.
@@ -517,11 +520,19 @@ If your application or tests reference these classes directly, update the import
 Applications using embedded Tomcat or Jetty should check for any direct class references and update accordingly.
 The `spring-boot-tomcat` module must now be an explicit dependency if you reference Tomcat classes directly.
 
-**Undertow is temporarily unsupported.**
-Undertow has not yet been updated for Servlet 6.1, which Spring Boot 4 requires.
-As a result, Undertow is **not** an available embedded servlet container in Grails 8.
-Applications that previously used `spring-boot-starter-undertow` must switch to Tomcat or Jetty until Undertow ships Servlet 6.1 compatibility.
-The Grails Forge generator no longer offers Undertow as a selectable servlet implementation, and explicitly selecting it (for example, `--servlet=undertow` on the API/CLI) fails fast with `IllegalArgumentException` and a clear error message.
+**Undertow support is now provided by the Grails Undertow plugin.**
+Spring Boot 4 removed its Undertow support (`spring-boot-starter-undertow`) before Undertow shipped Servlet 6.1 compatibility.
+Undertow has since released Servlet 6.1 support, and Grails 8 restores Undertow as an embedded servlet container through the `grails-undertow` plugin, which bundles the Spring Boot Undertow web server support.
+Applications that previously used `spring-boot-starter-undertow` should replace it with:
+
+[source,groovy]
+----
+implementation 'org.apache.grails:grails-undertow'
+----
+
+The existing `server.undertow.*` configuration properties continue to work.
+Note that `server.undertow.max-http-post-size` now defaults to 2MB, matching Undertow's hardened default (CVE-2024-3884, CVE-2024-4027); set it to `-1` to restore the previous unlimited behavior.
+The Grails Forge generator offers Undertow as a selectable servlet implementation again (for example, `--servlet=undertow` on the API/CLI, or the `grails-undertow` feature).
 
 ==== 12. HandlerAdapter.getLastModified Removed
 
@@ -737,6 +748,35 @@ If your test infrastructure registers it explicitly, remove the registration; Sp
 Update the import.
 A new `RestTestClient` and corresponding `@AutoConfigureRestTestClient` annotation are also available as a fluent alternative.
 
+==== 17.1 Test Helpers Moved to Test Fixtures
+
+Several legacy Grails test helpers are no longer included in the production classpath.
+They are published as Gradle test fixtures instead, so applications and plugins that use them directly must request the fixture variant explicitly.
+
+This affects the following helpers:
+
+* `grails.plugin.json.view.test.JsonViewTest` and related JSON view test helpers
+* `org.grails.gorm.graphql.testing.GraphQLSchemaSpec`
+* `org.grails.gorm.graphql.testing.MockDataFetchingEnvironment`
+* `grails.util.GrailsWebMockUtil`
+* Mock resource and plugin helpers from `grails-core`, including `MockResourceLoader`, `MockStringResourceLoader`, `MockFileResource`, `MockPluginDiscovery`, and `MockGrailsPluginManager`
+
+If your tests import one of these classes, add the corresponding `testFixtures(...)` dependency to the configuration that compiles those tests:
+
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    testImplementation testFixtures('org.apache.grails:grails-core')
+    testImplementation testFixtures('org.apache.grails.web:grails-web-common')
+    testImplementation testFixtures('org.apache.grails:grails-views-gson')
+    testImplementation testFixtures('org.apache.grails.data:grails-data-graphql-core')
+}
+----
+
+Only add the fixture dependencies that provide helpers used by the project.
+Do not add them to `implementation`, because these artifacts contain test infrastructure and should not be part of the application runtime classpath.
+
 ==== 18. DevTools Live Reload Disabled by Default
 
 Spring Boot 4 changed the default of `spring.devtools.livereload.enabled` from `true` to `false`.
@@ -815,6 +855,9 @@ The Spring annotations still work, so this is non-blocking, but new code should 
 * **Namespaced link generation is namespace-aware.**
 When a link, form action, pagination link, sortable column link, redirect, chain, or include targets a controller without an explicit `namespace`, Grails now resolves the namespace automatically. In the normal case, where only one controller has the target name, `controller` and `action` generate the correct namespaced or non-namespaced URL. Ambiguity only occurs when multiple controllers share the same name. In that case, specify `namespace` to choose the target explicitly. Pass `namespace: null` from Groovy code or `namespace=""` in a GSP tag to target the non-namespaced controller explicitly.
 
+* **`bindData` can clear omitted included fields.**
+`bindData(target, source, [include: [...], clearMissing: true])` now clears included properties that are absent from the binding source. The behavior is opt-in, requires an `include` list, and does not apply globally. Existing `bindData` calls without `clearMissing: true` keep omitted fields unchanged.
+
 ==== 21. Tag Library Test Cleanup Changes
 
 Grails 8 removes the `purgeTagLibMetaClass` test hook used by some web and TagLib unit tests.
@@ -865,7 +908,8 @@ class DemoTagLib {
 
 Method tags with the conventional signatures `def tag(Map attrs)`, `def tag(Closure body)`, and `def tag(Map attrs, Closure body)` are discovered automatically. Zero-argument method tags and method tags that bind named attributes directly to method parameters must use `@grails.gsp.Tag`; this avoids exposing ordinary public helper methods as tags.
 
-Grails Gradle application builds preserve Java and Groovy method parameter names by default (see §22.3 below). If you compile TagLib classes outside those plugins, enable Java `-parameters` and Groovy `groovyOptions.parameters = true` so `@Tag` methods can bind attributes by parameter name.
+Grails Gradle application builds preserve Java and Groovy method parameter names by default (see §22.3 below).
+If you compile TagLib classes outside those plugins, enable Java `-parameters` and Groovy `groovyOptions.parameters = true` so `@Tag` methods can bind attributes by parameter name.
 
 To exclude a conventional public method from being exposed as a tag (for example, a helper that must remain public to satisfy an interface), annotate it with `@grails.gsp.NotATag`:
 
@@ -961,7 +1005,8 @@ grails {
 }
 ----
 
-NOTE: This Gradle extension property controls Groovy compilation only (`groovyOptions.parameters`). Java parameter-name preservation is enabled by the Spring Boot Gradle plugin, which adds `-parameters` to every `JavaCompile` task by default since Spring Boot 3.2. Grails 8 applications inherit this through the Spring Boot Gradle plugin and require no additional configuration for Java sources.
+NOTE: This Gradle extension property controls Groovy compilation only (`groovyOptions.parameters`).
+Java parameter-name preservation is enabled by the Spring Boot Gradle plugin, which adds `-parameters` to every `JavaCompile` task by default since Spring Boot 3.2. Grails 8 applications inherit this through the Spring Boot Gradle plugin and require no additional configuration for Java sources.
 
 If you compile TagLib classes outside the Grails Gradle plugin (for example, in a standalone Groovy module, a plain Spring Boot application that does not apply `org.springframework.boot`, or a build that disables the Spring Boot plugin's compiler configuration), enable parameter-name preservation explicitly so `@grails.gsp.Tag` methods can bind attributes by parameter name:
 
@@ -976,20 +1021,116 @@ tasks.withType(GroovyCompile).configureEach {
 }
 ----
 
-Without these flags, `Parameter.getName()` returns synthetic names such as `arg0`, the attribute lookup misses, and the call surfaces as `MissingMethodException` at runtime. The `@Tag`-annotated method itself produces no compile-time warning, because preservation is a property of the build, not of the source file.
+Without these flags, `Parameter.getName()` returns synthetic names such as `arg0`, the attribute lookup misses, and the call surfaces as `MissingMethodException` at runtime.
+The `@Tag`-annotated method itself produces no compile-time warning, because preservation is a property of the build, not of the source file.
 
 ==== 23. Known Plugin Incompatibilities
 
-Some third-party plugins have not yet been updated for Spring Boot 4 / Spring Framework 7 compatibility.
-The following are known blockers at this time:
+A Grails 7 plugin is not automatically incompatible with Grails 8. A plugin resolving, appearing in the load order, and letting the application start is encouraging, but it is not enough to establish compatibility. Exercise the plugin's documented public behavior, including web requests, outbound calls, serialization, commands, and any domain traits or annotations it exposes.
 
-* **grails-spring-security** - Uses `ReflectionUtils.getApplication()` which was removed in Spring Boot 4.
-Integration tests for modules depending on Spring Security are disabled until the plugin is updated.
+When a released Grails 7 plugin fails, first check whether the maintainer has published a Grails 8 version. Some failures have a temporary application-side workaround. Others are binary incompatibilities in already-published bytecode and require the plugin author to rebuild and release the plugin against Grails 8. Do not add framework-internal compatibility classes to an application to work around those failures.
 
-* **SiteMesh 3** - The decorator/layout mechanism is not compatible with Spring Framework 7.
-Applications using `grails-sitemesh3` should remain on the `grails-layout` plugin (SiteMesh 2.6.x) until SiteMesh 3 is updated.
+Use the first distinctive failure to choose the next step:
 
-Check the https://github.com/apache/grails-core/issues[Grails issue tracker] for the latest status of plugin compatibility.
+* `NoClassDefFoundError` mentioning `com/fasterxml/jackson/databind/exc/InvalidDefinitionException` while creating `OrderedFormContentFilter`: add the BOM-managed Jackson 2 `jackson-databind` dependency described below, then retest the plugin's public behavior.
+* `Could not find org.grails:...:.`: use a plugin version built against `org.apache.grails`, or use narrowly targeted dependency substitution as a temporary migration aid.
+* `MissingPropertyException` or `MissingMethodException` from `Metadata`: the plugin must be rebuilt against the typed metadata API.
+* `MalformedParameterizedTypeException` mentioning `$Trait$FieldHelper`, `NoClassDefFoundError` mentioning `ObjectUtil`, `IncompatibleClassChangeError` involving `HttpHeaders`, or an unexpected internal property after using a plugin annotation: the plugin must be rebuilt for Grails 8.
+
+===== 23.1 Metadata dynamic and map-style access
+
+A plugin that reads metadata through `Metadata.current.'some.key'` or `Metadata.current.get('some.key')` can start normally and fail only when that code path runs. The usual symptoms are `MissingPropertyException` or `MissingMethodException`, often as an HTTP 500 on a plugin endpoint. See https://github.com/apache/grails-core/issues/16122[Issue #16122].
+
+Plugin authors must replace the removed dynamic accessors with the typed public API:
+
+[source,groovy]
+----
+// Grails 7
+def version = Metadata.current.'info.app.grailsVersion'
+def name = Metadata.current.get('info.app.name')
+
+// Grails 8
+String version = Metadata.current.getProperty('info.app.grailsVersion', String, null)
+String name = Metadata.current.getProperty('info.app.name', String, null)
+----
+
+For a nested metadata value that does not need type conversion, `Metadata.current.navigate('some', 'nested', 'key')` is also available. This is a rebuild-only change for a published binary plugin. No Metadata compatibility shim is available.
+
+===== 23.2 Groovy 4 trait and AST-transform bytecode
+
+Groovy 5 can compile application code against a Groovy 4 plugin, but the following generated-bytecode patterns are known to be incompatible. These failures commonly occur only when the plugin's public feature is used, rather than at dependency resolution or startup. Rebuild the plugin with Grails 8 and Groovy 5. Consumers cannot reliably repair an already-published jar.
+
+* **Generic traits with fields.** A Grails 7 plugin that exposes a generic trait with fields can fail when an application implements that trait. JavaBeans, Spring, or Jackson introspection then throws `MalformedParameterizedTypeException` mentioning `<Trait>$Trait$FieldHelper`. The plugin's trait must be recompiled with Groovy 5. See https://github.com/apache/grails-core/issues/16123[Issue #16123]. Non-generic traits are not affected by this specific issue.
+
+* **AST transformations that target private trait methods.** A plugin transformation can compile successfully but silently lose a private trait method from the emitted application class. Using the annotated public feature then throws `MissingPropertyException` for an unexpected internal property. Plugin authors should change the transform to target a member emitted on the implementing class, then rebuild with Groovy 5. See https://github.com/apache/grails-core/issues/16126[Issue #16126].
+
+* **`@Immutable` classes.** A Groovy 4-compiled `@Immutable` class can throw `NoClassDefFoundError: org/apache/groovy/runtime/ObjectUtil` when constructed on Groovy 5. The missing call is generated by Groovy 4's AST transformation, so updating application source does not fix a released plugin jar. Rebuild affected plugin artifacts with Groovy 5. See https://github.com/apache/grails-core/issues/16128[Issue #16128].
+
+See <<groovy5-behavior-changes,Apache Groovy 5 Behavior Changes>> for source-level Groovy 5 changes that may affect the rebuilt plugin.
+
+===== 23.3 Jackson 2 dataformats without Jackson 2 databind
+
+Grails 8 uses Jackson 3 for databind, while a released plugin may still bring Jackson 2 Smile, CBOR, or YAML dataformat artifacts. If one of those dataformats is present while Jackson 2 databind is absent, Spring Framework detects an incomplete Jackson 2 classpath and application startup fails with `NoClassDefFoundError: com/fasterxml/jackson/databind/exc/InvalidDefinitionException`, usually while creating `OrderedFormContentFilter`. Jackson 2 core, annotations, and XML dataformat alone do not trigger this specific failure.
+
+The immediate consumer workaround is to supply the matching Jackson 2 databind artifact while the plugin is being migrated:
+
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    implementation 'com.example:plugin-that-needs-jackson2-dataformats:1.0.0'
+
+    // Keep the Jackson 2 runtime classpath complete.
+    runtimeOnly 'com.fasterxml.jackson.core:jackson-databind'
+}
+----
+
+Use the Jackson 2 version managed by the Grails and Spring Boot platform. Do not add a version if the active BOM already manages it. Plugin authors should release a Grails 8 version that migrates to Jackson 3 where possible, or declares a complete, compatible Jackson 2 runtime when it must retain Jackson 2 dataformats. See https://github.com/apache/grails-core/issues/16124[Issue #16124] and <<jackson3-default,Jackson 3 is the New Default>>.
+
+===== 23.4 Pre-Apache `org.grails` coordinates
+
+Some older plugins import a pre-Apache `org.grails` BOM and declare versionless `org.grails:*` dependencies. Grails 8 does not publish those coordinates. Gradle often reports an unhelpful empty-version error such as `Could not find org.grails:grails-core:.`.
+
+No complete, general coordinate substitution map exists. A narrowly targeted application-level substitution rule can resolve some plugins, but module names and binary compatibility are not always one-to-one after the Apache group rename. Treat substitution as a temporary diagnostic or migration aid, not proof that a plugin is compatible. The supported migration is for plugin authors to rebuild against `org.apache.grails` coordinates and publish a Grails 8 release. See https://github.com/apache/grails-core/issues/16125[Issue #16125].
+
+[source,groovy]
+.build.gradle - Plugin author migration
+----
+// Before: imported by an early Grails 7 plugin POM
+implementation platform('org.grails:grails-bom:7.0.0-M1')
+
+// After: compile against the Apache Grails 8 BOM
+implementation platform("org.apache.grails:grails-bom:$grailsVersion")
+----
+
+===== 23.5 Spring Framework 7 `HttpHeaders` binary incompatibility
+
+Spring Framework 7's `HttpHeaders` no longer implements `MultiValueMap`. A Grails 7 plugin compiled against Spring 6 can therefore boot and then throw `IncompatibleClassChangeError` when it passes `HttpHeaders` to an API expecting `MultiValueMap`, often during an outbound HTTP request. See https://github.com/apache/grails-core/issues/16127[Issue #16127].
+
+Plugin authors must compile against Spring Framework 7 and use the `HttpHeaders`-typed API. Remove any explicit `MultiValueMap` cast so recompilation selects Spring 7's `HttpEntity(T, HttpHeaders)` constructor instead of the deprecated `HttpEntity(T, MultiValueMap)` constructor:
+
+[source,groovy]
+----
+// Grails 7 / Spring 6 code that selected the MultiValueMap API
+HttpHeaders headers = new HttpHeaders()
+new HttpEntity(body, (MultiValueMap<String, String>) headers)
+
+// Grails 8 / Spring 7: use the HttpHeaders API
+HttpHeaders headers = new HttpHeaders()
+new HttpEntity(body, headers)
+----
+
+Changing only an application's dependencies cannot repair the plugin's existing bytecode. Upgrade to a plugin release compiled for Grails 8, or ask the maintainer to publish one.
+
+===== 23.6 Commands and plugin bean timing
+
+For a released Grails 7 plugin that implements `grails.dev.commands.ApplicationCommand`, keep the default `cliAutoProvision = true` and enable `grails { legacyCommandSupport = true }`. Run its commands with `./gradlew runCommand "-Pargs=<command> <arguments>"` or through the shell. Legacy commands do not create named Gradle tasks. Script, YAML, and profile commands do not need this bridge.
+
+The complete command migration, including the legacy bridge, script packaging, and companion artifact support delivered by https://github.com/apache/grails-core/pull/16011[PR #16011], https://github.com/apache/grails-core/pull/16082[PR #16082], and https://github.com/apache/grails-core/pull/15948[PR #15948], is covered in <<cli-companion-artifacts,CLI Commands Move to Companion `-cli` Artifacts>>. Plugin authors should still migrate commands to the current API and publish companion `-cli` artifacts.
+
+The plugin bean lifecycle change is not a compatibility bridge. Existing `doWithSpring` plugins still run, but https://github.com/apache/grails-core/pull/15934[PR #15934] moved them before Spring Boot auto-configuration. During that callback, the initializing application is available through the plugin's `grailsApplication` property, but it has not yet been published to the process-global `Holders.grailsApplication` fallback. Plugins that read the global Holder from `doWithSpring` must instead use their injected application, configuration, or environment. See <<plugin-beans-before-autoconfiguration,Plugin Beans Now Register Before Spring Boot Auto-Configuration>> for the timing change and migration to `beanRegistrar()`.
+
+Plugin compatibility continues to evolve. Check the plugin's release notes and the https://github.com/apache/grails-core/issues?q=state%3Aopen%20label%3A%22relates-to%3A%20external-plugin%22[Grails external-plugin issues] for current status.
 
 ==== 24. Custom JSON View Converters
 
@@ -1202,6 +1343,60 @@ GORM's `createCriteria()` and `withCriteria()` DSL are implemented on top of the
 
 *`javax.persistence` → `jakarta.persistence`*: This migration was already required for Grails 7; Grails 8 continues to require `jakarta.*`.
 
+[[_join_table_foreign_key_column_names]]
+===== 26.9 Join-Table Foreign-Key Column Names
+
+This change affects only a *unidirectional* `hasMany` — a collection with no `belongsTo` and no reciprocal `hasMany` on the other side. A *bidirectional* many-to-many association (both sides declare `hasMany`, or one side uses `belongsTo`) is **not** affected: both of its join-table foreign-key columns are still derived from the class names, identical to Grails 7.
+
+In Grails 7 (Hibernate 5), the default foreign-key column that referenced the associated entity in a unidirectional `hasMany` join table was derived from the simple name of that entity's domain class, after applying the column naming strategy.
+For example, the domain class `Book` produced the foreign-key column `book_id`, even when its physical table was mapped to a different name.
+
+In Grails 8 (Hibernate 7), that foreign-key column is instead derived from the physical table name of the associated domain class.
+The physical name includes an explicit `table` mapping and any transformation made by a custom physical naming strategy.
+For example, given the following mapping:
+
+[source,groovy]
+----
+class Book {
+    static mapping = {
+        table 'catalog_book'
+    }
+}
+
+class Shelf {
+    String label
+
+    static hasMany = [books: Book] // unidirectional: no belongsTo, no reciprocal hasMany
+}
+----
+
+Grails 7 used `book_id` by default in the `shelf_books` join table, whereas Grails 8 uses `catalog_book_id`. The other column in that same join table (`shelf_id`, derived from the owning `Shelf` class) is unchanged.
+This is a breaking schema change for an existing database if its join table still uses the Grails 7 column name.
+
+To keep the existing schema unchanged, configure the join table and its foreign-key column explicitly in the `static mapping` block:
+
+[source,groovy]
+----
+class Shelf {
+    String label
+
+    static hasMany = [books: Book]
+
+    static mapping = {
+        books joinTable: [
+            name: 'shelf_books',
+            key: 'shelf_id',
+            column: 'book_id'
+        ]
+    }
+}
+----
+
+Replace `shelf_books`, `shelf_id`, and `book_id` with the table and column names already used by your database.
+Declaring all three names prevents the naming strategy from changing the mapping during the upgrade.
+
+Separately, the element column of a *basic (non-enum) collection* (e.g. `static hasMany = [items: String]`) is now resolved through the naming strategy's *column* naming rules instead of its *table* naming rules for the property-name prefix, producing a `<property>_<element-type identifier>` column name. An enum collection is unaffected: its element column has no property-name prefix and already used the column naming rules before this change. Most naming strategies apply the same transformation to both, so this only matters if your custom `PhysicalNamingStrategy` implements `toPhysicalColumnName` and `toPhysicalTableName` differently.
+
 ==== 27. GORM Properties Are Nullable by Default
 
 Grails 8 changes the validation default so that an *unconstrained persistent (domain) property is nullable by default* rather than required.
@@ -1221,9 +1416,13 @@ class Book {
 }
 ----
 
-This is a *validation-layer* change only.
-Column/DDL nullability is governed separately by the mapping layer and is unaffected.
-Command objects are also unaffected: `Validateable` command-object fields remain required by default.
+This change also affects persistence mapping. Columns for unconstrained properties are
+nullable by default, so schema creation and schema migration can produce nullable columns
+where Grails 7 produced `NOT NULL` columns. Review existing schemas and declare
+`nullable: false` explicitly for properties that must remain required before running
+schema migration or diff tools.
+
+Command objects are unaffected: Validateable command-object properties remain non-nullable by default, except for collections and maps, which remain nullable by default.
 
 To restore the legacy required-by-default behaviour for an entire application, set the new `grails.gorm.default.nullable` property to `false`:
 
@@ -1246,6 +1445,7 @@ grails.gorm.default.constraints = {
 }
 ----
 
+[[groovy5-behavior-changes]]
 ==== 28. Apache Groovy 5 Behavior Changes
 
 Grails 8 upgrades from Apache Groovy 4 to Apache Groovy 5.
@@ -1287,6 +1487,39 @@ def value = configObject.containsKey(key) ? configObject.get(key) : null
 ----
 
 Grails applies this guard internally when resolving Spring profile activation keys; you only need it in application code that navigates a raw `ConfigObject` by subscript.
+
+===== 28.3 A getter on a map no longer hides behind a map entry
+
+In Groovy 4, reading or writing a property on a class that implements `Map` always addressed a map entry.
+In Groovy 5 a public JavaBean accessor declared on such a class is resolved first, so an entry whose name matches an accessor becomes unreadable, and assigning to it throws `groovy.lang.ReadOnlyPropertyException`.
+This affected `params`, where `getRequest()` and `getIdentifier()` made request parameters named `request` and `identifier` unreachable.
+
+Grails 8 removes those accessors, so `params` behaves as it did in Grails 7 - every parameter name is an ordinary map entry, in dotted and subscript form, and under static compilation:
+
+[source,groovy]
+----
+params.identifier = 'id1'       // the request parameter, not a property
+params['request'] = 'req1'      // the request parameter, not the HttpServletRequest
+----
+
+Two methods changed as a result:
+
+[cols="1,1", options="header"]
+|===
+| Grails 7
+| Grails 8
+
+| `params.getRequest()`
+| `params.request()`
+
+| `params.getIdentifier()`
+| `params.id` -- it only ever read the `id` parameter
+|===
+
+The same change applies to the `attrs` map passed to a GSP tag, whose internal implementation renames `isGspTagSyntaxCall()` to `gspTagSyntaxCall()`.
+Its setter is retained, so assigning `attrs.gspTagSyntaxCall` still invokes that setter rather than storing an attribute - as in Grails 7. Store an attribute of that name with `attrs.put('gspTagSyntaxCall', value)`.
+
+NOTE: When adding a class that extends `grails.util.TypeConvertingMap`, do not declare a no-argument `getX()` or `isX()` method on it, or the entry `x` becomes unreachable for the same reason. Statically compiled callers bind directly to the accessor, so the collision cannot be corrected at runtime.
 
 ==== 29. MIME Types Are Now Framework Defaults
 
@@ -1440,6 +1673,8 @@ Several Grails framework beans that were previously registered unconditionally a
 
 * i18n: `localeResolver`, `localeChangeInterceptor` and `messageSource`
 * URL mappings: `grailsCorsFilter`, `urlMappingsErrorPageCustomizer` and `urlMappingsInfoHandlerAdapter`
+* Controllers: `exceptionHandler`
+* Cache: `grailsCacheManager` and `customCacheKeyGenerator`
 
 **No action is required.**
 The framework beans still register by default; this only changes what happens when you define your own.
@@ -1449,6 +1684,7 @@ Now the framework bean simply backs off.
 NOTE: The clean back-off applies to beans that are registered before auto-configuration conditions are evaluated: `@Bean` methods in application configuration classes, and — as of the retimed plugin lifecycle (see _Plugin Beans Now Register Before Spring Boot Auto-Configuration_ below) — beans contributed through a plugin's `doWithSpring` or `beanRegistrar()`.
 Beans contributed through the application's `resources.groovy` or `resources.xml` register later and continue to take effect through bean-definition overriding, exactly as in previous releases.
 
+[[plugin-beans-before-autoconfiguration]]
 ==== 33. Plugin Beans Now Register Before Spring Boot Auto-Configuration
 
 In Grails 7 and earlier, the beans a plugin contributed through `doWithSpring` were registered *after* Spring Boot had processed its auto-configurations.
@@ -1457,7 +1693,7 @@ A plugin that wanted to replace a Boot-provided bean therefore had to rely on be
 In Grails 8 the plugin lifecycle is unified and retimed: plugin bean definitions — both `doWithSpring` and the new `beanRegistrar()` hook — are drained into the bean definition registry *before* Spring Boot expands its auto-configurations. The practical effects are:
 
 * **Plugin beans win `@ConditionalOnMissingBean` races.** When a plugin registers a bean, a Boot auto-configuration bean of the same name or type that is guarded by `@ConditionalOnMissingBean` now backs off in favor of the plugin's bean. Plugins no longer need to override or remove Boot's defaults after the fact.
-* **A single plugin manager and `GrailsApplication`.** The plugin manager and the `grailsApplication` are built once, early in the context lifecycle, and reused for the rest of startup, so plugins are loaded by a single manager pass rather than a throwaway pass followed by the real one. `Holders.grailsApplication` is available earlier than before.
+* **A single plugin manager and `GrailsApplication`.** The plugin manager and the `grailsApplication` are built once, early in the context lifecycle, and reused for the rest of startup, so plugins are loaded by a single manager pass rather than a throwaway pass followed by the real one. The global `Holders.grailsApplication` fallback is published after plugin `doWithSpring` and `beanRegistrar()` callbacks complete; plugins must not use it during those callbacks.
 * **Artefact discovery happens earlier.** Controllers, services, domain classes and other artefacts are discovered before plugin beans are registered, because core plugins iterate the application's artefacts while defining beans. The set of discovered artefacts is unchanged — only the timing moved.
 * **Side-effectful `doWithSpring` closures still run once**, just earlier. Closures that read `grailsApplication.config` continue to work; the configuration is fully loaded (including plugin-contributed configuration) before any bean-definition code runs.
 * **The application class is instantiated a second time during early artefact discovery.** A throwaway instance is created solely to compute the application's class scan; the real lifecycle bean is still created by Spring. An application-class constructor with side effects therefore runs twice per boot, so keep application-class constructors free of side effects.
@@ -1513,4 +1749,1351 @@ Both hooks may be used on the same plugin during migration; when a registrar and
 
 **Bean-definition overriding edge case.** Grails defaults `spring.main.allow-bean-definition-overriding` to `true`, and under that default nothing changes: an application bean (from the application class, `resources.groovy` or `resources.xml`) that uses the same name as a plugin bean still replaces the plugin's bean. However, because plugin beans now register earlier and application beans register in a separate, later step, an application that explicitly sets `spring.main.allow-bean-definition-overriding` to `false` will see a `BeanDefinitionOverrideException` for an application bean that shadows a plugin bean — in previous releases the two definitions were merged before a single registry write, so the shadowing was silent even with overriding disabled.
 
+
+==== 34. Compile-Time GORM Query Safety Check
+
+Grails 8 adds a compile-time check that can **break existing builds**: passing a GORM query method (`find`, `findAll`, `executeQuery`, `executeUpdate`, and the Neo4j Cypher equivalents) a `String`-typed variable that was built from an interpolated `GString` is now a compile error, not just a discouraged pattern.
+
+[source,groovy]
+----
+def vulnerable() {
+    String query = "from Book as b where b.title = ${params.title}"  // fails to compile
+    def books = Book.executeQuery(query)
+}
+----
+
+This is flagged because passing the `GString` *directly* to `executeQuery` is safe — GORM binds the interpolated value as a query parameter — but assigning it to a `String`-typed local first causes Groovy to coerce it to a plain `String` at that point, silently discarding the safe binding; the interpolated value is then embedded as raw, unescaped query text. See <<sqlInjection,SQL injection>> for the full explanation and examples.
+
+If your application has this pattern, fix it by keeping the query a `GString` all the way to the call, or by using named/positional parameters instead. For a call site that has been reviewed and is genuinely safe, add `@SuppressWarnings("GormUnsafeQueryString")` to the enclosing method rather than restructuring the code.
+
+This check runs automatically wherever `grails-datamapping-core` is on the compile classpath, with no opt-in configuration required. If it produces a false positive with no workaround, the whole check can be disabled by setting the `protectSqlInjectionAttacks` system property to `false` (it defaults to `true`) — this is a last-resort, build-wide kill switch, not a substitute for the per-call-site `@SuppressWarnings` above.
+
+The same check also emits (non-build-breaking) **compile-time warnings**, not errors, for two related but lower-confidence patterns: a `String`-typed field assigned an interpolated `GString` and later read through `this.field` in a query call, and query text built with `+` concatenation from a non-constant value with no `GString` involved. Neither of these fails the build, but both are worth reviewing — see <<sqlInjection,SQL injection>> for examples of both.
+
 **Most applications and plugins need no action.** Behavior only changes where a plugin bean and a conditional Boot bean competed for the same name or type — the plugin bean now wins, which is almost always the intended outcome.
+
+==== 35. Extension API Compatibility Notes
+
+Most Grails applications do not call the Grails extension APIs listed below directly.
+They can affect applications, plugins, or build logic that import these public classes or override these public extension points directly.
+Unsupported internal implementation details are not covered here.
+
+[cols="1,2,2", options="header"]
+|===
+| Module
+| Changed or removed API
+| Migration note
+
+| `grails-codecs`
+| `org.grails.plugins.codecs.CodecsGrailsPlugin` no longer overrides `doWithSpring()`
+| Do not depend on that plugin override to contribute codec bean definitions.
+Custom plugins should register their own beans from their own `doWithSpring()` implementation.
+
+| `grails-controllers`
+| `ControllersAutoConfiguration.dispatcherServletRegistration(...)` now returns Spring Boot 4's `org.springframework.boot.webmvc.autoconfigure.DispatcherServletRegistrationBean`
+| Update direct imports, overrides, and binary integrations that referenced the Spring Boot 3 return type.
+
+| `grails-converters`
+| `grails.web.JSONBuilder`
+| Use Groovy's `groovy.json.JsonBuilder` or `groovy.json.StreamingJsonBuilder` for JSON builder code.
+
+| `grails-core`
+| `GrailsApplicationPostProcessor`, `ProfilingGrailsApplicationPostProcessor`, and `DefaultGrailsPluginManager` plugin-discovery wiring changed
+| Update custom bootstrapping code or subclasses that construct `GrailsApplicationPostProcessor` or `DefaultGrailsPluginManager` directly to pass the plugin-discovery dependency.
+`ProfilingGrailsApplicationPostProcessor` keeps its `GrailsApplicationLifeCycle`, `ApplicationContext`, and `Class...` constructor shape, but the application context must expose the `grailsPluginDiscovery` bean.
+This was introduced during the Grails 7.1 plugin-loading changes and remains required in Grails 8.
+
+| `grails-core`
+| `grails.plugins.PluginFilter`, `IncludingPluginFilter`, `ExcludingPluginFilter`, `NoOpPluginFilter`, and related filter types
+| Import replacement types from the `org.apache.grails.core.plugins.filters` package, such as `PluginFilter`, `IncludingPluginFilter`, `ExcludingPluginFilter`, and `NoOpPluginFilter`.
+
+| `grails-core`
+| Legacy mixin transform APIs such as `grails.util.Mixin`, `MixinTargetAware`, and `MixinTransformation`
+| Replace legacy mixin usage with Groovy traits, extension methods, or explicit composition.
+
+| `grails-core`
+| `grails.validation.ConstraintsEvaluator`
+| Use `org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator`.
+
+| `grails-core`
+| `BinaryGrailsPluginDescriptor`, `CorePluginFinder`, and `BinaryGrailsPlugin.getBinaryDescriptor()`
+| Use the current plugin-discovery APIs and `BinaryGrailsPlugin.getPluginDescriptor()`.
+
+| `grails-domain-class`
+| `ConstraintEvaluatorAdapter` and `GrailsDomainClassAutoConfiguration.constraintsEvaluator(...)`
+| Code that imported the auto-configuration method should use the current `validateableConstraintsEvaluator(...)` bean path and the datastore constraint evaluator APIs. The auto-configuration itself is now named `org.grails.plugins.domain.DomainClassAutoConfiguration`, following the `*GrailsPlugin` -> `*AutoConfiguration` convention; update any `@EnableAutoConfiguration(exclude = ...)` or `spring.autoconfigure.exclude` entry that referenced the old name.
+
+| `grails-core`
+| `org.grails.plugins.core.CoreAutoConfiguration`
+| Now `org.grails.plugins.CoreAutoConfiguration`. The class is generated beside the plugin descriptor that declares its beans, and `CoreGrailsPlugin` lives in `org.grails.plugins`, so the simple name is unchanged but the package is not. Update any `@EnableAutoConfiguration(exclude = ...)`, `spring.autoconfigure.exclude`, or `@AutoConfigureAfter(name = ...)` entry naming the old package. Spring Boot only reports an invalid exclude for a class still on the classpath, so a stale entry is silently ignored rather than reported, and the beans it was meant to suppress are registered anyway.
+
+| `grails-cache`
+| `grails.plugin.cache.GrailsCacheAutoConfiguration`
+| Now `grails.plugin.cache.CacheAutoConfiguration`, following the `*GrailsPlugin` -> `*AutoConfiguration` convention. Update any `@EnableAutoConfiguration(exclude = ...)` or `spring.autoconfigure.exclude` entry that referenced the old name; the same silent-ignore applies as above.
+
+| `grails-databinding`
+| `org.grails.plugins.databinding.DataBindingConfiguration`
+| Now `org.grails.plugins.databinding.DataBindingAutoConfiguration`. It was registered as an auto-configuration while named only `*Configuration`; the name now says what it is. Update any `@EnableAutoConfiguration(exclude = ...)` or `spring.autoconfigure.exclude` entry that referenced the old name; the same silent-ignore applies as above.
+
+| `grails-fields`
+| `BeanPropertyAccessor.getBeanClass()`, its setter, `PropertyPathAccessor.getBeanClass()`, `FormFieldsTagLib.input(...)`, and direct `render*` helper methods
+| Use the `beanType` property exposed by the accessors.
+Custom field renderers should go through the documented `f:field`, `f:widget`, and `f:displayWidget` tags and templates instead of calling private render helpers directly.
+
+| `grails-gradle-plugins`
+| `ApplicationContextCommandTask`, `ApplicationContextScriptTask`, `ProfileCompilerTask`, and `GrailsRunTask` are abstract; `GrailsGradlePlugin.createBuildPropertiesTask(...)` no longer returns a task value; several `IntegrationTestGradlePlugin` constants were removed
+| Register these task types through Gradle task registration and update custom plugins that subclass `GrailsGradlePlugin` or read integration-test constants to use Gradle source sets, configurations, and the current test-phase APIs.
+
+| `grails-shell-cli`
+| `AetherGrapeEngine` and `AetherGrapeEngineFactory`
+| Use `MavenResolverGrapeEngine` and `MavenResolverGrapeEngineFactory` if you extend the legacy shell dependency resolver.
+
+| `grails-shell-cli`
+| JLine 2 `complete(...)` signatures
+| Implement the JLine 3 `org.jline.reader.Completer` contract, `complete(LineReader, ParsedLine, List<Candidate>)`.
+
+| `grails-spring`
+| `GrailsApplicationContext.onRefresh()`
+| Custom context subclasses should use supported Spring lifecycle extension points instead of overriding this removed hook.
+Spring theme APIs removed from the same area are covered in section 10.
+|===
+
+==== 36. Logback Configuration No Longer Generated by Default
+
+Newly generated Grails 8 applications no longer include a `grails-app/conf/logback-spring.xml` file.
+
+Logging still works out of the box. A generated application depends on `grails-logging`, which brings in Spring Boot's logging starter, so Logback and Spring Boot's own default Logback configuration apply automatically when the application supplies no configuration of its own. This matches the Spring Boot convention of needing no logging configuration file unless one is actually required.
+
+NOTE: This change affects *application generation* only. Existing applications that already contain `grails-app/conf/logback-spring.xml` are unaffected and continue to use that file.
+
+With no configuration file present you get Spring Boot's defaults: an `INFO` root level and a colorized console pattern. Levels and patterns can be tuned from `application.yml` with no XML:
+
+[source,yaml]
+.application.yml
+----
+logging:
+    level:
+        root: INFO
+        com.example.myapp: DEBUG          # your packages
+        org.hibernate.SQL: DEBUG          # see the generated SQL
+    pattern:
+        console: "%d{HH:mm:ss.SSS} %-5level %logger{36} - %msg%n"
+    file:
+        name: logs/myapp.log              # setting this activates Spring Boot's file appender
+----
+
+Per-environment logging also needs no XML. Grails environments map to Spring profiles, so an `environments` block in `application.yml` applies levels to a single environment — for example, verbose logging for your own packages in development only:
+
+[source,yaml]
+.application.yml
+----
+environments:
+    development:
+        logging:
+            level:
+                com.example.myapp: DEBUG
+----
+
+A profile-specific `grails-app/conf/application-development.yml` containing the same `logging.level` entries works as well.
+
+Add a `logback-spring.xml` file when properties are not enough — for example custom appenders, structured/JSON output, or per-environment appender routing. Use the `-spring` variant (not plain `logback.xml`), because it is processed by Spring Boot and unlocks `<springProfile>` and `<springProperty>`. Note that once the file exists it *replaces* Spring Boot's bundled configuration entirely, so it must declare its own appenders — the simplest approach is to compose Spring Boot's own includes:
+
+[source,xml]
+.grails-app/conf/logback-spring.xml
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+
+    <springProfile name="development">
+        <logger name="org.hibernate.SQL" level="DEBUG"/>
+    </springProfile>
+</configuration>
+----
+
+TIP: When generating a project with https://start.grails.org[Grails Forge], select the *Logback Configuration* feature to have a starter `grails-app/conf/logback-spring.xml` — the configuration shown above composed with a `<springProfile name="development">` block — generated for you.
+
+[[cli-companion-artifacts]]
+==== 37. CLI Commands Move to Companion `-cli` Artifacts
+
+Grails commands (`ApplicationCommand` implementations) no longer ship inside runtime plugin
+artifacts. Each command-bearing module publishes a companion artifact under its own coordinate with
+a `-cli` suffix, and commands are registered in a dedicated `META-INF/grails-cli.factories` file
+instead of `META-INF/grails.factories`.
+
+**Package rename.** The command contract moved from `grails.dev.commands.*` (in `grails-core`) to
+`org.apache.grails.core.cli.*` (in the new `org.apache.grails:grails-core-cli` artifact). Update
+imports in your `grails-app/commands` classes:
+
+[source,groovy]
+----
+// Grails 7
+import grails.dev.commands.ApplicationCommand
+import grails.dev.commands.ExecutionContext
+
+// Grails 8
+import org.apache.grails.core.cli.ApplicationCommand
+import org.apache.grails.core.cli.ExecutionContext
+----
+
+**New `grailsCli` configuration.** The Grails Gradle plugin registers a `grailsCli` configuration
+that is compile-visible for `grails-app/commands` sources and on the command-runner classpath, but
+never on `runtimeClasspath` — so commands and their CLI-only dependencies are excluded from
+`bootRun`, `bootJar`, and `bootWar`.
+
+**CLI dependencies are discovered automatically.** The plugin adds
+`org.apache.grails:grails-core-cli` (the command contract) and `org.apache.grails:grails-console`
+(the command runner) to `grailsCli`, and walks the application's resolved dependency graph —
+including transitive plugins — for jars carrying the `Grails-Cli-Artifact` manifest attribute,
+adding each advertised companion automatically. The per-command Gradle tasks (e.g. `dbmUpdate`)
+are registered from those companions as well, so no `buildscript` classpath entry is required. In
+most applications, upgrading therefore requires **no build changes** to keep plugin commands
+working:
+
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    // the dbm-* commands are discovered automatically: the plugin jar advertises
+    // org.apache.grails:grails-data-hibernate7-dbmigration-cli, which is added to grailsCli
+    implementation 'org.apache.grails:grails-data-hibernate7-dbmigration'
+}
+----
+
+The `console` and `shell` tasks also draw from the provisioned cli tier, so the
+`console "org.apache.grails:grails-console"` dependency that earlier Grails versions generated in
+`build.gradle` is no longer needed and can be removed (the `console` configuration itself remains
+for additional console-only dependencies).
+
+The deprecated Grails 7 command contract is isolated in
+`org.apache.grails:grails-core-cli-legacy`. When both `cliAutoProvision` (default `true`) and
+`legacyCommandSupport` (default `false`) are enabled, the plugin adds this artifact to the
+execution-only `grailsCliLegacy` bucket. `grailsCliClasspath` includes that bucket, but application
+and plugin compile classpaths do not. Opt in so existing Grails 7 command plugins keep working
+without exposing the deprecated API to new command sources.
+
+Two flags control auto-provisioning:
+
+* `cliAutoProvision` (default `true`) controls the modern CLI tier: `grails-core-cli`,
+  `grails-console`, and discovered companion `-cli` artifacts.
+* `legacyCommandSupport` (default `false`) controls only the Grails 7 application-command bridge.
+  It is consulted only when `cliAutoProvision` is also enabled.
+
+Disable the modern CLI tier with `grails { cliAutoProvision = false }` and declare dependencies
+explicitly when full control over the command classpath is preferred:
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    cliAutoProvision = false
+}
+
+dependencies {
+    implementation 'org.apache.grails:grails-data-hibernate7-dbmigration'
+    grailsCli 'org.apache.grails:grails-core-cli'
+    grailsCli 'org.apache.grails:grails-console'
+    grailsCli 'org.apache.grails:grails-data-hibernate7-dbmigration-cli'
+    grailsCliLegacy 'org.apache.grails:grails-core-cli-legacy'
+}
+----
+
+WARNING: `grails-console` is not optional in that list. It carries the entry points the Gradle tasks
+run - `grails.ui.console.GrailsSwingConsole`, `grails.ui.shell.GrailsShell`,
+`grails.ui.command.GrailsApplicationContextCommandRunner` and
+`grails.ui.script.GrailsApplicationScriptRunner`. Earlier versions reached them through the `console`
+configuration that the application generator wrote into every `build.gradle`, so the tasks worked
+without any CLI tier at all. Generated applications no longer declare that dependency, so with
+auto-provisioning off and `grails-console` omitted, `console`, `shell`, `runCommand`, `runScript` and
+`urlMappingsReport` fail with `Could not find or load main class`.
+
+Keep modern companion auto-provisioning while enabling only the Grails 7 bridge:
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    legacyCommandSupport = true
+}
+----
+
+The renamed framework command packages are:
+
+|===
+|Grails 7 | Grails 8 (`-cli` artifact)
+
+|`grails.dev.commands.*` (grails-core)
+|`org.apache.grails.core.cli.*` (grails-core-cli)
+
+|`org.grails.web.mapping.reporting.UrlMappingsReportCommand`
+|`org.apache.grails.web.mapping.cli.UrlMappingsReportCommand` (grails-web-url-mappings-cli)
+
+|`scaffolding.*` commands
+|`org.apache.grails.scaffolding.cli.*` (grails-scaffolding-cli)
+
+|`grails.plugin.hibernate.commands.SchemaExportCommand`
+|`org.apache.grails.data.hibernate5.cli` / `...hibernate7.cli` (grails-data-hibernate5-cli / -7-cli)
+
+|`org.grails.plugins.databasemigration.command.*`
+|`org.apache.grails.data.hibernate5.dbmigration.cli` / `...hibernate7.dbmigration.cli`
+
+|`grails.plugin.springsecurity` s2 commands
+|`org.apache.grails.security.cli.*` (grails-spring-security-cli)
+|===
+
+===== 35.1 Backwards Compatibility for Existing Command Plugins
+
+Grails 8 provides a deprecated, execution-only compatibility layer for already-published Grails 7 command
+plugins. Application commands created with `create-command` that implement
+`grails.dev.commands.ApplicationCommand` or `grails.dev.commands.GrailsApplicationCommand` remain
+available without a plugin re-release when the bridge is enabled. The deprecated
+`grails.dev.commands.*` types are retained in `org.apache.grails:grails-core-cli-legacy`, which is
+provisioned only on the command runner classpath when both `cliAutoProvision` and
+`legacyCommandSupport` are enabled (`legacyCommandSupport` defaults to `false`), and registrations
+in `META-INF/grails.factories` under `grails.dev.commands.ApplicationCommand` continue to be
+discovered at runtime.
+
+Enable the bridge in the consuming application:
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    legacyCommandSupport = true
+}
+----
+
+Or set the project property `grailsLegacyCommandSupport=true`.
+
+When the bridge is disabled, Grails still inspects legacy `META-INF/grails.factories` resources at
+command runtime without loading their command classes. If a plugin still publishes
+`grails.dev.commands.ApplicationCommand` entries, Grails logs an error naming the plugin artifact.
+An unknown command also includes the remediation to enable `legacyCommandSupport` or upgrade the
+plugin. This detection does not resolve application dependencies during Gradle configuration.
+
+Grails logs a one-time deprecation warning when it uses this compatibility layer. It is intended
+to keep existing published plugins working while plugin authors migrate; it is deprecated and may
+be removed in a future major release. No removal major has been announced.
+
+Legacy application commands do not receive a dedicated Gradle task. Run them through the generic
+`runCommand` task (or the shell, which routes legacy adapters there), for example:
+
+[source,bash]
+----
+./gradlew runCommand "-Pargs=generate-controller example.Book"
+----
+
+Named per-command Gradle tasks remain available only for migrated commands published in a
+companion `-cli` artifact.
+
+New and migrated commands should always compile against `org.apache.grails.core.cli.*` from
+`grails-core-cli`. A plugin that intentionally continues to author commands against the deprecated
+contract must declare `compileOnly 'org.apache.grails:grails-core-cli-legacy'` explicitly. Consumers
+of already-published Grails 7 command plugins must opt in with
+`grails { legacyCommandSupport = true }` (or declare `grailsCliLegacy` themselves).
+
+**What just works:**
+
+* Code generation scripts created with `create-script`, including scripts packaged as
+  `META-INF/commands/*.groovy` such as `audit-quickstart` and `s2-quickstart`, remain executable
+  through the CLI. When a plugin publishes a companion `-cli` artifact, those scripts (and
+  `META-INF/commands/*.yml` / `*.json` multi-step commands under `src/main/scripts`) are packaged
+  into the companion only - not the runtime plugin jar - and stay available via
+  `grailsCliClasspath`. Plugins without a companion continue to ship `src/main/scripts` in the
+  runtime jar, matching Grails 7 packaging.
+* Existing published Grails 7 application-command plugins continue to work on Grails 8 without a
+  re-release once `legacyCommandSupport` is enabled.
+
+**What consumers of Grails 7 command plugins must do:**
+
+* Enable `grails { legacyCommandSupport = true }` (or `-PgrailsLegacyCommandSupport=true`), or
+  declare `grailsCliLegacy 'org.apache.grails:grails-core-cli-legacy'` explicitly when
+  `cliAutoProvision` is disabled.
+
+**What plugin authors must do:**
+
+* Migrate application commands to the `org.apache.grails.core.cli.*` API and register them in
+  `META-INF/grails-cli.factories`.
+* Publish commands in a companion `-cli` artifact for the CLI classpath split and per-command
+  Gradle task support. See xref:commandLine#creatingCustomCommands[Creating Custom Commands] for
+  the complete workflow. Applying `org.apache.grails.gradle.grails-plugin-cli` also routes
+  `src/main/scripts` into that companion automatically - leave scripts under `src/main/scripts`
+  or place them under `src/cli/resources/META-INF/commands`.
+* The `copyCommands` and `copyTemplates` tasks stage into a directory of their own instead of
+  writing into the `processResources` output, and are registered when the plugin is applied rather
+  than in `afterEvaluate`. They are still `Copy` tasks, and paths are still relative to
+  `META-INF/templates` (or `META-INF/commands`), so a build script that configures them only needs
+  to drop the `afterEvaluate { }` wrapper that used to be required:
++
+[source,groovy]
+----
+tasks.named('copyTemplates', Copy) {
+    from(layout.projectDirectory.dir('grails-app/views')) {
+        into('views')
+    }
+}
+----
+* After first applying `grails-plugin-cli` on a project that was already built without it, consider
+  running `./gradlew clean` once. Older plugin packaging wrote command scripts directly into
+  `build/resources/main/META-INF/commands`; the first build on 8.0 drops those files, but the empty
+  directories they lived in remain until the build directory is cleaned. Fresh builds never place
+  companion scripts on the runtime classpath.
+
+NOTE: The compatibility layer applies only to the legacy application-command contract. Independently
+of it, a Grails 7 plugin that relies on APIs removed in Grails 8, Spring Boot 4, or other Grails 8
+changes still requires an update.
+
+==== 38. jQuery Webjar Upgraded to 4.0.0
+
+The jQuery webjar managed by the `grails-bom` (`org.webjars.npm:jquery`) moves from 3.7.1 to 4.0.0.
+jQuery 4 is a major release: it drops Internet Explorer and other legacy browsers and removes long-deprecated utilities such as `jQuery.trim`, `jQuery.type`, `jQuery.isArray`, `jQuery.isFunction`, `jQuery.proxy`, and `jQuery.isWindow`.
+See the https://jquery.com/upgrade-guide/4.0/[jQuery 4.0 Upgrade Guide] for the complete list of changes.
+
+Because the version is managed by the BOM, any application that references the jQuery webjar without an explicit version picks up 4.0.0 automatically once it adopts the Grails 8 BOM.
+This includes the generated create-app welcome page, whose assets have been verified against 4.0.0.
+
+If your application's own JavaScript relies on the removed APIs, migrate those call sites.
+If you are not ready to migrate, pin the previous version in your gradle build:
+
+[source,properties]
+.gradle.properties
+----
+jquery.version=3.7.1
+----
+
+==== 39. spring-security-ui Rewritten on Bootstrap 5
+
+The `spring-security-ui` plugin's screens are rewritten on Bootstrap 5 with no bundled styling of their own.
+The plugin no longer ships or depends on jQuery UI, jquery-form, jGrowl, DataTables, bgiframe or the bundled jdMenu/positionBy plugins, and every plugin stylesheet and image has been removed — dialogs are Bootstrap modals, tabs are nav-tabs, notifications render through `g:flashMessages`, and the autocomplete search uses a native `datalist`.
+jQuery (4.x) and Bootstrap are expected from the host application, as provided by the create-app layout.
+
+Plugin pages now render through the host application's own layout — configured with `grails.plugin.springsecurity.ui.gsp.parentLayout` (default `main`) — inheriting its theme, including Bootstrap dark mode, locale selector and branding.
+The security menu and login state are contributed to the host navbar through `nav` and `navActions` content blocks, which the create-app layout renders with `<g:pageProperty name="page.nav"/>` and `<g:pageProperty name="page.navActions"/>`; a custom layout that wants the menu in its navbar renders the same page properties.
+
+If you upgrade an application that customized the plugin:
+
+* Views previously copied into the application with `s2ui-override` reference removed stylesheets and rely on the old table-based markup of the `s2ui` field-row tags, which now emit Bootstrap form groups; regenerate or update those copies.
+* CSS written against the old `s2ui_*` and `jd_menu` classes no longer has anything to match; restyle against Bootstrap classes.
+* Applications that used the plugin's transitive webjars (jQuery UI, jGrowl, DataTables, jquery-form) must now declare those dependencies themselves.
+* The `grails.plugin.springsecurity.ui.Constants` class and the `spring-security-ui-register.js` and `spring-security-ui-*` stylesheet assets have been removed.
+* `LogoutController` now declares a computed `allowedMethods` restricting its action to POST while `logout.postOnly` is active (the default), making the restriction visible to tooling such as the create-app welcome page.
+
+==== 40. Stack Trace Filterer Configuration Reaches All Callers
+
+`grails.logging.stackTraceFiltererClass` and `grails.exceptionresolver.logFullStackTraceOnFilter` now also
+apply to paths outside the exception resolver — including GSP view-render exceptions — so the same two keys
+control which filterer is used and whether it emits, everywhere the framework filters a stack trace, not
+just for resolver-driven requests.
+
+[source, yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    logging:
+        stackTraceFiltererClass: com.example.MyStackTraceFilterer
+    exceptionresolver:
+        logFullStackTraceOnFilter: false
+----
+
+Applications that previously had to silence the `StackTrace` logger in logback purely to suppress
+render-time noise can set `logFullStackTraceOnFilter: false` instead and reach every caller of the filterer.
+
+The configured filterer is resolved once during application startup, before the application context
+refreshes. Any context not started through `SpringApplication` — the CLI, plain `main()` usage, Grails unit
+tests — keeps the previous fallback behaviour unchanged: a plain `DefaultStackTraceFilterer` with no
+configuration applied. The filterer is JVM-global rather than per-context, so in a JVM hosting more than one
+application context the last one booted supplies the filterer for all of them.
+
+==== 41. Jansi Removed and Developer Tooling Off the Application Classpath
+
+Grails no longer depends on a separate ANSI library. The console renders its escape sequences directly,
+and the FuseSource Jansi artifact - unmaintained, and the subject of an unfixed CVE - is gone from the
+dependency graph along with the `org.jline:jansi` fork that briefly replaced it.
+
+At the same time, developer-only tooling no longer ships with an application. These artifacts could reach
+an application's production runtime classpath, by a different route for each:
+
+* `org.apache.grails:grails-console` - the Swing console, the Groovy shell, and the script and command
+  runners - and the `org.apache.groovy:groovy-console`, `groovy-groovysh` and `groovy-swing` libraries it
+  brings with it, through the `console` configuration the application generator declared
+* the JLine family, including `org.jline:jansi`, and the FuseSource Jansi artifact, declared directly by
+  the generated build
+
+None of these are on an application's runtime classpath now. They are provisioned onto the `grailsCli`
+configuration instead, which the Grails Gradle plugin puts on the compile and test classpaths but never on
+`runtimeClasspath` - so `bootRun`, `bootJar` and `bootWar` no longer carry them. The `console` and `shell`
+tasks are unaffected and continue to work exactly as before.
+
+===== What you need to change
+
+Applications generated by earlier versions of Grails declare Jansi explicitly:
+
+[source,groovy]
+.build.gradle
+----
+runtimeOnly "org.fusesource.jansi:jansi"
+----
+
+Delete that line. New projects are generated without it.
+
+If your own code imports Jansi directly, it must move off it - there is no Grails-managed replacement
+coordinate. Application code that needs coloured output should use Spring Boot's
+`org.springframework.boot.ansi.AnsiOutput`, or JLine's `org.jline.utils.AttributedStringBuilder` if the
+project already depends on JLine.
+
+If your code, or a `runtimeOnly` dependency of it, genuinely needs the Groovy shell, Swing console or JLine
+at application runtime, declare that dependency explicitly rather than relying on the starter:
+
+[source,groovy]
+.build.gradle
+----
+runtimeOnly "org.apache.groovy:groovy-groovysh"
+----
+
+===== Controlling ANSI output
+
+Jansi's global switch went away with the library. Console colour is now driven by Spring Boot's own
+property, so it is configured in one place alongside the rest of the application's output settings:
+
+[source,yaml]
+.application.yml
+----
+spring:
+    output:
+        ansi:
+            enabled: never   # always | detect | never
+----
+
+`detect` is the default and keeps the previous behaviour - colour only when the attached terminal
+supports it. `never` suppresses it entirely, and `always` forces it on even when the terminal is not
+detected as capable, which is useful for CI logs that render ANSI.
+
+The same property works as a system property, which is how the CLI reads it since it has no Spring
+`Environment` to bind from:
+
+[source,bash]
+----
+grails -Dspring.output.ansi.enabled=never run-app
+----
+
+Note that passing `-D` to `gradlew` sets the property on the Gradle daemon, not on the JVM that
+`bootRun` forks for your application, so it has no effect there. To disable colour for `bootRun`, use
+the `application.yml` form above or set it on the task itself:
+
+[source,groovy]
+----
+tasks.named('bootRun') {
+    systemProperty 'spring.output.ansi.enabled', 'never'
+}
+----
+
+If you previously disabled colour through Jansi's own switch, replace it - the property no longer has any
+effect now that the library is gone:
+
+[cols="1,1"]
+|===
+|Before |Now
+
+|`-Dorg.fusesource.jansi.Ansi.disable=true`
+|`-Dspring.output.ansi.enabled=never`
+|===
+
+===== Remove `withJansi` from your Logback configuration
+
+Logback's `ConsoleAppender` has a `withJansi` option that loads `org.fusesource.jansi.AnsiConsole` by
+name to wrap the output stream. With Jansi gone from the dependency graph, an application that still
+enables it logs a warning on every startup and falls back to the plain stream:
+
+[source]
+----
+-WARN in ch.qos.logback.core.ConsoleAppender[STDOUT] - Failed to create AnsiPrintStream. Falling back
+on the default stream. java.lang.ClassNotFoundException: org.fusesource.jansi.AnsiConsole
+----
+
+Delete the element from `grails-app/conf/logback.xml` or `logback-spring.xml`:
+
+[source,xml]
+----
+<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <withJansi>true</withJansi>   <!--1-->
+    <encoder>
+        ...
+    </encoder>
+</appender>
+----
+<1> remove this line
+
+Nothing is lost. Coloured log output comes from Spring Boot's `ColorConverter` - the `%clr(...)` tokens
+in the encoder pattern - which is independent of Jansi and honours `spring.output.ansi.enabled`. The
+`withJansi` option only wrapped the stream for legacy Windows consoles.
+
+Applications generated by recent versions of Grails already omit it: Jansi's global `System.out`
+replacement breaks console logging after a Spring Boot DevTools restart
+(https://github.com/apache/grails-core/issues/15663[issue #15663]), so it was removed from the
+generated configuration before Jansi itself was dropped. Only applications carrying older
+configuration forward need this change.
+
+===== `GrailsConsole` moved to a companion artifact
+
+The console classes are developer tooling, so they now ship as `grails-bootstrap`'s CLI companion
+rather than in the artifact applications depend on. These types moved out of
+`org.apache.grails.bootstrap:grails-bootstrap` and into
+`org.apache.grails.bootstrap:grails-bootstrap-cli`:
+
+* `grails.build.logging.GrailsConsole`
+* `grails.build.logging.ConsoleLogger`
+* `grails.build.logging.GrailsEclipseConsole`
+* `org.grails.build.logging.GrailsConsolePrintStream`
+* `org.grails.build.logging.GrailsConsoleErrorPrintStream`
+* `org.grails.build.logging.GrailsConsoleAntBuilder`
+* `org.grails.build.logging.GrailsConsoleBuildListener`
+* `org.grails.build.interactive.CandidateListCompletionHandler`
+
+The URL mappings report renderer moved the same way, out of `org.apache.grails:grails-url-mappings`
+and into `org.apache.grails:grails-url-mappings-cli`:
+
+* `org.grails.web.mapping.reporting.AnsiConsoleUrlMappingsRenderer`
+
+Their package names are unchanged - only the artifact that carries them is different.
+
+Command code needs no change: the CLI tier is auto-provisioned onto `grailsCli`, so commands in
+`grails-app/commands` and in a plugin's `src/cli` continue to see `GrailsConsole` as before.
+
+If application code (not command code) references any of these types, it was relying on developer
+tooling being present at runtime. Prefer a logger, or Spring Boot's
+`org.springframework.boot.ansi.AnsiOutput` for coloured output. If the dependency is genuinely
+required, declare the companion explicitly:
+
+[source,groovy]
+.build.gradle
+----
+implementation "org.apache.grails.bootstrap:grails-bootstrap-cli"
+----
+
+Test code that extended `GrailsConsolePrintStream` to capture output does not need it: that class
+routes output through the CLI console, which a test almost never wants. Extend `java.io.PrintStream`
+directly instead.
+
+==== 42. Plugin Authors: Separate Source Sets for the CLI Tier
+
+This affects plugins that apply `org.apache.grails.gradle.grails-plugin-cli` and therefore publish a
+companion `-cli` artifact.
+
+Previously the `cli` source set's output and its dependencies were added to the plugin's `test`
+classpath, so unit tests saw CLI classes and CLI-only libraries that an application never receives. A test
+could pass against something that was not actually there in production.
+
+The `cli` tier now has its own test source sets:
+
+[cols="1,2"]
+|===
+|Source set |Purpose
+
+|`src/test-cli`
+|Tests for CLI classes. Runs as the `testCli` task, wired into `check`.
+
+|`src/integration-test-cli`
+|CLI tests that need a booted application - a command starts one the same way the shell does. Runs as the
+`integrationTestCli` task.
+|===
+
+Both are created by `org.apache.grails.gradle.grails-plugin-cli`, so there is nothing to declare: create the
+folder, add a spec, and the task picks it up.
+
+`src/test` no longer sees the CLI tier at all. Move any existing spec that exercises a command or another
+CLI class into `src/test-cli`, or into `src/integration-test-cli` if it boots an application.
+
+Both CLI test source sets can read the module's `main` and `test` output, so shared fixtures stay where they
+are. `src/integration-test-cli` additionally reuses `src/integration-test/resources` when that folder exists,
+since both integration phases boot the same application and its configuration should not be duplicated.
+
+The relationship between the source sets is deliberately one-way: CLI tests may use test fixtures, but
+ordinary tests never see CLI classes, which is what keeps the `test` classpath a faithful stand-in for
+production.
+
+==== 43. `gspCompile` Configuration Removed
+
+The `org.apache.grails.gradle.grails-gsp` plugin no longer registers a `gspCompile` configuration.
+
+It dated back to the original Ant-based GSP compiler, where it carried the classpath that compiler ran
+against. Once GSP compilation moved to a forked compile task the configuration's only remaining content was
+a hardcoded servlet API dependency, and that dependency has itself been removed — the servlet API already
+reaches GSP compilation through the regular compile classpath, at the version the BOM manages.
+
+GSPs continue to compile against the project's `compileClasspath`, its compiled classes, and — for a WAR
+build — `providedCompile`. No application that leaves the configuration alone is affected.
+
+A build that declares dependencies on `gspCompile` fails with `Could not find method gspCompile()`. Move
+those declarations to `compileOnly`, which places them on the compile classpath that GSP compilation uses:
+
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    // Grails 7
+    // gspCompile 'com.example:some-library:1.0'
+
+    // Grails 8
+    compileOnly 'com.example:some-library:1.0'
+}
+----
+
+==== 44. `grails.spring.bean.packages` Scanning Fixed Outside the Project Directory
+
+The component scan driven by `grails.spring.bean.packages` resolved its search root from a probe of the
+*working directory* — it looked for a `grails-app` directory or an `Application.groovy` beside it — and
+returned nothing when neither was there. An application started from anywhere other than its project root
+therefore registered none of the `@Component` classes in the configured packages, silently.
+
+That covers most production shapes: a systemd unit with its own `WorkingDirectory`, a container with a
+`WORKDIR`, an application server. `java -jar build/libs/app.jar` run from the project root was unaffected,
+which is why the gap survived. The scan now uses Spring's own resource resolution, so the packages are
+scanned wherever the process is started from.
+
+[source, yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    spring:
+        bean:
+            packages:
+                - com.example.components
+----
+
+**Applications deployed this way will start getting beans they previously did not.** The scan registers
+every `@Component`, `@Service`, `@Repository` and `@Controller` in the listed packages. Two things to check
+before upgrading:
+
+* A class in one of those packages that was never actually reaching the context — because it duplicates a
+bean the application defines elsewhere, or because it was left behind — now registers. A duplicate under the
+same bean name will fail startup rather than pass silently.
+* Beans that were previously absent may now participate in autowiring by type, so an injection point that
+resolved unambiguously before can become ambiguous.
+
+Removing the packages from `grails.spring.bean.packages`, or the stray classes from those packages, restores
+the previous set of beans.
+
+==== 45. GORM API Resolution Moves to a Registry
+
+GORM no longer allocates an API object for every (entity, connection) pair up front. Per-entity, per-qualifier
+state now lives in a registry (`org.grails.datastore.gorm.GormRegistry`), and APIs are built on first use by a
+pluggable factory. For applications this is invisible — `Book.list()`, dynamic finders, and
+`Book.withNewSession { }` behave as before. It does change some extension points that out-of-tree GORM
+implementations subclass.
+
+===== GormEnhancer
+
+`org.grails.datastore.gorm.GormEnhancer`'s public constructors, `enhance()`/`enhance(PersistentEntity)`,
+`dynamicEnhance`, and the `transactionManager` field are all unchanged in behaviour and signature (the
+`transactionManager` field is now `@Deprecated` and immutable after construction — read it, don't assign it).
+
+The following members were removed:
+
+[cols="1,2", options="header"]
+|===
+| Removed
+| Migration note
+
+| `finders` field / `getFinders()`
+| Use `createDynamicFinders(Datastore)`, or read the finders from the API object you are working with.
+
+| `removeConstraints()`
+| Moved to `GormRegistry.removeConstraints()`, called automatically from `GormRegistry.removeDatastore(Datastore)`
+as part of tearing a datastore down. There is nothing to call directly - it runs when the enhancer's `close()`
+removes the datastore from the registry, same as before.
+
+| `addStaticMethods(PersistentEntity, boolean)` / `addInstanceMethods(PersistentEntity, boolean)`
+| The `onlyExtendedMethods` parameter is gone; both methods now take only the entity. Installation mechanism
+also changed from per-method reflective registration to a single `methodMissing`/`propertyMissing` handler pair.
+
+| `findTenantId`, `apiQualifiers`, `findDatastoreByType`, `findSingleDatastore`,
+`findSingleTransactionManager`, `findTransactionManager(Class, String)`, `appliesToDatastore`,
+`getInstanceMethodApiProviders`, `registerStaticMethod`, `registerInstanceMethod`, `doesRealMethodExist`,
+`isRealMethod`
+| Internal helpers of the old per-method reflective registration mechanism, replaced wholesale by the registry
+and its `methodMissing`/`propertyMissing` handlers. If you overrode one of these to customise dispatch, override
+`registerApiFactories()` (below) or a `GormApiFactory` instead.
+|===
+
+A new `registerApiFactories()` hook is called once, before any entity is registered. Adapters that build
+specialised API objects should override it:
+
+[source,groovy]
+----
+class MyGormEnhancer extends GormEnhancer {
+
+    @Override
+    protected void registerApiFactories() {
+        GormRegistry.instance.registerApiFactory(MyDatastore, new MyGormApiFactory())
+    }
+}
+----
+
+WARNING: Earlier snapshots of this work registered API factories from `registerConstraints(Datastore)`.
+Move that code to `registerApiFactories()`; factory registration must not depend on the constraints lifecycle step.
+
+===== CurrentTenantHolder.get()
+
+`grails.gorm.multitenancy.CurrentTenantHolder.get()` — the no-argument form — now throws `TenantException` when
+different datastores hold different tenants on the calling thread, rather than returning an arbitrary one of
+them. Pass the datastore you are operating on:
+
+[source,groovy]
+----
+CurrentTenantHolder.get(datastore)
+----
+
+See <<multiTenancy,Multi-Tenancy>> for the full multi-tenancy API.
+
+===== Tenants.withId(Class, Serializable, Closure)
+
+`grails.gorm.multitenancy.Tenants` had two distinct 3-argument `withId` overloads that both erased to
+`withId(Class, Serializable, Closure)` at the bytecode level:
+
+[source,groovy]
+----
+// removed - resolved a datastore by its own type
+static <T> T withId(Class<? extends Datastore> datastoreClass, Serializable tenantId, Closure<T> callable)
+
+// kept - resolves the datastore that maps a domain class
+static <T> T withId(Class domainClass, Serializable tenantId, Closure<T> callable)
+----
+
+The datastore-class overload relied on `GormEnhancer.findDatastoreByType(Class)`, which was one of the internal
+per-method-dispatch helpers removed as part of the registry migration (see <<_gormenhancer,GormEnhancer>>
+above), so it could not be carried forward under its own name. Only the domain-class overload remains.
+
+Because both overloads share one erased signature, a call site that used to pass a datastore class -
+`Tenants.withId(SomeDatastore, tenantId) { ... }` - still compiles unchanged against the domain-class overload.
+It no longer resolves the datastore you named: `getDatastoreForDomain(SomeDatastore)` looks `SomeDatastore` up as
+if it were a *domain class*, finds no entity registered under that name, and falls through to the application's
+`DEFAULT` datastore. On a single-datastore application this is indistinguishable from the old behaviour. On a
+multi-datastore application it silently binds the tenant against the wrong datastore - no exception, no log -
+which can surface much later as a cross-database read or write.
+
+If you have a call site that passes a `Datastore` subclass to this method, migrate it to look the datastore up
+explicitly and call the datastore-instance overload instead. `Tenants.datastoreLocator` still resolves a
+datastore by its type - only the `withId(Class, ..)` shortcut for it is gone:
+
+[source,groovy]
+----
+MultiTenantCapableDatastore datastore = Tenants.datastoreLocator.getDatastore(SomeDatastore) as MultiTenantCapableDatastore
+Tenants.withId(datastore, tenantId) { ... }
+----
+
+or pass an actual domain class if that is what you meant:
+
+[source,groovy]
+----
+Tenants.withId(SomeDomainClass, tenantId) { ... }
+----
+
+
+==== 46. Startup Banner Shows the Servlet Container and Spring Security
+
+The banner now reports the servlet container it is running on, and the version of Spring Security where the
+application has it, without being asked for either. Both were previously opt-in through
+`grails.banner.versions.include`.
+
+What made them opt-in was that a version which could not be determined was shown as `unknown`, so turning one
+on by default would have printed `Spring Security: unknown` for every application without it. A version shown
+by default that cannot be determined is now left out instead, which is what allows the two to be shown at all.
+A version the application asked for by name still reads `unknown` where it cannot be determined, since saying
+nothing about something that was asked for reads as the option having been ignored.
+
+The container is named as itself: an application on Tomcat shows `Tomcat`, one on Jetty shows `Jetty`. It is
+configured under the single key `container`, whichever container that turns out to be.
+
+To restore the previous banner, exclude them:
+
+[source, yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    banner:
+        versions:
+            exclude:
+                - container
+                - spring-security
+----
+
+An application that already asked for `spring-security` under `grails.banner.versions.include` keeps working
+and needs no change — the option is still recognised, and the version is shown either way. The same is true
+of `tomcat`, `jetty` and `undertow`, which remain available for an application that wants to be told about a
+particular container whether or not it is the one serving; naming one as well as taking the default shows it
+once, not twice.
+
+A version option that names none of the known keys is now reported as a warning after the banner is printed,
+rather than being dropped in silence.
+==== 47. Message Bundles Resolved by Spring Boot
+
+Grails no longer registers a `messageSource` bean. Spring Boot's `MessageSourceAutoConfiguration`
+supplies a standard `ResourceBundleMessageSource`, and Grails contributes only the base-name list, which
+it records at build time rather than discovering by scanning the classpath at runtime.
+
+Most applications need no change. The rest of this section covers the cases that do.
+
+===== `spring.messages.*` is now the configuration surface
+
+`spring.messages.*` was previously ignored, because Grails' own message source claimed the bean name and
+Boot's auto-configuration backed off. It is now honoured in full — `encoding`, `cache-duration`,
+`fallback-to-system-locale`, `always-use-message-format`, `use-code-as-default-message` and
+`common-messages`.
+
+Two Grails settings give way to it:
+
+[cols="2,2,3"]
+|===
+|Setting |Replacement |Status
+
+|`grails.i18n.cache.seconds`
+|`spring.messages.cache-duration`
+|Deprecated, still honoured for now — see below
+
+|`grails.i18n.filecache.seconds`
+|None
+|Ignored
+|===
+
+`grails.i18n.cache.seconds` is still honoured as a temporary upgrade aid: it is translated into
+`spring.messages.cache-duration` and logs a deprecation warning. As before, it applies only when reload
+is enabled, so an application that set it for development keeps the timing it had. Setting
+`spring.messages.cache-duration` explicitly always wins. Migrate before it is removed.
+
+`grails.i18n.filecache.seconds` has no replacement and is ignored: it tuned the file-timestamp re-check
+of the message source Grails used to own, which Spring Boot's has no equivalent for.
+
+`grails.i18n.availableLocales.includePlugins` is replaced by `grails.i18n.include-plugin-bundles`, which
+now governs both message resolution and the locales offered by a language selector, so the two can no
+longer disagree.
+
+===== Plugin authors: base names must be namespaced
+
+A plugin's message bundle base names must be its plugin name, or that name followed by a hyphen and a
+suffix:
+
+[source]
+----
+grails-app/i18n/spring-security-core.properties            <1>
+grails-app/i18n/spring-security-core_fr.properties
+grails-app/i18n/spring-security-core-validation.properties <2>
+----
+<1> the plugin's own name
+<2> further bundles inside its namespace
+
+The plugin build fails otherwise. A plugin shipping `messages.properties` used to contribute messages as
+a fallback behind the application's own bundle; Spring resolves a base name to the first matching
+resource on the classpath, so such a bundle would now silently shadow, or be shadowed by, the
+application's. Rename it into the plugin's namespace.
+
+Applications are unaffected — there is only one application, so its base names cannot collide.
+
+A namespaced bundle still works under Grails 7, so a plugin does not need a separate source branch to
+support both. Grails 7 discovers a plugin's bundles by scanning the plugin jar's root for
+`*.properties` and matching locale suffixes; it never inspects the base name, so
+`spring-security-core.properties` and `spring-security-core_fr.properties` are found exactly as
+`messages.properties` was. The `spring-security-core` plugin has shipped this layout for years. Rename
+once, and the same source builds for both: Grails 7 finds the bundles by scanning, Grails 8 through the
+generated descriptor.
+
+===== Every bundle needs a locale-independent file
+
+Spring Boot's auto-configuration only activates when a configured base name has a bundle without a
+locale suffix, and it contributes the whole `messageSource` bean. An application shipping only
+`messages_de.properties` would therefore have had no message source at all, so the build now rejects it.
+
+===== Ambiguous base names must be declared
+
+A base name ending in a valid locale identifier is ambiguous: `api_fr.properties` reads as base name
+`api` in French. Likewise `api_errors.properties` alongside `api.properties` reads as a mistyped locale
+variant of `api`. Both fail the build; declare the base name when the inference is wrong:
+
+[source,groovy]
+----
+grails {
+    i18n {
+        basenames = ['api', 'api_errors']
+    }
+}
+----
+
+===== `PluginAwareResourceBundleMessageSource` removed
+
+`org.grails.spring.context.support.PluginAwareResourceBundleMessageSource` and the Grails fork of
+`ReloadableResourceBundleMessageSource` beside it are removed. Code that injected `MessageSource` is
+unaffected. Code that cast the bean to either type, or called `getBundleCodes()`, must be updated —
+inject `MessageSource` and use its interface, or declare your own bean, which Boot's auto-configuration
+backs off from.
+
+===== Language selectors read the same plugin set as message resolution
+
+The locales offered by `g:localeSelect available="true"` now come from the recorded bundles rather than a
+classpath scan, and they follow exactly the plugin set that message resolution uses. A plugin that was
+evicted, excluded, or failed to load no longer contributes a language entry, so a selector can no longer
+offer a translation whose messages will not resolve.
+
+An application that declares its own `AvailableLocaleResolver` bean must supply the effective descriptors
+instead of a `ClassLoader`; most applications simply rely on the one Grails registers.
+
+===== Reloading during development
+
+Editing a value in an existing bundle still reloads without a restart: Grails contributes a short
+`spring.messages.cache-duration` when reload is enabled, in place of the `grails.i18n.cache.seconds` it
+used to apply to its own message source.
+
+Adding or removing a base name now needs a restart, because Spring Boot reads the configured base names
+once when it builds the message source.
+
+==== 48. CAS Single Sign-Out Is Opt-In
+
+`grails.plugin.springsecurity.cas.useSingleSignout` now defaults to `false`. It previously defaulted
+to `true`, so every CAS application registered the CAS client's `SingleSignOutFilter` whether or not
+it wanted single sign-out.
+
+The default changed because enabling single sign-out is a security trade-off rather than a free
+feature. CAS maps the service ticket to the HTTP session id, so single sign-out cannot work while
+session fixation prevention is replacing the session when the user authenticates. Enabling
+`cas.useSingleSignout` disables session fixation prevention, and an application should make that
+choice deliberately.
+
+If your application relies on CAS single sign-out, enable it explicitly:
+
+[source,groovy]
+.grails-app/conf/application.groovy
+----
+grails.plugin.springsecurity.cas.useSingleSignout = true
+----
+
+The plugin logs a warning at startup when it is enabled, noting that session fixation prevention has
+been disabled.
+
+**Single sign-out did not actually work before Grails 8**, so an application upgrading from an
+earlier version is unlikely to lose working behaviour. The plugin set
+`useSessionFixationPrevention = false` from `doWithSpring`, but it declares `loadAfter =
+['springSecurityCore']`, so the core plugin had already defined `sessionAuthenticationStrategy` from
+the original value. The filter was registered, the session was still replaced on login, and CAS
+logout requests silently matched nothing. Grails 8 also redefines `sessionAuthenticationStrategy`
+from the CAS plugin, so enabling `cas.useSingleSignout` now has the documented effect.
+
+The Spring Security CAS configuration reference in this guide documents the setting in full.
+
+==== 49. GSPs Record a Source Checksum Instead of a Modification Time
+
+A GSP used to carry the modification time of its `.gsp` source, precompiled pages baking it into the
+generated class as a `LAST_MODIFIED` constant. Git stores no modification times, so every fresh clone or CI
+checkout gave each source a new one, and the generated classes differed on every checkout even when the
+sources were byte-for-byte identical. Because `LAST_MODIFIED` was a compile-time constant it was part of the
+class's ABI, so the difference survived even Gradle's compile-classpath normalization and every task
+downstream of a jar containing precompiled GSPs missed the build cache.
+
+Grails 8 records a `SOURCE_CHECKSUM` of the page source instead, for pages compiled at build time and at
+runtime alike. Identical sources now compile to identical bytes on every machine.
+
+Runtime reloading, described in
+<<makingChangesToADeployedApplication,Making Changes to a Deployed Application>>, is unaffected: a page is
+reloaded when its source no longer matches the recorded checksum. Detection is more accurate than it was.
+An edit is caught whenever the source's modification time or length moves, which any ordinary save does;
+previously a save landing within the old granularity window went unnoticed until a later edit moved it
+clear. In the other direction, a page whose modification time moves without its content changing is no
+longer recompiled, so touching a file — or a build step copying views into place — no longer reloads pages
+that did not actually change. If you were using `touch` to force a page to recompile, edit the page instead.
+
+**Removed API.** `GroovyPageMetaInfo.getLastModified()`, `setLastModified(long)` and
+`applyLastModifiedFromResource(Resource)` are gone, as are `GroovyPageParser.getLastModified()` and
+`setLastModified(long)`. Use `GroovyPageMetaInfo.getSourceChecksum()` to identify the source a page was
+compiled from. Generated page classes no longer declare a `LAST_MODIFIED` constant.
+
+**Removed setting.** `grails.gsp.reload.granularity` is gone. It existed to absorb rounding differences
+between modification times, which comparing content does not need; setting it now has no effect.
+`grails.gsp.reload.interval` is unchanged.
+
+A GSP precompiled by Grails 7 and shipped inside a binary plugin carries no checksum. Such a page is served
+normally; it is simply never reload-checked, which was already the case for views resolved out of a plugin
+jar.
+
+==== 50. Tag Libraries Are Described When Compiled
+
+Tag calls are resolved against a description each tag library contributes as it is compiled, and a
+resolved call is compiled into a direct invocation. The tag itself is still selected by name when the
+call runs, through the same lookup dynamic dispatch uses, so a tag library that overrides another and
+the order tag libraries are registered in behave as before. A call into a namespace no compiled tag
+library declares — a tag library from a plugin built against an earlier version of Grails, or one
+registered while the application runs — is left to dispatch exactly as it did.
+
+Three things are worth knowing when upgrading.
+
+A tag that no compiled tag library declares is left to resolve at runtime, and nothing is reported.
+Setting `grails { compileStatic { strictTags = true } }` makes it a compilation error instead, which
+is worth doing once to find misspelled tags, but is not the default because a namespace can
+legitimately hold tag libraries that carry no description. Where an application registers tag
+libraries while it runs, name their namespaces in
+`grails { compileStatic { dynamicTagNamespaces = [...] } }` so that they are never checked.
+
+Strict checking applies only where the source says a call is a tag: one naming its namespace, and one
+written as markup. A call written without a namespace is never checked, and a namespaced expression in
+a page is checked only when that page declares `compileStatic`.
+
+A call written without a namespace is not compiled at all unless the build asks for it with
+`grails { compileStatic { unqualifiedTagCalls = true } }`. Whether a bare name is a tag depends on what
+else answers to it, and not all of that is visible when compiling — a method Groovy gives every object,
+a delegate an enclosing closure is handed, an overload the tag library also declares — so by default
+such a call is dispatched exactly as it was before this release.
+
+Where it is turned on, a call written without a namespace reaches a tag only when nothing nearer
+answers to the name: not a method of the class, not one it inherits, not a field, property or local,
+not a method Groovy provides, and not a name inside a closure, whose delegate is only known when it
+runs. A method added to a controller or tag library *while the application runs*, through a plugin's
+`doWithDynamicMethods`, is not visible when the calling code is compiled, so a call that used to reach
+such a method and shares its name with a tag would reach the tag instead. Declare the method on the
+class, name the namespace in `dynamicTagNamespaces`, or call the tag with its namespace.
+
+Naming a namespace in `dynamicTagNamespaces` turns rewriting off for it entirely, not just the
+reporting: calls into it are dispatched exactly as they were before this release. That is the escape
+hatch for a namespace whose tags are decided while the application runs.
+
+Tags defined as closures now warn at compile time. They still work and are called the same way, but a
+closure carries no signature, so nothing about a call to such a tag can be checked. This covers the
+`def` form as well as the explicitly typed one, and the `def` form is the one most tag libraries are
+written in:
+
+[source,groovy]
+----
+// Before - both forms warn
+def hello = { attrs ->
+    out << "Hello ${attrs.name}"
+}
+
+Closure goodbye = { Map attrs ->
+    out << "Goodbye ${attrs.name}"
+}
+
+// After
+def hello(Map attrs) {
+    out << "Hello ${attrs.name}"
+}
+
+def goodbye(Map attrs) {
+    out << "Goodbye ${attrs.name}"
+}
+----
+
+A tag taking a body becomes a method with a second `Closure body` parameter:
+
+[source,groovy]
+----
+// Before
+def wrapped = { attrs, body ->
+    out << '<div>' << body() << '</div>'
+}
+
+// After
+def wrapped(Map attrs, Closure body) {
+    out << '<div>' << body() << '</div>'
+}
+----
+
+===== Tags Are No Longer Installed Onto Metaclasses
+
+Dispatching a tag no longer works by installing a method for every tag, and a property for every
+namespace, onto the metaclass of every tag library, controller and page. Tags are resolved through the
+tag library lookup instead. Calling a tag — from a page, a tag library or a controller, with or
+without its namespace — is unaffected.
+
+What changes is code that inspected the metaclass to find tags. A check such as
+
+[source,groovy]
+----
+tagLib.metaClass.respondsTo(tagLib, 'someTag')
+----
+
+answered `true` before because the tag had been installed there, and now answers `false`. Call the tag,
+or consult the tag library lookup, instead of asking the metaclass what it holds.
+
+The methods that performed the installation are deprecated or removed:
+
+[cols="2,3"]
+|===
+|Member |Replacement
+
+|`NamespacedTagDispatcher.initializeMetaClass()`
+|Removed. Nothing needs to be initialised.
+
+|`NamespacedTagDispatcher.registerTagMetaMethods(ExpandoMetaClass)`
+|Removed.
+
+|`TemplateNamespacedTagDispatcher.registerTagMetaMethods(ExpandoMetaClass)`
+|Removed.
+
+|`GroovyPagesMetaUtils.registerMethodMissingForGSP(...)`
+|Retained but does nothing. A page now declares `methodMissing` itself.
+
+|`TagLibraryMetaUtils.enhanceTagLibMetaClass`, `registerTagMetaMethods`, `registerMethodMissingForTags`, `registerNamespaceMetaProperties`, `registerPropertyMissingForTag`, `addTagLibMethodToMetaClass`
+|Deprecated. Unit test support still uses them so that a tag method can be called directly on a tag library under test.
+|===
+
+`TagLibraryMetaUtils.methodMissingForTagLib` is not deprecated — it is the dynamic dispatch path a call
+into an undescribed namespace still takes.
+
+===== A Method-Declared Tag Called Without a Namespace Returns Its Output
+
+A class that can call tags but is not a tag library — a controller — reaches a tag written without a
+namespace through `methodMissing` on the `TagLibraryInvoker` trait. That used to end in a direct call
+on the tag library bean. For a tag declared as a closure this made no difference, because the call
+landed on a generated wrapper that captured output anyway; for one declared as a method there was no
+wrapper, so the method ran with nothing captured and its own return value came back.
+
+Both forms now capture, so a method-declared tag returns what it wrote:
+
+[source,groovy]
+----
+class ReportTagLib {
+    static namespace = 'g'
+
+    def summary(Map attrs) {
+        out << 'the output'
+        'the return value'      // <1>
+    }
+}
+
+class ReportController {
+    def index() {
+        String result = summary(id: 1)   // 'the output', previously 'the return value'
+    }
+}
+----
+<1> a tag's return value is not what a caller receives; what it writes is
+
+A tag called *with* its namespace, and any tag called from a GSP, already captured, so only an
+unqualified call from a controller to a method-declared tag changes.
+
+==== 51. Quartz Job Scheduling Behavior Changes
+
+Three behaviors of the Quartz plugin changed in this release. All three concern what happens when
+something about a schedule is wrong; none of them require a change to a job class.
+
+===== 51.1 A trigger that can never fire no longer stops startup
+
+A job whose trigger has no possible fire time — a cron expression whose last occurrence is in the past,
+or an end time that has already passed — used to make the application fail to start, because the
+scheduler rejects such a trigger:
+
+----
+org.quartz.SchedulerException: Based on configured schedule, the given trigger will never fire.
+----
+
+The plugin now reports the trigger as an error in the log and leaves it unscheduled, so the rest of the
+application's jobs and triggers are scheduled and the application starts. The job itself is still
+registered, so it can be triggered and rescheduled at runtime.
+
+To go back to a failing startup, set `quartz.failOnNeverFiringTriggers`:
+
+[source,yaml]
+.application.yml
+----
+quartz:
+    failOnNeverFiringTriggers: true
+----
+
+===== 51.2 An application only removes the jobs it registered itself
+
+When an application starts, the plugin removes the jobs in the job store which are no longer enabled job
+artefacts of the application. It used to consider *every* job in the store, which with a persistent job
+store deleted the jobs and triggers of anything else using it — another application, or code that
+schedules through the Quartz API.
+
+Every job the plugin registers now carries the name of the application that registered it, taken from
+`info.app.name` or from the application metadata when that is unset, and only jobs carrying that name are
+removed. Two consequences for an application with `quartz.jdbcStore` enabled:
+
+* **Two applications sharing a job store must not share an application name.** Instances of one
+application do share it — that is what makes a clustered deployment clean up after itself — but two
+different applications on the same Quartz tables each need their own `info.app.name`. An application which
+does not name itself registers its jobs under the default name, which every unnamed application shares;
+with `quartz.jdbcStore` enabled the plugin warns about that at startup.
+* **A job written to the store by Grails 7 or earlier carries no application name**, so it is never
+removed automatically. A job class you deleted while running an older version leaves a row behind; remove
+it with `jobManagerService.removeJob(group, name)` or from the Quartz tables.
+
+===== 51.3 Scheduling methods report what is wrong instead of failing with a null pointer
+
+The static scheduling methods every job class gets — `schedule`, `reschedule`, `unschedule`,
+`triggerNow`, `removeJob` — used to fail with a `NullPointerException` when called with a null argument,
+or on a job the scheduler does not know about. They now raise:
+
+* an `IllegalArgumentException` naming the argument that is null. Note that a null argument resolves to
+`schedule(Trigger)` whichever method the caller meant, because the runtime type of `null` carries no
+information, so the message points at the other arguments too.
+* an `IllegalStateException` when the job is not registered with a scheduler — the plugin is disabled, the
+job is disabled with `jobEnabled = false`, or the class is not a job artefact of the application.
+
+An application that caught `NullPointerException` around these calls has to catch those instead. See
+<<quartzDynamicScheduling,Dynamic Job Scheduling>>.
+
+==== 52. Coordinate Changes
+
+`grails-datamapping-async` provides the asynchronous programming model for Grails Data — the
+`AsyncEntity` trait and the `async` namespace — and is meant to be depended on directly by
+applications and libraries. Groups nested below `org.apache.grails` are reserved for implementation
+details of Grails, so the artifact moved from the `org.apache.grails.data` group to
+`org.apache.grails`. The artifact id is unchanged:
+
+[source,groovy]
+.build.gradle
+----
+implementation "org.apache.grails:grails-datamapping-async"
+----
+
+The https://github.com/apache/grails-core/blob/8.0.x/RENAME.md[RENAME.md] reference table in the
+grails-core repository maps previous coordinate names to new names. The `rename_gradle_artifacts.sh`
+script in the https://github.com/apache/grails-core/tree/8.0.x/etc/bin[etc/bin] directory of the
+grails-core repository rewrites both the Grails 6 (`org.grails:grails-datastore-gorm-async`) and the
+Grails 7 (`org.apache.grails.data:grails-datamapping-async`) coordinates in a project's Gradle files:
+
+[source,console]
+----
+./rename_gradle_artifacts.sh -l my/project/location
+----
+
+==== 53. `importJavaTime` Removed
+
+The `org.apache.grails.gradle.grails-app` plugin no longer accepts `importJavaTime`.
+
+The flag added `java.time` to the star imports of every Groovy compilation. Groovy 5, which Grails 8
+requires, imports that package by default, so on Grails 8 the flag added an import the compiler already
+had:
+
+[source,groovy]
+----
+// Grails 8, no configuration and no import statement
+class Book {
+    LocalDate published
+    Duration readingTime
+}
+----
+
+A build that sets it fails with `Could not set unknown property 'importJavaTime'`. Delete the line; there
+is no replacement:
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    // Grails 7
+    // importJavaTime = true
+
+    // Grails 8 - java.time is a Groovy 5 default import
+}
+----
+
+`importGrailsCommonAnnotations` and `starImports` are unchanged, and both still default to off.
+
+`importGrailsCommonAnnotations` no longer probes the compile classpath before adding
+`grails.gorm.annotation` and `grails.plugin.scaffolding.annotation`. When the flag is set both packages are
+imported whether or not they are present — a star import of an absent package contributes no classes and is
+not an error in Groovy, so the probe changed nothing it could observe. An application that relied on the
+import being *omitted* when the package was absent sees no difference in compiled output.

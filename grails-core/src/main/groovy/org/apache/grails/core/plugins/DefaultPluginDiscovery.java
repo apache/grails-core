@@ -483,12 +483,26 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
     /**
      * Registers a plugin that is eligible to be loaded.
      *
-     * <p>This method skips disabled plugins, records eviction and observer relationships, and appends the
-     * plugin to the discovered load order.</p>
+     * <p>This method skips disabled plugins and plugins already registered under the same name (a plugin
+     * class may be declared by more than one {@code META-INF/grails-plugin.xml} descriptor on the
+     * classpath), records eviction and observer relationships, and appends the plugin to the discovered
+     * load order.</p>
      *
      * @param plugin the plugin to register
      */
     private void registerPlugin(PluginInfo plugin) {
+        var registeredPlugin = plugins.get(plugin.getName());
+        if (registeredPlugin != null) {
+            LOG.warn(
+                    "Grails plug-in [{}] with version [{}] is already registered; " +
+                            "skipping duplicate declaration with version [{}]",
+                    plugin.getName(),
+                    registeredPlugin.getPluginVersion(),
+                    plugin.getPluginVersion()
+            );
+            return;
+        }
+
         if (!plugin.getMetadata().canRegisterPlugin()) {
             if (LOG.isInfoEnabled()) {
                 LOG.info("Grails plugin {} is disabled and was not loaded", plugin);
@@ -496,8 +510,8 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
             return;
         }
 
-        if (LOG.isInfoEnabled()) {
-            LOG.info(
+        if (LOG.isDebugEnabled()) {
+            LOG.debug(
                     "Grails plug-in [{}] with version [{}] loaded successfully",
                     plugin.getName(),
                     plugin.getPluginVersion()

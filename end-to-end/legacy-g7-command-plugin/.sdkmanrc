@@ -1,0 +1,4 @@
+# Matches Grails 7: JDK 17 and Gradle 8.14.5 are what the 7.0.x branch pins.
+# Deliberately not synced with the repository root, which tracks Grails 8.
+java=17.0.18-librca
+gradle=8.14.5

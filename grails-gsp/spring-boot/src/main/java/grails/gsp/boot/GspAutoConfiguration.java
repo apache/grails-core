@@ -47,6 +47,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.Environment;
+import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.PropertiesPropertySource;
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.util.StringUtils;
@@ -62,7 +63,7 @@ import org.grails.gsp.GroovyPagesTemplateEngine;
 import org.grails.gsp.io.GroovyPageScriptSource;
 import org.grails.gsp.jsp.TagLibraryResolver;
 import org.grails.gsp.jsp.TagLibraryResolverImpl;
-import org.grails.plugins.sitemesh3.Sitemesh3GrailsPlugin;
+import org.grails.plugins.sitemesh3.Sitemesh3EnvironmentPostProcessor;
 import org.grails.plugins.web.taglib.RenderSitemeshTagLib;
 import org.grails.plugins.web.taglib.RenderTagLib;
 import org.grails.taglib.TagLibraryLookup;
@@ -190,7 +191,10 @@ public class GspAutoConfiguration {
         public void setEnvironment(Environment environment) {
             if (environment instanceof ConfigurableEnvironment) {
                 ConfigurableEnvironment configEnv = (ConfigurableEnvironment) environment;
-                configEnv.getPropertySources().addFirst(Sitemesh3GrailsPlugin.getDefaultPropertySource(configEnv, null));
+                MapPropertySource defaults = Sitemesh3EnvironmentPostProcessor.getDefaultPropertySource(configEnv);
+                if (!defaults.getSource().isEmpty()) {
+                    configEnv.getPropertySources().addFirst(defaults);
+                }
             }
         }
 

@@ -18,6 +18,30 @@
  */
 
 /*
- *= require main
+ *= require webjars/bootstrap/%/dist/css/bootstrap.css
  *= require_self
 */
+
+/*
+ * The security-ui screens render through the host application's Bootstrap
+ * layout, so the legacy plugin stylesheet (main.css) is intentionally not
+ * required. Provide only minimal styling for the raw list/show tables, and
+ * let long values (such as bcrypt-hashed answers) wrap so a wide table fits
+ * the viewport instead of overflowing and being clipped off-screen.
+ */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+}
+th, td {
+    padding: 0.5rem 0.6rem;
+    text-align: left;
+    vertical-align: top;
+    border-top: 1px solid #dee2e6;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+thead th {
+    border-bottom: 2px solid #dee2e6;
+}
