@@ -18,6 +18,7 @@
  */
 package org.grails.datastore.gorm.proxy
 
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.runtime.HandleMetaClass
 import org.codehaus.groovy.runtime.InvokerHelper
@@ -70,7 +71,8 @@ class GroovyProxyFactory implements ProxyFactory {
         }
     }
 
-    @groovy.transform.CompileDynamic
+    @CompileDynamic
+    @SuppressWarnings('GrMethodMayBeStatic')
     protected Serializable getIdDynamic(obj) {
         if (obj.respondsTo('getId')) {
             return (Serializable)obj.invokeMethod('getId', null)
@@ -90,7 +92,7 @@ class GroovyProxyFactory implements ProxyFactory {
     @Override
     <T> T createProxy(Session session, Class<T> type, Serializable key) {
         EntityPersister persister = (EntityPersister) session.getPersister(type)
-        T proxy = type.newInstance()
+        T proxy = type.getDeclaredConstructor().newInstance()
         if (persister != null) {
             persister.setObjectIdentifier(proxy, key)
         } else {
@@ -121,7 +123,8 @@ class GroovyProxyFactory implements ProxyFactory {
         return proxy
     }
 
-    @groovy.transform.CompileDynamic
+    @CompileDynamic
+    @SuppressWarnings('GrMethodMayBeStatic')
     protected void setMetaClassDynamic(Object proxy, MetaClass proxyMc) {
         proxy.setMetaClass(proxyMc)
     }
@@ -161,6 +164,7 @@ class GroovyProxyFactory implements ProxyFactory {
         return object
     }
 
+    @SuppressWarnings('GrMethodMayBeStatic')
     protected MetaClass unwrapHandleMetaClass(MetaClass mc) {
         if (mc instanceof HandleMetaClass) {
             return ((HandleMetaClass) mc).getAdaptee()
