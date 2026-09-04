@@ -75,6 +75,14 @@ class GroovydocEnhancerPlugin implements Plugin<Project> {
             if (project.configurations.names.contains('documentation')) {
                 it.groovyClasspath = project.configurations.getByName('documentation')
             }
+            // Groovydoc Class.forName's referenced types against this classpath. Compile
+            // classpath is not enough: Hibernate 7 (and similar libraries) publish logging
+            // APIs such as jboss-logging as runtime-only transitives, and loading those
+            // classes without the jar fails with NoClassDefFoundError.
+            def runtimeClasspath = project.configurations.findByName('runtimeClasspath')
+            if (runtimeClasspath != null) {
+                it.classpath = it.classpath ? it.classpath.plus(runtimeClasspath) : runtimeClasspath
+            }
         }
     }
 
@@ -110,9 +118,10 @@ class GroovydocEnhancerPlugin implements Plugin<Project> {
 
                 // Groovydoc resolves references to types outside the documented sources with
                 // Class.forName against its own classloader; anything it cannot load becomes a
-                // link to a page that was never generated. Adding the documented sources'
-                // compile classpath lets those types resolve, at which point the 'links'
-                // below turn them into external javadoc URLs.
+                // link to a page that was never generated. The groovydoc classpath includes
+                // compile and runtime dependencies so types such as Hibernate (which need
+                // runtime-only jars like jboss-logging) can load; the 'links' below then turn
+                // those types into external javadoc URLs.
                 def antClasspath = gdoc.classpath ? classpath.plus(gdoc.classpath) : classpath
 
                 project.ant.taskdef(
