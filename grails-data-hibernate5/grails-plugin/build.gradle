@@ -102,6 +102,7 @@ dependencies {
     }
     testRuntimeOnly 'org.springframework:spring-aop'
     testRuntimeOnly 'org.springframework:spring-expression'
+    testRuntimeOnly 'org.slf4j:slf4j-simple'
     testRuntimeOnly 'org.yaml:snakeyaml'
 }
 

@@ -24,7 +24,7 @@ env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   GRAILS_PUBLISH_RELEASE: 'true'
   JAVA_DISTRIBUTION: liberica
-  JAVA_VERSION: 21.0.7 # this must be a specific version for reproducible builds, keep it synced with .sdkmanrc and verification container
+  JAVA_VERSION: 21.0.12 # this must be a specific version for reproducible builds, keep it synced with .sdkmanrc and verification container
   JAVA_VERSION_MICRONAUT: 25.0.3 # the Grails-Micronaut "island" (grails-micronaut, grails-micronaut-bom) is built against Micronaut 5 which targets JVM 25 bytecode. Keep this synced with the secondary JDK installed in etc/bin/Dockerfile and the JDK_25_HOME branch in etc/bin/verify-reproducible.sh.
   PROJECT_DESC: >
     Grails is a powerful Groovy-based web application framework for the JVM,
@@ -101,7 +101,7 @@ jobs:
       - name: "🧩 Run grails-forge assemble"
         working-directory: grails-forge
         run: ./gradlew assemble -PgithubBranch=${TARGET_BRANCH}
-      - name: "📦 Generate grails-core docs (to assert that is works, before proceeding)"
+      - name: "📦 Generate grails-core docs (to assert that it works, before proceeding)"
         # grails-doc has no code dependency on the Micronaut island, and on this JDK 21
         # runner settings.gradle auto-prunes the island from the project graph so Gradle
         # does not try to resolve its JDK 25 deps during configuration.
@@ -632,26 +632,15 @@ jobs:
       - name: "🚀 MANUAL - Deploy Grails Forge"
         run: |
           echo "::group::Manual Grails Forge deployment"
-          echo "Kick off Forge-* workflow for version ${VERSION} based on the below rules:"
-          cat <<'EOF'
-          * RELEASE - Full Final Releases - https://github.com/apache/grails-core/actions/workflows/forge-deploy-release.yml
-          * NEXT - Milestones and Release Candidate for Next Release (also Next version snapshot prior to Milestone) - https://github.com/apache/grails-core/actions/workflows/forge-deploy-next.yml
-          * SNAPSHOT - current or next version snapshot - https://github.com/apache/grails-core/actions/workflows/forge-deploy-snapshot.yml
-          * PREV - previous release version - https://github.com/apache/grails-core/actions/workflows/forge-deploy-prev.yml
-          * PREV-SNAPSHOT - previous version snapshot - https://github.com/apache/grails-core/actions/workflows/forge-deploy-prev-snapshot.yml
-          EOF
+          echo "Deploy Forge via https://github.com/apache/grails-core/actions/workflows/forge-deploy-aws.yml"
+          echo "Use workflow from the maintenance branch. Choose slot latest, snapshot, next, next-snapshot, prev, prev-snapshot, or older."
+          echo "Do not run this workflow from a historical git tag."
           echo "::endgroup::"
   docs:
     environment: docs
     name: "VOTE SUCCEEDED - Publish Documentation"
     needs: [ publish, source, upload, release ]
     runs-on: ubuntu-24.04
-    # Documentation publishing targets a shared resource (the apache/grails-website repo).
-    # Use a static, branch-independent group so only one documentation publish can run at a
-    # time across every branch and across the snapshot publish in gradle.yml; the rest queue.
-    concurrency:
-      group: grails-docs-publish
-      cancel-in-progress: false
     steps:
       - name: "📝 Establish release version"
         run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
@@ -792,7 +781,8 @@ jobs:
         run: |
           echo "::group::Deploy the new SNAPSHOT to Forge - MANUAL"
           echo "After the Close Release PR is merged, deploy the new SNAPSHOT to Forge via:"
-          echo "https://github.com/apache/grails-core/actions/workflows/forge-deploy-snapshot.yml"
+          echo "https://github.com/apache/grails-core/actions/workflows/forge-deploy-aws.yml"
+          echo "Use workflow from the snapshot branch. Slot: snapshot."
           echo "::endgroup::"
       - name: "🌎 MANUAL - Add version to the Grails Website"
         run: |

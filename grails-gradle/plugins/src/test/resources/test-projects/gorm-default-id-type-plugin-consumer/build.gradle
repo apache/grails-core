@@ -1,0 +1,31 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0.
+ */
+
+tasks.register('inspectGormIdType') {
+    dependsOn ':plugin:compileJava'
+
+    doLast {
+        ['plugin', 'app'].each { projectName ->
+            def compileGroovy = project(":$projectName").tasks.named('compileGroovy').get()
+            def arguments = compileGroovy.groovyOptions.forkOptions.jvmArgumentProviders
+                    .collectMany { it.asArguments().toList() }
+                    .findAll { it.startsWith('-Dgrails.gorm.defaultIdType=') }
+            println "${projectName.toUpperCase()}_GORM_ID_TYPE_ARGS=${arguments}"
+        }
+
+        def pluginProject = project(':plugin')
+        def urls = (pluginProject.sourceSets.main.output.classesDirs.files +
+                pluginProject.sourceSets.main.compileClasspath.files)*.toURI()*.toURL()
+        URLClassLoader loader = URLClassLoader.newInstance(urls as URL[], ClassLoader.platformClassLoader)
+        try {
+            def idType = Class.forName('example.PortableBook', false, loader).getDeclaredField('id').type
+            println "PLUGIN_DECLARED_ID_TYPE=${idType.name}"
+        } finally {
+            loader.close()
+        }
+    }
+}

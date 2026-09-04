@@ -105,8 +105,8 @@ class GrailsUtilStackFiltererSpec extends Specification {
     }
 
     def 'installed DefaultStackTraceFilterer honours logFullStackTraceOnFilter=false'() {
-        given: 'a configured log appender to capture the StackTrace log entry'
-        def logCapture = new LogCapture('StackTrace')
+        given: 'a capture of the dedicated STACK_LOG logger'
+        def logCapture = new LogCapture(DefaultStackTraceFilterer.STACK_LOG_NAME)
 
         and: 'a filterer with the side-effect emission disabled'
         def quietFilterer = new DefaultStackTraceFilterer()
@@ -117,15 +117,15 @@ class GrailsUtilStackFiltererSpec extends Specification {
         GrailsUtil.deepSanitize(exceptionWithApplicationFrame())
 
         then: "no 'Full Stack Trace:' entry is emitted"
-        logCapture.events.count { it.formattedMessage.contains(StackTraceFilterer.FULL_STACK_TRACE_MESSAGE) } == 0
+        logCapture.events.every { !it.formattedMessage.contains(StackTraceFilterer.FULL_STACK_TRACE_MESSAGE) }
 
         cleanup:
         logCapture.close()
     }
 
     def 'installed DefaultStackTraceFilterer emits Full Stack Trace by default'() {
-        given: 'a configured log appender to capture the StackTrace log entry'
-        def logCapture = new LogCapture('StackTrace')
+        given: 'a capture of the dedicated STACK_LOG logger'
+        def logCapture = new LogCapture(DefaultStackTraceFilterer.STACK_LOG_NAME)
 
         and: 'a filterer with the default (enabled) side-effect emission'
         def loudFilterer = new DefaultStackTraceFilterer()

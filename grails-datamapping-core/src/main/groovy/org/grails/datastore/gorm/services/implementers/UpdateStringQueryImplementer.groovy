@@ -48,6 +48,11 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
 class UpdateStringQueryImplementer extends AbstractStringQueryImplementer implements SingleResultServiceImplementer<Number>, AnnotatedServiceImplementer<Query>, NoResultServiceImplementer {
 
     @Override
+    int getOrder() {
+        return super.getOrder() - 10
+    }
+
+    @Override
     boolean doesImplement(ClassNode domainClass, MethodNode methodNode) {
         return isAnnotated(domainClass, methodNode) && isCompatibleReturnType(domainClass, methodNode, methodNode.returnType, methodNode.name)
     }

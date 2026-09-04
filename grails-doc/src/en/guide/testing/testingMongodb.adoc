@@ -1,0 +1,74 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+The `grails-testing-support-mongodb` library provides Testcontainers-based MongoDB support for both unit and integration tests.
+
+When creating an application with https://start.grails.org[Grails Forge], select the `mongodb-testing-support` feature together with `gorm-mongodb` or `mongo-sync` to include this dependency automatically.
+
+== Installation
+
+Add the following dependency to your `build.gradle`:
+
+[source,groovy,subs="attributes"]
+----
+testImplementation "org.apache.grails.testing:grails-testing-support-mongodb"
+----
+
+NOTE: Docker must be available for Testcontainers to start a MongoDB container.
+
+== Unit Testing
+
+Extend `org.apache.grails.testing.mongo.AutoStartedMongoSpec` in unit tests. A MongoDB Testcontainers instance is started automatically and injected into the specification.
+
+[source,groovy]
+----
+import org.apache.grails.testing.mongo.AutoStartedMongoSpec
+import org.grails.datastore.mapping.mongo.MongoDatastore
+import spock.lang.Shared
+
+class BookSpec extends AutoStartedMongoSpec {
+
+    @Shared
+    MongoDatastore mongoDatastore
+
+    void "test mongo connection"() {
+        expect:
+        mongoHost
+        mongoPort
+        dbContainer.running
+    }
+}
+----
+
+If a shared `MongoDatastore` field is declared and `shouldInitializeDatastore()` returns `true` (the default), the datastore is bootstrapped against domain classes in the packages returned by `getMongoPackages()` (defaults to the package of the specification).
+
+== Integration Testing
+
+For integration tests, Spock global extensions start a single MongoDB container for the test run when MongoDB is not already listening on port `27017`. Connection details are exposed via system properties such as `grails.mongodb.url`, `grails.mongodb.host`, and `grails.mongodb.port`.
+
+== MongoDB Container Version
+
+The MongoDB image version defaults to `7.0.19`. Override it with the `mongodbContainerVersion` system property:
+
+[source,groovy]
+----
+tasks.withType(Test).configureEach {
+    systemProperty "mongodbContainerVersion", "7.0.25"
+}
+----

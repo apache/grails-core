@@ -43,10 +43,8 @@ dependencies {
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
     compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
-    compileOnly 'org.springframework:spring-test', {
-        // MockHttpServletRequest/Response/Context used in many classes
-    }
 
+    testImplementation testFixtures(project(':grails-web-common'))
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
     testImplementation 'org.springframework:spring-test'
 

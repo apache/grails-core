@@ -21,6 +21,7 @@ import grails.doc.git.FetchTagsTask
 import grails.doc.dropdown.CreateReleaseDropDownTask
 import grails.doc.gradle.PublishGuideTask
 import groovy.json.JsonSlurper
+import org.grails.doc.gradle.AuditGroovydocLinksTask
 
 import java.util.zip.ZipFile
 
@@ -64,6 +65,7 @@ dependencies {
 // this task needs to be here instead of the root since bom resolution only occurs when the java / groovy plugins are applied
 def combinedGroovydoc = tasks.register('aggregateGroovydoc', Groovydoc)
 apply from: rootProject.layout.projectDirectory.file('gradle/docs-dependencies.gradle')
+
 combinedGroovydoc.configure { Groovydoc gdoc ->
     gdoc.windowTitle = "Grails $projectVersion"
     gdoc.docTitle = "Grails $projectVersion"
@@ -92,15 +94,25 @@ combinedGroovydoc.configure { Groovydoc gdoc ->
             .collect { SourceSet it -> it.allSource.srcDirs }
             .flatten()
             .findAll { File srcDir ->
-                if (!(srcDir.name in ['java', 'groovy'])) {
+                // Grails artefacts are public API of the plugins that declare them, so the
+                // grails-app roots holding them count as source too. The remaining grails-app
+                // directories (conf, i18n, views, assets, init, migrations) hold configuration,
+                // messages and templates rather than documented classes.
+                if (!(srcDir.name in ['java', 'groovy', 'controllers', 'domain', 'services', 'taglib', 'commands'])) {
                     return false
                 }
                 srcDir.exists()
             }
 
+    // The included build that assembles Grails - its convention plugins, Gradle tasks and doc
+    // tooling - exists only to build this repository. None of it is API anyone consumes, so it
+    // is left out of the published docs.
+    File internalBuildLogicDir = rootProject.layout.projectDirectory.dir('build-logic').asFile.canonicalFile
+
     // Collect source directories from included builds (composite builds)
     // Gradle will not provide the included build projects or source sets, so we inspect the file system
     List<File> includedBuildSourceDirs = gradle.includedBuilds
+            .findAll { it.projectDir.canonicalFile != internalBuildLogicDir }
             .collectMany { includedBuild ->
                 def sourceDirs = []
                 includedBuild.projectDir.eachDir { File dir ->
@@ -118,11 +130,30 @@ combinedGroovydoc.configure { Groovydoc gdoc ->
     gdoc.source(project.files(allSourceDirs))
     gdoc.ext.groovydocSourceDirs = allSourceDirs
 
-    gdoc.classpath = files(sources.collect { SourceSet it -> it.compileClasspath.filter(File.&isDirectory) }.flatten().unique())
+    // The full compile classpath, not just the sibling projects' class directories: Groovydoc
+    // needs to load the external types referenced by the sources, otherwise it links them to
+    // a page it never generated instead of to the external javadocs configured above.
+    gdoc.classpath = files(sources.collect { SourceSet it -> it.compileClasspath })
     gdoc.destinationDir = project.layout.buildDirectory.dir('combined-api/api').get().asFile
 
     gdoc.inputs.files(gdoc.source).withPropertyName("groovyDocSrc").withPathSensitivity(PathSensitivity.RELATIVE)
     gdoc.outputs.dir(gdoc.destinationDir)
+}
+
+tasks.register('auditGroovydocLinks', AuditGroovydocLinksTask) {
+    apiDocsDir = project.layout.dir(combinedGroovydoc.map { it.destinationDir })
+    // A 'links' mapping only applies to types Groovydoc managed to resolve, so a package whose
+    // classes it cannot load has to be listed here. Keeping the list to what genuinely cannot
+    // be linked leaves every other unresolvable type a build failure.
+    unmappedPackages = [
+            // Gradle's API cannot go on the Groovydoc classpath: it bundles an older Groovy
+            // and the Ant groovydoc task then fails to initialise.
+            'org.gradle.',
+            // The publish plugin is maintained in its own repository, with no javadoc site to
+            // link to. The rest of org.apache.grails.gradle.* lives in the grails-gradle
+            // included build and is documented in this aggregate, so it stays audited.
+            'org.apache.grails.gradle.publish.'
+    ]
 }
 
 String getVersion(String artifact) {
@@ -145,7 +176,7 @@ generateBomDocumentation.configure { Task it ->
     def grailsMicronautBom = findProject(':grails-micronaut-bom')
     def grailsHibernate7MicronautBom = findProject(':grails-hibernate7-micronaut-bom')
 
-    def extractConstraintsDeps = [':grails-bom:extractConstraints', ':grails-hibernate5-bom:extractConstraints', ':grails-hibernate7-bom:extractConstraints']
+    def extractConstraintsDeps = [':grails-bom:extractConstraints', ':grails-hibernate5-bom:extractConstraints', ':grails-hibernate7-bom:extractConstraints', ':grails-neo4j-bom:extractConstraints']
     if (grailsMicronautBom != null) {
         extractConstraintsDeps << ':grails-micronaut-bom:extractConstraints'
     }
@@ -154,12 +185,13 @@ generateBomDocumentation.configure { Task it ->
     }
     it.dependsOn(*extractConstraintsDeps)
 
-    it.description = 'Generates AsciiDoc tables listing Group, Artifact, and Version for all BOM variants (default, hibernate5, hibernate7, micronaut, hibernate7-micronaut).'
+    it.description = 'Generates AsciiDoc tables listing Group, Artifact, and Version for all BOM variants (default, hibernate5, hibernate7, neo4j, micronaut, hibernate7-micronaut).'
     it.group = 'documentation'
 
     it.inputs.files(project(':grails-bom').layout.projectDirectory.asFileTree)
     it.inputs.files(project(':grails-hibernate5-bom').layout.projectDirectory.asFileTree)
     it.inputs.files(project(':grails-hibernate7-bom').layout.projectDirectory.asFileTree)
+    it.inputs.files(project(':grails-neo4j-bom').layout.projectDirectory.asFileTree)
     if (grailsMicronautBom != null) {
         it.inputs.files(grailsMicronautBom.layout.projectDirectory.asFileTree)
     }
@@ -169,6 +201,7 @@ generateBomDocumentation.configure { Task it ->
     it.outputs.file(project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM.adoc'))
     it.outputs.file(project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Hibernate5.adoc'))
     it.outputs.file(project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Hibernate7.adoc'))
+    it.outputs.file(project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Neo4j.adoc'))
     if (grailsMicronautBom != null) {
         it.outputs.file(project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Micronaut.adoc'))
     }
@@ -193,6 +226,10 @@ generateBomDocumentation.configure { Task it ->
     def bomHibernate7DocumentFile = project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Hibernate7.adoc')
     def grailsBomHibernate7ConstraintFile = project(':grails-hibernate7-bom').layout.buildDirectory.file('grails-hibernate7-bom-constraints.adoc')
 
+    // Neo4j BOM
+    def bomNeo4jDocumentFile = project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Neo4j.adoc')
+    def grailsBomNeo4jConstraintFile = project(':grails-neo4j-bom').layout.buildDirectory.file('grails-neo4j-bom-constraints.adoc')
+
     // Micronaut BOM
     def bomMicronautDocumentFile = grailsMicronautBom != null
             ? project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Micronaut.adoc')
@@ -216,7 +253,7 @@ generateBomDocumentation.configure { Task it ->
             writer.writeLine ''
             writer.writeLine 'This document provides information about the dependencies defined in the default Grails BOM - also known as `org.apache.grails:grails-bom`. The default BOM uses Hibernate 5 compatible dependency versions.'
             writer.writeLine ''
-            writer.writeLine "NOTE: Variant BOMs are also available: link:Grails%20BOM%20Hibernate5.html[Grails Hibernate 5 BOM] | link:Grails%20BOM%20Hibernate7.html[Grails Hibernate 7 BOM]${micronautBomCrossRefSuffix}"
+            writer.writeLine "NOTE: Variant BOMs are also available: link:Grails%20BOM%20Hibernate5.html[Grails Hibernate 5 BOM] | link:Grails%20BOM%20Hibernate7.html[Grails Hibernate 7 BOM] | link:Grails%20BOM%20Neo4j.html[Grails Neo4j BOM]${micronautBomCrossRefSuffix}"
             writer.writeLine ''
             writer.write(grailsBomConstraintFile.get().asFile.text)
             writer.writeLine ''
@@ -229,7 +266,7 @@ generateBomDocumentation.configure { Task it ->
             writer.writeLine ''
             writer.writeLine 'This document provides information about the dependencies defined in `org.apache.grails:grails-hibernate5-bom`. This BOM inherits from the default `grails-bom` and explicitly enforces Hibernate 5 compatible dependency versions for consumers using `enforcedPlatform`.'
             writer.writeLine ''
-            writer.writeLine "See also: link:Grails%20BOM.html[Default BOM] | link:Grails%20BOM%20Hibernate7.html[Grails Hibernate 7 BOM]'${micronautBomCrossRefSuffix}"
+            writer.writeLine "See also: link:Grails%20BOM.html[Default BOM] | link:Grails%20BOM%20Hibernate7.html[Grails Hibernate 7 BOM] | link:Grails%20BOM%20Neo4j.html[Grails Neo4j BOM]'${micronautBomCrossRefSuffix}"
             writer.writeLine ''
             writer.write(grailsBomHibernate5ConstraintFile.get().asFile.text)
             writer.writeLine ''
@@ -242,12 +279,25 @@ generateBomDocumentation.configure { Task it ->
             writer.writeLine ''
             writer.writeLine 'This document provides information about the dependencies defined in `org.apache.grails:grails-hibernate7-bom`. This BOM inherits from the default `grails-bom` and explicitly enforces Hibernate 7 compatible dependency versions for consumers using `enforcedPlatform`.'
             writer.writeLine ''
-            writer.writeLine "See also: link:Grails%20BOM.html[Default BOM] | link:Grails%20BOM%20Hibernate5.html[Grails Hibernate 5 BOM]${micronautBomCrossRefSuffix}"
+            writer.writeLine "See also: link:Grails%20BOM.html[Default BOM] | link:Grails%20BOM%20Hibernate5.html[Grails Hibernate 5 BOM] | link:Grails%20BOM%20Neo4j.html[Grails Neo4j BOM]${micronautBomCrossRefSuffix}"
             writer.writeLine ''
             writer.write(grailsBomHibernate7ConstraintFile.get().asFile.text)
             writer.writeLine ''
         }
         it.logger.lifecycle "BOM Hibernate 7 Dependency Page generated to: ${bomHibernate7DocumentFile.asFile.absolutePath}"
+
+        // Generate Neo4j BOM page
+        bomNeo4jDocumentFile.asFile.withWriter { writer ->
+            writer.writeLine '== Grails Neo4j BOM Dependencies'
+            writer.writeLine ''
+            writer.writeLine 'This document provides information about the dependencies defined in `org.apache.grails:grails-neo4j-bom`. This BOM inherits from the default `grails-bom` and pins a Neo4j driver version compatible with `grails-data-neo4j`, so applications that do not use `grails-data-neo4j` are unaffected.'
+            writer.writeLine ''
+            writer.writeLine "See also: link:Grails%20BOM.html[Default BOM] | link:Grails%20BOM%20Hibernate5.html[Grails Hibernate 5 BOM] | link:Grails%20BOM%20Hibernate7.html[Grails Hibernate 7 BOM]${micronautBomCrossRefSuffix}"
+            writer.writeLine ''
+            writer.write(grailsBomNeo4jConstraintFile.get().asFile.text)
+            writer.writeLine ''
+        }
+        it.logger.lifecycle "BOM Neo4j Dependency Page generated to: ${bomNeo4jDocumentFile.asFile.absolutePath}"
 
         if (grailsMicronautBom != null) {
             // Generate Micronaut BOM page

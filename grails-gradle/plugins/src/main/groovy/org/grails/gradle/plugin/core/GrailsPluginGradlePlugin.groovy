@@ -20,12 +20,14 @@ package org.grails.gradle.plugin.core
 
 import javax.inject.Inject
 
+import grails.util.GrailsNameUtils
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.file.ProjectLayout
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSet
@@ -33,12 +35,14 @@ import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.compile.GroovyCompile
+import org.gradle.api.tasks.util.PatternFilterable
 import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
 
 import org.springframework.boot.gradle.tasks.bundling.BootJar
 
 import org.grails.gradle.plugin.commands.GrailsCliArtifactGradlePlugin
+import org.grails.gradle.plugin.i18n.GenerateI18nDescriptorTask
 import org.grails.gradle.plugin.run.FindMainClassTask
 import org.grails.gradle.plugin.util.SourceSets
 
@@ -63,6 +67,34 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
     @Inject
     GrailsPluginGradlePlugin(ToolingModelBuilderRegistry registry) {
         super(registry)
+    }
+
+    @Override
+    protected String grailsArtifactType() {
+        GenerateI18nDescriptorTask.TYPE_PLUGIN
+    }
+
+    /**
+     * The Grails plugin name, derived from the {@code *GrailsPlugin.groovy} descriptor exactly as
+     * {@link GrailsNameUtils#getPluginName} does at runtime, so
+     * {@code SpringSecurityCoreGrailsPlugin} yields {@code spring-security-core}.
+     *
+     * <p>Recording the runtime name rather than the Gradle project name is what lets the i18n
+     * descriptor be matched against the plugins the application actually discovers, and it is the
+     * namespace a plugin's message bundle base names must sit within.</p>
+     *
+     * <p>Resolved lazily: the descriptor is a source file, so the search must not happen while the
+     * project is still being configured.</p>
+     */
+    @Override
+    protected Provider<String> grailsArtifactName(Project project) {
+        project.provider {
+            SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
+            File descriptor = mainSourceSet?.allSource?.matching { PatternFilterable pattern ->
+                pattern.include('**/*GrailsPlugin.groovy')
+            }?.files?.sort { File file -> file.name }?.find()
+            descriptor ? GrailsNameUtils.getPluginName(descriptor.name) : project.name
+        }
     }
 
     @Override

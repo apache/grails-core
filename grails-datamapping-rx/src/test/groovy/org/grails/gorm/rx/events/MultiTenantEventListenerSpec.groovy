@@ -19,7 +19,7 @@
 
 package org.grails.gorm.rx.events
 
-import grails.gorm.multitenancy.Tenants
+import grails.gorm.rx.multitenancy.Tenants
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.engine.EntityAccess
 import org.grails.datastore.mapping.engine.event.PersistenceEventListener
@@ -27,8 +27,6 @@ import org.grails.datastore.mapping.engine.event.PostInsertEvent
 import org.grails.datastore.mapping.engine.event.PreInsertEvent
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.types.TenantId
-import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
-import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.multitenancy.TenantResolver
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantException
 import org.grails.datastore.mapping.query.Query
@@ -184,10 +182,9 @@ class MultiTenantEventListenerSpec extends Specification {
             getEntity() >> entity
         }
         PreQueryEvent event = new PreQueryEvent(datastoreClient, query)
-        MultiTenantCapableDatastore multiTenantCapableDatastore = sharedConnectionDatastore()
 
         when:
-        Tenants.withId(multiTenantCapableDatastore, 'tenant-a') {
+        Tenants.withId(datastoreClient.getClass(), 'tenant-a') {
             listener.onApplicationEvent(event)
         }
 
@@ -272,10 +269,9 @@ class MultiTenantEventListenerSpec extends Specification {
             getEntity() >> entityObject
         }
         PreInsertEvent event = new PreInsertEvent(datastoreClient, entity, entityAccess)
-        MultiTenantCapableDatastore multiTenantCapableDatastore = sharedConnectionDatastore()
 
         when:
-        Tenants.withId(multiTenantCapableDatastore, 'tenant-a') {
+        Tenants.withId(datastoreClient.getClass(), 'tenant-a') {
             listener.onApplicationEvent(event)
         }
 
@@ -300,10 +296,9 @@ class MultiTenantEventListenerSpec extends Specification {
             getProperty('tenantId') >> 'tenant-from-entity'
         }
         PreInsertEvent event = new PreInsertEvent(datastoreClient, entity, entityAccess)
-        MultiTenantCapableDatastore multiTenantCapableDatastore = sharedConnectionDatastore()
 
         when:
-        Tenants.withId(multiTenantCapableDatastore, ConnectionSource.DEFAULT) {
+        Tenants.withId(datastoreClient.getClass(), ConnectionSource.DEFAULT) {
             listener.onApplicationEvent(event)
         }
 
@@ -327,10 +322,9 @@ class MultiTenantEventListenerSpec extends Specification {
             getEntity() >> entityObject
         }
         PreInsertEvent event = new PreInsertEvent(datastoreClient, entity, entityAccess)
-        MultiTenantCapableDatastore multiTenantCapableDatastore = sharedConnectionDatastore()
 
         when:
-        Tenants.withId(multiTenantCapableDatastore, 'tenant-a') {
+        Tenants.withId(datastoreClient.getClass(), 'tenant-a') {
             listener.onApplicationEvent(event)
         }
 
@@ -340,12 +334,6 @@ class MultiTenantEventListenerSpec extends Specification {
         e.message.contains('tenant-a')
         e.message.startsWith('Could not assign tenant id')
         e.cause instanceof IllegalStateException
-    }
-
-    private MultiTenantCapableDatastore sharedConnectionDatastore() {
-        Stub(MultiTenantCapableDatastore) {
-            getMultiTenancyMode() >> MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR
-        }
     }
 
     private static Map datastoreClientRegistry() {

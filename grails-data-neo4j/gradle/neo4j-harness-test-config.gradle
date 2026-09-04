@@ -1,0 +1,80 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+// Shared by every grails-data-neo4j module (core, boot-plugin, grails-plugin) and every
+// grails-test-examples/neo4j example app that pulls in the embedded Neo4j 3.5.x test harness
+// (neo4j-harness). Applied via 'apply from:' rather than duplicated per module/app.
+
+test {
+    useJUnitPlatform()
+}
+
+// The embedded Neo4j 3.5.x test harness reflectively pokes JDK internals (Throwable's message
+// field, sun.nio.ch.FileChannelImpl's lock accessors) at startup; JDK 9+ strong encapsulation
+// blocks that without these opens. Applied to every Test-typed task (not just 'test') so it also
+// covers the example apps' 'integrationTest' task.
+tasks.withType(Test).configureEach {
+    jvmArgs += [
+            '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
+            '--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED',
+    ]
+}
+
+// The Spring Boot BOM (pulled in transitively via grails-neo4j-bom) force-upgrades Jetty to a
+// 12.x platform version. The embedded Neo4j 3.5.x test harness (neo4j-harness, test-only) is
+// compiled against Jetty 9.4 and is binary-incompatible with Jetty 12's restructured
+// handler/server APIs. Scoped to the test classpaths only, since main code never touches Jetty
+// directly. Also covers integrationTestCompileClasspath/integrationTestRuntimeClasspath when
+// the applying project has an integrationTest source set (the plugin modules don't; the example
+// apps do).
+def neo4jHarnessJettyVersion = '9.4.43.v20210629'
+def neo4jHarnessJettyConfigurations = [configurations.testCompileClasspath, configurations.testRuntimeClasspath]
+['integrationTestCompileClasspath', 'integrationTestRuntimeClasspath'].each { configurationName ->
+    def configuration = configurations.findByName(configurationName)
+    if (configuration != null) {
+        neo4jHarnessJettyConfigurations << configuration
+    }
+}
+neo4jHarnessJettyConfigurations.each {
+    it.resolutionStrategy {
+        force "org.eclipse.jetty:jetty-server:$neo4jHarnessJettyVersion",
+                "org.eclipse.jetty:jetty-servlet:$neo4jHarnessJettyVersion",
+                "org.eclipse.jetty:jetty-webapp:$neo4jHarnessJettyVersion",
+                "org.eclipse.jetty:jetty-security:$neo4jHarnessJettyVersion",
+                "org.eclipse.jetty:jetty-http:$neo4jHarnessJettyVersion",
+                "org.eclipse.jetty:jetty-io:$neo4jHarnessJettyVersion",
+                "org.eclipse.jetty:jetty-util:$neo4jHarnessJettyVersion",
+                "org.eclipse.jetty:jetty-util-ajax:$neo4jHarnessJettyVersion",
+                "org.eclipse.jetty:jetty-xml:$neo4jHarnessJettyVersion"
+    }
+}
+// Deliberately older than the BOM's Jetty version (see comment above) - exempt from
+// validateDependencyVersions. Declared here so it applies to every module/app that applies this
+// shared script without repeating the list per consumer.
+project.ext.allowedBomOverrides = [
+        'org.eclipse.jetty:jetty-server',
+        'org.eclipse.jetty:jetty-servlet',
+        'org.eclipse.jetty:jetty-webapp',
+        'org.eclipse.jetty:jetty-security',
+        'org.eclipse.jetty:jetty-http',
+        'org.eclipse.jetty:jetty-io',
+        'org.eclipse.jetty:jetty-util',
+        'org.eclipse.jetty:jetty-util-ajax',
+        'org.eclipse.jetty:jetty-xml'
+]

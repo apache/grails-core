@@ -26,7 +26,6 @@ package org.grails.datastore.gorm.mongodb.embedded;
  * stopping the server when the JVM exits. Only starting it differs, which is all this
  * interface covers.
  *
- * @author Grails
  * @since 8.0
  * @see InMemoryMongoBackend
  * @see FlapdoodleMongoBackend

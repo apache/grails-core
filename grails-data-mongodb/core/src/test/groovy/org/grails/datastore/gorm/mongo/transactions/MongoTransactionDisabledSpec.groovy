@@ -20,7 +20,7 @@ package org.grails.datastore.gorm.mongo.transactions
 
 import grails.gorm.annotation.Entity
 
-import org.apache.grails.testing.mongo.AutoStartedMongoSpec
+import org.apache.grails.testing.mongo.EmbeddedReplicaSetSpec
 import org.grails.datastore.mapping.mongo.MongoDatastore
 import spock.lang.AutoCleanup
 import spock.lang.Shared
@@ -30,20 +30,15 @@ import spock.lang.Shared
  * the legacy client-side flush behavior: server-side transactions are not used, so writes already
  * flushed within a transaction are not rolled back. This is the non-breaking fallback contract.
  */
-class MongoTransactionDisabledSpec extends AutoStartedMongoSpec {
+class MongoTransactionDisabledSpec extends EmbeddedReplicaSetSpec {
 
     @Shared
     @AutoCleanup
     MongoDatastore datastore
 
-    @Override
-    boolean shouldInitializeDatastore() {
-        false
-    }
-
     void setupSpec() {
         // No grails.mongodb.transactional => default false
-        datastore = new MongoDatastore(['grails.mongodb.url': dbContainer.getReplicaSetUrl('myDb')] as Map, LegacyThing)
+        datastore = new MongoDatastore(['grails.mongodb.url': mongoUrl] as Map, LegacyThing)
     }
 
     void setup() {

@@ -49,7 +49,27 @@ grails:
 | cas.artifactParameter | `'ticket'` | the ticket login url parameter
 | cas.serviceParameter | `'service'` | the service login url parameter
 | cas.filterProcessesUrl | '/login/cas' | the URL that the filter intercepts for login
-| cas.proxyCallbackUrl | `null`, should be set | proxy callback url, e.g. 'http://localhost:8080/secure/receptor'
-| cas.proxyReceptorUrl | `null`, should be set | proxy receptor url, e.g. '/secure/receptor'
-| cas.useSingleSignout | `true` | if `true` a `org.jasig.cas.client.session. SingleSignOutFilter` is registered
+| cas.proxyCallbackUrl | `null` | proxy callback url, e.g. 'http://localhost:8080/secure/receptor'. Only needed for proxy tickets, and only meaningful together with `cas.proxyReceptorUrl`
+| cas.proxyReceptorUrl | `null` | proxy receptor url, e.g. '/secure/receptor'. Only needed for proxy tickets, and only meaningful together with `cas.proxyCallbackUrl`. When unset, no request is treated as a proxy receptor request
+| cas.useSingleSignout | `false` | if `true` a `org.apereo.cas.client.session. SingleSignOutFilter` is registered, and session fixation prevention is disabled (see below)
 |====================
+
+[WARNING]
+====
+Single sign-out and session fixation prevention cannot both be active. CAS maps the service ticket
+to the HTTP session id, so if the session is replaced when the user authenticates, the session CAS
+later asks the application to invalidate no longer exists and the logout request has no effect.
+
+`cas.useSingleSignout` is therefore opt-in. Enabling it makes the plugin set
+`grails.plugin.springsecurity.useSessionFixationPrevention` to `false` and define
+`sessionAuthenticationStrategy` accordingly, overriding whatever the core plugin configured, and log
+a warning at startup so the trade-off is visible:
+
+[source,groovy]
+.grails-app/conf/application.groovy
+----
+grails.plugin.springsecurity.cas.useSingleSignout = true
+----
+
+Leave it off to keep session fixation prevention and handle logout in the application instead.
+====

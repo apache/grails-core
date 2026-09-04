@@ -21,7 +21,9 @@ package org.grails.gorm.rx.finders
 
 import groovy.transform.CompileStatic
 import org.grails.datastore.gorm.finders.DynamicFinderInvocation
+import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.rx.RxDatastoreClient
+import org.grails.datastore.rx.query.RxQuery
 
 /**
  * Implementation of countBy* dynamic finder for RxGORM
@@ -39,9 +41,13 @@ class CountByFinder extends org.grails.datastore.gorm.finders.CountByFinder {
 
     @Override
     protected Object doInvokeInternal(DynamicFinderInvocation invocation) {
-        def javaClass = invocation.getJavaClass()
-        def query = datastoreClient.createQuery(javaClass)
-        query = buildQuery(invocation, javaClass, query)
-        query.singleResult()
+        Class javaClass = invocation.getJavaClass()
+        Query query = datastoreClient.createQuery(javaClass)
+        applyAdditionalCriteria(query, invocation.getCriteria())
+        applyDetachedCriteria(query, invocation.getDetachedCriteria())
+        configureQueryWithArguments(javaClass, query, invocation.getArguments())
+        query.add(getJunction(invocation))
+        query.projections().count()
+        return ((RxQuery) query).singleResult()
     }
 }

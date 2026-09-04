@@ -33,6 +33,24 @@ class EmbeddedMongoSettingsSpec extends Specification {
         settings.databaseDir == '/var/data/mongo'
     }
 
+    void 'a setting written as empty describes the same server as one not written'() {
+        expect: 'so that a reload does not replace a server over a key with nothing after it'
+        new EmbeddedMongoSettings(27017, '', '', '') ==
+                new EmbeddedMongoSettings(27017, null, null, null)
+        new EmbeddedMongoSettings(27017, '', '', '').hashCode() ==
+                new EmbeddedMongoSettings(27017, null, null, null).hashCode()
+    }
+
+    void 'settings that describe different servers are different'() {
+        expect:
+        new EmbeddedMongoSettings(27017, 'V8_0', null, null) !=
+                new EmbeddedMongoSettings(27017, 'V7_0', null, null)
+        new EmbeddedMongoSettings(27017, null, null, 'rs0') !=
+                new EmbeddedMongoSettings(27017, null, null, null)
+        new EmbeddedMongoSettings(27017, null, null, null) !=
+                new EmbeddedMongoSettings(27018, null, null, null)
+    }
+
     void 'a version the application did not choose is left to the backend'() {
         expect: 'null rather than a default here, so each backend picks one it can actually run'
         new EmbeddedMongoSettings(27017, null, null).version == null

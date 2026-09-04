@@ -394,9 +394,27 @@ interface Settings {
 
     String DATABINDING_DENY_BY_DEFAULT = 'grails.databinding.denyByDefault'
 
-    String I18N_CACHE_SECONDS = 'grails.i18n.cache.seconds'
+    /**
+     * Whether message bundles contributed by plugins participate, both in message resolution and in
+     * the locales offered by a language selector. Defaults to {@code true}.
+     *
+     * <p>Bundle caching, encoding and locale fallback are Spring Boot's {@code spring.messages.*}
+     * properties.</p>
+     */
+    String I18N_INCLUDE_PLUGIN_BUNDLES = 'grails.i18n.include-plugin-bundles'
 
-    String I18N_FILE_CACHE_SECONDS = 'grails.i18n.filecache.seconds'
+    /**
+     * How long, in seconds, resolved message bundles are cached.
+     *
+     * <p>Still honoured as a temporary upgrade aid, and — as before — only when reload is enabled.
+     * It is translated into {@code spring.messages.cache-duration}, which an application that sets it
+     * explicitly always wins with.</p>
+     *
+     * @deprecated since 8.0, for removal. Spring Boot owns the message source; configure
+     * {@code spring.messages.cache-duration} instead.
+     */
+    @Deprecated(since = '8.0', forRemoval = true)
+    String I18N_CACHE_SECONDS = 'grails.i18n.cache.seconds'
 
     /**
      * The locale resolution strategy: {@code session} (default), {@code cookie},

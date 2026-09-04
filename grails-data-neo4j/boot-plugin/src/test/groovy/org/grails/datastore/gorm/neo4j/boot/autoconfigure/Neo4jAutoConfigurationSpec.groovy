@@ -34,9 +34,9 @@ import spock.util.environment.RestoreSystemProperties
  * Created by graemerocher on 23/11/15.
  */
 @RestoreSystemProperties
-class Neo4jDbGormAutoConfigurationSpec extends Specification{
+class Neo4jDbGormAutoConfigurationSpec extends Specification {
 
-    protected AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+    protected AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()
 
     void cleanup() {
         context.close()
@@ -45,18 +45,17 @@ class Neo4jDbGormAutoConfigurationSpec extends Specification{
     void setup() {
 
         System.setProperty(Settings.SETTING_NEO4J_TYPE, Settings.DATABASE_TYPE_EMBEDDED)
-        System.setProperty(Settings.SETTING_NEO4J_EMBEDDED_EPHEMERAL, "true")
+        System.setProperty(Settings.SETTING_NEO4J_EMBEDDED_EPHEMERAL, 'true')
         AutoConfigurationPackages.register(context, Neo4jDbGormAutoConfigurationSpec.package.name)
-        this.context.register( TestConfiguration, PropertyPlaceholderAutoConfiguration.class, );
+        this.context.register( TestConfiguration, PropertyPlaceholderAutoConfiguration.class, )
 
     }
 
-
     void 'Test that GORM is correctly configured'() {
-        when:"The context is refreshed"
+        when:'The context is refreshed'
         context.refresh()
 
-        then:"GORM queries work"
+        then:'GORM queries work'
         Person.count() == 0
     }
 
@@ -64,16 +63,16 @@ class Neo4jDbGormAutoConfigurationSpec extends Specification{
     @EnableAutoConfiguration
     @Import(Neo4jAutoConfiguration)
     static class TestConfiguration {
+
     }
 
 }
 
-
 @Entity
 class Person {
+
     String firstName
     String lastName
     Integer age = 18
 }
-
 
