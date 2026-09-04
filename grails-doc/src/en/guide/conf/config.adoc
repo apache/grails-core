@@ -112,6 +112,28 @@ class MyService {
 }
 ----
 
+=== Configuration Metadata
+
+Grails framework modules publish standard Spring Boot configuration metadata in
+`META-INF/spring-configuration-metadata.json`. IDEs use this metadata for key completion, types, descriptions, defaults,
+and value hints. The Grails configuration report command and the
+link:../ref/Configuration/Application%20Properties.html[Application Properties reference] use its property and group
+entries.
+
+For configuration classes written in Groovy, Grails collects metadata with a compiler AST transformation. The
+transformation stores metadata independently in each compiled `@ConfigurationProperties` class, and the build merges
+those class payloads after compilation. Java configuration classes are inspected from their compiled bytecode. This
+avoids Java annotation processing on Groovy sources, which would interfere with incremental Groovy compilation.
+
+The generated metadata describes bindable fields and bean properties. A module can also provide
+`META-INF/additional-spring-configuration-metadata.json` for descriptions, hints, legacy or indirect properties, and
+other details that cannot be derived safely from bytecode. Curated values override generated values for the same
+property.
+
+Only compile-time constant Groovy initializers are emitted as generated defaults. Defaults calculated by constructors,
+method calls, environment checks, system properties, or other dynamic expressions are intentionally omitted unless a
+curated metadata overlay supplies an authoritative value.
+
 === GrailsConfigurationAware Interface
 
 Accessing configuration dynamically at runtime can have a small effect on application performance. An alternative approach is to implement the link:{api}grails/core/support/GrailsConfigurationAware.html[GrailsConfigurationAware] interface, which provides a `setConfiguration` method that accepts the application configuration as a parameter when the class is initialized. You can then assign relevant configuration properties to instance properties on the class for later usage.

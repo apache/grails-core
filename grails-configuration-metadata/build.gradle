@@ -18,14 +18,11 @@
  */
 
 plugins {
+    id 'groovy'
+    id 'java-library'
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
-    id 'org.apache.grails.gradle.grails-plugin'
     id 'org.apache.grails.buildsrc.compile'
-    id 'org.apache.grails.buildsrc.configuration-metadata'
-    id 'org.apache.grails.buildsrc.publish'
-    id 'org.apache.grails.buildsrc.sbom'
-    id 'org.apache.grails.buildsrc.vulnerability-scan'
     id 'org.apache.grails.gradle.grails-code-style'
     id 'org.apache.grails.gradle.grails-jacoco'
 }
@@ -33,33 +30,15 @@ plugins {
 version = projectVersion
 group = 'org.apache.grails'
 
-ext {
-    pomDescription = 'Grails Markup Views'
-}
-
 dependencies {
     implementation platform(project(':grails-bom'))
-
-    api project(':grails-views-core') // Used in public API
-    api project(':grails-core') // Used in public API
-    api project(':grails-mimetypes') // Used in public API
-    api project(':grails-rest-transforms') // Used in public API
-
-    implementation 'org.apache.groovy:groovy'
-    implementation 'org.springframework:spring-beans'
-    implementation 'org.springframework.boot:spring-boot' // For @ConfigurationProperties
-
-    compileOnly 'jakarta.annotation:jakarta.annotation-api' // Provided
-    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
-
-    testImplementation project(':grails-web-url-mappings')
+    api 'org.apache.groovy:groovy'
+    testImplementation 'org.springframework.boot:spring-boot'
+    testImplementation 'org.apache.groovy:groovy-json'
     testImplementation 'org.spockframework:spock-core'
-    testImplementation 'jakarta.servlet:jakarta.servlet-api'
-    testImplementation 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation and tests
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
 }

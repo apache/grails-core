@@ -113,6 +113,7 @@ include(
         'grails-codecs-core',
         'grails-codecs',
         'grails-common',
+        'grails-configuration-metadata',
         'grails-console',
         'grails-controllers',
         'grails-converters',

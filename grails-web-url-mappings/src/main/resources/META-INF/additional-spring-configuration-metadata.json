@@ -1,0 +1,64 @@
+{
+    "groups": [
+        {
+            "name": "grails.cors",
+            "description": "CORS"
+        }
+    ],
+    "properties": [
+        {
+            "name": "grails.cors.enabled",
+            "type": "java.lang.Boolean",
+            "description": "Whether CORS support is enabled.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.cors.filter",
+            "type": "java.lang.Boolean",
+            "description": "Whether CORS is handled via a servlet filter (true) or an interceptor (false).",
+            "defaultValue": true
+        },
+        {
+            "name": "grails.cors.allowedOrigins",
+            "type": "java.util.List<java.lang.String>",
+            "description": "List of allowed origins (e.g., http://localhost:5000), only applies when grails.cors.enabled is true.",
+            "defaultValue": ["*"]
+        },
+        {
+            "name": "grails.cors.allowedMethods",
+            "type": "java.util.List<java.lang.String>",
+            "description": "List of allowed HTTP methods.",
+            "defaultValue": ["*"]
+        },
+        {
+            "name": "grails.cors.allowedHeaders",
+            "type": "java.util.List<java.lang.String>",
+            "description": "List of allowed request headers.",
+            "defaultValue": ["*"]
+        },
+        {
+            "name": "grails.cors.exposedHeaders",
+            "type": "java.util.List<java.lang.String>",
+            "description": "List of response headers to expose to the client.",
+            "defaultValue": []
+        },
+        {
+            "name": "grails.cors.maxAge",
+            "type": "java.lang.Integer",
+            "description": "How long (in seconds) the preflight response can be cached.",
+            "defaultValue": 1800
+        },
+        {
+            "name": "grails.cors.allowCredentials",
+            "type": "java.lang.Boolean",
+            "description": "Whether credentials (cookies, authorization headers) are supported.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.cors.mappings",
+            "type": "java.util.Map<java.lang.String,java.lang.Object>",
+            "description": "Map of URL patterns to per-path CORS configuration where defining any mapping disables the global /** mapping.",
+            "defaultValue": {}
+        }
+    ]
+}

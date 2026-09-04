@@ -342,7 +342,9 @@ generateConfigReference.configure { Task it ->
             project(':grails-cache').tasks.named('jar'),
             project(':grails-data-hibernate5-dbmigration').tasks.named('jar'),
             project(':grails-data-mongodb').tasks.named('jar'),
-            project(':grails-views-gson').tasks.named('jar')
+            project(':grails-views-gson').tasks.named('jar'),
+            project(':grails-views-markup').tasks.named('jar'),
+            project(':grails-web-url-mappings').tasks.named('jar')
     )
 
     it.description = 'Generates the Application Properties reference from configuration metadata.'
@@ -360,7 +362,9 @@ generateConfigReference.configure { Task it ->
             project(':grails-cache').tasks.named('jar').flatMap { task -> task.archiveFile },
             project(':grails-data-hibernate5-dbmigration').tasks.named('jar').flatMap { task -> task.archiveFile },
             project(':grails-data-mongodb').tasks.named('jar').flatMap { task -> task.archiveFile },
-            project(':grails-views-gson').tasks.named('jar').flatMap { task -> task.archiveFile }
+            project(':grails-views-gson').tasks.named('jar').flatMap { task -> task.archiveFile },
+            project(':grails-views-markup').tasks.named('jar').flatMap { task -> task.archiveFile },
+            project(':grails-web-url-mappings').tasks.named('jar').flatMap { task -> task.archiveFile }
     )
     it.outputs.file(outputFile)
 
@@ -378,7 +382,9 @@ generateConfigReference.configure { Task it ->
                 project(':grails-cache').tasks.named('jar').get().archiveFile.get().asFile,
                 project(':grails-data-hibernate5-dbmigration').tasks.named('jar').get().archiveFile.get().asFile,
                 project(':grails-data-mongodb').tasks.named('jar').get().archiveFile.get().asFile,
-                project(':grails-views-gson').tasks.named('jar').get().archiveFile.get().asFile
+                project(':grails-views-gson').tasks.named('jar').get().archiveFile.get().asFile,
+                project(':grails-views-markup').tasks.named('jar').get().archiveFile.get().asFile,
+                project(':grails-web-url-mappings').tasks.named('jar').get().archiveFile.get().asFile
         ]
 
         Map<String, String> groupDescriptions = new LinkedHashMap<String, String>()
