@@ -322,13 +322,17 @@ Publish the released version to [Grails Forge](https://start.grails.org) using [
 
 There is one workflow and two choices: **Use workflow from** (the maintenance branch to build) and **slot**.
 
+GitHub registers `workflow_dispatch` inputs from the **default branch**. The new `next-snapshot` and `older` choices appear in that UI only after this change is merged up from `7.0.x` through `7.1.x` / `7.2.x` onto the default line. Until then, dispatch from a maintenance branch that already contains the updated workflow file, or package and upload locally as below.
+
 | Slot | Host | Typical branch |
 | --- | --- | --- |
 | `latest` | `latest.grails.org` | current release line, for example `7.2.x` |
 | `snapshot` | `snapshot.grails.org` | current snapshot line, for example `8.0.x` |
 | `next` | `next.grails.org` | milestone / RC line |
+| `next-snapshot` | `next-snapshot.grails.org` | next snapshot line, currently `8.0.0-SNAPSHOT` from `8.0.x` |
 | `prev` | `prev.grails.org` | previous release line |
 | `prev-snapshot` | `prev-snapshot.grails.org` | previous snapshot line |
+| `older` | `older.grails.org` | older release, currently `7.0.6` from `7.0.x` |
 
 Do not select a historical git tag in **Use workflow from**. The AWS workflow file is not on old tags. Snapshot slots can deploy from the maintenance branch.
 

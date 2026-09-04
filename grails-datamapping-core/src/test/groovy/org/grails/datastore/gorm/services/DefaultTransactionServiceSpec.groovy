@@ -18,6 +18,11 @@
  */
 package org.grails.datastore.gorm.services
 
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.TransactionDefinition
+import org.springframework.transaction.TransactionStatus
+import org.springframework.transaction.TransactionSystemException
+
 import org.grails.datastore.mapping.core.Datastore
 import spock.lang.Specification
 

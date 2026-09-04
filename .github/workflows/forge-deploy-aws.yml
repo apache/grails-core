@@ -15,6 +15,8 @@
 #
 # Dispatch from the maintenance branch that should be built (Use workflow from).
 # Choose the slot. Region, stack name, and JDK come from that branch.
+# GitHub lists these choices from the default branch; merge this file up before
+# the new next-snapshot and older options appear in the Actions UI.
 
 name: "Forge - AWS Elastic Beanstalk Deploy"
 run-name: "Forge AWS ${{ inputs.slot }} ${{ github.ref_name }}"
@@ -30,8 +32,10 @@ on:
           - latest
           - snapshot
           - next
+          - next-snapshot
           - prev
           - prev-snapshot
+          - older
 
 permissions:
   contents: read
@@ -76,7 +80,7 @@ jobs:
           java-version: ${{ steps.jdk.outputs.version }}
 
       - name: "Setup Gradle"
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-provider: basic
 
@@ -89,8 +93,10 @@ jobs:
             latest) hostname='latest.grails.org' ;;
             snapshot) hostname='snapshot.grails.org' ;;
             next) hostname='next.grails.org' ;;
+            next-snapshot) hostname='next-snapshot.grails.org' ;;
             prev) hostname='prev.grails.org' ;;
             prev-snapshot) hostname='prev-snapshot.grails.org' ;;
+            older) hostname='older.grails.org' ;;
             *)
               echo "Unsupported deployment slot" >&2
               exit 1
@@ -108,7 +114,7 @@ jobs:
         run: ./gradlew grails-forge-web-netty:awsElasticBeanstalk
 
       - name: "Configure AWS credentials through OIDC"
-        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
         with:
           role-to-assume: ${{ env.DEPLOY_ROLE_ARN }}
           aws-region: us-east-1
@@ -163,9 +169,18 @@ jobs:
           wait_for_ready_green() {
             local operation="$1"
             local expected_version="$2"
-            local status health current_version attempt
+            local status health current_version attempt event
+            local start_iso
+            start_iso="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
             for attempt in {1..90}; do
+              event="$(aws elasticbeanstalk describe-events --environment-name "${ENVIRONMENT_NAME}" --start-time "${start_iso}" --query 'Events[?Severity==`ERROR`].Message' --output text)"
+              if [[ -n "${event}" && "${event}" != 'None' ]]; then
+                echo "${event}" >&2
+                echo "${operation} failed according to Elastic Beanstalk events." >&2
+                return 1
+              fi
               read -r status health current_version < <(aws elasticbeanstalk describe-environments --environment-names "${ENVIRONMENT_NAME}" --query 'Environments[0].[Status,Health,VersionLabel]' --output text)
+              echo "${operation} attempt=${attempt} Status=${status} Health=${health} VersionLabel=${current_version}"
               if [[ "${status}" == 'Ready' && "${health}" == 'Green' && "${current_version}" == "${expected_version}" ]]; then
                 return 0
               fi
@@ -193,26 +208,7 @@ jobs:
           aws elasticbeanstalk create-application-version \
             --application-name "${APPLICATION_NAME}" \
             --version-label "${VERSION_LABEL}" \
-            --source-bundle "S3Bucket=${ARTIFACT_BUCKET},S3Key=${S3_KEY}" \
-            --process >/dev/null
-
-          application_version_status=''
-          for attempt in {1..30}; do
-            application_version_status="$(aws elasticbeanstalk describe-application-versions --application-name "${APPLICATION_NAME}" --version-labels "${VERSION_LABEL}" --query 'ApplicationVersions[0].Status' --output text)"
-            application_version_status="${application_version_status^^}"
-            case "${application_version_status}" in
-              PROCESSED) break ;;
-              FAILED)
-                echo "Elastic Beanstalk application version processing failed." >&2
-                exit 1
-                ;;
-              *) sleep 10 ;;
-            esac
-          done
-          if [[ "${application_version_status}" != 'PROCESSED' ]]; then
-            echo "Elastic Beanstalk application version processing did not complete within the polling limit." >&2
-            exit 1
-          fi
+            --source-bundle "S3Bucket=${ARTIFACT_BUCKET},S3Key=${S3_KEY}" >/dev/null
 
           aws elasticbeanstalk update-environment \
             --environment-name "${ENVIRONMENT_NAME}" \

@@ -53,6 +53,18 @@ Applications generated for Hibernate 7 consume `grails-hibernate7-bom` — or `g
 This avoids the dependency resolution conflicts that occur when an application generated for Hibernate 5 is manually switched to `grails-data-hibernate7` while the default `grails-bom` remains on the build classpath.
 The `database-migration` feature also selects the matching `grails-data-hibernate7-dbmigration` plugin automatically.
 
+==== Asynchronous Grails Data Application Generation
+
+Grails Forge offers a new `gorm-async` feature that adds the asynchronous programming model for Grails Data — the `AsyncEntity` trait and the `async` namespace — to a generated application:
+
+[source,console]
+----
+grails -t forge create-app --features=gorm-async com.example.demo
+----
+
+The feature layers on top of whichever GORM implementation is selected, defaulting to Hibernate when none is chosen.
+The `grails-datamapping-async` artifact it brings in is intended for direct consumption by applications and libraries, so it moved from the `org.apache.grails.data` group to `org.apache.grails`; see the xref:upgrading#upgrading80x[upgrade guide] for the coordinate change.
+
 ==== Plugin Beans Register Before Spring Boot Auto-Configuration
 
 Grails {grailsMajorVersion} unifies and retimes the plugin lifecycle so that the beans a plugin contributes are registered before Spring Boot processes its auto-configurations.
@@ -213,6 +225,45 @@ grails {
 ----
 
 All three options are disabled by default and independent, or `compileStatic { all = true }` can be used as a shortcut to enable all of them. Any class that declares its own `@CompileDynamic` (or `@GrailsCompileStatic`/`@CompileStatic`/`@GrailsTypeChecked`/`@TypeChecked`) annotation keeps that setting, so the opt-in never overrides an explicit per-class choice. Tag libraries that still declare tags as closure fields (the deprecated form) are skipped automatically by the `tagLibs` opt-in and left dynamically compiled with a build warning, so define tags as methods to opt them in. See the xref:staticTypeCheckingAndCompilation/grailsCompileStatic[GrailsCompileStatic] section for details.
+
+==== GORM Domain Classes Can Take Their Identity Type from the Datastore
+
+A domain class that declares no `id` has always been given a `Long` one. That is right for Hibernate and
+wrong for MongoDB, where a `String id` holding a generated `ObjectId` needs no sequence collection and
+shards cleanly — but declaring `String id` ties the source to MongoDB. The nested `gorm` block of the
+`grails` build configuration lets each domain class take the identity type of the GORM implementation it
+is mapped with instead:
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    gorm {
+        defaultIdType = 'native'
+    }
+}
+----
+
+A domain class mapped with MongoDB is then given a `String id` while one mapped with Hibernate keeps
+`Long`, so the same source works against either. The type is resolved when the domain class is compiled,
+from its `mapWith` property and the GORM implementations on the compilation classpath, so an application
+using more than one gets the right type for each domain class from the single setting. A domain class
+that declares an `id` keeps the type it declares.
+
+For a domain class shipped precompiled in a plugin, declare `Serializable id` in the plugin. The same
+build setting is packaged as `grails.gorm.defaultIdType` and selects the effective persistent type at
+runtime; no duplicate application configuration is required. Normal external configuration can still
+override that property.
+
+MongoDB maps that portable declaration to `String` for `native` and to `Long` for `long`; Hibernate
+maps it to its native `Long` identity either way. The resolved type is cached in GORM's mapping metadata,
+so this adds no per-operation type lookup. Concrete identity declarations remain authoritative.
+
+The default is `defaultIdType = 'long'`, which is the behaviour of every earlier release. Turning it on
+changes the type of a field that already holds data, so it is a choice to make when an application is
+written rather than one to switch on over an existing database. See the
+link:{mongodb5Guide}index.html#idGeneration[Identity Generation] section of the GORM for MongoDB guide for
+details.
 
 ==== Test HTTP Client Form Requests
 
@@ -426,3 +477,30 @@ Defining a tag as a `Closure` field remains supported but is deprecated and now 
 a closure carries no signature, so nothing about a call to such a tag can be checked. Define tags as
 methods taking `Map attrs` and, where a body is needed, `Closure body`. See
 link:theWebLayer.html#compiledTags[Compiled Tag Resolution].
+
+==== Mapping Every Controller as a REST Resource
+
+A `resources` mapping can now be applied to every controller at once by capturing the controller in
+the URL and passing `*` instead of a controller name:
+
+[source,groovy]
+----
+"/$controller"(resources: '*')
+----
+
+This generates the same mappings the named form generates, but resolves the controller from the
+request rather than from the mapping, so an application whose controllers all follow the RESTful
+resource conventions declares them once instead of once per controller. The `includes` and `excludes`
+parameters work as they do for a named resource, and the mapping can be placed inside a `group`:
+
+[source,groovy]
+----
+group "/api/v1", {
+    "/$controller"(resources: '*', excludes: ['create', 'edit'])
+}
+----
+
+The controller and action captured from the URL are validated as they are for any other wildcard
+mapping. Because the controller is not known until a request is matched, the URL must capture it and
+child resources cannot be nested within the mapping. See
+link:theWebLayer.html#restfulMappings[Mapping to REST resources].

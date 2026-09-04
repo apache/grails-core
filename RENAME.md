@@ -45,6 +45,8 @@ The Grails developers have decided on several rules regarding packaging. These r
 ## Reference Table
 
 Below is a reference of all migrated artifacts - both their old and new name.
+Starting with Grails 8, the table also maps coordinates that changed again after the initial move to
+Apache - the old columns for those rows contain the earlier `org.apache.grails.*` coordinates.
 
 | old group id                      | old artifact id                                 | new group id                                    | new artifact id                                               | old gradle plugin name | new gradle plugin name | repository             |
 |-----------------------------------|-------------------------------------------------|-------------------------------------------------|---------------------------------------------------------------|------------------------|------------------------|------------------------|
@@ -68,7 +70,8 @@ Below is a reference of all migrated artifacts - both their old and new name.
 | org.grails.plugins                | hibernate5                                      | org.apache.grails                               | grails-data-hibernate5                                        |                        |                        | grails-data-mapping    |
 | org.grails.plugins                | database-migration                              | org.apache.grails                               | grails-data-hibernate5-dbmigration                            |                        |                        | grails-data-mapping    |
 | org.grails                        | gorm-hibernate5-spring-boot                     | org.apache.grails                               | grails-data-hibernate5-spring-boot                            |                        |                        | grails-data-mapping    |
-| org.grails                        | grails-datastore-gorm-async                     | org.apache.grails.data                          | grails-datamapping-async                                      |                        |                        | grails-data-mapping    |
+| org.grails                        | grails-datastore-gorm-async                     | org.apache.grails                               | grails-datamapping-async                                      |                        |                        | grails-data-mapping    |
+| org.apache.grails.data            | grails-datamapping-async                        | org.apache.grails                               | grails-datamapping-async                                      |                        |                        | grails-core            |
 | org.grails                        | grails-datastore-gorm                           | org.apache.grails.data                          | grails-datamapping-core                                       |                        |                        | grails-data-mapping    |
 | org.grails                        | grails-datastore-gorm-test                      | org.apache.grails.data                          | grails-datamapping-core-test                                  |                        |                        | grails-data-mapping    |
 | org.grails                        | grails-datastore-gorm-hibernate5                | org.apache.grails.data                          | grails-data-hibernate5-core                                   |                        |                        | grails-data-mapping    |
