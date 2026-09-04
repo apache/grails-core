@@ -1,0 +1,289 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+import org.gradle.api.file.DuplicatesStrategy
+import org.gradle.api.tasks.PathSensitivity
+
+import java.util.Properties
+import java.util.zip.ZipFile
+
+plugins {
+    id 'groovy'
+    id 'java-library'
+    id 'me.champeau.jmh' version '0.7.3'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
+    id 'org.apache.grails.gradle.grails-code-style'
+}
+
+version = projectVersion
+group = 'org.apache.grails'
+
+// This build-time-only benchmark harness is never published, so it deliberately omits
+// org.apache.grails.buildsrc.publish, org.apache.grails.buildsrc.sbom,
+// org.apache.grails.gradle.grails-jacoco, and org.apache.grails.buildsrc.dependency-validator.
+// Its JMH dependency is GPLv2 with the Classpath Exception (Category X) and must not be published.
+
+sourceSets {
+    report {
+        groovy.srcDirs = ['src/report/groovy']
+    }
+    reportTest {
+        groovy.srcDirs = ['src/reportTest/groovy']
+        resources.srcDirs = ['src/reportTest/resources']
+        compileClasspath = sourceSets.report.runtimeClasspath + configurations.reportTestCompileClasspath
+        runtimeClasspath = output + compileClasspath + configurations.reportTestRuntimeClasspath
+    }
+}
+
+// The Groovy fixtures under src/main/groovy build the framework objects whose APIs are
+// closure-based (the URL mappings DSL and view templates) or require a Groovy trait
+// (grails.artefact.Interceptor). The JMH
+// benchmarks themselves live in src/jmh/java and only *call* those fixtures, so that the
+// measured code path is plain Java and does not include Groovy's dynamic dispatch.
+// me.champeau.jmh puts the main source set's output on the jmh compile classpath, which is
+// why the fixtures are in main rather than src/jmh/groovy: keeping the benchmarks in a pure
+// Java source set preserves normal JMH annotation processing.
+dependencies {
+    implementation platform(project(':grails-bom'))
+
+    implementation project(':grails-web-url-mappings')
+    implementation project(':grails-databinding-core')
+    implementation project(':grails-gsp-core')
+    implementation project(':grails-interceptors')
+    implementation project(':grails-views-gson')
+    implementation project(':grails-views-markup')
+    implementation project(':grails-core')
+    implementation 'org.apache.groovy:groovy'
+
+    // The framework modules declare these as compileOnly, so they are absent from the runtime
+    // classpath a benchmark actually executes on. The modules' own test suites add them back
+    // the same way. Without them, URL mapping, interceptor and view benchmarks fail at @Setup
+    // with NoClassDefFoundError: jakarta/servlet/ServletContext.
+    implementation 'jakarta.servlet:jakarta.servlet-api'
+    implementation 'org.springframework:spring-test'
+
+    reportImplementation platform(project(':grails-bom'))
+    reportImplementation 'org.apache.groovy:groovy'
+    reportImplementation 'org.apache.groovy:groovy-json'
+
+    // Pull the report source set's full runtime classpath (groovy-json etc.), not only its
+    // compiled classes - the Spock suite exercises JsonSlurper and HttpClient paths.
+    reportTestImplementation platform(project(':grails-bom'))
+    reportTestImplementation 'org.apache.groovy:groovy-test-junit5'
+    reportTestImplementation 'org.junit.jupiter:junit-jupiter-api'
+    reportTestImplementation 'org.junit.platform:junit-platform-suite'
+    reportTestImplementation 'org.spockframework:spock-core'
+    reportTestRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+    // gradle/test-config.gradle adds these only to testRuntimeOnly.
+    reportTestRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    reportTestRuntimeOnly 'net.bytebuddy:byte-buddy'
+    reportTestRuntimeOnly 'org.objenesis:objenesis'
+}
+
+apply from: rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+
+// Keep the conventional task and output locations so grails-test-report continues to aggregate it,
+// while compiling and running only the standalone report tool and its reportTest source set.
+tasks.named('test', Test) {
+    setDependsOn([tasks.named('reportTestClasses')])
+    testClassesDirs = sourceSets.reportTest.output.classesDirs
+    classpath = sourceSets.reportTest.runtimeClasspath
+}
+
+tasks.register('jmhCompare', JavaExec) {
+    group = 'verification'
+    description = 'Compares JMH JSON results and renders a pull request report.'
+    classpath = sourceSets.report.runtimeClasspath
+    mainClass = 'org.apache.grails.benchmarks.report.JmhCompare'
+}
+
+// The jmh source set compiles and runs against everything main depends on.
+configurations.jmh.extendsFrom(configurations.implementation)
+
+// Every JMH knob the CI workflow needs to override is exposed as a Gradle property so that
+// .github/workflows/benchmark.yml can configure the PR profile from the same build.
+// Defaults here are the quick local-development profile.
+jmh {
+    jmhVersion = '1.37'
+    includes = providers.gradleProperty('jmh.include')
+            .map { it.split(',') as List<String> }
+            .orElse(['.*'])
+            .get()
+    fork = providers.gradleProperty('jmh.forks').map { it as Integer }.orElse(1).get()
+    warmupIterations = providers.gradleProperty('jmh.warmupIterations').map { it as Integer }.orElse(1).get()
+    iterations = providers.gradleProperty('jmh.iterations').map { it as Integer }.orElse(1).get()
+    warmup = providers.gradleProperty('jmh.warmupTime').orElse('1s').get()
+    timeOnIteration = providers.gradleProperty('jmh.iterationTime').orElse('1s').get()
+    resultFormat = providers.gradleProperty('jmh.resultFormat').orElse('JSON').get()
+    // A benchmark that throws during @Setup is otherwise dropped from the results file while
+    // the build still reports success, which would silently shrink the comparison set.
+    failOnError = providers.gradleProperty('jmh.failOnError').map { it.toBoolean() }.orElse(true).get()
+    resultsFile = file(providers.gradleProperty('jmh.resultFile')
+            .orElse(layout.buildDirectory.file('results/jmh/results.json').get().asFile.absolutePath)
+            .get())
+    // Comma-separated JMH profilers, e.g. -Pjmh.profilers=gc for allocation reporting.
+    profilers = providers.gradleProperty('jmh.profilers')
+            .map { it.split(',') as List<String> }
+            .orElse([])
+            .get()
+}
+
+def mergeJmhClasspathMetadata = tasks.register('mergeJmhClasspathMetadata') {
+        def mergedMetadataDirectory = layout.buildDirectory.dir('generated/jmh-classpath-metadata')
+        def lineMetadataPrefixes = ['META-INF/services/', 'META-INF/groovy/']
+        def extensionModuleSuffix = 'org.codehaus.groovy.runtime.ExtensionModule'
+        def propertiesMetadataPaths = [
+                'META-INF/spring.factories',
+                'META-INF/spring.handlers',
+                'META-INF/spring.schemas'
+        ]
+
+        inputs.files(configurations.jmhRuntimeClasspath)
+                .withPropertyName('jmhRuntimeClasspath')
+                .withPathSensitivity(PathSensitivity.RELATIVE)
+        outputs.dir(mergedMetadataDirectory)
+        outputs.cacheIf { true }
+
+        doLast {
+            File outputDirectory = mergedMetadataDirectory.get().asFile
+            project.delete(outputDirectory)
+
+            Map<String, Set<String>> lineEntries = new TreeMap<>()
+            Map<String, Map<String, Set<String>>> extensionModuleEntries = new TreeMap<>()
+            Map<String, Map<String, Set<String>>> propertyEntries = new TreeMap<>()
+
+            configurations.jmhRuntimeClasspath.files
+                    .findAll { File artifact -> artifact.name.endsWith('.jar') }
+                    .sort { File artifact -> artifact.absolutePath }
+                    .each { File artifact ->
+                        new ZipFile(artifact).withCloseable { ZipFile zipFile ->
+                            zipFile.entries().each { entry ->
+                                if (entry.directory) {
+                                    return
+                                }
+
+                                String path = entry.name
+                                if (path.endsWith(extensionModuleSuffix)) {
+                                    Properties properties = new Properties()
+                                    zipFile.getInputStream(entry).withCloseable { input ->
+                                        properties.load(input)
+                                    }
+                                    Map<String, Set<String>> entries = extensionModuleEntries.computeIfAbsent(path) {
+                                        new TreeMap<>()
+                                    }
+                                    ['extensionClasses', 'staticExtensionClasses'].each { String key ->
+                                        Set<String> values = entries.computeIfAbsent(key) { new TreeSet<>() }
+                                        properties.getProperty(key, '').split(',').each { String value ->
+                                            if (value) {
+                                                values.add(value.trim())
+                                            }
+                                        }
+                                    }
+                                } else if (lineMetadataPrefixes.any { String prefix -> path.startsWith(prefix) }) {
+                                    Set<String> lines = lineEntries.computeIfAbsent(path) { new TreeSet<>() }
+                                    zipFile.getInputStream(entry).withCloseable { input ->
+                                        input.getText('UTF-8').readLines().each { String line ->
+                                            if (line) {
+                                                lines.add(line)
+                                            }
+                                        }
+                                    }
+                                } else if (propertiesMetadataPaths.contains(path)) {
+                                    Properties properties = new Properties()
+                                    zipFile.getInputStream(entry).withCloseable { input ->
+                                        properties.load(input)
+                                    }
+                                    Map<String, Set<String>> entries = propertyEntries.computeIfAbsent(path) {
+                                        new TreeMap<>()
+                                    }
+                                    properties.stringPropertyNames().each { String key ->
+                                        Set<String> values = entries.computeIfAbsent(key) { new TreeSet<>() }
+                                        properties.getProperty(key).split(',').each { String value ->
+                                            if (value) {
+                                                values.add(value.trim())
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+            lineEntries.each { String path, Set<String> lines ->
+                File outputFile = new File(outputDirectory, path)
+                outputFile.parentFile.mkdirs()
+                outputFile.setText("${lines.join('\n')}\n", 'UTF-8')
+            }
+            extensionModuleEntries.each { String path, Map<String, Set<String>> entries ->
+                File outputFile = new File(outputDirectory, path)
+                outputFile.parentFile.mkdirs()
+                String moduleName = path.startsWith('META-INF/groovy/')
+                        ? 'grails-benchmark-groovy-extension-modules'
+                        : 'grails-benchmark-service-extension-modules'
+                outputFile.withWriter('UTF-8') { writer ->
+                    writer.write("moduleName=${moduleName}\n")
+                    writer.write('moduleVersion=1.0\n')
+                    entries.each { String key, Set<String> values ->
+                        writer.write("${key}=${values.join(',')}\n")
+                    }
+                }
+            }
+            propertyEntries.each { String path, Map<String, Set<String>> entries ->
+                File outputFile = new File(outputDirectory, path)
+                outputFile.parentFile.mkdirs()
+                outputFile.withWriter('UTF-8') { writer ->
+                    entries.each { String key, Set<String> values ->
+                        String escapedKey = key.replace('\\', '\\\\').replace('=', '\\=').replace(':', '\\:')
+                        writer.write("${escapedKey}=${values.join(',')}\n")
+                    }
+                }
+            }
+        }
+}
+
+tasks.named('jmhJar') {
+    dependsOn mergeJmhClasspathMetadata
+    def mergedMetadataDirectory = layout.buildDirectory.dir('generated/jmh-classpath-metadata')
+    def mergedMetadataPath = mergedMetadataDirectory.get().asFile.absolutePath + File.separator
+    def lineMetadataPrefixes = ['META-INF/services/', 'META-INF/groovy/']
+    def propertiesMetadataPaths = [
+            'META-INF/spring.factories',
+            'META-INF/spring.handlers',
+            'META-INF/spring.schemas'
+    ]
+
+    from(mergedMetadataDirectory)
+    eachFile { details ->
+        boolean mergeable = lineMetadataPrefixes.any { String prefix -> details.path.startsWith(prefix) } ||
+                propertiesMetadataPaths.contains(details.path)
+        if (mergeable && !details.file.absolutePath.startsWith(mergedMetadataPath)) {
+            details.exclude()
+        }
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.named('check') {
+    // Prefer compile-on-every-build over workflow-only compilation: the suite is small,
+    // and silent bit-rot between labelled performance runs is worse than the incremental
+    // JMH compile cost on ordinary developer/CI builds. jmhJar remains the full packaging gate.
+    dependsOn tasks.named('jmhClasses')
+}

@@ -210,7 +210,7 @@
         {
             "name": "grails.converters.encoding",
             "type": "java.lang.String",
-            "description": "The character encoding for converter output (JSON or XML).",
+            "description": "The character encoding for converter output (JSON or XML) and for the response content types stamped by the default renderers used by respond().",
             "defaultValue": "UTF-8"
         },
         {

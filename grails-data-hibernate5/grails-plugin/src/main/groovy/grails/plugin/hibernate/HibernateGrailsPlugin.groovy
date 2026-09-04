@@ -49,7 +49,7 @@ class HibernateGrailsPlugin extends Plugin {
 
     def grailsVersion = '8.0.0-SNAPSHOT > *'
 
-    def author = 'Grails Core Team'
+    def author = 'Apache Grails Team'
     def title = 'Hibernate 5 for Grails'
     def description = 'Provides integration between Grails and Hibernate 5 through GORM'
     def documentation = 'https://grails.apache.org/docs/latest/grails-data/'
@@ -60,7 +60,7 @@ class HibernateGrailsPlugin extends Plugin {
     def pluginExcludes = ['src/templates/**']
 
     def license = 'APACHE'
-    def organization = [name: 'Grails', url: 'https://grails.apache.org']
+    def organization = [name: 'Apache Grails', url: 'https://grails.apache.org']
     def issueManagement = [system: 'Github', url: 'https://github.com/apache/grails-core/issues']
     def scm = [url: 'https://github.com/apache/grails-core']
 

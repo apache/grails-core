@@ -25,6 +25,9 @@ import spock.lang.Specification
 /**
  * Created by graemerocher on 24/05/16.
  */
+// Intentionally uses JsonViewHelperSpec's Player/Circular rather than spec-local copies: the
+// child2/child4/circular .gson templates under grails-app/views import
+// grails.plugin.json.view.Player/.Circular directly, so the model here must be that same class.
 class TemplateInheritanceSpec extends Specification implements JsonViewTest {
 
     void "test extending another template"() {

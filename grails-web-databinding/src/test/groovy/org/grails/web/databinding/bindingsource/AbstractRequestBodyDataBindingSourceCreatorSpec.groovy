@@ -22,8 +22,8 @@ package org.grails.web.databinding.bindingsource
 import grails.databinding.CollectionDataBindingSource
 import grails.databinding.DataBindingSource
 import grails.databinding.SimpleMapDataBindingSource
-import grails.web.http.HttpHeaders
 import grails.web.mime.MimeType
+import grails.web.servlet.mvc.GrailsParameterMap
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.GrailsApplicationAttributes
 import org.springframework.http.HttpMethod
@@ -32,6 +32,7 @@ import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.mock.web.MockServletContext
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+import spock.lang.Issue
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -59,7 +60,8 @@ class AbstractRequestBodyDataBindingSourceCreatorSpec extends Specification {
 
             @Override
             protected CollectionDataBindingSource createCollectionBindingSource(Reader reader) {
-                return null
+                String body = reader.text
+                return { -> [new SimpleMapDataBindingSource([id: body])] } as CollectionDataBindingSource
             }
         }
     }
@@ -100,6 +102,20 @@ class AbstractRequestBodyDataBindingSourceCreatorSpec extends Specification {
         "request"      | build("PUT", null)
         "url"          | build("PUT", "")
         "request"      | build("PUT", "x")
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/16280')
+    void "test a collection binding source built from a GrailsParameterMap reads the request body"() {
+        given: 'a parameter map over a request whose body carries the binding source'
+        MockHttpServletRequest request = build('POST', 'from the body')
+        GrailsParameterMap params = new GrailsParameterMap(request)
+
+        when: 'the creator resolves the underlying request through request()'
+        CollectionDataBindingSource source = bindingSourceCreator
+                .createCollectionDataBindingSource(MimeType.ALL, Object, params)
+
+        then:
+        source.dataBindingSources*.identifierValue == ['from the body']
     }
 }
 

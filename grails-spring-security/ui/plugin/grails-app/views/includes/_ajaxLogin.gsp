@@ -17,53 +17,63 @@
   ~  under the License.
   --%>
 <g:set var='securityConfig' value='${applicationContext.springSecurityService.securityConfig}'/>
-					<style>
-					input.login {
-						display: block;
-						width: 400px;
-					}
-					</style>
-					<span id="s2ui_login_link_container">
-						<nobr>
-						<span id="logoutLink" style="display:none">
-						<g:link elementId='_logout' controller='logout'/>
-						<a href="${request.contextPath}${securityConfig.logout.afterLogoutUrl}" id="_afterLogout"></a>
-						</span>
-						<div id="loginLinkContainer">
-							<sec:ifLoggedIn>
-							<g:message code='spring.security.ui.login.loggedInAs' args='[sec.username()]'/>
-								(<g:link controller='logout' elementId='logout'><g:message code='spring.security.ui.login.logout'/></g:link>)
-							</sec:ifLoggedIn>
-							<sec:ifNotLoggedIn>
-							<a href="#" id="loginLink"><g:message code='spring.security.ui.login.login'/></a>
-							</sec:ifNotLoggedIn>
-							<sec:ifSwitched>
-							<a href="${request.contextPath}${securityConfig.switchUser.exitUserUrl}">
-								<g:message code='spring.security.ui.login.resumeAs' args='[sec.switchedUserOriginalUsername()]'/>
-							</a>
-							</sec:ifSwitched>
+<sec:ifLoggedIn>
+	<span class="navbar-text" id="loginLinkContainer">
+		<g:message code='spring.security.ui.login.loggedInAs' args='[sec.username()]'/>
+	</span>
+	<form action="${createLink(controller: 'logout')}" method="post" class="d-flex mb-0">
+		<button type="submit" id="logout" class="btn btn-outline-secondary btn-sm"><g:message code='spring.security.ui.login.logout'/></button>
+	</form>
+</sec:ifLoggedIn>
+<sec:ifSwitched>
+	<a class="btn btn-outline-warning btn-sm" href="${request.contextPath}${securityConfig.switchUser.exitUserUrl}">
+		<g:message code='spring.security.ui.login.resumeAs' args='[sec.switchedUserOriginalUsername()]'/>
+	</a>
+</sec:ifSwitched>
+<sec:ifNotLoggedIn>
+	<button type="button" id="loginLink" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#loginModal">
+		<g:message code='spring.security.ui.login.login'/>
+	</button>
+	<div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h1 class="modal-title fs-5" id="loginModalLabel"><g:message code='spring.security.ui.login.signin'/></h1>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="${message(code: 'spring.security.ui.login.cancel')}"></button>
+				</div>
+				<div class="modal-body">
+					<form action="${request.contextPath}${securityConfig.apf.filterProcessesUrl}" method="post" id="ajaxLoginForm" name="ajaxLoginForm" autocomplete="off">
+						<div class="mb-3">
+							<label class="form-label" for="ajaxUsername"><g:message code='spring.security.ui.login.username'/></label>
+							<input type="text" class="form-control" name="${securityConfig.apf.usernameParameter}" id="ajaxUsername" autocapitalize="none"/>
 						</div>
-						</nobr>
-					</span>
-					<div class="s2ui_center">
-						<div id="loginFormContainer" style="display:none" title="${message(code:'spring.security.ui.login.signin')}">
-							<form action="${request.contextPath}${securityConfig.apf.filterProcessesUrl}" method="post" id="loginForm" name="loginForm" autocomplete="off">
-							<label for="ajaxUsername"><g:message code='spring.security.ui.login.username'/></label>
-							<input class="login" name="${securityConfig.apf.usernameParameter}" id="ajaxUsername" size="20"/>
-							<label for="ajaxPassword"><g:message code='spring.security.ui.login.password'/></label>
-							<input class="login" type="password" name="${securityConfig.apf.passwordParameter}" id="ajaxPassword" size="20"/>
-							<input type="checkbox" class="checkbox" name="${securityConfig.rememberMe.parameter}" id="remember_me" checked="checked"/>
-							<label for="remember_me"><g:message code='spring.security.ui.login.rememberme'/></label> |
-							<g:link controller='register' action='forgotPassword'><g:message code='spring.security.ui.login.forgotPassword'/></g:link>
-							<g:link controller='register'><g:message code='spring.security.ui.login.register'/></g:link>
-							<input type="submit" class="s2ui_hidden_button"/>
-							</form>
-							<div id="loginMessage" style="color: red; margin-top: 10px;"></div>
+						<div class="mb-3">
+							<label class="form-label" for="ajaxPassword"><g:message code='spring.security.ui.login.password'/></label>
+							<div class="input-group">
+								<input type="password" class="form-control" name="${securityConfig.apf.passwordParameter}" id="ajaxPassword"/>
+								<button class="btn btn-outline-secondary" type="button" aria-pressed="false"
+								        onclick="s2uiTogglePassword(this, 'ajaxPassword')"
+								        aria-label="${message(code: 'springSecurity.login.password.toggle', default: 'Show or hide password')}">
+									<i class="bi bi-eye" aria-hidden="true"></i>
+								</button>
+							</div>
 						</div>
+						<div class="mb-3 form-check">
+							<input type="checkbox" class="form-check-input" name="${securityConfig.rememberMe.parameter}" id="remember_me" checked="checked"/>
+							<label class="form-check-label" for="remember_me"><g:message code='spring.security.ui.login.rememberme'/></label>
+						</div>
+						<button type="submit" class="btn btn-primary w-100"><g:message code='spring.security.ui.login.login'/></button>
+					</form>
+					<div id="loginMessage" class="mt-3"></div>
+					<div class="d-flex justify-content-between mt-3 small">
+						<g:link controller='register' action='forgotPassword'><g:message code='spring.security.ui.login.forgotPassword'/></g:link>
+						<g:link controller='register'><g:message code='spring.security.ui.login.register'/></g:link>
 					</div>
-<asset:script>
-var loginButtonCaption = "<g:message code='spring.security.ui.login.login'/>";
-var cancelButtonCaption = "<g:message code='spring.security.ui.login.cancel'/>";
+				</div>
+			</div>
+		</div>
+	</div>
+	<asset:script>
 var loggingYouIn = "<g:message code='spring.security.ui.login.loggingYouIn'/>";
-var loggedInAsWithPlaceholder = "<g:message code='spring.security.ui.login.loggedInAs' args='["{0}"]'/>";
-</asset:script>
+	</asset:script>
+</sec:ifNotLoggedIn>

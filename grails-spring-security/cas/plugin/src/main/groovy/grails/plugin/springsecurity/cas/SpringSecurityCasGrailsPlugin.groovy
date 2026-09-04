@@ -20,6 +20,7 @@ package grails.plugin.springsecurity.cas
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 
 import org.apereo.cas.client.proxy.Cas20ProxyRetriever
 import org.apereo.cas.client.proxy.ProxyGrantingTicketStorageImpl
@@ -35,25 +36,26 @@ import org.springframework.security.cas.authentication.CasAuthenticationProvider
 import org.springframework.security.cas.authentication.NullStatelessTicketCache
 import org.springframework.security.cas.web.CasAuthenticationEntryPoint
 import org.springframework.security.cas.web.CasAuthenticationFilter
+import org.springframework.security.web.authentication.session.NullAuthenticatedSessionStrategy
 
+import grails.plugin.springsecurity.BeanTypeResolver
 import grails.plugin.springsecurity.SecurityFilterPosition
 import grails.plugin.springsecurity.SpringSecurityUtils
 import grails.plugins.Plugin
 
+@Slf4j
 @CompileStatic
 class SpringSecurityCasGrailsPlugin extends Plugin {
 
-    String grailsVersion = '7.0.0 > *'
-    String author = 'Burt Beckwith'
-    String authorEmail = ''
-    String title = 'Jasig CAS support for the Spring Security plugin.'
-    String description = 'Jasig CAS support for the Spring Security plugin.'
+    String grailsVersion = '8.0.0-SNAPSHOT > *'
+    String title = 'Apereo CAS support for the Spring Security plugin.'
+    String description = 'Apereo CAS support for the Spring Security plugin.'
     String documentation = 'https://apache.github.io/grails-spring-security'
     String license = 'APACHE'
     List loadAfter = ['springSecurityCore']
-    def organization = [name: 'Grails', url: 'https://www.grails.org']
-    def issueManagement = [url: 'https://github.com/apache/grails-spring-security/issues']
-    def scm = [url: 'https://github.com/apache/grails-spring-security']
+    def organization = [name: 'Grails', url: 'https://grails.apache.org/']
+    def issueManagement = [system: 'Github', url: 'https://github.com/apache/grails-core/issues']
+    def scm = [url: 'https://github.com/apache/grails-core']
     def profiles = ['web']
 
     @CompileDynamic
@@ -87,9 +89,29 @@ class SpringSecurityCasGrailsPlugin extends Plugin {
 
             if (conf.cas.useSingleSignout) {
 
-                // session fixation prevention breaks single signout because
-                // the service ticket is mapped to the session id which changes
+                // Session fixation prevention breaks single signout because the service ticket is
+                // mapped to the session id, which changes when the session is replaced on login.
+                // Disabling it is a security trade-off the application has opted into, so say so.
+                String message = '''
+    WARNING: cas.useSingleSignout is enabled, so session fixation prevention has been disabled.
+    CAS maps the service ticket to the HTTP session id, and a logout request cannot be matched to a
+    session that was replaced when the user authenticated. Set cas.useSingleSignout to false to keep
+    session fixation prevention and handle logout in the application instead.
+    '''
+                println message
+                log.warn message
+
+                // Setting the config value is not enough on its own: this plugin loads after
+                // springSecurityCore, which has already defined sessionAuthenticationStrategy from
+                // the original value. The bean is therefore redefined here as well, the same way
+                // the core plugin defines it when the setting is off. The value is still updated so
+                // that anything reading the config later sees what is actually in effect.
                 conf.useSessionFixationPrevention = false
+
+                Class beanTypeResolverClass = (conf.beanTypeResolverClass ?: BeanTypeResolver) as Class
+                def casBeanTypeResolver = beanTypeResolverClass.newInstance(conf, grailsApplication)
+                sessionAuthenticationStrategy(casBeanTypeResolver.resolveType(
+                        'sessionAuthenticationStrategy', NullAuthenticatedSessionStrategy))
 
                 singleSignOutFilter(SingleSignOutFilter) {
                     ignoreInitConfiguration = true
@@ -135,7 +157,11 @@ class SpringSecurityCasGrailsPlugin extends Plugin {
                 continueChainBeforeSuccessfulAuthentication = conf.apf.continueChainBeforeSuccessfulAuthentication
                 // false
                 allowSessionCreation = conf.apf.allowSessionCreation // true
-                proxyReceptorUrl = conf.cas.proxyReceptorUrl
+                // Only set when configured: CasAuthenticationFilter rejects a null pattern, and an
+                // unset receptor is how the filter expresses that proxy support is disabled.
+                if (conf.cas.proxyReceptorUrl) {
+                    proxyReceptorUrl = conf.cas.proxyReceptorUrl
+                }
             }
 
             casProxyRetriever(Cas20ProxyRetriever, conf.cas.serverUrlPrefix, conf.cas.serverUrlEncoding /*'UTF-8'*/)

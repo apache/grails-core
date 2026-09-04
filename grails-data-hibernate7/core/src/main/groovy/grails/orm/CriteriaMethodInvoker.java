@@ -193,21 +193,30 @@ public class CriteriaMethodInvoker {
             final Metamodel metamodel = builder.getSessionFactory().getMetamodel();
             final EntityType<?> entityType = metamodel.entity(builder.getTargetClass());
             final Attribute<?, ?> attribute = entityType.getAttribute(name);
+            // The JPA metamodel does not consider an embedded component an association, but the
+            // GORM model does - an embedded block must build a DetachedAssociationCriteria so its
+            // properties resolve against the component. It needs no join: its columns live in the
+            // owning entity's table, so an explicit join-type argument on the block is
+            // intentionally ignored.
+            final boolean embedded =
+                    attribute.getPersistentAttributeType() == Attribute.PersistentAttributeType.EMBEDDED;
 
-            if (attribute.isAssociation()) {
+            if (attribute.isAssociation() || embedded) {
                 Class<?> oldTargetClass = builder.getTargetClass();
                 Class<?> associationClass = builder.getClassForAssociationType(attribute);
                 builder.setTargetClass(associationClass);
-                JoinType joinType;
-                if (hasMoreThanOneArg) {
-                    joinType = builder.convertFromInt((Integer) args[0]);
-                } else if (associationClass.equals(oldTargetClass)) {
-                    joinType = JoinType.LEFT; // default to left join if joining on the same table
-                } else {
-                    joinType = builder.convertFromInt(0);
-                }
+                if (!embedded) {
+                    JoinType joinType;
+                    if (hasMoreThanOneArg) {
+                        joinType = builder.convertFromInt((Integer) args[0]);
+                    } else if (associationClass.equals(oldTargetClass)) {
+                        joinType = JoinType.LEFT; // default to left join if joining on the same table
+                    } else {
+                        joinType = builder.convertFromInt(0);
+                    }
 
-                hibernateQuery.join(name, joinType);
+                    hibernateQuery.join(name, joinType);
+                }
 
                 GrailsHibernatePersistentEntity parentEntity = (GrailsHibernatePersistentEntity)
                         hibernateQuery.getSession().getMappingContext().getPersistentEntity(oldTargetClass.getName());

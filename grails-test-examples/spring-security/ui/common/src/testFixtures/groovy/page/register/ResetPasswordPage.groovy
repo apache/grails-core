@@ -31,7 +31,7 @@ class ResetPasswordPage extends LifecyclePage {
     static content = {
         password { $('#password').module(PasswordInput) }
         password2 { $('#password2').module(PasswordInput) }
-        submitBtn { $('a', id: 'submit') }
+        submitBtn { $('#submit') }
     }
 
     @Override

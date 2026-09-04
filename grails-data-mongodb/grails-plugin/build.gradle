@@ -85,6 +85,7 @@ dependencies {
     }
 
     compileOnly 'org.apache.groovy:groovy' // Provided as this is a Grails plugin
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
     compileOnly project(':grails-core'), { // Provided as this is a Grails plugin
         // api: GrailsPlugin
         // impl: DomainClassArtefactHandler, GrailsClass, GrailsPlugin, Metadata
@@ -114,6 +115,7 @@ dependencies {
     testFixturesImplementation 'org.spockframework:spock-core'
 
     testFixturesCompileOnly 'org.apache.groovy:groovy'
+    testFixturesCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 }
 
 def disabledTasks = ['bootRun', 'bootTestRun']

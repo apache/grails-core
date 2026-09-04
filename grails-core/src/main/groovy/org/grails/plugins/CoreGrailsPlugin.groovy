@@ -20,19 +20,39 @@ package org.grails.plugins
 
 import groovy.transform.CompileStatic
 
+import org.springframework.aop.config.AopConfigUtils
+import org.springframework.aot.AotDetector
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
 import org.springframework.beans.factory.config.CustomEditorConfigurer
 import org.springframework.beans.factory.support.DefaultListableBeanFactory
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader
+import org.springframework.boot.autoconfigure.AutoConfiguration
+import org.springframework.boot.autoconfigure.AutoConfigureOrder
+import org.springframework.boot.autoconfigure.context.PropertyPlaceholderAutoConfiguration
+import org.springframework.context.ApplicationContext
+import org.springframework.context.ConfigurableApplicationContext
+import org.springframework.context.annotation.AnnotationConfigUtils
 import org.springframework.context.annotation.ConfigurationClassPostProcessor
 import org.springframework.context.support.GenericApplicationContext
+import org.springframework.context.support.PropertySourcesPlaceholderConfigurer
+import org.springframework.core.Ordered
+import org.springframework.core.env.Environment
 import org.springframework.core.io.Resource
 import org.springframework.util.ClassUtils
 
+import java.beans.PropertyEditor
+
+import grails.compiler.beans.GrailsBeans
+import grails.config.Config
+import grails.config.ConfigProperties
 import grails.config.Settings
+import grails.core.GrailsApplication
 import grails.core.support.proxy.DefaultProxyHandler
+import grails.plugins.GrailsPluginManager
 import grails.plugins.Plugin
 import grails.util.BuildSettings
-import grails.util.Environment
+import grails.util.Environment as GrailsEnvironment
 import grails.util.GrailsUtil
 import org.grails.beans.support.PropertiesEditor
 import org.grails.core.io.DefaultResourceLocator
@@ -43,8 +63,11 @@ import org.grails.spring.RuntimeSpringConfigUtilities
 import org.grails.spring.RuntimeSpringConfiguration
 import org.grails.spring.aop.autoproxy.GroovyAwareAspectJAwareAdvisorAutoProxyCreator
 import org.grails.spring.aop.autoproxy.GroovyAwareInfrastructureAdvisorAutoProxyCreator
+import org.grails.spring.beans.AbstractResourceLocatorPostProcessor
 import org.grails.spring.beans.GrailsApplicationAwareBeanPostProcessor
 import org.grails.spring.beans.PluginManagerAwareBeanPostProcessor
+import org.grails.spring.context.annotation.GrailsComponentScanPostProcessor
+import org.grails.spring.context.support.GrailsPlaceholderConfigurer
 import org.grails.spring.context.support.MapBasedSmartPropertyOverrideConfigurer
 
 /**
@@ -53,6 +76,10 @@ import org.grails.spring.context.support.MapBasedSmartPropertyOverrideConfigurer
  * @author Graeme Rocher
  * @since 0.4
  */
+@CompileStatic
+@GrailsBeans
+@AutoConfiguration(before = [PropertyPlaceholderAutoConfiguration])
+@AutoConfigureOrder(Ordered.HIGHEST_PRECEDENCE)
 class CoreGrailsPlugin extends Plugin {
 
     def version = GrailsUtil.getGrailsVersion()
@@ -61,72 +88,181 @@ class CoreGrailsPlugin extends Plugin {
                                 'file:./grails-app/conf/application.groovy',
                                 'file:./grails-app/conf/application.yml']
 
-    private static final SPRING_PROXY_TARGET_CLASS_CONFIG = 'spring.aop.proxy-target-class'
+    private static final String SPRING_PROXY_TARGET_CLASS_CONFIG = 'spring.aop.proxy-target-class'
 
+    def beans = {
+        bean(ClassLoader).primary() { GrailsApplication grailsApplication ->
+            grailsApplication.classLoader
+        }
+
+        bean('grailsConfigProperties', ConfigProperties).primary() { GrailsApplication grailsApplication ->
+            new ConfigProperties(grailsApplication.config)
+        }
+
+        // GroovyPagesGrailsPlugin registers its own caching, GSP-aware locator under this name
+        // from doWithSpring, which runs earlier, so this backs off when GSP is present.
+        bean('grailsResourceLocator', DefaultResourceLocator).conditionalOnMissingBeanName() {
+            new DefaultResourceLocator().tap {
+                searchLocations = [BuildSettings.BASE_DIR.absolutePath]
+            }
+        }
+
+        // A static factory method reading the Environment, rather than an instance method reading an
+        // injected @Value field as the hand-written class had it: this bean is a
+        // BeanFactoryPostProcessor, so it is created before @Value injection is active and a field
+        // would always still be null, leaving the configured prefix with no effect. Static is also
+        // Spring's documented shape for a BFPP bean, since it needs no enclosing instance.
+        bean(PropertySourcesPlaceholderConfigurer).primary().staticMethod() { Environment environment ->
+            def configurer = new GrailsPlaceholderConfigurer()
+            String prefix = environment.getProperty(Settings.SPRING_PLACEHOLDER_PREFIX)
+            if (prefix != null) {
+                configurer.placeholderPrefix = prefix
+            }
+            configurer
+        }
+    }
+
+    /**
+     * Whether the context already has a processor that parses configuration classes.
+     *
+     * <p>Spring registers one under a well-known name as part of setting up annotation
+     * configuration, which is every application context that reads annotations. A context assembled
+     * without that step -- a test slice registering this plugin's beans on a bare registry -- has
+     * none, and is what the plugin's own processor is for.</p>
+     */
+    private static boolean hasConfigurationClassPostProcessor(GrailsApplication application) {
+        hasBeanDefinition(application, AnnotationConfigUtils.CONFIGURATION_ANNOTATION_PROCESSOR_BEAN_NAME)
+    }
+
+    /**
+     * Whether the context already has a definition under this name.
+     *
+     * <p>These registrars run after the {@code doWithSpring} drain, so a plugin that has already
+     * declared a bean under one of these names has declared the one that should stand: registering
+     * over it replaces something chosen for the application with the general case.</p>
+     */
+    private static boolean hasBeanDefinition(GrailsApplication application, String beanName) {
+        ApplicationContext context = application.mainContext
+        context instanceof ConfigurableApplicationContext &&
+                ((ConfigurableApplicationContext) context).beanFactory.containsBeanDefinition(beanName)
+    }
+
+    /**
+     * Scans the packages named by {@code grails.spring.bean.packages}. Contributed here rather
+     * than through {@code doWithSpring}'s {@code grailsContext:component-scan} element, which
+     * needs the XML namespace handler and therefore the bean builder DSL.
+     */
     @Override
-    Closure doWithSpring() {
-        { ->
+    BeanRegistrar beanRegistrar() {
+        return { BeanRegistry registry, Environment springEnvironment ->
+            GrailsApplication application = grailsApplication
+            Config config = application.config
 
-            def application = grailsApplication
-
-            // Grails config as properties
-            def config = application.config
-
-            // enable post-processing of @Configuration beans defined by plugins
-            grailsConfigurationClassPostProcessor(ConfigurationClassPostProcessor)
-            grailsBeanOverrideConfigurer(MapBasedSmartPropertyOverrideConfigurer) {
-                delegate.grailsApplication = application
+            // enable post-processing of @Configuration beans defined by plugins. An AOT-optimized
+            // context has no ConfigurationClassPostProcessor of its own: the configuration classes
+            // were parsed at build time and their beans are already in the generated initializer,
+            // so registering one here would parse them a second time. A context that annotation
+            // configuration has already been set up on has one of its own, which sees the plugin
+            // definitions because they are registered ahead of it; a second processor over the same
+            // registry parses everything a second time, and while code is being generated the two of
+            // them write out the same import-aware post-processor twice, so one registration
+            // replaces the other on every start.
+            //
+            // "Registered ahead of it" is what makes standing down safe, and it is a property of how
+            // the application started rather than of this registry. GrailsEarlyPluginRegistrationPostProcessor
+            // is added with addBeanFactoryPostProcessor and so runs before Spring's own processor,
+            // and it runs whenever PluginDiscovery was promoted to the bean factory -- which
+            // GrailsBootstrapRegistryInitializer does, from spring.factories, for every
+            // SpringApplication. A context assembled without SpringApplication would have Spring's
+            // processor already finished by the time these definitions arrive, and would need this
+            // one; it would also not be a Grails application started any supported way.
+            if (!AotDetector.useGeneratedArtifacts() && !hasConfigurationClassPostProcessor(application)) {
+                registry.registerBean('grailsConfigurationClassPostProcessor', ConfigurationClassPostProcessor)
             }
 
-            Class proxyCreatorClazz = null
-            // replace AutoProxy advisor with Groovy aware one
-            if (ClassUtils.isPresent('org.aspectj.lang.annotation.Around', application.classLoader) && !config.getProperty(Settings.SPRING_DISABLE_ASPECTJ, Boolean)) {
-                proxyCreatorClazz = GroovyAwareAspectJAwareAdvisorAutoProxyCreator
-            } else {
-                proxyCreatorClazz = GroovyAwareInfrastructureAdvisorAutoProxyCreator
-            }
-
-            Boolean isProxyTargetClass = config.getProperty(SPRING_PROXY_TARGET_CLASS_CONFIG, Boolean)
-            'org.springframework.aop.config.internalAutoProxyCreator'(proxyCreatorClazz) {
-                if (isProxyTargetClass != null) {
-                    proxyTargetClass = isProxyTargetClass
+            registry.registerBean('grailsBeanOverrideConfigurer', MapBasedSmartPropertyOverrideConfigurer) {
+                it.supplier {
+                    MapBasedSmartPropertyOverrideConfigurer configurer = new MapBasedSmartPropertyOverrideConfigurer()
+                    configurer.grailsApplication = application
+                    configurer
                 }
             }
 
-            def packagesToScan = []
-
-            def beanPackages = config.getProperty(Settings.SPRING_BEAN_PACKAGES, List)
-            if (beanPackages) {
-                packagesToScan += beanPackages
+            // replace the AutoProxy advisor with a Groovy aware one; the two variants share
+            // Spring's own internalAutoProxyCreator name, so at most one is registered
+            Boolean isProxyTargetClass = config.getProperty(SPRING_PROXY_TARGET_CLASS_CONFIG, Boolean)
+            if (ClassUtils.isPresent('org.aspectj.lang.annotation.Around', application.classLoader) &&
+                    !config.getProperty(Settings.SPRING_DISABLE_ASPECTJ, Boolean)) {
+                registry.registerBean(AopConfigUtils.AUTO_PROXY_CREATOR_BEAN_NAME, GroovyAwareAspectJAwareAdvisorAutoProxyCreator) {
+                    it.supplier {
+                        GroovyAwareAspectJAwareAdvisorAutoProxyCreator creator = new GroovyAwareAspectJAwareAdvisorAutoProxyCreator()
+                        if (isProxyTargetClass != null) {
+                            creator.proxyTargetClass = isProxyTargetClass
+                        }
+                        creator
+                    }
+                }
+            }
+            else {
+                registry.registerBean(AopConfigUtils.AUTO_PROXY_CREATOR_BEAN_NAME, GroovyAwareInfrastructureAdvisorAutoProxyCreator) {
+                    it.supplier {
+                        GroovyAwareInfrastructureAdvisorAutoProxyCreator creator = new GroovyAwareInfrastructureAdvisorAutoProxyCreator()
+                        if (isProxyTargetClass != null) {
+                            creator.proxyTargetClass = isProxyTargetClass
+                        }
+                        creator
+                    }
+                }
             }
 
-            if (packagesToScan) {
-                xmlns(grailsContext: 'http://grails.org/schema/context')
-                grailsContext.'component-scan'('base-package': packagesToScan.join(','))
+            registry.registerBean('grailsApplicationAwarePostProcessor', GrailsApplicationAwareBeanPostProcessor) {
+                it.supplier { new GrailsApplicationAwareBeanPostProcessor(application) }
+            }
+            registry.registerBean('pluginManagerPostProcessor', PluginManagerAwareBeanPostProcessor)
+
+            // a shutdown hook only outside war deployment, in development, with jline present
+            if (!GrailsEnvironment.isWarDeployed() && environment == GrailsEnvironment.DEVELOPMENT &&
+                    ClassUtils.isPresent('jline.Terminal', application.classLoader)) {
+                registry.registerBean('shutdownHook', DevelopmentShutdownHook)
             }
 
-            grailsApplicationAwarePostProcessor(GrailsApplicationAwareBeanPostProcessor, ref('grailsApplication'))
-            pluginManagerPostProcessor(PluginManagerAwareBeanPostProcessor)
-
-            // add shutdown hook if not running in war deployed mode
-            final warDeployed = Environment.isWarDeployed()
-            final devMode = !warDeployed && environment == Environment.DEVELOPMENT
-            if (devMode && ClassUtils.isPresent('jline.Terminal', application.classLoader)) {
-                shutdownHook(DevelopmentShutdownHook)
-            }
-            abstractGrailsResourceLocator {
-                searchLocations = [BuildSettings.BASE_DIR.absolutePath]
-            }
-            grailsResourceLocator(DefaultResourceLocator) { bean ->
-                bean.parent = 'abstractGrailsResourceLocator'
+            registry.registerBean('customEditors', CustomEditorConfigurer) {
+                it.supplier {
+                    CustomEditorConfigurer configurer = new CustomEditorConfigurer()
+                    Map<Class<?>, Class<? extends PropertyEditor>> editors = [:]
+                    editors.put(Class, ClassEditor)
+                    editors.put(Properties, PropertiesEditor)
+                    configurer.customEditors = editors
+                    configurer
+                }
             }
 
-            customEditors(CustomEditorConfigurer) {
-                customEditors = [(Class): ClassEditor,
-                                 (Properties): PropertiesEditor]
+            // The GORM implementations register a proxy handler that knows how to unwrap their own
+            // proxies; this is the one for an application that has none. Registering it over theirs
+            // left a Hibernate application unwrapping Hibernate proxies with the general case.
+            if (!hasBeanDefinition(application, 'proxyHandler')) {
+                registry.registerBean('proxyHandler', DefaultProxyHandler)
             }
 
-            proxyHandler(DefaultProxyHandler)
+            // an abstract parent definition, which registerBean cannot express since it always
+            // takes a class; third-party plugins inherit their search locations from it
+            registry.registerBean('grailsAbstractResourceLocatorPostProcessor', AbstractResourceLocatorPostProcessor) {
+                it.infrastructure().supplier {
+                    new AbstractResourceLocatorPostProcessor([BuildSettings.BASE_DIR.absolutePath])
+                }
+            }
+
+            List<String> packagesToScan = (List<String>) grailsApplication.config
+                    .getProperty(Settings.SPRING_BEAN_PACKAGES, List) ?: []
+            if (!packagesToScan) {
+                return
+            }
+            GrailsPluginManager pluginManager = manager
+            registry.registerBean('grailsComponentScanPostProcessor', GrailsComponentScanPostProcessor) {
+                it.infrastructure().supplier {
+                    new GrailsComponentScanPostProcessor(packagesToScan, pluginManager)
+                }
+            }
         }
     }
 

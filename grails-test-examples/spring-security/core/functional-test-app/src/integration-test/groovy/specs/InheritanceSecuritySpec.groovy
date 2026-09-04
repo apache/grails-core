@@ -102,36 +102,36 @@ class InheritanceSecuritySpec extends AbstractSecuritySpec {
         go 'base/index'
 
         then:
-        $('.errors').text() == "Sorry, you're not authorized to view this page."
+        $('.alert-danger p').text() == "Sorry, you're not authorized to view this page."
 
         when:
         go 'base/delete'
 
         then:
-        $('.errors').text() == "Sorry, you're not authorized to view this page."
+        $('.alert-danger p').text() == "Sorry, you're not authorized to view this page."
 
         when:
         go 'base/update'
 
         then:
-        $('.errors').text() == "Sorry, you're not authorized to view this page."
+        $('.alert-danger p').text() == "Sorry, you're not authorized to view this page."
 
         when:
         go 'extended/index'
 
         then:
-        $('.errors').text() == "Sorry, you're not authorized to view this page."
+        $('.alert-danger p').text() == "Sorry, you're not authorized to view this page."
 
         when:
         go 'extended/delete'
 
         then:
-        $('.errors').text() == "Sorry, you're not authorized to view this page."
+        $('.alert-danger p').text() == "Sorry, you're not authorized to view this page."
 
         when:
         go 'extended/update'
 
         then:
-        $('.errors').text() == "Sorry, you're not authorized to view this page."
+        $('.alert-danger p').text() == "Sorry, you're not authorized to view this page."
     }
 }

@@ -1,0 +1,249 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+The plugin is configured under the `quartz` key in `grails-app/conf/application.yml`:
+
+[source,yaml]
+----
+quartz:
+    autoStartup: true
+    jdbcStore: false
+----
+
+[[_plugin_options]]
+===== Plugin options
+
+[cols="2,1,4"]
+|===
+| Property | Default | Description
+
+| `quartz.pluginEnabled`
+| `true`
+| Set to `false` to disable the plugin entirely. No scheduler, job beans, or listeners are registered, and no jobs run. Useful for test environments.
+
+| `quartz.autoStartup`
+| `true`
+| Whether the scheduler is started once the application has finished bootstrapping. When `false`, jobs are registered but the scheduler stays idle until you start it yourself via the `quartzScheduler` bean.
+
+| `quartz.jdbcStore`
+| `false`
+| Set to `true` to have Quartz persist jobs and triggers in a database instead of the in-memory `RAMJobStore`. See <<_persistent_job_storage,Persistent job storage>>.
+
+| `quartz.jdbcStoreDataSource`
+| `dataSource`
+| The name of the Spring bean holding the `DataSource` Quartz should use when `jdbcStore` is enabled. Set this to use a data source other than the application's default.
+
+| `quartz.purgeQuartzTablesOnStartup`
+| `false`
+| When `true` — and only when `jdbcStore` is enabled and a Hibernate plugin is present — every Quartz table is emptied during startup. Intended for development and testing.
+
+| `quartz.waitForJobsToCompleteOnShutdown`
+| `true`
+| Whether shutdown blocks until currently executing jobs have finished. Set to `false` to shut the scheduler down immediately.
+
+| `quartz.exposeSchedulerInRepository`
+| `false`
+| Whether the scheduler is registered with the Quartz `SchedulerRepository`, making it reachable via `StdSchedulerFactory.getDefaultScheduler()`.
+
+| `quartz.failOnNeverFiringTriggers`
+| `false`
+| Whether startup fails when a job declares a trigger which can never fire — a cron expression whose last occurrence is in the past, for example. By default such a trigger is reported as an error in the log and skipped, and the application starts with the rest of its jobs and triggers scheduled. Set this to `true` to have the scheduler reject the trigger and the application fail to start.
+
+| `quartz.scheduler.instanceName`
+| The bean name
+| The name given to the scheduler. Set this when several applications share a job store, so their schedulers do not collide.
+|===
+
+===== Passing options straight through to Quartz
+
+Every key beneath `quartz` is flattened and handed to Quartz itself with an `org.quartz.` prefix, so any https://www.quartz-scheduler.org/documentation/quartz-2.3.0/configuration/[Quartz configuration property] can be set the same way. For example, this configures the thread pool:
+
+[source,yaml]
+----
+quartz:
+    threadPool:
+        threadCount: 10
+        threadPriority: 5
+----
+
+which Quartz receives as `org.quartz.threadPool.threadCount` and `org.quartz.threadPool.threadPriority`. The plugin options in the table above are read from the same flattened set, which is why they share the `quartz` prefix.
+
+===== Logging
+
+A logger is injected into every job class, so no setup is required to use `log` from within `execute`. To change the level, configure the `grails.app.jobs` logger — for example in `grails-app/conf/logback.groovy`:
+
+[source,groovy]
+----
+logger 'grails.app.jobs', DEBUG
+----
+
+Any exception thrown from a job is logged by a global job listener registered by the plugin, so failures are never silently swallowed.
+
+[[_hibernate_sessions_and_jobs]]
+===== Hibernate sessions and jobs
+
+When a Hibernate plugin is on the classpath, the plugin binds a Hibernate `Session` to the thread for the duration of each job execution. This is what allows a job to use GORM — lazy-loading collections, or applying `unique` constraints — exactly as a service would.
+
+Set `sessionRequired` to `false` on a job to opt out of this behaviour. This is rarely useful; note that the session is bound regardless when `jdbcStore` is enabled, because the job store needs it.
+
+[source,groovy]
+----
+class MyJob {
+    static sessionRequired = false
+}
+----
+
+The binding covers the job's `execute` method only. Job listeners run outside it and must manage their
+own session — see <<_job_listeners,Job listeners>>.
+
+[[_job_listeners]]
+===== Job listeners
+
+To run code around *every* job — binding a security context, populating a logging context, or any other
+setup a job inherits rather than repeats — register a Quartz `JobListener` with the scheduler. This is
+the supported way to share behaviour across all jobs; the plugin uses the same mechanism internally for
+its own exception logging.
+
+Implement `JobListener` (or extend Quartz's `JobListenerSupport`, which no-ops the callbacks you do not
+need):
+
+[source,groovy]
+----
+import org.quartz.JobExecutionContext
+import org.quartz.JobExecutionException
+import org.quartz.listeners.JobListenerSupport
+
+class SecurityContextJobListener extends JobListenerSupport {
+
+    String getName() { 'securityContextJobListener' }
+
+    void jobToBeExecuted(JobExecutionContext context) {
+        // bind whatever every job should see
+    }
+
+    void jobWasExecuted(JobExecutionContext context, JobExecutionException exception) {
+        // and unbind it again
+    }
+}
+----
+
+Register it against the `quartzScheduler` bean, typically from `BootStrap`:
+
+[source,groovy]
+----
+import org.quartz.Scheduler
+
+class BootStrap {
+
+    Scheduler quartzScheduler
+
+    def init = { servletContext ->
+        quartzScheduler.listenerManager.addJobListener(new SecurityContextJobListener())
+    }
+}
+----
+
+A listener registered with no matcher observes every job. To restrict it to particular jobs, pass a
+`Matcher` — `KeyMatcher.keyEquals(...)` for a single job, or `GroupMatcher.jobGroupEquals(...)` for a
+whole <<quartzJobProperties,job group>>.
+
+WARNING: A job listener has no Hibernate `Session` bound to its thread. The session opened for the job
+is flushed and closed before `jobWasExecuted` is called, so a listener that needs GORM must open its own
+with `withNewSession` or `withTransaction`. See <<_hibernate_sessions_and_jobs,Hibernate sessions and jobs>>.
+
+[[_persistent_job_storage]]
+===== Persistent job storage
+
+By default Quartz keeps jobs and triggers in memory, so they are rebuilt from your source every time the application starts. Setting `jdbcStore` to `true` switches Quartz to its JDBC job store, which persists them in the database:
+
+[source,yaml]
+----
+quartz:
+    jdbcStore: true
+----
+
+Two things are required for this to work:
+
+. The Quartz tables must exist in the database. Quartz ships the schema for each supported database with its distribution.
+. A `quartz.properties` file on the classpath, or equivalent `quartz.*` configuration, describing the job store — see the Quartz documentation on job stores.
+
+Persistent storage interacts with the `durability` and `requestsRecovery` job properties described in <<quartzJobProperties,Job Properties>>.
+
+[[_jobs_in_a_shared_job_store]]
+====== The application only removes its own jobs
+
+When an application starts, the plugin removes the jobs it finds in the store which are no longer enabled
+job artefacts of that application — a job class that has been deleted, or one turned off with
+`jobEnabled = false`. Every job it registers is stamped with the name of the application, taken from
+`info.app.name` or from the application metadata when that is unset, and only jobs carrying that name are
+candidates for removal. A job another application registered, and a job scheduled through the Quartz API
+rather than declared as a job artefact, are left where they are.
+
+That matters as soon as a job store is shared — between the instances of a clustered application, or
+between two applications pointing at the same Quartz tables:
+
+* Two applications sharing a store must not share an application name, or each treats the other's jobs as
+its own and removes them on startup. An application which does not name itself uses the default name,
+which every unnamed application shares, and the plugin warns about that when it starts against a JDBC
+job store.
+* A job written to the store by a version of the plugin older than Grails 8 carries no application name,
+so it is never removed automatically. Remove such a leftover through
+<<quartzJobManagerService,jobManagerService>> or from the Quartz tables.
+
+[[_trigger_names_and_persistent_storage]]
+====== Trigger names are permanent
+
+A trigger is identified by its name and group, and with a persistent job store that identity outlives
+the application. On startup the plugin reconciles the triggers a job declares against the ones already
+in the store: a declared trigger whose name is already present is rescheduled, and a declared trigger
+that is missing is added. A trigger in the store that the job *no longer* declares is left alone,
+because the plugin cannot tell it apart from one scheduled at runtime through
+<<quartzDynamicScheduling,dynamic scheduling>> or <<quartzJobManagerService,jobManagerService>>.
+
+The practical consequence is that **renaming a trigger does not replace it — it adds a second one**, and
+the job then fires on both the old schedule and the new one. Changing the `cronExpression` of an
+existing trigger is safe; changing its `name` is not.
+
+WARNING: This applies to the generated names too. A trigger declared without a `name` is named
+`<jobClassName><n>`, numbered in declaration order — so inserting a trigger ahead of an existing one
+renumbers the rest and orphans their old names. Give every trigger an explicit `name` when using a
+persistent job store, and treat those names as permanent.
+
+[source,groovy]
+----
+class ReportJob {
+
+    static triggers = {
+        cron name: 'reportNightly', cronExpression: '0 0 2 * * ?'   // renaming this later adds a trigger
+    }
+
+    void execute() { }
+}
+----
+
+If a trigger has already been orphaned, remove it from the scheduler — through
+<<quartzJobManagerService,jobManagerService>>, or by deleting the row from the Quartz tables — before
+restarting. Nothing detects or reports the duplicate on its own.
+
+[[_clustering]]
+===== Clustering
+
+Quartz can coordinate a schedule across several instances of your application, so a given trigger fires exactly once no matter how many instances are deployed. This requires `jdbcStore`, a shared set of Quartz tables, and a handful of additional properties.
+
+Clustering is covered in full — including the requirements and the pitfalls — in the <<quartzClustering,Clustering>> section.

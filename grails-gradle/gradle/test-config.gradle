@@ -59,7 +59,7 @@ tasks.withType(Test).configureEach {
         showStackTraces = true
     }
     excludes = ['**/*TestCase.class', '**/*$*.class']
-    maxParallelForks = configuredTestParallel
+    maxParallelForks = rootProject.ext.configuredTestParallel
     maxHeapSize = isCiBuild ? '768m' : '1024m'
     if (System.getProperty('debug.tests')) {
         jvmArgs += debugArguments

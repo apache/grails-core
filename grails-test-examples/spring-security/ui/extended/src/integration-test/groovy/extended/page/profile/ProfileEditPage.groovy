@@ -50,10 +50,8 @@ class ProfileEditPage extends LifecyclePage {
 
 	ProfileListPage deleteProfile() {
 		$('#deleteButton').click()
-		waitFor {
-			$('span', text: 'Are you sure?')
-		}
-		$('button', text: 'Delete').click()
+		waitFor { $('#deleteConfirmModal').displayed }
+		$('#confirmDelete').click()
 		def page = browser.at(ProfileListPage)
 		waitFor { page.loaded }
 		page

@@ -28,6 +28,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.compile.GroovyCompile
@@ -39,6 +40,11 @@ import static org.apache.grails.buildsrc.GradleUtils.lookupPropertyByType
 
 @CompileStatic
 class CompilePlugin implements Plugin<Project> {
+
+    static final String AUTO_CONFIGURATION_IMPORTS_PATH =
+            'src/main/resources/META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports'
+    private static final String AUTO_CONFIGURATION_IMPORTS_INPUT_REGISTERED =
+            'grailsAutoConfigurationImportsInputRegistered'
 
     @Override
     void apply(Project project) {
@@ -125,8 +131,31 @@ class CompilePlugin implements Plugin<Project> {
                 if (System.getenv('SUPPRESS_DEPRECATION_WARNINGS') == 'true') {
                     it.options.compilerArgs += ['-Xlint:-removal']
                 }
+                // Canonicalize annotation member order for reproducible builds. Annotations copied from
+                // precompiled classes (e.g. @DelegatesTo on trait methods woven into controllers and GORM
+                // entities) have their members ordered by Class.getDeclaredMethods(), which varies between
+                // JVM runs. The GrailsGradlePlugin merges this script with its own configuration script
+                // when both are present.
+                it.groovyOptions.configurationScript =
+                        GradleUtils.findRootGrailsCoreDir(project).file('gradle/groovy-compile-configscript.groovy').asFile
+            }
+            project.tasks.named('compileGroovy', GroovyCompile).configure { GroovyCompile task ->
+                // Resource-only changes do not ordinarily invalidate compilation. This file changes
+                // whether the compiler owns the generated imports resource, so adding or deleting it
+                // must run the transform even when no Groovy source changed.
+                registerAutoConfigurationImportsInput(project, task)
             }
         }
+    }
+
+    static void registerAutoConfigurationImportsInput(Project project, GroovyCompile task) {
+        if (task.extensions.extraProperties.has(AUTO_CONFIGURATION_IMPORTS_INPUT_REGISTERED)) {
+            return
+        }
+        task.extensions.extraProperties.set(AUTO_CONFIGURATION_IMPORTS_INPUT_REGISTERED, true)
+        task.inputs.files(project.layout.projectDirectory.file(AUTO_CONFIGURATION_IMPORTS_PATH))
+                .withPropertyName('grailsAutoConfigurationImports')
+                .withPathSensitivity(PathSensitivity.RELATIVE)
     }
 
     private static void configureReproducible(Project project) {

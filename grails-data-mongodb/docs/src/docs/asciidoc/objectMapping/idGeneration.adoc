@@ -50,6 +50,60 @@ class Person {
 BSON `ObjectId` instances are generated in a similar fashion to `UUIDs`.
 
 
+==== Native Identity Types
+
+Declaring `String id` on every domain class ties that source to MongoDB: the same class compiled against
+Hibernate would need `Long id` instead. Where domain classes are shared, or an application is written to
+run against either store, the build can ask for the identity type of whichever GORM implementation each
+domain class is mapped with:
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    gorm {
+        defaultIdType = 'native'
+    }
+}
+----
+
+A domain class mapped with MongoDB is then given a `String id` — holding the hexadecimal form of a
+generated `ObjectId`, exactly as if it had been declared — while one mapped with Hibernate keeps `Long`.
+Nothing in the domain class itself names a store.
+
+The default is `defaultIdType = 'long'`, which gives every domain class a `Long` id as earlier releases
+did. The type is resolved when the domain class is compiled, from its `mapWith` property and the GORM
+implementations on the compilation classpath, so an application using more than one implementation gets
+the right type for each domain class from the single setting. A domain class that declares an `id` of its
+own keeps the type it declares either way.
+
+Precompiled plugin domain classes cannot have their bytecode changed by the consuming application's
+compiler. A plugin that wants to leave this choice to its consumer can declare a portable identity:
+
+[source,groovy]
+----
+class Book {
+    Serializable id
+}
+----
+
+The consuming application uses the same build setting above for both cases. The Grails Gradle plugin
+packages its value as `grails.gorm.defaultIdType`, which is used at runtime for precompiled plugin
+domains. No duplicate application configuration is required, although normal external configuration
+can override the packaged value.
+
+MongoDB resolves the portable identity to `String` for `native` and `Long` for `long`. The result is
+stored in the entity mapping metadata, so normal persistence operations do not perform repeated type
+resolution. An explicitly declared concrete identity type still wins.
+
+WARNING: This changes the type of a field that already holds data. An existing MongoDB application whose
+domain classes rely on the default has sequence-generated `Long` `_id` values stored, and turning this on
+makes new documents use `ObjectId` hex strings instead. Choose it when an application is written, or
+migrate what has already been stored.
+
+NOTE: The setting reaches the compiler through the Grails Gradle plugin, so it applies to Gradle builds.
+Compiling the same sources with an IDE configured to bypass Gradle produces `Long` ids.
+
 ==== Assigned Identifiers
 
 

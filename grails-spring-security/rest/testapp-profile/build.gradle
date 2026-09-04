@@ -19,7 +19,6 @@
 
 plugins {
     id 'org.apache.grails.gradle.grails-profile'
-    id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
 }
 
@@ -29,25 +28,24 @@ group = 'org.apache.grails.profiles'
 ext {
     pomTitle = 'Grails Spring Security REST Test App Profile'
     pomDescription = 'A Grails profile to assist in generating various implementations of the Grails Spring Security REST plugin for testing purposes'
-    pomDevelopers = [
-            alvarosanchez: 'Alvaro Sanchez-Mariscal',
-    ]
 }
 
 tasks.register('generateProfileConfig') {
-    copy {
-        from 'profile.yml.tmpl'
-        into '.'
-        rename { String fileName -> fileName.replaceAll '\\.tmpl', '' }
-        expand(pluginVersion: project.version, grailsVersion: findProperty('projectVersion'))
-    }
-
-    file('features').eachDir { feature ->
+    doLast {
         copy {
-            from "features/${feature.name}/feature.yml.tmpl"
-            into "features/${feature.name}/"
+            from 'profile.yml.tmpl'
+            into '.'
             rename { String fileName -> fileName.replaceAll '\\.tmpl', '' }
             expand(pluginVersion: project.version, grailsVersion: findProperty('projectVersion'))
+        }
+
+        file('features').eachDir { feature ->
+            copy {
+                from "features/${feature.name}/feature.yml.tmpl"
+                into "features/${feature.name}/"
+                rename { String fileName -> fileName.replaceAll '\\.tmpl', '' }
+                expand(pluginVersion: project.version, grailsVersion: findProperty('projectVersion'))
+            }
         }
     }
 }
@@ -57,5 +55,10 @@ dependencies {
 }
 
 tasks.named('compileProfile') {
+    dependsOn('generateProfileConfig')
+}
+
+// The sources jar packages the generated profile.yml, so it must be created first
+tasks.named('sourcesJar') {
     dependsOn('generateProfileConfig')
 }
