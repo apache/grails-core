@@ -63,6 +63,11 @@ dependencies {
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
     testImplementation 'org.springframework:spring-test'
     testImplementation 'org.springframework.boot:spring-boot-test'
+    // Test-only: lets GrailsSecurityHeadersAutoConfigurationSpec verify the
+    // auto-configuration backs off when Spring Security's header-writing
+    // infrastructure is on the classpath. Not a main/runtime dependency -
+    // grails-controllers has no compile-time dependency on Spring Security.
+    testImplementation 'org.springframework.security:spring-security-web'
     testRuntimeOnly 'org.assertj:assertj-core'
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'

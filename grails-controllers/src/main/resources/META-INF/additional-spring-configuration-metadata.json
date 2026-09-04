@@ -1,0 +1,81 @@
+{
+  "properties": [
+    {
+      "name": "grails.security.headers.enabled",
+      "description": "Whether Grails registers the default servlet HTTP security headers filter.",
+      "type": "java.lang.Boolean",
+      "defaultValue": true
+    },
+    {
+      "name": "grails.security.headers.content-type-options.enabled",
+      "description": "Whether to send the X-Content-Type-Options response header.",
+      "type": "java.lang.Boolean",
+      "defaultValue": true
+    },
+    {
+      "name": "grails.security.headers.content-type-options.value",
+      "description": "Value for the X-Content-Type-Options response header.",
+      "type": "java.lang.String",
+      "defaultValue": "nosniff"
+    },
+    {
+      "name": "grails.security.headers.frame-options.enabled",
+      "description": "Whether to send the X-Frame-Options response header.",
+      "type": "java.lang.Boolean",
+      "defaultValue": true
+    },
+    {
+      "name": "grails.security.headers.frame-options.value",
+      "description": "Value for the X-Frame-Options response header.",
+      "type": "java.lang.String",
+      "defaultValue": "SAMEORIGIN"
+    },
+    {
+      "name": "grails.security.headers.referrer-policy.enabled",
+      "description": "Whether to send the Referrer-Policy response header.",
+      "type": "java.lang.Boolean",
+      "defaultValue": true
+    },
+    {
+      "name": "grails.security.headers.referrer-policy.value",
+      "description": "Value for the Referrer-Policy response header.",
+      "type": "java.lang.String",
+      "defaultValue": "strict-origin-when-cross-origin"
+    },
+    {
+      "name": "grails.security.headers.xss-protection.enabled",
+      "description": "Whether to send the X-XSS-Protection response header.",
+      "type": "java.lang.Boolean",
+      "defaultValue": true
+    },
+    {
+      "name": "grails.security.headers.xss-protection.value",
+      "description": "Value for the X-XSS-Protection response header.",
+      "type": "java.lang.String",
+      "defaultValue": "0"
+    },
+    {
+      "name": "grails.security.headers.hsts.enabled",
+      "description": "Whether to send Strict-Transport-Security on secure requests.",
+      "type": "java.lang.Boolean",
+      "defaultValue": false
+    },
+    {
+      "name": "grails.security.headers.hsts.value",
+      "description": "Value for the Strict-Transport-Security response header when HSTS is enabled and the request is secure.",
+      "type": "java.lang.String",
+      "defaultValue": "max-age=31536000"
+    },
+    {
+      "name": "grails.security.headers.content-security-policy.enabled",
+      "description": "Whether to send the Content-Security-Policy response header.",
+      "type": "java.lang.Boolean",
+      "defaultValue": false
+    },
+    {
+      "name": "grails.security.headers.content-security-policy.value",
+      "description": "Value for the Content-Security-Policy response header when CSP is enabled.",
+      "type": "java.lang.String"
+    }
+  ]
+}

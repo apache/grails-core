@@ -31,3 +31,65 @@ Grails has a few built in safety mechanisms by default.
 * The default link:scaffolding.html[scaffolding] templates HTML escape all data fields when displayed
 * Grails link creating tags (link:{gspTagsRef}link.html[link], link:{gspTagsRef}form.html[form], link:{gspTagsRef}createLink.html[createLink], link:{gspTagsRef}createLinkTo.html[createLinkTo] and others) all use appropriate escaping mechanisms to prevent code injection
 * Grails provides <<codecs,codecs>> to let you trivially escape data when rendered as HTML, JavaScript and URLs to prevent injection attacks here.
+
+==== HTTP Security Headers
+
+Grails servlet web applications send a small set of browser hardening headers by default:
+
+[cols="1,1", options="header"]
+|===
+| Header
+| Default value
+
+| `X-Content-Type-Options`
+| `nosniff`
+
+| `X-Frame-Options`
+| `SAMEORIGIN`
+
+| `Referrer-Policy`
+| `strict-origin-when-cross-origin`
+
+| `X-XSS-Protection`
+| `0`
+|===
+
+HSTS and Content Security Policy are not enabled by default because their correct values depend on deployment topology and application assets.
+When HSTS is enabled, Grails sends `Strict-Transport-Security` only for secure requests (`request.isSecure()`).
+
+If your application is deployed behind a TLS-terminating reverse proxy (the typical nginx/haproxy topology), the connection between the proxy and the application is plain HTTP, so `request.isSecure()` is `false` unless the container is told to trust the proxy's forwarded headers.
+Configure the Spring Boot `server.forward-headers-strategy: framework` (or `native`) property so `X-Forwarded-Proto` is honored, or set HSTS at the proxy instead, where TLS actually terminates.
+Without one of these, enabling HSTS here is a silent no-op behind most reverse proxies.
+
+If Spring Security's own header-writing filter (`HeaderWriterFilter`) is on the classpath, this filter does not apply at all - Spring Security already provides its own configurable header defaults, and layering Grails' eager defaults underneath would let them win over an application's explicit Spring Security header configuration.
+
+You can disable the whole filter, disable individual headers, or override values from `application.yml`:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    security:
+        headers:
+            enabled: true
+            frame-options:
+                value: DENY
+            referrer-policy:
+                value: no-referrer-when-downgrade
+            hsts:
+                enabled: true
+                value: max-age=31536000; includeSubDomains
+            content-security-policy:
+                enabled: true
+                value: default-src 'self'
+----
+
+Set `grails.security.headers.<header>.enabled` to `false` to omit a single header.
+For example, `grails.security.headers.xss-protection.enabled: false` omits `X-XSS-Protection`.
+If an application or another filter has already set one of these headers on the response, Grails leaves that value unchanged.
+
+This "already set" check can only see headers set inside the servlet container - it has no visibility into headers a reverse proxy adds to the response after it leaves the application.
+If your edge proxy already sends one of these headers (for example nginx's `add_header`, which _appends_ to upstream headers rather than replacing them), the client can end up receiving the header twice, e.g. proxy `X-Frame-Options: DENY` alongside the application's `SAMEORIGIN`.
+Browsers handle duplicate, conflicting headers inconsistently - duplicate `X-Frame-Options` can cause a browser to block framing outright, duplicate `Referrer-Policy` resolves to the last value sent, and multiple `Content-Security-Policy` headers are enforced as the intersection of all of them (strictly tighter, which can break pages relying on a single policy).
+HAProxy's `http-response set-header` replaces rather than appends, so it is not affected.
+If your edge proxy already owns one or more of these headers, either disable the corresponding header here (or the whole filter, with `grails.security.headers.enabled: false`) and let the proxy be the sole source of truth, or strip the application's copy at the proxy before it reaches the client.
