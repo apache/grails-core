@@ -31,7 +31,6 @@ import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.stmt.Statement
 
 import org.grails.datastore.gorm.services.ServiceImplementer
-import org.grails.datastore.gorm.transform.AstPropertyResolveUtils
 import org.grails.datastore.mapping.reflect.AstGenericsUtils
 import org.grails.datastore.mapping.reflect.AstUtils
 
@@ -71,20 +70,7 @@ trait IterableInterfaceProjectionBuilder extends InterfaceProjectionBuilder {
         if (AstUtils.isSubclassOfOrImplementsInterface(returnType, Iterable.name) || returnType.isArray()) {
             ClassNode genericType = AstGenericsUtils.resolveSingleGenericType(returnType)
             if (genericType != null && genericType.isInterface() && !genericType.packageName?.startsWith('java.')) {
-
-                List<String> interfacePropertyNames = AstPropertyResolveUtils.getPropertyNames(genericType)
-
-                for (prop in interfacePropertyNames) {
-                    ClassNode existingType = AstPropertyResolveUtils.getPropertyType(domainClass, prop)
-                    ClassNode propertyType = AstPropertyResolveUtils.getPropertyType(genericType, prop)
-                    if (existingType == null) {
-                        return false
-                    }
-                    else if (!AstUtils.isSubclassOfOrImplementsInterface(existingType, propertyType)) {
-                        return false
-                    }
-                }
-                return true
+                return hasCompatibleProperties(domainClass, genericType)
             }
         }
         return false
