@@ -19,6 +19,8 @@
 
 package grails.gorm.rx
 
+import jakarta.persistence.criteria.JoinType
+
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.core.connections.ConnectionSources
@@ -400,6 +402,20 @@ class DetachedCriteriaSpec extends Specification {
         then:
         1 * query.join('author')
         1 * query.select('title')
+        1 * query.findAll([:]) >> Observable.empty()
+    }
+
+    void "prepareQuery passes a custom JoinType through to the query"() {
+        given:
+        DetachedCriteria<Volume> criteria = newCriteria()
+        criteria.join('author', JoinType.LEFT)
+
+        when:
+        criteria.findAll()
+
+        then:
+        1 * query.join('author', JoinType.LEFT)
+        0 * query.join('author')
         1 * query.findAll([:]) >> Observable.empty()
     }
 
