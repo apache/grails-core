@@ -51,12 +51,11 @@ class PersistentLoginSpec extends SecurityUISpec {
 
 		then:
 		page.assertResults(1, 2, 2)
-		with(pageSource) {
-			contains('persistent_login_test_3')
-			contains('persistent_login_test_13')
-			contains('series3')
-			contains('series13')
-		}
+			pageSource.contains('persistent_login_test_3')
+			pageSource.contains('persistent_login_test_13')
+			pageSource.contains('series3')
+			pageSource.contains('series13')
+
 	}
 
 	void testFindByToken() {
@@ -69,10 +68,9 @@ class PersistentLoginSpec extends SecurityUISpec {
 
 		then:
 		page.assertResults(1, 2, 2)
-		with(pageSource) {
-			contains('token13')
-			contains('token3')
-		}
+			pageSource.contains('token13')
+			pageSource.contains('token3')
+
 	}
 
 	void testFindBySeries() {
@@ -85,11 +83,10 @@ class PersistentLoginSpec extends SecurityUISpec {
 
 		then:
 		page.assertResults(1, 2, 2)
-		with(pageSource) {
-			contains('series4')
-			contains('series14')
-			contains('persistent_login_test_4')
-			contains('persistent_login_test_14')
-		}
+			pageSource.contains('series4')
+			pageSource.contains('series14')
+			pageSource.contains('persistent_login_test_4')
+			pageSource.contains('persistent_login_test_14')
+
 	}
 }

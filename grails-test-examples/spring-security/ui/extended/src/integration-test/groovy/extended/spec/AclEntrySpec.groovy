@@ -53,17 +53,16 @@ class AclEntrySpec extends SecurityUISpec {
 
 		then:
 		page.assertResults(1, 3, 3)
-		with(pageSource) {
-			contains('60')
-			contains('62')
-			contains('194')
-			contains('195')
-			contains('user1')
-			contains('admin')
-			contains('BasePermission[...............................R=1]')
-			contains('BasePermission[...........................A....=16]')
-			!contains('>user2</a>')
-		}
+			pageSource.contains('60')
+			pageSource.contains('62')
+			pageSource.contains('194')
+			pageSource.contains('195')
+			pageSource.contains('user1')
+			pageSource.contains('admin')
+			pageSource.contains('BasePermission[...............................R=1]')
+			pageSource.contains('BasePermission[...........................A....=16]')
+			!pageSource.contains('>user2</a>')
+
 	}
 
 	void testFindByAceOrder() {
@@ -76,18 +75,17 @@ class AclEntrySpec extends SecurityUISpec {
 
 		then:
 		page.assertResults(1, 10, 67)
-		with(pageSource) {
-			contains('75')
-			contains('76')
-			contains('78')
-			contains('80')
-			contains('82')
-			contains('87')
-			contains('89')
-			contains('91')
-			contains('93')
-			contains('95')
-		}
+			pageSource.contains('75')
+			pageSource.contains('76')
+			pageSource.contains('78')
+			pageSource.contains('80')
+			pageSource.contains('82')
+			pageSource.contains('87')
+			pageSource.contains('89')
+			pageSource.contains('91')
+			pageSource.contains('93')
+			pageSource.contains('95')
+
 	}
 
 	void testFindByMask() {

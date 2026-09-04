@@ -32,6 +32,25 @@ Notable new features are included below.
 Grails {grailsMajorVersion} raises the standard build and runtime baseline to Java 21 and uses Gradle {gradleVersion}.
 The standard Grails BOM remains on Groovy {groovyVersion} and Spock {spockVersion}, while Micronaut-enabled Grails applications use Micronaut-specific BOM variants that align with Micronaut 5 and require JDK 25 or later.
 
+==== Groovy invokedynamic enabled by default
+
+Grails 7 disabled Groovy invokedynamic for `GroovyCompile` tasks because of performance regressions on Groovy 4 (https://github.com/apache/grails-core/issues/15293[#15293]).
+Grails 9 turns invokedynamic back on by default for generated apps (`grails { indy }`) and published framework modules (`CompilePlugin`).
+You do not need to set `grails { indy = true }`.
+That matches Groovy 6's preferred dispatch. CI can still compile without indy via `-PgrailsIndy=false`.
+
+To keep classic callsite bytecode:
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    indy = false
+}
+----
+
+Non-indy builds on Groovy 6 need `org.apache.groovy:groovy-callsite` on the classpath. The Grails BOM already manages that coordinate.
+
 ==== Spring Boot 4.1 and Spring Framework 7
 
 Grails {grailsMajorVersion} is built on Spring Boot {springBootVersion} and Spring Framework {springVersion}.

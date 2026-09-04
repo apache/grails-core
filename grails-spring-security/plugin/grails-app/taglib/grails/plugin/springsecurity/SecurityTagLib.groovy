@@ -30,6 +30,8 @@ import org.springframework.security.web.FilterInvocation
 import org.springframework.security.web.access.WebInvocationPrivilegeEvaluator
 
 import jakarta.servlet.FilterChain
+import jakarta.servlet.ServletRequest
+import jakarta.servlet.ServletResponse
 
 /**
  * Security tags.
@@ -51,9 +53,7 @@ class SecurityTagLib implements GrailsConfigurationAware {
     /** Dependency injection for webInvocationPrivilegeEvaluator. */
     WebInvocationPrivilegeEvaluator webInvocationPrivilegeEvaluator
 
-    protected static final FilterChain DUMMY_CHAIN = [
-        doFilter: { req, res -> throw new UnsupportedOperationException() }
-    ] as FilterChain
+    protected static final FilterChain DUMMY_CHAIN = new UnsupportedFilterChain()
 
     protected Map<String, Expression> expressionCache = [:]
 
@@ -316,5 +316,12 @@ class SecurityTagLib implements GrailsConfigurationAware {
     @Override
     void setConfiguration(Config co) {
         serverContextPath = co.getProperty('server.contextPath', String, null)
+    }
+
+    private static final class UnsupportedFilterChain implements FilterChain {
+        @Override
+        void doFilter(ServletRequest req, ServletResponse res) {
+            throw new UnsupportedOperationException()
+        }
     }
 }

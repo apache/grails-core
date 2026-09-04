@@ -32,10 +32,11 @@ grails {
     // this causes unexpected version mismatches in the various plugin projects
     springDependencyManagement = false
 
-    // Allow CI to toggle Groovy invokedynamic (indy) via -PgrailsIndy=true
+    // Allow CI to toggle Groovy invokedynamic (indy) via -PgrailsIndy=true/false
     // This enables testing functional tests with both indy enabled and disabled.
     // See: https://github.com/apache/grails-core/issues/15321
+    // Published framework modules inherit the same default from CompilePlugin.
     if (project.hasProperty('grailsIndy')) {
-        indy = Boolean.parseBoolean(project.property('grailsIndy') as String)
+        indy = project.property('grailsIndy').toString().trim().toBoolean()
     }
 }

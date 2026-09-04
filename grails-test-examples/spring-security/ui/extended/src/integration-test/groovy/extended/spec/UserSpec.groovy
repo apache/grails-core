@@ -56,11 +56,10 @@ class UserSpec extends SecurityUISpec {
 
 		then:
 		page.assertResults(1, 3, 3)
-		with(pageSource) {
-			contains('foon_2')
-			contains('foolkiller')
-			contains('foostra')
-		}
+			pageSource.contains('foon_2')
+			pageSource.contains('foolkiller')
+			pageSource.contains('foostra')
+
 	}
 
 	void testFindByDisabled() {
@@ -90,11 +89,10 @@ class UserSpec extends SecurityUISpec {
 
 		then:
 		page.assertResults(1, 3, 3)
-		with(pageSource) {
-			contains('maryrose')
-			contains('ratuig')
-			contains('rome20c')
-		}
+			pageSource.contains('maryrose')
+			pageSource.contains('ratuig')
+			pageSource.contains('rome20c')
+
 	}
 
 	void testFindByAccountLocked() {
@@ -109,11 +107,10 @@ class UserSpec extends SecurityUISpec {
 
 		then:
 		page.assertResults(1, 3, 3)
-		with(pageSource) {
-			contains('aaaaaasd')
-			contains('achen')
-			contains('szhang1999')
-		}
+			pageSource.contains('aaaaaasd')
+			pageSource.contains('achen')
+			pageSource.contains('szhang1999')
+
 	}
 
 	void testFindByPasswordExpired() {
@@ -128,11 +125,10 @@ class UserSpec extends SecurityUISpec {
 
 		then:
 		page.assertResults(1, 3, 3)
-		with(pageSource) {
-			contains('hhheeeaaatt')
-			contains('mscanio')
-			contains('kittal')
-		}
+			pageSource.contains('hhheeeaaatt')
+			pageSource.contains('mscanio')
+			pageSource.contains('kittal')
+
 	}
 
 	void testCreateAndEdit() {

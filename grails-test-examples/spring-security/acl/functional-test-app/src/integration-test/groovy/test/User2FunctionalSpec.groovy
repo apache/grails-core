@@ -130,27 +130,25 @@ class User2FunctionalSpec extends AbstractSecuritySpec {
 		go('/tagLibTest/test')
 
 		then:
-		with(pageSource) {
-			contains('test 1 true 1')
-			contains('test 2 true 1')
-			contains('test 3 true 1')
-			contains('test 4 true 1')
-			contains('test 5 true 1')
-			contains('test 6 true 1')
+		pageSource.contains('test 1 true 1')
+		pageSource.contains('test 2 true 1')
+		pageSource.contains('test 3 true 1')
+		pageSource.contains('test 4 true 1')
+		pageSource.contains('test 5 true 1')
+		pageSource.contains('test 6 true 1')
 
-			contains('test 1 false 13')
-			contains('test 2 false 13')
-			contains('test 3 false 13')
-			contains('test 4 false 13')
-			contains('test 5 false 13')
-			contains('test 6 false 13')
+		pageSource.contains('test 1 false 13')
+		pageSource.contains('test 2 false 13')
+		pageSource.contains('test 3 false 13')
+		pageSource.contains('test 4 false 13')
+		pageSource.contains('test 5 false 13')
+		pageSource.contains('test 6 false 13')
 
-			contains('test 1 false 80')
-			contains('test 2 false 80')
-			contains('test 3 false 80')
-			contains('test 4 false 80')
-			contains('test 5 false 80')
-			contains('test 6 false 80')
-		}
+		pageSource.contains('test 1 false 80')
+		pageSource.contains('test 2 false 80')
+		pageSource.contains('test 3 false 80')
+		pageSource.contains('test 4 false 80')
+		pageSource.contains('test 5 false 80')
+		pageSource.contains('test 6 false 80')
 	}
 }

@@ -60,13 +60,11 @@ class MiscSpec extends AbstractHyphenatedSecuritySpec {
         def auth = getSessionValue('SPRING_SECURITY_CONTEXT')
 
         then:
-        with(auth) {
-            contains('Username=admin')
-            contains('Authenticated=true')
-            contains('ROLE_ADMIN')
-            contains('ROLE_USER') // new, added since inferred from role hierarchy
-            !contains('ROLE_PREVIOUS_ADMINISTRATOR')
-        }
+        auth.contains('Username=admin')
+        auth.contains('Authenticated=true')
+        auth.contains('ROLE_ADMIN')
+        auth.contains('ROLE_USER') // new, added since inferred from role hierarchy
+        !auth.contains('ROLE_PREVIOUS_ADMINISTRATOR')
 
         // switch via GET
         when:
@@ -91,12 +89,10 @@ class MiscSpec extends AbstractHyphenatedSecuritySpec {
         auth = getSessionValue('SPRING_SECURITY_CONTEXT')
 
         then:
-        with(auth) {
-            contains('Username=testuser')
-            contains('Authenticated=true')
-            contains('ROLE_USER')
-            contains('ROLE_PREVIOUS_ADMINISTRATOR')
-        }
+        auth.contains('Username=testuser')
+        auth.contains('Authenticated=true')
+        auth.contains('ROLE_USER')
+        auth.contains('ROLE_PREVIOUS_ADMINISTRATOR')
 
         when:
         go('secure-annotated/user-action')
@@ -137,13 +133,11 @@ class MiscSpec extends AbstractHyphenatedSecuritySpec {
         auth = getSessionValue('SPRING_SECURITY_CONTEXT')
 
         then:
-        with(auth) {
-            contains('Username=admin')
-            contains('Authenticated=true')
-            contains('ROLE_ADMIN')
-            contains('ROLE_USER')
-            !contains('ROLE_PREVIOUS_ADMINISTRATOR')
-        }
+        auth.contains('Username=admin')
+        auth.contains('Authenticated=true')
+        auth.contains('ROLE_ADMIN')
+        auth.contains('ROLE_USER')
+        !auth.contains('ROLE_PREVIOUS_ADMINISTRATOR')
     }
 
     void 'hierarchical roles'() {
@@ -164,10 +158,8 @@ class MiscSpec extends AbstractHyphenatedSecuritySpec {
         def auth = getSessionValue('SPRING_SECURITY_CONTEXT')
 
         then:
-        with(auth) {
-            contains('Authenticated=true')
-            contains('ROLE_USER')
-        }
+        auth.contains('Authenticated=true')
+        auth.contains('ROLE_USER')
 
         // now get an action that's ROLE_USER only
         when:
@@ -180,37 +172,33 @@ class MiscSpec extends AbstractHyphenatedSecuritySpec {
     void 'taglibs unauthenticated'() {
         when:
         go('misc-test/test')
+        def html = pageSource
 
         then:
-        with(pageSource) {
-            !contains('user and admin')
-            !contains('user and admin and foo')
-            contains('not user and not admin')
-            !contains('user or admin')
-            contains('accountNonExpired: "not logged in"')
-            contains('id: "not logged in"')
-            contains('Username is ""')
-            !contains('logged in true')
-            contains('logged in false')
-            !contains('switched true')
-            contains('switched false')
-            contains('switched original username ""')
-
-            !contains('access with role user: true')
-            !contains('access with role admin: true')
-            contains('access with role user: false')
-            contains('access with role admin: false')
-
-            contains('Can access /login/auth')
-            !contains('Can access /secure-annotated')
-            !contains('Cannot access /login/auth')
-            contains('Cannot access /secure-annotated')
-
-            contains('anonymous access: true')
-            contains('Can access /misc-test/test')
-            !contains('anonymous access: false')
-            !contains('Cannot access /misc-test/test')
-        }
+        !html.contains('user and admin')
+        !html.contains('user and admin and foo')
+        html.contains('not user and not admin')
+        !html.contains('user or admin')
+        html.contains('accountNonExpired: "not logged in"')
+        html.contains('id: "not logged in"')
+        html.contains('Username is ""')
+        !html.contains('logged in true')
+        html.contains('logged in false')
+        !html.contains('switched true')
+        html.contains('switched false')
+        html.contains('switched original username ""')
+        !html.contains('access with role user: true')
+        !html.contains('access with role admin: true')
+        html.contains('access with role user: false')
+        html.contains('access with role admin: false')
+        html.contains('Can access /login/auth')
+        !html.contains('Can access /secure-annotated')
+        !html.contains('Cannot access /login/auth')
+        html.contains('Cannot access /secure-annotated')
+        html.contains('anonymous access: true')
+        html.contains('Can access /misc-test/test')
+        !html.contains('anonymous access: false')
+        !html.contains('Cannot access /misc-test/test')
     }
 
     void 'taglibs user'() {
@@ -222,36 +210,32 @@ class MiscSpec extends AbstractHyphenatedSecuritySpec {
 
         when:
         go('misc-test/test')
+        def html = pageSource
 
         then:
-        with(pageSource) {
-            !contains('user and admin')
-            !contains('user and admin and foo')
-            !contains('not user and not admin')
-            contains('user or admin')
-            contains('accountNonExpired: "true"')
-            !contains('id: "not logged in"') // can't test on exact id, don't know what it is)
-            contains('Username is "testuser"')
-            contains('logged in true')
-            !contains('logged in false')
-            !contains('switched true')
-            contains('switched false')
-            contains('switched original username ""')
-
-            contains('access with role user: true')
-            !contains('access with role admin: true')
-            !contains('access with role user: false')
-            contains('access with role admin: false')
-
-            contains('Can access /login/auth')
-            !contains('Can access /secure-annotated')
-            !contains('Cannot access /login/auth')
-            contains('Cannot access /secure-annotated')
-
-            contains('anonymous access: false')
-            contains('Can access /misc-test/test')
-            !contains('anonymous access: true')
-        }
+        !html.contains('user and admin')
+        !html.contains('user and admin and foo')
+        !html.contains('not user and not admin')
+        html.contains('user or admin')
+        html.contains('accountNonExpired: "true"')
+        !html.contains('id: "not logged in"') // can't test on exact id, don't know what it is)
+        html.contains('Username is "testuser"')
+        html.contains('logged in true')
+        !html.contains('logged in false')
+        !html.contains('switched true')
+        html.contains('switched false')
+        html.contains('switched original username ""')
+        html.contains('access with role user: true')
+        !html.contains('access with role admin: true')
+        !html.contains('access with role user: false')
+        html.contains('access with role admin: false')
+        html.contains('Can access /login/auth')
+        !html.contains('Can access /secure-annotated')
+        !html.contains('Cannot access /login/auth')
+        html.contains('Cannot access /secure-annotated')
+        html.contains('anonymous access: false')
+        html.contains('Can access /misc-test/test')
+        !html.contains('anonymous access: true')
     }
 
     void 'taglibs admin'() {
@@ -263,54 +247,48 @@ class MiscSpec extends AbstractHyphenatedSecuritySpec {
 
         when:
         go('misc-test/test')
+        def html = pageSource
 
         then:
-        with(pageSource) {
-            contains('user and admin')
-            !contains('user and admin and foo')
-            !contains('not user and not admin')
-            contains('user or admin')
-            contains('accountNonExpired: "true"')
-            !contains('id: "not logged in"') // can't test on exact id, don't know what it is)
-            contains('Username is "admin"')
-
-            contains('logged in true')
-            !contains('logged in false')
-            !contains('switched true')
-            contains('switched false')
-            contains('switched original username ""')
-
-            contains('access with role user: true')
-            contains('access with role admin: true')
-            !contains('access with role user: false')
-            !contains('access with role admin: false')
-
-            contains('Can access /login/auth')
-            contains('Can access /secure-annotated')
-            !contains('Cannot access /login/auth')
-            !contains('Cannot access /secure-annotated')
-
-            contains('anonymous access: false')
-            contains('Can access /misc-test/test')
-            !contains('anonymous access: true')
-            !contains('Cannot access /misc-test/test')
-        }
+        html.contains('user and admin')
+        !html.contains('user and admin and foo')
+        !html.contains('not user and not admin')
+        html.contains('user or admin')
+        html.contains('accountNonExpired: "true"')
+        !html.contains('id: "not logged in"') // can't test on exact id, don't know what it is)
+        html.contains('Username is "admin"')
+        html.contains('logged in true')
+        !html.contains('logged in false')
+        !html.contains('switched true')
+        html.contains('switched false')
+        html.contains('switched original username ""')
+        html.contains('access with role user: true')
+        html.contains('access with role admin: true')
+        !html.contains('access with role user: false')
+        !html.contains('access with role admin: false')
+        html.contains('Can access /login/auth')
+        html.contains('Can access /secure-annotated')
+        !html.contains('Cannot access /login/auth')
+        !html.contains('Cannot access /secure-annotated')
+        html.contains('anonymous access: false')
+        html.contains('Can access /misc-test/test')
+        !html.contains('anonymous access: true')
+        !html.contains('Cannot access /misc-test/test')
     }
 
     void 'controller methods unauthenticated'() {
         when:
         go('misc-test/test-controller-methods')
+        def html = pageSource
 
         then:
-        with(pageSource) {
-            contains('getPrincipal: org.springframework.security.core.userdetails.User')
-            contains('Username=__grails.anonymous.user__')
-            contains('Granted Authorities=[ROLE_ANONYMOUS]')
-            contains('isLoggedIn: false')
-            contains('loggedIn: false')
-            contains('getAuthenticatedUser: null')
-            contains('authenticatedUser: null')
-        }
+        html.contains('getPrincipal: org.springframework.security.core.userdetails.User')
+        html.contains('Username=__grails.anonymous.user__')
+        html.contains('Granted Authorities=[ROLE_ANONYMOUS]')
+        html.contains('isLoggedIn: false')
+        html.contains('loggedIn: false')
+        html.contains('getAuthenticatedUser: null')
+        html.contains('authenticatedUser: null')
     }
 
     void 'controller methods authenticated'() {
@@ -322,17 +300,16 @@ class MiscSpec extends AbstractHyphenatedSecuritySpec {
 
         when:
         go('misc-test/test-controller-methods')
+        def html = pageSource
 
         then:
-        with(pageSource) {
-            contains('getPrincipal: grails.plugin.springsecurity.userdetails.GrailsUser')
-            contains('principal: grails.plugin.springsecurity.userdetails.GrailsUser')
-            contains('Username=admin')
-            contains('isLoggedIn: true')
-            contains('loggedIn: true')
-            contains('getAuthenticatedUser: TestUser(username:admin)')
-            contains('authenticatedUser: TestUser(username:admin)')
-        }
+        html.contains('getPrincipal: grails.plugin.springsecurity.userdetails.GrailsUser')
+        html.contains('principal: grails.plugin.springsecurity.userdetails.GrailsUser')
+        html.contains('Username=admin')
+        html.contains('isLoggedIn: true')
+        html.contains('loggedIn: true')
+        html.contains('getAuthenticatedUser: TestUser(username:admin)')
+        html.contains('authenticatedUser: TestUser(username:admin)')
     }
 
     void 'test hyphenated'() {
@@ -395,16 +372,15 @@ class MiscSpec extends AbstractHyphenatedSecuritySpec {
     void 'test Servlet API methods unauthenticated'() {
         when:
         go('misc-test/test-servlet-api-methods')
+        def html = pageSource
 
         then:
-        with(pageSource) {
-            contains('request.getUserPrincipal(): null')
-            contains('request.userPrincipal: null')
-            contains('request.isUserInRole(\'ROLE_ADMIN\'): false')
-            contains('request.isUserInRole(\'ROLE_FOO\'): false')
-            contains('request.getRemoteUser(): null')
-            contains('request.remoteUser: null')
-        }
+        html.contains('request.getUserPrincipal(): null')
+        html.contains('request.userPrincipal: null')
+        html.contains('request.isUserInRole(\'ROLE_ADMIN\'): false')
+        html.contains('request.isUserInRole(\'ROLE_FOO\'): false')
+        html.contains('request.getRemoteUser(): null')
+        html.contains('request.remoteUser: null')
     }
 
     @Issue('https://github.com/apache/grails-spring-security/issues/414')
@@ -417,16 +393,15 @@ class MiscSpec extends AbstractHyphenatedSecuritySpec {
 
         when:
         go('misc-test/test-servlet-api-methods')
+        def html = pageSource
 
         then:
-        with(pageSource) {
-            contains('request.getUserPrincipal(): UsernamePasswordAuthenticationToken')
-            contains('request.userPrincipal: UsernamePasswordAuthenticationToken')
-            contains('request.isUserInRole(\'ROLE_ADMIN\'): true')
-            contains('request.isUserInRole(\'ROLE_FOO\'): false')
-            contains('request.getRemoteUser(): admin')
-            contains('request.remoteUser: admin')
-        }
+        html.contains('request.getUserPrincipal(): UsernamePasswordAuthenticationToken')
+        html.contains('request.userPrincipal: UsernamePasswordAuthenticationToken')
+        html.contains('request.isUserInRole(\'ROLE_ADMIN\'): true')
+        html.contains('request.isUserInRole(\'ROLE_FOO\'): false')
+        html.contains('request.getRemoteUser(): admin')
+        html.contains('request.remoteUser: admin')
     }
 
     @Issue('https://github.com/apache/grails-spring-security/issues/403')
