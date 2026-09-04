@@ -21,7 +21,20 @@ under the License.
 ==== Mongo Database Connection Configuration
 
 
-As mentioned the GORM for MongoDB plugin will configure all the defaults for you, but if you wish to customize those defaults you can do so in the `grails-app/conf/application.groovy` file:
+As mentioned the GORM for MongoDB plugin will configure all the defaults for you, but if you wish to customize those defaults you can do so in `grails-app/conf/application.yml`:
+
+[source,yaml]
+----
+grails:
+    mongodb:
+        host: localhost
+        port: 27017
+        username: blah
+        password: blah
+        databaseName: foo
+----
+
+or equivalently in `grails-app/conf/application.groovy`:
 
 [source,groovy]
 ----
@@ -35,6 +48,8 @@ grails {
     }
 }
 ----
+
+NOTE: These settings are read by name, so write them exactly as they are documented. Unlike Spring Boot's own configuration properties they are not relaxed-bound, and a kebab-case spelling such as `database-name` is not recognised — it is ignored, leaving the default in place.
 
 The `databaseName` setting configures the default database name. If not specified the `databaseName` will default to the name of your application.
 
@@ -87,6 +102,8 @@ grails {
         username = ".." // the username to connect with
         password = ".." // the password to connect with
         stateless = false // whether to use stateless sessions by default
+        buildIndexes = true // whether to create the indexes declared in mapping blocks on startup
+        buildIndexesAsync = false // whether that index build runs on a background thread instead of blocking startup
 
         // Alternatively, using  'url'
         // url = "mongodb://localhost/mydb"
@@ -124,6 +141,11 @@ grails.mongodb.default.mapping = {
 The `*` method is used to indicate that the setting applies to all properties.
 
 You can also set a global default for the storage type of `String id` fields via `grails.mongodb.stringIds.defaultStoredAs` (values `string` or `objectid`). See <<idGeneration,Identity Generation>> for details.
+
+==== Index Creation on Startup
+
+
+GORM creates and reconciles the indexes declared in your mapping blocks each time the datastore starts, and startup waits for MongoDB to finish building them. Set `grails.mongodb.buildIndexes = false` to leave the indexes on the server untouched instead, or `grails.mongodb.buildIndexesAsync = true` to keep building them but on a background thread — see <<queryIndexes,Querying Indexing>> for details and when to use each.
 
 ==== Multi-Document Transactions
 

@@ -25,6 +25,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import groovy.lang.Closure;
@@ -162,6 +165,15 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
     protected final boolean stateless;
     protected final boolean codecEngine;
     protected final boolean transactionsEnabled;
+    protected final boolean buildIndexes;
+    protected final boolean buildIndexesAsync;
+
+    /**
+     * Runs the startup index build off the thread that creates the datastore when
+     * {@code grails.mongodb.buildIndexesAsync} is enabled; {@code null} otherwise. A single thread,
+     * so the indexes are still built one at a time rather than all at once against the server.
+     */
+    private final ExecutorService indexBuildExecutor;
     private volatile Boolean transactionsSupported;
     private volatile boolean warnedTransactionsUnsupported = false;
     protected CodecRegistry codecRegistry;
@@ -205,6 +217,11 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
         this.stateless = settings.isStateless();
         this.codecEngine = settings.getEngine().equals(MongoConstants.CODEC_ENGINE);
         this.transactionsEnabled = settings.isTransactional();
+        this.buildIndexes = settings.isBuildIndexes();
+        this.buildIndexesAsync = settings.isBuildIndexesAsync();
+        this.indexBuildExecutor = this.buildIndexes && this.buildIndexesAsync ?
+                Executors.newSingleThreadExecutor(new IndexBuildThreadFactory(defaultConnectionSource.getName())) :
+                null;
         codecRegistry = CodecRegistries.fromRegistries(
                 CodecRegistries.fromProviders(new CodecExtensions(), new PersistentEntityCodeRegistry()),
                 mappingContext.getCodecRegistry(),
@@ -565,16 +582,159 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
     }
 
     /**
-     * Builds the MongoDB index for this datastore
+     * Builds the MongoDB index for this datastore.
+     *
+     * <p>Each index is created by a command that the server answers only once the index has been built,
+     * so with the default settings this blocks whoever creates the datastore — in an application, the
+     * startup thread — for as long as MongoDB takes to build every declared index. Enabling
+     * {@code grails.mongodb.buildIndexesAsync} hands the work to a background thread and returns
+     * immediately instead.
      */
     public void buildIndex() {
+        if (!buildIndexes) {
+            LOG.info("Index creation is disabled by [{} = false]. The indexes declared by the domain classes " +
+                    "will not be created or reconciled; the indexes already present on the server are left untouched.",
+                    MongoSettings.SETTING_BUILD_INDEXES);
+            return;
+        }
+        if (indexBuildExecutor == null) {
+            buildDeclaredIndexes();
+            return;
+        }
+        LOG.info("Building the indexes declared by the domain classes on a background thread ([{} = true]). " +
+                "Startup does not wait for them, so a query issued before its index exists is served without it.",
+                MongoSettings.SETTING_BUILD_INDEXES_ASYNC);
+        indexBuildExecutor.execute(() -> {
+            try {
+                buildDeclaredIndexes();
+            }
+            catch (Throwable e) {
+                // Nothing is waiting on this thread, so an error that would have failed startup has to be
+                // reported here or it is lost entirely.
+                if (indexBuildExecutor.isShutdown() || Thread.currentThread().isInterrupted()) {
+                    // toString rather than the message: an interrupted driver call can arrive wrapped in
+                    // an exception that carries no message of its own.
+                    LOG.debug("The background index build was abandoned because the datastore is shutting down: {}",
+                            e.toString(), e);
+                }
+                else {
+                    LOG.error("The background index build failed: {}. The application is running without the " +
+                            "indexes that were not created.", e.getMessage(), e);
+                }
+            }
+        });
+    }
+
+    /**
+     * Creates and reconciles the indexes declared by every entity mapped to this datastore, and reports
+     * what that cost. MongoDB answers each {@code createIndex} only once the index exists, so the elapsed
+     * time is the time the caller — startup, or the background build thread — actually spent waiting.
+     */
+    private void buildDeclaredIndexes() {
+        long startedAt = System.nanoTime();
+        IndexBuildSummary summary = new IndexBuildSummary();
         for (PersistentEntity entity : this.mappingContext.getPersistentEntities()) {
             // Only create Mongo templates for entities that are mapped with Mongo
             if (!entity.isExternal()) {
                 if (entity.isMultiTenant() && multiTenancyMode == MultiTenancySettings.MultiTenancyMode.SCHEMA) continue;
 
-                initializeIndices(entity);
+                summary.entities++;
+                initializeIndices(entity, summary);
             }
+        }
+        long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt);
+        if (summary.applied() == 0 && summary.failures == 0) {
+            LOG.debug("No indexes are declared by the {} domain class(es) mapped to database [{}]",
+                    summary.entities, defaultDatabase);
+            return;
+        }
+        String outcome = summary.classified ?
+                summary.created + " created, " + summary.alreadyPresent + " already present" :
+                summary.applied() + " index declaration(s) applied";
+        if (summary.failures == 0) {
+            LOG.info("Index build for database [{}] finished in {}ms: {}, from {} domain class(es)",
+                    defaultDatabase, elapsedMillis, outcome, summary.entities);
+        }
+        else {
+            LOG.warn("Index build for database [{}] finished in {}ms: {}, {} failed, from {} domain class(es). " +
+                    "The failures are reported above.",
+                    defaultDatabase, elapsedMillis, outcome, summary.failures, summary.entities);
+        }
+    }
+
+    /**
+     * The indexes a collection already had when the build reached it, listed once on first use and then
+     * reused. {@code createIndex} is idempotent and answers the same way whether or not it had to build
+     * anything — the driver hands back only the index name, discarding the {@code numIndexesBefore} /
+     * {@code numIndexesAfter} the server reports — so what was there beforehand is what distinguishes an
+     * index this build created from one it merely confirmed.
+     *
+     * <p>Listed lazily so that an entity declaring no indexes costs no round trip, and reused by the
+     * conflict path, which would otherwise list them again.
+     */
+    private static final class ExistingIndexes {
+
+        private final com.mongodb.client.MongoCollection<Document> collection;
+
+        private final IndexBuildSummary summary;
+
+        private List<Document> indexes;
+
+        private boolean listed;
+
+        private ExistingIndexes(com.mongodb.client.MongoCollection<Document> collection, IndexBuildSummary summary) {
+            this.collection = collection;
+            this.summary = summary;
+        }
+
+        /**
+         * @return the indexes present before the build, or {@code null} if they could not be listed
+         */
+        private List<Document> get() {
+            if (!listed) {
+                listed = true;
+                try {
+                    indexes = collection.listIndexes().into(new ArrayList<>());
+                } catch (RuntimeException e) {
+                    // Not fatal: the build can still create indexes, it just cannot report which of them
+                    // were new. Losing the breakdown is not worth failing a startup over.
+                    LOG.debug("Could not list the existing indexes of collection [{}]: {}",
+                            collection.getNamespace().getCollectionName(), e.getMessage(), e);
+                    summary.classified = false;
+                }
+            }
+            return indexes;
+        }
+
+        private boolean contains(Document keys) {
+            List<Document> existing = get();
+            return existing != null && findIndexByKeyPattern(existing, keys) != null;
+        }
+    }
+
+    /**
+     * Counts the work one index build did, so that it can be summarised once at the end rather than a line
+     * per index.
+     */
+    private static final class IndexBuildSummary {
+
+        private int entities;
+
+        private int created;
+
+        private int alreadyPresent;
+
+        private int failures;
+
+        /**
+         * False once an entity's existing indexes could not be listed, which is the only thing that
+         * separates a created index from one that was already there. The summary then falls back to
+         * reporting how many declarations were applied without saying which did work.
+         */
+        private boolean classified = true;
+
+        private int applied() {
+            return created + alreadyPresent;
         }
     }
 
@@ -754,6 +914,29 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
         }
     }
 
+    /**
+     * Whether GORM creates and reconciles the indexes declared in the domain class mapping blocks when
+     * the datastore starts. Disabled with {@code grails.mongodb.buildIndexes = false}, which leaves the
+     * indexes on the server exactly as they are.
+     *
+     * @return {@code true} if declared indexes are created on startup
+     * @since 8.0
+     */
+    public boolean isBuildIndexes() {
+        return buildIndexes;
+    }
+
+    /**
+     * Whether the startup index build runs on a background thread instead of blocking the thread that
+     * creates the datastore. Enabled with {@code grails.mongodb.buildIndexesAsync = true}.
+     *
+     * @return {@code true} if declared indexes are built asynchronously
+     * @since 8.0
+     */
+    public boolean isBuildIndexesAsync() {
+        return buildIndexesAsync;
+    }
+
     public String getDatabaseName(PersistentEntity entity) {
         if (entity.isMultiTenant() && multiTenancyMode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
             return Tenants.currentId(getClass()).toString();
@@ -921,7 +1104,17 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param entity The entity
      */
     protected void initializeIndices(final PersistentEntity entity) {
+        initializeIndices(entity, new IndexBuildSummary());
+    }
+
+    private void initializeIndices(final PersistentEntity entity, final IndexBuildSummary summary) {
+        if (!buildIndexes) {
+            LOG.debug("Index creation is disabled by [{} = false]. Skipping the indexes declared by entity [{}].",
+                    MongoSettings.SETTING_BUILD_INDEXES, entity.getName());
+            return;
+        }
         final com.mongodb.client.MongoCollection<Document> collection = getCollection(entity);
+        final ExistingIndexes existingIndexes = new ExistingIndexes(collection, summary);
         final ClassMapping<MongoCollection> classMapping = entity.getMapping();
         if (classMapping != null) {
             final MongoCollection mappedForm = classMapping.getMappedForm();
@@ -929,7 +1122,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
                 List<MongoCollection.Index> indices = mappedForm.getIndices();
                 for (MongoCollection.Index index : indices) {
                     createOrUpdateIndex(entity, collection, new Document(index.getDefinition()),
-                            index.getOptions(), "with definition [" + index.getDefinition() + "]");
+                            index.getOptions(), "with definition [" + index.getDefinition() + "]",
+                            summary, existingIndexes);
                 }
 
                 for (Map compoundIndex : mappedForm.getCompoundIndices()) {
@@ -943,7 +1137,7 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
                     }
                     Document indexDef = new Document(compoundIndex);
                     createOrUpdateIndex(entity, collection, indexDef, indexAttributes,
-                            "compound index with definition [" + indexDef + "]");
+                            "compound index with definition [" + indexDef + "]", summary, existingIndexes);
                 }
             }
         }
@@ -968,7 +1162,7 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
                     }
                 }
                 createOrUpdateIndex(entity, collection, dbObject, options,
-                        "on property [" + property.getName() + "]");
+                        "on property [" + property.getName() + "]", summary, existingIndexes);
             }
         }
 
@@ -989,7 +1183,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      */
     private void createOrUpdateIndex(PersistentEntity entity,
                                      com.mongodb.client.MongoCollection<Document> collection,
-                                     Document keys, Map<String, Object> rawOptions, String descriptor) {
+                                     Document keys, Map<String, Object> rawOptions, String descriptor,
+                                     IndexBuildSummary summary, ExistingIndexes existingIndexes) {
         Map<String, Object> options = rawOptions != null ? new HashMap<>(rawOptions) : new HashMap<>();
 
         // Control flag — not a Mongo index option.
@@ -1006,13 +1201,32 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
             indexOptions.expireAfter(expireAfterSeconds, TimeUnit.SECONDS);
         }
 
+        // Asked before the index is created, while the answer still means something.
+        boolean present = existingIndexes.contains(keys);
+        long startedAt = System.nanoTime();
         try {
             collection.createIndex(keys, indexOptions);
+            if (present) {
+                summary.alreadyPresent++;
+            }
+            else {
+                summary.created++;
+            }
+            LOG.debug("{} index for entity [{}] {} in {}ms", present ? "Confirmed" : "Created",
+                    entity.getName(), descriptor, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt));
         } catch (MongoCommandException e) {
             if (e.getErrorCode() == INDEX_OPTIONS_CONFLICT_CODE) {
-                reconcileIndexConflict(entity, collection, keys, indexOptions,
-                        expireAfterSeconds, recreateOnConflict, descriptor, e);
+                if (reconcileIndexConflict(entity, collection, existingIndexes, keys, indexOptions,
+                        expireAfterSeconds, recreateOnConflict, descriptor, e)) {
+                    // A conflict means an index was already on these keys; reconciling it changed the one
+                    // that was there rather than adding one.
+                    summary.alreadyPresent++;
+                }
+                else {
+                    summary.failures++;
+                }
             } else {
+                summary.failures++;
                 LOG.error("Failed to create index for entity [{}] {}: {}",
                     entity.getName(), descriptor, e.getMessage(), e);
             }
@@ -1024,23 +1238,26 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * different options. A TTL difference is the common, safe case (e.g. a configurable retention
      * changed between restarts) and is updated in place via {@code collMod}; anything else needs an
      * explicit {@code recreateOnConflict:true} to authorise the drop-and-recreate.
+     *
+     * @return {@code true} if the index ended up in the declared state, {@code false} if the conflict
+     *         could not be resolved and the existing index was left as it was
      */
-    private void reconcileIndexConflict(PersistentEntity entity,
+    private boolean reconcileIndexConflict(PersistentEntity entity,
                                         com.mongodb.client.MongoCollection<Document> collection,
+                                        ExistingIndexes existingIndexes,
                                         Document keys, IndexOptions desired, Long expireAfterSeconds,
                                         boolean recreateOnConflict, String descriptor, MongoCommandException original) {
-        Document existing;
-        try {
-            existing = findIndexByKeyPattern(collection, keys);
-        } catch (RuntimeException listError) {
+        List<Document> indexes = existingIndexes.get();
+        if (indexes == null) {
             LOG.error("Failed to create index for entity [{}] {} and could not inspect existing indexes: {}",
-                entity.getName(), descriptor, listError.getMessage(), original);
-            return;
+                entity.getName(), descriptor, original.getMessage(), original);
+            return false;
         }
+        Document existing = findIndexByKeyPattern(indexes, keys);
         if (existing == null) {
             LOG.error("Failed to create index for entity [{}] {}: {}",
                 entity.getName(), descriptor, original.getMessage(), original);
-            return;
+            return false;
         }
 
         String existingName = existing.getString("name");
@@ -1057,7 +1274,7 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
                                         .append(INDEX_EXPIRE_AFTER_SECONDS, expireAfterSeconds)));
                 LOG.info("Updated TTL of index [{}] on entity [{}] to {}s",
                     existingName, entity.getName(), expireAfterSeconds);
-                return;
+                return true;
             } catch (MongoCommandException collModError) {
                 // collMod can't make every change (e.g. add a TTL to a non-TTL index on older
                 // servers) — fall through to recreate (if authorised) rather than fail outright.
@@ -1071,17 +1288,19 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
                 collection.dropIndex(existingName);
                 collection.createIndex(keys, desired);
                 LOG.info("Recreated index [{}] on entity [{}] {}", existingName, entity.getName(), descriptor);
+                return true;
             } catch (MongoCommandException recreateError) {
                 LOG.error("Failed to recreate index [{}] on entity [{}] {}: {}",
                     existingName, entity.getName(), descriptor, recreateError.getMessage(), recreateError);
+                return false;
             }
-            return;
         }
 
         LOG.error(
             "Index conflict for entity [{}] {}: an index [{}] already exists on the same keys with different options. " +
                 "Declare indexAttributes:[recreateOnConflict:true] to drop and recreate it. Original error: {}",
             entity.getName(), descriptor, existingName, original.getMessage());
+        return false;
     }
 
     /**
@@ -1094,9 +1313,9 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * existing text index is unambiguously the one a newly-declared text index conflicts with —
      * match it regardless of its key shape or name so {@code recreateOnConflict} can absorb it.</p>
      */
-    private static Document findIndexByKeyPattern(com.mongodb.client.MongoCollection<Document> collection, Document keys) {
+    private static Document findIndexByKeyPattern(Iterable<Document> indexes, Document keys) {
         boolean desiredIsText = isTextIndex(keys);
-        for (Document idx : collection.listIndexes()) {
+        for (Document idx : indexes) {
             Object key = idx.get("key");
             if (!(key instanceof Document)) {
                 continue;
@@ -1232,6 +1451,11 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
     @PreDestroy
     public void close() {
         MongoClient current = this.mongo;
+        if (indexBuildExecutor != null) {
+            // Interrupt rather than wait: an index build can run for minutes and shutdown must not wait
+            // for it. The server carries on building what it was asked for.
+            indexBuildExecutor.shutdownNow();
+        }
         try {
             super.destroy();
         } catch (Exception e) {
@@ -1261,6 +1485,28 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
     }
 
     /**
+     * Names the background index build thread after the connection it serves, so that a log line or a
+     * thread dump says which datastore is building indexes. The thread is a daemon: an index build in
+     * flight must not hold the JVM open, and abandoning the wait does not abandon the build — the server
+     * finishes an index it has been asked for whether or not a client is still listening.
+     */
+    private static final class IndexBuildThreadFactory implements ThreadFactory {
+
+        private final String connectionName;
+
+        private IndexBuildThreadFactory(String connectionName) {
+            this.connectionName = connectionName;
+        }
+
+        @Override
+        public Thread newThread(Runnable runnable) {
+            Thread thread = new Thread(runnable, "gorm-mongo-index-build-" + connectionName);
+            thread.setDaemon(true);
+            return thread;
+        }
+    }
+
+    /**
      * Creates the connection sources for a {@link MongoClient}.
      *
      * @param mongoClient The {@link MongoClient}
@@ -1273,7 +1519,11 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @return The {@link ConnectionSources}
      */
     protected static ConnectionSources<MongoClient, MongoConnectionSourceSettings> createDefaultConnectionSources(MongoClient mongoClient, PropertyResolver configuration, MongoMappingContext mappingContext, boolean closeable) {
-        MongoConnectionSourceSettings settings = new MongoConnectionSourceSettings();
+        // Bound from the configuration rather than left at the defaults: the client is supplied here, but
+        // the settings that describe how the datastore behaves (stateless, transactional, buildIndexes,
+        // engine, flush mode) still come from grails.mongodb, exactly as they do when GORM creates the
+        // client itself. The connection details in them are unused - this client is already connected.
+        MongoConnectionSourceSettings settings = new MongoConnectionSourceSettingsBuilder(configuration).build();
         settings.setDatabaseName(mappingContext.getDefaultDatabaseName());
         ConnectionSource<MongoClient, MongoConnectionSourceSettings> defaultConnectionSource = new DefaultConnectionSource<>(ConnectionSource.DEFAULT, mongoClient, settings, closeable);
         return new InMemoryConnectionSources<>(defaultConnectionSource, new MongoConnectionSourceFactory(), configuration);
