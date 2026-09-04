@@ -171,7 +171,7 @@ trait TagLibrary implements WebAttributes, ServletAttributes, TagLibraryInvoker 
                         final String currentNamespace = resolvedNamespace
                         result = { Map attrs = [:], Closure body = null ->
                             Object output = TagOutput.captureTagOutput(gspTagLibraryLookup, currentNamespace, name, attrs, body, OutputContextLookupHelper.lookupOutputContext())
-                            boolean gspTagSyntaxCall = attrs instanceof GroovyPageAttributes && ((GroovyPageAttributes) attrs).isGspTagSyntaxCall()
+                            boolean gspTagSyntaxCall = attrs instanceof GroovyPageAttributes && ((GroovyPageAttributes) attrs).gspTagSyntaxCall()
                             boolean returnsObject = gspTagLibraryLookup.doesTagReturnObject(currentNamespace, name)
                             if (gspTagSyntaxCall && !returnsObject && output != null) {
                                 OutputEncodingStack.currentStack().taglibWriter.print(output)

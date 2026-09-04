@@ -295,9 +295,9 @@ ext {
                 'derby.version'                 : '10.17.1.0',
                 // Spring Boot 4.1 can select Hibernate ORM 7.4.x through Spring Dependency
                 // Management, and Hibernate ORM 7.4.x requires hibernate-models 1.1.x.
-                'hibernate-models.version'      : '1.1.1',
-                'hibernate-tools.version'       : '7.3.8.Final',
-                'hibernate.version'             : '7.4.1.Final',
+                'hibernate-models.version'      : '1.1.2',
+                'hibernate-tools.version'       : '7.3.13.Final',
+                'hibernate.version'             : '7.4.7.Final',
                 'jandex.version'                : '3.2.3',
                 'liquibase-hibernate.version'   : '4.27.0',
                 'liquibase-test-harness.version': '1.0.11',
@@ -392,9 +392,9 @@ ext {
         customBomVersions = [
                 'cache-ri-impl.version'         : '1.1.1',
                 'groovy.version'                : bomDependencyVersions['groovy.version'],
-                'hibernate-models.version'      : '1.1.1',
-                'hibernate-tools.version'       : '7.3.8.Final',
-                'hibernate.version'             : '7.4.1.Final',
+                'hibernate-models.version'      : '1.1.2',
+                'hibernate-tools.version'       : '7.3.13.Final',
+                'hibernate.version'             : '7.4.7.Final',
                 'jandex.version'                : '3.2.3',
                 'liquibase-hibernate.version'   : '4.27.0',
                 'liquibase-test-harness.version': '1.0.11',

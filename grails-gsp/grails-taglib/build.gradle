@@ -84,6 +84,9 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
     testImplementation 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during compilation and tests
     testImplementation 'org.spockframework:spock-core'
+    // spock-core supplies the Spock engine, so the specs in this module run without it, but the
+    // plain JUnit 5 tests need the Jupiter engine or they are silently never discovered.
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 }
 
 apply {

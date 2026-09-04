@@ -129,6 +129,12 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
     private static final String RESOURCE = "resource";
     private static final String RESOURCES = "resources";
 
+    /**
+     * The value of the {@code resources} argument that maps the RESTful resource conventions onto every
+     * controller, rather than onto one named controller.
+     */
+    private static final String WILDCARD_RESOURCES = "*";
+
     private final ApplicationContext applicationContext;
     private GrailsApplication grailsApplication;
 
@@ -784,7 +790,13 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
                                 createSingleResourceRestfulMappings(controllerName, mappingInfo.getPlugin(), mappingInfo.getNamespace(), version, urlData, currentConstraints, calculateIncludes(namedArguments, DEFAULT_RESOURCE_INCLUDES));
                             } else if (namedArguments.containsKey(RESOURCES)) {
                                 var controller = namedArguments.get(RESOURCES);
-                                var controllerName = controller.toString();
+                                var isWildcard = WILDCARD_RESOURCES.equals(controller.toString());
+                                if (isWildcard) {
+                                    validateWildcardResources(mappedURI, args, currentConstraints);
+                                }
+                                // A null controller name leaves the mapping to resolve the controller from the
+                                // URL's own capture when a request is matched.
+                                String controllerName = isWildcard ? null : controller.toString();
                                 mappingInfo.setController(controllerName);
                                 parentResources.push(new ParentResource(controllerName, mappedURI, false));
                                 try {
@@ -901,6 +913,28 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
                 uriBuilder.append(uri);
             }
             return uriBuilder.toString();
+        }
+
+        /**
+         * Validates a wildcard resources mapping. Because the controller is not known until a request is
+         * matched, the URL has to capture it, and no child resource can be nested within it.
+         */
+        private void validateWildcardResources(String mappedURI, Object[] args, List<ConstrainedProperty> constraints) {
+            var capturesController = false;
+            for (var constraint : constraints) {
+                if (CONTROLLER.equals(constraint.getPropertyName())) {
+                    capturesController = true;
+                    break;
+                }
+            }
+            if (!capturesController) {
+                throw new UrlMappingException("A wildcard resources mapping requires the URL to capture the " +
+                        "controller, for example \"/$controller\"(resources: '*'), but [" + mappedURI + "] does not");
+            }
+            if (args.length > 1 && args[1] instanceof Closure) {
+                throw new UrlMappingException("Cannot nest mappings within the wildcard resources mapping [" +
+                        mappedURI + "] because the parent controller is not known until a request is matched");
+            }
         }
 
         private void invokeLastArgumentIfClosure(Object[] args) {
