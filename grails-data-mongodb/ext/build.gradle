@@ -86,6 +86,7 @@ dependencies {
     compileOnly 'org.slf4j:slf4j-api', {
         // "optional" compile dependency in mongodb-driver-core
     }
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 }
 
 apply {

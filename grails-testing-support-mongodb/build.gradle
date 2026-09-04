@@ -45,6 +45,11 @@ dependencies {
     implementation 'org.spockframework:spock-core'
 
     api 'org.testcontainers:testcontainers-mongodb'
+
+    // EmbeddedReplicaSetSpec serves the specifications that need transactions, which a standalone
+    // server refuses. The server it starts belongs to whoever extends it, so this module compiles
+    // against the embedded module and carries neither it nor the flapdoodle library behind it.
+    compileOnly project(':grails-data-mongodb-embedded')
 }
 
 apply {

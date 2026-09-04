@@ -75,6 +75,11 @@ class FindOneImplementer extends AbstractDetachedCriteriaServiceImplementor impl
         )
     }
 
+    // domainClassNode/newMethodNode are unused here, but kept so subclasses
+    // (e.g. FindAndDeleteImplementer, FindOneInterfaceProjectionImplementer) can
+    // override this as a polymorphic extension point and vary the query method
+    // by domain class/method
+    @SuppressWarnings('unused')
     protected String findMethodToInvoke(ClassNode domainClassNode, MethodNode newMethodNode) {
         'find'
     }

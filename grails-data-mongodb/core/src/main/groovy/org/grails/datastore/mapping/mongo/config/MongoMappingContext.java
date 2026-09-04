@@ -19,6 +19,7 @@
 package org.grails.datastore.mapping.mongo.config;
 
 import java.beans.PropertyDescriptor;
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -91,6 +92,7 @@ import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PropertyMapping;
 import org.grails.datastore.mapping.model.types.Custom;
 import org.grails.datastore.mapping.model.types.Identity;
+import org.grails.datastore.mapping.model.types.mapping.IdentityWithMapping;
 import org.grails.datastore.mapping.mongo.MongoConstants;
 import org.grails.datastore.mapping.mongo.MongoDatastore;
 import org.grails.datastore.mapping.mongo.connections.AbstractMongoConnectionSourceSettings;
@@ -144,6 +146,7 @@ public class MongoMappingContext extends DocumentMappingContext {
      * Java type" (current GORM behavior). See {@link MongoSettings#SETTING_STRING_IDS_DEFAULT_STORED_AS}.
      */
     private Class<?> stringIdDefaultStoredAs;
+    private Class<?> portableIdentityType = Long.class;
 
     public Class<?> getStringIdDefaultStoredAs() {
         return stringIdDefaultStoredAs;
@@ -189,6 +192,8 @@ public class MongoMappingContext extends DocumentMappingContext {
         // (invoked during entity registration) can read the global default.
         String storedAsDefault = configuration.getProperty(MongoSettings.SETTING_STRING_IDS_DEFAULT_STORED_AS, String.class, null);
         this.stringIdDefaultStoredAs = parseStoredAs(storedAsDefault);
+        this.portableIdentityType = resolvePortableIdentityType(
+                configuration.getProperty("grails.gorm.defaultIdType", String.class, "long"));
         initialize(classes);
     }
 
@@ -220,7 +225,12 @@ public class MongoMappingContext extends DocumentMappingContext {
         // (invoked during entity registration) can read the global default.
         String storedAsDefault = settings.getStringIds() != null ? settings.getStringIds().getDefaultStoredAs() : null;
         this.stringIdDefaultStoredAs = parseStoredAs(storedAsDefault);
+        this.portableIdentityType = resolvePortableIdentityType(settings.getDefaultIdType());
         initialize(classes);
+    }
+
+    private static Class<?> resolvePortableIdentityType(String configuredType) {
+        return "native".equalsIgnoreCase(configuredType) ? String.class : Long.class;
     }
 
     /**
@@ -376,13 +386,21 @@ public class MongoMappingContext extends DocumentMappingContext {
 
         @Override
         public Identity<MongoAttribute> createIdentity(PersistentEntity owner, MappingContext context, PropertyDescriptor pd) {
-            Identity<MongoAttribute> identity = super.createIdentity(owner, context, pd);
+            Identity<MongoAttribute> identity;
+            if (Serializable.class.equals(pd.getPropertyType())) {
+                IdentityWithMapping<MongoAttribute> portableIdentity =
+                        new IdentityWithMapping<>(owner, context, pd.getName(), portableIdentityType);
+                portableIdentity.setMapping(createPropertyMapping(portableIdentity, owner));
+                identity = portableIdentity;
+            } else {
+                identity = super.createIdentity(owner, context, pd);
+            }
             MongoAttribute mappedForm = identity.getMapping().getMappedForm();
             mappedForm.setTargetName(MongoConstants.MONGO_ID_FIELD);
             // Apply the global default storedAs for String-id domains that don't declare their own.
             if (mappedForm.getStoredAs() == null &&
                     stringIdDefaultStoredAs != null &&
-                    String.class.equals(pd.getPropertyType())) {
+                    String.class.equals(identity.getType())) {
                 mappedForm.setStoredAs(stringIdDefaultStoredAs);
             }
             return identity;

@@ -25,7 +25,6 @@ import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 
 import org.hibernate.dialect.Dialect;
 import org.hibernate.dialect.H2Dialect;
-import org.hibernate.dialect.OracleDialect;
 import org.hibernate.mapping.Column;
 
 import org.grails.orm.hibernate.cfg.ColumnConfig;
@@ -44,7 +43,8 @@ public class NumericColumnConstraintsBinder {
         this.dialect = dialect;
     }
 
-    public void bindNumericColumnConstraints(Column column, ColumnConfig cc, PropertyConfig constrainedProperty) {
+    public void bindNumericColumnConstraints(
+            Column column, ColumnConfig cc, PropertyConfig constrainedProperty, Class<?> propertyType) {
         int scale = determineScale(cc, constrainedProperty);
         if (scale > -1) {
             column.setScale(scale);
@@ -53,25 +53,33 @@ public class NumericColumnConstraintsBinder {
         }
         if (cc != null && cc.getPrecision() > -1) {
             column.setPrecision(cc.getPrecision());
-        } else {
+        } else if (!isApproximateFloatingPoint(propertyType)) {
             int minConstraintValueLength = getConstraintValueLength(constrainedProperty.getMin(), scale);
             int maxConstraintValueLength = getConstraintValueLength(constrainedProperty.getMax(), scale);
 
-            int defaultPrecision;
-            if (dialect instanceof OracleDialect) {
-                defaultPrecision = 126;
-            } else {
-                // Default to 15 decimal digits which maps to ~50-53 bits in Hibernate 7
-                // This avoids float(64) DDL errors in H2 and PostgreSQL
-                defaultPrecision = 15;
-            }
-
             int precision = minConstraintValueLength > 0 && maxConstraintValueLength > 0 ?
                     Math.max(minConstraintValueLength, maxConstraintValueLength) :
-                    DefaultGroovyMethods.max(
-                            new Integer[] {defaultPrecision, minConstraintValueLength, maxConstraintValueLength});
+                    DefaultGroovyMethods.max(new Integer[] {
+                        dialect.getDefaultDecimalPrecision(), minConstraintValueLength, maxConstraintValueLength
+                    });
             column.setPrecision(precision);
         }
+        // else: leave Float/Double precision unset. Hibernate renders FLOAT/DOUBLE DDL as
+        // float(precision) where precision is a *bit* count (IEEE-754), converted internally
+        // from whatever decimal-digit value column.setPrecision() is given (n * log2(10)). Any
+        // decimal-oriented default - Hibernate's own 19/38, or a dialect's getFloatPrecision()/
+        // getDoublePrecision(), which are already bit counts and would be converted a second
+        // time - overflows H2/PostgreSQL's 53-bit ceiling and produces DDL those dialects reject
+        // at execution time (silently: Hibernate only logs the failure, it doesn't throw, so the
+        // table is never created - see GH numeric-precision issue). Leaving precision unset lets
+        // Hibernate fall back to the dialect's own correct float/double DDL type directly.
+    }
+
+    private boolean isApproximateFloatingPoint(Class<?> propertyType) {
+        return Float.class.equals(propertyType) ||
+                float.class.equals(propertyType) ||
+                Double.class.equals(propertyType) ||
+                double.class.equals(propertyType);
     }
 
     private int getConstraintValueLength(Comparable<?> min, int scale) {

@@ -51,9 +51,6 @@ ext {
 }
 
 dependencies {
-    // Import Log4j ahead of inherited platforms so Maven consumers keep Log4j 2.25.5
-    // (CVE-2026-49844) ahead of Spring Boot's older managed Log4j version.
-    api platform(gradleBomPlatformDependencies['log4j2-bom'])
     api platform(project(':grails-base-bom'))
 
     constraints {

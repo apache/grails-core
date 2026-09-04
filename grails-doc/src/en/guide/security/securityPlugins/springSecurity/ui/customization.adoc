@@ -129,7 +129,7 @@ The files copied for each type are summarized here:
 
 === I18N
 
-All of the plugin's displayed strings are localized and stored in the plugin's `grails-app/i18n/messages.spring-security-ui.properties` file. You can override any of these values by putting an override in your application's `grails-app/i18n/messages.properties` file.
+All of the plugin's displayed strings are localized and stored in the plugin's `grails-app/i18n/spring-security-ui.properties` file. You can override any of these values by putting an override in your application's `grails-app/i18n/messages.properties` file, which takes precedence over every plugin's bundles.
 
 === application.groovy attributes
 
