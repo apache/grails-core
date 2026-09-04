@@ -67,7 +67,7 @@ class CompilePluginSpec extends Specification {
 
             ext {
                 javaVersion = 21
-                grailsVersion = '8.0.0-SNAPSHOT'
+                grailsVersion = '9.0.0-SNAPSHOT'
                 formattedBuildDate = '2026-01-01'
             }
 
@@ -86,9 +86,19 @@ class CompilePluginSpec extends Specification {
         """
     }
 
-    def "disables invokedynamic on GroovyCompile tasks by default"() {
+    def "enables invokedynamic on GroovyCompile tasks by default"() {
         when:
         def result = runPrintIndy()
+
+        then:
+        result.task(':printIndy').outcome == TaskOutcome.SUCCESS
+        result.output.contains('MAIN_INDY=true')
+        result.output.contains('TEST_INDY=true')
+    }
+
+    def "disables invokedynamic when grailsIndy is false"() {
+        when:
+        def result = runPrintIndy('-PgrailsIndy=false')
 
         then:
         result.task(':printIndy').outcome == TaskOutcome.SUCCESS
