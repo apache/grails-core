@@ -38,14 +38,19 @@ on:
   push:
     branches:
       - '[0-9]+.[0-9]+.x'
-  # Runs on PRs whose BASE branch is a release branch so the autolabeler can
-  # apply labels (bug/feature/docs/...) and the draft picks up new PRs as soon
-  # as they are opened. Feature-to-feature PRs (e.g. fix/foo -> feat/bar)
-  # are intentionally excluded - they cannot affect any release.
-  pull_request:
-    types: [opened, reopened, synchronize, labeled]
-    branches:
-      - '[0-9]+.[0-9]+.x'
+  # There is deliberately no `pull_request` trigger. It was here so the autolabeler could
+  # label pull requests, and the action pinned below cannot do that: release-drafter 7 split
+  # labelling into a second entrypoint, `release-drafter/release-drafter/autolabeler`, and the
+  # entrypoint used here contains no labelling at all. A pull request run therefore applied no
+  # labels, and on a pull request from a fork it could not write a draft either - the token is
+  # read only, so it failed with "Resource not accessible by integration" and was hidden by
+  # `continue-on-error` below. Runs that could only fail also collided with each other: every
+  # pull request against a release branch computed the same concurrency group, so one cancelled
+  # another's check twelve seconds in.
+  #
+  # Restoring labels means adding the autolabeler entrypoint, which is a separate action and is
+  # not on the ASF approved list - `approved_patterns.yml` carries only
+  # `release-drafter/release-drafter@*` - so it needs an INFRA request first.
   # Manual recovery: rerun against any branch (e.g. to recreate a draft after
   # one was accidentally deleted, or to seed an initial draft on a new branch).
   workflow_dispatch:
@@ -66,9 +71,11 @@ on:
 #
 # `cancel-in-progress: true`: if multiple pushes land on the same branch in
 # quick succession, only the latest matters - the latest run sees every PR
-# the older one would have seen, so cancelling pending runs is correct.
+# the older one would have seen, so cancelling pending runs is correct. With no
+# pull request trigger, a branch is the only subject there is, so nothing shares
+# this group with anything unrelated.
 concurrency:
-  group: release-drafter-${{ github.event.pull_request.base.ref || github.ref_name }}
+  group: release-drafter-${{ github.ref_name }}
   cancel-in-progress: true
 
 jobs:
@@ -77,8 +84,10 @@ jobs:
     permissions:
       # Required to create or update the draft GitHub Release
       contents: write
-      # Required for the autolabeler to add labels to PRs
-      pull-requests: write
+      # Read, not write: nothing here labels anything any more. The draft is built from merged
+      # pull requests - the action's find-recent-merged-pull-requests asks for them - and a
+      # permissions block is restrictive, so the scope has to be named even to read.
+      pull-requests: read
     runs-on: ubuntu-latest
     steps:
       # Seed an initial version for release branches that have no published
@@ -100,7 +109,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -uo pipefail
-          BRANCH="${{ github.event.pull_request.base.ref || github.ref_name }}"
+          BRANCH="${{ github.ref_name }}"
           if [[ ! "$BRANCH" =~ ^([0-9]+)\.([0-9]+)\.x$ ]]; then
             echo "Branch $BRANCH is not a release branch; no version seed."
             echo "version=" >> "$GITHUB_OUTPUT"
@@ -154,12 +163,11 @@ jobs:
         # silently produced no draft (e.g. rate-limit exhaustion).
         continue-on-error: true
         with:
-          # Explicit `commitish` is critical on `pull_request` events: without
-          # it, release-drafter would default to `refs/pull/N/merge` (a
-          # virtual ref) which the GitHub API rejects when creating a release,
-          # producing the "Validation Failed: target_commitish invalid" error
-          # historically seen on PRs (see INFRA-27602).
-          commitish: ${{ github.event.pull_request.base.ref || github.ref_name }}
+          # Explicit `commitish`, kept from when this also ran on pull requests: it
+          # defaulted to `refs/pull/N/merge`, a virtual ref the GitHub API rejects
+          # when creating a release ("Validation Failed: target_commitish invalid",
+          # see INFRA-27602). Naming the branch is right for a push in any case.
+          commitish: ${{ github.ref_name }}
           # Empty for branches that already have a release (release-drafter
           # treats an empty version as "no override" and resolves the next
           # version itself). On a release-less branch this is MAJOR.MINOR.0 so
@@ -183,7 +191,7 @@ jobs:
           DRAFT_NAME: ${{ steps.drafter.outputs.name }}
           DRAFT_URL: ${{ steps.drafter.outputs.html_url }}
           DRAFT_OUTCOME: ${{ steps.drafter.outcome }}
-          BRANCH: ${{ github.event.pull_request.base.ref || github.ref_name }}
+          BRANCH: ${{ github.ref_name }}
         run: |
           set -euo pipefail
           {
