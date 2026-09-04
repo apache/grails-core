@@ -2254,7 +2254,8 @@ class SecureMapConstructorValue implements Validateable {
 
     SecureMapConstructorValue(Map values) {
         name = values.name
-        admin = values.admin as boolean
+        // Groovy 5 without invokedynamic throws on `null as boolean`.
+        admin = Boolean.TRUE.equals(values.admin)
     }
 
     static constraints = {
