@@ -54,10 +54,7 @@ dependencies {
     testImplementation project(':grails-testing-support-datamapping')
     testImplementation project(':grails-testing-support-web')
     testImplementation "org.javassist:javassist:$javassistVersion"
-    testImplementation("org.jodd:jodd-wot:$joddWotVersion") {
-        exclude module: 'slf4j-api'
-        exclude module: 'asm'
-    }
+    testImplementation "org.jsoup:jsoup:$jsoupVersion"
 
     testCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
