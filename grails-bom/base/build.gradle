@@ -97,6 +97,10 @@ dependencies {
     }
 }
 
+// Companion cli artifact constraints — declared directly here and on every derived BOM so that
+// enforcedPlatform() consumers also receive forced companion versions (see the shared script).
+apply from: rootProject.layout.projectDirectory.file('gradle/cli-companion-bom-constraints.gradle')
+
 configurations.register('bomDependencies').configure {
     it.canBeResolved = true
     it.transitive = true
@@ -120,6 +124,11 @@ tasks.register('extractConstraints', ExtractDependenciesTask).configure { Extrac
 
         rootProject.subprojects.each { p ->
             artifactIdMappings[p.name] = p.findProperty('pomArtifactId') ?: p.name
+
+            String cliArtifactId = p.findProperty('cliArtifactId')
+            if (cliArtifactId) {
+                artifactIdMappings[cliArtifactId] = cliArtifactId
+            }
         }
 
         for (Map.Entry<String, String> dependency : project.ext.gradleBuildProjects.entrySet()) {
@@ -136,6 +145,11 @@ tasks.register('extractConstraints', ExtractDependenciesTask).configure { Extrac
             String artifactId = p.findProperty('pomArtifactId') as String ?: p.name
             String baseVersionName = artifactId.replaceAll('[.]', '-')
             projectCoordinates["${p.group}:${ artifactId}:${p.version}" as String] = baseVersionName
+
+            String cliArtifactId = p.findProperty('cliArtifactId')
+            if (cliArtifactId) {
+                projectCoordinates["${p.group}:${cliArtifactId}:${p.version}" as String] = cliArtifactId
+            }
         }
 
         for (Map.Entry<String, String> dependency : project.ext.gradleBuildProjects.entrySet()) {
@@ -190,6 +204,12 @@ ext {
             propertyNameCalculator.addProjects(rootProject.subprojects)
             for (String gradleArtifactId : project.ext.gradleBuildProjects) {
                 propertyNameCalculator.addProject('org.apache.grails.gradle', gradleArtifactId, project.version as String, gradleArtifactId)
+            }
+            for (Project p : rootProject.subprojects) {
+                String cliArtifactId = p.findProperty('cliArtifactId')
+                if (cliArtifactId) {
+                    propertyNameCalculator.addProject(p.group as String, cliArtifactId, p.version as String, cliArtifactId)
+                }
             }
 
             Map<String, String> pomProperties = [:]

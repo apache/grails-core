@@ -24,6 +24,8 @@ import org.springframework.context.support.GenericApplicationContext
 import org.springframework.mock.web.MockServletContext
 import org.springframework.web.context.support.StaticWebApplicationContext
 
+import java.util.function.Supplier
+
 import spock.lang.Specification
 
 /**
@@ -32,6 +34,15 @@ import spock.lang.Specification
  * when a message bundle changes.
  */
 class I18nGrailsPluginSpec extends Specification {
+
+    private static AvailableLocaleResolver testResolver(Locale defaultLocale = Locale.forLanguageTag('en')) {
+        ClassLoader classLoader = AvailableLocaleResolver.classLoader
+        Supplier<EffectiveI18nDescriptors> descriptors = {
+            EffectiveI18nDescriptors.of(I18nDescriptors.load(classLoader), [], true)
+        } as Supplier<EffectiveI18nDescriptors>
+        new AvailableLocaleResolver(descriptors, defaultLocale)
+    }
+
 
     private static StaticWebApplicationContext webContext(AvailableLocaleResolver resolver = null,
                                                           String beanName = 'availableLocaleResolver') {
@@ -55,7 +66,7 @@ class I18nGrailsPluginSpec extends Specification {
 
     void 'doWithApplicationContext publishes the available locales to the servlet context'() {
         given:
-        AvailableLocaleResolver resolver = new AvailableLocaleResolver(getClass().classLoader, Locale.forLanguageTag('en'))
+        AvailableLocaleResolver resolver = testResolver()
         StaticWebApplicationContext ctx = webContext(resolver)
         I18nGrailsPlugin plugin = pluginFor(ctx)
 
@@ -71,7 +82,7 @@ class I18nGrailsPluginSpec extends Specification {
 
     void 'a user-defined resolver under a custom bean name is still published (lookup is by type)'() {
         given: 'the auto-configuration backs off by type, so the plugin must find the bean by type too'
-        AvailableLocaleResolver resolver = new AvailableLocaleResolver(getClass().classLoader, Locale.forLanguageTag('en'))
+        AvailableLocaleResolver resolver = testResolver()
         StaticWebApplicationContext ctx = webContext(resolver, 'myOwnLocaleResolver')
         I18nGrailsPlugin plugin = pluginFor(ctx)
 
@@ -119,7 +130,7 @@ class I18nGrailsPluginSpec extends Specification {
 
     void 'onChange re-scans and republishes the available locales when a bundle changes'() {
         given: 'the locales have been published once and are cached'
-        AvailableLocaleResolver resolver = new AvailableLocaleResolver(getClass().classLoader, Locale.forLanguageTag('en'))
+        AvailableLocaleResolver resolver = testResolver()
         StaticWebApplicationContext ctx = webContext(resolver)
         I18nGrailsPlugin plugin = pluginFor(ctx)
         plugin.doWithApplicationContext()

@@ -1,0 +1,17 @@
+org.springframework.beans.factory.aot.BeanRegistrationExcludeFilter=\
+org.apache.grails.core.aot.AbstractBeanDefinitionExcludeFilter
+
+org.springframework.aot.hint.RuntimeHintsRegistrar=\
+org.apache.grails.core.aot.BeanRegistrarRuntimeHints,\
+org.apache.grails.core.aot.GrailsApiRuntimeHints,\
+org.apache.grails.core.aot.GrailsBannerRuntimeHints,\
+org.apache.grails.core.aot.GrailsClosureRuntimeHints,\
+org.apache.grails.core.aot.GrailsResourceRuntimeHints,\
+org.apache.grails.core.aot.GroovyExtensionModuleRuntimeHints
+
+org.springframework.beans.factory.aot.BeanRegistrationAotProcessor=\
+org.apache.grails.core.aot.AutowireModeBeanRegistrationAotProcessor,\
+org.apache.grails.core.aot.VarargsBeanRegistrationAotProcessor
+
+org.springframework.beans.factory.aot.BeanFactoryInitializationAotProcessor=\
+org.apache.grails.core.aot.ArtefactClassesBeanFactoryInitializationAotProcessor

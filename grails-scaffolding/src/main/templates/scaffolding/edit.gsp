@@ -1,3 +1,4 @@
+@{ model="${fullName} ${propertyName}" }
 <!DOCTYPE html>
 <html>
 <head>

@@ -1,0 +1,42 @@
+import org.gradle.api.DefaultTask
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.TaskAction
+
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+abstract class GenUserScript extends DefaultTask {
+    @OutputFile abstract RegularFileProperty getOutputFile()
+    @TaskAction void generate() {
+        outputFile.get().asFile.parentFile.mkdirs()
+        outputFile.get().asFile.text = "withConfig(configuration) { imports { star 'java.time' } }"
+    }
+}
+
+def genUserScript = tasks.register('generateUserConfigScript', GenUserScript) {
+    outputFile.set(layout.buildDirectory.file('user-config.groovy'))
+}
+
+// Properly provider-wired: this carries the task dependency.
+tasks.named('compileGroovy', GroovyCompile) {
+    groovyOptions.configurationScriptFile.set(genUserScript.flatMap { it.outputFile })
+}
+
+tasks.register('inspectGenerated') {
+    dependsOn 'generateCompileGroovyGrailsCompilerConfig'
+    doLast {
+        def combined = file('build/grailsGroovyCompilerConfig-compileGroovy.groovy')
+        println "COMBINED_HAS_USER_SCRIPT=${combined.exists() && combined.text.contains(/star 'java.time'/)}"
+        println "USER_SCRIPT_PRODUCED=${file('build/user-config.groovy').exists()}"
+    }
+}
+
+tasks.register('inspectOrder') {
+    doLast {
+        def gen = tasks.named('generateCompileGroovyGrailsCompilerConfig').get()
+        def deps = gen.taskDependencies.getDependencies(gen)*.path
+        println "GENERATOR_DEPENDS_ON_USER_SCRIPT_PRODUCER=${deps.any { it == ':generateUserConfigScript' }}"
+    }
+}

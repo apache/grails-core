@@ -1,0 +1,34 @@
+// A plugin whose cli tier depends on a CUSTOMIZED companion coordinate via its capability. The
+// published metadata must record the plain acme-tools coordinate, exercising the rewrite for
+// capabilities that do not follow the <module>-cli naming convention.
+plugins {
+    id 'java-library'
+    id 'org.apache.grails.gradle.grails-plugin-cli'
+    id 'org.apache.grails.gradle.grails-publish'
+}
+
+group = 'org.example.test'
+
+cliArtifact {
+    defaultDependencies = false
+}
+
+dependencies {
+    cliApi project(path)
+    cliApi(project(':custom-owner')) {
+        capabilities {
+            requireCapability('org.example.test:acme-tools')
+        }
+    }
+}
+
+grailsPublish {
+    githubSlug = 'apache/grails-core'
+    license {
+        name = 'Apache-2.0'
+    }
+    title = 'Plugin B'
+    desc = 'Test module whose cli tier consumes a customized companion coordinate'
+    developers = [test: 'Test Developer']
+    testRepositoryPath = rootProject.layout.buildDirectory.dir('test-repo').get()
+}

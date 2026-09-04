@@ -19,13 +19,16 @@
 
 package redis
 
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
+import org.springframework.core.env.Environment
+
 import grails.plugins.Plugin
-import grails.plugins.redis.RedisService
-import grails.plugins.redis.util.RedisConfigurationUtil
+import grails.plugins.redis.RedisBeanDefinitionsPostProcessor
 
 class RedisGrailsPlugin extends Plugin {
 
-    def grailsVersion = '7.0.0-SNAPSHOT > *'
+    def grailsVersion = '8.0.0-SNAPSHOT > *'
     def pluginExcludes = [
             'codenarc.properties',
             'grails-app/conf/**',
@@ -35,36 +38,30 @@ class RedisGrailsPlugin extends Plugin {
     ]
 
     def title = 'Redis Plugin' // Headline display name of the plugin
-    def author = 'Ted Naleid'
-    def authorEmail = 'contact@naleid.com'
+    def author = 'Apache Grails Team'
+    def authorEmail = ''
 
     def description = '''The Redis plugin provides integration with a Redis datastore. Redis is a lightning fast 'data structure server'.  The plugin enables a number of memoization techniques to cache results from complex operations in Redis.'''
     def issueManagement = [system: 'github', url: 'https://github.com/grails-plugins/grails-redis/issues']
-    def scm = [url: 'https://github.com/grails-plugins/grails-redis']
-    def documentation = 'http://grails.org/plugin/grails-redis'
+    def scm = [ url: 'https://github.com/apache/grails-core']
+    def documentation = 'https://grails.apache.org/documentation.html'
     def license = 'APACHE'
 
-    def developers = [
-            [name: 'Burt Beckwith'],
-            [name: 'Christian Oestreich'],
-            [name: 'Brian Coles'],
-            [name: 'Michael Cameron'],
-            [name: 'John Engelman'],
-            [name: 'David Seiler'],
-            [name: 'Jordon Saardchit'],
-            [name: 'Florian Langenhahn'],
-            [name: 'German Sancho'],
-            [name: 'John Mulhern'],
-            [name: 'Shaun Jurgemeyer']]
+    @Override
+    BeanRegistrar beanRegistrar() {
+        return { BeanRegistry registry, Environment environment ->
+            // Read through the Grails config, not the Environment: map-shaped subtrees are
+            // not resolvable as Environment properties
+            Map redisConfigMap = (Map) (grailsApplication.config.get('grails.redis') ?: [:])
 
-    Closure doWithSpring() {
-        { ->
-            def redisConfigMap = grailsApplication.config.get('grails.redis') ?: [:]
-
-            RedisConfigurationUtil.configureService(delegate, redisConfigMap, '', RedisService)
-            redisConfigMap?.connections?.each { connection ->
-                RedisConfigurationUtil.configureService(delegate, connection.value, connection?.key?.capitalize(), RedisService)
+            // The redis pool definitions need destroy methods and dynamic pool-config property
+            // values, which the BeanRegistry API cannot express — the definitions are contributed
+            // by a dedicated post-processor instead
+            registry.registerBean('redisBeanDefinitionsPostProcessor', RedisBeanDefinitionsPostProcessor) {
+                it.infrastructure().supplier {
+                    new RedisBeanDefinitionsPostProcessor(redisConfigMap)
+                }
             }
-        }
+        } as BeanRegistrar
     }
 }

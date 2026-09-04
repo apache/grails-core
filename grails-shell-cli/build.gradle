@@ -27,6 +27,7 @@ plugins {
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.buildsrc.vulnerability-scan'
     id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-cli-library'
     id 'org.apache.grails.gradle.grails-jacoco'
 }
 
@@ -54,9 +55,14 @@ dependencies {
     implementation 'org.apache.groovy:groovy-json'
 
     api project(':grails-bootstrap')
+    // the console and the jline completion handler now ship as grails-bootstrap's cli companion
+    api(project(':grails-bootstrap')) {
+        capabilities {
+            requireCapability('org.apache.grails.bootstrap:grails-bootstrap-cli')
+        }
+    }
     api 'org.apache.grails.gradle:grails-gradle-model'
     api 'org.apache.ant:ant'
-    api 'org.fusesource.jansi:jansi'
     api 'org.jline:jline'
     api("org.gradle:gradle-tooling-api:$gradleToolingApiVersion") {
         exclude group: 'org.slf4j', module: 'slf4j-api'
@@ -114,10 +120,20 @@ dependencies {
     api 'org.slf4j:jcl-over-slf4j'
 
     // Testing
-    testImplementation 'org.slf4j:slf4j-simple'
+    // org.slf4j:slf4j-simple is already on the test classpath via the runtimeOnly
+    // dependency above. It coexists here with logback-classic (needed for Logback-appender
+    // assertions in forked-process specs), so both SLF4J providers are present at once -
+    // any new forked-process fixture must explicitly pin one via
+    // -Dslf4j.provider=<FQCN> to avoid SLF4J's ambiguous-binding provider selection.
+    testImplementation 'ch.qos.logback:logback-classic'
     testImplementation 'org.spockframework:spock-core'
 
     testRuntimeOnly 'net.bytebuddy:byte-buddy' // Required by Spock's mocking support
+
+    // Required to load SpringApplicationWebApplicationInitializer (extends SpringBootServletInitializer)
+    // in tests; these are compileOnly for the main source set.
+    testImplementation 'org.springframework.boot:spring-boot'
+    testImplementation 'org.springframework:spring-web'
 
     // any project that should be included in the end distribution should be included here
     // historically these were the included projects so we have trimmed them back down to pre7.0

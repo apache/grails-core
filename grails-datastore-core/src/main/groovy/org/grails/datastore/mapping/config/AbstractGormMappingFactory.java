@@ -42,8 +42,6 @@ import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
 
 /**
  * Abstract GORM implementation that uses the GORM MappingConfigurationBuilder to configure entity mappings.
- *
- * @author Graeme Rocher
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
 public abstract class AbstractGormMappingFactory<R extends Entity, T extends Property> extends MappingFactory<R, T> {
@@ -54,6 +52,7 @@ public abstract class AbstractGormMappingFactory<R extends Entity, T extends Pro
     private Object contextObject;
     protected Closure defaultConstraints;
     protected boolean versionByDefault = true;
+    protected boolean defaultNullable = true;
 
     /**
      * @param contextObject Context object to be passed to mapping blocks
@@ -64,6 +63,10 @@ public abstract class AbstractGormMappingFactory<R extends Entity, T extends Pro
 
     public void setDefaultConstraints(Closure defaultConstraints) {
         this.defaultConstraints = defaultConstraints;
+    }
+
+    public void setDefaultNullable(boolean defaultNullable) {
+        this.defaultNullable = defaultNullable;
     }
 
     /**
@@ -178,25 +181,46 @@ public abstract class AbstractGormMappingFactory<R extends Entity, T extends Pro
     public T createMappedForm(PersistentProperty mpp) {
         Map<String, T> properties = entityToPropertyMap.get(mpp.getOwner());
         if (properties != null && properties.containsKey(mpp.getName())) {
-            return properties.get(mpp.getName());
+            T property = properties.get(mpp.getName());
+            if (notIdentityOrVersion(mpp) && !property.isNullableConfigured()) {
+                property.setNullable(defaultNullable);
+            }
+            return property;
         }
         else if (properties != null) {
-            Property property = properties.get(IDENTITY_PROPERTY);
+            T property = properties.get(IDENTITY_PROPERTY);
             if (property != null && mpp.getName().equals(property.getName())) {
-                return (T) property;
+                return property;
             }
         }
 
         T defaultMapping = properties != null ? properties.get("*") : null;
         if (defaultMapping != null) {
             try {
-                return (T) defaultMapping.clone();
+                T property = (T) defaultMapping.clone();
+                if (notIdentityOrVersion(mpp) && !property.isNullableConfigured()) {
+                    property.setNullable(defaultNullable);
+                }
+                return property;
             } catch (CloneNotSupportedException e) {
-                return BeanUtils.instantiateClass(getPropertyMappedFormType());
+                T property = BeanUtils.instantiateClass(getPropertyMappedFormType());
+                if (notIdentityOrVersion(mpp)) {
+                    property.setNullable(defaultNullable);
+                }
+                return property;
             }
         }
         else {
-            return BeanUtils.instantiateClass(getPropertyMappedFormType());
+            T property = BeanUtils.instantiateClass(getPropertyMappedFormType());
+            if (notIdentityOrVersion(mpp)) {
+                property.setNullable(defaultNullable);
+            }
+            return property;
         }
+    }
+
+    private static boolean notIdentityOrVersion(PersistentProperty property) {
+        return !GormProperties.IDENTITY.equals(property.getName()) &&
+            !GormProperties.VERSION.equals(property.getName());
     }
 }

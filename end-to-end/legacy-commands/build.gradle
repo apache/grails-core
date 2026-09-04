@@ -1,0 +1,98 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+plugins {
+    id 'groovy'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
+    id 'org.apache.grails.gradle.grails-web'
+}
+
+version = '0.1'
+group = 'legacycommands'
+
+// The precompiled Grails 7 / Groovy 4 binary. Its build is standalone and runs under its own JDK
+// (see legacy-g7-command-plugin/.sdkmanrc), so it is consumed here as a prebuilt jar rather than
+// driven from this build. Build it first with:
+//
+//     cd ../legacy-g7-command-plugin && sdk env && ./gradlew jar
+//
+// The version is not hard-coded here: a stale pin would silently drop the jar from the classpath,
+// because Gradle tolerates non-existent files in a `files(...)` dependency.
+def legacyG7FixtureJars = fileTree(
+        dir: rootProject.layout.projectDirectory.dir('legacy-g7-command-plugin/build/libs'),
+        include: '*.jar')
+
+tasks.named('compileGroovy').configure {
+    doFirst {
+        if (legacyG7FixtureJars.empty) {
+            throw new GradleException('The precompiled Grails 7 command fixture has not been built. ' +
+                    'Run: cd end-to-end/legacy-g7-command-plugin && sdk env && ./gradlew jar')
+        }
+    }
+}
+
+dependencies {
+    implementation platform("org.apache.grails:grails-bom:$projectVersion")
+
+    implementation project(':legacy-commands-plugin')
+    implementation files(legacyG7FixtureJars)
+    implementation 'org.apache.grails:grails-core'
+    implementation 'org.apache.grails:grails-logging'
+    implementation 'org.apache.grails:grails-databinding'
+    implementation 'org.apache.grails:grails-interceptors'
+    implementation 'org.apache.grails:grails-services'
+    implementation 'org.apache.grails:grails-url-mappings'
+    implementation 'org.apache.grails:grails-web-boot'
+    if (System.getenv('SITEMESH2_TESTING_ENABLED') == 'true') {
+        implementation 'org.apache.grails:grails-layout'
+    }
+    else {
+        implementation 'org.apache.grails:grails-sitemesh3'
+    }
+    implementation 'org.apache.grails:grails-data-hibernate5'
+    implementation 'org.springframework.boot:spring-boot-autoconfigure'
+    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'org.springframework.boot:spring-boot-starter-logging'
+    implementation 'org.springframework.boot:spring-boot-starter-tomcat'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    runtimeOnly 'com.h2database:h2'
+    runtimeOnly 'org.apache.tomcat:tomcat-jdbc'
+
+    testImplementation 'org.apache.grails:grails-testing-support-web'
+    testImplementation 'org.spockframework:spock-core'
+}
+
+// The core build's gradle/functional-test-config.gradle is deliberately not applied here. Its
+// dependency substitution enumerates rootProject.subprojects, which only makes sense inside the
+// core build; here the org.apache.grails coordinates resolve from the published artifacts in
+// build/local-maven instead (see settings.gradle). Its remaining job - the per-suite skip flags
+// keyed off grails-test-examples-* project names - has no meaning in this build, which is driven
+// by its own workflow.
+apply {
+    from rootProject.layout.projectDirectory.file('../gradle/grails-extension-gradle-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+}
+
+// Opt in to the Grails 7 application-command bridge (off by default on Grails 8).
+grails {
+    legacyCommandSupport = true
+}

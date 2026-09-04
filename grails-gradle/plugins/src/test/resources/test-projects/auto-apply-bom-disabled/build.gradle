@@ -14,8 +14,12 @@ tasks.register('inspectBomSetup') {
         }
         println "HAS_PLATFORM_BOM=${hasPlatform}"
 
-        def hasBomPropertyOverrides = project.plugins.findPlugin('org.apache.grails.gradle.bom-property-overrides') != null
-        println "HAS_BOM_PROPERTY_OVERRIDES=${hasBomPropertyOverrides}"
+        // bom-property-overrides is now always applied (see GrailsGradlePlugin#applyGrailsBom for
+        // why), so plugin identity alone no longer signals whether the BOM opt-out took effect.
+        // What matters functionally is that it found nothing to override: no declared platform, so
+        // no constraints added.
+        def hasOverrideConstraints = !configurations.implementation.dependencyConstraints.isEmpty()
+        println "HAS_BOM_OVERRIDE_CONSTRAINTS=${hasOverrideConstraints}"
 
         def hasSpringDm = project.plugins.findPlugin('io.spring.dependency-management') != null
         println "HAS_SPRING_DM=${hasSpringDm}"

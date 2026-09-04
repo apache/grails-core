@@ -34,6 +34,8 @@ plugins {
 version = projectVersion
 group = 'org.apache.grails.forge'
 
+apply from: rootProject.layout.projectDirectory.file('../dependencies.gradle')
+
 sourceSets {
     main {
         rocker {
@@ -90,7 +92,10 @@ dependencies {
     implementation "info.picocli:picocli:$picocliVersion"
     implementation "info.picocli:picocli-shell-jline3:$picocliVersion"
     implementation 'jakarta.inject:jakarta.inject-api'
-    implementation "org.fusesource.jansi:jansi:$jansiVersion"
+    // InteractiveShell drives JLine directly, and since the ansi stream install was dropped it also
+    // relies on JLine's terminal for virtual-terminal processing; pin it rather than inheriting
+    // whatever version picocli-shell-jline3 happens to bring
+    implementation "org.jline:jline:${gradleBomDependencyVersions['jline.version']}"
     implementation "org.slf4j:slf4j-nop"
     implementation "org.yaml:snakeyaml"
 

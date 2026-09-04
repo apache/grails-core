@@ -29,13 +29,13 @@ class RolesTab extends Module {
     static content = {
         tab {
             // Needs to be dynamic to ensure not becoming stale
-            $('a', href: '#tab-roles', dynamic: true)
+            $('button', 'data-bs-target': '#tab-roles', dynamic: true)
         }
     }
 
     void select() {
         tab.click()
-        waitFor { $('li', 'aria-controls': 'tab-roles', 'aria-selected': 'true') }
+        waitFor { $('button', 'aria-controls': 'tab-roles', 'aria-selected': 'true') }
     }
 
     int totalRoles() {

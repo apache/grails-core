@@ -19,6 +19,7 @@
 package grails.plugin.json.view.api
 
 import grails.persistence.Entity
+import grails.plugin.json.view.api.handleassociations.Author
 import grails.plugin.json.view.test.JsonRenderResult
 import grails.plugin.json.view.test.JsonViewTest
 import groovy.json.JsonException
@@ -71,4 +72,3 @@ class PublishedBook {
 class Publisher {
     String name
 }
-

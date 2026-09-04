@@ -20,9 +20,11 @@
 plugins {
     id 'groovy'
     id 'java-library'
+    id 'java-test-fixtures'
     id 'project-report'
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.gradle.grails-plugin-cli'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
@@ -34,6 +36,12 @@ plugins {
 version = projectVersion
 group = 'org.apache.grails'
 
+cliArtifact {
+    automaticModuleName = 'org.apache.grails.core.cli'
+    // this framework module wires its cli dependencies with project dependencies below
+    defaultDependencies = false
+}
+
 dependencies {
 
     implementation platform(project(':grails-bom'))
@@ -43,6 +51,12 @@ dependencies {
     api 'jakarta.inject:jakarta.inject-api'
     api 'jakarta.persistence:jakarta.persistence-api'
     api 'jakarta.annotation:jakarta.annotation-api'
+
+    // api, and the only declaration of it anywhere: grails-core is on every Grails project's
+    // classpath, and GlobalGrailsClassInjectorTransformation.compileBeansDsl loads the transform
+    // reflectively and returns silently when it is absent - so this is what makes the implicit
+    // 'def beans = { }' convention reach a third-party plugin author at all.
+    api project(':grails-beans-dsl')
 
     implementation 'com.github.ben-manes.caffeine:caffeine'
     api 'org.apache.groovy:groovy'
@@ -55,7 +69,6 @@ dependencies {
     api 'org.springframework:spring-context'
     api 'org.springframework.boot:spring-boot-autoconfigure'
 
-    compileOnly 'org.springframework:spring-test'
     compileOnly 'org.apache.groovy:groovy-templates'
 
     api project(':grails-common')
@@ -64,7 +77,29 @@ dependencies {
 
     api project(':grails-datastore-core')
 
+    // the cli tier — published separately as org.apache.grails:grails-core-cli
+    cliImplementation platform(project(':grails-bom'))
+    cliApi project(project.path)
+    // commands render through GrailsConsole, which ships as grails-bootstrap's cli companion; exposed
+    // as cliApi so every module building on grails-core's cli tier inherits it
+    cliApi(project(':grails-bootstrap')) {
+        capabilities {
+            requireCapability('org.apache.grails.bootstrap:grails-bootstrap-cli')
+        }
+    }
+    cliImplementation 'org.apache.groovy:groovy-json'
+    cliImplementation 'org.apache.groovy:groovy-templates'
+
+    cliCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
     testImplementation 'org.springframework:spring-jdbc'
+    testImplementation 'org.springframework.boot:spring-boot-test'
+    // ApplicationContextRunner's signatures reach AssertJ through ApplicationContextAssertProvider;
+    // without it on the classpath Groovy cannot introspect the runner and every call misses.
+    testRuntimeOnly 'org.assertj:assertj-core'
+    // AspectJ is compileOnly for the framework; on the test classpath so CoreGrailsPlugin's
+    // AspectJ-aware auto proxy creator branch is reachable
+    testRuntimeOnly 'org.aspectj:aspectjweaver'
 
     testImplementation 'org.hamcrest:hamcrest'
 
@@ -82,21 +117,22 @@ dependencies {
     api 'org.slf4j:jcl-over-slf4j'
 
     // Testing
-    testImplementation 'org.slf4j:slf4j-simple'
     testImplementation 'org.spockframework:spock-core'
 
     testRuntimeOnly 'net.bytebuddy:byte-buddy' // Required by Spock's mocking support
     testRuntimeOnly 'org.objenesis:objenesis' // Required by Spock for mocking classes without default constructor
+
+    testFixturesImplementation(platform(project(':grails-bom')))
+    testFixturesApi 'ch.qos.logback:logback-classic' // LogCapture uses Logback types in its API
 }
 
-TaskProvider<WriteProperties> writeProps = tasks.register('writeGrailsProperties', WriteProperties)
-writeProps.configure { WriteProperties it ->
-    it.destinationFile = project.layout.buildDirectory.file('grails.build.properties')
-    it.property('grails.version', project.version)
+def writeProps = tasks.register('writeGrailsProperties', WriteProperties) {
+    destinationFile = project.layout.buildDirectory.file('grails.build.properties')
+    property('grails.version', project.version)
 }
 
-tasks.named('processResources', ProcessResources).configure { ProcessResources it ->
-    it.from writeProps
+tasks.named('processResources', ProcessResources) {
+    from(writeProps)
 }
 
 apply {

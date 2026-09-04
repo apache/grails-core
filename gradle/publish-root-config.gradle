@@ -34,6 +34,8 @@ def publishedProjects = [
         'grails-bom',
         'grails-hibernate5-bom',
         'grails-hibernate7-bom',
+        'grails-beans-dsl',
+        'grails-neo4j-bom',
         'grails-bootstrap',
         'grails-cache',
         'grails-codecs',
@@ -43,6 +45,7 @@ def publishedProjects = [
         'grails-controllers',
         'grails-converters',
         'grails-core',
+        'grails-core-cli-legacy',
         'grails-databinding',
         'grails-databinding-core',
         'grails-datasource',
@@ -71,6 +74,7 @@ def publishedProjects = [
         'grails-logging',
         'grails-mail',
         'grails-mimetypes',
+        'grails-quartz',
         'grails-redis',
         'grails-rest-transforms',
         'grails-scaffolding',
@@ -149,6 +153,7 @@ def publishedProjects = [
         'grails-data-mongodb',
         'grails-data-mongodb-bson',
         'grails-data-mongodb-core',
+        'grails-data-mongodb-embedded',
         'grails-data-mongodb-ext',
         'grails-data-mongodb-gson-templates',
         'grails-data-mongodb-spring-boot',
@@ -156,6 +161,10 @@ def publishedProjects = [
         // graphql
         'grails-data-graphql',
         'grails-data-graphql-core',
+        // neo4j
+        'grails-data-neo4j',
+        'grails-data-neo4j-core',
+        'grails-data-neo4j-spring-boot',
         // wrapper
         'grails-wrapper',
         // profiles

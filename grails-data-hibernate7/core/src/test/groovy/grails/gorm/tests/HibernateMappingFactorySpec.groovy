@@ -220,8 +220,9 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
         PersistentEntity entity = mappingContext.getPersistentEntity(MappingFactoryLibrary.name)
         def sectionsProp = entity.persistentProperties.find { it.name == 'sections' }
 
-        then:
+        then: "a non-enum element collection gets the plain variant, not the enum subclass"
         sectionsProp instanceof HibernateBasicProperty
+        !(sectionsProp instanceof HibernateBasicEnumProperty)
     }
 
     void "createEmbeddedCollection produces HibernateEmbeddedCollectionProperty for embedded value-object collection"() {
@@ -313,7 +314,7 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
         def prop = entity.persistentProperties.find { it.name == 'statuses' }
 
         then:
-        prop instanceof HibernateBasicProperty
+        prop instanceof HibernateBasicEnumProperty
         (prop as HibernateBasicProperty).customTypeMarshaller != null
     }
 
@@ -328,7 +329,7 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
         def prop = entity.persistentProperties.find { it.name == 'statuses' }
 
         then:
-        prop instanceof HibernateBasicProperty
+        prop instanceof HibernateBasicEnumProperty
         (prop as HibernateBasicProperty).customTypeMarshaller != null
     }
 

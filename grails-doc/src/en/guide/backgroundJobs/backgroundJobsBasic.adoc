@@ -1,0 +1,170 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+Spring's scheduling support is part of the framework, so it is available in every Grails application without adding a dependency.
+
+===== Enabling scheduling
+
+Annotate your `Application` class with `@EnableScheduling`:
+
+[source,groovy]
+----
+package myapp
+
+import grails.boot.GrailsApp
+import grails.boot.config.GrailsAutoConfiguration
+import org.springframework.scheduling.annotation.EnableScheduling
+
+@EnableScheduling
+class Application extends GrailsAutoConfiguration {
+
+    static void main(String[] args) {
+        GrailsApp.run(Application, args)
+    }
+}
+----
+
+NOTE: Grails 3 enabled scheduling implicitly. From Grails 4 onwards `@EnableScheduling` must be applied explicitly — see xref:upgrading.adoc#upgrading33x[Upgrading from Grails 3.3.x to Grails 4].
+
+===== Scheduling a method
+
+Annotate any Spring bean method — a service is the natural home — with `@Scheduled`:
+
+[source,groovy]
+----
+package myapp
+
+import org.springframework.scheduling.annotation.Scheduled
+
+class ReportService {
+
+    @Scheduled(cron = '0 0 6 * * ?')
+    void sendDailyDigest() {
+        // ...
+    }
+}
+----
+
+A `@Scheduled` method must take no arguments and return `void`. Spring 6.1 additionally supports reactive return types — a `Publisher`, an RxJava type, or a Kotlin suspending function — which Spring subscribes to on the configured schedule.
+
+===== Scheduling attributes
+
+[cols="2,4"]
+|===
+| Attribute | Description
+
+| `fixedDelay`
+| Delay between the *end* of one execution and the start of the next. Use this when executions must never overlap and the work takes a variable amount of time.
+
+| `fixedRate`
+| Interval between the *start* of successive executions. If an execution overruns the interval, the next one is queued rather than skipped.
+
+| `initialDelay`
+| Delay before the first execution. Combine with `fixedDelay` or `fixedRate`.
+
+| `cron`
+| A cron expression, for schedules that are calendar-based rather than interval-based.
+
+| `zone`
+| The time zone a `cron` expression is resolved against. Defaults to the server's local time zone — worth setting explicitly for anything that must fire at a particular wall-clock time.
+
+| `timeUnit`
+| The unit for `fixedDelay`, `fixedRate`, and `initialDelay`. Defaults to milliseconds.
+|===
+
+Each duration attribute has a `String` variant — `fixedDelayString`, `fixedRateString`, `initialDelayString` — that accepts a property placeholder, and `cron` accepts one directly. This is the cleanest way to make a schedule configurable per environment:
+
+[source,groovy]
+----
+class ReportService {
+
+    @Scheduled(cron = '${myapp.digest.cron}')
+    void sendDailyDigest() {
+        // ...
+    }
+
+    @Scheduled(fixedDelayString = '${myapp.poll.delay}', timeUnit = TimeUnit.SECONDS)
+    void pollUpstream() {
+        // ...
+    }
+}
+----
+
+[source,yaml]
+.application.yml
+----
+myapp:
+    digest:
+        cron: '0 0 6 * * ?'
+    poll:
+        delay: 30
+----
+
+TIP: A `cron` value of `-` disables the task entirely, which is a convenient way to turn a scheduled method off in a particular environment without changing code.
+
+===== The scheduler thread pool
+
+*Spring Boot configures the scheduler with a single thread by default.* Every `@Scheduled` method in the application shares it, so one long-running or blocked task delays every other scheduled task. This is the second most common surprise with `@Scheduled`, after clustering.
+
+Increase the pool through configuration:
+
+[source,yaml]
+.application.yml
+----
+spring:
+    task:
+        scheduling:
+            pool:
+                size: 5
+            thread-name-prefix: scheduling-
+            shutdown:
+                await-termination: true
+                await-termination-period: 60s
+----
+
+On Java 21 and above, setting `spring.threads.virtual.enabled` to `true` switches the scheduler to virtual threads, in which case the pool size no longer applies and `spring.task.scheduling.simple.concurrency-limit` bounds concurrency instead.
+
+===== Running work asynchronously
+
+`@Scheduled` is about *when* work runs. To run work off the request thread on demand, use `@Async` together with `@EnableAsync`:
+
+[source,groovy]
+----
+import org.springframework.scheduling.annotation.Async
+
+class NotificationService {
+
+    @Async
+    void notifyAsync(Long userId) {
+        // returns to the caller immediately
+    }
+}
+----
+
+`@Async` methods use the `spring.task.execution.*` pool, which is separate from the scheduling pool. As with any Spring proxy-based annotation, calling an `@Async` or `@Scheduled` method from another method on the *same* bean bypasses the proxy and runs it synchronously.
+
+See also xref:async.adoc#async[Asynchronous Programming] for the Grails-specific async APIs.
+
+===== The limitation
+
+Nothing in `@Scheduled` is aware of other instances of your application. Each instance builds its own scheduler from the annotations it finds at startup, in memory, with no shared state — so there is no coordination point, and nowhere for one instance to discover that another has already claimed a firing. With three instances deployed, a `@Scheduled(cron = '0 0 6 * * ?')` method runs three times at 6:00am — concurrently, on three machines, against the same database.
+
+Common workarounds — designating one instance "the scheduler" with a Spring profile, or taking an advisory lock inside the method — either forfeit high availability or reimplement, badly, what a clustered scheduler already does.
+
+For anything that must run exactly once per schedule across a deployment, see xref:backgroundJobs.adoc#backgroundJobsAdvanced[Advanced Scheduling].

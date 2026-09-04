@@ -17,73 +17,39 @@
  *  under the License.
  */
 
-$(function() {
-	var buttons = {};
-	buttons[cancelButtonCaption] = function() {
-		$(this).dialog('close');
-	};
-	buttons[loginButtonCaption] = function() {
-		$('#loginForm').submit();
-	};
+// Registered on DOMContentLoaded so the host layout's end-of-body scripts
+// (jQuery, Bootstrap) are guaranteed to have loaded before this runs,
+// regardless of where the plugin's script tag lands in the document.
+document.addEventListener('DOMContentLoaded', function() {
 
-	$("#loginFormContainer").dialog({
-		autoOpen: false,
-		height: 450,
-		width: 450,
-		modal: true,
-		buttons: buttons
+	$('#loginModal').on('shown.bs.modal', function() {
+		$('#ajaxUsername').trigger('focus');
 	});
 
-	$('#loginForm').bind('submit', function() {
-		$(this).ajaxSubmit({
-			target: '#loginMessage',
-			beforeSubmit: function() {
-				$('#loginMessage').html(loggingYouIn);
-				return true;
-			},
+	$('#ajaxLoginForm').on('submit', function(event) {
+		event.preventDefault();
+		var $form = $(this);
+		$('#loginMessage').html(loggingYouIn);
+		$.ajax({
+			url: $form.attr('action'),
+			method: 'post',
+			data: $form.serialize(),
+			dataType: 'json',
 			success: function(json) {
 				if (json.success) {
-					if (json.url) {
-						document.location = json.url;
-					}
-					else {
-						$('#loginFormContainer').dialog('close');
-						$('#loginLinkContainer').html(
-							loggedInAsWithPlaceholder.replace(/\{0\}/, json.username) +
-							' (<a href="' + $("#_logout").attr("href") + '" id="logout">Logout</a>)');
-						$("#logout").click(logout);
-					}
+					window.location = json.url || window.location.href;
 				}
 				else if (json.error) {
-					$('#loginMessage').html("<span class='errorMessage'>" + json.error + '</error>');
+					$('#loginMessage').html($('<span class="text-danger">').text(json.error));
 				}
 				else {
-					$('#loginMessage').html(responseText);
+					$('#loginMessage').empty();
 				}
 			},
-			dataType: 'json'
+			error: function(jqXHR, textStatus, errorThrown) {
+				console.log('Login error, textStatus: ' + textStatus + ', errorThrown: ' + errorThrown);
+				$('#loginMessage').html($('<span class="text-danger">').text(textStatus));
+			}
 		});
-		return false;
 	});
-
-	$('#loginLink').click(function() {
-		$('#loginFormContainer').show().dialog('open');
-		$('#ajaxUsername').focus();
-	});
-
-   $("#logout").click(logout);
 });
-
-function logout(event) {
-   event.preventDefault();
-   $.ajax({
-      url: $("#_logout").attr("href"),
-      method: "post",
-      success: function(data, textStatus, jqXHR) {
-         window.location = $("#_afterLogout").attr("href");
-      },
-      error: function(jqXHR, textStatus, errorThrown) {
-         console.log("Logout error, textStatus: " + textStatus + ", errorThrown: " + errorThrown);
-      }
-   });
-}

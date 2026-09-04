@@ -23,14 +23,13 @@
 </head>
 <body>
 <g:if test='${cache}'>
-<p/>
-<g:message code='spring.security.ui.info.usercache.classname' args='[cache.getClass().name]'/>
+<p><g:message code='spring.security.ui.info.usercache.classname' args='[cache.getClass().name]'/></p>
 <s2ui:securityInfoTable type='usercache' headerCodes='attribute,value'>
-	<tr class='even'>
+	<tr>
 		<td><g:message code='spring.security.ui.info.usercache.label.name'/></td>
 		<td>${cache.name}</td>
 	</tr>
-	<tr class='even'>
+	<tr>
 		<td colspan='2'>
 		<s2ui:securityInfoTable type='usercache.statistics' headerCodes='attribute,value'>
 		<tr>
@@ -81,7 +80,7 @@
 </s2ui:securityInfoTable>
 </g:if>
 <g:else>
-<h3><g:message code='spring.security.ui.info.usercache.disabled'/></h3>
+<h1 class="h4 mb-3"><g:message code='spring.security.ui.info.usercache.disabled'/></h1>
 </g:else>
 </body>
 </html>
