@@ -54,6 +54,21 @@ class HibernateMappingContextConfigurationSpec extends Specification {
         config.getProperties().get(AvailableSettings.CLASSLOADERS).is(cl)
     }
 
+    void "setApplicationContext leaves CLASSLOADERS unset when the context class loader is null"() {
+        given:
+        def config = new HibernateMappingContextConfiguration()
+        ApplicationContext appCtx = Stub(ApplicationContext) {
+            containsBean("dataSource") >> false
+            getClassLoader() >> null
+        }
+
+        when:
+        config.setApplicationContext(appCtx)
+
+        then:
+        !config.getProperties().containsKey(AvailableSettings.CLASSLOADERS)
+    }
+
     void "setApplicationContext prefers RestartClassLoader thread context class loader over the context class loader"() {
         given:
         def config = new HibernateMappingContextConfiguration()
@@ -108,7 +123,22 @@ class HibernateMappingContextConfigurationSpec extends Specification {
 
         then:
         config.dataSourceName == "secondary"
-        config.getProperties().containsKey(AvailableSettings.CLASSLOADERS)
-        config.getProperties().get(AvailableSettings.CLASSLOADERS) != null
+        config.getProperties().get(AvailableSettings.CLASSLOADERS).is(connSrc.getClass().getClassLoader())
+    }
+
+    void "resolveSessionFactoryClassLoader prefers RestartClassLoader thread context class loader over configured class loader"() {
+        given:
+        def config = new HibernateMappingContextConfiguration()
+        ClassLoader configuredLoader = new URLClassLoader([] as URL[], originalContextClassLoader)
+        ClassLoader restartLoader = new GroovyClassLoader().parseClass(
+                'class RestartClassLoader extends ClassLoader {}'
+        ).getDeclaredConstructor().newInstance() as ClassLoader
+        config.getProperties().put(AvailableSettings.CLASSLOADERS, configuredLoader)
+
+        when:
+        Thread.currentThread().contextClassLoader = restartLoader
+
+        then:
+        config.resolveSessionFactoryClassLoader().is(restartLoader)
     }
 }

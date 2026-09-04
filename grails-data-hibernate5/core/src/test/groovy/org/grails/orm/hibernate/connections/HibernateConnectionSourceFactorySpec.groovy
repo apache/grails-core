@@ -18,13 +18,18 @@
  */
 package org.grails.orm.hibernate.connections
 
+import javax.sql.DataSource
+
 import grails.gorm.annotation.Entity
+import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.orm.hibernate.cfg.HibernateMappingContext
+import org.hibernate.cfg.AvailableSettings
 import org.hibernate.SessionFactory
 import org.hibernate.dialect.H2Dialect
 import org.hibernate.dialect.Oracle8iDialect
+import org.springframework.context.ApplicationContext
 import spock.lang.Specification
 
 /**
@@ -57,6 +62,82 @@ class HibernateConnectionSourceFactorySpec extends Specification {
 
         then:"The session factory is closed"
         connectionSource.source.isClosed()
+    }
+
+    void "buildConfiguration uses setApplicationContext when the dataSource bean exists even if the connection source is named default"() {
+        given:
+        ClassLoader applicationClassLoader = new URLClassLoader([] as URL[], getClass().classLoader)
+        ApplicationContext applicationContext = Stub(ApplicationContext) {
+            containsBean("dataSource") >> true
+            containsBean("default") >> false
+            getBean("dataSource") >> Stub(DataSource)
+            getClassLoader() >> applicationClassLoader
+        }
+        HibernateConnectionSourceFactory factory = new HibernateConnectionSourceFactory()
+        factory.setApplicationContext(applicationContext)
+        ConnectionSource<DataSource, DataSourceSettings> dataSourceConnectionSource = Stub(ConnectionSource) {
+            getName() >> ConnectionSource.DEFAULT
+            getSource() >> Stub(DataSource)
+            getSettings() >> new DataSourceSettings()
+        }
+
+        when:
+        def configuration = factory.buildConfiguration(
+                ConnectionSource.DEFAULT, dataSourceConnectionSource, new HibernateConnectionSourceSettings())
+
+        then:
+        configuration.getProperties().get(AvailableSettings.CLASSLOADERS).is(applicationClassLoader)
+    }
+
+    void "buildConfiguration injects the named dataSource bean instead of the default dataSource"() {
+        given:
+        ClassLoader applicationClassLoader = new URLClassLoader([] as URL[], getClass().classLoader)
+        DataSource defaultDataSource = Stub(DataSource)
+        DataSource secondaryDataSource = Stub(DataSource)
+        ApplicationContext applicationContext = Stub(ApplicationContext) {
+            containsBean("dataSource") >> true
+            containsBean("dataSource_secondary") >> true
+            getBean("dataSource") >> defaultDataSource
+            getBean("dataSource_secondary") >> secondaryDataSource
+            getClassLoader() >> applicationClassLoader
+        }
+        HibernateConnectionSourceFactory factory = new HibernateConnectionSourceFactory()
+        factory.setApplicationContext(applicationContext)
+        ConnectionSource<DataSource, DataSourceSettings> dataSourceConnectionSource = Stub(ConnectionSource) {
+            getName() >> "secondary"
+            getSource() >> Stub(DataSource)
+            getSettings() >> new DataSourceSettings()
+        }
+
+        when:
+        def configuration = factory.buildConfiguration(
+                "secondary", dataSourceConnectionSource, new HibernateConnectionSourceSettings())
+
+        then:
+        configuration.dataSourceName == "secondary"
+        configuration.getProperties().get(AvailableSettings.CLASSLOADERS).is(applicationClassLoader)
+        configuration.getProperties().get(org.hibernate.cfg.Environment.DATASOURCE).is(secondaryDataSource)
+    }
+
+    void "buildConfiguration uses the connection source class loader when the dataSource bean does not exist"() {
+        given:
+        ApplicationContext applicationContext = Stub(ApplicationContext) {
+            containsBean("dataSource") >> false
+        }
+        HibernateConnectionSourceFactory factory = new HibernateConnectionSourceFactory()
+        factory.setApplicationContext(applicationContext)
+        ConnectionSource<DataSource, DataSourceSettings> dataSourceConnectionSource = Stub(ConnectionSource) {
+            getName() >> ConnectionSource.DEFAULT
+            getSource() >> Stub(DataSource)
+            getSettings() >> new DataSourceSettings()
+        }
+
+        when:
+        def configuration = factory.buildConfiguration(
+                ConnectionSource.DEFAULT, dataSourceConnectionSource, new HibernateConnectionSourceSettings())
+
+        then:
+        configuration.getProperties().get(AvailableSettings.CLASSLOADERS).is(dataSourceConnectionSource.getClass().getClassLoader())
     }
 }
 

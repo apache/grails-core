@@ -229,6 +229,7 @@ class HibernateMappingContextConfigurationSpec extends Specification {
         config.getProperties().containsKey("hibernate.enhancer.enableDirtyTracking")
         config.getProperties().containsKey("hibernate.enhancer.enableAssociationManagement")
         !config.getProperties().containsKey(JdbcSettings.JAKARTA_NON_JTA_DATASOURCE)
+        !config.getProperties().containsKey(AvailableSettings.CLASSLOADERS)
     }
 
     def "setApplicationContext with datasource bean injects the datasource into properties"() {
@@ -283,6 +284,49 @@ class HibernateMappingContextConfigurationSpec extends Specification {
 
         then:
         config.getProperties().get(AvailableSettings.CLASSLOADERS).is(restartLoader)
+
+        cleanup:
+        Thread.currentThread().contextClassLoader = originalCl
+    }
+
+    def "setApplicationContext with a null context class loader still prefers a RestartClassLoader thread context class loader"() {
+        given:
+        def config = new HibernateMappingContextConfiguration()
+        ApplicationContext appCtx = Stub(ApplicationContext) {
+            containsBean("dataSource") >> false
+            getClassLoader() >> null
+        }
+        ClassLoader restartLoader = new GroovyClassLoader().parseClass(
+                'class RestartClassLoader extends ClassLoader {}'
+        ).getDeclaredConstructor().newInstance() as ClassLoader
+        def originalCl = Thread.currentThread().contextClassLoader
+
+        when:
+        Thread.currentThread().contextClassLoader = restartLoader
+        config.setApplicationContext(appCtx)
+
+        then:
+        config.getProperties().get(AvailableSettings.CLASSLOADERS).is(restartLoader)
+
+        cleanup:
+        Thread.currentThread().contextClassLoader = originalCl
+    }
+
+    def "resolveSessionFactoryClassLoader prefers RestartClassLoader thread context class loader over configured class loader"() {
+        given:
+        def config = new HibernateMappingContextConfiguration()
+        ClassLoader configuredLoader = new URLClassLoader([] as URL[], Thread.currentThread().contextClassLoader)
+        ClassLoader restartLoader = new GroovyClassLoader().parseClass(
+                'class RestartClassLoader extends ClassLoader {}'
+        ).getDeclaredConstructor().newInstance() as ClassLoader
+        config.getProperties().put(AvailableSettings.CLASSLOADERS, configuredLoader)
+        def originalCl = Thread.currentThread().contextClassLoader
+
+        when:
+        Thread.currentThread().contextClassLoader = restartLoader
+
+        then:
+        config.resolveSessionFactoryClassLoader().is(restartLoader)
 
         cleanup:
         Thread.currentThread().contextClassLoader = originalCl

@@ -33,6 +33,8 @@ package org.grails.datastore.mapping.reflect;
  */
 public final class DevToolsClassLoaders {
 
+    private static final String RESTART_CLASS_LOADER_NAME =
+            "org.springframework.boot.devtools.restart.classloader.RestartClassLoader";
     private static final String RESTART_CLASS_LOADER_SIMPLE_NAME = "RestartClassLoader";
 
     private DevToolsClassLoaders() {
@@ -44,27 +46,61 @@ public final class DevToolsClassLoaders {
      * {@code RestartClassLoader}
      */
     public static boolean isRestartClassLoader(ClassLoader classLoader) {
-        return classLoader != null &&
-                RESTART_CLASS_LOADER_SIMPLE_NAME.equalsIgnoreCase(classLoader.getClass().getSimpleName());
+        if (classLoader == null) {
+            return false;
+        }
+        Class<?> type = classLoader.getClass();
+        while (type != null && type != Object.class) {
+            if (RESTART_CLASS_LOADER_NAME.equals(type.getName())) {
+                return true;
+            }
+            type = type.getSuperclass();
+        }
+        // Fallback for tests and shaded/relocated DevTools copies.
+        return RESTART_CLASS_LOADER_SIMPLE_NAME.equals(classLoader.getClass().getSimpleName());
     }
 
     /**
      * Prefer the thread context class loader when it is DevTools'
-     * {@code RestartClassLoader}; otherwise return {@code fallback}, or this
-     * class's loader when {@code fallback} is {@code null}.
+     * {@code RestartClassLoader}, unless {@code fallback} is that loader or a
+     * descendant of it (the child can see everything the restart loader sees
+     * plus its own classes). Otherwise return {@code fallback}, or this class's
+     * loader when {@code fallback} is {@code null}.
      *
      * @param fallback the loader to use when DevTools is not active
      * @return a non-null class loader
      */
-    @SuppressWarnings("PMD.UseProperClassLoader")
-    public static ClassLoader resolve(ClassLoader fallback) {
+    @SuppressWarnings("PMD.UseProperClassLoader") // last-resort fallback; TCCL is checked first when it is a RestartClassLoader
+    public static ClassLoader preferRestartClassLoader(ClassLoader fallback) {
         ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
         if (isRestartClassLoader(contextClassLoader)) {
+            if (isLoaderOrDescendant(fallback, contextClassLoader)) {
+                return fallback;
+            }
             return contextClassLoader;
         }
         if (fallback != null) {
             return fallback;
         }
         return DevToolsClassLoaders.class.getClassLoader();
+    }
+
+    /**
+     * @deprecated use {@link #preferRestartClassLoader(ClassLoader)}
+     */
+    @Deprecated
+    public static ClassLoader resolve(ClassLoader fallback) {
+        return preferRestartClassLoader(fallback);
+    }
+
+    private static boolean isLoaderOrDescendant(ClassLoader candidate, ClassLoader ancestor) {
+        ClassLoader current = candidate;
+        while (current != null) {
+            if (current == ancestor) {
+                return true;
+            }
+            current = current.getParent();
+        }
+        return false;
     }
 }
