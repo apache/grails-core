@@ -21,13 +21,20 @@ package org.apache.grails.buildsrc
 import org.gradle.api.Project
 import org.gradle.api.tasks.compile.GroovyCompile
 import org.gradle.testfixtures.ProjectBuilder
+import org.gradle.testkit.runner.GradleRunner
+import org.gradle.testkit.runner.TaskOutcome
 import spock.lang.Specification
 import spock.lang.TempDir
+
+import java.nio.file.Path
 
 class CompilePluginSpec extends Specification {
 
     @TempDir
     File projectDir
+
+    @TempDir
+    Path testProjectDir
 
     void 'the hand-authored auto-configuration imports file is a compiler input'() {
         given:
@@ -46,4 +53,74 @@ class CompilePluginSpec extends Specification {
         compileGroovy.inputs.files.files.count { it.canonicalFile == importsFile.canonicalFile } == 1
     }
 
+    def setup() {
+        testProjectDir.resolve('settings.gradle').toFile().text = ''
+        testProjectDir.resolve('.asf.yaml').toFile().text = ''
+        def configScript = testProjectDir.resolve('gradle/groovy-compile-configscript.groovy').toFile()
+        configScript.parentFile.mkdirs()
+        configScript.text = ''
+        testProjectDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'groovy'
+                id 'org.apache.grails.buildsrc.compile'
+            }
+
+            ext {
+                javaVersion = 21
+                grailsVersion = '8.0.0-SNAPSHOT'
+                formattedBuildDate = '2026-01-01'
+            }
+
+            repositories {
+                mavenCentral()
+            }
+
+            tasks.register('printIndy') {
+                def compileTask = tasks.named('compileGroovy', org.gradle.api.tasks.compile.GroovyCompile)
+                def testCompileTask = tasks.named('compileTestGroovy', org.gradle.api.tasks.compile.GroovyCompile)
+                doLast {
+                    println "MAIN_INDY=\${compileTask.get().groovyOptions.optimizationOptions.indy}"
+                    println "TEST_INDY=\${testCompileTask.get().groovyOptions.optimizationOptions.indy}"
+                }
+            }
+        """
+    }
+
+    def "disables invokedynamic on GroovyCompile tasks by default"() {
+        when:
+        def result = runPrintIndy()
+
+        then:
+        result.task(':printIndy').outcome == TaskOutcome.SUCCESS
+        result.output.contains('MAIN_INDY=false')
+        result.output.contains('TEST_INDY=false')
+    }
+
+    def "enables invokedynamic when grailsIndy is true"() {
+        when:
+        def result = runPrintIndy('-PgrailsIndy=true')
+
+        then:
+        result.task(':printIndy').outcome == TaskOutcome.SUCCESS
+        result.output.contains('MAIN_INDY=true')
+        result.output.contains('TEST_INDY=true')
+    }
+
+    def "trims whitespace when parsing grailsIndy"() {
+        when:
+        def result = runPrintIndy('-PgrailsIndy= true ')
+
+        then:
+        result.task(':printIndy').outcome == TaskOutcome.SUCCESS
+        result.output.contains('MAIN_INDY=true')
+        result.output.contains('TEST_INDY=true')
+    }
+
+    private def runPrintIndy(String... extraArgs) {
+        GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments(['printIndy', '--stacktrace'] + (extraArgs as List))
+                .withPluginClasspath()
+                .build()
+    }
 }

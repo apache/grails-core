@@ -656,7 +656,8 @@ class GrailsWebDataBinder extends SimpleDataBinder {
             if (value instanceof Map) {
                 if (isBindAllIncludeList(includeList) ||
                         !DataBindingUtils.isDenyByDefaultEnabled()) {
-                    return referencedType.newInstance(filterUnbindableMapConstructorArguments(referencedType, (Map) value))
+                    return newInstanceFromMapArguments(referencedType,
+                            filterUnbindableMapConstructorArguments(referencedType, (Map) value))
                 }
                 if (DataBindingUtils.isGeneratedBindingIncludeList(bindingIncludeList.get())) {
                     warnAboutMissingNoArgConstructor(referencedType)
