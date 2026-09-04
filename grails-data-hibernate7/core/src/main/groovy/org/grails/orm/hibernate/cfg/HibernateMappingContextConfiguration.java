@@ -73,6 +73,7 @@ import org.grails.datastore.gorm.GormEntity;
 import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.reflect.DevToolsClassLoaders;
 import org.grails.orm.hibernate.EventListenerIntegrator;
 import org.grails.orm.hibernate.GrailsSessionContext;
 import org.grails.orm.hibernate.HibernateEventListeners;
@@ -153,9 +154,13 @@ public class HibernateMappingContextConfiguration extends Configuration
             properties.put("hibernate.enhancer.enableLazyInitialization", FALSE_LITERAL);
             properties.put("hibernate.enhancer.enableDirtyTracking", FALSE_LITERAL);
             properties.put("hibernate.enhancer.enableAssociationManagement", FALSE_LITERAL);
-            ClassLoader classLoader = applicationContext.getClassLoader();
-            if (classLoader != null) {
-                properties.put(AvailableSettings.CLASSLOADERS, classLoader);
+            ClassLoader applicationClassLoader = applicationContext.getClassLoader();
+            // Keep CLASSLOADERS absent when the context loader is null and DevTools is not
+            // active so buildSessionFactory can fall back to this class's loader.
+            if (applicationClassLoader != null ||
+                    DevToolsClassLoaders.isRestartClassLoader(Thread.currentThread().getContextClassLoader())) {
+                properties.put(AvailableSettings.CLASSLOADERS,
+                        DevToolsClassLoaders.preferRestartClassLoader(applicationClassLoader));
             }
         }
     }
@@ -175,16 +180,8 @@ public class HibernateMappingContextConfiguration extends Configuration
         getProperties().put(JdbcSettings.JAKARTA_NON_JTA_DATASOURCE, source);
         getProperties().put(Environment.CURRENT_SESSION_CONTEXT_CLASS, GrailsSessionContext.class.getName());
         setBytecodeProvider(getGrailsBytecodeProvider());
-        final ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
-        if (contextClassLoader != null &&
-                contextClassLoader.getClass().getSimpleName().equalsIgnoreCase("RestartClassLoader")) {
-            getProperties().put(AvailableSettings.CLASSLOADERS, contextClassLoader);
-        } else {
-            getProperties()
-                    .put(
-                            AvailableSettings.CLASSLOADERS,
-                            connectionSource.getClass().getClassLoader());
-        }
+        getProperties().put(AvailableSettings.CLASSLOADERS,
+                DevToolsClassLoaders.preferRestartClassLoader(connectionSource.getClass().getClassLoader()));
     }
 
     /**
@@ -291,14 +288,7 @@ public class HibernateMappingContextConfiguration extends Configuration
         // work around for HHH-2624
         SessionFactory sessionFactory;
 
-        Object classLoaderObject = getProperties().get(AvailableSettings.CLASSLOADERS);
-        ClassLoader appClassLoader;
-
-        if (classLoaderObject instanceof ClassLoader) {
-            appClassLoader = (ClassLoader) classLoaderObject;
-        } else {
-            appClassLoader = getClass().getClassLoader();
-        }
+        ClassLoader appClassLoader = resolveSessionFactoryClassLoader();
 
         ConfigurationHelper.resolvePlaceHolders(getProperties());
 
@@ -366,14 +356,28 @@ public class HibernateMappingContextConfiguration extends Configuration
         standardServiceRegistryBuilder.addService(org.hibernate.bytecode.spi.BytecodeProvider.class, bytecodeProvider);
 
         StandardServiceRegistry ssr = standardServiceRegistryBuilder.build();
+        ClassLoader previous = Thread.currentThread().getContextClassLoader();
         try {
+            Thread.currentThread().setContextClassLoader(appClassLoader);
             sessionFactory = super.buildSessionFactory(ssr);
         } catch (Exception e) {
             throw new RuntimeException(e);
+        } finally {
+            Thread.currentThread().setContextClassLoader(previous);
         }
         this.serviceRegistry = ssr;
 
         return sessionFactory;
+    }
+
+    ClassLoader resolveSessionFactoryClassLoader() {
+        Object classLoaderObject = getProperties().get(AvailableSettings.CLASSLOADERS);
+        ClassLoader storedClassLoader = classLoaderObject instanceof ClassLoader ?
+                (ClassLoader) classLoaderObject : getClass().getClassLoader();
+        // Re-check TCCL: addProperties() / a custom configClass can overwrite CLASSLOADERS
+        // after the setters. GrailsDomainBinder.bindClass only setClassName(entityName);
+        // Hibernate then re-resolves Class via ReflectHelper.classForName (TCCL).
+        return DevToolsClassLoaders.preferRestartClassLoader(storedClassLoader);
     }
 
     /**
