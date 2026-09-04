@@ -21,7 +21,6 @@ package org.grails.datastore.gorm.services.implementers
 
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.AnnotationNode
-import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.Parameter
@@ -30,7 +29,6 @@ import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.transform.trait.Traits
 
 import grails.gorm.multitenancy.TenantService
-import grails.gorm.transactions.TransactionService
 import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.multitenancy.transform.TenantTransform
 import org.grails.datastore.gorm.services.ServiceImplementer
@@ -41,7 +39,6 @@ import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.reflect.AstUtils
-import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 
 import static org.codehaus.groovy.ast.ClassHelper.make
 import static org.codehaus.groovy.ast.tools.GeneralUtils.args
@@ -140,13 +137,6 @@ abstract class AbstractServiceImplementer implements PrefixedServiceImplementer,
     /**
      * @return The datastore expression
      */
-    protected Expression transactionalDatastore() {
-        return castX(ClassHelper.make(TransactionCapableDatastore), datastore())
-    }
-
-    /**
-     * @return The datastore expression
-     */
     protected Expression multiTenantDatastore() {
         return castX(make(MultiTenantCapableDatastore), datastore())
     }
@@ -156,13 +146,6 @@ abstract class AbstractServiceImplementer implements PrefixedServiceImplementer,
      */
     protected Expression tenantService() {
         return callX(multiTenantDatastore(), 'getService', args(classX(make(TenantService))))
-    }
-
-    /**
-     * @return The transaction service
-     */
-    protected Expression transactionService() {
-        return callX(transactionalDatastore(), 'getService', args(classX(make(TransactionService))))
     }
 
     protected Expression findConnectionId(MethodNode methodNode) {
@@ -195,11 +178,6 @@ abstract class AbstractServiceImplementer implements PrefixedServiceImplementer,
                 'findStaticApi',
                 args(classX(domainClass), connectionId ?: ConstantExpression.NULL)
         )
-    }
-
-    protected Expression findInstanceApiForConnectionId(ClassNode domainClass, MethodNode methodNode) {
-        Expression connectionId = findConnectionId(methodNode)
-        return buildInstanceApiLookup(domainClass, connectionId)
     }
 
     protected Expression findStaticApiForConnectionId(ClassNode domainClass, MethodNode methodNode) {
