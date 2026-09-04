@@ -37,7 +37,7 @@ jobs:
           distribution: liberica
           java-version: 21
       - name: "🗄️ Restore dependency jar cache"
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
           # Keyed by branch version so each release branch maintains its own warm cache.
@@ -48,7 +48,7 @@ jobs:
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
@@ -86,7 +86,7 @@ jobs:
           distribution: liberica
           java-version: ${{ matrix.java }}
       - name: "🗄️ Restore dependency jar cache"
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
           # Keyed by branch version so each release branch maintains its own warm cache.
@@ -97,7 +97,7 @@ jobs:
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
@@ -184,7 +184,7 @@ jobs:
           java-version: ${{ matrix.java }}
       - name: "🗄️ Restore dependency jar cache"
         id: dependency-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
           # Keyed by branch version so each release branch maintains its own warm cache.
@@ -195,7 +195,7 @@ jobs:
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
@@ -217,7 +217,7 @@ jobs:
           ${{ matrix.runner_arguments }}
       - name: "🗄️ Save dependency jar cache"
         if: ${{ success() && matrix.cache_writer && steps.dependency-cache.outputs.cache-hit != 'true' }}
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
             ~/.gradle/caches/modules-2
@@ -267,7 +267,7 @@ jobs:
           java-version: ${{ matrix.java }}
       - name: "🗄️ Restore dependency jar cache"
         id: dependency-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
           # Keyed by branch version so each release branch maintains its own warm cache.
@@ -278,7 +278,7 @@ jobs:
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
@@ -297,7 +297,7 @@ jobs:
           ${{ matrix.extra_arguments }}
       - name: "🗄️ Save dependency jar cache"
         if: ${{ success() && matrix.cache_writer && steps.dependency-cache.outputs.cache-hit != 'true' }}
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
             ~/.gradle/caches/modules-2
@@ -325,7 +325,7 @@ jobs:
           distribution: 'liberica'
           java-version: ${{ matrix.java }}
       - name: "🗄️ Restore dependency jar cache"
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
           # Keyed by branch version so each release branch maintains its own warm cache.
@@ -336,7 +336,7 @@ jobs:
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
@@ -445,7 +445,7 @@ jobs:
           java-version: ${{ matrix.java }}
       - name: "🗄️ Restore dependency jar cache"
         id: dependency-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
           # Keyed by branch version so each release branch maintains its own warm cache.
@@ -456,7 +456,7 @@ jobs:
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
@@ -482,7 +482,7 @@ jobs:
           ${{ matrix.shard_arguments }}
       - name: "🗄️ Save dependency jar cache"
         if: ${{ success() && matrix.cache_writer && steps.dependency-cache.outputs.cache-hit != 'true' }}
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
             ~/.gradle/caches/modules-2
@@ -525,7 +525,7 @@ jobs:
           distribution: liberica
           java-version: ${{ matrix.java }}
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
@@ -564,7 +564,7 @@ jobs:
           distribution: liberica
           java-version: 21
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
@@ -605,7 +605,7 @@ jobs:
           distribution: liberica
           java-version: 21
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
@@ -640,7 +640,7 @@ jobs:
           distribution: liberica
           java-version: ${{ matrix.java }}
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
@@ -680,7 +680,7 @@ jobs:
           distribution: liberica
           java-version: ${{ matrix.java }}
       - name: "🗄️ Restore dependency jar cache"
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
           # Keyed by branch version so each release branch maintains its own warm cache.
@@ -691,7 +691,7 @@ jobs:
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
       - name: "🗄️ Cache the mongod the embedded server runs"
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           # Kept apart from the dependency jars: this holds an immutable download from
           # fastdl.mongodb.org - the archive and the binary extracted out of it - and no database,
@@ -702,7 +702,7 @@ jobs:
           path: ~/.embedmongo
           key: embedmongo-${{ runner.os }}-${{ matrix.mongodb-version }}
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
@@ -743,7 +743,7 @@ jobs:
           distribution: liberica
           java-version: ${{ matrix.java }}
       - name: "🗄️ Restore dependency jar cache"
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
           # Keyed by branch version so each release branch maintains its own warm cache.
@@ -754,7 +754,7 @@ jobs:
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
@@ -825,7 +825,7 @@ jobs:
           distribution: liberica
           java-version: ${{ matrix.java }}
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
@@ -864,7 +864,7 @@ jobs:
           distribution: liberica
           java-version: ${{ matrix.java }}
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
@@ -894,7 +894,7 @@ jobs:
           distribution: liberica
           java-version: 21
       - name: "🗄️ Restore dependency jar cache"
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
           # Keyed by branch version so each release branch maintains its own warm cache.
@@ -905,7 +905,7 @@ jobs:
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
@@ -961,7 +961,7 @@ jobs:
           distribution: liberica
           java-version: 21
       - name: "🗄️ Restore dependency jar cache"
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
           # Keyed by branch version so each release branch maintains its own warm cache.
@@ -972,7 +972,7 @@ jobs:
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
@@ -1046,7 +1046,7 @@ jobs:
           distribution: liberica
           java-version: 25
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
@@ -1079,7 +1079,7 @@ jobs:
           distribution: liberica
           java-version: 21
       - name: "🗄️ Restore dependency jar cache"
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
           # Keyed by branch version so each release branch maintains its own warm cache.
@@ -1090,7 +1090,7 @@ jobs:
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
@@ -1190,7 +1190,7 @@ jobs:
           distribution: liberica
           java-version: 21
       - name: "🗄️ Restore dependency jar cache"
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
           # Keyed by branch version so each release branch maintains its own warm cache.
@@ -1201,7 +1201,7 @@ jobs:
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
