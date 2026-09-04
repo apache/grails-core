@@ -34,12 +34,23 @@ class DirtyCheckingMap implements Map, DirtyCheckableCollection {
     final DirtyCheckable parent
     final String property
     final int originalSize
+    final boolean assigned
 
     DirtyCheckingMap(Map target, DirtyCheckable parent, String property) {
+        this(target, parent, property, false)
+    }
+
+    DirtyCheckingMap(Map target, DirtyCheckable parent, String property, boolean assigned) {
         this.target = target
         this.parent = parent
         this.property = property
         this.originalSize = target.size()
+        this.assigned = assigned
+    }
+
+    @Override
+    boolean isAssigned() {
+        return assigned
     }
 
     @Override

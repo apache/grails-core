@@ -33,6 +33,7 @@ import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.PropertyNode
 import org.codehaus.groovy.ast.Variable
 import org.codehaus.groovy.ast.expr.ConstantExpression
+import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.ListExpression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
@@ -47,6 +48,7 @@ import org.springframework.validation.annotation.Validated
 import grails.gorm.dirty.checking.DirtyCheck
 import grails.gorm.dirty.checking.DirtyCheckedProperty
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
+import org.grails.datastore.mapping.dirty.checking.DirtyCheckingSupport
 import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.reflect.AstUtils
 import org.grails.datastore.mapping.reflect.ClassUtils
@@ -61,6 +63,7 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.args
 import static org.codehaus.groovy.ast.tools.GeneralUtils.assignS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.block
 import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.castX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.constX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.param
 import static org.codehaus.groovy.ast.tools.GeneralUtils.params
@@ -94,6 +97,13 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
     public static final ClassNode DIRTY_CHECKED_PROPERTY_CLASS_NODE = ClassHelper.make(DirtyCheckedProperty)
     public static final ClassNode DIRTY_CHECK_CLASS_NODE = ClassHelper.make(DirtyCheck)
     public static final AnnotationNode DIRTY_CHECKED_PROPERTY_ANNOTATION_NODE = new AnnotationNode(DIRTY_CHECKED_PROPERTY_CLASS_NODE)
+    private static final ClassNode DIRTY_CHECKING_SUPPORT_CLASS_NODE = ClassHelper.make(DirtyCheckingSupport)
+    // Interface-typed collection properties whose generated setter re-establishes change
+    // tracking via DirtyCheckingSupport.rewrap. Restricted to the exact interfaces the
+    // DirtyChecking* wrappers implement so the cast in the generated setter is always valid.
+    private static final Set<String> REWRAPPABLE_TYPE_NAMES = [
+            Collection.name, List.name, Set.name, Map.name
+    ] as Set<String>
 
     static {
         if (ClassUtils.isPresent('jakarta.validation.Constraint')) {
@@ -364,7 +374,21 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
             final BlockStatement setterBody = new BlockStatement()
             MethodCallExpression markDirtyMethodCall = createMarkDirtyMethodCall(markDirtyMethodNode, propertyName, setterParameter)
             setterBody.addStatement(stmt(markDirtyMethodCall))
-            setterBody.addStatement(assignS(propX(varX('this'), fieldName), varX(setterParameter)))
+            // Collection/Map-typed properties assign through DirtyCheckingSupport.rewrap so a
+            // value that replaces a tracked wrapper (installed by an interception-based store's
+            // decoder) stays tracked. Without this, `entity.items = []` over a tracked list
+            // stored a plain untracked collection and every later in-place mutation was
+            // invisible to change tracking. rewrap is a no-op when the old value was untracked,
+            // so stores with their own dirty checking (Hibernate) are unaffected.
+            Expression assignedValue
+            if (REWRAPPABLE_TYPE_NAMES.contains(returnType.name)) {
+                assignedValue = castX(returnType.plainNodeReference, callX(
+                        DIRTY_CHECKING_SUPPORT_CLASS_NODE, 'rewrap',
+                        args(varX('this'), constX(propertyName), propX(varX('this'), fieldName), varX(setterParameter))))
+            } else {
+                assignedValue = varX(setterParameter)
+            }
+            setterBody.addStatement(assignS(propX(varX('this'), fieldName), assignedValue))
 
             setter = classNode.addMethod(setterName, PUBLIC, ClassHelper.VOID_TYPE, params(setterParameter), ClassNode.EMPTY_ARRAY, setterBody)
             markAsGenerated(classNode, setter)

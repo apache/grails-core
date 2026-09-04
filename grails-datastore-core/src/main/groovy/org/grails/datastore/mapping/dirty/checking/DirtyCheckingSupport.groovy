@@ -130,4 +130,53 @@ class DirtyCheckingSupport {
         }
         return new DirtyCheckingCollection(coll, parent, property)
     }
+
+    /**
+     * Re-establishes change tracking when a tracked collection or map value is replaced
+     * through a generated dirty-checking setter.
+     *
+     * <p>Interception-based stores (MongoDB et al.) install the DirtyChecking* wrappers when an
+     * entity is decoded and rely on them exclusively — there is no flush-time snapshot
+     * comparison. The generated setter used to store whatever raw value it was handed, so
+     * reassigning a collection property replaced the tracked wrapper with a plain, untracked
+     * collection and every later in-place mutation became invisible to change tracking. The
+     * common defensive re-init {@code if (!entity.items) entity.items = []} triggered this on
+     * every load (an empty tracked collection is falsy in Groovy), and because the new empty
+     * collection equals the old one the assignment itself was never flagged either.
+     *
+     * <p>Tracking is only re-established, never introduced: when the value being replaced is
+     * not a tracked wrapper — a transient instance, or a store like Hibernate that performs its
+     * own snapshot-based dirty checking and never installs these wrappers — the new value is
+     * returned untouched, keeping this a no-op for those cases.
+     *
+     * @param parent The dirty-checkable owner
+     * @param property The property being assigned
+     * @param oldValue The value being replaced
+     * @param newValue The value being assigned
+     * @return The value to store: {@code newValue}, wrapped if it replaces a tracked value
+     */
+    static Object rewrap(DirtyCheckable parent, String property, Object oldValue, Object newValue) {
+        if (newValue == null || !(oldValue instanceof DirtyCheckableCollection)) {
+            return newValue
+        }
+        if (newValue instanceof DirtyCheckableCollection) {
+            return newValue
+        }
+        // Constructed with assigned=true: a replacement is a wholesale rewrite, so persisters
+        // must not diff it element-by-element against stored state (see DirtyCheckableCollection
+        // .isAssigned()).
+        if (newValue instanceof List) {
+            return new DirtyCheckingList((List) newValue, parent, property, true)
+        }
+        if (newValue instanceof Set) {
+            return new DirtyCheckingSet((Set) newValue, parent, property, true)
+        }
+        if (newValue instanceof Collection) {
+            return new DirtyCheckingCollection((Collection) newValue, parent, property, true)
+        }
+        if (newValue instanceof Map) {
+            return new DirtyCheckingMap((Map) newValue, parent, property, true)
+        }
+        return newValue
+    }
 }

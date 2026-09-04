@@ -33,7 +33,17 @@ class DirtyCheckingSet extends DirtyCheckingCollection implements Set {
     @Delegate Set target
 
     DirtyCheckingSet(Set target, DirtyCheckable parent, String property) {
-        super(target, parent, property)
+        this(target, parent, property, false)
+    }
+
+    DirtyCheckingSet(Set target, DirtyCheckable parent, String property, boolean assigned) {
+        super(target, parent, property, assigned)
         this.target = target
+    }
+
+    @Override
+    Iterator iterator() {
+        // Route through the dirty-marking iterator (Groovy DGM removal methods iterate)
+        return super.iterator()
     }
 }
