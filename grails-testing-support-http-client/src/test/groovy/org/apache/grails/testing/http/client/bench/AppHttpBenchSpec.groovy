@@ -36,6 +36,9 @@ class AppHttpBenchSpec extends Specification {
         System.clearProperty('app.bench.samples')
         System.clearProperty('app.bench.warmup')
         System.clearProperty('app.bench.forks')
+        System.clearProperty('appBenchWarmup')
+        System.clearProperty('appBenchSamples')
+        System.clearProperty('appBenchForks')
     }
 
     void 'enabled is off by default'() {
@@ -51,7 +54,7 @@ class AppHttpBenchSpec extends Specification {
         AppHttpBench.enabled()
     }
 
-    void 'toJmhEntry reports mean ns/op and splits raw data into forks'() {
+    void 'toJmhEntry reports a 95 percent t-interval over fork means'() {
         given:
         double[] values = [10d, 20d, 30d, 40d] as double[]
 
@@ -63,26 +66,63 @@ class AppHttpBenchSpec extends Specification {
         entry.mode == 'avgt'
         entry.forks == 2
         ((Map) entry.primaryMetric).score == 25d
+        Math.abs(((Map) entry.primaryMetric).scoreError - 127.06d) < 0.000001d
+        ((Map) entry.primaryMetric).scoreConfidence.every { double value -> Math.abs(Math.abs(value - 25d) - 127.06d) < 0.000001d }
         ((Map) entry.primaryMetric).scoreUnit == 'ns/op'
         ((List) ((Map) entry.primaryMetric).rawData).size() == 2
     }
 
-    void 'appendEntry writes and extends a JMH JSON array'() {
+    void 'writeEntries replaces an existing JMH JSON array'() {
         given:
         Path out = tempDir.resolve('bench.json')
         Map<String, Object> first = AppHttpBench.toJmhEntry('one', [1d] as double[], 1)
         Map<String, Object> second = AppHttpBench.toJmhEntry('two', [2d] as double[], 1)
 
         when:
-        AppHttpBench.appendEntry(out, first)
-        AppHttpBench.appendEntry(out, second)
+        AppHttpBench.writeEntries(out, [first])
+        AppHttpBench.writeEntries(out, [second])
         List parsed = (List) new JsonSlurper().parse(out.toFile())
 
         then:
-        parsed.size() == 2
-        parsed[0].benchmark == 'one'
-        parsed[1].benchmark == 'two'
+        parsed.size() == 1
+        parsed[0].benchmark == 'two'
         Files.size(out) > 0
+    }
+
+    void 'writeEntries rejects non-array and truncated JSON'() {
+        given:
+        Path out = tempDir.resolve('bench.json')
+
+        when: 'the prior output is a JSON object'
+        Files.writeString(out, '{}')
+        AppHttpBench.writeEntries(out, [])
+
+        then:
+        IllegalStateException objectError = thrown()
+        objectError.message.contains('non-JSON-array')
+
+        when: 'the prior output is truncated'
+        Files.writeString(out, '[')
+        AppHttpBench.writeEntries(out, [])
+
+        then:
+        IllegalStateException truncatedError = thrown()
+        truncatedError.message.contains('Truncated or invalid')
+    }
+
+    void 'measureAndWrite writes HTTP and ruler benchmarks'() {
+        given:
+        System.setProperty('app.bench.warmup', '0')
+        System.setProperty('app.bench.samples', '2')
+        System.setProperty('app.bench.forks', '1')
+        Path out = tempDir.resolve('bench.json')
+
+        when:
+        AppHttpBench.measureAndWrite('appbench.example.httpGet', out) { }
+        List parsed = (List) new JsonSlurper().parse(out.toFile())
+
+        then:
+        parsed*.benchmark == ['appbench.example.httpGet', AppHttpBench.RULER_BENCHMARK]
     }
 
     void 'measureAndWrite rejects a sample count below 1'() {
@@ -117,5 +157,31 @@ class AppHttpBenchSpec extends Specification {
         entry.forks == 3
         ((List) ((Map) entry.primaryMetric).rawData).size() == 3
         ((List) ((Map) entry.primaryMetric).rawData).every { List chunk -> !chunk.isEmpty() }
+    }
+
+    void 'intProperty parses decimal values and rejects invalid values'() {
+        given:
+        System.setProperty('app.bench.samples', configured)
+
+        expect:
+        AppHttpBench.intProperty('app.bench.samples', 'appBenchSamples', 1, false) == expected
+
+        where:
+        configured || expected
+        '010'      || 10
+        '1000'     || 1000
+    }
+
+    void 'intProperty rejects empty and non-decimal values'() {
+        when:
+        System.setProperty('app.bench.samples', configured)
+        AppHttpBench.intProperty('app.bench.samples', 'appBenchSamples', 1, false)
+
+        then:
+        IllegalArgumentException error = thrown()
+        error.message.contains('decimal integer')
+
+        where:
+        configured << ['', '1O00']
     }
 }

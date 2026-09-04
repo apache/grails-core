@@ -287,8 +287,12 @@ jobs:
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "Verify JMH comparison tool"
         run: ./gradlew :grails-benchmarks:test --max-workers=4
+      - name: "Stop Gradle daemons before app benchmark measurement"
+        if: always()
+        run: ./gradlew --stop || true
       - name: "Run app-level indy A/B benches"
         timeout-minutes: 180
+        continue-on-error: true
         run: ./gradlew --no-daemon :grails-benchmarks:appIndyBench -PappBenchWarmup=80 -PappBenchSamples=300 -PappBenchForks=2 -PappBenchOutDir="$RESULT_DIR" --max-workers=4
       - name: "Upload app benchmark artifacts"
         if: always()

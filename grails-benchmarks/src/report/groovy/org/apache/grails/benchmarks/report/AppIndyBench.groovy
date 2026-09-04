@@ -22,9 +22,12 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
+import java.util.concurrent.TimeUnit
 
 @CompileStatic
 class AppIndyBench {
+
+    static final String OUTPUT_DIRECTORY_NAME = 'run'
 
     static final List<App> APPS = [
             new App('latency', ':grails-test-examples-latency:integrationTest', 'latencyapp.AppBenchFastPingSpec'),
@@ -46,31 +49,42 @@ class AppIndyBench {
     static int run(String[] args, GradleRunner runner, CommentPoster poster, Map<String, String> environment) {
         try {
             Options options = parse(args)
-            Path noindyDir = recreateDirectory(options.outputDir.resolve('noindy'))
-            Path indyDir = recreateDirectory(options.outputDir.resolve('indy'))
+            Path runDir = recreateOwnedDirectory(options.outputDir)
+            Path noindyDir = Files.createDirectories(runDir.resolve('noindy'))
+            Path indyDir = Files.createDirectories(runDir.resolve('indy'))
+            Path report = runDir.resolve('indy-vs-noindy.md')
+            boolean nestedFailed = false
 
-            ['false', 'true'].each { String indy ->
-                Path modeDir = indy == 'true' ? indyDir : noindyDir
-                APPS.each { App app ->
+            APPS.eachWithIndex { App app, int index ->
+                List<String> modes = index % 2 == 0 ? ['false', 'true'] : ['true', 'false']
+                modes.each { String indy ->
+                    Path modeDir = indy == 'true' ? indyDir : noindyDir
                     Path out = modeDir.resolve(app.name + '.json')
-                    runner.run(options.projectDir, gradleArgs(options, app, indy, out))
+                    try {
+                        runner.run(options.projectDir, gradleArgs(options, app, indy, out))
+                    } catch (Exception error) {
+                        nestedFailed = true
+                        System.err.println("Nested Gradle failed for ${app.name} with grailsIndy=${indy}: ${error.message}")
+                        error.printStackTrace(System.err)
+                    }
                     if (!Files.isRegularFile(out)) {
-                        throw new IllegalStateException("Missing result file: ${out}")
+                        nestedFailed = true
+                        System.err.println(missingResultMessage(out))
                     }
                 }
             }
 
-            Path report = options.outputDir.resolve('indy-vs-noindy.md')
             int compareExit = JmhCompare.run(
                     ['--base', noindyDir.toString(), '--head', indyDir.toString(), '--output', report.toString()] as String[],
                     poster,
                     environment
             )
-            if (compareExit != 0) {
-                return compareExit
+            if (compareExit != 0 || nestedFailed) {
+                appendFallbackStepSummary(environment, 'JmhCompare could not produce an app indy benchmark comparison. Nested result files were retained as artifacts for diagnosis.')
+            } else {
+                appendStepSummary(report, environment)
             }
-            appendStepSummary(report, environment)
-            return 0
+            return nestedFailed ? 2 : compareExit
         } catch (Exception error) {
             error.printStackTrace(System.err)
             return 2
@@ -81,6 +95,8 @@ class AppIndyBench {
         return [
                 '--no-daemon',
                 "--max-workers=${options.maxWorkers}".toString(),
+                '--project-cache-dir',
+                ownedOutputDirectory(options.outputDir).resolve('project-cache').resolve(indy == 'true' ? 'indy' : 'noindy').resolve(app.name).toString(),
                 app.task,
                 '--tests',
                 app.tests,
@@ -155,13 +171,40 @@ class AppIndyBench {
         )
     }
 
-    static Path recreateDirectory(Path directory) {
+    private static void appendFallbackStepSummary(Map<String, String> environment, String message) {
+        String summary = environment.get('GITHUB_STEP_SUMMARY')
+        if (summary) {
+            Files.writeString(
+                    Path.of(summary),
+                    "## App indy benchmark comparison\n\n${message}\n",
+                    StandardCharsets.UTF_8,
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.APPEND
+            )
+        }
+    }
+
+    static String missingResultMessage(Path result) {
+        return "Missing benchmark result file: ${result}. Possible causes: -PskipTests, -PskipFunctionalTests, -PonlyCoreTests, the app benchmark spec was ignored because the app.bench system property is missing, or the --tests filter did not match the benchmark spec."
+    }
+
+    static Path recreateOwnedDirectory(Path outputDir) {
+        Path directory = ownedOutputDirectory(outputDir)
         if (Files.exists(directory)) {
             Files.walk(directory).withCloseable { stream ->
                 stream.sorted(Comparator.reverseOrder()).forEach { Path path -> Files.deleteIfExists(path) }
             }
         }
         return Files.createDirectories(directory)
+    }
+
+    static Path ownedOutputDirectory(Path outputDir) {
+        Path normalizedOutputDir = outputDir.toAbsolutePath().normalize()
+        Path directory = normalizedOutputDir.resolve(OUTPUT_DIRECTORY_NAME).normalize()
+        if (directory.parent != normalizedOutputDir) {
+            throw new IllegalArgumentException("benchmark output directory must be contained by output directory: ${directory}")
+        }
+        return directory
     }
 
     @CompileStatic
@@ -203,22 +246,34 @@ class AppIndyBench {
 
     @CompileStatic
     static final class WrapperGradleRunner implements GradleRunner {
+        static final long NESTED_GRADLE_TIMEOUT_MINUTES = 90L
+
         @Override
         void run(Path projectDir, List<String> args) {
             Path javaHome = Path.of(System.getProperty('java.home'))
-            List<String> command = commandLine(javaHome, projectDir, args)
+            List<String> command = commandLine(javaHome, projectDir, args, System.getenv())
             ProcessBuilder processBuilder = new ProcessBuilder(command)
             processBuilder.directory(projectDir.toFile())
             processBuilder.inheritIO()
             processBuilder.environment().put('JAVA_HOME', javaHome.toString())
             Process process = processBuilder.start()
-            int exit = process.waitFor()
+            boolean completed = process.waitFor(NESTED_GRADLE_TIMEOUT_MINUTES, TimeUnit.MINUTES)
+            if (!completed) {
+                process.destroyForcibly()
+                process.waitFor()
+                throw new IllegalStateException("Nested Gradle timed out after ${NESTED_GRADLE_TIMEOUT_MINUTES} minutes: ${command}")
+            }
+            int exit = process.exitValue()
             if (exit != 0) {
                 throw new IllegalStateException("Nested Gradle exited ${exit}: ${command}")
             }
         }
 
         static List<String> commandLine(Path javaHome, Path projectDir, List<String> args) {
+            return commandLine(javaHome, projectDir, args, System.getenv())
+        }
+
+        static List<String> commandLine(Path javaHome, Path projectDir, List<String> args, Map<String, String> environment) {
             Path java = javaExecutable(javaHome)
             Path wrapperJar = projectDir.resolve('gradle').resolve('wrapper').resolve('gradle-wrapper.jar')
             if (!Files.isRegularFile(java)) {
@@ -229,11 +284,49 @@ class AppIndyBench {
             }
             List<String> command = new ArrayList<>()
             command.add(java.toString())
+            ['DEFAULT_JVM_OPTS', 'JAVA_OPTS', 'GRADLE_OPTS'].each { String name ->
+                command.addAll(parseJavaOptions(environment.get(name)))
+            }
             command.add('-cp')
             command.add(wrapperJar.toString())
             command.add('org.gradle.wrapper.GradleWrapperMain')
             command.addAll(args)
             return command
+        }
+
+        static List<String> parseJavaOptions(String options) {
+            if (!options) {
+                return Collections.emptyList()
+            }
+            List<String> parsed = new ArrayList<>()
+            StringBuilder current = new StringBuilder()
+            char quote = (char) 0
+            for (int index = 0; index < options.length(); index++) {
+                char character = options.charAt(index)
+                if (quote != (char) 0) {
+                    if (character == quote) {
+                        quote = (char) 0
+                    } else {
+                        current.append(character)
+                    }
+                } else if (character == '\'' || character == '"') {
+                    quote = character
+                } else if (Character.isWhitespace(character)) {
+                    if (current.length() > 0) {
+                        parsed.add(current.toString())
+                        current.setLength(0)
+                    }
+                } else {
+                    current.append(character)
+                }
+            }
+            if (quote != (char) 0) {
+                throw new IllegalArgumentException("Unterminated quote in JVM options: ${options}")
+            }
+            if (current.length() > 0) {
+                parsed.add(current.toString())
+            }
+            return parsed
         }
 
         static Path javaExecutable(Path javaHome) {

@@ -65,6 +65,7 @@ dependencies {
 
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
     integrationTestImplementation project(':grails-testing-support-http-client')
+    integrationTestImplementation testFixtures(project(':grails-testing-support-http-client'))
 
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
     testImplementation 'org.springframework:spring-test'

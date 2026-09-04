@@ -50,11 +50,15 @@ class AppIndyBenchSpec extends Specification {
         error.message.contains('--project-dir is required')
     }
 
-    void 'run invokes six nested builds then compares directory results'() {
+    void 'run alternates indy mode per app then compares directory results'() {
         given:
         Path outputDir = temporaryDirectory.resolve('out')
+        Path runDir = outputDir.resolve(AppIndyBench.OUTPUT_DIRECTORY_NAME)
         Path summary = temporaryDirectory.resolve('summary.md')
         List<List<String>> invocations = []
+        Files.createDirectories(outputDir.resolve('noindy'))
+        Files.writeString(outputDir.resolve('noindy').resolve('caller-owned.json'), '[]', StandardCharsets.UTF_8)
+        Files.writeString(outputDir.resolve('indy-vs-noindy.md'), 'stale report', StandardCharsets.UTF_8)
         AppIndyBench.GradleRunner runner = { Path projectDir, List<String> args ->
             invocations.add(args)
             writeDummyResult(args)
@@ -88,49 +92,87 @@ class AppIndyBenchSpec extends Specification {
         invocations[0].contains('--no-daemon')
         !invocations[0].contains('--rerun-tasks')
         invocations[0].contains('--max-workers=3')
-        invocations[1].contains(':grails-test-examples-app1:integrationTest')
-        invocations[1].contains('functionaltests.AppBenchInterceptorDemoSpec')
-        invocations[1].contains('-PgrailsIndy=false')
-        invocations[2].contains(':grails-test-examples-gsp-layout:integrationTest')
-        invocations[2].contains('org.example.grails.layout.AppBenchDemoRenderTextSpec')
-        invocations[2].contains('-PgrailsIndy=false')
-        invocations[3].contains('-PgrailsIndy=true')
-        invocations[3].contains(':grails-test-examples-latency:integrationTest')
-        invocations[4].contains('-PgrailsIndy=true')
+        invocations[0].contains('--project-cache-dir')
+        invocations[0].any { String argument -> Path.of(argument).endsWith(Path.of(AppIndyBench.OUTPUT_DIRECTORY_NAME, 'project-cache', 'noindy', 'latency')) }
+        invocations[1].contains('-PgrailsIndy=true')
+        invocations[1].contains(':grails-test-examples-latency:integrationTest')
+        invocations[2].contains(':grails-test-examples-app1:integrationTest')
+        invocations[2].contains('functionaltests.AppBenchInterceptorDemoSpec')
+        invocations[2].contains('-PgrailsIndy=true')
+        invocations[3].contains('-PgrailsIndy=false')
+        invocations[3].contains(':grails-test-examples-app1:integrationTest')
+        invocations[4].contains('-PgrailsIndy=false')
+        invocations[4].contains(':grails-test-examples-gsp-layout:integrationTest')
         invocations[5].contains('-PgrailsIndy=true')
-        Files.isRegularFile(outputDir.resolve('noindy').resolve('latency.json'))
-        Files.isRegularFile(outputDir.resolve('indy').resolve('gsp-layout.json'))
-        Files.isRegularFile(outputDir.resolve('indy-vs-noindy.md'))
+        invocations[5].contains(':grails-test-examples-gsp-layout:integrationTest')
+        invocations.each { List<String> arguments ->
+            boolean indy = arguments.contains('-PgrailsIndy=true')
+            String outputArgument = arguments.find { String argument -> argument.startsWith('-PappBenchOut=') }
+            Path result = Path.of(outputArgument.substring('-PappBenchOut='.length()))
+            result.parent == runDir.resolve(indy ? 'indy' : 'noindy')
+            int projectCacheIndex = arguments.indexOf('--project-cache-dir')
+            Path projectCache = Path.of(arguments[projectCacheIndex + 1])
+            projectCache.startsWith(runDir.resolve('project-cache').resolve(indy ? 'indy' : 'noindy'))
+        }
+        Files.isRegularFile(runDir.resolve('noindy').resolve('latency.json'))
+        Files.isRegularFile(runDir.resolve('indy').resolve('latency.json'))
+        Files.isRegularFile(runDir.resolve('noindy').resolve('app1.json'))
+        Files.isRegularFile(runDir.resolve('indy').resolve('app1.json'))
+        Files.isRegularFile(runDir.resolve('noindy').resolve('gsp-layout.json'))
+        Files.isRegularFile(runDir.resolve('indy').resolve('gsp-layout.json'))
+        Files.isRegularFile(runDir.resolve('indy-vs-noindy.md'))
+        Files.readString(runDir.resolve('indy-vs-noindy.md')).contains('IMPROVED')
+        Files.readString(outputDir.resolve('indy-vs-noindy.md')) == 'stale report'
+        Files.isRegularFile(outputDir.resolve('noindy').resolve('caller-owned.json'))
         Files.size(summary) > 0
     }
 
-    void 'run fails when a nested build does not write JSON'() {
+    void 'run continues after missing nested results and reports likely causes'() {
         given:
+        List<List<String>> invocations = []
         AppIndyBench.GradleRunner runner = { Path projectDir, List<String> args ->
+            invocations.add(args)
         } as AppIndyBench.GradleRunner
 
         when:
+        Path summary = temporaryDirectory.resolve('summary.md')
         int exit = AppIndyBench.run(
                 ['--project-dir', temporaryDirectory.toString(), '--output-dir', temporaryDirectory.resolve('missing').toString()] as String[],
-                runner
+                runner,
+                new GitHubComments(),
+                [GITHUB_STEP_SUMMARY: summary.toString()]
         )
 
         then:
         exit == 2
+        invocations.size() == 6
+        AppIndyBench.missingResultMessage(temporaryDirectory.resolve('missing.json')).contains('-PskipTests')
+        AppIndyBench.missingResultMessage(temporaryDirectory.resolve('missing.json')).contains('-PskipFunctionalTests')
+        AppIndyBench.missingResultMessage(temporaryDirectory.resolve('missing.json')).contains('-PonlyCoreTests')
+        AppIndyBench.missingResultMessage(temporaryDirectory.resolve('missing.json')).contains('app.bench')
+        AppIndyBench.missingResultMessage(temporaryDirectory.resolve('missing.json')).contains('--tests filter')
+        Files.readString(summary).contains('JmhCompare could not produce an app indy benchmark comparison')
     }
 
-    void 'recreateDirectory drops leftover json shards'() {
+    void 'recreateOwnedDirectory removes stale files without deleting caller-owned mode directories'() {
         given:
-        Path leftover = temporaryDirectory.resolve('noindy')
-        Files.createDirectories(leftover)
-        Files.writeString(leftover.resolve('stale.json'), '[]', StandardCharsets.UTF_8)
+        Path outputDir = temporaryDirectory.resolve('out')
+        Path ownedDirectory = outputDir.resolve(AppIndyBench.OUTPUT_DIRECTORY_NAME)
+        Path staleFile = ownedDirectory.resolve('noindy').resolve('stale.json')
+        Path callerOwnedFile = outputDir.resolve('noindy').resolve('caller-owned.json')
+        Files.createDirectories(staleFile.parent)
+        Files.createDirectories(callerOwnedFile.parent)
+        Files.writeString(staleFile, '[]', StandardCharsets.UTF_8)
+        Files.writeString(callerOwnedFile, '[]', StandardCharsets.UTF_8)
 
         when:
-        Path cleaned = AppIndyBench.recreateDirectory(leftover)
+        Path cleaned = AppIndyBench.recreateOwnedDirectory(outputDir)
 
         then:
         Files.isDirectory(cleaned)
-        !Files.exists(leftover.resolve('stale.json'))
+        cleaned == ownedDirectory.toAbsolutePath().normalize()
+        !Files.exists(staleFile)
+        Files.isRegularFile(callerOwnedFile)
     }
 
     void 'parse rejects an unknown option'() {
@@ -142,7 +184,7 @@ class AppIndyBenchSpec extends Specification {
         error.message.contains('unknown option: --bogus')
     }
 
-    void 'wrapper command uses GradleWrapperMain and the project wrapper jar'() {
+    void 'wrapper command forwards JVM options before GradleWrapperMain and the project wrapper jar'() {
         given:
         Path projectDir = temporaryDirectory.resolve('proj')
         Path wrapperJar = projectDir.resolve('gradle').resolve('wrapper').resolve('gradle-wrapper.jar')
@@ -151,14 +193,20 @@ class AppIndyBenchSpec extends Specification {
         Path javaHome = Path.of(System.getProperty('java.home'))
 
         when:
-        List<String> command = AppIndyBench.WrapperGradleRunner.commandLine(javaHome, projectDir, [':help'])
+        List<String> command = AppIndyBench.WrapperGradleRunner.commandLine(
+                javaHome,
+                projectDir,
+                [':help'],
+                [DEFAULT_JVM_OPTS: '-Xms128m', JAVA_OPTS: '-Djava.opts=true', GRADLE_OPTS: '-Xmx512m -Dgradle.opts=true']
+        )
 
         then:
         command[0] == AppIndyBench.WrapperGradleRunner.javaExecutable(javaHome).toString()
-        command[1] == '-cp'
-        command[2] == wrapperJar.toString()
-        command[3] == 'org.gradle.wrapper.GradleWrapperMain'
-        command[4] == ':help'
+        command[1..4] == ['-Xms128m', '-Djava.opts=true', '-Xmx512m', '-Dgradle.opts=true']
+        command[5] == '-cp'
+        command[6] == wrapperJar.toString()
+        command[7] == 'org.gradle.wrapper.GradleWrapperMain'
+        command[8] == ':help'
     }
 
     void 'wrapper command fails when the wrapper jar is missing'() {
@@ -205,6 +253,8 @@ class AppIndyBenchSpec extends Specification {
         String outArg = args.find { String arg -> arg.startsWith('-PappBenchOut=') }
         assert outArg
         Path out = Path.of(outArg.substring('-PappBenchOut='.length()))
+        boolean indy = args.contains('-PgrailsIndy=true')
+        double score = indy ? 90.0 : 100.0
         Files.createDirectories(out.parent)
         String name = out.fileName.toString().replace('.json', '')
         String benchmark = "appbench.${name}.Dummy.httpGet"
@@ -213,9 +263,9 @@ class AppIndyBenchSpec extends Specification {
     "benchmark": "${benchmark}",
     "mode": "avgt",
     "primaryMetric": {
-      "score": 100.0,
-      "scoreError": 1.0,
-      "scoreConfidence": [99.0, 101.0],
+       "score": ${score},
+       "scoreError": 1.0,
+       "scoreConfidence": [${score - 1.0}, ${score + 1.0}],
       "scoreUnit": "ns/op"
     }
   }
