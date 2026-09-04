@@ -834,6 +834,14 @@ jobs:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: "Neo4j Functional Tests (Java ${{ matrix.java }}, indy=${{ matrix.indy }})"
     runs-on: ubuntu-24.04
+    # GRAILS-16218: this job has twice stopped producing output after its last task and held a
+    # runner until GitHub's six hour ceiling. It normally finishes in 40 to 65 minutes, so two
+    # hours ends a hang at a fifth of the cost while leaving room for a slow but real run.
+    timeout-minutes: 120
+    # GRAILS-16218: this job has twice stopped producing output after its last task and held a
+    # runner until GitHub's six hour ceiling. It normally finishes in 40 to 65 minutes, so two
+    # hours ends a hang at a fifth of the cost while leaving room for a slow but real run.
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
@@ -857,6 +865,15 @@ jobs:
         with:
           cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      # GRAILS-16218: armed before the build rather than after it, because a step after the
+      # build never runs while the build is hung - which is the state being investigated. It
+      # sleeps past the point where this job should have finished and then reports what every
+      # JVM is doing, twice, a minute apart.
+      - name: "🐕 Arm the hang watchdog"
+        run: |
+          chmod +x .github/scripts/hang-watchdog.sh
+          nohup .github/scripts/hang-watchdog.sh > "${RUNNER_TEMP}/hang-watchdog.log" 2>&1 &
+          echo "armed; output will be printed after the build"
       - name: "🏃 Run Functional Tests"
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
@@ -868,6 +885,11 @@ jobs:
           -PgrailsIndy=${{ matrix.indy }}
           -PonlyNeo4jTests
           -PskipCodeStyle
+      # `always()` so that this is reached when the job is cancelled by the timeout above, which
+      # is exactly the run whose watchdog output is worth reading.
+      - name: "🐕 Hang watchdog output"
+        if: always()
+        run: cat "${RUNNER_TEMP}/hang-watchdog.log" || echo "no watchdog output""
   publishGradle:
     if: github.repository_owner == 'apache' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     needs: [ buildGradle ]

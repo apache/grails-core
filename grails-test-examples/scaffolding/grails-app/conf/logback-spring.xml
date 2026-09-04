@@ -44,10 +44,14 @@
 
 <!--        <logger name="org.hibernate.SQL" level="DEBUG"/>-->
 <!--        <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE"/>-->
-<!--        <logger name="org.springframework.security" level="TRACE"/>-->
-
 <!--        <root level="WARN"/>-->
     </springProfile>
+
+    <!-- On for GRAILS-16217: says whether the login POST arrived, under which session, and what
+         Spring Security did with it - the server half of the same question. Deliberately outside
+         every springProfile block: integration tests run under the "test" profile, so a logger
+         confined to "development" is never applied and the root level of ERROR silences it. -->
+    <logger name="org.springframework.security" level="DEBUG"/>
 
 <!--    logging to a file-->
 <!--    <property name="LOG_FILE" value="${LOG_FILE:-${LOG_PATH:-${LOG_TEMP:-${java.io.tmpdir:-/tmp}}/}spring.log}"/>-->
