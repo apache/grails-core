@@ -37,6 +37,7 @@ import org.gradle.api.tasks.javadoc.Javadoc
 import org.gradle.api.tasks.testing.Test
 import org.gradle.external.javadoc.StandardJavadocDocletOptions
 
+import static org.apache.grails.buildsrc.GradleUtils.lookupProperty
 import static org.apache.grails.buildsrc.GradleUtils.lookupPropertyByType
 
 @CompileStatic
@@ -114,6 +115,12 @@ class CompilePlugin implements Plugin<Project> {
                 it.groovyOptions.encoding = StandardCharsets.UTF_8.name()
                 // Preserve method parameter names in Groovy/Java classes for IDE parameter hints & bean reflection metadata.
                 it.groovyOptions.parameters = true
+                // Grails 8 keeps invokedynamic off for published artifacts. Groovy 5's
+                // compiler default is indy=true, which is a large runtime regression for
+                // dynamic Groovy (see #15293). Unpublished build-logic uses Gradle's
+                // default. Grails 9 / Groovy 6 can flip this. CI can still opt in with
+                // -PgrailsIndy=true (same property as grails-extension-gradle-config.gradle).
+                it.groovyOptions.optimizationOptions.put('indy', lookupProperty(project, 'grailsIndy', false))
                 // encoding needs to be the same since it's different across platforms
                 it.options.encoding = StandardCharsets.UTF_8.name()
                 it.options.fork = true
