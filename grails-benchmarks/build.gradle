@@ -115,6 +115,27 @@ tasks.register('jmhCompare', JavaExec) {
     mainClass = 'org.apache.grails.benchmarks.report.JmhCompare'
 }
 
+tasks.register('appIndyBench', JavaExec) {
+    group = 'verification'
+    description = 'Runs app-level HTTP benches for grailsIndy=false then true and compares JMH-shaped JSON.'
+    classpath = sourceSets.report.runtimeClasspath
+    mainClass = 'org.apache.grails.benchmarks.report.AppIndyBench'
+    def warmup = providers.gradleProperty('appBenchWarmup').orElse('200')
+    def samples = providers.gradleProperty('appBenchSamples').orElse('1000')
+    def forks = providers.gradleProperty('appBenchForks').orElse('2')
+    def maxWorkers = providers.gradleProperty('appBenchMaxWorkers').orElse('4')
+    def outputDir = providers.gradleProperty('appBenchOutDir')
+            .orElse(rootProject.layout.projectDirectory.dir('build/app-bench').asFile.absolutePath)
+    args(
+            '--project-dir', rootProject.projectDir.absolutePath,
+            '--output-dir', outputDir.get(),
+            '--warmup', warmup.get(),
+            '--samples', samples.get(),
+            '--forks', forks.get(),
+            '--max-workers', maxWorkers.get()
+    )
+}
+
 // The jmh source set compiles and runs against everything main depends on.
 configurations.jmh.extendsFrom(configurations.implementation)
 

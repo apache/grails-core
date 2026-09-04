@@ -264,6 +264,44 @@ jobs:
           git worktree remove --force "$WORKTREE_ROOT/base" || true
           git worktree remove --force "$WORKTREE_ROOT/head" || true
 
+  app-bench:
+    name: "App indy benchmarks"
+    if: >-
+      contains(github.event.pull_request.labels.*.name, 'performance') &&
+      (github.event.action != 'labeled' || github.event.label.name == 'performance')
+    runs-on: ubuntu-24.04
+    env:
+      RESULT_DIR: ${{ github.workspace }}/app-bench-results
+    steps:
+      - name: "Checkout repository"
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: "Setup JDK"
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: liberica
+          java-version: 21
+      - name: "Setup Gradle"
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        with:
+          cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: "Verify JMH comparison tool"
+        run: ./gradlew :grails-benchmarks:test --max-workers=4
+      - name: "Stop Gradle daemons before app benchmark measurement"
+        if: always()
+        run: ./gradlew --stop || true
+      - name: "Run app-level indy A/B benches"
+        timeout-minutes: 180
+        continue-on-error: true
+        run: ./gradlew --no-daemon :grails-benchmarks:appIndyBench -PappBenchWarmup=80 -PappBenchSamples=300 -PappBenchForks=2 -PappBenchOutDir="$RESULT_DIR" --max-workers=4
+      - name: "Upload app benchmark artifacts"
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: app-bench-results
+          path: app-bench-results/
+          if-no-files-found: warn
+
   report:
     name: "Publish JMH benchmark comparison"
     needs: benchmark
