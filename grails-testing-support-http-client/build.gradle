@@ -44,6 +44,7 @@ dependencies {
 
     implementation platform(project(':grails-bom'))
     implementation project(':grails-testing-support-core')
+    implementation 'org.apache.grails.gradle:grails-gradle-common' // XmlParserFeature
     implementation 'org.apache.groovy:groovy'
     implementation 'org.apache.groovy:groovy-json'
     implementation 'org.apache.groovy:groovy-xml'

@@ -49,6 +49,8 @@ import groovy.xml.XmlSlurper;
 
 import org.xml.sax.SAXException;
 
+import org.apache.grails.gradle.common.XmlParserFeature;
+
 /**
  * Simple utility methods for file and stream copying.
  * All copy methods use a block size of 4096 bytes,
@@ -416,6 +418,19 @@ public class SpringIOUtils {
         return factory.newSAXParser();
     }
 
+    /**
+     * Parser features switched off for every parser this class hands out.
+     *
+     * <p>{@link XmlParserFeature#DISALLOW_DOCTYPE_DECL} is deliberately absent. See
+     * {@link #createParserFactory()}.
+     */
+    private static final XmlParserFeature[] DISABLED_PARSER_FEATURES = {
+        XmlParserFeature.EXTERNAL_GENERAL_ENTITIES,
+        XmlParserFeature.EXTERNAL_PARAMETER_ENTITIES,
+        XmlParserFeature.LOAD_DTD_GRAMMAR,
+        XmlParserFeature.LOAD_EXTERNAL_DTD
+    };
+
     private static SAXParserFactory saxParserFactory = null;
 
     private static SAXParserFactory createParserFactory() throws ParserConfigurationException {
@@ -428,36 +443,21 @@ public class SpringIOUtils {
             } catch (UnsupportedOperationException e) {
                 // ignore, parser doesn't support
             }
-
-            try {
-                saxParserFactory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
-            } catch (Exception pce) {
-                // ignore, parser doesn't support
-            }
-            try {
-                saxParserFactory.setFeature("http://xml.org/sax/features/external-general-entities", false);
-            } catch (Exception pce) {
-                // ignore, parser doesn't support
-            }
-            try {
-                saxParserFactory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
-            } catch (Exception pce) {
-                // ignore, parser doesn't support
-            }
             try {
                 saxParserFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
             } catch (Exception e) {
                 // ignore, parser doesn't support
             }
-            try {
-                saxParserFactory.setFeature("http://apache.org/xml/features/nonvalidating/load-dtd-grammar", false);
-            } catch (Exception e) {
-                // ignore, parser doesn't support
-            }
-            try {
-                saxParserFactory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
-            } catch (Exception e) {
-                // ignore, parser doesn't support
+            // DOCTYPE declarations stay permitted: this factory is shared with readers of trusted
+            // classpath descriptors -- JSP tag library definitions, web.xml, plugin.xml -- which
+            // routinely carry one. External entities and external DTDs are refused below, so the
+            // XXE vector is closed without rejecting those descriptors.
+            for (XmlParserFeature feature : DISABLED_PARSER_FEATURES) {
+                try {
+                    saxParserFactory.setFeature(feature.getFeatureName(), false);
+                } catch (Exception e) {
+                    // ignore, parser doesn't support
+                }
             }
         }
         return saxParserFactory;
