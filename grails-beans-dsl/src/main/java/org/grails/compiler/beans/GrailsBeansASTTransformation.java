@@ -20,13 +20,20 @@ package org.grails.compiler.beans;
 
 import java.beans.Introspector;
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Modifier;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.lang.model.SourceVersion;
 
@@ -38,9 +45,14 @@ import org.codehaus.groovy.GroovyBugError;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.AnnotatedNode;
 import org.codehaus.groovy.ast.AnnotationNode;
+import org.codehaus.groovy.ast.AstToTextHelper;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.CodeVisitorSupport;
+import org.codehaus.groovy.ast.ConstructorNode;
 import org.codehaus.groovy.ast.FieldNode;
+import org.codehaus.groovy.ast.InnerClassNode;
+import org.codehaus.groovy.ast.GenericsType;
 import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.PropertyNode;
@@ -56,12 +68,14 @@ import org.codehaus.groovy.ast.expr.MapEntryExpression;
 import org.codehaus.groovy.ast.expr.MapExpression;
 import org.codehaus.groovy.ast.expr.MethodCallExpression;
 import org.codehaus.groovy.ast.expr.PropertyExpression;
+import org.codehaus.groovy.ast.expr.TupleExpression;
 import org.codehaus.groovy.ast.expr.VariableExpression;
 import org.codehaus.groovy.ast.stmt.BlockStatement;
 import org.codehaus.groovy.ast.stmt.EmptyStatement;
 import org.codehaus.groovy.ast.stmt.ExpressionStatement;
 import org.codehaus.groovy.ast.stmt.ReturnStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
+import org.codehaus.groovy.ast.tools.GenericsUtils;
 import org.codehaus.groovy.control.CompilationUnit;
 import org.codehaus.groovy.control.CompilePhase;
 import org.codehaus.groovy.control.CompilerConfiguration;
@@ -79,12 +93,17 @@ import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.AutoConfigureOrder;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.ComponentScans;
 import org.springframework.context.annotation.Conditional;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.ImportResource;
 import org.springframework.context.annotation.Lazy;
@@ -92,6 +111,8 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.annotation.PropertySources;
 import org.springframework.context.annotation.Scope;
+
+import grails.compiler.beans.ConditionalOnGrailsEnv;
 
 /**
  * Rewrites the {@code beans} closure DSL on a {@link grails.compiler.beans.GrailsBeans}-annotated
@@ -175,30 +196,55 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
     private static final String BEAN_CALL = "bean";
     private static final String FIELD_CALL = "field";
     private static final String METHOD_CALL = "method";
-    private static final Set<String> ROOT_STATEMENT_CALL_NAMES = Set.of(BEAN_CALL, FIELD_CALL, METHOD_CALL);
+    private static final String GROUP_CALL = "group";
+    private static final Set<String> ROOT_STATEMENT_CALL_NAMES =
+            Set.of(BEAN_CALL, FIELD_CALL, METHOD_CALL, GROUP_CALL);
+    private static final String CONDITIONAL_ON_BEAN_CALL = "conditionalOnBean";
     private static final String CONDITIONAL_ON_MISSING_BEAN_CALL = "conditionalOnMissingBean";
     private static final String CONDITIONAL_ON_MISSING_BEAN_NAME_CALL = "conditionalOnMissingBeanName";
+    private static final String CONDITIONAL_ON_PROPERTY_CALL = "conditionalOnProperty";
+    private static final String CONDITIONAL_ON_EXPRESSION_CALL = "conditionalOnExpression";
+    private static final String CONDITIONAL_ON_CLASS_CALL = "conditionalOnClass";
     private static final String PRIMARY_CALL = "primary";
     private static final String LAZY_CALL = "lazy";
     private static final String SCOPE_CALL = "scope";
     private static final String STATIC_METHOD_CALL = "staticMethod";
     private static final String ANNOTATE_CALL = "annotate";
     private static final String VALUE_CALL = "value";
+    private static final String TYPE_ARGUMENTS_CALL = "typeArguments";
+    private static final String ALIASES_CALL = "aliases";
+    private static final String CONDITIONAL_ON_GRAILS_ENV_CALL = "conditionalOnGrailsEnv";
     private static final Set<String> BEAN_QUALIFIER_CALL_NAMES = Set.of(
-            CONDITIONAL_ON_MISSING_BEAN_CALL, CONDITIONAL_ON_MISSING_BEAN_NAME_CALL,
-            PRIMARY_CALL, LAZY_CALL, SCOPE_CALL, STATIC_METHOD_CALL, ANNOTATE_CALL);
+            CONDITIONAL_ON_BEAN_CALL, CONDITIONAL_ON_MISSING_BEAN_CALL, CONDITIONAL_ON_MISSING_BEAN_NAME_CALL,
+            CONDITIONAL_ON_PROPERTY_CALL, CONDITIONAL_ON_EXPRESSION_CALL, CONDITIONAL_ON_CLASS_CALL,
+            PRIMARY_CALL, LAZY_CALL, SCOPE_CALL, STATIC_METHOD_CALL,
+            ANNOTATE_CALL, TYPE_ARGUMENTS_CALL, CONDITIONAL_ON_GRAILS_ENV_CALL, ALIASES_CALL);
     // field(...) and method(...) declare plain class members, not beans - bean-specific
     // qualifiers don't apply; .value(...) (@Value config injection) is field-only.
-    private static final Set<String> FIELD_QUALIFIER_CALL_NAMES = Set.of(ANNOTATE_CALL, VALUE_CALL);
-    private static final Set<String> METHOD_QUALIFIER_CALL_NAMES = Set.of(ANNOTATE_CALL);
-    private static final Set<String> ALL_QUALIFIER_CALL_NAMES = Set.of(
-            CONDITIONAL_ON_MISSING_BEAN_CALL, CONDITIONAL_ON_MISSING_BEAN_NAME_CALL,
-            PRIMARY_CALL, LAZY_CALL, SCOPE_CALL, STATIC_METHOD_CALL, ANNOTATE_CALL, VALUE_CALL);
+    private static final Set<String> FIELD_QUALIFIER_CALL_NAMES = Set.of(ANNOTATE_CALL, VALUE_CALL, TYPE_ARGUMENTS_CALL);
+    private static final Set<String> METHOD_QUALIFIER_CALL_NAMES = Set.of(ANNOTATE_CALL, TYPE_ARGUMENTS_CALL);
+    // A group declares a nested configuration class, so it takes what applies to a class: the
+    // conditions, and the escape hatch. Bean-shaped qualifiers (primary, scope, aliases, the
+    // type arguments of a declared type) have nothing to attach to here.
+    private static final Set<String> GROUP_QUALIFIER_CALL_NAMES = Set.of(
+            CONDITIONAL_ON_BEAN_CALL, CONDITIONAL_ON_MISSING_BEAN_CALL, CONDITIONAL_ON_PROPERTY_CALL,
+            CONDITIONAL_ON_EXPRESSION_CALL, CONDITIONAL_ON_CLASS_CALL, CONDITIONAL_ON_GRAILS_ENV_CALL,
+            ANNOTATE_CALL);
+    // Every qualifier any declaration accepts. Derived, not restated: this set decides whether a
+    // chained call is a qualifier at all, so a name present in one of the three sets above but
+    // missing here would be rejected by the chain walk as if the whole statement were malformed -
+    // "Expected bean([\"name\", ] Type)..." pointing at a qualifier that is in fact supported.
+    private static final Set<String> ALL_QUALIFIER_CALL_NAMES =
+            Stream.of(BEAN_QUALIFIER_CALL_NAMES, FIELD_QUALIFIER_CALL_NAMES, METHOD_QUALIFIER_CALL_NAMES)
+                    .flatMap(Set::stream)
+                    .collect(Collectors.toUnmodifiableSet());
     private static final String PLUGIN_SUPERCLASS_NAME = "grails.plugins.Plugin";
     private static final String GRAILS_PLUGIN_SUFFIX = "GrailsPlugin";
     private static final String AUTO_CONFIGURATION_SUFFIX = "AutoConfiguration";
     private static final String AUTO_CONFIGURATION_NAME_MEMBER = "autoConfigurationName";
     private static final String MOVE_ANNOTATIONS_MEMBER = "moveAnnotations";
+    private static final String PROXY_BEAN_METHODS_MEMBER = "proxyBeanMethods";
+    private static final String DUMP_DIR_PROPERTY = "grails.beans.dsl.dumpdir";
 
     private CompilationUnit compilationUnit;
 
@@ -255,16 +301,23 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
         // once) and bean(...) statements second. A bean's derived method name then adapts to every
         // explicitly-named member wherever it appears in the block - reordering equivalent DSL
         // statements must never change validity.
+        List<MethodNode> preExistingMethods = new ArrayList<>(beanMethodHost.getMethods());
+        List<FieldNode> preExistingFields = new ArrayList<>(beanMethodHost.getFields());
         for (Statement statement : statements) {
             if (!isBeanRootedStatement(statement)) {
-                processStatement(beanMethodHost, statement, source, usedNames);
+                processStatement(beanMethodHost, classNode, statement, source, usedNames);
             }
         }
         for (Statement statement : statements) {
             if (isBeanRootedStatement(statement)) {
-                processStatement(beanMethodHost, statement, source, usedNames);
+                processStatement(beanMethodHost, classNode, statement, source, usedNames);
             }
         }
+        List<MethodNode> generatedMethods = generatedMembers(beanMethodHost, preExistingMethods);
+        List<FieldNode> generatedFields = new ArrayList<>(beanMethodHost.getFields());
+        generatedFields.removeAll(preExistingFields);
+        rejectUnproxiedSiblingBeanCalls(beanMethodHost, generatedMethods, source);
+        dumpGeneratedMembers(beanMethodHost, generatedMethods, generatedFields, source);
 
         if (beanMethodHost != classNode) {
             applyStaticCompilation(classNode, beanMethodHost, source);
@@ -582,8 +635,8 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
                     addError(use.baseCall, source, "\"" + use.beanName + "\" is already used as the Spring " +
                             "bean name of another bean(...) statement - declaring it more than once is only " +
                             "allowed when every declaration with the name carries its own discriminating " +
-                            "condition (e.g. .annotate(ConditionalOnProperty, ...)), so that at most one of " +
-                            "them registers at runtime");
+                            "condition (e.g. .conditionalOnProperty(...), .conditionalOnBean(...), or " +
+                            ".conditionalOnGrailsEnv(...)), so that at most one of them registers at runtime");
                 }
             }
         }
@@ -638,11 +691,32 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
         return new BeanNameUse(name, baseCall, hasDiscriminatingCondition(qualifierCalls, outerCall));
     }
 
+    /**
+     * The qualifiers that condition a bean on something outside itself, and so can tell two
+     * declarations of one name apart whenever they are given anything to compare.
+     *
+     * <p>Listed rather than tested one by one, because forgetting to add a new condition qualifier
+     * here does not fail any build: it rejects the author's block instead. They write the mutually
+     * exclusive pair Spring Boot documents and are told their two beans need "its own
+     * discriminating condition" while looking straight at the condition that discriminates them.</p>
+     *
+     * <p>{@code .conditionalOnMissingBean(...)} is deliberately absent, handled separately just
+     * below: it discriminates only when given a type, since two same-named beans backing off by
+     * that shared name carry an identical condition. {@code .conditionalOnMissingBeanName()} never
+     * discriminates, for the same reason.</p>
+     */
+    private static final Set<String> DISCRIMINATING_QUALIFIER_CALL_NAMES =
+            Set.of(CONDITIONAL_ON_BEAN_CALL, CONDITIONAL_ON_PROPERTY_CALL, CONDITIONAL_ON_EXPRESSION_CALL,
+                    CONDITIONAL_ON_CLASS_CALL, CONDITIONAL_ON_GRAILS_ENV_CALL);
+
     private boolean hasDiscriminatingCondition(List<MethodCallExpression> qualifierCalls, MethodCallExpression outerCall) {
         for (MethodCallExpression qualifierCall : qualifierCalls) {
             String qualifierName = qualifierCall.getMethodAsString();
             List<Expression> args = withoutTrailingClosure(flatten(qualifierCall.getArguments()), qualifierCall, outerCall);
             if (CONDITIONAL_ON_MISSING_BEAN_CALL.equals(qualifierName) && discriminatesByType(args)) {
+                return true;
+            }
+            if (DISCRIMINATING_QUALIFIER_CALL_NAMES.contains(qualifierName) && !args.isEmpty()) {
                 return true;
             }
             if (ANNOTATE_CALL.equals(qualifierName)) {
@@ -713,7 +787,8 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
         return false;
     }
 
-    private void processStatement(ClassNode classNode, Statement statement, SourceUnit source, Set<String> usedNames) {
+    private void processStatement(ClassNode classNode, ClassNode declaringClass, Statement statement,
+            SourceUnit source, Set<String> usedNames) {
         if (!(statement instanceof ExpressionStatement) ||
                 !(((ExpressionStatement) statement).getExpression() instanceof MethodCallExpression)) {
             addError(statement, source, "Each 'beans' statement must be a bean(...), field(...), or method(...) call");
@@ -764,7 +839,8 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
         }
         boolean isBean = BEAN_CALL.equals(rootName);
         Set<String> allowedQualifiers = isBean ? BEAN_QUALIFIER_CALL_NAMES :
-                FIELD_CALL.equals(rootName) ? FIELD_QUALIFIER_CALL_NAMES : METHOD_QUALIFIER_CALL_NAMES;
+                FIELD_CALL.equals(rootName) ? FIELD_QUALIFIER_CALL_NAMES :
+                        GROUP_CALL.equals(rootName) ? GROUP_QUALIFIER_CALL_NAMES : METHOD_QUALIFIER_CALL_NAMES;
         for (MethodCallExpression qualifierCall : qualifierCalls) {
             if (!allowedQualifiers.contains(qualifierCall.getMethodAsString())) {
                 addError(qualifierCall, source, "." + qualifierCall.getMethodAsString() + "(...) cannot be " +
@@ -786,14 +862,176 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
         }
 
         if (isBean) {
-            processBeanStatement(classNode, outerCall, baseCall, qualifierCalls, source, usedNames);
+            processBeanStatement(classNode, declaringClass, outerCall, baseCall, qualifierCalls, source, usedNames);
+        }
+        else if (GROUP_CALL.equals(rootName)) {
+            processGroupStatement(classNode, declaringClass, outerCall, baseCall, qualifierCalls, source, usedNames);
         }
         else if (FIELD_CALL.equals(rootName)) {
-            processFieldStatement(classNode, baseCall, qualifierCalls, source, usedNames);
+            processFieldStatement(classNode, declaringClass, baseCall, qualifierCalls, source, usedNames);
         }
         else {
-            processMethodStatement(classNode, outerCall, baseCall, qualifierCalls, source, usedNames);
+            processMethodStatement(classNode, declaringClass, outerCall, baseCall, qualifierCalls, source, usedNames);
         }
+    }
+
+    /**
+     * Compiles {@code group("name").<conditions> { ... }} into a nested static
+     * {@code @Configuration(proxyBeanMethods = false)} class holding the declarations in its body,
+     * with the chained qualifiers attached to that class rather than to each bean.
+     *
+     * <p>This is the shape real auto-configurations take, and the one a condition on an optional
+     * type has to take. Spring reads a condition from the bytecode before loading anything, but a
+     * {@code @Bean} method's parameter and return types are resolved when its configuration class
+     * is parsed - so a bean whose own signature names a class that may be absent cannot be guarded
+     * on the method. Moving it into a nested class moves the guard with it, and the nested class is
+     * never parsed when the condition fails. Spring Boot writes exactly this: JacksonAutoConfiguration
+     * carries four nested {@code @ConditionalOnClass} configuration classes.</p>
+     *
+     * <p>Spring finds the nested class itself - {@code ConfigurationClassParser} processes the member
+     * classes of a configuration class - so nothing has to import or register it.</p>
+     */
+    private void processGroupStatement(ClassNode classNode, ClassNode declaringClass, MethodCallExpression outerCall,
+            MethodCallExpression baseCall, List<MethodCallExpression> qualifierCalls, SourceUnit source,
+            Set<String> usedNames) {
+        List<Expression> closureCallArgs = flatten(outerCall.getArguments());
+        if (closureCallArgs.isEmpty() || !(closureCallArgs.get(closureCallArgs.size() - 1) instanceof ClosureExpression)) {
+            addError(outerCall, source, "group(...) must end with a body closure: group(\"name\") { ... }");
+            return;
+        }
+        ClosureExpression body = (ClosureExpression) closureCallArgs.get(closureCallArgs.size() - 1);
+        if (body.getParameters() != null && body.getParameters().length > 0) {
+            addError(outerCall, source, "group(...) takes no closure parameters - a group declares a class, " +
+                    "not a bean, so there is nothing to inject into. Put the parameters on the bean(...) " +
+                    "declarations inside it");
+            return;
+        }
+
+        List<Expression> baseArgs = flatten(baseCall.getArguments());
+        if (baseCall == outerCall && !baseArgs.isEmpty()) {
+            baseArgs = baseArgs.subList(0, baseArgs.size() - 1);
+        }
+        if (baseArgs.size() != 1) {
+            addError(baseCall, source, "group(...) takes a name, e.g. group(\"imageServing\") { ... }");
+            return;
+        }
+        String name = resolveStringConstant(baseArgs.get(0), declaringClass);
+        if (name == null || !isValidJavaIdentifier(BeanUtils.capitalize(name))) {
+            addError(baseArgs.get(0), source, "group(name) requires the name to be a String literal or a " +
+                    "compile-time String constant that is a valid Java identifier - it becomes the nested " +
+                    "class's name, e.g. group(\"imageServing\")");
+            return;
+        }
+
+        // JacksonObjectMapperConfiguration rather than JacksonObjectMapper: the suffix is what says
+        // this is a configuration class when it turns up in a stack trace or /actuator/beans.
+        String simpleName = BeanUtils.capitalize(name);
+        if (!simpleName.endsWith("Configuration")) {
+            simpleName = simpleName + "Configuration";
+        }
+        if (!registerName(simpleName, baseCall, source, usedNames,
+                "is already used by another member of the class - generated member names must be unique")) {
+            return;
+        }
+
+        List<Statement> statements = beanStatements(body);
+        if (statements.isEmpty()) {
+            addError(outerCall, source, "group(\"" + name + "\") declares nothing - a group exists to put a " +
+                    "condition on the declarations inside it");
+            return;
+        }
+        for (Statement statement : statements) {
+            if (isGroupRootedStatement(statement)) {
+                addError(statement, source, "group(...) cannot be nested - flatten it, or give the inner " +
+                        "group its own conditions at the top level");
+                return;
+            }
+        }
+
+        InnerClassNode group = new InnerClassNode(classNode, classNode.getName() + "$" + simpleName,
+                Modifier.PUBLIC | Modifier.STATIC, ClassHelper.OBJECT_TYPE);
+        group.setSourcePosition(baseCall);
+        source.getAST().addClass(group);
+
+        // proxyBeanMethods = false, matching what Spring Boot's own nested configuration classes
+        // carry - and keeping the sibling-call check below meaningful inside the group.
+        AnnotationNode configuration = new AnnotationNode(ClassHelper.make(Configuration.class));
+        configuration.setMember(PROXY_BEAN_METHODS_MEMBER, new ConstantExpression(Boolean.FALSE));
+        group.addAnnotation(withPosition(configuration, baseCall));
+
+        for (MethodCallExpression qualifierCall : qualifierCalls) {
+            List<Expression> qualifierArgs = flatten(qualifierCall.getArguments());
+            if (qualifierCall == outerCall) {
+                qualifierArgs = qualifierArgs.subList(0, qualifierArgs.size() - 1);
+            }
+            if (!applyGroupQualifier(group, qualifierCall, qualifierArgs, source)) {
+                return;
+            }
+        }
+
+        Set<String> groupNames = existingMemberNames(group);
+        List<MethodNode> preExisting = new ArrayList<>(group.getMethods());
+        validateSharedBeanNames(statements, source);
+        for (Statement statement : statements) {
+            if (!isBeanRootedStatement(statement)) {
+                processStatement(group, declaringClass, statement, source, groupNames);
+            }
+        }
+        for (Statement statement : statements) {
+            if (isBeanRootedStatement(statement)) {
+                processStatement(group, declaringClass, statement, source, groupNames);
+            }
+        }
+        List<MethodNode> generated = generatedMembers(group, preExisting);
+        rejectUnproxiedSiblingBeanCalls(group, generated, source);
+        dumpGeneratedMembers(group, generated, new ArrayList<>(group.getFields()), source);
+
+        // The group is compiled as its own class, so it needs the host's static-compilation
+        // treatment in its own right - otherwise its bodies are dynamic inside a @CompileStatic file.
+        applyStaticCompilation(classNode, group, source);
+    }
+
+    // Same silent classification as isBeanRootedStatement, for the nesting check.
+    private boolean isGroupRootedStatement(Statement statement) {
+        if (!(statement instanceof ExpressionStatement) ||
+                !(((ExpressionStatement) statement).getExpression() instanceof MethodCallExpression)) {
+            return false;
+        }
+        MethodCallExpression call = (MethodCallExpression) ((ExpressionStatement) statement).getExpression();
+        while (!ROOT_STATEMENT_CALL_NAMES.contains(call.getMethodAsString()) &&
+                call.getObjectExpression() instanceof MethodCallExpression) {
+            call = (MethodCallExpression) call.getObjectExpression();
+        }
+        return GROUP_CALL.equals(call.getMethodAsString());
+    }
+
+    private boolean applyGroupQualifier(ClassNode group, MethodCallExpression qualifierCall,
+            List<Expression> args, SourceUnit source) {
+        String name = qualifierCall.getMethodAsString();
+        AnnotationNode annotation;
+        if (CONDITIONAL_ON_BEAN_CALL.equals(name)) {
+            annotation = conditionalOnBeanAnnotation(args, qualifierCall, source);
+        }
+        else if (CONDITIONAL_ON_MISSING_BEAN_CALL.equals(name)) {
+            annotation = conditionalOnMissingBeanAnnotation(args, qualifierCall, source);
+        }
+        else if (CONDITIONAL_ON_PROPERTY_CALL.equals(name)) {
+            annotation = conditionalOnPropertyAnnotation(args, qualifierCall, source);
+        }
+        else if (CONDITIONAL_ON_EXPRESSION_CALL.equals(name)) {
+            annotation = conditionalOnExpressionAnnotation(args, qualifierCall, source);
+        }
+        else if (CONDITIONAL_ON_CLASS_CALL.equals(name)) {
+            annotation = conditionalOnClassAnnotation(args, qualifierCall, source);
+        }
+        else if (CONDITIONAL_ON_GRAILS_ENV_CALL.equals(name)) {
+            // attaches directly rather than returning a node, like the qualifier path it shares
+            return applyConditionalOnGrailsEnvQualifier(group, qualifierCall, args, source);
+        }
+        else {
+            return applyGenericAnnotation(group, qualifierCall, args, source);
+        }
+        return annotation != null && addAnnotationIfAbsent(group, qualifierCall, annotation, source);
     }
 
     private boolean registerName(String name, ASTNode location, SourceUnit source, Set<String> usedNames, String errorSuffix) {
@@ -804,7 +1042,8 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
         return true;
     }
 
-    private void processBeanStatement(ClassNode classNode, MethodCallExpression outerCall, MethodCallExpression baseCall,
+    private void processBeanStatement(ClassNode classNode, ClassNode declaringClass,
+            MethodCallExpression outerCall, MethodCallExpression baseCall,
             List<MethodCallExpression> qualifierCalls, SourceUnit source, Set<String> usedNames) {
         // The factory closure is optional: bean(Type) with no body declares a bean that is just its
         // own no-argument construction, which is by far the most common shape and reads as noise
@@ -822,20 +1061,63 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
             baseArgs = baseArgs.subList(0, baseArgs.size() - 1);
         }
 
-        TypeAndName typeAndName = parseNameAndType(baseArgs, baseCall, source, BEAN_CALL, false);
+        TypeAndName typeAndName = parseNameAndType(baseArgs, baseCall, source, BEAN_CALL, false, true, declaringClass);
         if (typeAndName == null) {
             return;
         }
 
-        ClassNode beanType = typeAndName.type.getType();
+        ClassNode beanType = declaredType(typeAndName, qualifierCalls, outerCall, factory != null, source, BEAN_CALL);
+        if (beanType == null) {
+            return;
+        }
+        ClassNode implementationType = typeAndName.implementation == null ? null : typeAndName.implementation.getType();
+        String declaredName = typeAndName.type.getType().getNameWithoutPackage();
         // A closure whose body is empty declares construction too, from its own parameters: the
         // parameters say what is injected, and the generated body is the constructor call the author
         // would otherwise have written out. bean(Type) { } with no parameters is bean(Type).
-        boolean constructsDeclaredType = factory == null || isEmpty(factory.getCode());
-        if (constructsDeclaredType && (beanType.isInterface() || Modifier.isAbstract(beanType.getModifiers()))) {
-            addError(baseCall, source, "bean(" + beanType.getNameWithoutPackage() + ") with no factory closure body " +
-                    "constructs the declared type, which cannot be done for an interface or abstract class - " +
-                    "give it a body: bean(" + beanType.getNameWithoutPackage() + ") { new SomeImplementation() }");
+        boolean constructsBean = factory == null || isEmpty(factory.getCode());
+        if (implementationType != null) {
+            String implementationName = implementationType.getNameWithoutPackage();
+            // Naming the implementation IS the construction, so a body answering the same question
+            // again can only disagree with it.
+            if (!constructsBean) {
+                addError(baseCall, source, "bean(" + declaredName + ", " + implementationName + ") already " +
+                        "declares what to construct, so it takes no factory closure body - drop the body, or " +
+                        "drop " + implementationName + " and construct it there");
+                return;
+            }
+            if (!isSubtypeOf(implementationType, typeAndName.type.getType())) {
+                addError(baseCall, source, implementationName + " is not a " + declaredName + ", so it cannot " +
+                        "be the implementation of a bean declared as " + declaredName);
+                return;
+            }
+        }
+        // What the generated body actually calls new on: the implementation when one was named,
+        // the declared type otherwise.
+        ClassNode constructedType = implementationType != null ? implementationType : beanType;
+        // The construction can already prove the declared type's type arguments - a bean declared as
+        // AuditorAware and built from a SpringSecurityAuditorAware is an AuditorAware<Long>, and
+        // Spring matches injection points against exactly that. Restating it in .typeArguments(...)
+        // is then only an opportunity to state it differently from the truth.
+        if (!hasExplicitTypeArguments(qualifierCalls)) {
+            ClassNode evidence = implementationType != null ? implementationType : constructedTypeFromBody(factory);
+            ClassNode inferred = inferTypeArguments(typeAndName.type.getType(), evidence);
+            if (inferred != null) {
+                beanType = inferred;
+            }
+        }
+        if (constructsBean && (constructedType.isInterface() || Modifier.isAbstract(constructedType.getModifiers()))) {
+            if (implementationType != null) {
+                addError(baseCall, source, constructedType.getNameWithoutPackage() + " is an interface or abstract " +
+                        "class, so it cannot be the implementation - name a concrete type: bean(" + declaredName +
+                        ", SomeImplementation)");
+            }
+            else {
+                addError(baseCall, source, "bean(" + declaredName + ") with no factory closure body " +
+                        "constructs the declared type, which cannot be done for an interface or abstract class - " +
+                        "name the implementation: bean(" + declaredName + ", SomeImplementation), or give it a " +
+                        "body: bean(" + declaredName + ") { new SomeImplementation() }");
+            }
             return;
         }
 
@@ -850,8 +1132,8 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
 
         Parameter[] beanParameters = factory == null || factory.getParameters() == null ?
                 Parameter.EMPTY_ARRAY : factory.getParameters();
-        Statement beanBody = constructsDeclaredType ?
-                synthesizedConstruction(beanType, beanParameters, baseCall) :
+        Statement beanBody = constructsBean ?
+                synthesizedConstruction(constructedType, beanParameters, baseCall) :
                 factory.getCode();
 
         MethodNode beanMethod = new MethodNode(
@@ -875,7 +1157,326 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
             }
         }
 
+        if (!rejectNonStaticPostProcessor(beanMethod, beanType, baseCall, source)) {
+            return;
+        }
+
+        if (!rehomeAnonymousInnerClasses(beanBody, classNode, Modifier.isStatic(beanMethod.getModifiers()),
+                typeAndName.name, source)) {
+            return;
+        }
+
         classNode.addMethod(beanMethod);
+    }
+
+    private static final String BEAN_FACTORY_POST_PROCESSOR = "org.springframework.beans.factory.config.BeanFactoryPostProcessor";
+    private static final String BEAN_POST_PROCESSOR = "org.springframework.beans.factory.config.BeanPostProcessor";
+
+    /**
+     * A {@code BeanFactoryPostProcessor}/{@code BeanPostProcessor} bean must be creatable without
+     * instantiating its declaring class, because Spring has to obtain it before the ordinary bean
+     * lifecycle it participates in has started. Declared as an instance method it still "works",
+     * which is the problem: the configuration class is instantiated far too early, taking every bean
+     * its methods depend on with it, out of order and past the post-processors that would have
+     * configured them - a class of startup bug that shows up as an unrelated bean being unconfigured
+     * rather than as anything pointing here.
+     *
+     * <p>{@code .staticMethod()} is the fix and is already in the DSL; this only stops the mistake
+     * being silent. An instance-bound post-processor, if one is genuinely wanted, is still writable
+     * as an ordinary {@code @Bean} method on the same class - the block does not claim them.</p>
+     */
+    private boolean rejectNonStaticPostProcessor(MethodNode beanMethod, ClassNode beanType,
+            ASTNode location, SourceUnit source) {
+        if (Modifier.isStatic(beanMethod.getModifiers())) {
+            return true;
+        }
+        String postProcessorType = null;
+        if (isSubtypeOf(beanType, ClassHelper.make(BEAN_FACTORY_POST_PROCESSOR))) {
+            postProcessorType = "BeanFactoryPostProcessor";
+        }
+        else if (isSubtypeOf(beanType, ClassHelper.make(BEAN_POST_PROCESSOR))) {
+            postProcessorType = "BeanPostProcessor";
+        }
+        if (postProcessorType == null) {
+            return true;
+        }
+        addError(location, source, "a " + postProcessorType + " bean must be declared " +
+                ".staticMethod(), so Spring can obtain it without instantiating this class - as an " +
+                "instance method it forces that instantiation before the beans it post-processes " +
+                "are configured");
+        return false;
+    }
+
+    /**
+     * Writes the members this block generated to {@code -Dgrails.beans.dsl.dumpdir=<dir>}, one file
+     * per host class.
+     *
+     * <p>Everything the DSL decides that the source does not say is a declaration, not a body: the
+     * bean name Spring will resolve by, the annotations the qualifiers became, the modifiers, the
+     * declared type and whether it ended up carrying type arguments, and the parameter annotations
+     * that make a dependency optional or qualified. Bodies are excluded on purpose - a bean body is
+     * the author's own closure body, lifted verbatim, so it is already readable where they wrote it.
+     *
+     * <p>Without this, the only way to see any of it is {@code javap} on the compiled class, which
+     * is a poor place to answer "did that qualifier attach anything" while writing the block.
+     * Grails already takes this shape for its other compile-time generator, where
+     * {@code grails.views.gsp.keepgenerateddir} keeps the Groovy a GSP compiles to.</p>
+     */
+    private void dumpGeneratedMembers(ClassNode host, List<MethodNode> methods, List<FieldNode> fields,
+            SourceUnit source) {
+        String dir = System.getProperty(DUMP_DIR_PROPERTY);
+        if (dir == null || dir.isBlank()) {
+            return;
+        }
+        StringBuilder text = new StringBuilder();
+        text.append("// Generated from the 'beans' DSL in ").append(host.getName()).append('\n');
+        text.append("// Bodies are omitted: each is the closure body from that source, lifted verbatim.\n");
+        for (FieldNode field : fields) {
+            text.append('\n');
+            for (AnnotationNode annotation : field.getAnnotations()) {
+                text.append(annotationText(annotation)).append('\n');
+            }
+            text.append(AstToTextHelper.getModifiersText(field.getModifiers())).append(' ')
+                    .append(typeText(field.getType())).append(' ').append(field.getName()).append('\n');
+        }
+        for (MethodNode method : methods) {
+            text.append('\n');
+            for (AnnotationNode annotation : method.getAnnotations()) {
+                text.append(annotationText(annotation)).append('\n');
+            }
+            text.append(AstToTextHelper.getModifiersText(method.getModifiers())).append(' ')
+                    .append(typeText(method.getReturnType())).append(' ').append(method.getName())
+                    .append('(').append(parametersText(method.getParameters())).append(")\n");
+        }
+        try {
+            Path target = Paths.get(dir);
+            Files.createDirectories(target);
+            Files.writeString(target.resolve(host.getName() + ".beans.txt"), text.toString(),
+                    StandardCharsets.UTF_8);
+        }
+        catch (IOException | RuntimeException e) {
+            // Opt-in by definition, so this can only fire for someone who asked for the dump and
+            // would otherwise be left looking for a file that was never written.
+            addError(host, source, "could not write the beans DSL dump for " + host.getName() + " to \"" +
+                    dir + "\" (" + DUMP_DIR_PROPERTY + "): " + e);
+        }
+    }
+
+    private String parametersText(Parameter[] parameters) {
+        StringBuilder text = new StringBuilder();
+        for (Parameter parameter : parameters) {
+            if (text.length() > 0) {
+                text.append(", ");
+            }
+            for (AnnotationNode annotation : parameter.getAnnotations()) {
+                text.append(annotationText(annotation)).append(' ');
+            }
+            text.append(typeText(parameter.getType())).append(' ').append(parameter.getName());
+        }
+        return text.toString();
+    }
+
+    // Type arguments are printed only when every one of them is concrete. A raw declared type
+    // resolved from a class still reports its own type PARAMETERS here, and printing those would
+    // read as <String> when nothing of the sort was declared.
+    private String typeText(ClassNode type) {
+        GenericsType[] generics = type.getGenericsTypes();
+        if (generics == null || generics.length == 0) {
+            return type.getName();
+        }
+        StringBuilder text = new StringBuilder(type.getName());
+        for (GenericsType generic : generics) {
+            if (generic.isPlaceholder() || generic.isWildcard()) {
+                return type.getName();
+            }
+        }
+        text.append('<');
+        for (int i = 0; i < generics.length; i++) {
+            text.append(i == 0 ? "" : ", ").append(generics[i].getType().getName());
+        }
+        return text.append('>').toString();
+    }
+
+    private String annotationText(AnnotationNode annotation) {
+        StringBuilder text = new StringBuilder("@").append(annotation.getClassNode().getNameWithoutPackage());
+        Map<String, Expression> members = annotation.getMembers();
+        if (members.isEmpty()) {
+            return text.toString();
+        }
+        text.append('(');
+        boolean first = true;
+        for (Map.Entry<String, Expression> member : members.entrySet()) {
+            text.append(first ? "" : ", ").append(member.getKey()).append(" = ")
+                    .append(memberValueText(member.getValue()));
+            first = false;
+        }
+        return text.append(')').toString();
+    }
+
+    // Expression.getText() renders a String constant bare, so @DependsOn("names") would print as
+    // value = names and read as an identifier. Quote them, and descend into a list so an
+    // array-valued attribute reads the way it was written.
+    private String memberValueText(Expression value) {
+        if (value instanceof ConstantExpression && ((ConstantExpression) value).getValue() instanceof String) {
+            return "\"" + ((ConstantExpression) value).getValue() + "\"";
+        }
+        if (value instanceof ListExpression) {
+            StringBuilder text = new StringBuilder("[");
+            List<Expression> entries = ((ListExpression) value).getExpressions();
+            for (int i = 0; i < entries.size(); i++) {
+                text.append(i == 0 ? "" : ", ").append(memberValueText(entries.get(i)));
+            }
+            return text.append(']').toString();
+        }
+        return value.getText();
+    }
+
+    // The methods this block just generated, in declaration order: everything on the host that was
+    // not there before the two processing loops ran. MethodNode does not override equals, so the
+    // removal is by identity and cannot drop a same-signature method the user wrote.
+    private List<MethodNode> generatedMembers(ClassNode host, List<MethodNode> preExisting) {
+        List<MethodNode> generated = new ArrayList<>(host.getMethods());
+        generated.removeAll(preExisting);
+        return generated;
+    }
+
+    /**
+     * Rejects a call from one generated method to another generated {@code @Bean} method, on a host
+     * whose bean methods Spring does not proxy.
+     *
+     * <p>Calling a sibling {@code @Bean} method and getting the singleton back is a CGLIB trick, and
+     * Spring only plays it for a full {@code @Configuration} class. On a <i>lite</i> configuration
+     * source the same call is a plain Java call that constructs a second instance - and lite is the
+     * common case for this DSL: {@code @AutoConfiguration} is
+     * {@code @Configuration(proxyBeanMethods = false)}, the sibling generated for a plugin descriptor
+     * carries exactly that, and a Grails {@code Application} class is a configuration source without
+     * being annotated {@code @Configuration} at all.</p>
+     *
+     * <p>A full {@code @Configuration} class is not wholly exempt: the interception is CGLIB
+     * subclassing, so it cannot override a {@code static} method, and Spring documents that calls to
+     * a static {@code @Bean} method are never intercepted - not even there. A {@code .staticMethod()}
+     * bean is therefore checked on every host, and is the only thing checked on a proxied one.</p>
+     *
+     * <p>Nothing about that failure is visible at runtime. The context starts, every bean exists, and
+     * two objects live where the author meant one - so a listener registers on the wrong instance, or
+     * configuration applied to one is missing from the other. It is also the exact mistake a
+     * migration invites, since moving bean methods off a real {@code @Configuration} class into this
+     * DSL silently changes what those calls mean.</p>
+     */
+    private void rejectUnproxiedSiblingBeanCalls(ClassNode host, List<MethodNode> generated, SourceUnit source) {
+        boolean proxied = beanMethodsAreProxied(host);
+        Map<String, MethodNode> beanMethodsByName = new LinkedHashMap<>();
+        // Every @Bean method on the host, not only the ones this block generated. A class that
+        // mixes hand-written @Bean methods with the DSL is what a migration looks like midway
+        // through, and a call to one of those from a generated body misses the singleton in exactly
+        // the same way - more easily, in fact, since it was correct in the @Configuration class the
+        // beans are being moved out of. Only generated bodies are scanned: what a hand-written
+        // method does is its author's business, not this transform's.
+        for (MethodNode method : host.getMethods()) {
+            if (method.getAnnotations(ClassHelper.make(Bean.class)).isEmpty()) {
+                continue;
+            }
+            // A proxied host still cannot intercept a .staticMethod() bean: the interception is
+            // CGLIB subclassing, and a static method cannot be overridden. So on a full
+            // @Configuration class those are the only sibling calls still worth rejecting.
+            if (!proxied || method.isStatic()) {
+                beanMethodsByName.put(method.getName(), method);
+            }
+        }
+        if (beanMethodsByName.isEmpty()) {
+            return;
+        }
+        for (MethodNode method : generated) {
+            if (method.getCode() == null) {
+                continue;
+            }
+            MethodNode caller = method;
+            method.getCode().visit(new CodeVisitorSupport() {
+                // Deliberately not descending. Inside a closure an unqualified call is resolved
+                // against the delegate first, so `new Registry().tap { initialize() }` calls the
+                // registry - not this class - even though the AST records implicit-this either way.
+                // Reading that as a sibling bean call would reject working code, which is a far
+                // worse trade than missing the rare bean call written inside a nested closure.
+                @Override
+                public void visitClosureExpression(ClosureExpression expression) {
+                }
+
+                @Override
+                public void visitMethodCallExpression(MethodCallExpression call) {
+                    super.visitMethodCallExpression(call);
+                    if (!isSelfCall(call)) {
+                        return;
+                    }
+                    MethodNode target = beanMethodsByName.get(call.getMethodAsString());
+                    if (target == null || target == caller) {
+                        return;
+                    }
+                    addError(call, source, siblingCallCause(host, call.getMethodAsString(), proxied) +
+                            ", so this call does not return the bean Spring registered - it constructs a second " +
+                            "instance. Inject it instead, by declaring it as a parameter of this closure; if what " +
+                            "you want is shared logic rather than the bean, move it into a method(...) declaration.");
+                }
+            });
+        }
+    }
+
+    // Why this particular call misses the singleton. On a proxied host the map holds only static
+    // bean methods, so reaching here means the target is one.
+    private String siblingCallCause(ClassNode host, String name, boolean proxied) {
+        if (proxied) {
+            return "\"" + name + "(...)\" is another bean declared in this block, and is declared " +
+                    ".staticMethod(). A static @Bean method is never intercepted by the container - not even " +
+                    "on a proxied @Configuration class like " + host.getNameWithoutPackage() + " - because " +
+                    "that interception is CGLIB subclassing, which cannot override a static method";
+        }
+        return "\"" + name + "(...)\" is another bean declared in this block, and " +
+                host.getNameWithoutPackage() + " is not a proxied @Configuration class";
+    }
+
+    // An unqualified call, or one written against this. Anything with a real receiver is somebody
+    // else's method that happens to share the name.
+    private boolean isSelfCall(MethodCallExpression call) {
+        return call.isImplicitThis() ||
+                (call.getObjectExpression() instanceof VariableExpression &&
+                        ((VariableExpression) call.getObjectExpression()).isThisExpression());
+    }
+
+    // Whether Spring will CGLIB-proxy this host's @Bean methods: true only when @Configuration is
+    // reachable from the class's own annotations without passing through one that sets
+    // proxyBeanMethods = false. @AutoConfiguration answers false through that second clause - its
+    // meta-annotation is @Configuration(proxyBeanMethods = false) - and a Grails Application class
+    // answers false by carrying no @Configuration at all.
+    private boolean beanMethodsAreProxied(ClassNode host) {
+        return proxiesBeanMethods(host.getAnnotations(), new HashSet<>());
+    }
+
+    // `visited` guards descent, and only descent. Recording a type when the branch is pruned - by
+    // the meta-annotation filter, by proxyBeanMethods = false, or by being @Configuration itself -
+    // would memoize an answer that was never computed: @Configuration reached through
+    // @AutoConfiguration is pruned, and a real proxying @Configuration written alongside it would
+    // then be skipped as already-seen, answering false for a class Spring does proxy.
+    private boolean proxiesBeanMethods(List<AnnotationNode> annotations, Set<String> visited) {
+        for (AnnotationNode annotation : annotations) {
+            ClassNode type = annotation.getClassNode();
+            if (type.getName().startsWith("java.lang.annotation.")) {
+                continue;
+            }
+            if (isFalseConstant(annotation.getMember(PROXY_BEAN_METHODS_MEMBER))) {
+                continue;
+            }
+            if (Configuration.class.getName().equals(type.getName())) {
+                return true;
+            }
+            if (visited.add(type.getName()) && proxiesBeanMethods(type.getAnnotations(), visited)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isFalseConstant(Expression expression) {
+        return expression instanceof ConstantExpression &&
+                Boolean.FALSE.equals(((ConstantExpression) expression).getValue());
     }
 
     private boolean isEmpty(Statement code) {
@@ -913,6 +1514,164 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
         return returnStatement;
     }
 
+    /**
+     * Whether {@code candidate} is a {@code target}. Used for the implementation type, where
+     * checking it here rather than leaving it to the generated {@code return new Impl()} means the
+     * failure names both types and points at the {@code bean(...)} statement instead of surfacing as
+     * an assignment error inside a body the author never wrote.
+     */
+    private boolean isSubtypeOf(ClassNode candidate, ClassNode target) {
+        ClassNode resolved = target.redirect();
+        return candidate.redirect().equals(resolved) || candidate.isDerivedFrom(resolved) ||
+                candidate.implementsInterface(resolved);
+    }
+
+    private boolean hasExplicitTypeArguments(List<MethodCallExpression> qualifierCalls) {
+        for (MethodCallExpression qualifierCall : qualifierCalls) {
+            if (TYPE_ARGUMENTS_CALL.equals(qualifierCall.getMethodAsString())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * The type a factory closure constructs, when its body is exactly that and nothing else: a last
+     * statement that is a {@code new ...} expression, which in Groovy is the closure's return value.
+     * Anything else - a local, a method call, a conditional - is not evidence of anything, and this
+     * returns null rather than guess.
+     */
+    private ClassNode constructedTypeFromBody(ClosureExpression factory) {
+        if (factory == null || !(factory.getCode() instanceof BlockStatement)) {
+            return null;
+        }
+        List<Statement> statements = ((BlockStatement) factory.getCode()).getStatements();
+        if (statements.isEmpty()) {
+            return null;
+        }
+        Statement last = statements.get(statements.size() - 1);
+        Expression expression = null;
+        if (last instanceof ReturnStatement) {
+            expression = ((ReturnStatement) last).getExpression();
+        }
+        else if (last instanceof ExpressionStatement) {
+            expression = ((ExpressionStatement) last).getExpression();
+        }
+        return expression instanceof ConstructorCallExpression ? expression.getType() : null;
+    }
+
+    /**
+     * The declared type parameterized by what {@code evidence} binds it to, or null when that cannot
+     * be answered concretely - {@code evidence} is unrelated, the declared type is not generic, or
+     * the binding is itself a type variable ({@code class Box<T> implements Holder<T>} proves
+     * nothing about a {@code Holder} bean). Inference only ever adds information the compiler could
+     * already see; where it cannot, the raw type stands exactly as before and
+     * {@code .typeArguments(...)} remains the way to say it.
+     */
+    private ClassNode inferTypeArguments(ClassNode declaredRaw, ClassNode evidence) {
+        GenericsType[] declared = declaredRaw.redirect().getGenericsTypes();
+        if (evidence == null || declared == null || declared.length == 0) {
+            return null;
+        }
+        if (!isSubtypeOf(evidence, declaredRaw)) {
+            return null;
+        }
+        // A raw construction of a generic type proves nothing: Groovy resolves its parameters to
+        // their bounds, so new GenericBox() would infer Holder<Object> - not merely uninformative
+        // but wrong, since a bean typed Holder<Object> no longer matches a Holder<String> injection
+        // point it previously did as a raw Holder.
+        GenericsType[] evidenceParameters = evidence.redirect().getGenericsTypes();
+        if (evidenceParameters != null && evidenceParameters.length > 0 &&
+                (evidence.getGenericsTypes() == null || evidence.getGenericsTypes().length == 0)) {
+            return null;
+        }
+        ClassNode parameterized;
+        try {
+            parameterized = GenericsUtils.parameterizeType(evidence, declaredRaw.redirect());
+        }
+        catch (RuntimeException ignored) {
+            // parameterizeType is best-effort on partially resolved hierarchies; an unusable answer
+            // is the same as no answer.
+            return null;
+        }
+        GenericsType[] resolved = parameterized == null ? null : parameterized.getGenericsTypes();
+        if (resolved == null || resolved.length != declared.length) {
+            return null;
+        }
+        for (GenericsType candidate : resolved) {
+            if (candidate.isPlaceholder() || candidate.isWildcard() || candidate.getType() == null ||
+                    candidate.getType().isGenericsPlaceHolder()) {
+                return null;
+            }
+        }
+        return GenericsUtils.makeClassSafeWithGenerics(declaredRaw, resolved);
+    }
+
+    /**
+     * Re-homes anonymous inner classes in a body lifted out of the {@code beans} closure.
+     *
+     * <p>Groovy's {@code InnerClassVisitor} runs at SEMANTIC_ANALYSIS, before this transform, and
+     * gives an anonymous class its enclosing instance from wherever it was written: a class
+     * declared inside a closure gets {@code final Closure this$0} and a constructor taking a
+     * {@code Closure}, where one declared in a method gets the declaring class. Lifting the body
+     * into a method moves the code and not that decision, so the generated call passes {@code this}
+     * - the configuration class - to a constructor still expecting the closure. It compiles, and
+     * fails at runtime with a {@code GroovyCastException} naming neither the bean nor the DSL.</p>
+     *
+     * <p>So the three places that decision landed are corrected here: the {@code this$0} field, the
+     * synthetic constructor's first parameter, and the argument at the call site.</p>
+     */
+    private boolean rehomeAnonymousInnerClasses(Statement body, ClassNode host, boolean staticMethod,
+            String beanName, SourceUnit source) {
+        List<ConstructorCallExpression> anonymous = new ArrayList<>();
+        body.visit(new CodeVisitorSupport() {
+            @Override
+            public void visitConstructorCallExpression(ConstructorCallExpression call) {
+                if (call.isUsingAnonymousInnerClass()) {
+                    anonymous.add(call);
+                }
+                super.visitConstructorCallExpression(call);
+            }
+        });
+        for (ConstructorCallExpression call : anonymous) {
+            ClassNode inner = call.getType();
+            FieldNode outerField = inner.getDeclaredField("this$0");
+            if (outerField == null || !ClassHelper.CLOSURE_TYPE.equals(outerField.getType())) {
+                continue; // already homed somewhere real, or static - nothing the lift broke
+            }
+            // A static factory method has no enclosing instance to give it, and the field cannot be
+            // dropped here: InnerClassVisitor added it and the constructor body assigns it.
+            if (staticMethod) {
+                addError(call, source, "\"" + beanName + "\" is declared .staticMethod() and its body " +
+                        "constructs an anonymous inner class, which needs an enclosing instance the " +
+                        "static method has not got - give the anonymous class a name and declare it " +
+                        "as a static nested class, or drop .staticMethod()");
+                return false;
+            }
+            ClassNode enclosing = host.getPlainNodeReference();
+            outerField.setType(enclosing);
+            for (ConstructorNode constructor : inner.getDeclaredConstructors()) {
+                Parameter[] parameters = constructor.getParameters();
+                if (parameters.length > 0 && ClassHelper.CLOSURE_TYPE.equals(parameters[0].getType())) {
+                    parameters[0].setType(enclosing);
+                    // Both, and originType is the one that matters: static type checking compares
+                    // arguments against Parameter.getOriginType() while the error it raises prints
+                    // getType(), so setting only the latter fails the call and reports the two
+                    // types as identical.
+                    parameters[0].setOriginType(enclosing);
+                }
+            }
+            List<Expression> arguments = ((TupleExpression) call.getArguments()).getExpressions();
+            if (!arguments.isEmpty() && arguments.get(0) instanceof VariableExpression &&
+                    "this".equals(((VariableExpression) arguments.get(0)).getName())) {
+                VariableExpression thisExpression = new VariableExpression("this", enclosing);
+                thisExpression.setSourcePosition(arguments.get(0));
+                arguments.set(0, thisExpression);
+            }
+        }
+        return true;
+    }
+
     private String syntheticBeanMethodName(ClassNode beanType, Set<String> usedNames) {
         String base = decapitalize(beanType.getNameWithoutPackage());
         String candidate;
@@ -925,10 +1684,10 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
         return candidate;
     }
 
-    private void processFieldStatement(ClassNode classNode, MethodCallExpression baseCall,
+    private void processFieldStatement(ClassNode classNode, ClassNode declaringClass, MethodCallExpression baseCall,
             List<MethodCallExpression> qualifierCalls, SourceUnit source, Set<String> usedNames) {
         List<Expression> baseArgs = flatten(baseCall.getArguments());
-        TypeAndName typeAndName = parseNameAndType(baseArgs, baseCall, source, FIELD_CALL, true);
+        TypeAndName typeAndName = parseNameAndType(baseArgs, baseCall, source, FIELD_CALL, true, declaringClass);
         if (typeAndName == null) {
             return;
         }
@@ -938,10 +1697,18 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
             return;
         }
 
-        FieldNode field = classNode.addField(typeAndName.name, Modifier.PRIVATE, typeAndName.type.getType(), null);
+        ClassNode fieldType = declaredType(typeAndName, qualifierCalls, null, false, source, FIELD_CALL);
+        if (fieldType == null) {
+            return;
+        }
+
+        FieldNode field = classNode.addField(typeAndName.name, Modifier.PRIVATE, fieldType, null);
         field.setSourcePosition(baseCall);
 
         for (MethodCallExpression qualifierCall : qualifierCalls) {
+            if (TYPE_ARGUMENTS_CALL.equals(qualifierCall.getMethodAsString())) {
+                continue;
+            }
             List<Expression> qualifierArgs = flatten(qualifierCall.getArguments());
             if (VALUE_CALL.equals(qualifierCall.getMethodAsString())) {
                 AnnotationNode valueAnnotation = valueAnnotation(qualifierArgs, qualifierCall, source);
@@ -1016,7 +1783,28 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
     // constant reference either from its AST initial expression (a constant declared in the same
     // compilation unit) or reflectively from the already-compiled class on the classpath; and
     // concatenations of resolvable pieces recursively.
+    /**
+     * As {@link #resolveStringConstant(Expression)}, but also resolving a <i>bare</i> reference to a
+     * static final String field on {@code declaringClass} - the class the {@code beans} block was
+     * written on, which for a plugin descriptor is not the class the members land on.
+     *
+     * <p>Unqualified is how such a constant is written from inside the class that declares it, so it
+     * is the spelling that matters here; the qualified form already resolved.</p>
+     */
     private String resolveStringConstant(Expression expression) {
+        return resolveStringConstant(expression, null);
+    }
+
+    private String resolveStringConstant(Expression expression, ClassNode declaringClass) {
+        if (declaringClass != null && expression instanceof VariableExpression) {
+            FieldNode field = findStaticFinalField(declaringClass, ((VariableExpression) expression).getName(),
+                    new HashSet<>());
+            if (field != null && field.getInitialExpression() instanceof ConstantExpression) {
+                Object value = ((ConstantExpression) field.getInitialExpression()).getValue();
+                return value instanceof String ? (String) value : null;
+            }
+            return null;
+        }
         if (expression instanceof ConstantExpression) {
             Object value = ((ConstantExpression) expression).getValue();
             return value instanceof String ? (String) value : null;
@@ -1026,8 +1814,8 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
             if (binary.getOperation().getType() != Types.PLUS) {
                 return null;
             }
-            String left = resolveStringConstant(binary.getLeftExpression());
-            String right = resolveStringConstant(binary.getRightExpression());
+            String left = resolveStringConstant(binary.getLeftExpression(), declaringClass);
+            String right = resolveStringConstant(binary.getRightExpression(), declaringClass);
             return left != null && right != null ? left + right : null;
         }
         if (expression instanceof PropertyExpression) {
@@ -1082,7 +1870,8 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
         return null;
     }
 
-    private void processMethodStatement(ClassNode classNode, MethodCallExpression outerCall, MethodCallExpression baseCall,
+    private void processMethodStatement(ClassNode classNode, ClassNode declaringClass,
+            MethodCallExpression outerCall, MethodCallExpression baseCall,
             List<MethodCallExpression> qualifierCalls, SourceUnit source, Set<String> usedNames) {
         List<Expression> closureCallArgs = flatten(outerCall.getArguments());
         if (closureCallArgs.isEmpty() || !(closureCallArgs.get(closureCallArgs.size() - 1) instanceof ClosureExpression)) {
@@ -1096,7 +1885,7 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
             baseArgs = baseArgs.subList(0, baseArgs.size() - 1);
         }
 
-        TypeAndName typeAndName = parseNameAndType(baseArgs, baseCall, source, METHOD_CALL, true);
+        TypeAndName typeAndName = parseNameAndType(baseArgs, baseCall, source, METHOD_CALL, true, declaringClass);
         if (typeAndName == null) {
             return;
         }
@@ -1106,16 +1895,24 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
             return;
         }
 
+        ClassNode returnType = declaredType(typeAndName, qualifierCalls, outerCall, true, source, METHOD_CALL);
+        if (returnType == null) {
+            return;
+        }
+
         MethodNode helperMethod = new MethodNode(
                 typeAndName.name,
                 Modifier.PRIVATE,
-                typeAndName.type.getType(),
+                returnType,
                 body.getParameters() == null ? Parameter.EMPTY_ARRAY : body.getParameters(),
                 ClassNode.EMPTY_ARRAY,
                 body.getCode());
         helperMethod.setSourcePosition(baseCall);
 
         for (MethodCallExpression qualifierCall : qualifierCalls) {
+            if (TYPE_ARGUMENTS_CALL.equals(qualifierCall.getMethodAsString())) {
+                continue;
+            }
             List<Expression> qualifierArgs = flatten(qualifierCall.getArguments());
             if (qualifierCall == outerCall) {
                 qualifierArgs = qualifierArgs.subList(0, qualifierArgs.size() - 1);
@@ -1125,22 +1922,118 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
             }
         }
 
+        // A helper's body is lifted out of the closure exactly as a bean's is, so it needs the same
+        // correction - always non-static, there being no .staticMethod() for method(...).
+        if (!rehomeAnonymousInnerClasses(body.getCode(), classNode, false, typeAndName.name, source)) {
+            return;
+        }
+
         classNode.addMethod(helperMethod);
+    }
+
+    /**
+     * The declared type of a bean, field or helper method, with any {@code .typeArguments(...)}
+     * applied - {@code bean("auditorAware", AuditorAware).typeArguments(String)} declares
+     * {@code AuditorAware<String>}.
+     *
+     * <p>A type argument is not decoration. Spring resolves an injection point by its full generic
+     * type, so a bean declared raw where a consumer asks for {@code Repository<User>} may not match,
+     * and {@code ObjectProvider<Handler<Order>>} or an injected {@code List<Handler<Order>>} cannot
+     * select it at all. The type in {@code bean(...)} is a class literal and Groovy has no syntax
+     * for writing type arguments on one, so without this the only way to declare a parameterized
+     * bean type was to declare the implementation class instead and let Spring read the arguments
+     * off its hierarchy - which is not always the type the author wants the bean known by.
+     *
+     * @return the type to declare, or {@code null} when the qualifier is present but malformed
+     * (the error is already reported)
+     */
+    private ClassNode declaredType(TypeAndName typeAndName, List<MethodCallExpression> qualifierCalls,
+            MethodCallExpression outerCall, boolean outerCallCarriesClosure, SourceUnit source, String callName) {
+        ClassNode raw = typeAndName.type.getType();
+        for (MethodCallExpression qualifierCall : qualifierCalls) {
+            if (!TYPE_ARGUMENTS_CALL.equals(qualifierCall.getMethodAsString())) {
+                continue;
+            }
+            List<Expression> args = flatten(qualifierCall.getArguments());
+            if (outerCallCarriesClosure && qualifierCall == outerCall && !args.isEmpty()) {
+                args = args.subList(0, args.size() - 1);
+            }
+            String rawName = raw.getNameWithoutPackage();
+            if (args.isEmpty()) {
+                addError(qualifierCall, source, ".typeArguments(...) requires at least one type, e.g. " +
+                        callName + "(..., " + rawName + ").typeArguments(String)");
+                return null;
+            }
+            GenericsType[] typeArguments = new GenericsType[args.size()];
+            for (int i = 0; i < args.size(); i++) {
+                if (!(args.get(i) instanceof ClassExpression)) {
+                    addError(args.get(i), source, ".typeArguments(...) takes types, e.g. " +
+                            ".typeArguments(String) or .typeArguments(String, Integer)");
+                    return null;
+                }
+                typeArguments[i] = new GenericsType(((ClassExpression) args.get(i)).getType());
+            }
+            // The type parameters the declared type actually has. Checking the count here turns a
+            // mismatch into a located error naming both numbers, rather than an unchecked generic
+            // signature that only misleads whoever reads the bean's type later.
+            GenericsType[] declared = raw.redirect().getGenericsTypes();
+            if (declared == null || declared.length == 0) {
+                addError(qualifierCall, source, rawName + " is not a generic type, so it has no type " +
+                        "arguments to give");
+                return null;
+            }
+            if (declared.length != typeArguments.length) {
+                addError(qualifierCall, source, rawName + " declares " + declared.length +
+                        " type parameter" + (declared.length == 1 ? "" : "s") + ", so .typeArguments(...) takes " +
+                        declared.length + ", not " + typeArguments.length);
+                return null;
+            }
+            return GenericsUtils.makeClassSafeWithGenerics(raw, typeArguments);
+        }
+        return raw;
     }
 
     private static final class TypeAndName {
         private final ClassExpression type;
         private final String name;
+        /** The type actually constructed, when stated separately from the declared type; else null. */
+        private final ClassExpression implementation;
 
-        TypeAndName(ClassExpression type, String name) {
+        TypeAndName(ClassExpression type, String name, ClassExpression implementation) {
             this.type = type;
             this.name = name;
+            this.implementation = implementation;
         }
     }
 
     private TypeAndName parseNameAndType(List<Expression> args, MethodCallExpression call, SourceUnit source,
-            String callName, boolean requireValidIdentifier) {
-        if (args.isEmpty() || args.size() > 2 || !(args.get(args.size() - 1) instanceof ClassExpression)) {
+            String callName, boolean requireValidIdentifier, ClassNode declaringClass) {
+        return parseNameAndType(args, call, source, callName, requireValidIdentifier, false, declaringClass);
+    }
+
+    /**
+     * Reads the {@code [name, ] Type [, Implementation]} head of a DSL statement.
+     *
+     * <p>The implementation type is what separates the declared type from the constructed one, so
+     * that a bean can be declared as the interface its consumers inject while still being built
+     * without a factory closure. It is recognised only by two adjacent type literals - the trailing
+     * one is the implementation - which cannot collide with the {@code (name, Type)} shape, since a
+     * name is a String literal.</p>
+     */
+    private TypeAndName parseNameAndType(List<Expression> args, MethodCallExpression call, SourceUnit source,
+            String callName, boolean requireValidIdentifier, boolean allowImplementation,
+            ClassNode declaringClass) {
+        // Two trailing type literals mean the second is the implementation. Split it off first so
+        // everything below reads the same [name, ] Type head it always did.
+        ClassExpression implementation = null;
+        if (allowImplementation && args.size() >= 2 &&
+                args.get(args.size() - 1) instanceof ClassExpression &&
+                args.get(args.size() - 2) instanceof ClassExpression) {
+            implementation = (ClassExpression) args.get(args.size() - 1);
+            args = args.subList(0, args.size() - 1);
+        }
+        int maxArgs = 2;
+        if (args.isEmpty() || args.size() > maxArgs || !(args.get(args.size() - 1) instanceof ClassExpression)) {
             if (args.size() == 2 && args.get(0) instanceof ClassExpression) {
                 addError(call, source, callName + "(...) takes the name before the type: " +
                         callName + "(\"myGreeter\", Greeter), not " + callName + "(Greeter, \"myGreeter\")");
@@ -1170,13 +2063,18 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
         }
         else {
             Expression nameArg = args.get(0);
-            Object nameValue = nameArg instanceof ConstantExpression ? ((ConstantExpression) nameArg).getValue() : null;
-            if (!(nameValue instanceof String)) {
-                addError(nameArg, source, callName + "(name, Type) requires the name to be a String literal, " +
-                        "e.g. " + callName + "(\"myGreeter\", Greeter)");
+            // A literal or any compile-time String constant - the same folding .value(...) does for a
+            // config key, and for the same reason. A bean name is often already a constant, because
+            // something else has to look the bean up by it; making the DSL the one place that cannot
+            // say the constant's name would mean writing the string twice and letting the two drift.
+            String nameValue = resolveStringConstant(nameArg, declaringClass);
+            if (nameValue == null) {
+                addError(nameArg, source, callName + "(name, Type) requires the name to be a String literal " +
+                        "or a compile-time String constant, e.g. " + callName + "(\"myGreeter\", Greeter) or " +
+                        callName + "(VIEW_LOADER_BEAN, GroovyPageResourceLoader)");
                 return null;
             }
-            name = (String) nameValue;
+            name = nameValue;
             if (requireValidIdentifier && !isValidJavaIdentifier(name)) {
                 addError(nameArg, source, "\"" + name + "\" is not a valid name: it becomes the generated " +
                         "member's name, so it must be a valid Java identifier");
@@ -1190,14 +2088,35 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
                 return null;
             }
         }
-        return new TypeAndName(type, name);
+        return new TypeAndName(type, name, implementation);
     }
 
     private boolean applyQualifier(MethodNode beanMethod, String beanName, MethodCallExpression qualifierCall,
             List<Expression> args, SourceUnit source) {
         String name = qualifierCall.getMethodAsString();
+        // Consumed by declaredType(...) before the method node existed - it shapes the declared type
+        // rather than attaching anything to the member.
+        if (TYPE_ARGUMENTS_CALL.equals(name)) {
+            return true;
+        }
+        if (CONDITIONAL_ON_BEAN_CALL.equals(name)) {
+            AnnotationNode annotation = conditionalOnBeanAnnotation(args, qualifierCall, source);
+            return annotation != null && addAnnotationIfAbsent(beanMethod, qualifierCall, annotation, source);
+        }
         if (CONDITIONAL_ON_MISSING_BEAN_CALL.equals(name)) {
             AnnotationNode annotation = conditionalOnMissingBeanAnnotation(args, qualifierCall, source);
+            return annotation != null && addAnnotationIfAbsent(beanMethod, qualifierCall, annotation, source);
+        }
+        if (CONDITIONAL_ON_PROPERTY_CALL.equals(name)) {
+            AnnotationNode annotation = conditionalOnPropertyAnnotation(args, qualifierCall, source);
+            return annotation != null && addAnnotationIfAbsent(beanMethod, qualifierCall, annotation, source);
+        }
+        if (CONDITIONAL_ON_EXPRESSION_CALL.equals(name)) {
+            AnnotationNode annotation = conditionalOnExpressionAnnotation(args, qualifierCall, source);
+            return annotation != null && addAnnotationIfAbsent(beanMethod, qualifierCall, annotation, source);
+        }
+        if (CONDITIONAL_ON_CLASS_CALL.equals(name)) {
+            AnnotationNode annotation = conditionalOnClassAnnotation(args, qualifierCall, source);
             return annotation != null && addAnnotationIfAbsent(beanMethod, qualifierCall, annotation, source);
         }
         if (CONDITIONAL_ON_MISSING_BEAN_NAME_CALL.equals(name)) {
@@ -1228,21 +2147,152 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
         if (SCOPE_CALL.equals(name)) {
             return applyScopeQualifier(beanMethod, qualifierCall, args, source);
         }
+        if (ALIASES_CALL.equals(name)) {
+            return applyAliasesQualifier(beanMethod, beanName, qualifierCall, args, source);
+        }
+        if (CONDITIONAL_ON_GRAILS_ENV_CALL.equals(name)) {
+            return applyConditionalOnGrailsEnvQualifier(beanMethod, qualifierCall, args, source);
+        }
         return applyGenericAnnotation(beanMethod, qualifierCall, args, source);
     }
 
+    /**
+     * Additional names for the bean, appended to {@code @Bean}'s value - which Spring reads as the
+     * canonical name followed by aliases.
+     *
+     * <p>Separate from {@code bean("name", Type)} rather than more arguments to it, because the
+     * canonical name is not one of a list: it is what the generated method is named after, what
+     * duplicate-name validation runs against, and what {@code .conditionalOnMissingBeanName()}
+     * resolves to. Aliases are none of those things, and saying so in their own call keeps which
+     * name is which visible at the callsite.</p>
+     *
+     * <p>The case they exist for is a migration: something reachable under an old name that must
+     * stay reachable while its callers move to the new one.</p>
+     */
+    private boolean applyAliasesQualifier(MethodNode beanMethod, String beanName,
+            MethodCallExpression qualifierCall, List<Expression> args, SourceUnit source) {
+        if (args.isEmpty()) {
+            addError(qualifierCall, source, ".aliases(...) requires at least one additional name, " +
+                    "e.g. .aliases(\"legacyName\")");
+            return false;
+        }
+        List<AnnotationNode> existing = beanMethod.getAnnotations(ClassHelper.make(Bean.class));
+        if (existing.isEmpty()) {
+            addError(qualifierCall, source, ".aliases(...) applies to bean(...) declarations only");
+            return false;
+        }
+        Expression namesMember = existing.get(0).getMember("value");
+        if (!(namesMember instanceof ListExpression)) {
+            addError(qualifierCall, source, ".aliases(...) cannot be combined with a @Bean whose names " +
+                    "were set another way");
+            return false;
+        }
+        ListExpression names = (ListExpression) namesMember;
+        Set<String> seen = new HashSet<>();
+        seen.add(beanName);
+        for (Expression arg : args) {
+            Expression folded = foldStringValue(arg);
+            Object value = folded instanceof ConstantExpression ? ((ConstantExpression) folded).getValue() : null;
+            if (!(value instanceof String) || ((String) value).isBlank()) {
+                addError(arg, source, ".aliases(...) takes non-blank names as Strings, " +
+                        "e.g. .aliases(\"legacyName\")");
+                return false;
+            }
+            String alias = (String) value;
+            if (!seen.add(alias)) {
+                addError(arg, source, alias.equals(beanName) ?
+                        "\"" + alias + "\" is this bean's own name, so it is not an alias of anything" :
+                        "\"" + alias + "\" is given as an alias twice");
+                return false;
+            }
+            names.addExpression(folded);
+        }
+        return true;
+    }
+
+    /**
+     * {@code @Scope} - the scope name positionally, the annotation's other attributes by name, as
+     * every other attribute-bearing qualifier takes them.
+     *
+     * <pre>{@code
+     * .scope('prototype')
+     * .scope('session', proxyMode: ScopedProxyMode.TARGET_CLASS)
+     * }</pre>
+     *
+     * <p>{@code proxyMode} is why this takes attributes at all. A session- or request-scoped bean
+     * injected into a singleton needs {@code TARGET_CLASS}, or the singleton captures one scope
+     * instance for the lifetime of the application and serves it to everyone - a wrong answer
+     * rather than an error. Leaving it to {@code .annotate(Scope, ...)} put the fix somewhere other
+     * than where the mistake is written.</p>
+     */
     private boolean applyScopeQualifier(MethodNode beanMethod, MethodCallExpression qualifierCall,
             List<Expression> args, SourceUnit source) {
-        Expression scopeArg = args.size() == 1 ? args.get(0) : null;
-        Object scopeValue = scopeArg instanceof ConstantExpression ? ((ConstantExpression) scopeArg).getValue() : null;
-        if (!(scopeValue instanceof String) || ((String) scopeValue).isEmpty()) {
-            addError(qualifierCall, source, ".scope(...) requires exactly one non-empty String argument, " +
-                    "e.g. .scope(\"prototype\")");
+        MapExpression members = !args.isEmpty() && args.get(0) instanceof MapExpression ? (MapExpression) args.get(0) : null;
+        List<Expression> positional = members != null ? args.subList(1, args.size()) : args;
+        if (positional.size() > 1) {
+            addError(qualifierCall, source, ".scope(...) takes one scope name, e.g. " +
+                    ".scope(\"session\", proxyMode: ScopedProxyMode.TARGET_CLASS)");
+            return false;
+        }
+        if (positional.isEmpty() && !namesAnyOf(members, SCOPE_NAME_MEMBERS)) {
+            addError(qualifierCall, source, ".scope(...) needs a scope name, positionally or as " +
+                    "value:/scopeName: - e.g. .scope(\"prototype\")");
+            return false;
+        }
+        if (!positional.isEmpty() && rejectPositionalAndNamed(members, SCOPE_NAME_MEMBERS, SCOPE_CALL,
+                "a scope name", qualifierCall, source)) {
             return false;
         }
         AnnotationNode scopeAnnotation = new AnnotationNode(ClassHelper.make(Scope.class));
-        scopeAnnotation.setMember("value", scopeArg);
+        if (members != null && !addMembersFromMap(scopeAnnotation, members, qualifierCall, source)) {
+            return false;
+        }
+        if (!positional.isEmpty()) {
+            Expression folded = foldStringValue(positional.get(0));
+            Object scopeValue = folded instanceof ConstantExpression ? ((ConstantExpression) folded).getValue() : null;
+            if (!(scopeValue instanceof String) || ((String) scopeValue).isEmpty()) {
+                addError(qualifierCall, source, ".scope(...) requires a non-empty String scope name, " +
+                        "e.g. .scope(\"prototype\")");
+                return false;
+            }
+            scopeAnnotation.setMember("value", folded);
+        }
         return addAnnotationIfAbsent(beanMethod, qualifierCall, scopeAnnotation, source);
+    }
+
+    /** {@code @Scope}'s attributes that name the scope; aliases of each other. */
+    private static final Set<String> SCOPE_NAME_MEMBERS = Set.of("value", "scopeName");
+
+    /**
+     * Compiles {@code .conditionalOnGrailsEnv("development"[, ...])} into {@code @ConditionalOnGrailsEnv}.
+     *
+     * <p>Not {@code @ConditionalOnProperty(name = "grails.env", ...)}, which is what this would
+     * otherwise be written as and is wrong: Grails infers an environment when none was set, so the
+     * property is absent on exactly the runs the condition is meant to describe, and the bean goes
+     * missing with nothing to show for it.</p>
+     */
+    // AnnotatedNode, not MethodNode: the same qualifier attaches to a group's nested class.
+    private boolean applyConditionalOnGrailsEnvQualifier(AnnotatedNode beanMethod, MethodCallExpression qualifierCall,
+            List<Expression> args, SourceUnit source) {
+        if (args.isEmpty()) {
+            addError(qualifierCall, source, ".conditionalOnGrailsEnv(...) requires at least one environment name, " +
+                    "e.g. .conditionalOnGrailsEnv(\"development\")");
+            return false;
+        }
+        ListExpression names = new ListExpression();
+        for (Expression arg : args) {
+            Expression folded = foldStringValue(arg);
+            Object value = folded instanceof ConstantExpression ? ((ConstantExpression) folded).getValue() : null;
+            if (!(value instanceof String) || ((String) value).isBlank()) {
+                addError(arg, source, ".conditionalOnGrailsEnv(...) takes non-blank environment names as Strings, " +
+                        "e.g. .conditionalOnGrailsEnv(\"development\", \"test\")");
+                return false;
+            }
+            names.addExpression(folded);
+        }
+        AnnotationNode annotation = new AnnotationNode(ClassHelper.make(ConditionalOnGrailsEnv.class));
+        annotation.setMember("value", names);
+        return addAnnotationIfAbsent(beanMethod, qualifierCall, annotation, source);
     }
 
     private boolean applyGenericAnnotation(AnnotatedNode target, MethodCallExpression qualifierCall,
@@ -1261,11 +2311,112 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
             return false;
         }
 
+        // Spring never reads a field(...) or method(...) member as a bean, so @Bean on one is a
+        // mistake rather than something to merge into a @Bean that was never attached.
+        if (annotationType.getName().equals(Bean.class.getName()) &&
+                target.getAnnotations(ClassHelper.make(Bean.class)).isEmpty()) {
+            addError(qualifierCall, source, ".annotate(Bean, ...) applies to bean(...) declarations - " +
+                    "field(...) and method(...) declare plain members, which Spring never reads as beans");
+            return false;
+        }
+
+        // An annotation a QUALIFIER attached is merged into, not collided with: a qualifier sets only
+        // the attribute it exists for - bean(...) the name, .scope(...) the scope - so without this
+        // the annotation's remaining attributes have no spelling in the DSL at all. One that an
+        // earlier .annotate(...) attached is a different matter: .annotate(...) already takes every
+        // attribute at once, so writing it twice for one type is a mistake, not an addition, and
+        // still reports as one.
+        List<AnnotationNode> existing = target.getAnnotations(annotationType);
+        if (!existing.isEmpty() && existing.get(0).getNodeMetaData(ANNOTATE_ATTACHED) == null) {
+            return mergeIntoAnnotation(existing.get(0), annotationType, members, qualifierCall, source);
+        }
+
         AnnotationNode annotation = new AnnotationNode(annotationType);
+        annotation.putNodeMetaData(ANNOTATE_ATTACHED, Boolean.TRUE);
         if (members != null && !addMembersFromMap(annotation, members, qualifierCall, source)) {
             return false;
         }
         return addAnnotationIfAbsent(target, qualifierCall, annotation, source);
+    }
+
+    /** Marks an annotation node as one {@code .annotate(...)} attached, rather than a qualifier. */
+    private static final String ANNOTATE_ATTACHED =
+            GrailsBeansASTTransformation.class.getName() + ".annotateAttached";
+
+    /**
+     * Attributes that alias one another, so setting one when the other is already set is the same
+     * contradiction as setting it twice - and reads as an addition rather than a conflict, which is
+     * why it is worth naming rather than leaving to Spring's runtime "different values" error.
+     */
+    private static final Map<String, Set<String>> ALIASED_ANNOTATION_MEMBERS = Map.of(
+            Bean.class.getName(), Set.of("value", "name"),
+            Scope.class.getName(), Set.of("value", "scopeName"),
+            ConditionalOnProperty.class.getName(), Set.of("value", "name"));
+
+    /**
+     * Folds {@code .annotate(X, ...)} attributes into an {@code @X} a qualifier already attached.
+     *
+     * <p>Without it those attributes are unreachable: a qualifier sets only what it exists for, so
+     * {@code bean(...)} leaves every other {@code @Bean} attribute unsettable - {@code destroyMethod}
+     * being the one that matters, since Spring otherwise infers {@code close()} and calls it on a
+     * client the application does not own - and {@code .scope("session")} leaves
+     * {@code proxyMode}, without which a scoped bean injected into a singleton silently captures one
+     * instance forever.</p>
+     *
+     * <p>What the qualifier itself set is not re-settable here. Restating it could only disagree
+     * with the value the rest of the block was built around, and for a name that value is what
+     * duplicate-name validation already ran against.</p>
+     */
+    private boolean mergeIntoAnnotation(AnnotationNode annotation, ClassNode annotationType,
+            MapExpression members, MethodCallExpression qualifierCall, SourceUnit source) {
+        String name = annotationType.getNameWithoutPackage();
+        if (members == null || members.getMapEntryExpressions().isEmpty()) {
+            addError(qualifierCall, source, ".annotate(" + name + ") adds nothing, since @" + name +
+                    " is already attached here - give the attributes to set, e.g. " +
+                    ".annotate(Bean, destroyMethod: \"\")");
+            return false;
+        }
+        Set<String> aliases = ALIASED_ANNOTATION_MEMBERS.getOrDefault(annotationType.getName(), Set.of());
+        for (MapEntryExpression entry : members.getMapEntryExpressions()) {
+            Object keyValue = entry.getKeyExpression() instanceof ConstantExpression ?
+                    ((ConstantExpression) entry.getKeyExpression()).getValue() : null;
+            if (!(keyValue instanceof String)) {
+                addError(qualifierCall, source, ".annotate(...) attribute names must be simple " +
+                        "identifiers, e.g. .annotate(Bean, destroyMethod: \"\")");
+                return false;
+            }
+            String key = (String) keyValue;
+            String taken = takenMember(annotation, key, aliases);
+            if (taken != null) {
+                if (annotationType.getName().equals(Bean.class.getName()) && aliases.contains(taken)) {
+                    addError(qualifierCall, source, "a bean's name comes from bean(\"name\", Type), so " +
+                            ".annotate(Bean, " + key + ": ...) would state it twice - rename it there instead");
+                }
+                else {
+                    addError(qualifierCall, source, "@" + name + "'s \"" + taken + "\" is already set here" +
+                            (taken.equals(key) ? "" : ", and \"" + key + "\" aliases it") +
+                            " - set it where it is stated, not a second time");
+                }
+                return false;
+            }
+            annotation.setMember(key, foldStringValue(entry.getValueExpression()));
+        }
+        return true;
+    }
+
+    /** The member already carrying {@code key}'s value - {@code key} itself, or an alias of it. */
+    private String takenMember(AnnotationNode annotation, String key, Set<String> aliases) {
+        if (annotation.getMember(key) != null) {
+            return key;
+        }
+        if (aliases.contains(key)) {
+            for (String alias : aliases) {
+                if (annotation.getMember(alias) != null) {
+                    return alias;
+                }
+            }
+        }
+        return null;
     }
 
     private boolean addMembersFromMap(AnnotationNode annotation, MapExpression members,
@@ -1338,19 +2489,219 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
     // generic .annotate(...) escape hatch.
     private AnnotationNode conditionalOnMissingBeanAnnotation(List<Expression> args,
             MethodCallExpression qualifierCall, SourceUnit source) {
-        AnnotationNode annotation = new AnnotationNode(ClassHelper.make(ConditionalOnMissingBean.class));
+        return beanConditionAnnotation(ConditionalOnMissingBean.class, CONDITIONAL_ON_MISSING_BEAN_CALL,
+                args, qualifierCall, source);
+    }
+
+    /**
+     * {@code @ConditionalOnBean}, the positive counterpart - "register this only when something else
+     * already supplied that".
+     *
+     * <p>Unlike its opposite it takes no zero-argument form. With nothing named, Spring deduces the
+     * type from the annotated method's own return type, which for
+     * {@code @ConditionalOnMissingBean} is the whole point - back off if someone else provided this
+     * - and for {@code @ConditionalOnBean} asks it to register a bean only when a bean of that same
+     * type already exists. That is answerable, and almost never what anybody means.</p>
+     */
+    private AnnotationNode conditionalOnBeanAnnotation(List<Expression> args,
+            MethodCallExpression qualifierCall, SourceUnit source) {
+        if (args.isEmpty()) {
+            addError(qualifierCall, source, ".conditionalOnBean() needs at least one type or attribute. With " +
+                    "none, Spring deduces the type from this bean's own return type, so the condition reads " +
+                    "\"register this bean only when a bean of its type already exists\" - name what it actually " +
+                    "depends on, e.g. .conditionalOnBean(SmsTransport)");
+            return null;
+        }
+        return beanConditionAnnotation(ConditionalOnBean.class, CONDITIONAL_ON_BEAN_CALL,
+                args, qualifierCall, source);
+    }
+
+    /**
+     * {@code @ConditionalOnProperty} - "register this only when the configuration says so", and by
+     * some distance the most common condition in an application's own wiring. Positional arguments
+     * are property names; named ones are the annotation's remaining attributes.
+     *
+     * <pre>{@code
+     * .conditionalOnProperty('app.offline', havingValue: 'false', matchIfMissing: true)
+     * .conditionalOnProperty(prefix: 'app', name: 'offline', havingValue: 'false')
+     * }</pre>
+     *
+     * <p>A bare form would be an annotation naming no property, which Spring rejects at runtime, so
+     * it is rejected here where the line is written.</p>
+     */
+    private AnnotationNode conditionalOnPropertyAnnotation(List<Expression> args,
+            MethodCallExpression qualifierCall, SourceUnit source) {
         MapExpression members = !args.isEmpty() && args.get(0) instanceof MapExpression ? (MapExpression) args.get(0) : null;
-        List<Expression> types = members != null ? args.subList(1, args.size()) : args;
-        if (members != null && !types.isEmpty()) {
-            for (MapEntryExpression entry : members.getMapEntryExpressions()) {
-                Object keyValue = entry.getKeyExpression() instanceof ConstantExpression ?
-                        ((ConstantExpression) entry.getKeyExpression()).getValue() : null;
-                if ("value".equals(keyValue)) {
-                    addError(qualifierCall, source, "conditionalOnMissingBean(...) was given types both " +
-                            "positionally and via value: - use one or the other");
+        List<Expression> names = members != null ? args.subList(1, args.size()) : args;
+        if (names.isEmpty() && !namesAnyOf(members, PROPERTY_NAME_MEMBERS)) {
+            addError(qualifierCall, source, ".conditionalOnProperty(...) needs at least one property name, " +
+                    "positionally or as name:/value: - e.g. .conditionalOnProperty(\"app.offline\", " +
+                    "havingValue: \"false\")");
+            return null;
+        }
+        if (!names.isEmpty() && rejectPositionalAndNamed(members, PROPERTY_NAME_MEMBERS,
+                CONDITIONAL_ON_PROPERTY_CALL, "property names", qualifierCall, source)) {
+            return null;
+        }
+        AnnotationNode annotation = new AnnotationNode(ClassHelper.make(ConditionalOnProperty.class));
+        if (members != null && !addMembersFromMap(annotation, members, qualifierCall, source)) {
+            return null;
+        }
+        if (!names.isEmpty()) {
+            ListExpression nameList = new ListExpression();
+            for (Expression name : names) {
+                Expression folded = foldStringValue(name);
+                Object value = folded instanceof ConstantExpression ? ((ConstantExpression) folded).getValue() : null;
+                if (!(value instanceof String) || ((String) value).isBlank()) {
+                    addError(name, source, ".conditionalOnProperty(...) takes non-blank property names as " +
+                            "Strings, e.g. .conditionalOnProperty(\"app.offline\")");
                     return null;
                 }
+                nameList.addExpression(folded);
             }
+            annotation.setMember("name", nameList);
+        }
+        return annotation;
+    }
+
+    /**
+     * {@code @ConditionalOnExpression} - the condition for what the others cannot say, most often
+     * because it is a disjunction and {@code @ConditionalOnProperty} only ever conjoins:
+     *
+     * <pre>{@code
+     * .conditionalOnExpression('!${aws.ses.enabled:false} or ${app.offline:false}')
+     * }</pre>
+     *
+     * <p>Write it single-quoted in Groovy: the {@code ${...}} placeholders are Spring's, resolved
+     * before the expression is evaluated, and a double-quoted string would have Groovy interpolate
+     * them away at compile time into whatever is in scope - usually nothing, silently.</p>
+     */
+    private AnnotationNode conditionalOnExpressionAnnotation(List<Expression> args,
+            MethodCallExpression qualifierCall, SourceUnit source) {
+        Expression folded = args.size() == 1 ? foldStringValue(args.get(0)) : null;
+        Object value = folded instanceof ConstantExpression ? ((ConstantExpression) folded).getValue() : null;
+        if (!(value instanceof String) || ((String) value).isBlank()) {
+            addError(qualifierCall, source, ".conditionalOnExpression(...) takes exactly one non-blank " +
+                    "String expression, e.g. .conditionalOnExpression('${app.offline:false}')");
+            return null;
+        }
+        AnnotationNode annotation = new AnnotationNode(ClassHelper.make(ConditionalOnExpression.class));
+        annotation.setMember("value", folded);
+        return annotation;
+    }
+
+    /** The attributes of {@code @ConditionalOnProperty} that name properties; aliases of each other. */
+    private static final Set<String> CLASS_TYPE_MEMBERS = Set.of("value");
+    private static final Set<String> CLASS_NAME_MEMBERS = Set.of("name");
+
+    /**
+     * {@code @ConditionalOnClass} - "register this only when that class is on the classpath", the
+     * condition an optional integration is gated on.
+     *
+     * <p>Takes class literals and String names in the same positional list, because the two are not
+     * interchangeable and the choice is the whole point. A literal is the readable form and is
+     * checked by the compiler, but it can only be written for a class this module compiles against;
+     * naming a class that may be absent has to be a String, or the reference itself is the thing
+     * that fails. Spring's annotation carries both for that reason ({@code value} and {@code name}),
+     * and so does this.</p>
+     *
+     * <p>Note where the condition is written. Spring reads it from the bytecode before loading
+     * anything, but a {@code @Bean} method's parameter and return types are resolved when the
+     * configuration class is parsed - so guarding a method whose own signature names the absent
+     * class is not reliably safe. Gate at class level for that: a separate
+     * {@code @GrailsBeans @AutoConfiguration} class carrying {@code @ConditionalOnClass}, holding
+     * the beans that mention the optional type.</p>
+     */
+    private AnnotationNode conditionalOnClassAnnotation(List<Expression> args,
+            MethodCallExpression qualifierCall, SourceUnit source) {
+        MapExpression members = !args.isEmpty() && args.get(0) instanceof MapExpression ? (MapExpression) args.get(0) : null;
+        List<Expression> positional = members != null ? args.subList(1, args.size()) : args;
+        if (positional.isEmpty() && !namesAnyOf(members, CLASS_TYPE_MEMBERS) && !namesAnyOf(members, CLASS_NAME_MEMBERS)) {
+            addError(qualifierCall, source, ".conditionalOnClass(...) needs at least one class, as a type or " +
+                    "a String name - e.g. .conditionalOnClass(MongoLockProvider) for a class this module " +
+                    "compiles against, or .conditionalOnClass(name: \"net.javacrumbs.shedlock.provider.mongo." +
+                    "MongoLockProvider\") for one that may be absent");
+            return null;
+        }
+        ListExpression types = new ListExpression();
+        ListExpression names = new ListExpression();
+        for (Expression arg : positional) {
+            if (arg instanceof ClassExpression) {
+                types.addExpression(arg);
+                continue;
+            }
+            Expression folded = foldStringValue(arg);
+            Object value = folded instanceof ConstantExpression ? ((ConstantExpression) folded).getValue() : null;
+            if (!(value instanceof String) || ((String) value).isBlank()) {
+                addError(arg, source, ".conditionalOnClass(...) takes types or non-blank String class names, " +
+                        "e.g. .conditionalOnClass(MongoLockProvider) or " +
+                        ".conditionalOnClass(\"net.javacrumbs.shedlock.provider.mongo.MongoLockProvider\")");
+                return null;
+            }
+            names.addExpression(folded);
+        }
+        if (!types.getExpressions().isEmpty() && rejectPositionalAndNamed(members, CLASS_TYPE_MEMBERS,
+                CONDITIONAL_ON_CLASS_CALL, "types", qualifierCall, source)) {
+            return null;
+        }
+        if (!names.getExpressions().isEmpty() && rejectPositionalAndNamed(members, CLASS_NAME_MEMBERS,
+                CONDITIONAL_ON_CLASS_CALL, "class names", qualifierCall, source)) {
+            return null;
+        }
+        AnnotationNode annotation = new AnnotationNode(ClassHelper.make(ConditionalOnClass.class));
+        if (members != null && !addMembersFromMap(annotation, members, qualifierCall, source)) {
+            return null;
+        }
+        if (!types.getExpressions().isEmpty()) {
+            annotation.setMember("value", types);
+        }
+        if (!names.getExpressions().isEmpty()) {
+            annotation.setMember("name", names);
+        }
+        return annotation;
+    }
+
+    private static final Set<String> PROPERTY_NAME_MEMBERS = Set.of("name", "value");
+
+    private boolean namesAnyOf(MapExpression members, Set<String> keys) {
+        if (members == null) {
+            return false;
+        }
+        for (MapEntryExpression entry : members.getMapEntryExpressions()) {
+            Object keyValue = entry.getKeyExpression() instanceof ConstantExpression ?
+                    ((ConstantExpression) entry.getKeyExpression()).getValue() : null;
+            if (keys.contains(keyValue)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Rejects saying the same thing positionally and by name. Which member the positional arguments
+     * fill differs per condition - types go to {@code value}, property names to {@code name} - so
+     * the members that would collide are passed in rather than assumed.
+     */
+    private boolean rejectPositionalAndNamed(MapExpression members, Set<String> aliasMembers, String callName,
+            String what, MethodCallExpression qualifierCall, SourceUnit source) {
+        if (!namesAnyOf(members, aliasMembers)) {
+            return false;
+        }
+        addError(qualifierCall, source, callName + "(...) was given " + what + " both positionally and via " +
+                String.join(":/", aliasMembers.stream().sorted().toList()) + ": - use one or the other");
+        return true;
+    }
+
+    // Shared by both: positional types go to value, named arguments are the annotation's own
+    // attributes, and giving types both ways at once is rejected.
+    private AnnotationNode beanConditionAnnotation(Class<?> annotationType, String callName, List<Expression> args,
+            MethodCallExpression qualifierCall, SourceUnit source) {
+        AnnotationNode annotation = new AnnotationNode(ClassHelper.make(annotationType));
+        MapExpression members = !args.isEmpty() && args.get(0) instanceof MapExpression ? (MapExpression) args.get(0) : null;
+        List<Expression> types = members != null ? args.subList(1, args.size()) : args;
+        if (!types.isEmpty() && rejectPositionalAndNamed(members, Set.of("value"), callName, "types",
+                qualifierCall, source)) {
+            return null;
         }
         if (members != null && !addMembersFromMap(annotation, members, qualifierCall, source)) {
             return null;
@@ -1359,9 +2710,9 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
             ListExpression typeList = new ListExpression();
             for (Expression type : types) {
                 if (!(type instanceof ClassExpression)) {
-                    addError(qualifierCall, source, "conditionalOnMissingBean(...) arguments must be types " +
-                            "and/or named attributes, e.g. conditionalOnMissingBean(Greeter) or " +
-                            "conditionalOnMissingBean(name: \"greeter\", search: SearchStrategy.CURRENT)");
+                    addError(qualifierCall, source, callName + "(...) arguments must be types " +
+                            "and/or named attributes, e.g. " + callName + "(Greeter) or " + callName +
+                            "(name: \"greeter\", search: SearchStrategy.CURRENT)");
                     continue;
                 }
                 typeList.addExpression(type);
