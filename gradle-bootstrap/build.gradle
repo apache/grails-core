@@ -17,17 +17,38 @@
  *  under the License.
  */
 
-def props = new Properties()
-project.rootProject.layout.projectDirectory.file('../.sdkmanrc').asFile.withInputStream {
-    props.load(it)
+def loadSdkmanrc = { String relativePath ->
+    def loaded = new Properties()
+    project.rootProject.layout.projectDirectory.file(relativePath).asFile.withInputStream {
+        loaded.load(it)
+    }
+    loaded
 }
-tasks.withType(Wrapper).configureEach {
+
+def props = loadSdkmanrc('../.sdkmanrc')
+
+// Scoped to the default wrapper task on purpose. legacyG7Wrapper below pins a different version,
+// which a `tasks.withType(Wrapper)` block here would silently overwrite.
+tasks.named('wrapper', Wrapper) {
     gradleVersion = props.gradle
+}
+
+// The Grails 7 fixture is built by the Gradle version Grails 7 uses, not the one this repository
+// builds with, so that it stands in for a plugin the way one was actually published. It therefore
+// gets its own wrapper generated from its own .sdkmanrc, written straight into the fixture rather
+// than copied from the shared one below.
+def legacyG7Dir = project.rootProject.layout.projectDirectory.dir('../end-to-end/legacy-g7-command-plugin')
+def legacyG7Props = loadSdkmanrc('../end-to-end/legacy-g7-command-plugin/.sdkmanrc')
+tasks.register('legacyG7Wrapper', Wrapper) {
+    description = "Generates the Grails 7 fixture's wrapper at the Gradle version Grails 7 pins."
+    gradleVersion = legacyG7Props.gradle
+    scriptFile = legacyG7Dir.file('gradlew').asFile
+    jarFile = legacyG7Dir.file('gradle/wrapper/gradle-wrapper.jar').asFile
 }
 
 defaultTasks 'bootstrap'
 tasks.register('bootstrap') {
-    dependsOn 'wrapper'
+    dependsOn 'wrapper', 'legacyG7Wrapper'
     doLast {
         ant.copy file: "${projectDir}/gradlew", todir: "${projectDir}/../grails-forge"
         ant.copy file: "${projectDir}/gradlew.bat", todir: "${projectDir}/../grails-forge"
@@ -50,6 +71,22 @@ tasks.register('bootstrap') {
         }
         ant.chmod(file: "${projectDir}/../grails-gradle/gradlew", perm: '755')
         ant.chmod(file: "${projectDir}/../grails-gradle/gradlew.bat", perm: '755')
+
+        // end-to-end/legacy-g7-command-plugin is deliberately absent from these copies: its
+        // wrapper comes from legacyG7Wrapper at the Grails 7 Gradle version instead.
+        ant.chmod(file: "${projectDir}/../end-to-end/legacy-g7-command-plugin/gradlew", perm: '755')
+        ant.chmod(file: "${projectDir}/../end-to-end/legacy-g7-command-plugin/gradlew.bat", perm: '755')
+
+        ant.copy file: "${projectDir}/gradlew", todir: "${projectDir}/../end-to-end"
+        ant.copy file: "${projectDir}/gradlew.bat", todir: "${projectDir}/../end-to-end"
+        ant.copy(todir: "${projectDir}/../end-to-end/gradle/wrapper") {
+            fileset(dir: "${projectDir}/gradle/wrapper") {
+                include(name: 'gradle-wrapper.jar')
+                include(name: 'gradle-wrapper.properties')
+            }
+        }
+        ant.chmod(file: "${projectDir}/../end-to-end/gradlew", perm: '755')
+        ant.chmod(file: "${projectDir}/../end-to-end/gradlew.bat", perm: '755')
 
         ant.move file: "${projectDir}/gradlew", todir: "${projectDir}/../"
         ant.move file: "${projectDir}/gradlew.bat", todir: "${projectDir}/../"

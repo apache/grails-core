@@ -1,0 +1,27 @@
+// External consumer: resolves the published artifacts from the maven repo like a generated app would
+plugins {
+    id 'java'
+}
+
+repositories {
+    maven { url = rootProject.layout.buildDirectory.dir('test-repo') }
+}
+
+configurations {
+    cliTier
+}
+
+dependencies {
+    cliTier 'org.example.test:console-lib:1.0.0-SNAPSHOT'
+    cliTier 'org.example.test:plugin-a-cli:1.0.0-SNAPSHOT'
+    cliTier 'org.example.test:owner-cli:1.0.0-SNAPSHOT'
+    cliTier 'org.example.test:plugin-b-cli:1.0.0-SNAPSHOT'
+    cliTier 'org.example.test:acme-tools:1.0.0-SNAPSHOT'
+}
+
+tasks.register('resolveCliTier') {
+    def files = configurations.cliTier
+    doLast {
+        files.files.each { println "RESOLVED: ${it.name}" }
+    }
+}

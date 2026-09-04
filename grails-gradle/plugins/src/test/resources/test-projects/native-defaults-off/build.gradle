@@ -1,0 +1,12 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+// An application that builds neither an image nor a cache applies neither plugin, and so should
+// find nothing has been decided on its behalf.
+tasks.register('inspectDefaults') {
+    doLast {
+        println "INDY=${project.extensions.getByName('grails').indy.get()}"
+        println "HAS_NATIVE_EXTENSION=${project.extensions.findByName('graalvmNative') != null}"
+    }
+}

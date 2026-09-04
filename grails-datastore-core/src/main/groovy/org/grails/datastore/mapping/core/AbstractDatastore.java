@@ -14,6 +14,7 @@
  */
 package org.grails.datastore.mapping.core;
 
+import java.util.ArrayList;
 import java.util.Map;
 
 import groovy.lang.Closure;
@@ -55,12 +56,39 @@ import org.grails.datastore.mapping.transactions.SessionHolder;
 @SuppressWarnings({"rawtypes", "unchecked"})
 public abstract class AbstractDatastore implements Datastore, StatelessDatastore, ServiceRegistry {
     protected static final Logger LOG = LoggerFactory.getLogger(AbstractDatastore.class);
+
     private ApplicationContext applicationContext;
+    protected ApplicationEventPublisher applicationEventPublisher;
 
     protected final MappingContext mappingContext;
     protected final ServiceRegistry serviceRegistry;
     protected final PropertyResolver connectionDetails;
     protected final TPCacheAdapterRepository cacheAdapterRepository;
+
+    /**
+     * Created lazily by {@link #getSessionResolver()} so that {@code this} does not escape the
+     * constructor into the resolver while the datastore is still under construction.
+     */
+    private volatile SessionResolver sessionResolver;
+
+    /**
+     * @return The session resolver for this datastore: a stateless view over the same
+     * {@link SessionHolder}/{@link TransactionSynchronizationManager} state used elsewhere for
+     * this datastore. The same instance is returned on every call.
+     */
+    public SessionResolver getSessionResolver() {
+        SessionResolver resolver = this.sessionResolver;
+        if (resolver == null) {
+            synchronized (this) {
+                resolver = this.sessionResolver;
+                if (resolver == null) {
+                    resolver = new TransactionSynchronizationSessionResolver(this);
+                    this.sessionResolver = resolver;
+                }
+            }
+        }
+        return resolver;
+    }
 
     public AbstractDatastore(MappingContext mappingContext) {
         this(mappingContext, (PropertyResolver) null, null);
@@ -80,8 +108,8 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
                              ConfigurableApplicationContext ctx, TPCacheAdapterRepository cacheAdapterRepository) {
         this.mappingContext = mappingContext;
         this.connectionDetails = connectionDetails;
-        setApplicationContext(ctx);
         this.cacheAdapterRepository = cacheAdapterRepository;
+        setApplicationContext(ctx);
         DefaultServiceRegistry defaultServiceRegistry = new DefaultServiceRegistry(this);
         this.serviceRegistry = defaultServiceRegistry;
         defaultServiceRegistry.initialize();
@@ -106,8 +134,24 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
         return serviceRegistry.getServices();
     }
 
+    /**
+     * Closes every session held by the current thread's {@link SessionHolder}, if any. Since
+     * {@link TransactionSynchronizationManager} is thread-local, this only reaches the thread
+     * invoking {@code @PreDestroy} - sessions bound on other threads are not visible here and must
+     * be closed by their own owning thread. A holder that is synchronized with an active Spring
+     * transaction is left alone: {@code DatastoreTransactionManager} still owns those sessions and
+     * will operate on them during commit or rollback.
+     */
     @PreDestroy
     public void destroy() {
+        Object resource = TransactionSynchronizationManager.hasResource(this) ?
+                TransactionSynchronizationManager.getResource(this) : null;
+        if (resource instanceof SessionHolder && !((SessionHolder) resource).isSynchronizedWithTransaction()) {
+            TransactionSynchronizationManager.unbindResource(this);
+            for (Session session : new ArrayList<>(((SessionHolder) resource).getSessions())) {
+                DatastoreUtils.closeSession(session);
+            }
+        }
         FieldEntityAccess.clearReflectors();
         final MetaClassRegistry registry = GroovySystem.getMetaClassRegistry();
         for (PersistentEntity persistentEntity : getMappingContext().getPersistentEntities()) {
@@ -122,6 +166,7 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
 
     public void setApplicationContext(ApplicationContext ctx) {
         applicationContext = ctx;
+        this.applicationEventPublisher = ctx;
     }
 
     public Session connect() {
@@ -170,8 +215,16 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
         return DatastoreUtils.doGetSession(this, false);
     }
 
+    /**
+     * @return Whether {@link #getCurrentSession()} would return an existing session rather than
+     * opening a new one: a validated (still connected) session is bound to the current thread.
+     * Delegates to {@link #getSessionResolver()} so both methods read the same state. Unlike
+     * {@link #getCurrentSession()}, this is non-mutating - it never evicts a stale session or
+     * unbinds an empty holder, so it is safe to call for routing/discovery purposes on a
+     * datastore whose session state this call has no other reason to touch.
+     */
     public boolean hasCurrentSession() {
-        return TransactionSynchronizationManager.hasResource(this);
+        return getSessionResolver().hasResolvedSession();
     }
 
     /**
@@ -222,8 +275,12 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
         return (ConfigurableApplicationContext) applicationContext;
     }
 
+    /**
+     * @return The event publisher, or {@code null} if this datastore was constructed without an
+     * {@link ApplicationContext} and no subclass provides its own publisher
+     */
     public ApplicationEventPublisher getApplicationEventPublisher() {
-        return getApplicationContext();
+        return applicationEventPublisher;
     }
 
     protected void initializeConverters(MappingContext mappingContext) {

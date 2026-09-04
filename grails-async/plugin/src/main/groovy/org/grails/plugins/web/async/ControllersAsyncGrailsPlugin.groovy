@@ -18,6 +18,12 @@
  */
 package org.grails.plugins.web.async
 
+import groovy.transform.CompileStatic
+
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
+import org.springframework.core.env.Environment
+
 import grails.plugins.Plugin
 import org.grails.plugins.web.async.mvc.AsyncActionResultTransformer
 import org.grails.plugins.web.async.spring.PromiseFactoryBean
@@ -29,14 +35,17 @@ import org.grails.plugins.web.async.spring.PromiseFactoryBean
  * @author Graeme Rocher
  * @since 2.0
  */
+@CompileStatic
 class ControllersAsyncGrailsPlugin extends Plugin {
 
-    def grailsVersion = '7.0.0-SNAPSHOT > *'
+    def grailsVersion = '8.0.0-SNAPSHOT > *'
     def loadAfter = ['controllers']
-    Closure doWithSpring() {
-        { ->
-            asyncPromiseResponseActionResultTransformer(AsyncActionResultTransformer)
-            grailsPromiseFactory(PromiseFactoryBean)
+
+    @Override
+    BeanRegistrar beanRegistrar() {
+        return { BeanRegistry registry, Environment environment ->
+            registry.registerBean('asyncPromiseResponseActionResultTransformer', AsyncActionResultTransformer)
+            registry.registerBean('grailsPromiseFactory', PromiseFactoryBean)
         }
     }
 }

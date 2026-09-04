@@ -25,10 +25,10 @@ abstract class SearchPage extends LifecyclePage {
 	}
 	static content = {
 		searchSummary {
-			$('div#s2ui_content div:last-child div:last-child').last().text()
+			$('#searchSummary').text()
 		}
 		submitBtn {
-			$('a', id: 'searchButton')
+			$('#searchButton')
 		}
 	}
 

@@ -34,6 +34,16 @@ vendored from Spring Framework 6.2.x. These classes were removed in Spring Frame
 Copyright 2002-2024 the original author or authors.
 Licensed under the Apache License, Version 2.0.
 
+Spring Boot Undertow Support
+This product includes software from the Spring Boot project (https://spring.io/projects/spring-boot),
+vendored under grails-undertow/spring-boot from the spring-boot-undertow module of Spring Boot 4.0.0-M1.
+The module was removed from Spring Boot before the 4.0.0 GA release. It also includes the Undertow
+reactive server adapter classes from the Spring Framework project
+(https://spring.io/projects/spring-framework), vendored from Spring Framework 6.2.19
+(org.springframework.http.server.reactive). These classes were removed in Spring Framework 7.0.
+Copyright 2012-present the original author or authors.
+Licensed under the Apache License, Version 2.0.
+
 Roboto Font
 This product bundles the Roboto font (https://fonts.google.com/specimen/Roboto), used by the
 GORM documentation website under grails-data-docs/data-mapping-website/.

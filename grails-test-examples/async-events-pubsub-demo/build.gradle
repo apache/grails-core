@@ -63,7 +63,6 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-tomcat'
 
     runtimeOnly 'com.h2database:h2'
-    runtimeOnly 'org.fusesource.jansi:jansi'
     runtimeOnly 'com.zaxxer:HikariCP'
 
     testImplementation 'org.apache.grails:grails-testing-support-web'

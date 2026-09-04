@@ -18,6 +18,7 @@
  */
 package grails.web.servlet.mvc
 
+import groovy.transform.CompileStatic
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 
@@ -483,5 +484,127 @@ class GrailsParameterMapTests {
         def params = new GrailsParameterMap(request)
         assert '[a.b.c.d:1, a:[b.c.d:1, b:[c.d:1, c:[d:1], e:2], b.e:2], a.b.e:2]' == params.toString()
         assert params != null
+    }
+
+    // https://github.com/apache/grails-core/issues/16280
+    @Test
+    void testAddingParametersNamedAfterAnAccessor() {
+        theMap = new GrailsParameterMap(mockRequest)
+
+        theMap['identifier'] = 'id1'
+        theMap['request'] = 'req1'
+
+        assertEquals 'id1', theMap['identifier']
+        assertEquals 'req1', theMap['request']
+        assertEquals 'id1', theMap.get('identifier')
+        assertEquals 'req1', theMap.get('request')
+    }
+
+    // https://github.com/apache/grails-core/issues/16280
+    @Test
+    void testPropertySyntaxForParametersNamedAfterAnAccessor() {
+        theMap = new GrailsParameterMap(mockRequest)
+
+        theMap.identifier = 'id1'
+        theMap.request = 'req1'
+
+        assertEquals 'id1', theMap.identifier
+        assertEquals 'req1', theMap.request
+        assertEquals 'id1', theMap['identifier']
+        assertEquals 'req1', theMap['request']
+    }
+
+    // https://github.com/apache/grails-core/issues/16280
+    @Test
+    void testParametersNamedAfterAnAccessorArrivingFromTheRequest() {
+        mockRequest.addParameter('identifier', 'id1')
+        mockRequest.addParameter('request', 'req1')
+        theMap = new GrailsParameterMap(mockRequest)
+
+        assertEquals 'id1', theMap['identifier']
+        assertEquals 'req1', theMap['request']
+        assertEquals 'id1', theMap.identifier
+        assertEquals 'req1', theMap.request
+    }
+
+    // https://github.com/apache/grails-core/issues/16280
+    @Test
+    void testParametersNamedAfterAnAccessorAreAbsentWhenNotSubmitted() {
+        theMap = new GrailsParameterMap(mockRequest)
+
+        assertNull theMap['identifier']
+        assertNull theMap['request']
+        assertNull theMap.identifier
+        assertNull theMap.request
+        assertFalse theMap.containsKey('identifier')
+        assertFalse theMap.containsKey('request')
+    }
+
+    // https://github.com/apache/grails-core/issues/16280
+    // getProperty/setProperty are runtime hooks the static compiler never reaches, so a colliding
+    // accessor could not be worked around at runtime. This pins that statically compiled access
+    // reaches the map in every form.
+    @Test
+    void testStaticallyCompiledAccessAddressesTheMap() {
+        theMap = new GrailsParameterMap(mockRequest)
+
+        StaticallyCompiledAccess.writeSubscript(theMap, 'id1')
+        assertEquals 'id1', theMap['identifier']
+        assertEquals 'id1', StaticallyCompiledAccess.readSubscript(theMap)
+        assertEquals 'id1', StaticallyCompiledAccess.readProperty(theMap)
+
+        StaticallyCompiledAccess.writeProperty(theMap, 'id2')
+        assertEquals 'id2', theMap['identifier']
+        assertEquals 'id2', StaticallyCompiledAccess.readProperty(theMap)
+    }
+
+    // https://github.com/apache/grails-core/issues/16280
+    @Test
+    void testTheUnderlyingRequestIsStillReachable() {
+        theMap = new GrailsParameterMap(mockRequest)
+
+        assertSame mockRequest, theMap.request()
+        assertSame mockRequest, StaticallyCompiledAccess.readRequest(theMap)
+
+        theMap['request'] = 'req1'
+        assertSame mockRequest, theMap.request()
+    }
+
+    // https://github.com/apache/grails-core/issues/16280
+    @Test
+    void testRemovingAndCloningParametersNamedAfterAnAccessor() {
+        mockRequest.addParameter('identifier', 'id1')
+        theMap = new GrailsParameterMap(mockRequest)
+
+        def cloned = theMap.clone()
+        assertEquals 'id1', cloned['identifier']
+
+        assertEquals 'id1', theMap.remove('identifier')
+        assertFalse theMap.containsKey('identifier')
+        assertEquals 'id1', cloned['identifier']
+    }
+
+    @CompileStatic
+    static class StaticallyCompiledAccess {
+
+        static void writeSubscript(GrailsParameterMap params, Object value) {
+            params['identifier'] = value
+        }
+
+        static void writeProperty(GrailsParameterMap params, Object value) {
+            params.identifier = value
+        }
+
+        static Object readSubscript(GrailsParameterMap params) {
+            params['identifier']
+        }
+
+        static Object readProperty(GrailsParameterMap params) {
+            params.identifier
+        }
+
+        static HttpServletRequest readRequest(GrailsParameterMap params) {
+            params.request()
+        }
     }
 }

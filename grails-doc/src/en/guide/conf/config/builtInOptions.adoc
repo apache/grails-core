@@ -27,6 +27,7 @@ Grails has a set of core settings that are worth knowing about. Their defaults a
 On the runtime front, i.e. `grails-app/conf/application.yml`, there are quite a few more core settings:
 
 * `grails.enable.native2ascii` - Set this to false if you do not require native2ascii conversion of Grails i18n properties files (default: true).
+* `grails.converters.encoding` - The character encoding for converter output (JSON or XML) and for the response content types stamped by the default renderers used by `respond()` (default: 'UTF-8').
 * `grails.views.default.codec` - Sets the default encoding regime for GSPs - can be one of 'none', 'html', or 'base64' (default: 'none'). To reduce risk of XSS attacks, set this to 'html'.
 * `grails.views.gsp.encoding` - The file encoding used for GSP source files (default: 'utf-8').
 * `grails.mime.file.extensions` - Whether to use the file extension to dictate the mime type in link:theWebLayer.html#contentNegotiation[Content Negotiation] (default: true).

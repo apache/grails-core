@@ -81,7 +81,7 @@ public class SpringIOUtils {
     /**
      * Convert a byte[] array to readable string format. This makes the "hex" readable!
      *
-     * @return result String buffer in String format
+     * @return result in String format
      * @param in
      *            byte[] buffer to convert to string format
      */
@@ -92,7 +92,7 @@ public class SpringIOUtils {
             return null;
         }
 
-        StringBuffer out = new StringBuffer(in.length * 2);
+        StringBuilder out = new StringBuilder(in.length * 2);
 
         //CheckStyle:MagicNumber OFF
         for (int i = 0; i < in.length; i++) {

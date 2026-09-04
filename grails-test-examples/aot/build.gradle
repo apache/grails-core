@@ -1,0 +1,96 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
+}
+
+version = '0.1'
+group = 'functionaltests'
+
+apply plugin: 'org.apache.grails.gradle.grails-web'
+apply plugin: 'org.apache.grails.gradle.grails-gsp'
+apply plugin: 'org.springframework.boot.aot'
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
+}
+
+dependencies {
+    implementation platform(project(':grails-bom'))
+
+    implementation 'org.apache.grails:grails-dependencies-starter-web'
+    implementation 'org.apache.grails:grails-sitemesh3'
+
+    testImplementation 'org.apache.grails:grails-testing-support-web'
+}
+
+
+// A generated definition holding a path from the machine that generated it builds cleanly, starts
+// cleanly on that machine, and fails everywhere else -- so nothing but looking at what was written
+// catches it. This is what the AOT_PROCESSING checks in the plugins are for.
+tasks.register('aotGeneratedSourcesCarryNoBuildPath') {
+    group = 'verification'
+    description = 'Asserts the generated bean definitions hold no path from the machine that generated them'
+    dependsOn tasks.named('processAot')
+    def generated = layout.buildDirectory.dir('generated/aotSources')
+    def buildPath = projectDir.absolutePath
+    inputs.dir(generated).withPropertyName('generatedSources')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+    doLast {
+        List<File> carrying = []
+        generated.get().asFile.eachFileRecurse { file ->
+            if (file.name.endsWith('.java') && file.text.contains(buildPath)) {
+                carrying << file
+            }
+        }
+        if (carrying) {
+            throw new GradleException(
+                    "Generated bean definitions carry the directory they were generated in, so the " +
+                    "application would look for its resources there wherever it runs:\n  " +
+                    carrying.join('\n  '))
+        }
+    }
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('aotGeneratedSourcesCarryNoBuildPath')
+}
+
+// The application must also start from what was generated, which is the half that catches a
+// runtime-only regression - a context that generates cleanly can still fail to boot.
+tasks.register('aotStartupCheck', JavaExec) {
+    dependsOn tasks.named('bootJar')
+    group = 'verification'
+    description = 'Starts the packaged application with AOT enabled and asserts the context comes up'
+    classpath = files(tasks.named('bootJar').flatMap { it.archiveFile })
+    mainClass = 'org.springframework.boot.loader.launch.JarLauncher'
+    systemProperties([
+            'spring.aot.enabled': 'true',
+            'grails.env'        : 'production',
+    ])
+    args = ['--aot-startup-check', '--server.port=0', '--spring.main.banner-mode=off']
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('aotStartupCheck')
+}

@@ -22,8 +22,7 @@
 	<title><g:message code='spring.security.ui.menu.securityInfo.mappings'/></title>
 </head>
 <body>
-<p/>
-<g:message code='spring.security.ui.info.mappings.type' args='[securityConfigType]'/>
+<p><g:message code='spring.security.ui.info.mappings.type' args='[securityConfigType]'/></p>
 <s2ui:securityInfoTable type='mappings' items='${configAttributes}' headerCodes='pattern,attribute,method'>
 	<g:set var='closure' value='${it.configAttributes.any { ca -> ca.getClass().name.contains("ClosureConfigAttribute") }}'/>
 	<td>${it.pattern}</td>

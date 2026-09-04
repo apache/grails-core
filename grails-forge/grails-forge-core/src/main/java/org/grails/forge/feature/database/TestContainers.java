@@ -82,7 +82,7 @@ public class TestContainers implements Feature {
             generatorContext.addDependency(testContainerTestDependency("testcontainers-spock"));
         }
 
-        if (generatorContext.isFeaturePresent(MongoFeature.class) || generatorContext.isFeaturePresent(MongoGorm.class)) {
+        if (generatorContext.isFeaturePresent(MongoFeature.class) || generatorContext.isFeaturePresent(GrailsDataMongoDB.class)) {
             generatorContext.addDependency(testContainerTestDependency("testcontainers-mongodb"));
         }
     }

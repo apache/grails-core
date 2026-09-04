@@ -18,9 +18,7 @@
  */
 package com.example.pages
 
-import geb.Page
-
-class LoginPage extends Page {
+class LoginPage extends NavigationPage {
 
     static String pageTitle = 'Please sign in'
 
@@ -36,6 +34,8 @@ class LoginPage extends Page {
         this.username = username
         this.password = password
         loginButton.click()
-        waitFor { title && title != pageTitle }
+        // Wait for a definitive authenticated signal: the login page must be fully replaced
+        // (title changed AND the login form is gone), not merely a transient title change.
+        waitFor { title != pageTitle && $('input', name: 'username').empty }
     }
 }

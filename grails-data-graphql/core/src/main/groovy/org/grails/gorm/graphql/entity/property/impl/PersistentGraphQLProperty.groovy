@@ -134,7 +134,7 @@ class PersistentGraphQLProperty extends OrderedGraphQLProperty {
                     deprecationReason = Schema.DEFAULT_DEPRECATION_REASON
                 }
             }
-        } catch (NoSuchFieldException e) { }
+        } catch (NoSuchFieldException ignored) { }
 
         if (mapping.deprecated && deprecationReason == null) {
             deprecationReason = Schema.DEFAULT_DEPRECATION_REASON

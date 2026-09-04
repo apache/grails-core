@@ -20,6 +20,7 @@
 plugins {
     id 'groovy'
     id 'java-library'
+    id 'org.apache.grails.gradle.grails-plugin-cli'
     id 'project-report'
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
@@ -34,9 +35,29 @@ plugins {
 version = projectVersion
 group = 'org.apache.grails.web'
 
+cliArtifact {
+    automaticModuleName = 'org.apache.grails.web.mapping.cli'
+    // this framework module wires its cli dependencies with project dependencies below
+    defaultDependencies = false
+}
+
 dependencies {
 
     implementation platform(project(':grails-bom'))
+
+    // the cli tier — published separately as a companion -cli artifact
+    cliImplementation platform(project(':grails-bom'))
+    cliApi project(project.path)
+    cliApi(project(':grails-core')) {
+        capabilities {
+            requireCapability('org.apache.grails:grails-core-cli')
+        }
+    }
+    // ANSI console output for the url-mappings report — cli-only, never on an app runtime classpath.
+    // jline comes with it: the renderer reads GrailsConsole, whose signature Groovy has to resolve.
+    cliImplementation 'org.jline:jline'
+    cliCompileOnly 'jakarta.servlet:jakarta.servlet-api'
+    cliCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     api project(':grails-web-common')
     implementation 'io.micrometer:micrometer-observation'
@@ -50,21 +71,16 @@ dependencies {
     api 'org.apache.groovy:groovy'
     api project(':grails-datamapping-validation')
 
-    compileOnly 'org.fusesource.jansi:jansi'
-    testRuntimeOnly 'org.fusesource.jansi:jansi'
-    compileOnly 'org.jline:jline'
-
     implementation 'com.github.ben-manes.caffeine:caffeine'
 
     testImplementation project(':grails-test-suite-base')
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
-    compileOnly 'org.springframework:spring-test', {
-        // MockHttpServletRequest/Response/Context used in many classes
-    }
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
     testImplementation 'org.springframework:spring-test'
+    testImplementation testFixtures(project(':grails-web-common'))
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'

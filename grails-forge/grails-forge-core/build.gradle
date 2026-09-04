@@ -56,7 +56,6 @@ dependencies {
     api 'io.micronaut:micronaut-http'
     api 'io.micronaut:micronaut-http-client'
     api 'io.micronaut:micronaut-inject'
-    api "org.eclipse.jgit:org.eclipse.jgit:$jgitVersion"
 
     implementation "com.typesafe:config:$typesafeConfigVersion"
     implementation "org.apache.commons:commons-compress:$commonsCompressVersion"
@@ -73,7 +72,7 @@ dependencies {
         exclude group: 'org.apache.groovy', module: 'groovy-all'
     }
 
-    testRuntimeOnly "ch.qos.logback:logback-classic"
+    testImplementation "ch.qos.logback:logback-classic"
     testRuntimeOnly "org.objenesis:objenesis:$objenesisVersion"
     testImplementation 'org.apache.groovy:groovy-test'
 }
@@ -118,6 +117,7 @@ copyGrailsWrapper.configure { Sync it ->
 }
 
 apply {
+    from rootProject.layout.projectDirectory.file('gradle/groovy-version-pin.gradle')
     from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/doc-config.gradle')
@@ -132,4 +132,3 @@ nohttp {
         it.dependsOn(copyGrailsWrapper, grailsVersionInfoTask)
     }
 }
-

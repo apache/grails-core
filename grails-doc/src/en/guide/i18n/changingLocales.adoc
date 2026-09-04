@@ -26,6 +26,31 @@ By default, the user locale is detected from the incoming `Accept-Language` head
 
 Grails will automatically switch the user's locale and subsequent requests will use the switched locale.
 
+To offer a language selector, the i18n plugin discovers the locales your application is actually translated into by scanning the classpath for `messages_&#42;.properties` bundles (plus the default locale, configurable via `grails.i18n.default.locale`). This list is exposed as the `AvailableLocaleResolver` bean, ordered by each locale's own name (autonym), and published to the servlet context under the `availableLocales` attribute.
+
+The `<g:localeSelect available="true"/>` tag renders a `<select>` limited to those locales. To build a custom switcher, use the tag's body form: it resolves and orders the locales and flags the active (`loc.active`) and configured-default (`loc.default`) entries, while your markup decides how each is rendered:
+
+[source,xml]
+----
+<g:localeSelect available="true" pinDefault="true" var="loc">
+    <a href="?lang=${loc.tag}"${loc.active ? ' aria-current="page"' : ''}>${loc.autonym}</a>
+</g:localeSelect>
+----
+
+Alternatively, iterate the published `availableLocales` list directly.
+
+The list is drawn from the message bundles your application and its plugins actually ship, recorded at build time, so it offers only real translations. It follows exactly the same set of plugins that message resolution uses: a plugin that was evicted, excluded, or failed to load contributes neither messages nor a language entry, so the selector can never offer a language whose messages will not resolve. To list only your application's own translations, set `grails.i18n.include-plugin-bundles=false`:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    i18n:
+        include-plugin-bundles: false   # list only the application's own translations
+----
+
+Applications created with `grails create-app` include a ready-made Bootstrap language dropdown in the default layout, built with the `g:localeSelect` body form shown above.
+
 By default, Grails uses {springapi}org/springframework/web/servlet/i18n/SessionLocaleResolver.html[SessionLocaleResolver] as the `localeResolver` bean.
 
 You can select a different resolver strategy with the `grails.i18n.localeResolver` configuration property, without declaring a bean:

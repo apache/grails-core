@@ -23,7 +23,7 @@ The `create-app` and related commands are available in both the Grails Shell CLI
 
 - To create a project using the default Grails Shell CLI:
 `$ grails create-app myapp`
-- To use Forge-specific options (such as `--java-version`, `--features`, etc.):  
+- To use Forge-specific options (such as `--java-version`, `--features`, etc.):
 `$ grails -t forge create-app myapp`
 
 ====
@@ -51,7 +51,7 @@ After generating a project with Forge, switch to the created directory and use t
 [none]
 * -jdk, --java-version
 * -s, --servlet
-* -g, --gorm
+* -d, --data (-g, --gorm are legacy aliases)
 * -t, --test
 * -f, --features
 * -i, --inplace
@@ -61,7 +61,7 @@ After generating a project with Forge, switch to the created directory and use t
 ./grails -t forge create-app \
     --servlet=tomcat \
     --jdk=11 \
-    --gorm=hibernate \
+    --data=hibernate5 \
     --test=spock \
     --features=github-workflow-java-ci \
     com.example.demo
@@ -73,7 +73,7 @@ After generating a project with Forge, switch to the created directory and use t
 [none]
 * -jdk, --java-version
 * -s, --servlet
-* -g, --gorm
+* -d, --data (-g, --gorm are legacy aliases)
 * -t, --test
 * -f, --features
 * -i, --inplace
@@ -83,7 +83,7 @@ After generating a project with Forge, switch to the created directory and use t
 ./grails -t forge create-restapi \
     --servlet=tomcat \
     --jdk=11 \
-    --gorm=hibernate \
+    --data=hibernate5 \
     --test=spock \
     --features=github-workflow-java-ci \
     com.example.demo
@@ -95,7 +95,7 @@ After generating a project with Forge, switch to the created directory and use t
 [none]
 * -jdk, --java-version
 * -s, --servlet
-* -g, --gorm
+* -d, --data (-g, --gorm are legacy aliases)
 * -t, --test
 * -f, --features
 * -i, --inplace
@@ -105,7 +105,7 @@ After generating a project with Forge, switch to the created directory and use t
 ./grails -t forge create-plugin \
     --servlet=tomcat \
     --jdk=11 \
-    --gorm=hibernate \
+    --data=hibernate5 \
     --test=spock \
     --features=github-workflow-java-ci \
     com.example.demo
@@ -117,7 +117,7 @@ After generating a project with Forge, switch to the created directory and use t
 [none]
 * -jdk, --java-version
 * -s, --servlet
-* -g, --gorm
+* -d, --data (-g, --gorm are legacy aliases)
 * -t, --test
 * -f, --features
 * -i, --inplace
@@ -127,7 +127,7 @@ After generating a project with Forge, switch to the created directory and use t
 ./grails -t forge create-web-plugin \
     --servlet=tomcat \
     --jdk=11 \
-    --gorm=hibernate \
+    --data=hibernate5 \
     --test=spock \
     --features=github-workflow-java-ci \
     com.example.demo
@@ -136,7 +136,7 @@ After generating a project with Forge, switch to the created directory and use t
 
 === The `create-` command flags
 
-The "create-*" commands are used to produce a fundamental Grails project, allowing for the inclusion of optional flags to select additional features, to customize GORM settings, an embedded servlet, the test framework, and the Java version.
+The "create-*" commands are used to produce a fundamental Grails project, allowing for the inclusion of optional flags to select additional features, to customize Grails Data settings, an embedded servlet, the test framework, and the Java version.
 
 [cols="4,8,6a"]
 |===
@@ -158,12 +158,12 @@ The "create-*" commands are used to produce a fundamental Grails project, allowi
 --servlet=tomcat
 ----
 
-| -g, --gorm
-| Which GORM Implementation to configure. Possible values: hibernate, mongodb, neo4j.
+| -d, --data (-g, --gorm are legacy aliases)
+| Which Grails Data implementation to configure. Possible values: hibernate5, hibernate7, mongodb. The value hibernate is accepted as a legacy alias for hibernate5.
 |
 [source,shell]
 ----
---gorm hibernate
+--data hibernate5
 ----
 
 | -t, --test
@@ -175,7 +175,7 @@ The "create-*" commands are used to produce a fundamental Grails project, allowi
 ----
 
 | -f, --features
-| The features to use. Possible values: h2, gorm-hibernate5, spring-boot-starter-jetty, micronaut-http-client, cache-ehcache, hibernate-validator, postgres, mysql, cache, database-migration, grails-gsp, hamcrest, gorm-mongodb, assertj, mockito, spring-boot-starter-undertow, github-workflow-java-ci, jrebel, testcontainers, sqlserver, grails-console, views-markup, views-json, gorm-neo4j, asciidoctor, grails-web-console, logbackGroovy, mongo-sync, shade, properties
+| The features to use. Possible values: h2, gorm-hibernate5, gorm-hibernate7, spring-boot-starter-jetty, micronaut-http-client, cache-ehcache, hibernate-validator, postgres, mysql, cache, database-migration, grails-gsp, hamcrest, gorm-mongodb, assertj, mockito, grails-undertow, github-workflow-java-ci, jrebel, testcontainers, sqlserver, grails-console, views-markup, views-json, gorm-neo4j, asciidoctor, grails-web-console, logbackGroovy, mongo-sync, shade, properties
 |
 [source,shell]
 ----

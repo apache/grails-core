@@ -22,6 +22,8 @@ import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.io.ResourceResolver;
 import io.micronaut.core.util.StringUtils;
 import jakarta.inject.Singleton;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -40,6 +42,8 @@ import java.util.stream.Collectors;
 
 @Singleton
 public class PomDependencyVersionResolver implements CoordinateResolver {
+
+    private static final Logger LOG = LoggerFactory.getLogger(PomDependencyVersionResolver.class);
 
     private static final String NODE_NAME_TEXT = "#text";
     private final Map<String, Coordinate> coordinates;
@@ -94,7 +98,7 @@ public class PomDependencyVersionResolver implements CoordinateResolver {
                     }
                 }
             } catch (IOException | SAXException | ParserConfigurationException e) {
-                e.printStackTrace();
+                LOG.warn("Unable to read dependency versions from " + url, e);
             }
         }
         this.coordinates = coordinates;

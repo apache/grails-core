@@ -170,8 +170,7 @@ class HibernateRuntimeUtils {
                 } else {
                     value = conversionService.convert(value, targetType)
                 }
-            } catch (e) {
-                // ignore
+            } catch (ignored) {
             }
         }
         return value
