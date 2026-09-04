@@ -23,10 +23,17 @@ import groovy.transform.CompileStatic
 import org.springframework.beans.factory.BeanRegistrar
 import org.springframework.beans.factory.BeanRegistry
 import org.springframework.core.env.Environment
+import org.springframework.core.task.AsyncTaskExecutor
+import org.springframework.core.task.TaskDecorator
+import org.springframework.core.task.support.CompositeTaskDecorator
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
 
+import grails.async.PromiseFactory
+import grails.async.Promises
 import grails.plugins.Plugin
+import grails.async.web.WebPromises
+import org.grails.async.factory.PromiseFactoryBuilder
 import org.grails.plugins.web.async.mvc.AsyncActionResultTransformer
-import org.grails.plugins.web.async.spring.PromiseFactoryBean
 
 /**
  * Async support for the Grails 2.0. Doesn't do much right now, most logic handled
@@ -45,7 +52,30 @@ class ControllersAsyncGrailsPlugin extends Plugin {
     BeanRegistrar beanRegistrar() {
         return { BeanRegistry registry, Environment environment ->
             registry.registerBean('asyncPromiseResponseActionResultTransformer', AsyncActionResultTransformer)
-            registry.registerBean('grailsPromiseFactory', PromiseFactoryBean)
+            registry.registerBean('grailsWebRequestTaskDecorator', TaskDecorator) {
+                it.supplier { new GrailsWebRequestTaskDecorator() }
+            }
+            registry.registerBean('grailsPromiseExecutor', AsyncTaskExecutor) {
+                it.fallback()
+                it.supplier { context ->
+                    List<TaskDecorator> decorators = context.beanProvider(TaskDecorator).orderedStream().toList()
+                    ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor()
+                    executor.threadNamePrefix = 'grails-promise-'
+                    if (decorators) {
+                        executor.taskDecorator = new CompositeTaskDecorator(decorators)
+                    }
+                    return executor
+                }
+            }
+            registry.registerBean('grailsPromiseFactory', PromiseFactory) {
+                it.supplier { context ->
+                    AsyncTaskExecutor executor = context.bean(AsyncTaskExecutor)
+                    PromiseFactory promiseFactory = PromiseFactoryBuilder.build(executor)
+                    Promises.setPromiseFactory(promiseFactory)
+                    WebPromises.setPromiseFactory(promiseFactory)
+                    return promiseFactory
+                }
+            }
         }
     }
 }

@@ -21,9 +21,13 @@ package org.grails.plugins.web.async
 import org.springframework.beans.factory.support.BeanRegistryAdapter
 import org.springframework.beans.factory.support.DefaultListableBeanFactory
 import org.springframework.core.env.StandardEnvironment
+import org.springframework.core.task.AsyncTaskExecutor
+import org.springframework.core.task.TaskDecorator
+import org.springframework.core.task.SyncTaskExecutor
+import org.springframework.core.task.support.TaskExecutorAdapter
 
+import grails.async.PromiseFactory
 import org.grails.plugins.web.async.mvc.AsyncActionResultTransformer
-import org.grails.plugins.web.async.spring.PromiseFactoryBean
 
 import spock.lang.Specification
 
@@ -39,6 +43,40 @@ class ControllersAsyncGrailsPluginSpec extends Specification {
 
         then:
         beanFactory.getBeanDefinition('asyncPromiseResponseActionResultTransformer').beanClassName == AsyncActionResultTransformer.name
-        beanFactory.getBeanDefinition('grailsPromiseFactory').beanClassName == PromiseFactoryBean.name
+        beanFactory.getBeanDefinition('grailsPromiseFactory').beanClassName == PromiseFactory.name
+        beanFactory.getBeanDefinition('grailsWebRequestTaskDecorator').beanClassName == TaskDecorator.name
+        beanFactory.getBeanDefinition('grailsPromiseExecutor').fallback
+    }
+
+    void 'promise factory uses the application task executor'() {
+        given:
+        def beanFactory = new DefaultListableBeanFactory()
+        AsyncTaskExecutor executor = new TaskExecutorAdapter(new SyncTaskExecutor())
+        beanFactory.registerSingleton('applicationTaskExecutor', executor)
+        def registrar = new ControllersAsyncGrailsPlugin().beanRegistrar()
+        new BeanRegistryAdapter(beanFactory, new StandardEnvironment(), registrar.getClass()).register(registrar)
+
+        when:
+        PromiseFactory promiseFactory = beanFactory.getBean('grailsPromiseFactory', PromiseFactory)
+
+        then:
+        promiseFactory.createPromise { Thread.currentThread() }.get().is(Thread.currentThread())
+    }
+
+    void 'promise factory uses a managed fallback executor when Boot does not provide one'() {
+        given:
+        def beanFactory = new DefaultListableBeanFactory()
+        def registrar = new ControllersAsyncGrailsPlugin().beanRegistrar()
+        new BeanRegistryAdapter(beanFactory, new StandardEnvironment(), registrar.getClass()).register(registrar)
+
+        when:
+        PromiseFactory promiseFactory = beanFactory.getBean('grailsPromiseFactory', PromiseFactory)
+        Thread worker = promiseFactory.createPromise { Thread.currentThread() }.get()
+
+        then:
+        worker.name.startsWith('grails-promise-')
+
+        cleanup:
+        beanFactory.destroySingletons()
     }
 }

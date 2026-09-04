@@ -91,7 +91,35 @@ def result = p.get(1,MINUTES)
 
 === The PromiseFactory Interface
 
-By default, the `Promises` static methods use an instance of `PromiseFactory`. This `PromiseFactory` interface has various implementations. The default implementation is link:{api}org/grails/async/factory/future/CachedThreadPoolPromiseFactory.html[CachedThreadPoolPromiseFactory] which uses a thread pool that will create threads as needed (the same as `java.util.concurrent.Executors.newCachedThreadPool()`)
+By default, the `Promises` static methods use an instance of `PromiseFactory`. This `PromiseFactory` interface has various implementations. The default implementation is link:{api}org/grails/async/factory/future/CompletableFuturePromiseFactory.html[CompletableFuturePromiseFactory], which uses JDK `CompletableFuture` for execution and composition.
+
+In a Grails application, the async plugin uses Spring Boot's `applicationTaskExecutor`. This means promise execution shares Boot's lifecycle management, graceful shutdown, and `spring.task.execution` configuration. For example:
+
+[source,yaml]
+.application.yml
+----
+spring:
+    task:
+        execution:
+            pool:
+                max-size: 16
+                queue-capacity: 100
+----
+
+On Java 21 or later, virtual threads can be enabled for the application task executor without changing promise code:
+
+[source,yaml]
+.application.yml
+----
+spring:
+    threads:
+        virtual:
+            enabled: true
+----
+
+Spring Boot also composes any `org.springframework.core.task.TaskDecorator` beans with the executor. Grails contributes a decorator that makes the current `GrailsWebRequest` available inside `task { }`. When Micrometer context propagation is on the classpath, setting `spring.task.execution.propagate-context` to `true` additionally propagates observation and logging context.
+
+The default promise is also a JDK `CompletionStage`. Asynchronous stage operations such as `thenApplyAsync` continue to use Boot's `applicationTaskExecutor`, so they retain the same lifecycle, virtual-thread, and context-propagation configuration as Groovy `then` callbacks.
 
 However, the design of the Grails promises framework is such that you can swap out the underlying implementation for your own or one of the pre-supported implementations. For example to use RxJava 1.x simply add the RxJava dependency to `build.gradle`:
 
@@ -101,7 +129,7 @@ However, the design of the Grails promises framework is such that you can swap o
 runtimeOnly 'org.apache.grails.async:grails-async-rxjava3'
 ----
 
-With the above in place RxJava 1.x will be used to create `Promise` instances.
+With the above in place RxJava 3.x will be used to create `Promise` instances.
 
 The following table summarizes the available implementation and the dependency that should be added to activate them:
 
@@ -141,6 +169,12 @@ Promises.promiseFactory = new SynchronousPromiseFactory()
 ----
 
 Using the `PromiseFactory` mechanism it is theoretically possible to plug in other concurrency libraries into the Grails framework. For this you need to override the two interfaces `grails.async.Promise` and `grails.async.PromiseFactory`.
+
+==== Migrating Legacy Promise Configuration
+
+The FutureTask-based promise classes and the Spring `PromiseFactoryBean` are deprecated for removal. Applications should use the normal async plugin registration and configure `spring.task.execution` instead of constructing `CachedThreadPoolPromiseFactory` or `PromiseFactoryBean` beans.
+
+Code that needs a standalone factory can construct `CompletableFuturePromiseFactory` with a JDK `Executor`. Grails applications should normally inject `PromiseFactory` and allow Spring Boot to supply and manage the executor.
 
 === Promise Chaining
 
