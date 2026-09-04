@@ -57,7 +57,6 @@ dependencies {
         exclude group:'org.slf4j', module:'jcl-over-slf4j'
         exclude group:'org.slf4j', module:'slf4j-api'
         exclude group:'org.slf4j', module:'slf4j-log4j12'
-        exclude group:'xml-apis', module:'xml-apis'
     }
     api "org.hibernate.models:hibernate-models"
     api 'org.hibernate.validator:hibernate-validator', {
@@ -85,7 +84,6 @@ dependencies {
         exclude group:'org.slf4j', module:'jcl-over-slf4j'
         exclude group:'org.slf4j', module:'slf4j-api'
         exclude group:'org.slf4j', module:'slf4j-log4j12'
-        exclude group:'xml-apis', module:'xml-apis'
     }
 
     testImplementation 'org.testcontainers:testcontainers'
@@ -116,6 +114,8 @@ dependencies {
     // groovy proxy fixes bytebuddy to be a bit smarter when it comes to groovy metaClass
     testImplementation 'org.apache.tomcat:tomcat-jdbc'
     testImplementation 'org.spockframework:spock-core'
+
+    testCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     testRuntimeOnly 'org.slf4j:slf4j-simple'
     testRuntimeOnly 'org.slf4j:jcl-over-slf4j'

@@ -23,8 +23,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.Generated
 
 import grails.gorm.api.GormAllOperations
-import org.grails.datastore.gorm.GormEnhancer
-import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.gorm.GormRegistry
 
 /**
  * A trait for domain classes to implement that should be treated as multi tenant
@@ -44,7 +43,7 @@ trait MultiTenant<D> extends Entity {
      */
     @Generated
     static <T> T withTenant(Serializable tenantId, Closure<T> callable) {
-        GormEnhancer.findStaticApi(this).withTenant(tenantId, callable)
+        GormRegistry.instance.findStaticApi((Class<D>) this).withTenant(tenantId, callable)
     }
 
     /**
@@ -55,7 +54,10 @@ trait MultiTenant<D> extends Entity {
      */
     @Generated
     static <D> GormAllOperations eachTenant(Closure callable) {
-        GormEnhancer.findStaticApi(this, ConnectionSource.DEFAULT).eachTenant(callable)
+        // eachTenant enumerates tenants, so it must not force current-tenant resolution: use the
+        // non-resolving registry lookup (findStaticApi triggers strict-mode resolution, which throws
+        // TenantNotFoundException for SCHEMA/DATABASE entities when no tenant is bound).
+        GormRegistry.instance.getStaticApi((Class<D>) this).eachTenant(callable)
     }
 
     /**
@@ -66,6 +68,6 @@ trait MultiTenant<D> extends Entity {
      */
     @Generated
     static <D> GormAllOperations<D> withTenant(Serializable tenantId) {
-        (GormAllOperations<D>) GormEnhancer.findStaticApi(this).withTenant(tenantId)
+        (GormAllOperations<D>) GormRegistry.instance.findStaticApi((Class<D>) this).withTenant(tenantId)
     }
 }

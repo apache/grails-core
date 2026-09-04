@@ -31,7 +31,7 @@ Configures the Hibernate type for a particular property.
 === Examples
 
 
-Changing to a text type (CLOB or TEXT depending on database dialect):
+Changing to an unbounded text type (e.g. `TEXT`, `LONGTEXT` or `CLOB` depending on database dialect):
 
 [source,groovy]
 ----
@@ -76,6 +76,8 @@ static mapping = {
     title type: "text"
 }
 ----
+
+NOTE: `type: "text"` does not map to a literal SQL type named `text`. GORM asks Hibernate to resolve the dialect's own unbounded large-character type, which is `text` on PostgreSQL and H2, `longtext` on MySQL and MariaDB, and `CLOB` on Oracle. Every `Dialect` shipped with Hibernate defines this mapping, so the resolved column is always unbounded regardless of which of these databases you use — you don't need to (and can't) choose the literal SQL type name yourself.
 
 Hibernate also has the concept of custom `UserType` implementations. In this case you specify the `UserType` class. If the `UserType` maps to multiple columns you may need to specify a mapping for each column:
 

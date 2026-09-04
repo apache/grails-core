@@ -51,7 +51,11 @@ public class MongoSync extends MongoFeature {
     @Override
     public void apply(GeneratorContext generatorContext) {
         Map<String, Object> config = generatorContext.getConfiguration();
-        config.put("grails.mongodb.url", "mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/foo");
+        // One url cannot name a database that is right in every environment, so each names its
+        // own on the same server, the way a generated SQL application already does.
+        config.put("grails.mongodb.url", externalUrl(PROD_DATABASE));
+        config.put("environments.development.grails.mongodb.url", externalUrl(DEV_DATABASE));
+        config.put("environments.test.grails.mongodb.url", externalUrl(TEST_DATABASE));
         generatorContext.addDependency(Dependency.builder()
                 .groupId("org.mongodb")
                 .artifactId("mongodb-driver-sync")

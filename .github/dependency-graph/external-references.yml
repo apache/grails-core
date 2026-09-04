@@ -22,6 +22,7 @@ references:
   - purl: pkg:maven/org.apache.grails/grails-converters
   - purl: pkg:maven/org.apache.grails/grails-core
   - purl: pkg:maven/org.apache.grails/grails-databinding
+  - purl: pkg:maven/org.apache.grails/grails-datamapping-async
   - purl: pkg:maven/org.apache.grails/grails-datasource
   - purl: pkg:maven/org.apache.grails/grails-dependencies-assets
   - purl: pkg:maven/org.apache.grails/grails-dependencies-starter-web
@@ -80,7 +81,6 @@ references:
   - purl: pkg:maven/org.apache.grails.data/grails-data-mongodb-gson-templates
   - purl: pkg:maven/org.apache.grails.data/grails-data-mongodb-spring-boot
   - purl: pkg:maven/org.apache.grails.data/grails-data-simple
-  - purl: pkg:maven/org.apache.grails.data/grails-datamapping-async
   - purl: pkg:maven/org.apache.grails.data/grails-datamapping-core
   - purl: pkg:maven/org.apache.grails.data/grails-datamapping-core-test
   - purl: pkg:maven/org.apache.grails.data/grails-datamapping-support

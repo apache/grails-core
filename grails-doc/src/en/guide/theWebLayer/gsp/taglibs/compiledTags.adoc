@@ -1,0 +1,308 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+Tag libraries are described when they are compiled, and that description is used to resolve tag calls
+in pages, tag libraries and controllers compiled afterwards.
+
+==== Defining tags as methods
+
+Define a tag as a method:
+
+[source,groovy]
+----
+class GreetingTagLib {
+
+    static namespace = 'greet'
+
+    def hello(Map attrs) {
+        out << "Hello ${attrs.name}"
+    }
+
+    def wrapped(Map attrs, Closure body) {
+        out << '<div>' << body() << '</div>'
+    }
+}
+----
+
+The attributes parameter must be a `Map` named `attrs`, and the body parameter a `Closure` named
+`body`. A method taking anything else is an ordinary method of the tag library rather than a tag.
+Where that convention does not suit, `@Tag` marks a method as a tag whatever its signature and
+`@NotATag` excludes one that would otherwise match.
+
+The older form, a `Closure` field, still works:
+
+[source,groovy]
+----
+// Deprecated
+Closure hello = { Map attrs ->
+    out << "Hello ${attrs.name}"
+}
+----
+
+A tag declared this way is described and called like any other — the tag is selected by name when the
+call runs, and a closure answers to a name as readily as a method does. The form remains deprecated
+because a closure carries no signature, so nothing about the call can be checked, and because a
+closure field is inherited where a tag method is not, which makes what a tag library declares harder
+to read. Compiling a tag library that declares one produces a warning naming the tag.
+
+==== Calling tags
+
+In a tag library or a controller, a call to a tag whose namespace and name are known is compiled into
+a direct invocation rather than being dispatched through the metaclass:
+
+[source,groovy]
+----
+class BookController {
+    def index() {
+        String markup = g.createLink(controller: 'book')   // compiled into a direct invocation
+        String other  = greet.hello(name: 'Grails')        // likewise
+    }
+}
+----
+
+The attributes and body are passed straight through where the call says what they are. Where it does
+not — attributes assembled at runtime, or a single value the tag reads under its own name — the
+arguments are forwarded as written and sorted out by the same rules dynamic dispatch applies:
+
+[source,groovy]
+----
+Map attrs = buildAttributes()
+g.createLink(attrs)    // still compiled into an invocation
+----
+
+The tag is always selected by name when the call runs, through the same lookup dynamic dispatch uses.
+A tag library that overrides another, one registered while the application is running, and the order
+tag libraries are registered in all decide the outcome exactly as they did before. Nothing is bound to
+a particular tag library class, so a tag declared by more than one of them is compiled the same way.
+
+A call into a namespace no compiled tag library declares is left alone, which is what allows a tag
+library registered while an application is running to keep working.
+
+A controller declared by convention, under `grails-app/controllers`, has its tag calls compiled. One
+declared by annotation outside that directory does not:
+
+[source,groovy]
+----
+// src/main/groovy/demo/ReportController.groovy
+@Artefact('Controller')
+class ReportController {
+    def index() {
+        g.createLink(controller: 'book')   // dispatched dynamically
+    }
+}
+----
+
+The ability to call tags reaches such a class from the `@Artefact` annotation, which is applied later
+in the compilation than the rewriting runs, so the rewriting cannot see that the class calls tags. The
+call behaves exactly as it did before this release; it simply does not take the faster path. Moving
+the class under `grails-app/controllers` gets it compiled.
+
+A name that something else in scope already answers to is not a namespace. A local variable, a
+parameter or a property called `g` is that thing, and a call on it is left alone:
+
+[source,groovy]
+----
+def index() {
+    def g = someClient
+    g.createLink(controller: 'book')   // someClient.createLink, not the tag
+}
+----
+
+A call written without a namespace is not compiled unless the build asks for it. Whether a bare name
+is a tag depends on what else answers to it, and not all of that is visible when compiling: a method
+Groovy gives every object, a delegate an enclosing closure is handed when it runs, an overload the tag
+library also declares. Such a call is dispatched as it always was:
+
+[source,groovy]
+----
+class BookController {
+    def index() {
+        String markup = createLink(controller: 'book')   // dispatched dynamically
+        String other  = g.createLink(controller: 'book') // compiled into an invocation
+    }
+}
+----
+
+A project whose tag names are known not to collide can compile those calls too:
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    compileStatic {
+        unqualifiedTagCalls = true
+    }
+}
+----
+
+Turning it on widens which calls are considered, not which names may be captured: a name that Groovy,
+a local, a field, a parameter or the calling class answers to is still left alone.
+
+A call that names its namespace is compiled wherever it appears, including inside a closure. The
+namespace itself is a name a closure's delegate could in principle answer to, and that is not checked
+— the guard above applies to the tag name, not to the namespace in front of it. No delegate in
+ordinary use answers to a namespace name, so a call written as `g.createLink(...)` reaches the tag as
+written; a DSL whose delegate did answer to `g` would be the exception.
+
+==== Tags in pages
+
+A page resolves a name against the model it was rendered with before it reaches a tag library, and
+that model is not known when the page is compiled. A page therefore keeps resolving its tags as it
+always has, unless it declares `compileStatic`:
+
+[source,html]
+----
+<%@ page compileStatic="true" %>
+${g.createLink(controller: 'book')}   <%-- compiled into a direct invocation --%>
+----
+
+Declaring `compileStatic` on a page reserves the namespace names for tag libraries: a model attribute
+called `g` no longer shadows the `g` namespace there. Without it, an expression is dispatched exactly
+as before. Set `grails.views.gsp.compileStatic` in configuration to apply it to every page.
+
+Two things hold in a page either way. A call written without a namespace, as
+`${createLink(controller: 'book')}` is, is always left to resolve against the binding. And a name the
+page puts into its own binding is that variable rather than a namespace:
+
+[source,html]
+----
+<g:set var="g" value="${someObject}"/>
+${g.createLink(controller: 'book')}   <%-- someObject.createLink, not the tag --%>
+----
+
+A tag written as markup, as `<g:createLink controller="book"/>` is, already compiles into a direct
+call naming the tag and needs no rewriting. It is unambiguously a tag whatever the page does, so under
+strict checking it is checked in every page. An expression is checked only where it is resolved, in a
+page declaring `compileStatic`, since elsewhere the receiver may be part of the model.
+
+==== Reporting unknown tags
+
+By default nothing is reported: a tag that no compiled tag library declares is left to resolve at
+runtime, exactly as it did before. A namespace can hold tag libraries that were not compiled with a
+description — a plugin built against an earlier version of Grails contributes tags to `g` without one,
+and a tag library registered at runtime contributes more — so a tag missing from the description is
+not necessarily a misspelling, and reporting one by default would mean complaining about correct code.
+
+An application whose tag libraries are all described can ask for an error instead:
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    compileStatic {
+        strictTags = true
+        dynamicTagNamespaces = ['legacy']   // <1>
+    }
+}
+----
+<1> namespaces genuinely filled in while the application runs
+
+Strict checking applies where the source says a call is a tag: one naming its namespace, as
+`g.message(code: 'x')` does, and one written as markup, as `<g:message/>` is. A call written without a
+namespace is never checked — such a name may equally be a method contributed while the application
+runs, and in a page it may come from the model. A namespaced expression in a page is checked only when
+that page declares `compileStatic`, for the same reason its calls are only rewritten there.
+
+`dynamicTagNamespaces` names the namespaces whose tags are decided while the application runs rather
+than described when it is compiled. It turns compile-time resolution off for them completely: a call
+into such a namespace is never rewritten, never reported, and is dispatched exactly as it was before
+this release, whether or not a compiled tag library also declares the namespace. Declare a namespace
+here when a tag library is registered at runtime, or when the tags in it are contributed by
+metaprogramming.
+
+Both settings are read from the build, not from a system property, so changing either recompiles what
+depends on it.
+
+===== What strict checking covers
+
+Strict checking applies to the namespaces this project's own tag libraries declare. Those are the only
+namespaces whose contents are knowable when compiling: a tag missing from one of them is a misspelling,
+because nothing else contributes to it.
+
+Every other namespace is left alone, `g` included. A plugin built against an earlier version of Grails
+contributes tags to `g` with no description, as does one that declares its tag libraries by convention
+without applying the GSP Gradle plugin, and a tag library registered while the application runs
+contributes more. A tag missing from such a namespace is as likely to be one of those as a mistake, so
+reporting it would fail a build over correct code.
+
+So `strictTags` catches a misspelling of your own tags, in your own namespaces, and never complains
+about a plugin's. Nothing has to be listed in `dynamicTagNamespaces` to get that — it remains for the
+narrower case of a namespace *this project* declares but fills in while the application runs.
+
+An index generated from source before compilation also records what it could not describe, and no tag
+in a namespace it failed to read completely is reported either.
+
+==== Where the description lives
+
+Each tag library contributes one file under `META-INF/grails/taglibs` in the artifact it is packaged
+in. Descriptions from every jar on the classpath are combined, so a plugin's tag libraries are
+resolvable by an application that depends on it without any extra build configuration.
+
+Under the Grails Gradle plugin the description is written twice, because the two things that read it
+need different guarantees.
+
+`generateTagLibraryIndex` runs before compilation and reads the sources under `grails-app/taglib`, so
+tags an application declares are resolvable in the same compilation that defines them. Being read from
+source it cannot describe everything: a tag library referring to a type written in Java, or generated
+by the build, is left out. What it missed is recorded, and nothing in a namespace it could not fully
+describe is ever reported as an unknown tag, so strict checking cannot fail a build over a tag that
+does exist. This index is used only to compile this project, and is never packaged.
+
+`packageTagLibraryIndex` runs after compilation, with the project's own classes on its classpath,
+where every tag library resolves whatever language its collaborators were written in. That index is
+the authoritative one: pages are compiled against it, it travels with the artifact, and a project
+depending on this one reads it. Every run replaces the directory, so a tag library that is renamed or
+deleted disappears from it.
+
+A project keeping tag libraries elsewhere adds those directories once, by task type, so that both
+indexes describe the same set — configuring them separately would let the index this project compiles
+against differ from the one it publishes:
+
+[source,groovy]
+.build.gradle
+----
+import org.grails.gradle.plugin.views.gsp.GenerateTagLibraryIndexTask
+
+tasks.withType(GenerateTagLibraryIndexTask).configureEach {
+    sourceDirectories.from(file('src/main/groovy'))
+}
+----
+
+Before compilation, a tag library referring to something the same project declares — a service it
+injects, a base class it extends, a trait it carries — is described too, by reading that Groovy source
+alongside it, so an inherited namespace, a tag a trait contributes and an attributes parameter of a
+project-declared type are all read rather than guessed. A tag library naming a type that does not
+exist is left out, as it would be by the compiler.
+
+Where no build writes the index — a plain Groovy compilation, or one that does not apply the Grails
+Gradle plugin — a tag library annotated `@TagLib` describes itself as it is compiled instead, which
+makes it resolvable to anything compiled after it.
+
+That fallback reaches annotated tag libraries only. A tag library declared by convention, as an
+unannotated class under `grails-app/taglib`, is recognised as an artefact too late in the compilation
+for it to describe itself, so without the Gradle plugin it contributes no description. Nothing breaks:
+a tag with no description is dispatched dynamically, exactly as it was before any of this existed. But
+a plugin that declares its tag libraries by convention and does not apply the Grails GSP Gradle plugin
+publishes no descriptors, and its tags are resolved at runtime in applications that depend on it.
+Annotate those tag libraries with `@TagLib`, or apply the plugin, to have them described.
+
+A descriptor written this way is also never removed. Renaming or deleting a tag library leaves its
+description behind until the build directory is cleaned, and a description naming a class that no
+longer exists puts tags into the index that nothing will answer to. Builds using the Gradle plugin do
+not have this problem: the task rewrites the index from the sources each time it runs.

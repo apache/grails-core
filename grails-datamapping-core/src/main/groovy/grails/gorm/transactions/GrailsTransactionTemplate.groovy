@@ -22,6 +22,8 @@ import groovy.transform.CompileStatic
 import groovy.transform.stc.ClosureParams
 import groovy.transform.stc.SimpleType
 
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.TransactionException
@@ -42,6 +44,8 @@ import org.grails.datastore.mapping.transactions.CustomizableRollbackTransaction
  */
 @CompileStatic
 class GrailsTransactionTemplate {
+
+    private static final Logger log = LoggerFactory.getLogger(GrailsTransactionTemplate)
 
     CustomizableRollbackTransactionAttribute transactionAttribute
 
@@ -72,6 +76,7 @@ class GrailsTransactionTemplate {
                         return action.call(status)
                     }
                     catch (Throwable e) {
+                        log.debug('Rolling back after the action threw', e)
                         return new ThrowableHolder(e)
                     } finally {
                         status.setRollbackOnly()

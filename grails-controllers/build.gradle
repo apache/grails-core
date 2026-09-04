@@ -57,8 +57,9 @@ dependencies {
     testRuntimeOnly 'org.jline:jline'
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
-    compileOnly 'org.springframework:spring-test'
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
+    testImplementation testFixtures(project(':grails-web-common'))
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
     testImplementation 'org.springframework:spring-test'
     testImplementation 'org.springframework.boot:spring-boot-test'

@@ -23,7 +23,6 @@ import jakarta.inject.Singleton;
 import org.grails.forge.application.Project;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
-import org.grails.forge.feature.security.template.securityConfig;
 import org.grails.forge.feature.security.template.user;
 import org.grails.forge.feature.security.template.userController;
 import org.grails.forge.feature.security.template.userService;
@@ -33,8 +32,9 @@ import org.grails.forge.template.RockerTemplate;
 
 /**
  * Secures the application with plain Spring Security: the spring-boot-starter-security
- * dependency, the shared user artifacts and a {@code SecurityConfig} with form login.
- * No Grails security plugins are involved.
+ * dependency, the shared user artifacts, and form login wired through the {@code beans}
+ * DSL on the application's own {@code Application} class. No Grails security plugins are
+ * involved, and no separate configuration class is generated.
  *
  * @since 8.0
  */
@@ -76,15 +76,13 @@ public class SpringBootStarterSecurity extends SecurityFeature implements Primar
 
         final Project project = generatorContext.getProject();
         generatorContext.addTemplate("securityUser",
-                new RockerTemplate("grails-app/domain/{packagePath}/User.groovy", user.template(project)));
+                new RockerTemplate("grails-app/domain/{packagePath}/User.groovy",
+                        user.template(project, generatorContext.getFeatures())));
         generatorContext.addTemplate("securityUserController",
                 new RockerTemplate("grails-app/controllers/{packagePath}/UserController.groovy", userController.template(project)));
         generatorContext.addTemplate("securityUserService",
                 new RockerTemplate("grails-app/services/{packagePath}/UserService.groovy", userService.template(project)));
         generatorContext.addTemplate("securityUserSpec",
                 new RockerTemplate(generatorContext.getTestSourcePath("/{packagePath}/User"), userSpec.template(project)));
-        generatorContext.addTemplate("securityConfig",
-                new RockerTemplate(generatorContext.getSourcePath("/{packagePath}/SecurityConfig"),
-                        securityConfig.template(project)));
     }
 }

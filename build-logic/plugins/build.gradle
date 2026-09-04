@@ -123,5 +123,9 @@ gradlePlugin {
             id = 'org.apache.grails.buildsrc.autoconfiguration-imports'
             implementationClass = 'org.apache.grails.buildsrc.AutoConfigurationImportsPlugin'
         }
+        register('testTaskShardingPlugin') {
+            id = 'org.apache.grails.buildsrc.test-task-sharding'
+            implementationClass = 'org.apache.grails.buildsrc.TestTaskShardingPlugin'
+        }
     }
 }

@@ -310,6 +310,7 @@ class PublishPlugin implements Plugin<Project> {
             emeritus('smaldini','Stephane Maldini', project),
             emeritus('tkvw','Dennie de Lange', project),
             emeritus('tomwidmer','Tom Widmer', project),
+            emeritus('vitaliisamolovskikh','Vitalii Samolovskikh', project),
             emeritus('yamkazu','Kazuki Yamamoto', project),
             emeritus('zanthrash','Zan Thrash', project),
             emeritus('ziegfried', 'Siegfried Puchbauer', project),

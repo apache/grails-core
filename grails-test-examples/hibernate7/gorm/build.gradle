@@ -57,8 +57,8 @@ dependencies {
     testImplementation 'org.apache.grails:grails-testing-support-web'
     testImplementation 'org.apache.grails:grails-testing-support-datamapping'
 
-
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
+    integrationTestImplementation testFixtures('org.apache.grails.web:grails-web-common')
     integrationTestImplementation project(':grails-testing-support-http-client')
 }
 
