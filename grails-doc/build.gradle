@@ -21,6 +21,7 @@ import grails.doc.git.FetchTagsTask
 import grails.doc.dropdown.CreateReleaseDropDownTask
 import grails.doc.gradle.PublishGuideTask
 import groovy.json.JsonSlurper
+import org.grails.doc.gradle.AuditGroovydocLinksTask
 
 import java.util.zip.ZipFile
 
@@ -64,6 +65,7 @@ dependencies {
 // this task needs to be here instead of the root since bom resolution only occurs when the java / groovy plugins are applied
 def combinedGroovydoc = tasks.register('aggregateGroovydoc', Groovydoc)
 apply from: rootProject.layout.projectDirectory.file('gradle/docs-dependencies.gradle')
+
 combinedGroovydoc.configure { Groovydoc gdoc ->
     gdoc.windowTitle = "Grails $projectVersion"
     gdoc.docTitle = "Grails $projectVersion"
@@ -92,15 +94,25 @@ combinedGroovydoc.configure { Groovydoc gdoc ->
             .collect { SourceSet it -> it.allSource.srcDirs }
             .flatten()
             .findAll { File srcDir ->
-                if (!(srcDir.name in ['java', 'groovy'])) {
+                // Grails artefacts are public API of the plugins that declare them, so the
+                // grails-app roots holding them count as source too. The remaining grails-app
+                // directories (conf, i18n, views, assets, init, migrations) hold configuration,
+                // messages and templates rather than documented classes.
+                if (!(srcDir.name in ['java', 'groovy', 'controllers', 'domain', 'services', 'taglib', 'commands'])) {
                     return false
                 }
                 srcDir.exists()
             }
 
+    // The included build that assembles Grails - its convention plugins, Gradle tasks and doc
+    // tooling - exists only to build this repository. None of it is API anyone consumes, so it
+    // is left out of the published docs.
+    File internalBuildLogicDir = rootProject.layout.projectDirectory.dir('build-logic').asFile.canonicalFile
+
     // Collect source directories from included builds (composite builds)
     // Gradle will not provide the included build projects or source sets, so we inspect the file system
     List<File> includedBuildSourceDirs = gradle.includedBuilds
+            .findAll { it.projectDir.canonicalFile != internalBuildLogicDir }
             .collectMany { includedBuild ->
                 def sourceDirs = []
                 includedBuild.projectDir.eachDir { File dir ->
@@ -118,11 +130,30 @@ combinedGroovydoc.configure { Groovydoc gdoc ->
     gdoc.source(project.files(allSourceDirs))
     gdoc.ext.groovydocSourceDirs = allSourceDirs
 
-    gdoc.classpath = files(sources.collect { SourceSet it -> it.compileClasspath.filter(File.&isDirectory) }.flatten().unique())
+    // The full compile classpath, not just the sibling projects' class directories: Groovydoc
+    // needs to load the external types referenced by the sources, otherwise it links them to
+    // a page it never generated instead of to the external javadocs configured above.
+    gdoc.classpath = files(sources.collect { SourceSet it -> it.compileClasspath })
     gdoc.destinationDir = project.layout.buildDirectory.dir('combined-api/api').get().asFile
 
     gdoc.inputs.files(gdoc.source).withPropertyName("groovyDocSrc").withPathSensitivity(PathSensitivity.RELATIVE)
     gdoc.outputs.dir(gdoc.destinationDir)
+}
+
+tasks.register('auditGroovydocLinks', AuditGroovydocLinksTask) {
+    apiDocsDir = project.layout.dir(combinedGroovydoc.map { it.destinationDir })
+    // A 'links' mapping only applies to types Groovydoc managed to resolve, so a package whose
+    // classes it cannot load has to be listed here. Keeping the list to what genuinely cannot
+    // be linked leaves every other unresolvable type a build failure.
+    unmappedPackages = [
+            // Gradle's API cannot go on the Groovydoc classpath: it bundles an older Groovy
+            // and the Ant groovydoc task then fails to initialise.
+            'org.gradle.',
+            // The publish plugin is maintained in its own repository, with no javadoc site to
+            // link to. The rest of org.apache.grails.gradle.* lives in the grails-gradle
+            // included build and is documented in this aggregate, so it stays audited.
+            'org.apache.grails.gradle.publish.'
+    ]
 }
 
 String getVersion(String artifact) {

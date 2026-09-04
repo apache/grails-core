@@ -76,7 +76,8 @@ public class SpringBootStarterSecurity extends SecurityFeature implements Primar
 
         final Project project = generatorContext.getProject();
         generatorContext.addTemplate("securityUser",
-                new RockerTemplate("grails-app/domain/{packagePath}/User.groovy", user.template(project)));
+                new RockerTemplate("grails-app/domain/{packagePath}/User.groovy",
+                        user.template(project, generatorContext.getFeatures())));
         generatorContext.addTemplate("securityUserController",
                 new RockerTemplate("grails-app/controllers/{packagePath}/UserController.groovy", userController.template(project)));
         generatorContext.addTemplate("securityUserService",
