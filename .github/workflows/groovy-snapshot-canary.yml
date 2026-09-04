@@ -185,7 +185,6 @@ jobs:
           ./gradlew ${{ matrix.gradle_task }}
           --continue
           --stacktrace
-          -x groovydoc
           -PskipCodeStyle
           -PskipMicronautProjects
           -PmaxTestParallel=3
