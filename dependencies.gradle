@@ -84,11 +84,11 @@ ext {
             // extended-scalars compatibility. See https://github.com/apache/grails-core/issues/15674
             'graphql-java.version'          : '25.0',
             'graphql-java-extended-scalars.version': '24.0',
-            'groovy.version'                : '6.0.0-beta-2',
+            'groovy.version'                : '6.0.0-beta-3',
             'guava.version'                 : '33.7.1-jre',
             // Security: overrides spring-boot-dependencies (5.4.2). 5.4.3 fixes CVE-2026-54399 (httpcore5) and CVE-2026-54428 (httpcore5-h2).
             'httpcore5.version'             : '5.4.3',
-            // Groovy YAML 6.0.0-beta-2 requires Jackson 2.22.x, and 2.22.2 also overrides the
+            // Groovy YAML 6.0.0-beta-3 requires Jackson 2.22.x, and 2.22.2 also overrides the
             // 2.21.5 Spring Boot 4.1 manages: it adds the StreamReadConstraints length limit to
             // GregorianCalendar/Duration (CVE-2026-68497) and restricts the URI schemes
             // java.nio.file.Path deserialization accepts (CVE-2026-19032). Jackson 2 only releases
@@ -194,7 +194,7 @@ ext {
             'httpcore5'                   : "org.apache.httpcomponents.core5:httpcore5:${bomDependencyVersions['httpcore5.version']}",
             'httpcore5-h2'                : "org.apache.httpcomponents.core5:httpcore5-h2:${bomDependencyVersions['httpcore5.version']}",
             // Security override of the 2.21.5 spring-boot-dependencies imports through
-            // com.fasterxml.jackson:jackson-bom - see jackson2.version. groovy-yaml 6.0.0-beta-2
+            // com.fasterxml.jackson:jackson-bom - see jackson2.version. groovy-yaml 6.0.0-beta-3
             // also pulls jackson-dataformat-yaml, so the BOM must manage it at >= the resolved version.
             'jackson2-annotations'     : "com.fasterxml.jackson.core:jackson-annotations:${bomDependencyVersions['jackson2-annotations.version']}",
             'jackson2-core'            : "com.fasterxml.jackson.core:jackson-core:${bomDependencyVersions['jackson2.version']}",

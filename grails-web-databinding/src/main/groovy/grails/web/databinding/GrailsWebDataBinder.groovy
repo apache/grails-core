@@ -472,7 +472,7 @@ class GrailsWebDataBinder extends SimpleDataBinder {
                 Class<?> componentType = metaProperty.type.componentType
                 List boundItems = []
                 ((Collection) val).each { item ->
-                    // Groovy 6.0.0-beta-2: static type checking merges the flow state of a `||`
+                    // Groovy 6.0.0-beta-3: static type checking merges the flow state of a `||`
                     // inside a closure to void, so the guard is hoisted into a boolean local.
                     boolean matchesComponentType = item == null || componentType.isAssignableFrom(item.getClass())
                     if (matchesComponentType) {
@@ -548,7 +548,9 @@ class GrailsWebDataBinder extends SimpleDataBinder {
                                 }
                             }
                             if (persistentInstance == null) {
-                                if (item == null || referencedType.isAssignableFrom(item.getClass())) {
+                                // Groovy 6.0.0-beta-3: see the `||` flow-state note on the array branch above.
+                                boolean matchesReferencedType = item == null || referencedType.isAssignableFrom(item.getClass())
+                                if (matchesReferencedType) {
                                     // Already of the element type, so there is nothing to instantiate
                                     // and nothing to bind into. A raw collection always lands here:
                                     // Basic#componentType falls back to Object.class when a property
@@ -589,7 +591,7 @@ class GrailsWebDataBinder extends SimpleDataBinder {
                         try {
                             Map boundMap = new LinkedHashMap()
                             ((Map) val).each { key, item ->
-                                // Groovy 6.0.0-beta-2: see the `||` flow-state note on the array branch above.
+                                // Groovy 6.0.0-beta-3: see the `||` flow-state note on the array branch above.
                                 boolean matchesReferencedType = item == null || referencedType.isAssignableFrom(item.getClass())
                                 if (matchesReferencedType) {
                                     boundMap[key] = item

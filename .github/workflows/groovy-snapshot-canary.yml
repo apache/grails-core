@@ -59,14 +59,18 @@ jobs:
       - name: "📝 Derive matching Apache Groovy branch from dependencies.gradle"
         id: groovy-branch
         run: |
-          # Extract the major and minor version of `groovy.version` declared in this
-          # branch's dependencies.gradle (e.g. '5.0.5' -> '5_0', '4.0.31' -> '4_0')
-          # and use it to pick the matching Apache Groovy development branch
+          # Extract the major and minor version of the main BOM `groovy.version`
+          # pin (e.g. '5.0.5' -> '5_0', '6.0.0-beta-3' -> '6_0') and use it to
+          # pick the matching Apache Groovy development branch
           # (GROOVY_<major>_<minor>_X), or master for the current Groovy development
           # line before a maintenance branch exists.
-          # This keeps `7.0.x` PRs validating against Groovy 4 and `8.0.x` PRs
-          # validating against Groovy 5 without hard-coding the branch here.
-          GROOVY_MAJOR_MINOR=$(sed -nE "s/.*'groovy\.version'.*'([0-9]+)\.([0-9]+)\.[0-9]+'.*/\1_\2/p" dependencies.gradle | head -n 1)
+          # Allow prerelease suffixes: a pattern that required a quote immediately
+          # after the patch number skipped '6.0.0-beta-3' and head -n 1 then landed
+          # on the Micronaut island's Groovy 5 pin, so this job resolved
+          # groovy-callsite:5.0.9-SNAPSHOT.
+          # This keeps `7.0.x` PRs validating against Groovy 4, `8.0.x` against
+          # Groovy 5, and `9.0.x` against Groovy 6 without hard-coding the branch.
+          GROOVY_MAJOR_MINOR=$(sed -nE "s/^[[:space:]]*'groovy\.version'[[:space:]]*:[[:space:]]*'([0-9]+)\.([0-9]+)\.[0-9]+.*/\1_\2/p" dependencies.gradle | head -n 1)
           if [ -z "$GROOVY_MAJOR_MINOR" ]; then
             echo "::error::Could not determine Apache Groovy major/minor version from dependencies.gradle"
             exit 1
