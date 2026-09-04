@@ -477,3 +477,30 @@ Defining a tag as a `Closure` field remains supported but is deprecated and now 
 a closure carries no signature, so nothing about a call to such a tag can be checked. Define tags as
 methods taking `Map attrs` and, where a body is needed, `Closure body`. See
 link:theWebLayer.html#compiledTags[Compiled Tag Resolution].
+
+==== Mapping Every Controller as a REST Resource
+
+A `resources` mapping can now be applied to every controller at once by capturing the controller in
+the URL and passing `*` instead of a controller name:
+
+[source,groovy]
+----
+"/$controller"(resources: '*')
+----
+
+This generates the same mappings the named form generates, but resolves the controller from the
+request rather than from the mapping, so an application whose controllers all follow the RESTful
+resource conventions declares them once instead of once per controller. The `includes` and `excludes`
+parameters work as they do for a named resource, and the mapping can be placed inside a `group`:
+
+[source,groovy]
+----
+group "/api/v1", {
+    "/$controller"(resources: '*', excludes: ['create', 'edit'])
+}
+----
+
+The controller and action captured from the URL are validated as they are for any other wildcard
+mapping. Because the controller is not known until a request is matched, the URL must capture it and
+child resources cannot be nested within the mapping. See
+link:theWebLayer.html#restfulMappings[Mapping to REST resources].
