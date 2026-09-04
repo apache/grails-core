@@ -193,7 +193,7 @@ abstract class AbstractLinkingRenderer<T> extends AbstractIncludeExcludeRenderer
                 if (associatedEntity) {
                     final proxy = mappingContext.getEntityReflector(a.owner).getProperty(object, propertyName)
                     final id = proxyHandler.getProxyIdentifier(proxy)
-                    final href = linkGenerator.link(resource: associatedEntity.decapitalizedName, id: id, method: HttpMethod.GET, absolute: absoluteLinks)
+                    final href = linkGenerator.link(resource: associatedEntity.javaClass, id: id, method: HttpMethod.GET, absolute: absoluteLinks)
                     final associationTitle = getLinkTitle(associatedEntity, locale)
                     def link = new Link(propertyName, href)
                     link.title = associationTitle

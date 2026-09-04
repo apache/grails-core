@@ -268,6 +268,29 @@ As a convenience you can also pass a domain instance to the `resource` attribute
 
 This will automatically produce the correct link (in this case "/books/1" for an id of "1").
 
+When the `resource` attribute is given a domain instance, the controller named after the domain class
+is used if one exists, so an application following the naming convention is unaffected. Only when no
+such controller exists is the controller that _declares_ the domain class used, which lets a
+controller named for the resource rather than the domain class be linked to:
+
+[source,groovy]
+----
+class PeopleController extends RestfulController<Person> {
+    PeopleController() { super(Person) }
+}
+----
+
+[source,groovy]
+----
+<g:link resource="${person}">My Link</g:link>     <%-- /people/1 --%>
+----
+
+If no controller declares the domain class, or more than one does, the link falls back to the domain
+class name; pass the `controller` attribute explicitly in that case.
+
+NOTE: This applies only when `resource` is given a domain instance and GORM is configured. Passing a
+controller name directly, as in `<g:link resource="book">`, is unaffected.
+
 
 The case of nested resources is a little different as they typically required two identifiers (the id of the resource and the one it is nested within). For example given the nested resources:
 
