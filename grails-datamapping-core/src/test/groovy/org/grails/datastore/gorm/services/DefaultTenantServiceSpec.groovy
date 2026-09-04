@@ -24,6 +24,7 @@ import org.grails.datastore.mapping.model.DatastoreConfigurationException
 import org.grails.datastore.mapping.multitenancy.AllTenantsResolver
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
+import org.grails.datastore.mapping.multitenancy.TenantResolver
 import spock.lang.Specification
 
 /**
@@ -109,6 +110,21 @@ class DefaultTenantServiceSpec extends Specification {
         }
     }
 
+    void 'currentId resolves the tenant id from the tenant resolver'() {
+        given:
+        TenantResolver tenantResolver = Mock(TenantResolver) {
+            resolveTenantIdentifier() >> 'tenant1'
+        }
+        MultiTenantCapableDatastore datastore = Mock(MultiTenantCapableDatastore) {
+            getMultiTenancyMode() >> MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR
+            getTenantResolver() >> tenantResolver
+        }
+        service.setDatastore(datastore)
+
+        expect:
+        service.currentId() == 'tenant1'
+    }
+
     void "withoutId throws DatastoreConfigurationException when multi tenancy mode is NONE"() {
         given:
         service.setDatastore(Mock(MultiTenantCapableDatastore) {
@@ -132,6 +148,17 @@ class DefaultTenantServiceSpec extends Specification {
         // arity routes through multiTenantCapableDatastore.withSession(...), which a bare Mock
         // won't invoke without also stubbing withSession itself.
         service.withoutId { -> 'no tenant here' } == 'no tenant here'
+    }
+
+    void 'withoutId with a non-shared connection mode executes within a new session'() {
+        given:
+        MultiTenantCapableDatastore datastore = Mock(MultiTenantCapableDatastore)
+        datastore.multiTenancyMode >> MultiTenancySettings.MultiTenancyMode.DATABASE
+        datastore.withNewSession(_, _) >> { args -> args[1].call('session') }
+        service.setDatastore(datastore)
+
+        expect:
+        service.withoutId { 'result' } == 'result'
     }
 
     void "withCurrent throws DatastoreConfigurationException when multi tenancy mode is NONE"() {
@@ -200,6 +227,40 @@ class DefaultTenantServiceSpec extends Specification {
 
         expect:
         service.withId('explicit_tenant') { CurrentTenantHolder.get() } == 'explicit_tenant'
+    }
+
+    void 'withId with a shared connection mode executes the callable directly'() {
+        given:
+        MultiTenantCapableDatastore datastore = Mock(MultiTenantCapableDatastore)
+        datastore.multiTenancyMode >> MultiTenancySettings.MultiTenancyMode.SCHEMA
+        service.setDatastore(datastore)
+
+        expect:
+        service.withId('tenant1') { tenantId -> "result-$tenantId" } == 'result-tenant1'
+    }
+
+    void 'withId with a non-shared connection mode executes within a new session for the tenant'() {
+        given:
+        MultiTenantCapableDatastore datastore = Mock(MultiTenantCapableDatastore)
+        datastore.multiTenancyMode >> MultiTenancySettings.MultiTenancyMode.DATABASE
+        datastore.withNewSession('tenant1', _) >> { args -> args[1].call('session') }
+        service.setDatastore(datastore)
+
+        expect:
+        service.withId('tenant1') { 'result' } == 'result'
+    }
+
+    void 'eachTenant throws when multi tenancy mode is NONE'() {
+        given:
+        service.setDatastore(Mock(MultiTenantCapableDatastore) {
+            getMultiTenancyMode() >> MultiTenancySettings.MultiTenancyMode.NONE
+        })
+
+        when:
+        service.eachTenant {}
+
+        then:
+        thrown(UnsupportedOperationException)
     }
 
     void "withId's RESOLVING guard lets a nested call re-enter without recursing into Tenants"() {
