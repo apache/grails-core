@@ -74,6 +74,7 @@ def publishedProjects = [
         'grails-logging',
         'grails-mail',
         'grails-mimetypes',
+        'grails-openapi',
         'grails-quartz',
         'grails-redis',
         'grails-rest-transforms',
