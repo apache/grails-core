@@ -16,19 +16,18 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package grails.testing.web.interceptor
 
 import java.lang.reflect.ParameterizedType
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import groovy.transform.TypeCheckingMode
+
+import org.jspecify.annotations.Nullable
 
 import org.springframework.web.servlet.ModelAndView
 
 import grails.artefact.Interceptor
-import grails.core.GrailsClass
 import grails.testing.web.GrailsWebUnitTest
 import grails.util.GrailsNameUtils
 import grails.web.mapping.UrlMappingInfo
@@ -51,8 +50,8 @@ trait InterceptorUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
      * @return The mocked interceptor
      */
     @CompileDynamic
-    Interceptor mockInterceptor(Class<?> interceptorClass) {
-        GrailsClass artefact = grailsApplication.addArtefact(InterceptorArtefactHandler.TYPE, interceptorClass)
+    <I extends Interceptor> I mockInterceptor(Class<I> interceptorClass) {
+        def artefact = grailsApplication.addArtefact(InterceptorArtefactHandler.TYPE, interceptorClass)
         defineBeans {
             "${artefact.propertyName}"(artefact.clazz) { bean ->
                 bean.autowire = true
@@ -60,7 +59,7 @@ trait InterceptorUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
         }
         getHandlerInterceptor()
                 .setInterceptors(applicationContext.getBeansOfType(Interceptor).values() as Interceptor[])
-        (Interceptor) applicationContext.getBean(artefact.propertyName, interceptorClass)
+        applicationContext.getBean(artefact.propertyName, interceptorClass)
     }
 
     /**
@@ -70,14 +69,12 @@ trait InterceptorUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
      * @param callable A callable containing an invocation of a controller action
      * @return The result of the callable execution
      */
-    Object withInterceptors(Map<String, Object> arguments, Closure callable) {
+    @Nullable Object withInterceptors(Map<String, Object> arguments, Closure callable) {
         ensureInterceptorHasBeenMocked()
-        UrlMappingInfo info = withRequest(arguments)
-
-        def hi = getHandlerInterceptor()
-
+        def urlMappingInfo = withRequest(arguments)
+        def handlerInterceptor = getHandlerInterceptor()
         try {
-            if (hi.preHandle(request, response, this)) {
+            if (handlerInterceptor.preHandle(request, response, this)) {
                 def result = callable.call()
                 ModelAndView modelAndView = null
                 def modelAndViewObject = request.getAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW)
@@ -85,17 +82,18 @@ trait InterceptorUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
                     modelAndView = (ModelAndView) modelAndViewObject
                 }
                 else if (result instanceof Map) {
-                    modelAndView =  new ModelAndView(info?.actionName ?: 'index', new HashMap<String, Object>((Map) result))
+                    modelAndView =  new ModelAndView(urlMappingInfo?.actionName ?: 'index', new HashMap<String, Object>((Map) result))
                 }
                 else if (result instanceof ModelAndView) {
                     return (ModelAndView) result
                 }
-                hi.postHandle(request, response, this, modelAndView)
+                handlerInterceptor.postHandle(request, response, this, modelAndView)
                 return result
             }
         } catch (Exception e) {
-            hi.afterCompletion(request, response, this, e)
+            handlerInterceptor.afterCompletion(request, response, this, e)
         }
+        null
     }
 
     /**
@@ -106,21 +104,21 @@ trait InterceptorUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
      *
      * @return The {@link UrlMappingInfo} object
      */
-    @CompileStatic(TypeCheckingMode.SKIP)
+    @CompileDynamic
     UrlMappingInfo withRequest(Map<String, Object> arguments) {
         ensureInterceptorHasBeenMocked()
-        UrlMappingInfo info = null
+        UrlMappingInfo urlMappingInfo = null
         if (arguments.uri) {
             request.requestURI = arguments.uri.toString()
         } else {
-            info = new ForwardUrlMappingInfo(arguments)
-            request.setAttribute(UrlMappingsHandlerMapping.MATCHED_REQUEST, info)
+            urlMappingInfo = new ForwardUrlMappingInfo(arguments)
+            request.setAttribute(UrlMappingsHandlerMapping.MATCHED_REQUEST, urlMappingInfo)
         }
 
-        for (String name in request.attributeNames.findAll() { String n -> n.endsWith(InterceptorArtefactHandler.MATCH_SUFFIX) }) {
+        for (String name : request.attributeNames.findAll { String candidate -> candidate.endsWith(InterceptorArtefactHandler.MATCH_SUFFIX) }) {
             request.removeAttribute(name)
         }
-        info
+        urlMappingInfo
     }
 
     private GrailsInterceptorHandlerInterceptorAdapter getHandlerInterceptor() {
@@ -136,12 +134,11 @@ trait InterceptorUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
     }
 
     private Class<T> getInterceptorTypeUnderTest() {
-        ParameterizedType parameterizedType = (ParameterizedType) getClass().genericInterfaces.find { genericInterface ->
+        def parameterizedType = getClass().genericInterfaces.find { genericInterface ->
             genericInterface instanceof ParameterizedType &&
                     InterceptorUnitTest.isAssignableFrom((Class)((ParameterizedType)genericInterface).rawType)
-        }
-
-        parameterizedType?.actualTypeArguments[0]
+        } as ParameterizedType
+        parameterizedType?.actualTypeArguments[0] as Class<T>
     }
 
     T getInterceptor() {
@@ -151,7 +148,7 @@ trait InterceptorUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
 
     private void ensureInterceptorHasBeenMocked() {
         if (!hasBeenMocked) {
-            mockInterceptor(getInterceptorTypeUnderTest())
+            mockInterceptor(getInterceptorTypeUnderTest() as Class<Interceptor>)
             hasBeenMocked = true
         }
     }

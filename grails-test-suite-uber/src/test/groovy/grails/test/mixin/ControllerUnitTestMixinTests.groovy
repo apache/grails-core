@@ -19,6 +19,8 @@
 
 package grails.test.mixin
 
+import groovy.transform.CompileStatic
+
 import grails.artefact.Artefact
 import grails.converters.JSON
 import grails.converters.XML
@@ -66,6 +68,12 @@ class ControllerUnitTestMixinTests extends Specification implements ControllerUn
             def setterMethod = clazz.getMethod('grails_validation_Validateable__constraintsMapInternal$set', Map)
             setterMethod.invoke(null, (Map) null)
         }
+    }
+
+    @CompileStatic
+    void "mockController returns the typed controller"() {
+        expect: "no compilation error"
+        AnnotationOnlyTestController c = mockController(AnnotationOnlyTestController)
     }
 
     void testRenderText() {
@@ -729,6 +737,13 @@ class TestCommand {
 class SubController extends TestController {
     def method1() {
         super.method1()
+    }
+}
+
+@Artefact('Controller')
+class AnnotationOnlyTestController {
+    def hello() {
+        render('Hello')
     }
 }
 

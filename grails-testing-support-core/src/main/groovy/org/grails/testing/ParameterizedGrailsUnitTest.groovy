@@ -30,13 +30,13 @@ trait ParameterizedGrailsUnitTest<T> extends GrailsUnitTest {
     private T _artefactInstance
 
     Class<T> getTypeUnderTest() {
-        ParameterizedType parameterizedType = (ParameterizedType) getClass().genericInterfaces.find { genericInterface ->
+        def parameterizedType = getClass().genericInterfaces.find { genericInterface ->
             genericInterface instanceof ParameterizedType &&
-              ParameterizedGrailsUnitTest.isAssignableFrom((Class)((ParameterizedType)genericInterface).rawType)
-        }
+              ParameterizedGrailsUnitTest.isAssignableFrom((Class) ((ParameterizedType) genericInterface).rawType)
+        } as ParameterizedType
 
         if (parameterizedType?.actualTypeArguments != null) {
-            parameterizedType.actualTypeArguments[0]
+            parameterizedType.actualTypeArguments[0] as Class<T>
         } else {
             null
         }
@@ -47,12 +47,16 @@ trait ParameterizedGrailsUnitTest<T> extends GrailsUnitTest {
             def cutType = getTypeUnderTest()
             if (cutType != null) {
                 mockArtefact(cutType)
-                final String beanName = getBeanName(cutType)
+                def beanName = getBeanName(cutType)
                 if (beanName != null && applicationContext.containsBean(beanName)) {
-                    _artefactInstance = applicationContext.getBean(beanName, T)
+                    _artefactInstance = applicationContext.getBean(beanName, cutType)
                 } else {
-                    _artefactInstance = cutType.newInstance()
-                    applicationContext.autowireCapableBeanFactory.autowireBeanProperties(_artefactInstance, AutowireCapableBeanFactory.AUTOWIRE_BY_NAME, false)
+                    _artefactInstance = cutType.getDeclaredConstructor().newInstance()
+                    applicationContext.autowireCapableBeanFactory.autowireBeanProperties(
+                            _artefactInstance,
+                            AutowireCapableBeanFactory.AUTOWIRE_BY_NAME,
+                            false
+                    )
                 }
             }
         }
