@@ -36,6 +36,8 @@ applications at via `GRAILS_REPO_URL`.
 | `legacy-commands-plugin` | A Grails 8 plugin whose legacy commands are recompiled under Groovy 5. |
 | `legacy-commands` | A Grails 8 application that consumes both and runs their commands through the registry. |
 | `spring-dependency-management` | A Grails 8 application that manages its versions with the legacy `io.spring.dependency-management` plugin instead of the Grails Gradle plugin's native `platform(grails-bom)`, as an upgraded Grails 7 application does. |
+| `native-i18n-plugin` | A Grails 8 plugin shipping a namespaced message bundle (`native-messages.properties`), with a multi-word plugin name. |
+| `native-i18n` | A Grails 8 application that resolves messages from three kinds of bundle, on a JVM always and inside a GraalVM binary when asked. |
 | `taglib-index-incremental` | Builds a Grails 8 application **twice, without a clean**, to prove a renamed or deleted tag library cannot survive in the published tag library index. Incremental behaviour is the whole point, so it cannot be expressed by a project the core build builds once for itself. |
 
 `legacy-g7-command-plugin` is deliberately excluded from `settings.gradle`. An included build would
@@ -50,6 +52,56 @@ what this build already provides. In the core build it had to be excluded whenev
 published yet (a reproducible release build, or a fresh release branch whose version has never been
 published), and otherwise silently fell back to whatever the Apache snapshot repository happened to
 hold rather than the working tree.
+
+## Native image verification
+
+`native-i18n` exists because AOT processing on a JVM cannot falsify a resource hint. Every bundle on
+a JVM classpath is readable whether it was registered or not, so a missing hint shows up only in a
+compiled image, as a `NoSuchMessageException` for a message that resolved perfectly in every test.
+
+The application resolves one code from each way a bundle reaches the message source, and only the
+first is covered by Spring Boot's own hints, which register the two hardcoded patterns
+`messages.properties` and `messages_*.properties` and derive nothing from the configured base names:
+
+| Bundle | Base name | Why it is here |
+|---|---|---|
+| the application's own | `messages` | The case Boot already covers, as a control. |
+| the plugin's | `native-messages` | Namespaced, so Boot's patterns never reach it. The plugin name is multi-word, so this also covers the descriptor's hyphenated spelling being matched against the plugin's camel-case one. |
+| one the application configured | `config.i18n.custom` | Outside `grails-app/i18n`, and written dotted, so it also proves the base name is converted to `config/i18n/custom` before being registered. |
+
+Each is resolved in English and in a locale variant. The locale half is the assertion that would
+fail if the hints registered *bundles* rather than resource *patterns* and the image were built with
+a narrower locale set than the bundles cover — the open question recorded in
+https://github.com/apache/grails-core/issues/16176.
+
+The JVM half runs in `check` and needs nothing special. The native half is opt-in, because it needs a
+GraalVM toolchain and minutes of CPU:
+
+```bash
+cd end-to-end
+./gradlew :native-i18n:check -PnativeTests
+```
+
+Two things it needs that nothing else in this repository does:
+
+**A GraalVM JDK.** `JAVA_HOME` and `GRAALVM_HOME` must both point at it before anything is published,
+not just before the image is built. `grails-gradle` pins no release target, so it stamps whatever JDK
+ran it onto its class files; publishing under a newer JDK than the GraalVM makes the image fail at
+*configuration* time, naming a framework class as though the framework had regressed.
+
+**Invokedynamic, on both sides.** Without it Groovy classes carry a `CallSiteArray` and define
+call-site classes as they run, which an image forbids — it fails as `UnsupportedFeatureError: Tried
+to define class`, naming a class nobody wrote. The application sets `grails { indy = true }`, and the
+framework it resolves against has to match, so the publish needs `-PgrailsIndy=true`:
+
+```bash
+export JAVA_HOME=$GRAALVM_HOME
+(cd grails-gradle && ./gradlew publishAllPublicationsToTestCaseMavenRepoRepository -PgrailsIndy=true)
+./gradlew publishAllPublicationsToTestCaseMavenRepoRepository -PgrailsIndy=true
+```
+
+Released Grails artifacts are built without indy, so no released Grails can produce a working image
+whatever the application does.
 
 ## JDKs
 
@@ -88,6 +140,10 @@ sdk env            # from the repository root
 cd end-to-end
 ./gradlew check
 ```
+
+The native image check is not part of those three steps. It needs a differently published framework
+(indy, under a GraalVM JDK) and a toolchain nothing else here uses, so it is opt-in and documented
+separately above.
 
 Re-run the publish whenever you change something in the core build that these tests exercise;
 nothing here can detect that for you, because the whole point is that the build boundary is real.

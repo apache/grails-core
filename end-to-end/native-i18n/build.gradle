@@ -1,0 +1,98 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.gradle.grails-web'
+    id 'org.graalvm.buildtools.native' version "$graalvmBuildtoolsVersion" apply false
+}
+
+// Applied the legacy way: the Spring Boot plugin is on this build's classpath through the
+// Grails plugin, so the id resolves, but it carries no version for the plugins block.
+// TEMP probe: disabled
+//apply plugin: 'org.springframework.boot.aot'
+
+version = '0.1'
+group = 'nativei18n'
+
+grails {
+    // Without invokedynamic, Groovy classes carry a CallSiteArray and define call-site classes as
+    // they run. An image forbids that, and the failure names a class nobody wrote. The framework
+    // must be published with -PgrailsIndy=true to match; see the README.
+    indy = true
+}
+
+dependencies {
+    implementation platform("org.apache.grails:grails-bom:$projectVersion")
+    implementation project(':native-i18n-plugin')
+    implementation 'org.apache.grails:grails-dependencies-starter-web'
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('../gradle/grails-extension-gradle-config.gradle')
+}
+
+// Runs on any JDK, and proves only that the fixture and its assertions are self-consistent - on a
+// JVM every bundle is readable whether it was registered or not. Cheap enough to keep in `check` so
+// the assertions cannot drift from the bundles while the native job is not being run.
+tasks.register('i18nCheckOnJvm', JavaExec) {
+    group = 'verification'
+    description = 'Resolves every message bundle from the packaged application on a JVM'
+    dependsOn tasks.named('bootJar')
+    classpath = files(tasks.named('bootJar').flatMap { it.archiveFile })
+    mainClass = 'org.springframework.boot.loader.launch.JarLauncher'
+    args = ['--i18n-check', '--server.port=0', '--spring.main.banner-mode=off']
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('i18nCheckOnJvm')
+}
+
+// The native half is opt-in: it needs a GraalVM toolchain and several minutes of CPU, which is too
+// much to ask of every run of this build. Enable with -PnativeTests.
+if (project.hasProperty('nativeTests')) {
+    pluginManager.apply('org.graalvm.buildtools.native')
+
+    graalvmNative {
+        binaries {
+            main {
+                imageName = 'native-i18n'
+                mainClass = 'nativei18n.Application'
+                // 16 threads exhausted the heap on a 32GB machine; 4 builds in about six minutes.
+                buildArgs.add('--parallelism=4')
+            }
+        }
+        // The image is the point of this module, so a failure to build one is a failure.
+        toolchainDetection = false
+    }
+
+    tasks.register('i18nCheckOnNative', Exec) {
+        group = 'verification'
+        description = 'Resolves every message bundle from a compiled GraalVM binary'
+        dependsOn tasks.named('nativeCompile')
+        commandLine layout.buildDirectory.file('native/nativeCompile/native-i18n').get().asFile.absolutePath,
+                '--i18n-check', '--server.port=0', '--spring.main.banner-mode=off'
+    }
+
+    tasks.named('check') {
+        dependsOn tasks.named('i18nCheckOnNative')
+    }
+}

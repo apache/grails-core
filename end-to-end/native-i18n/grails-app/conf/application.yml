@@ -16,13 +16,12 @@
 #  specific language governing permissions and limitations
 #  under the License.
 #
-
-projectVersion=8.0.0-SNAPSHOT
-
-org.gradle.jvmargs=-Dfile.encoding=UTF-8 -Xmx5G
-org.gradle.configuration-cache=false
-org.gradle.caching=true
-org.gradle.parallel=true
-
-# GraalVM Gradle plugin, used only by the opt-in native verification in native-i18n.
-graalvmBuildtoolsVersion=1.1.7
+spring:
+    messages:
+        # Dotted, so the run also proves a base name is converted to a resource path
+        # (config.i18n.custom -> config/i18n/custom.properties) before it is used.
+        basename: config.i18n.custom
+        fallback-to-system-locale: false
+        # Not a base name, so resolving an unknown code to itself proves the rest of
+        # MessageSourceProperties was bound too - they all arrive together or not at all.
+        use-code-as-default-message: true
