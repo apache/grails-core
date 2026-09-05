@@ -123,7 +123,23 @@ grails.mongodb.default.mapping = {
 
 The `*` method is used to indicate that the setting applies to all properties.
 
-You can also set a global default for the storage type of `String id` fields via `grails.mongodb.stringIds.defaultStoredAs` (values `string` or `objectid`). See <<idGeneration,Identity Generation>> for details.
+The storage type of `String id` fields is controlled globally by `grails.mongodb.stringIds.defaultStoredAs` (values `objectid`, the default as of 8.0.0, or `string`). See <<idGeneration,Identity Generation>> for details, including the upgrade note for applications with existing String `_id` data.
+
+==== Persistence Engine (deprecated)
+
+`grails.mongodb.engine` selects the persistence engine. The default, and only supported value, is `codec`.
+
+The `mapping` engine is deprecated and will be removed in a future release. It reaches MongoDB through a separate persister hierarchy that has to be kept in step with the codec one for every change to the storage layer, and it offers no capability the codec engine lacks. An application setting it should remove the setting:
+
+[source,yaml]
+----
+grails:
+  mongodb:
+    engine: mapping   # <1>
+----
+<1> Deprecated. Remove this to use the default codec engine.
+
+Selecting it logs a warning at startup.
 
 ==== Multi-Document Transactions
 

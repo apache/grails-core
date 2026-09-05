@@ -29,6 +29,7 @@ import java.util.Set;
 
 import jakarta.persistence.FlushModeType;
 
+import com.mongodb.DBRef;
 import com.mongodb.WriteConcern;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.model.DeleteManyModel;
@@ -56,8 +57,12 @@ import org.grails.datastore.mapping.engine.Persister;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.config.GormProperties;
+import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.ToOne;
+import org.grails.datastore.mapping.mongo.config.MongoAttribute;
 import org.grails.datastore.mapping.mongo.engine.AbstractMongoObectEntityPersister;
 import org.grails.datastore.mapping.mongo.engine.MongoEntityPersister;
+import org.grails.datastore.mapping.mongo.engine.MongoIdCoercion;
 import org.grails.datastore.mapping.mongo.query.MongoQuery;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
@@ -67,7 +72,14 @@ import org.grails.datastore.mapping.query.api.QueryableCriteria;
  *
  * @author Graeme Rocher
  * @since 1.0
+ *
+ * @deprecated The non-codec ("mapping") persistence engine is deprecated and will be removed
+ * in a future release. Use the default codec engine, which is what
+ * {@code grails.mongodb.engine} selects when unset. This engine reaches MongoDB through a
+ * separate persister hierarchy that has to be kept in step with the codec one for every
+ * storage-layer change, and it carries no feature the codec engine lacks.
  */
+@Deprecated
 public class MongoSession extends AbstractMongoSession {
 
     public MongoSession(MongoDatastore datastore, MappingContext mappingContext, ApplicationEventPublisher publisher) {
@@ -138,7 +150,8 @@ public class MongoSession extends AbstractMongoSession {
                         Document updateDoc = (Document) update.getNativeEntry();
                         updateDoc.remove(MongoConstants.MONGO_ID_FIELD);
                         updateDoc = createSetAndUnsetDoc(updateDoc);
-                        final Object nativeKey = update.getNativeKey();
+                        final Object nativeKey = MongoIdCoercion.coerceIdToStoredType(
+                                update.getNativeKey(), persistentEntity);
                         final Document id = new Document(MongoConstants.MONGO_ID_FIELD, nativeKey);
                         MongoEntityPersister documentEntityPersister = (MongoEntityPersister) getPersister(persistentEntity);
                         final EntityAccess entityAccess = update.getEntityAccess();
@@ -178,7 +191,8 @@ public class MongoSession extends AbstractMongoSession {
 
                         if (delete.isVetoed()) continue;
 
-                        final Object k = delete.getNativeKey();
+                        final Object k = MongoIdCoercion.coerceIdToStoredType(
+                                delete.getNativeKey(), persistentEntity);
                         if (k != null) {
                             if (k instanceof Document) {
                                 entityWrites.add(new DeleteManyModel<>((Document) k));
@@ -288,7 +302,13 @@ public class MongoSession extends AbstractMongoSession {
 
         for (final PersistentEntity persistentEntity : toDelete.keySet()) {
             final MongoQuery query = new MongoQuery(this, persistentEntity);
-            query.in(MongoEntityPersister.MONGO_ID_FIELD, toDelete.get(persistentEntity));
+            // Filters on the literal "_id" field, not the logical identity name, so the
+            // criterion preprocessing in MongoQuery does not recognise it as an id.
+            final List<Object> deleteKeys = new ArrayList<Object>();
+            for (Object k : toDelete.get(persistentEntity)) {
+                deleteKeys.add(MongoIdCoercion.coerceIdToStoredType(k, persistentEntity));
+            }
+            query.in(MongoEntityPersister.MONGO_ID_FIELD, deleteKeys);
             final Document mongoQuery = query.getMongoQuery();
             final EntityPersister persister = (EntityPersister) getPersister(persistentEntity);
             addPendingDelete(new PendingDeleteAdapter<Object, Object>(persistentEntity, mongoQuery, null) {
@@ -350,7 +370,32 @@ public class MongoSession extends AbstractMongoSession {
         final com.mongodb.client.MongoCollection<Document> collection = getCollection(entity);
         final UpdateOptions updateOptions = new UpdateOptions();
         updateOptions.upsert(false);
-        final UpdateResult updateResult = updateMany(collection, nativeQuery, new Document("$set", properties), updateOptions);
+        // Encode to-one association values the way normal persistence does: the target's
+        // identifier, in the type its _id is stored as, wrapped in a DBRef where the mapping
+        // asks for one. Without this a bulk update writes the domain object itself.
+        // Normalised into a copy -- the caller's map is theirs, and may be immutable.
+        final Map<String, Object> updateProperties = new LinkedHashMap<String, Object>(properties);
+        for (Association association : entity.getAssociations()) {
+            final String associationName = association.getName();
+            if (association instanceof ToOne && updateProperties.containsKey(associationName)) {
+                final Object value = updateProperties.get(associationName);
+                if (value != null) {
+                    final PersistentEntity associatedEntity = association.getAssociatedEntity();
+                    final Object associationId = MongoIdCoercion.coerceIdToStoredType(
+                            getMappingContext().getEntityReflector(associatedEntity).getIdentifier(value),
+                            associatedEntity);
+                    final MongoAttribute attr = (MongoAttribute) association.getMapping().getMappedForm();
+                    if (attr != null && attr.isReference()) {
+                        updateProperties.put(associationName,
+                                new DBRef(getCollectionName(associatedEntity), associationId));
+                    }
+                    else {
+                        updateProperties.put(associationName, associationId);
+                    }
+                }
+            }
+        }
+        final UpdateResult updateResult = updateMany(collection, nativeQuery, new Document("$set", updateProperties), updateOptions);
         if (updateResult.wasAcknowledged()) {
             try {
                 return updateResult.getModifiedCount();

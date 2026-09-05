@@ -18,6 +18,41 @@ under the License.
 ////
 
 === Upgrade Notes
+==== String id Storage Now Defaults to ObjectId
+
+A domain that declares `String id` without its own `storedAs` mapping now persists `_id` as a BSON `ObjectId`. Before 8.0.0 the default was BSON `String`.
+
+Application code is unaffected: `person.id` is still the 24-char hex `String`, and `get`, `findAllByIdInList`, updates and deletes still accept hex strings. What changes is the BSON type written to and matched in the database.
+
+*This is a data-compatibility change.* An application upgrading from 7.x whose collections already hold String `_id` values has two options:
+
+. Keep the previous behavior by pinning the old default:
++
+[source,yaml]
+----
+grails:
+  mongodb:
+    stringIds:
+      defaultStoredAs: string
+----
++
+. Or migrate the stored `_id` values to `ObjectId`. Because `_id` is immutable, each document must be reinserted under the converted id rather than updated in place.
+
+Domains keyed by a natural string value (slug, email, UUID) should declare the opt-out explicitly, since such values are not valid ObjectId hex:
+
+[source,groovy]
+----
+class UserProfile {
+    String id   // e.g. "jsmith@example.com"
+
+    static mapping = {
+        id generator: 'assigned', storedAs: String
+    }
+}
+----
+
+See <<idGeneration,Identity Generation>> for the full description of `storedAs`.
+
 ==== Dependency Upgrades
 
 GORM 7.1 supports Apache Groovy 3, Java 14, MongoDB Driver 4.3 and Spring 5.3.x.

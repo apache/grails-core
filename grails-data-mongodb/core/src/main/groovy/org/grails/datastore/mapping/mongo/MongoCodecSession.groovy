@@ -24,6 +24,7 @@ import groovy.transform.CompileStatic
 
 import jakarta.persistence.FlushModeType
 
+import com.mongodb.DBRef
 import com.mongodb.WriteConcern
 import com.mongodb.bulk.BulkWriteResult
 import com.mongodb.client.FindIterable
@@ -62,6 +63,7 @@ import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.ToOne
 import org.grails.datastore.mapping.mongo.engine.MongoCodecEntityPersister
 import org.grails.datastore.mapping.mongo.engine.MongoEntityPersister
+import org.grails.datastore.mapping.mongo.config.MongoAttribute
 import org.grails.datastore.mapping.mongo.engine.MongoIdCoercion
 import org.grails.datastore.mapping.mongo.engine.codecs.PersistentEntityCodec
 import org.grails.datastore.mapping.mongo.query.MongoQuery
@@ -200,7 +202,9 @@ class MongoCodecSession extends AbstractMongoSession {
                         if (delete.vetoed) continue
 
                         final Object k = coerceIdToStoredType(delete.nativeKey, persistentEntity)
-                        if (k) {
+                        // Groovy truthiness would skip an empty assigned String id, which is a
+                        // valid BSON _id -- the document would silently survive the delete.
+                        if (k != null) {
                             nativeKeys << k
                             final List cascadeOperations = delete.cascadeOperations
                             addPostFlushOperations(cascadeOperations)
@@ -344,16 +348,34 @@ class MongoCodecSession extends AbstractMongoSession {
         final MongoCollection collection = getCollection(entity)
         final updateOptions = new UpdateOptions()
         updateOptions.upsert(false)
+        // Normalise into a copy: the caller's map is theirs, and may be immutable. Writing the
+        // encoded reference back into it replaced their domain object with an ObjectId or
+        // DBRef, and threw UnsupportedOperationException for a Map.of/singletonMap argument.
+        Map<String, Object> updateProperties = new LinkedHashMap<String, Object>(properties)
         for (Association association in entity.associations) {
             String associationName = association.name
-            if (association instanceof ToOne && properties.containsKey(associationName)) {
-                def value = properties.get(associationName)
+            if (association instanceof ToOne && updateProperties.containsKey(associationName)) {
+                def value = updateProperties.get(associationName)
                 if (value != null) {
-                    properties.put(associationName, association.associatedEntity.reflector.getIdentifier(value))
+                    // Write the reference exactly as ToOneEncoder does on the normal
+                    // persistence path: in the target's stored _id type, as a DBRef where the
+                    // mapping asks for one. Otherwise a bulk update leaves a reference that
+                    // association queries and external clients cannot match.
+                    def associatedEntity = association.associatedEntity
+                    def associationId = MongoIdCoercion.coerceIdToStoredType(
+                            associatedEntity.reflector.getIdentifier(value), associatedEntity)
+                    MongoAttribute attr = (MongoAttribute) association.mapping.mappedForm
+                    if (attr?.isReference()) {
+                        updateProperties.put(associationName,
+                                new DBRef(getCollectionName(associatedEntity), associationId))
+                    }
+                    else {
+                        updateProperties.put(associationName, associationId)
+                    }
                 }
             }
         }
-        final UpdateResult updateResult = updateMany(collection, nativeQuery, new Document(MONGO_SET_OPERATOR, properties), updateOptions)
+        final UpdateResult updateResult = updateMany(collection, nativeQuery, new Document(MONGO_SET_OPERATOR, updateProperties), updateOptions)
         if (updateResult.wasAcknowledged()) {
             try {
                 return updateResult.modifiedCount
