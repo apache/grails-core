@@ -16,47 +16,44 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+package org.grails.datastore.mapping.model
 
-package org.grails.datastore.mapping.model;
+import groovy.transform.CompileStatic
 
-import java.util.Optional;
-import java.util.SortedSet;
-
-import org.grails.datastore.mapping.config.Property;
-import org.grails.datastore.mapping.model.types.Association;
-import org.grails.datastore.mapping.model.types.Basic;
-import org.grails.datastore.mapping.model.types.Embedded;
-import org.grails.datastore.mapping.model.types.ManyToMany;
-import org.grails.datastore.mapping.model.types.ManyToOne;
-import org.grails.datastore.mapping.model.types.OneToMany;
-import org.grails.datastore.mapping.model.types.ToOne;
-import org.grails.datastore.mapping.reflect.EntityReflector;
-
-import static java.util.Optional.ofNullable;
+import org.grails.datastore.mapping.config.Property
+import org.grails.datastore.mapping.model.types.Association
+import org.grails.datastore.mapping.model.types.Basic
+import org.grails.datastore.mapping.model.types.Embedded
+import org.grails.datastore.mapping.model.types.ManyToMany
+import org.grails.datastore.mapping.model.types.ManyToOne
+import org.grails.datastore.mapping.model.types.OneToMany
+import org.grails.datastore.mapping.model.types.ToOne
+import org.grails.datastore.mapping.reflect.EntityReflector
 
 /**
  * @author Graeme Rocher
  * @since 1.0
  */
-public interface PersistentProperty<T extends Property> {
+@CompileStatic
+interface PersistentProperty<T extends Property> {
 
     /**
      * The name of the property
      * @return The property name
      */
-    String getName();
+    String getName()
 
     /**
      * The name with the first letter in upper case as per Java bean conventions
      * @return The capitilized name
      */
-    String getCapitilizedName();
+    String getCapitilizedName()
 
     /**
      * The type of the property
      * @return The property type
      */
-    Class<?> getType();
+    Class<?> getType()
 
     /**
      * Specifies the mapping between this property and an external form
@@ -64,12 +61,11 @@ public interface PersistentProperty<T extends Property> {
      *
      * @return The PropertyMapping instance
      */
-    PropertyMapping<T> getMapping();
+    PropertyMapping<T> getMapping()
 
     default T getMappedForm() {
-        return Optional.of(getMapping())
-                .map(PropertyMapping::getMappedForm)
-                .orElse(null);
+        PropertyMapping<T> mapping = Objects.requireNonNull(getMapping())
+        return mapping.getMappedForm()
     }
 
     /**
@@ -77,48 +73,48 @@ public interface PersistentProperty<T extends Property> {
      *
      * @return The owner
      */
-    PersistentEntity getOwner();
+    PersistentEntity getOwner()
 
     /**
      * Whether the property can be set to null
      *
      * @return True if it can
      */
-    boolean isNullable();
+    boolean isNullable()
 
     /**
      * @return Whether this property is inherited
      */
-    boolean isInherited();
+    boolean isInherited()
 
     /**
      * @return The reader for this property
      */
-    EntityReflector.PropertyReader getReader();
+    EntityReflector.PropertyReader getReader()
 
     /**
      * @return The writer for this property
      */
-    EntityReflector.PropertyWriter getWriter();
+    EntityReflector.PropertyWriter getWriter()
 
     default boolean isUnidirectionalOneToMany() {
-        return ((this instanceof OneToMany) && !((Association<?>) this).isBidirectional());
+        return ((this instanceof OneToMany) && !((Association<?>) this).isBidirectional())
     }
 
     default boolean isLazyAble() {
         return this instanceof ToOne && !(this instanceof Embedded) ||
-                !(this instanceof Association) && !this.equals(this.getOwner().getIdentity());
+                !(this instanceof Association) && !this.equals(this.getOwner().getIdentity())
     }
 
     default boolean isBidirectionalManyToOne() {
-        if (this instanceof ManyToOne manyToOne) {
-            return manyToOne.isBidirectional();
+        if (this instanceof ManyToOne) {
+            return ((ManyToOne) this).isBidirectional()
         }
-        return false;
+        return false
     }
 
     default boolean supportsJoinColumnMapping() {
-        return this instanceof ManyToMany || isUnidirectionalOneToMany() || this instanceof Basic;
+        return this instanceof ManyToMany || isUnidirectionalOneToMany() || this instanceof Basic
     }
 
     /**
@@ -127,36 +123,39 @@ public interface PersistentProperty<T extends Property> {
      * @return true if sorted
      */
     default boolean isSorted() {
-        return SortedSet.class.isAssignableFrom(this.getType());
+        return SortedSet.isAssignableFrom(this.getType())
     }
 
     /**
      * @return Whether this property is part of a composite identifier
      */
     default boolean isCompositeIdProperty() {
-        PersistentProperty[] compositeId = getOwner().getCompositeIdentity();
+        PersistentProperty[] compositeId = getOwner().getCompositeIdentity()
         if (compositeId != null) {
-            for (PersistentProperty p : compositeId) {
-                if (p.getName().equals(getName())) {
-                    return true;
+            for (PersistentProperty p in compositeId) {
+                if (p.getName() == getName()) {
+                    return true
                 }
             }
         }
-        return false;
+        return false
     }
 
     /**
      * @return Whether this property is the identity
      */
     default boolean isIdentityProperty() {
-        return getOwner().isIdentityName(getName());
+        return getOwner().isIdentityName(getName())
     }
 
     default String getOwnerClassName() {
-        return ofNullable(getOwner())
-                .map(PersistentEntity::getJavaClass)
-                .map(Class::getName)
-                .orElseThrow(() -> new IllegalMappingException("Property [" + getName() + "] has no owner entity defined"));
+        PersistentEntity owner = getOwner()
+        Class<?> javaClass = owner != null ? owner.getJavaClass() : null
+        String className = javaClass != null ? javaClass.getName() : null
+        if (className == null) {
+            throw new IllegalMappingException('Property [' + getName() + '] has no owner entity defined')
+        }
+        return className
     }
 
 }
