@@ -16,11 +16,9 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.datastore.mapping.reflect;
+package org.grails.datastore.mapping.reflect
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import groovy.transform.CompileStatic
 
 /**
  * Helper methods for dealing with classes and reflection
@@ -28,28 +26,30 @@ import java.util.Map;
  * @author Graeme Rocher
  * @since 5.0
  */
-public class ClassUtils {
-    public static final Map<Class<?>, Class<?>> PRIMITIVE_TYPE_COMPATIBLE_CLASSES = new HashMap<>();
+@CompileStatic
+class ClassUtils {
+
+    public static final Map<Class<?>, Class<?>> PRIMITIVE_TYPE_COMPATIBLE_CLASSES = new HashMap<>()
 
     /**
      * Just add two entries to the class compatibility map
      * @param left
      * @param right
      */
-    private static final void registerPrimitiveClassPair(Class<?> left, Class<?> right) {
-        PRIMITIVE_TYPE_COMPATIBLE_CLASSES.put(left, right);
-        PRIMITIVE_TYPE_COMPATIBLE_CLASSES.put(right, left);
+    private static void registerPrimitiveClassPair(Class<?> left, Class<?> right) {
+        PRIMITIVE_TYPE_COMPATIBLE_CLASSES.put(left, right)
+        PRIMITIVE_TYPE_COMPATIBLE_CLASSES.put(right, left)
     }
 
     static {
-        registerPrimitiveClassPair(Boolean.class, boolean.class);
-        registerPrimitiveClassPair(Integer.class, int.class);
-        registerPrimitiveClassPair(Short.class, short.class);
-        registerPrimitiveClassPair(Byte.class, byte.class);
-        registerPrimitiveClassPair(Character.class, char.class);
-        registerPrimitiveClassPair(Long.class, long.class);
-        registerPrimitiveClassPair(Float.class, float.class);
-        registerPrimitiveClassPair(Double.class, double.class);
+        registerPrimitiveClassPair(Boolean, boolean)
+        registerPrimitiveClassPair(Integer, int)
+        registerPrimitiveClassPair(Short, short)
+        registerPrimitiveClassPair(Byte, byte)
+        registerPrimitiveClassPair(Character, char)
+        registerPrimitiveClassPair(Long, long)
+        registerPrimitiveClassPair(Float, float)
+        registerPrimitiveClassPair(Double, double)
     }
 
     /**
@@ -60,14 +60,14 @@ public class ClassUtils {
      * (may be {@code null}, which indicates the default class loader)
      * @return whether the specified class is present
      */
-    public static boolean isPresent(String className) {
+    static boolean isPresent(String className) {
         try {
-            Class.forName(className, false, ClassUtils.class.getClassLoader());
-            return true;
+            Class.forName(className, false, ClassUtils.getClassLoader())
+            return true
         }
         catch (Throwable ex) {
             // Class or one of its dependencies is not present...
-            return false;
+            return false
         }
     }
 
@@ -80,23 +80,23 @@ public class ClassUtils {
      * @return true if the class is a taglib
      * @see java.lang.Class#isAssignableFrom(Class)
      */
-    public static boolean isAssignableOrConvertibleFrom(Class<?> clazz, Class<?> type) {
+    static boolean isAssignableOrConvertibleFrom(Class<?> clazz, Class<?> type) {
         if (type == null || clazz == null) {
-            return false;
+            return false
         }
         if (type.isPrimitive()) {
             // convert primitive type to compatible class
-            Class<?> primitiveClass = PRIMITIVE_TYPE_COMPATIBLE_CLASSES.get(type);
+            Class<?> primitiveClass = PRIMITIVE_TYPE_COMPATIBLE_CLASSES.get(type)
             if (primitiveClass == null) {
                 // no compatible class found for primitive type
-                return false;
+                return false
             }
-            return clazz.isAssignableFrom(primitiveClass);
+            return clazz.isAssignableFrom(primitiveClass)
         }
-        else if (type.isArray() && Iterable.class.isAssignableFrom(clazz)) {
-            return true;
+        else if (type.isArray() && Iterable.isAssignableFrom(clazz)) {
+            return true
         }
-        return clazz.isAssignableFrom(type);
+        return clazz.isAssignableFrom(type)
     }
 
     /**
@@ -108,14 +108,14 @@ public class ClassUtils {
      * (may be {@code null}, which indicates the default class loader)
      * @return whether the specified class is present
      */
-    public static boolean isPresent(String className, ClassLoader classLoader) {
+    static boolean isPresent(String className, ClassLoader classLoader) {
         try {
-            Class.forName(className, false, classLoader);
-            return true;
+            Class.forName(className, false, classLoader)
+            return true
         }
         catch (Throwable ex) {
             // Class or one of its dependencies is not present...
-            return false;
+            return false
         }
     }
 
@@ -126,30 +126,33 @@ public class ClassUtils {
      * @param map The map to look in
      * @return A boolean value which will be false if the map is null, the map doesn't contain the key or the value is false
      */
-    public static boolean getBooleanFromMap(String key, Map<?, ?> map) {
-        if (map == null) return false;
-        if (map.containsKey(key)) {
-            Object o = map.get(key);
-            if (o == null) return false;
-            if (o instanceof Boolean) {
-                return (Boolean) o;
-            }
-            return Boolean.valueOf(o.toString());
+    static boolean getBooleanFromMap(String key, Map<?, ?> map) {
+        if (map == null) {
+            return false
         }
-        return false;
+        if (map.containsKey(key)) {
+            Object o = map.get(key)
+            if (o == null) {
+                return false
+            }
+            if (o instanceof Boolean) {
+                return (Boolean) o
+            }
+            return Boolean.valueOf(o.toString())
+        }
+        return false
     }
 
-    public static boolean isClassBelowPackage(Class<?> domainClazz, List packageList) {
-        String classPackage = domainClazz.getPackage().getName();
-        for (Object packageName : packageList) {
+    static boolean isClassBelowPackage(Class<?> domainClazz, List packageList) {
+        String classPackage = domainClazz.getPackage().getName()
+        for (Object packageName in packageList) {
             if (packageName != null) {
                 if (classPackage.startsWith(packageName.toString())) {
-                    return true;
+                    return true
                 }
             }
         }
-        return false;
-
+        return false
     }
 
     /**
@@ -158,13 +161,14 @@ public class ClassUtils {
      * @param clazz The class
      * @return True if it is
      */
-    public static boolean isMultiTenant(Class clazz) {
-        Class<?>[] allInterfacesForClass = org.springframework.util.ClassUtils.getAllInterfacesForClass(clazz);
-        for (Class anInterface : allInterfacesForClass) {
-            if (anInterface.getSimpleName().equals("MultiTenant")) {
-                return true;
+    static boolean isMultiTenant(Class clazz) {
+        Class<?>[] allInterfacesForClass = org.springframework.util.ClassUtils.getAllInterfacesForClass(clazz)
+        for (Class anInterface in allInterfacesForClass) {
+            if (anInterface.getSimpleName() == 'MultiTenant') {
+                return true
             }
         }
-        return false;
+        return false
     }
+
 }

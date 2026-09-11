@@ -16,7 +16,9 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.datastore.mapping.reflect;
+package org.grails.datastore.mapping.reflect
+
+import groovy.transform.CompileStatic
 
 /**
  * Runtime exception equivalent of java.lang.InstantiationException
@@ -24,11 +26,13 @@ package org.grails.datastore.mapping.reflect;
  * @author Graeme Rocher
  * @since 1.0
  */
-public class InstantiationException extends RuntimeException {
+@CompileStatic
+class InstantiationException extends RuntimeException {
 
-    private static final long serialVersionUID = 1;
+    private static final long serialVersionUID = 1
 
-    public InstantiationException(String s, Throwable throwable) {
-        super(s, throwable);
+    InstantiationException(String s, Throwable throwable) {
+        super(s, throwable)
     }
+
 }

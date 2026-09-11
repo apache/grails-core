@@ -16,7 +16,9 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.datastore.mapping.reflect;
+package org.grails.datastore.mapping.reflect
+
+import groovy.transform.CompileStatic
 
 /**
  * Utility methods for manipulating meta classes
@@ -24,34 +26,29 @@ package org.grails.datastore.mapping.reflect;
  * @author Graeme Rocher
  * @since 5.0
  */
+@CompileStatic
+class MetaClassUtils {
 
-import groovy.lang.ExpandoMetaClass;
-import groovy.lang.GroovySystem;
-import groovy.lang.MetaClass;
-import groovy.lang.MetaClassRegistry;
+    static ExpandoMetaClass getExpandoMetaClass(Class<?> aClass) {
+        MetaClassRegistry registry = GroovySystem.getMetaClassRegistry()
 
-public class MetaClassUtils {
-
-    public static ExpandoMetaClass getExpandoMetaClass(Class<?> aClass) {
-        MetaClassRegistry registry = GroovySystem.getMetaClassRegistry();
-
-        MetaClass mc = registry.getMetaClass(aClass);
+        MetaClass mc = registry.getMetaClass(aClass)
         if (mc instanceof ExpandoMetaClass) {
-            ExpandoMetaClass emc = (ExpandoMetaClass) mc;
-            registry.setMetaClass(aClass, emc); // make permanent
-            return emc;
+            ExpandoMetaClass emc = (ExpandoMetaClass) mc
+            registry.setMetaClass(aClass, emc) // make permanent
+            return emc
         }
 
-        registry.removeMetaClass(aClass);
-        mc = registry.getMetaClass(aClass);
+        registry.removeMetaClass(aClass)
+        mc = registry.getMetaClass(aClass)
         if (mc instanceof ExpandoMetaClass) {
-            return (ExpandoMetaClass) mc;
+            return (ExpandoMetaClass) mc
         }
 
-        ExpandoMetaClass emc = new ExpandoMetaClass(aClass, true, true);
-        emc.initialize();
-        registry.setMetaClass(aClass, emc);
-        return emc;
+        ExpandoMetaClass emc = new ExpandoMetaClass(aClass, true, true)
+        emc.initialize()
+        registry.setMetaClass(aClass, emc)
+        return emc
     }
 
 }

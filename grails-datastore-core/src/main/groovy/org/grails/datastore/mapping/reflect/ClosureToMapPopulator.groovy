@@ -16,15 +16,9 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+package org.grails.datastore.mapping.reflect
 
-package org.grails.datastore.mapping.reflect;
-
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-
-import groovy.lang.Closure;
-import groovy.lang.GroovyObjectSupport;
+import groovy.transform.CompileStatic
 
 /**
  * A simple class that takes method invocations and property setters and populates
@@ -33,49 +27,51 @@ import groovy.lang.GroovyObjectSupport;
  * @author Graeme Rocher
  * @since 6.0
  */
-@SuppressWarnings({"unchecked", "rawtypes"})
-public class ClosureToMapPopulator extends GroovyObjectSupport {
+@CompileStatic
+@SuppressWarnings(['unchecked', 'rawtypes'])
+class ClosureToMapPopulator extends GroovyObjectSupport {
 
-    private Map map;
+    private final Map map
 
-    public ClosureToMapPopulator(Map theMap) {
-        map = theMap;
+    ClosureToMapPopulator(Map theMap) {
+        map = theMap
     }
 
-    public ClosureToMapPopulator() {
-        this(new HashMap());
+    ClosureToMapPopulator() {
+        this(new HashMap())
     }
 
-    public Map populate(Closure callable) {
-        callable.setDelegate(this);
-        callable.setResolveStrategy(Closure.DELEGATE_FIRST);
-        callable.call();
-        return map;
+    Map populate(Closure callable) {
+        callable.setDelegate(this)
+        callable.setResolveStrategy(Closure.DELEGATE_FIRST)
+        callable.call()
+        return map
     }
 
     @Override
-    public void setProperty(String name, Object o) {
+    void setProperty(String name, Object o) {
         if (o != null) {
-            map.put(name, o);
+            map.put(name, o)
         }
     }
 
     @Override
-    public Object invokeMethod(String name, Object o) {
+    Object invokeMethod(String name, Object o) {
         if (o != null) {
             if (o.getClass().isArray()) {
-                Object[] args = (Object[]) o;
+                Object[] args = (Object[]) o
                 if (args.length == 1) {
-                    map.put(name, args[0]);
+                    map.put(name, args[0])
                 }
                 else {
-                    map.put(name, Arrays.asList(args));
+                    map.put(name, Arrays.asList(args))
                 }
             }
             else {
-                map.put(name, o);
+                map.put(name, o)
             }
         }
-        return null;
+        return null
     }
+
 }
