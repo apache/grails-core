@@ -117,6 +117,9 @@ abstract class AbstractWhereImplementer extends AbstractReadOperationImplementer
         }
     }
 
+    // domainClassNode is unused here, but kept so subclasses can override this as a
+    // polymorphic extension point and pick a DetachedCriteria type based on the domain class
+    @SuppressWarnings(['unused', 'MethodMayBeStatic'])
     protected ClassNode getDetachedCriteriaType(ClassNode domainClassNode) {
         ClassHelper.make(DetachedCriteria)
     }

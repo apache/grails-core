@@ -36,7 +36,6 @@ import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.finders.MatchSpec
 import org.grails.datastore.gorm.services.transform.ServiceTransformation
 import org.grails.datastore.mapping.core.Ordered
-import org.grails.datastore.mapping.reflect.AstUtils
 
 import static org.codehaus.groovy.ast.ClassHelper.MAP_TYPE
 import static org.codehaus.groovy.ast.tools.GeneralUtils.args
@@ -109,7 +108,7 @@ class FindAllByImplementer extends AbstractArrayOrIterableResultImplementer impl
         }
 
         if (matchSpec == null) {
-            AstUtils.error(abstractMethodNode.declaringClass.module.context, abstractMethodNode, ServiceTransformation.NO_IMPLEMENTATIONS_MESSAGE)
+            error(abstractMethodNode.declaringClass.module.context, abstractMethodNode, ServiceTransformation.NO_IMPLEMENTATIONS_MESSAGE)
         }
         else {
             // validate the properties

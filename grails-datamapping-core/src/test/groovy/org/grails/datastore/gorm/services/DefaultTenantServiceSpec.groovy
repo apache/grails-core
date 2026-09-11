@@ -56,7 +56,7 @@ class DefaultTenantServiceSpec extends Specification {
         service.setDatastore(Mock(Datastore))
 
         when:
-        service.eachTenant { }
+        service.eachTenant {}
 
         then:
         def e = thrown(DatastoreConfigurationException)

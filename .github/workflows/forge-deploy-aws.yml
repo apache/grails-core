@@ -80,7 +80,7 @@ jobs:
           java-version: ${{ steps.jdk.outputs.version }}
 
       - name: "Setup Gradle"
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-provider: basic
 
@@ -114,7 +114,7 @@ jobs:
         run: ./gradlew grails-forge-web-netty:awsElasticBeanstalk
 
       - name: "Configure AWS credentials through OIDC"
-        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
         with:
           role-to-assume: ${{ env.DEPLOY_ROLE_ARN }}
           aws-region: us-east-1

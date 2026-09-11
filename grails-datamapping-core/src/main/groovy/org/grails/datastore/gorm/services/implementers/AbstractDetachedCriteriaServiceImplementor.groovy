@@ -123,6 +123,9 @@ abstract class AbstractDetachedCriteriaServiceImplementor extends AbstractReadOp
         }
     }
 
+    // domainClassNode is unused here, but kept so subclasses can override this as a
+    // polymorphic extension point and pick a DetachedCriteria type based on the domain class
+    @SuppressWarnings(['unused', 'MethodMayBeStatic'])
     protected ClassNode getDetachedCriteriaType(ClassNode domainClassNode) {
         DETACHED_CRITERIA
     }
@@ -150,6 +153,9 @@ abstract class AbstractDetachedCriteriaServiceImplementor extends AbstractReadOp
      * Whether lookup by id is allowed by this implementation
      * @return True if it is
      */
+    // Not static: AbstractProjectionImplementer overrides this to return false, and
+    // doImplement() dispatches on it polymorphically. A static method would break that override.
+    @SuppressWarnings('MethodMayBeStatic')
     protected boolean lookupById() {
         return true
     }

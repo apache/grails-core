@@ -51,7 +51,18 @@ import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.namedAr
 @CompileStatic
 abstract class AbstractSaveImplementer extends AbstractWriteOperationImplementer {
 
+    /**
+     * Six-parameter overload retained so custom {@link org.grails.datastore.gorm.services.ServiceImplementer}
+     * subclasses compiled against Grails 7.x / 8.1.x keep a matching descriptor. {@code newMethodNode}
+     * is unused after error reporting moved to {@code abstractMethodNode}; this overload delegates
+     * to {@link #bindParametersAndSave(ClassNode, MethodNode, Parameter[], BlockStatement, VariableExpression)}.
+     */
+    @SuppressWarnings('unused')
     protected Statement bindParametersAndSave(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, Parameter[] parameters, BlockStatement body, VariableExpression entityVar) {
+        bindParametersAndSave(domainClassNode, abstractMethodNode, parameters, body, entityVar)
+    }
+
+    protected Statement bindParametersAndSave(ClassNode domainClassNode, MethodNode abstractMethodNode, Parameter[] parameters, BlockStatement body, VariableExpression entityVar) {
         Expression argsExpression = null
 
         for (Parameter parameter in parameters) {
@@ -64,8 +75,8 @@ abstract class AbstractSaveImplementer extends AbstractWriteOperationImplementer
                 argsExpression = varX(parameter)
             } else {
                 AstUtils.error(
-                        newMethodNode.declaringClass.module.context,
-                        newMethodNode,
+                        abstractMethodNode.declaringClass.module.context,
+                        abstractMethodNode,
                         "Cannot implement method for argument [${parameterName}]. No property exists on domain class [$domainClassNode.name]"
                 )
             }

@@ -65,9 +65,11 @@ class FormFieldsTemplateService {
     }
 
     Map findTemplate(BeanPropertyAccessor propertyAccessor, String templateName, String templatesFolder, String theme = null) {
-        shouldCache ?
-                findTemplateCached(propertyAccessor, controllerNamespace, controllerName, actionName, templateName, templatesFolder, theme) :
-                findTemplateNotCached(propertyAccessor, controllerNamespace, controllerName, actionName, templateName, templatesFolder, theme)
+        // Build candidate paths before caching so memoization keys on lookup-relevant
+        // strings rather than request-scoped BeanPropertyAccessor instances, which retain
+        // root beans and property values and would otherwise leak per request.
+        List<String> candidatePaths = resolveCandidateTemplatePaths(propertyAccessor, controllerNamespace, controllerName, actionName, templateName, templatesFolder, theme)
+        shouldCache ? findTemplateCached(candidatePaths) : findTemplateNotCached(candidatePaths)
     }
 
     static String toPropertyNameFormat(Class type) {
@@ -185,22 +187,22 @@ class FormFieldsTemplateService {
         grailsApplication?.config?.getProperty("grails.plugin.fields.$templateProperty", templateProperty) ?: templateProperty
     }
 
-    @Memoized
-    private Map<String, String> findTemplateCached(BeanPropertyAccessor propertyAccessor, String controllerNamespace, String controllerName, String actionName, String templateName, String templatesFolder, String themeName) {
-        findTemplateNotCached(propertyAccessor, controllerNamespace, controllerName, actionName, templateName, templatesFolder, themeName)
+    private List<String> resolveCandidateTemplatePaths(BeanPropertyAccessor propertyAccessor, String controllerNamespace, String controllerName, String actionName, String templateName, String templatesFolder, String themeName) {
+        if (themeName) {
+            // if theme is specified, first resolve all theme paths and then all the default paths
+            String themeFolder = THEMES_FOLDER + '/' + themeName
+            return candidateTemplatePaths(propertyAccessor, controllerNamespace, controllerName, actionName, templateName, templatesFolder, themeFolder) +
+                    candidateTemplatePaths(propertyAccessor, controllerNamespace, controllerName, actionName, templateName, templatesFolder, null)
+        }
+        return candidateTemplatePaths(propertyAccessor, controllerNamespace, controllerName, actionName, templateName, templatesFolder, null)
     }
 
-    private Map<String, String> findTemplateNotCached(BeanPropertyAccessor propertyAccessor, String controllerNamespace, String controllerName, String actionName, String templateName, String templatesFolder, String themeName) {
-        List<String> candidatePaths
-        if (themeName) {
-            //if theme is specified, first resolve all theme paths and then all the default paths
-            String themeFolder = THEMES_FOLDER + '/' + themeName
-            candidatePaths = candidateTemplatePaths(propertyAccessor, controllerNamespace, controllerName, actionName, templateName, templatesFolder, themeFolder)
-            candidatePaths = candidatePaths + candidateTemplatePaths(propertyAccessor, controllerNamespace, controllerName, actionName, templateName, templatesFolder, null)
-        } else {
-            candidatePaths = candidateTemplatePaths(propertyAccessor, controllerNamespace, controllerName, actionName, templateName, templatesFolder, null)
-        }
+    @Memoized
+    private Map<String, String> findTemplateCached(List<String> candidatePaths) {
+        findTemplateNotCached(candidatePaths)
+    }
 
+    private Map<String, String> findTemplateNotCached(List<String> candidatePaths) {
         candidatePaths.findResult { String path ->
             log.debug('looking for template with path {}', path)
             def source = groovyPageLocator.findTemplateByPath(path)
