@@ -23,27 +23,15 @@ import spock.lang.Specification
 
 class GrailsForgeConfigurationSpec extends Specification {
 
-    void "setRedirectUrl updates the browser redirect target"() {
+    void "redirectUrl is exposed as a redirect URI without a redirectUri setter"() {
         given:
-        def configuration = new GrailsForgeConfiguration()
+        GrailsForgeConfiguration config = new GrailsForgeConfiguration()
 
         when:
-        configuration.setRedirectUrl('https://start.grails.org/')
+        config.redirectUrl = 'https://start.grails.org/'
 
         then:
-        configuration.redirectUrl == 'https://start.grails.org/'
-        configuration.redirectUri.get().toString() == 'https://start.grails.org/'
-    }
-
-    void "setRedirectUrl ignores null so the default remains"() {
-        given:
-        def configuration = new GrailsForgeConfiguration()
-        def before = configuration.redirectUrl
-
-        when:
-        configuration.setRedirectUrl(null)
-
-        then:
-        configuration.redirectUrl == before
+        config.redirectUrl == 'https://start.grails.org/'
+        config.redirectUri().get().toString() == 'https://start.grails.org/'
     }
 }

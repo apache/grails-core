@@ -18,7 +18,7 @@
  */
 package org.grails.forge.util;
 
-import io.micronaut.core.annotation.NonNull;
+import jakarta.annotation.Nonnull;
 import org.grails.forge.options.JdkVersion;
 
 import java.io.IOException;
@@ -69,7 +69,7 @@ public class VersionInfo {
     }
 
     /**
-     * @return Checks whether micronaut is a snapshot version.
+     * @return Checks whether Grails is a snapshot version.
      */
     public static boolean isGrailsSnapshot() {
         return getGrailsVersion().endsWith("-SNAPSHOT");
@@ -111,7 +111,7 @@ public class VersionInfo {
      * @param id The ID
      * @return The dependency version as a string
      */
-    public static @NonNull String getBomVersion(String id) {
+    public static @Nonnull String getBomVersion(String id) {
         String key = id + ".version";
         Object version = VERSIONS.get(key);
         if (version != null) {
@@ -125,7 +125,7 @@ public class VersionInfo {
      * @param id The ID
      * @return The dependency version
      */
-    public static @NonNull Map.Entry<String, String> getDependencyVersion(String id) {
+    public static @Nonnull Map.Entry<String, String> getDependencyVersion(String id) {
         String key = id + ".version";
         Object version = VERSIONS.get(key);
         if (version != null) {

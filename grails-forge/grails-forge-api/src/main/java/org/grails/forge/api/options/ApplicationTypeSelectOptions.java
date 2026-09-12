@@ -20,11 +20,9 @@ package org.grails.forge.api.options;
 
 import org.grails.forge.api.ApplicationTypeDTO;
 import org.grails.forge.api.SelectOptionDTO;
-import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.List;
 
-@Schema(name = "ApplicationTypeSelectOptions")
 public class ApplicationTypeSelectOptions extends SelectOptionDTO<ApplicationTypeDTO> {
     public ApplicationTypeSelectOptions(List<ApplicationTypeDTO> options, ApplicationTypeDTO defaultOption) {
         super(options, defaultOption);

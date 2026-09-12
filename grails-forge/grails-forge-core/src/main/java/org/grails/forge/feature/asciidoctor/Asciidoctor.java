@@ -18,7 +18,7 @@
  */
 package org.grails.forge.feature.asciidoctor;
 
-import jakarta.inject.Singleton;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Coordinate;
@@ -30,7 +30,7 @@ import org.grails.forge.feature.asciidoctor.template.asciidocGradle;
 import org.grails.forge.feature.asciidoctor.template.indexAdoc;
 import org.grails.forge.template.RockerTemplate;
 
-@Singleton
+@Component
 public class Asciidoctor implements Feature {
 
     private final CoordinateResolver coordinateResolver;

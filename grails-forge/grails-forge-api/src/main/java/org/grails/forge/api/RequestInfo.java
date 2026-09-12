@@ -18,83 +18,45 @@
  */
 package org.grails.forge.api;
 
-import io.micronaut.http.HttpParameters;
 import org.grails.forge.application.ApplicationType;
-import io.swagger.v3.oas.annotations.Hidden;
 
 import java.util.Locale;
 import java.util.Objects;
 
-/**
- * The server URL.
- *
- * @author graemerocher
- * @since 6.0.0
- */
-@Hidden
 public class RequestInfo {
 
-    public static final RequestInfo LOCAL = new RequestInfo("http://localhost:8080", "/", null, Locale.ENGLISH, "");
+    public static final RequestInfo LOCAL = new RequestInfo("http://localhost:8080", "/", Locale.ENGLISH, "");
 
     private final String serverURL;
     private final String currentURL;
     private final String path;
-    private final HttpParameters parameters;
     private final Locale locale;
     private final String userAgent;
 
-    /**
-     * Default constructor.
-     *
-     * @param serverURL  The URL
-     * @param path       The request path
-     * @param parameters The request parameters
-     * @param locale     The locale
-     * @param userAgent  The browser user-agent
-     */
-    public RequestInfo(String serverURL, String path, HttpParameters parameters, Locale locale, String userAgent) {
+    public RequestInfo(String serverURL, String path, Locale locale, String userAgent) {
         this.serverURL = Objects.requireNonNull(serverURL, "URL cannot be null");
         this.locale = locale;
         this.path = path;
-        this.parameters = parameters;
         this.userAgent = userAgent;
         this.currentURL = serverURL + Objects.requireNonNull(path, "Path cannot be null");
     }
 
-    /**
-     * @return The server URL
-     */
     public String getServerURL() {
         return serverURL;
     }
 
-    /**
-     * @return The current URL
-     */
     public String getCurrentURL() {
         return currentURL;
     }
 
-    /**
-     * @return The self link
-     */
     public LinkDTO self() {
         return new LinkDTO(getCurrentURL(), false);
     }
 
-    /**
-     * @param rel  The relationship
-     * @param type The type
-     * @return A new link
-     */
     public LinkDTO link(Relationship rel, ApplicationType type) {
         return new LinkDTO(getServerURL() + "/" + rel + "/" + type.getName() + "/{name}");
     }
 
-    /**
-     * @param type The type
-     * @return A new link
-     */
     public LinkDTO link(ApplicationType type) {
         return new LinkDTO(getServerURL() + "/application-types/" + type.getName(), false);
     }
@@ -111,29 +73,7 @@ public class RequestInfo {
         return userAgent;
     }
 
-    /**
-     * @return request path
-     */
     public String getPath() {
         return path;
-    }
-
-    /**
-     * @return request parameters
-     */
-    public HttpParameters getParameters() {
-        return parameters;
-    }
-
-    @Override
-    public String toString() {
-        return "RequestInfo{" +
-                "serverURL='" + serverURL + '\'' +
-                ", currentURL='" + currentURL + '\'' +
-                ", path='" + path + '\'' +
-                ", parameters=" + parameters +
-                ", locale=" + locale +
-                ", userAgent='" + userAgent + '\'' +
-                '}';
     }
 }

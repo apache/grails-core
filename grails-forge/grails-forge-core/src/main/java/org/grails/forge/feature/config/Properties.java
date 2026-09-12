@@ -18,7 +18,7 @@
  */
 package org.grails.forge.feature.config;
 
-import jakarta.inject.Singleton;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.feature.FeaturePhase;
 import org.grails.forge.template.PropertiesTemplate;
@@ -26,7 +26,7 @@ import org.grails.forge.template.Template;
 
 import java.util.function.Function;
 
-@Singleton
+@Component
 public class Properties implements ConfigurationFeature {
 
     private static final String EXTENSION = "properties";

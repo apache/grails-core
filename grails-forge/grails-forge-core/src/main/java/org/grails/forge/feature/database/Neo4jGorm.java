@@ -18,8 +18,8 @@
  */
 package org.grails.forge.feature.database;
 
-import io.micronaut.core.annotation.Nullable;
-import jakarta.inject.Singleton;
+import jakarta.annotation.Nullable;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
@@ -30,7 +30,7 @@ import org.grails.forge.options.Options;
 import java.util.Map;
 import java.util.Set;
 
-@Singleton
+@Component
 public class Neo4jGorm extends GormOneOfFeature {
 
     @Override

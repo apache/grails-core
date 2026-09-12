@@ -18,8 +18,8 @@
  */
 package org.grails.forge.feature.view;
 
-import io.micronaut.core.annotation.NonNull;
-import jakarta.inject.Singleton;
+import jakarta.annotation.Nonnull;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
@@ -34,7 +34,7 @@ import org.grails.forge.template.URLTemplate;
 import java.util.Map;
 import java.util.Set;
 
-@Singleton
+@Component
 public class GrailsGsp implements DefaultFeature {
 
     private final GrailsWeb grailsWeb;
@@ -53,13 +53,13 @@ public class GrailsGsp implements DefaultFeature {
         return "GSP";
     }
 
-    @NonNull
+    @Nonnull
     @Override
     public String getName() {
         return "gsp";
     }
 
-    @NonNull
+    @Nonnull
     @Override
     public String getDescription() {
         return "GSP (Groovy Server Pages) is the server-side view technology used in Grails. " +

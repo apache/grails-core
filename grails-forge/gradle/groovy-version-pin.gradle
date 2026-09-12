@@ -17,8 +17,8 @@
  *  under the License.
  */
 
-// Pin all Groovy modules to the version in gradle.properties instead of the
-// (older) version managed by the Micronaut platform BOM.
+// Pin all Groovy modules to the version in gradle.properties so groovydoc
+// output stays deterministic (GROOVY-11954).
 configurations.configureEach {
     resolutionStrategy.eachDependency { DependencyResolveDetails details ->
         if (details.requested.group == 'org.apache.groovy') {

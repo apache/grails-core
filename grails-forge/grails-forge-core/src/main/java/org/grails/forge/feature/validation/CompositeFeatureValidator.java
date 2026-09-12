@@ -18,8 +18,8 @@
  */
 package org.grails.forge.feature.validation;
 
-import io.micronaut.context.annotation.Primary;
-import jakarta.inject.Singleton;
+import org.springframework.context.annotation.Primary;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.feature.Feature;
 import org.grails.forge.options.Options;
@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.Set;
 
 @Primary
-@Singleton
+@Component
 public class CompositeFeatureValidator implements FeatureValidator {
 
     private final List<FeatureValidator> featureValidators;

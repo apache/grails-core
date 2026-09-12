@@ -18,8 +18,7 @@
  */
 package org.grails.forge.api;
 
-import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.naming.Named;
+import jakarta.annotation.Nonnull;
 
 import java.util.Locale;
 
@@ -29,14 +28,12 @@ import java.util.Locale;
  * @author graemerocher
  * @since 6.0.0
  */
-public enum Relationship implements Named, CharSequence {
+public enum Relationship implements CharSequence {
     SELF,
     CREATE,
     PREVIEW,
     DIFF;
 
-    @NonNull
-    @Override
     public String getName() {
         return name().toLowerCase(Locale.ENGLISH);
     }

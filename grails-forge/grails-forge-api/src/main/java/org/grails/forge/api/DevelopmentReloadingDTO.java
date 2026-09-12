@@ -18,23 +18,16 @@
  */
 package org.grails.forge.api;
 
-import io.micronaut.context.MessageSource;
-import io.micronaut.core.annotation.Creator;
-import io.micronaut.core.annotation.Internal;
-import io.micronaut.core.annotation.Introspected;
-import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.naming.Described;
-import io.micronaut.core.naming.Named;
-import io.swagger.v3.oas.annotations.media.Schema;
+import org.springframework.context.MessageSource;
+import java.util.Locale;
+import jakarta.annotation.Nonnull;
 import org.grails.forge.options.DevelopmentReloading;
 import org.grails.forge.util.NameUtils;
 
 /**
  * DTO objects for {@link DevelopmentReloading}.
  */
-@Schema(name = "DevelopmentReloadingInfo")
-@Introspected
-public class DevelopmentReloadingDTO extends Linkable implements Named, Described, Selectable<DevelopmentReloading> {
+public class DevelopmentReloadingDTO extends Linkable implements Selectable<DevelopmentReloading> {
     static final String MESSAGE_PREFIX = GrailsForgeConfiguration.PREFIX + ".developmentReloading.";
     private final String name;
     private final String description;
@@ -53,8 +46,6 @@ public class DevelopmentReloadingDTO extends Linkable implements Named, Describe
      * @param name the name
      * @param description The description
      */
-    @Creator
-    @Internal
     DevelopmentReloadingDTO(DevelopmentReloading value, String name, String description) {
         this.value = value;
         this.name = name;
@@ -67,37 +58,31 @@ public class DevelopmentReloadingDTO extends Linkable implements Named, Describe
      * @param messageSource The message source
      * @param messageContext The message context
      */
-    @Internal
-    DevelopmentReloadingDTO(DevelopmentReloading developmentReloading, MessageSource messageSource, MessageSource.MessageContext messageContext) {
+    DevelopmentReloadingDTO(DevelopmentReloading developmentReloading, MessageSource messageSource, Locale locale) {
         this.value = developmentReloading;
         this.name = developmentReloading.toString();
-        this.description = messageSource.getMessage(MESSAGE_PREFIX + name + ".description", messageContext, NameUtils.getNaturalNameOfEnum(name));
+        this.description = ForgeMessages.message(messageSource, locale, MESSAGE_PREFIX + name + ".description", NameUtils.getNaturalNameOfEnum(name));
     }
 
-    @NonNull
+    @Nonnull
     @Override
-    @Schema(description = "A description of the developmentReloading")
-    public String getDescription() {
+        public String getDescription() {
         return description;
     }
 
-    @Override
-    @Schema(description = "The name of the developmentReloading")
-    @NonNull
+    @Nonnull
     public String getName() {
         return name;
     }
 
     @Override
-    @Schema(description = "The value of the developmentReloading for select options")
-    @NonNull
+        @Nonnull
     public DevelopmentReloading getValue() {
         return value;
     }
 
     @Override
-    @Schema(description = "The label of the developmentReloading for select options")
-    public String getLabel() {
+        public String getLabel() {
         return value.getLabel();
     }
 }

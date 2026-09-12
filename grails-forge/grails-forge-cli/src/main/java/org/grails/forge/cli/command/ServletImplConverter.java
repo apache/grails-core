@@ -18,11 +18,9 @@
  */
 package org.grails.forge.cli.command;
 
-import io.micronaut.core.annotation.Introspected;
 import org.grails.forge.options.ServletImpl;
 import picocli.CommandLine;
 
-@Introspected
 public class ServletImplConverter implements CommandLine.ITypeConverter<ServletImpl> {
 
     @Override

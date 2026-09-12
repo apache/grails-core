@@ -20,11 +20,9 @@ package org.grails.forge.api.options;
 
 import org.grails.forge.api.JdkVersionDTO;
 import org.grails.forge.api.SelectOptionDTO;
-import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.List;
 
-@Schema(name = "JdkVersionSelectOptions")
 public class JdkVersionSelectOptions extends SelectOptionDTO<JdkVersionDTO> {
     public JdkVersionSelectOptions(List<JdkVersionDTO> options, JdkVersionDTO defaultOption) {
         super(options, defaultOption);

@@ -18,11 +18,10 @@
  */
 package org.grails.forge.api;
 
-import io.micronaut.context.annotation.ConfigurationProperties;
-import io.micronaut.context.env.Environment;
-import io.micronaut.core.annotation.Nullable;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
+import jakarta.annotation.Nullable;
 
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.util.Optional;
@@ -34,6 +33,7 @@ import java.util.Optional;
  * @since 6.0.0
  */
 @ConfigurationProperties(GrailsForgeConfiguration.PREFIX)
+@Component
 public class GrailsForgeConfiguration {
     public static final String PREFIX = "grails.forge";
     private static final String DEFAULT_REDIRECT_URL = "https://apache.github.io/grails-forge-ui/";
@@ -46,20 +46,12 @@ public class GrailsForgeConfiguration {
      * Default constructor.
      */
     public GrailsForgeConfiguration() {
-        String hostname = System.getenv(Environment.HOSTNAME);
-        if (hostname != null) {
-            try {
-                this.url = new URL("https://" + hostname);
-            } catch (MalformedURLException e) {
-                // ignore
-            }
-        }
     }
 
     /**
      * @return The URI to redirect to when visiting via the browser
      */
-    public Optional<URI> getRedirectUri() {
+    public Optional<URI> redirectUri() {
         return Optional.ofNullable(redirectUrl).map(URI::create);
     }
 

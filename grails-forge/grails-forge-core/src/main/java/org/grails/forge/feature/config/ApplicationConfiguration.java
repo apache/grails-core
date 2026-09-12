@@ -18,15 +18,15 @@
  */
 package org.grails.forge.feature.config;
 
-import io.micronaut.core.annotation.NonNull;
+import jakarta.annotation.Nonnull;
 
 public class ApplicationConfiguration extends Configuration {
 
-    public ApplicationConfiguration(@NonNull String sourceSet, @NonNull String environment) {
+    public ApplicationConfiguration(@Nonnull String sourceSet, @Nonnull String environment) {
         super(sourceSet, ("application-" + environment), ("application-config-" + environment), environment);
     }
 
-    public ApplicationConfiguration(@NonNull String environment) {
+    public ApplicationConfiguration(@Nonnull String environment) {
         this("main", environment);
     }
 

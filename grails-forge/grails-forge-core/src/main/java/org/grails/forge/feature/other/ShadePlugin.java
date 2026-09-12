@@ -18,8 +18,8 @@
  */
 package org.grails.forge.feature.other;
 
-import io.micronaut.core.annotation.NonNull;
-import jakarta.inject.Singleton;
+import jakarta.annotation.Nonnull;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.gradle.GradlePlugin;
@@ -29,10 +29,10 @@ import org.grails.forge.feature.Feature;
 /**
  * Adds a shaded JAR feature.
  */
-@Singleton
+@Component
 public class ShadePlugin implements Feature {
 
-    @NonNull
+    @Nonnull
     @Override
     public String getName() {
         return "shade";

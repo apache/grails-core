@@ -18,9 +18,7 @@
  */
 package org.grails.forge.cli.command;
 
-import io.micronaut.context.BeanContext;
-import io.micronaut.core.annotation.ReflectiveAccess;
-import io.micronaut.core.util.functional.ThrowingSupplier;
+import org.grails.forge.util.ThrowingSupplier;
 import org.grails.forge.application.Project;
 import org.grails.forge.cli.CodeGenConfig;
 import org.grails.forge.io.ConsoleOutput;
@@ -38,13 +36,12 @@ public abstract class CodeGenCommand extends BaseCommand implements Callable<Int
 
     protected final CodeGenConfig config;
 
-    @ReflectiveAccess
     @CommandLine.Option(names = {"-f", "--force"}, description = "Whether to overwrite existing files")
     protected boolean overwrite;
 
     private final ThrowingSupplier<OutputHandler, IOException> outputHandlerSupplier;
     private final ConsoleOutput consoleOutput;
-    private BeanContext beanContext;
+    private org.springframework.context.ApplicationContext beanContext;
 
     public CodeGenCommand(CodeGenConfig config) {
         this.config = config;
@@ -61,7 +58,7 @@ public abstract class CodeGenCommand extends BaseCommand implements Callable<Int
     }
 
     @Inject
-    public void setBeanContext(BeanContext beanContext) {
+    public void setBeanContext(org.springframework.context.ApplicationContext beanContext) {
         this.beanContext = beanContext;
     }
 
@@ -87,7 +84,12 @@ public abstract class CodeGenCommand extends BaseCommand implements Callable<Int
     }
 
     protected <T extends CodeGenCommand> T getCommand(Class<T> clazz) {
-        T bean = beanContext.createBean(clazz, config);
+        T bean;
+        try {
+            bean = clazz.getConstructor(CodeGenConfig.class).newInstance(config);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("Unable to create command " + clazz.getName(), e);
+        }
         bean.overwrite = overwrite;
         bean.spec = spec;
         bean.commonOptions = commonOptions;

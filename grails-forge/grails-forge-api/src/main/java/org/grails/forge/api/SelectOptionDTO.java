@@ -18,10 +18,6 @@
  */
 package org.grails.forge.api;
 
-import io.micronaut.core.annotation.Creator;
-import io.micronaut.core.annotation.Introspected;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
-import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.List;
 
@@ -29,7 +25,6 @@ import java.util.List;
  * Supported Option
  * @param <T> The underlying option type
  */
-@Introspected
 public abstract class SelectOptionDTO<T extends Selectable<?>> {
 
     /**
@@ -42,20 +37,15 @@ public abstract class SelectOptionDTO<T extends Selectable<?>> {
      */
     T defaultOption;
 
-    @Creator
     public SelectOptionDTO(List<T> options, T defaultOption) {
         this.options = options;
         this.defaultOption = defaultOption;
     }
 
-    @ArraySchema(schema =
-        @Schema(description = "the supported options")
-    )
     public List<T> getOptions() {
         return options;
     }
 
-    @Schema(description = "the default value")
     public T getDefaultOption() {
         return defaultOption;
     }

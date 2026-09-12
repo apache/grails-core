@@ -18,9 +18,9 @@
  */
 package org.grails.forge.feature.spring;
 
-import io.micronaut.context.annotation.Primary;
-import io.micronaut.core.annotation.NonNull;
-import jakarta.inject.Singleton;
+import org.springframework.context.annotation.Primary;
+import jakarta.annotation.Nonnull;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
@@ -31,7 +31,7 @@ import org.grails.forge.options.ServletImpl;
 import java.util.Set;
 
 @Primary
-@Singleton
+@Component
 public class SpringBootTomcatFeature extends SpringBootEmbeddedServlet {
 
     @Override
@@ -39,7 +39,7 @@ public class SpringBootTomcatFeature extends SpringBootEmbeddedServlet {
         return "Embedded Tomcat";
     }
 
-    @NonNull
+    @Nonnull
     @Override
     public String getName() {
         return "spring-boot-starter-tomcat";

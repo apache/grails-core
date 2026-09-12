@@ -71,16 +71,10 @@ ext {
 }
 
 dependencies {
-    annotationProcessor platform("io.micronaut.platform:micronaut-platform:$micronautVersion")
-    implementation platform("io.micronaut.platform:micronaut-platform:$micronautVersion")
-    annotationProcessor 'io.micronaut:micronaut-inject-java'
-    testAnnotationProcessor platform("io.micronaut.platform:micronaut-platform:$micronautVersion")
-    testAnnotationProcessor 'io.micronaut:micronaut-inject-java'
+    implementation platform("org.apache.grails:grails-bom:$projectVersion")
+    testAnnotationProcessor platform("org.apache.grails:grails-bom:$projectVersion")
 
     generateConfig "info.picocli:picocli-codegen:$picocliVersion"
-
-    annotationProcessor 'io.micronaut:micronaut-graal'
-    annotationProcessor 'io.micronaut:micronaut-inject-java'
 
     implementation project(':grails-forge-core')
     implementation("org.apache.grails.bootstrap:grails-bootstrap:$projectVersion") {
@@ -92,22 +86,14 @@ dependencies {
     implementation "info.picocli:picocli:$picocliVersion"
     implementation "info.picocli:picocli-shell-jline3:$picocliVersion"
     implementation 'jakarta.inject:jakarta.inject-api'
-    // InteractiveShell drives JLine directly, and since the ansi stream install was dropped it also
-    // relies on JLine's terminal for virtual-terminal processing; pin it rather than inheriting
-    // whatever version picocli-shell-jline3 happens to bring
+    implementation 'org.springframework:spring-context'
     implementation "org.jline:jline:${gradleBomDependencyVersions['jline.version']}"
     implementation "org.slf4j:slf4j-nop"
     implementation "org.yaml:snakeyaml"
 
-    compileOnly 'com.google.code.findbugs:jsr305'
-
     testImplementation enforcedPlatform('org.spockframework:spock-bom:2.4-groovy-4.0')
-    testImplementation 'io.micronaut.picocli:micronaut-picocli'
     testImplementation "org.reflections:reflections:$reflectionsVersion"
-    testImplementation "org.testcontainers:spock"
-    if (project.hasProperty('micronautVersion')) {
-        testCompileOnly "io.micronaut:micronaut-inject-groovy:$micronautVersion"
-    }
+    testImplementation "org.testcontainers:spock:$testcontainersVersion"
 
     testImplementation 'org.apache.groovy:groovy'
     testImplementation "org.spockframework:spock-core", {

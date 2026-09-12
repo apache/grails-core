@@ -18,8 +18,8 @@
  */
 package org.grails.forge.feature.test;
 
-import io.micronaut.core.annotation.NonNull;
-import jakarta.inject.Singleton;
+import jakarta.annotation.Nonnull;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.Project;
 import org.grails.forge.application.generator.GeneratorContext;
@@ -34,7 +34,7 @@ import org.grails.forge.template.RockerTemplate;
 
 import java.util.Set;
 
-@Singleton
+@Component
 public class GebWithTestcontainers implements DefaultFeature {
 
     private final Spock spock;
@@ -48,7 +48,7 @@ public class GebWithTestcontainers implements DefaultFeature {
         return applicationType == ApplicationType.WEB;
     }
 
-    @NonNull
+    @Nonnull
     @Override
     public String getName() {
         return "geb-with-testcontainers";
@@ -59,7 +59,7 @@ public class GebWithTestcontainers implements DefaultFeature {
         return "Geb Functional Testing for Grails with Testcontainers";
     }
 
-    @NonNull
+    @Nonnull
     @Override
     public String getDescription() {
         return "This plugins configure Geb for Grails framework to write automation tests that run with Testcontainers.";

@@ -18,7 +18,7 @@
  */
 package org.grails.forge.feature.view;
 
-import jakarta.inject.Singleton;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
 
@@ -27,7 +27,7 @@ import org.grails.forge.build.dependencies.Dependency;
  * {@code grails-layout} plugin. Mutually exclusive with {@code sitemesh3};
  * selecting this feature replaces the default SiteMesh 3 decorator.
  */
-@Singleton
+@Component
 public class GrailsLayout extends GspLayout {
 
     @Override

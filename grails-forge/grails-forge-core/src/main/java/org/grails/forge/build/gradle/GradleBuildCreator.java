@@ -18,20 +18,21 @@
  */
 package org.grails.forge.build.gradle;
 
-import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.order.OrderUtil;
-import jakarta.inject.Singleton;
+import jakarta.annotation.Nonnull;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.options.BuildTool;
+import org.springframework.core.Ordered;
+import org.springframework.stereotype.Component;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Singleton
+@Component
 public class GradleBuildCreator {
 
-    @NonNull
-    public GradleBuild create(@NonNull GeneratorContext generatorContext) {
+    @Nonnull
+    public GradleBuild create(@Nonnull GeneratorContext generatorContext) {
         GradleDsl gradleDsl = BuildTool.DEFAULT_OPTION
                 .getGradleDsl()
                 .orElseThrow(() -> new IllegalArgumentException("GradleBuildCreator can only create Gradle builds"));
@@ -39,24 +40,24 @@ public class GradleBuildCreator {
                 .stream()
                 .filter(GradlePlugin.class::isInstance)
                 .map(GradlePlugin.class::cast)
-                .sorted(OrderUtil.COMPARATOR)
+                .sorted(Comparator.comparingInt(Ordered::getOrder))
                 .collect(Collectors.toList());
 
         List<GradleRepository> buildRepositories = generatorContext.getBuildRepositories()
                 .stream()
-                .sorted(OrderUtil.COMPARATOR).
+                .sorted(Comparator.comparingInt(Ordered::getOrder)).
                 toList();
 
         List<GradleRepository> repositories = generatorContext.getRepositories()
                 .stream()
-                .sorted(OrderUtil.COMPARATOR)
+                .sorted(Comparator.comparingInt(Ordered::getOrder))
                 .toList();
 
         return new GradleBuild(gradleDsl, resolveDependencies(generatorContext), resolveBuildscriptDependencies(generatorContext), gradlePlugins, buildRepositories, repositories);
     }
 
-    @NonNull
-    private List<GradleDependency> resolveDependencies(@NonNull GeneratorContext generatorContext) {
+    @Nonnull
+    private List<GradleDependency> resolveDependencies(@Nonnull GeneratorContext generatorContext) {
         return generatorContext.getDependencies()
                 .stream()
                 .map(dep -> new GradleDependency(dep, generatorContext))
@@ -64,8 +65,8 @@ public class GradleBuildCreator {
                 .collect(Collectors.toList());
     }
 
-    @NonNull
-    private List<GradleDependency> resolveBuildscriptDependencies(@NonNull GeneratorContext generatorContext) {
+    @Nonnull
+    private List<GradleDependency> resolveBuildscriptDependencies(@Nonnull GeneratorContext generatorContext) {
         return generatorContext.getBuildscriptDependencies()
                 .stream()
                 .map(dep -> new GradleDependency(dep, generatorContext))

@@ -20,7 +20,7 @@ package org.grails.forge.feature.micronaut;
 
 import java.util.Set;
 
-import jakarta.inject.Singleton;
+import org.springframework.stereotype.Component;
 
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.feature.Feature;
@@ -28,7 +28,7 @@ import org.grails.forge.feature.reloading.SpringBootDevTools;
 import org.grails.forge.feature.validation.FeatureValidator;
 import org.grails.forge.options.Options;
 
-@Singleton
+@Component
 public class GrailsMicronautValidator implements FeatureValidator {
 
     @Override

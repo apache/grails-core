@@ -20,7 +20,7 @@
 package org.grails.forge.build.gradle
 
 import groovy.util.logging.Slf4j
-import io.micronaut.context.ApplicationContext
+import org.grails.forge.ForgeContexts
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.fixture.CommandOutputFixture
 import org.grails.forge.fixture.ContextFixture
@@ -28,6 +28,7 @@ import org.grails.forge.fixture.ProjectFixture
 import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.Options
 import org.grails.forge.options.TestFramework
+import org.springframework.context.ApplicationContext
 import spock.lang.Specification
 
 @Slf4j
@@ -36,7 +37,7 @@ class GradleSpec extends Specification implements ProjectFixture, ContextFixture
     ApplicationContext beanContext
 
     void setup() {
-        beanContext = ApplicationContext.run()
+        beanContext = ForgeContexts.create()
     }
 
     void cleanup() {

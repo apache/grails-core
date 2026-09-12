@@ -18,7 +18,6 @@
  */
 package org.grails.forge.feature.build.gradle;
 
-import jakarta.inject.Singleton;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Coordinate;
@@ -38,11 +37,12 @@ import org.grails.forge.options.Options;
 import org.grails.forge.template.BinaryTemplate;
 import org.grails.forge.template.RockerTemplate;
 import org.grails.forge.util.VersionInfo;
+import org.springframework.stereotype.Component;
 
 import java.util.Set;
 import java.util.function.Function;
 
-@Singleton
+@Component
 public class Gradle implements BuildFeature {
     private static final String WRAPPER_JAR = "gradle/wrapper/gradle-wrapper.jar";
     private static final String WRAPPER_PROPS = "gradle/wrapper/gradle-wrapper.properties";

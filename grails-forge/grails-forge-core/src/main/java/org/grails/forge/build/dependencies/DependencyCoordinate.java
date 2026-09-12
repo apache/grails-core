@@ -18,14 +18,12 @@
  */
 package org.grails.forge.build.dependencies;
 
-import io.micronaut.core.annotation.Introspected;
-import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.annotation.Nullable;
-import io.micronaut.core.order.Ordered;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
+import org.springframework.core.Ordered;
 
 import java.util.Objects;
 
-@Introspected
 public class DependencyCoordinate implements Coordinate, Ordered {
 
     private final String groupId;
@@ -71,13 +69,13 @@ public class DependencyCoordinate implements Coordinate, Ordered {
         return order;
     }
 
-    @NonNull
+    @Nonnull
     @Override
     public String getGroupId() {
         return groupId;
     }
 
-    @NonNull
+    @Nonnull
     @Override
     public String getArtifactId() {
         return artifactId;

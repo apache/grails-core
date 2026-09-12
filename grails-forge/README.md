@@ -33,7 +33,7 @@ $ cd demo
 $ ./gradlew run
 ```
 
-Run `curl https://latest.grails.org/` for more information on how to use the API or see the API documentation referenced below.
+Run `curl https://latest.grails.org/` for more information on how to use the API.
 
 ## UI
 
@@ -43,15 +43,13 @@ The user interface is [written in React](https://github.com/apache/grails-forge-
 
 ## API
 
-API documentation for the production instance can be found at:
+API usage for the production instance is available at:
 
-* [Swagger / OpenAPI Doc](https://latest.grails.org/swagger-ui/index.html)
-* [RAPI Doc](https://latest.grails.org/rapidoc/index.html)
+* [Production API](https://latest.grails.org/)
 
-API documentation for the snapshot / development instance can be found at:
+API usage for the snapshot / development instance is available at:
 
-* [Swagger / OpenAPI Doc](https://snapshot.grails.org/swagger-ui/index.html)
-* [RAPI Doc](https://snapshot.grails.org/rapidoc/index.html)
+* [Snapshot API](https://snapshot.grails.org/)
 
 ## Snapshots and Releases
 
@@ -63,17 +61,13 @@ A release is performed with the following steps:
 * [Monitor the Workflow](https://github.com/apache/grails-core/actions?query=workflow%3ARelease) to check it passed successfully.
 * Celebrate!
 
-## Architecture
-
-![Grails Forge Architecture](grailsforgearchitecture.jpeg)
-
 ## Distribution to AWS Elastic Beanstalk
 
 The seven Forge API slots run on AWS Elastic Beanstalk behind one shared application load balancer. The UI remains at `https://start.grails.org`.
 
 The API hosts are `latest.grails.org`, `snapshot.grails.org`, `next.grails.org`, `next-snapshot.grails.org`, `prev.grails.org`, `prev-snapshot.grails.org`, and `older.grails.org`. GitHub Actions authenticates to AWS through OIDC using the repository variable `AWS_FORGE_DEPLOY_ROLE_ARN`; it does not use static AWS access keys.
 
-Deployments package the normal Forge executable JAR in a ZIP source bundle. Analytics is not deployed. When its endpoint and analytics environment variables are absent, reporting is disabled without affecting application generation. The unused server-side GitHub create / OAuth integration is also omitted.
+Deployments package the Grails 8 `grails-forge-web` Tomcat `bootJar` as `app.jar` in the `grails-forge-web-aws.zip` source bundle. The bundle also contains `Procfile` and `start.sh`. Analytics is not deployed.
 
 For deployment, rollback, monitoring, and GCP decommissioning, see [AWS Elastic Beanstalk Deployment Runbook](docs/aws-elastic-beanstalk.md).
 

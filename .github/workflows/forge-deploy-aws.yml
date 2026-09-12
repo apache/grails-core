@@ -111,7 +111,7 @@ jobs:
       - name: "Package Forge for Elastic Beanstalk"
         working-directory: grails-forge
         shell: bash
-        run: ./gradlew grails-forge-web-netty:awsElasticBeanstalk
+        run: ./gradlew grails-forge-web:awsElasticBeanstalk
 
       - name: "Configure AWS credentials through OIDC"
         uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
@@ -155,7 +155,7 @@ jobs:
           VERSION_LABEL: ${{ steps.target.outputs.version-label }}
         run: |
           set -Eeuo pipefail
-          artifact='grails-forge/grails-forge-web-netty/build/distributions/grails-forge-web-netty-aws.zip'
+          artifact='grails-forge/grails-forge-web/build/distributions/grails-forge-web-aws.zip'
           test -s "${artifact}"
           aws s3 cp "${artifact}" "s3://${ARTIFACT_BUCKET}/${S3_KEY}" --only-show-errors
 

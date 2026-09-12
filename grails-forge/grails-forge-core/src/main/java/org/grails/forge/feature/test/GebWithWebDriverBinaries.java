@@ -18,8 +18,8 @@
  */
 package org.grails.forge.feature.test;
 
-import io.micronaut.core.annotation.NonNull;
-import jakarta.inject.Singleton;
+import jakarta.annotation.Nonnull;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.Project;
 import org.grails.forge.application.generator.GeneratorContext;
@@ -34,7 +34,7 @@ import org.grails.forge.feature.test.template.gebConfig;
 
 import java.util.stream.Stream;
 
-@Singleton
+@Component
 public class GebWithWebDriverBinaries implements Feature {
 
     private final Spock spock;
@@ -43,7 +43,7 @@ public class GebWithWebDriverBinaries implements Feature {
         this.spock = spock;
     }
 
-    @NonNull
+    @Nonnull
     @Override
     public String getName() {
         return "geb-with-webdriver-binaries";
@@ -54,7 +54,7 @@ public class GebWithWebDriverBinaries implements Feature {
         return "Geb Functional Testing using WebDriver binaries Gradle plugin";
     }
 
-    @NonNull
+    @Nonnull
     @Override
     public String getDescription() {
         return "This plugin configures Geb to use the WebDriver binaries Gradle plugin for downloading and caching the WebDriver binary for your platform.";

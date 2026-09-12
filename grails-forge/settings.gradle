@@ -30,6 +30,10 @@ pluginManagement {
     repositories {
         configurePluginRepositories(delegate)
     }
+    plugins {
+        id 'com.gradleup.shadow' version shadowVersion
+        id 'io.sdkman.vendors' version gradleSdkvendorPluginVersion
+    }
 }
 
 plugins {
@@ -64,12 +68,11 @@ rootProject.name = 'grails-forge'
 
 include(
         'grails-cli',
-        'grails-cli-shadow', // to allow us to transform our own artifacts
-        'grails-forge-analytics-postgres',
+        'grails-cli-shadow',
         'grails-forge-api',
         'grails-forge-cli',
         'grails-forge-core',
-        'grails-forge-web-netty',
+        'grails-forge-web',
         'test-core',
 )
 

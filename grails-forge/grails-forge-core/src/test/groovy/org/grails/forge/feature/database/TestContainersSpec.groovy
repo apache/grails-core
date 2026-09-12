@@ -25,8 +25,6 @@ import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.TestFramework
 
-import java.util.stream.Collectors
-
 class TestContainersSpec extends ApplicationContextSpec {
 
     void "test mysql dependency is present for gradle"() {
@@ -118,8 +116,6 @@ class TestContainersSpec extends ApplicationContextSpec {
         gradleTemplate.contains("org.testcontainers")
 
         where:
-        driverFeature <<  beanContext.streamOfType(DatabaseDriverFeature)
-                .filter({ f ->  !f.embedded() })
-                .collect(Collectors.toList())
+        driverFeature << beanContext.getBeansOfType(DatabaseDriverFeature).values().findAll { !it.embedded() }
     }
 }

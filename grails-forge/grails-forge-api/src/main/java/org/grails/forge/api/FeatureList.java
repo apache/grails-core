@@ -18,8 +18,6 @@
  */
 package org.grails.forge.api;
 
-import io.micronaut.core.annotation.Introspected;
-import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.List;
 
@@ -29,8 +27,6 @@ import java.util.List;
  * @author graemerocher
  * @since 6.0.0
  */
-@Schema(description = "A list of features")
-@Introspected
 public class FeatureList extends Linkable {
     private List<FeatureDTO> features;
 
@@ -52,8 +48,7 @@ public class FeatureList extends Linkable {
     /**
      * @return A list of features.
      */
-    @Schema(description = "A list of features")
-    public List<FeatureDTO> getFeatures() {
+        public List<FeatureDTO> getFeatures() {
         return features;
     }
 

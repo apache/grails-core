@@ -18,8 +18,8 @@
  */
 package org.grails.forge.feature.view.markup;
 
-import io.micronaut.core.annotation.NonNull;
-import jakarta.inject.Singleton;
+import jakarta.annotation.Nonnull;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
 import org.grails.forge.build.gradle.GradlePlugin;
@@ -29,7 +29,7 @@ import org.grails.forge.feature.view.markup.templates.*;
 import org.grails.forge.feature.web.GrailsWeb;
 import org.grails.forge.template.RockerTemplate;
 
-@Singleton
+@Component
 public class ViewMarkup extends GrailsViews implements Feature {
 
     public ViewMarkup(GrailsWeb grailsWeb) {
@@ -37,7 +37,7 @@ public class ViewMarkup extends GrailsViews implements Feature {
     }
 
     @Override
-    @NonNull
+    @Nonnull
     public String getName() {
         return "views-markup";
     }
@@ -48,7 +48,7 @@ public class ViewMarkup extends GrailsViews implements Feature {
     }
 
     @Override
-    @NonNull
+    @Nonnull
     public String getDescription() {
         return "Markup views are written in Groovy, end with the file extension gml and reside in the grails-app/views directory. They provide a DSL for producing output in the XML.";
     }

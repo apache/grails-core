@@ -18,7 +18,7 @@
  */
 package org.grails.forge.options;
 
-import io.micronaut.core.annotation.NonNull;
+import jakarta.annotation.Nonnull;
 import org.grails.forge.defaults.IncludesDefaults;
 import org.grails.forge.defaults.LanguageDefaults;
 import org.grails.forge.feature.Feature;
@@ -88,7 +88,7 @@ public enum Language implements IncludesDefaults<LanguageDefaults> {
         return getName();
     }
 
-    @NonNull
+    @Nonnull
     public String getName() {
         return name().toLowerCase(Locale.ENGLISH);
     }

@@ -19,9 +19,7 @@
 package org.grails.forge.options;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.micronaut.core.annotation.Introspected;
 
-@Introspected
 public class FeatureFilter {
     @JsonProperty("reloading")
     private DevelopmentReloading reloading;

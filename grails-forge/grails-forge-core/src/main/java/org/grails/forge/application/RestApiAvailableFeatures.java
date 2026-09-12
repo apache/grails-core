@@ -19,14 +19,14 @@
 package org.grails.forge.application;
 
 import jakarta.inject.Named;
-import jakarta.inject.Singleton;
+import org.springframework.stereotype.Component;
 import org.grails.forge.feature.BaseAvailableFeatures;
 import org.grails.forge.feature.Feature;
 
 import java.util.List;
 
 @Named("rest_api")
-@Singleton
+@Component
 public class RestApiAvailableFeatures extends BaseAvailableFeatures {
     public RestApiAvailableFeatures(List<Feature> features) {
         super(features, ApplicationType.REST_API);

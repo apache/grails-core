@@ -18,9 +18,6 @@
  */
 package org.grails.forge.api;
 
-import io.micronaut.core.annotation.Creator;
-import io.micronaut.core.annotation.Introspected;
-import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * Represents a link.
@@ -28,8 +25,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
  * @author graemerocher
  * @since 6.0.0
  */
-@Introspected
-@Schema(name = "Link")
 public class LinkDTO {
 
     private final String href;
@@ -39,7 +34,6 @@ public class LinkDTO {
         this(href, false);
     }
 
-    @Creator
     public LinkDTO(String href, boolean templated) {
         this.href = href;
         this.templated = templated;
@@ -48,7 +42,6 @@ public class LinkDTO {
     /**
      * @return The link address
      */
-    @Schema(description = "The link address")
     public String getHref() {
         return href;
     }
@@ -56,7 +49,6 @@ public class LinkDTO {
     /**
      * @return Whether the link is templated
      */
-    @Schema(description = "Whether the link is templated")
     public boolean isTemplated() {
         return templated;
     }

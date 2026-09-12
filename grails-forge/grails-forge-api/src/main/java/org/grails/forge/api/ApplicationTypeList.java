@@ -18,8 +18,6 @@
  */
 package org.grails.forge.api;
 
-import io.micronaut.core.annotation.Introspected;
-import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.List;
 
@@ -29,8 +27,6 @@ import java.util.List;
  * @author graemerocher
  * @since 6.0.0
  */
-@Schema(description = "A list of application types")
-@Introspected
 public class ApplicationTypeList extends Linkable {
     private List<ApplicationTypeDTO> types;
 
@@ -51,8 +47,7 @@ public class ApplicationTypeList extends Linkable {
     /**
      * @return The application types
      */
-    @Schema(description = "The application types")
-    public List<ApplicationTypeDTO> getTypes() {
+        public List<ApplicationTypeDTO> getTypes() {
         return types;
     }
 

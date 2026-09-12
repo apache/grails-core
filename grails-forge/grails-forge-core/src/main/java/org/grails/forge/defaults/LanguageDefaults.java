@@ -18,8 +18,6 @@
  */
 package org.grails.forge.defaults;
 
-import io.micronaut.core.annotation.Creator;
-import io.micronaut.core.annotation.Introspected;
 import org.grails.forge.options.BuildTool;
 import org.grails.forge.options.DevelopmentReloading;
 
@@ -27,13 +25,11 @@ import org.grails.forge.options.DevelopmentReloading;
  * Default values to be applied when a given
  * {@link org.grails.forge.options.Language} is selected
  */
-@Introspected
 public class LanguageDefaults implements HasDefaultDevelopmentReloading, HasDefaultBuild {
 
     DevelopmentReloading reloading;
     BuildTool build;
 
-    @Creator
     public LanguageDefaults(DevelopmentReloading reloading, BuildTool build) {
         this.reloading = reloading;
         this.build = build;
