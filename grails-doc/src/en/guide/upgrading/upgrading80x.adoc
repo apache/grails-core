@@ -3335,7 +3335,7 @@ imported whether or not they are present — a star import of an absent package 
 not an error in Groovy, so the probe changed nothing it could observe. An application that relied on the
 import being *omitted* when the package was absent sees no difference in compiled output.
 
-==== 54. Non-Public Bean Classes Are Marshalled, and Reported Once
+==== 58. Non-Public Bean Classes Are Marshalled, and Reported Once
 
 Groovy 4 stamped `ACC_PUBLIC` on anonymous inner classes; Groovy 5, which Grails 8 builds on, does not.
 Reflection cannot invoke a method on a class that is not `public` from another package, even when the method
@@ -3413,7 +3413,7 @@ logging:
         org.apache.grails.common.reflect.ReflectionUtils: ERROR
 ----
 
-==== 58. Interceptor URI Matching Uses the Dispatched Path
+==== 59. Interceptor URI Matching Uses the Dispatched Path
 
 Interceptors that match on `uri`, with `match(uri: ...)` or `excludes(uri: ...)`, now match the same path that URL
 mappings route on: percent escapes are decoded, matrix parameters (`;name=value`) are removed and the context path is
@@ -3461,7 +3461,7 @@ RFC 9110 section 4.2.3 define paths as case-sensitive, and during a `RequestDisp
 matched. Interceptors and the Spring Security matchers follow dispatch on both points because a matcher that
 disagrees with dispatch lets a request reach a controller without its interceptors or restrictions.
 
-==== 59. Sort and Order Query Arguments Are Validated
+==== 60. Sort and Order Query Arguments Are Validated
 
 Grails 8 checks the `sort` and `order` arguments of `list()`, dynamic finders, where queries, criteria queries and `listOrderBy*` before the query is built, on both Hibernate 5 and Hibernate 7. A client-supplied sort value used to be interpolated into the query, and the entry points did not agree on how a bad value was handled. They now fail the same way everywhere, with an `IllegalArgumentException` whose message deliberately does not echo the value.
 
@@ -3488,7 +3488,7 @@ def index(Integer max) {
 }
 ----
 
-==== 60. XML Request Bodies That Declare a DOCTYPE Are Refused
+==== 61. XML Request Bodies That Declare a DOCTYPE Are Refused
 
 XML that Grails parses on an application's behalf is now read with external entity expansion, external DTD retrieval and
 DTD grammar loading disabled. Earlier releases set these parser features under identifiers the parser did not recognise,
@@ -3505,3 +3505,83 @@ is never retrieved. The plugin descriptor `grails-plugin.xml` is not among them:
 declaration, so it is read strictly at compile time and at runtime alike.
 
 See <<upgrading>> for the full description of the XML parsing defaults.
+
+==== 62. Generated Groovy Compiler Configuration Scripts
+
+On Gradle 9.7+, configure `groovyOptions.configurationScriptFile` before task execution. Assigning
+`groovyOptions.configurationScript` from `compileGroovy.doFirst { ... }` fails because Gradle has
+already finalized the compiler options. Grails prepares the combined compiler script before compilation.
+
+If another task generates your compiler script, prefer passing that task's output provider to
+`configurationScriptFile`. The provider carries both the file location and its producing task, so
+Grails can prepare the combined script after your script is generated.
+
+Declare the generated script as an output and connect it through its provider:
+
+[source,groovy]
+.build.gradle
+----
+import org.gradle.api.DefaultTask
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.compile.GroovyCompile
+import org.gradle.work.DisableCachingByDefault
+
+@DisableCachingByDefault(because = 'Writing a short compiler script is inexpensive')
+abstract class GenerateCompilerScript extends DefaultTask {
+    @OutputFile
+    abstract RegularFileProperty getOutputFile()
+
+    @TaskAction
+    void generate() {
+        def script = outputFile.get().asFile
+        script.parentFile.mkdirs()
+        script.text = "withConfig(configuration) { imports { star 'java.nio.file' } }"
+    }
+}
+
+def generateUserConfigScript = tasks.register('generateUserConfigScript', GenerateCompilerScript) {
+    outputFile.set(layout.buildDirectory.file('user-config.groovy'))
+}
+
+tasks.named('compileGroovy', GroovyCompile) {
+    groovyOptions.configurationScriptFile.set(generateUserConfigScript.flatMap { it.outputFile })
+}
+----
+
+No separate `dependsOn` is needed for this producer. If the script's content depends on task properties
+or other files, declare those as task inputs so changes regenerate the script.
+
+Existing builds can also keep the plain file assignment with an explicit compile dependency:
+
+[source,groovy]
+.build.gradle (alternative wiring for the producer above)
+----
+tasks.named('compileGroovy', GroovyCompile) {
+    dependsOn generateUserConfigScript
+    groovyOptions.configurationScript = file('build/user-config.groovy')
+}
+----
+
+Grails matches the configured file against the declared outputs of the compile task's direct
+dependencies and orders script preparation after the matching producer. This preserves the Grails 7
+pattern when the producer declares the exact script file as an output, whether through an `@OutputFile`
+property as `GenerateCompilerScript` does above or through `outputs.file(...)` on an ad-hoc task. A
+dependency that declares only a containing output directory, writes the file without declaring it as an
+output, or is reachable only through another task's `dependsOn` cannot be identified this way. Such a
+build fails from a clean checkout before compilation starts, with a validation error on the
+`generateCompileGroovyGrailsCompilerConfig` task that Grails registers:
+
+[source,text]
+----
+A problem was found with the configuration of task ':generateCompileGroovyGrailsCompilerConfig' (type 'GrailsCompilerConfigScriptTask').
+Input file does not exist
+  ... property 'configurationScript' specifies file '.../build/user-config.groovy' which doesn't exist
+----
+
+If you see this error, expose the script as an output file and use the provider wiring instead.
+
+An existing, checked-in compiler script can still use a plain file assignment without a producer.
+Tasks that only generate source or classpath entries do not need additional ordering against
+compiler-script preparation: Grails does not read the compile or runtime classpath to prepare its script.
