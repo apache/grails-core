@@ -44,6 +44,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import org.grails.datastore.gorm.finders.DynamicFinder;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.config.GormProperties;
@@ -116,7 +117,9 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
         if (argMap.containsKey(ARGUMENT_READ_ONLY)) {
             c.setReadOnly(ClassUtils.getBooleanFromMap(ARGUMENT_READ_ONLY, argMap));
         }
-        String orderParam = (String) argMap.get(ARGUMENT_ORDER);
+        // checked before looking at the sort key, so an invalid direction is rejected even when
+        // there is nothing to sort by rather than being silently ignored
+        final String orderParam = DynamicFinder.normalizeDirection((String) argMap.get(ARGUMENT_ORDER));
         Object fetchObj = argMap.get(ARGUMENT_FETCH);
         if (fetchObj instanceof Map) {
             Map fetch = (Map) fetchObj;
@@ -153,16 +156,20 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
             if (caseArg instanceof Boolean) {
                 ignoreCase = (Boolean) caseArg;
             }
+            PersistentEntity sortEntity = datastore == null || targetClass == null ? null :
+                    datastore.getMappingContext().getPersistentEntity(targetClass.getName());
             if (sortObj instanceof Map) {
                 Map sortMap = (Map) sortObj;
-                for (Object sort : sortMap.keySet()) {
-                    final String order = ORDER_DESC.equalsIgnoreCase((String) sortMap.get(sort)) ? ORDER_DESC : ORDER_ASC;
-                    addOrderPossiblyNested(datastore, c, targetClass, (String) sort, order, ignoreCase);
+                for (Object sortKey : sortMap.keySet()) {
+                    final String sort = (String) sortKey;
+                    DynamicFinder.validateSortProperty(sortEntity, sort);
+                    final String order = DynamicFinder.normalizeDirection((String) sortMap.get(sortKey));
+                    addOrderPossiblyNested(datastore, c, targetClass, sort, order, ignoreCase);
                 }
             } else {
                 final String sort = (String) sortObj;
-                final String order = ORDER_DESC.equalsIgnoreCase(orderParam) ? ORDER_DESC : ORDER_ASC;
-                addOrderPossiblyNested(datastore, c, targetClass, sort, order, ignoreCase);
+                DynamicFinder.validateSortProperty(sortEntity, sort);
+                addOrderPossiblyNested(datastore, c, targetClass, sort, orderParam, ignoreCase);
             }
         }
         else if (useDefaultMapping) {

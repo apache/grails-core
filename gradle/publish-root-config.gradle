@@ -177,16 +177,6 @@ def publishedProjects = [
         'grails-profiles-web-plugin',
 ]
 
-def skipMicronautProjects = providers.gradleProperty('skipMicronautProjects').isPresent()
-if (!skipMicronautProjects) {
-    publishedProjects.addAll([
-            'grails-hibernate5-micronaut-bom',
-            'grails-hibernate7-micronaut-bom',
-            'grails-micronaut',
-            'grails-micronaut-bom',
-    ])
-}
-
 subprojects {
     if (name in publishedProjects) {
         // This has to be applied here in the root project due to the nexus plugin requirements

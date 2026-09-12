@@ -48,6 +48,8 @@ grails.plugin.springsecurity.ipRestrictions = [
 
 `pattern1` URLs can be accessed only from the external address 123.234.345.456, `pattern2` URLs can be accessed only from a 10.xxx.xxx.xxx intranet address, and `pattern3` URLs can be accessed only from 10.10.200.42 or 10.10.200.63. All other URL patterns are accessible from any IP address.
 
+Patterns are matched against the request path within the application, in the form the request is dispatched: the context path is not included, percent-encoded characters are decoded and matrix parameters (`;name=value`) are removed, so an encoded or matrix-parameter variant of a restricted URL is subject to the same restriction. For a forwarded request the path of the original request is checked.
+
 [WARNING]
 ====
 The format of `ipRestrictions` has changed from previous versions to avoid configuration parsing issues. In previous versions the property was a single Map, where the keys were the access patterns and the values were the IP addresses that are allowed. The old format is no longer supported and your configurations must be updated to the newer format.
