@@ -22,7 +22,9 @@ package org.grails.async.factory
 import grails.async.PromiseFactory
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import org.grails.async.factory.future.CachedThreadPoolPromiseFactory
+import java.util.concurrent.Executor
+
+import org.grails.async.factory.future.CompletableFuturePromiseFactory
 
 /**
  * Constructs the default promise factory
@@ -37,14 +39,14 @@ class PromiseFactoryBuilder {
     /**
      * @return Builds the default PromiseFactory
      */
-    static PromiseFactory build() {
+    static PromiseFactory build(Executor executor = null) {
 
         List<PromiseFactory> promiseFactories = ServiceLoader.load(PromiseFactory).toList()
 
         PromiseFactory promiseFactory
         if (promiseFactories.isEmpty()) {
-            log.debug('No PromiseFactory implementation found. Using default ExecutorService promise factory.')
-            promiseFactory = new CachedThreadPoolPromiseFactory()
+            log.debug('No PromiseFactory implementation found. Using the CompletableFuture promise factory.')
+            promiseFactory = executor == null ? new CompletableFuturePromiseFactory() : new CompletableFuturePromiseFactory(executor)
         }
         else {
             promiseFactory = promiseFactories.first()

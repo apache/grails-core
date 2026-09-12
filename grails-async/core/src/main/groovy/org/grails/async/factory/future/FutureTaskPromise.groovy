@@ -38,7 +38,9 @@ import org.grails.async.factory.BoundPromise
  *
  * @author Graeme Rocher
  * @since 3.3
+ * @deprecated Use {@link CompletableFuturePromise}. This legacy callback implementation will be removed in a future release.
  */
+@Deprecated(since = '8.0', forRemoval = true)
 @AutoFinal
 @CompileStatic
 class FutureTaskPromise<T> extends FutureTask<T> implements Promise<T> {

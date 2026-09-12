@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-If you are deploying to a Servlet 3.0 container such as Tomcat 7 and above then it is possible to deal with responses asynchronously.
+When running a Servlet application, Grails controller actions can produce responses asynchronously.
 
 In general for controller actions that execute quickly there is little benefit in handling requests asynchronously. However, for long running controller actions it is extremely beneficial.
 
@@ -25,16 +25,9 @@ The reason being that with an asynchronous / non-blocking response, the one thre
 
 For example, if you have 70 available container threads and an action takes a minute to complete, if the actions are not executed in a non-blocking fashion the likelihood of all 70 threads being occupied and the container not being able to respond is quite high and you should consider asynchronous request processing.
 
-Since Grails 2.3, Grails features a simplified API for creating asynchronous responses built on the `Promise` mechanism discussed previously.
+Grails provides a simplified API for creating asynchronous responses built on the `Promise` mechanism discussed previously. Promise results are integrated with Spring MVC's asynchronous request lifecycle. Spring MVC manages the Servlet async dispatch, timeout callbacks, and normal exception resolution when a promise fails.
 
-The implementation is based on Servlet 3.0 async. So, to enable the async features you need to set your servlet target version to 3.0 in application.yml:
-
-[source,groovy]
-----
-grails:
-    servlet:
-        version: 3.0
-----
+The raw `AsyncController.startAsync()` API and its Grails-specific Servlet wrappers are deprecated for removal. Return a `Promise` from the action instead; this allows Spring MVC to manage the request lifecycle and Spring Boot to manage execution and context propagation.
 
 
 ==== Async Models
