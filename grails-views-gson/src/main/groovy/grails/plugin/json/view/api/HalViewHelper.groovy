@@ -105,7 +105,7 @@ interface HalViewHelper {
      *
      * @param object The model to create links for
      */
-    void links(Map model, Object paginationObject, Number total)
+    void links(Map model, Object paginationObject, Long total)
 
     /**
      * Pagination support which outputs hal links to the resulting pages
@@ -113,7 +113,7 @@ interface HalViewHelper {
      * @param object The object to create links for
      * @param total The total number of objects to be paginated
      */
-    void paginate(Object object, Integer total)
+    void paginate(Object object, Long total)
 
     /**
      * Pagination support which outputs hal links to the resulting pages
@@ -122,7 +122,7 @@ interface HalViewHelper {
      * @param total The total number of objects to be paginated
      * @param offset The numerical offset where the page starts (defaults to 0)
      */
-    void paginate(Object object, Integer total, Integer offset)
+    void paginate(Object object, Long total, Long offset)
 
     /**
      * Pagination support which outputs hal links to the resulting pages
@@ -132,7 +132,7 @@ interface HalViewHelper {
      * @param offset The numerical offset where the page starts (defaults to 0)
      * @param max The maximum number of objects to be shown (defaults to 10)
      */
-    void paginate(Object object, Integer total, Integer offset, Integer max)
+    void paginate(Object object, Long total, Long offset, Integer max)
 
     /**
      * Pagination support which outputs hal links to the resulting pages
@@ -143,7 +143,7 @@ interface HalViewHelper {
      * @param max The maximum number of objects to be shown (defaults to 10)
      * @param sort The field to sort on (defaults to null)
      */
-    void paginate(Object object, Integer total, Integer offset, Integer max,  String sort)
+    void paginate(Object object, Long total, Long offset, Integer max,  String sort)
 
     /**
      * Pagination support which outputs hal links to the resulting pages
@@ -155,7 +155,7 @@ interface HalViewHelper {
      * @param sort The field to sort on (defaults to null)
      * @param order The order in which the results are to be sorted eg: DESC or ASC
      */
-    void paginate(Object object, Integer total, Integer offset, Integer max,  String sort, String order)
+    void paginate(Object object, Long total, Long offset, Integer max,  String sort, String order)
 
     /**
      * Render embedded links for the associations of the given object (if any)

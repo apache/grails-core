@@ -3335,7 +3335,7 @@ imported whether or not they are present — a star import of an absent package 
 not an error in Groovy, so the probe changed nothing it could observe. An application that relied on the
 import being *omitted* when the package was absent sees no difference in compiled output.
 
-==== 54. Non-Public Bean Classes Are Marshalled, and Reported Once
+==== 58. Non-Public Bean Classes Are Marshalled, and Reported Once
 
 Groovy 4 stamped `ACC_PUBLIC` on anonymous inner classes; Groovy 5, which Grails 8 builds on, does not.
 Reflection cannot invoke a method on a class that is not `public` from another package, even when the method
@@ -3413,7 +3413,7 @@ logging:
         org.apache.grails.common.reflect.ReflectionUtils: ERROR
 ----
 
-==== 58. Interceptor URI Matching Uses the Dispatched Path
+==== 59. Interceptor URI Matching Uses the Dispatched Path
 
 Interceptors that match on `uri`, with `match(uri: ...)` or `excludes(uri: ...)`, now match the same path that URL
 mappings route on: percent escapes are decoded, matrix parameters (`;name=value`) are removed and the context path is
@@ -3461,7 +3461,7 @@ RFC 9110 section 4.2.3 define paths as case-sensitive, and during a `RequestDisp
 matched. Interceptors and the Spring Security matchers follow dispatch on both points because a matcher that
 disagrees with dispatch lets a request reach a controller without its interceptors or restrictions.
 
-==== 59. Sort and Order Query Arguments Are Validated
+==== 60. Sort and Order Query Arguments Are Validated
 
 Grails 8 checks the `sort` and `order` arguments of `list()`, dynamic finders, where queries, criteria queries and `listOrderBy*` before the query is built, on both Hibernate 5 and Hibernate 7. A client-supplied sort value used to be interpolated into the query, and the entry points did not agree on how a bad value was handled. They now fail the same way everywhere, with an `IllegalArgumentException` whose message deliberately does not echo the value.
 
@@ -3488,7 +3488,7 @@ def index(Integer max) {
 }
 ----
 
-==== 60. XML Request Bodies That Declare a DOCTYPE Are Refused
+==== 61. XML Request Bodies That Declare a DOCTYPE Are Refused
 
 XML that Grails parses on an application's behalf is now read with external entity expansion, external DTD retrieval and
 DTD grammar loading disabled. Earlier releases set these parser features under identifiers the parser did not recognise,
@@ -3505,3 +3505,115 @@ is never retrieved. The plugin descriptor `grails-plugin.xml` is not among them:
 declaration, so it is read strictly at compile time and at runtime alike.
 
 See <<upgrading>> for the full description of the XML parsing defaults.
+
+==== 62. `count()` Returns `Long`
+
+`count()` and the `count` property return `Long` instead of `Integer`:
+
+[source,groovy]
+----
+// Grails 7
+Integer total = Book.count()
+
+// Grails 8
+Long total = Book.count()
+----
+
+How wide the underlying value is depends on the datastore. Hibernate counts with SQL `COUNT(*)` and Neo4j
+with Cypher `count(*)`, both 64-bit. MongoDB aggregates with `{$sum: 1}`, which returns Int32 and promotes
+to Int64 once the total exceeds it, so the width depends on how many documents the collection holds. Only
+the in-memory datastore is fixed at 32 bits, and it returns a list size. `GormStaticApi.count()` narrowed the datastore
+result with `intValue()`, which truncates silently. That second step truncates silently, so
+a table with more than `Integer.MAX_VALUE` rows reported a wrong and possibly negative count with no
+error. `Long` is the only type that holds every value a datastore can produce here, so it is what the API
+now declares.
+
+The change affects `GormStaticOperations.count()` and `getCount()`, the `count()` and `count` members
+generated on every domain class, and `RestfulController.countResources()`. Dynamic Groovy is unaffected:
+`Book.count() == 5`, `int n = Book.count()` and arithmetic on the result all continue to work, because
+Groovy converts between numeric types on assignment and compares them by value.
+
+Code that is statically compiled, or that overrides one of these methods, needs updating:
+
+[source,groovy]
+----
+@CompileStatic
+class ReportService {
+    // Grails 7
+    // Integer bookCount() { Book.count() }
+
+    // Grails 8
+    Long bookCount() { Book.count() }
+}
+
+class BookController extends RestfulController<Book> {
+    // Grails 7
+    // protected Integer countResources() { ... }
+
+    // Grails 8
+    protected Long countResources() { ... }
+}
+----
+
+Java callers assigning the result to an `Integer` or `int` need an explicit conversion, since `Long` does
+not unbox to `int`:
+
+[source,java]
+----
+long total = Book.count();            // auto-unboxes, no change needed
+int  small = Book.count().intValue();  // only when the count is known to be small
+----
+
+A GSP that declares the count in a typed model directive should declare it as `Number`, which accepts
+whatever a controller supplies:
+
+[source,html]
+----
+@{ model="List<Book> bookList; Number bookCount" }
+----
+
+JSON views declare their model the same way, and bind it the same way, so a `model` block naming the count
+with a concrete numeric type needs the same treatment:
+
+[source,groovy]
+.grails-app/views/book/index.gson
+----
+model {
+    Iterable<Book> bookList
+    // Grails 7
+    // Integer bookCount
+    Long bookCount     // or Number, to accept either controller
+}
+----
+
+`HalViewHelper.paginate()` and `links()` now declare `total` as `Long`, and `paginate()` declares `offset`
+as `Long` with it. Callers are unaffected, because Groovy widens an `Integer` argument to `Long` in both
+dynamic and statically compiled code, but anyone implementing `HalViewHelper` has to update their
+signatures.
+
+The GraphQL count field changes type with it. `graphql-java` maps `Long` to
+`ExtendedScalars.GraphQLLong`, so a schema that exposed
+
+[source,graphql]
+----
+type Query {
+  personCount: Int
+}
+----
+
+now exposes
+
+[source,graphql]
+----
+type Query {
+  personCount: Long
+}
+----
+
+Queries that select the field are unchanged and the JSON value is unchanged, but generated clients and
+schema snapshots need regenerating. The count fetcher previously narrowed the datastore result to fit
+`Int`, so counts above `Integer.MAX_VALUE` were truncated there too.
+
+Paginated list responses already type `totalCount` as `Long` through the same type manager, in
+`DefaultGraphQLPaginationResponseHandler`, so this aligns the count field with a scalar the schema
+already used rather than introducing a new one.

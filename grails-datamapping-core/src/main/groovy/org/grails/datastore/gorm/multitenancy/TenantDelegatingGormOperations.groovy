@@ -386,14 +386,14 @@ class TenantDelegatingGormOperations<D> implements GormAllOperations<D> {
     }
 
     @Override
-    Integer count() {
+    Long count() {
         Tenants.withId(requireMultiTenantCapableDatastore(), tenantId) {
             allOperations.count()
         }
     }
 
     @Override
-    Integer getCount() {
+    Long getCount() {
         Tenants.withId(requireMultiTenantCapableDatastore(), tenantId) {
             allOperations.getCount()
         }

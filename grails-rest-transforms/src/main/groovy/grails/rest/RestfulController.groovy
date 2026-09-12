@@ -281,7 +281,7 @@ class RestfulController<T> {
      *
      * @return List of resources or empty if it doesn't exist
      */
-    protected Integer countResources() {
+    protected Long countResources() {
         resource.count()
     }
 

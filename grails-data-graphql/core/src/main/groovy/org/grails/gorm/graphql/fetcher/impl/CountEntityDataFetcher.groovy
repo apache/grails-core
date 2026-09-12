@@ -34,15 +34,15 @@ import org.grails.gorm.graphql.fetcher.ReadingGormDataFetcher
  */
 @CompileStatic
 @InheritConstructors
-class CountEntityDataFetcher extends DefaultGormDataFetcher<Integer> implements ReadingGormDataFetcher<Integer> {
+class CountEntityDataFetcher extends DefaultGormDataFetcher<Long> implements ReadingGormDataFetcher<Long> {
 
-    protected Integer queryCount() {
+    protected Long queryCount() {
         staticApi.count()
     }
 
     @Override
-    Integer get(DataFetchingEnvironment environment) {
-        (Integer) withTransaction(true) {
+    Long get(DataFetchingEnvironment environment) {
+        (Long) withTransaction(true) {
             queryCount()
         }
     }
