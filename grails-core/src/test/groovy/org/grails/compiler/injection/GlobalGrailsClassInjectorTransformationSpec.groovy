@@ -720,6 +720,45 @@ class GlobalGrailsClassInjectorTransformationSpec extends Specification {
             xml.resources.resource*.text() == ['KeptThing']
     }
 
+    void "plugin xml update recreates a descriptor that declares a doctype"() {
+        given:
+            def logCapture = new LogCapture(GlobalGrailsClassInjectorTransformation, Level.WARN)
+
+        and: 'an existing descriptor declaring a doctype, which Grails never generates'
+            def pluginXml = new File(tempDir, 'doctype-plugin.xml')
+            pluginXml.text = '''
+                <!DOCTYPE plugin>
+                <plugin>
+                    <resources>
+                        <resource>ExistingThing</resource>
+                    </resources>
+                </plugin>
+            '''
+
+        when: 'the transformation attempts to update the descriptor'
+            transformation.updatePluginXml(null, null, pluginXml, ['NewThing'])
+
+        then: 'the declaration is refused, so the descriptor is discarded and a warning is logged'
+            !pluginXml.exists()
+            logCapture.events.size() == 1
+            with(logCapture.events[0]) {
+                level == Level.WARN
+                formattedMessage == "Failed to update existing file ${pluginXml.absolutePath}. Recreating it instead..."
+            }
+
+        and: 'the deferred names are written out when the descriptor is next generated'
+            transformation.generatePluginXml(
+                    compilePlugin('class DoctypeRecoveredGrailsPlugin {}'),
+                    '1.0',
+                    [] as Set,
+                    pluginXml
+            )
+            new XmlSlurper().parse(pluginXml).resources.resource*.text() == ['NewThing']
+
+        cleanup:
+            logCapture.close()
+    }
+
     void "plugin xml update recreates safely when the existing descriptor is malformed"() {
         given:
             def logCapture = new LogCapture(GlobalGrailsClassInjectorTransformation, Level.WARN)
