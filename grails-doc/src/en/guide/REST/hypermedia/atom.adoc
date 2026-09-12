@@ -43,7 +43,17 @@ https://tools.ietf.org/html/rfc4287[Atom] is another standard interchange format
 </feed>
 ----
 
-To use Atom rendering again simply define a custom renderer:
+Atom/feed rendering is not installed on the default core REST path. To retain it, first add the optional
+XML module:
+
+[source,groovy]
+----
+dependencies {
+    implementation 'org.apache.grails:grails-xml'
+}
+----
+
+Then explicitly define the feed renderers needed by the application:
 
 [source,groovy]
 ----

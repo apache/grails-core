@@ -22,6 +22,8 @@ import groovy.transform.CompileStatic
 
 import org.apache.commons.logging.Log
 import org.apache.commons.logging.LogFactory
+import org.springframework.http.InvalidMediaTypeException
+import org.springframework.http.MediaType
 
 import grails.web.mime.AcceptHeaderParser
 import grails.web.mime.MimeType
@@ -61,29 +63,8 @@ class DefaultAcceptHeaderParser implements AcceptHeaderParser {
             return mimeConfig
         }
 
-        String[] tokens = header.split(',')
-        for (String t in tokens) {
-            if (t.indexOf(';') > -1) {
-                List tokenWithArgs = t.split(';').toList()
-                Map<String, String> params = [:]
-                final paramsList = tokenWithArgs.size() > 1 ? tokenWithArgs[1..-1] : []
-                paramsList.each { it ->
-                    String theString = it as String
-                    def i = theString.indexOf('=')
-                    if (i > -1) {
-                        params[theString[0..i - 1].trim()] = theString[i + 1.. - 1].trim()
-                    }
-                }
-                if (params) {
-                    createMimeTypeAndAddToList(tokenWithArgs[0].trim(), mimeConfig, mimes, params)
-                }
-                else {
-                    createMimeTypeAndAddToList(tokenWithArgs[0].trim(), mimeConfig, mimes)
-                }
-            }
-            else {
-                createMimeTypeAndAddToList(t.trim(), mimeConfig, mimes)
-            }
+        for (MimeType requestedMimeType in parseRequestedMimeTypes(header)) {
+            createMimeTypeAndAddToList(requestedMimeType, mimeConfig, mimes)
         }
 
         if (!mimes) {
@@ -123,8 +104,28 @@ class DefaultAcceptHeaderParser implements AcceptHeaderParser {
         mimes as MimeType[]
     }
 
-    protected void createMimeTypeAndAddToList(String name, MimeType[] mimeConfig, List<MimeType> mimes, Map<String,String> params = null) {
-        def mime = params ? new MimeType(name, params) : new MimeType(name)
+    protected List<MimeType> parseRequestedMimeTypes(String header) {
+        List<MimeType> mimeTypes = []
+
+        for (String token in header.split(',')) {
+            String candidate = token.trim()
+            try {
+                MediaType mediaType = MediaType.parseMediaType(candidate)
+                mimeTypes.add(SpringMediaTypeAdapter.toMimeType(mediaType))
+            }
+            catch (InvalidMediaTypeException ignored) {
+                // Preserve Grails' lenient handling of legacy headers such as a trailing semicolon,
+                // a valueless parameter, or an out-of-range/non-numeric quality value.
+                mimeTypes.add(new MimeType(candidate))
+            }
+        }
+
+        mimeTypes.sort(true, new QualityComparator())
+        return mimeTypes
+    }
+
+    protected void createMimeTypeAndAddToList(MimeType mime, MimeType[] mimeConfig, List<MimeType> mimes) {
+        String name = mime.name
         //First try to find the exact match for the mime type using name and version. If version is not set,  consider
         // version match to be successful.
         def foundMime = mimeConfig.find { MimeType mt ->

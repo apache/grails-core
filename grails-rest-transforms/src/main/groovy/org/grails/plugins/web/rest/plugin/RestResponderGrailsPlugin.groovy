@@ -32,10 +32,13 @@ import grails.core.GrailsApplication
 import grails.core.GrailsClass
 import grails.plugins.Plugin
 import grails.rest.Resource
+import grails.rest.render.errors.ValidationProblemDetailFactory
+import org.springframework.context.MessageSource
 import grails.util.GrailsUtil
 import org.grails.core.artefact.ControllerArtefactHandler
 import org.grails.core.artefact.DomainClassArtefactHandler
 import org.grails.plugins.web.rest.render.DefaultRendererRegistry
+import org.grails.plugins.web.rest.render.SpringMessageConverters
 
 /**
  * @since 2.3
@@ -64,6 +67,17 @@ class RestResponderGrailsPlugin extends Plugin {
                     return rendererRegistry
                 }
             }
+            registry.registerBean('validationProblemDetailFactory', ValidationProblemDetailFactory) {
+                it.supplier {
+                    // Resolves each error through the application's MessageSource, so a validation
+                    // response carries the message for the current locale with its arguments
+                    // substituted rather than the raw default template.
+                    // Absent outside an application context, such as a unit test slice; the
+                    // factory then falls back to each error's default message.
+                    new ValidationProblemDetailFactory(false, it.beanProvider(MessageSource).getIfAvailable())
+                }
+            }
+            registry.registerBean('springMessageConverters', SpringMessageConverters)
         }
     }
 

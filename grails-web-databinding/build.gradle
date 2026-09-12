@@ -45,6 +45,7 @@ dependencies {
     }
     api project(':grails-encoder')
     api 'org.apache.groovy:groovy'
+    api 'tools.jackson.core:jackson-databind'
 
     implementation project(':grails-common'), {
         // impl: GrailsMessageSourceUtils

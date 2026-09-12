@@ -45,8 +45,6 @@ class DefaultDataBindingSourceRegistry extends ClassAndMimeTypeRegistry<DataBind
     void initialize() {
         registerDefault(MimeType.JSON, new JsonDataBindingSourceCreator())
         registerDefault(MimeType.TEXT_JSON, new JsonDataBindingSourceCreator())
-        registerDefault(MimeType.XML, new XmlDataBindingSourceCreator())
-        registerDefault(MimeType.TEXT_XML, new XmlDataBindingSourceCreator())
     }
 
     protected DataBindingSourceCreator getDataBindingSourceCreator(MimeType mimeType, Class targetType, Object bindingSource) {

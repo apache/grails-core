@@ -72,7 +72,10 @@ class GrailsApplicationBuilder {
             GrailsApplicationBuilder.classLoader
     )
 
-    static final Set DEFAULT_INCLUDED_PLUGINS = ['core', 'eventBus'] as Set
+    // 'xml' resolves only when the optional grails-xml module is on the classpath; plugin
+    // discovery simply does not find it otherwise. Nothing depends on that plugin, so it would
+    // never be pulled in through the dependency graph the way converters is.
+    static final Set DEFAULT_INCLUDED_PLUGINS = ['core', 'eventBus', 'xml'] as Set
 
     Closure doWithSpring
     Closure doWithConfig

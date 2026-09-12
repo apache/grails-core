@@ -22,7 +22,7 @@ import grails.converters.XML
 
 import grails.core.DefaultGrailsApplication
 import org.grails.plugins.testing.GrailsMockHttpServletRequest
-import org.grails.web.converters.configuration.ConvertersConfigurationInitializer
+import org.grails.web.converters.configuration.XmlConvertersConfigurationInitializer
 
 import spock.lang.Issue
 import spock.lang.Specification
@@ -32,7 +32,9 @@ class GrailsMockHttpServletRequestSpec extends Specification {
     @Issue("GRAILS-11493")
     def "should allow setting request.xml with XML instance"() {
         given:
-            ConvertersConfigurationInitializer initializer=new ConvertersConfigurationInitializer(grailsApplication: new DefaultGrailsApplication())
+            XmlConvertersConfigurationInitializer initializer = new XmlConvertersConfigurationInitializer(
+                    grailsApplication: new DefaultGrailsApplication()
+            )
             initializer.initialize()
             GrailsMockHttpServletRequest request=new GrailsMockHttpServletRequest()
         when:

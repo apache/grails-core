@@ -46,6 +46,7 @@ import grails.web.mime.MimeType
 import grails.web.mime.MimeUtility
 import grails.web.pages.GrailsLayoutSelector
 import grails.web.pages.GrailsRenderViewMutator
+import grails.web.render.NamedJsonRenderer
 import org.grails.gsp.GroovyPageTemplate
 import org.grails.io.support.SpringIOUtils
 import org.grails.web.json.JSONElement
@@ -92,12 +93,28 @@ import static org.grails.plugins.web.controllers.metaclass.RenderDynamicMethod.T
 @CompileStatic
 trait ResponseRenderer extends WebAttributes {
 
+    static final String ARGUMENT_JSON = 'json'
+
+    static final String ARGUMENT_JSON_CONFIGURATION = 'jsonConfiguration'
+
     private Collection<ActionResultTransformer> actionResultTransformers = []
 
     private MimeUtility mimeUtility
     private GrailsRenderViewMutator grailsRenderViewMutator
     private GrailsLayoutSelector grailsLayoutSelector
     private GrailsPluginManager pluginManager
+    private NamedJsonRenderer namedJsonRenderer
+
+    @Generated
+    @Autowired(required = false)
+    void setNamedJsonRenderer(NamedJsonRenderer namedJsonRenderer) {
+        this.namedJsonRenderer = namedJsonRenderer
+    }
+
+    @Generated
+    NamedJsonRenderer getNamedJsonRenderer() {
+        return namedJsonRenderer
+    }
 
     @Generated
     @Autowired(required = false)
@@ -252,6 +269,44 @@ trait ResponseRenderer extends WebAttributes {
     }
 
     /**
+     * Renders the {@code json} argument with a registered named Jackson configuration:
+     *
+     * <pre>render json: book, jsonConfiguration: 'deep'</pre>
+     *
+     * Keyed off the argument map rather than an overload taking an object, so that no other
+     * two-argument render call can be captured by it.
+     *
+     * @param argMap the render arguments
+     * @param webRequest the current request
+     * @param response the response to write to
+     */
+    @Generated
+    private void renderNamedJson(Map argMap, GrailsWebRequest webRequest, HttpServletResponse response) {
+        Object value = argMap.get(ARGUMENT_JSON)
+        String configurationName = argMap.get(ARGUMENT_JSON_CONFIGURATION)?.toString()
+        if (!configurationName) {
+            throw new IllegalArgumentException(
+                    "Argument [$ARGUMENT_JSON_CONFIGURATION] is required when rendering [$ARGUMENT_JSON].")
+        }
+        if (namedJsonRenderer == null || !namedJsonRenderer.contains(configurationName)) {
+            throw new IllegalArgumentException("Named JSON configuration [$configurationName] is not registered.")
+        }
+        if (!applyContentType(response, argMap, value, false)) {
+            setContentType(response, MimeType.JSON.name, DEFAULT_ENCODING)
+        }
+        try {
+            namedJsonRenderer.render(configurationName, value, response.writer,
+                    (List<String>) argMap.get('includes'), (List<String>) argMap.get('excludes'))
+            response.writer.flush()
+        }
+        catch (IOException e) {
+            throw new ControllerExecutionException(
+                    "I/O error rendering named JSON configuration [$configurationName].", e)
+        }
+        webRequest.renderView = false
+    }
+
+    /**
      * Render a response for the given named arguments
      *
      * @param argMap The named argument map
@@ -264,6 +319,10 @@ trait ResponseRenderer extends WebAttributes {
         boolean statusSet = handleStatusArgument(argMap, webRequest, response)
 
         def applicationAttributes = webRequest.attributes
+        if (argMap.containsKey(ARGUMENT_JSON)) {
+            renderNamedJson(argMap, webRequest, response)
+            return
+        }
         if (argMap.containsKey(ARGUMENT_TEXT)) {
             def textArg = argMap[ARGUMENT_TEXT]
             applyContentType(response, argMap, textArg)

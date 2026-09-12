@@ -23,11 +23,12 @@ import org.springframework.beans.factory.support.DefaultListableBeanFactory
 import org.springframework.core.env.StandardEnvironment
 
 import grails.converters.JSON
-import grails.converters.XML
+import grails.converters.json.NamedJsonConfigurationRegistry
+import tools.jackson.databind.json.JsonMapper
 import org.grails.web.converters.configuration.ConvertersConfigurationInitializer
 import org.grails.web.converters.configuration.ObjectMarshallerRegisterer
+import org.grails.web.converters.jackson.JacksonNamedJsonRenderer
 import org.grails.web.converters.marshaller.json.ValidationErrorsMarshaller as JsonErrorsMarshaller
-import org.grails.web.converters.marshaller.xml.ValidationErrorsMarshaller as XmlErrorsMarshaller
 
 import spock.lang.Specification
 
@@ -44,21 +45,65 @@ class ConvertersGrailsPluginSpec extends Specification {
         expect:
         with(beanFactory) {
             getBeanDefinition('jsonErrorsMarshaller').beanClassName == JsonErrorsMarshaller.name
-            getBeanDefinition('xmlErrorsMarshaller').beanClassName == XmlErrorsMarshaller.name
             getBeanDefinition('convertersConfigurationInitializer').beanClassName == ConvertersConfigurationInitializer.name
-            containsBeanDefinition('errorsXmlMarshallerRegisterer')
+            containsBeanDefinition('namedJsonConfigurationRegistry')
+            containsBeanDefinition('namedJsonRenderer')
             containsBeanDefinition('errorsJsonMarshallerRegisterer')
         }
     }
 
+    void "the named JSON configuration registry is created without a Boot JsonMapper"() {
+        when: "the bean is instantiated in a context that has no JsonMapper, such as a unit test slice"
+        def configurationRegistry = beanFactory.getBean('namedJsonConfigurationRegistry', NamedJsonConfigurationRegistry)
+
+        then: "creating it does not fail the application context"
+        configurationRegistry != null
+
+        and: "configurations still register, since that needs no mapper"
+        configurationRegistry.register('deep') { it.attribute('depth', 'deep') }
+        configurationRegistry.contains('deep')
+    }
+
+    void "using a named configuration without a JsonMapper says so rather than substituting one"() {
+        given:
+        def configurationRegistry = beanFactory.getBean('namedJsonConfigurationRegistry', NamedJsonConfigurationRegistry)
+        configurationRegistry.register('deep') { it.attribute('depth', 'deep') }
+
+        when: "a writer is needed but Jackson auto-configuration never ran"
+        configurationRegistry.writeValueAsString('deep', [title: 'Grails'])
+
+        then: "the failure names the cause instead of silently using a differently configured mapper"
+        IllegalStateException e = thrown()
+        e.message.contains('no JsonMapper is available')
+    }
+
+    void "a registered JsonMapper is the one configurations derive from"() {
+        given: "a mapper registered after the registry bean definition, as Boot's is"
+        def mapper = JsonMapper.builder().build()
+        beanFactory.registerSingleton('jacksonJsonMapper', mapper)
+        def configurationRegistry = beanFactory.getBean('namedJsonConfigurationRegistry', NamedJsonConfigurationRegistry)
+
+        when:
+        configurationRegistry.register('deep') { it.attribute('depth', 'deep') }
+
+        then:
+        configurationRegistry.writeValueAsString('deep', [title: 'Grails']) == '{"title":"Grails"}'
+    }
+
+    void "the named JSON renderer is created without a Boot JsonMapper"() {
+        when:
+        def renderer = beanFactory.getBean('namedJsonRenderer', JacksonNamedJsonRenderer)
+
+        then:
+        renderer != null
+        !renderer.contains('absent')
+    }
+
     void "the errors marshaller registerers use the named errors marshaller beans"() {
         when:
-        def xmlRegisterer = beanFactory.getBean('errorsXmlMarshallerRegisterer', ObjectMarshallerRegisterer)
         def jsonRegisterer = beanFactory.getBean('errorsJsonMarshallerRegisterer', ObjectMarshallerRegisterer)
 
         then:
-        xmlRegisterer.marshaller.is(beanFactory.getBean('xmlErrorsMarshaller', XmlErrorsMarshaller))
-        xmlRegisterer.converterClass == XML
         jsonRegisterer.marshaller.is(beanFactory.getBean('jsonErrorsMarshaller', JsonErrorsMarshaller))
         jsonRegisterer.converterClass == JSON
     }

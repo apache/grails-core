@@ -25,6 +25,7 @@ import org.springframework.core.env.StandardEnvironment
 
 import grails.config.Settings
 import grails.core.DefaultGrailsApplication
+import grails.rest.render.errors.ValidationProblemDetailFactory
 import org.grails.plugins.web.rest.render.DefaultRendererRegistry
 
 import spock.lang.Specification
@@ -41,6 +42,7 @@ class RestResponderGrailsPluginSpec extends Specification {
         then:
         beanFactory.getBeanDefinition('rendererRegistry').lazyInit
         beanFactory.getBean('rendererRegistry', DefaultRendererRegistry).modelSuffix == ''
+        beanFactory.getBean('validationProblemDetailFactory', ValidationProblemDetailFactory)
     }
 
     void "the renderer registry model suffix is read from the environment"() {

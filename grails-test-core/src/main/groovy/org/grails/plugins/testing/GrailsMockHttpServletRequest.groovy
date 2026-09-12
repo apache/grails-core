@@ -20,6 +20,8 @@ package org.grails.plugins.testing
 
 import java.nio.charset.StandardCharsets
 
+import groovy.transform.CompileStatic
+
 import jakarta.servlet.AsyncContext
 import jakarta.servlet.AsyncEvent
 import jakarta.servlet.AsyncListener
@@ -128,6 +130,7 @@ class GrailsMockHttpServletRequest extends MockHttpServletRequest implements Mul
      *
      * @param sourceXml
      */
+    @CompileStatic
     void setXml(Object sourceXml) {
         setContentType('text/xml; charset=UTF-8')
         setFormat('xml')
@@ -136,16 +139,46 @@ class GrailsMockHttpServletRequest extends MockHttpServletRequest implements Mul
             setContent(sourceXml.getBytes(StandardCharsets.UTF_8))
         }
         else {
-            XML xml
-            if (sourceXml instanceof XML) {
-                xml = (XML) sourceXml
-            } else {
-                xml = new XML(sourceXml)
-            }
-            setContent(xml.toString().getBytes(StandardCharsets.UTF_8))
+            setContent(convertToXml(sourceXml).toString().getBytes(StandardCharsets.UTF_8))
         }
 
-        getAttribute('org.codehaus.groovy.grails.WEB_REQUEST')?.informParameterCreationListeners()
+        GrailsWebRequest webRequest = (GrailsWebRequest) getAttribute('org.codehaus.groovy.grails.WEB_REQUEST')
+        webRequest?.informParameterCreationListeners()
+    }
+
+    /**
+     * grails-xml is optional, so these touch {@code grails.converters.XML} only inside the method
+     * body, never in a signature: Groovy builds a class's metaclass by reflecting over method
+     * signatures, and a signature naming an absent class leaves the metaclass incomplete. Keeping
+     * the reference to the executing instruction means the failure surfaces here, with a usable
+     * message, only when object-to-XML conversion is actually requested.
+     */
+    private static Object convertToXml(Object sourceXml) {
+        try {
+            return sourceXml instanceof XML ? sourceXml : new XML(sourceXml)
+        }
+        catch (NoClassDefFoundError e) {
+            throw missingXmlModule(e)
+        }
+    }
+
+    // Statically compiled so that XML binds as a class. Left dynamic, Groovy resolves the bare
+    // name as a property read, which routes back through getXML() and recurses.
+    @CompileStatic
+    private static Object parseXml(GrailsMockHttpServletRequest request) {
+        try {
+            return XML.parse(request)
+        }
+        catch (NoClassDefFoundError e) {
+            throw missingXmlModule(e)
+        }
+    }
+
+    private static IllegalStateException missingXmlModule(Throwable cause) {
+        return new IllegalStateException(
+                'Object-to-XML conversion requires org.apache.grails:grails-xml on the test classpath',
+                cause
+        )
     }
 
     void setXML(Object sourceXml) {
@@ -235,7 +268,7 @@ class GrailsMockHttpServletRequest extends MockHttpServletRequest implements Mul
      */
     def getXML() {
         if (!cachedXml) {
-            cachedXml = GrailsMockHttpServletRequest.classLoader.loadClass('grails.converters.XML').parse(this)
+            cachedXml = parseXml(this)
         }
         return cachedXml
     }
@@ -247,9 +280,16 @@ class GrailsMockHttpServletRequest extends MockHttpServletRequest implements Mul
      */
     def getJSON() {
         if (!cachedJson) {
-            cachedJson = GrailsMockHttpServletRequest.classLoader.loadClass('grails.converters.JSON').parse(this)
+            cachedJson = parseJson(this)
         }
         return cachedJson
+    }
+
+    // Statically compiled so that JSON binds as a class. Left dynamic, Groovy resolves the bare
+    // name as a property read, which routes back through getJSON() and recurses.
+    @CompileStatic
+    private static Object parseJson(GrailsMockHttpServletRequest request) {
+        return JSON.parse(request)
     }
 
     /**
