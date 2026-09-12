@@ -77,6 +77,27 @@ class CoreAutoConfigurationSpec extends Specification {
         }
     }
 
+    void 'the core beans stand down for an application that is not a Grails application'() {
+        given: 'a context with no GrailsApplication, as any Spring Boot application with grails-core has'
+        ApplicationContextRunner runner = new ApplicationContextRunner()
+                .withConfiguration(AutoConfigurations.of(CoreAutoConfiguration, PropertyPlaceholderAutoConfiguration))
+
+        expect: 'the context starts, rather than failing on a bean of a type it never had'
+        runner.run { context ->
+            assert !context.startupFailure
+            assert !context.containsBean('classLoader')
+            assert !context.containsBean('grailsConfigProperties')
+            assert !context.containsBean('grailsResourceLocator')
+        }
+
+        and: 'the whole configuration stands down, so the application places holders as Spring Boot does'
+        runner.run { context ->
+            PropertySourcesPlaceholderConfigurer configurer =
+                    context.getBean(PropertySourcesPlaceholderConfigurer)
+            assert !(configurer instanceof GrailsPlaceholderConfigurer)
+        }
+    }
+
     void 'the classLoader bean exposes the GrailsApplication class loader'() {
         expect:
         contextRunner().run { context ->

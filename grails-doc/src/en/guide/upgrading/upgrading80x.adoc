@@ -3335,7 +3335,7 @@ imported whether or not they are present — a star import of an absent package 
 not an error in Groovy, so the probe changed nothing it could observe. An application that relied on the
 import being *omitted* when the package was absent sees no difference in compiled output.
 
-==== 54. Non-Public Bean Classes Are Marshalled, and Reported Once
+==== 58. Non-Public Bean Classes Are Marshalled, and Reported Once
 
 Groovy 4 stamped `ACC_PUBLIC` on anonymous inner classes; Groovy 5, which Grails 8 builds on, does not.
 Reflection cannot invoke a method on a class that is not `public` from another package, even when the method
@@ -3349,7 +3349,7 @@ serialVersionUID` field was accessible before checking that it was static, which
 every serializable bean declares that field, so this affected a large share of objects passed to `as JSON`.
 
 Grails 8 adds compatibility handling for the non-public case, and reports each such class once so that the
-code can be corrected — see 54.2 below. The shape that hits it is an anonymous implementation of a public
+code can be corrected — see 58.2 below. The shape that hits it is an anonymous implementation of a public
 interface:
 
 [source,groovy]
@@ -3368,7 +3368,7 @@ NOTE: Ordinary Groovy code is unaffected. Property access and method calls throu
 on such an object from any package, as does the JDK's `Introspector`; only raw reflection against the method
 as the non-public class declares it fails. That is what bean marshalling was doing.
 
-===== 54.1 Public Fields of Non-Public Classes Are Now Included
+===== 58.1 Public Fields of Non-Public Classes Are Now Included
 
 Java and Groovy beans are now treated alike. A `public` instance field declared on a class that is not
 public was silently omitted from the JSON or XML body when the bean was a plain Java object; it is now
@@ -3386,7 +3386,7 @@ A `public` *field* that cannot be read at all — because its class is in a name
 its package — is skipped, and the rest of the object still converts. A *getter* in that same situation is
 not skipped: the conversion fails, as it did before Grails 8.
 
-===== 54.2 The Warning
+===== 58.2 The Warning
 
 Reading a bean whose class is not public is compatibility handling rather than a supported contract, so each
 such class is reported once:
@@ -3413,7 +3413,7 @@ logging:
         org.apache.grails.common.reflect.ReflectionUtils: ERROR
 ----
 
-==== 58. Interceptor URI Matching Uses the Dispatched Path
+==== 59. Interceptor URI Matching Uses the Dispatched Path
 
 Interceptors that match on `uri`, with `match(uri: ...)` or `excludes(uri: ...)`, now match the same path that URL
 mappings route on: percent escapes are decoded, matrix parameters (`;name=value`) are removed and the context path is
@@ -3461,7 +3461,7 @@ RFC 9110 section 4.2.3 define paths as case-sensitive, and during a `RequestDisp
 matched. Interceptors and the Spring Security matchers follow dispatch on both points because a matcher that
 disagrees with dispatch lets a request reach a controller without its interceptors or restrictions.
 
-==== 59. Sort and Order Query Arguments Are Validated
+==== 60. Sort and Order Query Arguments Are Validated
 
 Grails 8 checks the `sort` and `order` arguments of `list()`, dynamic finders, where queries, criteria queries and `listOrderBy*` before the query is built, on both Hibernate 5 and Hibernate 7. A client-supplied sort value used to be interpolated into the query, and the entry points did not agree on how a bad value was handled. They now fail the same way everywhere, with an `IllegalArgumentException` whose message deliberately does not echo the value.
 
@@ -3488,7 +3488,7 @@ def index(Integer max) {
 }
 ----
 
-==== 60. XML Request Bodies That Declare a DOCTYPE Are Refused
+==== 61. XML Request Bodies That Declare a DOCTYPE Are Refused
 
 XML that Grails parses on an application's behalf is now read with external entity expansion, external DTD retrieval and
 DTD grammar loading disabled. Earlier releases set these parser features under identifiers the parser did not recognise,
@@ -3505,3 +3505,55 @@ is never retrieved. The plugin descriptor `grails-plugin.xml` is not among them:
 declaration, so it is read strictly at compile time and at runtime alike.
 
 See <<upgrading>> for the full description of the XML parsing defaults.
+
+==== 62. Grails Plugins Run for a Grails Application Only
+
+The Grails plugin lifecycle ran for any Spring Boot application that had `grails-core` on its class path,
+whether or not it was a Grails application. An application that depended on a Grails library — GSP for its
+views, say — was given a `GrailsApplication`, a plugin manager, and the beans of every plugin found on the
+class path, over the top of what the libraries it did ask for auto-configure for themselves.
+
+The lifecycle now runs only for a Grails application: one that `GrailsApp` launched, or one where a source of
+the context is a Grails application class, which is what `grails-app/init/Application.groovy` is. A Grails
+application is unaffected either way. A Spring Boot application using a Grails library gets that library's
+auto-configuration and nothing else.
+
+This matters if you deliberately put a Grails plugin on the class path of an application that is not a Grails
+application and relied on its `doWithSpring` or `beanRegistrar` beans being contributed. Those beans are no
+longer registered. A plugin that also publishes an auto-configuration — as the Grails modules do, and as
+`@GrailsBeans` generates for a plugin's `beans` block — continues to contribute through Spring Boot's own
+auto-configuration, which needs no lifecycle.
+
+It also matters inside a Grails application, in one place: a `@SpringBootTest` that names configuration
+classes of its own rather than the application class. The context of such a test has no Grails application
+class among its sources, so it is not a Grails application by the rule above and the lifecycle no longer runs
+for it — where before it did, and the test was given the whole plugin runtime.
+
+[source,groovy]
+----
+// Grails 7: the plugin lifecycle ran, and this context had a GrailsApplication and every plugin's beans
+@SpringBootTest(classes = SomeConfig)
+class SomeSpec extends Specification { }
+
+// Grails 8: name the application class as well, and the context is a Grails application again
+@SpringBootTest(classes = [Application, SomeConfig])
+class SomeSpec extends Specification { }
+----
+
+`@Integration` tests are unaffected: they always name the application class. So are tests using the
+`grails-testing-support` unit test mixins, which build their context without the lifecycle either way.
+
+==== 63. `sitemesh.decorator.default` Is Consulted for the Default Layout
+
+The SiteMesh 3 integration resolved the default layout from `grails.sitemesh.default.layout`, falling back to
+the legacy `grails.views.layout.default`. With neither set it used the implicit `application` layout.
+
+SiteMesh's own `sitemesh.decorator.default` is now consulted as a last fallback, after both Grails keys. It is
+the property a Spring Boot application rendering views with GSP configures, and the one
+`Sitemesh3EnvironmentPostProcessor` derives from the Grails keys, so it decides only where neither Grails key
+is set.
+
+This changes behaviour for a Grails application that set `sitemesh.decorator.default` and neither Grails key:
+it was decorated with the implicit `application` layout and is now decorated with the layout that property
+names. Set `grails.sitemesh.default.layout` to be explicit, or remove `sitemesh.decorator.default` to keep the
+implicit `application` layout. An application that sets either Grails key is unaffected — those still win.

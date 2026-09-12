@@ -206,7 +206,6 @@ class GroovyPagePlugin implements Plugin<Project> {
         FileCollection classesDirs = resolveClassesDirs(output, project)
         Provider<Directory> destDir = project.layout.buildDirectory.dir('gsp-classes/main')
         Provider<Directory> webappDestDir = project.layout.buildDirectory.dir('gsp-classes/webapp')
-        output?.dir('gsp-classes')
 
         // The Java the rest of the project is built with, so that pages are built with it too.
         // Absent a toolchain this resolves to the JVM running Gradle, which is what compiling
@@ -435,6 +434,38 @@ class GroovyPagePlugin implements Plugin<Project> {
             } else {
                 war.classpath = project.files(destDir, webappDestDir)
             }
+        }
+
+        // The archives below take the compiled pages by copy. A test of a Spring Boot application
+        // needs them on its class path as well, so it loads the same pages the application ships -
+        // the view registry among them. They cannot be registered as source set output: that output
+        // is what `classes` builds, and compileGroovyPages runs after `classes`, so it would cycle.
+        //
+        // Nothing is contributed to a Grails build. A Grails application renders the views under
+        // grails-app/views, which its tests already find as they are, and putting the compiled pages
+        // on the test class path would put every such project's `test` task behind
+        // compileGroovyPages for pages it does not read.
+        //
+        // The main runtime class path is deliberately left alone in either build. A boot archive
+        // packages every directory of it into its own classes directory, and the pages are copied
+        // there already, so each page would arrive twice - and an application run from the build
+        // renders its templates as they are edited, which is what a page compiled ahead of the edit
+        // would stand in the way of.
+        //
+        // Whether this is a Grails build is answered through a provider rather than by asking the
+        // project here: this plugin is applied on its own as well as alongside the Grails plugin,
+        // with no ordering between them, so the answer is only settled once the build is configured.
+        boolean grailsBuild = false
+        project.plugins.withType(GrailsGradlePlugin) {
+            grailsBuild = true
+        }
+        FileCollection compiledPages = project.files(project.provider {
+            grailsBuild ? [] : [project.files(destDir, webappDestDir)
+                    .builtBy(compileGroovyPages, compileWebappGroovyPages)]
+        })
+        SourceSet testSourceSet = SourceSets.findSourceSet(project, SourceSet.TEST_SOURCE_SET_NAME)
+        if (testSourceSet != null) {
+            testSourceSet.runtimeClasspath = testSourceSet.runtimeClasspath + compiledPages
         }
 
         tasks.withType(Jar).configureEach { Jar jar ->

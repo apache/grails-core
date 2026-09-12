@@ -28,6 +28,11 @@ import org.springframework.beans.factory.config.CustomEditorConfigurer
 import org.springframework.beans.factory.support.BeanRegistryAdapter
 import org.springframework.beans.factory.support.GenericBeanDefinition
 import org.springframework.beans.factory.support.RootBeanDefinition
+import org.springframework.boot.autoconfigure.AutoConfigurations
+import org.springframework.boot.autoconfigure.aop.AopAutoConfiguration
+import org.springframework.boot.test.context.runner.ApplicationContextRunner
+import org.springframework.context.ApplicationContextInitializer
+import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.context.support.GenericApplicationContext
 
 import grails.config.Settings
@@ -93,6 +98,20 @@ class CoreGrailsPluginRegistrarSpec extends Specification {
 
         cleanup:
         context.close()
+    }
+
+    void "Spring Boot's AOP auto-configuration starts on top of the registered auto proxy creator"() {
+        given: 'a plain Spring Boot context - nothing here loads GrailsAutoConfiguration'
+        GrailsApplication application = new DefaultGrailsApplication()
+
+        expect: 'the auto-configuration accepts the registered creator instead of rejecting it as unknown'
+        new ApplicationContextRunner()
+                .withInitializer(applyRegistrar(application))
+                .withConfiguration(AutoConfigurations.of(AopAutoConfiguration))
+                .run { context ->
+                    assert context.getBean(AopConfigUtils.AUTO_PROXY_CREATOR_BEAN_NAME) instanceof
+                            GroovyAwareAspectJAwareAdvisorAutoProxyCreator
+                }
     }
 
     void 'the Class and Properties editors are registered'() {
@@ -180,18 +199,28 @@ class CoreGrailsPluginRegistrarSpec extends Specification {
 
     private static GenericApplicationContext buildContext(GrailsApplication application,
                                                           Closure<?> customizer = null) {
-        CoreGrailsPlugin plugin = new CoreGrailsPlugin()
-        plugin.grailsApplication = application
-
         GenericApplicationContext context = new GenericApplicationContext()
         context.beanFactory.registerSingleton(GrailsApplication.APPLICATION_ID, application)
         customizer?.call(context)
+        registerBeans(application, context)
+        context.refresh()
+        context
+    }
+
+    private static ApplicationContextInitializer<ConfigurableApplicationContext> applyRegistrar(GrailsApplication application) {
+        return { ConfigurableApplicationContext context ->
+            context.beanFactory.registerSingleton(GrailsApplication.APPLICATION_ID, application)
+            registerBeans(application, (GenericApplicationContext) context)
+        } as ApplicationContextInitializer<ConfigurableApplicationContext>
+    }
+
+    private static void registerBeans(GrailsApplication application, GenericApplicationContext context) {
+        CoreGrailsPlugin plugin = new CoreGrailsPlugin()
+        plugin.grailsApplication = application
 
         BeanRegistrar registrar = plugin.beanRegistrar()
         new BeanRegistryAdapter(context, context.beanFactory, context.environment, registrar.getClass())
                 .register(registrar)
-        context.refresh()
-        context
     }
 
     /**

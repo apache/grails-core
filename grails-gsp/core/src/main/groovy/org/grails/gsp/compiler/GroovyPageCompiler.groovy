@@ -151,16 +151,19 @@ class GroovyPageCompiler {
                 }
 
                 // write the view registry to a properties file (this is read by GroovyPagesTemplateEngine at runtime)
+                // The registry names every page compiled here, whether or not this run had to recompile it, so it
+                // is written whole rather than merged into what an earlier run left behind. Merging kept naming
+                // pages that have since been renamed, removed or registered under a different prefix, against
+                // classes no longer on the class path.
+                //
+                // This holds because a caller hands the compiler the whole source set on every run, which is what
+                // GroovyPageForkCompileTask and GroovyPageCompilerTask both do - each passes its full srcDir and
+                // lets the up-to-date check above decide what to recompile. The merge existed for a caller that
+                // passed only the changed files; one that did would now write a registry naming those alone.
                 File viewregistryFile = new File(targetDir, 'gsp/views.properties')
                 viewregistryFile.parentFile.mkdirs()
                 // Use SortedProperties to ensure a consistent order of entries for reproducible builds
                 Properties views = CollectionFactory.createSortedProperties(false)
-                if (viewregistryFile.exists()) {
-                    // only changed files are added to the mapping, read the existing mapping file
-                    viewregistryFile.withInputStream { stream ->
-                        views.load(new InputStreamReader(stream, 'UTF-8'))
-                    }
-                }
                 views.putAll(compileGSPRegistry)
                 viewregistryFile.withOutputStream { viewsOut ->
                     views.store(viewsOut, "Precompiled views for ${packagePrefix}")

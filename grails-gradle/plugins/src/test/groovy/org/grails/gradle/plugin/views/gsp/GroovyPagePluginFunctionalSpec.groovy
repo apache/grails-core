@@ -93,4 +93,35 @@ class GroovyPagePluginFunctionalSpec extends GradleSpecification {
         result.output.contains('PAGE_COMPILER_STATIC=false')
         result.output.contains('WEBAPP_PAGE_COMPILER_STATIC=false')
     }
+
+    def "compiled pages are on the test runtime class path"() {
+        given: 'a project whose pages the plugin compiles'
+        setupTestResourceProject('gsp-compile-classpath')
+
+        when:
+        def result = executeTask('inspectGspRuntimeClasspath')
+
+        then: 'a test of the application loads the pages it would ship, the view registry included'
+        result.output.contains('TEST_RUNTIME_HAS_PAGES=true')
+        result.output.contains('TEST_RUNTIME_HAS_WEBAPP_PAGES=true')
+
+        and: 'they are off the main runtime class path, which a boot archive would package a second time'
+        result.output.contains('MAIN_RUNTIME_HAS_PAGES=false')
+        result.output.contains('MAIN_RUNTIME_HAS_WEBAPP_PAGES=false')
+    }
+
+    def "a Grails project gets no compiled pages on its test runtime class path"() {
+        given: 'the same wiring in a Grails build'
+        setupTestResourceProject('gsp-compile-classpath-grails')
+
+        when:
+        def result = executeTask('inspectGspRuntimeClasspath')
+
+        then: 'a Grails application renders the views under grails-app/views, which its tests find as they are'
+        result.output.contains('TEST_RUNTIME_HAS_PAGES=false')
+        result.output.contains('TEST_RUNTIME_HAS_WEBAPP_PAGES=false')
+
+        and: 'so its test task is not put behind compiling pages it does not read'
+        result.output.contains('TEST_WAITS_FOR_PAGE_COMPILATION=false')
+    }
 }

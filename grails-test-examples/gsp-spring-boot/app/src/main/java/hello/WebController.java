@@ -18,14 +18,18 @@
  */
 package hello;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -37,31 +41,63 @@ public class WebController implements WebMvcConfigurer {
         registry.addViewController("/results").setViewName("results");
     }
 
-    @RequestMapping("/jsp") public String jsp() { return setJsp(true); }
+    /**
+     * Tells every view what rendered it and whether the JSP rendering can be offered - the results
+     * view included, which is rendered by the view controller above rather than by a handler method
+     * of this class.
+     */
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(new HandlerInterceptor() {
+            @Override
+            public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler,
+                    ModelAndView modelAndView) {
+                // not onto a redirect, which would carry the attributes over as query parameters
+                if (modelAndView != null && !isRedirect(modelAndView)) {
+                    modelAndView.getModel().putIfAbsent("jspAvailable",
+                            JspSupport.canServeJsp(request.getServletContext()));
+                    modelAndView.getModel().putIfAbsent("viewType", viewType(modelAndView));
+                }
+            }
 
-    @RequestMapping("/gsp") public String gsp() { return setJsp(false); }
+            /** What renders this page, which the view name says: only a JSP is asked for by file. */
+            private String viewType(ModelAndView modelAndView) {
+                String viewName = modelAndView.getViewName();
+                return viewName != null && viewName.endsWith(".jsp") ? "JSP" : "GSP";
+            }
 
-    private static boolean jsp = false;
+            private boolean isRedirect(ModelAndView modelAndView) {
+                String viewName = modelAndView.getViewName();
+                return viewName != null && viewName.startsWith("redirect:");
+            }
+        });
+    }
 
-    private String setJsp(boolean jsp) {
-        this.jsp = jsp;
+    @RequestMapping("/gsp") public String gsp() {
+        selectJsp(false);
         return "redirect:/";
     }
 
-    private String formView(Model model) {
-        model.addAttribute("viewType", jsp ? "JSP" : "GSP");
+    private static boolean jsp = false;
+
+    /** Called by {@link JspViewController}, which is mapped only where a JSP can be served. */
+    static void selectJsp(boolean selected) {
+        jsp = selected;
+    }
+
+    private String formView() {
         return String.format("form%s", jsp ? ".jsp" : "");
     }
 
     @RequestMapping(value = "/", method = RequestMethod.GET)
-    public String showForm(Person person, Model model) {
-        return formView(model);
+    public String showForm(Person person) {
+        return formView();
     }
 
     @RequestMapping(value = "/", method = RequestMethod.POST)
-    public String checkPersonInfo(@Valid Person person, BindingResult result, Model model, HttpSession session) throws Exception {
+    public String checkPersonInfo(@Valid Person person, BindingResult result, HttpSession session) throws Exception {
         if (result.hasErrors()) {
-            return formView(model);
+            return formView();
         }
         session.setAttribute("person", person);
         return "redirect:results";

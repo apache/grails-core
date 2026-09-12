@@ -18,23 +18,22 @@
  */
 package hello;
 
-import asset.pipeline.springboot.AssetPipelineService;
+import jakarta.servlet.http.HttpServletRequest;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
 
-@Configuration
-@ComponentScan
-@EnableAutoConfiguration
-// Serves what the asset pipeline compiled - see the assets block of build.gradle - from /assets/*.
-// The pipeline's Spring Boot module supplies the filter; the application imports its configuration.
-@Import(AssetPipelineService.class)
-public class Application {
+/**
+ * Switches the form over to its JSP rendering, where the deployment can serve one. Where it cannot
+ * the form stays on GSP: an executable jar offers no link here (see {@code layouts/main.gsp}), and
+ * a request typed in by hand returns the page it can render rather than failing to render a JSP.
+ */
+@Controller
+public class JspViewController {
 
-    public static void main(String[] args) throws Exception {
-        SpringApplication.run(Application.class, args);
+    @RequestMapping("/jsp")
+    public String jsp(HttpServletRequest request) {
+        WebController.selectJsp(JspSupport.canServeJsp(request.getServletContext()));
+        return "redirect:/";
     }
 }

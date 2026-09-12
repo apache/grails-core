@@ -16,25 +16,9 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package hello;
 
-import asset.pipeline.springboot.AssetPipelineService;
-
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
-
-@Configuration
-@ComponentScan
-@EnableAutoConfiguration
-// Serves what the asset pipeline compiled - see the assets block of build.gradle - from /assets/*.
-// The pipeline's Spring Boot module supplies the filter; the application imports its configuration.
-@Import(AssetPipelineService.class)
-public class Application {
-
-    public static void main(String[] args) throws Exception {
-        SpringApplication.run(Application.class, args);
-    }
-}
+// A manifest, as the stylesheet beside it is: Bootstrap's own scripts, which the navbar toggle
+// and the theme menu are built on, compiled into a single application.js.
+//
+//= require webjars/bootstrap/%/dist/js/bootstrap.bundle.js
+//= require_self

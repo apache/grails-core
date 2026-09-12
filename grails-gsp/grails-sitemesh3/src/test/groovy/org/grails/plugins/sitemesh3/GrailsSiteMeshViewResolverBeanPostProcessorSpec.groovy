@@ -61,6 +61,28 @@ class GrailsSiteMeshViewResolverBeanPostProcessorSpec extends Specification {
         result instanceof GrailsSiteMeshViewResolver
     }
 
+    void "wraps a resolver that carries jspViewResolver as an alias, as a standalone Spring Boot application registers it"() {
+        given:
+        ContentProcessor cp = Mock(ContentProcessor)
+        DecoratorSelector<SiteMeshContext> ds = Mock(DecoratorSelector)
+        ServletContext sc = Mock(ServletContext)
+        beanFactory.containsBean('contentProcessor') >> true
+        beanFactory.containsBean('decoratorSelector') >> true
+        beanFactory.getBean('contentProcessor', ContentProcessor) >> cp
+        beanFactory.getBean('decoratorSelector', DecoratorSelector) >> ds
+        beanFactory.getBean('servletContext', ServletContext) >> sc
+        beanFactory.getAliases('gspViewResolver') >> (['jspViewResolver'] as String[])
+
+        GrailsSiteMeshViewResolverBeanPostProcessor pp = new GrailsSiteMeshViewResolverBeanPostProcessor()
+        pp.setBeanFactory(beanFactory)
+
+        when:
+        Object result = pp.postProcessAfterInitialization(new InternalResourceViewResolver(), 'gspViewResolver')
+
+        then:
+        result instanceof GrailsSiteMeshViewResolver
+    }
+
     void "beans with a non-matching name are returned untouched"() {
         given:
         beanFactory.containsBean(_ as String) >> true
