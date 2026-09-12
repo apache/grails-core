@@ -25,6 +25,7 @@ import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import org.codehaus.groovy.control.Phases
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.AutoConfiguration
@@ -32,6 +33,9 @@ import org.springframework.boot.autoconfigure.AutoConfigureAfter
 import org.springframework.boot.autoconfigure.AutoConfigureBefore
 import org.springframework.boot.autoconfigure.AutoConfigureOrder
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication
@@ -41,19 +45,27 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.ComponentScan
+import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.DependsOn
 import org.springframework.context.annotation.ImportResource
 import org.springframework.context.annotation.Lazy
 import org.springframework.context.annotation.Primary
 import org.springframework.context.annotation.PropertySource
 import org.springframework.context.annotation.PropertySources
 import org.springframework.context.annotation.Scope
+import org.springframework.context.annotation.ScopedProxyMode
 import org.springframework.core.annotation.Order
 import org.springframework.core.env.MapPropertySource
+import org.springframework.context.annotation.Conditional
+import org.springframework.core.type.AnnotatedTypeMetadata
+import org.springframework.context.annotation.ConditionContext
 import spock.lang.Specification
 import spock.lang.TempDir
 import spock.lang.Unroll
 
+import grails.compiler.beans.ConditionalOnGrailsEnv
 import grails.plugins.Plugin
+import grails.util.Environment
 
 class GrailsBeansASTTransformationSpec extends Specification {
 
@@ -123,6 +135,2275 @@ class GrailsBeansASTTransformationSpec extends Specification {
             }
         }
     '''
+
+    def "rejects a call to a sibling bean method when the host's bean methods are not proxied"() {
+        given: "@AutoConfiguration is @Configuration(proxyBeanMethods = false), so the call builds a second Greeter"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class UnproxiedSiblingBeans {
+                def beans = {
+                    bean('greeter', String) {
+                        'hello'
+                    }
+
+                    bean('shout', String) {
+                        greeter().toUpperCase()
+                    }
+                }
+            }
+        '''
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('is another bean declared in this block')
+        e.message.contains('constructs a second instance')
+    }
+
+    def "rejects a sibling bean call from a method(...) helper too"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class HelperSiblingBeans {
+                def beans = {
+                    bean('greeter', String) {
+                        'hello'
+                    }
+
+                    method('shouted', String) {
+                        greeter().toUpperCase()
+                    }
+                }
+            }
+        '''
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('is another bean declared in this block')
+    }
+
+    def "allows a sibling bean call on a full @Configuration class, where Spring does return the singleton"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.context.annotation.Configuration
+
+            @GrailsBeans
+            @Configuration
+            class ProxiedSiblingBeans {
+                def beans = {
+                    bean('greeter', StringBuilder) {
+                        new StringBuilder('hello')
+                    }
+
+                    bean('shout', String) {
+                        greeter().toString().toUpperCase()
+                    }
+                }
+            }
+        '''
+
+        when:
+        Class<?> compiled = compile(source)
+
+        then:
+        noExceptionThrown()
+        compiled.getDeclaredMethod('shout') != null
+    }
+
+    def "rejects a sibling bean call on a @Configuration class that has switched proxying off"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.context.annotation.Configuration
+
+            @GrailsBeans
+            @Configuration(proxyBeanMethods = false)
+            class LiteConfigurationBeans {
+                def beans = {
+                    bean('greeter', StringBuilder) {
+                        new StringBuilder('hello')
+                    }
+
+                    bean('shout', String) {
+                        greeter().toString().toUpperCase()
+                    }
+                }
+            }
+        '''
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('is not a proxied @Configuration class')
+    }
+
+    def "rejects a sibling bean call on a class carrying no Spring configuration annotation, as a Grails Application does"() {
+        given: "the shape a Grails Application class has - a configuration source Spring never proxies"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+
+            @GrailsBeans
+            class UnannotatedHostBeans {
+                def beans = {
+                    bean('greeter', String) {
+                        'hello'
+                    }
+
+                    bean('shout', String) {
+                        greeter().toUpperCase()
+                    }
+                }
+            }
+        '''
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('is another bean declared in this block')
+    }
+
+    def "rejects a sibling bean call on a plugin descriptor's generated sibling, which is always @AutoConfiguration"() {
+        given: "the check runs on the sibling, so the annotations moved onto it must already be there"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import grails.plugins.Plugin
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class SiblingCallGrailsPlugin extends Plugin {
+                def beans = {
+                    bean('greeter', String) {
+                        'hello'
+                    }
+
+                    bean('shout', String) {
+                        greeter().toUpperCase()
+                    }
+                }
+            }
+        '''
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('is another bean declared in this block')
+        e.message.contains('SiblingCallAutoConfiguration is not a proxied @Configuration class')
+    }
+
+    def "a static @Bean method really is uninterceptable on a proxied @Configuration class"() {
+        given: "hand-written, not the DSL - this pins Spring's behaviour, which is the reason for the rule"
+        String source = '''
+            import org.springframework.context.annotation.Bean
+            import org.springframework.context.annotation.Configuration
+
+            class Leaf { }
+
+            class Holder {
+                Leaf leaf
+
+                Holder(Leaf leaf) {
+                    this.leaf = leaf
+                }
+            }
+
+            @Configuration
+            class HandWrittenStaticConfig {
+                @Bean
+                static Leaf leaf() {
+                    new Leaf()
+                }
+
+                @Bean
+                Holder holder() {
+                    new Holder(leaf())
+                }
+            }
+        '''
+
+        and:
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(source)
+        def context = new AnnotationConfigApplicationContext()
+        context.classLoader = loader
+        context.register(loader.loadClass('HandWrittenStaticConfig'))
+
+        when:
+        context.refresh()
+
+        then: "CGLIB cannot override a static method, so the call was not intercepted"
+        !context.getBean('holder').leaf.is(context.getBean('leaf'))
+
+        cleanup:
+        context.close()
+    }
+
+    def "rejects a call to a static sibling bean even on a proxied @Configuration class"() {
+        given: "the DSL spelling of the shape above"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.context.annotation.Configuration
+
+            @GrailsBeans
+            @Configuration
+            class ProxiedStaticSiblingBeans {
+                def beans = {
+                    bean('greeter', StringBuilder).staticMethod() {
+                        new StringBuilder('hello')
+                    }
+
+                    bean('shout', String) {
+                        greeter().toString().toUpperCase()
+                    }
+                }
+            }
+        '''
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('is declared .staticMethod()')
+        e.message.contains('never intercepted by the container')
+    }
+
+    def "a proxying @Configuration written alongside a non-proxying composed annotation still counts as proxied"() {
+        given: "@AutoConfiguration prunes @Configuration(proxyBeanMethods = false) on the way past it;\
+               the author's own @Configuration must not then be skipped as already-seen"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+            import org.springframework.context.annotation.Configuration
+
+            @GrailsBeans
+            @AutoConfiguration
+            @Configuration
+            class DoublyAnnotatedBeans {
+                def beans = {
+                    bean('greeter', StringBuilder) {
+                        new StringBuilder('hello')
+                    }
+
+                    bean('shout', String) {
+                        greeter().toString().toUpperCase()
+                    }
+                }
+            }
+        '''
+
+        when:
+        Class<?> compiled = compile(source)
+
+        then: "Spring reads the directly-declared @Configuration, so the sibling call is legitimate"
+        noExceptionThrown()
+        compiled.getDeclaredMethod('shout') != null
+    }
+
+    def "still allows a non-static sibling bean call on a proxied @Configuration class"() {
+        given: "the narrowing must not have swallowed the exemption the proxied case earns"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.context.annotation.Configuration
+
+            @GrailsBeans
+            @Configuration
+            class ProxiedInstanceSiblingBeans {
+                def beans = {
+                    bean('greeter', StringBuilder) {
+                        new StringBuilder('hello')
+                    }
+
+                    bean('shout', String) {
+                        greeter().toString().toUpperCase()
+                    }
+                }
+            }
+        '''
+
+        when:
+        Class<?> compiled = compile(source)
+
+        then:
+        noExceptionThrown()
+        compiled.getDeclaredMethod('shout') != null
+    }
+
+    def "leaves a call to a method(...) helper alone - only bean methods are singletons to miss"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class HelperCallBeans {
+                def beans = {
+                    method('salutation', String) {
+                        'hello'
+                    }
+
+                    bean('greeter', String) {
+                        salutation()
+                    }
+                }
+            }
+        '''
+
+        when:
+        Class<?> compiled = compile(source)
+
+        then:
+        noExceptionThrown()
+        compiled.getDeclaredConstructor().newInstance().greeter() == 'hello'
+    }
+
+    def "leaves an unqualified call inside a nested closure alone, where a delegate may be answering it"() {
+        given: "the shape DataBindingGrailsPlugin uses - tap { initialize() } calls the registry, not this"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            class Registry {
+                boolean ready
+
+                void initialize() {
+                    ready = true
+                }
+            }
+
+            @GrailsBeans
+            @AutoConfiguration
+            class DelegateCallBeans {
+                def beans = {
+                    bean('initialize', String) {
+                        'a bean that happens to share the name'
+                    }
+
+                    bean('registry', Registry) {
+                        new Registry().tap {
+                            initialize()
+                        }
+                    }
+                }
+            }
+        '''
+
+        and: "loaded by name - compile() hands back the first class in the source, which is Registry"
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(source)
+
+        when:
+        def fixture = loader.loadClass('DelegateCallBeans').getDeclaredConstructor().newInstance()
+
+        then: "no error: tap resolves delegate-first, so the call reaches Registry, not this class"
+        noExceptionThrown()
+        fixture.registry().ready
+    }
+
+    def "leaves a same-named call on another receiver alone"() {
+        given: "a call with a real receiver is somebody else's method that happens to share the name"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class OtherReceiverBeans {
+                def beans = {
+                    bean('trim', String) {
+                        'hello'
+                    }
+
+                    bean('padded', String) { StringBuilder source ->
+                        source.toString().trim()
+                    }
+                }
+            }
+        '''
+
+        when:
+        Class<?> compiled = compile(source)
+
+        then:
+        noExceptionThrown()
+        compiled.getDeclaredMethod('padded', StringBuilder) != null
+    }
+
+    def "typeArguments declares a parameterized bean type, which is what Spring resolves an injection point against"() {
+        given: "two handlers differing only in their type argument - raw beans could not tell them apart"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface Handler<T> { }
+            class Order { }
+            class Refund { }
+            class OrderHandler implements Handler<Order> { }
+            class RefundHandler implements Handler<Refund> { }
+
+            class Dispatcher {
+                Handler<Order> handler
+
+                Dispatcher(Handler<Order> handler) {
+                    this.handler = handler
+                }
+            }
+
+            @GrailsBeans
+            @AutoConfiguration
+            class GenericBeansFixture {
+                def beans = {
+                    bean('orderHandler', Handler).typeArguments(Order) { new OrderHandler() }
+                    bean('refundHandler', Handler).typeArguments(Refund) { new RefundHandler() }
+
+                    bean('dispatcher', Dispatcher) { Handler<Order> handler ->
+                        new Dispatcher(handler)
+                    }
+                }
+            }
+        '''
+
+        and:
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(source)
+        def context = new AnnotationConfigApplicationContext()
+        context.classLoader = loader
+        context.register(loader.loadClass('GenericBeansFixture'))
+
+        when:
+        context.refresh()
+
+        then: "both are Handler beans, so the type argument is the only thing that can discriminate"
+        context.getBeanNamesForType(loader.loadClass('Handler')).length == 2
+
+        and: "and Spring picked the one whose declared type argument matches the injection point"
+        loader.loadClass('OrderHandler').isInstance(context.getBean('dispatcher').handler)
+
+        cleanup:
+        context.close()
+    }
+
+    def "typeArguments reaches the generated method's signature, not just its erasure"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class GenericSignatureFixture {
+                def beans = {
+                    bean('names', ArrayList).typeArguments(String) {
+                        new ArrayList<String>()
+                    }
+                }
+            }
+        '''
+
+        when:
+        Class<?> compiled = compile(source)
+        def method = compiled.getDeclaredMethod('names')
+
+        then:
+        method.returnType == ArrayList
+        method.genericReturnType.typeName == 'java.util.ArrayList<java.lang.String>'
+    }
+
+    def "typeArguments works on a bodyless bean, where the synthesized construction carries them too"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class BodylessGenericFixture {
+                def beans = {
+                    bean('names', ArrayList).typeArguments(String)
+                }
+            }
+        '''
+
+        when:
+        Class<?> compiled = compile(source)
+        def method = compiled.getDeclaredMethod('names')
+
+        then:
+        method.genericReturnType.typeName == 'java.util.ArrayList<java.lang.String>'
+        compiled.getDeclaredConstructor().newInstance().names() == []
+    }
+
+    def "typeArguments applies to field(...) and method(...) as well as bean(...)"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class GenericMemberFixture {
+                def beans = {
+                    field('cache', Map).typeArguments(String, Integer)
+
+                    method('names', ArrayList).typeArguments(String) {
+                        new ArrayList<String>()
+                    }
+
+                    bean('greeting', String) {
+                        'hello'
+                    }
+                }
+            }
+        '''
+
+        when:
+        Class<?> compiled = compile(source)
+
+        then:
+        compiled.getDeclaredField('cache').genericType.typeName == 'java.util.Map<java.lang.String, java.lang.Integer>'
+        compiled.getDeclaredMethod('names').genericReturnType.typeName == 'java.util.ArrayList<java.lang.String>'
+    }
+
+    @Unroll
+    def "typeArguments rejects #description"() {
+        given:
+        String source = """
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class BadGenericsFixture${fixture} {
+                def beans = {
+                    bean('value', ${type}).typeArguments(${arguments}) {
+                        ${body}
+                    }
+                }
+            }
+        """
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains(expected)
+
+        where:
+        description                          | fixture   | type        | arguments         | body                       | expected
+        'too few type arguments'             | 'Few'     | 'Map'       | 'String'          | 'new HashMap<>()'          | 'declares 2 type parameters'
+        'too many type arguments'            | 'Many'    | 'ArrayList' | 'String, Integer' | 'new ArrayList<>()'        | 'declares 1 type parameter,'
+        'a type that is not generic'         | 'Plain'   | 'String'    | 'Integer'         | "'hello'"                  | 'is not a generic type'
+        'something that is not a type'       | 'NotType' | 'ArrayList' | "'String'"        | 'new ArrayList<>()'        | '.typeArguments(...) takes types'
+        'no type arguments at all'           | 'Empty'   | 'ArrayList' | ''                | 'new ArrayList<>()'        | 'requires at least one type'
+    }
+
+    @Unroll
+    def "annotate carries an array-valued attribute written as #description"() {
+        given: "@DependsOn.value() is a String[], the shape a single value has to widen into"
+        String source = """
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+            import org.springframework.context.annotation.DependsOn
+
+            @GrailsBeans
+            @AutoConfiguration
+            class ArrayAttributeFixture${fixture} {
+                def beans = {
+                    bean('first', String) {
+                        'first'
+                    }
+
+                    bean('second', String) {
+                        'second'
+                    }
+
+                    bean('third', String).annotate(DependsOn, value: ${written}) {
+                        'third'
+                    }
+                }
+            }
+        """
+
+        when:
+        Class<?> compiled = compile(source)
+        def method = compiled.getDeclaredMethod('third')
+
+        then: "the transform builds the annotation after Groovy's own verifier has run, so this is\
+               worth pinning rather than assuming"
+        method.getAnnotation(DependsOn).value() == expected as String[]
+
+        where:
+        description        | fixture  | written               | expected
+        'a single value'   | 'Scalar' | "'first'"             | ['first']
+        'a list'           | 'List'   | "['first', 'second']" | ['first', 'second']
+    }
+
+    def "dumps the generated members when grails.beans.dsl.dumpdir is set"() {
+        given: "a block whose interesting parts are all declaration, not body"
+        File dumpDir = new File(tempDir, 'beans-dump')
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.beans.factory.annotation.Autowired
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+            import org.springframework.context.annotation.DependsOn
+
+            @GrailsBeans
+            @AutoConfiguration
+            class DumpedBeans {
+                def beans = {
+                    field('encoding', String).value('app.encoding', 'UTF-8')
+
+                    bean('names', ArrayList).typeArguments(String) {
+                        new ArrayList<String>()
+                    }
+
+                    bean('greeter', String).primary().annotate(DependsOn, value: 'names') {
+                        'hello'
+                    }
+
+                    bean('shout', String) { @Autowired(required = false) StringBuilder input ->
+                        input?.toString() ?: 'none'
+                    }
+                }
+            }
+        '''
+
+        when:
+        System.setProperty('grails.beans.dsl.dumpdir', dumpDir.absolutePath)
+        compile(source)
+        String dumped = new File(dumpDir, 'DumpedBeans.beans.txt').text
+
+        then: "the bean name Spring resolves by, and the annotations the qualifiers became"
+        dumped.contains('@Bean(value = ["greeter"])')
+        dumped.contains('@Primary')
+        dumped.contains('@DependsOn(value = "names")')
+
+        and: "the declared type, including type arguments it ended up carrying"
+        dumped.contains('java.util.ArrayList<java.lang.String> names()')
+
+        and: "a raw type is not dressed up in its own type parameters"
+        !dumped.contains('ArrayList<E>')
+
+        and: "parameter annotations, which is where optional and qualified live"
+        dumped.contains('@Autowired(required = false) java.lang.StringBuilder input')
+
+        and: "fields too, with the @Value the config key became"
+        dumped.contains('private java.lang.String encoding')
+        dumped.contains('@Value(value = "${app.encoding:UTF-8}")')
+
+        and: "bodies are deliberately absent - they are the author's own closure bodies"
+        !dumped.contains("'hello'")
+
+        cleanup:
+        System.clearProperty('grails.beans.dsl.dumpdir')
+    }
+
+    def "writes nothing when the dump directory is not set"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class UndumpedBeans {
+                def beans = {
+                    bean('greeting', String) { 'hello' }
+                }
+            }
+        '''
+
+        when:
+        Class<?> compiled = compile(source)
+
+        then:
+        System.getProperty('grails.beans.dsl.dumpdir') == null
+        compiled.getDeclaredMethod('greeting') != null
+    }
+
+    def "rejects a generated bean calling a hand-written @Bean method on the same class"() {
+        given: "the mixed shape a migration passes through, where the call was correct before the move"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+            import org.springframework.context.annotation.Bean
+
+            @GrailsBeans
+            @AutoConfiguration
+            class MixedHandWrittenBeans {
+                @Bean
+                StringBuilder greeter() {
+                    new StringBuilder('hello')
+                }
+
+                def beans = {
+                    bean('shout', String) {
+                        greeter().toString().toUpperCase()
+                    }
+                }
+            }
+        '''
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('is another bean declared in this block')
+    }
+
+    def "leaves a call to a hand-written method that is not a bean alone"() {
+        given: "only @Bean methods have a singleton to miss"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class MixedPlainMethodBeans {
+                String salutation() {
+                    'hello'
+                }
+
+                def beans = {
+                    bean('greeting', String) {
+                        salutation()
+                    }
+                }
+            }
+        '''
+
+        when:
+        Class<?> compiled = compile(source)
+
+        then:
+        noExceptionThrown()
+        compiled.getDeclaredConstructor().newInstance().greeting() == 'hello'
+    }
+
+    def "a map construction settles type arguments the same way a named implementation does"() {
+        given: "the one-expression form for an implementation configured by properties"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface Holder<T> { }
+
+            class StringHolder implements Holder<String> {
+                String label
+            }
+
+            @GrailsBeans
+            @AutoConfiguration
+            class MapConstructionBeans {
+                def beans = {
+                    bean('label', String) { 'hello' }
+
+                    bean('holder', Holder) { String label ->
+                        new StringHolder(label: label)
+                    }
+                }
+            }
+        '''
+
+        and:
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(source)
+        def fixture = loader.loadClass('MapConstructionBeans')
+
+        expect: "the construction is evidence, whether its arguments are positional or named"
+        fixture.getDeclaredMethod('holder', String).genericReturnType.typeName == 'Holder<java.lang.String>'
+
+        and: "and it really does configure the instance"
+        fixture.getDeclaredConstructor().newInstance().holder('hi').label == 'hi'
+    }
+
+    def "conditionalOnBean registers a bean only when the bean it names is there"() {
+        given: "the transport is supplied by a SEPARATE configuration, registered first"
+        String source = """
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+            import org.springframework.context.annotation.Bean
+            import org.springframework.context.annotation.Configuration
+
+            class Transport { }
+            class Adapter { }
+
+            @Configuration
+            class TransportConfig${suffix} {
+                @Bean
+                Transport transport() { new Transport() }
+            }
+
+            @GrailsBeans
+            @AutoConfiguration
+            class ConditionalOnBeanFixture${suffix} {
+                def beans = {
+                    bean('adapter', Adapter).conditionalOnBean(Transport) {
+                        new Adapter()
+                    }
+                }
+            }
+        """
+
+        and: """@ConditionalOnBean matches only against definitions the context has ALREADY processed,
+                which is why Spring restricts it to auto-configurations. Declaring the transport beside
+                the adapter in one block would make this test depend on @Bean method order within a
+                single class - which it did, and which passed locally and failed under an indy-off
+                compile. Registering the supplier first is the ordering the annotation guarantees."""
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(source)
+        def context = new AnnotationConfigApplicationContext()
+        context.classLoader = loader
+        if (transportSupplied) {
+            context.register(loader.loadClass("TransportConfig${suffix}"))
+        }
+        context.register(loader.loadClass("ConditionalOnBeanFixture${suffix}"))
+
+        when:
+        context.refresh()
+
+        then:
+        context.containsBean('adapter') == registered
+
+        cleanup:
+        context.close()
+
+        where:
+        description                  | suffix     | transportSupplied | registered
+        'the transport is present'   | 'Present'  | true              | true
+        'the transport is absent'    | 'Absent'   | false             | false
+    }
+
+    def "conditionalOnBean rejects the zero-argument form, which would condition a bean on its own type"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class BareConditionalOnBeanFixture {
+                def beans = {
+                    bean('greeting', String).conditionalOnBean() {
+                        'hello'
+                    }
+                }
+            }
+        '''
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('needs at least one type or attribute')
+    }
+
+    def "conditionalOnBean takes the annotation's named attributes, like its opposite"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+            import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
+
+            @GrailsBeans
+            @AutoConfiguration
+            class NamedConditionalOnBeanFixture {
+                def beans = {
+                    bean('greeting', String).conditionalOnBean(name: 'transport') {
+                        'hello'
+                    }
+                }
+            }
+        '''
+
+        when:
+        Class<?> compiled = compile(source)
+        def annotation = compiled.getDeclaredMethod('greeting').getAnnotation(ConditionalOnBean)
+
+        then:
+        annotation.name() == ['transport'] as String[]
+    }
+
+    def "conditionalOnClass takes a type, and registers the bean only when it is present"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class OnClassPresentBeans {
+                def beans = {
+                    bean('greeting', String).conditionalOnClass(StringBuilder) {
+                        'hello'
+                    }
+
+                    bean('absent', String).conditionalOnClass(name: 'com.example.NotOnTheClasspath') {
+                        'never'
+                    }
+                }
+            }
+        '''
+
+        and:
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(source)
+        def context = new AnnotationConfigApplicationContext()
+        context.classLoader = loader
+        context.register(loader.loadClass('OnClassPresentBeans'))
+
+        when:
+        context.refresh()
+
+        then: 'the present type registers, the absent name does not'
+        context.containsBean('greeting')
+        !context.containsBean('absent')
+
+        cleanup:
+        context.close()
+    }
+
+    def "conditionalOnClass keeps types and String names in their own annotation members"() {
+        given: "a literal is compiler-checked; a name is the only form that survives the class being absent"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+            import org.springframework.boot.autoconfigure.condition.ConditionalOnClass
+
+            @GrailsBeans
+            @AutoConfiguration
+            class OnClassMembersBeans {
+                def beans = {
+                    bean('greeting', String).conditionalOnClass(StringBuilder, 'java.lang.Integer') {
+                        'hello'
+                    }
+                }
+            }
+        '''
+
+        when:
+        Class<?> compiled = compile(source)
+        def annotation = compiled.getDeclaredMethod('greeting').getAnnotation(ConditionalOnClass)
+
+        then:
+        annotation.value() == [StringBuilder] as Class[]
+        annotation.name() == ['java.lang.Integer'] as String[]
+    }
+
+    @Unroll
+    def "conditionalOnClass rejects #description"() {
+        given:
+        String source = """
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class BadOnClassFixture${fixture} {
+                def beans = {
+                    bean('greeting', String).conditionalOnClass(${arguments}) {
+                        'hello'
+                    }
+                }
+            }
+        """
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains(expected)
+
+        where:
+        description                       | fixture  | arguments                                | expected
+        'no class at all'                 | 'Empty'  | ''                                       | 'needs at least one class'
+        'a non-String, non-type argument' | 'Number' | '42'                                     | 'takes types or non-blank String class names'
+        'a blank name'                    | 'Blank'  | "'  '"                                   | 'takes types or non-blank String class names'
+        'types given both ways'           | 'Both'   | "StringBuilder, value: [StringBuilder]"  | 'both positionally and via'
+    }
+
+    def "a bean name may be a compile-time String constant, however it is written"() {
+        given: "the shape that motivated it - a name something else has to look the bean up by"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            class BeanNames {
+                static final String QUALIFIED = 'qualifiedName'
+            }
+
+            @GrailsBeans
+            @AutoConfiguration
+            class ConstantNamedBeans {
+                static final String BARE = 'bareName'
+
+                def beans = {
+                    bean(BARE, String) { 'from a bare constant' }
+                    bean(BeanNames.QUALIFIED, String) { 'from a qualified constant' }
+                    bean('literal' + 'Name', String) { 'from a concatenation' }
+                    field(BARE + 'Field', String).value('app.thing', 'x')
+                }
+            }
+        '''
+
+        and:
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(source)
+        Class<?> compiled = loader.loadClass('ConstantNamedBeans')
+
+        expect: "the @Bean value is the constant's value, not its identifier"
+        compiled.getDeclaredMethod('bareName').getAnnotation(Bean).value() == ['bareName'] as String[]
+        compiled.getDeclaredMethod('qualifiedName').getAnnotation(Bean).value() == ['qualifiedName'] as String[]
+        compiled.getDeclaredMethod('literalName').getAnnotation(Bean).value() == ['literalName'] as String[]
+
+        and: "field(...) takes one too, since its name is a member name like any other"
+        compiled.getDeclaredField('bareNameField') != null
+    }
+
+    def "a bean name that is not a compile-time constant is still rejected"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class RuntimeNamedBeans {
+                def beans = {
+                    bean(System.getProperty('bean.name'), String) { 'nope' }
+                }
+            }
+        '''
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('String literal or a compile-time String constant')
+    }
+
+    def "group declares a nested configuration class holding its beans"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class GroupedBeans {
+                def beans = {
+                    bean('top', String) { 'top' }
+
+                    group('imageServing').conditionalOnClass(StringBuilder) {
+                        bean('inner', String) { 'inner' }
+                        bean('other', String) { 'other' }
+                    }
+                }
+            }
+        '''
+
+        and:
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(source)
+        Class<?> nested = loader.loadClass('GroupedBeans$ImageServingConfiguration')
+
+        expect: "a nested static @Configuration(proxyBeanMethods = false) carrying the condition"
+        java.lang.reflect.Modifier.isStatic(nested.modifiers)
+        !nested.getAnnotation(Configuration).proxyBeanMethods()
+        nested.getAnnotation(ConditionalOnClass).value() == [StringBuilder] as Class[]
+
+        and: "the group's beans are its methods, and are not on the host"
+        nested.getDeclaredMethod('inner') != null
+        nested.getDeclaredMethod('other') != null
+        loader.loadClass('GroupedBeans').declaredMethods.every { it.name != 'inner' }
+    }
+
+    def "a group's condition gates its beans, and Spring finds the nested class unaided"() {
+        given: "no @Import anywhere - ConfigurationClassParser processes member classes"
+        String source = """
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class GroupGatedBeans${fixture} {
+                def beans = {
+                    bean('always', String) { 'always' }
+
+                    group('optional').conditionalOnClass(name: '${gated}') {
+                        bean('sometimes', String) { 'sometimes' }
+                    }
+                }
+            }
+        """
+
+        and:
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(source)
+        def context = new AnnotationConfigApplicationContext()
+        context.classLoader = loader
+        context.register(loader.loadClass("GroupGatedBeans${fixture}"))
+
+        when:
+        context.refresh()
+
+        then:
+        context.containsBean('always')
+        context.containsBean('sometimes') == registered
+
+        cleanup:
+        context.close()
+
+        where:
+        fixture   | gated                            | registered
+        'Present' | 'java.lang.StringBuilder'        | true
+        'Absent'  | 'com.example.NotOnTheClasspath'  | false
+    }
+
+    def "a group is how a bean whose own signature names an absent class stays declarable"() {
+        given: "the case that motivated it - guarding the method would not have been safe"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class SignatureGuardedBeans {
+                def beans = {
+                    bean('safe', String) { 'safe' }
+
+                    group('optional').conditionalOnClass(name: 'com.example.Missing') {
+                        bean('needsMissing', StringBuilder) { StringBuilder collaborator ->
+                            collaborator
+                        }
+                    }
+                }
+            }
+        '''
+
+        and:
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(source)
+        def context = new AnnotationConfigApplicationContext()
+        context.classLoader = loader
+        context.register(loader.loadClass('SignatureGuardedBeans'))
+
+        when:
+        context.refresh()
+
+        then: "the nested class is never parsed, so nothing in its signatures is resolved"
+        noExceptionThrown()
+        context.containsBean('safe')
+        !context.containsBean('needsMissing')
+
+        cleanup:
+        context.close()
+    }
+
+    @Unroll
+    def "group rejects #description"() {
+        given:
+        String source = """
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class BadGroupFixture${fixture} {
+                def beans = {
+                    ${declaration}
+                }
+            }
+        """
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains(expected)
+
+        where:
+        description                    | fixture   | declaration                                                              | expected
+        'an empty body'                | 'Empty'   | "group('a').conditionalOnClass(String) { }"                              | 'declares nothing'
+        'nesting'                      | 'Nested'  | "group('a') { group('b') { bean('x', String) { 'x' } } }"                | 'cannot be nested'
+        'closure parameters'           | 'Params'  | "group('a') { String s -> bean('x', String) { 'x' } }"                   | 'takes no closure parameters'
+        'a bean-shaped qualifier'      | 'Primary' | "group('a').primary() { bean('x', String) { 'x' } }"                     | 'cannot be chained onto group'
+        'a name that is not an ident'  | 'BadName' | "group('not an identifier') { bean('x', String) { 'x' } }"               | 'valid Java identifier'
+    }
+
+    def "an anonymous class inside a nested closure keeps that closure as its enclosing instance"() {
+        given: "the lift moves the bean's own body; a nested closure survives it, and still homes what it contains"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface NestedGreeter { String greet() }
+
+            @GrailsBeans
+            @AutoConfiguration
+            class NestedAnonymousBeans {
+                def beans = {
+                    bean('greeter', NestedGreeter) {
+                        List<NestedGreeter> made = ['x'].collect { String tag ->
+                            new NestedGreeter() { String greet() { 'hello ' + tag } }
+                        }
+                        made[0]
+                    }
+                }
+            }
+        '''
+
+        and:
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(source)
+        def fixture = loader.loadClass('NestedAnonymousBeans').getDeclaredConstructor().newInstance()
+
+        expect: "re-homing it would rewrite a correct `this` and fail with a GroovyCastException"
+        fixture.greeter().greet() == 'hello x'
+    }
+
+    def "a staticMethod bean may construct an anonymous class inside a nested closure"() {
+        given: "the nested closure supplies the enclosing instance the static method has not got"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+            import org.springframework.beans.factory.config.BeanFactoryPostProcessor
+            import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
+
+            @GrailsBeans
+            @AutoConfiguration
+            class StaticNestedAnonymousBeans {
+                def beans = {
+                    bean('bfpp', BeanFactoryPostProcessor).staticMethod() {
+                        List<BeanFactoryPostProcessor> made = ['x'].collect { String tag ->
+                            new BeanFactoryPostProcessor() {
+                                void postProcessBeanFactory(ConfigurableListableBeanFactory bf) { }
+                            }
+                        }
+                        made[0]
+                    }
+                }
+            }
+        '''
+
+        when:
+        Class<?> compiled = compile(source)
+
+        then: "rejected only when the anonymous class is written directly in the lifted body"
+        noExceptionThrown()
+        compiled.getDeclaredMethod('bfpp') != null
+    }
+
+    @Unroll
+    def "group survives @CompileStatic on #hostKind"() {
+        given: "every in-tree plugin descriptor is statically compiled, so this is the case that matters"
+        String source = """
+            import grails.compiler.beans.GrailsBeans
+            import grails.plugins.Plugin
+            import groovy.transform.CompileStatic
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @CompileStatic
+            @AutoConfiguration
+            class StaticGroup${fixture} ${extendsClause} {
+                def beans = {
+                    group('extras').conditionalOnProperty('probe.enabled') {
+                        bean('greeting', String) { 'hello'.toUpperCase() }
+                    }
+                }
+            }
+        """
+
+        when:
+        compile(source)
+
+        then: """statically compiling the nested class before Groovy adds its inner-class MOP methods
+                 fails class generation with a GroovyBugError, so the pass is deferred to
+                 INSTRUCTION_SELECTION - after those methods exist"""
+        noExceptionThrown()
+
+        where:
+        hostKind            | fixture  | extendsClause
+        'a plain host'      | 'Plain'  | ''
+        'a plugin descriptor' | 'GrailsPlugin' | 'extends Plugin'
+    }
+
+    def "a group's bodies really are statically compiled, not silently left dynamic"() {
+        given: "a body that only type-checks dynamically"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import groovy.transform.CompileStatic
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @CompileStatic
+            @AutoConfiguration
+            class StaticGroupBodyBeans {
+                def beans = {
+                    group('extras') {
+                        bean('greeting', String) { 'hello'.noSuchMethodAnywhere() }
+                    }
+                }
+            }
+        '''
+
+        when:
+        compile(source)
+
+        then: "deferring the pass must not amount to skipping it"
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('noSuchMethodAnywhere')
+    }
+
+    @Unroll
+    def "duplicate bean names are rejected for #description too"() {
+        given: "shared-name validation has to read the same head processBeanStatement does"
+        String source = """
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface DupIface { }
+            class DupImplA implements DupIface { }
+            class DupImplB implements DupIface { }
+
+            @GrailsBeans
+            @AutoConfiguration
+            class DuplicateNameFixture${fixture} {
+                static final String NAME = 'dup'
+                def beans = {
+                    ${declarations}
+                }
+            }
+        """
+
+        when:
+        compile(source)
+
+        then: "without a discriminating condition Spring keeps the first and drops the rest"
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('is already used as the Spring bean name of another bean(...) statement')
+
+        where:
+        description                     | fixture  | declarations
+        'the implementation form'       | 'Impl'   | "bean('dup', DupIface, DupImplA)\n                    bean('dup', DupIface, DupImplB)"
+        'a constant name'               | 'Const'  | "bean(NAME, String) { 'a' }\n                    bean(NAME, String) { 'b' }"
+        'a literal name'                | 'Literal'| "bean('dup', String) { 'a' }\n                    bean('dup', String) { 'b' }"
+    }
+
+    def "an anonymous class on a plugin descriptor cannot reach a member that moved to the sibling"() {
+        given: "the member compiles onto the sibling; the anonymous class stays homed on the descriptor"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import grails.plugins.Plugin
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface MovedGreeter { String greet() }
+
+            @GrailsBeans
+            @AutoConfiguration
+            class MovedMemberGrailsPlugin extends Plugin {
+                def beans = {
+                    method('suffix', String) { '!' }
+
+                    bean('greeter', MovedGreeter) {
+                        new MovedGreeter() { String greet() { 'hello' + suffix() } }
+                    }
+                }
+            }
+        '''
+
+        when:
+        compile(source)
+
+        then: "rejected here rather than as a NoSuchFieldError inside a running application"
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('keeps the plugin descriptor as its outer class')
+        e.message.contains('suffix()')
+    }
+
+    def "an anonymous class on a plugin descriptor that reaches nothing outside itself is fine"() {
+        given: "the shape that works, and must not be caught by the check above"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import grails.plugins.Plugin
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface SelfContainedGreeter { String greet() }
+
+            @GrailsBeans
+            @AutoConfiguration
+            class SelfContainedGrailsPlugin extends Plugin {
+                def beans = {
+                    method('suffix', String) { '!' }
+
+                    bean('greeter', SelfContainedGreeter) {
+                        new SelfContainedGreeter() {
+                            String greet() { own() }
+                            private String own() { 'hello' }
+                        }
+                    }
+                }
+            }
+        '''
+
+        when:
+        Class<?> compiled = compile(source)
+
+        then: "its own methods, and anything it inherits, resolve on the anonymous class itself"
+        noExceptionThrown()
+        compiled != null
+    }
+
+    def "the same reference on a non-plugin host is left alone, because nothing moved"() {
+        given: "members and the anonymous class share a home here, so the reference resolves"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface HomedGreeter { String greet() }
+
+            @GrailsBeans
+            @AutoConfiguration
+            class HomedMemberBeans {
+                def beans = {
+                    method('suffix', String) { '!' }
+
+                    bean('greeter', HomedGreeter) {
+                        new HomedGreeter() { String greet() { 'hello' + suffix() } }
+                    }
+                }
+            }
+        '''
+
+        and:
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(source)
+        def fixture = loader.loadClass('HomedMemberBeans').getDeclaredConstructor().newInstance()
+
+        expect:
+        fixture.greeter().greet() == 'hello!'
+    }
+
+    def "an anonymous class on a plugin descriptor cannot reach a moved accessor read as a property either"() {
+        given: "method('getSuffix') moves; 'suffix' in the body is the same reference by another spelling"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import grails.plugins.Plugin
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface MovedAccessorGreeter { String greet() }
+
+            @GrailsBeans
+            @AutoConfiguration
+            class MovedAccessorGrailsPlugin extends Plugin {
+                def beans = {
+                    method('getSuffix', String) { '!' }
+
+                    bean('greeter', MovedAccessorGreeter) {
+                        new MovedAccessorGreeter() { String greet() { 'hello' + suffix } }
+                    }
+                }
+            }
+        '''
+
+        when:
+        compile(source)
+
+        then: "comparing raw names alone would let this through to a NoSuchFieldError"
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('keeps the plugin descriptor as its outer class')
+        e.message.contains('"suffix"')
+    }
+
+    @Unroll
+    def "an anonymous class in a group(...) body cannot reach #description, on #hostKind"() {
+        given: "a group compiles to a static nested class - there is no enclosing instance behind it at all"
+        String source = """
+            import grails.compiler.beans.GrailsBeans
+            import grails.plugins.Plugin
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface ${fixture}Greeter { String greet() }
+
+            @GrailsBeans
+            @AutoConfiguration
+            class ${fixture}${suffixClass} ${extendsClause} {
+                def beans = {
+                    ${hostMember}
+                    group('extras') {
+                        ${groupMember}
+                        bean('greeter', ${fixture}Greeter) {
+                            new ${fixture}Greeter() { String greet() { 'hello' + suffix() } }
+                        }
+                    }
+                }
+            }
+        """
+
+        when:
+        compile(source)
+
+        then: "rejected here rather than as a NoSuchFieldError inside a running application"
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('nothing outside the anonymous class is in reach')
+        e.message.contains('suffix()')
+
+        where:
+        description                | hostKind             | fixture      | suffixClass   | extendsClause    | hostMember                        | groupMember
+        'a group-level member'     | 'a plain host'       | 'GroupOwn'   | 'Beans'       | ''               | ''                                | "method('suffix', String) { '!' }"
+        'a host-level member'      | 'a plain host'       | 'GroupHost'  | 'Beans'       | ''               | "method('suffix', String) { '!' }" | ''
+        'a group-level member'     | 'a plugin descriptor'| 'GroupOwn'   | 'GrailsPlugin'| 'extends Plugin' | ''                                | "method('suffix', String) { '!' }"
+        'a host-level member'      | 'a plugin descriptor'| 'GroupHost'  | 'GrailsPlugin'| 'extends Plugin' | "method('suffix', String) { '!' }" | ''
+    }
+
+    @Unroll
+    def "an anonymous class cannot reach a moved member spelled #spelling either"() {
+        given: "every spelling of the same unreachable reference, not just the bare implicit-this one"
+        String source = """
+            import grails.compiler.beans.GrailsBeans
+            import grails.plugins.Plugin
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface ${fixture}Greeter { String greet() }
+
+            @GrailsBeans
+            @AutoConfiguration
+            class ${fixture}${suffixClass} ${extendsClause} {
+                def beans = {
+                    ${open}
+                        ${declaration}
+
+                        bean('greeter', ${fixture}Greeter) {
+                            new ${fixture}Greeter() { String greet() { 'hello' + ${reference} } }
+                        }
+                    ${close}
+                }
+            }
+        """
+
+        when:
+        compile(source)
+
+        then: "rejected here rather than as a NoSuchFieldError inside a running application"
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('does not resolve on this anonymous')
+
+        where:
+        spelling                              | fixture    | suffixClass    | extendsClause    | open                | close | declaration                        | reference
+        'this.suffix() on a descriptor'       | 'SpellA'   | 'GrailsPlugin' | 'extends Plugin' | ''                  | ''    | "method('suffix', String) { '!' }" | 'this.suffix()'
+        'this.suffix on a descriptor'         | 'SpellB'   | 'GrailsPlugin' | 'extends Plugin' | ''                  | ''    | "method('getSuffix', String) { '!' }" | 'this.suffix'
+        'this.suffix() in a group'            | 'SpellC'   | 'Beans'        | ''               | "group('extras') {" | '}'   | "method('suffix', String) { '!' }" | 'this.suffix()'
+        'getSuffix() against a moved field'   | 'SpellD'   | 'GrailsPlugin' | 'extends Plugin' | ''                  | ''    | "field('suffix', String)"          | 'getSuffix()'
+        'suffix against a moved getSuffix'    | 'SpellE'   | 'GrailsPlugin' | 'extends Plugin' | ''                  | ''    | "method('getSuffix', String) { '!' }" | 'suffix'
+    }
+
+    @Unroll
+    def "a reference the anonymous class can resolve itself is left alone: #control"() {
+        given: "the same names, reachable - none of these may be rejected"
+        String source = """
+            import grails.compiler.beans.GrailsBeans
+            import grails.plugins.Plugin
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface ${fixture}Greeter { String greet() }
+            ${extraTypes}
+
+            @GrailsBeans
+            @AutoConfiguration
+            class ${fixture}GrailsPlugin extends Plugin {
+                def beans = {
+                    ${declaration}
+
+                    bean('greeter', ${fixture}Greeter) {
+                        ${prelude}
+                        ${construction}
+                    }
+                }
+            }
+        """
+
+        and:
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(source)
+
+        expect:
+        loader.loadClass("${fixture}AutoConfiguration").getDeclaredConstructor().newInstance().greeter().greet() == 'hello'
+
+        where:
+        control                                   | fixture   | extraTypes                                             | declaration                             | prelude                    | construction
+        'this.own() is the class\'s own method'   | 'CtlA'    | ''                                                     | "method('own', String) { 'moved' }"     | ''                         | "new CtlAGreeter() { String greet() { this.own() }\n                                          private String own() { 'hello' } }"
+        'this.name resolves to its own getName()' | 'CtlB'    | ''                                                     | "method('getName', String) { 'moved' }" | ''                         | "new CtlBGreeter() { String greet() { this.name }\n                                          String getName() { 'hello' } }"
+        'the property belongs to another object'  | 'CtlC'    | "class CtlCHolder { String suffix = 'hello' }"          | "method('suffix', String) { 'moved' }"  | 'CtlCHolder h = new CtlCHolder()' | "new CtlCGreeter() { String greet() { h.suffix } }"
+        'the accessor is inherited'               | 'CtlD'    | "abstract class CtlDBase implements CtlDGreeter { String getTag() { 'hello' } }" | "method('tag', String) { 'moved' }" | '' | "new CtlDBase() { String greet() { tag } }"
+    }
+
+    @Unroll
+    def "an anonymous class cannot reach outward from a field initializer either, #hostKind"() {
+        given: "the Verifier folds an initializer into the constructor at class generation, long after this"
+        String source = """
+            import grails.compiler.beans.GrailsBeans
+            import grails.plugins.Plugin
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface ${fixture}Greeter { String greet() }
+
+            @GrailsBeans
+            @AutoConfiguration
+            class ${fixture}${suffixClass} ${extendsClause} {
+                def beans = {
+                    ${open}
+                        method('suffix', String) { '!' }
+
+                        bean('greeter', ${fixture}Greeter) {
+                            new ${fixture}Greeter() {
+                                String s = suffix()
+                                String greet() { 'hello' + s }
+                            }
+                        }
+                    ${close}
+                }
+            }
+        """
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('does not resolve on this anonymous')
+
+        where:
+        hostKind               | fixture    | suffixClass    | extendsClause    | open                | close
+        'on a descriptor'      | 'InitA'    | 'GrailsPlugin' | 'extends Plugin' | ''                  | ''
+        'in a group'           | 'InitB'    | 'Beans'        | ''               | "group('extras') {" | '}'
+    }
+
+    def "a field initializer that resolves on the anonymous class itself is left alone"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import grails.plugins.Plugin
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface InitOwnGreeter { String greet() }
+
+            @GrailsBeans
+            @AutoConfiguration
+            class InitOwnGrailsPlugin extends Plugin {
+                def beans = {
+                    method('suffix', String) { 'moved' }
+
+                    bean('greeter', InitOwnGreeter) {
+                        new InitOwnGreeter() {
+                            String s = own()
+                            String greet() { s }
+                            private String own() { 'hello' }
+                        }
+                    }
+                }
+            }
+        '''
+
+        and:
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(source)
+
+        expect:
+        loader.loadClass('InitOwnAutoConfiguration').getDeclaredConstructor().newInstance().greeter().greet() == 'hello'
+    }
+
+    @Unroll
+    def "an anonymous class cannot reach #target either, #hostKind"() {
+        given: "the lift retypes the enclosing-instance field, so nothing behind it survives"
+        String source = """
+            import grails.compiler.beans.GrailsBeans
+            import grails.plugins.Plugin
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface ${fixture}Greeter { String greet() }
+
+            @GrailsBeans
+            @AutoConfiguration
+            class ${fixture}${suffixClass} ${extendsClause} {
+                ${hostMember}
+                def beans = {
+                    bean('greeter', ${fixture}Greeter) {
+                        new ${fixture}Greeter() { String greet() { 'hello' + ${reference} } }
+                    }
+                }
+            }
+        """
+
+        when:
+        compile(source)
+
+        then: "a descriptor member is as unreachable as a moved one - this\$0 is typed as the sibling"
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('does not resolve on this anonymous')
+
+        where:
+        target                                  | hostKind          | fixture   | suffixClass    | extendsClause    | hostMember                   | reference
+        'a method the descriptor declares'      | 'a descriptor'    | 'ReachA'  | 'GrailsPlugin' | 'extends Plugin' | "String ownMethod() { '!' }" | 'ownMethod()'
+        'a field the descriptor declares'       | 'a descriptor'    | 'ReachB'  | 'GrailsPlugin' | 'extends Plugin' | "String ownField = '!'"      | 'ownField'
+        'a method inherited from Plugin'        | 'a descriptor'    | 'ReachC'  | 'GrailsPlugin' | 'extends Plugin' | ''                           | 'String.valueOf(getPluginManager())'
+        'a property inherited from Plugin'      | 'a descriptor'    | 'ReachD'  | 'GrailsPlugin' | 'extends Plugin' | ''                           | 'String.valueOf(grailsApplication)'
+    }
+
+    @Unroll
+    def "an anonymous class may still use #usable, #hostKind"() {
+        given: "these resolve against the instance itself and never fetch the enclosing instance"
+        String source = """
+            import grails.compiler.beans.GrailsBeans
+            import grails.plugins.Plugin
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface ${fixture}Greeter { String greet() }
+            ${extraTypes}
+
+            @GrailsBeans
+            @AutoConfiguration
+            class ${fixture}${suffixClass} ${extendsClause} {
+                def beans = {
+                    ${open}
+                        ${declaration}
+                        bean('greeter', ${fixture}Greeter) {
+                            ${prelude}
+                            ${construction}
+                        }
+                    ${close}
+                }
+            }
+        """
+
+        and:
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(source)
+
+        expect: "none of these may be reported"
+        loader.loadClass(owner).getDeclaredConstructor().newInstance().greeter().greet() == 'hello'
+
+        where:
+        usable                             | hostKind        | fixture  | suffixClass    | extendsClause    | extraTypes | open              | close | declaration                            | prelude                   | construction | owner
+        'a captured local'                 | 'in a group'    | 'UseA'   | 'Beans'        | ''               | ''         | "group('extras') {" | '}' | "method('suffix', String) { 'moved' }" | "String suffix = 'hello'" | "new UseAGreeter() { String greet() { suffix } }" | 'UseABeans$ExtrasConfiguration'
+        'a captured local'                 | 'on a descriptor' | 'UseB' | 'GrailsPlugin' | 'extends Plugin' | ''         | ''                | ''    | "method('suffix', String) { 'moved' }" | "String suffix = 'hello'" | "new UseBGreeter() { String greet() { suffix } }" | 'UseBAutoConfiguration'
+        'println and with'                 | 'on a descriptor' | 'UseC' | 'GrailsPlugin' | 'extends Plugin' | ''         | ''                | ''    | ''                                     | ''                        | "new UseCGreeter() { String greet() { println 'noise'; 'hello'.with { String s -> s } } }" | 'UseCAutoConfiguration'
+        'identity'                         | 'in a group'    | 'UseD'   | 'Beans'        | ''               | ''         | "group('extras') {" | '}' | ''                                     | ''                        | "new UseDGreeter() { String greet() { identity { 'hello' } } }" | 'UseDBeans$ExtrasConfiguration'
+        'its own methodMissing'            | 'on a descriptor' | 'UseE' | 'GrailsPlugin' | 'extends Plugin' | ''         | ''                | ''    | "method('suffix', String) { '!' }"     | ''                        | "new UseEGreeter() { String greet() { 'hello' + anythingAtAll() }\n                                          def methodMissing(String m, a) { '' } }" | 'UseEAutoConfiguration'
+        'a property of another object'     | 'in a group'    | 'UseF'   | 'Beans'        | ''               | "class UseFHolder { String suffix = 'hello' }" | "group('extras') {" | '}' | "method('suffix', String) { 'moved' }" | 'UseFHolder h = new UseFHolder()' | "new UseFGreeter() { String greet() { h.suffix } }" | 'UseFBeans$ExtrasConfiguration'
+    }
+
+    @Unroll
+    def "an anonymous class in a closure parameter default is repaired too, #hostKind"() {
+        given: "a parameter default comes across with the parameter, so the lift has to reach it"
+        String source = """
+            import grails.compiler.beans.GrailsBeans
+            import grails.plugins.Plugin
+            import groovy.transform.CompileStatic
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface ${fixture}Greeter { String greet() }
+
+            @GrailsBeans
+            @CompileStatic
+            @AutoConfiguration
+            class ${fixture}${suffixClass} ${extendsClause} {
+                def beans = {
+                    ${open}
+                        ${declaration}
+                        bean('greeter', ${fixture}Greeter) { ${beanParam} }
+                    ${close}
+                }
+            }
+        """
+
+        and:
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(source)
+        Class<?> generated = loader.loadClass(owner)
+
+        expect: "class generation dies with a GroovyBugError when the default is never visited"
+        generated.declaredMethods.find { it.name == 'greeter' && it.parameterCount == 0 }
+                .invoke(generated.getDeclaredConstructor().newInstance()).greet() == 'defaulted'
+
+        where:
+        hostKind              | fixture      | suffixClass    | extendsClause    | open                | close | declaration | beanParam | owner
+        'on a plain host'     | 'ParamDefA'  | 'Beans'        | ''               | ''                  | ''    | ''          | "ParamDefAGreeter f = new ParamDefAGreeter() { String greet() { 'defaulted' } } -> f" | 'ParamDefABeans'
+        'on a descriptor'     | 'ParamDefB'  | 'GrailsPlugin' | 'extends Plugin' | ''                  | ''    | ''          | "ParamDefBGreeter f = new ParamDefBGreeter() { String greet() { 'defaulted' } } -> f" | 'ParamDefBAutoConfiguration'
+        'in a group'          | 'ParamDefC'  | 'Beans'        | ''               | "group('extras') {" | '}'   | ''          | "ParamDefCGreeter f = new ParamDefCGreeter() { String greet() { 'defaulted' } } -> f" | 'ParamDefCBeans\$ExtrasConfiguration'
+    }
+
+    @Unroll
+    def "the reach check follows the lift: #shape"() {
+        given: "wherever the lift repairs a class, this has to be able to see it"
+        String source = """
+            import grails.compiler.beans.GrailsBeans
+            import grails.plugins.Plugin
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface ${fixture}Greeter { String greet() }
+
+            @GrailsBeans
+            @AutoConfiguration
+            class ${fixture}${suffixClass} ${extendsClause} {
+                def beans = {
+                    ${open}
+                        method('suffix', String) { '!' }
+                        bean('greeter', ${fixture}Greeter) { ${declaration} }
+                    ${close}
+                }
+            }
+        """
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('does not resolve on this anonymous')
+
+        where:
+        shape                                          | fixture   | suffixClass    | extendsClause    | open                | close | declaration
+        'a class in a parameter default, descriptor'   | 'DeepA'   | 'GrailsPlugin' | 'extends Plugin' | ''                  | ''    | "DeepAGreeter f = new DeepAGreeter() { String greet() { 'hello' + suffix() } } -> f"
+        'a class nested in another, in a group'        | 'DeepB'   | 'Beans'        | ''               | "group('extras') {" | '}'   | "new DeepBGreeter() { String greet() { DeepBGreeter d = new DeepBGreeter() { String greet() { 'hello' + suffix() } }\n                                d.greet() } }"
+        'a class nested in another, on a descriptor'   | 'DeepC'   | 'GrailsPlugin' | 'extends Plugin' | ''                  | ''    | "new DeepCGreeter() { String greet() { DeepCGreeter d = new DeepCGreeter() { String greet() { 'hello' + suffix() } }\n                                d.greet() } }"
+    }
+
+    def "a nested anonymous class may still reach the one it is nested inside"() {
+        given: "its own enclosing instance was never retyped - it holds the outer anonymous class"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface DeepOwnGreeter { String greet() }
+
+            @GrailsBeans
+            @AutoConfiguration
+            class DeepOwnBeans {
+                def beans = {
+                    group('extras') {
+                        method('suffix', String) { 'moved' }
+
+                        bean('greeter', DeepOwnGreeter) {
+                            new DeepOwnGreeter() {
+                                String greet() {
+                                    DeepOwnGreeter deep = new DeepOwnGreeter() {
+                                        String greet() { outerHelper() }
+                                    }
+                                    deep.greet()
+                                }
+                                String outerHelper() { 'hello' }
+                            }
+                        }
+                    }
+                }
+            }
+        '''
+
+        and:
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(source)
+
+        expect:
+        loader.loadClass('DeepOwnBeans$ExtrasConfiguration')
+                .getDeclaredConstructor().newInstance().greeter().greet() == 'hello'
+    }
+
+    @Unroll
+    def "the reach check does not descend into a closure in the class body: #shape"() {
+        given: "a closure's resolve strategy and delegate are runtime facts - a delegate may answer this"
+        String source = """
+            import grails.compiler.beans.GrailsBeans
+            import grails.plugins.Plugin
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface ${fixture}Greeter { String greet() }
+            ${extraTypes}
+
+            @GrailsBeans
+            @AutoConfiguration
+            class ${fixture}${suffixClass} ${extendsClause} {
+                def beans = {
+                    ${open}
+                        bean('greeter', ${fixture}Greeter) { ${construction} }
+                    ${close}
+                }
+            }
+        """
+
+        and:
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(source)
+
+        expect: "rejecting these would break working code, the regression this check must not become"
+        loader.loadClass(owner).getDeclaredConstructor().newInstance().greeter().greet() == 'hello'
+
+        where:
+        shape                            | fixture  | suffixClass    | extendsClause    | extraTypes | open                | close | construction | owner
+        'with { } in a group'            | 'DelA'   | 'Beans'        | ''               | ''         | "group('extras') {" | '}'   | "new DelAGreeter() { String greet() { 'hello'.with { toLowerCase() } } }" | 'DelABeans$ExtrasConfiguration'
+        'tap { } on a descriptor'        | 'DelB'   | 'GrailsPlugin' | 'extends Plugin' | ''         | ''                  | ''    | "new DelBGreeter() { String greet() { new StringBuilder().tap { append('hello') }.toString() } }" | 'DelBAutoConfiguration'
+    }
+
+    def "this-qualified and bare spellings of an inherited field agree"() {
+        given: "getFields() is declared fields only, so the inherited ones have to be added by hand"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import grails.plugins.Plugin
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface InheritedFieldGreeter { String greet() }
+            abstract class InheritedFieldBase implements InheritedFieldGreeter {
+                protected String tag = 'hello'
+            }
+
+            @GrailsBeans
+            @AutoConfiguration
+            class InheritedFieldGrailsPlugin extends Plugin {
+                def beans = {
+                    bean('qualified', InheritedFieldGreeter) {
+                        new InheritedFieldBase() { String greet() { this.tag } }
+                    }
+
+                    bean('bare', InheritedFieldGreeter) {
+                        new InheritedFieldBase() { String greet() { tag } }
+                    }
+                }
+            }
+        '''
+
+        and:
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(source)
+        def sibling = loader.loadClass('InheritedFieldAutoConfiguration').getDeclaredConstructor().newInstance()
+
+        expect:
+        sibling.qualified().greet() == 'hello'
+        sibling.bare().greet() == 'hello'
+    }
+
+    @Unroll
+    def "the reachable set follows what the runtime answers: #usable"() {
+        given:
+        String source = """
+            import grails.compiler.beans.GrailsBeans
+            import grails.plugins.Plugin
+            import groovy.transform.CompileStatic
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface ${fixture}Greeter { String greet() }
+            ${extraTypes}
+
+            @GrailsBeans
+            ${staticAnnotation}
+            @AutoConfiguration
+            class ${fixture}${suffixClass} ${extendsClause} {
+                ${hostMembers}
+                def beans = {
+                    ${open}
+                        bean('greeter', ${fixture}Greeter) { ${construction} }
+                    ${close}
+                }
+            }
+        """
+
+        and:
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(source)
+
+        expect: "none of these ever reads the enclosing instance, so none may be reported"
+        loader.loadClass(owner).getDeclaredConstructor().newInstance().greeter().greet() == 'hello'
+
+        where:
+        usable                                           | fixture | suffixClass    | extendsClause    | staticAnnotation | hostMembers | extraTypes | open                | close | construction | owner
+        'an extension method on a collection receiver'   | 'ExtA'  | 'Beans'        | ''               | ''               | ''          | 'abstract class ExtAList extends ArrayList<String> implements ExtAGreeter {}' | "group('extras') {" | '}' | "new ExtAList() { String greet() { add('hel'); add('lo'); join('') } }" | 'ExtABeans$ExtrasConfiguration'
+        'a static member of a @CompileStatic descriptor' | 'ExtB'  | 'GrailsPlugin' | 'extends Plugin' | '@CompileStatic' | "static final String SUFFIX = ''\n                static String helper() { 'hello' }" | '' | '' | '' | "new ExtBGreeter() { String greet() { helper() + SUFFIX } }" | 'ExtBAutoConfiguration'
+    }
+
+    def "a static member of a DYNAMIC host is still out of reach, and the error says how to qualify it"() {
+        given: "without @CompileStatic the same reference goes through the enclosing instance"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import grails.plugins.Plugin
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface DynStaticGreeter { String greet() }
+
+            @GrailsBeans
+            @AutoConfiguration
+            class DynStaticGrailsPlugin extends Plugin {
+                static String helper() { 'hello' }
+
+                def beans = {
+                    bean('greeter', DynStaticGreeter) {
+                        new DynStaticGreeter() { String greet() { helper() } }
+                    }
+                }
+            }
+        '''
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('static member of an enclosing class')
+    }
+
+    def "a precompiled superclass declaring getProperty does not exempt its subclass"() {
+        given: "invokeMethod/getProperty became GroovyObject defaults in Groovy 3, so a class from a\n                library built before that declares both on every type"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import grails.plugins.Plugin
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface InheritedAnyGreeter { String greet() }
+            abstract class InheritedAnyBase extends Properties implements InheritedAnyGreeter {}
+
+            @GrailsBeans
+            @AutoConfiguration
+            class InheritedAnyGrailsPlugin extends Plugin {
+                def beans = {
+                    method('suffix', String) { '!' }
+
+                    bean('greeter', InheritedAnyGreeter) {
+                        new InheritedAnyBase() { String greet() { 'hello' + suffix() } }
+                    }
+                }
+            }
+        '''
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('does not resolve on this anonymous')
+    }
+
+    @Unroll
+    def "a class that really does answer anything is exempt: #shape"() {
+        given:
+        String source = """
+            import grails.compiler.beans.GrailsBeans
+            import grails.plugins.Plugin
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface ${fixture}Greeter { String greet() }
+            ${extraTypes}
+
+            @GrailsBeans
+            @AutoConfiguration
+            class ${fixture}GrailsPlugin extends Plugin {
+                def beans = {
+                    method('suffix', String) { '!' }
+
+                    bean('greeter', ${fixture}Greeter) { ${construction} }
+                }
+            }
+        """
+
+        when:
+        compile(source)
+
+        then: "written here, in source this unit compiles - which is what getModule() tells apart"
+        noExceptionThrown()
+
+        where:
+        shape                                             | fixture | extraTypes | construction
+        'the anonymous class writes its own getProperty'  | 'AnyB'  | ''         | "new AnyBGreeter() { String greet() { 'hello' + suffix() }\n                            def getProperty(String n) { '' } }"
+        'a same-unit superclass writes invokeMethod'       | 'AnyC'  | "abstract class AnyCBase implements AnyCGreeter { Object invokeMethod(String n, Object a) { '' } }" | "new AnyCBase() { String greet() { 'hello' + suffix() } }"
+    }
+
+    def "a @CompileStatic host reaches its statics from inside a group too"() {
+        given: "a group's static compilation is deferred, so the two paths could drift"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import groovy.transform.CompileStatic
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface GroupStaticGreeter { String greet() }
+
+            @GrailsBeans
+            @CompileStatic
+            @AutoConfiguration
+            class GroupStaticBeans {
+                static final String SUFFIX = ''
+                static String helper() { 'hello' }
+
+                def beans = {
+                    group('extras') {
+                        bean('greeter', GroupStaticGreeter) {
+                            new GroupStaticGreeter() { String greet() { helper() + SUFFIX } }
+                        }
+                    }
+                }
+            }
+        '''
+
+        and:
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(source)
+
+        expect:
+        loader.loadClass('GroupStaticBeans$ExtrasConfiguration')
+                .getDeclaredConstructor().newInstance().greeter().greet() == 'hello'
+    }
+
+    def "@CompileStatic(TypeCheckingMode.SKIP) is a dynamic host, so its statics are out of reach"() {
+        given: "what @CompileDynamic expands to - identical annotation, dynamic bytecode"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import grails.plugins.Plugin
+            import groovy.transform.CompileStatic
+            import groovy.transform.TypeCheckingMode
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface SkippedGreeter { String greet() }
+
+            @GrailsBeans
+            @CompileStatic(TypeCheckingMode.SKIP)
+            @AutoConfiguration
+            class SkippedGrailsPlugin extends Plugin {
+                static String helper() { 'hello' }
+
+                def beans = {
+                    bean('greeter', SkippedGreeter) {
+                        new SkippedGreeter() { String greet() { helper() } }
+                    }
+                }
+            }
+        '''
+
+        when:
+        compile(source)
+
+        then: "uncaught it is the NoSuchFieldError this check exists to turn into a compile error"
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('static member of an enclosing class')
+    }
+
+    def "an extension method of a receiver the anonymous class is not is still out of reach"() {
+        given: "every DGM name regardless of receiver would let a moved getText through as text"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import grails.plugins.Plugin
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface UnrelatedGreeter { String greet() }
+
+            @GrailsBeans
+            @AutoConfiguration
+            class UnrelatedGrailsPlugin extends Plugin {
+                def beans = {
+                    method('getText', String) { 'moved' }
+
+                    bean('greeter', UnrelatedGreeter) {
+                        new UnrelatedGreeter() { String greet() { text } }
+                    }
+                }
+            }
+        '''
+
+        when:
+        compile(source)
+
+        then: "DGM declares getText on File/URL/Reader, none of which this class is"
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('"text"')
+    }
+
+    def "an anonymous class in a group(...) body that reaches nothing outside itself is fine"() {
+        given: "the shape that works, and must not be caught by the check above"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface GroupSelfContainedGreeter { String greet() }
+
+            @GrailsBeans
+            @AutoConfiguration
+            class GroupSelfContainedBeans {
+                def beans = {
+                    group('extras') {
+                        method('suffix', String) { '!' }
+
+                        bean('greeter', GroupSelfContainedGreeter) {
+                            new GroupSelfContainedGreeter() {
+                                String greet() { own() }
+                                private String own() { 'hello' }
+                            }
+                        }
+                    }
+                }
+            }
+        '''
+
+        and:
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(source)
+        def group = loader.loadClass('GroupSelfContainedBeans$ExtrasConfiguration')
+
+        expect:
+        group.getDeclaredConstructor().newInstance().greeter().greet() == 'hello'
+    }
+
+    def "a captured local reaches an anonymous class in a group(...) body, which is what the error suggests"() {
+        given: "the way out the message names - a local is copied into the class, not reached through an enclosing instance"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface GroupCapturedGreeter { String greet() }
+
+            @GrailsBeans
+            @AutoConfiguration
+            class GroupCapturedBeans {
+                def beans = {
+                    group('extras') {
+                        bean('greeter', GroupCapturedGreeter) {
+                            String suffix = '!'
+                            new GroupCapturedGreeter() { String greet() { 'hello' + suffix } }
+                        }
+                    }
+                }
+            }
+        '''
+
+        and:
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(source)
+        def group = loader.loadClass('GroupCapturedBeans$ExtrasConfiguration')
+
+        expect:
+        group.getDeclaredConstructor().newInstance().greeter().greet() == 'hello!'
+    }
 
     private Class<?> compile() {
         compile(FIXTURE)
@@ -1345,6 +3626,124 @@ class GrailsBeansASTTransformationSpec extends Specification {
         paramAnnotations.any { it instanceof Qualifier && it.value() == 'special' }
     }
 
+    def "an @Autowired(required = false) closure parameter lets the context start when nothing supplies the dependency"() {
+        given: "a bean depending on a type no one wires - the shape of an integration another module may or may not provide"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.beans.factory.annotation.Autowired
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface Transport { }
+
+            class Sender {
+                Transport transport
+
+                Sender(Transport transport) {
+                    this.transport = transport
+                }
+            }
+
+            @GrailsBeans
+            @AutoConfiguration
+            class OptionalDependencyFixture {
+                def beans = {
+                    bean('sender', Sender) { @Autowired(required = false) Transport transport ->
+                        new Sender(transport)
+                    }
+                }
+            }
+        '''
+
+        and:
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(source)
+        def context = new AnnotationConfigApplicationContext()
+        context.classLoader = loader
+        context.register(loader.loadClass('OptionalDependencyFixture'))
+
+        when:
+        context.refresh()
+
+        then: "Spring passes null rather than refusing to build the bean"
+        noExceptionThrown()
+        context.getBean('sender').transport == null
+
+        cleanup:
+        context.close()
+    }
+
+    def "the same parameter without it is required, which is what makes the annotation load-bearing rather than decorative"() {
+        given: "identical to the fixture above but for the missing annotation"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface RequiredTransport { }
+
+            class RequiredSender {
+                RequiredTransport transport
+
+                RequiredSender(RequiredTransport transport) {
+                    this.transport = transport
+                }
+            }
+
+            @GrailsBeans
+            @AutoConfiguration
+            class RequiredDependencyFixture {
+                def beans = {
+                    bean('sender', RequiredSender) { RequiredTransport transport ->
+                        new RequiredSender(transport)
+                    }
+                }
+            }
+        '''
+
+        and:
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(source)
+        def context = new AnnotationConfigApplicationContext()
+        context.classLoader = loader
+        context.register(loader.loadClass('RequiredDependencyFixture'))
+
+        when:
+        context.refresh()
+
+        then:
+        thrown(Exception)
+
+        cleanup:
+        context.close()
+    }
+
+    def "an annotation on a closure parameter reaches the generated method as a real parameter annotation"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.beans.factory.annotation.Autowired
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class OptionalParameterAnnotationFixture {
+                def beans = {
+                    bean('greeting', String) { @Autowired(required = false) StringBuilder input ->
+                        input?.toString() ?: 'none'
+                    }
+                }
+            }
+        '''
+
+        when:
+        Class<?> compiled = compile(source)
+        def method = compiled.getDeclaredMethod('greeting', StringBuilder)
+
+        then: "not merely present, but carrying the attribute that makes the dependency optional"
+        Autowired autowired = method.parameterAnnotations[0].find { it instanceof Autowired } as Autowired
+        autowired != null
+        !autowired.required()
+    }
+
     def "a @Qualifier on a closure parameter selects the intended candidate when Spring injects it"() {
         given: "two beans of the dependency type, so the injection point is genuinely ambiguous " +
                 "without the qualifier - refresh would fail outright if it were not honoured"
@@ -1513,8 +3912,8 @@ class GrailsBeansASTTransformationSpec extends Specification {
         'staticMethod() chained twice'                  | "bean('x', String).staticMethod().staticMethod() { 'y' }"          | 'may only be chained once'
         'staticMethod() chained onto field(...)'         | "field('x', String).staticMethod()"                                | 'cannot be chained onto field(...)'
         'staticMethod() chained onto method(...)'        | "method('x', String).staticMethod() { 'y' }"                       | 'cannot be chained onto method(...)'
-        'scope(...) with no argument'                   | "bean('x', String).scope() { 'y' }"                                | '.scope(...) requires exactly one non-empty String argument'
-        'scope(...) with a non-String argument'         | "bean('x', String).scope(42) { 'y' }"                              | '.scope(...) requires exactly one non-empty String argument'
+        'scope(...) with no argument'                   | "bean('x', String).scope() { 'y' }"                                | 'needs a scope name'
+        'scope(...) with a non-String argument'         | "bean('x', String).scope(42) { 'y' }"                              | 'non-empty String scope name'
         'annotate(...) with no arguments'                | "bean('x', String).annotate() { 'y' }"                            | 'requires an annotation type'
         'annotate(...) with a non-type argument'         | "bean('x', String).annotate('NotAType') { 'y' }"                  | 'requires an annotation type'
         'annotate(...) with a non-annotation type'       | "bean('x', String).annotate(String) { 'y' }"                      | 'is not an annotation type'
@@ -1533,7 +3932,7 @@ class GrailsBeansASTTransformationSpec extends Specification {
         '.value(key, default) with a blank key'              | "field('x', String).value('', 'fallback')"                      | 'requires a non-blank config key'
         '.value(key, default) with a whitespace-only key'    | "field('x', String).value('   ', 'fallback')"                   | 'requires a non-blank config key'
         '.value(...) chained twice'                          | "field('x', String).value('a', 'b').value('c', 'd')"            | 'may only be chained once'
-        '.value(...) combined with .annotate(Value, ...)'    | "field('x', String).value('k', 'd').annotate(Value, value: 'v')" | 'already attached'
+        '.value(...) combined with .annotate(Value, ...)'    | "field('x', String).value('k', 'd').annotate(Value, value: 'v')" | '"value" is already set here'
         'conditionalOnMissingBeanName(...) given a name: attribute' |
                 "bean('x', String).conditionalOnMissingBeanName(name: 'other') { 'y' }" | 'sets name automatically'
         'conditionalOnMissingBeanName(...) given a value: attribute' |
@@ -3257,6 +5656,1542 @@ class GrailsBeansASTTransformationSpec extends Specification {
 
         then: "it was never generated, so nothing bean-less is registered as an auto-configuration"
         thrown(ClassNotFoundException)
+    }
+
+    def "bean(name, Type, Implementation) declares the interface and constructs the implementation"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class ImplementationBeans {
+                def beans = {
+                    bean('greeter', Greeter, EnglishGreeter)
+                }
+            }
+
+            interface Greeter { String greet() }
+            class EnglishGreeter implements Greeter { String greet() { 'hello' } }
+        '''
+
+        when:
+        Class<?> beans = compile(source)
+        def method = beans.getDeclaredMethod('greeter')
+
+        then: "the declared type is what consumers inject"
+        method.returnType.simpleName == 'Greeter'
+        method.getAnnotation(Bean).value() == ['greeter'] as String[]
+
+        and: "the body constructs the implementation"
+        method.invoke(beans.getDeclaredConstructor().newInstance()).greet() == 'hello'
+    }
+
+    def "bean(Type, Implementation) with no name derives the name from the declared type, not the implementation"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class DerivedNameImplementationBeans {
+                def beans = {
+                    bean(Greeter, EnglishGreeter)
+                }
+            }
+
+            interface Greeter { String greet() }
+            class EnglishGreeter implements Greeter { String greet() { 'hello' } }
+        '''
+
+        when:
+        Class<?> beans = compile(source)
+
+        then: "the bean is named after the contract it satisfies"
+        beans.getDeclaredMethod('greeter').getAnnotation(Bean).value() == ['greeter'] as String[]
+    }
+
+    def "bean(name, Type, Implementation) takes its constructor arguments from the closure parameters"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class InjectedImplementationBeans {
+                def beans = {
+                    bean('suffix', String) { '!' }
+                    bean('greeter', Greeter, EnglishGreeter) { String suffix -> }
+                }
+            }
+
+            interface Greeter { String greet() }
+            class EnglishGreeter implements Greeter {
+                private final String suffix
+                EnglishGreeter(String suffix) { this.suffix = suffix }
+                String greet() { 'hello' + suffix }
+            }
+        '''
+
+        when:
+        Class<?> beans = compile(source)
+        def method = beans.getDeclaredMethod('greeter', String)
+
+        then: "the parameter is the injection point and the constructor argument"
+        method.returnType.simpleName == 'Greeter'
+        method.invoke(beans.getDeclaredConstructor().newInstance(), '!').greet() == 'hello!'
+    }
+
+    def "bean(name, Type, Implementation) chains with the qualifiers"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+            import org.springframework.core.annotation.Order
+
+            @GrailsBeans
+            @AutoConfiguration
+            class QualifiedImplementationBeans {
+                def beans = {
+                    bean('greeter', Greeter, EnglishGreeter).primary().lazy().annotate(Order, value: 3)
+                }
+            }
+
+            interface Greeter { String greet() }
+            class EnglishGreeter implements Greeter { String greet() { 'hello' } }
+        '''
+
+        when:
+        def method = compile(source).getDeclaredMethod('greeter')
+
+        then:
+        method.isAnnotationPresent(Primary)
+        method.isAnnotationPresent(Lazy)
+        method.getAnnotation(Order).value() == 3
+    }
+
+    def "rejects a factory closure body alongside an implementation type, which would answer the same question twice"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class ContradictoryImplementationBeans {
+                def beans = {
+                    bean('greeter', Greeter, EnglishGreeter) { new FrenchGreeter() }
+                }
+            }
+
+            interface Greeter { String greet() }
+            class EnglishGreeter implements Greeter { String greet() { 'hello' } }
+            class FrenchGreeter implements Greeter { String greet() { 'bonjour' } }
+        '''
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('already declares what to construct')
+    }
+
+    def "rejects an implementation that is not a subtype of the declared type"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class UnrelatedImplementationBeans {
+                def beans = {
+                    bean('greeter', Greeter, Stranger)
+                }
+            }
+
+            interface Greeter { String greet() }
+            class Stranger { }
+        '''
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('Stranger is not a Greeter')
+    }
+
+    def "rejects an abstract implementation type"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class AbstractImplementationBeans {
+                def beans = {
+                    bean('greeter', Greeter, AbstractGreeter)
+                }
+            }
+
+            interface Greeter { String greet() }
+            abstract class AbstractGreeter implements Greeter { }
+        '''
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('cannot be the implementation')
+    }
+
+    def "the bodyless-interface error points at the implementation form"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class BodylessInterfaceBeans {
+                def beans = {
+                    bean('greeter', Greeter)
+                }
+            }
+
+            interface Greeter { String greet() }
+        '''
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('name the implementation: bean(Greeter, SomeImplementation)')
+    }
+
+    def "field(...) and method(...) do not take an implementation type"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class FieldImplementationBeans {
+                def beans = {
+                    field('greeter', Greeter, EnglishGreeter)
+                }
+            }
+
+            interface Greeter { String greet() }
+            class EnglishGreeter implements Greeter { String greet() { 'hello' } }
+        '''
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('field(...) requires a type, optionally preceded by a name')
+    }
+
+    def "the implementation type settles the declared type's type arguments without restating them"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class InferredFromImplementationBeans {
+                def beans = {
+                    bean('auditor', Auditor, LongAuditor)
+                }
+            }
+
+            interface Auditor<T> { T current() }
+            class LongAuditor implements Auditor<Long> { Long current() { 1L } }
+        '''
+
+        when:
+        def method = compile(source).getDeclaredMethod('auditor')
+
+        then: "the generic signature Spring resolves against is there, unstated"
+        method.genericReturnType.toString().contains('Auditor<java.lang.Long>')
+    }
+
+    def "a factory body that is just a construction settles them too"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class InferredFromBodyBeans {
+                def beans = {
+                    bean('auditor', Auditor) { new LongAuditor() }
+                }
+            }
+
+            interface Auditor<T> { T current() }
+            class LongAuditor implements Auditor<Long> { Long current() { 1L } }
+        '''
+
+        when:
+        def method = compile(source).getDeclaredMethod('auditor')
+
+        then:
+        method.genericReturnType.toString().contains('Auditor<java.lang.Long>')
+    }
+
+    def "an explicit typeArguments still wins over what the construction would prove"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class ExplicitOverInferredBeans {
+                def beans = {
+                    bean('numbers', List).typeArguments(Number) { new ArrayList<Number>() }
+                }
+            }
+        '''
+
+        when:
+        def method = compile(source).getDeclaredMethod('numbers')
+
+        then:
+        method.genericReturnType.toString().contains('List<java.lang.Number>')
+    }
+
+    def "infers nothing when the construction proves nothing: #description"() {
+        given:
+        String source = """
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class NotInferredBeans {
+                def beans = {
+                    bean('holder', Holder) { $body }
+                }
+            }
+
+            interface Holder<T> { T get() }
+            class GenericBox<T> implements Holder<T> { T value; T get() { value } }
+            class StringBox implements Holder<String> { String get() { 'x' } }
+        """
+
+        when:
+        def method = compile(source).getDeclaredMethod('holder')
+
+        then: "the raw type stands, exactly as it did before inference existed"
+        method.genericReturnType.toString() == 'interface Holder'
+
+        where:
+        description                           | body
+        'the construction is raw'             | 'new GenericBox()'
+        'the body is not a bare construction' | 'def b = new StringBox(); b'
+    }
+
+    def "a parameterized construction proves the declared type's arguments as well as a bound implementation does"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class InferredFromParameterizedConstructionBeans {
+                def beans = {
+                    bean('holder', Holder) { new GenericBox<String>() }
+                }
+            }
+
+            interface Holder<T> { T get() }
+            class GenericBox<T> implements Holder<T> { T value; T get() { value } }
+        '''
+
+        when:
+        def method = compile(source).getDeclaredMethod('holder')
+
+        then:
+        method.genericReturnType.toString().contains('Holder<java.lang.String>')
+    }
+
+    def "a bodyless bean on a generic type is left raw, since it proves only its own placeholders"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class BodylessGenericBeans {
+                def beans = {
+                    bean('names', ArrayList)
+                }
+            }
+        '''
+
+        when:
+        def method = compile(source).getDeclaredMethod('names')
+
+        then:
+        method.returnType == ArrayList
+        method.genericReturnType.toString() == 'class java.util.ArrayList'
+    }
+
+    def "annotate(Bean, ...) merges into the synthesized @Bean, reaching its own attributes"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+            import org.springframework.context.annotation.Bean
+
+            @GrailsBeans
+            @AutoConfiguration
+            class BeanAttributeBeans {
+                def beans = {
+                    bean('sharedClient', String).annotate(Bean, destroyMethod: '') { 'client' }
+                    bean('managed', String).annotate(Bean, initMethod: 'trim', autowireCandidate: false) { 'managed' }
+                }
+            }
+        '''
+
+        when:
+        Class<?> beans = compile(source)
+
+        then: "the name bean(...) states survives the merge"
+        beans.getDeclaredMethod('sharedClient').getAnnotation(Bean).value() == ['sharedClient'] as String[]
+
+        and: "and the attribute that was previously unreachable is set"
+        beans.getDeclaredMethod('sharedClient').getAnnotation(Bean).destroyMethod() == ''
+
+        and:
+        beans.getDeclaredMethod('managed').getAnnotation(Bean).initMethod() == 'trim'
+        !beans.getDeclaredMethod('managed').getAnnotation(Bean).autowireCandidate()
+    }
+
+    def "rejects setting the bean's name through annotate(Bean, #attribute:), which bean(...) already states"() {
+        given:
+        String source = """
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+            import org.springframework.context.annotation.Bean
+
+            @GrailsBeans
+            @AutoConfiguration
+            class RenamedBeans {
+                def beans = {
+                    bean('greeting', String).annotate(Bean, $attribute: 'other') { 'hello' }
+                }
+            }
+        """
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('would state it twice')
+
+        where:
+        attribute << ['value', 'name']
+    }
+
+    def "rejects a bare annotate(Bean), which adds nothing"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+            import org.springframework.context.annotation.Bean
+
+            @GrailsBeans
+            @AutoConfiguration
+            class BareBeanAnnotationBeans {
+                def beans = {
+                    bean('greeting', String).annotate(Bean) { 'hello' }
+                }
+            }
+        '''
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('adds nothing')
+    }
+
+    def "rejects setting the same @Bean attribute twice"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+            import org.springframework.context.annotation.Bean
+
+            @GrailsBeans
+            @AutoConfiguration
+            class DuplicateBeanAttributeBeans {
+                def beans = {
+                    bean('greeting', String).annotate(Bean, initMethod: 'a').annotate(Bean, initMethod: 'b') { 'hello' }
+                }
+            }
+        '''
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('is already set here')
+    }
+
+    def "rejects annotate(Bean, ...) on a method(...) helper, which Spring never reads as a bean"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+            import org.springframework.context.annotation.Bean
+
+            @GrailsBeans
+            @AutoConfiguration
+            class BeanOnHelperBeans {
+                def beans = {
+                    method('helper', String).annotate(Bean, initMethod: 'start') { 'hello' }
+                }
+            }
+        '''
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('applies to bean(...) declarations')
+    }
+
+    def "rejects a #description bean declared without staticMethod()"() {
+        given:
+        String source = """
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+            import $type
+
+            @GrailsBeans
+            @AutoConfiguration
+            class NonStaticPostProcessorBeans {
+                def beans = {
+                    bean('postProcessor', ${type.tokenize('.').last()}) { $body }
+                }
+            }
+        """
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains("a $description bean must be declared .staticMethod()")
+
+        where:
+        description                | type                                                             | body
+        'BeanFactoryPostProcessor' | 'org.springframework.beans.factory.config.BeanFactoryPostProcessor' | '{ factory -> } as BeanFactoryPostProcessor'
+        'BeanPostProcessor'        | 'org.springframework.beans.factory.config.BeanPostProcessor'        | 'new BeanPostProcessor() { }'
+    }
+
+    def "accepts a post-processor bean declared staticMethod()"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+            import org.springframework.beans.factory.config.BeanFactoryPostProcessor
+
+            @GrailsBeans
+            @AutoConfiguration
+            class StaticPostProcessorBeans {
+                def beans = {
+                    bean('postProcessor', BeanFactoryPostProcessor).staticMethod() {
+                        { factory -> } as BeanFactoryPostProcessor
+                    }
+                }
+            }
+        '''
+
+        when:
+        def method = compile(source).getDeclaredMethod('postProcessor')
+
+        then:
+        Modifier.isStatic(method.modifiers)
+    }
+
+    def "rejects a subtype of a post-processor too, not just the interface itself"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+            import org.springframework.beans.factory.config.BeanFactoryPostProcessor
+            import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
+
+            @GrailsBeans
+            @AutoConfiguration
+            class SubtypePostProcessorBeans {
+                def beans = {
+                    bean('postProcessor', MarkPrimary)
+                }
+            }
+
+            class MarkPrimary implements BeanFactoryPostProcessor {
+                void postProcessBeanFactory(ConfigurableListableBeanFactory factory) { }
+            }
+        '''
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('must be declared .staticMethod()')
+    }
+
+    def "leaves an ordinary bean alone"() {
+        given:
+        Class<?> beans = compile()
+
+        expect: "nothing in the standard fixture is a post-processor, so nothing is forced static"
+        !Modifier.isStatic(beans.getDeclaredMethod('greeting').modifiers)
+    }
+
+    def "conditionalOnGrailsEnv(...) compiles to @ConditionalOnGrailsEnv, not a grails.env property condition"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class EnvironmentBeans {
+                def beans = {
+                    bean('devOnly', String).conditionalOnGrailsEnv('development') { 'dev' }
+                    bean('nonProduction', String).conditionalOnGrailsEnv('development', 'test') { 'not prod' }
+                }
+            }
+        '''
+
+        when:
+        Class<?> beans = compile(source)
+
+        then:
+        beans.getDeclaredMethod('devOnly').getAnnotation(ConditionalOnGrailsEnv).value() == ['development'] as String[]
+        beans.getDeclaredMethod('nonProduction').getAnnotation(ConditionalOnGrailsEnv).value() == ['development', 'test'] as String[]
+
+        and: "it is a real Spring condition, so Spring evaluates it like any other"
+        ConditionalOnGrailsEnv.isAnnotationPresent(Conditional)
+        ConditionalOnGrailsEnv.getAnnotation(Conditional).value() == [OnGrailsEnvCondition] as Class[]
+    }
+
+    def "the condition matches the environment Grails reports, including one nobody set as a property"() {
+        given: "an environment inferred by Grails, with no grails.env property anywhere"
+        def context = new AnnotationConfigApplicationContext()
+        context.environment.propertySources.addFirst(new MapPropertySource('empty', [:]))
+        def condition = new OnGrailsEnvCondition()
+        def metadata = Mock(AnnotatedTypeMetadata)
+        metadata.getAnnotationAttributes(ConditionalOnGrailsEnv.name) >> [value: names as String[]]
+        def conditionContext = Mock(ConditionContext)
+        conditionContext.getClassLoader() >> getClass().classLoader
+        conditionContext.getEnvironment() >> context.environment
+
+        expect:
+        condition.matches(conditionContext, metadata) == matches
+
+        cleanup:
+        context.close()
+
+        where:
+        names                       | matches
+        [Environment.current.name]  | true
+        ['no-such-environment']     | false
+        ['no-such-environment', Environment.current.name] | true
+    }
+
+    def "rejects conditionalOnGrailsEnv(...) #description"() {
+        given:
+        String source = """
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class BadEnvironmentBeans {
+                def beans = {
+                    bean('greeting', String).conditionalOnGrailsEnv($arguments) { 'hello' }
+                }
+            }
+        """
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains(message)
+
+        where:
+        description                  | arguments   | message
+        'with no environment'        | ''          | 'requires at least one environment name'
+        'with a blank environment'   | "'  '"      | 'non-blank environment names'
+        'with something not a String'| 'String'    | 'non-blank environment names'
+    }
+
+    def "conditionalOnGrailsEnv(...) tells two same-named beans apart, as any other condition does"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class PerEnvironmentBeans {
+                def beans = {
+                    bean('store', String).conditionalOnGrailsEnv('development') { 'in-memory' }
+                    bean('store', String).conditionalOnGrailsEnv('production') { 'redis' }
+                }
+            }
+        '''
+
+        when: "both declare the same bean name under mutually exclusive conditions"
+        Class<?> beans = compile(source)
+
+        then: "the shared-name check accepts them, and both methods carry their own condition"
+        beans.declaredMethods.count { it.isAnnotationPresent(ConditionalOnGrailsEnv) } == 2
+    }
+
+    def "conditionalOnBean tells two same-named beans apart, as any other condition does"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class PerBeanConditionBeans {
+                def beans = {
+                    bean('sender', String).conditionalOnBean(Integer) { 'with transport' }
+                    bean('sender', String).conditionalOnBean(Long) { 'with other transport' }
+                }
+            }
+        '''
+
+        when: "both declare one bean name under mutually exclusive conditions"
+        Class<?> beans = compile(source)
+
+        then: "the shared-name check accepts them"
+        beans.declaredMethods.count { it.isAnnotationPresent(ConditionalOnBean) } == 2
+    }
+
+    def "the shared-name error points at a first-class condition qualifier, not only the escape hatch"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class UnconditionedDuplicateBeans {
+                def beans = {
+                    bean('store', String) { 'one' }
+                    bean('store', String) { 'two' }
+                }
+            }
+        '''
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains(".conditionalOnProperty(...)")
+        e.message.contains('.conditionalOnGrailsEnv(...)')
+    }
+
+    def "conditionalOnProperty takes property names positionally and attributes by name"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class PropertyConditionBeans {
+                def beans = {
+                    bean('offlineOnly', String).conditionalOnProperty('app.offline', havingValue: 'true') { 'offline' }
+                    bean('onlineOnly', String).conditionalOnProperty('app.offline', havingValue: 'false', matchIfMissing: true) { 'online' }
+                    bean('bothSet', String).conditionalOnProperty('a.one', 'a.two') { 'both' }
+                    bean('prefixed', String).conditionalOnProperty(prefix: 'app', name: 'offline', havingValue: 'false') { 'prefixed' }
+                }
+            }
+        '''
+
+        when:
+        Class<?> beans = compile(source)
+
+        then:
+        beans.getDeclaredMethod('offlineOnly').getAnnotation(ConditionalOnProperty).name() == ['app.offline'] as String[]
+        beans.getDeclaredMethod('offlineOnly').getAnnotation(ConditionalOnProperty).havingValue() == 'true'
+
+        and: "matchIfMissing rides along as an ordinary attribute"
+        beans.getDeclaredMethod('onlineOnly').getAnnotation(ConditionalOnProperty).matchIfMissing()
+
+        and: "several names are all required, as the annotation defines"
+        beans.getDeclaredMethod('bothSet').getAnnotation(ConditionalOnProperty).name() == ['a.one', 'a.two'] as String[]
+
+        and: "the fully-named form still works, prefix included"
+        beans.getDeclaredMethod('prefixed').getAnnotation(ConditionalOnProperty).prefix() == 'app'
+        beans.getDeclaredMethod('prefixed').getAnnotation(ConditionalOnProperty).name() == ['offline'] as String[]
+    }
+
+    def "rejects conditionalOnProperty #description"() {
+        given:
+        String source = """
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class BadPropertyConditionBeans {
+                def beans = {
+                    bean('greeting', String).conditionalOnProperty($arguments) { 'hello' }
+                }
+            }
+        """
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains(message)
+
+        where:
+        description                              | arguments                 | message
+        'naming no property at all'              | ''                        | 'needs at least one property name'
+        'with only attributes, no name'          | "havingValue: 'true'"     | 'needs at least one property name'
+        'naming properties both ways'            | "'a.one', name: 'a.two'"  | 'both positionally and via'
+        'naming properties both ways via value:' | "'a.one', value: 'a.two'" | 'both positionally and via'
+        'with a blank name'                      | "'  '"                    | 'non-blank property names'
+        'with a name that is not a String'       | 'String'                  | 'non-blank property names'
+    }
+
+    def "conditionalOnProperty tells two same-named beans apart"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class PerPropertyBeans {
+                def beans = {
+                    bean('store', String).conditionalOnProperty('app.offline', havingValue: 'true') { 'memory' }
+                    bean('store', String).conditionalOnProperty('app.offline', havingValue: 'false') { 'redis' }
+                }
+            }
+        '''
+
+        when:
+        Class<?> beans = compile(source)
+
+        then:
+        beans.declaredMethods.count { it.isAnnotationPresent(ConditionalOnProperty) } == 2
+    }
+
+    def "conditionalOnExpression carries the expression through verbatim, placeholders and all"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class ExpressionConditionBeans {
+                def beans = {
+                    bean('fallbackTransport', String)
+                            .conditionalOnExpression('!${aws.ses.enabled:false} or ${app.offline:false}') { 'logging' }
+                }
+            }
+        '''
+
+        when:
+        def method = compile(source).getDeclaredMethod('fallbackTransport')
+
+        then: "the placeholder syntax is Spring's, and must reach the annotation untouched"
+        method.getAnnotation(ConditionalOnExpression).value() ==
+                '!${aws.ses.enabled:false} or ${app.offline:false}'
+    }
+
+    def "rejects conditionalOnExpression #description"() {
+        given:
+        String source = """
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class BadExpressionConditionBeans {
+                def beans = {
+                    bean('greeting', String).conditionalOnExpression($arguments) { 'hello' }
+                }
+            }
+        """
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('exactly one non-blank String expression')
+
+        where:
+        description             | arguments
+        'with no expression'    | ''
+        'with a blank one'      | "'   '"
+        'with more than one'    | "'a', 'b'"
+        'with something else'   | 'String'
+    }
+
+    def "conditionalOnExpression tells two same-named beans apart"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class PerExpressionBeans {
+                def beans = {
+                    bean('transport', String).conditionalOnExpression('${app.offline:false}') { 'logging' }
+                    bean('transport', String).conditionalOnExpression('!${app.offline:false}') { 'ses' }
+                }
+            }
+        '''
+
+        when:
+        Class<?> beans = compile(source)
+
+        then:
+        beans.declaredMethods.count { it.isAnnotationPresent(ConditionalOnExpression) } == 2
+    }
+
+    def "annotate(Scope, ...) completes the @Scope that .scope(...) attached"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+            import org.springframework.context.annotation.Scope
+            import org.springframework.context.annotation.ScopedProxyMode
+
+            @GrailsBeans
+            @AutoConfiguration
+            class ScopedBeans {
+                def beans = {
+                    bean('cart', String).scope('session').annotate(Scope, proxyMode: ScopedProxyMode.TARGET_CLASS) { 'cart' }
+                }
+            }
+        '''
+
+        when:
+        def method = compile(source).getDeclaredMethod('cart')
+
+        then: "the scope the qualifier set survives"
+        method.getAnnotation(Scope).value() == 'session'
+
+        and: "and proxyMode, which no qualifier sets and a scoped bean needs, is reachable"
+        method.getAnnotation(Scope).proxyMode() == ScopedProxyMode.TARGET_CLASS
+    }
+
+    def "rejects restating through annotate(...) what the qualifier already set"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+            import org.springframework.context.annotation.Scope
+
+            @GrailsBeans
+            @AutoConfiguration
+            class RestatedScopeBeans {
+                def beans = {
+                    bean('cart', String).scope('session').annotate(Scope, value: 'request') { 'cart' }
+                }
+            }
+        '''
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('@Scope\'s "value" is already set here')
+    }
+
+    def "annotate(...) is still once per annotation type when it attached the annotation itself"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+            import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
+
+            @GrailsBeans
+            @AutoConfiguration
+            class TwiceAnnotatedBeans {
+                def beans = {
+                    bean('x', String).annotate(ConditionalOnProperty, name: 'a')
+                            .annotate(ConditionalOnProperty, havingValue: 'b') { 'x' }
+                }
+            }
+        '''
+
+        when: "the two calls set different attributes, so a merge would have accepted them"
+        compile(source)
+
+        then: "but .annotate(...) already takes every attribute at once, so twice is a mistake"
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('already attached')
+    }
+
+    def "aliases(...) gives a bean additional names, the canonical one staying first"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+            import org.springframework.context.annotation.AnnotationConfigApplicationContext
+
+            @GrailsBeans
+            @AutoConfiguration
+            class AliasedBeans {
+                def beans = {
+                    bean('recipientResolver', String).aliases('legacyResolver', 'oldResolver') { 'resolver' }
+                }
+            }
+        '''
+
+        when:
+        Class<?> beans = compile(source)
+        def method = beans.getDeclaredMethod('recipientResolver')
+
+        then: "Spring reads the first as the bean name and the rest as aliases"
+        method.getAnnotation(Bean).value() == ['recipientResolver', 'legacyResolver', 'oldResolver'] as String[]
+    }
+
+    def "an aliased bean really is resolvable under every name"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.context.annotation.Configuration
+
+            @GrailsBeans
+            @Configuration
+            class AliasResolutionBeans {
+                def beans = {
+                    bean('canonical', String).aliases('legacy') { 'one instance' }
+                }
+            }
+        '''
+        Class<?> config = compile(source)
+        def context = new AnnotationConfigApplicationContext()
+        context.register(config)
+        context.refresh()
+
+        expect: "both names reach it, and reach the same singleton"
+        context.getBean('canonical') == 'one instance'
+        context.getBean('legacy') == 'one instance'
+        context.getBean('canonical').is(context.getBean('legacy'))
+
+        cleanup:
+        context.close()
+    }
+
+    def "rejects aliases(...) #description"() {
+        given:
+        String source = """
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class BadAliasBeans {
+                def beans = {
+                    bean('greeting', String).aliases($arguments) { 'hello' }
+                }
+            }
+        """
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains(message)
+
+        where:
+        description                        | arguments               | message
+        'with no name'                     | ''                      | 'requires at least one additional name'
+        'with a blank name'                | "'  '"                  | 'non-blank names'
+        'with something that is not a name'| 'String'                | 'non-blank names'
+        "with the bean's own name"         | "'greeting'"            | 'own name, so it is not an alias'
+        'with the same alias twice'        | "'other', 'other'"      | 'given as an alias twice'
+    }
+
+    def "aliases(...) is not valid on a field(...) or method(...)"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class AliasedHelperBeans {
+                def beans = {
+                    method('helper', String).aliases('other') { 'hello' }
+                }
+            }
+        '''
+
+        when:
+        compile(source)
+
+        then:
+        thrown(MultipleCompilationErrorsException)
+    }
+
+    def "scope(...) takes the annotation's other attributes by name"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+            import org.springframework.context.annotation.ScopedProxyMode
+
+            @GrailsBeans
+            @AutoConfiguration
+            class ScopeAttributeBeans {
+                def beans = {
+                    bean('cart', String).scope('session', proxyMode: ScopedProxyMode.TARGET_CLASS) { 'cart' }
+                    bean('plain', String).scope('prototype') { 'plain' }
+                    bean('named', String).scope(scopeName: 'request') { 'named' }
+                }
+            }
+        '''
+
+        when:
+        Class<?> beans = compile(source)
+
+        then: "one call now says what a scoped bean needs to work"
+        beans.getDeclaredMethod('cart').getAnnotation(Scope).value() == 'session'
+        beans.getDeclaredMethod('cart').getAnnotation(Scope).proxyMode() == ScopedProxyMode.TARGET_CLASS
+
+        and: "the bare positional form is unchanged"
+        beans.getDeclaredMethod('plain').getAnnotation(Scope).value() == 'prototype'
+        beans.getDeclaredMethod('plain').getAnnotation(Scope).proxyMode() == ScopedProxyMode.DEFAULT
+
+        and: "and the scope may be named instead, as the annotation allows"
+        beans.getDeclaredMethod('named').getAnnotation(Scope).scopeName() == 'request'
+    }
+
+    def "rejects scope(...) #description"() {
+        given:
+        String source = """
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+            import org.springframework.context.annotation.ScopedProxyMode
+
+            @GrailsBeans
+            @AutoConfiguration
+            class BadScopeBeans {
+                def beans = {
+                    bean('greeting', String).scope($arguments) { 'hello' }
+                }
+            }
+        """
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains(message)
+
+        where:
+        description                       | arguments                              | message
+        'naming no scope at all'          | ''                                     | 'needs a scope name'
+        'with only attributes, no scope'  | 'proxyMode: ScopedProxyMode.TARGET_CLASS' | 'needs a scope name'
+        'naming the scope both ways'      | "'session', value: 'request'"          | 'both positionally and via'
+        'naming the scope both ways via scopeName:' | "'session', scopeName: 'request'" | 'both positionally and via'
+        'with more than one scope name'   | "'session', 'request'"                 | 'takes one scope name'
+        'with an empty scope name'        | "''"                                   | 'non-empty String scope name'
+    }
+
+    def "a bean body may construct an anonymous inner class"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class AnonymousInnerBeans {
+                def beans = {
+                    bean('greeter', Greeter) {
+                        new Greeter() {
+                            String greet() { 'hello' }
+                        }
+                    }
+                }
+            }
+
+            interface Greeter { String greet() }
+        '''
+
+        when:
+        Class<?> beans = compile(source)
+        def instance = beans.getDeclaredConstructor().newInstance()
+
+        then: "the lifted body still constructs it against the generated method, not the closure"
+        instance.greeter().greet() == 'hello'
+    }
+
+    def "an anonymous subclass in a bean body keeps working, overrides and all"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class AnonymousSubclassBeans {
+                def beans = {
+                    bean('greeter', Greeter) {
+                        new Greeter() {
+                            @Override
+                            String greet() { 'overridden ' + super.greet() }
+                        }
+                    }
+                }
+            }
+
+            class Greeter { String greet() { 'base' } }
+        '''
+
+        when:
+        Class<?> beans = compile(source)
+        def instance = beans.getDeclaredConstructor().newInstance()
+
+        then:
+        instance.greeter().greet() == 'overridden base'
+    }
+
+    def "a method(...) helper body may construct an anonymous inner class too"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class AnonymousInHelperBeans {
+                def beans = {
+                    method('build', Greeter) {
+                        new Greeter() {
+                            String greet() { 'from helper' }
+                        }
+                    }
+
+                    bean('greeting', String) { build().greet() }
+                }
+            }
+
+            interface Greeter { String greet() }
+        '''
+
+        when:
+        Class<?> beans = compile(source)
+
+        then:
+        beans.getDeclaredConstructor().newInstance().greeting() == 'from helper'
+    }
+
+    def "rejects an anonymous inner class in a staticMethod() bean, which has no enclosing instance"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+            import org.springframework.beans.factory.config.BeanFactoryPostProcessor
+            import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
+
+            @GrailsBeans
+            @AutoConfiguration
+            class StaticAnonymousBeans {
+                def beans = {
+                    bean('pp', BeanFactoryPostProcessor).staticMethod() {
+                        new BeanFactoryPostProcessor() {
+                            void postProcessBeanFactory(ConfigurableListableBeanFactory f) { }
+                        }
+                    }
+                }
+            }
+        '''
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('needs an enclosing instance the static method has not got')
+    }
+
+    def "a bean body may coerce a closure to a functional interface under @CompileStatic"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import groovy.transform.CompileStatic
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @CompileStatic
+            @AutoConfiguration
+            class SamCoercionBeans {
+                def beans = {
+                    bean('greeter', Greeter).typeArguments(String) {
+                        BaseGreeter delegate = new BaseGreeter()
+                        return { String name -> delegate.greet(name).toUpperCase() } as Greeter<String>
+                    }
+                }
+            }
+
+            interface Greeter<T> { String greet(T name) }
+            class BaseGreeter { String greet(String name) { "hello $name" } }
+        '''
+
+        when:
+        Class<?> beans = compile(source)
+        def greeter = beans.getDeclaredConstructor().newInstance().greeter()
+
+        then: "no anonymous inner class is involved, so nothing needs re-homing"
+        greeter.greet('world') == 'HELLO WORLD'
+
+        and: "and the declared type still carries its type argument"
+        beans.getDeclaredMethod('greeter').genericReturnType.toString().contains('Greeter<java.lang.String>')
+    }
+
+    def "Groovy itself statically compiles an anonymous inner class in an ordinary method"() {
+        given: "no beans DSL anywhere - this is the control for the lifted-body case"
+        String source = '''
+            import groovy.transform.CompileStatic
+
+            @CompileStatic
+            class PlainStaticHost {
+                Greeter make() {
+                    new Greeter() {
+                        String greet() { 'hello' }
+                    }
+                }
+            }
+
+            interface Greeter { String greet() }
+        '''
+
+        when:
+        Class<?> host = compile(source)
+
+        then: "it compiles and runs, so @CompileStatic is not the limitation"
+        host.getDeclaredConstructor().newInstance().make().greet() == 'hello'
+    }
+
+    def "an anonymous inner class works under @CompileStatic too"() {
+        given:
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import groovy.transform.CompileStatic
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @CompileStatic
+            @AutoConfiguration
+            class StaticAnonymousInnerBeans {
+                def beans = {
+                    bean('greeter', Greeter) {
+                        new Greeter() {
+                            String greet() { 'hello' }
+                        }
+                    }
+                }
+            }
+
+            interface Greeter { String greet() }
+        '''
+
+        when:
+        Class<?> beans = compile(source)
+
+        then:
+        beans.getDeclaredConstructor().newInstance().greeter().greet() == 'hello'
+    }
+
+    def "an anonymous inner class works under @CompileStatic on a plugin descriptor too"() {
+        given: "the descriptor's own static-compilation pass runs first and visits the lifted class"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import grails.plugins.Plugin
+            import groovy.transform.CompileStatic
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface StaticPluginGreeter { String greet() }
+
+            @GrailsBeans
+            @CompileStatic
+            @AutoConfiguration
+            class StaticAnonymousGrailsPlugin extends Plugin {
+                def beans = {
+                    bean('greeter', StaticPluginGreeter) {
+                        new StaticPluginGreeter() { String greet() { 'hello' } }
+                    }
+                }
+            }
+        '''
+
+        and:
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(source)
+        def sibling = loader.loadClass('StaticAnonymousAutoConfiguration')
+
+        expect: "a lifted class has no enclosing method from the parser, and static compilation reads one"
+        sibling.getDeclaredConstructor().newInstance().greeter().greet() == 'hello'
+    }
+
+    @Unroll
+    def "a group(...) bean body may construct an anonymous inner class on #hostKind#staticness"() {
+        given:
+        String source = """
+            import grails.compiler.beans.GrailsBeans
+            import grails.plugins.Plugin
+            import groovy.transform.CompileStatic
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface ${fixture}Greeter { String greet() }
+
+            @GrailsBeans
+            ${staticAnnotation}
+            @AutoConfiguration
+            class ${fixture}${suffixClass} ${extendsClause} {
+                def beans = {
+                    group('extras') {
+                        bean('greeter', ${fixture}Greeter) {
+                            new ${fixture}Greeter() { String greet() { 'hello' } }
+                        }
+                    }
+                }
+            }
+        """
+
+        and: "the group is visited as an inner class of the host before its own bean method is"
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(source)
+        def group = loader.loadClass("${owner}\$ExtrasConfiguration")
+
+        expect:
+        group.getDeclaredConstructor().newInstance().greeter().greet() == 'hello'
+
+        where: "the group nests under whatever the beans landed on - the host, or its generated sibling"
+        hostKind              | staticness               | fixture           | suffixClass    | extendsClause    | staticAnnotation | owner
+        'a plain host'        | ''                       | 'GroupAnon'       | 'Beans'        | ''               | ''               | 'GroupAnonBeans'
+        'a plugin descriptor' | ''                       | 'GroupAnon'       | 'GrailsPlugin' | 'extends Plugin' | ''               | 'GroupAnonAutoConfiguration'
+        'a plain host'        | ', under @CompileStatic' | 'StaticGroupAnon' | 'Beans'        | ''               | '@CompileStatic' | 'StaticGroupAnonBeans'
+        'a plugin descriptor' | ', under @CompileStatic' | 'StaticGroupAnon' | 'GrailsPlugin' | 'extends Plugin' | '@CompileStatic' | 'StaticGroupAnonAutoConfiguration'
+    }
+
+    @Unroll
+    def "an anonymous class inside a nested closure compiles under @CompileStatic #scenario"() {
+        given: "the parser sets enclosingMethod per enclosing method, closures in between included"
+        String source = """
+            import grails.compiler.beans.GrailsBeans
+            import grails.plugins.Plugin
+            import groovy.transform.CompileStatic
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface ${fixture}Greeter { String greet() }
+
+            @GrailsBeans
+            @CompileStatic
+            @AutoConfiguration
+            class ${fixture}${suffixClass} ${extendsClause} {
+                def beans = {
+                    ${open}
+                        bean('greeter', ${fixture}Greeter) {
+                            ['x'].collect { String t ->
+                                new ${fixture}Greeter() { String greet() { 'hello' } }
+                            }[0]
+                        }
+                    ${close}
+                }
+            }
+        """
+
+        and:
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(source)
+
+        expect: "class generation dies with a GroovyBugError when the enclosing method is not set"
+        loader.loadClass(owner).getDeclaredConstructor().newInstance().greeter().greet() == 'hello'
+
+        where:
+        scenario                      | fixture    | suffixClass    | extendsClause    | open                | close | owner
+        'on a plugin descriptor'      | 'NcPlugin' | 'GrailsPlugin' | 'extends Plugin' | ''                  | ''    | 'NcPluginAutoConfiguration'
+        'in a group on a plain host'  | 'NcGroup'  | 'Beans'        | ''               | "group('extras') {" | '}'   | 'NcGroupBeans$ExtrasConfiguration'
+        'in a group on a descriptor'  | 'NcBoth'   | 'GrailsPlugin' | 'extends Plugin' | "group('extras') {" | '}'   | 'NcBothAutoConfiguration$ExtrasConfiguration'
+    }
+
+    def "an anonymous class inside a nested closure in a group cannot reach outward either"() {
+        given: "the lift leaves the closure as its enclosing instance, so the group is never behind it"
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            interface NestedGroupGreeter { String greet() }
+
+            @GrailsBeans
+            @AutoConfiguration
+            class NestedGroupBeans {
+                def beans = {
+                    group('extras') {
+                        method('suffix', String) { '!' }
+
+                        bean('greeter', NestedGroupGreeter) {
+                            ['x'].collect { String t ->
+                                new NestedGroupGreeter() { String greet() { 'hello' + suffix() } }
+                            }[0]
+                        }
+                    }
+                }
+            }
+        '''
+
+        when:
+        compile(source)
+
+        then: "uncaught it is a ClassCastException naming the group and the host, at runtime"
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('nothing outside the anonymous class is in reach')
     }
 
     def "an empty beans block on a plain configuration class is a no-op"() {

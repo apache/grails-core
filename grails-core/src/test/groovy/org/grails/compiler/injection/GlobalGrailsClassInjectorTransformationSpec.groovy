@@ -468,6 +468,110 @@ class GlobalGrailsClassInjectorTransformationSpec extends Specification {
             classNode.getProperty('beans') == null
     }
 
+    void "a stray statement among real declarations fails an application class rather than silently registering nothing"() {
+        given: "an application whose beans block has one statement that is not a declaration - a typo, here"
+            def sourceFile = new File(tempDir, 'grails-app/init/Application.groovy')
+            def targetDir = new File(tempDir, 'build/classes/groovy/main')
+
+        when:
+            compileToFile(
+                    sourceFile,
+                    """
+                        class Application extends grails.boot.config.GrailsAutoConfiguration {
+                            def beans = {
+                                bean('greeting', String) { 'hello' }
+                                bea('typo', String) { 'oops' }
+                                bean('farewell', String) { 'bye' }
+                            }
+                        }
+                    """,
+                    targetDir
+            )
+
+        then: "the build fails, naming what to do, instead of dropping all three declarations"
+            MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+            e.message.contains('not a bean(...), field(...) or method(...) declaration')
+            e.message.contains('must be one of those three')
+    }
+
+    void "an if wrapped around beans is reported, since the beans inside it would register nothing"() {
+        given: "the shape a conditional-registration attempt takes"
+            def sourceFile = new File(tempDir, 'grails-app/init/Application.groovy')
+            def targetDir = new File(tempDir, 'build/classes/groovy/main')
+
+        when:
+            compileToFile(
+                    sourceFile,
+                    """
+                        class Application extends grails.boot.config.GrailsAutoConfiguration {
+                            def beans = {
+                                bean('greeting', String) { 'hello' }
+                                if (System.getProperty('dev')) {
+                                    bean('devOnly', String) { 'dev' }
+                                }
+                            }
+                        }
+                    """,
+                    targetDir
+            )
+
+        then: "it points at the qualifier that does express a condition"
+            MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+            e.message.contains('ConditionalOnProperty')
+    }
+
+    void "a plugin descriptor with a stray statement fails the same way an application class does"() {
+        given: "a descriptor is compiled by the plugin author, but its missing beans are felt downstream"
+            def sourceFile = new File(tempDir, 'StrayBeansGrailsPlugin.groovy')
+            def targetDir = new File(tempDir, 'build/classes/groovy/main')
+
+        when:
+            compileToFile(
+                    sourceFile,
+                    """
+                        class StrayBeansGrailsPlugin {
+                            def version = '1.0'
+                            def beans = {
+                                bean('greeting', String) { 'hello' }
+                                println 'not a declaration'
+                            }
+                        }
+                    """,
+                    targetDir
+            )
+
+        then: "no leniency for being a descriptor - the severity must not depend on the class name"
+            MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+            e.message.contains('not a bean(...), field(...) or method(...) declaration')
+
+        and: "and the message names the way out for a beans property that genuinely is not the DSL"
+            e.message.contains('rename it')
+    }
+
+    void "a beans closure with no declarations at all stays silent, being an unrelated property"() {
+        given: "the case the all-or-nothing claim exists to protect"
+            def sourceFile = new File(tempDir, 'grails-app/init/Application.groovy')
+            def targetDir = new File(tempDir, 'build/classes/groovy/main')
+
+        when:
+            def classNode = compileToFile(
+                    sourceFile,
+                    """
+                        class Application extends grails.boot.config.GrailsAutoConfiguration {
+                            def beans = {
+                                println 'not the DSL'
+                                System.currentTimeMillis()
+                            }
+                        }
+                    """,
+                    targetDir
+            )
+
+        then: "no diagnostic - nothing here claims to be a declaration"
+            noExceptionThrown()
+            classNode.getProperty('beans') != null
+    }
+
     void "the global transform fails when a plugin descriptor class has no version"() {
         given: "a plugin descriptor class without a declared or compiler-provided version"
             def sourceFile = new File(tempDir, 'UnversionedGrailsPlugin.groovy')
