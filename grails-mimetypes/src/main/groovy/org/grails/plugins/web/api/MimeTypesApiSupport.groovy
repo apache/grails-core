@@ -138,7 +138,7 @@ class MimeTypesApiSupport {
             formatProvider.setAttribute(GrailsApplicationAttributes.CONTENT_FORMAT, format)
         }
         else {
-            GrailsWebRequest.lookup().currentRequest.setAttribute(GrailsApplicationAttributes.RESPONSE_FORMAT, format)
+            GrailsWebRequest.lookup().request.setAttribute(GrailsApplicationAttributes.RESPONSE_FORMAT, format)
         }
 
         if (formatResponse instanceof Closure) {

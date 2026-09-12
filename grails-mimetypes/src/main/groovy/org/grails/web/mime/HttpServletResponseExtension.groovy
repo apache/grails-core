@@ -64,7 +64,7 @@ class HttpServletResponseExtension {
     static String getFormat(HttpServletResponse response) {
 
         final webRequest = GrailsWebRequest.lookup()
-        HttpServletRequest request = webRequest.getCurrentRequest()
+        HttpServletRequest request = webRequest.getRequest()
         def result = request.getAttribute(GrailsApplicationAttributes.RESPONSE_FORMAT)
         if (!result) {
             final mimeType = getMimeType(response)
@@ -89,7 +89,7 @@ class HttpServletResponseExtension {
     }
 
     private static MimeType getMimeTypeForRequest(GrailsWebRequest webRequest) {
-        HttpServletRequest request = webRequest.getCurrentRequest()
+        HttpServletRequest request = webRequest.getRequest()
         MimeType result = (MimeType) request.getAttribute(GrailsApplicationAttributes.RESPONSE_MIME_TYPE)
         if (!result) {
             def formatOverride = webRequest?.params?.format
@@ -128,7 +128,7 @@ class HttpServletResponseExtension {
      * @return The configured mime types
      */
     static MimeType[] getMimeTypes(HttpServletResponse response) {
-        return getMimeTypesInternal(GrailsWebRequest.lookup().currentRequest)
+        return getMimeTypesInternal(GrailsWebRequest.lookup().request)
     }
 
     /**
@@ -139,7 +139,7 @@ class HttpServletResponseExtension {
      */
     static MimeType[] getMimeTypesFormatAware(HttpServletResponse response) {
         GrailsWebRequest webRequest = GrailsWebRequest.lookup()
-        HttpServletRequest request = webRequest.getCurrentRequest()
+        HttpServletRequest request = webRequest.getRequest()
         MimeType[] result = (MimeType[]) request.getAttribute(GrailsApplicationAttributes.RESPONSE_MIME_TYPES)
         if (!result) {
             def formatOverride = webRequest?.params?.format

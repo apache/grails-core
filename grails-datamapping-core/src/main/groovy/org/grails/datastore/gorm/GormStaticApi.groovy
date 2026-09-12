@@ -377,15 +377,20 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     Integer count() {
-        log.debug('GormStaticApi.count() called for {}', persistentClass.name)
+        // Capture the @Slf4j logger before entering the SessionCallback. With
+        // invokedynamic off (Grails 8 default), log.debug(...) inside that
+        // closure is dispatched through methodMissing as a dynamic finder on
+        // the persistent class (MissingMethodException: debug).
+        def logger = log
+        logger.debug('GormStaticApi.count() called for {}', persistentClass.name)
         Integer result = execute({ Session session ->
             def query = session.createQuery(persistentClass)
             query.projections().count()
             def res = query.singleResult()
-            log.debug('Query singleResult returned {}', res)
+            logger.debug('Query singleResult returned {}', res)
             res instanceof Number ? ((Number)res).intValue() : 0
         } as SessionCallback<Integer>)
-        log.debug('count() result is {}', result)
+        logger.debug('count() result is {}', result)
         return result
     }
 

@@ -29,6 +29,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
 import groovy.xml.slurpersupport.GPathResult
 import org.codehaus.groovy.reflection.CachedMethod
+import org.codehaus.groovy.runtime.InvokerHelper
 
 import grails.databinding.converters.FormattedValueConverter
 import grails.databinding.converters.ValueConverter
@@ -430,10 +431,22 @@ class SimpleDataBinder implements DataBinder {
         try {
             instance = referencedType.getDeclaredConstructor().newInstance()
         } catch (NoSuchMethodException | IllegalAccessException ignored) {
-            return referencedType.newInstance(values)
+            return newInstanceFromMapArguments(referencedType, values)
         }
         bind(instance, new SimpleMapDataBindingSource(values), listener)
         instance
+    }
+
+    /**
+     * Invoke a {@code Map} constructor without calling Groovy's
+     * {@code Class.newInstance(Map)}. Under {@code @CompileStatic} with
+     * invokedynamic disabled that extension is not selected, so nested
+     * objects with only a Map constructor are left unbound.
+     */
+    protected Object newInstanceFromMapArguments(Class referencedType, Map values) {
+        // Pass an Object[] so CompileStatic cannot treat the Map as named
+        // arguments or coerce it to a multi-arg constructor signature.
+        InvokerHelper.invokeConstructorOf(referencedType, new Object[] { values })
     }
 
     @CompileStatic(TypeCheckingMode.SKIP)

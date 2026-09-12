@@ -30,7 +30,11 @@ Notable new features are included below.
 ==== Platform Baseline
 
 Grails {grailsMajorVersion} raises the standard build and runtime baseline to Java 21 and uses Gradle {gradleVersion}.
-The standard Grails BOM remains on Groovy {groovyVersion} and Spock {spockVersion}, while Micronaut-enabled Grails applications use Micronaut-specific BOM variants that align with Micronaut 5 and require JDK 25 or later.
+The standard Grails BOM uses Groovy {groovyVersion} and Spock {spockVersion}.
+
+==== Grails Micronaut Repository
+
+Grails Micronaut is maintained and released from the https://github.com/apache/grails-micronaut[Apache Grails Micronaut repository] and consumes published Grails Core artifacts.
 
 ==== Spring Boot 4.1 and Spring Framework 7
 
@@ -49,9 +53,21 @@ The `create-*` commands also accept a new `-d, --data` option (the previous `-g`
 grails -t forge create-app --data=hibernate7 com.example.demo
 ----
 
-Applications generated for Hibernate 7 consume `grails-hibernate7-bom` — or `grails-hibernate7-micronaut-bom` when combined with the `grails-micronaut` feature — consistently across the application dependencies, the buildscript classpath, and `buildSrc`.
+Applications generated for Hibernate 7 consume `grails-hibernate7-bom` consistently across the application dependencies, the buildscript classpath, and `buildSrc`.
 This avoids the dependency resolution conflicts that occur when an application generated for Hibernate 5 is manually switched to `grails-data-hibernate7` while the default `grails-bom` remains on the build classpath.
 The `database-migration` feature also selects the matching `grails-data-hibernate7-dbmigration` plugin automatically.
+
+==== Asynchronous Grails Data Application Generation
+
+Grails Forge offers a new `gorm-async` feature that adds the asynchronous programming model for Grails Data — the `AsyncEntity` trait and the `async` namespace — to a generated application:
+
+[source,console]
+----
+grails -t forge create-app --features=gorm-async com.example.demo
+----
+
+The feature layers on top of whichever GORM implementation is selected, defaulting to Hibernate when none is chosen.
+The `grails-datamapping-async` artifact it brings in is intended for direct consumption by applications and libraries, so it moved from the `org.apache.grails.data` group to `org.apache.grails`; see the xref:upgrading#upgrading80x[upgrade guide] for the coordinate change.
 
 ==== Plugin Beans Register Before Spring Boot Auto-Configuration
 
@@ -465,3 +481,30 @@ Defining a tag as a `Closure` field remains supported but is deprecated and now 
 a closure carries no signature, so nothing about a call to such a tag can be checked. Define tags as
 methods taking `Map attrs` and, where a body is needed, `Closure body`. See
 link:theWebLayer.html#compiledTags[Compiled Tag Resolution].
+
+==== Mapping Every Controller as a REST Resource
+
+A `resources` mapping can now be applied to every controller at once by capturing the controller in
+the URL and passing `*` instead of a controller name:
+
+[source,groovy]
+----
+"/$controller"(resources: '*')
+----
+
+This generates the same mappings the named form generates, but resolves the controller from the
+request rather than from the mapping, so an application whose controllers all follow the RESTful
+resource conventions declares them once instead of once per controller. The `includes` and `excludes`
+parameters work as they do for a named resource, and the mapping can be placed inside a `group`:
+
+[source,groovy]
+----
+group "/api/v1", {
+    "/$controller"(resources: '*', excludes: ['create', 'edit'])
+}
+----
+
+The controller and action captured from the URL are validated as they are for any other wildcard
+mapping. Because the controller is not known until a request is matched, the URL must capture it and
+child resources cannot be nested within the mapping. See
+link:theWebLayer.html#restfulMappings[Mapping to REST resources].

@@ -47,7 +47,18 @@ public class GroovyPageAttributes extends TypeConvertingMap implements Cloneable
         this.gspTagSyntaxCall = gspTagSyntaxCall;
     }
 
-    public boolean isGspTagSyntaxCall() {
+    /**
+     * Whether the tag was invoked with GSP tag syntax rather than as a method call.
+     *
+     * <p>Deliberately not named {@code isGspTagSyntaxCall()}. This class implements {@link Map},
+     * and a JavaBean accessor on a map shadows the map entry of the same name, which made an
+     * attribute named {@code gspTagSyntaxCall} unreadable. See
+     * {@link grails.util.AbstractTypeConvertingMap} for the rule.
+     *
+     * @return {@code true} when invoked with GSP tag syntax
+     * @since 8.0
+     */
+    public boolean gspTagSyntaxCall() {
         return gspTagSyntaxCall;
     }
 

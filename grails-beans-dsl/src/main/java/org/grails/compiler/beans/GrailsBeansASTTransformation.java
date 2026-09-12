@@ -19,6 +19,7 @@
 package org.grails.compiler.beans;
 
 import java.beans.Introspector;
+import java.io.File;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -63,6 +64,7 @@ import org.codehaus.groovy.ast.stmt.ReturnStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
 import org.codehaus.groovy.control.CompilationUnit;
 import org.codehaus.groovy.control.CompilePhase;
+import org.codehaus.groovy.control.CompilerConfiguration;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.syntax.SyntaxException;
 import org.codehaus.groovy.syntax.Types;
@@ -159,6 +161,15 @@ import org.springframework.context.annotation.Scope;
  */
 @GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
 public class GrailsBeansASTTransformation implements ASTTransformation, CompilationUnitAware {
+
+    /**
+     * Class-node metadata carrying the compilation's output directory, seeded by the global Grails
+     * transform. It resolves the directory for Groovy-Eclipse, where the compiler configuration
+     * either has none or has one relative to the Eclipse project, and that resolution lives in
+     * grails-core - which this module cannot depend on.
+     */
+    public static final String RESOLVED_TARGET_DIRECTORY_METADATA =
+            GrailsBeansASTTransformation.class.getName() + ".resolvedTargetDirectory";
 
     private static final String BEANS_PROPERTY = "beans";
     private static final String BEAN_CALL = "bean";
@@ -323,7 +334,24 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
         sibling.addAnnotations(siblingAnnotations);
         pluginClass.getAnnotations().removeAll(siblingAnnotations);
 
+        // The name is settled here and nowhere else, so this is where it is registered.
+        AutoConfigurationImportsWriter.register(
+                siblingName, targetDirectory(pluginClass, source), source, compilationUnit);
+
         return sibling;
+    }
+
+    /**
+     * The compilation's output directory: the one the global transform resolved if it ran, which is
+     * the only one that is right under Groovy-Eclipse, and the compiler's own otherwise.
+     */
+    private static File targetDirectory(ClassNode classNode, SourceUnit source) {
+        Object resolved = classNode == null ? null : classNode.getNodeMetaData(RESOLVED_TARGET_DIRECTORY_METADATA);
+        if (resolved instanceof File) {
+            return (File) resolved;
+        }
+        CompilerConfiguration configuration = source == null ? null : source.getConfiguration();
+        return configuration == null ? null : configuration.getTargetDirectory();
     }
 
     private Set<String> parseMoveAnnotations(AnnotationNode grailsBeansAnnotation, SourceUnit source) {

@@ -152,7 +152,7 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
             StringBuilder stringBuilder = new StringBuilder();
             namespace = webRequest.getControllerNamespace();
             controller = webRequest.getControllerName();
-            pluginContextPath = (webRequest.getAttributes() != null && webRequest.getCurrentRequest() != null) ? webRequest.getAttributes().getPluginContextPath(webRequest.getCurrentRequest()) : null;
+            pluginContextPath = (webRequest.getAttributes() != null && webRequest.getRequest() != null) ? webRequest.getAttributes().getPluginContextPath(webRequest.getRequest()) : null;
 
             stringBuilder.append(GrailsStringUtils.isNotEmpty(pluginContextPath) ? pluginContextPath : "-");
             stringBuilder.append(',');
@@ -190,7 +190,7 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
 
         GrailsWebRequest webRequest = GrailsWebRequest.lookup();
         if (webRequest != null) {
-            HttpServletRequest request = webRequest.getCurrentRequest();
+            HttpServletRequest request = webRequest.getRequest();
             controller = webRequest.getAttributes().getController(request);
         }
 

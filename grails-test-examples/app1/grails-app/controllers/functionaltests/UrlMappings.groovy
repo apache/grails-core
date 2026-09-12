@@ -29,6 +29,9 @@ class UrlMappings {
             }
         }
 
+        // See RequestPathSpec.groovy - one request through filter chain, dispatcher, mapping and controller
+        "/request-path"(resources: 'requestPath')
+
         "/alphaDemo"(controller: 'demo', action: 'doit', namespace: 'alpha')
         "/betaDemo"(controller: 'demo', action: 'doit', namespace: 'beta')
 

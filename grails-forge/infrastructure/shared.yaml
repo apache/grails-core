@@ -290,8 +290,10 @@ Resources:
                   - Fn::Sub: arn:${AWS::Partition}:elasticbeanstalk:${AWS::Region}:${AWS::AccountId}:environment/${ApplicationName}/${ApplicationName}-latest
                   - Fn::Sub: arn:${AWS::Partition}:elasticbeanstalk:${AWS::Region}:${AWS::AccountId}:environment/${ApplicationName}/${ApplicationName}-snapshot
                   - Fn::Sub: arn:${AWS::Partition}:elasticbeanstalk:${AWS::Region}:${AWS::AccountId}:environment/${ApplicationName}/${ApplicationName}-next
+                  - Fn::Sub: arn:${AWS::Partition}:elasticbeanstalk:${AWS::Region}:${AWS::AccountId}:environment/${ApplicationName}/${ApplicationName}-next-snapshot
                   - Fn::Sub: arn:${AWS::Partition}:elasticbeanstalk:${AWS::Region}:${AWS::AccountId}:environment/${ApplicationName}/${ApplicationName}-prev
                   - Fn::Sub: arn:${AWS::Partition}:elasticbeanstalk:${AWS::Region}:${AWS::AccountId}:environment/${ApplicationName}/${ApplicationName}-prev-snapshot
+                  - Fn::Sub: arn:${AWS::Partition}:elasticbeanstalk:${AWS::Region}:${AWS::AccountId}:environment/${ApplicationName}/${ApplicationName}-older
                   - Fn::Sub: arn:${AWS::Partition}:elasticbeanstalk:${AWS::Region}:${AWS::AccountId}:applicationversion/${ApplicationName}/*
               - Action:
                   - cloudformation:DescribeStacks
@@ -343,15 +345,6 @@ Outputs:
     Export:
       Name:
         Fn::Sub: ${AWS::StackName}:SharedLoadBalancerDnsName
-  SharedLoadBalancerCanonicalHostedZoneId:
-    Description: Canonical hosted zone ID for Route 53 ALIAS records.
-    Value:
-      Fn::GetAtt:
-        - SharedLoadBalancer
-        - CanonicalHostedZoneID
-    Export:
-      Name:
-        Fn::Sub: ${AWS::StackName}:SharedLoadBalancerCanonicalHostedZoneId
   HttpsListenerArn:
     Description: Shared HTTPS listener ARN for Elastic Beanstalk host-header rules.
     Value:

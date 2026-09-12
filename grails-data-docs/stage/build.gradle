@@ -69,7 +69,10 @@ combinedGroovydoc.configure { Groovydoc task ->
     }.unique()
     task.source(allSourceDirs)
     task.ext.groovydocSourceDirs = allSourceDirs
-    task.classpath = files(sources.collect { SourceSet it -> it.compileClasspath.filter(File.&isDirectory) }.flatten().unique())
+    // The full compile classpath, not just the sibling projects' class directories: Groovydoc
+    // needs to load the external types referenced by the sources, otherwise it links them to
+    // a page it never generated instead of to the external javadocs configured above.
+    task.classpath = files(sources.collect { SourceSet it -> it.compileClasspath })
     task.destinationDir = project.layout.buildDirectory.dir('data-api/api').get().asFile
 
     task.inputs.files(task.source).withPropertyName("groovyDocSrc").withPathSensitivity(PathSensitivity.RELATIVE)

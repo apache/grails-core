@@ -110,7 +110,7 @@ trait RequestForwarder implements WebAttributes {
 
         Map model = params.model instanceof Map ? (Map) params.model : Collections.EMPTY_MAP
 
-        HttpServletRequest request = webRequest.currentRequest
+        HttpServletRequest request = webRequest.request
         HttpServletResponse response = webRequest.currentResponse
 
         for (Map.Entry<String, Object> entry : model.entrySet()) {

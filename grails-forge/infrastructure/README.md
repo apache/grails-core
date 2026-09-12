@@ -49,7 +49,7 @@ aws cloudformation deploy \
     GitHubOidcProviderArn=<github-oidc-provider-arn>
 ```
 
-Deploy five environment stacks with distinct `Slot`, `HostName`, and `ListenerRulePriority` values. Every listener priority must be unique in the range 1-50000. The command below deploys the `latest` slot.
+Deploy seven environment stacks with distinct `Slot`, `HostName`, and `ListenerRulePriority` values. Every listener priority must be unique in the range 1-50000. The command below deploys the `latest` slot.
 
 ```bash
 aws cloudformation deploy \
@@ -68,11 +68,11 @@ aws cloudformation deploy \
     CorsAllowedOrigin=https://start.grails.org
 ```
 
-Repeat the environment deployment for `snapshot`, `next`, `prev`, and `prev-snapshot`, supplying each existing `*.grails.org` hostname and a unique priority. `CorsAllowedOrigin` is the browser UI origin and is intentionally independent of the API slot hostname.
+Repeat the environment deployment for `snapshot`, `next`, `next-snapshot`, `prev`, `prev-snapshot`, and `older`, supplying each existing `*.grails.org` hostname and a unique priority. `CorsAllowedOrigin` is the browser UI origin and is intentionally independent of the API slot hostname.
 
 Do not create a GitHub OAuth app secret or pass OAuth client credentials to these stacks. The start.grails.org UI removed Push to GitHub, and the unused server-side create/OAuth integration is not deployed. Analytics is also omitted.
 
-Cloudflare DNS-only CNAME records for `latest.grails.org`, `snapshot.grails.org`, `next.grails.org`, `prev.grails.org`, and `prev-snapshot.grails.org` already point at the shared ALB. Do not proxy those records. Do not create or modify `start.grails.org`.
+Cloudflare is authoritative for Forge API DNS. Operators must add DNS-only CNAME records for `latest.grails.org`, `snapshot.grails.org`, `next.grails.org`, `next-snapshot.grails.org`, `prev.grails.org`, `prev-snapshot.grails.org`, and `older.grails.org`, pointing each record at the shared ALB DNS name. Do not proxy those records. Do not create or modify `start.grails.org`.
 
 ```bash
 aws cloudformation list-exports \
@@ -81,16 +81,4 @@ aws cloudformation list-exports \
   --output text
 ```
 
-`dns.yaml` is optional future Route 53 support only. Do not deploy it while Cloudflare remains authoritative. If the hosted zone later moves to Route 53, deploy the template after the five environments are healthy.
-
-```bash
-aws cloudformation deploy \
-  --region us-east-1 \
-  --stack-name <dns-stack-name> \
-  --template-file dns.yaml \
-  --parameter-overrides \
-    SharedStackName=<shared-stack-name> \
-    HostedZoneId=<route53-hosted-zone-id>
-```
-
-GitHub Actions assumes the shared stack's `DeployRoleArn`. Upload a normal JAR deployment ZIP to the exported artifact bucket, create an Elastic Beanstalk application version, then update one exported environment name. The trust policy allows `apache/grails-core` maintenance branches matching `refs/heads/*.x` and tags matching `refs/tags/v*`. The deploy policy is restricted to the application, its versions, and the five declared slot environment names.
+GitHub Actions assumes the shared stack's `DeployRoleArn`. Upload a normal JAR deployment ZIP to the exported artifact bucket, create an Elastic Beanstalk application version, then update one exported environment name. The trust policy allows `apache/grails-core` maintenance branches matching `refs/heads/*.x` and tags matching `refs/tags/v*`. The deploy policy is restricted to the application, its versions, and the seven declared slot environment names.

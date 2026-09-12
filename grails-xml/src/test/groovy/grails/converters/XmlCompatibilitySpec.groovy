@@ -23,6 +23,7 @@ import java.nio.file.Files
 import groovy.xml.XmlSlurper
 
 import org.springframework.validation.BeanPropertyBindingResult
+import org.xml.sax.SAXParseException
 
 import grails.core.DefaultGrailsApplication
 import grails.web.mime.MimeType
@@ -31,7 +32,9 @@ import grails.rest.render.hal.HalXmlCollectionRenderer
 import grails.rest.render.hal.HalXmlRenderer
 import org.grails.web.converters.configuration.ConvertersConfigurationHolder
 import org.grails.web.converters.configuration.XmlConvertersConfigurationInitializer
+import org.grails.web.converters.exceptions.ConverterException
 import org.grails.web.converters.marshaller.xml.ValidationErrorsMarshaller
+import org.grails.web.databinding.bindingsource.InvalidRequestBodyException
 import org.grails.web.databinding.bindingsource.XmlDataBindingSourceCreator
 
 import spock.lang.Specification
@@ -141,30 +144,40 @@ class XmlCompatibilitySpec extends Specification {
     }
 
     void 'external entities are not resolved by converter or binding parsers'() {
-        given:
+        given: 'a document whose entity points at a file that really is readable'
         def secret = Files.createTempFile('grails-xml-xxe-', '.txt')
         Files.writeString(secret, 'must-not-be-read')
         def xml = "<!DOCTYPE root [<!ENTITY xxe SYSTEM '${secret.toUri()}'>]><root><value>&xxe;</value></root>"
 
-        when:
-        def converted = XML.parse(xml)
-        def bound = new XmlDataBindingSourceCreator().createDataBindingSource(
+        when: 'the converter parses it'
+        XML.parse(xml)
+
+        then: 'the declaration is refused, so the entity is never resolved'
+        ConverterException fromConverter = thrown()
+        fromConverter.cause instanceof SAXParseException
+
+        when: 'the same body is bound'
+        new XmlDataBindingSourceCreator().createDataBindingSource(
                 MimeType.XML, Object, new StringReader(xml))
 
-        then:
-        converted.value.text() != 'must-not-be-read'
-        bound['value'].toString() != 'must-not-be-read'
+        then: 'it is refused as an invalid request body'
+        InvalidRequestBodyException fromBinding = thrown()
+        fromBinding.cause instanceof SAXParseException
 
         cleanup:
         Files.deleteIfExists(secret)
     }
 
-    void 'internal DTD entities remain supported without loading external resources'() {
-        given:
+    void 'a doctype declaring only internal entities is refused as well'() {
+        given: 'a declaration that references nothing external'
         def xml = '<!DOCTYPE root [<!ENTITY value "internal">]><root><value>&value;</value></root>'
 
-        expect:
-        XML.parse(xml).value.text() == 'internal'
+        when:
+        XML.parse(xml)
+
+        then: 'declaring a doctype at all is enough for the document to be refused'
+        ConverterException e = thrown()
+        e.cause instanceof SAXParseException
     }
 
     void 'validation errors retain their legacy XML element and attribute shape'() {

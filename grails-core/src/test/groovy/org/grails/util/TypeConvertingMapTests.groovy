@@ -156,6 +156,21 @@ class TypeConvertingMapTests {
         assert toTypeConverting(a: 1, b: 2).hashCode() != ["b": 2, a: 1].hashCode()
     }
 
+    // https://github.com/apache/grails-core/issues/16280
+    // The base class declares no no-argument getX()/isX() accessor, so no key name is shadowed.
+    // Keys named after methods that do exist on the hierarchy are ordinary entries.
+    @Test
+    void testKeysNamedAfterMethodsOnTheHierarchyAreOrdinaryEntries() {
+        def map = toTypeConverting([:])
+
+        ['identifier', 'request', 'gspTagSyntaxCall', 'byte', 'int', 'wrappedMap'].each { String key ->
+            map[key] = "value of $key".toString()
+            assert map[key] == "value of $key".toString()
+            assert map.get(key) == "value of $key".toString()
+            assert map.containsKey(key)
+        }
+    }
+
     protected toTypeConverting(map) {
         new TypeConvertingMap(map)
     }

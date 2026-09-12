@@ -28,8 +28,10 @@ Parameters:
       - latest
       - snapshot
       - next
+      - next-snapshot
       - prev
       - prev-snapshot
+      - older
     Description: Deployment slot. One environment stack is required for each slot.
   HostName:
     Type: String

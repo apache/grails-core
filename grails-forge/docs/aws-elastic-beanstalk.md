@@ -16,19 +16,19 @@ limitations under the License.
 
 # AWS Elastic Beanstalk Deployment Runbook
 
-This runbook describes operating the five Forge API slots on AWS Elastic Beanstalk. Public DNS for `latest.grails.org`, `snapshot.grails.org`, `next.grails.org`, `prev.grails.org`, and `prev-snapshot.grails.org` points at the shared ALB. The UI remains at `https://start.grails.org`.
+This runbook describes operating the seven Forge API slots on AWS Elastic Beanstalk. Public DNS for `latest.grails.org`, `snapshot.grails.org`, `next.grails.org`, `next-snapshot.grails.org`, `prev.grails.org`, `prev-snapshot.grails.org`, and `older.grails.org` points at the shared ALB. The UI remains at `https://start.grails.org`.
 
 ## Architecture
 
-Five Forge API slots run in separate Elastic Beanstalk environments. One shared application load balancer (ALB) terminates TLS and routes each stable hostname by host header. The Forge UI remains at `https://start.grails.org` and is not part of this migration.
+Seven Forge API slots run in separate Elastic Beanstalk environments. One shared application load balancer (ALB) terminates TLS and routes each stable hostname by host header. The Forge UI remains at `https://start.grails.org` and is not part of this migration.
 
 The shared CloudFormation stack creates the ALB and listeners, Elastic Beanstalk application, artifact bucket, IAM roles, and security groups. Each environment stack creates exactly one Elastic Beanstalk environment. Elastic Beanstalk owns the environment's target group and shared-listener host rule. Neither template creates an `AWS::ElasticBeanstalk::ApplicationVersion` or sets an environment `VersionLabel`; the deployment workflow creates application versions and updates environments after the stacks exist.
 
-`dns.yaml` is optional and reserved for a future move of authoritative DNS to Route 53. Current cutover is manual in Cloudflare.
+Authoritative DNS remains in Cloudflare for these names.
 
 ## Prerequisites and Defaults
 
-Use `us-east-1` for this migration and the default VPC. DNS is currently authoritative in Cloudflare. Use an ACM wildcard or SAN certificate that covers all five slot hostnames and is issued in `us-east-1`, the ALB region.
+Use `us-east-1` for this migration and the default VPC. DNS is currently authoritative in Cloudflare. Use an ACM wildcard or SAN certificate that covers all seven slot hostnames and is issued in `us-east-1`, the ALB region.
 
 The operator creating or updating infrastructure needs administrator-level credentials appropriate for CloudFormation, IAM, EC2, ACM, Elastic Beanstalk, and S3. This is separate from the restricted GitHub deployment role: routine workflow deployments do not create infrastructure stacks.
 
@@ -71,17 +71,21 @@ aws elasticbeanstalk describe-configuration-options \
 
 ## Slots and Listener Rules
 
-Create one environment stack for each row. The five listener priorities must remain unique.
+Create one environment stack for each row. The seven listener priorities must remain unique.
 
 | Slot | HostName | Environment name | ListenerRulePriority |
 | --- | --- | --- | --- |
 | `latest` | `latest.grails.org` | `grails-forge-latest` | 10 |
 | `snapshot` | `snapshot.grails.org` | `grails-forge-snapshot` | 20 |
 | `next` | `next.grails.org` | `grails-forge-next` | 30 |
+| `next-snapshot` | `next-snapshot.grails.org` | `grails-forge-next-snapshot` | 60 |
 | `prev` | `prev.grails.org` | `grails-forge-prev` | 40 |
 | `prev-snapshot` | `prev-snapshot.grails.org` | `grails-forge-prev-snapshot` | 50 |
+| `older` | `older.grails.org` | `grails-forge-older` | 70 |
 
-`HostName` supplies both the host-header condition and the application's `HOSTNAME` setting. Do not use a path rule or the listener default rule for a slot.
+`ListenerRulePriority` is the CloudFormation parameter (unique in 1-50000). On the shared ALB, Elastic Beanstalk remaps those values to consecutive HTTPS rule priorities 1-7 in environment-create order. Host-header routing is what matters; do not treat the live 1-7 numbers as the values to pass back into CloudFormation.
+
+`HostName` supplies both the host-header condition and the application's `HOSTNAME` setting. Do not use a path rule or the listener default rule for a slot. `next-snapshot` currently serves `8.0.0-SNAPSHOT` from `8.0.x`. `older` currently serves `7.0.6` from `7.0.x`.
 
 ## Stack Deployment Order
 
@@ -101,7 +105,7 @@ aws cloudformation deploy \
     ApplicationName=grails-forge
 ```
 
-Deploy five `environment.yaml` stacks next, using the slot values in the table. The command parameters are `SharedStackName`, `Slot`, `HostName`, `ListenerRulePriority`, `InstanceSubnets`, `PlatformArn`, `InstanceType`, and `Architecture`. `GitHubRedirectUrl` is an optional template parameter that defaults to `https://start.grails.org/`.
+Deploy seven `environment.yaml` stacks next, using the slot values in the table. The command parameters are `SharedStackName`, `Slot`, `HostName`, `ListenerRulePriority`, `InstanceSubnets`, `PlatformArn`, `InstanceType`, and `Architecture`. `GitHubRedirectUrl` is an optional template parameter that defaults to `https://start.grails.org/`.
 
 ```bash
 aws cloudformation deploy \
@@ -119,7 +123,7 @@ aws cloudformation deploy \
     Architecture=<arm64_OR_x86_64>
 ```
 
-Repeat that command for the other four rows. Before the first Forge deployment, require only `Status=Ready` for each environment. With no `VersionLabel`, Elastic Beanstalk may run its Sample Application, which can be unhealthy because it does not provide `/versions`. Dispatch the first deployment workflow next; after it completes, require `Status=Ready` and `Health=Green`. Do not try to pass an application version or version label to CloudFormation.
+Repeat that command for the other six rows. Before the first Forge deployment, require only `Status=Ready` for each environment. With no `VersionLabel`, Elastic Beanstalk may run its Sample Application, which can be unhealthy because it does not provide `/versions`. Dispatch the first deployment workflow next; after it completes, require `Status=Ready` and `Health=Green`. Do not try to pass an application version or version label to CloudFormation.
 
 ## Artifact Packaging
 
@@ -129,7 +133,7 @@ From `grails-forge`, build the Elastic Beanstalk bundle with the repository task
 ./gradlew grails-forge-web-netty:awsElasticBeanstalk
 ```
 
-The output is `grails-forge-web-netty/build/distributions/grails-forge-web-netty-aws.zip`. Its ZIP root contains `app.jar`, `Procfile`, `start.sh`, and `.platform`. Do not create an `application.jar` archive manually. The workflow uploads this ZIP and creates a distinct immutable Elastic Beanstalk application version for the selected slot; it does not require the same artifact to be deployed to all five slots.
+The output is `grails-forge-web-netty/build/distributions/grails-forge-web-netty-aws.zip`. Its ZIP root contains `app.jar`, `Procfile`, `start.sh`, and `.platform`. Do not create an `application.jar` archive manually. The workflow uploads this ZIP and creates a distinct immutable Elastic Beanstalk application version for the selected slot; it does not require the same artifact to be deployed to all seven slots.
 
 ## GitHub Actions Deployment
 
@@ -163,15 +167,32 @@ curl --fail --show-error --silent \
   "https://${SLOT_HOSTNAME}/versions"
 ```
 
-Repeat for all five hostnames. Success proves certificate selection, SNI, the host rule, and target reachability. Public DNS already CNAME's these hostnames to the ALB, so the same check works without `--connect-to`.
+Repeat for all seven hostnames. Success proves certificate selection, SNI, the host rule, and target reachability. Public DNS already CNAMEs these hostnames to the ALB, so the same check works without `--connect-to`.
 
 ## Cloudflare DNS
 
-The five API hostnames already have DNS-only CNAME records targeting the shared ALB. Keep them unproxied. Do not create or change `start.grails.org`. To reverse traffic, restore the previous CNAME targets. Keep GCP available through the observation window so that reversal remains possible.
+Cloudflare is authoritative for the seven API hostnames. Configure each as a DNS-only (grey-cloud, not proxied) CNAME targeting the shared stack `SharedLoadBalancerDnsName` output. Resolve that value with:
 
-## Optional Future Route 53 DNS
+```bash
+aws cloudformation list-exports \
+  --region us-east-1 \
+  --query "Exports[?Name=='grails-forge-shared:SharedLoadBalancerDnsName'].Value" \
+  --output text
+```
 
-Do not deploy `grails-forge/infrastructure/dns.yaml` while Cloudflare remains authoritative. After authoritative DNS moves to Route 53, it can create the five A alias records with only `SharedStackName` and `HostedZoneId`. The current template creates A aliases only; it does not create AAAA records. It deliberately does not modify `start.grails.org`.
+Use that export as every CNAME target. Do not copy a historic ALB DNS name from this document; replacing the shared load balancer changes the hostname.
+
+| Hostname | Record type | Target | Proxy status |
+| --- | --- | --- | --- |
+| `latest.grails.org` | CNAME | `<SHARED_LOAD_BALANCER_DNS_NAME>` | DNS only |
+| `snapshot.grails.org` | CNAME | `<SHARED_LOAD_BALANCER_DNS_NAME>` | DNS only |
+| `next.grails.org` | CNAME | `<SHARED_LOAD_BALANCER_DNS_NAME>` | DNS only |
+| `next-snapshot.grails.org` | CNAME | `<SHARED_LOAD_BALANCER_DNS_NAME>` | DNS only |
+| `prev.grails.org` | CNAME | `<SHARED_LOAD_BALANCER_DNS_NAME>` | DNS only |
+| `prev-snapshot.grails.org` | CNAME | `<SHARED_LOAD_BALANCER_DNS_NAME>` | DNS only |
+| `older.grails.org` | CNAME | `<SHARED_LOAD_BALANCER_DNS_NAME>` | DNS only |
+
+Do not proxy these records. `next-snapshot.grails.org` and `older.grails.org` are the two new records that must be added in Cloudflare in the same way as the existing five. Do not create or modify `start.grails.org`. Keep the ACM wildcard certificate for `*.grails.org`; it covers both new hostnames. To reverse traffic, restore the previous CNAME targets. Keep GCP available through the observation window so that reversal remains possible.
 
 ## Routine Deployment and Rollback
 

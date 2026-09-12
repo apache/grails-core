@@ -33,7 +33,7 @@ Activate this skill when developing with current Grails, including:
 Current Grails is built on:
 - **Spring Boot**: 4.1.x
 - **Spring Framework**: 7.0.x
-- **Groovy**: 5.0.x
+- **Groovy**: 5.1.x
 - **Gradle**: 9.6.x
 - **Spock**: 2.4-groovy-5.0
 - **Jakarta EE**: 10 (migrated from javax.*)
@@ -865,6 +865,6 @@ grails.plugin.springsecurity.controllerAnnotations.staticRules = [
 - **Grails User Guide**: https://grails.apache.org/docs/latest/guide/single.html
 - **GORM Documentation**: https://grails.apache.org/docs/latest/grails-data/
 - **Grails Plugins**: https://grails.apache.org/plugins.html
-- **Groovy 5 Documentation**: https://groovy-lang.org/documentation.html#all-versions (select latest 5.0.x)
+- **Groovy 5 Documentation**: https://groovy-lang.org/documentation.html#all-versions (select latest 5.1.x)
 - **Spock Framework**: https://spockframework.org/spock/docs/2.4/all_in_one.html
 - **Geb Manual**: https://groovy.apache.org/geb/manual/current/

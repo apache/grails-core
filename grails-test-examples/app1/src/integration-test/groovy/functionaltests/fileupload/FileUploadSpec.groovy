@@ -303,6 +303,56 @@ class FileUploadSpec extends Specification implements HttpClientSupport {
         ])
     }
 
+    def "upload exceeding the configured limit is reported through the application error pipeline"() {
+        given: 'a payload larger than the default grails.controllers.upload.maxRequestSize of 128000 bytes'
+        def body = MultipartBody.builder()
+                .addPart('file', 'huge.txt', 'text/plain', ('X' * 200000).bytes)
+                .build()
+
+        when:
+        def response = httpPostMultipart('/fileUploadTest/uploadSingle', body)
+
+        then: 'the error dispatch renders it, rather than the container serving its own error page'
+        response.assertStatus(413)
+        with(response.json()) {
+            status == 413
+            path == '/fileUploadTest/uploadSingle'
+        }
+    }
+
+    def "method override still applies to a multipart upload"() {
+        given: 'the form g:uploadForm(method: "PUT") produces - multipart plus _method'
+        def body = MultipartBody.builder()
+                .addPart('_method', 'PUT')
+                .addPart('file', 'override.txt', 'text/plain', 'content'.bytes)
+                .build()
+
+        when:
+        def response = httpPostMultipart('/fileUploadTest/uploadWithMethodOverride', body)
+
+        then: 'the action is declared allowedMethods PUT, so reaching it at all is the override doing its work'
+        response.assertJsonContains(200, [
+                success : true,
+                filename: 'override.txt'
+        ])
+
+        and: 'while the request reports the method it actually arrived as'
+        response.json().method == 'POST'
+    }
+
+    def "without the override the same POST is refused"() {
+        given: 'the same upload, with nothing asking for a different method'
+        def body = MultipartBody.builder()
+                .addPart('file', 'override.txt', 'text/plain', 'content'.bytes)
+                .build()
+
+        when:
+        def response = httpPostMultipart('/fileUploadTest/uploadWithMethodOverride', body)
+
+        then: 'allowedMethods rejects it, which is what makes the test above meaningful'
+        response.assertStatus(405)
+    }
+
     def "upload xml file with content"() {
         given:
         def xmlContent = '<?xml version="1.0"?><root><item id="1">Test</item></root>'

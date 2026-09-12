@@ -84,7 +84,7 @@ class SaveImplementer extends AbstractSaveImplementer implements SingleResultSer
                 declS(entityVar, ctorX(domainClassNode))
             )
             body.addStatement(
-                bindParametersAndSave(domainClassNode, abstractMethodNode, newMethodNode, parameters, body, entityVar)
+                bindParametersAndSave(domainClassNode, abstractMethodNode, parameters, body, entityVar)
             )
 
         }

@@ -18,7 +18,6 @@
  */
 package org.grails.web.mapping.mvc
 
-import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
 import jakarta.servlet.http.HttpServletRequest
@@ -46,6 +45,7 @@ import grails.web.mime.MimeTypeResolver
 import org.grails.exceptions.ExceptionUtils
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.GrailsApplicationAttributes
+import org.grails.web.util.HiddenHttpMethod
 import org.grails.web.util.WebUtils
 
 /**
@@ -59,10 +59,54 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
 
     public static final String MATCHED_REQUEST = 'org.grails.url.match.info'
 
+    // Both are stateless, so one shared instance each rather than two allocations per request.
+    private static final HandlerInterceptor OBSERVATION_ROUTE_HANDLER = new ObservationRouteHandler()
+    private static final HandlerInterceptor ERROR_HANDLING_HANDLER = new ErrorHandlingHandler()
+
+    /**
+     * Whether to resolve a "_method" parameter on a POST into the overridden request method while matching
+     * URL mappings. Set when the hidden HTTP method filter is disabled. The dispatcher normally wraps the
+     * request with the override before this runs, so this is the fallback for one that does not.
+     */
+    boolean resolveHiddenHttpMethod = false
+
     protected UrlMappingsHolder urlMappingsHolder
+    // Deliberately not UrlPathHelper.defaultInstance: that instance is read-only, and this field is
+    // protected, so a subclass configuring it (alwaysUseFullPath and friends) must keep working.
     protected UrlPathHelper urlHelper = new UrlPathHelper()
     protected MimeTypeResolver mimeTypeResolver
     protected HandlerInterceptor[] webRequestHandlerInterceptors
+
+    /**
+     * The HTTP method to match URL mappings against.
+     *
+     * <p>An override the dispatcher already resolved is honoured wherever it applies, forwards and includes
+     * included - the servlet filter's wrapper reports the overridden method for the whole of a request, and
+     * an application is entitled to the same answer in either mode.</p>
+     *
+     * <p>Deriving a fresh override from the parameters is what an internal dispatch must not do: it inherits
+     * the parameters of the request that started it, so a "_method" the dispatcher never acted on would go
+     * on selecting an action for every forward after it.</p>
+     */
+    protected String resolveHttpMethod(HttpServletRequest request) {
+        if (!resolveHiddenHttpMethod) {
+            return request.getMethod()
+        }
+        String resolved = HiddenHttpMethod.effectiveMethod(request)
+        if (resolved != request.getMethod() || WebUtils.isForwardOrInclude(request)) {
+            return resolved
+        }
+        String override = HiddenHttpMethod.resolveOverride(request)
+        if (override == null) {
+            return resolved
+        }
+        // Published as well as returned. Routing on an override that allowedMethods cannot see would send
+        // the request to the action the override names and then refuse it with a 405 for the method it
+        // arrived as. The dispatcher normally publishes this before the mapping runs; this is the path
+        // where it did not - a stock DispatcherServlet, or this mapping driven on its own.
+        request.setAttribute(HiddenHttpMethod.OVERRIDDEN_METHOD_ATTRIBUTE, override)
+        override
+    }
 
     UrlMappingsHandlerMapping(UrlMappingsHolder urlMappingsHolder) {
         Assert.notNull(urlMappingsHolder, 'Argument [urlMappingsHolder] cannot be null')
@@ -93,34 +137,21 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
 
     @Override
     protected HandlerExecutionChain getHandlerExecutionChain(Object handler, HttpServletRequest request) {
-        HandlerExecutionChain chain = (handler instanceof HandlerExecutionChain ?
-                (HandlerExecutionChain) handler : new HandlerExecutionChain(handler))
+        // Let Spring assemble the chain. Re-implementing it here meant Grails-mapped requests silently
+        // missed whatever AbstractHandlerMapping added later - currently the API version deprecation
+        // interceptor behind spring.mvc.apiversion.*.
+        HandlerExecutionChain chain = super.getHandlerExecutionChain(handler, request)
 
-        // WebRequestInterceptor need to come first, as these include things like Hibernate OSIV
+        // WebRequestInterceptors have to come first, as these include things like Hibernate OSIV.
         if (webRequestHandlerInterceptors) {
-            chain.addInterceptors(webRequestHandlerInterceptors)
-        }
-
-        for (HandlerInterceptor interceptor in this.adaptedInterceptors) {
-            if (interceptor instanceof MappedInterceptor) {
-                MappedInterceptor mappedInterceptor = mappedInterceptor(interceptor)
-                if (mappedInterceptor.matches(request)) {
-                    chain.addInterceptor(mappedInterceptor.getInterceptor())
-                }
-            }
-            else {
-                chain.addInterceptor(interceptor)
+            for (int i = 0; i < webRequestHandlerInterceptors.length; i++) {
+                chain.addInterceptor(i, webRequestHandlerInterceptors[i])
             }
         }
 
-        chain.addInterceptor(new ObservationRouteHandler())
-        chain.addInterceptor(new ErrorHandlingHandler())
+        chain.addInterceptor(OBSERVATION_ROUTE_HANDLER)
+        chain.addInterceptor(ERROR_HANDLING_HANDLER)
         return chain
-    }
-
-    @CompileDynamic
-    protected MappedInterceptor mappedInterceptor(HandlerInterceptor interceptor) {
-        (MappedInterceptor) interceptor
     }
 
     @Override
@@ -159,7 +190,7 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
         }
         else {
 
-            def infos = urlMappingsHolder.matchAll(uri, request.getMethod(), version != null ? version : UrlMapping.ANY_VERSION)
+            def infos = urlMappingsHolder.matchAll(uri, resolveHttpMethod(request), version != null ? version : UrlMapping.ANY_VERSION)
 
             for (UrlMappingInfo info in infos) {
                 if (info) {

@@ -90,7 +90,8 @@ class UpdateOneImplementer extends AbstractSaveImplementer implements SingleResu
             declS(entityVar, lookupCall)
         )
         BlockStatement ifBody = block()
-        Statement saveStmt = bindParametersAndSave(domainClassNode, abstractMethodNode, newMethodNode, parameters[1..-1] as Parameter[], ifBody, entityVar)
+        Parameter[] propertyParameters = Arrays.copyOfRange(parameters, 1, parameters.length)
+        Statement saveStmt = bindParametersAndSave(domainClassNode, abstractMethodNode, propertyParameters, ifBody, entityVar)
         ifBody.addStatement(saveStmt)
         body.addStatement(
             ifS(notNullX(entityVar),

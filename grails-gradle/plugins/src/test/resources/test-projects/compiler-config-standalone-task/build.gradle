@@ -1,0 +1,27 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+grails {
+    starImports = ['com.example.custom']
+}
+
+// A GroovyCompile that no source set owns.
+tasks.register('compileCustomGroovy', GroovyCompile) {
+    source('src/custom/groovy')
+    destinationDirectory.set(layout.buildDirectory.dir('classes/custom'))
+    classpath = files()
+    groovyOptions.configurationScript = file('user-config.groovy')
+}
+
+tasks.register('inspectStandalone') {
+    dependsOn 'compileCustomGroovy'
+    doLast {
+        def c = tasks.named('compileCustomGroovy', GroovyCompile).get()
+        println "FINAL_CONFIG_SCRIPT=${c.groovyOptions.configurationScript?.name}"
+        def combined = file('build/grailsGroovyCompilerConfig-compileCustomGroovy.groovy')
+        println "COMBINED_EXISTS=${combined.exists()}"
+        println "COMBINED_CONTAINS_GRAILS_IMPORT=${combined.exists() && combined.text.contains(/star 'com.example.custom'/)}"
+        println "COMBINED_CONTAINS_USER_IMPORT=${combined.exists() && combined.text.contains(/star 'java.time'/)}"
+    }
+}
