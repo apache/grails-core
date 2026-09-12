@@ -45,7 +45,7 @@ class AsyncActionResultTransformer implements ActionResultTransformer {
     Object transformActionResult(GrailsWebRequest webRequest, String viewName, Object actionResult) {
 
         if (actionResult instanceof Promise promise) {
-            final request = webRequest.getCurrentRequest()
+            final request = webRequest.getRequest()
             WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(request)
             final response = webRequest.getResponse()
 

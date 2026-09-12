@@ -38,6 +38,7 @@ ext {
 dependencies {
 
     implementation platform(project(':grails-bom'))
+    testImplementation platform(project(':grails-bom'))
 
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails:grails-controllers'
@@ -65,6 +66,10 @@ dependencies {
 
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
 
+    testImplementation testFixtures('org.apache.grails:grails-core')
+    testImplementation testFixtures('org.apache.grails.web:grails-web-common'), {
+        // GrailsWebMockUtil
+    }
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
     testImplementation 'org.springframework:spring-test'
     testImplementation 'org.spockframework:spock-core'

@@ -180,7 +180,7 @@ trait ResponseRenderer extends WebAttributes {
         } else {
             renderMarkupInternal(webRequest, closure, response)
         }
-        setLayout(webRequest.currentRequest, false, layoutArg)
+        setLayout(webRequest.request, false, layoutArg)
     }
 
     private void renderJsonInternal(HttpServletResponse response, @DelegatesTo(value = StreamingJsonBuilder.StreamingJsonDelegate, strategy = Closure.DELEGATE_FIRST) Closure callable) {
@@ -204,7 +204,7 @@ trait ResponseRenderer extends WebAttributes {
         applyContentType(response, argMap, body)
         handleStatusArgument(argMap, webRequest, response)
         render(body)
-        setLayout(webRequest.currentRequest, false, layoutArg)
+        setLayout(webRequest.request, false, layoutArg)
     }
 
     /**
@@ -247,7 +247,7 @@ trait ResponseRenderer extends WebAttributes {
         handleStatusArgument(argMap, webRequest, response)
         applyContentType(response, argMap, writable)
         renderWritable(writable, response)
-        setLayout(webRequest.currentRequest, false, layoutArg)
+        setLayout(webRequest.request, false, layoutArg)
         webRequest.renderView = false
     }
 
@@ -274,7 +274,7 @@ trait ResponseRenderer extends WebAttributes {
                 CharSequence text = (textArg instanceof CharSequence) ? ((CharSequence) textArg) : textArg.toString()
                 render(text)
             }
-            setLayout(webRequest.currentRequest, false, layoutArg)
+            setLayout(webRequest.request, false, layoutArg)
         } else if (argMap.containsKey(ARGUMENT_VIEW)) {
             String viewName = argMap[ARGUMENT_VIEW].toString()
             String viewUri = applicationAttributes.getNoSuffixViewURI((GroovyObject) this, viewName)
@@ -300,7 +300,7 @@ trait ResponseRenderer extends WebAttributes {
             }
 
             ((GroovyObject) this).setProperty('modelAndView', new ModelAndView(viewUri, model))
-            setLayout(webRequest.currentRequest, true, layoutArg)
+            setLayout(webRequest.request, true, layoutArg)
         } else if (argMap.containsKey(ARGUMENT_TEMPLATE)) {
             applyContentType(response, argMap, null, false)
             webRequest.renderView = false
@@ -319,8 +319,7 @@ trait ResponseRenderer extends WebAttributes {
             String templateUri = applicationAttributes.getTemplateURI((GroovyObject) this, templateName, false)
 
             // retrieve view resolver
-            def applicationContext = applicationAttributes.getApplicationContext()
-            def viewResolver = applicationContext.getBean(CompositeViewResolver.BEAN_NAME, CompositeViewResolver)
+            CompositeViewResolver viewResolver = applicationAttributes.getCompositeViewResolver()
             try {
 
                 View view = viewResolver.resolveView(templateUri, webRequest.locale)
@@ -331,10 +330,10 @@ trait ResponseRenderer extends WebAttributes {
                     throw new ControllerExecutionException("Unable to load template for uri [$templateUri]. Template not found.")
                 }
 
-                boolean renderWithLayout = (layoutArg || webRequest.getCurrentRequest().getAttribute(WebUtils.LAYOUT_ATTRIBUTE))
+                boolean renderWithLayout = (layoutArg || webRequest.getRequest().getAttribute(WebUtils.LAYOUT_ATTRIBUTE))
                 // if automatic decoration occurred unwrap, since this is a partial
                 if (renderWithLayout) {
-                    setLayout(webRequest.currentRequest, false, layoutArg)
+                    setLayout(webRequest.request, false, layoutArg)
                 }
 
                 if (grailsRenderViewMutator) {
@@ -615,7 +614,7 @@ trait ResponseRenderer extends WebAttributes {
 
     private void renderViewForTemplate(GrailsWebRequest webRequest, View view, Map binding) {
         try {
-            view.render(binding, webRequest.getCurrentRequest(), webRequest.getResponse())
+            view.render(binding, webRequest.getRequest(), webRequest.getResponse())
         }
         catch (Exception e) {
             throw new ControllerExecutionException(e.getMessage(), e)

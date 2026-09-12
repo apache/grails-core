@@ -63,6 +63,24 @@ class MongoMappingContextSpec extends Specification {
         then:
         !entity.getPropertyByName('name').mapping.mappedForm.nullable
     }
+
+    void "portable identities use the configured datastore identity type"() {
+        given:
+        def settings = new MongoConnectionSourceSettings()
+        settings.defaultIdType = configuredType
+
+        when:
+        def entity = new MongoMappingContext(settings)
+                .addPersistentEntity(PortableMongoIdentityEntity)
+
+        then:
+        entity.identity.type == expectedType
+
+        where:
+        configuredType || expectedType
+        'long'         || Long
+        'native'       || String
+    }
 }
 
 @Entity
@@ -86,4 +104,10 @@ class WildcardMongoEntity {
     static mapping = {
         '*' cache: true
     }
+}
+
+@Entity
+class PortableMongoIdentityEntity {
+    Serializable id
+    String name
 }

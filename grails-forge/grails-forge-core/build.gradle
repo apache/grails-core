@@ -72,7 +72,7 @@ dependencies {
         exclude group: 'org.apache.groovy', module: 'groovy-all'
     }
 
-    testRuntimeOnly "ch.qos.logback:logback-classic"
+    testImplementation "ch.qos.logback:logback-classic"
     testRuntimeOnly "org.objenesis:objenesis:$objenesisVersion"
     testImplementation 'org.apache.groovy:groovy-test'
 }
@@ -132,4 +132,3 @@ nohttp {
         it.dependsOn(copyGrailsWrapper, grailsVersionInfoTask)
     }
 }
-

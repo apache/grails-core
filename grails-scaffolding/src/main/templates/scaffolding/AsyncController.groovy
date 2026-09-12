@@ -16,7 +16,7 @@ class ${className}Controller {
         }
     }
 
-    def show(Long id) {
+    def show(Serializable id) {
         ${className}.async.get(id).then { ${propertyName} ->
             respond ${propertyName}
         }
@@ -51,13 +51,13 @@ class ${className}Controller {
         }
     }
 
-    def edit(Long id) {
+    def edit(Serializable id) {
         ${className}.async.get(id).then { ${propertyName} ->
             respond ${propertyName}
         }
     }
 
-    def update(Long id) {
+    def update(Serializable id) {
         ${className}.async.withTransaction { TransactionStatus status ->
             def ${propertyName} = ${className}.get(id)
             if (${propertyName} == null) {
@@ -83,7 +83,7 @@ class ${className}Controller {
         }
     }
 
-    def delete(Long id) {
+    def delete(Serializable id) {
         ${className}.async.withTransaction { TransactionStatus status ->
             def ${propertyName} = ${className}.get(id)
             if (${propertyName} == null) {

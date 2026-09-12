@@ -45,6 +45,7 @@ dependencies {
     testImplementation project(':grails-spring')
     testImplementation project(':grails-test-suite-base')
     testImplementation project(':grails-testing-support-core')
+    testImplementation testFixtures(project(':grails-web-common'))
     testImplementation 'org.apache.groovy:groovy'
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'

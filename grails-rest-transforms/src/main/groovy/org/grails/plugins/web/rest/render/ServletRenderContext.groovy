@@ -30,6 +30,7 @@ import grails.web.mime.MimeType
 import org.grails.core.util.IncludeExcludeSupport
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.GrailsApplicationAttributes
+import org.grails.web.util.HiddenHttpMethod
 import org.grails.web.util.WebUtils
 
 /**
@@ -105,7 +106,7 @@ class ServletRenderContext extends AbstractRenderContext {
 
     @Override
     HttpMethod getHttpMethod() {
-        HttpMethod.valueOf(webRequest.currentRequest.method)
+        HttpMethod.valueOf(HiddenHttpMethod.effectiveMethod(webRequest.request))
     }
 
     @Override
@@ -126,7 +127,7 @@ class ServletRenderContext extends AbstractRenderContext {
 
     @Override
     String getViewName() {
-        final request = webRequest.currentRequest
+        final request = webRequest.request
         ModelAndView modelAndView = (ModelAndView) request.getAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW)
         if (modelAndView) {
             return modelAndView.viewName
@@ -135,7 +136,7 @@ class ServletRenderContext extends AbstractRenderContext {
     }
 
     protected ModelAndView getModelAndView() {
-        final request = webRequest.currentRequest
+        final request = webRequest.request
         ModelAndView modelAndView = (ModelAndView) request.getAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW)
         if (modelAndView == null) {
             modelAndView = new ModelAndView()

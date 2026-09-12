@@ -39,6 +39,7 @@ import org.springframework.asm.AnnotationVisitor;
 import org.springframework.asm.ClassReader;
 import org.springframework.asm.ClassVisitor;
 import org.springframework.asm.Opcodes;
+import org.springframework.core.OrderComparator;
 import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.util.ClassUtils;
 
@@ -164,6 +165,7 @@ public class GrailsAwareInjectionOperation implements CompilationUnit.IPrimaryCl
                 }
                 return 0;
             });
+            OrderComparator.sort(injectors);
             classInjectors = injectors.toArray(new ClassInjector[0]);
             globalClassInjectors = globalInjectors.toArray(new ClassInjector[0]);
         } catch (IOException e) {

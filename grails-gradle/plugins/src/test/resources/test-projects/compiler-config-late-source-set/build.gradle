@@ -1,0 +1,15 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+// Registered after every afterEvaluate callback has run.
+gradle.projectsEvaluated {
+    sourceSets.register('late')
+}
+
+tasks.register('inspectLate') {
+    doLast {
+        println "LATE_GENERATOR_EXISTS=${tasks.names.contains('generateCompileLateGroovyGrailsCompilerConfig')}"
+        println "MAIN_GENERATOR_EXISTS=${tasks.names.contains('generateCompileGroovyGrailsCompilerConfig')}"
+    }
+}

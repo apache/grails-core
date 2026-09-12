@@ -856,7 +856,7 @@ class FormFieldsTagLib {
     @CompileStatic
     private Locale getLocale() {
         def locale
-        def request = GrailsWebRequest.lookup()?.currentRequest
+        def request = GrailsWebRequest.lookup()?.request
         if (request instanceof HttpServletRequest) {
             locale = localeResolver?.resolveLocale(request)
         }

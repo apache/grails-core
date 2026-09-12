@@ -120,7 +120,12 @@ dependencies {
     api 'org.slf4j:jcl-over-slf4j'
 
     // Testing
-    testImplementation 'org.slf4j:slf4j-simple'
+    // org.slf4j:slf4j-simple is already on the test classpath via the runtimeOnly
+    // dependency above. It coexists here with logback-classic (needed for Logback-appender
+    // assertions in forked-process specs), so both SLF4J providers are present at once -
+    // any new forked-process fixture must explicitly pin one via
+    // -Dslf4j.provider=<FQCN> to avoid SLF4J's ambiguous-binding provider selection.
+    testImplementation 'ch.qos.logback:logback-classic'
     testImplementation 'org.spockframework:spock-core'
 
     testRuntimeOnly 'net.bytebuddy:byte-buddy' // Required by Spock's mocking support

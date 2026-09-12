@@ -28,6 +28,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.compile.GroovyCompile
@@ -35,10 +36,16 @@ import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.javadoc.Javadoc
 import org.gradle.external.javadoc.StandardJavadocDocletOptions
 
+import static org.apache.grails.buildsrc.GradleUtils.lookupProperty
 import static org.apache.grails.buildsrc.GradleUtils.lookupPropertyByType
 
 @CompileStatic
 class CompilePlugin implements Plugin<Project> {
+
+    static final String AUTO_CONFIGURATION_IMPORTS_PATH =
+            'src/main/resources/META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports'
+    private static final String AUTO_CONFIGURATION_IMPORTS_INPUT_REGISTERED =
+            'grailsAutoConfigurationImportsInputRegistered'
 
     @Override
     void apply(Project project) {
@@ -107,6 +114,12 @@ class CompilePlugin implements Plugin<Project> {
                 it.groovyOptions.encoding = StandardCharsets.UTF_8.name()
                 // Preserve method parameter names in Groovy/Java classes for IDE parameter hints & bean reflection metadata.
                 it.groovyOptions.parameters = true
+                // Grails 8 keeps invokedynamic off for published artifacts. Groovy 5's
+                // compiler default is indy=true, which is a large runtime regression for
+                // dynamic Groovy (see #15293). Unpublished build-logic uses Gradle's
+                // default. Grails 9 / Groovy 6 can flip this. CI can still opt in with
+                // -PgrailsIndy=true (same property as grails-extension-gradle-config.gradle).
+                it.groovyOptions.optimizationOptions.put('indy', lookupProperty(project, 'grailsIndy', false))
                 // encoding needs to be the same since it's different across platforms
                 it.options.encoding = StandardCharsets.UTF_8.name()
                 it.options.fork = true
@@ -133,7 +146,23 @@ class CompilePlugin implements Plugin<Project> {
                 it.groovyOptions.configurationScript =
                         GradleUtils.findRootGrailsCoreDir(project).file('gradle/groovy-compile-configscript.groovy').asFile
             }
+            project.tasks.named('compileGroovy', GroovyCompile).configure { GroovyCompile task ->
+                // Resource-only changes do not ordinarily invalidate compilation. This file changes
+                // whether the compiler owns the generated imports resource, so adding or deleting it
+                // must run the transform even when no Groovy source changed.
+                registerAutoConfigurationImportsInput(project, task)
+            }
         }
+    }
+
+    static void registerAutoConfigurationImportsInput(Project project, GroovyCompile task) {
+        if (task.extensions.extraProperties.has(AUTO_CONFIGURATION_IMPORTS_INPUT_REGISTERED)) {
+            return
+        }
+        task.extensions.extraProperties.set(AUTO_CONFIGURATION_IMPORTS_INPUT_REGISTERED, true)
+        task.inputs.files(project.layout.projectDirectory.file(AUTO_CONFIGURATION_IMPORTS_PATH))
+                .withPropertyName('grailsAutoConfigurationImports')
+                .withPathSensitivity(PathSensitivity.RELATIVE)
     }
 
     private static void configureReproducible(Project project) {

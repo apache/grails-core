@@ -32,6 +32,7 @@ group = 'examples'
 
 dependencies {
     implementation platform(project(':grails-bom'))
+    testImplementation platform(project(':grails-bom'))
 
     implementation 'org.apache.grails:grails-data-hibernate5'
     implementation 'org.apache.grails:grails-core'
@@ -58,6 +59,7 @@ dependencies {
     runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
 
     testImplementation 'org.apache.grails.testing:grails-testing-support-core'
+    testImplementation testFixtures('org.apache.grails.web:grails-web-common')
 }
 
 apply {

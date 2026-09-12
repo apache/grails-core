@@ -88,8 +88,8 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass;
  * live in the familiar {@code *GrailsPlugin.groovy} file. In that case the generated methods land
  * on a new sibling class instead, named by the plugin-descriptor convention - a {@code *GrailsPlugin}
  * name swaps that suffix for {@code AutoConfiguration} ({@code I18nGrailsPlugin} ->
- * {@code I18nAutoConfiguration}), any other name appends it - or {@link #autoConfigurationName}
- * if given. A {@code Plugin} subclass is never processed by
+ * {@code I18nAutoConfiguration}), any other name appends it, and the plugin's own package holds it
+ * - or {@link #autoConfigurationName} if given, which may name a package too. A {@code Plugin} subclass is never processed by
  * Spring as a bean, so {@code @AutoConfiguration} together with every annotation that gates or
  * configures it (the {@code @Conditional*} family, {@code @Import}/{@code @ImportAutoConfiguration}/
  * {@code @ImportResource}, {@code @ComponentScan}, {@code @EnableConfigurationProperties},
@@ -112,13 +112,23 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass;
 public @interface GrailsBeans {
 
     /**
-     * The simple name of the generated sibling class, for a {@code grails.plugins.Plugin}
-     * subclass. The default derives from the plugin's own name - a {@code *GrailsPlugin} class
-     * swaps that suffix for {@code AutoConfiguration}, any other name appends it. Set this when
-     * converting an existing public {@code @AutoConfiguration} class whose name doesn't follow
-     * that convention and whose class identity must be preserved (e.g. for {@code exclude =}
-     * references, {@code before=}/{@code after=} ordering from other modules, or tests that
-     * import it by name).
+     * The name of the generated sibling class, for a {@code grails.plugins.Plugin} subclass. The
+     * default derives from the plugin's own name - a {@code *GrailsPlugin} class swaps that suffix
+     * for {@code AutoConfiguration}, any other name appends it - in the plugin's own package. Set
+     * this when converting an existing public {@code @AutoConfiguration} class whose name doesn't
+     * follow that convention and whose class identity must be preserved (e.g. for
+     * {@code exclude = } references, {@code before=}/{@code after=} ordering from other modules, or
+     * tests that import it by name).
+     *
+     * <p>A bare identifier renames the class within the plugin's package. Class identity is the
+     * qualified name, though, and a plugin descriptor sits in the package its implementation
+     * classes sit beneath rather than alongside them, so the class being replaced is often in
+     * another package: give the qualified name and the sibling is generated there instead, e.g.
+     * {@code @GrailsBeans(autoConfigurationName = "com.example.web.ExampleAutoConfiguration")} on
+     * {@code com.example.ExampleGrailsPlugin}. A name containing a dot is taken as written - it is
+     * never resolved relative to the plugin's package. Generating into a package the plugin does
+     * not otherwise own splits that package across two jars, which a modular or native-image
+     * consumer pays for, so name one of the plugin's own.
      */
     String autoConfigurationName() default "";
 

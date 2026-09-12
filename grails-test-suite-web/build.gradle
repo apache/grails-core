@@ -47,6 +47,8 @@ dependencies {
         exclude group: 'org.apache.grails', module: 'grails-testing-support-core'
         exclude group: 'org.apache.grails', module: 'grails-rest-transforms'
     }
+    testImplementation testFixtures(project(':grails-core'))
+    testImplementation testFixtures(project(':grails-web-common'))
     testImplementation 'org.spockframework:spock-core'
 
     testCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation

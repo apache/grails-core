@@ -23,6 +23,7 @@ import java.util.concurrent.ConcurrentHashMap
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
 
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import org.codehaus.groovy.runtime.GStringImpl
@@ -39,6 +40,7 @@ import grails.util.GrailsMetaClassUtils
  * @author Lari Hotari
  * @since 2.3
  */
+@CompileStatic
 class CodecMetaClassSupport {
 
     static final Object[] EMPTY_ARGS = []
@@ -53,7 +55,6 @@ class CodecMetaClassSupport {
      *
      * @param codecClass the codec class
      */
-    @CompileStatic
     void configureCodecMethods(CodecFactory codecFactory, boolean cacheLookup = !Environment.getCurrent().isDevelopmentMode(), List<ExpandoMetaClass> targetMetaClasses = resolveDefaultMetaClasses()) {
         Closure<String> encodeMethodNameClosure = { String codecName -> "${ENCODE_AS_PREFIX}${codecName}".toString() }
         Closure<String> decodeMethodNameClosure = { String codecName -> "${DECODE_PREFIX}${codecName}".toString() }
@@ -133,12 +134,10 @@ class CodecMetaClassSupport {
      * @param delegate
      * @return
      */
-    @CompileStatic
     private static Object filterNullObject(Object delegate) {
         delegate != null && delegate.getClass() != NullObject ? delegate : null
     }
 
-    @CompileStatic
     private addAliasMetaMethods(List<ExpandoMetaClass> targetMetaClasses, Set<String> aliases, Closure<String> methodNameClosure, Closure methodClosure,
             boolean cacheLookup, Set<MetaMethodRegistrationKey> registeredMetaMethodKeys) {
         aliases?.each { String aliasName ->
@@ -162,6 +161,9 @@ class CodecMetaClassSupport {
         }
     }
 
+    // The metamethod name is only known at run time, and a GString property name is the one
+    // thing static compilation cannot express.
+    @CompileDynamic
     protected void addMetaMethod(List<ExpandoMetaClass> targetMetaClasses, String methodName, Closure closure) {
         targetMetaClasses.each { ExpandoMetaClass emc ->
             emc."${methodName}" << closure
@@ -185,18 +187,15 @@ class CodecMetaClassSupport {
         }
     }
 
-    @CompileStatic
     private static boolean shouldRegisterMetaMethod(ExpandoMetaClass emc, String methodName, Set<MetaMethodRegistrationKey> registeredMetaMethodKeys) {
         MetaMethodRegistrationKey key = registrationKey(emc, methodName)
         registeredMetaMethodKeys.add(key) || emc.getMetaMethod(methodName, EMPTY_ARGS) == null
     }
 
-    @CompileStatic
     private static MetaMethodRegistrationKey registrationKey(ExpandoMetaClass emc, String methodName) {
         new MetaMethodRegistrationKey(emc.getTheClass(), methodName)
     }
 
-    @CompileStatic
     private static Set<MetaMethodRegistrationKey> registeredMetaMethodKeys(CodecFactory codecFactory) {
         REGISTERED_META_METHODS.get(codecFactory) { CodecFactory ignored ->
             Collections.newSetFromMap(new ConcurrentHashMap<MetaMethodRegistrationKey, Boolean>())

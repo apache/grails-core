@@ -19,6 +19,7 @@
 package org.grails.compiler.beans;
 
 import java.beans.Introspector;
+import java.io.File;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -63,6 +64,7 @@ import org.codehaus.groovy.ast.stmt.ReturnStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
 import org.codehaus.groovy.control.CompilationUnit;
 import org.codehaus.groovy.control.CompilePhase;
+import org.codehaus.groovy.control.CompilerConfiguration;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.syntax.SyntaxException;
 import org.codehaus.groovy.syntax.Types;
@@ -133,11 +135,13 @@ import org.springframework.context.annotation.Scope;
  * {@code beans} property itself is removed so no closure survives into the compiled class.
  *
  * <p>When the annotated class extends {@code grails.plugins.Plugin}, the generated members land
- * on a new sibling class in the same package instead of on the plugin class itself - named by
- * swapping a {@code *GrailsPlugin} suffix for {@code AutoConfiguration}, or appending
- * {@code AutoConfiguration} otherwise. A {@code Plugin} subclass is instantiated by
- * {@code DefaultGrailsPlugin} via plain reflection, never as a Spring bean, so it cannot carry
- * {@code @Bean} methods or a meaningful {@code @AutoConfiguration} annotation of its own.
+ * on a new sibling class instead of on the plugin class itself - named by swapping a
+ * {@code *GrailsPlugin} suffix for {@code AutoConfiguration}, or appending
+ * {@code AutoConfiguration} otherwise, and placed in the plugin's own package unless
+ * {@code @GrailsBeans(autoConfigurationName = ...)} names another. A {@code Plugin} subclass is
+ * instantiated by {@code DefaultGrailsPlugin} via plain reflection, never as a Spring bean, so
+ * it cannot carry {@code @Bean} methods or a meaningful {@code @AutoConfiguration} annotation
+ * of its own.
  * {@code @AutoConfiguration} and every annotation that gates or configures it - the
  * {@code @Conditional*} family, {@code @Import}/{@code @ImportAutoConfiguration}/
  * {@code @ImportResource}, {@code @ComponentScan}, {@code @EnableConfigurationProperties},
@@ -157,6 +161,15 @@ import org.springframework.context.annotation.Scope;
  */
 @GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
 public class GrailsBeansASTTransformation implements ASTTransformation, CompilationUnitAware {
+
+    /**
+     * Class-node metadata carrying the compilation's output directory, seeded by the global Grails
+     * transform. It resolves the directory for Groovy-Eclipse, where the compiler configuration
+     * either has none or has one relative to the Eclipse project, and that resolution lives in
+     * grails-core - which this module cannot depend on.
+     */
+    public static final String RESOLVED_TARGET_DIRECTORY_METADATA =
+            GrailsBeansASTTransformation.class.getName() + ".resolvedTargetDirectory";
 
     private static final String BEANS_PROPERTY = "beans";
     private static final String BEAN_CALL = "bean";
@@ -302,10 +315,7 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
                     " class would never be processed by Spring Boot");
         }
 
-        String siblingSimpleName = siblingSimpleName(pluginClass, grailsBeansAnnotation, source);
-        String packageName = pluginClass.getPackageName();
-        String siblingName = (packageName == null || packageName.isEmpty()) ?
-                siblingSimpleName : packageName + "." + siblingSimpleName;
+        String siblingName = siblingName(pluginClass, grailsBeansAnnotation, source);
         ClassNode sibling = new ClassNode(siblingName, Modifier.PUBLIC, ClassHelper.OBJECT_TYPE);
         // Without a position, anything Groovy later reports against a generated node - a sibling
         // name clash, a typo in .annotate(...) - is reported at line -1, column -1.
@@ -324,7 +334,24 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
         sibling.addAnnotations(siblingAnnotations);
         pluginClass.getAnnotations().removeAll(siblingAnnotations);
 
+        // The name is settled here and nowhere else, so this is where it is registered.
+        AutoConfigurationImportsWriter.register(
+                siblingName, targetDirectory(pluginClass, source), source, compilationUnit);
+
         return sibling;
+    }
+
+    /**
+     * The compilation's output directory: the one the global transform resolved if it ran, which is
+     * the only one that is right under Groovy-Eclipse, and the compiler's own otherwise.
+     */
+    private static File targetDirectory(ClassNode classNode, SourceUnit source) {
+        Object resolved = classNode == null ? null : classNode.getNodeMetaData(RESOLVED_TARGET_DIRECTORY_METADATA);
+        if (resolved instanceof File) {
+            return (File) resolved;
+        }
+        CompilerConfiguration configuration = source == null ? null : source.getConfiguration();
+        return configuration == null ? null : configuration.getTargetDirectory();
     }
 
     private Set<String> parseMoveAnnotations(AnnotationNode grailsBeansAnnotation, SourceUnit source) {
@@ -362,8 +389,13 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
         return simpleName + AUTO_CONFIGURATION_SUFFIX;
     }
 
-    private String siblingSimpleName(ClassNode pluginClass, AnnotationNode grailsBeansAnnotation, SourceUnit source) {
-        String defaultName = defaultSiblingSimpleName(pluginClass);
+    // The name of the generated sibling, qualified. A bare identifier names it in the plugin's own
+    // package, which is where it lands by default; a name that is already qualified is taken as
+    // written, so a conversion can keep the package of the class it replaces as well as its simple
+    // name - the two together being what an exclude= or a before=/after= from another module names.
+    private String siblingName(ClassNode pluginClass, AnnotationNode grailsBeansAnnotation, SourceUnit source) {
+        String packageName = pluginClass.getPackageName();
+        String defaultName = qualify(packageName, defaultSiblingSimpleName(pluginClass));
         Expression nameArg = grailsBeansAnnotation.getMember(AUTO_CONFIGURATION_NAME_MEMBER);
         if (nameArg == null) {
             return defaultName;
@@ -379,12 +411,17 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
                     "blank - omit the attribute entirely to use the default " + defaultName + " instead");
             return defaultName;
         }
-        if (!isValidJavaIdentifier(name)) {
+        if (!isValidQualifiedName(name)) {
             addError(nameArg, source, "@GrailsBeans(autoConfigurationName = \"" + name + "\") is not a valid " +
-                    "name: it becomes the generated sibling's simple class name, so it must be a valid Java identifier");
+                    "name: it becomes the generated sibling's class name, so it must be a valid Java " +
+                    "identifier, or a qualified name whose every part is one");
             return defaultName;
         }
-        return name;
+        return name.indexOf('.') < 0 ? qualify(packageName, name) : name;
+    }
+
+    private static String qualify(String packageName, String simpleName) {
+        return (packageName == null || packageName.isEmpty()) ? simpleName : packageName + "." + simpleName;
     }
 
     private boolean belongsOnSibling(ClassNode annotationType, Set<String> moveAnnotationNames) {
@@ -1373,6 +1410,11 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
 
     private boolean isValidJavaIdentifier(String name) {
         return SourceVersion.isIdentifier(name) && !SourceVersion.isKeyword(name);
+    }
+
+    // A single identifier or a dotted sequence of them, none of which is a keyword.
+    private boolean isValidQualifiedName(String name) {
+        return SourceVersion.isName(name);
     }
 
     private void addError(ASTNode node, SourceUnit source, String message) {

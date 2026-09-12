@@ -97,7 +97,6 @@ dependencies {
     compileOnly 'org.apache.groovy:groovy-sql'
     compileOnly 'org.apache.groovy:groovy-xml'
 
-    compileOnly 'org.springframework:spring-test'
     compileOnly 'org.springframework:spring-jdbc'
     compileOnly 'org.springframework:spring-beans'
     compileOnly 'org.springframework:spring-context'

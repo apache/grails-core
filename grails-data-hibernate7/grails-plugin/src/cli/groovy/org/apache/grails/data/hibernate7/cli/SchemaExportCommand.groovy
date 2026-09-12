@@ -23,6 +23,9 @@ import groovy.transform.CompileStatic
 import org.hibernate.engine.spi.SessionFactoryImplementor
 import org.hibernate.tool.hbm2ddl.SchemaExport as HibernateSchemaExport
 import org.hibernate.tool.schema.TargetType
+import org.hibernate.tool.schema.spi.SchemaManagementException
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 import org.apache.grails.core.cli.ApplicationCommand
 import org.apache.grails.core.cli.ExecutionContext
@@ -38,6 +41,8 @@ import org.grails.orm.hibernate.HibernateDatastore
  */
 @CompileStatic
 class SchemaExportCommand implements ApplicationCommand {
+
+    private static final Logger LOG = LoggerFactory.getLogger(SchemaExportCommand)
 
     final String description = 'Creates a DDL file of the database schema'
     Boolean skipBootstrap = true
@@ -89,14 +94,28 @@ class SchemaExportCommand implements ApplicationCommand {
             targetTypes = EnumSet.of(TargetType.SCRIPT)
         }
 
-        schemaExport.execute(targetTypes, HibernateSchemaExport.Action.CREATE, metadata, serviceRegistry)
+        try {
+            schemaExport.execute(targetTypes, HibernateSchemaExport.Action.CREATE, metadata, serviceRegistry)
+        } catch (SchemaManagementException e) {
+            reportFailure(e)
+            return false
+        }
 
         if (schemaExport.exceptions) {
             def e = (Exception) schemaExport.exceptions[0]
-            e.printStackTrace()
+            reportFailure(e)
             return false
         }
         return true
+    }
+
+    private static void reportFailure(Exception exception) {
+        if (LOG.errorEnabled) {
+            LOG.error('Unable to export database schema', exception)
+        }
+        else {
+            exception.printStackTrace(System.err)
+        }
     }
 
 }

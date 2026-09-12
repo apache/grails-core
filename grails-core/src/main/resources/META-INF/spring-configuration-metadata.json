@@ -217,6 +217,12 @@
             "defaultValue": true
         },
         {
+            "name": "grails.gorm.defaultIdType",
+            "type": "java.lang.String",
+            "description": "Effective identity type for precompiled plugin domains that declare Serializable id. Accepted values are long and native.",
+            "defaultValue": "long"
+        },
+        {
             "name": "grails.gorm.custom.types",
             "type": "java.util.Map<java.lang.String,java.lang.Object>",
             "description": "Map of custom GORM types.",

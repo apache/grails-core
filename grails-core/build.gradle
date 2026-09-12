@@ -69,7 +69,6 @@ dependencies {
     api 'org.springframework:spring-context'
     api 'org.springframework.boot:spring-boot-autoconfigure'
 
-    compileOnly 'org.springframework:spring-test'
     compileOnly 'org.apache.groovy:groovy-templates'
 
     api project(':grails-common')

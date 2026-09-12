@@ -48,7 +48,6 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.args
 import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.castX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.classX
-import static org.codehaus.groovy.ast.tools.GeneralUtils.param
 import static org.codehaus.groovy.ast.tools.GeneralUtils.propX
 import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.callD
 import static org.grails.datastore.mapping.reflect.AstUtils.varThis
@@ -119,7 +118,7 @@ abstract class AbstractServiceImplementer implements PrefixedServiceImplementer,
      * @return True if it is
      */
     protected boolean isValidParameter(ClassNode domainClassNode, Parameter parameter, String parameterName) {
-        if (GormProperties.IDENTITY.equals(parameterName)) {
+        if (GormProperties.IDENTITY == parameterName) {
             return true
         }
         else {
@@ -149,7 +148,7 @@ abstract class AbstractServiceImplementer implements PrefixedServiceImplementer,
      * @return The datastore expression
      */
     protected Expression multiTenantDatastore() {
-        return castX(ClassHelper.make(MultiTenantCapableDatastore), datastore())
+        return castX(make(MultiTenantCapableDatastore), datastore())
     }
 
     /**
@@ -168,7 +167,7 @@ abstract class AbstractServiceImplementer implements PrefixedServiceImplementer,
 
     protected Expression findConnectionId(MethodNode methodNode) {
         if (TenantTransform.hasTenantAnnotation(methodNode)) {
-            return callD(classX(ClassHelper.make(MultiTenancySettings)), 'resolveConnectionForTenantId', args(
+            return callD(classX(make(MultiTenancySettings)), 'resolveConnectionForTenantId', args(
                 propX(multiTenantDatastore(), 'multiTenancyMode'), callD(tenantService(), 'currentId')
             ))
         }

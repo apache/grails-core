@@ -206,8 +206,9 @@ class EmbeddedMongoInitializerSpec extends Specification {
                 'grails.mongodb.url'              : 'mongodb://embedded:28003/bookstore',
         ])
         new EmbeddedMongoInitializer().initialize(first)
-        EmbeddedMongoLifecycle before = first.beanFactory
-                .getBean(EmbeddedMongoLifecycle.BEAN_NAME, EmbeddedMongoLifecycle)
+        try (MongoClient client = MongoClients.create('mongodb://localhost:28003/bookstore')) {
+            client.getDatabase('bookstore').getCollection('probe').insertOne(new Document('v', 'before'))
+        }
 
         when: 'the reloaded application asks for another version of MongoDB'
         GenericApplicationContext restarted = contextWith([
@@ -218,13 +219,44 @@ class EmbeddedMongoInitializerSpec extends Specification {
         new EmbeddedMongoInitializer().initialize(restarted)
 
         then: 'the server it is given is not the one that was started for the settings before'
-        EmbeddedMongoLifecycle replacement = restarted.beanFactory
-                .getBean(EmbeddedMongoLifecycle.BEAN_NAME, EmbeddedMongoLifecycle)
-        !replacement.is(before)
+        long carriedOver
+        try (MongoClient client = MongoClients.create('mongodb://localhost:28003/bookstore')) {
+            carriedOver = client.getDatabase('bookstore').getCollection('probe').countDocuments()
+        }
+        carriedOver == 0L
         restarted.environment.getProperty('grails.mongodb.url') == 'mongodb://localhost:28003/bookstore'
 
         cleanup:
-        replacement?.stop()
+        restarted.beanFactory.getBean(EmbeddedMongoLifecycle.BEAN_NAME, EmbeddedMongoLifecycle)?.stop()
+    }
+
+    void 'a restart that asks for a different backend is not handed the one already running'() {
+        given: 'a server started by the in-memory backend, holding a document'
+        GenericApplicationContext first = contextWith([
+                (EmbeddedMongoInitializer.BACKEND): InMemoryMongoBackend.NAME,
+                'grails.mongodb.url'              : 'mongodb://embedded:28017/bookstore',
+        ])
+        new EmbeddedMongoInitializer().initialize(first)
+        try (MongoClient client = MongoClients.create('mongodb://localhost:28017/bookstore')) {
+            client.getDatabase('bookstore').getCollection('probe').insertOne(new Document('backend', 'in-memory'))
+        }
+
+        when: 'the reloaded application asks for a real mongod instead, changing nothing else'
+        GenericApplicationContext restarted = contextWith([
+                (EmbeddedMongoInitializer.BACKEND): FlapdoodleMongoBackend.NAME,
+                'grails.mongodb.url'              : 'mongodb://embedded:28017/bookstore',
+        ])
+        new EmbeddedMongoInitializer().initialize(restarted)
+
+        then: 'what answers the url is a server that was started for this backend, not the last one'
+        long carriedOver
+        try (MongoClient client = MongoClients.create('mongodb://localhost:28017/bookstore')) {
+            carriedOver = client.getDatabase('bookstore').getCollection('probe').countDocuments()
+        }
+        carriedOver == 0L
+
+        cleanup:
+        restarted.beanFactory.getBean(EmbeddedMongoLifecycle.BEAN_NAME, EmbeddedMongoLifecycle)?.stop()
     }
 
     void 'the in-memory backend refuses to pretend it can be a replica set'() {

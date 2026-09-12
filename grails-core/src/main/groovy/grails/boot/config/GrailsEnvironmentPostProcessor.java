@@ -18,6 +18,7 @@
  */
 package grails.boot.config;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -34,7 +35,9 @@ import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.EnumerablePropertySource;
 import org.springframework.core.env.MutablePropertySources;
 import org.springframework.core.env.PropertySource;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.ResourcePropertySource;
 
 import org.apache.grails.core.plugins.PluginDiscovery;
 import org.apache.grails.core.plugins.PluginInfo;
@@ -59,6 +62,7 @@ import org.grails.core.exceptions.GrailsConfigurationException;
 public class GrailsEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
 
     private static final Logger LOG = LoggerFactory.getLogger(GrailsEnvironmentPostProcessor.class);
+    private static final String BUILD_INFO_RESOURCE = "META-INF/grails.build.info";
 
     private final ConfigurableBootstrapContext bootstrapContext;
 
@@ -77,6 +81,8 @@ public class GrailsEnvironmentPostProcessor implements EnvironmentPostProcessor,
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         try {
+            loadBuildProperties(environment, new ClassPathResource(BUILD_INFO_RESOURCE,
+                    application.getClassLoader()));
             PluginDiscovery pluginDiscovery = bootstrapContext.get(PluginDiscovery.class);
             if (pluginDiscovery == null) {
                 throw new IllegalStateException("GrailsPluginDiscovery bean not found in bootstrap context");
@@ -89,6 +95,18 @@ public class GrailsEnvironmentPostProcessor implements EnvironmentPostProcessor,
         } catch (Exception e) {
             LOG.error("Error loading Grails plugin configurations early: ", e);
             throw new GrailsConfigurationException("Unable to load Grails Plugins", e);
+        }
+    }
+
+    void loadBuildProperties(ConfigurableEnvironment environment, Resource resource) {
+        if (!resource.exists()) {
+            return;
+        }
+
+        try {
+            environment.getPropertySources().addLast(new ResourcePropertySource("grailsBuildInfo", resource));
+        } catch (IOException e) {
+            LOG.debug("Unable to load Grails build properties: {}", e.getMessage());
         }
     }
 

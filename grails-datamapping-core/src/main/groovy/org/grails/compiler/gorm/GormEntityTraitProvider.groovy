@@ -32,4 +32,21 @@ interface GormEntityTraitProvider {
      * @return Whether this trait provided is available
      */
     boolean isAvailable()
+
+    /**
+     * The identity type injected into an entity mapped with this implementation when the entity does
+     * not declare an {@code id} of its own, and the build has opted into native identity types with
+     * {@code grails { gorm { defaultIdType = 'native' } }}.
+     *
+     * <p>Defaults to {@code Long}, which is what every entity is given when the build has not opted
+     * in. An implementation whose stores generate identifiers of another type overrides this - GORM
+     * for MongoDB returns {@code String}, because a Mongo {@code ObjectId} is generated for a String
+     * id and handed back as its hexadecimal form, with no sequence collection involved.</p>
+     *
+     * @return the default identity type, never {@code null}
+     * @since 8.0
+     */
+    default Class<?> getDefaultIdentityType() {
+        Long
+    }
 }

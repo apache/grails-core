@@ -217,6 +217,28 @@ class BuildSettings {
     public static final String COMPILE_STATIC_GSP_STRICT = 'grails.views.gsp.compileStaticConfig.strict'
 
     /**
+     * A property name that selects the type of the {@code id} GORM injects into an entity that
+     * declares none of its own.
+     *
+     * <p>{@link #GORM_DEFAULT_ID_TYPE_LONG}, the default, gives every entity a {@code Long} id.
+     * {@link #GORM_DEFAULT_ID_TYPE_NATIVE} asks the GORM implementation the entity is mapped with for
+     * its own default, so a Mongo entity is given a {@code String} id while a Hibernate entity keeps
+     * {@code Long}.</p>
+     */
+    public static final String GORM_DEFAULT_ID_TYPE = 'grails.gorm.defaultIdType'
+
+    /**
+     * The {@link #GORM_DEFAULT_ID_TYPE} value that gives every entity a {@code Long} id.
+     */
+    public static final String GORM_DEFAULT_ID_TYPE_LONG = 'long'
+
+    /**
+     * The {@link #GORM_DEFAULT_ID_TYPE} value that defers to the GORM implementation an entity is
+     * mapped with.
+     */
+    public static final String GORM_DEFAULT_ID_TYPE_NATIVE = 'native'
+
+    /**
      * The base directory of the project
      */
     public static final File BASE_DIR

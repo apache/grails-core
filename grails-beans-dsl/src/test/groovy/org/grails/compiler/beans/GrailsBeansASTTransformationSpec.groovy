@@ -2558,6 +2558,138 @@ class GrailsBeansASTTransformationSpec extends Specification {
         thrown(ClassNotFoundException)
     }
 
+    def "a qualified autoConfigurationName generates the sibling in the package it names"() {
+        given: "a descriptor in the package its implementation classes sit beneath, which is where a plugin descriptor goes"
+        String source = '''
+            package com.example
+
+            import grails.compiler.beans.GrailsBeans
+            import grails.plugins.Plugin
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans(autoConfigurationName = 'com.example.web.ExampleAutoConfiguration')
+            @AutoConfiguration
+            class ExampleGrailsPlugin extends Plugin {
+                def beans = {
+                    bean('greeting', String) {
+                        'hello'
+                    }
+                }
+            }
+        '''
+
+        and:
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(source)
+
+        expect: "the class the conversion replaces keeps its qualified name, which is its identity"
+        loader.loadClass('com.example.web.ExampleAutoConfiguration').getDeclaredMethod('greeting') != null
+
+        when: "the plugin's own package is looked in instead"
+        loader.loadClass('com.example.ExampleAutoConfiguration')
+
+        then: "nothing was generated there"
+        thrown(ClassNotFoundException)
+    }
+
+    def "a qualified autoConfigurationName carries the annotations that move to the sibling"() {
+        given:
+        String source = '''
+            package com.example
+
+            import grails.compiler.beans.GrailsBeans
+            import grails.plugins.Plugin
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+            import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication
+
+            @GrailsBeans(autoConfigurationName = 'com.example.web.MovedAutoConfiguration')
+            @AutoConfiguration(beforeName = 'com.example.OtherAutoConfiguration')
+            @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+            class MovedGrailsPlugin extends Plugin {
+                def beans = {
+                    bean('greeting', String) {
+                        'hello'
+                    }
+                }
+            }
+        '''
+
+        and:
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(source)
+        Class<?> sibling = loader.loadClass('com.example.web.MovedAutoConfiguration')
+
+        expect: "naming a package changes where the sibling lands and nothing else about it"
+        sibling.getAnnotation(AutoConfiguration).beforeName().toList() == ['com.example.OtherAutoConfiguration']
+        sibling.isAnnotationPresent(ConditionalOnWebApplication)
+        !loader.loadClass('com.example.MovedGrailsPlugin').isAnnotationPresent(AutoConfiguration)
+    }
+
+    def "a bare autoConfigurationName still names the sibling in the plugin's own package"() {
+        given:
+        String source = '''
+            package com.example
+
+            import grails.compiler.beans.GrailsBeans
+            import grails.plugins.Plugin
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans(autoConfigurationName = 'BareNamed')
+            @AutoConfiguration
+            class BareNamedGrailsPlugin extends Plugin {
+                def beans = {
+                    bean('greeting', String) {
+                        'hello'
+                    }
+                }
+            }
+        '''
+
+        and:
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(source)
+
+        expect:
+        loader.loadClass('com.example.BareNamed').getDeclaredMethod('greeting') != null
+    }
+
+    @Unroll
+    def "a qualified autoConfigurationName with #description is rejected"() {
+        given:
+        String source = """
+            package com.example
+
+            import grails.compiler.beans.GrailsBeans
+            import grails.plugins.Plugin
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans(autoConfigurationName = '$name')
+            @AutoConfiguration
+            class ${simpleName}GrailsPlugin extends Plugin {
+                def beans = {
+                    bean('greeting', String) {
+                        'hello'
+                    }
+                }
+            }
+        """
+
+        when:
+        compile(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('is not a valid name')
+
+        where:
+        description                  | name                         | simpleName
+        'a keyword for a package'    | 'com.int.Example'            | 'KeywordPackage'
+        'a trailing dot'             | 'com.example.'               | 'TrailingDot'
+        'a leading dot'              | '.com.example.Example'       | 'LeadingDot'
+        'an empty part'              | 'com..example.Example'       | 'EmptyPart'
+        'a space in a part'          | 'com.exa mple.Example'       | 'SpacedPart'
+    }
+
     def "autoConfigurationName is rejected on a standalone (non-Plugin) class, where it can have no effect"() {
         given:
         String source = '''

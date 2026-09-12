@@ -51,18 +51,17 @@ dependencies {
     api project(':grails-mimetypes')
     api project(':grails-web-core')
     api project(':grails-converters')
-    api 'org.apache.groovy:groovy'
 
+    api 'org.apache.groovy:groovy'
 
     // needed for Spock
     api 'org.objenesis:objenesis'
 
+    implementation testFixtures(project(':grails-web-common'))
+
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
     compileOnly 'org.jline:jline' // command line requirements
     compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
-    compileOnly 'org.springframework:spring-test', {
-        // MockHttpServletRequest/Response/Context used in many classes
-    }
 
     // Logging
     api 'org.slf4j:slf4j-api'

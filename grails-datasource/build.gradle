@@ -51,9 +51,6 @@ dependencies {
     api project(':grails-core')
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
-    compileOnly 'org.springframework:spring-test', {
-        // MockHttpServletRequest/Response/Context used in many classes
-    }
 
     testImplementation 'com.h2database:h2'
     testImplementation 'jakarta.servlet:jakarta.servlet-api'

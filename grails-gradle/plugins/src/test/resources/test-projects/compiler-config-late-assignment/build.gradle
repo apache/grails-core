@@ -1,0 +1,20 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+gradle.projectsEvaluated {
+    tasks.named('compileGroovy', GroovyCompile).configure {
+        it.groovyOptions.configurationScript = file('user-config.groovy')
+    }
+}
+
+tasks.register('inspectAssign') {
+    dependsOn 'compileGroovy'
+    doLast {
+        def c = tasks.named('compileGroovy', GroovyCompile).get()
+        println "FINAL_CONFIG_SCRIPT=${c.groovyOptions.configurationScript?.name}"
+        def combined = file('build/grailsGroovyCompilerConfig-compileGroovy.groovy')
+        println "COMBINED_EXISTS=${combined.exists()}"
+        println "COMBINED_CONTAINS_USER_IMPORT=${combined.exists() && combined.text.contains(/star 'java.time'/)}"
+    }
+}

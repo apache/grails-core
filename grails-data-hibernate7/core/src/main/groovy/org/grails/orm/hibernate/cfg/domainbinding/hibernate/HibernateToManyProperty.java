@@ -245,15 +245,29 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
                         IndexedCollection.DEFAULT_ELEMENT_COLUMN_NAME);
     }
 
+    /**
+     * Only reached for a unidirectional {@code hasMany} join table (via {@code CollectionWithJoinTableBinder}).
+     * A bidirectional many-to-many join table's foreign-key columns instead go through
+     * {@code DefaultColumnNameFetcher#resolveForeignKeyForPropertyDomainClass}, unaffected by this method.
+     */
     default String resolveJoinTableForeignKeyColumnName(PersistentEntityNamingStrategy namingStrategy) {
         return ofNullable(getHibernateMappedForm())
                 .map(PropertyConfig::getJoinTableColumnConfig)
                 .map(ColumnConfig::getName)
-                .orElseGet(() -> namingStrategy.resolveColumnName(getHibernateAssociatedEntity()
-                                .getHibernateRootEntity()
-                                .getJavaClass()
-                                .getSimpleName()) +
+                .orElseGet(() -> resolveAssociatedEntityTableName(namingStrategy) +
                         GrailsDomainBinder.FOREIGN_KEY_SUFFIX);
+    }
+
+    /**
+     * Resolves the associated root entity's table name for use as a join-table foreign-key column
+     * prefix. The result is a column-identifier fragment, never a literal, quotable SQL identifier -
+     * so the Groovy backtick-quoting convention is always invalid there and must be stripped once
+     * here, rather than trusted to the caller (a prior bug left the foreign key malformed as
+     * {@code `quoted_table`_id}).
+     */
+    default String resolveAssociatedEntityTableName(PersistentEntityNamingStrategy namingStrategy) {
+        return new BackticksRemover().apply(
+                getHibernateAssociatedEntity().getHibernateRootEntity().getTableName(namingStrategy));
     }
 
     default String joinTableColumName(PersistentEntityNamingStrategy namingStrategy) {
@@ -268,8 +282,11 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
             // isn't named after the enum's package.
             columnName = namingStrategy.resolveColumnName(referencedType.getSimpleName());
         } else {
+            // Both callers of joinTableColumName (BasicCollectionElementBinder, EnumTypeBinder) operate on
+            // a HibernateBasicProperty, so referencedType is always the collection's basic element type here,
+            // never an associated entity - resolveAssociatedEntityTableName does not apply to this path.
             var clazz = namingStrategy.resolveColumnName(referencedType.getName());
-            var prop = namingStrategy.resolveTableName(getName());
+            var prop = namingStrategy.resolveColumnName(getName());
             columnName = new BackticksRemover().apply(prop) + UNDERSCORE + new BackticksRemover().apply(clazz);
         }
         return columnName;

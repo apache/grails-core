@@ -50,7 +50,7 @@ Start every Grails 8 upgrade by checking these platform requirements:
 
 - Use JDK 21 or later to build and run ordinary Grails 8 applications.
 - Use JDK 25 or later if the application uses `grails-micronaut`, `micronaut-http-client`, or other Micronaut features.
-- Update the Gradle wrapper to the Grails 8 managed line. Current 8.0.x snapshot docs use Gradle 9.6.0, while milestone docs may show an earlier Gradle 9.x version.
+- Update the Gradle wrapper to the Grails 8 managed line. Current 8.0.x snapshot docs use Gradle 9.7.1, while milestone docs may show an earlier Gradle 9.x version.
 - Expect Spring Boot 4.1.x, Spring Framework 7.0.x, Spring Security 7.1.x, Spring Data 2026.0.x, Micrometer 1.17.x, Jackson 3.1.x, Tomcat 11.0.x, and Jakarta Servlet 6.1.
 - Keep using `jakarta.*` APIs. Do not reintroduce `javax.*` packages.
 - Add `runtimeOnly 'org.springframework.boot:spring-boot-properties-migrator'` temporarily during the migration, boot once, fix reported configuration properties, then remove it.
@@ -227,6 +227,7 @@ GORM behavior changes:
 - Declare `nullable: false` on required domain properties, or set `grails.gorm.default.nullable: false` to restore the previous application-wide default.
 - Command object fields are unaffected and remain required by default.
 - GORM dynamic methods such as `save()`, `delete()`, `get()`, `load()`, and `merge()` are not affected by Hibernate `Session` API removals.
+- The `sort` and `order` arguments of `list()`, dynamic finders, where queries, criteria queries and `listOrderBy*` are validated on both Hibernate versions: `sort` must be a dotted property path that resolves through the mapping (a dotted alias such as `c.name` is still passed through), and `order` must be `asc` or `desc`. Anything else throws `IllegalArgumentException` (`Invalid sort property` / `Invalid sort direction`) instead of being ignored or failing inside Hibernate. On Hibernate 7, `list()` also rejects a `fetch` key that is not a persistent property.
 
 ## Web Layer and Content Negotiation
 

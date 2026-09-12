@@ -216,7 +216,7 @@ public class GrailsFlashScope implements FlashScope {
     private void registerWithSessionIfNecessary() {
         if (registerWithSession) {
             GrailsWebRequest webRequest = (GrailsWebRequest) RequestContextHolder.currentRequestAttributes();
-            HttpSession session = webRequest.getCurrentRequest().getSession(true);
+            HttpSession session = webRequest.getRequest().getSession(true);
             if (session.getAttribute(GrailsApplicationAttributes.FLASH_SCOPE) == null) {
                 session.setAttribute(GrailsApplicationAttributes.FLASH_SCOPE, this);
             }

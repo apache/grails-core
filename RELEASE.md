@@ -142,15 +142,6 @@ After all jar files are verified to be signed by a valid Grails key, we need to 
 
 Further details on the building can be found in the [INSTALL](INSTALL) document.  Otherwise, run the `verify-reproducible.sh` shell script to compare the published jar files to a locally built version of them. 
 
-#### Dual-JDK requirement for the Grails-Micronaut island
-
-Grails 8 release artifacts come from TWO different JDKs and therefore TWO different reproducibility pins:
-
-- **Primary JDK (`$JAVA_VERSION` in `release.yml`, also in `.sdkmanrc` and the primary `FROM` in `etc/bin/Dockerfile`)**: builds every published artifact EXCEPT the Grails-Micronaut "island" (`grails-micronaut`, `grails-micronaut-bom`).
-- **Secondary JDK (`$JAVA_VERSION_MICRONAUT` in `release.yml`, installed alongside the primary in `etc/bin/Dockerfile` and exposed as `$JDK_25_HOME`)**: builds the two Micronaut island artifacts. The Micronaut 5 platform GA targets JVM 25 bytecode, so these two JARs cannot be reproduced on the primary JDK.
-
-The verify script understands both. Inside the verification container, `JDK_25_HOME` is already set so `verify-reproducible.sh` "just works". Outside the container, manual verifiers MUST install Liberica JDK matching `$JAVA_VERSION_MICRONAUT` from `release.yml` (for example via `sdk install java <version>-librca`) and export `JDK_25_HOME=/path/to/jdk25` before running the script - otherwise the script fails fast with a clear error.
-
 If there are any jar file differences, confirm they are relevant by following the following steps: 
 1. Extract the differing jar file using the `etc/bin/extract-build-artifact.sh <jarfilepath from diff.txt>`
 2. In IntelliJ, under `etc/bin/results` there will now be a `firstArtifact` & `secondArtifact` folder. Select them both, right click, and select `Compared Directories`  
@@ -318,18 +309,31 @@ the date you moved the distribution artifacts and report the release.
 
 ### Deploy the release to Grails Forge
 
-Publish the released version to [Grails Forge](https://start.grails.org) using one of the [GCP Deploy Actions](https://github.com/apache/grails-core/actions) available in the `grails-core` repository.
+Publish the released version to [Grails Forge](https://start.grails.org) using [Forge - AWS Elastic Beanstalk Deploy](https://github.com/apache/grails-core/actions/workflows/forge-deploy-aws.yml).
 
-Grails Forge organizes deployments into version slots as follows:
+There is one workflow and two choices: **Use workflow from** (the maintenance branch to build) and **slot**.
 
-- **RELEASE** - Full Final Releases - https://github.com/apache/grails-core/actions/workflows/forge-deploy-release.yml
-- **NEXT** - Milestones and Release Candidate for Next Release (also Next version snapshot prior to Milestone) - https://github.com/apache/grails-core/actions/workflows/forge-deploy-next.yml
-- **SNAPSHOT** - current or next version snapshot - https://github.com/apache/grails-core/actions/workflows/forge-deploy-snapshot.yml
-- **PREV** - previous release version - https://github.com/apache/grails-core/actions/workflows/forge-deploy-prev.yml
-- **PREV-SNAPSHOT** - previous version snapshot - https://github.com/apache/grails-core/actions/workflows/forge-deploy-prev-snapshot.yml
+GitHub registers `workflow_dispatch` inputs from the **default branch**. The new `next-snapshot` and `older` choices appear in that UI only after this change is merged up from `7.0.x` through `7.1.x` / `7.2.x` onto the default line. Until then, dispatch from a maintenance branch that already contains the updated workflow file, or package and upload locally as below.
 
-Use the action whose name matches the slot you want to deploy to.\
-In the **“Run workflow/Use workflow from”** dropdown, choose the release tag you just created.
+| Slot | Host | Typical branch |
+| --- | --- | --- |
+| `latest` | `latest.grails.org` | current release line, for example `7.2.x` |
+| `snapshot` | `snapshot.grails.org` | current snapshot line, for example `8.0.x` |
+| `next` | `next.grails.org` | milestone / RC line |
+| `next-snapshot` | `next-snapshot.grails.org` | next snapshot line, currently `8.0.0-SNAPSHOT` from `8.0.x` |
+| `prev` | `prev.grails.org` | previous release line |
+| `prev-snapshot` | `prev-snapshot.grails.org` | previous snapshot line |
+| `older` | `older.grails.org` | older release, currently `7.0.6` from `7.0.x` |
+
+Do not select a historical git tag in **Use workflow from**. The AWS workflow file is not on old tags. Snapshot slots can deploy from the maintenance branch.
+
+A tagged release that must match an exact tag is packaged locally, then uploaded to Elastic Beanstalk. From a checkout of that tag, copy `grails-forge/grails-forge-web-netty/aws/` from the matching maintenance branch, then from `grails-forge` run:
+
+```bash
+./gradlew grails-forge-web-netty:awsElasticBeanstalk
+```
+
+The bundle is `grails-forge-web-netty/build/distributions/grails-forge-web-netty-aws.zip`. See [AWS Elastic Beanstalk Deployment Runbook](grails-forge/docs/aws-elastic-beanstalk.md).
 
 (The `release` job in the `Release` workflow includes a step titled `🚀 MANUAL - Deploy Grails Forge` that serves as a reminder to perform the deployment described above.)
 
@@ -347,7 +351,7 @@ version from Maven Central.
 
 The last step in the `grails-core` release workflow is to run the `Close Release` step.  This will create a merge branch for the original tag with version number and then open a PR to merge back into the next branch.  You will need to merge this PR into the branch after correcting any merge conflict.
 
-After this PR is merged, deploy the new SNAPSHOT to Forge via: https://github.com/apache/grails-core/actions/workflows/forge-deploy-snapshot.yml
+After this PR is merged, deploy the new SNAPSHOT to Forge via https://github.com/apache/grails-core/actions/workflows/forge-deploy-aws.yml (Use workflow from the snapshot branch, slot `snapshot`).
 
 ### Update the `grails-static-website`
 
@@ -410,11 +414,8 @@ Setup the key for validity:
 The Grails image is officially built on linux in a GitHub action using an Ubuntu container. To run a linux container
 locally, you can use the following command (substitute `<git-tag-of-release>` with the tag name):
 
-The verification container ships with BOTH JDKs needed for full reproducible verification: the primary Liberica JDK
-(`$JAVA_VERSION`, default on `PATH`/`JAVA_HOME`) and the secondary Liberica JDK 25 for the Grails-Micronaut "island"
-(installed at `$JDK_25_HOME`). `verify-reproducible.sh` uses both automatically - no manual JDK switching required
-inside the container. Both pins live in `etc/bin/Dockerfile` and must stay synced with
-`$JAVA_VERSION` / `$JAVA_VERSION_MICRONAUT` in `.github/workflows/release.yml`.
+The verification container uses the Liberica JDK version pinned by the `FROM` instruction in `etc/bin/Dockerfile`.
+Keep that version synchronized with `$JAVA_VERSION` in `.github/workflows/release.yml`.
 
 **macOS/Linux**
 ```bash
@@ -509,14 +510,6 @@ To test reproducibility locally, running etc/bin/test-reproducible-builds.sh wil
 to build the three gradle projects Grails uses. The artifacts are then saved off, and built again. Finally, the hashes
 are generated to ensure the artifacts are the same.
 
-Note that Grails 8 release artifacts come from TWO pinned JDKs: the primary one (used for everything except the
-Grails-Micronaut island) and a secondary Liberica JDK 25 (used only for `grails-micronaut` and `grails-micronaut-bom`,
-because Micronaut 5 platform GA targets JVM 25 bytecode). Both pins live in `.github/workflows/release.yml`
-(`JAVA_VERSION` and `JAVA_VERSION_MICRONAUT` respectively) and are installed side-by-side in `etc/bin/Dockerfile`. The
-verify scripts switch `JAVA_HOME` to `$JDK_25_HOME` for the island and back to the default for everything else. Anyone
-bumping either pin must also bump the matching pin in the Dockerfile so the verification container can reproduce the
-new artifacts.
-
 Some common gotchas with Java build reproducibility problems:
 
 1. Most tools support a `SOURCE_DATE_EPOCH` environment variable that can be set to a fixed time to ensure timestamps
@@ -603,7 +596,7 @@ the following workflows:
 2. `codestyle.yml` - Runs checkstyle on our build to ensure code style requirements are met against any submitted code.
 3. `forge-*.yml` - Workflows to build & publish our public App Generation website.
 4. `gradle.yml` - Our main CI workflow & snapshot publishing.
-5. `groovy-joint-workflow.yml` - A workflow that runs with the latest snapshot of Groovy to ensure we are forward
+5. `groovy-snapshot-canary.yml` - A workflow that runs with the latest snapshot of Groovy to ensure we are forward
    compatible and give the Groovy team early feedback.
 6. `rat.yml` - A workflow that runs the Apache RAT license audit to ensure license compliance. We use the Gradle plugin
    org.nosphere.apache.rat` to perform the audit.

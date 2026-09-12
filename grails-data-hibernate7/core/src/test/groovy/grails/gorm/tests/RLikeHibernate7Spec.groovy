@@ -28,6 +28,8 @@ import spock.lang.Requires
 import spock.lang.Shared
 import spock.lang.Unroll
 
+import java.time.Duration
+
 @Testcontainers
 @Requires({ isDockerAvailable() })
 class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
@@ -35,7 +37,12 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
     @Shared postgres = new PostgreSQLContainer("postgres:16")
     @Shared mysql = new MySQLContainer("mysql:8.0")
     @Shared mariadb = new MariaDBContainer("mariadb:10.11")
+    // slim-faststart ships native ARM64 + x86_64 images and typically reports ready in ~15s,
+    // but the default 60s Testcontainers timeout has been too tight on loaded/emulated CI
+    // runners (testcontainers/testcontainers-java#9057) - a generous explicit timeout avoids
+    // that without slowing down the common case.
     @Shared oracle = new OracleContainer("gvenzl/oracle-free:slim-faststart")
+            .withStartupTimeout(Duration.ofMinutes(3))
 
     void setupSpec() {
         manager.registerDomainClasses(RlikeFoo)
@@ -84,7 +91,7 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
         "Postgres"   | postgres
         "MySQL"      | mysql
         "MariaDB"    | mariadb
-        // "Oracle"     | oracle
+        "Oracle"     | oracle
     }
 }
 

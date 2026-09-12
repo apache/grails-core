@@ -33,6 +33,7 @@ import grails.core.ApplicationAttributes;
 import grails.web.mvc.FlashScope;
 import grails.web.pages.GroovyPagesUriService;
 import org.grails.gsp.ResourceAwareTemplateEngine;
+import org.grails.web.servlet.view.CompositeViewResolver;
 
 /**
  * Defines the names of and methods to retrieve Grails specific request and servlet attributes.
@@ -196,4 +197,18 @@ public interface GrailsApplicationAttributes extends ApplicationAttributes {
      * @return The MessageSource instance
      */
     MessageSource getMessageSource();
+
+    /**
+     * Obtains the {@link CompositeViewResolver} used to resolve the views and templates a controller renders.
+     *
+     * <p>Declared as a default method so that implementations outside the framework keep compiling; the default
+     * resolves the bean on every call, which is what callers did for themselves before this method existed.
+     * {@link org.grails.web.servlet.DefaultGrailsApplicationAttributes} overrides it to resolve the bean once.</p>
+     *
+     * @return The CompositeViewResolver instance
+     * @since 8.0
+     */
+    default CompositeViewResolver getCompositeViewResolver() {
+        return getApplicationContext().getBean(CompositeViewResolver.BEAN_NAME, CompositeViewResolver.class);
+    }
 }

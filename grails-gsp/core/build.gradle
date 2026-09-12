@@ -91,6 +91,7 @@ dependencies {
 //    }
 //    implementation 'org.springframework:spring-context' // ApplicationContext
 //
+    testImplementation testFixtures(project(':grails-core'))
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
     testImplementation project(':grails-web-common') // FlashScope, GrailsWebRequest -- test only, so no cycle

@@ -18,8 +18,9 @@ under the License.
 *@
 
 @import org.grails.forge.application.Project
+@import org.grails.forge.feature.Features
 
-@args (Project project)
+@args (Project project, Features features)
 
 package @project.getPackageName()
 
@@ -38,13 +39,21 @@ class User implements UserDetails {
 
     static hasMany = [roles: String]
 
+@if (features.contains("gorm-mongodb")) {
+    static mapping = {
+        collection 'users'
+    }
+
+} else if (features.contains("gorm-hibernate5") || features.contains("gorm-hibernate7")) {
     static mapping = {
         table 'users'
     }
 
+}
+
     static constraints = {
-        username blank: false, unique: true
-        password blank: false, password: true
+        username nullable: false, blank: false, unique: true
+        password nullable: false, blank: false, password: true
     }
 
     @@Override

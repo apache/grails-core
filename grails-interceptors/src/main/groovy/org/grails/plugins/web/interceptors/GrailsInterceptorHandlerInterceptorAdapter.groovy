@@ -18,7 +18,7 @@
  */
 package org.grails.plugins.web.interceptors
 
-import java.util.function.BooleanSupplier
+import java.util.concurrent.ConcurrentHashMap
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
@@ -54,11 +54,22 @@ class GrailsInterceptorHandlerInterceptorAdapter implements HandlerInterceptor {
 
     private static final Log LOG = LogFactory.getLog(Interceptor)
     private static final String ATTRIBUTE_MATCHED_INTERCEPTORS = 'org.grails.web.MATCHED_INTERCEPTORS'
+    private static final String OBSERVATION_NAME = 'grails.interceptor'
+    private static final String OBSERVATION_CONTEXTUAL_NAME_PREFIX = 'grails.interceptor '
+    private static final String OBSERVATION_PHASE_KEY = 'grails.interceptor.phase'
+    private static final String UNKNOWN_INTERCEPTOR_NAME = 'unknown'
 
     static final String INTERCEPTOR_RENDERED_VIEW = 'interceptor_rendered_view'
 
     protected List<Interceptor> interceptors = []
     protected List<Interceptor> reverseInterceptors = []
+
+    /**
+     * Caches the logical interceptor name per interceptor class, so that it is derived once rather
+     * than on every observed callback. Held per adapter instance (the adapter is an application
+     * singleton) so the cached class references die with the application context.
+     */
+    private final Map<Class<?>, String> logicalInterceptorNames = new ConcurrentHashMap<>()
 
     @Autowired(required = false)
     ServiceRegistry[] serviceRegistry // inject the service registry to ensure data services are wired up
@@ -84,10 +95,10 @@ class GrailsInterceptorHandlerInterceptorAdapter implements HandlerInterceptor {
         if (!interceptors.isEmpty()) {
             List<Interceptor> matchInterceptors = []
             request.setAttribute(ATTRIBUTE_MATCHED_INTERCEPTORS, matchInterceptors)
-            for (i in interceptors) {
+            for (Interceptor i in interceptors) {
                 if (i.doesMatch(request)) {
                     matchInterceptors.add(i)
-                    if (!observe(i, 'before', { -> i.before() } as BooleanSupplier)) {
+                    if (!observe(i, Phase.BEFORE)) {
                         return false
                     }
                 }
@@ -104,10 +115,11 @@ class GrailsInterceptorHandlerInterceptorAdapter implements HandlerInterceptor {
                 request.setAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW, modelAndView)
             }
 
-            List<Interceptor> reversedInterceptors = ((List<Interceptor>) matchedInterceptorsObject).reverse()
+            List<Interceptor> reversedInterceptors = (List<Interceptor>) matchedInterceptorsObject
+            Collections.reverse(reversedInterceptors)
             request.setAttribute(ATTRIBUTE_MATCHED_INTERCEPTORS, reversedInterceptors)
-            for (i in reversedInterceptors) {
-                if (!observe(i, 'after', { -> i.after() } as BooleanSupplier)) {
+            for (Interceptor i in reversedInterceptors) {
+                if (!observe(i, Phase.AFTER)) {
                     if (request.getAttribute(INTERCEPTOR_RENDERED_VIEW)) {
                         ModelAndView interceptorsModelAndView = i.modelAndView
                         modelAndView.viewName = interceptorsModelAndView.viewName
@@ -131,7 +143,7 @@ class GrailsInterceptorHandlerInterceptorAdapter implements HandlerInterceptor {
         request.setAttribute(Matcher.THROWABLE, ex)
         Object matchedInterceptorsObject = request.getAttribute(ATTRIBUTE_MATCHED_INTERCEPTORS)
         if (matchedInterceptorsObject) {
-            for (i in ((List<Interceptor>) matchedInterceptorsObject)) {
+            for (Interceptor i in ((List<Interceptor>) matchedInterceptorsObject)) {
                 i.afterView()
             }
         }
@@ -139,22 +151,22 @@ class GrailsInterceptorHandlerInterceptorAdapter implements HandlerInterceptor {
 
     /**
      * Records a {@code grails.interceptor} span around a single interceptor callback, preserving its
-     * boolean result and control flow. No-op (runs the callback directly) when observation is disabled.
+     * boolean result and control flow. No-op (invokes the callback directly) when observation is disabled.
      */
-    private boolean observe(Interceptor interceptor, String phase, BooleanSupplier action) {
+    private boolean observe(Interceptor interceptor, Phase phase) {
         var registry = this.observationRegistry
         if (registry == null || registry.isNoop()) {
-            return action.getAsBoolean()
+            return phase.invoke(interceptor)
         }
-        var name = GrailsNameUtils.getLogicalPropertyName(interceptor.getClass().name, 'Interceptor') ?: 'unknown'
-        var observation = Observation.createNotStarted('grails.interceptor', registry)
-                .contextualName('grails.interceptor ' + name)
-                .lowCardinalityKeyValue('grails.interceptor', name)
-                .lowCardinalityKeyValue('grails.interceptor.phase', phase ?: 'unknown')
+        var name = logicalNameOf(interceptor)
+        var observation = Observation.createNotStarted(OBSERVATION_NAME, registry)
+                .contextualName(OBSERVATION_CONTEXTUAL_NAME_PREFIX + name)
+                .lowCardinalityKeyValue(OBSERVATION_NAME, name)
+                .lowCardinalityKeyValue(OBSERVATION_PHASE_KEY, phase.tag)
                 .start()
         var scope = observation.openScope()
         try {
-            return action.getAsBoolean()
+            return phase.invoke(interceptor)
         }
         catch (Throwable t) {
             observation.error(t)
@@ -163,6 +175,41 @@ class GrailsInterceptorHandlerInterceptorAdapter implements HandlerInterceptor {
         finally {
             scope.close()
             observation.stop()
+        }
+    }
+
+    /**
+     * Returns the logical name reported for the given interceptor, deriving it at most once per
+     * interceptor class.
+     */
+    private String logicalNameOf(Interceptor interceptor) {
+        Class<?> interceptorClass = interceptor.getClass()
+        String name = this.logicalInterceptorNames.get(interceptorClass)
+        if (name == null) {
+            name = GrailsNameUtils.getLogicalPropertyName(interceptorClass.name, 'Interceptor') ?: UNKNOWN_INTERCEPTOR_NAME
+            this.logicalInterceptorNames.put(interceptorClass, name)
+        }
+        name
+    }
+
+    /**
+     * The interceptor callback being invoked. Dispatching through this enum keeps the observation
+     * plumbing shared between the two phases without a per-call callback object having to be
+     * allocated for every matched interceptor on every request.
+     */
+    private enum Phase {
+
+        BEFORE('before'),
+        AFTER('after')
+
+        final String tag
+
+        Phase(String tag) {
+            this.tag = tag
+        }
+
+        boolean invoke(Interceptor interceptor) {
+            this.is(BEFORE) ? interceptor.before() : interceptor.after()
         }
     }
 }

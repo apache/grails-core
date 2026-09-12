@@ -109,6 +109,39 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
     public static final AnnotationNode JPA_TRANSIENT_ANNOTATION_NODE = new AnnotationNode(ClassHelper.make(Transient))
 
     private static final String CREATE_NAMED_QUERY = 'createNamedQuery'
+
+    /**
+     * The system property, published by the Grails Gradle plugin from
+     * {@code grails { gorm { defaultIdType = '...' } }}, that selects the type of the {@code id}
+     * property injected into an entity that declares none of its own.
+     *
+     * <p>{@link #DEFAULT_ID_TYPE_LONG}, the default, injects {@code Long} for every entity as every
+     * earlier release did. {@link #DEFAULT_ID_TYPE_NATIVE} asks the GORM implementation the entity is
+     * mapped with for its own default, through
+     * {@link GormEntityTraitProvider#getDefaultIdentityType()}, so a Mongo entity is given a
+     * {@code String} id while a Hibernate entity keeps {@code Long}.</p>
+     *
+     * <p>An entity that declares an {@code id} keeps the type it declares either way.</p>
+     *
+     * @since 8.0
+     */
+    public static final String DEFAULT_ID_TYPE_PROPERTY = 'grails.gorm.defaultIdType'
+
+    /**
+     * The {@link #DEFAULT_ID_TYPE_PROPERTY} value that gives every entity a {@code Long} id. The
+     * default where the property is unset.
+     *
+     * @since 8.0
+     */
+    public static final String DEFAULT_ID_TYPE_LONG = 'long'
+
+    /**
+     * The {@link #DEFAULT_ID_TYPE_PROPERTY} value that defers to the GORM implementation the entity is
+     * mapped with.
+     *
+     * @since 8.0
+     */
+    public static final String DEFAULT_ID_TYPE_NATIVE = 'native'
     private static ClassNode GORM_ENTITY_CLASS_NODE = ClassHelper.make(GormEntity)
     private static MethodNode ADD_TO_METHOD_NODE = GORM_ENTITY_CLASS_NODE.getMethods('addTo').get(0)
     private static MethodNode REMOVE_FROM_METHOD_NODE = GORM_ENTITY_CLASS_NODE.getMethods('removeFrom').get(0)
@@ -210,9 +243,14 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
         def rxEntityClassNode = AstUtils.findInterface(classNode, 'grails.gorm.rx.RxEntity')
         boolean isRxEntity = rxEntityClassNode != null
 
+        // Resolved once, and only where it was already being resolved: the same provider decides both
+        // the injected identity type and the entity trait, so the two cannot disagree. An RX entity
+        // picks no trait, so it resolves nothing and keeps the Long id it has always been given.
+        GormEntityTraitProvider traitProvider = isRxEntity ? null : resolveTraitProvider(classNode, sourceUnit)
+
         if (!isJpaEntity) {
             // Add default id
-            injectIdProperty(classNode)
+            injectIdProperty(classNode, sourceUnit, traitProvider)
         }
 
         if (!isRxEntity && !isJpaEntity) {
@@ -231,7 +269,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
         MethodNode getAssociationMethodNode = GET_ASSOCIATION_ID_METHOD_NODE
 
         if (!isRxEntity) {
-            def classGormEntityTrait = pickGormEntityTrait(classNode, sourceUnit)
+            Class<?> classGormEntityTrait = traitProvider?.entityTrait ?: GormEntity
             AstUtils.injectTrait(classNode, classGormEntityTrait)
         } else {
             addToMethodNode = rxEntityClassNode.getMethods('addTo').get(0)
@@ -388,40 +426,45 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
         classNode.putNodeMetaData(AstUtils.TRANSFORM_APPLIED_MARKER, APPLIED_MARKER)
     }
 
-    protected Class pickGormEntityTrait(ClassNode classNode, SourceUnit source) {
+    /**
+     * Resolves, at compile time, the GORM implementation an entity is mapped with, from the entity's
+     * {@code mapWith} property and the {@link GormEntityTraitProvider}s on the compilation classpath.
+     *
+     * <p>The result decides both the entity trait the class is given and, where the build has opted
+     * into native identity types, the type of the injected {@code id}.</p>
+     *
+     * @param classNode the entity
+     * @param source the source unit, warned against where the implementation is ambiguous
+     * @return the provider for the implementation, or {@code null} where none applies and the entity
+     *         falls back to the datastore-neutral {@link GormEntity} trait and a {@code Long} id
+     * @since 8.0
+     */
+    protected GormEntityTraitProvider resolveTraitProvider(ClassNode classNode, SourceUnit source) {
         def classLoader = getClass().classLoader
 
         // first try the `mapWithValue`
         def mapWith = AstUtils.getPropertyFromHierarchy(classNode, GormProperties.MAPPING_STRATEGY)
         String mapWithValue = mapWith?.initialExpression?.text
-        Class gormEntityTrait = null
         boolean isHibernatePresent = isHibernatePresent(classLoader)
         if (isHibernatePresent && mapWithValue == null) {
-            gormEntityTrait = GormEntity
-        } else {
-            List<GormEntityTraitProvider> allTraitProviders = findTraitProviders(GormEntityTraitProvider, classLoader)
-            if (allTraitProviders.isEmpty()) {
-                gormEntityTrait = GormEntity
-            } else {
-                if (mapWithValue == null) {
-                    if (allTraitProviders.size() > 1) {
-                        AstUtils.warning(source, classNode, 'There are multiple GORM implementations on the classpath. GORM cannot choose automatically which implementation to use. Please use \'mapWith\' on your entity to avoid this conflict and warning.')
-                        gormEntityTrait = GormEntity
-                    } else {
-                        gormEntityTrait = allTraitProviders.get(0).entityTrait
-                    }
-                } else {
-                    def mapWithDatastore = NameUtils.capitalize(mapWithValue)
-                    def candidate = allTraitProviders.find() { GormEntityTraitProvider provider -> provider.entityTrait?.simpleName?.startsWith(mapWithDatastore) }
-                    if (candidate != null) {
-                        gormEntityTrait = candidate.entityTrait
-                    } else {
-                        gormEntityTrait = GormEntity
-                    }
-                }
-            }
+            return null
         }
-        return gormEntityTrait
+
+        List<GormEntityTraitProvider> allTraitProviders = findTraitProviders(GormEntityTraitProvider, classLoader)
+        if (allTraitProviders.isEmpty()) {
+            return null
+        }
+
+        if (mapWithValue == null) {
+            if (allTraitProviders.size() > 1) {
+                AstUtils.warning(source, classNode, 'There are multiple GORM implementations on the classpath. GORM cannot choose automatically which implementation to use. Please use \'mapWith\' on your entity to avoid this conflict and warning.')
+                return null
+            }
+            return allTraitProviders.get(0)
+        }
+
+        String mapWithDatastore = NameUtils.capitalize(mapWithValue)
+        allTraitProviders.find { GormEntityTraitProvider provider -> provider.entityTrait?.simpleName?.startsWith(mapWithDatastore) }
     }
 
     @Memoized
@@ -462,15 +505,45 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
         }
     }
 
-    protected void injectIdProperty(ClassNode classNode) {
+    protected void injectIdProperty(ClassNode classNode, SourceUnit sourceUnit, GormEntityTraitProvider traitProvider) {
         final boolean hasId = AstUtils.hasOrInheritsProperty(classNode, GormProperties.IDENTITY)
 
         if (!hasId) {
             // inject into furthest relative
             ClassNode parent = AstUtils.getFurthestUnresolvedParent(classNode)
 
-            parent.addProperty(GormProperties.IDENTITY, Modifier.PUBLIC, new ClassNode(Long), null, null, null)
+            Class<?> identityType = resolveIdentityType(classNode, sourceUnit, traitProvider)
+            parent.addProperty(GormProperties.IDENTITY, Modifier.PUBLIC, new ClassNode(identityType), null, null, null)
         }
+    }
+
+    /**
+     * The type of the {@code id} injected into an entity that declares none.
+     *
+     * <p>{@code Long} unless the build opted into native identity types through
+     * {@link #DEFAULT_ID_TYPE_PROPERTY}, in which case the GORM implementation the entity is mapped
+     * with supplies its own default. An entity that resolved to no implementation - because several
+     * are on the classpath and it does not say which it means, or because it is mapped with Hibernate
+     * - keeps {@code Long}.</p>
+     *
+     * @param classNode the entity
+     * @param sourceUnit the source unit, warned against where the property states a value that is not
+     *        recognised
+     * @param traitProvider the resolved implementation, or {@code null} where none applies
+     * @return the identity type, never {@code null}
+     * @since 8.0
+     */
+    protected Class<?> resolveIdentityType(ClassNode classNode, SourceUnit sourceUnit, GormEntityTraitProvider traitProvider) {
+        String configured = System.getProperty(DEFAULT_ID_TYPE_PROPERTY, DEFAULT_ID_TYPE_LONG)
+        if (DEFAULT_ID_TYPE_LONG.equalsIgnoreCase(configured)) {
+            return Long
+        }
+        if (!DEFAULT_ID_TYPE_NATIVE.equalsIgnoreCase(configured)) {
+            AstUtils.warning(sourceUnit, classNode, "Unrecognised value [$configured] for $DEFAULT_ID_TYPE_PROPERTY. " +
+                    "Expected '$DEFAULT_ID_TYPE_LONG' or '$DEFAULT_ID_TYPE_NATIVE'. Injecting a Long id.")
+            return Long
+        }
+        traitProvider?.defaultIdentityType ?: Long
     }
 
     private void injectAssociationsForJpaEntity(ClassNode classNode, MethodNode addToMethodNode, MethodNode removeFromMethodNode, MethodNode getAssociationMethodNode) {

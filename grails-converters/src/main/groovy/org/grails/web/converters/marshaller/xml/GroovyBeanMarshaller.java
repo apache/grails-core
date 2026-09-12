@@ -32,6 +32,7 @@ import grails.converters.XML;
 import grails.persistence.Entity;
 import grails.persistence.PersistenceMethod;
 import grails.web.controllers.ControllerMethod;
+import org.apache.grails.common.reflect.ReflectionUtils;
 import org.grails.core.util.IncludeExcludeSupport;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.web.converters.exceptions.ConverterException;
@@ -50,6 +51,7 @@ public class GroovyBeanMarshaller extends IncludeExcludePropertyMarshaller<XML> 
     public void marshalObject(Object o, XML xml) throws ConverterException {
         try {
             Class<? extends Object> clazz = o.getClass();
+            ReflectionUtils.warnOnNonPublicClass(clazz);
             List<String> excludes = xml.getExcludes(clazz);
             List<String> includes = xml.getIncludes(clazz);
             IncludeExcludeSupport<String> includeExcludeSupport = new IncludeExcludeSupport<>();
@@ -66,7 +68,8 @@ public class GroovyBeanMarshaller extends IncludeExcludePropertyMarshaller<XML> 
                     if (Modifier.isStatic(readMethod.getModifiers())) continue;
                     if (readMethod.getAnnotation(PersistenceMethod.class) != null) continue;
                     if (readMethod.getAnnotation(ControllerMethod.class) != null) continue;
-                    Object value = readMethod.invoke(o, (Object[]) null);
+                    Method invokable = ReflectionUtils.resolveInvokableReadMethod(readMethod, clazz, o);
+                    Object value = invokable.invoke(o, (Object[]) null);
                     xml.startNode(name);
                     xml.convertAnother(value);
                     xml.end();
@@ -74,10 +77,11 @@ public class GroovyBeanMarshaller extends IncludeExcludePropertyMarshaller<XML> 
             }
             for (Field field : o.getClass().getDeclaredFields()) {
                 int modifiers = field.getModifiers();
-                if (Modifier.isPublic(modifiers) && !(Modifier.isStatic(modifiers) || Modifier.isTransient(modifiers))) {
+                if (Modifier.isPublic(modifiers) && !(Modifier.isStatic(modifiers) || Modifier.isTransient(modifiers)) && !field.isSynthetic()) {
                     String name = field.getName();
                     if (!shouldInclude(includeExcludeSupport, includes, excludes, o, name)) continue;
                     if (isEntity && (name.equals(GormProperties.ATTACHED) || name.equals(GormProperties.ERRORS))) continue;
+                    if (!ReflectionUtils.tryMakeReadable(field, o)) continue;
                     xml.startNode(name);
                     xml.convertAnother(field.get(o));
                     xml.end();

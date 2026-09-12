@@ -17,7 +17,12 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Although generally testing can be done using functional tests via an HTTP client, the JSON views plugin also provides a trait which helps in writing either unit or integration tests.
+Although generally testing can be done using functional tests via an HTTP client, the JSON views plugin also provides a trait which helps in writing either unit or integration tests. Add the `org.apache.grails:grails-views-gson` test-fixtures dependency to use this trait:
+
+[source,groovy]
+dependencies {
+    testImplementation testFixtures('org.apache.grails:grails-views-gson')
+}
 
 To use the trait import the `grails.plugin.json.view.test.JsonViewTest` class and apply it to any Spock or JUnit test:
 

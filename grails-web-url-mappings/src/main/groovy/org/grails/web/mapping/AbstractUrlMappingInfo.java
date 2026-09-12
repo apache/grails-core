@@ -34,6 +34,7 @@ import org.springframework.web.util.UriUtils;
 import grails.util.GrailsStringUtils;
 import grails.web.mapping.UrlMappingInfo;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
+import org.grails.web.util.HiddenHttpMethod;
 
 /**
  * Abstract super class providing pass functionality for configuring a UrlMappingInfo.
@@ -120,6 +121,9 @@ public abstract class AbstractUrlMappingInfo implements UrlMappingInfo {
         if (value instanceof CharSequence) {
             return value.toString().trim();
         }
+        else if (value instanceof RuntimeConstraintEvaluator) {
+            return evaluateCapturedName((RuntimeConstraintEvaluator) value);
+        }
         else {
             GrailsWebRequest webRequest = (GrailsWebRequest) RequestContextHolder.getRequestAttributes();
             return evaluateNameForValue(value, webRequest);
@@ -129,6 +133,10 @@ public abstract class AbstractUrlMappingInfo implements UrlMappingInfo {
     protected String evaluateNameForValue(Object value, GrailsWebRequest webRequest) {
         if (value == null) {
             return null;
+        }
+
+        if (value instanceof RuntimeConstraintEvaluator) {
+            return evaluateCapturedName((RuntimeConstraintEvaluator) value);
         }
 
         String name;
@@ -142,12 +150,26 @@ public abstract class AbstractUrlMappingInfo implements UrlMappingInfo {
         }
         else if (value instanceof Map) {
             Map httpMethods = (Map) value;
-            name = (String) httpMethods.get(webRequest.getCurrentRequest().getMethod());
+            name = (String) httpMethods.get(HiddenHttpMethod.effectiveMethod(webRequest.getRequest()));
         }
         else {
             name = value.toString();
         }
         return name != null ? name.trim() : null;
+    }
+
+    /**
+     * Resolves a name the mapping captured from the URI - the {@code $controller} token of
+     * {@code "/$controller/$action?"}, for example - from this instance's own parameters, so that the
+     * answer depends only on the mapping and the URI that matched it and not on what the current
+     * request happens to carry.
+     *
+     * @param evaluator The evaluator held by the mapping for the token
+     * @return The captured value, or null if the URI did not supply one
+     */
+    private String evaluateCapturedName(RuntimeConstraintEvaluator evaluator) {
+        Object value = params.get(evaluator.getConstraintName());
+        return value != null ? value.toString().trim() : null;
     }
 
     /**
