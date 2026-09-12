@@ -1,0 +1,120 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+import org.springframework.boot.gradle.tasks.bundling.BootJar
+
+plugins {
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.gradle.grails-web'
+    id 'org.apache.grails.buildsrc.compile'
+}
+
+version = projectVersion
+group = 'org.apache.grails.forge'
+
+grails {
+    cliAutoProvision = false
+}
+
+dependencies {
+    implementation platform("org.apache.grails:grails-bom:$projectVersion")
+    implementation project(':grails-forge-api')
+    implementation project(':grails-forge-core')
+    implementation 'org.apache.grails:grails-dependencies-starter-web'
+    implementation 'org.apache.grails:grails-converters'
+    implementation 'org.springframework.boot:spring-boot-starter-tomcat'
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    runtimeOnly 'ch.qos.logback:logback-classic'
+
+    testImplementation 'org.apache.grails:grails-testing-support-web'
+    testImplementation 'org.apache.groovy:groovy'
+    testImplementation 'org.spockframework:spock-core'
+    testImplementation 'org.springframework:spring-test'
+}
+
+tasks.named('bootJar', BootJar).configure {
+    archiveClassifier.set('all')
+    mainClass.set('org.grails.forge.web.Application')
+}
+
+TaskProvider<Zip> awsElasticBeanstalk = tasks.register('awsElasticBeanstalk', Zip) {
+    dependsOn('bootJar')
+    archiveFileName.set('grails-forge-web-aws.zip')
+    destinationDirectory.set(layout.buildDirectory.dir('distributions'))
+    reproducibleFileOrder = true
+    preserveFileTimestamps = false
+
+    from({ tasks.named('bootJar').get().archiveFile.get() }) {
+        rename { 'app.jar' }
+    }
+    from(layout.projectDirectory.dir('aws')) {
+        includeEmptyDirs = false
+    }
+
+    doLast {
+        File zipFile = archiveFile.get().asFile
+        Set<String> names = [] as Set
+        new java.util.zip.ZipFile(zipFile).withCloseable { java.util.zip.ZipFile zip ->
+            zip.entries().each { java.util.zip.ZipEntry entry ->
+                names.add(entry.name)
+            }
+            java.util.zip.ZipEntry appJarEntry = zip.getEntry('app.jar')
+            if (appJarEntry == null) {
+                throw new GradleException("${zipFile.name} is missing app.jar")
+            }
+            File appJar = layout.buildDirectory.file('tmp/aws-app.jar').get().asFile
+            appJar.parentFile.mkdirs()
+            zip.getInputStream(appJarEntry).withStream { InputStream input ->
+                appJar.withOutputStream { OutputStream output ->
+                    output << input
+                }
+            }
+            boolean executable = false
+            new java.util.zip.ZipFile(appJar).withCloseable { java.util.zip.ZipFile jar ->
+                java.util.zip.ZipEntry manifestEntry = jar.getEntry('META-INF/MANIFEST.MF')
+                if (manifestEntry != null) {
+                    java.util.jar.Manifest manifest = new java.util.jar.Manifest(jar.getInputStream(manifestEntry))
+                    String mainClass = manifest.mainAttributes.getValue('Main-Class')
+                    String startClass = manifest.mainAttributes.getValue('Start-Class')
+                    executable = mainClass != null &&
+                            (mainClass.contains('JarLauncher') || mainClass == 'org.grails.forge.web.Application' || startClass == 'org.grails.forge.web.Application')
+                }
+            }
+            if (!executable) {
+                throw new GradleException("${zipFile.name} app.jar is not an executable Spring Boot jar")
+            }
+        }
+        ['app.jar', 'Procfile', 'start.sh'].each { String required ->
+            if (!names.contains(required)) {
+                throw new GradleException("${zipFile.name} is missing ${required}")
+            }
+        }
+    }
+}
+
+tasks.named('assemble') {
+    dependsOn(awsElasticBeanstalk)
+}
+
+apply from: rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
+apply from: rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+
+dependencies {
+    checkstyle "io.spring.nohttp:nohttp-checkstyle:$nohttpGradleVersion"
+}

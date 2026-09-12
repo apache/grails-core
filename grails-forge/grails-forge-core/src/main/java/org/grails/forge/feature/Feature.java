@@ -18,12 +18,8 @@
  */
 package org.grails.forge.feature;
 
-import io.micronaut.core.annotation.Indexed;
-import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.annotation.Nullable;
-import io.micronaut.core.naming.Described;
-import io.micronaut.core.naming.Named;
-import io.micronaut.core.order.Ordered;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 
@@ -37,16 +33,14 @@ import org.grails.forge.application.generator.GeneratorContext;
  * @author James Kleeh
  * @since 6.0.0
  */
-@Indexed(Feature.class)
-public interface Feature extends Named, Ordered, Described {
+public interface Feature {
 
     /**
      * The name of the feature. It must be unique.
      *
      * @return the name of the feature
      */
-    @NonNull
-    @Override
+    @Nonnull
     String getName();
 
     /**
@@ -70,7 +64,6 @@ public interface Feature extends Named, Ordered, Described {
         return getName();
     }
 
-    @Override
     default String getDescription() {
         return getName();
     }

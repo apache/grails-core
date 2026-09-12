@@ -18,8 +18,7 @@
  */
 package org.grails.forge.application.generator;
 
-import io.micronaut.context.annotation.DefaultImplementation;
-import io.micronaut.core.annotation.Nullable;
+import jakarta.annotation.Nullable;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.OperatingSystem;
 import org.grails.forge.application.Project;
@@ -29,7 +28,6 @@ import org.grails.forge.options.Options;
 
 import java.util.List;
 
-@DefaultImplementation(DefaultProjectGenerator.class)
 public interface ProjectGenerator {
 
     void generate(ApplicationType applicationType,

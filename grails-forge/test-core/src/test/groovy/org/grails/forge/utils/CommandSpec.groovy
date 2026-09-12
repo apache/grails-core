@@ -15,8 +15,8 @@
  */
 package org.grails.forge.utils
 
-import io.micronaut.context.ApplicationContext
-import io.micronaut.core.util.functional.ThrowingSupplier
+import org.grails.forge.ForgeContexts
+import org.grails.forge.util.ThrowingSupplier
 import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.GradleRunner
 import org.grails.forge.application.ApplicationType
@@ -44,7 +44,7 @@ abstract class CommandSpec extends Specification {
 
     @Shared
     @AutoCleanup
-    ApplicationContext applicationContext
+    org.springframework.context.ApplicationContext applicationContext
 
     @Shared
     GradleRunner gradleRunner = GradleRunner.create()
@@ -56,7 +56,7 @@ abstract class CommandSpec extends Specification {
     File dir
 
     void setupSpec() {
-        applicationContext = ApplicationContext.run(getConfiguration())
+        applicationContext = ForgeContexts.create(getConfiguration())
         testKit = Files.createTempDirectory("${tempDirectoryPrefix}TestKit").toFile()
         gradleRunner.withTestKitDir(testKit)
     }

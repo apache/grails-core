@@ -327,13 +327,13 @@ GitHub registers `workflow_dispatch` inputs from the **default branch**. The new
 
 Do not select a historical git tag in **Use workflow from**. The AWS workflow file is not on old tags. Snapshot slots can deploy from the maintenance branch.
 
-A tagged release that must match an exact tag is packaged locally, then uploaded to Elastic Beanstalk. From a checkout of that tag, copy `grails-forge/grails-forge-web-netty/aws/` from the matching maintenance branch, then from `grails-forge` run:
+A tagged release that must match an exact tag is packaged locally, then uploaded to Elastic Beanstalk. From a checkout of that tag, copy `grails-forge/grails-forge-web/aws/` from the matching maintenance branch, then from `grails-forge` run:
 
 ```bash
-./gradlew grails-forge-web-netty:awsElasticBeanstalk
+./gradlew grails-forge-web:awsElasticBeanstalk
 ```
 
-The bundle is `grails-forge-web-netty/build/distributions/grails-forge-web-netty-aws.zip`. See [AWS Elastic Beanstalk Deployment Runbook](grails-forge/docs/aws-elastic-beanstalk.md).
+The bundle is `grails-forge-web/build/distributions/grails-forge-web-aws.zip`. See [AWS Elastic Beanstalk Deployment Runbook](grails-forge/docs/aws-elastic-beanstalk.md).
 
 (The `release` job in the `Release` workflow includes a step titled `🚀 MANUAL - Deploy Grails Forge` that serves as a reminder to perform the deployment described above.)
 

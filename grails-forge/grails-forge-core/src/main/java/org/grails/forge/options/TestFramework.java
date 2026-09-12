@@ -18,7 +18,7 @@
  */
 package org.grails.forge.options;
 
-import io.micronaut.core.annotation.NonNull;
+import jakarta.annotation.Nonnull;
 
 import java.util.Collections;
 import java.util.List;
@@ -34,7 +34,7 @@ public enum TestFramework {
         return this.name().toLowerCase();
     }
 
-    @NonNull
+    @Nonnull
     public String getName() {
         return name().toLowerCase(Locale.ENGLISH);
     }

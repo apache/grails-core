@@ -19,7 +19,6 @@
 
 package org.grails.forge.cli.command
 
-import io.micronaut.configuration.picocli.PicocliRunner
 import org.grails.forge.cli.CodeGenConfig
 import org.grails.forge.utils.CommandSpec
 import spock.lang.Ignore
@@ -30,13 +29,14 @@ class CreateServiceSpec extends CommandSpec {
     void "test create-service command"() {
         when:
         generateProjectWithDefaults()
-        applicationContext.createBean(CodeGenConfig.class, new CodeGenConfig())
+        applicationContext.beanFactory.registerSingleton(CodeGenConfig.name, new CodeGenConfig())
+        applicationContext.registerBean(CreateServiceCommand)
 
         then:
         applicationContext.getBean(CodeGenConfig.class)
 
         when:
-        PicocliRunner.run(CreateServiceCommand.class, applicationContext, "Test")
+        org.grails.forge.cli.CliRunner.run(CreateServiceCommand.class, applicationContext, "Test")
 
         then:
         new File(dir, "grails-app/controllers/example/grails/TestService.groovy").exists()

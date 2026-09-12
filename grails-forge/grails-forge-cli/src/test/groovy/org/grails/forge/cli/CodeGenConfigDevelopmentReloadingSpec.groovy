@@ -19,9 +19,8 @@
 
 package org.grails.forge.cli
 
-import io.micronaut.context.ApplicationContext
-import io.micronaut.context.env.Environment
 import org.grails.forge.io.ConsoleOutput
+import org.springframework.context.ApplicationContext
 import spock.lang.Specification
 import spock.lang.TempDir
 import spock.lang.Unroll
@@ -36,7 +35,7 @@ class CodeGenConfigDevelopmentReloadingSpec extends Specification {
     ApplicationContext beanContext
 
     def setup() {
-        beanContext = ApplicationContext.run(Environment.CLI)
+        beanContext = org.grails.forge.ForgeContexts.create()
     }
 
     def cleanup() {
@@ -208,10 +207,9 @@ features: []
         CodeGenConfig config = CodeGenConfig.load(beanContext, tempDir.toFile(), consoleOutput)
 
         then:
-        // YAML deserialization is case-sensitive and requires lowercase enum names  
-        // Uppercase like "DevTools" will cause a ConversionErrorException
-        // This documents the YAML format requirement: reloading: devtools (lowercase)
-        thrown(io.micronaut.core.convert.exceptions.ConversionErrorException)
+        // Enum.valueOf is case-sensitive. Values like "DevTools" do not match DEVTOOLS.
+        // This documents the YAML format requirement: reloading: devtools
+        thrown(IllegalArgumentException)
     }
 
     void "test reloading field preserved through round-trip serialization"() {

@@ -18,7 +18,7 @@
  */
 package org.grails.forge.feature.grails;
 
-import jakarta.inject.Singleton;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.feature.DefaultFeature;
@@ -29,7 +29,7 @@ import org.grails.forge.feature.grails.templates.urlMappings;
 
 import java.util.Set;
 
-@Singleton
+@Component
 public class GrailsUrlMappings implements DefaultFeature {
 
     @Override

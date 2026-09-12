@@ -18,7 +18,7 @@
  */
 package org.grails.forge.options;
 
-import io.micronaut.core.annotation.NonNull;
+import jakarta.annotation.Nonnull;
 
 /**
  * Servlet Implementation.
@@ -42,12 +42,12 @@ public enum ServletImpl {
         this.label = label;
     }
 
-    @NonNull
+    @Nonnull
     public String getName() {
         return featureName;
     }
 
-    @NonNull
+    @Nonnull
     public String getLabel() {
         return label;
     }

@@ -18,15 +18,16 @@
  */
 package org.grails.forge.options;
 
-import io.micronaut.core.convert.ArgumentConversionContext;
-import io.micronaut.core.convert.value.ConvertibleValues;
-import io.micronaut.core.convert.value.ConvertibleValuesMap;
 import org.grails.forge.application.OperatingSystem;
 import org.grails.forge.util.VersionInfo;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
 
-public class Options implements ConvertibleValues<Object> {
+public class Options {
 
     private final OperatingSystem operatingSystem;
 
@@ -35,7 +36,7 @@ public class Options implements ConvertibleValues<Object> {
     private final GormImpl gormImpl;
     private final ServletImpl servletImpl;
     private final JdkVersion javaVersion;
-    private final ConvertibleValuesMap<Object> additionalOptions;
+    private final Map<String, Object> additionalOptions;
 
     public Options(DevelopmentReloading reloading,
                    GormImpl gormImpl,
@@ -50,7 +51,7 @@ public class Options implements ConvertibleValues<Object> {
         this.servletImpl = servletImpl;
         this.javaVersion = javaVersion;
         this.operatingSystem = operatingSystem;
-        this.additionalOptions = new ConvertibleValuesMap<>(additionalOptions);
+        this.additionalOptions = new LinkedHashMap<>(additionalOptions);
     }
 
     public Options(DevelopmentReloading reloading,
@@ -117,42 +118,27 @@ public class Options implements ConvertibleValues<Object> {
         return servletImpl;
     }
 
-    @Override
-    public Set<String> names() {
-        return additionalOptions.names();
-    }
-
-    @Override
-    public Collection<Object> values() {
-        return additionalOptions.values();
-    }
-
-    @Override
-    public <T> Optional<T> get(CharSequence name, ArgumentConversionContext<T> conversionContext) {
-        return additionalOptions.get(name, conversionContext);
-    }
-
     public JdkVersion getJavaVersion() {
         return javaVersion;
     }
 
     public Options withOperatingSystem(OperatingSystem operatingSystem) {
-        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, additionalOptions.asMap());
+        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, additionalOptions);
     }
 
     public Options withDevelopmentReloading(DevelopmentReloading reloading) {
-        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, additionalOptions.asMap());
+        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, additionalOptions);
     }
 
     public Options withGormImpl(GormImpl gormImpl) {
-        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, additionalOptions.asMap());
+        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, additionalOptions);
     }
 
     public Options withServletImpl(ServletImpl servletImpl) {
-        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, additionalOptions.asMap());
+        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, additionalOptions);
     }
 
     public Options withJavaVersion(JdkVersion javaVersion) {
-        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, additionalOptions.asMap());
+        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, additionalOptions);
     }
 }

@@ -18,8 +18,8 @@
  */
 package org.grails.forge.feature.database;
 
-import io.micronaut.context.annotation.Primary;
-import jakarta.inject.Singleton;
+import org.springframework.context.annotation.Primary;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
@@ -30,7 +30,7 @@ import org.grails.forge.options.Options;
 
 import java.util.Set;
 
-@Singleton
+@Component
 @Primary
 public class H2 extends DatabaseDriverFeature implements DefaultFeature {
 

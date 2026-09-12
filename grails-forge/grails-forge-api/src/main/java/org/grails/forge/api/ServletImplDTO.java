@@ -18,14 +18,9 @@
  */
 package org.grails.forge.api;
 
-import io.micronaut.context.MessageSource;
-import io.micronaut.core.annotation.Creator;
-import io.micronaut.core.annotation.Internal;
-import io.micronaut.core.annotation.Introspected;
-import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.naming.Described;
-import io.micronaut.core.naming.Named;
-import io.swagger.v3.oas.annotations.media.Schema;
+import org.springframework.context.MessageSource;
+import java.util.Locale;
+import jakarta.annotation.Nonnull;
 import org.grails.forge.options.ServletImpl;
 
 /**
@@ -33,9 +28,7 @@ import org.grails.forge.options.ServletImpl;
  *
  * @since 6.0.0
  */
-@Schema(name = "ServletImplInfo")
-@Introspected
-public class ServletImplDTO extends Linkable implements Named, Described, Selectable<ServletImpl> {
+public class ServletImplDTO extends Linkable implements Selectable<ServletImpl> {
 
     static final String MESSAGE_PREFIX = GrailsForgeConfiguration.PREFIX + ".servletImpl.";
 
@@ -52,8 +45,6 @@ public class ServletImplDTO extends Linkable implements Named, Described, Select
         this.description = servletImpl.getName();
     }
 
-    @Creator
-    @Internal
     ServletImplDTO(ServletImpl servletImpl,
                    String name,
                    String description) {
@@ -62,39 +53,33 @@ public class ServletImplDTO extends Linkable implements Named, Described, Select
         this.description = description;
     }
 
-    @Internal
     ServletImplDTO(ServletImpl servletImpl,
                    MessageSource messageSource,
-                   MessageSource.MessageContext messageContext) {
+                   Locale locale) {
         this.value = servletImpl;
         String name = servletImpl.getName();
         this.name = name;
-        this.description = messageSource.getMessage(MESSAGE_PREFIX + name + ".description", messageContext, name);
+        this.description = ForgeMessages.message(messageSource, locale, MESSAGE_PREFIX + name + ".description", name);
     }
 
-    @NonNull
+    @Nonnull
     @Override
-    @Schema(description = "A description of the Servlet implementation")
-    public String getDescription() {
+        public String getDescription() {
         return description;
     }
 
-    @Override
-    @Schema(description = "The name of the Gorm Implementation")
-    @NonNull
+    @Nonnull
     public String getName() {
         return name;
     }
 
     @Override
-    @Schema(description = "The value of the Servlet Implementation for select options")
-    public ServletImpl getValue() {
+        public ServletImpl getValue() {
         return value;
     }
 
     @Override
-    @Schema(description = "The label of the Servlet Implementation for select options")
-    public String getLabel() {
+        public String getLabel() {
         return value.getLabel();
     }
 }

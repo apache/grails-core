@@ -18,23 +18,11 @@
  */
 package org.grails.forge.api.event;
 
-import io.micronaut.context.event.ApplicationEvent;
 import org.grails.forge.application.generator.GeneratorContext;
+import org.springframework.context.ApplicationEvent;
 
-/**
- * An event fired when an application is generated.
- *
- * @author graemerocher
- * @since 6.0.0
- */
 public class ApplicationGeneratingEvent extends ApplicationEvent {
 
-    /**
-     * Constructs a prototypical Event.
-     *
-     * @param generatorContext The generator context.
-     * @throws IllegalArgumentException if source is null.
-     */
     public ApplicationGeneratingEvent(GeneratorContext generatorContext) {
         super(generatorContext);
     }

@@ -19,14 +19,14 @@
 package org.grails.forge.application;
 
 import jakarta.inject.Named;
-import jakarta.inject.Singleton;
+import org.springframework.stereotype.Component;
 import org.grails.forge.feature.BaseAvailableFeatures;
 import org.grails.forge.feature.Feature;
 
 import java.util.List;
 
 @Named("web")
-@Singleton
+@Component
 public class WebAvailableFeatures extends BaseAvailableFeatures {
 
     public WebAvailableFeatures(List<Feature> features) {

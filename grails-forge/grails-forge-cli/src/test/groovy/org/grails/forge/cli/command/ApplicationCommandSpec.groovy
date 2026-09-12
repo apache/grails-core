@@ -19,9 +19,7 @@
 
 package org.grails.forge.cli.command
 
-import io.micronaut.configuration.picocli.PicocliRunner
-import io.micronaut.context.ApplicationContext
-import io.micronaut.context.env.Environment
+import org.springframework.context.ApplicationContext
 import org.grails.forge.cli.Application
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
@@ -33,11 +31,11 @@ class ApplicationCommandSpec extends CommandSpec implements CommandFixture {
 
     @Shared
     @AutoCleanup
-    ApplicationContext ctx = ApplicationContext.run(Environment.CLI)
+    ApplicationContext ctx = org.grails.forge.ForgeContexts.create()
 
     @Shared
     @AutoCleanup
-    ApplicationContext beanContext = ApplicationContext.run()
+    ApplicationContext beanContext = org.grails.forge.ForgeContexts.create()
 
     void "print version info via: grails #args"() {
         given:
@@ -45,7 +43,7 @@ class ApplicationCommandSpec extends CommandSpec implements CommandFixture {
         System.setOut(new PrintStream(out))
 
         when:
-        PicocliRunner.run(Application, ctx, args)
+        org.grails.forge.cli.CliRunner.run(Application, ctx, args)
 
         then:
         noExceptionThrown()

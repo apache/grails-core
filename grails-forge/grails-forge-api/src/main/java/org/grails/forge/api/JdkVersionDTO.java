@@ -18,15 +18,10 @@
  */
 package org.grails.forge.api;
 
-import io.micronaut.context.MessageSource;
-import io.micronaut.core.annotation.Creator;
-import io.micronaut.core.annotation.Internal;
-import io.micronaut.core.annotation.Introspected;
-import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.naming.Described;
-import io.micronaut.core.naming.Named;
+import org.springframework.context.MessageSource;
+import java.util.Locale;
+import jakarta.annotation.Nonnull;
 import org.grails.forge.options.JdkVersion;
-import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * DTO objects for {@link JdkVersion}.
@@ -34,9 +29,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
  * @author graemerocher
  * @since 6.0.0
  */
-@Schema(name = "JdkVersionInfo")
-@Introspected
-public class JdkVersionDTO extends Linkable implements Named, Described, Selectable<JdkVersion> {
+public class JdkVersionDTO extends Linkable implements Selectable<JdkVersion> {
     static final String MESSAGE_PREFIX = GrailsForgeConfiguration.PREFIX + ".jdkVersion.";
     private final JdkVersion value;
     private final String name;
@@ -57,8 +50,6 @@ public class JdkVersionDTO extends Linkable implements Named, Described, Selecta
      * @param name the name
      * @param description The description
      */
-    @Creator
-    @Internal
     JdkVersionDTO(String name, String description, Integer majorVersion, JdkVersion value) {
         this.value = value;
         this.name = name;
@@ -72,39 +63,33 @@ public class JdkVersionDTO extends Linkable implements Named, Described, Selecta
      * @param messageSource The message source
      * @param messageContext The message context
      */
-    @Internal
-    JdkVersionDTO(JdkVersion jdkVersion, MessageSource messageSource, MessageSource.MessageContext messageContext) {
+    JdkVersionDTO(JdkVersion jdkVersion, MessageSource messageSource, Locale locale) {
         String name = jdkVersion.name();
 
         this.value = jdkVersion;
         this.name = name;
-        this.description = messageSource.getMessage(MESSAGE_PREFIX + name + ".description", messageContext, name);
+        this.description = ForgeMessages.message(messageSource, locale, MESSAGE_PREFIX + name + ".description", name);
         this.majorVersion = jdkVersion.majorVersion();
     }
 
     @Override
-    @Schema(description = "A description of the jdkVersion")
-    public String getDescription() {
+        public String getDescription() {
         return description;
     }
 
-    @Override
-    @Schema(description = "The name of the jdkVersion")
-    @NonNull
+    @Nonnull
     public String getName() {
         return name;
     }
 
     @Override
-    @Schema(description = "The value of the jdkVersion for select options")
-    @NonNull
+        @Nonnull
     public JdkVersion getValue() {
         return value;
     }
 
     @Override
-    @Schema(description = "The label of the jdkVersion for select options")
-    public String getLabel() {
+        public String getLabel() {
         return description.replaceFirst("JDK_", "");
     }
 }

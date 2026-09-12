@@ -18,58 +18,16 @@
  */
 package org.grails.forge.api;
 
-import io.micronaut.core.annotation.Nullable;
-import io.micronaut.http.annotation.Get;
-import io.swagger.v3.oas.annotations.Parameter;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.options.FeatureFilter;
 
-/**
- * Operations on application types.
- *
- * @author graemerocher
- * @since 6.0.0
- */
 public interface ApplicationTypeOperations {
 
-    /**
-     * List the application types.
-     * @param serverURL The server URL
-     * @return The types
-     */
-    @Get("/application-types")
-    ApplicationTypeList list(@Parameter(hidden = true) RequestInfo serverURL);
+    ApplicationTypeList list(RequestInfo serverURL);
 
-    /**
-     * Get a specific application type.
-     * @param type The type
-     * @param serverURL The server URL
-     * @return The type
-     */
-    @Get("/application-types/{type}")
-    ApplicationTypeDTO getType(ApplicationType type, @Parameter(hidden = true) RequestInfo serverURL);
+    ApplicationTypeDTO getType(ApplicationType type, RequestInfo serverURL);
 
-    /**
-     * List the type features.
-     * @param type The features
-     * @param serverURL The server URL
-     * @param filter features to filter by
-     * @return The features
-     */
-    @Get("/application-types/{type}/features{?filter*}")
-    FeatureList features(ApplicationType type,
-                         @Parameter(hidden = true) RequestInfo serverURL,
-                         @Nullable FeatureFilter filter);
+    FeatureList features(ApplicationType type, RequestInfo serverURL, FeatureFilter filter);
 
-    /**
-     * List the default features.
-     * @param type The features
-     * @param serverURL The server URL
-     * @param filter features to filter by
-     * @return The features
-     */
-    @Get("/application-types/{type}/features/default{?filter*}")
-    FeatureList defaultFeatures(ApplicationType type,
-                                @Parameter(hidden = true) RequestInfo serverURL,
-                                @Nullable FeatureFilter filter);
+    FeatureList defaultFeatures(ApplicationType type, RequestInfo serverURL, FeatureFilter filter);
 }

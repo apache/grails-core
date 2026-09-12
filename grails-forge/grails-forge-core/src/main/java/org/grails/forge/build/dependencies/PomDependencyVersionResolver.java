@@ -18,12 +18,11 @@
  */
 package org.grails.forge.build.dependencies;
 
-import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.io.ResourceResolver;
-import io.micronaut.core.util.StringUtils;
-import jakarta.inject.Singleton;
+import jakarta.annotation.Nonnull;
+import org.grails.forge.util.NameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -35,12 +34,15 @@ import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
-@Singleton
+@Component
 public class PomDependencyVersionResolver implements CoordinateResolver {
 
     private static final Logger LOG = LoggerFactory.getLogger(PomDependencyVersionResolver.class);
@@ -48,11 +50,14 @@ public class PomDependencyVersionResolver implements CoordinateResolver {
     private static final String NODE_NAME_TEXT = "#text";
     private final Map<String, Coordinate> coordinates;
 
-    public PomDependencyVersionResolver(ResourceResolver resourceResolver) {
+    public PomDependencyVersionResolver() {
+        this(loadPomResources());
+    }
+
+    PomDependencyVersionResolver(Iterable<URL> pomUrls) {
         Map<String, Coordinate> coordinates = new HashMap<>();
-        for (URL url : resourceResolver.getResources("classpath:pom.xml").collect(Collectors.toList())) {
-            try {
-                InputStream inputStream = url.openStream();
+        for (URL url : pomUrls) {
+            try (InputStream inputStream = url.openStream()) {
                 Document doc = documentFor(inputStream);
                 doc.getDocumentElement().normalize();
                 NodeList nList = doc.getElementsByTagName("dependency");
@@ -87,7 +92,7 @@ public class PomDependencyVersionResolver implements CoordinateResolver {
                         }
                     }
 
-                    if (StringUtils.isNotEmpty(groupId) && StringUtils.isNotEmpty(artifactId)) {
+                    if (!NameUtils.isBlank(groupId) && !NameUtils.isBlank(artifactId)) {
                         DependencyCoordinate dependencyCoordinate = Dependency.builder()
                                 .groupId(groupId)
                                 .artifactId(artifactId)
@@ -104,21 +109,39 @@ public class PomDependencyVersionResolver implements CoordinateResolver {
         this.coordinates = coordinates;
     }
 
+    private static List<URL> loadPomResources() {
+        ClassLoader classLoader = PomDependencyVersionResolver.class.getClassLoader();
+        if (classLoader == null) {
+            return Collections.emptyList();
+        }
+        try {
+            Enumeration<URL> resources = classLoader.getResources("pom.xml");
+            List<URL> urls = new ArrayList<>();
+            while (resources.hasMoreElements()) {
+                urls.add(resources.nextElement());
+            }
+            return urls;
+        } catch (IOException e) {
+            LOG.warn("Unable to locate pom.xml resources", e);
+            return Collections.emptyList();
+        }
+    }
+
     @Override
-    @NonNull
-    public Optional<Coordinate> resolve(@NonNull String artifactId) {
+    @Nonnull
+    public Optional<Coordinate> resolve(@Nonnull String artifactId) {
         return Optional.ofNullable(coordinates.get(artifactId));
     }
 
-    private static Document documentFor(@NonNull InputStream inputStream)
+    private static Document documentFor(@Nonnull InputStream inputStream)
             throws ParserConfigurationException, IOException, SAXException {
         DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
         DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
         return dBuilder.parse(inputStream);
     }
 
-    @NonNull
-    private Optional<String> valueOfNode(@NonNull Node node) {
+    @Nonnull
+    private Optional<String> valueOfNode(@Nonnull Node node) {
         NodeList children = node.getChildNodes();
         for (int i = 0; i < children.getLength(); i++) {
             Node child = children.item(i);
@@ -129,7 +152,7 @@ public class PomDependencyVersionResolver implements CoordinateResolver {
         return Optional.empty();
     }
 
-    @NonNull
+    @Nonnull
     public Map<String, Coordinate> getCoordinates() {
         return coordinates;
     }

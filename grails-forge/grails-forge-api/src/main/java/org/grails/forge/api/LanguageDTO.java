@@ -18,18 +18,13 @@
  */
 package org.grails.forge.api;
 
-import io.micronaut.context.MessageSource;
-import io.micronaut.core.annotation.Creator;
-import io.micronaut.core.annotation.Internal;
-import io.micronaut.core.annotation.Introspected;
-import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.naming.Described;
-import io.micronaut.core.naming.Named;
+import org.springframework.context.MessageSource;
+import java.util.Locale;
+import jakarta.annotation.Nonnull;
 import org.grails.forge.defaults.IncludesDefaults;
 import org.grails.forge.defaults.LanguageDefaults;
 import org.grails.forge.options.Language;
 import org.grails.forge.util.NameUtils;
-import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * DTO objects for {@link Language}.
@@ -37,9 +32,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
  * @author graemerocher
  * @since 6.0.0
  */
-@Schema(name = "LanguageInfo")
-@Introspected
-public class LanguageDTO extends Linkable implements Named, Described, Selectable<Language>, IncludesDefaults<LanguageDefaults> {
+public class LanguageDTO extends Linkable implements Selectable<Language>, IncludesDefaults<LanguageDefaults> {
     static final String MESSAGE_PREFIX = GrailsForgeConfiguration.PREFIX + ".language.";
     private final String name;
     private final String extension;
@@ -61,8 +54,6 @@ public class LanguageDTO extends Linkable implements Named, Described, Selectabl
      * @param extension The extension
      * @param description The description
      */
-    @Creator
-    @Internal
     LanguageDTO(Language value, String name, String extension, String description) {
         this.value = value;
         this.name = name;
@@ -76,49 +67,41 @@ public class LanguageDTO extends Linkable implements Named, Described, Selectabl
      * @param messageSource The message source
      * @param messageContext The message context
      */
-    @Internal
-    LanguageDTO(Language language, MessageSource messageSource, MessageSource.MessageContext messageContext) {
+    LanguageDTO(Language language, MessageSource messageSource, Locale locale) {
         this.value = language;
         String name = language.getName();
         this.name = name;
         this.extension = language.getExtension();
-        this.description = messageSource.getMessage(MESSAGE_PREFIX + name + ".description", messageContext, name);
+        this.description = ForgeMessages.message(messageSource, locale, MESSAGE_PREFIX + name + ".description", name);
 
     }
 
-    @Schema(description = "The extension of the language")
-    public String getExtension() {
+        public String getExtension() {
         return extension;
     }
 
     @Override
-    @Schema(description = "A description of the language")
-    public String getDescription() {
+        public String getDescription() {
         return description;
     }
 
-    @Override
-    @Schema(description = "The name of the language")
-    @NonNull
+    @Nonnull
     public String getName() {
         return name;
     }
 
     @Override
-    @Schema(description = "The value of the language for select options")
-    public Language getValue() {
+        public Language getValue() {
         return value;
     }
 
     @Override
-    @Schema(description = "The label of the language for select options")
-    public String getLabel() {
+        public String getLabel() {
         return NameUtils.getNaturalNameOfEnum(name);
     }
 
     @Override
-    @Schema(description = "The default values that correlate to the language")
-    public LanguageDefaults getDefaults() {
+        public LanguageDefaults getDefaults() {
         return this.value.getDefaults();
     }
 }

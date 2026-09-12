@@ -18,9 +18,9 @@
  */
 package org.grails.forge.application;
 
-import io.micronaut.core.annotation.Nullable;
+import jakarta.annotation.Nullable;
 
-import jakarta.inject.Singleton;
+import org.springframework.stereotype.Component;
 
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.DefaultCoordinateResolver;
@@ -37,7 +37,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
 
-@Singleton
+@Component
 public class ContextFactory {
 
     private final FeatureValidator featureValidator;

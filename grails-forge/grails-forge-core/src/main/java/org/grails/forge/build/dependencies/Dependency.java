@@ -18,8 +18,8 @@
  */
 package org.grails.forge.build.dependencies;
 
-import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.annotation.Nullable;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import org.grails.forge.template.Writable;
 
 import java.util.Objects;
@@ -184,7 +184,7 @@ public final class Dependency {
         private boolean pom = false;
         private boolean enforced = false;
 
-        public Builder scope(@NonNull Scope scope) {
+        public Builder scope(@Nonnull Scope scope) {
             if (template) {
                 return copy().scope(scope);
             } else {
@@ -274,7 +274,7 @@ public final class Dependency {
             }
         }
 
-        public Builder artifactId(@NonNull String artifactId) {
+        public Builder artifactId(@Nonnull String artifactId) {
             if (template) {
                 return copy().artifactId(artifactId);
             } else {
@@ -283,7 +283,7 @@ public final class Dependency {
             }
         }
 
-        public Builder lookupArtifactId(@NonNull String artifactId) {
+        public Builder lookupArtifactId(@Nonnull String artifactId) {
             if (template) {
                 return copy().lookupArtifactId(artifactId);
             } else {
@@ -311,7 +311,7 @@ public final class Dependency {
             }
         }
 
-        @NonNull
+        @Nonnull
         public Builder extension(@Nullable Writable extension) {
             this.extension = extension;
             return this;

@@ -18,7 +18,7 @@
  */
 package org.grails.forge.feature.validation;
 
-import jakarta.inject.Singleton;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.feature.Feature;
 import org.grails.forge.feature.OneOfFeature;
@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-@Singleton
+@Component
 public class OneOfFeatureValidator implements FeatureValidator {
 
     private void validate(Set<Feature> features) {

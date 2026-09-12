@@ -18,7 +18,7 @@
  */
 package org.grails.forge.build.dependencies;
 
-import io.micronaut.core.annotation.NonNull;
+import jakarta.annotation.Nonnull;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -44,33 +44,33 @@ public class Scope {
     public static final Scope INTEGRATION_TEST_IMPLEMENTATION_TEST_FIXTURES = new Scope(Source.MAIN, Collections.singletonList(Phase.INTEGRATION_TEST_IMPLEMENTATION_TEST_FIXTURES));
     public static final Scope CLASSPATH = new Scope(Source.BUILDSCRIPT, Collections.singletonList(Phase.BUILD));
 
-    @NonNull
+    @Nonnull
     private Source source;
 
-    @NonNull
+    @Nonnull
     private List<Phase> phases;
 
-    public Scope(@NonNull Source source,
-                 @NonNull List<Phase> phases) {
+    public Scope(@Nonnull Source source,
+                 @Nonnull List<Phase> phases) {
         this.source = source;
         this.phases = phases;
     }
 
-    @NonNull
+    @Nonnull
     public Source getSource() {
         return source;
     }
 
-    public void setSource(@NonNull Source source) {
+    public void setSource(@Nonnull Source source) {
         this.source = source;
     }
 
-    @NonNull
+    @Nonnull
     public List<Phase> getPhases() {
         return phases;
     }
 
-    public void setPhases(@NonNull List<Phase> phases) {
+    public void setPhases(@Nonnull List<Phase> phases) {
         this.phases = phases;
     }
 

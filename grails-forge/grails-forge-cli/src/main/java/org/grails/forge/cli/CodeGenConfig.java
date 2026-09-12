@@ -18,14 +18,12 @@
  */
 package org.grails.forge.cli;
 
-import io.micronaut.context.BeanContext;
-import io.micronaut.core.annotation.Introspected;
-import io.micronaut.core.beans.BeanIntrospection;
-import io.micronaut.inject.qualifiers.Qualifiers;
+import org.springframework.context.ApplicationContext;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.feature.AvailableFeatures;
 import org.grails.forge.feature.DefaultFeature;
 import org.grails.forge.feature.Feature;
+import org.grails.forge.feature.FeatureRegistry;
 import org.grails.forge.io.ConsoleOutput;
 import org.grails.forge.io.FileSystemOutputHandler;
 import org.grails.forge.options.JdkVersion;
@@ -41,7 +39,6 @@ import java.nio.file.Files;
 import java.util.*;
 import java.util.stream.Collectors;
 
-@Introspected
 public class CodeGenConfig {
 
     private ApplicationType applicationType;
@@ -96,7 +93,7 @@ public class CodeGenConfig {
         return legacy;
     }
 
-    public static CodeGenConfig load(BeanContext beanContext, ConsoleOutput consoleOutput) {
+    public static CodeGenConfig load(ApplicationContext beanContext, ConsoleOutput consoleOutput) {
         try {
             return load(beanContext, FileSystemOutputHandler.getDefaultBaseDirectory(), consoleOutput);
         } catch (IOException e) {
@@ -104,12 +101,11 @@ public class CodeGenConfig {
         }
     }
 
-    public static CodeGenConfig load(BeanContext beanContext, File directory, ConsoleOutput consoleOutput) {
+    public static CodeGenConfig load(ApplicationContext beanContext, File directory, ConsoleOutput consoleOutput) {
 
         File grailsCli = new File(directory, "grails-forge-cli.yml");
 
         if (!grailsCli.exists()) {
-            // backwards compatibility for grails-cli.yml
             grailsCli = new File(directory, "grails-cli.yml");
         }
 
@@ -127,16 +123,31 @@ public class CodeGenConfig {
                         }
                     }
                 }
-                BeanIntrospection<CodeGenConfig> introspection = BeanIntrospection.getIntrospection(CodeGenConfig.class);
-                CodeGenConfig codeGenConfig = introspection.instantiate();
-                introspection.getBeanProperties().forEach(bp -> {
-                    Object value = map.get(bp.getName());
-                    if (value != null) {
-                        bp.convertAndSet(codeGenConfig, value);
+                CodeGenConfig codeGenConfig = new CodeGenConfig();
+                if (map.get("applicationType") != null) {
+                    codeGenConfig.setApplicationType(ApplicationType.valueOf(map.get("applicationType").toString().toUpperCase(Locale.ENGLISH).replace('-', '_')));
+                }
+                if (map.get("defaultPackage") != null) {
+                    codeGenConfig.setDefaultPackage(map.get("defaultPackage").toString());
+                }
+                if (map.get("reloading") != null) {
+                    String reloading = map.get("reloading").toString();
+                    codeGenConfig.setReloading(Arrays.stream(DevelopmentReloading.values())
+                            .filter(value -> value.getName().equals(reloading))
+                            .findFirst()
+                            .orElseThrow(() -> new IllegalArgumentException("Unknown development reloading option: " + reloading)));
+                }
+                if (map.get("sourceLanguage") != null) {
+                    codeGenConfig.setSourceLanguage(Language.valueOf(map.get("sourceLanguage").toString().toUpperCase(Locale.ENGLISH)));
+                }
+                if (map.get("features") instanceof List) {
+                    List<String> features = new ArrayList<>();
+                    for (Object feature : (List<?>) map.get("features")) {
+                        features.add(feature.toString());
                     }
-                });
+                    codeGenConfig.setFeatures(features);
+                }
 
-                // Backwards compatibility: if old YAML has 'testFramework' field, default reloading to NONE
                 if (map.containsKey("testFramework") && !map.containsKey("reloading")) {
                     codeGenConfig.setReloading(DevelopmentReloading.NONE);
                 }
@@ -156,7 +167,8 @@ public class CodeGenConfig {
                         return null;
                     }
 
-                    AvailableFeatures availableFeatures = beanContext.getBean(AvailableFeatures.class, Qualifiers.byName(codeGenConfig.getApplicationType().getName()));
+                    AvailableFeatures availableFeatures = beanContext.getBean(FeatureRegistry.class)
+                            .availableFeatures(codeGenConfig.getApplicationType());
 
                     codeGenConfig.setFeatures(availableFeatures.getAllFeatures()
                             .filter(f -> f instanceof DefaultFeature)

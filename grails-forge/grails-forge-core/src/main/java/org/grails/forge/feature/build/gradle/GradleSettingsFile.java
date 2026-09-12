@@ -18,7 +18,6 @@
  */
 package org.grails.forge.feature.build.gradle;
 
-import jakarta.inject.Singleton;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Coordinate;
@@ -29,10 +28,11 @@ import org.grails.forge.build.gradle.GradleBuildCreator;
 import org.grails.forge.feature.build.gradle.templates.settingsGradle;
 import org.grails.forge.options.BuildTool;
 import org.grails.forge.template.RockerTemplate;
+import org.springframework.stereotype.Component;
 
 import java.util.function.Function;
 
-@Singleton
+@Component
 public class GradleSettingsFile implements GradleSettingsFileFeature {
 
     private final GradleBuildCreator dependencyResolver;

@@ -18,7 +18,7 @@
  */
 package org.grails.forge.feature.security;
 
-import jakarta.inject.Singleton;
+import org.springframework.stereotype.Component;
 
 import org.grails.forge.application.Project;
 import org.grails.forge.application.generator.GeneratorContext;
@@ -38,7 +38,7 @@ import org.grails.forge.template.RockerTemplate;
  *
  * @since 8.0
  */
-@Singleton
+@Component
 public class SpringBootStarterSecurity extends SecurityFeature implements PrimarySecurityFeature {
 
     public SpringBootStarterSecurity(Scaffolding scaffolding) {

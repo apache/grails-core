@@ -18,9 +18,9 @@
  */
 package org.grails.forge.feature.database;
 
-import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.annotation.Nullable;
-import jakarta.inject.Singleton;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
@@ -33,12 +33,12 @@ import org.grails.forge.template.StringTemplate;
 
 import java.util.Optional;
 
-@Singleton
+@Component
 public class TestContainers implements Feature {
 
     private static final String TESTCONTAINERS_GROUP_ID = "org.testcontainers";
 
-    @NonNull
+    @Nonnull
     @Override
     public String getName() {
         return "testcontainers";
@@ -87,16 +87,16 @@ public class TestContainers implements Feature {
         }
     }
 
-    @NonNull
-    private static Dependency.Builder testContainerTestDependency(@NonNull String artifactId) {
+    @Nonnull
+    private static Dependency.Builder testContainerTestDependency(@Nonnull String artifactId) {
         return Dependency.builder()
             .groupId(TESTCONTAINERS_GROUP_ID)
             .artifactId(artifactId)
             .testImplementation();
     }
 
-    @NonNull
-    private static Optional<String> artifactIdForDriverFeature(@NonNull DatabaseDriverFeature driverFeature) {
+    @Nonnull
+    private static Optional<String> artifactIdForDriverFeature(@Nonnull DatabaseDriverFeature driverFeature) {
         if (driverFeature instanceof MySQL) {
             return Optional.of("testcontainers-mysql");
         } else if (driverFeature instanceof PostgreSQL) {
@@ -107,8 +107,8 @@ public class TestContainers implements Feature {
         return Optional.empty();
     }
 
-    @NonNull
-    private static Optional<String> urlForDatabaseDriverFeature(@NonNull DatabaseDriverFeature driverFeature) {
+    @Nonnull
+    private static Optional<String> urlForDatabaseDriverFeature(@Nonnull DatabaseDriverFeature driverFeature) {
         if (driverFeature instanceof MySQL) {
             return Optional.of("jdbc:tc:mysql:8:///db");
 

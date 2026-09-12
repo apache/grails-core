@@ -18,26 +18,27 @@
  */
 package org.grails.forge.build.dependencies;
 
-import io.micronaut.context.annotation.Primary;
-import io.micronaut.core.annotation.NonNull;
-import jakarta.inject.Singleton;
+import jakarta.annotation.Nonnull;
+import org.springframework.context.annotation.Primary;
+import org.springframework.stereotype.Component;
 
-import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
-@Singleton
+@Component
 @Primary
 public class DefaultCoordinateResolver implements CoordinateResolver {
 
-    private final CoordinateResolver[] coordinateResolvers;
+    private final List<CoordinateResolver> coordinateResolvers;
 
-    public DefaultCoordinateResolver(CoordinateResolver[] coordinateResolvers) {
+    public DefaultCoordinateResolver(List<CoordinateResolver> coordinateResolvers) {
         this.coordinateResolvers = coordinateResolvers;
     }
 
-    @NonNull
-    public Optional<Coordinate> resolve(@NonNull String artifactId) {
-        return Arrays.stream(coordinateResolvers)
+    @Nonnull
+    public Optional<Coordinate> resolve(@Nonnull String artifactId) {
+        return coordinateResolvers.stream()
+                .filter(resolver -> resolver != this)
                 .map(resolver -> resolver.resolve(artifactId))
                 .filter(Optional::isPresent)
                 .map(Optional::get)

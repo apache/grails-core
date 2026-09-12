@@ -18,15 +18,10 @@
  */
 package org.grails.forge.api;
 
-import io.micronaut.context.MessageSource;
-import io.micronaut.core.annotation.Creator;
-import io.micronaut.core.annotation.Internal;
-import io.micronaut.core.annotation.Introspected;
-import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.naming.Described;
-import io.micronaut.core.naming.Named;
+import org.springframework.context.MessageSource;
+import java.util.Locale;
+import jakarta.annotation.Nonnull;
 import org.grails.forge.application.ApplicationType;
-import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.List;
 
@@ -36,9 +31,7 @@ import java.util.List;
  * @author graemerocher
  * @since 6.0.0
  */
-@Schema(name = "ApplicationTypeInfo")
-@Introspected
-public class ApplicationTypeDTO extends Linkable implements Named, Described, Selectable<ApplicationType> {
+public class ApplicationTypeDTO extends Linkable implements Selectable<ApplicationType> {
 
     static final String MESSAGE_PREFIX = GrailsForgeConfiguration.PREFIX + ".application-types.";
     private final String name;
@@ -63,8 +56,6 @@ public class ApplicationTypeDTO extends Linkable implements Named, Described, Se
      * @param name the name
      * @param features The available features
      */
-    @Creator
-    @Internal
     ApplicationTypeDTO(ApplicationType value,
                        String name,
                        String title,
@@ -84,46 +75,39 @@ public class ApplicationTypeDTO extends Linkable implements Named, Described, Se
      * @param messageSource The message source
      * @param messageContext The message context
      */
-    @Internal
-    ApplicationTypeDTO(ApplicationType type, List<FeatureDTO> features, MessageSource messageSource, MessageSource.MessageContext messageContext) {
+    public ApplicationTypeDTO(ApplicationType type, List<FeatureDTO> features, MessageSource messageSource, Locale locale) {
         this.value = type;
         String name = type.getName();
         this.name = name;
         this.features = features;
-        this.title = messageSource.getMessage(MESSAGE_PREFIX + name + ".title", messageContext, type.getTitle());
-        this.description = messageSource.getMessage(MESSAGE_PREFIX + name + ".description", messageContext, type.getDescription());
+        this.title = ForgeMessages.message(messageSource, locale, MESSAGE_PREFIX + name + ".title", type.getTitle());
+        this.description = ForgeMessages.message(messageSource, locale, MESSAGE_PREFIX + name + ".description", type.getDescription());
     }
 
-    @Schema(description = "The title of the application type")
-    public String getTitle() {
+        public String getTitle() {
         return title;
     }
 
-    @Schema(description = "The possible application features")
-    public List<FeatureDTO> getFeatures() {
+        public List<FeatureDTO> getFeatures() {
         return features;
     }
 
-    @Schema(description = "A description of the application type")
-    public String getDescription() {
+        public String getDescription() {
         return description;
     }
 
-    @Schema(description = "The name of the application type")
-    @NonNull
+        @Nonnull
     public String getName() {
         return name;
     }
 
     @Override
-    @Schema(description = "The value of the application type for select options")
-    public ApplicationType getValue() {
+        public ApplicationType getValue() {
         return value;
     }
 
     @Override
-    @Schema(description = "The label of the application type for select options")
-    public String getLabel() {
+        public String getLabel() {
         return title;
     }
 }

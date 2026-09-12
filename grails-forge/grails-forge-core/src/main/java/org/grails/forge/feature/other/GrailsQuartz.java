@@ -18,14 +18,14 @@
  */
 package org.grails.forge.feature.other;
 
-import jakarta.inject.Singleton;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
 import org.grails.forge.feature.Category;
 import org.grails.forge.feature.Feature;
 
-@Singleton
+@Component
 public class GrailsQuartz implements Feature {
 
     public static final String FEATURE_NAME = "grails-quartz";

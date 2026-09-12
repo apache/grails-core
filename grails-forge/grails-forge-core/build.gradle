@@ -42,31 +42,22 @@ sourceSets {
 }
 
 dependencies {
-    annotationProcessor platform("io.micronaut.platform:micronaut-platform:$micronautVersion")
-    implementation platform("io.micronaut.platform:micronaut-platform:$micronautVersion")
-    annotationProcessor 'io.micronaut:micronaut-inject-java'
-    testAnnotationProcessor platform("io.micronaut.platform:micronaut-platform:$micronautVersion")
-    testAnnotationProcessor 'io.micronaut:micronaut-inject-java'
+    implementation platform("org.apache.grails:grails-bom:$projectVersion")
 
-    api platform("io.micronaut.platform:micronaut-platform:$micronautVersion") // TODO: Should this be api?
+    api 'org.springframework:spring-context'
+    api 'jakarta.annotation:jakarta.annotation-api'
+    api 'jakarta.inject:jakarta.inject-api'
     api 'com.fasterxml.jackson.core:jackson-databind'
     api 'jakarta.validation:jakarta.validation-api'
     api "com.fizzed:rocker-runtime:$rockerVersion"
     api "io.github.java-diff-utils:java-diff-utils:$javaDiffUtils"
-    api 'io.micronaut:micronaut-http'
-    api 'io.micronaut:micronaut-http-client'
-    api 'io.micronaut:micronaut-inject'
 
     implementation "com.typesafe:config:$typesafeConfigVersion"
     implementation "org.apache.commons:commons-compress:$commonsCompressVersion"
     implementation "org.yaml:snakeyaml"
-
-    compileOnly 'com.google.code.findbugs:jsr305'
+    implementation 'org.slf4j:slf4j-api'
 
     testImplementation 'org.apache.groovy:groovy-yaml'
-
-    testCompileOnly 'io.micronaut:micronaut-inject-groovy'
-
     testImplementation 'org.apache.groovy:groovy'
     testImplementation "org.spockframework:spock-core", {
         exclude group: 'org.apache.groovy', module: 'groovy-all'
@@ -117,7 +108,6 @@ copyGrailsWrapper.configure { Sync it ->
 }
 
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/groovy-version-pin.gradle')
     from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/doc-config.gradle')

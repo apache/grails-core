@@ -18,8 +18,8 @@
  */
 package org.grails.forge.build.gradle;
 
-import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.annotation.Nullable;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import org.grails.forge.build.BuildPlugin;
 import org.grails.forge.build.dependencies.*;
 import org.grails.forge.options.BuildTool;
@@ -42,7 +42,7 @@ public class GradlePlugin implements BuildPlugin {
     private final int order;
     private final boolean useApplyPlugin;
 
-    public GradlePlugin(@NonNull String id,
+    public GradlePlugin(@Nonnull String id,
                         @Nullable String version,
                         @Nullable String artifactId,
                         @Nullable Writable extension,
@@ -61,7 +61,7 @@ public class GradlePlugin implements BuildPlugin {
             false);
     }
 
-    public GradlePlugin(@NonNull String id,
+    public GradlePlugin(@Nonnull String id,
                         @Nullable String version,
                         @Nullable String artifactId,
                         @Nullable Writable extension,
@@ -86,7 +86,7 @@ public class GradlePlugin implements BuildPlugin {
         return buildImports;
     }
 
-    @NonNull
+    @Nonnull
     public String getId() {
         return id;
     }
@@ -97,7 +97,7 @@ public class GradlePlugin implements BuildPlugin {
     }
 
     @Override
-    @NonNull
+    @Nonnull
     public BuildTool getBuildTool() {
         return null;
     }
@@ -172,20 +172,20 @@ public class GradlePlugin implements BuildPlugin {
 
         private Builder() { }
 
-        @NonNull
-        public GradlePlugin.Builder id(@NonNull String id) {
+        @Nonnull
+        public GradlePlugin.Builder id(@Nonnull String id) {
             this.id = id;
             return this;
         }
 
-        @NonNull
+        @Nonnull
         public GradlePlugin.Builder buildImports(String... imports) {
             this.buildImports.addAll(Arrays.asList(imports));
             return this;
         }
 
-        @NonNull
-        public GradlePlugin.Builder lookupArtifactId(@NonNull String artifactId) {
+        @Nonnull
+        public GradlePlugin.Builder lookupArtifactId(@Nonnull String artifactId) {
             if (template) {
                 return copy().lookupArtifactId(artifactId);
             } else {
@@ -195,25 +195,25 @@ public class GradlePlugin implements BuildPlugin {
             }
         }
 
-        @NonNull
+        @Nonnull
         public GradlePlugin.Builder version(@Nullable String version) {
             this.version = version;
             return this;
         }
 
-        @NonNull
+        @Nonnull
         public GradlePlugin.Builder extension(@Nullable Writable extension) {
             this.extension = extension;
             return this;
         }
 
-        @NonNull
+        @Nonnull
         public GradlePlugin.Builder settingsExtension(@Nullable Writable settingsExtension) {
             this.settingsExtension = settingsExtension;
             return this;
         }
 
-        @NonNull
+        @Nonnull
         public GradlePlugin.Builder order(int order) {
             this.order = order;
             return this;
