@@ -190,17 +190,18 @@ class GrailsGroovyCompilerConfigSpec extends GradleSpecification {
         changed.output.contains('GRAILS_IMPORT=1')
 
         where:
-        wiring     | scriptArgs
-        'provider' | []
-        'plain'    | ['-PplainFile']
+        wiring                 | scriptArgs
+        'provider'             | []
+        'plain'                | ['-PplainFile']
+        'plain, ad-hoc producer' | ['-PplainFile', '-PadHocProducer']
     }
 
-    def "a plain script file keeps its producer ordered before script preparation"() {
+    def "a plain script file keeps its #producer producer ordered before script preparation"() {
         given: 'the legacy file assignment with a separate compileGroovy dependency'
         setupTestResourceProject('compiler-config-generated-user-script-execution')
 
         when: 'compilation is requested normally from a clean project'
-        def natural = executeTask('verifyCompilation', ['-PplainFile'])
+        def natural = executeTask('verifyCompilation', ['-PplainFile'] + producerArgs)
 
         then: 'the producer runs before the combined script is read'
         natural.task(':generateUserConfigScript').outcome == TaskOutcome.SUCCESS
@@ -210,13 +211,18 @@ class GrailsGroovyCompilerConfigSpec extends GradleSpecification {
 
         when: 'script preparation is explicitly requested first after cleaning the outputs'
         def forced = executeTask('clean', ['generateCompileGroovyGrailsCompilerConfig',
-                'verifyCompilation', '-PplainFile'])
+                'verifyCompilation', '-PplainFile'] + producerArgs)
 
         then: 'the producer dependency still takes precedence over the requested task order'
         forced.task(':generateUserConfigScript').outcome == TaskOutcome.SUCCESS
         forced.task(':compileGroovy').outcome == TaskOutcome.SUCCESS
         forced.output.contains('CONFIGURED_TYPE=java.nio.file.Path')
         forced.output.contains('GRAILS_IMPORT=1')
+
+        where: 'the producer declares the script as an @OutputFile property or with outputs.file'
+        producer | producerArgs
+        'typed'  | []
+        'ad-hoc' | ['-PadHocProducer']
     }
 
     def "script preparation does not inherit unrelated compile dependencies with #wiring wiring"() {

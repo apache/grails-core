@@ -3566,10 +3566,21 @@ tasks.named('compileGroovy', GroovyCompile) {
 
 Grails matches the configured file against the declared outputs of the compile task's direct
 dependencies and orders script preparation after the matching producer. This preserves the Grails 7
-pattern when the producer declares the exact script file as an output, as `GenerateCompilerScript`
-does above. A dependency that declares only a containing output directory or writes the file without
-declaring it as an output cannot be identified this way; expose the script as an output file and use
-the provider wiring instead.
+pattern when the producer declares the exact script file as an output, whether through an `@OutputFile`
+property as `GenerateCompilerScript` does above or through `outputs.file(...)` on an ad-hoc task. A
+dependency that declares only a containing output directory, writes the file without declaring it as an
+output, or is reachable only through another task's `dependsOn` cannot be identified this way. Such a
+build fails from a clean checkout before compilation starts, with a validation error on the
+`generateCompileGroovyGrailsCompilerConfig` task that Grails registers:
+
+[source,text]
+----
+A problem was found with the configuration of task ':generateCompileGroovyGrailsCompilerConfig' (type 'GrailsCompilerConfigScriptTask').
+Input file does not exist
+  ... property 'configurationScript' specifies file '.../build/user-config.groovy' which doesn't exist
+----
+
+If you see this error, expose the script as an output file and use the provider wiring instead.
 
 An existing, checked-in compiler script can still use a plain file assignment without a producer.
 Tasks that only generate source or classpath entries do not need additional ordering against

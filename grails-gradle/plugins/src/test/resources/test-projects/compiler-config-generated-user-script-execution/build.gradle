@@ -58,9 +58,32 @@ abstract class GenUserScript extends DefaultTask {
     }
 }
 
-def genUserScript = tasks.register('generateUserConfigScript', GenUserScript) {
-    importedType.set(providers.gradleProperty('importedType').orElse('java.nio.file.Path'))
-    outputFile.set(layout.buildDirectory.file('user-config.groovy'))
+def importedTypeName = providers.gradleProperty('importedType').orElse('java.nio.file.Path')
+def userScript = layout.buildDirectory.file('user-config.groovy')
+
+def genUserScript
+if (providers.gradleProperty('adHocProducer').isPresent()) {
+    // The shape most Grails 7 builds used: an untyped task that declares the script with outputs.file.
+    genUserScript = tasks.register('generateUserConfigScript') {
+        inputs.property('importedType', importedTypeName)
+        outputs.file(userScript)
+        doLast {
+            def script = userScript.get().asFile
+            script.parentFile.mkdirs()
+            script.text = """
+                withConfig(configuration) {
+                    imports {
+                        alias 'ImportedType', '${importedTypeName.get()}'
+                    }
+                }
+            """
+        }
+    }
+} else {
+    genUserScript = tasks.register('generateUserConfigScript', GenUserScript) {
+        importedType.set(importedTypeName)
+        outputFile.set(userScript)
+    }
 }
 
 if (providers.gradleProperty('additionalDependency').isPresent()) {
@@ -87,6 +110,8 @@ tasks.named('compileGroovy', GroovyCompile) {
         // The plugin matches this file against the compile dependency's declared output.
         dependsOn genUserScript
         groovyOptions.configurationScript = file('build/user-config.groovy')
+    } else if (providers.gradleProperty('adHocProducer').isPresent()) {
+        groovyOptions.configurationScriptFile.fileProvider(genUserScript.map { it.outputs.files.singleFile })
     } else {
         groovyOptions.configurationScriptFile.set(genUserScript.flatMap { it.outputFile })
     }
