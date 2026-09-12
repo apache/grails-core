@@ -4,26 +4,21 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.datastore.mapping.query.api;
+package org.grails.datastore.mapping.query.api
 
-import java.util.Map;
-
-import groovy.lang.Closure;
-import groovy.lang.DelegatesTo;
-
-import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.JoinType
 
 /**
  *
@@ -31,12 +26,12 @@ import jakarta.persistence.criteria.JoinType;
  * @since 3.1.2
  *
  */
-public interface BuildableCriteria extends Criteria {
+interface BuildableCriteria extends Criteria {
 
     /**
      * @return The class the criteria applies to
      */
-    Class getTargetClass();
+    Class getTargetClass()
 
     /**
      * Whether to cache the query
@@ -44,7 +39,7 @@ public interface BuildableCriteria extends Criteria {
      * @param cache True if the query should be cached
      * @return This criteria
      */
-    BuildableCriteria cache(boolean cache);
+    BuildableCriteria cache(boolean cache)
 
     /**
      * Whether to cache the query should be readOnly
@@ -52,7 +47,7 @@ public interface BuildableCriteria extends Criteria {
      * @param readOnly True if the results should be read-only
      * @return This criteria
      */
-    BuildableCriteria readOnly(boolean readOnly);
+    BuildableCriteria readOnly(boolean readOnly)
 
     /**
      * Whether to join on an association
@@ -60,7 +55,7 @@ public interface BuildableCriteria extends Criteria {
      * @param property The property to join on
      * @return This criteria
      */
-    BuildableCriteria join(String property);
+    BuildableCriteria join(String property)
 
     /**
      * Whether to join on an association
@@ -69,7 +64,7 @@ public interface BuildableCriteria extends Criteria {
      * @param joinType The type of join
      * @return This criteria
      */
-    BuildableCriteria join(String property, JoinType joinType);
+    BuildableCriteria join(String property, JoinType joinType)
 
     /**
      * Whether to select on an association
@@ -77,7 +72,7 @@ public interface BuildableCriteria extends Criteria {
      * @param property The property to join on
      * @return This criteria
      */
-    BuildableCriteria select(String property);
+    BuildableCriteria select(String property)
 
     /**
      * Defines and executes a list query in a single call. Example: Foo.createCriteria().list { }
@@ -85,7 +80,7 @@ public interface BuildableCriteria extends Criteria {
      *
      * @return The result
      */
-    Object list(@DelegatesTo(Criteria.class) Closure<?> closure);
+    Object list(@DelegatesTo(Criteria) Closure<?> closure)
 
     /**
      * Defines and executes a list query in a single call. Example: Foo.createCriteria().list { }
@@ -95,7 +90,7 @@ public interface BuildableCriteria extends Criteria {
      *
      * @return The result
      */
-    Object list(Map<String, ?> params, @DelegatesTo(Criteria.class) Closure<?> closure);
+    Object list(Map<String, ?> params, @DelegatesTo(Criteria) Closure<?> closure)
 
     /**
      * Defines and executes a list distinct query in a single call. Example: Foo.createCriteria().listDistinct { }
@@ -103,7 +98,7 @@ public interface BuildableCriteria extends Criteria {
      *
      * @return The result
      */
-    Object listDistinct(@DelegatesTo(Criteria.class) Closure<?> closure);
+    Object listDistinct(@DelegatesTo(Criteria) Closure<?> closure)
 
     /**
      * Defines and executes a scroll query in a single call. Example: Foo.createCriteria().scroll { }
@@ -112,7 +107,7 @@ public interface BuildableCriteria extends Criteria {
      *
      * @return A scrollable result set
      */
-    Object scroll(@DelegatesTo(Criteria.class) Closure<?> closure);
+    Object scroll(@DelegatesTo(Criteria) Closure<?> closure)
 
     /**
      * Defines and executes a get query ( a single result) in a single call. Example: Foo.createCriteria().get { }
@@ -121,5 +116,6 @@ public interface BuildableCriteria extends Criteria {
      *
      * @return A single result
      */
-    Object get(@DelegatesTo(Criteria.class) Closure<?> closure);
+    Object get(@DelegatesTo(Criteria) Closure<?> closure)
+
 }

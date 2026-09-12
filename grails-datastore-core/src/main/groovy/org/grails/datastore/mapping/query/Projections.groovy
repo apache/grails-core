@@ -4,19 +4,21 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.datastore.mapping.query;
+package org.grails.datastore.mapping.query
+
+import groovy.transform.CompileStatic
 
 /**
  * Projections used to customize the results of a query
@@ -24,16 +26,18 @@ package org.grails.datastore.mapping.query;
  * @author Graeme Rocher
  * @since 1.0
  */
-public class Projections {
-    public static final Query.IdProjection ID_PROJECTION = new Query.IdProjection();
-    public static final Query.CountProjection COUNT_PROJECTION = new Query.CountProjection();
+@CompileStatic
+class Projections {
+
+    public static final Query.IdProjection ID_PROJECTION = new Query.IdProjection()
+    public static final Query.CountProjection COUNT_PROJECTION = new Query.CountProjection()
 
     /**
      * Projection used to obtain the id of an object
      * @return The IdProjection instance
      */
-    public static Query.IdProjection id() {
-        return ID_PROJECTION;
+    static Query.IdProjection id() {
+        return ID_PROJECTION
     }
 
     /**
@@ -42,8 +46,8 @@ public class Projections {
      *
      * @return The CountProjection instance
      */
-    public static Query.CountProjection count() {
-        return COUNT_PROJECTION;
+    static Query.CountProjection count() {
+        return COUNT_PROJECTION
     }
 
     /**
@@ -51,8 +55,8 @@ public class Projections {
      * @param name The name of the property
      * @return The PropertyProjection instance
      */
-    public static Query.PropertyProjection property(String name) {
-        return new Query.PropertyProjection(name);
+    static Query.PropertyProjection property(String name) {
+        return new Query.PropertyProjection(name)
     }
 
     /**
@@ -61,8 +65,8 @@ public class Projections {
      * @param name The name of the property
      * @return The PropertyProjection instance
      */
-    public static Query.SumProjection sum(String name) {
-        return new Query.SumProjection(name);
+    static Query.SumProjection sum(String name) {
+        return new Query.SumProjection(name)
     }
 
     /**
@@ -71,8 +75,8 @@ public class Projections {
      * @param name The name of the property
      * @return The PropertyProjection instance
      */
-    public static Query.MinProjection min(String name) {
-        return new Query.MinProjection(name);
+    static Query.MinProjection min(String name) {
+        return new Query.MinProjection(name)
     }
 
     /**
@@ -81,8 +85,8 @@ public class Projections {
      * @param name The name of the property
      * @return The PropertyProjection instance
      */
-    public static Query.MaxProjection max(String name) {
-        return new Query.MaxProjection(name);
+    static Query.MaxProjection max(String name) {
+        return new Query.MaxProjection(name)
     }
 
     /**
@@ -91,8 +95,8 @@ public class Projections {
      * @param name The name of the property
      * @return The PropertyProjection instance
      */
-    public static Query.AvgProjection avg(String name) {
-        return new Query.AvgProjection(name);
+    static Query.AvgProjection avg(String name) {
+        return new Query.AvgProjection(name)
     }
 
     /**
@@ -100,18 +104,8 @@ public class Projections {
      *
      * @return Distinct projection
      */
-    public static Query.DistinctProjection distinct() {
-        return new Query.DistinctProjection();
-    }
-
-    /**
-     * Projection that signifies to return only distinct results
-     *
-     * @param property The name of the property
-     * @return Distinct projection
-     */
-    public static Query.DistinctPropertyProjection distinct(String property) {
-        return new Query.DistinctPropertyProjection(property);
+    static Query.DistinctProjection distinct() {
+        return new Query.DistinctProjection()
     }
 
     /**
@@ -120,8 +114,18 @@ public class Projections {
      * @param property The name of the property
      * @return Distinct projection
      */
-    public static Query.CountDistinctProjection countDistinct(String property) {
-        return new Query.CountDistinctProjection(property);
+    static Query.DistinctPropertyProjection distinct(String property) {
+        return new Query.DistinctPropertyProjection(property)
+    }
+
+    /**
+     * Projection that signifies to return only distinct results
+     *
+     * @param property The name of the property
+     * @return Distinct projection
+     */
+    static Query.CountDistinctProjection countDistinct(String property) {
+        return new Query.CountDistinctProjection(property)
     }
 
     /**
@@ -131,7 +135,8 @@ public class Projections {
      *
      * @return The projection list
      */
-    public static Query.GroupPropertyProjection groupProperty(String property) {
-        return new Query.GroupPropertyProjection(property);
+    static Query.GroupPropertyProjection groupProperty(String property) {
+        return new Query.GroupPropertyProjection(property)
     }
+
 }

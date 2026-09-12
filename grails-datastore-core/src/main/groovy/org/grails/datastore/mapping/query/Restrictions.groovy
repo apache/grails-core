@@ -4,28 +4,29 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.datastore.mapping.query;
+package org.grails.datastore.mapping.query
 
-import java.util.Collection;
+import groovy.transform.CompileStatic
 
-import org.grails.datastore.mapping.query.api.QueryableCriteria;
+import org.grails.datastore.mapping.query.api.QueryableCriteria
 
 /**
  * Factory for creating {@link org.grails.datastore.mapping.query.Query.Criterion} instances
  */
-public class Restrictions {
+@CompileStatic
+class Restrictions {
 
     /**
      * Restricts the property to be equal to the given value
@@ -33,8 +34,8 @@ public class Restrictions {
      * @param value The value
      * @return An instance of Query.Equals
      */
-    public static Query.Equals eq(String property, Object value) {
-        return new Query.Equals(property, value);
+    static Query.Equals eq(String property, Object value) {
+        return new Query.Equals(property, value)
     }
 
     /**
@@ -42,8 +43,8 @@ public class Restrictions {
      * @param value The value
      * @return An instance of Query.Equals
      */
-    public static Query.IdEquals idEq(Object value) {
-        return new Query.IdEquals(value);
+    static Query.IdEquals idEq(Object value) {
+        return new Query.IdEquals(value)
     }
 
     /**
@@ -53,8 +54,8 @@ public class Restrictions {
      * @return An instance of Query.Equals
      */
 
-    public static Query.NotEquals ne(String property, Object value) {
-        return new Query.NotEquals(property, value);
+    static Query.NotEquals ne(String property, Object value) {
+        return new Query.NotEquals(property, value)
     }
 
     /**
@@ -63,8 +64,8 @@ public class Restrictions {
      * @param values The values
      * @return An instance of Query.In
      */
-    public static Query.In in(String property, Collection<?> values) {
-        return new Query.In(property, values);
+    static Query.In in(String property, Collection<?> values) {
+        return new Query.In(property, values)
     }
 
     /**
@@ -73,8 +74,8 @@ public class Restrictions {
      * @param subquery The subquery
      * @return An instance of Query.In
      */
-    public static Query.In in(String property, QueryableCriteria subquery) {
-        return new Query.In(property, subquery);
+    static Query.In in(String property, QueryableCriteria subquery) {
+        return new Query.In(property, subquery)
     }
 
     /**
@@ -83,8 +84,8 @@ public class Restrictions {
      * @param subquery The subquery
      * @return An instance of Query.In
      */
-    public static Query.NotIn notIn(String property, QueryableCriteria subquery) {
-        return new Query.NotIn(property, subquery);
+    static Query.NotIn notIn(String property, QueryableCriteria subquery) {
+        return new Query.NotIn(property, subquery)
     }
 
     /**
@@ -93,8 +94,8 @@ public class Restrictions {
      * @param expression The expression
      * @return An instance of Query.Like
      */
-    public static Query.Like like(String property, String expression) {
-        return new Query.Like(property, expression);
+    static Query.Like like(String property, String expression) {
+        return new Query.Like(property, expression)
     }
 
     /**
@@ -104,8 +105,8 @@ public class Restrictions {
      * @param expression The expression
      * @return An ILike expression
      */
-    public static Query.ILike ilike(String property, String expression) {
-        return new Query.ILike(property, expression);
+    static Query.ILike ilike(String property, String expression) {
+        return new Query.ILike(property, expression)
     }
 
     /**
@@ -115,16 +116,16 @@ public class Restrictions {
      * @param expression The expression
      * @return An instance of Query.RLike
      */
-    public static Query.RLike rlike(String property, String expression) {
-        return new Query.RLike(property, expression);
+    static Query.RLike rlike(String property, String expression) {
+        return new Query.RLike(property, expression)
     }
 
-    public static Query.Criterion and(Query.Criterion a, Query.Criterion b) {
-        return new Query.Conjunction().add(a).add(b);
+    static Query.Criterion and(Query.Criterion a, Query.Criterion b) {
+        return new Query.Conjunction().add(a).add(b)
     }
 
-    public static Query.Criterion or(Query.Criterion a, Query.Criterion b) {
-        return new Query.Disjunction().add(a).add(b);
+    static Query.Criterion or(Query.Criterion a, Query.Criterion b) {
+        return new Query.Disjunction().add(a).add(b)
     }
 
     /**
@@ -135,8 +136,8 @@ public class Restrictions {
      * @param end The end of the range
      * @return The Between instance
      */
-    public static Query.Between between(String property, Object start, Object end) {
-        return new Query.Between(property, start, end);
+    static Query.Between between(String property, Object start, Object end) {
+        return new Query.Between(property, start, end)
     }
 
     /**
@@ -145,8 +146,8 @@ public class Restrictions {
      * @param value The value
      * @return The GreaterThan instance
      */
-    public static Query.GreaterThan gt(String property, Object value) {
-        return new Query.GreaterThan(property, value);
+    static Query.GreaterThan gt(String property, Object value) {
+        return new Query.GreaterThan(property, value)
     }
 
     /**
@@ -155,8 +156,8 @@ public class Restrictions {
      * @param value The value
      * @return The LessThan instance
      */
-    public static Query.LessThan lt(String property, Object value) {
-        return new Query.LessThan(property, value);
+    static Query.LessThan lt(String property, Object value) {
+        return new Query.LessThan(property, value)
     }
 
     /**
@@ -165,8 +166,8 @@ public class Restrictions {
      * @param value The value
      * @return The LessThan instance
      */
-    public static Query.GreaterThanEquals gte(String property, Object value) {
-        return new Query.GreaterThanEquals(property, value);
+    static Query.GreaterThanEquals gte(String property, Object value) {
+        return new Query.GreaterThanEquals(property, value)
     }
 
     /**
@@ -175,8 +176,8 @@ public class Restrictions {
      * @param value The value
      * @return The LessThan instance
      */
-    public static Query.LessThanEquals lte(String property, Object value) {
-        return new Query.LessThanEquals(property, value);
+    static Query.LessThanEquals lte(String property, Object value) {
+        return new Query.LessThanEquals(property, value)
     }
 
     /**
@@ -185,8 +186,8 @@ public class Restrictions {
      * @param property The property name
      * @return The IsNull instance
      */
-    public static Query.IsNull isNull(String property) {
-        return new Query.IsNull(property);
+    static Query.IsNull isNull(String property) {
+        return new Query.IsNull(property)
     }
 
     /**
@@ -195,8 +196,8 @@ public class Restrictions {
      * @param property The property name
      * @return The IsEmpty instance
      */
-    public static Query.IsEmpty isEmpty(String property) {
-        return new Query.IsEmpty(property);
+    static Query.IsEmpty isEmpty(String property) {
+        return new Query.IsEmpty(property)
     }
 
     /**
@@ -205,8 +206,8 @@ public class Restrictions {
      * @param property The property name
      * @return The IsEmpty instance
      */
-    public static Query.IsNotEmpty isNotEmpty(String property) {
-        return new Query.IsNotEmpty(property);
+    static Query.IsNotEmpty isNotEmpty(String property) {
+        return new Query.IsNotEmpty(property)
     }
 
     /**
@@ -215,8 +216,8 @@ public class Restrictions {
      * @param property The property name
      * @return The IsNull instance
      */
-    public static Query.IsNotNull isNotNull(String property) {
-        return new Query.IsNotNull(property);
+    static Query.IsNotNull isNotNull(String property) {
+        return new Query.IsNotNull(property)
     }
 
     /**
@@ -226,8 +227,8 @@ public class Restrictions {
      * @param size The size to restrict
      * @return The result
      */
-    public static Query.SizeEquals sizeEq(String property, int size) {
-        return new Query.SizeEquals(property, size);
+    static Query.SizeEquals sizeEq(String property, int size) {
+        return new Query.SizeEquals(property, size)
     }
 
     /**
@@ -237,8 +238,8 @@ public class Restrictions {
      * @param size The size to restrict
      * @return The result
      */
-    public static Query.SizeGreaterThan sizeGt(String property, int size) {
-        return new Query.SizeGreaterThan(property, size);
+    static Query.SizeGreaterThan sizeGt(String property, int size) {
+        return new Query.SizeGreaterThan(property, size)
     }
 
     /**
@@ -248,8 +249,8 @@ public class Restrictions {
      * @param size The size to restrict
      * @return The result
      */
-    public static Query.SizeGreaterThanEquals sizeGe(String property, int size) {
-        return new Query.SizeGreaterThanEquals(property, size);
+    static Query.SizeGreaterThanEquals sizeGe(String property, int size) {
+        return new Query.SizeGreaterThanEquals(property, size)
     }
 
     /**
@@ -260,8 +261,8 @@ public class Restrictions {
      *
      * @return A Criterion instance
      */
-    public static Query.SizeLessThanEquals sizeLe(String property, int size) {
-        return new Query.SizeLessThanEquals(property, size);
+    static Query.SizeLessThanEquals sizeLe(String property, int size) {
+        return new Query.SizeLessThanEquals(property, size)
     }
 
     /**
@@ -272,8 +273,8 @@ public class Restrictions {
      *
      * @return A Criterion instance
      */
-    public static Query.SizeLessThan sizeLt(String property, int size) {
-        return new Query.SizeLessThan(property, size);
+    static Query.SizeLessThan sizeLt(String property, int size) {
+        return new Query.SizeLessThan(property, size)
     }
 
     /**
@@ -284,8 +285,8 @@ public class Restrictions {
      *
      * @return A Criterion instance
      */
-    public static Query.SizeNotEquals sizeNe(String property, int size) {
-        return new Query.SizeNotEquals(property, size);
+    static Query.SizeNotEquals sizeNe(String property, int size) {
+        return new Query.SizeNotEquals(property, size)
     }
 
     /**
@@ -295,8 +296,8 @@ public class Restrictions {
      * @param otherPropertyName The other property
      * @return The criterion instance
      */
-    public static Query.EqualsProperty eqProperty(String propertyName, String otherPropertyName) {
-        return new Query.EqualsProperty(propertyName, otherPropertyName);
+    static Query.EqualsProperty eqProperty(String propertyName, String otherPropertyName) {
+        return new Query.EqualsProperty(propertyName, otherPropertyName)
     }
 
     /**
@@ -306,8 +307,8 @@ public class Restrictions {
      * @param otherPropertyName The other property
      * @return This criterion instance
      */
-    public static Query.NotEqualsProperty neProperty(String propertyName, String otherPropertyName) {
-        return new Query.NotEqualsProperty(propertyName, otherPropertyName);
+    static Query.NotEqualsProperty neProperty(String propertyName, String otherPropertyName) {
+        return new Query.NotEqualsProperty(propertyName, otherPropertyName)
     }
 
     /**
@@ -317,8 +318,8 @@ public class Restrictions {
      * @param otherPropertyName The other property
      * @return The criterion
      */
-    public static Query.GreaterThanProperty gtProperty(String propertyName, String otherPropertyName) {
-        return new Query.GreaterThanProperty(propertyName, otherPropertyName);
+    static Query.GreaterThanProperty gtProperty(String propertyName, String otherPropertyName) {
+        return new Query.GreaterThanProperty(propertyName, otherPropertyName)
     }
 
     /**
@@ -328,8 +329,8 @@ public class Restrictions {
      * @param otherPropertyName The other property
      * @return The criterion
      */
-    public static Query.GreaterThanEqualsProperty geProperty(String propertyName, String otherPropertyName) {
-        return new Query.GreaterThanEqualsProperty(propertyName, otherPropertyName);
+    static Query.GreaterThanEqualsProperty geProperty(String propertyName, String otherPropertyName) {
+        return new Query.GreaterThanEqualsProperty(propertyName, otherPropertyName)
     }
 
     /**
@@ -339,8 +340,8 @@ public class Restrictions {
      * @param otherPropertyName The other property
      * @return The criterion
      */
-    public static Query.LessThanProperty ltProperty(String propertyName, String otherPropertyName) {
-        return new Query.LessThanProperty(propertyName, otherPropertyName);
+    static Query.LessThanProperty ltProperty(String propertyName, String otherPropertyName) {
+        return new Query.LessThanProperty(propertyName, otherPropertyName)
     }
 
     /**
@@ -350,7 +351,8 @@ public class Restrictions {
      * @param otherPropertyName The other property
      * @return The criterion
      */
-    public static Query.LessThanEqualsProperty leProperty(String propertyName, String otherPropertyName) {
-        return new Query.LessThanEqualsProperty(propertyName, otherPropertyName);
+    static Query.LessThanEqualsProperty leProperty(String propertyName, String otherPropertyName) {
+        return new Query.LessThanEqualsProperty(propertyName, otherPropertyName)
     }
+
 }
