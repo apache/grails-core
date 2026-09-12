@@ -73,38 +73,6 @@ buildCache {
 
 rootProject.name = 'grails.core.ROOT'
 
-// Grails-Micronaut "island" toggle.
-//
-// The island is excluded from the build graph entirely when skipped:
-//   * grails-micronaut (Grails plugin that re-exports the Micronaut platform)
-//   * grails-micronaut-bom (overrides Groovy/Spock to Groovy 5 / Spock 2.4-groovy-5.0)
-//   * the grails-test-examples that consume grails-micronaut-bom
-//
-// The island builds against the Micronaut 5 platform, whose GA artifacts target JVM 25
-// bytecode and declare org.gradle.jvm.version=25. A build JDK older than 25 cannot resolve
-// or compile them, so by default the island is auto-excluded on a sub-25 JDK and auto-included
-// on JDK 25+. This lets a plain `./gradlew build` work on the Grails 8 baseline (JDK 21) and
-// transparently pick up the island when run on JDK 25+.
-//
-// Two presence-based overrides (matching project convention: skipFunctionalTests, skipCodeStyle):
-//   -PskipMicronautProjects    force-exclude the island on ANY JDK. Used by
-//                              groovy-snapshot-canary.yml, where the island's Groovy 5 /
-//                              Spock 2.4-groovy-5.0 pin clashes with the Groovy 4.x snapshot
-//                              that build swaps in - a reason independent of the JDK (#15613).
-//   -PincludeMicronautProjects force-include the island on a sub-25 JDK. Escape hatch for
-//                              making the :grails-micronaut tasks addressable on an older JDK
-//                              (e.g. to inspect the project graph). Note the island still
-//                              cannot compile the JVM-25 Micronaut platform on a sub-25 JDK.
-// -PskipMicronautProjects wins if both are present.
-//
-// Consumers that reference :grails-micronaut-bom (e.g. grails-doc:generateBomDocumentation)
-// must guard those references with findProject(':grails-micronaut-bom') != null.
-// See https://github.com/apache/grails-core/issues/15613.
-def explicitlySkipMicronaut = providers.gradleProperty('skipMicronautProjects').isPresent()
-def explicitlyIncludeMicronaut = providers.gradleProperty('includeMicronautProjects').isPresent()
-def buildJdkSupportsMicronaut = Runtime.version().feature() >= 25
-def skipMicronautProjects = explicitlySkipMicronaut || (!buildJdkSupportsMicronaut && !explicitlyIncludeMicronaut)
-
 include(
         'grails-bootstrap',
         'grails-beans-dsl',
@@ -668,38 +636,6 @@ includeBuild('./grails-gradle') {
 }
 includeBuild('./build-logic') {
     name = 'build-logic-root'
-}
-
-// Grails-Micronaut "island" - kept on its own dependency graph because the Micronaut
-// platform pins Groovy 5 / Spock 2.4-groovy-5.0, which is incompatible with the
-// Groovy 4 / Spock 2.4-groovy-4.0 stack the rest of grails-core targets. Skipping
-// these projects (via -PskipMicronautProjects) keeps Micronaut's version overrides
-// from leaking into builds where Groovy 4 is in play (notably the joint validation
-// build that swaps in an apache/groovy 4.x snapshot).
-if (!skipMicronautProjects) {
-    include(
-            'grails-micronaut-bom',
-            'grails-hibernate5-micronaut-bom',
-            'grails-hibernate7-micronaut-bom',
-            'grails-micronaut',
-            'grails-test-examples-issue-11767',
-            'grails-test-examples-micronaut',
-            'grails-test-examples-micronaut-groovy-only',
-            'grails-test-examples-micronaut-hibernate5',
-            'grails-test-examples-micronaut-hibernate7',
-            'grails-test-examples-plugins-issue-11767',
-            'grails-test-examples-plugins-micronaut-singleton',
-    )
-    project(':grails-micronaut-bom').projectDir = file('grails-bom/micronaut')
-    project(':grails-hibernate5-micronaut-bom').projectDir = file('grails-bom/hibernate5-micronaut')
-    project(':grails-test-examples-micronaut-hibernate5').projectDir = file('grails-test-examples/micronaut-hibernate5')
-    project(':grails-hibernate7-micronaut-bom').projectDir = file('grails-bom/hibernate7-micronaut')
-    project(':grails-test-examples-micronaut-hibernate7').projectDir = file('grails-test-examples/micronaut-hibernate7')
-    project(':grails-test-examples-issue-11767').projectDir = file('grails-test-examples/issue-11767')
-    project(':grails-test-examples-micronaut').projectDir = file('grails-test-examples/micronaut')
-    project(':grails-test-examples-micronaut-groovy-only').projectDir = file('grails-test-examples/micronaut-groovy-only')
-    project(':grails-test-examples-plugins-issue-11767').projectDir = file('grails-test-examples/plugins/issue-11767')
-    project(':grails-test-examples-plugins-micronaut-singleton').projectDir = file('grails-test-examples/plugins/micronaut-singleton')
 }
 
 // Due to https://github.com/gradle/gradle/issues/2986 , we can't change the global exclude for profiles, it must be done everywhere

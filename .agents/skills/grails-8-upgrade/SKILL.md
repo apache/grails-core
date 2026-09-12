@@ -227,6 +227,7 @@ GORM behavior changes:
 - Declare `nullable: false` on required domain properties, or set `grails.gorm.default.nullable: false` to restore the previous application-wide default.
 - Command object fields are unaffected and remain required by default.
 - GORM dynamic methods such as `save()`, `delete()`, `get()`, `load()`, and `merge()` are not affected by Hibernate `Session` API removals.
+- The `sort` and `order` arguments of `list()`, dynamic finders, where queries, criteria queries and `listOrderBy*` are validated on both Hibernate versions: `sort` must be a dotted property path that resolves through the mapping (a dotted alias such as `c.name` is still passed through), and `order` must be `asc` or `desc`. Anything else throws `IllegalArgumentException` (`Invalid sort property` / `Invalid sort direction`) instead of being ignored or failing inside Hibernate. On Hibernate 7, `list()` also rejects a `fetch` key that is not a persistent property.
 
 ## Web Layer and Content Negotiation
 

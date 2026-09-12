@@ -48,20 +48,22 @@ tasks.withType(Test).configureEach {
     ] as TestListener)
 }
 
-tasks.named('integrationTest', Test) {
-    systemProperty('geb.build.reportsDir', reporting.file("$projectDir/build/geb-reports"))
-    systemProperty('grails.geb.reporting.directory', reporting.file("$projectDir/build/geb-reports").canonicalFile.absolutePath)
-    // systemProperty('grails.geb.recording.mode', 'RECORD_ALL')
-    systemProperty('TESTCONFIG', System.getProperty('TESTCONFIG'))
+pluginManager.withPlugin('org.apache.grails.gradle.grails-integration-test') {
+    tasks.named('integrationTest', Test) {
+        systemProperty('geb.build.reportsDir', reporting.file("$projectDir/build/geb-reports"))
+        systemProperty('grails.geb.reporting.directory', reporting.file("$projectDir/build/geb-reports").canonicalFile.absolutePath)
+        // systemProperty('grails.geb.recording.mode', 'RECORD_ALL')
+        systemProperty('TESTCONFIG', System.getProperty('TESTCONFIG'))
 
-    // Waiting at-checks keep Geb tests resilient when a page is still loading after navigation.
-    systemProperty('grails.geb.atCheckWaiting.enabled', 'true')
-    systemProperty('grails.geb.timeouts.timeout', '30')
+        // Waiting at-checks keep Geb tests resilient when a page is still loading after navigation.
+        systemProperty('grails.geb.atCheckWaiting.enabled', 'true')
+        systemProperty('grails.geb.timeouts.timeout', '30')
 
-    doFirst {
-        logger.quiet(
-                '\n - Running tests for configuration: {}',
-                System.getProperty('TESTCONFIG', 'N/S')
-        )
+        doFirst {
+            logger.quiet(
+                    '\n - Running tests for configuration: {}',
+                    System.getProperty('TESTCONFIG', 'N/S')
+            )
+        }
     }
 }

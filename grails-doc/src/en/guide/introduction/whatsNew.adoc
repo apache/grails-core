@@ -30,7 +30,11 @@ Notable new features are included below.
 ==== Platform Baseline
 
 Grails {grailsMajorVersion} raises the standard build and runtime baseline to Java 21 and uses Gradle {gradleVersion}.
-The standard Grails BOM remains on Groovy {groovyVersion} and Spock {spockVersion}, while Micronaut-enabled Grails applications use Micronaut-specific BOM variants that align with Micronaut 5 and require JDK 25 or later.
+The standard Grails BOM uses Groovy {groovyVersion} and Spock {spockVersion}.
+
+==== Grails Micronaut Repository
+
+Grails Micronaut is maintained and released from the https://github.com/apache/grails-micronaut[Apache Grails Micronaut repository] and consumes published Grails Core artifacts.
 
 ==== Spring Boot 4.1 and Spring Framework 7
 
@@ -49,7 +53,7 @@ The `create-*` commands also accept a new `-d, --data` option (the previous `-g`
 grails -t forge create-app --data=hibernate7 com.example.demo
 ----
 
-Applications generated for Hibernate 7 consume `grails-hibernate7-bom` — or `grails-hibernate7-micronaut-bom` when combined with the `grails-micronaut` feature — consistently across the application dependencies, the buildscript classpath, and `buildSrc`.
+Applications generated for Hibernate 7 consume `grails-hibernate7-bom` consistently across the application dependencies, the buildscript classpath, and `buildSrc`.
 This avoids the dependency resolution conflicts that occur when an application generated for Hibernate 5 is manually switched to `grails-data-hibernate7` while the default `grails-bom` remains on the build classpath.
 The `database-migration` feature also selects the matching `grails-data-hibernate7-dbmigration` plugin automatically.
 

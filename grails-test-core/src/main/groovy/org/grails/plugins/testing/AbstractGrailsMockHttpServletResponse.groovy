@@ -77,12 +77,16 @@ abstract class AbstractGrailsMockHttpServletResponse extends MockHttpServletResp
     }
 
     /**
-     * Get the response XML
+     * Get the response XML.
+     *
+     * <p>The body is the controller's own output rather than untrusted input, so a
+     * {@code DOCTYPE} declaration is accepted. External entities and external DTDs are still
+     * not resolved.
      *
      * @return The response XML
      */
     GPathResult getXml() {
-        SpringIOUtils.createXmlSlurper().parseText(contentAsString)
+        SpringIOUtils.createXmlSlurper(true).parseText(contentAsString)
     }
 
     /**
