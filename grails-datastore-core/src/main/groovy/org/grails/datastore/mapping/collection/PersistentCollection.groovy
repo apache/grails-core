@@ -4,23 +4,21 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.datastore.mapping.collection;
+package org.grails.datastore.mapping.collection
 
-import java.util.Collection;
-
-import org.grails.datastore.mapping.dirty.checking.DirtyCheckableCollection;
+import org.grails.datastore.mapping.dirty.checking.DirtyCheckableCollection
 
 /**
  * A lazy loaded collection.
@@ -28,33 +26,34 @@ import org.grails.datastore.mapping.dirty.checking.DirtyCheckableCollection;
  * @author Graeme Rocher
  * @since 1.0
  */
-@SuppressWarnings("rawtypes")
-public interface PersistentCollection extends Collection, DirtyCheckableCollection {
+@SuppressWarnings('rawtypes')
+interface PersistentCollection extends Collection, DirtyCheckableCollection {
 
     /**
      * Check whether the collection has been loaded.
      * @return <code>true</code> if the collection has been initialized
      */
-    boolean isInitialized();
+    boolean isInitialized()
 
     /**
      * Initializes the collection if it hasn't already been initialized.
      */
-    void initialize();
+    void initialize()
 
     /**
      * Check whether the collection has been modified.
      * @return <code>true</code> if the collection is initialized and has been changed since initialization
      */
-    boolean isDirty();
+    boolean isDirty()
 
     /**
      * Mark the collection as no longer dirty.
      */
-    void resetDirty();
+    void resetDirty()
 
     /**
      * Mark the collection as dirty.
      */
-    void markDirty();
+    void markDirty()
+
 }
