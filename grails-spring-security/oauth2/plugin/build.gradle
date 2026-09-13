@@ -115,6 +115,10 @@ dependencies {
 	}
 	compileOnly 'org.apache.groovy:groovy' // Provided as this is a Grails plugin
 
+	testImplementation 'org.spockframework:spock-core'
+
+	testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+
 	integrationTestImplementation project(':grails-testing-support-web')
 	integrationTestImplementation 'org.spockframework:spock-core'
 
