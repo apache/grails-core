@@ -49,7 +49,7 @@ public class FeatureDTO extends Linkable {
      * Default constructor.
      * @param feature The feature
      * @param messageSource The message source
-     * @param messageContext The messageContext
+     * @param locale The locale
      */
     public FeatureDTO(Feature feature, MessageSource messageSource, Locale locale) {
         this.name = feature.getName();

@@ -61,7 +61,7 @@ public class JdkVersionDTO extends Linkable implements Selectable<JdkVersion> {
      * i18n constructor.
      * @param jdkVersion The type
      * @param messageSource The message source
-     * @param messageContext The message context
+     * @param locale The locale
      */
     JdkVersionDTO(JdkVersion jdkVersion, MessageSource messageSource, Locale locale) {
         String name = jdkVersion.name();

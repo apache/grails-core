@@ -73,7 +73,7 @@ public class ApplicationTypeDTO extends Linkable implements Selectable<Applicati
      * @param type The type
      * @param features The features
      * @param messageSource The message source
-     * @param messageContext The message context
+     * @param locale The locale
      */
     public ApplicationTypeDTO(ApplicationType type, List<FeatureDTO> features, MessageSource messageSource, Locale locale) {
         this.value = type;

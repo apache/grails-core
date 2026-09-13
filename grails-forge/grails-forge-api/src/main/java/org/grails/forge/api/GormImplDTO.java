@@ -61,7 +61,7 @@ public class GormImplDTO extends Linkable implements Selectable<GormImpl> {
      * i18n constructor.
      * @param gormImpl The type
      * @param messageSource The message source
-     * @param messageContext The message context
+     * @param locale The locale
      */
     GormImplDTO(GormImpl gormImpl,
                 MessageSource messageSource,

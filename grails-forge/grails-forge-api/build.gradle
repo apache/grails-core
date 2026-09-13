@@ -45,7 +45,7 @@ dependencies {
         exclude group: 'org.apache.groovy', module: 'groovy-all'
     }
     testRuntimeOnly "ch.qos.logback:logback-classic"
-    testRuntimeOnly "org.objenesis:objenesis:$objenesisVersion"
+    testRuntimeOnly 'org.objenesis:objenesis'
     testImplementation 'org.apache.groovy:groovy-test'
 }
 

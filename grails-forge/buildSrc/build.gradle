@@ -24,16 +24,18 @@ plugins {
     id 'org.apache.grails.buildsrc.dependency-validator'
 }
 
+apply from: '../../dependencies.gradle'
+
 configurations.configureEach {
     exclude group: 'io.github.groovylang.groovydoc', module: 'io.github.groovylang.groovydoc.gradle.plugin'
 }
 
 dependencies {
-    implementation "org.apache.grails.gradle:grails-publish:$grailsPublishGradleVersion"
+    implementation "org.apache.grails.gradle:grails-publish:${gradleBomDependencyVersions['grails-publish-plugin.version']}"
     implementation "com.fizzed:rocker-compiler:$rockerVersion"
-    implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonDatabindVersion"
+    implementation "com.fasterxml.jackson.core:jackson-databind:${bomDependencyVersions['jackson2.version']}"
     implementation "io.sdkman:gradle-sdkvendor-plugin:$gradleSdkvendorPluginVersion"
-    implementation "org.asciidoctor:asciidoctor-gradle-jvm:$asciidoctorGradleJvmVersion"
+    implementation "org.asciidoctor:asciidoctor-gradle-jvm:${gradleBomDependencyVersions['asciidoctor-gradle-jvm.version']}"
     implementation "com.diffplug.spotless:spotless-plugin-gradle:$spotlessVersion"
     implementation "io.spring.nohttp:nohttp-gradle:$nohttpGradleVersion"
     implementation "com.gradleup.shadow:shadow-gradle-plugin:$shadowVersion"
@@ -43,7 +45,7 @@ dependencies {
         exclude group: 'org.asciidoctor'
     }
     implementation "org.antlr:antlr4-runtime:$antlr4Version"
-    implementation "org.apache.ant:ant:$antVersion"
+    implementation "org.apache.ant:ant:${gradleBomDependencyVersions['ant.version']}"
     implementation "org.apache.grails.gradle:grails-gradle-common:$projectVersion"
     implementation "org.cyclonedx.bom:org.cyclonedx.bom.gradle.plugin:$gradleCycloneDxPluginVersion"
 }

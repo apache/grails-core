@@ -91,7 +91,6 @@ dependencies {
     implementation "org.slf4j:slf4j-nop"
     implementation "org.yaml:snakeyaml"
 
-    testImplementation enforcedPlatform('org.spockframework:spock-bom:2.4-groovy-4.0')
     testImplementation "org.reflections:reflections:$reflectionsVersion"
     testImplementation "org.testcontainers:spock:$testcontainersVersion"
 
@@ -101,7 +100,7 @@ dependencies {
     }
 
     testRuntimeOnly "ch.qos.logback:logback-classic"
-    testRuntimeOnly "org.objenesis:objenesis:$objenesisVersion"
+    testRuntimeOnly 'org.objenesis:objenesis'
     testImplementation 'org.apache.groovy:groovy-test'
 }
 
@@ -110,7 +109,6 @@ rocker {
 }
 
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/groovy-version-pin.gradle')
     from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/doc-config.gradle')

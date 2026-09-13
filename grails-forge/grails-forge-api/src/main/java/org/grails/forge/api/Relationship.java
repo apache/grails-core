@@ -18,8 +18,6 @@
  */
 package org.grails.forge.api;
 
-import jakarta.annotation.Nonnull;
-
 import java.util.Locale;
 
 /**

@@ -21,11 +21,9 @@ package org.grails.forge.options;
 import org.grails.forge.application.OperatingSystem;
 import org.grails.forge.util.VersionInfo;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Set;
 
 public class Options {
 

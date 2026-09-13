@@ -20,7 +20,7 @@
 // Add JUnit Platform launcher dependency required by Gradle 9 for running tests
 // Also add ByteBuddy for Spock mocking on Java 17+ (CGLIB doesn't support Java 17 class files)
 dependencies {
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.12.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testImplementation "net.bytebuddy:byte-buddy"
 }
 

@@ -64,7 +64,7 @@ dependencies {
     }
 
     testImplementation "ch.qos.logback:logback-classic"
-    testRuntimeOnly "org.objenesis:objenesis:$objenesisVersion"
+    testRuntimeOnly 'org.objenesis:objenesis'
     testImplementation 'org.apache.groovy:groovy-test'
 }
 

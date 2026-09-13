@@ -65,7 +65,7 @@ public class LanguageDTO extends Linkable implements Selectable<Language>, Inclu
      * i18n constructor.
      * @param language The type
      * @param messageSource The message source
-     * @param messageContext The message context
+     * @param locale The locale
      */
     LanguageDTO(Language language, MessageSource messageSource, Locale locale) {
         this.value = language;
