@@ -16,25 +16,20 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.common.aot;
+package org.apache.grails.common.aot
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.LinkedHashSet;
-import java.util.Set;
-
-import org.jspecify.annotations.Nullable;
-
-import org.springframework.asm.ClassReader;
-import org.springframework.asm.ClassVisitor;
-import org.springframework.asm.ConstantDynamic;
-import org.springframework.asm.FieldVisitor;
-import org.springframework.asm.Handle;
-import org.springframework.asm.Label;
-import org.springframework.asm.MethodVisitor;
-import org.springframework.asm.SpringAsmInfo;
-import org.springframework.asm.Type;
-import org.springframework.util.ClassUtils;
+import groovy.transform.CompileStatic
+import org.jspecify.annotations.Nullable
+import org.springframework.asm.ClassReader
+import org.springframework.asm.ClassVisitor
+import org.springframework.asm.ConstantDynamic
+import org.springframework.asm.FieldVisitor
+import org.springframework.asm.Handle
+import org.springframework.asm.Label
+import org.springframework.asm.MethodVisitor
+import org.springframework.asm.SpringAsmInfo
+import org.springframework.asm.Type
+import org.springframework.util.ClassUtils
 
 /**
  * Decides whether a type found by scanning can be registered for reflection.
@@ -53,7 +48,8 @@ import org.springframework.util.ClassUtils;
  *
  * @since 8.0
  */
-public final class RegistrableTypes {
+@CompileStatic
+final class RegistrableTypes {
 
     private RegistrableTypes() {
     }
@@ -65,12 +61,12 @@ public final class RegistrableTypes {
      * @param classLoader the loader to resolve against
      * @return whether the type can be registered
      */
-    public static boolean loads(String className, @Nullable ClassLoader classLoader) {
-        int declaring = className.indexOf('$');
+    static boolean loads(String className, @Nullable ClassLoader classLoader) {
+        int declaring = className.indexOf('$')
         if (declaring > 0 && !ClassUtils.isPresent(className.substring(0, declaring), classLoader)) {
-            return false;
+            return false
         }
-        return ClassUtils.isPresent(className, classLoader);
+        return ClassUtils.isPresent(className, classLoader)
     }
 
     /**
@@ -81,171 +77,175 @@ public final class RegistrableTypes {
      * @param classLoader the loader to resolve against
      * @return whether the type can be registered
      */
-    public static boolean referencesLoad(InputStream bytecode, @Nullable ClassLoader classLoader) {
-        Set<String> referenced = new LinkedHashSet<>();
+    static boolean referencesLoad(InputStream bytecode, @Nullable ClassLoader classLoader) {
+        Set<String> referenced = new LinkedHashSet<>()
         try (InputStream input = bytecode) {
             new ClassReader(input).accept(new ReferenceCollector(referenced),
-                    ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+                    ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES)
         }
         catch (IOException | RuntimeException ex) {
-            return false;
+            return false
         }
-        for (String name : referenced) {
+        for (String name in referenced) {
             if (!ClassUtils.isPresent(name, classLoader)) {
-                return false;
+                return false
             }
         }
-        return true;
+        return true
     }
 
     /** Collects the types a class names, in its own declaration and in the bodies of its methods. */
     private static final class ReferenceCollector extends ClassVisitor {
 
-        private final Set<String> referenced;
+        private final Set<String> referenced
 
         private ReferenceCollector(Set<String> referenced) {
-            super(SpringAsmInfo.ASM_VERSION);
-            this.referenced = referenced;
+            super(SpringAsmInfo.ASM_VERSION)
+            this.referenced = referenced
         }
 
         private void add(@Nullable String internalName) {
             if (internalName == null) {
-                return;
+                return
             }
-            if (internalName.startsWith("[")) {
+            if (internalName.startsWith('[')) {
                 // an array names its element type, which is the class that has to be there
-                addType(Type.getType(internalName));
-                return;
+                addType(Type.getType(internalName))
+                return
             }
-            String className = ClassUtils.convertResourcePathToClassName(internalName);
+            String className = ClassUtils.convertResourcePathToClassName(internalName)
             // the JDK is always present, and skipping it keeps this to the classes that can be absent
-            if (!className.startsWith("java.") && !className.startsWith("jdk.")) {
-                referenced.add(className);
+            if (!className.startsWith('java.') && !className.startsWith('jdk.')) {
+                referenced.add(className)
             }
         }
 
         /** Adds a type, reducing an array to the element type it is an array of. */
         private void addType(@Nullable Type type) {
             if (type == null) {
-                return;
+                return
             }
-            Type element = type;
+            Type element = type
             while (element.getSort() == Type.ARRAY) {
-                element = element.getElementType();
+                element = element.getElementType()
             }
             if (element.getSort() == Type.OBJECT) {
-                add(element.getInternalName());
+                add(element.getInternalName())
             }
         }
 
         /** Adds every type a method descriptor names: what it takes and what it gives back. */
         private void addMethodDescriptor(@Nullable String descriptor) {
             if (descriptor == null) {
-                return;
+                return
             }
-            for (Type argument : Type.getArgumentTypes(descriptor)) {
-                addType(argument);
+            for (Type argument in Type.getArgumentTypes(descriptor)) {
+                addType(argument)
             }
-            addType(Type.getReturnType(descriptor));
+            addType(Type.getReturnType(descriptor))
         }
 
         /** Adds whichever constant carries a type: a class literal, a handle, or a method type. */
         private void addConstant(@Nullable Object constant) {
-            if (constant instanceof Type type) {
+            if (constant instanceof Type) {
+                Type type = (Type) constant
                 if (type.getSort() == Type.METHOD) {
-                    addMethodDescriptor(type.getDescriptor());
+                    addMethodDescriptor(type.getDescriptor())
                 }
                 else {
-                    addType(type);
+                    addType(type)
                 }
             }
-            else if (constant instanceof Handle handle) {
-                add(handle.getOwner());
-                addMethodDescriptor(handle.getDesc());
+            else if (constant instanceof Handle) {
+                Handle handle = (Handle) constant
+                add(handle.getOwner())
+                addMethodDescriptor(handle.getDesc())
             }
-            else if (constant instanceof ConstantDynamic dynamic) {
-                addType(Type.getType(dynamic.getDescriptor()));
-                add(dynamic.getBootstrapMethod().getOwner());
+            else if (constant instanceof ConstantDynamic) {
+                ConstantDynamic dynamic = (ConstantDynamic) constant
+                addType(Type.getType(dynamic.getDescriptor()))
+                add(dynamic.getBootstrapMethod().getOwner())
                 for (int i = 0; i < dynamic.getBootstrapMethodArgumentCount(); i++) {
-                    addConstant(dynamic.getBootstrapMethodArgument(i));
+                    addConstant(dynamic.getBootstrapMethodArgument(i))
                 }
             }
         }
 
         @Override
-        public void visit(int version, int access, String name, String signature, String superName,
+        void visit(int version, int access, String name, String signature, String superName,
                 String[] interfaces) {
-            add(superName);
+            add(superName)
             if (interfaces != null) {
-                for (String each : interfaces) {
-                    add(each);
+                for (String each in interfaces) {
+                    add(each)
                 }
             }
         }
 
         @Override
-        public FieldVisitor visitField(int access, String name, String descriptor, String signature,
+        FieldVisitor visitField(int access, String name, String descriptor, String signature,
                 Object value) {
-            addType(Type.getType(descriptor));
-            return null;
+            addType(Type.getType(descriptor))
+            return null
         }
 
         @Override
-        public MethodVisitor visitMethod(int access, String name, String descriptor, String signature,
+        MethodVisitor visitMethod(int access, String name, String descriptor, String signature,
                 String[] exceptions) {
-            addMethodDescriptor(descriptor);
+            addMethodDescriptor(descriptor)
             if (exceptions != null) {
-                for (String each : exceptions) {
-                    add(each);
+                for (String each in exceptions) {
+                    add(each)
                 }
             }
             return new MethodVisitor(SpringAsmInfo.ASM_VERSION) {
                 @Override
-                public void visitTypeInsn(int opcode, String type) {
-                    add(type);
+                void visitTypeInsn(int opcode, String type) {
+                    add(type)
                 }
 
                 @Override
-                public void visitMethodInsn(int opcode, String owner, String methodName,
+                void visitMethodInsn(int opcode, String owner, String methodName,
                         String methodDescriptor, boolean isInterface) {
-                    add(owner);
-                    addMethodDescriptor(methodDescriptor);
+                    add(owner)
+                    addMethodDescriptor(methodDescriptor)
                 }
 
                 @Override
-                public void visitFieldInsn(int opcode, String owner, String fieldName,
+                void visitFieldInsn(int opcode, String owner, String fieldName,
                         String fieldDescriptor) {
-                    add(owner);
-                    addType(Type.getType(fieldDescriptor));
+                    add(owner)
+                    addType(Type.getType(fieldDescriptor))
                 }
 
                 @Override
-                public void visitLdcInsn(Object value) {
+                void visitLdcInsn(Object value) {
                     // a class literal, which names a type without ever calling anything on it
-                    addConstant(value);
+                    addConstant(value)
                 }
 
                 @Override
-                public void visitInvokeDynamicInsn(String methodName, String methodDescriptor,
+                void visitInvokeDynamicInsn(String methodName, String methodDescriptor,
                         Handle bootstrap, Object... arguments) {
                     // how a Groovy call site names what it dispatches on
-                    addMethodDescriptor(methodDescriptor);
-                    addConstant(bootstrap);
-                    for (Object argument : arguments) {
-                        addConstant(argument);
+                    addMethodDescriptor(methodDescriptor)
+                    addConstant(bootstrap)
+                    for (Object argument in arguments) {
+                        addConstant(argument)
                     }
                 }
 
                 @Override
-                public void visitMultiANewArrayInsn(String descriptor, int dimensions) {
-                    addType(Type.getType(descriptor));
+                void visitMultiANewArrayInsn(String arrayDescriptor, int dimensions) {
+                    addType(Type.getType(arrayDescriptor))
                 }
 
                 @Override
-                public void visitTryCatchBlock(Label start, Label end, Label handler, String type) {
-                    add(type);
+                void visitTryCatchBlock(Label start, Label end, Label handler, String type) {
+                    add(type)
                 }
-            };
+            }
         }
     }
+
 }

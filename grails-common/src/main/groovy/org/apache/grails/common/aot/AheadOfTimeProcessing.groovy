@@ -16,10 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.common.aot;
+package org.apache.grails.common.aot
 
-import org.springframework.context.aot.AbstractAotProcessor;
-import org.springframework.core.SpringProperties;
+import groovy.transform.CompileStatic
+import org.springframework.context.aot.AbstractAotProcessor
+import org.springframework.core.SpringProperties
 
 /**
  * Whether the application's code is being written out rather than run.
@@ -39,7 +40,8 @@ import org.springframework.core.SpringProperties;
  *
  * @since 8.0
  */
-public final class AheadOfTimeProcessing {
+@CompileStatic
+final class AheadOfTimeProcessing {
 
     private AheadOfTimeProcessing() {
     }
@@ -47,8 +49,8 @@ public final class AheadOfTimeProcessing {
     /**
      * @return whether this is running inside ahead-of-time processing rather than in an application
      */
-    public static boolean isGeneratingCode() {
-        return SpringProperties.getFlag(AbstractAotProcessor.AOT_PROCESSING);
+    static boolean isGeneratingCode() {
+        return SpringProperties.getFlag(AbstractAotProcessor.AOT_PROCESSING)
     }
 
 }
