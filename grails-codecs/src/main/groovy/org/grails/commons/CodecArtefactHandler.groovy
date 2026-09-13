@@ -16,27 +16,30 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.plugins.codecs;
+package org.grails.commons
 
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
+import groovy.transform.CompileStatic
 
-import grails.core.GrailsApplication;
-import org.grails.encoder.CodecLookup;
+import grails.core.ArtefactHandlerAdapter
+import org.grails.core.artefact.DomainClassArtefactHandler
 
 /**
- * Beans for Codecs
- *
- * @author graemerocher
- * @since 4.0
+ * @author Marc Palmer (marc@anyware.co.uk)
  */
-@Configuration
-public class CodecsConfiguration {
+@CompileStatic
+class CodecArtefactHandler extends ArtefactHandlerAdapter {
 
-    @Bean("codecLookup")
-    @Primary
-    public CodecLookup codecLookup(GrailsApplication grailsApplication) {
-        return new DefaultCodecLookup(grailsApplication);
+    public static final String TYPE = 'Codec'
+
+    CodecArtefactHandler() {
+        super(TYPE, GrailsCodecClass, DefaultGrailsCodecClass, TYPE)
     }
+
+    @Override
+    boolean isArtefactClass(@SuppressWarnings('rawtypes') Class clazz) {
+        if (clazz == null) return false
+
+        return clazz.getName().endsWith(DefaultGrailsCodecClass.CODEC) && !DomainClassArtefactHandler.isDomainClass(clazz)
+    }
+
 }

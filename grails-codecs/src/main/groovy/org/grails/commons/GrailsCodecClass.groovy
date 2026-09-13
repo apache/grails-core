@@ -16,10 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.commons;
+package org.grails.commons
 
-import grails.core.InjectableGrailsClass;
-import org.grails.encoder.CodecFactory;
+import grails.core.InjectableGrailsClass
+import org.grails.encoder.CodecFactory
 
 /**
  * Provides access to Codec classes. A Codec class one that ends in the convention
@@ -28,6 +28,8 @@ import org.grails.encoder.CodecFactory;
  * @author Jeff Brown
  * @since 0.4
  */
-public interface GrailsCodecClass extends InjectableGrailsClass, CodecFactory {
-    public void configureCodecMethods();
+interface GrailsCodecClass extends InjectableGrailsClass, CodecFactory {
+
+    void configureCodecMethods()
+
 }

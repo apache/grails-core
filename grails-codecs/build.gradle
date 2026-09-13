@@ -64,6 +64,13 @@ dependencies {
     testImplementation 'org.spockframework:spock-core'
 }
 
+tasks.withType(Jar).configureEach {
+    // The GlobalGrailsClassInjectorTransformation AST transform copies META-INF/grails.factories into
+    // the compiled classes output alongside the copy processResources puts there from src/main/resources,
+    // so the jar sees it twice (see issue #10118).
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
 apply {
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
