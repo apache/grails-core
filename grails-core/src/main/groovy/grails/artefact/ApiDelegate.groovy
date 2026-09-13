@@ -16,29 +16,31 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.artefact;
+package grails.artefact
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.ElementType
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
 
-import org.codehaus.groovy.transform.GroovyASTTransformationClass;
+import org.codehaus.groovy.transform.GroovyASTTransformationClass
 
 /**
- * Can be applied to any Trait to indicate to Grails that the trait should be automatically added to the given artefact types
+ * Similar to Groovy's @Delegate AST transform but instead assumes the first
+ * argument to every method is 'this'.
  *
  * @author Graeme Rocher
- * @since 3.0.3
+ * @since 2.0
  */
-
-@Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.TYPE})
-@GroovyASTTransformationClass("org.grails.compiler.injection.EnhancesTraitTransformation")
-public @interface Enhances {
+@java.lang.annotation.Documented
+@Retention(RetentionPolicy.SOURCE)
+@Target([ElementType.FIELD])
+@GroovyASTTransformationClass('org.grails.compiler.injection.ApiDelegateTransformation')
+@interface ApiDelegate {
 
     /**
-     * @return The artefact types (Example: Controller, Service etc.)
+     * @return The super class to check for in the first argument of api methods. Defaults to Object.class.
      */
-    String[] value();
+    Class<?> value() default Object
+
 }

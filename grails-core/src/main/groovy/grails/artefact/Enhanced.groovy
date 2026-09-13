@@ -16,30 +16,26 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.artefact;
+package grails.artefact
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
-import org.codehaus.groovy.transform.GroovyASTTransformationClass;
+import java.lang.annotation.ElementType
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
 
 /**
- * Similar to Groovy's @Delegate AST transform but instead assumes the first
- * argument to every method is 'this'.
+ * An annotation for classes that are compile-time enhanced. Used to
+ * fallback to runtime enhancement if compile time enhancement does not occur.
  *
  * @author Graeme Rocher
  * @since 2.0
  */
-@java.lang.annotation.Documented
-@Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.FIELD})
-@GroovyASTTransformationClass("org.grails.compiler.injection.ApiDelegateTransformation")
-public @interface ApiDelegate {
+@Retention(RetentionPolicy.RUNTIME)
+@Target([ElementType.TYPE])
+@interface Enhanced {
 
-    /**
-     * @return The super class to check for in the first argument of api methods. Defaults to Object.class.
-     */
-    Class<?> value() default Object.class;
+    String version()
+    String[] enhancedFor() default []
+    Class<?>[] mixins() default []
+
 }

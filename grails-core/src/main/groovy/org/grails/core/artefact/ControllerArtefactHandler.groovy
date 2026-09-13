@@ -16,28 +16,37 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.core.artefact;
+package org.grails.core.artefact
 
-import grails.core.ArtefactHandlerAdapter;
-import grails.core.GrailsServiceClass;
-import org.grails.core.DefaultGrailsServiceClass;
+import groovy.transform.CompileStatic
+
+import grails.core.ArtefactHandlerAdapter
+import grails.core.GrailsControllerClass
+import org.grails.core.DefaultGrailsControllerClass
 
 /**
+ * Lookup controllers for uris.
+ *
+ * <p>This class is responsible for looking up controller classes for uris.</p>
+ *
+ * <p>Lookups are cached in non-development mode, and the cache size can be controlled using the grails.urlmapping.cache.maxsize config property.</p>
+ *
  * @author Marc Palmer (marc@anyware.co.uk)
- */
-public class ServiceArtefactHandler extends ArtefactHandlerAdapter {
+*/
+@CompileStatic
+class ControllerArtefactHandler extends ArtefactHandlerAdapter {
 
-    public static final String TYPE = "Service";
-    public static final String PLUGIN_NAME = "services";
+    public static final String TYPE = 'Controller'
+    public static final String PLUGIN_NAME = 'controllers'
 
-    public ServiceArtefactHandler() {
-        super(TYPE, GrailsServiceClass.class, DefaultGrailsServiceClass.class,
-                DefaultGrailsServiceClass.SERVICE, false);
+    ControllerArtefactHandler() {
+        super(TYPE, GrailsControllerClass, DefaultGrailsControllerClass,
+                DefaultGrailsControllerClass.CONTROLLER, false)
     }
 
     @Override
-    public String getPluginName() {
-        return PLUGIN_NAME;
+    String getPluginName() {
+        return PLUGIN_NAME
     }
 
 }

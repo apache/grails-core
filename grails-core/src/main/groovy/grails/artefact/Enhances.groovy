@@ -16,24 +16,30 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.artefact;
+package grails.artefact
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.ElementType
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
+
+import org.codehaus.groovy.transform.GroovyASTTransformationClass
 
 /**
- * An annotation for classes that are compile-time enhanced. Used to
- * fallback to runtime enhancement if compile time enhancement does not occur.
+ * Can be applied to any Trait to indicate to Grails that the trait should be automatically added to the given artefact types
  *
  * @author Graeme Rocher
- * @since 2.0
+ * @since 3.0.3
  */
+
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.TYPE})
-public @interface Enhanced {
-    String version();
-    String[] enhancedFor() default {};
-    Class<?>[] mixins() default {};
+@Target([ElementType.TYPE])
+@GroovyASTTransformationClass('org.grails.compiler.injection.EnhancesTraitTransformation')
+@interface Enhances {
+
+    /**
+     * @return The artefact types (Example: Controller, Service etc.)
+     */
+    String[] value()
+
 }

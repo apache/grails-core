@@ -16,12 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.core.artefact;
+package org.grails.core.artefact
 
-import java.util.HashSet;
-import java.util.Set;
+import jakarta.persistence.Entity
 
-import jakarta.persistence.Entity;
+import groovy.transform.CompileStatic
 
 /**
  * Detects annotated domain classes for EJB3 style mappings.
@@ -29,26 +28,28 @@ import jakarta.persistence.Entity;
  * @author Graeme Rocher
  * @since 1.0
  */
-public class AnnotationDomainClassArtefactHandler extends DomainClassArtefactHandler {
+@CompileStatic
+class AnnotationDomainClassArtefactHandler extends DomainClassArtefactHandler {
 
-    private static final String JPA_MAPPING_STRATEGY = "JPA";
+    private static final String JPA_MAPPING_STRATEGY = 'JPA'
 
-    private Set<String> jpaClassNames = new HashSet<>();
+    private Set<String> jpaClassNames = new HashSet<>()
 
-    public Set<String> getJpaClassNames() {
-        return jpaClassNames;
+    Set<String> getJpaClassNames() {
+        return jpaClassNames
     }
 
     @Override
-    public boolean isArtefactClass(@SuppressWarnings("rawtypes") Class clazz) {
-        final boolean isJpaDomainClass = isJPADomainClass(clazz);
+    boolean isArtefactClass(@SuppressWarnings('rawtypes') Class clazz) {
+        final boolean isJpaDomainClass = isJPADomainClass(clazz)
         if (isJpaDomainClass) {
-            jpaClassNames.add(clazz.getName());
+            jpaClassNames.add(clazz.getName())
         }
-        return super.isArtefactClass(clazz);
+        return super.isArtefactClass(clazz)
     }
 
-    public static boolean isJPADomainClass(Class<?> clazz) {
-        return clazz != null && clazz.getAnnotation(Entity.class) != null;
+    static boolean isJPADomainClass(Class<?> clazz) {
+        return clazz != null && clazz.getAnnotation(Entity) != null
     }
+
 }

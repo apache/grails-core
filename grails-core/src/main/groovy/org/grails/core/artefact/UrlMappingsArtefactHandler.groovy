@@ -16,25 +16,28 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.artefact;
+package org.grails.core.artefact
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import groovy.transform.CompileStatic
 
-import org.codehaus.groovy.transform.GroovyASTTransformationClass;
+import grails.core.ArtefactHandlerAdapter
+import grails.core.GrailsUrlMappingsClass
+import org.grails.core.DefaultGrailsUrlMappingsClass
 
 /**
- * Used to define the artefact type for classes declared outside of Grails' usual conventions.
+ * A handler for UrlMappings.
  *
  * @author Graeme Rocher
- * @since 2.0
+ * @since 0.5
  */
-@Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.TYPE})
-@GroovyASTTransformationClass("org.grails.compiler.injection.ArtefactTypeAstTransformation")
-public @interface Artefact {
+@CompileStatic
+class UrlMappingsArtefactHandler extends ArtefactHandlerAdapter {
 
-    String value();
+    public static final String TYPE = 'UrlMappings'
+
+    UrlMappingsArtefactHandler() {
+        super(TYPE, GrailsUrlMappingsClass, DefaultGrailsUrlMappingsClass,
+                DefaultGrailsUrlMappingsClass.URL_MAPPINGS)
+    }
+
 }
