@@ -16,11 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.servlet;
+package org.grails.web.servlet
 
-import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest
 
-import org.springframework.web.util.UrlPathHelper;
+import groovy.transform.CompileStatic
+import org.springframework.web.util.UrlPathHelper
 
 /**
  * Extends the default Spring UrlPathHelper and makes methods Grails path aware.
@@ -28,20 +29,22 @@ import org.springframework.web.util.UrlPathHelper;
  * @author Graeme Rocher
  * @since 0.5
  */
-public class GrailsUrlPathHelper extends UrlPathHelper {
+@CompileStatic
+class GrailsUrlPathHelper extends UrlPathHelper {
 
-    public static final String GRAILS_DISPATCH_EXTENSION = ".dispatch";
-    public static final String GRAILS_SERVLET_PATH = "/grails";
+    public static final String GRAILS_DISPATCH_EXTENSION = '.dispatch'
+    public static final String GRAILS_SERVLET_PATH = '/grails'
 
     @Override
-    public String getPathWithinApplication(HttpServletRequest request) {
-        String uri = super.getPathWithinApplication(request).trim();
+    String getPathWithinApplication(HttpServletRequest request) {
+        String uri = super.getPathWithinApplication(request).trim()
         if (uri.startsWith(GRAILS_SERVLET_PATH)) {
-            uri = uri.substring(GRAILS_SERVLET_PATH.length());
+            uri = uri.substring(GRAILS_SERVLET_PATH.length())
         }
         if (uri.endsWith(GRAILS_DISPATCH_EXTENSION)) {
-            return uri.substring(0, uri.length() - GRAILS_DISPATCH_EXTENSION.length());
+            return uri.substring(0, uri.length() - GRAILS_DISPATCH_EXTENSION.length())
         }
-        return uri;
+        return uri
     }
+
 }

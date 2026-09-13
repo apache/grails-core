@@ -16,19 +16,18 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.filters;
+package org.grails.web.filters
 
-import java.io.IOException;
+import jakarta.servlet.FilterChain
+import jakarta.servlet.ServletException
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletRequestWrapper
+import jakarta.servlet.http.HttpServletResponse
 
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletRequestWrapper;
-import jakarta.servlet.http.HttpServletResponse;
-
-import org.springframework.util.Assert;
-import org.springframework.util.StringUtils;
-import org.springframework.web.filter.OncePerRequestFilter;
+import groovy.transform.CompileStatic
+import org.springframework.util.Assert
+import org.springframework.util.StringUtils
+import org.springframework.web.filter.OncePerRequestFilter
 
 /**
  * Based off the Spring implementation, but also supports the X-HTTP-Method-Override HTTP header.
@@ -38,45 +37,46 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * @author Graeme Rocher
  * @since 1.2
  */
-public class HiddenHttpMethodFilter extends OncePerRequestFilter {
+@CompileStatic
+class HiddenHttpMethodFilter extends OncePerRequestFilter {
 
     /** Default method parameter: <code>_method</code> */
-    public static final String DEFAULT_METHOD_PARAM = "_method";
+    public static final String DEFAULT_METHOD_PARAM = '_method'
 
-    private String methodParam = DEFAULT_METHOD_PARAM;
-    public static final String HEADER_X_HTTP_METHOD_OVERRIDE = "X-HTTP-Method-Override";
+    private String methodParam = DEFAULT_METHOD_PARAM
+    public static final String HEADER_X_HTTP_METHOD_OVERRIDE = 'X-HTTP-Method-Override'
 
     /**
      * Set the parameter name to look for HTTP methods.
      * @see #DEFAULT_METHOD_PARAM
      */
-    public void setMethodParam(String methodParam) {
-        Assert.hasText(methodParam, "'methodParam' must not be empty");
-        this.methodParam = methodParam;
+    void setMethodParam(String methodParam) {
+        Assert.hasText(methodParam, "'methodParam' must not be empty")
+        this.methodParam = methodParam
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
             FilterChain filterChain) throws ServletException, IOException {
 
-        if ("POST".equalsIgnoreCase(request.getMethod())) {
-            String httpMethod = getHttpMethodOverride(request);
+        if ('POST'.equalsIgnoreCase(request.getMethod())) {
+            String httpMethod = getHttpMethodOverride(request)
             if (StringUtils.hasLength(httpMethod)) {
-                filterChain.doFilter(new HttpMethodRequestWrapper(httpMethod, request), response);
-                return;
+                filterChain.doFilter(new HttpMethodRequestWrapper(httpMethod, request), response)
+                return
             }
         }
 
-        filterChain.doFilter(request, response);
+        filterChain.doFilter(request, response)
     }
 
     protected String getHttpMethodOverride(HttpServletRequest request) {
-        String httpMethod = request.getParameter(methodParam);
+        String httpMethod = request.getParameter(methodParam)
 
         if (httpMethod == null) {
-            httpMethod = request.getHeader(HEADER_X_HTTP_METHOD_OVERRIDE);
+            httpMethod = request.getHeader(HEADER_X_HTTP_METHOD_OVERRIDE)
         }
-        return httpMethod == null ? null : httpMethod.toUpperCase();
+        return httpMethod == null ? null : httpMethod.toUpperCase()
     }
 
     /**
@@ -85,16 +85,17 @@ public class HiddenHttpMethodFilter extends OncePerRequestFilter {
      */
     protected static class HttpMethodRequestWrapper extends HttpServletRequestWrapper {
 
-        private final String method;
+        private final String method
 
-        public HttpMethodRequestWrapper(String method, HttpServletRequest request) {
-            super(request);
-            this.method = method;
+        HttpMethodRequestWrapper(String method, HttpServletRequest request) {
+            super(request)
+            this.method = method
         }
 
         @Override
-        public String getMethod() {
-            return method;
+        String getMethod() {
+            return method
         }
     }
+
 }

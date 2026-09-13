@@ -16,17 +16,16 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.errors;
+package org.grails.web.errors
 
-import java.lang.reflect.Method;
-import java.util.Optional;
+import java.lang.reflect.Method
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.springframework.beans.BeansException;
-import org.springframework.context.ApplicationContext;
-import org.springframework.util.ClassUtils;
+import groovy.transform.CompileStatic
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import org.springframework.beans.BeansException
+import org.springframework.context.ApplicationContext
+import org.springframework.util.ClassUtils
 
 /**
  * Optional integration with the GORM {@code AuditorAware} bean. When the audit API
@@ -39,51 +38,52 @@ import org.springframework.util.ClassUtils;
  * empty {@code Optional}. Exception logging must never be blocked by a broken
  * auditor lookup.</p>
  */
+@CompileStatic
 class AuditorAwareLookup {
 
-    private static final Logger LOG = LoggerFactory.getLogger(AuditorAwareLookup.class);
-    private static final String AUDITOR_AWARE_CLASS = "org.grails.datastore.gorm.timestamp.AuditorAware";
+    private static final Logger LOG = LoggerFactory.getLogger(AuditorAwareLookup)
+    private static final String AUDITOR_AWARE_CLASS = 'org.grails.datastore.gorm.timestamp.AuditorAware'
 
-    private final ApplicationContext applicationContext;
+    private final ApplicationContext applicationContext
 
-    private volatile boolean resolved;
-    private Object bean;
-    private Method getCurrentAuditor;
+    private volatile boolean resolved
+    private Object bean
+    private Method getCurrentAuditor
 
     AuditorAwareLookup(ApplicationContext applicationContext) {
-        this.applicationContext = applicationContext;
+        this.applicationContext = applicationContext
     }
 
     Optional<?> getCurrentAuditor() {
-        resolve();
+        resolve()
         if (bean == null) {
-            return Optional.empty();
+            return Optional.empty()
         }
         try {
-            Object result = getCurrentAuditor.invoke(bean);
-            return result instanceof Optional<?> ? (Optional<?>) result : Optional.empty();
+            Object result = getCurrentAuditor.invoke(bean)
+            return result instanceof Optional<?> ? (Optional<?>) result : Optional.empty()
         }
         catch (ReflectiveOperationException e) {
-            LOG.debug("AuditorAware#getCurrentAuditor invocation failed", e);
-            return Optional.empty();
+            LOG.debug('AuditorAware#getCurrentAuditor invocation failed', e)
+            return Optional.empty()
         }
     }
 
     private void resolve() {
         if (resolved) {
-            return;
+            return
         }
         synchronized (this) {
             if (resolved) {
-                return;
+                return
             }
             try {
                 if (applicationContext != null &&
                         ClassUtils.isPresent(AUDITOR_AWARE_CLASS, applicationContext.getClassLoader())) {
-                    Class<?> type = ClassUtils.forName(AUDITOR_AWARE_CLASS, applicationContext.getClassLoader());
+                    Class<?> type = ClassUtils.forName(AUDITOR_AWARE_CLASS, applicationContext.getClassLoader())
                     try {
-                        bean = applicationContext.getBean(type);
-                        getCurrentAuditor = type.getMethod("getCurrentAuditor");
+                        bean = applicationContext.getBean(type)
+                        getCurrentAuditor = type.getMethod('getCurrentAuditor')
                     }
                     catch (BeansException noBean) {
                         // optional — no bean registered
@@ -91,11 +91,12 @@ class AuditorAwareLookup {
                 }
             }
             catch (Throwable t) {
-                LOG.debug("AuditorAware integration unavailable", t);
+                LOG.debug('AuditorAware integration unavailable', t)
             }
             finally {
-                resolved = true;
+                resolved = true
             }
         }
     }
+
 }
