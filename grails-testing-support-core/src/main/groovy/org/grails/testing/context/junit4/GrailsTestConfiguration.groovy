@@ -16,60 +16,60 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.testing.context.junit4;
+package org.grails.testing.context.junit4
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Inherited;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.Documented
+import java.lang.annotation.ElementType
+import java.lang.annotation.Inherited
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
 
-import org.springframework.context.ApplicationContextInitializer;
-import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.test.context.ContextConfiguration;
+import org.springframework.context.ApplicationContextInitializer
+import org.springframework.context.ConfigurableApplicationContext
+import org.springframework.test.context.ContextConfiguration
 
-import grails.boot.test.GrailsApplicationContextLoader;
+import grails.boot.test.GrailsApplicationContextLoader
 
 /**
  * @author Graeme Rocher
  * @since 3.0
  */
-@ContextConfiguration(loader = GrailsApplicationContextLoader.class)
+@ContextConfiguration(loader = GrailsApplicationContextLoader)
 @Documented
 @Inherited
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-public @interface GrailsTestConfiguration {
+@interface GrailsTestConfiguration {
 
     /**
      * @see ContextConfiguration#locations()
      */
-    String[] locations() default {};
+    String[] locations() default []
 
     /**
      * @see ContextConfiguration#classes()
      */
-    Class<?>[] classes() default {};
+    Class<?>[] classes() default []
 
     /**
      * @see ContextConfiguration#initializers()
      */
-    Class<? extends ApplicationContextInitializer<? extends ConfigurableApplicationContext>>[] initializers() default {};
+    Class<? extends ApplicationContextInitializer<? extends ConfigurableApplicationContext>>[] initializers() default []
 
     /**
      * @see ContextConfiguration#inheritLocations()
      */
-    boolean inheritLocations() default true;
+    boolean inheritLocations() default true
 
     /**
      * @see ContextConfiguration#inheritInitializers()
      */
-    boolean inheritInitializers() default true;
+    boolean inheritInitializers() default true
 
     /**
      * @see ContextConfiguration#name()
      */
-    String name() default "";
+    String name() default ''
 
 }
