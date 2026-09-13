@@ -16,30 +16,37 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.core.exceptions;
+package grails.core.support.proxy
+
+import groovy.transform.CompileStatic
 
 /**
- * Occurs when the creation of a new instance fails.
+ * Trivial default implementation that always returns true and the object.
  *
- * @author Steven Devijver
+ * @author Graeme Rocher
+ * @since 1.2.2
  */
-public class NewInstanceCreationException extends GrailsException {
+@CompileStatic
+class DefaultProxyHandler implements ProxyHandler {
 
-    private static final long serialVersionUID = -877948309600522419L;
-
-    public NewInstanceCreationException() {
-        super();
+    boolean isInitialized(Object o) {
+        return true
     }
 
-    public NewInstanceCreationException(String message) {
-        super(message);
+    boolean isInitialized(Object obj, String associationName) {
+        return true
     }
 
-    public NewInstanceCreationException(String message, Throwable cause) {
-        super(message, cause);
+    Object unwrapIfProxy(Object instance) {
+        return instance
     }
 
-    public NewInstanceCreationException(Throwable cause) {
-        super(cause);
+    boolean isProxy(Object o) {
+        return false
     }
+
+    void initialize(Object o) {
+        // do nothing
+    }
+
 }

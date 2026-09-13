@@ -16,7 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.core.support.proxy;
+package grails.core.support.proxy
 
 /**
  * Interface that defines logic for handling proxied instances
@@ -24,14 +24,14 @@ package grails.core.support.proxy;
  * @author Graeme Rocher
  * @since 1.2.2
  */
-public interface ProxyHandler {
+interface ProxyHandler {
 
     /**
      * Returns true if the specified object is a proxy.
      * @param o The object in question
      * @return true if it is a proxy
      */
-    boolean isProxy(Object o);
+    boolean isProxy(Object o)
 
     /**
      * Returns the unwrapped proxy instance or the original object if not proxied.
@@ -39,7 +39,7 @@ public interface ProxyHandler {
      * @param instance The instance to unwrap
      * @return The unwrapped instance
      */
-    Object unwrapIfProxy(Object instance);
+    Object unwrapIfProxy(Object instance)
 
     /**
      * Returns whether a lazy proxied instance has been initialized.
@@ -47,13 +47,13 @@ public interface ProxyHandler {
      * @param o The instance to test
      * @return true if it has been initialized false otherwise
      */
-    boolean isInitialized(Object o);
+    boolean isInitialized(Object o)
 
     /**
      * Initializes an existing uninitialized proxy instance.
      * @param o The proxy instance
      */
-    void initialize(Object o);
+    void initialize(Object o)
 
     /**
      * Tests whether an association of the given object has been initialized.
@@ -61,5 +61,6 @@ public interface ProxyHandler {
      * @param associationName The association
      * @return true if has been init
      */
-    boolean isInitialized(Object obj, String associationName);
+    boolean isInitialized(Object obj, String associationName)
+
 }

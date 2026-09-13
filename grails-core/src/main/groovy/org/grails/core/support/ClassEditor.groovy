@@ -16,11 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.core.support;
+package org.grails.core.support
 
-import java.beans.PropertyEditorSupport;
+import java.beans.PropertyEditorSupport
 
-import org.springframework.util.ClassUtils;
+import groovy.transform.CompileStatic
+import org.springframework.util.ClassUtils
 
 /**
  * Converts Strings to Class references for Spring.
@@ -30,43 +31,45 @@ import org.springframework.util.ClassUtils;
  *
  * @since Aug 8, 2005
  */
-public class ClassEditor extends PropertyEditorSupport {
+@CompileStatic
+class ClassEditor extends PropertyEditorSupport {
 
-    private ClassLoader classLoader;
+    private ClassLoader classLoader
 
-    public ClassEditor() {
-        super();
+    ClassEditor() {
+        super()
     }
 
-    public ClassEditor(Object source) {
-        super(source);
+    ClassEditor(Object source) {
+        super(source)
     }
 
-    public void setClassLoader(ClassLoader classLoader) {
+    void setClassLoader(ClassLoader classLoader) {
         if (classLoader != null) {
-            this.classLoader = classLoader;
+            this.classLoader = classLoader
         }
     }
 
     @Override
-    public String getAsText() {
-        return ((Class<?>) getValue()).getName();
+    String getAsText() {
+        return ((Class<?>) getValue()).getName()
     }
 
     @Override
-    public void setAsText(String className) throws IllegalArgumentException {
+    void setAsText(String className) throws IllegalArgumentException {
         try {
-            Class<?> clazz = ClassUtils.resolvePrimitiveClassName(className);
+            Class<?> clazz = ClassUtils.resolvePrimitiveClassName(className)
             if (clazz != null) {
-                setValue(clazz);
+                setValue(clazz)
             }
             else {
-                final ClassLoader cl = classLoader != null ? classLoader : Thread.currentThread().getContextClassLoader();
-                setValue(cl.loadClass(className));
+                final ClassLoader cl = classLoader != null ? classLoader : Thread.currentThread().getContextClassLoader()
+                setValue(cl.loadClass(className))
             }
         }
         catch (ClassNotFoundException e) {
-            throw new IllegalArgumentException("Could not load class [" + className + "]!");
+            throw new IllegalArgumentException('Could not load class [' + className + ']!')
         }
     }
+
 }

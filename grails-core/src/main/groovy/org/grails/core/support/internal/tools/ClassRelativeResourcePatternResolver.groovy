@@ -16,24 +16,29 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.core.support;
 
-import org.springframework.beans.factory.Aware;
+package org.grails.core.support.internal.tools
+
+import groovy.transform.CompileStatic
+import org.springframework.core.io.Resource
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver
 
 /**
- * Convenience interface that can be implemented by classes that are registered by plugins.
+ * Attempts to limit classpath searching to only locations relative to the given class
  *
- * @author Steven Devijver
- * @since 0.2
+ * @author Graeme Rocher
+ * @since 3.1.13
  */
-public interface ClassLoaderAware extends Aware {
+@CompileStatic
+class ClassRelativeResourcePatternResolver extends PathMatchingResourcePatternResolver {
 
-    /**
-     * This method is called by the {@link org.springframework.context.ApplicationContext} that
-     * loads the Grails application. The {@link ClassLoader} that loads the Grails application code
-     * is injected.
-     *
-     * @param classLoader the {@link ClassLoader} that loads the Grails application code
-     */
-    void setClassLoader(ClassLoader classLoader);
+    ClassRelativeResourcePatternResolver(Class clazz) {
+        super(new ClassRelativeClassLoader(clazz))
+    }
+
+    @Override
+    protected void addAllClassLoaderJarRoots(ClassLoader classLoader, Set<Resource> result) {
+        // no-op - don't search jar roots
+    }
+
 }

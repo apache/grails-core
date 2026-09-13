@@ -16,33 +16,25 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.core.support.proxy;
+package grails.core.support
+
+import org.springframework.beans.factory.Aware
 
 /**
- * Trivial default implementation that always returns true and the object.
+ * Convenience interface that can be implemented by classes that are registered by plugins.
  *
- * @author Graeme Rocher
- * @since 1.2.2
+ * @author Steven Devijver
+ * @since 0.2
  */
-public class DefaultProxyHandler implements ProxyHandler {
+interface ClassLoaderAware extends Aware {
 
-    public boolean isInitialized(Object o) {
-        return true;
-    }
+    /**
+     * This method is called by the {@link org.springframework.context.ApplicationContext} that
+     * loads the Grails application. The {@link ClassLoader} that loads the Grails application code
+     * is injected.
+     *
+     * @param classLoader the {@link ClassLoader} that loads the Grails application code
+     */
+    void setClassLoader(ClassLoader classLoader)
 
-    public boolean isInitialized(Object obj, String associationName) {
-        return true;
-    }
-
-    public Object unwrapIfProxy(Object instance) {
-        return instance;
-    }
-
-    public boolean isProxy(Object o) {
-        return false;
-    }
-
-    public void initialize(Object o) {
-        // do nothing
-    }
 }

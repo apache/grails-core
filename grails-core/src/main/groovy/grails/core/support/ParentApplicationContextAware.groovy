@@ -16,28 +16,19 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.core.exceptions;
+package grails.core.support
+
+import org.springframework.beans.factory.Aware
+import org.springframework.context.ApplicationContext
 
 /**
+ * Allows objects to be aware of the Grails parent application context.
+ *
  * @author Graeme Rocher
+ * @since 0.4
  */
-public class GrailsConfigurationException extends GrailsException {
+interface ParentApplicationContextAware extends Aware {
 
-    private static final long serialVersionUID = -4535880758562704335L;
+    void setParentApplicationContext(ApplicationContext parent)
 
-    public GrailsConfigurationException() {
-        // default
-    }
-
-    public GrailsConfigurationException(String message) {
-        super(message);
-    }
-
-    public GrailsConfigurationException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
-    public GrailsConfigurationException(Throwable cause) {
-        super(cause);
-    }
 }

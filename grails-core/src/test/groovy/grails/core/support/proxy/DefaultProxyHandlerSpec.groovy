@@ -16,27 +16,38 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.core.exceptions;
+package grails.core.support.proxy
 
-/**
- * Generic global runtime exception.
- *
- * @author Graeme Rocher
- * @since 0.4
- */
-public class GrailsRuntimeException extends GrailsException {
+import spock.lang.Specification
 
-    private static final long serialVersionUID = -1335036736215845295L;
+class DefaultProxyHandlerSpec extends Specification {
 
-    public GrailsRuntimeException(String message) {
-        super(message);
+    ProxyHandler handler = new DefaultProxyHandler()
+
+    void 'isInitialized is always true'() {
+        expect:
+        handler.isInitialized(new Object())
+        handler.isInitialized(new Object(), 'someAssociation')
     }
 
-    public GrailsRuntimeException(String message, Throwable cause) {
-        super(message, cause);
+    void 'unwrapIfProxy returns the same instance'() {
+        given:
+        def instance = new Object()
+
+        expect:
+        handler.unwrapIfProxy(instance).is(instance)
     }
 
-    public GrailsRuntimeException(Throwable cause) {
-        super(cause);
+    void 'isProxy is always false'() {
+        expect:
+        !handler.isProxy(new Object())
+    }
+
+    void 'initialize does nothing and does not throw'() {
+        when:
+        handler.initialize(new Object())
+
+        then:
+        noExceptionThrown()
     }
 }

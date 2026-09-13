@@ -16,19 +16,34 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.core.support;
+package org.grails.core.exceptions
 
-import org.springframework.beans.factory.Aware;
-
-import grails.config.Config;
+import groovy.transform.CompileStatic
 
 /**
- * Obtains the Grails ConfigObject via Spring.
+ * Thrown when creation of the Grails domain from the Grails domain classes fails.
  *
  * @author Graeme Rocher
- * @since 1.2
  */
-public interface GrailsConfigurationAware extends Aware {
+@CompileStatic
+class GrailsDomainException extends GrailsException {
 
-    void setConfiguration(Config co);
+    private static final long serialVersionUID = -3824320541041888143L
+
+    GrailsDomainException() {
+        super()
+    }
+
+    GrailsDomainException(String message, Throwable cause) {
+        super(message, cause)
+    }
+
+    GrailsDomainException(String message) {
+        super(message)
+    }
+
+    GrailsDomainException(Throwable cause) {
+        super(cause)
+    }
+
 }

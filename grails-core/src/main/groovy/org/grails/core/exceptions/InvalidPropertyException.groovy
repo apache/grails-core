@@ -16,28 +16,34 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+package org.grails.core.exceptions
 
-package org.grails.core.support.internal.tools;
-
-import java.util.Set;
-
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import groovy.transform.CompileStatic
 
 /**
- * Attempts to limit classpath searching to only locations relative to the given class
+ * Thrown when a property of a Grails class is invalidated.
  *
  * @author Graeme Rocher
- * @since 3.1.13
  */
-public class ClassRelativeResourcePatternResolver extends PathMatchingResourcePatternResolver {
+@CompileStatic
+class InvalidPropertyException extends GrailsException {
 
-    public ClassRelativeResourcePatternResolver(Class clazz) {
-        super(new ClassRelativeClassLoader(clazz));
+    private static final long serialVersionUID = 132133525035378206L
+
+    InvalidPropertyException() {
+        super()
     }
 
-    @Override
-    protected void addAllClassLoaderJarRoots(ClassLoader classLoader, Set<Resource> result) {
-        // no-op - don't search jar roots
+    InvalidPropertyException(String message, Throwable cause) {
+        super(message, cause)
     }
+
+    InvalidPropertyException(String message) {
+        super(message)
+    }
+
+    InvalidPropertyException(Throwable cause) {
+        super(cause)
+    }
+
 }

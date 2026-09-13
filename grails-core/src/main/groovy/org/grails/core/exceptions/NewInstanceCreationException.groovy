@@ -16,31 +16,34 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.core.exceptions;
+package org.grails.core.exceptions
+
+import groovy.transform.CompileStatic
 
 /**
- * Base class for all Grails exceptions that are not recoverable.
+ * Occurs when the creation of a new instance fails.
  *
  * @author Steven Devijver
- * @since Jul 2, 2005
  */
-public abstract class GrailsException extends RuntimeException {
+@CompileStatic
+class NewInstanceCreationException extends GrailsException {
 
-    private static final long serialVersionUID = 8909019964961528326L;
+    private static final long serialVersionUID = -877948309600522419L
 
-    public GrailsException() {
-        super();
+    NewInstanceCreationException() {
+        super()
     }
 
-    public GrailsException(String message) {
-        super(message);
+    NewInstanceCreationException(String message) {
+        super(message)
     }
 
-    public GrailsException(String message, Throwable cause) {
-        super(message, cause);
+    NewInstanceCreationException(String message, Throwable cause) {
+        super(message, cause)
     }
 
-    public GrailsException(Throwable cause) {
-        super(cause);
+    NewInstanceCreationException(Throwable cause) {
+        super(cause)
     }
+
 }

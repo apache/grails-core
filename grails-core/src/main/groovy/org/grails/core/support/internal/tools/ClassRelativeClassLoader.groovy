@@ -17,17 +17,13 @@
  *  under the License.
  */
 
-package org.grails.core.support.internal.tools;
+package org.grails.core.support.internal.tools
 
-import java.io.IOException;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.util.Enumeration;
+import groovy.transform.CompileStatic
+import org.springframework.core.io.FileSystemResource
 
-import org.springframework.core.io.FileSystemResource;
-
-import grails.io.IOUtils;
-import grails.util.BuildSettings;
+import grails.io.IOUtils
+import grails.util.BuildSettings
 
 /**
  * A classloader that only finds resources and classes that are in the same jar as the given class
@@ -37,51 +33,54 @@ import grails.util.BuildSettings;
  * @author Graeme Rocher
  * @since 3.1.13
  */
+@CompileStatic
 class ClassRelativeClassLoader extends URLClassLoader {
-    public ClassRelativeClassLoader(Class targetClass) {
-        super(createClassLoaderUrls(targetClass), ClassLoader.getSystemClassLoader());
+
+    ClassRelativeClassLoader(Class targetClass) {
+        super(createClassLoaderUrls(targetClass), ClassLoader.getSystemClassLoader())
     }
 
     private static URL[] createClassLoaderUrls(Class targetClass) {
-        URL root = IOUtils.findRootResource(targetClass);
+        URL root = IOUtils.findRootResource(targetClass)
         if (BuildSettings.RESOURCES_DIR != null && BuildSettings.RESOURCES_DIR.exists()) {
             try {
-                return new URL[] {root, new FileSystemResource(BuildSettings.RESOURCES_DIR.getCanonicalFile()).getURL() };
+                return [root, new FileSystemResource(BuildSettings.RESOURCES_DIR.getCanonicalFile()).getURL()] as URL[]
             } catch (IOException e) {
-                return new URL[]{root};
+                return [root] as URL[]
             }
         }
         else {
-            return new URL[]{root};
+            return [root] as URL[]
         }
     }
 
     @Override
-    public URL getResource(String name) {
-        return findResource(name);
+    URL getResource(String name) {
+        return findResource(name)
     }
 
     @Override
-    public Enumeration<URL> getResources(String name) throws IOException {
-        if ("".equals(name)) {
-            final URL[] urls = getURLs();
-            final int l = urls.length;
-            return new Enumeration<>() {
-                int i = 0;
+    Enumeration<URL> getResources(String name) throws IOException {
+        if (''.equals(name)) {
+            final URL[] urls = getURLs()
+            final int l = urls.length
+            return new Enumeration<URL>() {
+                int i = 0
 
                 @Override
-                public boolean hasMoreElements() {
-                    return i < l;
+                boolean hasMoreElements() {
+                    return i < l
                 }
 
                 @Override
-                public URL nextElement() {
-                    return urls[i++];
+                URL nextElement() {
+                    return urls[i++]
                 }
-            };
+            }
         }
         else {
-            return findResources(name);
+            return findResources(name)
         }
     }
+
 }

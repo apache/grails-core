@@ -16,30 +16,32 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.core.exceptions;
+package org.grails.core.exceptions
+
+import groovy.transform.CompileStatic
 
 /**
- * Thrown when a property of a Grails class is invalidated.
- *
  * @author Graeme Rocher
  */
-public class InvalidPropertyException extends GrailsException {
+@CompileStatic
+class GrailsConfigurationException extends GrailsException {
 
-    private static final long serialVersionUID = 132133525035378206L;
+    private static final long serialVersionUID = -4535880758562704335L
 
-    public InvalidPropertyException() {
-        super();
+    GrailsConfigurationException() {
+        // default
     }
 
-    public InvalidPropertyException(String message, Throwable cause) {
-        super(message, cause);
+    GrailsConfigurationException(String message) {
+        super(message)
     }
 
-    public InvalidPropertyException(String message) {
-        super(message);
+    GrailsConfigurationException(String message, Throwable cause) {
+        super(message, cause)
     }
 
-    public InvalidPropertyException(Throwable cause) {
-        super(cause);
+    GrailsConfigurationException(Throwable cause) {
+        super(cause)
     }
+
 }

@@ -16,17 +16,31 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.core.support;
+package org.grails.core.exceptions
 
-import org.springframework.beans.factory.Aware;
-import org.springframework.context.ApplicationContext;
+import groovy.transform.CompileStatic
 
 /**
- * Allows objects to be aware of the Grails parent application context.
+ * Generic global runtime exception.
  *
  * @author Graeme Rocher
  * @since 0.4
  */
-public interface ParentApplicationContextAware extends Aware {
-    void setParentApplicationContext(ApplicationContext parent);
+@CompileStatic
+class GrailsRuntimeException extends GrailsException {
+
+    private static final long serialVersionUID = -1335036736215845295L
+
+    GrailsRuntimeException(String message) {
+        super(message)
+    }
+
+    GrailsRuntimeException(String message, Throwable cause) {
+        super(message, cause)
+    }
+
+    GrailsRuntimeException(Throwable cause) {
+        super(cause)
+    }
+
 }

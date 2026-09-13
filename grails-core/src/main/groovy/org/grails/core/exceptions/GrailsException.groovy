@@ -16,27 +16,35 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.core.support;
+package org.grails.core.exceptions
 
-import org.springframework.beans.factory.Aware;
-
-import grails.core.GrailsApplication;
+import groovy.transform.CompileStatic
 
 /**
- * <p>Convenience interface that can be implemented by classes that are
- * registered by plugins.</p>
+ * Base class for all Grails exceptions that are not recoverable.
  *
  * @author Steven Devijver
- * @since 0.2
- * @see GrailsApplication
+ * @since Jul 2, 2005
  */
-public interface GrailsApplicationAware extends Aware {
-    /**
-     * <p>This method is called by the {@link org.springframework.context.ApplicationContext} that
-     * loads the Grails application. The {@link GrailsApplication} instance that represents
-     * the loaded Grails application is injected.</p>
-     *
-     * @param grailsApplication the {@link GrailsApplication} object that represents this Grails application
-     */
-    void setGrailsApplication(GrailsApplication grailsApplication);
+@CompileStatic
+abstract class GrailsException extends RuntimeException {
+
+    private static final long serialVersionUID = 8909019964961528326L
+
+    GrailsException() {
+        super()
+    }
+
+    GrailsException(String message) {
+        super(message)
+    }
+
+    GrailsException(String message, Throwable cause) {
+        super(message, cause)
+    }
+
+    GrailsException(Throwable cause) {
+        super(cause)
+    }
+
 }

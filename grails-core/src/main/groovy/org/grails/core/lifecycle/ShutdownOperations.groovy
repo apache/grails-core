@@ -16,15 +16,13 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.core.lifecycle;
+package org.grails.core.lifecycle
 
-import java.util.Collection;
-import java.util.LinkedHashSet;
+import groovy.transform.CompileStatic
+import org.apache.commons.logging.Log
+import org.apache.commons.logging.LogFactory
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import grails.util.Holders;
+import grails.util.Holders
 
 /**
  * Operations that should be executed on shutdown.
@@ -32,33 +30,35 @@ import grails.util.Holders;
  * @author Graeme Rocher
  * @since 2.0
  */
-public class ShutdownOperations {
-    private static final Log LOG = LogFactory.getLog(ShutdownOperations.class);
+@CompileStatic
+class ShutdownOperations {
 
-    private static final Collection<Runnable> shutdownOperations = new LinkedHashSet<>();
-    private static final Collection<Runnable> preservedShutdownOperations = new LinkedHashSet<>();
+    private static final Log LOG = LogFactory.getLog(ShutdownOperations)
 
-    public static final Runnable DEFAULT_SHUTDOWN_OPERATION = Holders::reset;
+    private static final Collection<Runnable> shutdownOperations = new LinkedHashSet<>()
+    private static final Collection<Runnable> preservedShutdownOperations = new LinkedHashSet<>()
+
+    public static final Runnable DEFAULT_SHUTDOWN_OPERATION = Holders::reset
 
     static {
-        resetOperations();
+        resetOperations()
     }
 
     /**
      * Runs the shutdown operations
      */
-    public static synchronized void runOperations() {
+    static synchronized void runOperations() {
         try {
-            for (Runnable shutdownOperation : shutdownOperations) {
+            for (Runnable shutdownOperation in shutdownOperations) {
                 try {
-                    shutdownOperation.run();
+                    shutdownOperation.run()
                 } catch (Exception e) {
-                    LOG.warn("Error occurred running shutdown operation: " + e.getMessage(), e);
+                    LOG.warn('Error occurred running shutdown operation: ' + e.getMessage(), e)
                 }
             }
         } finally {
-            shutdownOperations.clear();
-            shutdownOperations.addAll(preservedShutdownOperations);
+            shutdownOperations.clear()
+            shutdownOperations.addAll(preservedShutdownOperations)
         }
     }
 
@@ -66,8 +66,8 @@ public class ShutdownOperations {
      * Adds a shutdown operation which will be run once for the next shutdown
      * @param runnable The runnable operation
      */
-    public static synchronized void addOperation(Runnable runnable) {
-        addOperation(runnable, false);
+    static synchronized void addOperation(Runnable runnable) {
+        addOperation(runnable, false)
     }
 
     /**
@@ -75,20 +75,21 @@ public class ShutdownOperations {
      * @param runnable The runnable operation
      * @param preserveForNextShutdown should preserve the operation for subsequent shutdowns, useful in tests
      */
-    public static synchronized void addOperation(Runnable runnable, boolean preserveForNextShutdown) {
-        shutdownOperations.add(runnable);
+    static synchronized void addOperation(Runnable runnable, boolean preserveForNextShutdown) {
+        shutdownOperations.add(runnable)
         if (preserveForNextShutdown) {
-            preservedShutdownOperations.add(runnable);
+            preservedShutdownOperations.add(runnable)
         }
     }
 
     /**
      * Clears all shutdown operations without running them. Also clears operations that are kept after running operations.
      */
-    public static synchronized void resetOperations() {
-        shutdownOperations.clear();
-        preservedShutdownOperations.clear();
+    static synchronized void resetOperations() {
+        shutdownOperations.clear()
+        preservedShutdownOperations.clear()
         // default operations
-        addOperation(DEFAULT_SHUTDOWN_OPERATION, true);
+        addOperation(DEFAULT_SHUTDOWN_OPERATION, true)
     }
+
 }

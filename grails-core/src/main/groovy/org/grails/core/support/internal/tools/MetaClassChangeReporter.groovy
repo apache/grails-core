@@ -16,11 +16,9 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.core.support.internal.tools;
+package org.grails.core.support.internal.tools
 
-import groovy.lang.MetaClass;
-import groovy.lang.MetaClassRegistryChangeEvent;
-import groovy.lang.MetaClassRegistryChangeEventListener;
+import groovy.transform.CompileStatic
 
 /**
  * Simple class that reports when meta class changes and where (in what stack frame) those changes took place
@@ -28,7 +26,9 @@ import groovy.lang.MetaClassRegistryChangeEventListener;
  * @author Graeme Rocher
  * @since 2.0
  */
-public class MetaClassChangeReporter implements MetaClassRegistryChangeEventListener {
+@CompileStatic
+class MetaClassChangeReporter implements MetaClassRegistryChangeEventListener {
+
     /**
      * Called when the a constant MetaClass is updated. If the new MetaClass is null, then the MetaClass
      * is removed. Be careful, while this method is executed other updates may happen. If you want this
@@ -36,11 +36,12 @@ public class MetaClassChangeReporter implements MetaClassRegistryChangeEventList
      *
      * @param cmcu - the change event
      */
-    public void updateConstantMetaClass(MetaClassRegistryChangeEvent cmcu) {
-        Class<?> classToUpdate = cmcu.getClassToUpdate();
-        MetaClass newMetaClass = cmcu.getNewMetaClass();
+    void updateConstantMetaClass(MetaClassRegistryChangeEvent cmcu) {
+        Class<?> classToUpdate = cmcu.getClassToUpdate()
+        MetaClass newMetaClass = cmcu.getNewMetaClass()
 
-        System.out.println("Class [" + classToUpdate + "] updated MetaClass to [" + newMetaClass + "]");
-        Thread.dumpStack();
+        System.out.println('Class [' + classToUpdate + '] updated MetaClass to [' + newMetaClass + ']')
+        Thread.dumpStack()
     }
+
 }
