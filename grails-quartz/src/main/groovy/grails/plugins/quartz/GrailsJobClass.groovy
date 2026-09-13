@@ -14,11 +14,9 @@
  * limitations under the License.
  */
 
-package grails.plugins.quartz;
+package grails.plugins.quartz
 
-import java.util.Map;
-
-import grails.core.GrailsClass;
+import grails.core.GrailsClass
 
 /**
  * Represents a job class in Grails.
@@ -29,61 +27,62 @@ import grails.core.GrailsClass;
  * @author Sergey Nebolsin (nebolsin@gmail.com)
  * @since 0.1
  */
-public interface GrailsJobClass extends GrailsClass {
+interface GrailsJobClass extends GrailsClass {
 
     /**
      * Method which is executed by the job scheduler.
      */
-    public void execute();
+    void execute()
 
     /**
      * Get group name used for configuring scheduler.
      *
      * @return jobs group name for this job
      */
-    public String getGroup();
+    String getGroup()
 
     /**
      * If jobs can be executed concurrently returns true.
      *
      * @return true if several instances of this job can run concurrently
      */
-    public boolean isConcurrent();
+    boolean isConcurrent()
 
     /**
      * If job requires Hibernate Session bounded to thread returns true.
      *
      * @return true if this job require a Hibernate Session bounded to thread
      */
-    public boolean isSessionRequired();
+    boolean isSessionRequired()
 
     /**
      * If job is durable returns true.
      *
      * @return true if this job is durable
      */
-    public boolean isDurability();
+    boolean isDurability()
 
     /**
      * If job should be re-executed if a 'recovery' or 'fail-over' situation is encountered returns true.
      *
      * @return true if this job requests recovery
      */
-    public boolean isRequestsRecovery();
+    boolean isRequestsRecovery()
 
     /**
      * If job should be enabled or at all. Useful for testing new jobs and temporarily disabling jobs at the class property level
      *
      * @return true if this job is enabled
      */
-    public boolean isEnabled();
+    boolean isEnabled()
 
     /**
      * Get job's description used for configuring job details.
      *
      * @return description for this job
      */
-    public String getDescription();
+    String getDescription()
 
-    public Map getTriggers();
+    Map getTriggers()
+
 }
