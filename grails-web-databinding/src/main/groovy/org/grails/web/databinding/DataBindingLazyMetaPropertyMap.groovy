@@ -16,15 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.databinding;
+package org.grails.web.databinding
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import groovy.transform.CompileStatic
 
-import grails.beans.util.LazyMetaPropertyMap;
-import grails.web.databinding.DataBindingUtils;
+import grails.beans.util.LazyMetaPropertyMap
+import grails.web.databinding.DataBindingUtils
 
 /**
  * Extends the default implementation and does data binding.
@@ -32,34 +29,36 @@ import grails.web.databinding.DataBindingUtils;
  * @author Graeme Rocher
  * @since 1.1
  */
-public class DataBindingLazyMetaPropertyMap extends LazyMetaPropertyMap {
+@CompileStatic
+class DataBindingLazyMetaPropertyMap extends LazyMetaPropertyMap {
 
     /**
      * Constructs the map
      *
      * @param o The object to inspect
      */
-    public DataBindingLazyMetaPropertyMap(Object o) {
-        super(o);
+    DataBindingLazyMetaPropertyMap(Object o) {
+        super(o)
     }
 
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings('rawtypes')
     @Override
-    public Object put(Object propertyName, Object propertyValue) {
+    Object put(Object propertyName, Object propertyValue) {
         if (propertyName instanceof List) {
-            DataBindingUtils.bindObjectToInstance(getInstance(), propertyValue, (List) propertyName, null, null);
+            DataBindingUtils.bindObjectToInstance(getInstance(), propertyValue, (List) propertyName, null, null)
         } else {
-            final Map bindingSource;
+            final Map bindingSource
             if (propertyValue instanceof Map) {
-                bindingSource = (Map) propertyValue;
+                bindingSource = (Map) propertyValue
             } else {
-                bindingSource = new HashMap();
-                bindingSource.put(propertyName, propertyValue);
+                bindingSource = new HashMap()
+                bindingSource.put(propertyName, propertyValue)
             }
-            List propertyNames = new ArrayList();
-            propertyNames.add(propertyName);
-            DataBindingUtils.bindObjectToInstance(getInstance(), bindingSource, propertyNames, null, null);
+            List propertyNames = new ArrayList()
+            propertyNames.add(propertyName)
+            DataBindingUtils.bindObjectToInstance(getInstance(), bindingSource, propertyNames, null, null)
         }
-        return null;
+        return null
     }
+
 }

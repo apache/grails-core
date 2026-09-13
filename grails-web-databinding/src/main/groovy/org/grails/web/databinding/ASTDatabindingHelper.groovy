@@ -16,21 +16,17 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.databinding.bindingsource;
+package org.grails.web.databinding
 
-import org.grails.databinding.bindingsource.DataBindingSourceCreationException;
+import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.classgen.GeneratorContext
+import org.codehaus.groovy.control.SourceUnit
 
-/** 
- * Represents an error creation a data binding source because the request
- * body is invalid.  Examples would be malformed JSON or XML.
- * 
+/**
  * @author Jeff Brown
- * @since 2.3
  */
-public class InvalidRequestBodyException extends DataBindingSourceCreationException {
-    private static final long serialVersionUID = 1L;
+interface ASTDatabindingHelper {
 
-    public InvalidRequestBodyException(Exception cause) {
-        super(cause);
-    }
+    void injectDatabindingCode(SourceUnit source, GeneratorContext context, ClassNode classNode)
+
 }

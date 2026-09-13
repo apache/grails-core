@@ -16,15 +16,26 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.web.databinding;
+package org.grails.web.databinding.bindingsource
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import groovy.transform.CompileStatic
 
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.PARAMETER)
-public @interface BindAllowed {
-    String[] value();
+import org.grails.databinding.bindingsource.DataBindingSourceCreationException
+
+/**
+ * Represents an error creation a data binding source because the request
+ * body is invalid.  Examples would be malformed JSON or XML.
+ *
+ * @author Jeff Brown
+ * @since 2.3
+ */
+@CompileStatic
+class InvalidRequestBodyException extends DataBindingSourceCreationException {
+
+    private static final long serialVersionUID = 1L
+
+    InvalidRequestBodyException(Exception cause) {
+        super(cause)
+    }
+
 }
