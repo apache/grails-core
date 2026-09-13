@@ -16,10 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.validation;
+package grails.validation
 
-import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.ClassNode
 
-public interface ASTValidateableHelper {
-    void injectValidateableCode(ClassNode classNode, boolean defaultNullable);
+interface ASTValidateableHelper {
+
+    void injectValidateableCode(ClassNode classNode, boolean defaultNullable)
+
 }
