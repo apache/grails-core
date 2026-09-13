@@ -16,82 +16,81 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.core;
-
-import java.util.Properties;
+package grails.core
 
 /**
  * Represents a data source in Grails.
  *
  * @author Steven Devijver
  */
-public interface GrailsDataSource extends InjectableGrailsClass {
+interface GrailsDataSource extends InjectableGrailsClass {
 
     /**
      * True is connection pooling is enabled.
      *
      * @return connection pooling enabled
      */
-    boolean isPooled();
+    boolean isPooled()
 
     /**
      * The driver class name for the data source.
      *
      * @return driver class name
      */
-    String getDriverClassName();
+    String getDriverClassName()
 
     /**
      * The URL for the data source.
      *
      * @return URL
      */
-    String getUrl();
+    String getUrl()
 
     /**
      * The username for the data source.
      *
      * @return username
      */
-    String getUsername();
+    String getUsername()
 
     /**
      * The password for the data source.
      *
      * @return password
      */
-    String getPassword();
+    String getPassword()
 
     /**
      * Other properties for this data source.
      *
      * @return other properties
      */
-    Properties getOtherProperties();
+    Properties getOtherProperties()
 
     /**
      * Whether to generate the database with HBM 2 DDL, values can be "create", "create-drop" or "update".
      * @return The dbCreate method to use
      */
-    String getDbCreate();
+    String getDbCreate()
 
     /**
      * @return The configuration class to use when setting up the database.
      */
-    @SuppressWarnings("rawtypes")
-    Class getConfigurationClass();
+    @SuppressWarnings('rawtypes')
+    Class getConfigurationClass()
 
     /**
      * The dialect implementation to use.
      * @return The dialect class or null if none configured
      */
-    @SuppressWarnings("rawtypes")
-    Class getDialect();
+    @SuppressWarnings('rawtypes')
+    Class getDialect()
 
     /**
      * Whether SQL logging is enabled
      *
      * @return true if SQL logging is enabled
      */
-    boolean isLoggingSql();
+    boolean isLoggingSql()
+
 }

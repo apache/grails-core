@@ -16,28 +16,39 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.core;
+package org.grails.core
 
-import org.springframework.context.ApplicationContext;
+import groovy.transform.CompileStatic
+import groovy.transform.stc.POJO
+
+import grails.core.InjectableGrailsClass
 
 /**
+ * Configures Grails classes to be autowirable by name, always.
+ *
  * @author Graeme Rocher
- * @since 0.4
+ * @author Steven Devijver
+ *
+ * @since 0.1
  */
-public interface ApplicationAttributes {
-    String APPLICATION = "org.codehaus.groovy.grails.APPLICATION";
-    String APPLICATION_CONTEXT = "org.codehaus.groovy.grails.APPLICATION_CONTEXT";
-    String PARENT_APPLICATION_CONTEXT = "org.codehaus.groovy.grails.PARENT_APPLICATION_CONTEXT";
-    String REQUEST_SCOPE_ID = "org.codehaus.groovy.grails.GRAILS_APPLICATION_ATTRIBUTES";
-    String PLUGIN_MANAGER = "org.codehaus.groovy.grails.GRAILS_PLUGIN_MANAGER";
+@CompileStatic
+@POJO
+abstract class AbstractInjectableGrailsClass extends AbstractGrailsClass implements InjectableGrailsClass {
 
-    /**
-     * @return The application context for servlet
-     */
-    ApplicationContext getApplicationContext();
+    AbstractInjectableGrailsClass(Class<?> clazz, String trailingName) {
+        super(clazz, trailingName)
+    }
 
-    /**
-     * @return Retrieves the grails application instance
-     */
-    GrailsApplication getGrailsApplication();
+    boolean byName() {
+        return true
+    }
+
+    boolean byType() {
+        return false
+    }
+
+    boolean getAvailable() {
+        return true
+    }
+
 }

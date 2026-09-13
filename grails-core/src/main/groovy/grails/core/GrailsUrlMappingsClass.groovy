@@ -16,31 +16,26 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.core;
-
-import org.grails.core.AbstractGrailsClass;
+package grails.core
 
 /**
- * A default implementation for Grails classes that need to be registered and managed by a GrailsApplication,
- * but don't need any special handling.
- *
- * @author Graeme Rocher
- * @since 0.5
+ * Loads the UrlMappings.
  */
-public class DefaultGrailsClass extends AbstractGrailsClass {
+interface GrailsUrlMappingsClass extends GrailsClass {
 
     /**
-     * Contructor to be used by all child classes to create a
-     * new instance and get the name right.
+     * Returns the mappings closure which is called to evaluate the url mappings.
      *
-     * @param clazz        the Grails class
-     * @param trailingName the trailing part of the name for this class type
+     * @return A Closure instance
      */
-    public DefaultGrailsClass(Class<?> clazz, String trailingName) {
-        super(clazz, trailingName);
-    }
+    @SuppressWarnings('rawtypes')
+    Closure getMappingsClosure()
 
-    public DefaultGrailsClass(Class<?> clazz) {
-        super(clazz, "");
-    }
+    /**
+     * Returns a List of URI patterns to exclude.
+     * @return  the patterns (Strings)
+     */
+    @SuppressWarnings('rawtypes')
+    List getExcludePatterns()
+
 }

@@ -16,9 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.core;
-
-import java.util.Map;
+package grails.core
 
 /**
  * Holder for all the class-related info and structures relating to an Artefact.
@@ -28,30 +26,30 @@ import java.util.Map;
  *
  * @since 1.0
  */
-public interface ArtefactInfo {
+interface ArtefactInfo {
 
     /**
      * Gets you the array of all artefact Class(es), the original classes loaded
      * that represent the artefacts.
      * @return The array, which may be empty but never null.
      */
-    @SuppressWarnings("rawtypes")
-    Class[] getClasses();
+    @SuppressWarnings('rawtypes')
+    Class[] getClasses()
 
     /**
      * Gets you the array of all artefact GrailsClass(es), the classes used to track
      * information about the artefact.
      * @return The array, which may be empty but never null.
      */
-    GrailsClass[] getGrailsClasses();
+    GrailsClass[] getGrailsClasses()
 
     /**
      * Gets you the unmodifiable Map of all artefact Class(es), the actual classes implementing the artefact.
      * <p>The Map is keyed by class name, i.e. "BookController"</p>
      * @return The Map, which may be empty but never null.
      */
-    @SuppressWarnings("rawtypes")
-    Map getClassesByName();
+    @SuppressWarnings('rawtypes')
+    Map getClassesByName()
 
     /**
      * <p>Gets you the unmodifiable Map of all artefact GrailsClass(es), the classes that store extra
@@ -59,8 +57,8 @@ public interface ArtefactInfo {
      * <p>The Map is keyed by class name, i.e. "BookController"</p>
      * @return The Map, which may be empty but never null.
      */
-    @SuppressWarnings("rawtypes")
-    Map getGrailsClassesByName();
+    @SuppressWarnings('rawtypes')
+    Map getGrailsClassesByName()
 
     /**
      * <p>Retrieves the GrailsClass representing a named artefact.</p>
@@ -68,12 +66,13 @@ public interface ArtefactInfo {
      * @param name The name of the artefact, i.e. "BookController"
      * @return The Map, which may be empty but never null.
      */
-    GrailsClass getGrailsClass(String name);
+    GrailsClass getGrailsClass(String name)
 
     /**
      * Retrieves a Grails class by its logical property name. For example "BookController" would be "book".
      * @param logicalName The logical name
      * @return A GrailsClass or null
      */
-    GrailsClass getGrailsClassByLogicalPropertyName(String logicalName);
+    GrailsClass getGrailsClassByLogicalPropertyName(String logicalName)
+
 }

@@ -16,33 +16,34 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.core;
-
-import grails.core.InjectableGrailsClass;
+package grails.core
 
 /**
- * Configures Grails classes to be autowirable by name, always.
- *
- * @author Graeme Rocher
  * @author Steven Devijver
- *
- * @since 0.1
  */
-public abstract class AbstractInjectableGrailsClass extends AbstractGrailsClass implements InjectableGrailsClass {
+interface GrailsServiceClass extends InjectableGrailsClass {
 
-    public AbstractInjectableGrailsClass(Class<?> clazz, String trailingName) {
-        super(clazz, trailingName);
-    }
+    String DATA_SOURCE = 'datasource'
+    String DEFAULT_DATA_SOURCE = 'DEFAULT'
+    String ALL_DATA_SOURCES = 'ALL'
 
-    public boolean byName() {
-        return true;
-    }
+    /**
+     * Service should be configured with transaction demarcation.
+     *
+     * @return configure with transaction demarcation
+     */
+    boolean isTransactional()
 
-    public boolean byType() {
-        return false;
-    }
+    /**
+     * Get the datasource name that this service class works with.
+     * @return the name
+     */
+    String getDatasource()
 
-    public boolean getAvailable() {
-        return true;
-    }
+    /**
+     * Check if the service class can use the named DataSource.
+     * @param name the name
+     */
+    boolean usesDatasource(String name)
+
 }

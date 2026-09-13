@@ -16,15 +16,15 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.core;
+package grails.core
 
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
-import org.springframework.core.io.Resource;
+import org.springframework.context.ApplicationContext
+import org.springframework.context.ApplicationContextAware
+import org.springframework.core.io.Resource
 
-import grails.config.Config;
-import grails.util.Metadata;
-import org.grails.datastore.mapping.model.MappingContext;
+import grails.config.Config
+import grails.util.Metadata
+import org.grails.datastore.mapping.model.MappingContext
 
 /**
  * <p>The main interface representing a running Grails application. This interface's
@@ -46,53 +46,53 @@ import org.grails.datastore.mapping.model.MappingContext;
  *
  * @since 0.1
  */
-public interface GrailsApplication extends ApplicationContextAware {
+interface GrailsApplication extends ApplicationContextAware {
 
     /**
      * The id of the grails application within a bean context
      */
-    String APPLICATION_ID = "grailsApplication";
+    String APPLICATION_ID = 'grailsApplication'
 
     /**
      * The name of the transaction manager bean
      */
-    String TRANSACTION_MANAGER_BEAN = "transactionManager";
-    String SESSION_FACTORY_BEAN = "sessionFactory";
-    String DATA_SOURCE_BEAN = "dataSource";
-    String MESSAGE_SOURCE_BEAN = "messageSource";
-    String MULTIPART_RESOLVER_BEAN = "multipartResolver";
-    String EXCEPTION_HANDLER_BEAN = "exceptionHandler";
-    String CLASS_LOADER_BEAN = "classLoader";
-    String DIALECT_DETECTOR_BEAN = "dialectDetector";
-    String OPEN_SESSION_IN_VIEW_INTERCEPTOR_BEAN = "openSessionInViewInterceptor";
+    String TRANSACTION_MANAGER_BEAN = 'transactionManager'
+    String SESSION_FACTORY_BEAN = 'sessionFactory'
+    String DATA_SOURCE_BEAN = 'dataSource'
+    String MESSAGE_SOURCE_BEAN = 'messageSource'
+    String MULTIPART_RESOLVER_BEAN = 'multipartResolver'
+    String EXCEPTION_HANDLER_BEAN = 'exceptionHandler'
+    String CLASS_LOADER_BEAN = 'classLoader'
+    String DIALECT_DETECTOR_BEAN = 'dialectDetector'
+    String OPEN_SESSION_IN_VIEW_INTERCEPTOR_BEAN = 'openSessionInViewInterceptor'
 
     /**
      * Returns the ConfigObject instance.
      *
      * @return The ConfigObject instance
      */
-    Config getConfig();
+    Config getConfig()
 
     /**
      * Returns the class loader instance for the Grails application.
      *
      * @return The ClassLoader instance
      */
-    ClassLoader getClassLoader();
+    ClassLoader getClassLoader()
 
     /**
      * Retrieves all java.lang.Class instances loaded by the Grails class loader
      * @return An array of classes
      */
-    @SuppressWarnings("rawtypes")
-    Class[] getAllClasses();
+    @SuppressWarnings('rawtypes')
+    Class[] getAllClasses()
 
     /**
      * Retrieves all java.lang.Class instances considered Artefacts loaded by the Grails class loader
      * @return An array of classes
      */
-    @SuppressWarnings("rawtypes")
-    Class[] getAllArtefacts();
+    @SuppressWarnings('rawtypes')
+    Class[] getAllArtefacts()
 
     /**
      * Returns the Spring context for this application. Note that this
@@ -100,31 +100,31 @@ public interface GrailsApplication extends ApplicationContextAware {
      * initialised. This context contains all the application artifacts,
      * plugin beans, the works.
      */
-    ApplicationContext getMainContext();
+    ApplicationContext getMainContext()
 
     /**
      * @return The GORM {@link MappingContext}. Returns null if none present
      */
-    MappingContext getMappingContext();
+    MappingContext getMappingContext()
 
     /**
      * Sets the main Spring context for this application.
      */
-    void setMainContext(ApplicationContext context);
+    void setMainContext(ApplicationContext context)
 
     /**
      * Configures the {@link MappingContext} for this application
      *
      * @param mappingContext The mapping context
      */
-    void setMappingContext(MappingContext mappingContext);
+    void setMappingContext(MappingContext mappingContext)
 
     /**
      * Returns the Spring application context that contains this
      * application instance. It is the parent of the context returned
      * by {@link #getMainContext()}.
      */
-    ApplicationContext getParentContext();
+    ApplicationContext getParentContext()
 
     /**
      * Retrieves a class for the given name within the GrailsApplication or returns null
@@ -132,20 +132,20 @@ public interface GrailsApplication extends ApplicationContextAware {
      * @param className The name of the class
      * @return The class or null
      */
-    @SuppressWarnings("rawtypes")
-    Class getClassForName(String className);
+    @SuppressWarnings('rawtypes')
+    Class getClassForName(String className)
 
     /**
      * This method will refresh the entire application
      */
-    void refresh();
+    void refresh()
 
     /**
      * Rebuilds this Application throwing away the class loader and re-constructing it from the loaded
      * resources again. Can only be called in development mode and an error will be thrown if called
      * in a different enivronment
      */
-    void rebuild();
+    void rebuild()
 
     /**
      * Retrieves a Resource instance for the given Grails class or null it doesn't exist.
@@ -153,8 +153,8 @@ public interface GrailsApplication extends ApplicationContextAware {
      * @param theClazz The Grails class
      * @return A Resource or null
      */
-    @SuppressWarnings("rawtypes")
-    Resource getResourceForClass(Class theClazz);
+    @SuppressWarnings('rawtypes')
+    Resource getResourceForClass(Class theClazz)
 
     /**
      * <p>Call this to find out if the class you have is an artefact loaded by grails.</p>
@@ -162,8 +162,8 @@ public interface GrailsApplication extends ApplicationContextAware {
      * @return true if and only if the class was loaded from grails-app/
      * @since 0.5
      */
-    @SuppressWarnings("rawtypes")
-    boolean isArtefact(Class theClazz);
+    @SuppressWarnings('rawtypes')
+    boolean isArtefact(Class theClazz)
 
     /**
      * <p>Check if the specified artefact Class has been loaded by Grails already AND is
@@ -173,8 +173,8 @@ public interface GrailsApplication extends ApplicationContextAware {
      * @return true if Grails considers the class to be managed as an artefact of the type specified.
      * @since 0.5
      */
-    @SuppressWarnings("rawtypes")
-    boolean isArtefactOfType(String artefactType, Class theClazz);
+    @SuppressWarnings('rawtypes')
+    boolean isArtefactOfType(String artefactType, Class theClazz)
 
     /**
      * <p>Check if the artefact Class with the name specified is of the type expected</p>
@@ -183,7 +183,7 @@ public interface GrailsApplication extends ApplicationContextAware {
      * @return true if Grails considers the class to be managed as an artefact of the type specified.
      * @since 0.5
      */
-    boolean isArtefactOfType(String artefactType, String className);
+    boolean isArtefactOfType(String artefactType, String className)
 
     /**
      * <p>Gets the GrailsClass associated with the named artefact class</p>
@@ -193,15 +193,15 @@ public interface GrailsApplication extends ApplicationContextAware {
      * @return The associated GrailsClass or null
      * @since 0.5
      */
-    GrailsClass getArtefact(String artefactType, String name);
+    GrailsClass getArtefact(String artefactType, String name)
 
     /**
      * Returns the ArtefactHandler for the given class or null
      * @param theClass The class
      * @return The ArtefactHandler
      */
-    @SuppressWarnings("rawtypes")
-    ArtefactHandler getArtefactType(Class theClass);
+    @SuppressWarnings('rawtypes')
+    ArtefactHandler getArtefactType(Class theClass)
 
     /**
      * <p>Obtain all the class information about the artefactType specified</p>
@@ -209,7 +209,7 @@ public interface GrailsApplication extends ApplicationContextAware {
      * @return The artefact info or null if the artefactType is not recognized
      * @since 0.5
      */
-    ArtefactInfo getArtefactInfo(String artefactType);
+    ArtefactInfo getArtefactInfo(String artefactType)
 
     /**
      * <p>Get an array of all the GrailsClass instances relating to artefacts of the specified type.</p>
@@ -217,7 +217,7 @@ public interface GrailsApplication extends ApplicationContextAware {
      * @return An array of GrailsClasses which may empty by not null
      * @since 0.5
      */
-    GrailsClass[] getArtefacts(String artefactType);
+    GrailsClass[] getArtefacts(String artefactType)
 
     /**
      * <p>Get an artefact GrailsClass by a "feature" which depending on the artefact may be a URI or tag name
@@ -227,7 +227,7 @@ public interface GrailsApplication extends ApplicationContextAware {
      * @return The grails class or null if none is found
      * @since 0.5
      */
-    GrailsClass getArtefactForFeature(String artefactType, Object featureID);
+    GrailsClass getArtefactForFeature(String artefactType, Object featureID)
 
     /**
      * <p>Registers a new artefact</p>
@@ -237,8 +237,8 @@ public interface GrailsApplication extends ApplicationContextAware {
      * @return The new grails class for the artefact class
      * @since 0.5
      */
-    @SuppressWarnings("rawtypes")
-    GrailsClass addArtefact(String artefactType, Class artefactClass);
+    @SuppressWarnings('rawtypes')
+    GrailsClass addArtefact(String artefactType, Class artefactClass)
 
     /**
      * <p>Registers a new artefact</p>
@@ -247,37 +247,37 @@ public interface GrailsApplication extends ApplicationContextAware {
      * @return The supplied grails class for the artefact class
      * @since 0.5
      */
-    GrailsClass addArtefact(String artefactType, GrailsClass artefactGrailsClass);
+    GrailsClass addArtefact(String artefactType, GrailsClass artefactGrailsClass)
 
     /**
      * <p>Register a new artefact handler</p>
      * @param handler The new handler to add
      */
-    void registerArtefactHandler(ArtefactHandler handler);
+    void registerArtefactHandler(ArtefactHandler handler)
 
     /**
      * <p>Test whether an artefact handler exists for a given type</p>
      * @param type The type of the handler
      * @return true if it does
      */
-    boolean hasArtefactHandler(String type);
+    boolean hasArtefactHandler(String type)
 
     /**
      * <p>Obtain a list of all the artefact handlers</p>
      * @return The list, possible empty but not null, of all currently registered handlers
      */
-    ArtefactHandler[] getArtefactHandlers();
+    ArtefactHandler[] getArtefactHandlers()
 
     /**
      * Initialise this GrailsApplication.
      */
-    void initialise();
+    void initialise()
 
     /**
      * Returns whether this GrailsApplication has been initialised or not.
      * @return true if it has been initialised
      */
-    boolean isInitialised();
+    boolean isInitialised()
 
     /**
      * <p>Get access to the project's metadata, specified in application.yml and grails.build.info if it is present</p>
@@ -285,7 +285,7 @@ public interface GrailsApplication extends ApplicationContextAware {
      * but <b>NOT</b> general application settings.</p>
      * @return A read-only Map of data about the application, not environment specific
      */
-    Metadata getMetadata();
+    Metadata getMetadata()
 
     /**
      * Retrieves an artefact by its logical property name. For example the logical property name of
@@ -294,38 +294,39 @@ public interface GrailsApplication extends ApplicationContextAware {
      * @param logicalName The logical name
      * @return The GrailsClass or null if it doesn't exist
      */
-    GrailsClass getArtefactByLogicalPropertyName(String type, String logicalName);
+    GrailsClass getArtefactByLogicalPropertyName(String type, String logicalName)
 
     /**
      * Adds the given artefact, attempting to determine type from
      * @param artefact The artefact to add
      */
-    @SuppressWarnings("rawtypes")
-    void addArtefact(Class artefact);
+    @SuppressWarnings('rawtypes')
+    void addArtefact(Class artefact)
 
     /**
      * Returns true if this application has been deployed as a WAR file
      *
      * @return true if the application is WAR deployed
      */
-    boolean isWarDeployed();
+    boolean isWarDeployed()
 
     /**
      * Adds an artefact that can be overriden by user defined classes
      * @param artefact An overridable artefact
      */
-    @SuppressWarnings("rawtypes")
-    void addOverridableArtefact(Class artefact);
+    @SuppressWarnings('rawtypes')
+    void addOverridableArtefact(Class artefact)
 
     /**
      * Fired to inform the application when the Config.groovy file changes.
      */
-    void configChanged();
+    void configChanged()
 
     /**
      * Returns the ArtefactHandler for the given type
      * @param type The artefact handler type
      * @return The artefact handler
      */
-    ArtefactHandler getArtefactHandler(String type);
+    ArtefactHandler getArtefactHandler(String type)
+
 }

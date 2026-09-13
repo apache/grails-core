@@ -16,29 +16,37 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.core;
+package grails.core
 
-import java.util.List;
+import groovy.transform.CompileStatic
+import groovy.transform.stc.POJO
 
-import groovy.lang.Closure;
+import org.grails.core.AbstractGrailsClass
 
 /**
- * Loads the UrlMappings.
+ * A default implementation for Grails classes that need to be registered and managed by a GrailsApplication,
+ * but don't need any special handling.
+ *
+ * @author Graeme Rocher
+ * @since 0.5
  */
-public interface GrailsUrlMappingsClass extends GrailsClass {
+@CompileStatic
+@POJO
+class DefaultGrailsClass extends AbstractGrailsClass {
 
     /**
-     * Returns the mappings closure which is called to evaluate the url mappings.
+     * Contructor to be used by all child classes to create a
+     * new instance and get the name right.
      *
-     * @return A Closure instance
+     * @param clazz        the Grails class
+     * @param trailingName the trailing part of the name for this class type
      */
-    @SuppressWarnings("rawtypes")
-    Closure getMappingsClosure();
+    DefaultGrailsClass(Class<?> clazz, String trailingName) {
+        super(clazz, trailingName)
+    }
 
-    /**
-     * Returns a List of URI patterns to exclude.
-     * @return  the patterns (Strings)
-     */
-    @SuppressWarnings("rawtypes")
-    List getExcludePatterns();
+    DefaultGrailsClass(Class<?> clazz) {
+        super(clazz, '')
+    }
+
 }

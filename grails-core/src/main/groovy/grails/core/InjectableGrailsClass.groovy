@@ -16,33 +16,36 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.core;
+package grails.core
 
 /**
+ * Represents a Grails class that is to be configured in Spring and as such is injectable.
+ *
  * @author Steven Devijver
+ * @author Graeme Rocher
+ * @since 1.0
  */
-public interface GrailsServiceClass extends InjectableGrailsClass {
-
-    String DATA_SOURCE = "datasource";
-    String DEFAULT_DATA_SOURCE = "DEFAULT";
-    String ALL_DATA_SOURCES = "ALL";
+interface InjectableGrailsClass extends GrailsClass {
 
     /**
-     * Service should be configured with transaction demarcation.
+     * If autowiring by name is enabled.
      *
-     * @return configure with transaction demarcation
+     * @return autowiring by name
      */
-    boolean isTransactional();
+    boolean byName()
 
     /**
-     * Get the datasource name that this service class works with.
-     * @return the name
+     * If autowiring by type is enabled.
+     *
+     * @return autowiring by type
      */
-    String getDatasource();
+    boolean byType()
 
     /**
-     * Check if the service class can use the named DataSource.
-     * @param name the name
+     * If class should be configured for dependency injection.
+     *
+     * @return available for dependency injection
      */
-    boolean usesDatasource(String name);
+    boolean getAvailable()
+
 }

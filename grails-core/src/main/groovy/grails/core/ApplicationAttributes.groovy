@@ -16,35 +16,30 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.core;
+package grails.core
+
+import org.springframework.context.ApplicationContext
 
 /**
- * Represents a Grails class that is to be configured in Spring and as such is injectable.
- *
- * @author Steven Devijver
  * @author Graeme Rocher
- * @since 1.0
+ * @since 0.4
  */
-public interface InjectableGrailsClass extends GrailsClass {
+interface ApplicationAttributes {
+
+    String APPLICATION = 'org.codehaus.groovy.grails.APPLICATION'
+    String APPLICATION_CONTEXT = 'org.codehaus.groovy.grails.APPLICATION_CONTEXT'
+    String PARENT_APPLICATION_CONTEXT = 'org.codehaus.groovy.grails.PARENT_APPLICATION_CONTEXT'
+    String REQUEST_SCOPE_ID = 'org.codehaus.groovy.grails.GRAILS_APPLICATION_ATTRIBUTES'
+    String PLUGIN_MANAGER = 'org.codehaus.groovy.grails.GRAILS_PLUGIN_MANAGER'
 
     /**
-     * If autowiring by name is enabled.
-     *
-     * @return autowiring by name
+     * @return The application context for servlet
      */
-    boolean byName();
+    ApplicationContext getApplicationContext()
 
     /**
-     * If autowiring by type is enabled.
-     *
-     * @return autowiring by type
+     * @return Retrieves the grails application instance
      */
-    boolean byType();
+    GrailsApplication getGrailsApplication()
 
-    /**
-     * If class should be configured for dependency injection.
-     *
-     * @return available for dependency injection
-     */
-    boolean getAvailable();
 }

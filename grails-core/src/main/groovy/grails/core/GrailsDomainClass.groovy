@@ -16,11 +16,9 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.core;
+package grails.core
 
-import java.util.Map;
-
-import org.springframework.validation.Validator;
+import org.springframework.validation.Validator
 
 /**
  * Represents a persistable Grails domain class.
@@ -31,26 +29,26 @@ import org.springframework.validation.Validator;
  * @deprecated Use {@link org.grails.datastore.mapping.model.PersistentEntity} instead
  */
 @Deprecated
-public interface GrailsDomainClass extends GrailsClass {
+interface GrailsDomainClass extends GrailsClass {
 
     /**
      * The name of the default ORM implementation used to map the class
      */
-    String GORM = "GORM";
+    String GORM = 'GORM'
 
-    String ORM_MAPPING = "mapping";
+    String ORM_MAPPING = 'mapping'
 
     /**
      * @return Whether to autowire
      */
-    boolean isAutowire();
+    boolean isAutowire()
 
     /**
      * @param domainClass
      * @return true if the specifying domain class is on the owning side of a relationship
      */
-    @SuppressWarnings("rawtypes")
-    boolean isOwningClass(Class domainClass);
+    @SuppressWarnings('rawtypes')
+    boolean isOwningClass(Class domainClass)
 
     /**
      * <p>Returns the default property name of the GrailsClass. For example the property name for
@@ -58,7 +56,7 @@ public interface GrailsDomainClass extends GrailsClass {
      *
      * @return The property name representation of the class name
      */
-    String getPropertyName();
+    String getPropertyName()
 
     /**
      * Returns a map of constraints applied to this domain class with the keys being the property name
@@ -66,21 +64,21 @@ public interface GrailsDomainClass extends GrailsClass {
      *
      * @return A map of constraints
      */
-    @SuppressWarnings("rawtypes")
-    Map getConstrainedProperties();
+    @SuppressWarnings('rawtypes')
+    Map getConstrainedProperties()
 
     /**
      * Retreives the validator for this domain class
      *
      * @return A validator instance or null if none exists
      */
-    Validator getValidator();
+    Validator getValidator()
 
     /**
      * Sets the validator for this domain class
      *
      * @param validator The domain class validator to set
      */
-    void setValidator(Validator validator);
+    void setValidator(Validator validator)
 
 }

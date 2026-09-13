@@ -16,30 +16,35 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.core;
+package org.grails.core
 
-import grails.core.GrailsServiceClass;
+import groovy.transform.CompileStatic
+import groovy.transform.stc.POJO
+
+import grails.core.GrailsServiceClass
 
 /**
  * @author Steven Devijver
  */
-public class DefaultGrailsServiceClass extends AbstractInjectableGrailsClass implements GrailsServiceClass {
+@CompileStatic
+@POJO
+class DefaultGrailsServiceClass extends AbstractInjectableGrailsClass implements GrailsServiceClass {
 
-    public static final String SERVICE = "Service";
-    private static final String TRANSACTIONAL = "transactional";
+    public static final String SERVICE = 'Service'
+    private static final String TRANSACTIONAL = 'transactional'
 
-    private boolean transactional = true;
-    private String datasourceName;
+    private boolean transactional = true
+    private String datasourceName
 
-    public DefaultGrailsServiceClass(Class<?> clazz) {
-        super(clazz, SERVICE);
+    DefaultGrailsServiceClass(Class<?> clazz) {
+        super(clazz, SERVICE)
 
-        Object tmpTransactional = getStaticPropertyValue(TRANSACTIONAL, Boolean.class);
-        transactional = Boolean.TRUE.equals(tmpTransactional);
+        Object tmpTransactional = getStaticPropertyValue(TRANSACTIONAL, Boolean)
+        transactional = Boolean.TRUE.equals(tmpTransactional)
     }
 
-    public boolean isTransactional() {
-        return transactional;
+    boolean isTransactional() {
+        return transactional
     }
 
     /**
@@ -47,19 +52,20 @@ public class DefaultGrailsServiceClass extends AbstractInjectableGrailsClass imp
      *
      * @return name of data source
      */
-    public String getDatasource() {
+    String getDatasource() {
         if (datasourceName == null) {
-            CharSequence name = getStaticPropertyValue(DATA_SOURCE, CharSequence.class);
-            datasourceName = name == null ? null : name.toString();
+            CharSequence name = getStaticPropertyValue(DATA_SOURCE, CharSequence)
+            datasourceName = name == null ? null : name.toString()
             if (datasourceName == null) {
-                datasourceName = DEFAULT_DATA_SOURCE;
+                datasourceName = DEFAULT_DATA_SOURCE
             }
         }
 
-        return datasourceName;
+        return datasourceName
     }
 
-    public boolean usesDatasource(final String name) {
-        return getDatasource().equals(name);
+    boolean usesDatasource(final String name) {
+        return getDatasource().equals(name)
     }
+
 }

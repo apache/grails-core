@@ -16,11 +16,9 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.core;
+package grails.core
 
-import groovy.lang.MetaClass;
-
-import grails.core.support.GrailsApplicationAware;
+import grails.core.support.GrailsApplicationAware
 
 /**
  * Represents any class in a Grails application.
@@ -29,35 +27,35 @@ import grails.core.support.GrailsApplicationAware;
  * @author Graeme Rocher
  * @since 0.1
  */
-public interface GrailsClass extends GrailsApplicationAware {
+interface GrailsClass extends GrailsApplicationAware {
 
     /**
      * Whether the class is abstract or not
      *
      * @return true if it is abstract
      */
-    boolean isAbstract();
+    boolean isAbstract()
 
     /**
      * The GrailsApplication that this class belongs to
      *
      * @return The GrailsApplication instance
      */
-    GrailsApplication getApplication();
+    GrailsApplication getApplication()
 
     /**
      * Gets the initial value of the given property on the class.
      * @param name The name of the property
      * @return The initial value
      */
-    Object getPropertyValue(String name);
+    Object getPropertyValue(String name)
 
     /**
      * Returns true if the class has the specified property.
      * @param name The name of the property
      * @return true if it does
      */
-    boolean hasProperty(String name);
+    boolean hasProperty(String name)
 
     /**
      * Creates a new instance of this class.
@@ -65,7 +63,7 @@ public interface GrailsClass extends GrailsApplicationAware {
      * This method can be used as factory method in the Spring application context.
      * @return A new instance of this class
      */
-    Object newInstance();
+    Object newInstance()
 
     /**
      * Returns the logical name of the class in the application without the trailing convention part if applicable
@@ -73,14 +71,14 @@ public interface GrailsClass extends GrailsApplicationAware {
      *
      * @return The logical name
      */
-    String getName();
+    String getName()
 
     /**
      * Returns the short name of the class without package prefix.
      *
      * @return The short name
      */
-    String getShortName();
+    String getShortName()
 
     /**
      * Returns the full name of the class in the application with the trailing convention part and with
@@ -88,52 +86,52 @@ public interface GrailsClass extends GrailsApplicationAware {
      *
      * @return The full name
      */
-    String getFullName();
+    String getFullName()
 
     /**
      * Returns the name of the class as a property name.
      *
      * @return The property name representation
      */
-    String getPropertyName();
+    String getPropertyName()
 
     /**
      * Returns the logical name of the class as a property name.
      *
      * @return The logical property name
      */
-    String getLogicalPropertyName();
+    String getLogicalPropertyName()
 
     /**
      * Returns the name of the property in natural terms (eg. 'lastName' becomes 'Last Name')
      * @return The natural property name.
      */
-    String getNaturalName();
+    String getNaturalName()
 
     /**
      * Returns the package name of the class.
      *
      * @return The package name
      */
-    String getPackageName();
+    String getPackageName()
 
     /**
      * Returns the actual clazz represented by the GrailsClass.
      *
      * @return The class
      */
-    @SuppressWarnings("rawtypes")
-    Class getClazz();
+    @SuppressWarnings('rawtypes')
+    Class getClazz()
 
     /**
      * @return The MetaClass for this Grails class
      */
-    MetaClass getMetaClass();
+    MetaClass getMetaClass()
 
     /**
      * @return Sample (reference) instance for this Grails class
      */
-    Object getReferenceInstance();
+    Object getReferenceInstance()
 
     /**
      * Obtains a property value for the given name and type
@@ -142,10 +140,11 @@ public interface GrailsClass extends GrailsApplicationAware {
      *
      * @return The property value
      */
-    <T> T getPropertyValue(String name, Class<T> type);
+    def <T> T getPropertyValue(String name, Class<T> type)
 
     /**
      * @return The plugin where the artefact originates from
      */
-    String getPluginName();
+    String getPluginName()
+
 }

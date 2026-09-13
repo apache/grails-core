@@ -16,11 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.core;
+package grails.core
 
-import org.codehaus.groovy.ast.ClassNode;
-
-import org.springframework.core.Ordered;
+import org.codehaus.groovy.ast.ClassNode
+import org.springframework.core.Ordered
 
 /**
  * <p>The ArtefactHandler interface's purpose is to allow the analysis of conventions within a Grails application.
@@ -36,25 +35,25 @@ import org.springframework.core.Ordered;
  * @author Marc Palmer (marc@anyware.co.uk)
  * @since 1.0
  */
-public interface ArtefactHandler extends Ordered {
+interface ArtefactHandler extends Ordered {
 
     /**
      * Obtains the plugin name that deals with this artefact.
      * @return The plugin name or null if there isn't one
      */
-    String getPluginName();
+    String getPluginName()
 
     /**
      * Implementations must return a name such as "Domain" to indicate the type of artefact they represent.
      * @return The aretfact type, as a String
      */
-    String getType();
+    String getType()
 
     /**
      * @param classNode The ClassNode instance
      * @return True if the given ClassNode instance is an instance of the Artefact type
      */
-    boolean isArtefact(ClassNode classNode);
+    boolean isArtefact(ClassNode classNode)
 
     /**
      * <p>Called by the GrailsApplication whenever it needs to know if a given class
@@ -64,21 +63,21 @@ public interface ArtefactHandler extends Ordered {
      * @param aClass A class to test
      * @return true if the class looks like one of your artefacts
      */
-    boolean isArtefact(@SuppressWarnings("rawtypes") Class aClass);
+    boolean isArtefact(@SuppressWarnings('rawtypes') Class aClass)
 
     /**
      * <p>Called by GrailsApplication when a new class is found and a GrailsClass wrapping it is required</p>
      * @param artefactClass The new class that has been loaded
      * @return A new custom GrailsClass wrapper containing any extra information your artefact type requires
      */
-    GrailsClass newArtefactClass(@SuppressWarnings("rawtypes") Class artefactClass);
+    GrailsClass newArtefactClass(@SuppressWarnings('rawtypes') Class artefactClass)
 
     /**
      * <p>Called whenever the list of artefacts has changed or been reloaded.</p>
      * <p>It must be safe to call this method multiple times and have any internal data structures reset.</p>
      * @param artefacts The collection of artefact classes for this handler
      */
-    void initialize(ArtefactInfo artefacts);
+    void initialize(ArtefactInfo artefacts)
 
     /**
      * <p>Called to retrieve an artefact relating to some other key for example a URI or tag name</p>
@@ -87,12 +86,13 @@ public interface ArtefactHandler extends Ordered {
      * @param feature Any object that acts as a key
      * @return A matching artefact GrailsClass or null if there is no match for this feature ID
      */
-    GrailsClass getArtefactForFeature(Object feature);
+    GrailsClass getArtefactForFeature(Object feature)
 
     /**
      * <p>Called to check if the specified GrailsClass is one managed by this artefact handler</p>
      * @param artefactGrailsClass A GrailsClass instance
      * @return true if this handler manages the specified GrailsClass
      */
-    boolean isArtefactGrailsClass(GrailsClass artefactGrailsClass);
+    boolean isArtefactGrailsClass(GrailsClass artefactGrailsClass)
+
 }
