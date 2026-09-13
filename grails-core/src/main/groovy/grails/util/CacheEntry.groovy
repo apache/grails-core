@@ -16,17 +16,18 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.util;
+package grails.util
 
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.Callable
+import java.util.concurrent.ConcurrentMap
+import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.locks.Lock
+import java.util.concurrent.locks.ReadWriteLock
+import java.util.concurrent.locks.ReentrantReadWriteLock
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import groovy.transform.CompileStatic
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 /**
  * Wrapper for a value inside a cache that adds timestamp information
@@ -39,21 +40,23 @@ import org.slf4j.LoggerFactory;
  * @author Lari Hotari
  * @since 2.3.4
  */
-public class CacheEntry<V> {
-    private static final Logger LOG = LoggerFactory.getLogger(CacheEntry.class);
-    private final AtomicReference<V> valueRef = new AtomicReference<>(null);
-    private long createdMillis;
-    private final ReadWriteLock lock = new ReentrantReadWriteLock();
-    private final Lock readLock = lock.readLock();
-    private final Lock writeLock = lock.writeLock();
-    private volatile boolean initialized = false;
+@CompileStatic
+class CacheEntry<V> {
 
-    public CacheEntry() {
-        expire();
+    private static final Logger LOG = LoggerFactory.getLogger(CacheEntry)
+    private final AtomicReference<V> valueRef = new AtomicReference<>(null)
+    private long createdMillis
+    private final ReadWriteLock lock = new ReentrantReadWriteLock()
+    private final Lock readLock = lock.readLock()
+    private final Lock writeLock = lock.writeLock()
+    private volatile boolean initialized = false
+
+    CacheEntry() {
+        expire()
     }
 
-    public CacheEntry(V value) {
-        setValue(value);
+    CacheEntry(V value) {
+        setValue(value)
     }
 
     /**
@@ -71,54 +74,54 @@ public class CacheEntry<V> {
      * @param cacheRequestObject context object that gets passed to hasExpired, shouldUpdate and updateValue methods, not used in default implementation
      * @return the value
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    public static <K, V> V getValue(ConcurrentMap<K, CacheEntry<V>> map,
+    @SuppressWarnings([ 'unchecked', 'rawtypes' ])
+    static <K, V> V getValue(ConcurrentMap<K, CacheEntry<V>> map,
                                     K key,
                                     long timeoutMillis,
                                     Callable<V> updater, Callable<? extends CacheEntry> cacheEntryFactory,
                                     boolean returnExpiredWhileUpdating,
                                     Object cacheRequestObject) {
-        CacheEntry<V> cacheEntry = map.get(key);
+        CacheEntry<V> cacheEntry = map.get(key)
         if (cacheEntry == null) {
             try {
-                cacheEntry = cacheEntryFactory.call();
+                cacheEntry = cacheEntryFactory.call()
             }
             catch (Exception e) {
-                throw new UpdateException(e);
+                throw new UpdateException(e)
             }
-            CacheEntry<V> previousEntry = map.putIfAbsent(key, cacheEntry);
+            CacheEntry<V> previousEntry = map.putIfAbsent(key, cacheEntry)
             if (previousEntry != null) {
-                cacheEntry = previousEntry;
+                cacheEntry = previousEntry
             }
         }
         try {
-            return cacheEntry.getValue(timeoutMillis, updater, returnExpiredWhileUpdating, cacheRequestObject);
+            return cacheEntry.getValue(timeoutMillis, updater, returnExpiredWhileUpdating, cacheRequestObject)
         }
         catch (UpdateException e) {
-            e.rethrowRuntimeException();
+            e.rethrowRuntimeException()
             // make compiler happy
-            return null;
+            return null
         }
     }
 
-    @SuppressWarnings("rawtypes")
-    private static final Callable<CacheEntry> DEFAULT_CACHE_ENTRY_FACTORY = new Callable<>() {
+    @SuppressWarnings('rawtypes')
+    private static final Callable<CacheEntry> DEFAULT_CACHE_ENTRY_FACTORY = new Callable<CacheEntry>() {
         @Override
-        public CacheEntry call() throws Exception {
-            return new CacheEntry();
+        CacheEntry call() throws Exception {
+            return new CacheEntry()
         }
-    };
-
-    public static <K, V> V getValue(ConcurrentMap<K, CacheEntry<V>> map, K key, long timeoutMillis, Callable<V> updater) {
-        return getValue(map, key, timeoutMillis, updater, DEFAULT_CACHE_ENTRY_FACTORY, true, null);
     }
 
-    public static <K, V> V getValue(ConcurrentMap<K, CacheEntry<V>> map, K key, long timeoutMillis, Callable<V> updater, boolean returnExpiredWhileUpdating) {
-        return getValue(map, key, timeoutMillis, updater, DEFAULT_CACHE_ENTRY_FACTORY, returnExpiredWhileUpdating, null);
+    static <K, V> V getValue(ConcurrentMap<K, CacheEntry<V>> map, K key, long timeoutMillis, Callable<V> updater) {
+        return getValue(map, key, timeoutMillis, updater, DEFAULT_CACHE_ENTRY_FACTORY, true, null)
     }
 
-    public V getValue(long timeout, Callable<V> updater) {
-        return getValue(timeout, updater, true, null);
+    static <K, V> V getValue(ConcurrentMap<K, CacheEntry<V>> map, K key, long timeoutMillis, Callable<V> updater, boolean returnExpiredWhileUpdating) {
+        return getValue(map, key, timeoutMillis, updater, DEFAULT_CACHE_ENTRY_FACTORY, returnExpiredWhileUpdating, null)
+    }
+
+    V getValue(long timeout, Callable<V> updater) {
+        return getValue(timeout, updater, true, null)
     }
 
     /**
@@ -132,140 +135,141 @@ public class CacheEntry<V> {
      * @param cacheRequestObject
      * @return the current value
      */
-    public V getValue(long timeout, Callable<V> updater, boolean returnExpiredWhileUpdating, Object cacheRequestObject) {
+    V getValue(long timeout, Callable<V> updater, boolean returnExpiredWhileUpdating, Object cacheRequestObject) {
         if (!isInitialized() || hasExpired(timeout, cacheRequestObject)) {
-            boolean lockAcquired = false;
+            boolean lockAcquired = false
             try {
-                long beforeLockingCreatedMillis = createdMillis;
+                long beforeLockingCreatedMillis = createdMillis
                 if (returnExpiredWhileUpdating) {
                     if (!writeLock.tryLock()) {
                         if (isInitialized()) {
-                            return getValueWhileUpdating(cacheRequestObject);
+                            return getValueWhileUpdating(cacheRequestObject)
                         } else {
                             if (LOG.isDebugEnabled()) {
-                                LOG.debug("Locking cache for update");
+                                LOG.debug('Locking cache for update')
                             }
-                            writeLock.lock();
+                            writeLock.lock()
                         }
                     }
                 } else {
-                    LOG.debug("Locking cache for update");
-                    writeLock.lock();
+                    LOG.debug('Locking cache for update')
+                    writeLock.lock()
                 }
-                lockAcquired = true;
-                V value;
+                lockAcquired = true
+                V value
                 if (!isInitialized() || shouldUpdate(beforeLockingCreatedMillis, cacheRequestObject)) {
                     try {
-                        value = updateValue(getValue(), updater, cacheRequestObject);
+                        value = updateValue(getValue(), updater, cacheRequestObject)
                         if (LOG.isDebugEnabled()) {
-                            LOG.debug("Updating cache for value [{}]", value);
+                            LOG.debug('Updating cache for value [{}]', value)
                         }
-                        setValue(value);
+                        setValue(value)
                     }
                     catch (Exception e) {
-                        throw new UpdateException(e);
+                        throw new UpdateException(e)
                     }
                 } else {
-                    value = getValue();
-                    resetTimestamp(false);
+                    value = getValue()
+                    resetTimestamp(false)
                 }
-                return value;
+                return value
             } finally {
                 if (lockAcquired) {
                     if (LOG.isDebugEnabled()) {
-                        LOG.debug("Unlocking cache for update");
+                        LOG.debug('Unlocking cache for update')
                     }
-                    writeLock.unlock();
+                    writeLock.unlock()
                 }
             }
         } else {
-            return getValue();
+            return getValue()
         }
     }
 
     protected V getValueWhileUpdating(Object cacheRequestObject) {
-        return valueRef.get();
+        return valueRef.get()
     }
 
     protected V updateValue(V oldValue, Callable<V> updater, Object cacheRequestObject) throws Exception {
-        return updater != null ? updater.call() : oldValue;
+        return updater != null ? updater.call() : oldValue
     }
 
-    public V getValue() {
+    V getValue() {
         try {
-            readLock.lock();
-            return valueRef.get();
+            readLock.lock()
+            return valueRef.get()
         } finally {
-            readLock.unlock();
+            readLock.unlock()
         }
     }
 
-    public void setValue(V val) {
+    void setValue(V val) {
         try {
-            writeLock.lock();
-            valueRef.set(val);
-            setInitialized(true);
-            resetTimestamp(true);
+            writeLock.lock()
+            valueRef.set(val)
+            setInitialized(true)
+            resetTimestamp(true)
         } finally {
-            writeLock.unlock();
+            writeLock.unlock()
         }
     }
 
     protected boolean hasExpired(long timeout, Object cacheRequestObject) {
-        return timeout >= 0 && System.currentTimeMillis() - timeout > createdMillis;
+        return timeout >= 0 && System.currentTimeMillis() - timeout > createdMillis
     }
 
     protected boolean shouldUpdate(long beforeLockingCreatedMillis, Object cacheRequestObject) {
-        return beforeLockingCreatedMillis == createdMillis || createdMillis == 0L;
+        return beforeLockingCreatedMillis == createdMillis || createdMillis == 0L
     }
 
     protected void resetTimestamp(boolean updated) {
         if (updated) {
-            createdMillis = System.currentTimeMillis();
+            createdMillis = System.currentTimeMillis()
         }
     }
 
-    public long getCreatedMillis() {
-        return createdMillis;
+    long getCreatedMillis() {
+        return createdMillis
     }
 
-    public void expire() {
-        createdMillis = 0L;
+    void expire() {
+        createdMillis = 0L
     }
 
-    public boolean isInitialized() {
-        return initialized;
+    boolean isInitialized() {
+        return initialized
     }
 
-    public void setInitialized(boolean initialized) {
-        this.initialized = initialized;
+    void setInitialized(boolean initialized) {
+        this.initialized = initialized
     }
 
     public static final class UpdateException extends RuntimeException {
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = 1L
 
-        public UpdateException(String message, Throwable cause) {
-            super(message, cause);
+        UpdateException(String message, Throwable cause) {
+            super(message, cause)
         }
 
-        public UpdateException(Throwable cause) {
-            super(cause);
+        UpdateException(Throwable cause) {
+            super(cause)
         }
 
-        public void rethrowCause() throws Exception {
+        void rethrowCause() throws Exception {
             if (getCause() instanceof Exception) {
-                throw (Exception) getCause();
+                throw (Exception) getCause()
             }
 
-            throw this;
+            throw this
         }
 
-        public void rethrowRuntimeException() {
+        void rethrowRuntimeException() {
             if (getCause() instanceof RuntimeException) {
-                throw (RuntimeException) getCause();
+                throw (RuntimeException) getCause()
             }
-            throw this;
+            throw this
         }
 
     }
+
 }

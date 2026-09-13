@@ -16,15 +16,14 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.util;
+package grails.util
 
-import java.io.PrintWriter;
+import groovy.transform.CompileStatic
+import org.apache.commons.logging.Log
+import org.apache.commons.logging.LogFactory
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import org.grails.exceptions.reporting.DefaultStackTraceFilterer;
-import org.grails.exceptions.reporting.StackTraceFilterer;
+import org.grails.exceptions.reporting.DefaultStackTraceFilterer
+import org.grails.exceptions.reporting.StackTraceFilterer
 
 /**
  * Grails utility methods for command line and GUI applications.
@@ -32,10 +31,11 @@ import org.grails.exceptions.reporting.StackTraceFilterer;
  * @author Graeme Rocher
  * @since 0.2
  */
-public class GrailsUtil {
+@CompileStatic
+class GrailsUtil {
 
-    private static final Log LOG = LogFactory.getLog(GrailsUtil.class);
-    private static final boolean LOG_DEPRECATED = Boolean.valueOf(System.getProperty("grails.log.deprecated", String.valueOf(Environment.isDevelopmentMode())));
+    private static final Log LOG = LogFactory.getLog(GrailsUtil)
+    private static final boolean LOG_DEPRECATED = Boolean.valueOf(System.getProperty('grails.log.deprecated', String.valueOf(Environment.isDevelopmentMode())))
 
     /**
      * Default filterer used before {@link #initializeStackFilterer(StackTraceFilterer)} runs — that
@@ -43,7 +43,7 @@ public class GrailsUtil {
      * usage, Grails unit tests). Preserves the pre-PR behaviour of a single hardcoded
      * {@link DefaultStackTraceFilterer} instance for the JVM lifetime when no application is wired.
      */
-    private static final StackTraceFilterer FALLBACK_FILTERER = new DefaultStackTraceFilterer();
+    private static final StackTraceFilterer FALLBACK_FILTERER = new DefaultStackTraceFilterer()
 
     /**
      * Active filterer for {@link #printSanitizedStackTrace}, {@link #sanitizeRootCause} and
@@ -52,7 +52,7 @@ public class GrailsUtil {
      * Grails bootstrap. Volatile so the bootstrap-time write publishes safely to the request
      * threads that read it later.
      */
-    private static volatile StackTraceFilterer stackFilterer = FALLBACK_FILTERER;
+    private static volatile StackTraceFilterer stackFilterer = FALLBACK_FILTERER
 
     private GrailsUtil() {
     }
@@ -75,9 +75,9 @@ public class GrailsUtil {
      *
      * @since 8.0
      */
-    public static void initializeStackFilterer(StackTraceFilterer filterer) {
+    static void initializeStackFilterer(StackTraceFilterer filterer) {
         if (filterer != null) {
-            stackFilterer = filterer;
+            stackFilterer = filterer
         }
     }
 
@@ -86,16 +86,16 @@ public class GrailsUtil {
      *
      * @return true if it is the development environment
      */
-    public static boolean isDevelopmentEnv() {
-        return Environment.getCurrent().equals(Environment.DEVELOPMENT);
+    static boolean isDevelopmentEnv() {
+        return Environment.getCurrent().equals(Environment.DEVELOPMENT)
     }
 
-    public static String getGrailsVersion() {
-        return Environment.getGrailsVersion();
+    static String getGrailsVersion() {
+        return Environment.getGrailsVersion()
     }
 
     private static boolean isBlank(String value) {
-        return value == null || value.trim().length() == 0;
+        return value == null || value.trim().length() == 0
     }
 
     /**
@@ -104,8 +104,8 @@ public class GrailsUtil {
      * @param clazz A class
      * @param methodOrPropName Name of deprecated property or method
      */
-    public static void deprecated(Class<?> clazz, String methodOrPropName) {
-        deprecated(clazz, methodOrPropName, getGrailsVersion());
+    static void deprecated(Class<?> clazz, String methodOrPropName) {
+        deprecated(clazz, methodOrPropName, getGrailsVersion())
     }
 
     /**
@@ -115,11 +115,11 @@ public class GrailsUtil {
      * @param methodOrPropName Name of deprecated property or method
      * @param version Version of Grails release in which property or method were deprecated
      */
-    public static void deprecated(Class<?> clazz, String methodOrPropName, String version) {
+    static void deprecated(Class<?> clazz, String methodOrPropName, String version) {
         if (LOG_DEPRECATED) {
-            deprecated("Property or method [" + methodOrPropName + "] of class [" + clazz.getName() +
-                    "] is deprecated in [" + version +
-                    "] and will be removed in future releases");
+            deprecated('Property or method [' + methodOrPropName + '] of class [' + clazz.getName() +
+                    '] is deprecated in [' + version +
+                    '] and will be removed in future releases')
         }
     }
 
@@ -128,9 +128,9 @@ public class GrailsUtil {
      *
      * @param message Message to display
      */
-    public static void deprecated(String message) {
+    static void deprecated(String message) {
         if (LOG_DEPRECATED && LOG.isWarnEnabled()) {
-            LOG.warn("[DEPRECATED] " + message);
+            LOG.warn('[DEPRECATED] ' + message)
         }
     }
 
@@ -139,29 +139,29 @@ public class GrailsUtil {
      *
      * @param message Message to display
      */
-    public static void warn(String message) {
+    static void warn(String message) {
         if (LOG.isWarnEnabled()) {
-            LOG.warn("[WARNING] " + message);
+            LOG.warn('[WARNING] ' + message)
         }
     }
 
-    public static void printSanitizedStackTrace(Throwable t, PrintWriter p) {
-        printSanitizedStackTrace(t, p, stackFilterer);
+    static void printSanitizedStackTrace(Throwable t, PrintWriter p) {
+        printSanitizedStackTrace(t, p, stackFilterer)
     }
 
-    public static void printSanitizedStackTrace(Throwable t, PrintWriter p, StackTraceFilterer stackTraceFilterer) {
-        t = stackTraceFilterer.filter(t);
+    static void printSanitizedStackTrace(Throwable t, PrintWriter p, StackTraceFilterer stackTraceFilterer) {
+        t = stackTraceFilterer.filter(t)
 
-        StackTraceElement[] trace = t.getStackTrace();
-        for (StackTraceElement stackTraceElement : trace) {
-            p.println("at " + stackTraceElement.getClassName() +
-                      "(" + stackTraceElement.getMethodName() +
-                      ":" + stackTraceElement.getLineNumber() + ")");
+        StackTraceElement[] trace = t.getStackTrace()
+        for (StackTraceElement stackTraceElement in trace) {
+            p.println('at ' + stackTraceElement.getClassName() +
+                      '(' + stackTraceElement.getMethodName() +
+                      ':' + stackTraceElement.getLineNumber() + ')')
         }
     }
 
-    public static void printSanitizedStackTrace(Throwable t) {
-        printSanitizedStackTrace(t, new PrintWriter(System.err));
+    static void printSanitizedStackTrace(Throwable t) {
+        printSanitizedStackTrace(t, new PrintWriter(System.err))
     }
 
     /**
@@ -169,12 +169,12 @@ public class GrailsUtil {
      * @param t
      * @return The deepest cause of the exception that can be found
      */
-    public static Throwable extractRootCause(Throwable t) {
-        Throwable result = t;
+    static Throwable extractRootCause(Throwable t) {
+        Throwable result = t
         while (result.getCause() != null) {
-            result = result.getCause();
+            result = result.getCause()
         }
-        return result;
+        return result
     }
 
     /**
@@ -183,8 +183,8 @@ public class GrailsUtil {
      * @param t
      * @return The root cause exception instance, with its stace trace modified to filter out grails runtime classes
      */
-    public static Throwable sanitizeRootCause(Throwable t) {
-        return stackFilterer.filter(extractRootCause(t));
+    static Throwable sanitizeRootCause(Throwable t) {
+        return stackFilterer.filter(extractRootCause(t))
     }
 
     /**
@@ -193,8 +193,8 @@ public class GrailsUtil {
      * @param t
      * @return The root cause exception instances, with stack trace modified to filter out grails runtime classes
      */
-    public static Throwable deepSanitize(Throwable t) {
-        return stackFilterer.filter(t, true);
+    static Throwable deepSanitize(Throwable t) {
+        return stackFilterer.filter(t, true)
     }
 
 }

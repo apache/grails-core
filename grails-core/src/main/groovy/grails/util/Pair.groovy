@@ -17,60 +17,65 @@
  *  under the License.
  */
 
-package grails.util;
+package grails.util
 
-public class Pair<A, B> {
-    final A aValue;
-    final B bValue;
+import groovy.transform.CompileStatic
 
-    public Pair(A aValue, B bValue) {
-        this.aValue = aValue;
-        this.bValue = bValue;
+@CompileStatic
+class Pair<A, B> {
+
+    final A aValue
+    final B bValue
+
+    Pair(A aValue, B bValue) {
+        this.aValue = aValue
+        this.bValue = bValue
     }
 
-    public A getaValue() {
-        return aValue;
+    A getaValue() {
+        return aValue
     }
 
-    public B getbValue() {
-        return bValue;
-    }
-
-    @Override
-    public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ((aValue == null) ? 0 : aValue.hashCode());
-        result = prime * result + ((bValue == null) ? 0 : bValue.hashCode());
-        return result;
+    B getbValue() {
+        return bValue
     }
 
     @Override
-    public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
+    int hashCode() {
+        final int prime = 31
+        int result = 1
+        result = prime * result + ((aValue == null) ? 0 : aValue.hashCode())
+        result = prime * result + ((bValue == null) ? 0 : bValue.hashCode())
+        return result
+    }
+
+    @Override
+    boolean equals(Object obj) {
+        if (this.is(obj))
+            return true
         if (obj == null)
-            return false;
+            return false
         if (getClass() != obj.getClass())
-            return false;
-        Pair other = (Pair) obj;
+            return false
+        Pair other = (Pair) obj
         if (aValue == null) {
             if (other.aValue != null)
-                return false;
+                return false
         }
         else if (!aValue.equals(other.aValue))
-            return false;
+            return false
         if (bValue == null) {
             if (other.bValue != null)
-                return false;
+                return false
         }
         else if (!bValue.equals(other.bValue))
-            return false;
-        return true;
+            return false
+        return true
     }
 
     @Override
-    public String toString() {
-        return "TupleKey [aValue=" + aValue + ", bValue=" + bValue + "]";
+    String toString() {
+        return 'TupleKey [aValue=' + aValue + ', bValue=' + bValue + ']'
     }
+
 }

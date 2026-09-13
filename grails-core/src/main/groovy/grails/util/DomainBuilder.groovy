@@ -16,13 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.util;
+package grails.util
 
-import java.lang.reflect.Field;
-import java.util.Collection;
+import java.lang.reflect.Field
 
-import groovy.util.ObjectGraphBuilder;
-import org.codehaus.groovy.runtime.InvokerHelper;
+import groovy.transform.CompileStatic
+import org.codehaus.groovy.runtime.InvokerHelper
 
 /**
  * <p>Allows the construction of object graphs of domain classes. Example:
@@ -39,33 +38,35 @@ import org.codehaus.groovy.runtime.InvokerHelper;
  * </code></pre>
  * @author Scott Vlaminck
  */
-public class DomainBuilder extends ObjectGraphBuilder {
+@CompileStatic
+class DomainBuilder extends ObjectGraphBuilder {
 
-    public DomainBuilder() {
-        setChildPropertySetter(new DefaultGrailsChildPropertySetter());
-        setClassLoader(Thread.currentThread().getContextClassLoader());
+    DomainBuilder() {
+        setChildPropertySetter(new DefaultGrailsChildPropertySetter())
+        setClassLoader(Thread.currentThread().getContextClassLoader())
     }
 
-    public static class DefaultGrailsChildPropertySetter implements ChildPropertySetter {
-        public void setChild(Object parent, Object child, String parentName, String propertyName) {
+    static class DefaultGrailsChildPropertySetter implements ObjectGraphBuilder.ChildPropertySetter {
+        void setChild(Object parent, Object child, String parentName, String propertyName) {
             if (isCollection(parent, child, parentName, propertyName)) {
-                String propName = propertyName.substring(0, 1).toUpperCase() + propertyName.substring(1);
-                String methodName = "addTo" + propName;
-                InvokerHelper.invokeMethod(parent, methodName, child);
+                String propName = propertyName.substring(0, 1).toUpperCase() + propertyName.substring(1)
+                String methodName = 'addTo' + propName
+                InvokerHelper.invokeMethod(parent, methodName, child)
             }
             else {
-                InvokerHelper.setProperty(parent, propertyName, child);
+                InvokerHelper.setProperty(parent, propertyName, child)
             }
         }
 
         private boolean isCollection(Object parent, Object child, String parentName, String propertyName) {
             try {
-                Field field = parent.getClass().getDeclaredField(propertyName);
-                return Collection.class.isAssignableFrom(field.getType());
+                Field field = parent.getClass().getDeclaredField(propertyName)
+                return Collection.isAssignableFrom(field.getType())
             }
-            catch (NoSuchFieldException ignored) { /* ignored */}
+            catch (NoSuchFieldException ignored) { /* ignored */ }
 
-            return false;
+            return false
         }
     }
+
 }

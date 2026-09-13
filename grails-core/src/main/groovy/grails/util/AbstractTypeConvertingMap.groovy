@@ -16,21 +16,13 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.util;
+package grails.util
 
-import java.util.Collection;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import groovy.transform.CompileStatic
+import org.codehaus.groovy.runtime.DefaultGroovyMethods
+import org.codehaus.groovy.util.HashCodeHelper
 
-import groovy.lang.GroovyObjectSupport;
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
-import org.codehaus.groovy.util.HashCodeHelper;
-
-import org.apache.grails.core.internal.util.TypeConverters;
+import org.apache.grails.core.internal.util.TypeConverters
 
 /**
  * AbstractTypeConvertingMap is a Map with type conversion capabilities.
@@ -59,72 +51,75 @@ import org.apache.grails.core.internal.util.TypeConverters;
  * @author Lari Hotari
  * @since 1.2
  */
-@SuppressWarnings({ "rawtypes", "unchecked" })
-public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport implements Map, Cloneable {
-    protected Map wrappedMap;
+@SuppressWarnings([ 'rawtypes', 'unchecked' ])
+@CompileStatic
+abstract class AbstractTypeConvertingMap extends GroovyObjectSupport implements Map, Cloneable {
 
-    public AbstractTypeConvertingMap() {
-        this(new LinkedHashMap());
+    protected Map wrappedMap
+
+    AbstractTypeConvertingMap() {
+        this(new LinkedHashMap())
     }
 
-    public AbstractTypeConvertingMap(Map map) {
-        if (map == null) map = new LinkedHashMap();
-        wrappedMap = map;
+    AbstractTypeConvertingMap(Map map) {
+        if (map == null) map = new LinkedHashMap()
+        wrappedMap = map
     }
 
-    public boolean equals(Map that) {
-        return equals((Object) that);
+    boolean equals(Map that) {
+        return equals((Object) that)
     }
 
     @Override
-    public boolean equals(Object that) {
-        if (this == that) {
-            return true;
+    boolean equals(Object that) {
+        if (this.is(that)) {
+            return true
         }
 
         if (that == null) {
-            return false;
+            return false
         }
 
         if (getClass() != that.getClass()) {
-            return false;
+            return false
         }
 
-        AbstractTypeConvertingMap thatMap = (AbstractTypeConvertingMap) that;
+        AbstractTypeConvertingMap thatMap = (AbstractTypeConvertingMap) that
+        Map thatWrappedMap = thatMap.@wrappedMap
 
-        if (wrappedMap == thatMap.wrappedMap) {
-            return true;
+        if (wrappedMap.is(thatWrappedMap)) {
+            return true
         }
 
-        if (wrappedMap.size() != thatMap.wrappedMap.size()) {
-            return false;
+        if (wrappedMap.size() != thatWrappedMap.size()) {
+            return false
         }
 
-        if (!wrappedMap.keySet().equals(thatMap.wrappedMap.keySet())) {
-            return false;
+        if (!wrappedMap.keySet().equals(thatWrappedMap.keySet())) {
+            return false
         }
 
-        final Iterator it = wrappedMap.keySet().iterator();
+        final Iterator it = wrappedMap.keySet().iterator()
         while (it.hasNext()) {
-            final Object key = it.next();
-            Object thisValue = wrappedMap.get(key);
-            Object thatValue = thatMap.wrappedMap.get(key);
+            final Object key = it.next()
+            Object thisValue = wrappedMap.get(key)
+            Object thatValue = thatWrappedMap.get(key)
             if (thisValue == null && thatValue != null ||
                 thisValue != null && thatValue == null ||
-                thisValue != thatValue && !thisValue.equals(thatValue)) {
-                return false;
+                !thisValue.is(thatValue) && !thisValue.equals(thatValue)) {
+                return false
             }
         }
-        return true;
+        return true
     }
 
     @Override
-    public int hashCode() {
-        int hashCode = HashCodeHelper.initHash();
-        for (Object entry : wrappedMap.entrySet()) {
-            hashCode = HashCodeHelper.updateHash(hashCode, entry);
+    int hashCode() {
+        int hashCode = HashCodeHelper.initHash()
+        for (Object entry in wrappedMap.entrySet()) {
+            hashCode = HashCodeHelper.updateHash(hashCode, entry)
         }
-        return hashCode;
+        return hashCode
     }
 
     /**
@@ -132,12 +127,12 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
      * @param name The name of the parameter
      * @return The integer value or null if there isn't one
      */
-    public Byte getByte(String name) {
-        return TypeConverters.toByte(get(name));
+    Byte getByte(String name) {
+        return TypeConverters.toByte(get(name))
     }
 
-    public Byte getByte(String name, Integer defaultValue) {
-        return TypeConverters.toByte(get(name), defaultValue);
+    Byte getByte(String name, Integer defaultValue) {
+        return TypeConverters.toByte(get(name), defaultValue)
     }
 
     /**
@@ -145,12 +140,12 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
      * @param name The name of the parameter
      * @return The Character value or null if there isn't one
      */
-    public Character getChar(String name) {
-        return TypeConverters.toCharacter(get(name));
+    Character getChar(String name) {
+        return TypeConverters.toCharacter(get(name))
     }
 
-    public Character getChar(String name, Integer defaultValue) {
-        return TypeConverters.toCharacter(get(name), defaultValue);
+    Character getChar(String name, Integer defaultValue) {
+        return TypeConverters.toCharacter(get(name), defaultValue)
     }
 
     /**
@@ -158,12 +153,12 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
      * @param name The name of the parameter
      * @return The integer value or null if there isn't one
      */
-    public Integer getInt(String name) {
-        return TypeConverters.toInteger(get(name));
+    Integer getInt(String name) {
+        return TypeConverters.toInteger(get(name))
     }
 
-    public Integer getInt(String name, Integer defaultValue) {
-        return TypeConverters.toInteger(get(name), defaultValue);
+    Integer getInt(String name, Integer defaultValue) {
+        return TypeConverters.toInteger(get(name), defaultValue)
     }
 
     /**
@@ -171,12 +166,12 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
      * @param name The name of the parameter
      * @return The long value or null if there isn't one
      */
-    public Long getLong(String name) {
-        return TypeConverters.toLong(get(name));
+    Long getLong(String name) {
+        return TypeConverters.toLong(get(name))
     }
 
-    public Long getLong(String name, Long defaultValue) {
-        return TypeConverters.toLong(get(name), defaultValue);
+    Long getLong(String name, Long defaultValue) {
+        return TypeConverters.toLong(get(name), defaultValue)
     }
 
     /**
@@ -184,12 +179,12 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
     * @param name The name of the parameter
     * @return The short value or null if there isn't one
     */
-    public Short getShort(String name) {
-        return TypeConverters.toShort(get(name));
+    Short getShort(String name) {
+        return TypeConverters.toShort(get(name))
     }
 
-    public Short getShort(String name, Integer defaultValue) {
-        return TypeConverters.toShort(get(name), defaultValue);
+    Short getShort(String name, Integer defaultValue) {
+        return TypeConverters.toShort(get(name), defaultValue)
     }
 
     /**
@@ -197,12 +192,12 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
     * @param name The name of the parameter
     * @return The double value or null if there isn't one
     */
-    public Double getDouble(String name) {
-        return TypeConverters.toDouble(get(name));
+    Double getDouble(String name) {
+        return TypeConverters.toDouble(get(name))
     }
 
-    public Double getDouble(String name, Double defaultValue) {
-        return TypeConverters.toDouble(get(name), defaultValue);
+    Double getDouble(String name, Double defaultValue) {
+        return TypeConverters.toDouble(get(name), defaultValue)
     }
 
     /**
@@ -210,12 +205,12 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
      * @param name The name of the parameter
      * @return The double value or null if there isn't one
      */
-    public Float getFloat(String name) {
-        return TypeConverters.toFloat(get(name));
+    Float getFloat(String name) {
+        return TypeConverters.toFloat(get(name))
     }
 
-    public Float getFloat(String name, Float defaultValue) {
-        return TypeConverters.toFloat(get(name), defaultValue);
+    Float getFloat(String name, Float defaultValue) {
+        return TypeConverters.toFloat(get(name), defaultValue)
     }
 
     /**
@@ -223,18 +218,18 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
      * @param name The name of the parameter
      * @return The boolean value or null if there isn't one
      */
-    public Boolean getBoolean(String name) {
-        return TypeConverters.toBoolean(get(name));
+    Boolean getBoolean(String name) {
+        return TypeConverters.toBoolean(get(name))
     }
 
-    public Boolean getBoolean(String name, Boolean defaultValue) {
-        Boolean value;
+    Boolean getBoolean(String name, Boolean defaultValue) {
+        Boolean value
         if (containsKey(name)) {
-            value = getBoolean(name);
+            value = getBoolean(name)
         } else {
-            value = defaultValue;
+            value = defaultValue
         }
-        return value;
+        return value
     }
 
     /**
@@ -242,12 +237,12 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
      * @param name The name of the parameter
      * @return The String value or null if there isn't one
      */
-    public String getString(String name) {
-        return TypeConverters.toStringValue(get(name));
+    String getString(String name) {
+        return TypeConverters.toStringValue(get(name))
     }
 
-    public String getString(String name, String defaultValue) {
-        return TypeConverters.toStringValue(get(name), defaultValue);
+    String getString(String name, String defaultValue) {
+        return TypeConverters.toStringValue(get(name), defaultValue)
     }
 
     /**
@@ -255,8 +250,8 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
      * @param name
      * @return The date or null
      */
-    public Date getDate(String name) {
-        return TypeConverters.toDate(get(name));
+    Date getDate(String name) {
+        return TypeConverters.toDate(get(name))
     }
 
     /**
@@ -265,8 +260,8 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
      * @param format The format
      * @return The date or null
      */
-    public Date getDate(String name, String format) {
-        return TypeConverters.toDate(get(name), format);
+    Date getDate(String name, String format) {
+        return TypeConverters.toDate(get(name), format)
     }
 
     /**
@@ -275,8 +270,8 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
      * @param name The name of the parameter
      * @return The date object or null if it cannot be parsed
      */
-    public Date date(String name) {
-        return getDate(name);
+    Date date(String name) {
+        return getDate(name)
     }
 
     /**
@@ -286,8 +281,8 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
      * @param format The format
      * @return The date object or null if it cannot be parsed
      */
-    public Date date(String name, String format) {
-        return getDate(name, format);
+    Date date(String name, String format) {
+        return getDate(name, format)
     }
 
     /**
@@ -297,12 +292,12 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
      * @param formats The formats
      * @return The date object or null if it cannot be parsed
      */
-    public Date date(String name, Collection<String> formats) {
-        return getDate(name, formats);
+    Date date(String name, Collection<String> formats) {
+        return getDate(name, formats)
     }
 
     private Date getDate(String name, Collection<String> formats) {
-        return TypeConverters.toDate(get(name), formats);
+        return TypeConverters.toDate(get(name), formats)
     }
 
     /**
@@ -310,68 +305,69 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
      * @param name The name of the parameter
      * @return A list of values
      */
-    public List getList(String name) {
-        return TypeConverters.toList(get(name));
+    List getList(String name) {
+        return TypeConverters.toList(get(name))
     }
 
-    public List list(String name) {
-        return getList(name);
+    List list(String name) {
+        return getList(name)
     }
 
-    public Object put(Object k, Object v) {
-        return wrappedMap.put(k, v);
+    Object put(Object k, Object v) {
+        return wrappedMap.put(k, v)
     }
 
-    public Object remove(Object o) {
-        return wrappedMap.remove(o);
+    Object remove(Object o) {
+        return wrappedMap.remove(o)
     }
 
-    public int size() {
-        return wrappedMap.size();
+    int size() {
+        return wrappedMap.size()
     }
 
-    public boolean isEmpty() {
-        return wrappedMap.isEmpty();
+    boolean isEmpty() {
+        return wrappedMap.isEmpty()
     }
 
-    public boolean containsKey(Object k) {
-        return wrappedMap.containsKey(k);
+    boolean containsKey(Object k) {
+        return wrappedMap.containsKey(k)
     }
 
-    public boolean containsValue(Object v) {
-        return wrappedMap.containsValue(v);
+    boolean containsValue(Object v) {
+        return wrappedMap.containsValue(v)
     }
 
-    public Object get(Object k) {
-        return wrappedMap.get(k);
+    Object get(Object k) {
+        return wrappedMap.get(k)
     }
 
-    public void putAll(Map m) {
-        wrappedMap.putAll(m);
+    void putAll(Map m) {
+        wrappedMap.putAll(m)
     }
 
-    public void clear() {
-        wrappedMap.clear();
+    void clear() {
+        wrappedMap.clear()
     }
 
-    public Set keySet() {
-        return wrappedMap.keySet();
+    Set keySet() {
+        return wrappedMap.keySet()
     }
 
-    public Collection values() {
-        return wrappedMap.values();
+    Collection values() {
+        return wrappedMap.values()
     }
 
-    public Set entrySet() {
-        return wrappedMap.entrySet();
+    Set entrySet() {
+        return wrappedMap.entrySet()
     }
 
     @Override
-    public String toString() {
-        return DefaultGroovyMethods.toMapString(this);
+    String toString() {
+        return DefaultGroovyMethods.toMapString(this)
     }
 
-    public boolean asBoolean() {
-        return !isEmpty();
+    boolean asBoolean() {
+        return !isEmpty()
     }
+
 }
