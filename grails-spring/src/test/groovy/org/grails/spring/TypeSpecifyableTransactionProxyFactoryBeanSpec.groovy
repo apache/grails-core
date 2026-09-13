@@ -16,31 +16,26 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.spring;
+package org.grails.spring
 
-import org.springframework.context.ApplicationEvent;
-import org.springframework.web.context.WebApplicationContext;
+import spock.lang.Specification
 
-/**
- * Signals various events related to the Grails context loading.
- *
- * @author Graeme Rocher
- * @since 1.0
- */
-public class GrailsContextEvent extends ApplicationEvent {
+class TypeSpecifyableTransactionProxyFactoryBeanSpec extends Specification {
 
-    private static final long serialVersionUID = -2686144042443671643L;
+    void 'an explicit type is returned instead of asking the superclass'() {
+        given:
+        TypeSpecifyableTransactionProxyFactoryBean bean = new TypeSpecifyableTransactionProxyFactoryBean(String)
 
-    public static final int DYNAMIC_METHODS_REGISTERED = 0;
-
-    private int eventType;
-
-    public GrailsContextEvent(WebApplicationContext ctx, int eventType) {
-        super(ctx);
-        this.eventType = eventType;
+        expect:
+        bean.objectType == String
     }
 
-    public int getEventType() {
-        return eventType;
+    void 'a null type falls back to the superclass determination'() {
+        given:
+        TypeSpecifyableTransactionProxyFactoryBean bean = new TypeSpecifyableTransactionProxyFactoryBean(null)
+
+        expect:
+        bean.objectType == null
     }
+
 }
