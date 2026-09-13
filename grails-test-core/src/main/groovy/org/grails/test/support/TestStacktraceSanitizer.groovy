@@ -16,33 +16,34 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.test.support;
+package org.grails.test.support
 
-import java.util.ArrayList;
-import java.util.List;
+import groovy.transform.CompileStatic
 
-import org.grails.exceptions.reporting.DefaultStackTraceFilterer;
+import org.grails.exceptions.reporting.DefaultStackTraceFilterer
 
-public class TestStacktraceSanitizer {
+@CompileStatic
+class TestStacktraceSanitizer {
 
-    private static final String TEST_RUNNING_CLASS = "_GrailsTest";
+    private static final String TEST_RUNNING_CLASS = '_GrailsTest'
 
     private TestStacktraceSanitizer() {
     }
 
-    public static Throwable sanitize(Throwable t) {
-        new DefaultStackTraceFilterer().filter(t, true);
-        StackTraceElement[] trace = t.getStackTrace();
-        List<StackTraceElement> newTrace = new ArrayList<>();
-        for (StackTraceElement stackTraceElement : trace) {
+    static Throwable sanitize(Throwable t) {
+        new DefaultStackTraceFilterer().filter(t, true)
+        StackTraceElement[] trace = t.getStackTrace()
+        List<StackTraceElement> newTrace = new ArrayList<>()
+        for (StackTraceElement stackTraceElement in trace) {
             if (stackTraceElement.getClassName().startsWith(TEST_RUNNING_CLASS)) {
-                break;
+                break
             }
 
-            newTrace.add(stackTraceElement);
+            newTrace.add(stackTraceElement)
         }
 
-        t.setStackTrace(newTrace.toArray(new StackTraceElement[newTrace.size()]));
-        return t;
+        t.setStackTrace(newTrace.toArray(new StackTraceElement[newTrace.size()]))
+        return t
     }
+
 }
