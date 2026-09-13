@@ -1,0 +1,96 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.grails.plugins.databinding
+
+import groovy.transform.CompileStatic
+import org.springframework.boot.context.properties.ConfigurationProperties
+
+/**
+ * Data binding configuration.
+ *
+ * @author graemerocher
+ * @since 4.0
+ */
+@ConfigurationProperties('grails.databinding')
+@CompileStatic
+class DataBindingConfigurationProperties {
+
+    private static final String DEFAULT_JSR310_OFFSET_ZONED_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ"
+    private static final String DEFAULT_JSR310_OFFSET_TIME_FORMAT = 'HH:mm:ssZ'
+    private static final String DEFAULT_JSR310_LOCAL_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss"
+    private static final String DEFAULT_JSR310_LOCAL_DATE_FORMAT = 'yyyy-MM-dd'
+    private static final String DEFAULT_JSR310_LOCAL_TIME_FORMAT = 'HH:mm:ss'
+
+    private boolean trimStrings = true
+    private boolean convertEmptyStringsToNull = true
+    private int autoGrowCollectionLimit = 256
+    private boolean dateParsingLenient = false
+    private List<String> dateFormats = List.of(
+            'yyyy-MM-dd HH:mm:ss.S',
+            "yyyy-MM-dd'T'HH:mm:ss'Z'",
+            'yyyy-MM-dd HH:mm:ss.S z',
+            "yyyy-MM-dd'T'HH:mm:ss.SSSX",
+            DEFAULT_JSR310_OFFSET_ZONED_DATE_TIME_FORMAT,
+            DEFAULT_JSR310_OFFSET_TIME_FORMAT,
+            DEFAULT_JSR310_LOCAL_DATE_TIME_FORMAT,
+            DEFAULT_JSR310_LOCAL_DATE_FORMAT,
+            DEFAULT_JSR310_LOCAL_TIME_FORMAT
+    )
+
+    boolean isTrimStrings() {
+        return trimStrings
+    }
+
+    void setTrimStrings(boolean trimStrings) {
+        this.trimStrings = trimStrings
+    }
+
+    boolean isConvertEmptyStringsToNull() {
+        return convertEmptyStringsToNull
+    }
+
+    void setConvertEmptyStringsToNull(boolean convertEmptyStringsToNull) {
+        this.convertEmptyStringsToNull = convertEmptyStringsToNull
+    }
+
+    int getAutoGrowCollectionLimit() {
+        return autoGrowCollectionLimit
+    }
+
+    void setAutoGrowCollectionLimit(int autoGrowCollectionLimit) {
+        this.autoGrowCollectionLimit = autoGrowCollectionLimit
+    }
+
+    boolean isDateParsingLenient() {
+        return dateParsingLenient
+    }
+
+    void setDateParsingLenient(boolean dateParsingLenient) {
+        this.dateParsingLenient = dateParsingLenient
+    }
+
+    List<String> getDateFormats() {
+        return dateFormats
+    }
+
+    void setDateFormats(List<String> dateFormats) {
+        this.dateFormats = dateFormats
+    }
+
+}
