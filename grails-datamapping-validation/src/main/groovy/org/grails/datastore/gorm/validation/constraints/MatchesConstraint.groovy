@@ -4,25 +4,26 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
  */
 
-package org.grails.datastore.gorm.validation.constraints;
+package org.grails.datastore.gorm.validation.constraints
 
-import org.springframework.context.MessageSource;
-import org.springframework.validation.Errors;
+import groovy.transform.CompileStatic
+import org.springframework.context.MessageSource
+import org.springframework.validation.Errors
 
-import grails.gorm.validation.ConstrainedProperty;
+import grails.gorm.validation.ConstrainedProperty
 
 /**
  * Validates the property against a supplied regular expression.
@@ -30,53 +31,54 @@ import grails.gorm.validation.ConstrainedProperty;
  * @author Graeme Rocher
  * @since 0.4
  */
-public class MatchesConstraint extends AbstractConstraint {
+@CompileStatic
+class MatchesConstraint extends AbstractConstraint {
 
-    private final String regex;
+    private final String regex
 
-    public MatchesConstraint(Class<?> constraintOwningClass, String constraintPropertyName, Object constraintParameter, MessageSource messageSource) {
-        super(constraintOwningClass, constraintPropertyName, constraintParameter, messageSource);
-        this.regex = this.constraintParameter.toString();
+    MatchesConstraint(Class<?> constraintOwningClass, String constraintPropertyName, Object constraintParameter, MessageSource messageSource) {
+        super(constraintOwningClass, constraintPropertyName, constraintParameter, messageSource)
+        this.regex = this.constraintParameter.toString()
     }
 
     /**
      * @return Returns the regex.
      */
-    public String getRegex() {
-        return regex;
+    String getRegex() {
+        return regex
     }
 
     /* (non-Javadoc)
      * @see org.grails.validation.Constraint#supports(java.lang.Class)
      */
-    @SuppressWarnings("rawtypes")
-    public boolean supports(Class type) {
-        return type != null && String.class.isAssignableFrom(type);
+    @SuppressWarnings('rawtypes')
+    boolean supports(Class type) {
+        return type != null && String.isAssignableFrom(type)
     }
 
     @Override
     protected Object validateParameter(Object constraintParameter) {
         if (!(constraintParameter instanceof CharSequence)) {
-            throw new IllegalArgumentException("Parameter for constraint [" + ConstrainedProperty.MATCHES_CONSTRAINT +
-                    "] of property [" + constraintPropertyName + "] of class [" +
-                    constraintOwningClass + "] must be of type [CharSequence]");
+            throw new IllegalArgumentException('Parameter for constraint [' + ConstrainedProperty.MATCHES_CONSTRAINT +
+                    '] of property [' + constraintPropertyName + '] of class [' +
+                    constraintOwningClass + '] must be of type [CharSequence]')
         }
-        return constraintParameter;
+        return constraintParameter
     }
 
-    public String getName() {
-        return ConstrainedProperty.MATCHES_CONSTRAINT;
+    String getName() {
+        return ConstrainedProperty.MATCHES_CONSTRAINT
     }
 
     @Override
     protected void processValidate(Object target, Object propertyValue, Errors errors) {
         if (propertyValue.toString().matches(regex)) {
-            return;
+            return
         }
 
         rejectValue(target, errors, ConstrainedProperty.DEFAULT_DOESNT_MATCH_MESSAGE_CODE,
                 ConstrainedProperty.MATCHES_CONSTRAINT + ConstrainedProperty.INVALID_SUFFIX,
-                new Object[] { constraintPropertyName, constraintOwningClass, propertyValue, regex });
+                [constraintPropertyName, constraintOwningClass, propertyValue, regex] as Object[])
     }
-}
 
+}
