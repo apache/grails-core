@@ -16,25 +16,28 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.plugin.cache;
+package org.grails.plugin.cache
 
-import org.springframework.cache.support.SimpleValueWrapper;
+import org.springframework.cache.CacheManager
 
 /**
- * Extends the standard implementation to also include the native wrapper instance.
- *
  * @author Burt Beckwith
  */
-public class GrailsValueWrapper extends SimpleValueWrapper {
+interface GrailsCacheManager extends CacheManager {
 
-    protected Object nativeWrapper;
+    /**
+     * Whether the cache for the given name exits
+     *
+     * @param name The name of the cache
+     * @return True if it does
+     */
+    boolean cacheExists(String name)
 
-    public GrailsValueWrapper(Object value, Object nativeWrapper) {
-        super(value);
-        this.nativeWrapper = nativeWrapper;
-    }
+    /**
+     * Destroys the given named cache
+     * @param name The name of the cache
+     * @return True if it was destroyed
+     */
+    boolean destroyCache(String name)
 
-    public Object getNativeWrapper() {
-        return nativeWrapper;
-    }
 }

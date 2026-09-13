@@ -16,19 +16,21 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.plugin.cache.util;
+package grails.plugin.cache.util
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
+import java.lang.reflect.Field
+import java.lang.reflect.Method
 
-import org.springframework.util.ReflectionUtils;
+import groovy.transform.CompileStatic
+import org.springframework.util.ReflectionUtils
 
-import grails.util.GrailsNameUtils;
+import grails.util.GrailsNameUtils
 
 /**
  * @author Jeff Brown
  */
-public class ClassUtils {
+@CompileStatic
+class ClassUtils {
 
     /**
      * This method will try to retrieve the value of the named property from the
@@ -39,25 +41,28 @@ public class ClassUtils {
      * @param propertyOrFieldName the name of the field or property to retrieve
      * @return the value of the field or property, null if neither is found
      */
-    public static Object getPropertyOrFieldValue(Object object, String propertyOrFieldName) {
-        final String getterName = GrailsNameUtils.getGetterName(propertyOrFieldName);
-        final Class<? extends Object> objectClass = object.getClass();
+    static Object getPropertyOrFieldValue(Object object, String propertyOrFieldName) {
+        final String getterName = GrailsNameUtils.getGetterName(propertyOrFieldName)
+        final Class<? extends Object> objectClass = object.getClass()
         try {
-            final Method method = objectClass.getMethod(getterName, new Class[0]);
+            final Method method = objectClass.getMethod(getterName, new Class[0])
             if (method != null) {
-                ReflectionUtils.makeAccessible(method);
-                return method.invoke(object, new Object[0]);
+                ReflectionUtils.makeAccessible(method)
+                return method.invoke(object, new Object[0])
             }
-        } catch (Exception e) {
+        }
+        catch (Exception ignored) {
         }
         try {
-            final Field field = ReflectionUtils.findField(objectClass, propertyOrFieldName);
+            final Field field = ReflectionUtils.findField(objectClass, propertyOrFieldName)
             if (field != null) {
-                ReflectionUtils.makeAccessible(field);
-                return field.get(object);
+                ReflectionUtils.makeAccessible(field)
+                return field.get(object)
             }
-        } catch (Exception e) {
         }
-        return null;
+        catch (Exception ignored) {
+        }
+        null
     }
+
 }

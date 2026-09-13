@@ -16,12 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.plugin.cache;
+package grails.plugin.cache
 
-import java.util.Collection;
-import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentMap
 
-import org.springframework.cache.concurrent.ConcurrentMapCache;
+import groovy.transform.CompileStatic
+import org.springframework.cache.concurrent.ConcurrentMapCache
 
 /**
  * Extends the default implementation to return GrailsValueWrapper instances instead of
@@ -32,28 +32,30 @@ import org.springframework.cache.concurrent.ConcurrentMapCache;
  *
  * @author Burt Beckwith
  */
-public class GrailsConcurrentMapCache extends ConcurrentMapCache implements GrailsCache {
+@CompileStatic
+class GrailsConcurrentMapCache extends ConcurrentMapCache implements GrailsCache {
 
-    public GrailsConcurrentMapCache(String name) {
-        super(name);
+    GrailsConcurrentMapCache(String name) {
+        super(name)
     }
 
-    public GrailsConcurrentMapCache(String name, boolean allowNullValues) {
-        super(name, allowNullValues);
+    GrailsConcurrentMapCache(String name, boolean allowNullValues) {
+        super(name, allowNullValues)
     }
 
-    public GrailsConcurrentMapCache(String name, ConcurrentMap<Object, Object> store, boolean allowNullValues) {
-        super(name, store, allowNullValues);
+    GrailsConcurrentMapCache(String name, ConcurrentMap<Object, Object> store, boolean allowNullValues) {
+        super(name, store, allowNullValues)
     }
 
     @Override
-    public GrailsValueWrapper get(Object key) {
-        Object value = getNativeCache().get(key);
-        return value == null ? null : new GrailsValueWrapper(fromStoreValue(value), null);
+    GrailsValueWrapper get(Object key) {
+        Object value = getNativeCache().get(key)
+        value == null ? null : new GrailsValueWrapper(fromStoreValue(value), null)
     }
 
-    @SuppressWarnings("unchecked")
-    public Collection<Object> getAllKeys() {
-        return getNativeCache().keySet();
+    @SuppressWarnings('unchecked')
+    Collection<Object> getAllKeys() {
+        getNativeCache().keySet()
     }
+
 }
