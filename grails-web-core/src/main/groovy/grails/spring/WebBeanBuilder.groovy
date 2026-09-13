@@ -16,12 +16,13 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.spring;
+package grails.spring
 
-import org.springframework.context.ApplicationContext;
+import groovy.transform.CompileStatic
+import org.springframework.context.ApplicationContext
 
-import org.grails.spring.RuntimeSpringConfiguration;
-import org.grails.web.servlet.context.support.WebRuntimeSpringConfiguration;
+import org.grails.spring.RuntimeSpringConfiguration
+import org.grails.web.servlet.context.support.WebRuntimeSpringConfiguration
 
 /**
  * Extended version of the BeanBuilder class that provides support for constructing WebApplicationContext instances
@@ -29,26 +30,28 @@ import org.grails.web.servlet.context.support.WebRuntimeSpringConfiguration;
  * @author Graeme Rocher
  * @since 1.0
  */
-public class WebBeanBuilder extends BeanBuilder {
+@CompileStatic
+class WebBeanBuilder extends BeanBuilder {
 
-    public WebBeanBuilder() {
-        super();
+    WebBeanBuilder() {
+        super()
     }
 
-    public WebBeanBuilder(ClassLoader classLoader) {
-        super(classLoader);
+    WebBeanBuilder(ClassLoader classLoader) {
+        super(classLoader)
     }
 
-    public WebBeanBuilder(ApplicationContext parent) {
-        super(parent);
+    WebBeanBuilder(ApplicationContext parent) {
+        super(parent)
     }
 
-    public WebBeanBuilder(ApplicationContext parent, ClassLoader classLoader) {
-        super(parent, classLoader);
+    WebBeanBuilder(ApplicationContext parent, ClassLoader classLoader) {
+        super(parent, classLoader)
     }
 
     @Override
     protected RuntimeSpringConfiguration createRuntimeSpringConfiguration(ApplicationContext parent, ClassLoader classLoader) {
-        return new WebRuntimeSpringConfiguration(parent, classLoader);
+        return new WebRuntimeSpringConfiguration(parent, classLoader)
     }
+
 }

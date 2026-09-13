@@ -16,42 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.web.servlet.bootstrap;
+package org.grails.web.servlet.boostrap
 
-import groovy.lang.Closure;
+import groovy.transform.CompileStatic
 
-import grails.core.GrailsClass;
+import grails.core.ArtefactHandlerAdapter
+import grails.web.servlet.bootstrap.GrailsBootstrapClass
 
 /**
- * Loaded and executed on application load.
- *
- * @author Graeme Rocher
+ * @author Marc Palmer (marc@anyware.co.uk)
  */
-public interface GrailsBootstrapClass extends GrailsClass {
+@CompileStatic
+class BootstrapArtefactHandler extends ArtefactHandlerAdapter {
 
-    /**
-     * Calls the init closure if one exists.
-     */
-    void callInit();
+    public static final String TYPE = 'Bootstrap'
 
-    /**
-     * Calls the destroy closure if one exists.
-     */
-    void callDestroy();
+    BootstrapArtefactHandler() {
+        super(TYPE, GrailsBootstrapClass, DefaultGrailsBootstrapClass,
+                DefaultGrailsBootstrapClass.BOOT_STRAP)
+    }
 
-    /**
-     * Returns the init closure which is called on application load.
-     *
-     * @return A Closure instance
-     */
-    @SuppressWarnings("rawtypes")
-    Closure getInitClosure();
-
-    /**
-     * Returns the destroy closure which is called on application exit.
-     *
-     * @return A Closure instance
-     */
-    @SuppressWarnings("rawtypes")
-    Closure getDestroyClosure();
 }
