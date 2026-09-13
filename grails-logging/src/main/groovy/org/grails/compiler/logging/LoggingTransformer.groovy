@@ -1,0 +1,92 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.grails.compiler.logging
+
+import java.lang.reflect.Modifier
+
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import org.codehaus.groovy.ast.ASTNode
+import org.codehaus.groovy.ast.AnnotationNode
+import org.codehaus.groovy.ast.ClassHelper
+import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.FieldNode
+import org.codehaus.groovy.classgen.GeneratorContext
+import org.codehaus.groovy.control.CompilationUnit
+import org.codehaus.groovy.control.SourceUnit
+import org.codehaus.groovy.transform.LogASTTransformation
+
+import grails.compiler.ast.AllArtefactClassInjector
+import grails.compiler.ast.AstTransformer
+
+/**
+ * Adds a log field to all artifacts.
+ *
+ * @author Graeme Rocher
+ * @since 2.0
+ */
+@AstTransformer
+@CompileStatic
+class LoggingTransformer implements AllArtefactClassInjector {
+
+    @Override
+    void performInjection(SourceUnit source, GeneratorContext context, ClassNode classNode) {
+        performInjectionOnAnnotatedClass(source, classNode)
+    }
+
+    @Override
+    void performInjection(SourceUnit source, ClassNode classNode) {
+        performInjectionOnAnnotatedClass(source, classNode)
+    }
+
+    @Override
+    void performInjectionOnAnnotatedClass(SourceUnit source, ClassNode classNode) {
+        if (classNode.getNodeMetaData(Slf4j) != null) return
+        String packageName = Slf4j.getPackage().getName()
+
+        // if already annotated skip
+        for (AnnotationNode annotationNode in classNode.getAnnotations()) {
+            if (annotationNode.getClassNode().getPackageName().equals(packageName)) {
+                return
+            }
+        }
+
+        FieldNode logField = classNode.getField('log')
+        if (logField != null) {
+            if (!Modifier.isPrivate(logField.getModifiers())) {
+                return
+            }
+        }
+
+        if (classNode.getSuperClass().getName().equals('grails.boot.config.GrailsAutoConfiguration')) {
+            return
+        }
+
+        AnnotationNode annotationNode = new AnnotationNode(ClassHelper.make(Slf4j))
+        LogASTTransformation logASTTransformation = new LogASTTransformation()
+        logASTTransformation.setCompilationUnit(new CompilationUnit(new GroovyClassLoader(getClass().getClassLoader())))
+        logASTTransformation.visit([annotationNode, classNode] as ASTNode[], source)
+        classNode.putNodeMetaData(Slf4j, annotationNode)
+    }
+
+    boolean shouldInject(URL url) {
+        return true // Add log property to all artifact types
+    }
+
+}
