@@ -1,3 +1,4 @@
+
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one
  *  or more contributor license agreements.  See the NOTICE file
@@ -16,14 +17,18 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.compiler.ast;
+package grails.compiler.traits
 
 /**
- * Extended marker interface that indicates this ClassInjector applies to GSPs.
  *
- * @author Stephane Maldini
- * @since 2.0
+ * @author Jeff Brown
+ * @since 3.0
+ *
  */
-public interface GroovyPageInjector extends ClassInjector {
-    // marker
+interface TraitInjector {
+
+    Class getTrait()
+
+    String[] getArtefactTypes()
+
 }

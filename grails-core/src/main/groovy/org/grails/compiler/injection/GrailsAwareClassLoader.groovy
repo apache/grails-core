@@ -16,16 +16,16 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.compiler.injection;
+package org.grails.compiler.injection
 
-import java.security.CodeSource;
+import java.security.CodeSource
 
-import groovy.lang.GroovyClassLoader;
-import org.codehaus.groovy.control.CompilationUnit;
-import org.codehaus.groovy.control.CompilerConfiguration;
-import org.codehaus.groovy.control.Phases;
+import groovy.transform.CompileStatic
+import org.codehaus.groovy.control.CompilationUnit
+import org.codehaus.groovy.control.CompilerConfiguration
+import org.codehaus.groovy.control.Phases
 
-import grails.compiler.ast.ClassInjector;
+import grails.compiler.ast.ClassInjector
 
 /**
  * A class loader that is aware of Groovy sources and injection operations.
@@ -33,32 +33,33 @@ import grails.compiler.ast.ClassInjector;
  * @author Graeme Rocher
  * @since 0.6
  */
-public class GrailsAwareClassLoader extends GroovyClassLoader {
+@CompileStatic
+class GrailsAwareClassLoader extends GroovyClassLoader {
 
-    public GrailsAwareClassLoader() {
+    GrailsAwareClassLoader() {
         // default
     }
 
-    public GrailsAwareClassLoader(ClassLoader loader) {
-        super(loader);
+    GrailsAwareClassLoader(ClassLoader loader) {
+        super(loader)
     }
 
-    public GrailsAwareClassLoader(GroovyClassLoader parent) {
-        super(parent);
+    GrailsAwareClassLoader(GroovyClassLoader parent) {
+        super(parent)
     }
 
-    public GrailsAwareClassLoader(ClassLoader parent, CompilerConfiguration config, boolean useConfigurationClasspath) {
-        super(parent, config, useConfigurationClasspath);
+    GrailsAwareClassLoader(ClassLoader parent, CompilerConfiguration config, boolean useConfigurationClasspath) {
+        super(parent, config, useConfigurationClasspath)
     }
 
-    public GrailsAwareClassLoader(ClassLoader loader, CompilerConfiguration config) {
-        super(loader, config);
+    GrailsAwareClassLoader(ClassLoader loader, CompilerConfiguration config) {
+        super(loader, config)
     }
 
-    private ClassInjector[] classInjectors;
+    private ClassInjector[] classInjectors
 
-    public void setClassInjectors(ClassInjector[] classInjectors) {
-        this.classInjectors = classInjectors;
+    void setClassInjectors(ClassInjector[] classInjectors) {
+        this.classInjectors = classInjectors
     }
 
     /**
@@ -66,19 +67,20 @@ public class GrailsAwareClassLoader extends GroovyClassLoader {
      */
     @Override
     protected CompilationUnit createCompilationUnit(CompilerConfiguration config, CodeSource source) {
-        CompilationUnit cu = super.createCompilationUnit(config, source);
+        CompilationUnit cu = super.createCompilationUnit(config, source)
 
-        GrailsAwareInjectionOperation operation;
+        GrailsAwareInjectionOperation operation
 
         if (classInjectors == null) {
-            operation = new GrailsAwareInjectionOperation();
+            operation = new GrailsAwareInjectionOperation()
         }
         else {
-            operation = new GrailsAwareInjectionOperation(classInjectors);
+            operation = new GrailsAwareInjectionOperation(classInjectors)
         }
 
-        cu.addPhaseOperation(operation, Phases.CANONICALIZATION);
+        cu.addPhaseOperation(operation, Phases.CANONICALIZATION)
 
-        return cu;
+        return cu
     }
+
 }

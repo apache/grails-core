@@ -16,14 +16,13 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.compiler.ast;
+package grails.compiler.ast
 
-import java.lang.reflect.Modifier;
-import java.net.URL;
+import java.lang.reflect.Modifier
 
-import org.codehaus.groovy.ast.ClassNode;
-import org.codehaus.groovy.classgen.GeneratorContext;
-import org.codehaus.groovy.control.SourceUnit;
+import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.classgen.GeneratorContext
+import org.codehaus.groovy.control.SourceUnit
 
 /**
  * When implemented allows additional properties to be injected into Grails
@@ -33,9 +32,9 @@ import org.codehaus.groovy.control.SourceUnit;
  *
  * @since 0.2
  */
-public interface ClassInjector {
+interface ClassInjector {
 
-    int PRIVATE_STATIC_MODIFIER = Modifier.PRIVATE | Modifier.STATIC;
+    int PRIVATE_STATIC_MODIFIER = Modifier.PRIVATE | Modifier.STATIC
 
     /**
      * Handles injection of properties, methods etc. into a class.
@@ -44,7 +43,7 @@ public interface ClassInjector {
      * @param context The generator context
      * @param classNode The ClassNode instance
      */
-    void performInjection(SourceUnit source, GeneratorContext context, ClassNode classNode);
+    void performInjection(SourceUnit source, GeneratorContext context, ClassNode classNode)
 
     /**
      * Handles injection of properties, methods etc. into a class.
@@ -52,7 +51,7 @@ public interface ClassInjector {
      * @param source The source unit
      * @param classNode The ClassNode instance
      */
-    void performInjection(SourceUnit source, ClassNode classNode);
+    void performInjection(SourceUnit source, ClassNode classNode)
 
     /**
      * Handles injection of properties, methods etc. into a class.
@@ -60,7 +59,7 @@ public interface ClassInjector {
      * @param source The source unit
      * @param classNode The ClassNode instance
      */
-    void performInjectionOnAnnotatedClass(SourceUnit source, ClassNode classNode);
+    void performInjectionOnAnnotatedClass(SourceUnit source, ClassNode classNode)
 
     /**
      * Returns whether this injector should inject
@@ -68,5 +67,6 @@ public interface ClassInjector {
      * @param url The URL of the source file
      * @return true if injection should occur
      */
-    boolean shouldInject(URL url);
+    boolean shouldInject(URL url)
+
 }

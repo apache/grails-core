@@ -16,23 +16,21 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.compiler.injection;
+package grails.compiler.ast
 
-import org.codehaus.groovy.ast.ClassNode;
+import java.lang.annotation.ElementType
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
 
 /**
- * Enhances a class to contain an Errors property of type org.springframework.validation.Errors.  Methods added include:
+ * Marker annotation that for classes that transform Grails classes at the AST level.
  *
- *  <pre>
- *  public void setErrors(Errors errors)
- *  public Errors getErrors()
- *  public void clearErrors()
- *  public Boolean hasErrors()
- *  </pre>
- *
- *  @author Jeff Brown
+ * @since 2.0
+ * @author Graeme Rocher
  */
-public interface ASTErrorsHelper {
+@Retention(RetentionPolicy.RUNTIME)
+@Target([ElementType.TYPE])
+@interface AstTransformer {
 
-    void injectErrorsCode(ClassNode classNode);
 }

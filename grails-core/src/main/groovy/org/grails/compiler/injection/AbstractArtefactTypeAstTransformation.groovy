@@ -16,20 +16,19 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.compiler.injection;
+package org.grails.compiler.injection
 
-import java.util.List;
+import groovy.transform.CompileStatic
+import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.control.CompilePhase
+import org.codehaus.groovy.control.SourceUnit
+import org.codehaus.groovy.transform.ASTTransformation
+import org.codehaus.groovy.transform.GroovyASTTransformation
+import org.codehaus.groovy.transform.TransformWithPriority
 
-import org.codehaus.groovy.ast.ClassNode;
-import org.codehaus.groovy.control.CompilePhase;
-import org.codehaus.groovy.control.SourceUnit;
-import org.codehaus.groovy.transform.ASTTransformation;
-import org.codehaus.groovy.transform.GroovyASTTransformation;
-import org.codehaus.groovy.transform.TransformWithPriority;
-
-import grails.compiler.ast.AllArtefactClassInjector;
-import grails.compiler.ast.AnnotatedClassInjector;
-import grails.compiler.ast.ClassInjector;
+import grails.compiler.ast.AllArtefactClassInjector
+import grails.compiler.ast.AnnotatedClassInjector
+import grails.compiler.ast.ClassInjector
 
 /**
  * Base implementation for the artefact type transformation.
@@ -38,25 +37,28 @@ import grails.compiler.ast.ClassInjector;
  * @since 2.0
  */
 @GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
-public abstract class AbstractArtefactTypeAstTransformation implements ASTTransformation, TransformWithPriority {
+@CompileStatic
+abstract class AbstractArtefactTypeAstTransformation implements ASTTransformation, TransformWithPriority {
+
     protected void performInjectionOnArtefactType(SourceUnit sourceUnit, ClassNode cNode, String artefactType) {
         try {
-            ClassInjector[] classInjectors = GrailsAwareInjectionOperation.getClassInjectors();
-            List<ClassInjector> injectors = ArtefactTypeAstTransformation.findInjectors(artefactType, classInjectors);
+            ClassInjector[] classInjectors = GrailsAwareInjectionOperation.getClassInjectors()
+            List<ClassInjector> injectors = ArtefactTypeAstTransformation.findInjectors(artefactType, classInjectors)
             if (!injectors.isEmpty()) {
-                AbstractGrailsArtefactTransformer.addToTransformedClasses(cNode.getName());
-                for (ClassInjector injector : injectors) {
+                AbstractGrailsArtefactTransformer.addToTransformedClasses(cNode.getName())
+                for (ClassInjector injector in injectors) {
                     if (injector instanceof AllArtefactClassInjector) {
-                        injector.performInjection(sourceUnit, cNode);
+                        injector.performInjection(sourceUnit, cNode)
                     }
                     else if (injector instanceof AnnotatedClassInjector) {
-                        ((AnnotatedClassInjector) injector).performInjectionOnAnnotatedClass(sourceUnit, null, cNode);
+                        ((AnnotatedClassInjector) injector).performInjectionOnAnnotatedClass(sourceUnit, null, cNode)
                     }
                 }
             }
         } catch (RuntimeException e) {
-            System.err.println("Error occurred calling AST injector [" + getClass() + "]: " + e.getMessage());
-            throw e;
+            System.err.println('Error occurred calling AST injector [' + getClass() + ']: ' + e.getMessage())
+            throw e
         }
     }
+
 }

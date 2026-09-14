@@ -16,14 +16,25 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.compiler.ast;
+package grails.compiler.ast
+
+import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.classgen.GeneratorContext
+import org.codehaus.groovy.control.SourceUnit
 
 /**
- * Extended marker interface that indicates this ClassInjector applies to all types of artefacts (but not all classes).
+ * Injector applied to annotated (local transform) entities
  *
  * @author Graeme Rocher
- * @since 2.0
+ * @since 2.2.3
  */
-public interface AllArtefactClassInjector extends ClassInjector {
-    // marker interface
+interface AnnotatedClassInjector {
+
+    /**
+     * Performs injection on an annotated entity
+     * @param source The source unit
+     * @param classNode The class node
+     */
+    void performInjectionOnAnnotatedClass(SourceUnit source, GeneratorContext context, ClassNode classNode)
+
 }

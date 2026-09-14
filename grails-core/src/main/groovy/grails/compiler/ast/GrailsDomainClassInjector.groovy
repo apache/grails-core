@@ -16,20 +16,26 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.compiler.ast;
+package grails.compiler.ast
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import org.codehaus.groovy.ast.ClassNode
 
 /**
- * Marker annotation that for classes that transform Grails classes at the AST level.
+ * Mainly just a marker interface for implementations that perform injection on domain classes.
  *
- * @since 2.0
  * @author Graeme Rocher
+ *
+ * @since 0.2
  */
-@Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.TYPE})
-public @interface AstTransformer {
+interface GrailsDomainClassInjector extends ClassInjector {
+
+    /**
+     * Doesn't check with the specified ClassNode is a valid entity and assumes it
+     * is and proceeds with the injection regardless.
+     *
+     * @param classNode The ClassNode
+     * @since 1.1
+     */
+    void performInjectionOnAnnotatedEntity(ClassNode classNode)
+
 }
