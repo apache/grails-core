@@ -30,6 +30,11 @@ plugins {
     id 'org.apache.grails.buildsrc.sbom'
 }
 
+ext {
+    pomTitle = 'Apache Grails® Application Forge'
+    pomDescription = 'Generates Apache Grails® applications'
+}
+
 version = projectVersion
 group = 'org.apache.grails.forge'
 
@@ -42,7 +47,7 @@ sourceSets {
 }
 
 dependencies {
-    implementation platform("org.apache.grails:grails-bom:$projectVersion")
+    implementation platform(project(':grails-bom'))
 
     api 'org.springframework:spring-context'
     api 'jakarta.annotation:jakarta.annotation-api'
@@ -72,9 +77,8 @@ dependencies {
 def grailsVersionsPath = layout.buildDirectory.dir('version-info')
 def grailsVersionInfoTask = tasks.register('grailsVersionInfo', WriteGrailsVersionInfoTask)
 grailsVersionInfoTask.configure { WriteGrailsVersionInfoTask it ->
-    def bomPublicationTask = gradle.includedBuild('grails-core').task(':grails-bom:generatePomFileForMavenPublication')
-    it.dependsOn(bomPublicationTask)
-    it.bomPublicationFile = rootProject.layout.projectDirectory.file('../grails-bom/default/build/publications/maven/pom-default.xml')
+    it.dependsOn(':grails-bom:generatePomFileForMavenPublication')
+    it.bomPublicationFile = project(':grails-bom').layout.buildDirectory.file('publications/maven/pom-default.xml')
     it.versionsDirectory = grailsVersionsPath
 }
 sourceSets.main.resources.srcDir(grailsVersionsPath)
@@ -90,9 +94,9 @@ rocker {
 // profile base
 TaskProvider<Sync> copyGrailsWrapper = tasks.register('copyGrailsWrapper', Sync)
 copyGrailsWrapper.configure { Sync it ->
-    it.dependsOn(gradle.includedBuild('grails-core').task(':grails-wrapper:installDist'))
+    it.dependsOn(':grails-wrapper:installDist')
 
-    def wrapperFiles = rootProject.layout.projectDirectory.dir('../grails-wrapper/build/install/apache-grails-wrapper-bin')
+    def wrapperFiles = rootProject.layout.projectDirectory.dir('grails-wrapper/build/install/apache-grails-wrapper-bin')
     it.inputs.files(wrapperFiles)
     it.includeEmptyDirs = false
 
@@ -108,9 +112,9 @@ copyGrailsWrapper.configure { Sync it ->
 }
 
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/doc-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/forge-code-style-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/forge-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/forge-doc-config.gradle')
 }
 
 nohttp {

@@ -24,15 +24,33 @@ dependencies {
     testImplementation "net.bytebuddy:byte-buddy"
 }
 
-tasks.withType(Test).configureEach {
+tasks.withType(Test).configureEach { Test testTask ->
+    testTask.dependsOn(
+            ':publishAllPublicationsToTestCaseMavenRepoRepository',
+            gradle.includedBuild('grails-gradle').task(':publishAllPublicationsToTestCaseMavenRepoRepository')
+    )
+
     // Honor DO_NOT_CACHE_TESTS=1 so developers can repeatedly invoke the same test command
     // without --rerun-tasks (and without recompiling everything else).
     outputs.cacheIf { !doNotCacheTests }
     outputs.upToDateWhen { !doNotCacheTests }
 
     onlyIf {
+        if (['skipTests', 'skipForgeTests'].any { project.hasProperty(it) }) {
+            return false
+        }
+        if (project.hasProperty('onlyForgeTests')) {
+            return true
+        }
         ![
-                'skipTests'
+                'onlyCoreTests',
+                'onlyFunctionalTests',
+                'onlyHibernate5Tests',
+                'onlyHibernate7Tests',
+                'onlyMongodbTests',
+                'onlyNeo4jTests',
+                'onlyRedisTests',
+                'onlySpringSecurityTests',
         ].find {
             project.hasProperty(it)
         }
@@ -45,7 +63,7 @@ tasks.withType(Test).configureEach {
         showStackTraces = true
     }
 
-    environment('GRAILS_REPO_URL', uri(rootProject.layout.projectDirectory.dir('../build/local-maven')))
+    environment('GRAILS_REPO_URL', uri(rootProject.layout.projectDirectory.dir('build/local-maven')))
     jvmArgs('-Duser.country=US', '-Duser.language=en',
             '--add-opens', 'java.base/java.lang=ALL-UNNAMED')
     forkEvery = 100

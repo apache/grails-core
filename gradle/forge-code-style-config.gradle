@@ -20,6 +20,10 @@
 import com.diffplug.gradle.spotless.SpotlessExtension
 import io.spring.nohttp.gradle.NoHttpExtension
 
+ext {
+    set('grails.codestyle.dir.checkstyle', 'grails-forge/config/checkstyle')
+}
+
 apply plugin: 'checkstyle'
 apply plugin: 'codenarc'
 apply plugin: 'com.diffplug.spotless'
@@ -31,12 +35,12 @@ extensions.configure(SpotlessExtension) {
     it.java {
         target('src/main/java/**/*.java')
         // Formatters:
-        licenseHeaderFile(rootProject.layout.projectDirectory.file('config/spotless.license.java'))
+        licenseHeaderFile(rootProject.layout.projectDirectory.file('grails-forge/config/spotless.license.java'))
     }
     it.groovy {
         target('src/main/groovy/**')
         // Formatters:
-        licenseHeaderFile(rootProject.layout.projectDirectory.file('config/spotless.license.java'))
+        licenseHeaderFile(rootProject.layout.projectDirectory.file('grails-forge/config/spotless.license.java'))
     }
     it.format('javaMisc') {
         target(
@@ -44,7 +48,7 @@ extensions.configure(SpotlessExtension) {
                 'src/main/**/package-info.java',
         )
         // Formatters:
-        licenseHeaderFile(rootProject.layout.projectDirectory.file('config/spotless.license.java'), '\\/\\*\\*')
+        licenseHeaderFile(rootProject.layout.projectDirectory.file('grails-forge/config/spotless.license.java'), '\\/\\*\\*')
     }
 }
 
@@ -60,4 +64,8 @@ extensions.configure(NoHttpExtension) {
 
 tasks.named('checkstyleMain') {
     dependsOn('spotlessCheck')
+}
+
+tasks.matching { it.name.startsWith('spotless') || it.name == 'checkstyleNohttp' }.configureEach {
+    onlyIf { !project.hasProperty('skipCodeStyle') }
 }

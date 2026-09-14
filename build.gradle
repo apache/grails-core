@@ -131,7 +131,7 @@ subprojects {
         rootProject.ext['docProjects'] << name
     }
 
-    if (name.startsWith('grails-wrapper')) {
+    if (name.startsWith('grails-wrapper') || name == 'grails-cli' || name == 'grails-cli-shadow') {
         rootProject.ext['cliProjects'] << name
     }
 
@@ -152,7 +152,7 @@ interface ExecSupport {
     @Inject ExecOperations getProcess()
 }
 tasks.register('publishAllToMavenLocal') {
-    description = 'Publishes grails-gradle, the root build, and grails-forge to the local Maven cache (in order).'
+    description = 'Publishes grails-gradle and the root build to the local Maven cache (in order).'
     group = 'publishing'
 
     def execSupport = objects.newInstance(ExecSupport)
@@ -173,10 +173,8 @@ tasks.register('publishAllToMavenLocal') {
 
         // 1. Publish grails-gradle (provides Gradle plugins used by the main build)
         runPublish(new File(projectRoot, 'grails-gradle'), 'grails-gradle')
-        // 2. Publish the root (main) build
+        // 2. Publish the root (main) build, including Forge modules
         runPublish(projectRoot, 'root build')
-        // 3. Publish grails-forge
-        runPublish(new File(projectRoot, 'grails-forge'), 'grails-forge')
     }
 }
 

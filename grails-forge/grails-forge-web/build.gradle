@@ -33,16 +33,16 @@ grails {
 }
 
 dependencies {
-    implementation platform("org.apache.grails:grails-bom:$projectVersion")
+    implementation platform(project(':grails-bom'))
     implementation project(':grails-forge-api')
     implementation project(':grails-forge-core')
-    implementation 'org.apache.grails:grails-dependencies-starter-web'
-    implementation 'org.apache.grails:grails-converters'
+    implementation project(':grails-dependencies-starter-web')
+    implementation project(':grails-converters')
     implementation 'org.springframework.boot:spring-boot-starter-tomcat'
     implementation 'com.fasterxml.jackson.core:jackson-databind'
     runtimeOnly 'ch.qos.logback:logback-classic'
 
-    testImplementation 'org.apache.grails:grails-testing-support-web'
+    testImplementation project(':grails-testing-support-web')
     testImplementation 'org.apache.groovy:groovy'
     testImplementation 'org.spockframework:spock-core'
     testImplementation 'org.springframework:spring-test'
@@ -112,8 +112,8 @@ tasks.named('assemble') {
     dependsOn(awsElasticBeanstalk)
 }
 
-apply from: rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
-apply from: rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+apply from: rootProject.layout.projectDirectory.file('gradle/forge-code-style-config.gradle')
+apply from: rootProject.layout.projectDirectory.file('gradle/forge-test-config.gradle')
 
 dependencies {
     checkstyle "io.spring.nohttp:nohttp-checkstyle:$nohttpGradleVersion"

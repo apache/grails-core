@@ -110,6 +110,10 @@ tasks.withType(Test).configureEach { Test it ->
             return false
         }
 
+        if (project.hasProperty('onlyForgeTests')) {
+            return false
+        }
+
         if (project.hasProperty('onlyCoreTests')) {
             return false
         }

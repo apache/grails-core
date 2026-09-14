@@ -28,7 +28,7 @@ dependencies {
     // plugin and is independent of compileClasspath/testRuntimeClasspath. Apply
     // grails-bom here so the unversioned groovy-* artifacts below resolve through
     // groovy-bom.
-    documentation platform("org.apache.grails:grails-bom:$projectVersion")
+    documentation platform(project(':grails-bom'))
     documentation 'org.apache.groovy:groovy-templates'
     documentation 'org.apache.groovy:groovy-dateutil'
     documentation 'org.apache.groovy:groovy-ant'

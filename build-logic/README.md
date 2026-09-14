@@ -14,5 +14,5 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 # build-logic
-The Grails project is structured into 3 separate composite builds. Composite builds make use of Gradle's `includeBuild` feature, which do not share Gradle plugins from `buildSrc`. This project exists to share internal Gradle plugins across all 3 separate builds.
+The Grails project is structured into 2 separate composite builds (`grails-core` and `grails-gradle`). Composite builds make use of Gradle's `includeBuild` feature, which do not share Gradle plugins from `buildSrc`. This project exists to share internal Gradle plugins across those builds. Forge lives under `grails-forge/` as `grails-core` subprojects, so it uses these plugins through the root build.
 

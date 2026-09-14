@@ -129,13 +129,13 @@ Repeat that command for the other six rows. Before the first Forge deployment, r
 
 ## Artifact Packaging
 
-From `grails-forge`, build the Elastic Beanstalk bundle with the repository task:
+From the repository root, build the Elastic Beanstalk bundle with the repository task:
 
 ```bash
-./gradlew grails-forge-web:awsElasticBeanstalk
+./gradlew :grails-forge-web:awsElasticBeanstalk
 ```
 
-The output is `grails-forge-web/build/distributions/grails-forge-web-aws.zip`. Its ZIP root contains the Grails 8 application as an executable Tomcat `bootJar` named `app.jar`, plus `Procfile`, `start.sh`, and `.platform`. Do not create an `application.jar` archive manually. The workflow uploads this ZIP and creates a distinct immutable Elastic Beanstalk application version for the selected slot; it does not require the same artifact to be deployed to all seven slots.
+The output is `grails-forge/grails-forge-web/build/distributions/grails-forge-web-aws.zip`. Its ZIP root contains the Grails 8 application as an executable Tomcat `bootJar` named `app.jar`, plus `Procfile`, `start.sh`, and `.platform`. Do not create an `application.jar` archive manually. The workflow uploads this ZIP and creates a distinct immutable Elastic Beanstalk application version for the selected slot; it does not require the same artifact to be deployed to all seven slots.
 
 ## GitHub Actions Deployment
 
@@ -229,3 +229,4 @@ Reintroduce analytics only as an independent project with its own infrastructure
 Do not decommission GCP immediately. Retain Cloud Run, Cloud SQL, credentials, and the prior configuration through the observation window while comparing availability, generation success, latency, error rates, and cost.
 
 After the observation window closes and rollback is no longer required, remove traffic and credentials, verify that no client or scheduled job still depends on GCP, archive required configuration and logs, then decommission GCP through the approved change process.
+

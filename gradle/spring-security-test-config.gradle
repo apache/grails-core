@@ -32,6 +32,7 @@ tasks.withType(Test).configureEach {
                 'onlyMongodbTests',
                 'onlyRedisTests',
                 'onlyCoreTests',
+                'onlyForgeTests',
                 'skipTests'
         ].find {
             project.hasProperty(it)

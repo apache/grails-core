@@ -94,7 +94,7 @@ tasks.withType(Test).configureEach { Test task ->
     task.outputs.upToDateWhen { !doNotCacheTests }
 
     onlyIf {
-        if (['skipFunctionalTests', 'onlyCoreTests', 'skipTests'].any { project.hasProperty(it) }) {
+        if (['skipFunctionalTests', 'onlyCoreTests', 'onlyForgeTests', 'skipTests'].any { project.hasProperty(it) }) {
             return false
         }
 

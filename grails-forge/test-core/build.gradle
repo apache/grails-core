@@ -49,9 +49,9 @@ configurations.configureEach {
 }
 
 dependencies {
-    implementation platform("org.apache.grails:grails-bom:$projectVersion")
+    implementation platform(project(':grails-bom'))
     generateConfig "info.picocli:picocli-codegen:$picocliVersion"
-    groovyCompiler platform("org.apache.grails:grails-bom:$projectVersion")
+    groovyCompiler platform(project(':grails-bom'))
     groovyCompiler 'org.apache.groovy:groovy'
 
     testImplementation project(':grails-forge-cli')
@@ -76,5 +76,5 @@ tasks.withType(GroovyCompile).configureEach { GroovyCompile compile ->
 }
 
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/forge-test-config.gradle')
 }

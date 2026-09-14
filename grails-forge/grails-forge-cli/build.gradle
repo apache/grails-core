@@ -34,8 +34,6 @@ plugins {
 version = projectVersion
 group = 'org.apache.grails.forge'
 
-apply from: rootProject.layout.projectDirectory.file('../dependencies.gradle')
-
 sourceSets {
     main {
         rocker {
@@ -65,29 +63,28 @@ configurations {
 }
 
 ext {
+    pomTitle = 'Apache Grails® Application Forge'
+    pomDescription = 'Generates Apache Grails® applications'
     cliProject = true
     startMainClass = 'org.grails.forge.cli.Application'
     sbomProjectType = org.cyclonedx.model.Component.Type.APPLICATION.name()
 }
 
 dependencies {
-    implementation platform("org.apache.grails:grails-bom:$projectVersion")
-    testAnnotationProcessor platform("org.apache.grails:grails-bom:$projectVersion")
+    implementation platform(project(':grails-bom'))
+    testAnnotationProcessor platform(project(':grails-bom'))
 
     generateConfig "info.picocli:picocli-codegen:$picocliVersion"
 
     implementation project(':grails-forge-core')
-    implementation("org.apache.grails.bootstrap:grails-bootstrap:$projectVersion") {
-        exclude group: 'org.apache.grails', module: 'grails-bom'
-        exclude group: 'org.apache.groovy'
-    }
+    implementation project(':grails-bootstrap')
     compileOnly 'org.apache.groovy:groovy'
     implementation "com.fizzed:rocker-runtime:$rockerVersion"
     implementation "info.picocli:picocli:$picocliVersion"
     implementation "info.picocli:picocli-shell-jline3:$picocliVersion"
     implementation 'jakarta.inject:jakarta.inject-api'
     implementation 'org.springframework:spring-context'
-    implementation "org.jline:jline:${gradleBomDependencyVersions['jline.version']}"
+    implementation 'org.jline:jline'
     implementation "org.slf4j:slf4j-nop"
     implementation "org.yaml:snakeyaml"
 
@@ -109,9 +106,9 @@ rocker {
 }
 
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/doc-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/forge-code-style-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/forge-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/forge-doc-config.gradle')
 }
 
 def generateManpageAsciiDoc = tasks.register('generateManpageAsciiDoc', GenerateManpageAsciidoc) {

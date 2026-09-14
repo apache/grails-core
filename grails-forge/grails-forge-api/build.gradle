@@ -29,7 +29,7 @@ version = projectVersion
 group = 'org.apache.grails.forge'
 
 dependencies {
-    implementation platform("org.apache.grails:grails-bom:$projectVersion")
+    implementation platform(project(':grails-bom'))
 
     api project(':grails-forge-core'), {
         exclude group:'org.slf4j', module:'slf4j-nop'
@@ -50,7 +50,7 @@ dependencies {
 }
 
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/doc-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/forge-code-style-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/forge-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/forge-doc-config.gradle')
 }

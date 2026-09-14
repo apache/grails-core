@@ -63,9 +63,6 @@ cd grails-gradle
 ./gradlew publishToMavenLocal --rerun-tasks -PskipTests --no-build-cache --no-daemon
 cd ..
 ./gradlew publishToMavenLocal --rerun-tasks -PskipTests --no-build-cache --no-daemon
-cd grails-forge
-./gradlew publishToMavenLocal --rerun-tasks -PskipTests --no-build-cache --no-daemon
-cd ..
 
 echo "Generating Checksums for Built Jars"
 "${SCRIPT_DIR}/generate-build-artifact-hashes.groovy" "${DOWNLOAD_LOCATION}/grails" > "${DOWNLOAD_LOCATION}/grails/etc/bin/results/second.txt"

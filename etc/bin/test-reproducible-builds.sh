@@ -34,9 +34,6 @@ build_all() {
   ./gradlew build --rerun-tasks -PskipTests --no-build-cache --no-daemon
   cd ..
   ./gradlew build --rerun-tasks -PskipTests --no-build-cache --no-daemon
-  cd grails-forge
-  ./gradlew build --rerun-tasks -PskipTests --no-build-cache --no-daemon
-  cd ..
   killall -e java || true
 }
 

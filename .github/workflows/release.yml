@@ -94,9 +94,6 @@ jobs:
         run: ./gradlew validateDependencyVersions
       - name: "🧩 Run grails-core assemble"
         run: ./gradlew assemble -PgithubBranch=${TARGET_BRANCH}
-      - name: "🧩 Run grails-forge assemble"
-        working-directory: grails-forge
-        run: ./gradlew assemble -PgithubBranch=${TARGET_BRANCH}
       - name: "📦 Generate grails-core docs (to assert that it works, before proceeding)"
         run: ./gradlew grails-doc:build -PgithubBranch=${TARGET_BRANCH}
       - name: "🔏 Sign grails-wrapper ZIP"
@@ -188,22 +185,6 @@ jobs:
           publishToSonatype
           aggregateChecksums
           aggregatePublishedArtifacts
-      - name: "📤 Publish Grails Forge to Staging Repository"
-        env:
-          NEXUS_PUBLISH_USERNAME: ${{ secrets.NEXUS_STAGE_DEPLOYER_USER }}
-          NEXUS_PUBLISH_PASSWORD: ${{ secrets.NEXUS_STAGE_DEPLOYER_PW }}
-          NEXUS_PUBLISH_URL: ${{ vars.STAGING_URL }}
-          NEXUS_PUBLISH_STAGING_PROFILE_ID: ${{ secrets.STAGING_PROFILE_ID }}
-          NEXUS_PUBLISH_DESCRIPTION: '${{ env.REPO_NAME }}:${{ env.VERSION }}'
-          SIGNING_KEY: ${{ secrets.GPG_KEY_ID }}
-        working-directory: grails-forge
-        run: >
-          ./gradlew
-          -x initializeSonatypeStagingRepository
-          findSonatypeStagingRepository
-          publishToSonatype
-          aggregateChecksums
-          aggregatePublishedArtifacts
       - name: "✅ Close Staging Repository"
         env:
           NEXUS_PUBLISH_USERNAME: ${{ secrets.NEXUS_STAGE_DEPLOYER_USER }}
@@ -221,13 +202,11 @@ jobs:
           combined_file="build/CHECKSUMS.txt"
           cat build/grails-core-checksums.txt > "$combined_file"
           cat grails-gradle/build/grails-gradle-checksums.txt >> "$combined_file"
-          cat grails-forge/build/grails-forge-checksums.txt >> "$combined_file"
       - name: "🩹 Combine published artifacts"
         run: |
           combined_file="build/PUBLISHED_ARTIFACTS.txt"
           cat build/grails-core-artifacts.txt > "$combined_file"
           cat grails-gradle/build/grails-gradle-artifacts.txt >> "$combined_file"
-          cat grails-forge/build/grails-forge-artifacts.txt >> "$combined_file"
       - name: "📅 Generate build date file"
         run: echo "$SOURCE_DATE_EPOCH" >> build/BUILD_DATE.txt
       - name: "📤 Upload build date, checksums and published artifact files"
@@ -267,9 +246,6 @@ jobs:
           rm -f grails/grails-gradle/gradle/wrapper/gradle-wrapper.jar
           rm -f grails/grails-gradle/gradle/wrapper/gradle-wrapper.properties
           rm -f grails/grails-gradle/gradlew
-          rm -f grails/grails-forge/gradle/wrapper/gradle-wrapper.jar
-          rm -f grails/grails-forge/gradle/wrapper/gradle-wrapper.properties
-          rm -f grails/grails-forge/gradlew
           rm -f grails/KEYS
       - name: "📥 Download CHECKSUMS.txt and rename to CHECKSUMS"
         working-directory: grails
@@ -647,15 +623,13 @@ jobs:
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "🚀 Grails SDK Minor Release"
         if: contains(env.VERSION, 'M') || contains(env.VERSION, 'RC')
-        working-directory: grails-forge
-        run: ./gradlew sdkMinorRelease
+        run: ./gradlew :grails-cli:sdkMinorRelease
         env:
           GVM_SDKVENDOR_KEY: ${{ secrets.GVM_SDKVENDOR_KEY }}
           GVM_SDKVENDOR_TOKEN: ${{ secrets.GVM_SDKVENDOR_TOKEN }}
       - name: "🚀 Grails SDK Major Release"
         if: startsWith(env.VERSION, '7.') && !contains(env.VERSION, 'M') && !contains(env.VERSION, 'RC')
-        working-directory: grails-forge
-        run: ./gradlew sdkMajorRelease
+        run: ./gradlew :grails-cli:sdkMajorRelease
         env:
           GVM_SDKVENDOR_KEY: ${{ secrets.GVM_SDKVENDOR_KEY }}
           GVM_SDKVENDOR_TOKEN: ${{ secrets.GVM_SDKVENDOR_TOKEN }}

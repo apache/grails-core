@@ -49,11 +49,11 @@ configurations {
 
 evaluationDependsOn(':grails-cli-shadow')
 dependencies {
-    implementation platform("org.apache.grails:grails-bom:$projectVersion")
+    implementation platform(project(':grails-bom'))
     implementation 'org.apache.groovy:groovy'
 
     // shell-cli dependencies
-    implementation 'org.apache.grails:grails-shell-cli'
+    implementation project(':grails-shell-cli')
     implementation('org.springframework.boot:spring-boot-cli') {
         exclude group: 'jline', module: 'jline'
     }
@@ -63,8 +63,8 @@ dependencies {
 
     // The commands are pulled from the shellCliDependencies in the shell project, but they are not in the shell jar file,
     // so they must be added here. To keep the jar file smaller, only a subset is included here
-    implementation 'org.apache.grails:grails-core' // for ApplicationContextCommandFactory to lookup commands
-    implementation 'org.apache.grails:grails-url-mappings' // for UrlMappingsReportCommand
+    implementation project(':grails-core') // for ApplicationContextCommandFactory to lookup commands
+    implementation project(':grails-url-mappings') // for UrlMappingsReportCommand
     // profiles will add additional libraries as needed to surface commands
 
     // forge dependencies
@@ -76,13 +76,13 @@ dependencies {
 
     // for the shadow jar, configure forge & shell-cli dependencies to be pulled from a file to ensure the shadow
     // transforms are applied to both dependencies and our own projects
-    shadowCombined platform("org.apache.grails:grails-bom:$projectVersion")
+    shadowCombined platform(project(':grails-bom'))
     shadowCombined 'org.apache.groovy:groovy'
     shadowCombined files(rootProject.project(':grails-cli-shadow').tasks.named('shadowJar'))
 }
 
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/forge-code-style-config.gradle')
 }
 
 // It's surprisingly hard to generate start scripts and *not* have them nested into a bin / lib directory
@@ -118,7 +118,7 @@ shadowJarTask.configure { ShadowJar it ->
 
     // combines all LICENSE files
     it.transform(GrailsShadowLicenseTransform) {
-        it.licenseText = rootProject.layout.projectDirectory.file('../licenses/LICENSE-Apache-2.0.txt').getAsFile().text
+        it.licenseText = rootProject.layout.projectDirectory.file('licenses/LICENSE-Apache-2.0.txt').getAsFile().text
     }
 
     it.exclude(
@@ -219,9 +219,9 @@ project.extensions.getByType(DistributionContainer).configureEach {
             }
         }
 
-        from(rootProject.layout.projectDirectory.file('../LICENSE')) { it.into '' }
-        from(rootProject.layout.projectDirectory.file('../NOTICE')) { it.into '' }
-        from(rootProject.layout.projectDirectory.file('../INSTALL')) { it.into '' }
+        from(rootProject.layout.projectDirectory.file('LICENSE')) { it.into '' }
+        from(rootProject.layout.projectDirectory.file('NOTICE')) { it.into '' }
+        from(rootProject.layout.projectDirectory.file('INSTALL')) { it.into '' }
     }
 }
 

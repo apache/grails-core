@@ -50,17 +50,6 @@ defaultTasks 'bootstrap'
 tasks.register('bootstrap') {
     dependsOn 'wrapper', 'legacyG7Wrapper'
     doLast {
-        ant.copy file: "${projectDir}/gradlew", todir: "${projectDir}/../grails-forge"
-        ant.copy file: "${projectDir}/gradlew.bat", todir: "${projectDir}/../grails-forge"
-        ant.copy(todir: "${projectDir}/../grails-forge/gradle/wrapper") {
-            fileset(dir: "${projectDir}/gradle/wrapper") {
-                include(name: 'gradle-wrapper.jar')
-                include(name: 'gradle-wrapper.properties')
-            }
-        }
-        ant.chmod(file: "${projectDir}/../grails-forge/gradlew", perm: '755')
-        ant.chmod(file: "${projectDir}/../grails-forge/gradlew.bat", perm: '755')
-
         ant.copy file: "${projectDir}/gradlew", todir: "${projectDir}/../grails-gradle"
         ant.copy file: "${projectDir}/gradlew.bat", todir: "${projectDir}/../grails-gradle"
         ant.copy(todir: "${projectDir}/../grails-gradle/gradle/wrapper") {

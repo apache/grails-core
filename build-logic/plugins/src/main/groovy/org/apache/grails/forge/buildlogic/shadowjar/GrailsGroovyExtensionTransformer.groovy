@@ -16,10 +16,14 @@
  */
 package org.apache.grails.forge.buildlogic.shadowjar
 
+import java.nio.charset.StandardCharsets
+import java.time.LocalDate
+import java.time.ZoneOffset
+import java.util.regex.Pattern
+
 import com.github.jengelman.gradle.plugins.shadow.transformers.Transformer
 import com.github.jengelman.gradle.plugins.shadow.transformers.TransformerContext
 import groovy.transform.CompileStatic
-import org.apache.grails.gradle.common.PropertyFileUtils
 import org.apache.tools.zip.ZipEntry
 import org.apache.tools.zip.ZipOutputStream
 import org.gradle.api.file.FileTreeElement
@@ -107,6 +111,31 @@ class GrailsGroovyExtensionTransformer implements Transformer {
     private static InputStream toInputStream(Properties props) {
         def baos = new ByteArrayOutputStream()
         props.store(baos, null)
-        return PropertyFileUtils.makePropertiesOutputReproducible(baos)
+        return makePropertiesOutputReproducible(baos)
+    }
+
+    // Inlined from grails-gradle-common PropertyFileUtils so build-logic does not
+    // depend on grails-gradle (that included build already uses these plugins).
+    private static final Pattern TIME_REGEX = ~'^#(?:Sun|Mon|Tue|Wed|Thu|Fri|Sat)(?:,|\\s).*$'
+
+    private static InputStream makePropertiesOutputReproducible(ByteArrayOutputStream propertyOutputStream) {
+        List<String> lines = propertyOutputStream.toString(StandardCharsets.ISO_8859_1.name()).readLines()
+        ByteArrayOutputStream toWrite = new ByteArrayOutputStream()
+        toWrite.withWriter(StandardCharsets.ISO_8859_1.name()) { Writer writer ->
+            BufferedWriter bufferedWriter = new BufferedWriter(writer)
+            String sourceDateEpoch = System.getenv('SOURCE_DATE_EPOCH') ?:
+                    LocalDate.now(ZoneOffset.UTC).atStartOfDay(ZoneOffset.UTC).toEpochSecond().toString()
+            boolean dateReplaced = false
+            lines.each { String line ->
+                if (!dateReplaced && TIME_REGEX.matcher(line).matches()) {
+                    dateReplaced = true
+                    bufferedWriter.writeLine("# SOURCE_DATE_EPOCH = $sourceDateEpoch")
+                    return
+                }
+                bufferedWriter.writeLine(line)
+            }
+            bufferedWriter.flush()
+        }
+        new ByteArrayInputStream(toWrite.toByteArray())
     }
 }
