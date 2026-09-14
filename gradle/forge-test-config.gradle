@@ -24,37 +24,33 @@ dependencies {
     testImplementation "net.bytebuddy:byte-buddy"
 }
 
+// Skipped Test tasks still execute their dependsOn. Only wire the local-Maven
+// publish chain when Forge tests will actually run.
+boolean forgeTestsEnabled = !['skipTests', 'skipForgeTests'].any { project.hasProperty(it) } &&
+        (project.hasProperty('onlyForgeTests') ||
+                !['onlyCoreTests',
+                  'onlyFunctionalTests',
+                  'onlyHibernate5Tests',
+                  'onlyHibernate7Tests',
+                  'onlyMongodbTests',
+                  'onlyNeo4jTests',
+                  'onlyRedisTests',
+                  'onlySpringSecurityTests'].any { project.hasProperty(it) })
+
 tasks.withType(Test).configureEach { Test testTask ->
-    testTask.dependsOn(
-            ':publishAllPublicationsToTestCaseMavenRepoRepository',
-            gradle.includedBuild('grails-gradle').task(':publishAllPublicationsToTestCaseMavenRepoRepository')
-    )
+    if (forgeTestsEnabled) {
+        testTask.dependsOn(
+                ':publishAllPublicationsToTestCaseMavenRepoRepository',
+                gradle.includedBuild('grails-gradle').task(':publishAllPublicationsToTestCaseMavenRepoRepository')
+        )
+    }
 
     // Honor DO_NOT_CACHE_TESTS=1 so developers can repeatedly invoke the same test command
     // without --rerun-tasks (and without recompiling everything else).
     outputs.cacheIf { !doNotCacheTests }
     outputs.upToDateWhen { !doNotCacheTests }
 
-    onlyIf {
-        if (['skipTests', 'skipForgeTests'].any { project.hasProperty(it) }) {
-            return false
-        }
-        if (project.hasProperty('onlyForgeTests')) {
-            return true
-        }
-        ![
-                'onlyCoreTests',
-                'onlyFunctionalTests',
-                'onlyHibernate5Tests',
-                'onlyHibernate7Tests',
-                'onlyMongodbTests',
-                'onlyNeo4jTests',
-                'onlyRedisTests',
-                'onlySpringSecurityTests',
-        ].find {
-            project.hasProperty(it)
-        }
-    }
+    onlyIf { forgeTestsEnabled }
     testLogging {
         events('passed', 'skipped', 'failed')
         showExceptions = true

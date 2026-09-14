@@ -107,6 +107,28 @@ final class ActiveProcessorCountArgumentProvider implements CommandLineArgumentP
     }
 }
 
+// Core CI runs `build -PonlyCoreTests`. Forge has its own job. Disabled tasks
+// still keep the project in the build, but skip shadowJar, distZip, AWS zip,
+// and Forge tests that would otherwise run as part of the root `build`.
+if (project.hasProperty('onlyCoreTests') && !project.hasProperty('onlyForgeTests')) {
+    Set<String> forgeProjectNames = [
+            'grails-cli',
+            'grails-cli-shadow',
+            'grails-forge-api',
+            'grails-forge-cli',
+            'grails-forge-core',
+            'grails-forge-web',
+            'grails-forge-test-core',
+    ] as Set
+    subprojects { Project subproject ->
+        if (forgeProjectNames.contains(subproject.name)) {
+            subproject.tasks.configureEach {
+                enabled = false
+            }
+        }
+    }
+}
+
 subprojects {
 
     tasks.withType(Test).configureEach { testTask ->
