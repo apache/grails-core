@@ -16,31 +16,29 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli;
+package org.grails.cli
 
-import org.jline.terminal.Terminal;
-import org.jline.terminal.TerminalBuilder;
-
-import java.io.IOException;
+import org.jline.terminal.Terminal
+import org.jline.terminal.TerminalBuilder
 
 /**
  * A terminal for testing purposes that creates a dumb terminal.
  */
-public class TestTerminal {
-    
-    private final Terminal terminal;
-    
-    public TestTerminal() throws IOException {
+class TestTerminal {
+
+    private final Terminal terminal
+
+    TestTerminal() {
         this.terminal = TerminalBuilder.builder()
                 .dumb(true)
-                .build();
+                .build()
     }
-    
-    public Terminal getTerminal() {
-        return terminal;
+
+    Terminal getTerminal() {
+        return terminal
     }
-    
-    public void close() throws IOException {
-        terminal.close();
+
+    void close() {
+        terminal.close()
     }
 }
