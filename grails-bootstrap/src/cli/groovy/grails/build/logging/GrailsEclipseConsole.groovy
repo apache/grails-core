@@ -16,12 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.build.logging;
+package grails.build.logging
 
-import java.io.IOException;
-
-import org.jline.terminal.Terminal;
-import org.jline.terminal.TerminalBuilder;
+import groovy.transform.CompileStatic
+import org.jline.terminal.Terminal
+import org.jline.terminal.TerminalBuilder
 
 /**
  * This class is meant to keep changes made in support of Eclipse separate from
@@ -39,36 +38,27 @@ import org.jline.terminal.TerminalBuilder;
  *
  * @since 2.0.0.M2
  */
-public class GrailsEclipseConsole extends GrailsConsole {
+@CompileStatic
+class GrailsEclipseConsole extends GrailsConsole {
 
-    private static final boolean DEBUG = boolProp("grails.console.eclipse.debug");
-    private static final String ECLIPSE_SUPPORTS_ANSI_PROP = "grails.console.eclipse.ansi";
+    private static final boolean DEBUG = boolProp('grails.console.eclipse.debug')
+    private static final String ECLIPSE_SUPPORTS_ANSI_PROP = 'grails.console.eclipse.ansi'
 
-    private Boolean eclipseSupportsAnsi = null; //lazy initialized because implicitly used from super constructor.
-
-    /**
-     * Create a GrailsConsole that has some customizations to work better with STS. Note that
-     * this console implicitly captures and redirects System.out, System.err and System.in in the
-     * super class. So extreme care must be taken to ensure these streams are setup correctly
-     * before creating an instance.
-     */
-    public GrailsEclipseConsole() throws IOException {
-        super();
-    }
+    private Boolean eclipseSupportsAnsi = null //lazy initialized because implicitly used from super constructor.
 
     private boolean eclipseSupportsAnsi() {
         if (eclipseSupportsAnsi == null) {
-            eclipseSupportsAnsi = boolProp(ECLIPSE_SUPPORTS_ANSI_PROP);
+            eclipseSupportsAnsi = boolProp(ECLIPSE_SUPPORTS_ANSI_PROP)
         }
-        return eclipseSupportsAnsi;
+        return eclipseSupportsAnsi
     }
 
     private static Boolean boolProp(String propName) {
         try {
-            String prop = System.getProperty(propName);
-            return prop != null && Boolean.valueOf(prop);
+            String prop = System.getProperty(propName)
+            return prop != null && Boolean.valueOf(prop)
         } catch (Exception e) {
-            return false;
+            return false
         }
     }
 
@@ -77,6 +67,7 @@ public class GrailsEclipseConsole extends GrailsConsole {
         // For Eclipse, create a dumb terminal that doesn't try to interact with the console
         return TerminalBuilder.builder()
                 .dumb(true)
-                .build();
+                .build()
     }
+
 }

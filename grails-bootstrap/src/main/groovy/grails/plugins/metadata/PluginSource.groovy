@@ -16,18 +16,21 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.exceptions.reporting;
+package grails.plugins.metadata
 
-import java.io.Serializable;
+import java.lang.annotation.ElementType
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
 
 /**
- * An interface that represents an exception that is capable of providing more information about the source code
+ * Source level annotation that indicates that a given source file is part of a plugin
  *
  * @author Graeme Rocher
- * @since 1.0
+ * @since 3.1.7
  */
-public interface SourceCodeAware extends Serializable {
-    String getFileName();
+@Retention(RetentionPolicy.SOURCE)
+@Target([ElementType.TYPE])
+@interface PluginSource {
 
-    int getLineNumber();
 }

@@ -16,25 +16,35 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.plugins.exceptions;
+package grails.plugins
 
-public class PluginException extends RuntimeException {
+import groovy.transform.CompileStatic
 
-    private static final long serialVersionUID = -3041972956196552302L;
+/**
+ * Throw when a specified version number is invalid.
+ *
+ * @author Graeme Rocher
+ * @since 1.2
+ */
+@CompileStatic
+class InvalidVersionException extends RuntimeException {
 
-    public PluginException() {
-        super();
+    private static final long serialVersionUID = 7913782067211066121L
+
+    InvalidVersionException() {
+        // default
     }
 
-    public PluginException(String message, Throwable cause) {
-        super(message, cause);
+    InvalidVersionException(String message) {
+        super(message)
     }
 
-    public PluginException(String message) {
-        super(message);
+    InvalidVersionException(String message, Throwable throwable) {
+        super(message, throwable)
     }
 
-    public PluginException(Throwable cause) {
-        super(cause);
+    InvalidVersionException(Throwable throwable) {
+        super(throwable)
     }
+
 }

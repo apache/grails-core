@@ -16,22 +16,29 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.plugins.metadata;
+package grails.plugins.exceptions
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import groovy.transform.CompileStatic
 
-/**
- * Annotation that appears on classes of a particular plugin.
- *
- * @author Graeme Rocher
- * @since 1.2
- */
-@Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.TYPE})
-public @interface GrailsPlugin {
-    String name();
-    String version();
+@CompileStatic
+class PluginException extends RuntimeException {
+
+    private static final long serialVersionUID = -3041972956196552302L
+
+    PluginException() {
+        super()
+    }
+
+    PluginException(String message, Throwable cause) {
+        super(message, cause)
+    }
+
+    PluginException(String message) {
+        super(message)
+    }
+
+    PluginException(Throwable cause) {
+        super(cause)
+    }
+
 }

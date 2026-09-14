@@ -16,31 +16,18 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.plugins;
+package org.grails.exceptions.reporting
 
 /**
- * Throw when a specified version number is invalid.
+ * An interface that represents an exception that is capable of providing more information about the source code
  *
  * @author Graeme Rocher
- * @since 1.2
+ * @since 1.0
  */
-public class InvalidVersionException extends RuntimeException {
+interface SourceCodeAware extends Serializable {
 
-    private static final long serialVersionUID = 7913782067211066121L;
+    String getFileName()
 
-    public InvalidVersionException() {
-        // default
-    }
+    int getLineNumber()
 
-    public InvalidVersionException(String message) {
-        super(message);
-    }
-
-    public InvalidVersionException(String message, Throwable throwable) {
-        super(message, throwable);
-    }
-
-    public InvalidVersionException(Throwable throwable) {
-        super(throwable);
-    }
 }

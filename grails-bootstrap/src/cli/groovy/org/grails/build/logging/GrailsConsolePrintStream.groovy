@@ -16,11 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.build.logging;
+package org.grails.build.logging
 
-import java.io.PrintStream;
+import groovy.transform.CompileStatic
 
-import grails.build.logging.GrailsConsole;
+import grails.build.logging.GrailsConsole
 
 /**
  * Used to replace default System.out with one that routes calls through GrailsConsole.
@@ -28,37 +28,39 @@ import grails.build.logging.GrailsConsole;
  * @author Graeme Rocher
  * @since 2.0
  */
-public class GrailsConsolePrintStream extends PrintStream {
+@CompileStatic
+class GrailsConsolePrintStream extends PrintStream {
 
-    public GrailsConsolePrintStream(PrintStream out) {
-        super(out, true);
+    GrailsConsolePrintStream(PrintStream out) {
+        super(out, true)
     }
 
-    public PrintStream getTargetOut() {
-        return (PrintStream) out;
+    PrintStream getTargetOut() {
+        return (PrintStream) out
     }
 
     @Override
-    public void print(Object o) {
+    void print(Object o) {
         if (o != null) {
-            GrailsConsole.getInstance().log(o.toString());
+            GrailsConsole.getInstance().log(o.toString())
         }
     }
 
     @Override
-    public void print(String s) {
-        GrailsConsole.getInstance().log(s);
+    void print(String s) {
+        GrailsConsole.getInstance().log(s)
     }
 
     @Override
-    public void println(String s) {
-        GrailsConsole.getInstance().log(s);
+    void println(String s) {
+        GrailsConsole.getInstance().log(s)
     }
 
     @Override
-    public void println(Object o) {
+    void println(Object o) {
         if (o != null) {
-            GrailsConsole.getInstance().log(o.toString());
+            GrailsConsole.getInstance().log(o.toString())
         }
     }
+
 }

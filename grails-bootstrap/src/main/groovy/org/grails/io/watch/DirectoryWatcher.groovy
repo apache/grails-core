@@ -17,14 +17,11 @@
  *  under the License.
  */
 
-package org.grails.io.watch;
+package org.grails.io.watch
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import groovy.transform.CompileStatic
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 /**
  * Utility class to watch directories for changes.
@@ -32,20 +29,21 @@ import org.slf4j.LoggerFactory;
  * @author Graeme Rocher
  * @since 2.0
  */
-public class DirectoryWatcher extends Thread {
+@CompileStatic
+class DirectoryWatcher extends Thread {
 
-    private static final Logger LOG = LoggerFactory.getLogger(DirectoryWatcher.class);
+    private static final Logger LOG = LoggerFactory.getLogger(DirectoryWatcher)
 
-    private final AbstractDirectoryWatcher directoryWatcherDelegate;
+    private final AbstractDirectoryWatcher directoryWatcherDelegate
 
-    public static final String SVN_DIR_NAME = ".svn";
+    public static final String SVN_DIR_NAME = '.svn'
 
     /**
      * Constructor. Automatically selects the best means of watching for file system changes.
      */
-    public DirectoryWatcher() {
-        setDaemon(true);
-        this.directoryWatcherDelegate = createDelegate();
+    DirectoryWatcher() {
+        setDaemon(true)
+        this.directoryWatcherDelegate = createDelegate()
     }
 
     /**
@@ -58,17 +56,17 @@ public class DirectoryWatcher extends Thread {
      * @return the watcher to delegate to
      */
     private static AbstractDirectoryWatcher createDelegate() {
-        if (System.getProperty("os.name").equals("Mac OS X")) {
-            AbstractDirectoryWatcher macOsWatcher = createMacOsWatcher();
+        if (System.getProperty('os.name').equals('Mac OS X')) {
+            AbstractDirectoryWatcher macOsWatcher = createMacOsWatcher()
             if (macOsWatcher != null) {
-                return macOsWatcher;
+                return macOsWatcher
             }
         }
         try {
-            return new WatchServiceDirectoryWatcher();
+            return new WatchServiceDirectoryWatcher()
         } catch (Throwable e) {
-            LOG.warn("Could not create a WatchService based directory watcher. Falling back to PollingDirectoryWatcher.", e);
-            return new PollingDirectoryWatcher();
+            LOG.warn('Could not create a WatchService based directory watcher. Falling back to PollingDirectoryWatcher.', e)
+            return new PollingDirectoryWatcher()
         }
     }
 
@@ -83,21 +81,21 @@ public class DirectoryWatcher extends Thread {
             // library, and using it as the signal sends those applications down a load that can't succeed.
             // A LinkageError means the class is present but its own dependencies (JNA) are not, which is
             // equally unusable, so treat both as simply unavailable.
-            Class.forName("io.methvin.watchservice.MacOSXListeningWatchService");
+            Class.forName('io.methvin.watchservice.MacOSXListeningWatchService')
         } catch (ClassNotFoundException | LinkageError e) {
             // Warn rather than debug: the JDK supplies no native WatchService on macOS, so the fallback
             // polls and file changes take seconds to be noticed. The message names the one dependency
             // that fixes that, and adding it silences this. The cause is debug detail, not the point.
-            LOG.warn("Native macOS file event watching is unavailable, so the JDK WatchService is used instead, " +
-                    "which polls on macOS. Add 'io.methvin:directory-watcher' to the classpath for event driven file watching.");
-            LOG.debug("io.methvin.watchservice.MacOSXListeningWatchService could not be loaded.", e);
-            return null;
+            LOG.warn('Native macOS file event watching is unavailable, so the JDK WatchService is used instead, ' +
+                    "which polls on macOS. Add 'io.methvin:directory-watcher' to the classpath for event driven file watching.")
+            LOG.debug('io.methvin.watchservice.MacOSXListeningWatchService could not be loaded.', e)
+            return null
         }
         try {
-            return (AbstractDirectoryWatcher) Class.forName("org.grails.io.watch.MacOsWatchServiceDirectoryWatcher").getDeclaredConstructor().newInstance();
+            return (AbstractDirectoryWatcher) Class.forName('org.grails.io.watch.MacOsWatchServiceDirectoryWatcher').getDeclaredConstructor().newInstance()
         } catch (Throwable e) {
-            LOG.warn("Could not create the native macOS directory watcher. Falling back to the JDK WatchService.", e);
-            return null;
+            LOG.warn('Could not create the native macOS directory watcher. Falling back to the JDK WatchService.', e)
+            return null
         }
     }
 
@@ -106,8 +104,8 @@ public class DirectoryWatcher extends Thread {
      *
      * @param active False if you want to stop watching
      */
-    public void setActive(boolean active) {
-        directoryWatcherDelegate.setActive(active);
+    void setActive(boolean active) {
+        directoryWatcherDelegate.setActive(active)
     }
 
     /**
@@ -115,8 +113,8 @@ public class DirectoryWatcher extends Thread {
      *
      * @param sleepTime The sleep time
      */
-    public void setSleepTime(long sleepTime) {
-        directoryWatcherDelegate.setSleepTime(sleepTime);
+    void setSleepTime(long sleepTime) {
+        directoryWatcherDelegate.setSleepTime(sleepTime)
     }
 
     /**
@@ -124,8 +122,8 @@ public class DirectoryWatcher extends Thread {
      *
      * @param listener The file listener
      */
-    public void addListener(FileChangeListener listener) {
-        directoryWatcherDelegate.addListener(listener);
+    void addListener(FileChangeListener listener) {
+        directoryWatcherDelegate.addListener(listener)
     }
 
     /**
@@ -133,8 +131,8 @@ public class DirectoryWatcher extends Thread {
      *
      * @param listener The file listener
      */
-    public void removeListener(FileChangeListener listener) {
-        directoryWatcherDelegate.removeListener(listener);
+    void removeListener(FileChangeListener listener) {
+        directoryWatcherDelegate.removeListener(listener)
     }
 
     /**
@@ -142,8 +140,8 @@ public class DirectoryWatcher extends Thread {
      *
      * @param fileToWatch The file to watch
      */
-    public void addWatchFile(File fileToWatch) {
-        directoryWatcherDelegate.addWatchFile(fileToWatch);
+    void addWatchFile(File fileToWatch) {
+        directoryWatcherDelegate.addWatchFile(fileToWatch)
     }
 
     /**
@@ -152,12 +150,12 @@ public class DirectoryWatcher extends Thread {
      * @param dir The directory
      * @param fileExtensions The extensions
      */
-    public void addWatchDirectory(File dir, List<String> fileExtensions) {
-        List<String> fileExtensionsWithoutDot = new ArrayList<>(fileExtensions.size());
-        for (String fileExtension : fileExtensions) {
-            fileExtensionsWithoutDot.add(removeStartingDotIfPresent(fileExtension));
+    void addWatchDirectory(File dir, List<String> fileExtensions) {
+        List<String> fileExtensionsWithoutDot = new ArrayList<>(fileExtensions.size())
+        for (String fileExtension in fileExtensions) {
+            fileExtensionsWithoutDot.add(removeStartingDotIfPresent(fileExtension))
         }
-        directoryWatcherDelegate.addWatchDirectory(dir, fileExtensions);
+        directoryWatcherDelegate.addWatchDirectory(dir, fileExtensions)
     }
 
     /**
@@ -165,8 +163,8 @@ public class DirectoryWatcher extends Thread {
      *
      * @param dir The directory
      */
-    public void addWatchDirectory(File dir) {
-        addWatchDirectory(dir, "*");
+    void addWatchDirectory(File dir) {
+        addWatchDirectory(dir, '*')
     }
 
     /**
@@ -175,50 +173,51 @@ public class DirectoryWatcher extends Thread {
      * @param dir The directory
      * @param extension The extension
      */
-    public void addWatchDirectory(File dir, String extension) {
-        extension = removeStartingDotIfPresent(extension);
-        List<String> fileExtensions = new ArrayList<>();
+    void addWatchDirectory(File dir, String extension) {
+        extension = removeStartingDotIfPresent(extension)
+        List<String> fileExtensions = new ArrayList<>()
         if (extension != null && extension.length() > 0) {
-            int i = extension.lastIndexOf('.');
+            int i = extension.lastIndexOf('.')
             if (i > -1) {
-                extension = extension.substring(i + 1);
+                extension = extension.substring(i + 1)
             }
-            fileExtensions.add(extension);
+            fileExtensions.add(extension)
         }
         else {
-            fileExtensions.add("*");
+            fileExtensions.add('*')
         }
-        addWatchDirectory(dir, fileExtensions);
+        addWatchDirectory(dir, fileExtensions)
     }
 
     /**
      * Interface for FileChangeListeners
      */
-    public static interface FileChangeListener {
+    static interface FileChangeListener {
         /**
          * Fired when a file changes
          *
          * @param file The file that changed
          */
-        void onChange(File file);
+        void onChange(File file)
 
         /**
          * Fired when a new file is created
          *
          * @param file The file that was created
          */
-        void onNew(File file);
+        void onNew(File file)
     }
 
     @Override
-    public void run() {
-        directoryWatcherDelegate.run();
+    void run() {
+        directoryWatcherDelegate.run()
     }
 
     private String removeStartingDotIfPresent(String extension) {
-        if (extension.startsWith(".")) {
-            extension = extension.substring(1);
+        if (extension.startsWith('.')) {
+            extension = extension.substring(1)
         }
-        return extension;
+        return extension
     }
+
 }

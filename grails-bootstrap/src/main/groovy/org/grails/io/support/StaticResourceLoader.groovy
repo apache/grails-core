@@ -16,20 +16,31 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.plugins.metadata;
+package org.grails.io.support
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import groovy.transform.CompileStatic
 
 /**
- * Source level annotation that indicates that a given source file is part of a plugin
+ * Loads relative to a static base resource
  *
  * @author Graeme Rocher
- * @since 3.1.7
+ * @since 3.1
  */
-@Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.TYPE})
-public @interface PluginSource {
+@CompileStatic
+class StaticResourceLoader implements ResourceLoader {
+
+    private Resource baseResource
+
+    StaticResourceLoader(Resource baseResource) {
+        this.baseResource = baseResource
+    }
+
+    Resource getResource(String location) {
+        return baseResource.createRelative(location)
+    }
+
+    ClassLoader getClassLoader() {
+        return Thread.currentThread().getContextClassLoader()
+    }
+
 }
