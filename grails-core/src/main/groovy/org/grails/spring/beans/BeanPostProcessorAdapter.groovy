@@ -16,10 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.spring.beans;
+package org.grails.spring.beans
 
-import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.config.BeanPostProcessor;
+import groovy.transform.CompileStatic
+
+import org.springframework.beans.BeansException
+import org.springframework.beans.factory.config.BeanPostProcessor
 
 /**
  * Adapter implementation of {@link BeanPostProcessor}.
@@ -27,7 +29,8 @@ import org.springframework.beans.factory.config.BeanPostProcessor;
  * @author Steven Devijver
  * @since 0.2
  */
-public class BeanPostProcessorAdapter implements BeanPostProcessor {
+@CompileStatic
+class BeanPostProcessorAdapter implements BeanPostProcessor {
 
     /**
      * @param bean
@@ -36,8 +39,8 @@ public class BeanPostProcessorAdapter implements BeanPostProcessor {
      * @throws BeansException
      * @see BeanPostProcessor#postProcessBeforeInitialization(Object, String)
      */
-    public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
-        return bean;
+    Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+        bean
     }
 
     /**
@@ -47,7 +50,8 @@ public class BeanPostProcessorAdapter implements BeanPostProcessor {
      * @throws BeansException
      * @see BeanPostProcessor#postProcessAfterInitialization(Object, String)
      */
-    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
-        return bean;
+    Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+        bean
     }
+
 }

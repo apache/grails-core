@@ -16,20 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.spring.context.annotation;
+package org.grails.spring.context.annotation.fixture
 
-import org.springframework.beans.factory.xml.NamespaceHandlerSupport;
+import org.springframework.stereotype.Component
 
-/**
- * Provides custom implementation of component-scan that ignores Groovy closures.
- *
- * @author Graeme Rocher
- * @since 1.2
- */
-public class GrailsContextNamespaceHandler extends NamespaceHandlerSupport {
+@Component
+class ScanFixtureComponent {
 
-    public void init() {
-        registerBeanDefinitionParser("component-scan",
-                new ClosureClassIgnoringComponentScanBeanDefinitionParser());
-    }
 }

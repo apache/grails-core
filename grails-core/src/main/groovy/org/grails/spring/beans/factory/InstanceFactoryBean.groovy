@@ -17,54 +17,60 @@
  *  under the License.
  */
 
-package org.grails.spring.beans.factory;
+package org.grails.spring.beans.factory
 
-import org.springframework.beans.factory.FactoryBean;
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+
+import org.springframework.beans.factory.FactoryBean
 
 /**
  * Simple singleton instance implementation of Spring's FactoryBean interface
- * 
+ *
  * mainly useful in unit tests
- * 
+ *
  */
-public class InstanceFactoryBean<T> implements FactoryBean<T> {
-    T object;
-    Class<?> objectType;
-    
-    public InstanceFactoryBean() {
-        
-    }
-    
-    public InstanceFactoryBean(T object, Class<?> objectType) {
-        this.object = object;
-        this.objectType = objectType;
+@CompileStatic
+class InstanceFactoryBean<T> implements FactoryBean<T> {
+
+    @PackageScope T object
+    @PackageScope Class<?> objectType
+
+    InstanceFactoryBean() {
+
     }
 
-    public InstanceFactoryBean(T object) {
-        this.object = object;
-        this.objectType = object.getClass();
+    InstanceFactoryBean(T object, Class<?> objectType) {
+        this.object = object
+        this.objectType = objectType
     }
 
-    @Override
-    public boolean isSingleton() {
-        return true;
+    InstanceFactoryBean(T object) {
+        this.object = object
+        this.objectType = object.getClass()
     }
 
     @Override
-    public T getObject() {
-        return object;
-    }
-
-    public void setObject(T object) {
-        this.object = object;
+    boolean isSingleton() {
+        true
     }
 
     @Override
-    public Class<?> getObjectType() {
-        return objectType != null ? objectType : object.getClass();
+    T getObject() {
+        object
     }
 
-    public void setObjectType(Class<?> objectType) {
-        this.objectType = objectType;
+    void setObject(T object) {
+        this.object = object
     }
+
+    @Override
+    Class<?> getObjectType() {
+        objectType != null ? objectType : object.getClass()
+    }
+
+    void setObjectType(Class<?> objectType) {
+        this.objectType = objectType
+    }
+
 }

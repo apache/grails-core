@@ -16,13 +16,15 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.spring.beans;
+package org.grails.spring.beans
 
-import org.springframework.beans.BeansException;
+import groovy.transform.CompileStatic
 
-import grails.core.GrailsApplication;
-import grails.core.support.GrailsApplicationAware;
-import grails.core.support.GrailsConfigurationAware;
+import org.springframework.beans.BeansException
+
+import grails.core.GrailsApplication
+import grails.core.support.GrailsApplicationAware
+import grails.core.support.GrailsConfigurationAware
 
 /**
  * Implementation of {@link org.springframework.beans.factory.config.BeanPostProcessor}
@@ -32,26 +34,28 @@ import grails.core.support.GrailsConfigurationAware;
  * @author Steven Devijver
  * @since 0.2
  */
-public class GrailsApplicationAwareBeanPostProcessor extends BeanPostProcessorAdapter {
+@CompileStatic
+class GrailsApplicationAwareBeanPostProcessor extends BeanPostProcessorAdapter {
 
-    private GrailsApplication grailsApplication;
+    private GrailsApplication grailsApplication
 
-    public GrailsApplicationAwareBeanPostProcessor(GrailsApplication grailsApplication) {
-        this.grailsApplication = grailsApplication;
+    GrailsApplicationAwareBeanPostProcessor(GrailsApplication grailsApplication) {
+        this.grailsApplication = grailsApplication
     }
 
     @Override
-    public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
-        processAwareInterfaces(grailsApplication, bean);
-        return bean;
+    Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+        processAwareInterfaces(grailsApplication, bean)
+        bean
     }
 
-    public static void processAwareInterfaces(GrailsApplication grailsApplication, Object bean) {
+    static void processAwareInterfaces(GrailsApplication grailsApplication, Object bean) {
         if (bean instanceof GrailsApplicationAware) {
-            ((GrailsApplicationAware) bean).setGrailsApplication(grailsApplication);
+            ((GrailsApplicationAware) bean).setGrailsApplication(grailsApplication)
         }
         if (bean instanceof GrailsConfigurationAware) {
-            ((GrailsConfigurationAware) bean).setConfiguration(grailsApplication.getConfig());
+            ((GrailsConfigurationAware) bean).setConfiguration(grailsApplication.getConfig())
         }
     }
+
 }

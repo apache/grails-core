@@ -16,25 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.spring.beans;
+package org.grails.spring.context.annotation
 
-import org.springframework.beans.BeansException;
+import groovy.transform.CompileStatic
 
-import grails.core.support.ClassLoaderAware;
+import org.springframework.beans.factory.xml.NamespaceHandlerSupport
 
-public class ClassLoaderAwareBeanPostProcessor extends BeanPostProcessorAdapter {
+/**
+ * Provides custom implementation of component-scan that ignores Groovy closures.
+ *
+ * @author Graeme Rocher
+ * @since 1.2
+ */
+@CompileStatic
+class GrailsContextNamespaceHandler extends NamespaceHandlerSupport {
 
-    private ClassLoader classLoader;
-
-    public ClassLoaderAwareBeanPostProcessor(ClassLoader classLoader) {
-        this.classLoader = classLoader;
+    void init() {
+        registerBeanDefinitionParser('component-scan',
+                new ClosureClassIgnoringComponentScanBeanDefinitionParser())
     }
 
-    @Override
-    public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
-        if (bean instanceof ClassLoaderAware) {
-            ((ClassLoaderAware) bean).setClassLoader(classLoader);
-        }
-        return bean;
-    }
 }

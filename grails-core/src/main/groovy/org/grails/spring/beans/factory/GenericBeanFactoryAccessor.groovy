@@ -13,19 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.grails.spring.beans.factory;
+package org.grails.spring.beans.factory
 
-import java.lang.annotation.Annotation;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.lang.annotation.Annotation
 
-import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.ListableBeanFactory;
-import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.beans.factory.config.ConfigurableBeanFactory;
-import org.springframework.beans.factory.support.AbstractBeanDefinition;
-import org.springframework.core.annotation.AnnotationUtils;
-import org.springframework.util.Assert;
+import groovy.transform.CompileStatic
+import org.springframework.beans.BeansException
+import org.springframework.beans.factory.ListableBeanFactory
+import org.springframework.beans.factory.config.BeanDefinition
+import org.springframework.beans.factory.config.ConfigurableBeanFactory
+import org.springframework.beans.factory.support.AbstractBeanDefinition
+import org.springframework.core.annotation.AnnotationUtils
+import org.springframework.util.Assert
 
 /**
  * A fork of the Spring 2.5.6 GenericBeanFactoryAccess class that was removed from Spring 3.0.
@@ -34,57 +33,58 @@ import org.springframework.util.Assert;
  * @author Juergen Hoeller
  * @since 2.0
  */
-public class GenericBeanFactoryAccessor {
+@CompileStatic
+class GenericBeanFactoryAccessor {
 
     /**
      * The {@link ListableBeanFactory} being wrapped.
      */
-    private final ListableBeanFactory beanFactory;
+    private final ListableBeanFactory beanFactory
 
     /**
      * Constructs a <code>GenericBeanFactoryAccessor</code> that wraps the supplied {@link ListableBeanFactory}.
      */
-    public GenericBeanFactoryAccessor(ListableBeanFactory beanFactory) {
-        Assert.notNull(beanFactory, "Bean factory must not be null");
-        this.beanFactory = beanFactory;
+    GenericBeanFactoryAccessor(ListableBeanFactory beanFactory) {
+        Assert.notNull(beanFactory, 'Bean factory must not be null')
+        this.beanFactory = beanFactory
     }
 
     /**
      * Return the wrapped {@link ListableBeanFactory}.
      */
-    public final ListableBeanFactory getBeanFactory() {
-        return beanFactory;
+    final ListableBeanFactory getBeanFactory() {
+        beanFactory
     }
 
     /**
      * @see org.springframework.beans.factory.BeanFactory#getBean(String)
      */
-    @SuppressWarnings("unchecked")
-    public <T> T getBean(String name) throws BeansException {
-        return (T) beanFactory.getBean(name);
+    @SuppressWarnings('unchecked')
+    def <T> T getBean(String name) throws BeansException {
+        (T) beanFactory.getBean(name)
     }
 
     /**
      * @see org.springframework.beans.factory.BeanFactory#getBean(String, Class)
      */
-    public <T> T getBean(String name, Class<T> requiredType) throws BeansException {
-        return beanFactory.getBean(name, requiredType);
+    def <T> T getBean(String name, Class<T> requiredType) throws BeansException {
+        beanFactory.getBean(name, requiredType)
     }
 
     /**
      * @see ListableBeanFactory#getBeansOfType(Class)
      */
-    public <T> Map<String, T> getBeansOfType(Class<T> type) throws BeansException {
-        return beanFactory.getBeansOfType(type);
+    def <T> Map<String, T> getBeansOfType(Class<T> type) throws BeansException {
+        beanFactory.getBeansOfType(type)
     }
 
     /**
      * @see ListableBeanFactory#getBeansOfType(Class, boolean, boolean)
      */
-    public <T> Map<String, T> getBeansOfType(Class<T> type, boolean includeNonSingletons, boolean allowEagerInit)
+    def <T> Map<String, T> getBeansOfType(Class<T> type, boolean includeNonSingletons, boolean allowEagerInit)
             throws BeansException {
 
-        return beanFactory.getBeansOfType(type, includeNonSingletons, allowEagerInit);
+        beanFactory.getBeansOfType(type, includeNonSingletons, allowEagerInit)
     }
 
     /**
@@ -93,14 +93,14 @@ public class GenericBeanFactoryAccessor {
      * @return a Map with the matching beans, containing the bean names as
      * keys and the corresponding bean instances as values
      */
-    public Map<String, Object> getBeansWithAnnotation(Class<? extends Annotation> annotationType) {
-        Map<String, Object> results = new LinkedHashMap<>();
-        for (String beanName : beanFactory.getBeanNamesForType(Object.class)) {
+    Map<String, Object> getBeansWithAnnotation(Class<? extends Annotation> annotationType) {
+        Map<String, Object> results = new LinkedHashMap<>()
+        for (String beanName : beanFactory.getBeanNamesForType(Object)) {
             if (findAnnotationOnBean(beanName, annotationType) != null) {
-                results.put(beanName, beanFactory.getBean(beanName));
+                results.put(beanName, beanFactory.getBean(beanName))
             }
         }
-        return results;
+        results
     }
 
     /**
@@ -113,21 +113,22 @@ public class GenericBeanFactoryAccessor {
      * @return the annotation of the given type found, or <code>null</code>
      * @see org.springframework.core.annotation.AnnotationUtils#findAnnotation(Class, Class)
      */
-    public <A extends Annotation> A findAnnotationOnBean(String beanName, Class<A> annotationType) {
-        Class<?> handlerType = beanFactory.getType(beanName);
-        A ann = AnnotationUtils.findAnnotation(handlerType, annotationType);
-        if (ann == null && beanFactory instanceof ConfigurableBeanFactory &&
-                beanFactory.containsBeanDefinition(beanName)) {
-            ConfigurableBeanFactory cbf = (ConfigurableBeanFactory) beanFactory;
-            BeanDefinition bd = cbf.getMergedBeanDefinition(beanName);
+    def <A extends Annotation> A findAnnotationOnBean(String beanName, Class<A> annotationType) {
+        Class<?> handlerType = beanFactory.getType(beanName)
+        A ann = AnnotationUtils.findAnnotation(handlerType, annotationType)
+        if (ann == null && beanFactory.containsBeanDefinition(beanName) &&
+                beanFactory instanceof ConfigurableBeanFactory) {
+            ConfigurableBeanFactory cbf = (ConfigurableBeanFactory) beanFactory
+            BeanDefinition bd = cbf.getMergedBeanDefinition(beanName)
             if (bd instanceof AbstractBeanDefinition) {
-                AbstractBeanDefinition abd = (AbstractBeanDefinition) bd;
+                AbstractBeanDefinition abd = (AbstractBeanDefinition) bd
                 if (abd.hasBeanClass()) {
-                    Class<?> beanClass = abd.getBeanClass();
-                    ann = AnnotationUtils.findAnnotation(beanClass, annotationType);
+                    Class<?> beanClass = abd.getBeanClass()
+                    ann = AnnotationUtils.findAnnotation(beanClass, annotationType)
                 }
             }
         }
-        return ann;
+        ann
     }
+
 }

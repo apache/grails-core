@@ -16,24 +16,22 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.spring.aop.autoproxy;
+package org.grails.spring.aop.autoproxy
 
-import groovy.lang.GroovyObject;
+import spock.lang.Specification
 
-import org.springframework.aop.framework.autoproxy.InfrastructureAdvisorAutoProxyCreator;
+class GroovyAwareAspectJAwareAdvisorAutoProxyCreatorSpec extends Specification {
 
-/**
- * Tells Spring always to proxy Groovy classes.
- *
- * @author Graeme Rocher
- * @since 1.2
- */
-public class GroovyAwareInfrastructureAdvisorAutoProxyCreator extends InfrastructureAdvisorAutoProxyCreator {
+    GroovyAwareAspectJAwareAdvisorAutoProxyCreator creator = new GroovyAwareAspectJAwareAdvisorAutoProxyCreator()
 
-    private static final long serialVersionUID = 5545896123964533688L;
-
-    @Override
-    protected boolean shouldProxyTargetClass(Class<?> beanClass, String beanName) {
-        return GroovyObject.class.isAssignableFrom(beanClass) || super.shouldProxyTargetClass(beanClass, beanName);
+    void 'a Groovy-compiled class is always proxied'() {
+        expect:
+        creator.shouldProxyTargetClass(GroovyAwareAspectJAwareAdvisorAutoProxyCreatorSpec, 'self')
     }
+
+    void 'a plain Java class defers to the superclass rule'() {
+        expect:
+        !creator.shouldProxyTargetClass(String, 'string')
+    }
+
 }

@@ -17,22 +17,22 @@
  *  under the License.
  */
 
-package org.grails.spring.context.annotation;
+package org.grails.spring.context.annotation
 
-import java.util.List;
+import groovy.transform.CompileStatic
 
-import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.beans.factory.support.BeanDefinitionRegistry;
-import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
-import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
-import org.springframework.core.io.DefaultResourceLoader;
-import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
-import org.springframework.core.type.filter.TypeFilter;
-import org.springframework.util.AntPathMatcher;
+import org.springframework.beans.BeansException
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
+import org.springframework.beans.factory.support.BeanDefinitionRegistry
+import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor
+import org.springframework.context.annotation.ClassPathBeanDefinitionScanner
+import org.springframework.core.io.DefaultResourceLoader
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver
+import org.springframework.core.type.filter.TypeFilter
+import org.springframework.util.AntPathMatcher
 
-import grails.plugins.GrailsPluginManager;
-import grails.util.GrailsStringUtils;
+import grails.plugins.GrailsPluginManager
+import grails.util.GrailsStringUtils
 
 /**
  * Scans the packages named by {@code grails.spring.bean.packages} for annotated components.
@@ -46,49 +46,50 @@ import grails.util.GrailsStringUtils;
  *
  * @since 8.0
  */
-public class GrailsComponentScanPostProcessor implements BeanDefinitionRegistryPostProcessor {
+@CompileStatic
+class GrailsComponentScanPostProcessor implements BeanDefinitionRegistryPostProcessor {
 
-    private final List<String> packagesToScan;
-    private final GrailsPluginManager pluginManager;
+    private final List<String> packagesToScan
+    private final GrailsPluginManager pluginManager
 
-    public GrailsComponentScanPostProcessor(List<String> packagesToScan, GrailsPluginManager pluginManager) {
-        this.packagesToScan = packagesToScan;
-        this.pluginManager = pluginManager;
+    GrailsComponentScanPostProcessor(List<String> packagesToScan, GrailsPluginManager pluginManager) {
+        this.packagesToScan = packagesToScan
+        this.pluginManager = pluginManager
     }
 
     @Override
-    public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
+    void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         if (packagesToScan == null || packagesToScan.isEmpty()) {
-            return;
+            return
         }
 
-        ClassPathBeanDefinitionScanner scanner = new ClassPathBeanDefinitionScanner(registry);
-        scanner.setResourceLoader(resourcePatternResolver());
+        ClassPathBeanDefinitionScanner scanner = new ClassPathBeanDefinitionScanner(registry)
+        scanner.setResourceLoader(resourcePatternResolver())
         if (pluginManager != null) {
             for (TypeFilter typeFilter : pluginManager.getTypeFilters()) {
-                scanner.addIncludeFilter(typeFilter);
+                scanner.addIncludeFilter(typeFilter)
             }
         }
-        scanner.scan(packagesToScan.toArray(new String[0]));
+        scanner.scan(packagesToScan.toArray(new String[0]))
     }
 
     private static PathMatchingResourcePatternResolver resourcePatternResolver() {
         PathMatchingResourcePatternResolver resolver =
-                new PathMatchingResourcePatternResolver(new DefaultResourceLoader());
+                new PathMatchingResourcePatternResolver(new DefaultResourceLoader())
         resolver.setPathMatcher(new AntPathMatcher() {
             @Override
-            public boolean match(String pattern, String path) {
-                if (path.endsWith(".class") && GrailsStringUtils.getFileBasename(path).contains("$")) {
-                    return false;
+            boolean match(String pattern, String path) {
+                if (path.endsWith('.class') && GrailsStringUtils.getFileBasename(path).contains('$')) {
+                    return false
                 }
-                return super.match(pattern, path);
+                super.match(pattern, path)
             }
-        });
-        return resolver;
+        })
+        resolver
     }
 
     @Override
-    public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+    void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
         // bean definitions are contributed in postProcessBeanDefinitionRegistry
     }
 

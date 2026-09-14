@@ -16,14 +16,16 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.spring.beans;
+package org.grails.spring.beans
 
-import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.BeanFactory;
-import org.springframework.beans.factory.BeanFactoryAware;
+import groovy.transform.CompileStatic
 
-import grails.plugins.GrailsPluginManager;
-import grails.plugins.PluginManagerAware;
+import org.springframework.beans.BeansException
+import org.springframework.beans.factory.BeanFactory
+import org.springframework.beans.factory.BeanFactoryAware
+
+import grails.plugins.GrailsPluginManager
+import grails.plugins.PluginManagerAware
 
 /**
  * Auto-injects beans that implement PluginManagerAware.
@@ -31,38 +33,40 @@ import grails.plugins.PluginManagerAware;
  * @author Graeme Rocher
  * @since 1.2
  */
-public class PluginManagerAwareBeanPostProcessor extends BeanPostProcessorAdapter implements BeanFactoryAware {
+@CompileStatic
+class PluginManagerAwareBeanPostProcessor extends BeanPostProcessorAdapter implements BeanFactoryAware {
 
-    private GrailsPluginManager pluginManager;
-    private BeanFactory beanFactory;
+    private GrailsPluginManager pluginManager
+    private BeanFactory beanFactory
 
-    public PluginManagerAwareBeanPostProcessor() {
+    PluginManagerAwareBeanPostProcessor() {
 
     }
 
-    public PluginManagerAwareBeanPostProcessor(GrailsPluginManager pluginManager) {
-        this.pluginManager = pluginManager;
+    PluginManagerAwareBeanPostProcessor(GrailsPluginManager pluginManager) {
+        this.pluginManager = pluginManager
     }
 
     @Override
-    public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+    Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
         if (pluginManager == null) {
             if (beanFactory.containsBean(GrailsPluginManager.BEAN_NAME)) {
-                pluginManager = beanFactory.getBean(GrailsPluginManager.BEAN_NAME, GrailsPluginManager.class);
+                pluginManager = beanFactory.getBean(GrailsPluginManager.BEAN_NAME, GrailsPluginManager)
             }
         }
         if (pluginManager != null) {
 
             if (bean instanceof PluginManagerAware) {
-                ((PluginManagerAware) bean).setPluginManager(pluginManager);
+                ((PluginManagerAware) bean).setPluginManager(pluginManager)
             }
         }
 
-        return bean;
+        bean
     }
 
     @Override
-    public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
-        this.beanFactory = beanFactory;
+    void setBeanFactory(BeanFactory beanFactory) throws BeansException {
+        this.beanFactory = beanFactory
     }
+
 }

@@ -17,18 +17,18 @@
  *  under the License.
  */
 
-package org.grails.spring.beans;
+package org.grails.spring.beans
 
-import java.util.List;
+import groovy.transform.CompileStatic
 
-import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.beans.factory.support.BeanDefinitionRegistry;
-import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
-import org.springframework.beans.factory.support.GenericBeanDefinition;
-import org.springframework.core.PriorityOrdered;
+import org.springframework.beans.BeansException
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
+import org.springframework.beans.factory.support.BeanDefinitionRegistry
+import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor
+import org.springframework.beans.factory.support.GenericBeanDefinition
+import org.springframework.core.PriorityOrdered
 
-import org.apache.grails.common.aot.AheadOfTimeProcessing;
+import org.apache.grails.common.aot.AheadOfTimeProcessing
 
 /**
  * Registers {@code abstractGrailsResourceLocator}, the abstract parent definition that
@@ -46,25 +46,26 @@ import org.apache.grails.common.aot.AheadOfTimeProcessing;
  *
  * @since 8.0
  */
-public class AbstractResourceLocatorPostProcessor implements BeanDefinitionRegistryPostProcessor, PriorityOrdered {
+@CompileStatic
+class AbstractResourceLocatorPostProcessor implements BeanDefinitionRegistryPostProcessor, PriorityOrdered {
 
-    public static final String BEAN_NAME = "abstractGrailsResourceLocator";
+    static final String BEAN_NAME = 'abstractGrailsResourceLocator'
 
-    private final List<String> searchLocations;
+    private final List<String> searchLocations
 
-    public AbstractResourceLocatorPostProcessor(List<String> searchLocations) {
-        this.searchLocations = searchLocations;
+    AbstractResourceLocatorPostProcessor(List<String> searchLocations) {
+        this.searchLocations = searchLocations
     }
 
     @Override
-    public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
+    void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         if (registry.containsBeanDefinition(BEAN_NAME)) {
-            return;
+            return
         }
-        GenericBeanDefinition definition = new GenericBeanDefinition();
-        definition.setAbstract(true);
-        definition.getPropertyValues().add("searchLocations", searchLocationsToInherit());
-        registry.registerBeanDefinition(BEAN_NAME, definition);
+        GenericBeanDefinition definition = new GenericBeanDefinition()
+        definition.setAbstract(true)
+        definition.getPropertyValues().add('searchLocations', searchLocationsToInherit())
+        registry.registerBeanDefinition(BEAN_NAME, definition)
     }
 
     /**
@@ -78,7 +79,7 @@ public class AbstractResourceLocatorPostProcessor implements BeanDefinitionRegis
      * to look.</p>
      */
     private List<String> searchLocationsToInherit() {
-        return AheadOfTimeProcessing.isGeneratingCode() ? List.of() : this.searchLocations;
+        AheadOfTimeProcessing.isGeneratingCode() ? List.of() : this.searchLocations
     }
 
     /**
@@ -86,12 +87,12 @@ public class AbstractResourceLocatorPostProcessor implements BeanDefinitionRegis
      * until it exists, and merging happens as soon as anything resolves beans by type.
      */
     @Override
-    public int getOrder() {
-        return HIGHEST_PRECEDENCE;
+    int getOrder() {
+        HIGHEST_PRECEDENCE
     }
 
     @Override
-    public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+    void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
         // the definition is contributed in postProcessBeanDefinitionRegistry
     }
 

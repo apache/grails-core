@@ -16,24 +16,30 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.spring.aop.autoproxy;
+package org.grails.spring.context.annotation
 
-import groovy.lang.GroovyObject;
+import java.lang.reflect.Field
 
-import org.springframework.aop.aspectj.annotation.AnnotationAwareAspectJAutoProxyCreator;
+import org.springframework.beans.factory.xml.NamespaceHandlerSupport
+import spock.lang.Specification
 
-/**
- * Enables AspectJ weaving from the application context.
- *
- * @author Graeme Rocher
- * @since 1.3.4
- */
-public class GroovyAwareAspectJAwareAdvisorAutoProxyCreator extends AnnotationAwareAspectJAutoProxyCreator {
+class GrailsContextNamespaceHandlerSpec extends Specification {
 
-    private static final long serialVersionUID = 1;
+    void 'init registers a component-scan parser that ignores Groovy closure classes'() {
+        given:
+        GrailsContextNamespaceHandler handler = new GrailsContextNamespaceHandler()
 
-    @Override
-    protected boolean shouldProxyTargetClass(Class<?> beanClass, String beanName) {
-        return GroovyObject.class.isAssignableFrom(beanClass) || super.shouldProxyTargetClass(beanClass, beanName);
+        when:
+        handler.init()
+
+        then:
+        registeredParsers(handler)['component-scan'] instanceof ClosureClassIgnoringComponentScanBeanDefinitionParser
     }
+
+    private static Map registeredParsers(NamespaceHandlerSupport handler) {
+        Field field = NamespaceHandlerSupport.getDeclaredField('parsers')
+        field.accessible = true
+        (Map) field.get(handler)
+    }
+
 }
