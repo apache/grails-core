@@ -16,32 +16,23 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli.profile;
+package org.grails.cli.groovy
 
-import org.grails.build.parsing.CommandLine;
+import java.lang.annotation.Documented
+import java.lang.annotation.ElementType
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
 
 /**
- * Context for the execution of {@link org.grails.cli.profile.Command} instances within a {@link org.grails.cli.profile.Profile}
+ * Pseudo annotation used to trigger {@link org.grails.cli.compiler.autoconfigure.GroovyTemplatesCompilerAutoConfiguration}.
  *
- * @author Lari Hotari
- * @author Graeme Rocher
+ * @author Dave Syer
+ * @since 1.1.0
  */
-public interface ExecutionContext extends ProjectContext {
+@Target(ElementType.TYPE)
+@Documented
+@Retention(RetentionPolicy.RUNTIME)
+@interface EnableGroovyTemplates {
 
-    /**
-     * @return The parsed command line arguments as an instance of {@link org.grails.build.parsing.CommandLine}
-     */
-    CommandLine getCommandLine();
-
-    /**
-     * Allows cancelling of the running command
-     */
-    void cancel();
-
-    /**
-     * Attaches a listener for cancellation events
-     *
-     * @param listener The {@link CommandCancellationListener}
-     */
-    void addCancelledListener(CommandCancellationListener listener);
 }

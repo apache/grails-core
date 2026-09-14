@@ -16,7 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli.profile;
+package org.grails.cli.profile
 
 /**
  * A listener for listening for cancellation of {@link org.grails.cli.profile.Command} executions
@@ -24,9 +24,11 @@ package org.grails.cli.profile;
  * @author Lari Hotari
  * @author Graeme Rocher
  */
-public interface CommandCancellationListener {
+interface CommandCancellationListener {
+
     /**
      * Fired when a {@link org.grails.cli.profile.Command} is cancelled
      */
-    public void commandCancelled();
+    void commandCancelled()
+
 }

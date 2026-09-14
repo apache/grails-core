@@ -16,13 +16,13 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli.groovy;
+package org.grails.cli.groovy
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.Documented
+import java.lang.annotation.ElementType
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
 
 /**
  * Provides one or more additional sources of dependency management that is used when
@@ -31,11 +31,11 @@ import java.lang.annotation.Target;
  * @author Andy Wilkinson
  * @since 1.3.0
  */
-@Target({ ElementType.CONSTRUCTOR, ElementType.FIELD, ElementType.LOCAL_VARIABLE, ElementType.METHOD,
-            ElementType.PARAMETER, ElementType.TYPE })
+@Target([ElementType.CONSTRUCTOR, ElementType.FIELD, ElementType.LOCAL_VARIABLE, ElementType.METHOD,
+         ElementType.PARAMETER, ElementType.TYPE])
 @Retention(RetentionPolicy.SOURCE)
 @Documented
-public @interface DependencyManagementBom {
+@interface DependencyManagementBom {
 
     /**
      * One or more sets of colon-separated coordinates ({@code group:module:version}) of a
@@ -43,6 +43,6 @@ public @interface DependencyManagementBom {
      * default dependency management.
      * @return the BOM coordinates
      */
-    String[] value();
+    String[] value()
 
 }

@@ -16,17 +16,13 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli.profile;
+package org.grails.cli.profile
 
-import java.io.File;
-import java.util.List;
-import java.util.Set;
+import org.eclipse.aether.graph.Dependency
+import org.jline.reader.Completer
 
-import org.eclipse.aether.graph.Dependency;
-import org.jline.reader.Completer;
-
-import org.grails.config.NavigableMap;
-import org.grails.io.support.Resource;
+import org.grails.config.NavigableMap
+import org.grails.io.support.Resource
 
 /**
  * A Profile defines an active code generation and command execution policy. For example the "web" profile allows
@@ -37,78 +33,78 @@ import org.grails.io.support.Resource;
  *
  * @since 3.0
  */
-public interface Profile {
+interface Profile {
 
     /**
      * @return The name of the profile
      */
-    String getName();
+    String getName()
 
     /**
      * @return The version of the profile
      */
-    String getVersion();
+    String getVersion()
 
     /**
      * @return The description of the profile
      */
-    String getDescription();
+    String getDescription()
 
     /**
      * @return The list of file extensions which should be treated as binary
      */
-    Set<String> getBinaryExtensions();
+    Set<String> getBinaryExtensions()
 
     /**
      * @return The list of file patterns which should be executable in the resulting application
      */
-    Set<String> getExecutablePatterns();
+    Set<String> getExecutablePatterns()
 
     /**
      * @return Text to display after an application has been created with the profile
      */
-    String getInstructions();
+    String getInstructions()
 
     /**
      * @return The features for this profile
      */
-    Iterable<Feature> getFeatures();
+    Iterable<Feature> getFeatures()
 
     /**
      * @return The default features for this profile
      */
-    Iterable<Feature> getDefaultFeatures();
+    Iterable<Feature> getDefaultFeatures()
 
     /**
      * @return The required features for this profile
      */
-    Iterable<Feature> getRequiredFeatures();
+    Iterable<Feature> getRequiredFeatures()
 
     /**
      * The other {@link org.grails.cli.profile.Profile} instances that this {@link org.grails.cli.profile.Profile} extends
      * @return zero or many {@link org.grails.cli.profile.Profile} instance that this profile extends from
      */
-    Iterable<Profile> getExtends();
+    Iterable<Profile> getExtends()
 
     /**
      * @return The maven repository definitions for this profile
      */
-    List<String> getRepositories();
+    List<String> getRepositories()
 
     /**
      * @return The dependency definitions for this profile
      */
-    List<Dependency> getDependencies();
+    List<Dependency> getDependencies()
 
     /**
      * @return The profiles configuration
      */
-    NavigableMap getConfiguration();
+    NavigableMap getConfiguration()
 
     /**
      * @return The directory where the profile is located locally
      */
-    Resource getProfileDir();
+    Resource getProfileDir()
 
     /**
      * Obtain a template by path
@@ -116,7 +112,7 @@ public interface Profile {
      * @param path The path to template
      * @return The resource or null if it doesn't exist
      */
-    Resource getTemplate(String path);
+    Resource getTemplate(String path)
 
     /**
      * Obtain a command by name
@@ -124,14 +120,14 @@ public interface Profile {
      * @param name Obtain a command by name
      * @return The command
      */
-    Command getCommand(ProjectContext context, String name);
+    Command getCommand(ProjectContext context, String name)
 
     /**
      * The profile completers
      * @param context The {@link org.grails.cli.profile.ProjectContext} instance
      * @return An {@link java.lang.Iterable} of {@link org.jline.reader.Completer} instances
      */
-    Iterable<Completer> getCompleters(ProjectContext context);
+    Iterable<Completer> getCompleters(ProjectContext context)
 
     /**
      * The profile {@link org.grails.cli.profile.Command} instances
@@ -139,7 +135,7 @@ public interface Profile {
      * @param context The {@link ProjectContext} instance
      * @return An {@link java.lang.Iterable} of {@link org.grails.cli.profile.Command} instances
      */
-    Iterable<Command> getCommands(ProjectContext context);
+    Iterable<Command> getCommands(ProjectContext context)
 
     /**
      * Whether a command executes for the given context and name
@@ -147,42 +143,43 @@ public interface Profile {
      * @param name The command name
      * @return True if the command does exist
      */
-    boolean hasCommand(ProjectContext context, String name);
+    boolean hasCommand(ProjectContext context, String name)
 
     /**
      * Obtains a {@link Command}
      *
      * @return True if the command was handled
      */
-    boolean handleCommand(ExecutionContext context);
+    boolean handleCommand(ExecutionContext context)
 
     /**
      * @return The buildscript maven repository definitions for this profile
      */
-    List<String> getBuildRepositories();
+    List<String> getBuildRepositories()
 
     /**
      * @return The profile names to participate in build merge
      */
-    List<String> getBuildMergeProfileNames();
+    List<String> getBuildMergeProfileNames()
 
     /**
      * @return The list of build plugins for this profile
      */
-    List<String> getBuildPlugins();
+    List<String> getBuildPlugins()
 
     /**
      * @return The subfolder the parent profile(s) skeleton should be copied into
      */
-    String getParentSkeletonDir();
+    String getParentSkeletonDir()
 
     /**
      * @return The directory the parent profile(s) skeleton should be copied into
      */
-    File getParentSkeletonDir(File parent);
+    File getParentSkeletonDir(File parent)
 
     /**
      * @return A list of paths to exclude from the skeleton. Used in ant fileset exclude:
      */
-    List<String> getSkeletonExcludes();
+    List<String> getSkeletonExcludes()
+
 }

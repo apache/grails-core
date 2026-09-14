@@ -16,12 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli.profile;
+package org.grails.cli.profile
 
-import java.io.File;
-
-import grails.build.logging.GrailsConsole;
-import grails.config.ConfigMap;
+import grails.build.logging.GrailsConsole
+import grails.config.ConfigMap
 
 /**
  * The project context used by a {@link org.grails.cli.profile.Profile}
@@ -29,22 +27,23 @@ import grails.config.ConfigMap;
  * @author Lari Hotari
  * @author Graeme Rocher
  */
-public interface ProjectContext {
+interface ProjectContext {
+
     /**
      * @return The {@link grails.build.logging.GrailsConsole} instance
      */
-    GrailsConsole getConsole();
+    GrailsConsole getConsole()
 
     /**
      *
      * @return The base directory of the project
      */
-    File getBaseDir();
+    File getBaseDir()
 
     /**
      * @return The codegen config
      */
-    ConfigMap getConfig();
+    ConfigMap getConfig()
 
     /**
      * Obtains a value from the codegen configuration
@@ -52,7 +51,7 @@ public interface ProjectContext {
      * @param path The path to value
      * @return The value or null if not set
      */
-    String navigateConfig(String... path);
+    String navigateConfig(String... path)
 
     /**
      * Obtains a value of the given type from the codegen configuration
@@ -61,5 +60,6 @@ public interface ProjectContext {
      * @param path The path to value
      * @return The value or null if not set
      */
-    <T> T navigateConfigForType(Class<T> requiredType, String... path);
+    def <T> T navigateConfigForType(Class<T> requiredType, String... path)
+
 }

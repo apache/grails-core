@@ -16,19 +16,13 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli.interactive.completers;
+package org.grails.cli.interactive.completers
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
-
-import org.jline.reader.Candidate;
-import org.jline.reader.Completer;
-import org.jline.reader.LineReader;
-import org.jline.reader.ParsedLine;
+import groovy.transform.CompileStatic
+import org.jline.reader.Candidate
+import org.jline.reader.Completer
+import org.jline.reader.LineReader
+import org.jline.reader.ParsedLine
 
 /**
  * An aggregate completer that sorts completion candidates.
@@ -36,11 +30,12 @@ import org.jline.reader.ParsedLine;
  * @author Graeme Rocher
  * @since 3.0
  */
-public class SortedAggregateCompleter implements Completer {
-    
-    private final List<Completer> completers = new ArrayList<>();
+@CompileStatic
+class SortedAggregateCompleter implements Completer {
 
-    public SortedAggregateCompleter() {
+    private final List<Completer> completers = new ArrayList<>()
+
+    SortedAggregateCompleter() {
         // empty
     }
 
@@ -50,9 +45,9 @@ public class SortedAggregateCompleter implements Completer {
      *
      * @param completers the collection of completers
      */
-    public SortedAggregateCompleter(final Collection<Completer> completers) {
-        Objects.requireNonNull(completers);
-        this.completers.addAll(completers);
+    SortedAggregateCompleter(final Collection<Completer> completers) {
+        Objects.requireNonNull(completers)
+        this.completers.addAll(completers)
     }
 
     /**
@@ -61,8 +56,8 @@ public class SortedAggregateCompleter implements Completer {
      *
      * @param completers the completers
      */
-    public SortedAggregateCompleter(final Completer... completers) {
-        this(Arrays.asList(completers));
+    SortedAggregateCompleter(final Completer... completers) {
+        this(Arrays.asList(completers))
     }
 
     /**
@@ -70,39 +65,40 @@ public class SortedAggregateCompleter implements Completer {
      *
      * @return the aggregated completers
      */
-    public Collection<Completer> getCompleters() {
-        return completers;
+    Collection<Completer> getCompleters() {
+        return completers
     }
 
     /**
      * Perform a completion operation across all aggregated completers.
      */
     @Override
-    public void complete(LineReader reader, ParsedLine line, List<Candidate> candidates) {
-        Objects.requireNonNull(candidates);
+    void complete(LineReader reader, ParsedLine line, List<Candidate> candidates) {
+        Objects.requireNonNull(candidates)
 
-        List<Candidate> allCandidates = new ArrayList<>();
+        List<Candidate> allCandidates = new ArrayList<>()
 
         // Run each completer, collecting candidates
-        for (Completer completer : completers) {
-            List<Candidate> completerCandidates = new ArrayList<>();
-            completer.complete(reader, line, completerCandidates);
-            allCandidates.addAll(completerCandidates);
+        for (Completer completer in completers) {
+            List<Candidate> completerCandidates = new ArrayList<>()
+            completer.complete(reader, line, completerCandidates)
+            allCandidates.addAll(completerCandidates)
         }
 
         // Sort the candidates by their value
-        allCandidates.sort(Comparator.comparing(Candidate::value));
+        allCandidates.sort(Comparator.comparing(Candidate::value))
 
-        candidates.addAll(allCandidates);
+        candidates.addAll(allCandidates)
     }
 
     /**
      * @return a string representing the aggregated completers
      */
     @Override
-    public String toString() {
-        return getClass().getSimpleName() + "{" +
-            "completers=" + completers +
-            '}';
+    String toString() {
+        return getClass().getSimpleName() + '{' +
+            'completers=' + completers +
+            '}'
     }
+
 }

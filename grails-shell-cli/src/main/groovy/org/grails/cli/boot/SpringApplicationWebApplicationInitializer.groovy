@@ -16,17 +16,15 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli.boot;
+package org.grails.cli.boot
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.jar.Manifest;
+import jakarta.servlet.ServletContext
+import jakarta.servlet.ServletException
+import java.util.jar.Manifest
 
-import jakarta.servlet.ServletContext;
-import jakarta.servlet.ServletException;
-
-import org.springframework.boot.builder.SpringApplicationBuilder;
-import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
+import groovy.transform.CompileStatic
+import org.springframework.boot.builder.SpringApplicationBuilder
+import org.springframework.boot.web.servlet.support.SpringBootServletInitializer
 
 /**
  * {@link SpringBootServletInitializer} for CLI packaged WAR files.
@@ -34,22 +32,23 @@ import org.springframework.boot.web.servlet.support.SpringBootServletInitializer
  * @author Phillip Webb
  * @since 1.3.0
  */
-public class SpringApplicationWebApplicationInitializer extends SpringBootServletInitializer {
+@CompileStatic
+class SpringApplicationWebApplicationInitializer extends SpringBootServletInitializer {
 
     /**
      * The entry containing the source class.
      */
-    public static final String SOURCE_ENTRY = "Spring-Application-Source-Classes";
+    public static final String SOURCE_ENTRY = 'Spring-Application-Source-Classes'
 
-    private String[] sources;
+    private String[] sources
 
     @Override
-    public void onStartup(ServletContext servletContext) throws ServletException {
+    void onStartup(ServletContext servletContext) throws ServletException {
         try {
-            this.sources = getSources(servletContext);
+            this.sources = getSources(servletContext)
         }
         catch (IOException ex) {
-            throw new IllegalStateException(ex);
+            throw new IllegalStateException(ex)
         }
         // This initializer only applies to CLI-packaged WARs produced by the Grails shell 'war'
         // command, which records the application source classes in the WAR manifest via the
@@ -59,40 +58,40 @@ public class SpringApplicationWebApplicationInitializer extends SpringBootServle
         // the application's own SpringBootServletInitializer.
         // See https://github.com/apache/grails-core/issues/15377
         if (this.sources == null || this.sources.length == 0) {
-            return;
+            return
         }
-        super.onStartup(servletContext);
+        super.onStartup(servletContext)
     }
 
     private String[] getSources(ServletContext servletContext) throws IOException {
-        Manifest manifest = getManifest(servletContext);
+        Manifest manifest = getManifest(servletContext)
         if (manifest == null) {
-            return null;
+            return null
         }
-        String sources = manifest.getMainAttributes().getValue(SOURCE_ENTRY);
+        String sources = manifest.getMainAttributes().getValue(SOURCE_ENTRY)
         if (sources == null || sources.isBlank()) {
-            return null;
+            return null
         }
-        return sources.split(",");
+        return sources.split(',')
     }
 
     private Manifest getManifest(ServletContext servletContext) throws IOException {
-        InputStream stream = servletContext.getResourceAsStream("/META-INF/MANIFEST.MF");
-        return (stream != null) ? new Manifest(stream) : null;
+        InputStream stream = servletContext.getResourceAsStream('/META-INF/MANIFEST.MF')
+        return (stream != null) ? new Manifest(stream) : null
     }
 
     @Override
     protected SpringApplicationBuilder configure(SpringApplicationBuilder builder) {
         try {
-            ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-            Class<?>[] sourceClasses = new Class<?>[this.sources.length];
+            ClassLoader classLoader = Thread.currentThread().getContextClassLoader()
+            Class<?>[] sourceClasses = new Class<?>[this.sources.length]
             for (int i = 0; i < this.sources.length; i++) {
-                sourceClasses[i] = Class.forName(this.sources[i], false, classLoader);
+                sourceClasses[i] = Class.forName(this.sources[i], false, classLoader)
             }
-            return builder.sources(sourceClasses).properties("spring.groovy.template.check-template-location=false");
+            return builder.sources(sourceClasses).properties('spring.groovy.template.check-template-location=false')
         }
         catch (Exception ex) {
-            throw new IllegalStateException(ex);
+            throw new IllegalStateException(ex)
         }
     }
 

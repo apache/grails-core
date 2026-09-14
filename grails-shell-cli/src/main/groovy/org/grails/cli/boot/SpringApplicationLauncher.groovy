@@ -16,12 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli.boot;
+package org.grails.cli.boot
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.Map;
+import java.lang.reflect.Constructor
+import java.lang.reflect.Method
+
+import groovy.transform.CompileStatic
 
 /**
  * A launcher for {@code SpringApplication} or a {@code SpringApplication} subclass. The
@@ -35,19 +35,20 @@ import java.util.Map;
  * @see System#getProperty(String)
  * @see System#getenv(String)
  */
-public class SpringApplicationLauncher {
+@CompileStatic
+class SpringApplicationLauncher {
 
-    private static final String DEFAULT_SPRING_APPLICATION_CLASS = "org.springframework.boot.SpringApplication";
+    private static final String DEFAULT_SPRING_APPLICATION_CLASS = 'org.springframework.boot.SpringApplication'
 
-    private final ClassLoader classLoader;
+    private final ClassLoader classLoader
 
     /**
      * Creates a new launcher that will use the given {@code classLoader} to load the
      * configured {@code SpringApplication} class.
      * @param classLoader the {@code ClassLoader} to use
      */
-    public SpringApplicationLauncher(ClassLoader classLoader) {
-        this.classLoader = classLoader;
+    SpringApplicationLauncher(ClassLoader classLoader) {
+        this.classLoader = classLoader
     }
 
     /**
@@ -58,31 +59,31 @@ public class SpringApplicationLauncher {
      * @return the application's {@code ApplicationContext}
      * @throws Exception if the launch fails
      */
-    public Object launch(Class<?>[] sources, String[] args) throws Exception {
-        Map<String, Object> defaultProperties = new HashMap<>();
-        defaultProperties.put("spring.groovy.template.check-template-location", "false");
-        Class<?> applicationClass = Class.forName(getSpringApplicationClassName(), false, this.classLoader);
-        Constructor<?> constructor = applicationClass.getDeclaredConstructor(Class[].class);
-        constructor.setAccessible(true);
-        Object application = constructor.newInstance((Object) sources);
-        applicationClass.getMethod("setDefaultProperties", Map.class).invoke(application, defaultProperties);
-        Method method = applicationClass.getMethod("run", String[].class);
-        return method.invoke(application, (Object) args);
+    Object launch(Class<?>[] sources, String[] args) throws Exception {
+        Map<String, Object> defaultProperties = new HashMap<>()
+        defaultProperties.put('spring.groovy.template.check-template-location', 'false')
+        Class<?> applicationClass = Class.forName(getSpringApplicationClassName(), false, this.classLoader)
+        Constructor<?> constructor = applicationClass.getDeclaredConstructor(Class[])
+        constructor.setAccessible(true)
+        Object application = constructor.newInstance((Object) sources)
+        applicationClass.getMethod('setDefaultProperties', Map).invoke(application, defaultProperties)
+        Method method = applicationClass.getMethod('run', String[])
+        return method.invoke(application, (Object) args)
     }
 
     private String getSpringApplicationClassName() {
-        String className = System.getProperty("spring.application.class.name");
+        String className = System.getProperty('spring.application.class.name')
         if (className == null) {
-            className = getEnvironmentVariable("SPRING_APPLICATION_CLASS_NAME");
+            className = getEnvironmentVariable('SPRING_APPLICATION_CLASS_NAME')
         }
         if (className == null) {
-            className = DEFAULT_SPRING_APPLICATION_CLASS;
+            className = DEFAULT_SPRING_APPLICATION_CLASS
         }
-        return className;
+        return className
     }
 
     protected String getEnvironmentVariable(String name) {
-        return System.getenv(name);
+        return System.getenv(name)
     }
 
 }
