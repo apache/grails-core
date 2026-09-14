@@ -16,44 +16,45 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.transaction;
+package org.grails.transaction
 
-import java.lang.reflect.Method;
-import java.util.Properties;
-import java.util.Set;
+import java.lang.reflect.Method
 
-import org.springframework.transaction.interceptor.NameMatchTransactionAttributeSource;
-import org.springframework.transaction.interceptor.TransactionAttribute;
+import groovy.transform.CompileStatic
+import org.springframework.transaction.interceptor.NameMatchTransactionAttributeSource
+import org.springframework.transaction.interceptor.TransactionAttribute
 
-import grails.util.CollectionUtils;
+import grails.util.CollectionUtils
 
 /**
  * @author Graeme Rocher
  * @since 1.1.1 Don't match Groovy synthetic methods
  */
-public class GroovyAwareNamedTransactionAttributeSource extends NameMatchTransactionAttributeSource {
+@CompileStatic
+class GroovyAwareNamedTransactionAttributeSource extends NameMatchTransactionAttributeSource {
 
-    private static final long serialVersionUID = 3519687998898725875L;
+    private static final long serialVersionUID = 3519687998898725875L
     private static final Set<String> NONTRANSACTIONAL_GROOVY_METHODS = CollectionUtils.newSet(
-            "invokeMethod",
-            "getMetaClass",
-            "getProperty",
-            "setProperty");
+            'invokeMethod',
+            'getMetaClass',
+            'getProperty',
+            'setProperty')
 
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings('rawtypes')
     @Override
-    public TransactionAttribute getTransactionAttribute(Method method, Class targetClass) {
-        if (method.isSynthetic()) return null;
-        return super.getTransactionAttribute(method, targetClass);
+    TransactionAttribute getTransactionAttribute(Method method, Class targetClass) {
+        if (method.isSynthetic()) return null
+        return super.getTransactionAttribute(method, targetClass)
     }
 
     @Override
     protected boolean isMatch(String methodName, String mappedName) {
-        if (NONTRANSACTIONAL_GROOVY_METHODS.contains(methodName)) return false;
-        return super.isMatch(methodName, mappedName);
+        if (NONTRANSACTIONAL_GROOVY_METHODS.contains(methodName)) return false
+        return super.isMatch(methodName, mappedName)
     }
 
-    public void setTransactionalAttributes(Properties properties) {
-        super.setProperties(properties);
+    void setTransactionalAttributes(Properties properties) {
+        super.setProperties(properties)
     }
+
 }

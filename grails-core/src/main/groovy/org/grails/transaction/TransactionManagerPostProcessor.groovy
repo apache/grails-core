@@ -16,20 +16,21 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.transaction;
+package org.grails.transaction
 
-import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.BeanFactory;
-import org.springframework.beans.factory.BeanFactoryAware;
-import org.springframework.beans.factory.BeanFactoryUtils;
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostProcessor;
-import org.springframework.core.Ordered;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.util.Assert;
+import groovy.transform.CompileStatic
+import org.springframework.beans.BeansException
+import org.springframework.beans.factory.BeanFactory
+import org.springframework.beans.factory.BeanFactoryAware
+import org.springframework.beans.factory.BeanFactoryUtils
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
+import org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostProcessor
+import org.springframework.core.Ordered
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.util.Assert
 
-import grails.core.GrailsApplication;
-import grails.transaction.TransactionManagerAware;
+import grails.core.GrailsApplication
+import grails.transaction.TransactionManagerAware
 
 /**
  * Injects the platform transaction manager into beans that implement {@link grails.transaction.TransactionManagerAware}.
@@ -37,11 +38,13 @@ import grails.transaction.TransactionManagerAware;
  * @author Graeme Rocher
  * @since 0.4
  */
-public class TransactionManagerPostProcessor implements SmartInstantiationAwareBeanPostProcessor, BeanFactoryAware, Ordered {
-    private ConfigurableListableBeanFactory beanFactory;
-    private PlatformTransactionManager transactionManager;
-    private int order = Ordered.LOWEST_PRECEDENCE;
-    private boolean initialized = false;
+@CompileStatic
+class TransactionManagerPostProcessor implements SmartInstantiationAwareBeanPostProcessor, BeanFactoryAware, Ordered {
+
+    private ConfigurableListableBeanFactory beanFactory
+    private PlatformTransactionManager transactionManager
+    private int order = Ordered.LOWEST_PRECEDENCE
+    private boolean initialized = false
 
     /**
      * Gets the platform transaction manager from the bean factory if
@@ -49,11 +52,11 @@ public class TransactionManagerPostProcessor implements SmartInstantiationAwareB
      * @param beanFactory The bean factory handling this post processor.
      * @throws BeansException
      */
-    public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
-        Assert.isInstanceOf(ConfigurableListableBeanFactory.class, beanFactory,
-                "TransactionManagerPostProcessor requires a ConfigurableListableBeanFactory");
+    void setBeanFactory(BeanFactory beanFactory) throws BeansException {
+        Assert.isInstanceOf(ConfigurableListableBeanFactory, beanFactory,
+                'TransactionManagerPostProcessor requires a ConfigurableListableBeanFactory')
 
-        this.beanFactory = (ConfigurableListableBeanFactory) beanFactory;
+        this.beanFactory = (ConfigurableListableBeanFactory) beanFactory
     }
 
     /**
@@ -65,40 +68,41 @@ public class TransactionManagerPostProcessor implements SmartInstantiationAwareB
      * @throws BeansException
      */
     @Override
-    public boolean postProcessAfterInstantiation(Object bean, String name) throws BeansException {
+    boolean postProcessAfterInstantiation(Object bean, String name) throws BeansException {
         if (bean instanceof TransactionManagerAware) {
-            initialize();
+            initialize()
             if (transactionManager != null) {
-                TransactionManagerAware tma = (TransactionManagerAware) bean;
-                tma.setTransactionManager(transactionManager);
+                TransactionManagerAware tma = (TransactionManagerAware) bean
+                tma.setTransactionManager(transactionManager)
             }
         }
-        return true;
+        return true
     }
 
     private void initialize() {
         if (transactionManager == null && beanFactory != null && !initialized) {
             if (beanFactory.containsBean(GrailsApplication.TRANSACTION_MANAGER_BEAN)) {
-                transactionManager = beanFactory.getBean(GrailsApplication.TRANSACTION_MANAGER_BEAN, PlatformTransactionManager.class);
+                transactionManager = beanFactory.getBean(GrailsApplication.TRANSACTION_MANAGER_BEAN, PlatformTransactionManager)
             } else {
                 // Fetch the names of all the beans that are of type
                 // PlatformTransactionManager. Note that we have to pass
                 // "false" for the last argument to avoid eager initialisation,
                 // otherwise we end up in an endless loop (it triggers the current method).
                 String[] beanNames = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(
-                        beanFactory, PlatformTransactionManager.class, false, false);
+                        beanFactory, PlatformTransactionManager, false, false)
 
                 // If at least one is found, use the first of them as the
                 // transaction manager for the application.
                 if (beanNames.length > 0) {
-                    transactionManager = (PlatformTransactionManager) beanFactory.getBean(beanNames[0]);
+                    transactionManager = (PlatformTransactionManager) beanFactory.getBean(beanNames[0])
                 }
             }
-            initialized = true;
+            initialized = true
         }
     }
 
-    public int getOrder() {
-        return order;
+    int getOrder() {
+        return order
     }
+
 }

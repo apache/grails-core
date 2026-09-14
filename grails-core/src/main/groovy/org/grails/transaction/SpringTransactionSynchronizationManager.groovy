@@ -16,42 +16,45 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.transaction;
+package org.grails.transaction
 
-import org.springframework.transaction.support.TransactionSynchronizationManager;
+import groovy.transform.CompileStatic
+import org.springframework.transaction.support.TransactionSynchronizationManager
 
 /**
  * {@link SynchronizationManager} delegating calls to Spring's {@link TransactionSynchronizationManager}.
- * 
+ *
  * @author Michael Hunger
  * @author Oliver Gierke
  * @since 2.3.6
  */
+@CompileStatic
 enum SpringTransactionSynchronizationManager implements SynchronizationManager {
 
-    INSTANCE;
+    INSTANCE
 
     /*
      * (non-Javadoc)
      * @see org.grails.transaction.SynchronizationManager#initSynchronization()
      */
-    public void initSynchronization() {
-        TransactionSynchronizationManager.initSynchronization();
+    void initSynchronization() {
+        TransactionSynchronizationManager.initSynchronization()
     }
 
     /*
      * (non-Javadoc)
      * @see org.grails.transaction.SynchronizationManager#isSynchronizationActive()
      */
-    public boolean isSynchronizationActive() {
-        return TransactionSynchronizationManager.isSynchronizationActive();
+    boolean isSynchronizationActive() {
+        return TransactionSynchronizationManager.isSynchronizationActive()
     }
 
     /*
      * (non-Javadoc)
      * @see org.grails.transaction.SynchronizationManager#clearSynchronization()
      */
-    public void clearSynchronization() {
-        TransactionSynchronizationManager.clear();
+    void clearSynchronization() {
+        TransactionSynchronizationManager.clear()
     }
+
 }

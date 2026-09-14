@@ -16,17 +16,17 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.transaction;
+package grails.transaction
 
-import org.springframework.beans.factory.Aware;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.beans.factory.Aware
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.transaction.PlatformTransactionManager
 
 /**
  * @author Graeme Rocher
  * @since 0.4
  */
-public interface TransactionManagerAware extends Aware {
+interface TransactionManagerAware extends Aware {
 
     /**
      * Sets the transaction manager on implementors
@@ -34,5 +34,6 @@ public interface TransactionManagerAware extends Aware {
      * @param transactionManager The TransactionManager implementation
      */
     @Autowired
-    void setTransactionManager(PlatformTransactionManager transactionManager);
+    void setTransactionManager(PlatformTransactionManager transactionManager)
+
 }
