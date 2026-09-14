@@ -16,44 +16,40 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.boot.config;
+package grails.boot.config
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import groovy.transform.CompileStatic
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import org.springframework.beans.BeansException
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
+import org.springframework.beans.factory.support.BeanDefinitionRegistry
+import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor
+import org.springframework.beans.factory.support.BeanRegistryAdapter
+import org.springframework.beans.factory.support.DefaultSingletonBeanRegistry
+import org.springframework.context.ApplicationListener
+import org.springframework.context.ConfigurableApplicationContext
+import org.springframework.context.event.ContextRefreshedEvent
+import org.springframework.core.convert.support.ConfigurableConversionService
+import org.springframework.core.env.AbstractEnvironment
+import org.springframework.core.env.ConfigurableEnvironment
+import org.springframework.core.io.Resource
+import org.springframework.util.ClassUtils
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.BeanRegistrar;
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.beans.factory.support.BeanDefinitionRegistry;
-import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
-import org.springframework.beans.factory.support.BeanRegistryAdapter;
-import org.springframework.beans.factory.support.DefaultSingletonBeanRegistry;
-import org.springframework.context.ApplicationListener;
-import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.context.event.ContextRefreshedEvent;
-import org.springframework.core.convert.support.ConfigurableConversionService;
-import org.springframework.core.env.AbstractEnvironment;
-import org.springframework.core.env.ConfigurableEnvironment;
-import org.springframework.core.io.Resource;
-import org.springframework.util.ClassUtils;
-
-import grails.core.DefaultGrailsApplication;
-import grails.core.GrailsApplication;
-import grails.core.GrailsApplicationClass;
-import grails.plugins.DefaultGrailsPluginManager;
-import grails.plugins.GrailsPlugin;
-import grails.plugins.GrailsPluginManager;
-import grails.util.Environment;
-import grails.util.Holders;
-import org.apache.grails.core.plugins.PluginDiscovery;
-import org.grails.config.NavigableMap;
-import org.grails.config.PropertySourcesConfig;
-import org.grails.spring.DefaultRuntimeSpringConfiguration;
-import org.grails.spring.RuntimeSpringConfiguration;
+import grails.core.DefaultGrailsApplication
+import grails.core.GrailsApplication
+import grails.core.GrailsApplicationClass
+import grails.plugins.DefaultGrailsPluginManager
+import grails.plugins.GrailsPlugin
+import grails.plugins.GrailsPluginManager
+import grails.util.Environment
+import grails.util.Holders
+import org.apache.grails.core.plugins.PluginDiscovery
+import org.grails.config.NavigableMap
+import org.grails.config.PropertySourcesConfig
+import org.grails.spring.DefaultRuntimeSpringConfiguration
+import org.grails.spring.RuntimeSpringConfiguration
 
 /**
  * Runs the plugin bean-registration phase of the Grails lifecycle <em>before</em> Spring Boot's
@@ -86,85 +82,86 @@ import org.grails.spring.RuntimeSpringConfiguration;
  *
  * @since 8.0
  */
-public class GrailsEarlyPluginRegistrationPostProcessor
+@CompileStatic
+class GrailsEarlyPluginRegistrationPostProcessor
         implements BeanDefinitionRegistryPostProcessor, ApplicationListener<ContextRefreshedEvent> {
 
     /**
      * Name of the {@code Class[]} singleton under which {@link grails.boot.GrailsApp} stashes the
      * application source classes so this phase can perform early artefact discovery.
      */
-    public static final String APPLICATION_SOURCE_CLASSES_BEAN_NAME = "grailsApplicationSourceClasses";
+    public static final String APPLICATION_SOURCE_CLASSES_BEAN_NAME = 'grailsApplicationSourceClasses'
 
     /**
      * Name of the marker singleton registered once this phase has completed, checked by
      * {@link GrailsApplicationPostProcessor} to reuse the promoted singletons and skip the
      * already-performed lifecycle steps. Always checked on the local bean factory only.
      */
-    public static final String EARLY_REGISTRATION_COMPLETE_BEAN_NAME = "grailsEarlyPluginRegistrationComplete";
+    public static final String EARLY_REGISTRATION_COMPLETE_BEAN_NAME = 'grailsEarlyPluginRegistrationComplete'
 
-    private static final Logger LOG = LoggerFactory.getLogger(GrailsEarlyPluginRegistrationPostProcessor.class);
+    private static final Logger LOG = LoggerFactory.getLogger(GrailsEarlyPluginRegistrationPostProcessor)
 
-    private final ConfigurableApplicationContext applicationContext;
+    private final ConfigurableApplicationContext applicationContext
 
-    public GrailsEarlyPluginRegistrationPostProcessor(ConfigurableApplicationContext applicationContext) {
-        this.applicationContext = applicationContext;
+    GrailsEarlyPluginRegistrationPostProcessor(ConfigurableApplicationContext applicationContext) {
+        this.applicationContext = applicationContext
     }
 
     @Override
-    public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
+    void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         // Check the LOCAL singleton only — a parent context's discovery must not cause us to re-run
         // the early phase in a child context (containsBean/getBean would delegate to the parent).
-        Object discovery = applicationContext.getBeanFactory().getSingleton(PluginDiscovery.BEAN_NAME);
+        Object discovery = applicationContext.getBeanFactory().getSingleton(PluginDiscovery.BEAN_NAME)
         if (!(discovery instanceof PluginDiscovery pluginDiscovery)) {
             // No plugin discovery promoted to this context (e.g. unit-test slice) — nothing to do.
-            return;
+            return
         }
 
         // The initializing flag is a system property, so a leak on failure poisons every subsequent
         // context in the same JVM (test forks especially). Reset it if anything below throws; the
         // success path leaves it set and resets on refresh via the listener added at the end.
-        Environment.setInitializing(true);
+        Environment.setInitializing(true)
         try {
-            DefaultGrailsApplication grailsApplication = new DefaultGrailsApplication();
-            grailsApplication.setConfig(buildConfig());
-            grailsApplication.setApplicationContext(applicationContext);
-            grailsApplication.setMainContext(applicationContext);
+            DefaultGrailsApplication grailsApplication = new DefaultGrailsApplication()
+            grailsApplication.setConfig(buildConfig())
+            grailsApplication.setApplicationContext(applicationContext)
+            grailsApplication.setMainContext(applicationContext)
 
-            DefaultGrailsPluginManager pluginManager = new DefaultGrailsPluginManager(grailsApplication, pluginDiscovery);
-            pluginManager.loadPlugins();
-            pluginManager.setApplicationContext(applicationContext);
+            DefaultGrailsPluginManager pluginManager = new DefaultGrailsPluginManager(grailsApplication, pluginDiscovery)
+            pluginManager.loadPlugins()
+            pluginManager.setApplicationContext(applicationContext)
 
-            pluginManager.doArtefactConfiguration();
-            grailsApplication.initialise();
+            pluginManager.doArtefactConfiguration()
+            grailsApplication.initialise()
             // register plugin provided classes first, this gives the opportunity
             // for application classes to override those provided by a plugin
-            pluginManager.registerProvidedArtefacts(grailsApplication);
-            registerApplicationArtefacts(grailsApplication, registry);
+            pluginManager.registerProvidedArtefacts(grailsApplication)
+            registerApplicationArtefacts(grailsApplication, registry)
             // the source-classes stash has been consumed; drop it so it does not linger as an
             // autowire-by-type candidate for the life of the context
             if (applicationContext.getBeanFactory() instanceof DefaultSingletonBeanRegistry singletonRegistry) {
-                singletonRegistry.destroySingleton(APPLICATION_SOURCE_CLASSES_BEAN_NAME);
+                singletonRegistry.destroySingleton(APPLICATION_SOURCE_CLASSES_BEAN_NAME)
             }
 
-            RuntimeSpringConfiguration springConfig = new DefaultRuntimeSpringConfiguration();
-            pluginManager.doRuntimeConfiguration(springConfig);
-            springConfig.registerBeansWithRegistry(registry);
-            applyBeanRegistrars(pluginManager, registry);
+            RuntimeSpringConfiguration springConfig = new DefaultRuntimeSpringConfiguration()
+            pluginManager.doRuntimeConfiguration(springConfig)
+            springConfig.registerBeansWithRegistry(registry)
+            applyBeanRegistrars(pluginManager, registry)
 
-            ConfigurableListableBeanFactory beanFactory = applicationContext.getBeanFactory();
-            beanFactory.registerSingleton(GrailsApplication.APPLICATION_ID, grailsApplication);
-            beanFactory.registerSingleton(GrailsPluginManager.BEAN_NAME, pluginManager);
-            beanFactory.registerSingleton(EARLY_REGISTRATION_COMPLETE_BEAN_NAME, Boolean.TRUE);
-            Holders.setGrailsApplication(grailsApplication);
+            ConfigurableListableBeanFactory beanFactory = applicationContext.getBeanFactory()
+            beanFactory.registerSingleton(GrailsApplication.APPLICATION_ID, grailsApplication)
+            beanFactory.registerSingleton(GrailsPluginManager.BEAN_NAME, pluginManager)
+            beanFactory.registerSingleton(EARLY_REGISTRATION_COMPLETE_BEAN_NAME, Boolean.TRUE)
+            Holders.setGrailsApplication(grailsApplication)
 
             // GrailsApplicationPostProcessor resets the initializing flag on refresh, but it is not
             // present in every context that runs this phase — reset here as well so the flag does not
             // leak once the context is up.
-            applicationContext.addApplicationListener(this);
+            applicationContext.addApplicationListener(this)
         }
         catch (RuntimeException | Error e) {
-            Environment.setInitializing(false);
-            throw e;
+            Environment.setInitializing(false)
+            throw e
         }
     }
 
@@ -176,32 +173,32 @@ public class GrailsEarlyPluginRegistrationPostProcessor
      * deprecated DSL.
      */
     private void applyBeanRegistrars(DefaultGrailsPluginManager pluginManager, BeanDefinitionRegistry registry) {
-        String[] activeProfiles = applicationContext.getEnvironment().getActiveProfiles();
-        for (GrailsPlugin plugin : pluginManager.getAllPlugins()) {
+        String[] activeProfiles = applicationContext.getEnvironment().getActiveProfiles()
+        for (GrailsPlugin plugin in pluginManager.getAllPlugins()) {
             if (!plugin.supportsCurrentScopeAndEnvironment() || !plugin.isEnabled(activeProfiles)) {
-                continue;
+                continue
             }
-            BeanRegistrar registrar = plugin.getBeanRegistrar();
+            BeanRegistrar registrar = plugin.getBeanRegistrar()
             if (registrar != null) {
                 new BeanRegistryAdapter(registry, applicationContext.getBeanFactory(),
-                        applicationContext.getEnvironment(), registrar.getClass()).register(registrar);
+                        applicationContext.getEnvironment(), registrar.getClass()).register(registrar)
             }
         }
     }
 
     private void registerApplicationArtefacts(DefaultGrailsApplication grailsApplication, BeanDefinitionRegistry registry) {
-        Class<?>[] sources = resolveApplicationSourceClasses(registry);
+        Class<?>[] sources = resolveApplicationSourceClasses(registry)
         if (sources.length == 0) {
-            LOG.debug("No application source classes available — proceeding without early application artefact discovery");
-            return;
+            LOG.debug('No application source classes available — proceeding without early application artefact discovery')
+            return
         }
-        for (Class<?> source : sources) {
-            if (!GrailsApplicationClass.class.isAssignableFrom(source)) {
+        for (Class<?> source in sources) {
+            if (!GrailsApplicationClass.isAssignableFrom(source)) {
                 // non-application sources (plain configuration classes) never contribute artefacts
-                continue;
+                continue
             }
-            for (Object applicationClass : scanApplicationSource(source)) {
-                grailsApplication.addArtefact((Class<?>) applicationClass);
+            for (Object applicationClass in scanApplicationSource(source)) {
+                grailsApplication.addArtefact((Class<?>) applicationClass)
             }
         }
     }
@@ -216,17 +213,17 @@ public class GrailsEarlyPluginRegistrationPostProcessor
      * lifecycle bean the application interacts with is still created by Spring later.
      */
     private Collection<Class> scanApplicationSource(Class<?> source) {
-        if (GrailsAutoConfiguration.class.isAssignableFrom(source)) {
+        if (GrailsAutoConfiguration.isAssignableFrom(source)) {
             try {
-                GrailsAutoConfiguration application = (GrailsAutoConfiguration) source.getDeclaredConstructor().newInstance();
-                application.setApplicationContext(applicationContext);
-                return application.classes();
+                GrailsAutoConfiguration application = (GrailsAutoConfiguration) source.getDeclaredConstructor().newInstance()
+                application.setApplicationContext(applicationContext)
+                return application.classes()
             } catch (Exception | LinkageError e) {
-                LOG.warn("Unable to resolve application classes from [{}], falling back to package scan: {}",
-                        source.getName(), e.toString());
+                LOG.warn('Unable to resolve application classes from [{}], falling back to package scan: {}',
+                        source.getName(), e.toString())
             }
         }
-        return ApplicationArtefactScanner.scanApplicationClasses(source);
+        return ApplicationArtefactScanner.scanApplicationClasses(source)
     }
 
     /**
@@ -238,34 +235,34 @@ public class GrailsEarlyPluginRegistrationPostProcessor
      * as bean definitions by the time this phase runs.
      */
     private Class<?>[] resolveApplicationSourceClasses(BeanDefinitionRegistry registry) {
-        List<Class<?>> sources = new ArrayList<>();
-        boolean haveApplicationClass = false;
-        Object stashedSources = applicationContext.getBeanFactory().getSingleton(APPLICATION_SOURCE_CLASSES_BEAN_NAME);
+        List<Class<?>> sources = new ArrayList<>()
+        boolean haveApplicationClass = false
+        Object stashedSources = applicationContext.getBeanFactory().getSingleton(APPLICATION_SOURCE_CLASSES_BEAN_NAME)
         if (stashedSources instanceof Class<?>[] stashed) {
-            for (Class<?> source : stashed) {
-                sources.add(source);
-                if (GrailsApplicationClass.class.isAssignableFrom(source)) {
-                    haveApplicationClass = true;
+            for (Class<?> source in stashed) {
+                sources.add(source)
+                if (GrailsApplicationClass.isAssignableFrom(source)) {
+                    haveApplicationClass = true
                 }
             }
         }
         if (!haveApplicationClass) {
-            for (String beanDefinitionName : registry.getBeanDefinitionNames()) {
-                String beanClassName = registry.getBeanDefinition(beanDefinitionName).getBeanClassName();
+            for (String beanDefinitionName in registry.getBeanDefinitionNames()) {
+                String beanClassName = registry.getBeanDefinition(beanDefinitionName).getBeanClassName()
                 if (beanClassName == null) {
-                    continue;
+                    continue
                 }
                 try {
-                    Class<?> beanClass = ClassUtils.forName(beanClassName, applicationContext.getClassLoader());
-                    if (GrailsApplicationClass.class.isAssignableFrom(beanClass) && !sources.contains(beanClass)) {
-                        sources.add(beanClass);
+                    Class<?> beanClass = ClassUtils.forName(beanClassName, applicationContext.getClassLoader())
+                    if (GrailsApplicationClass.isAssignableFrom(beanClass) && !sources.contains(beanClass)) {
+                        sources.add(beanClass)
                     }
                 } catch (ClassNotFoundException | LinkageError ignored) {
                     // not resolvable here — cannot be an application class
                 }
             }
         }
-        return sources.toArray(new Class<?>[0]);
+        return sources.toArray(new Class<?>[0])
     }
 
     /**
@@ -277,25 +274,26 @@ public class GrailsEarlyPluginRegistrationPostProcessor
      * {@code getProperty(...)} access.
      */
     private PropertySourcesConfig buildConfig() {
-        ConfigurableEnvironment environment = applicationContext.getEnvironment();
-        ConfigurableConversionService conversionService = null;
+        ConfigurableEnvironment environment = applicationContext.getEnvironment()
+        ConfigurableConversionService conversionService = null
         if (environment instanceof AbstractEnvironment) {
-            conversionService = ((AbstractEnvironment) environment).getConversionService();
-            conversionService.addConverter(String.class, Resource.class, applicationContext::getResource);
-            conversionService.addConverter(NavigableMap.NullSafeNavigator.class, String.class, source -> null);
-            conversionService.addConverter(NavigableMap.NullSafeNavigator.class, Object.class, source -> null);
+            conversionService = ((AbstractEnvironment) environment).getConversionService()
+            conversionService.addConverter(String, Resource, applicationContext::getResource)
+            conversionService.addConverter(NavigableMap.NullSafeNavigator, String, source -> null)
+            conversionService.addConverter(NavigableMap.NullSafeNavigator, Object, source -> null)
         }
-        PropertySourcesConfig config = new PropertySourcesConfig(environment.getPropertySources());
+        PropertySourcesConfig config = new PropertySourcesConfig(environment.getPropertySources())
         if (conversionService != null) {
-            config.setConversionService(conversionService);
+            config.setConversionService(conversionService)
         }
-        return config;
+        return config
     }
 
     @Override
-    public void onApplicationEvent(ContextRefreshedEvent event) {
-        if (event.getApplicationContext() == applicationContext) {
-            Environment.setInitializing(false);
+    void onApplicationEvent(ContextRefreshedEvent event) {
+        if (event.getApplicationContext().is(applicationContext)) {
+            Environment.setInitializing(false)
         }
     }
+
 }

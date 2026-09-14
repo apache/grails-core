@@ -16,9 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.web;
+package grails.web
 
-import org.springframework.util.StringUtils;
+import groovy.transform.CompileStatic
+import org.springframework.util.StringUtils
 
 /**
  * URL converter that allows for hyphenated URLs
@@ -26,27 +27,29 @@ import org.springframework.util.StringUtils;
  * @author Jeff Brown
  * @since 2.0
  */
-public class HyphenatedUrlConverter implements UrlConverter {
+@CompileStatic
+class HyphenatedUrlConverter implements UrlConverter {
 
-    public String toUrlElement(String propertyOrClassName) {
+    String toUrlElement(String propertyOrClassName) {
         if (!StringUtils.hasText(propertyOrClassName)) {
-            return propertyOrClassName;
+            return propertyOrClassName
         }
 
-        StringBuilder builder = new StringBuilder();
-        char[] charArray = propertyOrClassName.toCharArray();
-        char lastChar = ' ';
-        for (char c : charArray) {
+        StringBuilder builder = new StringBuilder()
+        char[] charArray = propertyOrClassName.toCharArray()
+        char lastChar = ' '
+        for (char c in charArray) {
             if (Character.isUpperCase(c)) {
                 if (builder.length() > 0 && lastChar != '.') {
-                    builder.append('-');
+                    builder.append('-')
                 }
-                builder.append(Character.toLowerCase(c));
+                builder.append(Character.toLowerCase(c))
             } else {
-                builder.append(c);
+                builder.append(c)
             }
-            lastChar = c;
+            lastChar = c
         }
-        return builder.toString();
+        return builder.toString()
     }
+
 }

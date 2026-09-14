@@ -16,36 +16,31 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.boot.config;
+package grails.boot.config
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import org.springframework.boot.EnvironmentPostProcessor
+import org.springframework.boot.SpringApplication
+import org.springframework.boot.bootstrap.ConfigurableBootstrapContext
+import org.springframework.core.Ordered
+import org.springframework.core.env.ConfigurableEnvironment
+import org.springframework.core.env.EnumerablePropertySource
+import org.springframework.core.env.MutablePropertySources
+import org.springframework.core.env.PropertySource
+import org.springframework.core.io.ClassPathResource
+import org.springframework.core.io.Resource
+import org.springframework.core.io.support.ResourcePropertySource
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.springframework.boot.EnvironmentPostProcessor;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.bootstrap.ConfigurableBootstrapContext;
-import org.springframework.core.Ordered;
-import org.springframework.core.env.ConfigurableEnvironment;
-import org.springframework.core.env.EnumerablePropertySource;
-import org.springframework.core.env.MutablePropertySources;
-import org.springframework.core.env.PropertySource;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.support.ResourcePropertySource;
-
-import org.apache.grails.core.plugins.PluginDiscovery;
-import org.apache.grails.core.plugins.PluginInfo;
-import org.apache.grails.core.plugins.PluginUtils;
-import org.grails.config.PrefixedMapPropertySource;
-import org.grails.config.yaml.YamlPropertySourceLoader;
-import org.grails.core.cfg.GroovyConfigPropertySourceLoader;
-import org.grails.core.exceptions.GrailsConfigurationException;
+import org.apache.grails.core.plugins.PluginDiscovery
+import org.apache.grails.core.plugins.PluginInfo
+import org.apache.grails.core.plugins.PluginUtils
+import org.grails.config.PrefixedMapPropertySource
+import org.grails.config.yaml.YamlPropertySourceLoader
+import org.grails.core.cfg.GroovyConfigPropertySourceLoader
+import org.grails.core.exceptions.GrailsConfigurationException
 
 /**
  * A Spring Boot {@link EnvironmentPostProcessor} that loads {@code plugin.yml} or {@code plugin.groovy} configuration
@@ -59,54 +54,57 @@ import org.grails.core.exceptions.GrailsConfigurationException;
  * @see GrailsApplicationPostProcessor
  * @see PluginDiscovery
  */
-public class GrailsEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
+@CompileStatic
+class GrailsEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
 
-    private static final Logger LOG = LoggerFactory.getLogger(GrailsEnvironmentPostProcessor.class);
-    private static final String BUILD_INFO_RESOURCE = "META-INF/grails.build.info";
+    private static final Logger LOG = LoggerFactory.getLogger(GrailsEnvironmentPostProcessor)
+    private static final String BUILD_INFO_RESOURCE = 'META-INF/grails.build.info'
 
-    private final ConfigurableBootstrapContext bootstrapContext;
+    private final ConfigurableBootstrapContext bootstrapContext
 
+    @PackageScope
     GrailsEnvironmentPostProcessor(ConfigurableBootstrapContext bootstrapContext) {
-        this.bootstrapContext = bootstrapContext;
+        this.bootstrapContext = bootstrapContext
     }
 
     @Override
-    public int getOrder() {
+    int getOrder() {
         // Run after Spring Boot property source loading but before autoconfiguration evaluation.
         // We use a value that ensures we run after standard property sources are loaded but before
         // autoconfiguration conditions are evaluated.
-        return Ordered.HIGHEST_PRECEDENCE + 15;
+        return Ordered.HIGHEST_PRECEDENCE + 15
     }
 
     @Override
-    public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
+    void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         try {
             loadBuildProperties(environment, new ClassPathResource(BUILD_INFO_RESOURCE,
-                    application.getClassLoader()));
-            PluginDiscovery pluginDiscovery = bootstrapContext.get(PluginDiscovery.class);
+                    application.getClassLoader()))
+            PluginDiscovery pluginDiscovery = bootstrapContext.get(PluginDiscovery)
             if (pluginDiscovery == null) {
-                throw new IllegalStateException("GrailsPluginDiscovery bean not found in bootstrap context");
+                throw new IllegalStateException('GrailsPluginDiscovery bean not found in bootstrap context')
             }
 
-            pluginDiscovery.init(environment);
+            pluginDiscovery.init(environment)
 
-            Collection<PluginInfo> plugins = pluginDiscovery.getPluginsInLoadOrder();
-            loadPluginConfigurations(plugins, environment);
+            Collection<PluginInfo> plugins = pluginDiscovery.getPluginsInLoadOrder()
+            loadPluginConfigurations(plugins, environment)
         } catch (Exception e) {
-            LOG.error("Error loading Grails plugin configurations early: ", e);
-            throw new GrailsConfigurationException("Unable to load Grails Plugins", e);
+            LOG.error('Error loading Grails plugin configurations early: ', e)
+            throw new GrailsConfigurationException('Unable to load Grails Plugins', e)
         }
     }
 
+    @PackageScope
     void loadBuildProperties(ConfigurableEnvironment environment, Resource resource) {
         if (!resource.exists()) {
-            return;
+            return
         }
 
         try {
-            environment.getPropertySources().addLast(new ResourcePropertySource("grailsBuildInfo", resource));
+            environment.getPropertySources().addLast(new ResourcePropertySource('grailsBuildInfo', resource))
         } catch (IOException e) {
-            LOG.debug("Unable to load Grails build properties: {}", e.getMessage());
+            LOG.debug('Unable to load Grails build properties: {}', e.getMessage())
         }
     }
 
@@ -126,61 +124,61 @@ public class GrailsEnvironmentPostProcessor implements EnvironmentPostProcessor,
      * and a {@link PrefixedMapPropertySource} for the {@code grails.plugins.<name>} prefix.</p>
      */
     private void loadPluginConfigurations(Collection<PluginInfo> sortedPlugins, ConfigurableEnvironment environment) {
-        MutablePropertySources propertySources = environment.getPropertySources();
-        YamlPropertySourceLoader yamlLoader = new YamlPropertySourceLoader();
-        GroovyConfigPropertySourceLoader groovyLoader = new GroovyConfigPropertySourceLoader();
-        int loadedCount = 0;
+        MutablePropertySources propertySources = environment.getPropertySources()
+        YamlPropertySourceLoader yamlLoader = new YamlPropertySourceLoader()
+        GroovyConfigPropertySourceLoader groovyLoader = new GroovyConfigPropertySourceLoader()
+        int loadedCount = 0
 
         // Iterate in reverse order and use addLast, matching
         // GrailsApplicationPostProcessor.loadApplicationConfig() behavior
-        List<PluginInfo> reversed = new ArrayList<>(sortedPlugins);
-        Collections.reverse(reversed);
+        List<PluginInfo> reversed = new ArrayList<>(sortedPlugins)
+        Collections.reverse(reversed)
 
-        for (PluginInfo plugin : reversed) {
-            Resource resource = plugin.getConfigResource();
+        for (PluginInfo plugin in reversed) {
+            Resource resource = plugin.getConfigResource()
             if (resource == null || !resource.exists()) {
-                continue;
+                continue
             }
 
             try {
-                String filename = resource.getFilename();
-                String sourceName = plugin.getName() + "-" + filename;
+                String filename = resource.getFilename()
+                String sourceName = plugin.getName() + '-' + filename
 
-                List<PropertySource<?>> loaded;
+                List<PropertySource<?>> loaded
                 if (PluginUtils.PLUGIN_YML_CONFIG.equals(filename)) {
-                    loaded = yamlLoader.load(sourceName, resource, PluginUtils.DEFAULT_CONFIG_IGNORE_LIST);
+                    loaded = yamlLoader.load(sourceName, resource, PluginUtils.DEFAULT_CONFIG_IGNORE_LIST)
                 } else if (PluginUtils.PLUGIN_GROOVY_CONFIG.equals(filename)) {
-                    loaded = groovyLoader.load(sourceName, resource, PluginUtils.DEFAULT_CONFIG_IGNORE_LIST);
+                    loaded = groovyLoader.load(sourceName, resource, PluginUtils.DEFAULT_CONFIG_IGNORE_LIST)
                 } else {
-                    LOG.debug("Unknown config file format [{}] for plugin [{}], skipping",
-                            filename, plugin.getName());
-                    continue;
+                    LOG.debug('Unknown config file format [{}] for plugin [{}], skipping',
+                            filename, plugin.getName())
+                    continue
                 }
 
-                for (PropertySource<?> ps : loaded) {
+                for (PropertySource<?> ps in loaded) {
                     if (ps != null) {
                         // Add the prefixed property source (grails.plugins.<name>.<prop>),
                         // matching what AbstractGrailsPlugin / loadApplicationConfig() does
                         if (ps instanceof EnumerablePropertySource<?> eps) {
                             propertySources.addLast(new PrefixedMapPropertySource(
-                                    "grails.plugins." + plugin.getName(), eps));
+                                    'grails.plugins.' + plugin.getName(), eps))
                         }
 
                         // Add the property source directly (NavigableMapPropertySource)
                         // with the same name that AbstractGrailsPlugin would produce
-                        propertySources.addLast(ps);
-                        loadedCount++;
+                        propertySources.addLast(ps)
+                        loadedCount++
                     }
                 }
 
-                LOG.debug("Loaded {} for plugin [{}] early in lifecycle", filename, plugin.getName());
+                LOG.debug('Loaded {} for plugin [{}] early in lifecycle', filename, plugin.getName())
             } catch (Exception e) {
-                LOG.debug("Error loading configuration for plugin [{}]: {}", plugin.getName(), e.getMessage());
+                LOG.debug('Error loading configuration for plugin [{}]: {}', plugin.getName(), e.getMessage())
             }
         }
 
         if (loadedCount > 0) {
-            LOG.info("Loaded {} plugin configuration(s) early via GrailsEnvironmentPostProcessor", loadedCount);
+            LOG.info('Loaded {} plugin configuration(s) early via GrailsEnvironmentPostProcessor', loadedCount)
         }
     }
 

@@ -16,10 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.boot.config;
+package grails.boot.config
 
-import org.springframework.context.ApplicationContextInitializer;
-import org.springframework.context.ConfigurableApplicationContext;
+import groovy.transform.CompileStatic
+import org.springframework.context.ApplicationContextInitializer
+import org.springframework.context.ConfigurableApplicationContext
 
 /**
  * Registers the {@link GrailsEarlyPluginRegistrationPostProcessor} on the context via
@@ -31,10 +32,12 @@ import org.springframework.context.ConfigurableApplicationContext;
  *
  * @since 8.0
  */
-public class GrailsPluginLifecycleInitializer implements ApplicationContextInitializer<ConfigurableApplicationContext> {
+@CompileStatic
+class GrailsPluginLifecycleInitializer implements ApplicationContextInitializer<ConfigurableApplicationContext> {
 
     @Override
-    public void initialize(ConfigurableApplicationContext applicationContext) {
-        applicationContext.addBeanFactoryPostProcessor(new GrailsEarlyPluginRegistrationPostProcessor(applicationContext));
+    void initialize(ConfigurableApplicationContext applicationContext) {
+        applicationContext.addBeanFactoryPostProcessor(new GrailsEarlyPluginRegistrationPostProcessor(applicationContext))
     }
+
 }

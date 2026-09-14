@@ -16,11 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.web;
+package grails.web
 
-import org.springframework.util.StringUtils;
+import groovy.transform.CompileStatic
+import org.springframework.util.StringUtils
 
-import grails.util.GrailsNameUtils;
+import grails.util.GrailsNameUtils
 
 /**
  * URL converter that allows for camel case URLs
@@ -28,26 +29,28 @@ import grails.util.GrailsNameUtils;
  * @author Jeff Brown
  * @since 2.0
  */
-public class CamelCaseUrlConverter implements UrlConverter {
+@CompileStatic
+class CamelCaseUrlConverter implements UrlConverter {
 
-    public String toUrlElement(String propertyOrClassName) {
+    String toUrlElement(String propertyOrClassName) {
         if (!StringUtils.hasText(propertyOrClassName)) {
-            return propertyOrClassName;
+            return propertyOrClassName
         }
 
-        if (propertyOrClassName.contains(".")) {
-            String[] parts = propertyOrClassName.split("\\.");
-            StringBuilder buffer = new StringBuilder();
-            int last = parts.length - 1;
+        if (propertyOrClassName.contains('.')) {
+            String[] parts = propertyOrClassName.split('\\.')
+            StringBuilder buffer = new StringBuilder()
+            int last = parts.length - 1
             for (int i = 0; i < parts.length; i++) {
-                buffer.append(GrailsNameUtils.getPropertyName(parts[i]));
+                buffer.append(GrailsNameUtils.getPropertyName(parts[i]))
                 if (i < last) {
-                    buffer.append(".");
+                    buffer.append('.')
                 }
             }
-            return buffer.toString();
+            return buffer.toString()
         } else {
-            return GrailsNameUtils.getPropertyName(propertyOrClassName);
+            return GrailsNameUtils.getPropertyName(propertyOrClassName)
         }
     }
+
 }

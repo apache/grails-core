@@ -16,16 +16,21 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.web;
+package org.grails.boot.internal
+
+import java.lang.annotation.ElementType
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
 
 /**
- * URL converter interface for conversion strategies to implement
  *
- * @author Jeff Brown
- * @since 2.0
+ * Dummy annotation to fool boot into not applying the real 'EnableAutoConfiguration' annotation. Do not use in application code.
+ *
+ * @author Graeme Rocher
  */
-public interface UrlConverter {
-    String BEAN_NAME = "grailsUrlConverter";
+@Retention(RetentionPolicy.SOURCE)
+@Target(ElementType.TYPE)
+@interface EnableAutoConfiguration {
 
-    String toUrlElement(String propertyOrClassName);
 }
