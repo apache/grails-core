@@ -16,24 +16,30 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.plugins;
+package org.apache.grails.core.plugins.filters
 
-import org.springframework.beans.factory.Aware;
+import groovy.transform.CompileStatic
+
+import org.apache.grails.core.plugins.PluginMetadata
 
 /**
- * For implementors interested in obtaining a reference to the Grails PluginManager instance.
+ * A {@link PluginFilter} implementation that performs no filtering.
  *
- * @see GrailsPluginManager
- *
- * @author Graeme Rocher
- * @since 0.6
+ * <p>This filter returns the original plugin metadata list unchanged and is useful when no include or
+ * exclude rules are configured.</p>
  */
-public interface PluginManagerAware extends Aware {
+@CompileStatic
+class NoOpPluginFilter implements PluginFilter {
 
     /**
-     * Sets the plug-in manager on this instance
+     * Returns the original plugin metadata list unchanged.
      *
-     * @param pluginManager The PluginManager
+     * @param original the original plugin metadata list
+     * @return the same {@code original} list reference, without modification
      */
-    void setPluginManager(GrailsPluginManager pluginManager);
+    @Override
+    List<PluginMetadata> filterPluginList(List<PluginMetadata> original) {
+        return original
+    }
+
 }

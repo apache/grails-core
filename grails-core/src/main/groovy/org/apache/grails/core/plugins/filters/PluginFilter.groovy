@@ -16,28 +16,21 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.core.plugins.filters;
+package org.apache.grails.core.plugins.filters
 
-import java.util.List;
-
-import org.apache.grails.core.plugins.PluginMetadata;
+import org.apache.grails.core.plugins.PluginMetadata
 
 /**
- * A {@link PluginFilter} implementation that performs no filtering.
- *
- * <p>This filter returns the original plugin metadata list unchanged and is useful when no include or
- * exclude rules are configured.</p>
+ * Defines a strategy for filtering a list of {@link PluginMetadata}.
  */
-public class NoOpPluginFilter implements PluginFilter {
+interface PluginFilter {
 
     /**
-     * Returns the original plugin metadata list unchanged.
+     * Filters the supplied plugin metadata.
      *
-     * @param original the original plugin metadata list
-     * @return the same {@code original} list reference, without modification
+     * @param original the original plugin metadata list to filter
+     * @return the filtered plugin metadata list
      */
-    @Override
-    public List<PluginMetadata> filterPluginList(List<PluginMetadata> original) {
-        return original;
-    }
+    List<PluginMetadata> filterPluginList(List<PluginMetadata> original)
+
 }

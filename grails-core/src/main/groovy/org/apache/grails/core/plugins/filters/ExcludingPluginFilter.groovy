@@ -16,27 +16,26 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.core.plugins.filters;
+package org.apache.grails.core.plugins.filters
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import groovy.transform.CompileStatic
 
-import org.apache.grails.core.plugins.PluginMetadata;
+import org.apache.grails.core.plugins.PluginMetadata
 
 /**
  * A {@link PluginFilter} implementation that removes explicitly named plugins and any plugins that
  * transitively depend on them.
  */
-public class ExcludingPluginFilter extends BasePluginFilter {
+@CompileStatic
+class ExcludingPluginFilter extends BasePluginFilter {
 
     /**
      * Creates a filter that excludes the supplied plugin names.
      *
      * @param excluded the plugin names to exclude
      */
-    public ExcludingPluginFilter(Set<String> excluded) {
-        super(excluded);
+    ExcludingPluginFilter(Set<String> excluded) {
+        super(excluded)
     }
 
     /**
@@ -44,8 +43,8 @@ public class ExcludingPluginFilter extends BasePluginFilter {
      *
      * @param excluded the plugin names to exclude; each value is trimmed before use
      */
-    public ExcludingPluginFilter(String... excluded) {
-        super(excluded);
+    ExcludingPluginFilter(String... excluded) {
+        super(excluded)
     }
 
     /**
@@ -57,9 +56,9 @@ public class ExcludingPluginFilter extends BasePluginFilter {
      */
     @Override
     protected List<PluginMetadata> getPluginList(List<PluginMetadata> original, List<PluginMetadata> pluginList) {
-        var newList = new ArrayList<>(original);
-        newList.removeIf(pluginList::contains);
-        return newList;
+        var newList = new ArrayList<>(original)
+        newList.removeIf(pluginList::contains)
+        return newList
     }
 
     /**
@@ -74,10 +73,11 @@ public class ExcludingPluginFilter extends BasePluginFilter {
      */
     @Override
     protected void addPluginDependencies(List<PluginMetadata> additionalList, PluginMetadata plugin) {
-        var pluginName = plugin.getName();
+        var pluginName = plugin.getName()
         getAllPlugins().stream()
                 .filter(p -> !pluginName.equals(p.getName())) // looking for dependents, so don't include self
                 .filter(p -> isDependentOn(p, pluginName))
-                .forEach(p -> registerDependency(additionalList, p));
+                .forEach(p -> registerDependency(additionalList, p))
     }
+
 }

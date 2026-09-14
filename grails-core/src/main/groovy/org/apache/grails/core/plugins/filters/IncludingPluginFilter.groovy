@@ -16,27 +16,26 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.core.plugins.filters;
+package org.apache.grails.core.plugins.filters
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import groovy.transform.CompileStatic
 
-import org.apache.grails.core.plugins.PluginMetadata;
+import org.apache.grails.core.plugins.PluginMetadata
 
 /**
  * A {@link PluginFilter} implementation that retains explicitly named plugins and any plugins they
  * transitively depend on.
  */
-public class IncludingPluginFilter extends BasePluginFilter {
+@CompileStatic
+class IncludingPluginFilter extends BasePluginFilter {
 
     /**
      * Creates a filter that includes the supplied plugin names.
      *
      * @param included the plugin names to include
      */
-    public IncludingPluginFilter(Set<String> included) {
-        super(included);
+    IncludingPluginFilter(Set<String> included) {
+        super(included)
     }
 
     /**
@@ -44,8 +43,8 @@ public class IncludingPluginFilter extends BasePluginFilter {
      *
      * @param included the plugin names to include; each value is trimmed before use
      */
-    public IncludingPluginFilter(String... included) {
-        super(included);
+    IncludingPluginFilter(String... included) {
+        super(included)
     }
 
     /**
@@ -57,7 +56,7 @@ public class IncludingPluginFilter extends BasePluginFilter {
      */
     @Override
     protected List<PluginMetadata> getPluginList(List<PluginMetadata> original, List<PluginMetadata> pluginList) {
-        return new ArrayList<>(pluginList);
+        return new ArrayList<>(pluginList)
     }
 
     /**
@@ -71,9 +70,10 @@ public class IncludingPluginFilter extends BasePluginFilter {
      */
     @Override
     protected void addPluginDependencies(List<PluginMetadata> additionalList, PluginMetadata plugin) {
-        var dependencyNames = plugin.getDependsOnNames();
-        for (var name : dependencyNames) {
-            registerDependency(additionalList, getNamedPlugin(name));
+        var dependencyNames = plugin.getDependsOnNames()
+        for (var name in dependencyNames) {
+            registerDependency(additionalList, getNamedPlugin(name))
         }
     }
+
 }

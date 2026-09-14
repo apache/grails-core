@@ -16,18 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.core.plugins.filters;
+package org.apache.grails.core.plugins.filters
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import groovy.transform.CompileStatic
 
-import org.apache.grails.core.plugins.PluginMetadata;
+import org.apache.grails.core.plugins.PluginMetadata
 
 /**
  * Abstract base implementation for plugin filters that start from a supplied set of plugin names,
@@ -45,42 +38,43 @@ import org.apache.grails.core.plugins.PluginMetadata;
  * @see IncludingPluginFilter
  * @see ExcludingPluginFilter
  */
-public abstract class BasePluginFilter implements PluginFilter {
+@CompileStatic
+abstract class BasePluginFilter implements PluginFilter {
 
     /**
      * The plugin names supplied to the filter.
      */
-    private final Set<String> suppliedNames;
+    private final Set<String> suppliedNames
 
     /**
      * Plugins whose names match {@link #suppliedNames}.
      */
-    private final List<PluginMetadata> explicitlyNamedPlugins = new ArrayList<>();
+    private final List<PluginMetadata> explicitlyNamedPlugins = new ArrayList<>()
 
     /**
      * Plugins discovered indirectly through dependency traversal.
      */
-    private final List<PluginMetadata> derivedPlugins = new ArrayList<>();
+    private final List<PluginMetadata> derivedPlugins = new ArrayList<>()
 
     /**
      * Lookup of plugin name to plugin metadata for the original plugin list.
      */
-    protected Map<String, PluginMetadata> nameMap;
+    protected Map<String, PluginMetadata> nameMap
 
     /**
      * Tracks plugin names that have already been added while building the filtered result.
      */
-    private Set<String> addedNames;
+    private Set<String> addedNames
 
-    private List<PluginMetadata> originalPlugins;
+    private List<PluginMetadata> originalPlugins
 
     /**
      * Creates a filter using the supplied plugin names.
      *
      * @param suppliedNames the plugin names that drive the filter result
      */
-    public BasePluginFilter(Set<String> suppliedNames) {
-        this.suppliedNames = suppliedNames;
+    BasePluginFilter(Set<String> suppliedNames) {
+        this.suppliedNames = suppliedNames
     }
 
     /**
@@ -88,10 +82,10 @@ public abstract class BasePluginFilter implements PluginFilter {
      *
      * @param included the plugin names that drive the filter result; each value is trimmed before use
      */
-    public BasePluginFilter(String[] included) {
-        suppliedNames = new HashSet<>();
-        for (var s : included) {
-            suppliedNames.add(s.trim());
+    BasePluginFilter(String[] included) {
+        suppliedNames = new HashSet<>()
+        for (var s in included) {
+            suppliedNames.add(s.trim())
         }
     }
 
@@ -105,20 +99,20 @@ public abstract class BasePluginFilter implements PluginFilter {
      * @return the filtered plugin list
      */
     @Override
-    public List<PluginMetadata> filterPluginList(List<PluginMetadata> original) {
+    List<PluginMetadata> filterPluginList(List<PluginMetadata> original) {
 
-        originalPlugins = Collections.unmodifiableList(original);
-        addedNames = new HashSet<>();
+        originalPlugins = Collections.unmodifiableList(original)
+        addedNames = new HashSet<>()
 
-        buildNameMap();
-        buildExplicitlyNamedList();
-        buildDerivedPluginList();
+        buildNameMap()
+        buildExplicitlyNamedList()
+        buildDerivedPluginList()
 
-        var pluginList = new ArrayList<PluginMetadata>();
-        pluginList.addAll(explicitlyNamedPlugins);
-        pluginList.addAll(derivedPlugins);
+        var pluginList = new ArrayList<PluginMetadata>()
+        pluginList.addAll(explicitlyNamedPlugins)
+        pluginList.addAll(derivedPlugins)
 
-        return getPluginList(originalPlugins, pluginList);
+        return getPluginList(originalPlugins, pluginList)
     }
 
     /**
@@ -129,7 +123,7 @@ public abstract class BasePluginFilter implements PluginFilter {
      * @param additionalList the list collecting plugins discovered indirectly
      * @param plugin the plugin whose related plugins should be considered
      */
-    protected abstract void addPluginDependencies(List<PluginMetadata> additionalList, PluginMetadata plugin);
+    protected abstract void addPluginDependencies(List<PluginMetadata> additionalList, PluginMetadata plugin)
 
     /**
      * Builds the final filtered list from the original plugins and the plugins collected by the shared algorithm.
@@ -138,7 +132,7 @@ public abstract class BasePluginFilter implements PluginFilter {
      * @param pluginList the explicit and dependency-derived plugins collected so far
      * @return the filtered plugin list to expose to callers
      */
-    protected abstract List<PluginMetadata> getPluginList(List<PluginMetadata> original, List<PluginMetadata> pluginList);
+    protected abstract List<PluginMetadata> getPluginList(List<PluginMetadata> original, List<PluginMetadata> pluginList)
 
     /**
      * Determines whether the supplied plugin declares a dependency on the named plugin.
@@ -148,12 +142,12 @@ public abstract class BasePluginFilter implements PluginFilter {
      * @return {@code true} if {@code plugin} depends on {@code pluginName}
      */
     protected boolean isDependentOn(PluginMetadata plugin, String pluginName) {
-        for (var dependencyName : plugin.getDependsOnNames()) {
+        for (var dependencyName in plugin.getDependsOnNames()) {
             if (pluginName.equals(dependencyName)) {
-                return true;
+                return true
             }
         }
-        return false;
+        return false
     }
 
     /**
@@ -164,9 +158,9 @@ public abstract class BasePluginFilter implements PluginFilter {
      */
     protected void registerDependency(List<PluginMetadata> additionalList, PluginMetadata plugin) {
         if (!addedNames.contains(plugin.getName())) {
-            addedNames.add(plugin.getName());
-            additionalList.add(plugin);
-            addPluginDependencies(additionalList, plugin);
+            addedNames.add(plugin.getName())
+            additionalList.add(plugin)
+            addPluginDependencies(additionalList, plugin)
         }
     }
 
@@ -176,7 +170,7 @@ public abstract class BasePluginFilter implements PluginFilter {
      * @return all original plugins keyed in {@link #nameMap}
      */
     protected Collection<PluginMetadata> getAllPlugins() {
-        return Collections.unmodifiableCollection(nameMap.values());
+        return Collections.unmodifiableCollection(nameMap.values())
     }
 
     /**
@@ -186,7 +180,7 @@ public abstract class BasePluginFilter implements PluginFilter {
      * @return the matching plugin metadata, or {@code null} if none exists
      */
     protected PluginMetadata getNamedPlugin(String name) {
-        return nameMap.get(name);
+        return nameMap.get(name)
     }
 
     /**
@@ -195,7 +189,7 @@ public abstract class BasePluginFilter implements PluginFilter {
      * @return the supplied plugin names
      */
     protected Set<String> getSuppliedNames() {
-        return suppliedNames;
+        return suppliedNames
     }
 
     /**
@@ -204,9 +198,9 @@ public abstract class BasePluginFilter implements PluginFilter {
      */
     private void buildDerivedPluginList() {
         // find their dependencies
-        for (var plugin : explicitlyNamedPlugins) {
+        for (var plugin in explicitlyNamedPlugins) {
             // recursively add in plugin dependencies
-            addPluginDependencies(derivedPlugins, plugin);
+            addPluginDependencies(derivedPlugins, plugin)
         }
     }
 
@@ -217,18 +211,19 @@ public abstract class BasePluginFilter implements PluginFilter {
         originalPlugins.stream()
                 .filter(p -> suppliedNames.contains(p.getName()))
                 .forEach(p -> {
-                    explicitlyNamedPlugins.add(p);
-                    addedNames.add(p.getName());
-                });
+                    explicitlyNamedPlugins.add(p)
+                    addedNames.add(p.getName())
+                })
     }
 
     /**
      * Builds the {@link #nameMap} lookup from the original plugin list.
      */
     private void buildNameMap() {
-        nameMap = new HashMap<>();
-        for (var plugin : originalPlugins) {
-            nameMap.put(plugin.getName(), plugin);
+        nameMap = new HashMap<>()
+        for (var plugin in originalPlugins) {
+            nameMap.put(plugin.getName(), plugin)
         }
     }
+
 }

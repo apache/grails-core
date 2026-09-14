@@ -16,67 +16,67 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.core.plugins;
+package org.apache.grails.core.plugins
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.xml.sax.Attributes;
-import org.xml.sax.helpers.DefaultHandler;
+import groovy.transform.CompileStatic
+import org.xml.sax.Attributes
+import org.xml.sax.helpers.DefaultHandler
 
 /**
  * SAX handler for parsing {@code META-INF/grails-plugin.xml} files.
  * Extracts {@code <type>} elements containing plugin class
  * fully-qualified names.
  */
+@CompileStatic
 class PluginXmlHandler extends DefaultHandler {
 
     private enum ParseState { IDLE, TYPE, RESOURCE }
 
-    private ParseState state = ParseState.IDLE;
-    private final List<String> pluginTypes = new ArrayList<>();
-    private final List<String> pluginClasses = new ArrayList<>();
-    private StringBuilder buffer = new StringBuilder();
+    private ParseState state = ParseState.IDLE
+    private final List<String> pluginTypes = new ArrayList<>()
+    private final List<String> pluginClasses = new ArrayList<>()
+    private StringBuilder buffer = new StringBuilder()
 
     @Override
-    public void startElement(String uri, String localName, String qName,
+    void startElement(String uri, String localName, String qName,
                              Attributes attributes) {
-        if ("type".equals(localName) || "type".equals(qName)) {
-            state = ParseState.TYPE;
-            buffer = new StringBuilder();
-        } else if ("resource".equals(localName) || "resource".equals(qName)) {
-            state = ParseState.RESOURCE;
-            buffer = new StringBuilder();
+        if ('type'.equals(localName) || 'type'.equals(qName)) {
+            state = ParseState.TYPE
+            buffer = new StringBuilder()
+        } else if ('resource'.equals(localName) || 'resource'.equals(qName)) {
+            state = ParseState.RESOURCE
+            buffer = new StringBuilder()
         }
     }
 
     @Override
-    public void characters(char[] ch, int start, int length) {
+    void characters(char[] ch, int start, int length) {
         if (state == ParseState.TYPE || state == ParseState.RESOURCE) {
-            buffer.append(ch, start, length);
+            buffer.append(ch, start, length)
         }
     }
 
     @Override
-    public void endElement(String uri, String localName, String qName) {
+    void endElement(String uri, String localName, String qName) {
         switch (state) {
             case TYPE:
-                pluginTypes.add(buffer.toString().trim());
-                break;
+                pluginTypes.add(buffer.toString().trim())
+                break
             case RESOURCE:
-                pluginClasses.add(buffer.toString().trim());
-                break;
+                pluginClasses.add(buffer.toString().trim())
+                break
             default:
-                break;
+                break
         }
-        state = ParseState.IDLE;
+        state = ParseState.IDLE
     }
 
-    public List<String> getPluginClassNames() {
-        return pluginTypes;
+    List<String> getPluginClassNames() {
+        return pluginTypes
     }
 
-    public List<String> getProvidedClasses() {
-        return pluginClasses;
+    List<String> getProvidedClasses() {
+        return pluginClasses
     }
+
 }

@@ -16,15 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.plugins;
+package grails.plugins
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Function;
+import java.util.function.Function
+
+import groovy.transform.CompileStatic
 
 /**
  * Canonical topological sort for Grails plugins based on {@code loadAfter}
@@ -59,7 +55,8 @@ import java.util.function.Function;
  *
  * @since 7.1
  */
-public final class GrailsPluginSorter {
+@CompileStatic
+final class GrailsPluginSorter {
 
     private GrailsPluginSorter() {
         // utility class
@@ -88,16 +85,16 @@ public final class GrailsPluginSorter {
             Function<String, T> pluginLookup) {
 
         Map<T, List<T>> loadOrderDependencies = resolveLoadDependencies(
-                plugins, loadAfterExtractor, loadBeforeExtractor, pluginLookup);
+                plugins, loadAfterExtractor, loadBeforeExtractor, pluginLookup)
 
-        List<T> sorted = new ArrayList<>(plugins.size());
-        Set<T> visited = new HashSet<>();
+        List<T> sorted = new ArrayList<>(plugins.size())
+        Set<T> visited = new HashSet<>()
 
-        for (T plugin : plugins) {
-            visitTopologicalSort(plugin, sorted, visited, loadOrderDependencies);
+        for (T plugin in plugins) {
+            visitTopologicalSort(plugin, sorted, visited, loadOrderDependencies)
         }
 
-        return sorted;
+        return sorted
     }
 
     /**
@@ -114,18 +111,18 @@ public final class GrailsPluginSorter {
      * @param loadBeforeExtractor extracts the {@code loadBefore} names
      * @return a new list with the plugins in topological order
      */
-    public static <T> List<T> sort(
+    static <T> List<T> sort(
             List<T> plugins,
             Function<T, String> nameExtractor,
             Function<T, String[]> loadAfterExtractor,
             Function<T, String[]> loadBeforeExtractor) {
 
-        Map<String, T> pluginsByName = new HashMap<>();
-        for (T plugin : plugins) {
-            pluginsByName.putIfAbsent(nameExtractor.apply(plugin), plugin);
+        Map<String, T> pluginsByName = new HashMap<>()
+        for (T plugin in plugins) {
+            pluginsByName.putIfAbsent(nameExtractor.apply(plugin), plugin)
         }
 
-        return sortPlugins(plugins, loadAfterExtractor, loadBeforeExtractor, pluginsByName::get);
+        return sortPlugins(plugins, loadAfterExtractor, loadBeforeExtractor, pluginsByName::get)
     }
 
     /**
@@ -150,16 +147,16 @@ public final class GrailsPluginSorter {
             Function<T, String[]> loadBeforeExtractor,
             Function<String, T> pluginLookup) {
 
-        Map<T, List<T>> loadOrderDependencies = new HashMap<>();
+        Map<T, List<T>> loadOrderDependencies = new HashMap<>()
 
-        for (T plugin : plugins) {
+        for (T plugin in plugins) {
             // loadAfter: this plugin should load after the named plugins
-            addEdges(loadOrderDependencies, loadAfterExtractor, plugin, pluginLookup, true);
+            addEdges(loadOrderDependencies, loadAfterExtractor, plugin, pluginLookup, true)
             // loadBefore: the named plugins should load after this plugin
-            addEdges(loadOrderDependencies, loadBeforeExtractor, plugin, pluginLookup, false);
+            addEdges(loadOrderDependencies, loadBeforeExtractor, plugin, pluginLookup, false)
         }
 
-        return loadOrderDependencies;
+        return loadOrderDependencies
     }
 
     /**
@@ -177,14 +174,14 @@ public final class GrailsPluginSorter {
             Function<String, T> pluginLookup,
             boolean forwardEdge) {
 
-        String[] names = extractor.apply(plugin);
+        String[] names = extractor.apply(plugin)
         if (names != null) {
-            for (String name : names) {
-                T other = pluginLookup.apply(name);
+            for (String name in names) {
+                T other = pluginLookup.apply(name)
                 if (other != null) {
-                    T dependent = forwardEdge ? plugin : other;
-                    T dependency = forwardEdge ? other : plugin;
-                    loadOrderDependencies.computeIfAbsent(dependent, k -> new ArrayList<>()).add(dependency);
+                    T dependent = forwardEdge ? plugin : other
+                    T dependency = forwardEdge ? other : plugin
+                    loadOrderDependencies.computeIfAbsent(dependent, k -> new ArrayList<>()).add(dependency)
                 }
             }
         }
@@ -202,14 +199,15 @@ public final class GrailsPluginSorter {
             Map<T, List<T>> loadOrderDependencies) {
 
         if (plugin != null && !visited.contains(plugin)) {
-            visited.add(plugin);
-            List<T> deps = loadOrderDependencies.get(plugin);
+            visited.add(plugin)
+            List<T> deps = loadOrderDependencies.get(plugin)
             if (deps != null) {
-                for (T dep : deps) {
-                    visitTopologicalSort(dep, sorted, visited, loadOrderDependencies);
+                for (T dep in deps) {
+                    visitTopologicalSort(dep, sorted, visited, loadOrderDependencies)
                 }
             }
-            sorted.add(plugin);
+            sorted.add(plugin)
         }
     }
+
 }

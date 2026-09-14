@@ -16,18 +16,15 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.core.plugins.filters;
+package org.apache.grails.core.plugins.filters
 
-import java.util.Collection;
-import java.util.LinkedHashSet;
-import java.util.Set;
+import groovy.transform.CompileStatic
+import org.springframework.boot.context.properties.bind.Bindable
+import org.springframework.boot.context.properties.bind.Binder
+import org.springframework.core.env.Environment
+import org.springframework.util.StringUtils
 
-import org.springframework.boot.context.properties.bind.Bindable;
-import org.springframework.boot.context.properties.bind.Binder;
-import org.springframework.core.env.Environment;
-import org.springframework.util.StringUtils;
-
-import grails.config.Settings;
+import grails.config.Settings
 
 /**
  * Resolves the appropriate {@link PluginFilter} implementation from Grails plugin filter configuration.
@@ -43,9 +40,10 @@ import grails.config.Settings;
  *
  * <p>The resolved filter is cached per retriever instance, so repeated lookups return the same filter.</p>
  */
-public class PluginFilterRetriever {
+@CompileStatic
+class PluginFilterRetriever {
 
-    private PluginFilter filter;
+    private PluginFilter filter
 
     /**
      * Returns the cached plugin filter for this retriever, resolving it from the environment on first access.
@@ -53,13 +51,13 @@ public class PluginFilterRetriever {
      * @param environment the environment containing plugin include and exclude configuration
      * @return the resolved plugin filter
      */
-    public PluginFilter getPluginFilter(Environment environment) {
+    PluginFilter getPluginFilter(Environment environment) {
         if (filter != null) {
-            return filter;
+            return filter
         }
 
-        filter = findPluginFilter(environment);
-        return filter;
+        filter = findPluginFilter(environment)
+        return filter
     }
 
     /**
@@ -74,29 +72,29 @@ public class PluginFilterRetriever {
      */
     private PluginFilter findPluginFilter(Environment environment) {
         if (environment == null) {
-            throw new IllegalArgumentException("Environment cannot be null");
+            throw new IllegalArgumentException('Environment cannot be null')
         }
 
-        var binder = Binder.get(environment);
-        var includes = binder.bind(Settings.PLUGIN_INCLUDES, Bindable.listOf(String.class)).orElse(null);
+        var binder = Binder.get(environment)
+        var includes = binder.bind(Settings.PLUGIN_INCLUDES, Bindable.listOf(String)).orElse(null)
         if (includes != null && !includes.isEmpty()) {
-            return new IncludingPluginFilter(toSet(includes));
+            return new IncludingPluginFilter(toSet(includes))
         }
-        var includesCompatibility = environment.getProperty(Settings.PLUGIN_INCLUDES);
+        var includesCompatibility = environment.getProperty(Settings.PLUGIN_INCLUDES)
         if (StringUtils.hasText(includesCompatibility)) {
-            return new IncludingPluginFilter(toSet(StringUtils.commaDelimitedListToSet(includesCompatibility)));
+            return new IncludingPluginFilter(toSet(StringUtils.commaDelimitedListToSet(includesCompatibility)))
         }
 
-        var excludes = binder.bind(Settings.PLUGIN_EXCLUDES, Bindable.listOf(String.class)).orElse(null);
+        var excludes = binder.bind(Settings.PLUGIN_EXCLUDES, Bindable.listOf(String)).orElse(null)
         if (excludes != null && !excludes.isEmpty()) {
-            return new ExcludingPluginFilter(toSet(excludes));
+            return new ExcludingPluginFilter(toSet(excludes))
         }
-        var excludesCompatibility = environment.getProperty(Settings.PLUGIN_EXCLUDES);
+        var excludesCompatibility = environment.getProperty(Settings.PLUGIN_EXCLUDES)
         if (StringUtils.hasText(excludesCompatibility)) {
-            return new ExcludingPluginFilter(toSet(StringUtils.commaDelimitedListToSet(excludesCompatibility)));
+            return new ExcludingPluginFilter(toSet(StringUtils.commaDelimitedListToSet(excludesCompatibility)))
         }
 
-        return new NoOpPluginFilter();
+        return new NoOpPluginFilter()
     }
 
     /**
@@ -108,17 +106,18 @@ public class PluginFilterRetriever {
      * @return an ordered set containing the normalized plugin names
      */
     private static Set<String> toSet(Collection<String> values) {
-        var set = new LinkedHashSet<String>();
-        for (var v : values) {
+        var set = new LinkedHashSet<String>()
+        for (var v in values) {
             if (v == null) {
-                continue;
+                continue
             }
 
-            var s = v.trim();
+            var s = v.trim()
             if (!s.isEmpty()) {
-                set.add(s);
+                set.add(s)
             }
         }
-        return set;
+        return set
     }
+
 }

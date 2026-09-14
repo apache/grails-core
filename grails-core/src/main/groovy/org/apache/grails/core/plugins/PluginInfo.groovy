@@ -16,9 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.core.plugins;
+package org.apache.grails.core.plugins
 
-import org.springframework.core.io.Resource;
+import groovy.transform.CompileStatic
+import org.springframework.core.io.Resource
 
 /**
  * Represents a discovered Grails plugin together with the metadata and resources needed during bootstrap.
@@ -27,12 +28,13 @@ import org.springframework.core.io.Resource;
  * optional plugin configuration resource, and whether the plugin originated from dynamic plugin configuration rather
  * than classpath descriptor discovery.</p>
  */
-public final class PluginInfo {
+@CompileStatic
+final class PluginInfo {
 
-    private final PluginMetadata metadata;
-    private final PluginDescriptor pluginDescriptor;
-    private final Resource configResource;
-    private final boolean dynamic;
+    private final PluginMetadata metadata
+    private final PluginDescriptor pluginDescriptor
+    private final Resource configResource
+    private final boolean dynamic
 
     /**
      * Creates a new {@code PluginInfo}.
@@ -44,10 +46,10 @@ public final class PluginInfo {
      * @param dynamic {@code true} if this plugin came from dynamically supplied classes or resources
      */
     PluginInfo(PluginDescriptor pluginDescriptor, PluginMetadata metadata, Resource configResource, boolean dynamic) {
-        this.metadata = metadata;
-        this.pluginDescriptor = pluginDescriptor;
-        this.configResource = configResource;
-        this.dynamic = dynamic;
+        this.metadata = metadata
+        this.pluginDescriptor = pluginDescriptor
+        this.configResource = configResource
+        this.dynamic = dynamic
     }
 
     /**
@@ -55,8 +57,8 @@ public final class PluginInfo {
      *
      * @return the plugin name
      */
-    public String getName() {
-        return metadata.getName();
+    String getName() {
+        return metadata.getName()
     }
 
     /**
@@ -64,8 +66,8 @@ public final class PluginInfo {
      *
      * @return the plugin version
      */
-    public String getPluginVersion() {
-        return metadata.getPluginVersion();
+    String getPluginVersion() {
+        return metadata.getPluginVersion()
     }
 
     /**
@@ -73,8 +75,8 @@ public final class PluginInfo {
      *
      * @return the plugin class
      */
-    public Class<?> getPluginClass() {
-        return metadata.getPluginClass();
+    Class<?> getPluginClass() {
+        return metadata.getPluginClass()
     }
 
     /**
@@ -82,8 +84,8 @@ public final class PluginInfo {
      *
      * @return the plugin configuration resource, or {@code null} if the plugin has no external config resource
      */
-    public Resource getConfigResource() {
-        return configResource;
+    Resource getConfigResource() {
+        return configResource
     }
 
     /**
@@ -91,8 +93,8 @@ public final class PluginInfo {
      *
      * @return the plugin metadata backing this plugin info
      */
-    public PluginMetadata getMetadata() {
-        return metadata;
+    PluginMetadata getMetadata() {
+        return metadata
     }
 
     /**
@@ -100,8 +102,8 @@ public final class PluginInfo {
      *
      * @return the declared load-after plugin names
      */
-    public String[] getLoadAfterNames() {
-        return metadata.getLoadAfterNames();
+    String[] getLoadAfterNames() {
+        return metadata.getLoadAfterNames()
     }
 
     /**
@@ -109,8 +111,8 @@ public final class PluginInfo {
      *
      * @return the declared load-before plugin names
      */
-    public String[] getLoadBeforeNames() {
-        return metadata.getLoadBeforeNames();
+    String[] getLoadBeforeNames() {
+        return metadata.getLoadBeforeNames()
     }
 
     /**
@@ -118,8 +120,8 @@ public final class PluginInfo {
      *
      * @return the declared dependency plugin names
      */
-    public String[] getDependsOnNames() {
-        return metadata.getDependsOnNames();
+    String[] getDependsOnNames() {
+        return metadata.getDependsOnNames()
     }
 
     /**
@@ -127,8 +129,8 @@ public final class PluginInfo {
      *
      * @return the declared observed plugin names
      */
-    public String[] getObservedPluginNames() {
-        return metadata.getObservedPluginNames();
+    String[] getObservedPluginNames() {
+        return metadata.getObservedPluginNames()
     }
 
     /**
@@ -137,8 +139,8 @@ public final class PluginInfo {
      * @return {@code true} if this plugin came from configured classes or Groovy resources instead of classpath
      * descriptor discovery
      */
-    public boolean isDynamic() {
-        return dynamic;
+    boolean isDynamic() {
+        return dynamic
     }
 
     /**
@@ -146,8 +148,8 @@ public final class PluginInfo {
      *
      * @return the declared Grails version
      */
-    public String getGrailsVersionRange() {
-        return getMetadata().getGrailsVersionRange();
+    String getGrailsVersionRange() {
+        return getMetadata().getGrailsVersionRange()
     }
 
     /**
@@ -155,8 +157,8 @@ public final class PluginInfo {
      *
      * @return the declared evicted plugin names
      */
-    public String[] getEvictions() {
-        return metadata.getEvictions();
+    String[] getEvictions() {
+        return metadata.getEvictions()
     }
 
     /**
@@ -164,8 +166,8 @@ public final class PluginInfo {
      *
      * @return the plugin descriptor associated with this plugin
      */
-    public PluginDescriptor getPluginDescriptor() {
-        return pluginDescriptor;
+    PluginDescriptor getPluginDescriptor() {
+        return pluginDescriptor
     }
 
     /**
@@ -174,8 +176,8 @@ public final class PluginInfo {
      * @param grailsVersion the Grails version to test against
      * @return {@code true} if the plugin is compatible with the supplied Grails version
      */
-    public boolean isGrailsVersionCompatible(String grailsVersion) {
-        return PluginUtils.isPluginVersionCompatible(getPluginVersion(), getGrailsVersionRange(), grailsVersion, getName());
+    boolean isGrailsVersionCompatible(String grailsVersion) {
+        return PluginUtils.isPluginVersionCompatible(getPluginVersion(), getGrailsVersionRange(), grailsVersion, getName())
     }
 
     /**
@@ -185,19 +187,20 @@ public final class PluginInfo {
      * @return {@code true} if both plugin infos are considered equal by their metadata
      */
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof PluginInfo other)) return false;
-        return metadata.equals(other.metadata);
+    boolean equals(Object o) {
+        if (this.is(o)) return true
+        if (!(o instanceof PluginInfo other)) return false
+        return metadata.equals(other.metadata)
     }
 
     @Override
-    public int hashCode() {
-        return metadata.hashCode();
+    int hashCode() {
+        return metadata.hashCode()
     }
 
     @Override
-    public String toString() {
-        return "GrailsPluginInfo[" + metadata.getName() + "]";
+    String toString() {
+        return 'GrailsPluginInfo[' + metadata.getName() + ']'
     }
+
 }

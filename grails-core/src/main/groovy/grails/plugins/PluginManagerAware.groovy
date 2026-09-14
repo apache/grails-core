@@ -16,22 +16,25 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.core.plugins.filters;
+package grails.plugins
 
-import java.util.List;
-
-import org.apache.grails.core.plugins.PluginMetadata;
+import org.springframework.beans.factory.Aware
 
 /**
- * Defines a strategy for filtering a list of {@link PluginMetadata}.
+ * For implementors interested in obtaining a reference to the Grails PluginManager instance.
+ *
+ * @see GrailsPluginManager
+ *
+ * @author Graeme Rocher
+ * @since 0.6
  */
-public interface PluginFilter {
+interface PluginManagerAware extends Aware {
 
     /**
-     * Filters the supplied plugin metadata.
+     * Sets the plug-in manager on this instance
      *
-     * @param original the original plugin metadata list to filter
-     * @return the filtered plugin metadata list
+     * @param pluginManager The PluginManager
      */
-    List<PluginMetadata> filterPluginList(List<PluginMetadata> original);
+    void setPluginManager(GrailsPluginManager pluginManager)
+
 }

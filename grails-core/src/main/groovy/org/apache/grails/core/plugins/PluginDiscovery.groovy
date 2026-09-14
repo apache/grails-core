@@ -16,15 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.core.plugins;
+package org.apache.grails.core.plugins
 
-import java.util.Collection;
-import java.util.List;
+import org.springframework.core.env.Environment
+import org.springframework.core.io.Resource
 
-import org.springframework.core.env.Environment;
-import org.springframework.core.io.Resource;
-
-import org.apache.grails.core.plugins.filters.PluginFilter;
+import org.apache.grails.core.plugins.filters.PluginFilter
 
 /**
  * Defines a strategy for discovering the Grails plugins that should participate in application bootstrap.
@@ -36,12 +33,12 @@ import org.apache.grails.core.plugins.filters.PluginFilter;
  *
  * @since 7.1
  */
-public interface PluginDiscovery {
+interface PluginDiscovery {
 
     /**
      * The bean name used when the bootstrap {@code PluginDiscovery} is promoted into the application context.
      */
-    String BEAN_NAME = "grailsPluginDiscovery";
+    String BEAN_NAME = 'grailsPluginDiscovery'
 
     /**
      * Initializes plugin discovery for the supplied environment.
@@ -52,7 +49,7 @@ public interface PluginDiscovery {
      *
      * @param environment the environment used to determine plugin filtering and ordering
      */
-    void init(Environment environment);
+    void init(Environment environment)
 
     /**
      * Returns plugins supplied dynamically instead of being discovered from classpath descriptors.
@@ -61,7 +58,7 @@ public interface PluginDiscovery {
      *
      * @return dynamically configured plugins discovered outside the standard classpath descriptor scan
      */
-    Collection<PluginInfo> getDynamicPlugins();
+    Collection<PluginInfo> getDynamicPlugins()
 
     /**
      * Determines whether a plugin failed during discovery or dependency resolution.
@@ -69,7 +66,7 @@ public interface PluginDiscovery {
      * @param name the name of the plugin; implementations may normalize the name before lookup
      * @return {@code true} if the named plugin could not be loaded successfully
      */
-    boolean hasFailedPlugin(String name);
+    boolean hasFailedPlugin(String name)
 
     /**
      * Returns a plugin that failed during discovery or dependency resolution.
@@ -77,14 +74,14 @@ public interface PluginDiscovery {
      * @param name the name of the plugin; implementations may normalize the name before lookup
      * @return the failed plugin, or {@code null} if no matching failed plugin exists
      */
-    PluginInfo getFailedPlugin(String name);
+    PluginInfo getFailedPlugin(String name)
 
     /**
      * Returns every plugin that failed during discovery or dependency resolution.
      *
      * @return the plugins that could not be loaded successfully
      */
-    Collection<PluginInfo> getFailedPlugins();
+    Collection<PluginInfo> getFailedPlugins()
 
     /**
      * Finds a discovered plugin by name.
@@ -92,7 +89,7 @@ public interface PluginDiscovery {
      * @param pluginName a plugin name to search for; implementations may normalize the name before lookup
      * @return the plugin information if found, otherwise {@code null}
      */
-    PluginInfo findPlugin(String pluginName);
+    PluginInfo findPlugin(String pluginName)
 
     /**
      * Finds a discovered plugin by name and required version.
@@ -101,21 +98,21 @@ public interface PluginDiscovery {
      * @param version the required version of the plugin
      * @return the matching plugin if it satisfies the required version, otherwise {@code null}
      */
-    PluginInfo findPlugin(String pluginName, Object version);
+    PluginInfo findPlugin(String pluginName, Object version)
 
     /**
      * Returns the discovered plugins in topological order.
      *
      * @return plugins ordered by dependency and declared load-before/load-after relationships
      */
-    List<PluginInfo> getPluginsInTopologicalOrder();
+    List<PluginInfo> getPluginsInTopologicalOrder()
 
     /**
      * Returns the discovered plugins in their effective load order.
      *
      * @return the order in which plugins should be loaded
      */
-    List<PluginInfo> getPluginsInLoadOrder();
+    List<PluginInfo> getPluginsInLoadOrder()
 
     /**
      * Determines whether a plugin with the given name has been discovered.
@@ -123,7 +120,7 @@ public interface PluginDiscovery {
      * @param name the name of the plugin; implementations may normalize the name before lookup
      * @return {@code true} if a plugin with the given name exists, otherwise {@code false}
      */
-    boolean hasPlugin(String name);
+    boolean hasPlugin(String name)
 
     /**
      * Finds plugins that observe the supplied plugin.
@@ -131,7 +128,7 @@ public interface PluginDiscovery {
      * @param plugin the plugin to get the observers for
      * @return the plugins observing the given plugin, or an empty collection if there are none
      */
-    Collection<PluginInfo> findPluginObservers(PluginInfo plugin);
+    Collection<PluginInfo> findPluginObservers(PluginInfo plugin)
 
     /**
      * Enables or disables discovery of plugins from classpath descriptors.
@@ -139,61 +136,62 @@ public interface PluginDiscovery {
      * @param loadClasspathPlugins true if plugins should be loaded from the classpath,
      *                             otherwise no classpath plugins will be searched
      */
-    void setLoadPluginsFromClasspath(boolean loadClasspathPlugins);
+    void setLoadPluginsFromClasspath(boolean loadClasspathPlugins)
 
     /**
      * Controls whether at least one classpath plugin is required.
      *
      * @param requireClasspathPlugin if true, classpath plugins will be required to be present
      */
-    void setClasspathPluginsRequired(boolean requireClasspathPlugin);
+    void setClasspathPluginsRequired(boolean requireClasspathPlugin)
 
     /**
      * Overrides the plugin filter used during discovery.
      *
      * @param filter an override to filter plugins that are found during the discovery process
      */
-    void setPluginFilter(PluginFilter filter);
+    void setPluginFilter(PluginFilter filter)
 
     /**
      * Configures Groovy plugin resources to be treated as dynamic plugins.
      *
      * @param pluginResources the resources containing dynamically defined plugin classes
      */
-    void setPluginResources(Resource[] pluginResources);
+    void setPluginResources(Resource[] pluginResources)
 
     /**
      * Configures resource locations to search for dynamically defined plugins.
      *
      * @param pluginResources the resource location patterns containing dynamically defined plugins
      */
-    void setPluginResources(String[] pluginResources);
+    void setPluginResources(String[] pluginResources)
 
     /**
      * Configures a single resource location to search for dynamically defined plugins.
      *
      * @param resourcePath the resource location containing dynamically defined plugins
      */
-    void setPluginResources(String resourcePath);
+    void setPluginResources(String resourcePath)
 
     /**
      * Configures explicit plugin classes to be treated as dynamic plugins.
      *
      * @param pluginClasses the dynamically supplied plugin classes
      */
-    void setPluginClasses(Class<?>[] pluginClasses);
+    void setPluginClasses(Class<?>[] pluginClasses)
 
     /**
      * Returns the configured dynamic plugin resources.
      *
      * @return the dynamic plugin resources currently configured for discovery
      */
-    Resource[] getPluginResources();
+    Resource[] getPluginResources()
 
     /**
      * Resets the discovery state so plugins can be discovered again.
      *
      * <p><strong>Warning:</strong> This should only be done in controlled environments, usually during testing.</p>
      */
-    void reset();
+    void reset()
+
 }

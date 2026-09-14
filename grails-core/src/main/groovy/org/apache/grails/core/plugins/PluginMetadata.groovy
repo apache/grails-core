@@ -16,13 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.core.plugins;
+package org.apache.grails.core.plugins
 
-import java.util.Map;
-import java.util.Set;
+import groovy.transform.CompileStatic
 
-import grails.plugins.exceptions.PluginException;
-import grails.util.Environment;
+import grails.plugins.exceptions.PluginException
+import grails.util.Environment
 
 /**
  * Immutable metadata extracted from a Grails plugin class during discovery.
@@ -30,20 +29,21 @@ import grails.util.Environment;
  * <p>This value object captures the fields needed for plugin filtering, ordering, dependency resolution,
  * environment checks, and later bootstrap processing.</p>
  */
-public final class PluginMetadata {
+@CompileStatic
+final class PluginMetadata {
 
-    private final String name;
-    private final String pluginVersion;
-    private final String grailsVersionRange;
-    private final Class<?> pluginClass;
-    private final String[] loadAfterNames;
-    private final String[] loadBeforeNames;
-    private final Map<String, Object> dependencies;
-    private final String[] dependsOnNames;
-    private final String[] evictions;
-    private final String[] observedPluginNames;
-    private final Map<String, Set<Object>> environments;
-    private final boolean enabled;
+    private final String name
+    private final String pluginVersion
+    private final String grailsVersionRange
+    private final Class<?> pluginClass
+    private final String[] loadAfterNames
+    private final String[] loadBeforeNames
+    private final Map<String, Object> dependencies
+    private final String[] dependsOnNames
+    private final String[] evictions
+    private final String[] observedPluginNames
+    private final Map<String, Set<Object>> environments
+    private final boolean enabled
 
     /**
      * Creates plugin metadata extracted from a plugin class.
@@ -61,7 +61,7 @@ public final class PluginMetadata {
      * @param environments the environments this plugin is enabled for, or an empty map if enabled for all environments
      * @param enabled whether the plugin is enabled at all
      */
-    public PluginMetadata(
+    PluginMetadata(
             String name,
             String pluginVersion,
             String grailsVersionRange,
@@ -74,18 +74,18 @@ public final class PluginMetadata {
             String[] observedPluginNames,
             Map<String, Set<Object>> environments,
             boolean enabled) {
-        this.name = name;
-        this.pluginVersion = pluginVersion;
-        this.grailsVersionRange = grailsVersionRange;
-        this.pluginClass = pluginClass;
-        this.loadAfterNames = loadAfterNames;
-        this.loadBeforeNames = loadBeforeNames;
-        this.dependencies = dependencies;
-        this.dependsOnNames = dependsOnNames;
-        this.evictions = evictions;
-        this.observedPluginNames = observedPluginNames;
-        this.environments = environments;
-        this.enabled = enabled;
+        this.name = name
+        this.pluginVersion = pluginVersion
+        this.grailsVersionRange = grailsVersionRange
+        this.pluginClass = pluginClass
+        this.loadAfterNames = loadAfterNames
+        this.loadBeforeNames = loadBeforeNames
+        this.dependencies = dependencies
+        this.dependsOnNames = dependsOnNames
+        this.evictions = evictions
+        this.observedPluginNames = observedPluginNames
+        this.environments = environments
+        this.enabled = enabled
     }
 
     /**
@@ -93,8 +93,8 @@ public final class PluginMetadata {
      *
      * @return the plugin name
      */
-    public String getName() {
-        return name;
+    String getName() {
+        return name
     }
 
     /**
@@ -102,8 +102,8 @@ public final class PluginMetadata {
      *
      * @return the plugin version
      */
-    public String getPluginVersion() {
-        return pluginVersion;
+    String getPluginVersion() {
+        return pluginVersion
     }
 
     /**
@@ -111,8 +111,8 @@ public final class PluginMetadata {
      *
      * @return the supported Grails version
      */
-    public String getGrailsVersionRange() {
-        return grailsVersionRange;
+    String getGrailsVersionRange() {
+        return grailsVersionRange
     }
 
     /**
@@ -120,8 +120,8 @@ public final class PluginMetadata {
      *
      * @return the plugin class
      */
-    public Class<?> getPluginClass() {
-        return pluginClass;
+    Class<?> getPluginClass() {
+        return pluginClass
     }
 
     /**
@@ -129,8 +129,8 @@ public final class PluginMetadata {
      *
      * @return the declared load-after plugin names
      */
-    public String[] getLoadAfterNames() {
-        return loadAfterNames;
+    String[] getLoadAfterNames() {
+        return loadAfterNames
     }
 
     /**
@@ -138,8 +138,8 @@ public final class PluginMetadata {
      *
      * @return the declared load-before plugin names
      */
-    public String[] getLoadBeforeNames() {
-        return loadBeforeNames;
+    String[] getLoadBeforeNames() {
+        return loadBeforeNames
     }
 
     /**
@@ -147,8 +147,8 @@ public final class PluginMetadata {
      *
      * @return the dependency map keyed by plugin name
      */
-    public Map<String, Object> getDependencies() {
-        return dependencies;
+    Map<String, Object> getDependencies() {
+        return dependencies
     }
 
     /**
@@ -156,8 +156,8 @@ public final class PluginMetadata {
      *
      * @return the declared dependency plugin names
      */
-    public String[] getDependsOnNames() {
-        return dependsOnNames;
+    String[] getDependsOnNames() {
+        return dependsOnNames
     }
 
     /**
@@ -165,8 +165,8 @@ public final class PluginMetadata {
      *
      * @return the declared evicted plugin names
      */
-    public String[] getEvictions() {
-        return evictions;
+    String[] getEvictions() {
+        return evictions
     }
 
     /**
@@ -174,8 +174,8 @@ public final class PluginMetadata {
      *
      * @return the declared observed plugin names
      */
-    public String[] getObservedPluginNames() {
-        return observedPluginNames;
+    String[] getObservedPluginNames() {
+        return observedPluginNames
     }
 
     /**
@@ -183,8 +183,8 @@ public final class PluginMetadata {
      *
      * @return the configured environment include/exclude map
      */
-    public Map<String, Set<Object>> getEnvironments() {
-        return environments;
+    Map<String, Set<Object>> getEnvironments() {
+        return environments
     }
 
     /**
@@ -192,8 +192,8 @@ public final class PluginMetadata {
      *
      * @return {@code true} if the plugin is enabled
      */
-    public boolean getEnabled() {
-        return enabled;
+    boolean getEnabled() {
+        return enabled
     }
 
     /**
@@ -202,8 +202,8 @@ public final class PluginMetadata {
      * @return {@code true} if the plugin is enabled and supports the current environment
      */
     boolean canRegisterPlugin() {
-        Environment environment = Environment.getCurrent();
-        return enabled && supportsEnvironment(environment);
+        Environment environment = Environment.getCurrent()
+        return enabled && supportsEnvironment(environment)
     }
 
     /**
@@ -213,7 +213,7 @@ public final class PluginMetadata {
      * @return {@code true} if the plugin is enabled for the supplied environment
      */
     boolean supportsEnvironment(Environment environment) {
-        return PluginUtils.supportsValueInIncludeExcludeMap(environments, environment.getName());
+        return PluginUtils.supportsValueInIncludeExcludeMap(environments, environment.getName())
     }
 
     /**
@@ -223,12 +223,12 @@ public final class PluginMetadata {
      * @return the declared dependency version
      * @throws PluginException if the dependency is referenced without a version
      */
-    public String getDependentVersion(String name) {
-        var dependentVersion = dependencies.get(name);
+    String getDependentVersion(String name) {
+        var dependentVersion = dependencies.get(name)
         if (dependentVersion == null) {
-            throw new PluginException("Plugin [" + getName() + "] referenced dependency [" + name + "] with no version!");
+            throw new PluginException('Plugin [' + getName() + '] referenced dependency [' + name + '] with no version!')
         }
-        return dependentVersion.toString();
+        return dependentVersion.toString()
     }
 
     /**
@@ -238,19 +238,20 @@ public final class PluginMetadata {
      * @return {@code true} if both metadata instances have the same plugin name
      */
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof PluginMetadata other)) return false;
-        return name.equals(other.name);
+    boolean equals(Object o) {
+        if (this.is(o)) return true
+        if (!(o instanceof PluginMetadata other)) return false
+        return name.equals(other.name)
     }
 
     @Override
-    public int hashCode() {
-        return name.hashCode();
+    int hashCode() {
+        return name.hashCode()
     }
 
     @Override
-    public String toString() {
-        return "GrailsPluginClassMetadata[" + name + "]";
+    String toString() {
+        return 'GrailsPluginClassMetadata[' + name + ']'
     }
+
 }

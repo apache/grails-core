@@ -16,12 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.core.plugins;
+package org.apache.grails.core.plugins
 
-import java.util.List;
-import java.util.Objects;
-
-import org.springframework.core.io.Resource;
+import groovy.transform.CompileStatic
+import org.springframework.core.io.Resource
 
 /**
  * Represents a parsed Grails plugin descriptor discovered on the classpath.
@@ -29,11 +27,12 @@ import org.springframework.core.io.Resource;
  * <p>A descriptor captures the source {@link Resource} together with the plugin implementation classes declared by
  * the descriptor and any additional provided class names contributed by the plugin.</p>
  */
-public class PluginDescriptor {
+@CompileStatic
+class PluginDescriptor {
 
-    private final Resource resource;
-    private final List<String> providedPlugins;
-    private final List<String> providedClasses;
+    private final Resource resource
+    private final List<String> providedPlugins
+    private final List<String> providedClasses
 
     /**
      * Creates a plugin descriptor.
@@ -42,13 +41,13 @@ public class PluginDescriptor {
      * @param providedPlugins the fully qualified plugin implementation class names declared by the descriptor
      * @param providedClasses the fully qualified provided class names declared by the descriptor
      */
-    public PluginDescriptor(
+    PluginDescriptor(
             Resource resource,
             List<String> providedPlugins,
             List<String> providedClasses) {
-        this.resource = resource;
-        this.providedPlugins = providedPlugins;
-        this.providedClasses = providedClasses;
+        this.resource = resource
+        this.providedPlugins = providedPlugins
+        this.providedClasses = providedClasses
     }
 
     /**
@@ -56,8 +55,8 @@ public class PluginDescriptor {
      *
      * @return the descriptor resource
      */
-    public Resource getResource() {
-        return resource;
+    Resource getResource() {
+        return resource
     }
 
     /**
@@ -65,8 +64,8 @@ public class PluginDescriptor {
      *
      * @return the declared plugin implementation class names
      */
-    public List<String> getProvidedPlugins() {
-        return providedPlugins;
+    List<String> getProvidedPlugins() {
+        return providedPlugins
     }
 
     /**
@@ -74,8 +73,8 @@ public class PluginDescriptor {
      *
      * @return the declared provided class names
      */
-    public List<String> getProvidedClasses() {
-        return providedClasses;
+    List<String> getProvidedClasses() {
+        return providedClasses
     }
 
     /**
@@ -86,25 +85,26 @@ public class PluginDescriptor {
      * @return {@code true} if the descriptors describe the same resource and declared classes
      */
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof PluginDescriptor that)) return false;
+    boolean equals(Object o) {
+        if (this.is(o)) return true
+        if (!(o instanceof PluginDescriptor that)) return false
         return Objects.equals(resource, that.resource) &&
                 Objects.equals(providedPlugins, that.providedPlugins) &&
-                Objects.equals(providedClasses, that.providedClasses);
+                Objects.equals(providedClasses, that.providedClasses)
     }
 
     @Override
-    public int hashCode() {
-        return Objects.hash(resource, providedPlugins, providedClasses);
+    int hashCode() {
+        return Objects.hash(resource, providedPlugins, providedClasses)
     }
 
     @Override
-    public String toString() {
-        return "PluginDescriptor[" +
-                "resource=" + resource +
-                ", providedPlugins=" + providedPlugins +
-                ", providedClasses=" + providedClasses +
-                ']';
+    String toString() {
+        return 'PluginDescriptor[' +
+                'resource=' + resource +
+                ', providedPlugins=' + providedPlugins +
+                ', providedClasses=' + providedClasses +
+                ']'
     }
+
 }
