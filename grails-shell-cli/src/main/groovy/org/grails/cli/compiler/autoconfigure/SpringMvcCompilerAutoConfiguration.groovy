@@ -1,0 +1,61 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.grails.cli.compiler.autoconfigure
+
+import groovy.transform.CompileStatic
+import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.control.customizers.ImportCustomizer
+
+import org.grails.cli.compiler.AstUtils
+import org.grails.cli.compiler.CompilerAutoConfiguration
+import org.grails.cli.compiler.DependencyCustomizer
+import org.grails.cli.groovy.GroovyTemplate
+
+/**
+ * {@link CompilerAutoConfiguration} for Spring MVC.
+ *
+ * @author Dave Syer
+ * @author Phillip Webb
+ * @since 1.0.0
+ */
+@CompileStatic
+class SpringMvcCompilerAutoConfiguration extends CompilerAutoConfiguration {
+
+    @Override
+    boolean matches(ClassNode classNode) {
+        return AstUtils.hasAtLeastOneAnnotation(classNode, 'Controller', 'RestController', 'EnableWebMvc')
+    }
+
+    @Override
+    void applyDependencies(DependencyCustomizer dependencies) {
+        dependencies.ifAnyMissingClasses('org.springframework.web.servlet.mvc.Controller')
+            .add('spring-boot-starter-webmvc')
+        dependencies.ifAnyMissingClasses('groovy.text.TemplateEngine').add('groovy-templates')
+    }
+
+    @Override
+    void applyImports(ImportCustomizer imports) {
+        imports.addStarImports('org.springframework.web.bind.annotation',
+                'org.springframework.web.servlet.config.annotation', 'org.springframework.web.servlet',
+                'org.springframework.http', 'org.springframework.web.servlet.handler', 'org.springframework.http',
+                'org.springframework.ui', 'groovy.text')
+        imports.addStaticImport(GroovyTemplate.getName(), 'template')
+    }
+
+}
