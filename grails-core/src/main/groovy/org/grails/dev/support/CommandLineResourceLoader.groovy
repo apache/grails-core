@@ -16,11 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.dev.support;
+package org.grails.dev.support
 
-import org.springframework.core.io.DefaultResourceLoader;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
+import groovy.transform.CompileStatic
+import org.springframework.core.io.DefaultResourceLoader
+import org.springframework.core.io.FileSystemResource
+import org.springframework.core.io.Resource
 
 /**
  * Loads locations starting with /WEB-INF from the Grails web-app directory.
@@ -28,13 +29,15 @@ import org.springframework.core.io.Resource;
  * @author Graeme Rocher
  * @since 1.0
  */
-public class CommandLineResourceLoader extends DefaultResourceLoader {
+@CompileStatic
+class CommandLineResourceLoader extends DefaultResourceLoader {
 
     @Override
-    public Resource getResource(String location) {
-        if (location.startsWith("/WEB-INF")) {
-            return new FileSystemResource("./web-app" + location);
+    Resource getResource(String location) {
+        if (location.startsWith('/WEB-INF')) {
+            return new FileSystemResource('./web-app' + location)
         }
-        return super.getResource(location);
+        return super.getResource(location)
     }
+
 }

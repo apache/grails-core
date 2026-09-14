@@ -16,12 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.persistence;
+package grails.persistence
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.ElementType
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
 
 /**
  * A marker annotation for methods added to a class that are for persistence purposes
@@ -30,6 +30,7 @@ import java.lang.annotation.Target;
  * @since 2.1.5
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.METHOD})
-public @interface PersistenceMethod {
+@Target([ElementType.METHOD])
+@interface PersistenceMethod {
+
 }

@@ -16,7 +16,9 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.persistence.support;
+package grails.persistence.support
+
+import groovy.transform.CompileStatic
 
 /**
  * A dummy persistence context interceptor that does nothing.
@@ -24,40 +26,43 @@ package grails.persistence.support;
  * @author Graeme Rocher
  * @since 1.1.1
  */
-public class NullPersistentContextInterceptor implements PersistenceContextInterceptor {
-    public void init() {
+@CompileStatic
+class NullPersistentContextInterceptor implements PersistenceContextInterceptor {
+
+    void init() {
         // NOOP
     }
 
-    public void destroy() {
+    void destroy() {
         // NOOP
     }
 
-    public void disconnect() {
+    void disconnect() {
         // NOOP
     }
 
-    public void reconnect() {
+    void reconnect() {
         // NOOP
     }
 
-    public void flush() {
+    void flush() {
         // NOOP
     }
 
-    public void clear() {
+    void clear() {
         // NOOP
     }
 
-    public void setReadOnly() {
+    void setReadOnly() {
         // NOOP
     }
 
-    public void setReadWrite() {
+    void setReadWrite() {
         // NOOP
     }
 
-    public boolean isOpen() {
-        return false;
+    boolean isOpen() {
+        return false
     }
+
 }

@@ -16,11 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.validation;
-
-import java.util.List;
-
-import groovy.lang.Range;
+package grails.validation
 
 /**
  * A interface for something that is constrained by various criteria
@@ -28,79 +24,80 @@ import groovy.lang.Range;
  * @author Graeme Rocher
  * @since 2.4
  */
-public interface Constrained {
+interface Constrained {
 
     /**
      * @param constraintName The name of the constraint to check
      * @return Returns true if the specified constraint name is being applied to this property
      */
-    boolean hasAppliedConstraint(String constraintName);
+    boolean hasAppliedConstraint(String constraintName)
 
     /**
      * @return Returns the propertyType.
      */
-    Class<?> getPropertyType();
+    Class<?> getPropertyType()
 
     /**
      * @return Returns the maximum possible value.
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    Comparable getMax();
+    @SuppressWarnings([ 'unchecked', 'rawtypes' ])
+    Comparable getMax()
 
     /**
      * @return Returns the minimum possible value.
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    Comparable getMin();
+    @SuppressWarnings([ 'unchecked', 'rawtypes' ])
+    Comparable getMin()
 
     /**
      * @return Constrains the be within the list of given values
      */
-    @SuppressWarnings("rawtypes")
-    List getInList();
+    @SuppressWarnings('rawtypes')
+    List getInList()
 
     /**
      * @return Constrains the be within the range of given values
      */
-    @SuppressWarnings("rawtypes")
-    Range getRange();
+    @SuppressWarnings('rawtypes')
+    Range getRange()
 
-    Integer getScale();
+    Integer getScale()
 
-    @SuppressWarnings("rawtypes")
-    Range getSize();
+    @SuppressWarnings('rawtypes')
+    Range getSize()
 
-    boolean isBlank();
+    boolean isBlank()
 
-    boolean isEmail();
+    boolean isEmail()
 
-    boolean isCreditCard();
+    boolean isCreditCard()
 
-    String getMatches();
+    String getMatches()
 
-    Object getNotEqual();
+    Object getNotEqual()
 
-    Integer getMaxSize();
+    Integer getMaxSize()
 
-    Integer getMinSize();
+    Integer getMinSize()
 
-    boolean isNullable();
+    boolean isNullable()
 
-    boolean isUrl();
+    boolean isUrl()
 
-    boolean isDisplay();
+    boolean isDisplay()
 
-    boolean isEditable();
+    boolean isEditable()
 
-    int getOrder();
+    int getOrder()
 
-    String getFormat();
+    String getFormat()
 
-    boolean isPassword();
+    boolean isPassword()
 
-    boolean supportsContraint(String constraintName);
+    boolean supportsContraint(String constraintName)
 
-    void applyConstraint(String constraintName, Object constrainingValue);
+    void applyConstraint(String constraintName, Object constrainingValue)
 
-    Class getOwner();
+    Class getOwner()
+
 }

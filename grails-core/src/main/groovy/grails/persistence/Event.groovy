@@ -16,24 +16,36 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.persistence;
+package grails.persistence
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
-import org.codehaus.groovy.transform.GroovyASTTransformationClass;
+import groovy.transform.CompileStatic
 
 /**
- * A class annotation used to make a class into a GORM domain class.
+ * Enum of the available events that Grails triggers.
  *
  * @author Graeme Rocher
- * @since 1.1
+ * @since 1.2
  */
-@Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.TYPE})
-@GroovyASTTransformationClass("org.grails.compiler.injection.EntityASTTransformation")
-public @interface Entity {
-    // no attributes
+@CompileStatic
+enum Event {
+
+    onLoad, onSave, beforeLoad, beforeInsert, beforeUpdate, beforeDelete, afterLoad, afterInsert, afterUpdate, afterDelete
+
+    private static final String[] allEvents
+
+    static {
+        List<String> events = new ArrayList<>()
+        for (Event e in values()) {
+            events.add(e.toString())
+        }
+        allEvents = events.toArray(new String[events.size()])
+    }
+
+    /**
+     * @return The names of all persistence events
+     */
+    static String[] getAllEvents() {
+        return allEvents
+    }
+
 }

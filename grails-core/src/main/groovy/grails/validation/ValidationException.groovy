@@ -16,12 +16,13 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.validation;
+package grails.validation
 
-import org.springframework.validation.Errors;
-import org.springframework.validation.ObjectError;
+import groovy.transform.CompileStatic
+import org.springframework.validation.Errors
+import org.springframework.validation.ObjectError
 
-import org.grails.core.exceptions.GrailsException;
+import org.grails.core.exceptions.GrailsException
 
 /**
  * Thrown when validation fails during a .save().
@@ -29,37 +30,40 @@ import org.grails.core.exceptions.GrailsException;
  * @author Jeff Brown
  * @since 1.2
  */
-public class ValidationException extends GrailsException {
-    private static final long serialVersionUID = 1L;
-    private Errors errors;
-    private String fullMessage;
+@CompileStatic
+class ValidationException extends GrailsException {
 
-    public ValidationException(String msg, Errors e) {
-        super(msg);
-        errors = e;
-        fullMessage = formatErrors(e, msg);
+    private static final long serialVersionUID = 1L
+    private Errors errors
+    private String fullMessage
+
+    ValidationException(String msg, Errors e) {
+        super(msg)
+        errors = e
+        fullMessage = formatErrors(e, msg)
     }
 
-    public Errors getErrors() {
-        return errors;
+    Errors getErrors() {
+        return errors
     }
 
-    public String getMessage() {
-        return fullMessage;
+    String getMessage() {
+        return fullMessage
     }
 
-    public static String formatErrors(Errors errors) {
-        return formatErrors(errors, null);
+    static String formatErrors(Errors errors) {
+        return formatErrors(errors, null)
     }
 
-    public static String formatErrors(Errors errors, String msg) {
-        StringBuilder b = new StringBuilder();
+    static String formatErrors(Errors errors, String msg) {
+        StringBuilder b = new StringBuilder()
         if (msg != null && msg.length() > 0) {
-            b.append(msg).append(":\n");
+            b.append(msg).append(':\n')
         }
-        for (ObjectError error : errors.getAllErrors()) {
-            b.append("- ").append(error).append("\n");
+        for (ObjectError error in errors.getAllErrors()) {
+            b.append('- ').append(error).append('\n')
         }
-        return b.toString();
+        return b.toString()
     }
+
 }

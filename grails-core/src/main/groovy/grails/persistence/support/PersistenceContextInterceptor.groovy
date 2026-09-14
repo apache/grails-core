@@ -16,7 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.persistence.support;
+package grails.persistence.support
 
 /**
  * Sets up the persistent context before and after a Grails operation is invoked.
@@ -24,51 +24,52 @@ package grails.persistence.support;
  * @author Graeme Rocher
  * @since 0.4
  */
-public interface PersistenceContextInterceptor {
+interface PersistenceContextInterceptor {
 
     /**
      * Called to intialisation the persistent context.
      */
-    void init();
+    void init()
 
     /**
      * Called to finalize the persistent context.
      */
-    void destroy();
+    void destroy()
 
     /**
      * Disconnects the persistence context.
      */
-    void disconnect();
+    void disconnect()
 
     /**
      * Reconnects the persistence context.
      */
-    void reconnect();
+    void reconnect()
 
     /**
      *  Flushes any pending changes to the DB.
      */
-    void flush();
+    void flush()
 
     /**
      * Clear any pending changes.
      */
-    void clear();
+    void clear()
 
     /**
      * Sets the persistence context to read-only mode.
      */
-    void setReadOnly();
+    void setReadOnly()
 
     /**
      * Sets the persistence context to read-write mode.
      */
-    void setReadWrite();
+    void setReadWrite()
 
     /**
      * Checks whether the persistence context is open.
      * @return Returns whether the persistence context is open
      */
-    boolean isOpen();
+    boolean isOpen()
+
 }
