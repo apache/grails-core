@@ -1,0 +1,155 @@
+{
+    "groups": [
+        {
+            "name": "grails.views.markup",
+            "description": "Markup Views"
+        }
+    ],
+    "properties": [
+        {
+            "name": "grails.views.markup.allowResourceExpansion",
+            "type": "java.lang.Boolean",
+            "description": "Whether to allow resource expansion in Markup Views.",
+            "defaultValue": true
+        },
+        {
+            "name": "grails.views.markup.autoEscape",
+            "type": "java.lang.Boolean",
+            "description": "Whether to escape XML special characters in Markup Views.",
+            "defaultValue": true
+        },
+        {
+            "name": "grails.views.markup.autoIndent",
+            "type": "java.lang.Boolean",
+            "description": "Whether to indent generated markup automatically.",
+            "defaultValue": true
+        },
+        {
+            "name": "grails.views.markup.autoIndentString",
+            "type": "java.lang.String",
+            "description": "The string used for each automatic indentation level.",
+            "defaultValue": "    "
+        },
+        {
+            "name": "grails.views.markup.autoNewLine",
+            "type": "java.lang.Boolean",
+            "description": "Whether to insert new lines in generated markup automatically.",
+            "defaultValue": true
+        },
+        {
+            "name": "grails.views.markup.baseTemplateClass",
+            "type": "java.lang.Class<? extends groovy.text.markup.BaseTemplate>",
+            "description": "The base template class for Markup Views.",
+            "defaultValue": "grails.plugin.markup.view.MarkupViewTemplate"
+        },
+        {
+            "name": "grails.views.markup.cache",
+            "type": "java.lang.Boolean",
+            "description": "Whether to cache compiled Markup View templates. Defaults to false in development and true otherwise."
+        },
+        {
+            "name": "grails.views.markup.cacheTemplates",
+            "type": "java.lang.Boolean",
+            "description": "Whether the markup template engine caches compiled templates. Defaults to false in development and true otherwise."
+        },
+        {
+            "name": "grails.views.markup.compileStatic",
+            "type": "java.lang.Boolean",
+            "description": "Whether Markup Views are statically compiled.",
+            "defaultValue": true
+        },
+        {
+            "name": "grails.views.markup.declarationEncoding",
+            "type": "java.lang.String",
+            "description": "The character encoding declared in generated XML declarations."
+        },
+        {
+            "name": "grails.views.markup.enableReloading",
+            "type": "java.lang.Boolean",
+            "description": "Whether Markup Views are reloaded when they change. Defaults to true in development and false otherwise."
+        },
+        {
+            "name": "grails.views.markup.encoding",
+            "type": "java.lang.String",
+            "description": "The character encoding for Markup Views.",
+            "defaultValue": "UTF-8"
+        },
+        {
+            "name": "grails.views.markup.expandEmptyElements",
+            "type": "java.lang.Boolean",
+            "description": "Whether empty markup elements use expanded opening and closing tags.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.views.markup.extension",
+            "type": "java.lang.String",
+            "description": "The file extension for Markup View templates.",
+            "defaultValue": "gml"
+        },
+        {
+            "name": "grails.views.markup.locale",
+            "type": "java.util.Locale",
+            "description": "The locale used by the markup template engine."
+        },
+        {
+            "name": "grails.views.markup.mimeTypes",
+            "type": "java.util.List<java.lang.String>",
+            "description": "MIME types handled by Markup Views.",
+            "defaultValue": [
+                "application/xml",
+                "application/hal+xml"
+            ]
+        },
+        {
+            "name": "grails.views.markup.newLineString",
+            "type": "java.lang.String",
+            "description": "The string used for generated line breaks."
+        },
+        {
+            "name": "grails.views.markup.packageImports",
+            "type": "java.lang.String[]",
+            "description": "Packages imported into Markup View templates.",
+            "defaultValue": [
+                "groovy.transform"
+            ]
+        },
+        {
+            "name": "grails.views.markup.packageName",
+            "type": "java.lang.String",
+            "description": "The package name used for compiled Markup Views. Defaults to the application name."
+        },
+        {
+            "name": "grails.views.markup.prettyPrint",
+            "type": "java.lang.Boolean",
+            "description": "Whether to pretty-print generated markup.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.views.markup.staticImports",
+            "type": "java.lang.String[]",
+            "description": "Static classes imported into Markup View templates.",
+            "defaultValue": [
+                "org.springframework.http.HttpStatus",
+                "org.springframework.http.HttpMethod",
+                "grails.web.http.HttpHeaders"
+            ]
+        },
+        {
+            "name": "grails.views.markup.templatePath",
+            "type": "java.lang.String",
+            "description": "The filesystem path containing Markup View templates. Defaults to the environment reload location or application views directory."
+        },
+        {
+            "name": "grails.views.markup.useAbsoluteLinks",
+            "type": "java.lang.Boolean",
+            "description": "Whether links generated by Markup Views use absolute URLs.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.views.markup.useDoubleQuotes",
+            "type": "java.lang.Boolean",
+            "description": "Whether generated markup uses double quotes for attribute values.",
+            "defaultValue": false
+        }
+    ]
+}
