@@ -16,30 +16,25 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.grails.plugins.i18n;
+package org.grails.plugins.i18n
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.boot.EnvironmentPostProcessor
+import org.springframework.boot.SpringApplication
+import org.springframework.boot.bootstrap.ConfigurableBootstrapContext
+import org.springframework.core.Ordered
+import org.springframework.core.env.ConfigurableEnvironment
+import org.springframework.core.env.MapPropertySource
+import org.springframework.core.env.MutablePropertySources
 
-import org.springframework.boot.EnvironmentPostProcessor;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.bootstrap.ConfigurableBootstrapContext;
-import org.springframework.core.Ordered;
-import org.springframework.core.env.ConfigurableEnvironment;
-import org.springframework.core.env.MapPropertySource;
-import org.springframework.core.env.MutablePropertySources;
-
-import grails.config.Settings;
-import grails.util.Environment;
-import org.apache.grails.core.plugins.PluginDiscovery;
-import org.apache.grails.core.plugins.PluginInfo;
+import grails.config.Settings
+import grails.util.Environment
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+import org.apache.grails.core.plugins.PluginDiscovery
+import org.apache.grails.core.plugins.PluginInfo
 
 /**
  * Composes {@code spring.messages.basename} from the build-time i18n descriptors, so that Spring
@@ -62,75 +57,77 @@ import org.apache.grails.core.plugins.PluginInfo;
  *
  * @since 8.0
  */
-public class I18nEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
+@CompileStatic
+class I18nEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
 
     /**
      * Later than {@code ConfigDataEnvironmentPostProcessor.ORDER} so {@code application.yml} is
      * loaded, and later than {@code GrailsEnvironmentPostProcessor} so plugin configuration is in
      * place.
      */
-    public static final int ORDER = Ordered.HIGHEST_PRECEDENCE + 16;
+    static final int ORDER = Ordered.HIGHEST_PRECEDENCE + 16
 
     /** Property holding the composed, ordered base-name list. */
-    public static final String BASENAME_PROPERTY = "spring.messages.basename";
+    static final String BASENAME_PROPERTY = 'spring.messages.basename'
 
     /** Set to {@code false} to leave plugin bundles out of both resolution and native-image hints. */
-    public static final String INCLUDE_PLUGIN_BUNDLES_PROPERTY = "grails.i18n.include-plugin-bundles";
+    static final String INCLUDE_PLUGIN_BUNDLES_PROPERTY = 'grails.i18n.include-plugin-bundles'
 
-    private static final String PROPERTY_SOURCE_NAME = "grailsI18nBasenames";
+    private static final String PROPERTY_SOURCE_NAME = 'grailsI18nBasenames'
 
-    private static final String DEFAULTS_PROPERTY_SOURCE_NAME = "grailsI18nDefaults";
+    private static final String DEFAULTS_PROPERTY_SOURCE_NAME = 'grailsI18nDefaults'
 
-    private static final String ENCODING_PROPERTY = "spring.messages.encoding";
+    private static final String ENCODING_PROPERTY = 'spring.messages.encoding'
 
-    private static final String FALLBACK_TO_SYSTEM_LOCALE_PROPERTY = "spring.messages.fallback-to-system-locale";
+    private static final String FALLBACK_TO_SYSTEM_LOCALE_PROPERTY = 'spring.messages.fallback-to-system-locale'
 
-    private static final String GSP_ENCODING_PROPERTY = "grails.views.gsp.encoding";
+    private static final String GSP_ENCODING_PROPERTY = 'grails.views.gsp.encoding'
 
-    private static final String GSP_ENABLE_RELOAD_PROPERTY = "grails.gsp.enable.reload";
+    private static final String GSP_ENABLE_RELOAD_PROPERTY = 'grails.gsp.enable.reload'
 
-    private static final String CACHE_DURATION_PROPERTY = "spring.messages.cache-duration";
+    private static final String CACHE_DURATION_PROPERTY = 'spring.messages.cache-duration'
 
     /** Short enough to feel immediate while editing, long enough not to re-read on every lookup. */
-    private static final String DEVELOPMENT_CACHE_DURATION = "5s";
+    private static final String DEVELOPMENT_CACHE_DURATION = '5s'
 
-    private static final Logger logger = LoggerFactory.getLogger(I18nEnvironmentPostProcessor.class);
+    private static final Logger logger = LoggerFactory.getLogger(I18nEnvironmentPostProcessor)
 
-    private final ConfigurableBootstrapContext bootstrapContext;
+    private final ConfigurableBootstrapContext bootstrapContext
 
+    @PackageScope
     I18nEnvironmentPostProcessor(ConfigurableBootstrapContext bootstrapContext) {
-        this.bootstrapContext = bootstrapContext;
+        this.bootstrapContext = bootstrapContext
     }
 
     @Override
-    public int getOrder() {
-        return ORDER;
+    int getOrder() {
+        return ORDER
     }
 
     @Override
-    public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
-        MutablePropertySources propertySources = environment.getPropertySources();
+    void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
+        MutablePropertySources propertySources = environment.getPropertySources()
 
         // Contributed even when nothing was discovered: an application may point
         // spring.messages.basename at a bundle outside grails-app/i18n and so have a message source
         // but no descriptor, and Grails' documented defaults should still apply to it.
-        propertySources.addLast(new MapPropertySource(DEFAULTS_PROPERTY_SOURCE_NAME, defaults(environment)));
+        propertySources.addLast(new MapPropertySource(DEFAULTS_PROPERTY_SOURCE_NAME, defaults(environment)))
 
-        List<I18nDescriptor> descriptors = I18nDescriptors.load(application.getClassLoader());
+        List<I18nDescriptor> descriptors = I18nDescriptors.load(application.getClassLoader())
         if (descriptors.isEmpty()) {
-            return;
+            return
         }
 
-        boolean includePluginBundles = environment.getProperty(INCLUDE_PLUGIN_BUNDLES_PROPERTY, Boolean.class,
-                Boolean.TRUE);
+        boolean includePluginBundles = environment.getProperty(INCLUDE_PLUGIN_BUNDLES_PROPERTY, Boolean,
+                Boolean.TRUE)
         EffectiveI18nDescriptors effective = EffectiveI18nDescriptors.of(descriptors,
-                pluginNamesInTopologicalOrder(environment, descriptors, includePluginBundles), includePluginBundles);
+                pluginNamesInTopologicalOrder(environment, descriptors, includePluginBundles), includePluginBundles)
 
-        List<String> composed = compose(environment, effective.basenames());
+        List<String> composed = compose(environment, effective.basenames())
         if (!composed.isEmpty()) {
-            Map<String, Object> source = new LinkedHashMap<>();
-            source.put(BASENAME_PROPERTY, String.join(",", composed));
-            propertySources.addFirst(new MapPropertySource(PROPERTY_SOURCE_NAME, source));
+            Map<String, Object> source = new LinkedHashMap<>()
+            source.put(BASENAME_PROPERTY, String.join(',', composed))
+            propertySources.addFirst(new MapPropertySource(PROPERTY_SOURCE_NAME, source))
         }
     }
 
@@ -141,24 +138,24 @@ public class I18nEnvironmentPostProcessor implements EnvironmentPostProcessor, O
      * otherwise replace the whole list and silently discard whichever side lost.</p>
      */
     private List<String> compose(ConfigurableEnvironment environment, List<String> discovered) {
-        Set<String> composed = new LinkedHashSet<>(declaredBasenames(environment));
-        composed.addAll(discovered);
-        return new ArrayList<>(composed);
+        Set<String> composed = new LinkedHashSet<>(declaredBasenames(environment))
+        composed.addAll(discovered)
+        return new ArrayList<>(composed)
     }
 
     private List<String> declaredBasenames(ConfigurableEnvironment environment) {
-        String declared = environment.getProperty(BASENAME_PROPERTY);
+        String declared = environment.getProperty(BASENAME_PROPERTY)
         if (declared == null || declared.isBlank()) {
-            return List.of();
+            return List.of()
         }
-        List<String> basenames = new ArrayList<>();
-        for (String basename : declared.split(",")) {
-            String trimmed = basename.trim();
+        List<String> basenames = new ArrayList<>()
+        for (String basename : declared.split(',')) {
+            String trimmed = basename.trim()
             if (!trimmed.isEmpty()) {
-                basenames.add(trimmed);
+                basenames.add(trimmed)
             }
         }
-        return basenames;
+        return basenames
     }
 
     /**
@@ -166,18 +163,18 @@ public class I18nEnvironmentPostProcessor implements EnvironmentPostProcessor, O
      * application can still override them.
      */
     private Map<String, Object> defaults(ConfigurableEnvironment environment) {
-        Map<String, Object> defaults = new LinkedHashMap<>();
-        defaults.put(FALLBACK_TO_SYSTEM_LOCALE_PROPERTY, Boolean.FALSE);
-        String gspEncoding = environment.getProperty(GSP_ENCODING_PROPERTY);
+        Map<String, Object> defaults = new LinkedHashMap<>()
+        defaults.put(FALLBACK_TO_SYSTEM_LOCALE_PROPERTY, Boolean.FALSE)
+        String gspEncoding = environment.getProperty(GSP_ENCODING_PROPERTY)
         if (gspEncoding != null && !gspEncoding.isBlank()) {
-            defaults.put(ENCODING_PROPERTY, gspEncoding);
+            defaults.put(ENCODING_PROPERTY, gspEncoding)
         }
-        String legacyCacheDuration = legacyCacheDuration(environment);
+        String legacyCacheDuration = legacyCacheDuration(environment)
         if (reloadEnabled(environment)) {
             defaults.put(CACHE_DURATION_PROPERTY,
-                    (legacyCacheDuration != null) ? legacyCacheDuration : DEVELOPMENT_CACHE_DURATION);
+                    (legacyCacheDuration != null) ? legacyCacheDuration : DEVELOPMENT_CACHE_DURATION)
         }
-        return defaults;
+        return defaults
     }
 
     /**
@@ -194,17 +191,17 @@ public class I18nEnvironmentPostProcessor implements EnvironmentPostProcessor, O
      * property is not set
      * @deprecated since 8.0, for removal. Configure {@code spring.messages.cache-duration} instead.
      */
-    @Deprecated(since = "8.0", forRemoval = true)
-    @SuppressWarnings("removal")
+    @Deprecated(since = '8.0', forRemoval = true)
+    @SuppressWarnings('removal')
     private String legacyCacheDuration(ConfigurableEnvironment environment) {
-        Integer cacheSeconds = environment.getProperty(Settings.I18N_CACHE_SECONDS, Integer.class);
+        Integer cacheSeconds = environment.getProperty(Settings.I18N_CACHE_SECONDS, Integer)
         if (cacheSeconds == null) {
-            return null;
+            return null
         }
         logger.warn("'{}' is deprecated and will be removed. Spring Boot owns the message source now, " +
                 "so use '{}={}s' instead. As before, the setting applies only when reload is enabled.",
-                Settings.I18N_CACHE_SECONDS, CACHE_DURATION_PROPERTY, cacheSeconds);
-        return cacheSeconds + "s";
+                Settings.I18N_CACHE_SECONDS, CACHE_DURATION_PROPERTY, cacheSeconds)
+        return "${cacheSeconds}s"
     }
 
     /**
@@ -222,7 +219,7 @@ public class I18nEnvironmentPostProcessor implements EnvironmentPostProcessor, O
      */
     private boolean reloadEnabled(ConfigurableEnvironment environment) {
         return Environment.getCurrent().isReloadEnabled() ||
-                environment.getProperty(GSP_ENABLE_RELOAD_PROPERTY, Boolean.class, Boolean.FALSE);
+                environment.getProperty(GSP_ENABLE_RELOAD_PROPERTY, Boolean, Boolean.FALSE)
     }
 
     /**
@@ -233,19 +230,30 @@ public class I18nEnvironmentPostProcessor implements EnvironmentPostProcessor, O
     private List<String> pluginNamesInTopologicalOrder(ConfigurableEnvironment environment,
             List<I18nDescriptor> descriptors, boolean includePluginBundles) {
 
-        boolean pluginBundlesPresent = descriptors.stream().anyMatch(descriptor -> !descriptor.isApplication());
+        boolean pluginBundlesPresent = false
+        for (I18nDescriptor descriptor : descriptors) {
+            if (!descriptor.isApplication()) {
+                pluginBundlesPresent = true
+                break
+            }
+        }
         if (!includePluginBundles || !pluginBundlesPresent) {
-            return List.of();
+            return List.of()
         }
 
-        if (this.bootstrapContext == null || !this.bootstrapContext.isRegistered(PluginDiscovery.class)) {
-            throw new IllegalStateException("Plugin message bundles are on the classpath but Grails plugin discovery " +
-                    "is unavailable, so their base names cannot be ordered. Set " +
-                    INCLUDE_PLUGIN_BUNDLES_PROPERTY + "=false to exclude plugin bundles deliberately.");
+        if (this.bootstrapContext == null || !this.bootstrapContext.isRegistered(PluginDiscovery)) {
+            throw new IllegalStateException('Plugin message bundles are on the classpath but Grails plugin discovery ' +
+                    'is unavailable, so their base names cannot be ordered. Set ' +
+                    "${INCLUDE_PLUGIN_BUNDLES_PROPERTY}=false to exclude plugin bundles deliberately.")
         }
 
-        PluginDiscovery pluginDiscovery = this.bootstrapContext.get(PluginDiscovery.class);
-        pluginDiscovery.init(environment);
-        return pluginDiscovery.getPluginsInTopologicalOrder().stream().map(PluginInfo::getName).toList();
+        PluginDiscovery pluginDiscovery = this.bootstrapContext.get(PluginDiscovery)
+        pluginDiscovery.init(environment)
+        List<String> names = []
+        for (PluginInfo info : pluginDiscovery.getPluginsInTopologicalOrder()) {
+            names.add(info.getName())
+        }
+        return names
     }
+
 }

@@ -16,18 +16,18 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.grails.plugins.i18n;
+package org.grails.plugins.i18n
 
-import java.util.List;
+import org.springframework.aot.hint.ResourceHints
+import org.springframework.beans.factory.aot.BeanFactoryInitializationAotContribution
+import org.springframework.beans.factory.aot.BeanFactoryInitializationAotProcessor
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
+import org.springframework.boot.context.properties.bind.Bindable
+import org.springframework.boot.context.properties.bind.Binder
+import org.springframework.context.ConfigurableApplicationContext
+import org.springframework.core.env.Environment
 
-import org.springframework.aot.hint.ResourceHints;
-import org.springframework.beans.factory.aot.BeanFactoryInitializationAotContribution;
-import org.springframework.beans.factory.aot.BeanFactoryInitializationAotProcessor;
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.boot.context.properties.bind.Bindable;
-import org.springframework.boot.context.properties.bind.Binder;
-import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.core.env.Environment;
+import groovy.transform.CompileStatic
 
 /**
  * Registers the native-image resource hints the message bundles need.
@@ -46,48 +46,52 @@ import org.springframework.core.env.Environment;
  *
  * @since 8.0
  */
-public class I18nRuntimeHintsProcessor implements BeanFactoryInitializationAotProcessor {
+@CompileStatic
+class I18nRuntimeHintsProcessor implements BeanFactoryInitializationAotProcessor {
 
-    private static final String BASENAME_PROPERTY = "spring.messages.basename";
+    private static final String BASENAME_PROPERTY = 'spring.messages.basename'
 
-    private static final String DEFAULT_BASENAME = "messages";
+    private static final String DEFAULT_BASENAME = 'messages'
 
-    private static final String CLASSPATH_PREFIX = "classpath:";
+    private static final String CLASSPATH_PREFIX = 'classpath:'
 
     @Override
-    public BeanFactoryInitializationAotContribution processAheadOfTime(ConfigurableListableBeanFactory beanFactory) {
-        List<String> basenames = basenames(beanFactory);
+    BeanFactoryInitializationAotContribution processAheadOfTime(ConfigurableListableBeanFactory beanFactory) {
+        List<String> basenames = basenames(beanFactory)
         if (basenames.isEmpty()) {
-            return null;
+            return null
         }
-        return (generationContext, beanFactoryInitializationCode) -> {
-            ResourceHints resources = generationContext.getRuntimeHints().resources();
+        return { generationContext, beanFactoryInitializationCode ->
+            ResourceHints resources = generationContext.getRuntimeHints().resources()
             // The descriptors are read at runtime through an exact-name ClassLoader.getResources
             // lookup, so the descriptor itself has to be present in the image.
-            resources.registerPattern(I18nDescriptors.DESCRIPTOR_PATH);
+            resources.registerPattern(I18nDescriptors.DESCRIPTOR_PATH)
             for (String basename : basenames) {
-                String path = toResourcePath(basename);
-                resources.registerPattern(path + ".properties");
-                resources.registerPattern(path + "_*.properties");
+                String path = toResourcePath(basename)
+                resources.registerPattern("${path}.properties")
+                resources.registerPattern("${path}_*.properties")
             }
-        };
+        } as BeanFactoryInitializationAotContribution
     }
 
     private List<String> basenames(ConfigurableListableBeanFactory beanFactory) {
-        Environment environment = environment(beanFactory);
+        Environment environment = environment(beanFactory)
         if (environment == null) {
-            return List.of();
+            return List.of()
         }
-        return Binder.get(environment).bind(BASENAME_PROPERTY, Bindable.listOf(String.class))
-                .orElseGet(() -> List.of(DEFAULT_BASENAME));
+        return Binder.get(environment).bind(BASENAME_PROPERTY, Bindable.listOf(String))
+                .orElseGet({ -> List.of(DEFAULT_BASENAME) })
     }
 
     private Environment environment(ConfigurableListableBeanFactory beanFactory) {
         if (!beanFactory.containsBean(ConfigurableApplicationContext.ENVIRONMENT_BEAN_NAME)) {
-            return null;
+            return null
         }
-        Object environment = beanFactory.getBean(ConfigurableApplicationContext.ENVIRONMENT_BEAN_NAME);
-        return (environment instanceof Environment resolved) ? resolved : null;
+        Object environment = beanFactory.getBean(ConfigurableApplicationContext.ENVIRONMENT_BEAN_NAME)
+        if (environment instanceof Environment) {
+            return (Environment) environment
+        }
+        return null
     }
 
     /**
@@ -105,13 +109,13 @@ public class I18nRuntimeHintsProcessor implements BeanFactoryInitializationAotPr
      * would hide the mistake until it failed in a native image
      */
     private static String toResourcePath(String basename) {
-        String trimmed = basename.trim();
+        String trimmed = basename.trim()
         if (trimmed.startsWith(CLASSPATH_PREFIX)) {
-            throw new IllegalArgumentException("Invalid " + BASENAME_PROPERTY + " entry '" + trimmed +
-                    "'. Base names are ResourceBundle names resolved from the classpath root, so the '" +
-                    CLASSPATH_PREFIX + "' prefix is not supported; use '" +
-                    trimmed.substring(CLASSPATH_PREFIX.length()) + "' instead.");
+            throw new IllegalArgumentException("Invalid ${BASENAME_PROPERTY} entry '${trimmed}'. Base names are " +
+                    "ResourceBundle names resolved from the classpath root, so the '${CLASSPATH_PREFIX}' prefix " +
+                    "is not supported; use '${trimmed.substring(CLASSPATH_PREFIX.length())}' instead.")
         }
-        return trimmed.replace('.', '/');
+        return trimmed.replace('.', '/')
     }
+
 }

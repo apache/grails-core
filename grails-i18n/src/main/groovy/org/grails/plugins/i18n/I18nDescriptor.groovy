@@ -16,9 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.grails.plugins.i18n;
-
-import java.util.List;
+package org.grails.plugins.i18n
 
 /**
  * The message bundles one application or plugin contributes, as recorded in its
@@ -36,17 +34,17 @@ import java.util.List;
  * @param locales locale identifiers ({@code de}, {@code pt_BR}) the bundles are translated into
  * @since 8.0
  */
-public record I18nDescriptor(String type, String name, String version, List<String> basenames, List<String> locales) {
+record I18nDescriptor(String type, String name, String version, List<String> basenames, List<String> locales) {
 
     /** An application's descriptor. At most one may be present on a classpath. */
-    public static final String TYPE_APPLICATION = "application";
+    static final String TYPE_APPLICATION = 'application'
 
     /** A plugin's descriptor. */
-    public static final String TYPE_PLUGIN = "plugin";
+    static final String TYPE_PLUGIN = 'plugin'
 
-    public I18nDescriptor {
-        basenames = List.copyOf(basenames);
-        locales = List.copyOf(locales);
+    I18nDescriptor {
+        basenames = List.copyOf(basenames)
+        locales = List.copyOf(locales)
     }
 
     /**
@@ -54,7 +52,8 @@ public record I18nDescriptor(String type, String name, String version, List<Stri
      *
      * @return {@code true} for the application descriptor
      */
-    public boolean isApplication() {
-        return TYPE_APPLICATION.equals(this.type);
+    boolean isApplication() {
+        return TYPE_APPLICATION.equals(this.type)
     }
+
 }
