@@ -16,7 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.plugins.web.controllers;
+package org.grails.plugins.web.controllers
 
 /**
  * Represents meta data which describes an exception handling method
@@ -24,9 +24,10 @@ package org.grails.plugins.web.controllers;
  * @since 2.3
  *
  */
-public interface ControllerExceptionHandlerMetaData {
+interface ControllerExceptionHandlerMetaData {
 
-    Class<? extends Exception> getExceptionType();
+    Class<? extends Exception> getExceptionType()
 
-    String getMethodName();
+    String getMethodName()
+
 }
