@@ -16,14 +16,14 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.compiler.beans;
+package grails.compiler.beans
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.ElementType
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
 
-import org.codehaus.groovy.transform.GroovyASTTransformationClass;
+import org.codehaus.groovy.transform.GroovyASTTransformationClass
 
 /**
  * Marks a class whose {@code beans} closure property is a bean-definition DSL that should be
@@ -108,8 +108,8 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass;
  */
 @Retention(RetentionPolicy.CLASS)
 @Target(ElementType.TYPE)
-@GroovyASTTransformationClass("org.grails.compiler.beans.GrailsBeansASTTransformation")
-public @interface GrailsBeans {
+@GroovyASTTransformationClass('org.grails.compiler.beans.GrailsBeansASTTransformation')
+@interface GrailsBeans {
 
     /**
      * The name of the generated sibling class, for a {@code grails.plugins.Plugin} subclass. The
@@ -130,7 +130,7 @@ public @interface GrailsBeans {
      * not otherwise own splits that package across two jars, which a modular or native-image
      * consumer pays for, so name one of the plugin's own.
      */
-    String autoConfigurationName() default "";
+    String autoConfigurationName() default ''
 
     /**
      * Additional annotation types to move from a {@code grails.plugins.Plugin} subclass onto its
@@ -141,6 +141,6 @@ public @interface GrailsBeans {
      * plugin class, where Spring never sees it. E.g.
      * {@code @GrailsBeans(moveAnnotations = [SomeVendorAnnotation])}.
      */
-    Class<?>[] moveAnnotations() default {};
+    Class<?>[] moveAnnotations() default []
 
 }
