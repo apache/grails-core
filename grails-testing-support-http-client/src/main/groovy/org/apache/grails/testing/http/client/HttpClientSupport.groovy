@@ -1130,8 +1130,24 @@ trait HttpClientSupport {
                     'Consider using newHttpClientWith() or setting connectTimeout(...) on your custom client.'
             )
         }
-        def response = (client ?: httpClient).send(request, HttpResponse.BodyHandlers.ofString())
-        TestHttpResponse.wrap(response)
+        // A request is tagged and watched, so that one which never answers says which side it was
+        // waiting on rather than only that the client gave up. See SlowRequestReport.
+        String correlationId = SlowRequestReport.nextCorrelationId()
+        HttpRequest tagged = HttpRequest.newBuilder(request, { String name, String value -> true })
+                .header(SlowRequestReport.CORRELATION_HEADER, correlationId)
+                .build()
+        def report = SlowRequestReport.arm(correlationId, "${request.method()} ${request.uri()}")
+        try {
+            def response = (client ?: httpClient).send(tagged, HttpResponse.BodyHandlers.ofString())
+            TestHttpResponse.wrap(response)
+        }
+        catch (Exception noResponse) {
+            warn("No response for [${request.method()} ${request.uri()}] with correlation id [${correlationId}]: ${noResponse}")
+            throw noResponse
+        }
+        finally {
+            SlowRequestReport.disarm(report)
+        }
     }
 
     /**
