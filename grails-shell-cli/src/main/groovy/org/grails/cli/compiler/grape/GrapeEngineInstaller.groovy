@@ -16,37 +16,34 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli.compiler.grape;
+package org.grails.cli.compiler.grape
 
-import java.util.List;
+import java.lang.reflect.Field
 
-import org.eclipse.aether.repository.Proxy;
-import org.eclipse.aether.repository.ProxySelector;
-import org.eclipse.aether.repository.RemoteRepository;
+import groovy.grape.Grape
+import groovy.grape.GrapeEngine
+import groovy.transform.CompileStatic
 
 /**
- * Composite {@link ProxySelector}.
+ * Utility to install a specific {@link Grape} engine with Groovy.
  *
- * @author Dave Syer
- * @since 1.1.0
+ * @author Andy Wilkinson
+ * @since 1.0.0
  */
-public class CompositeProxySelector implements ProxySelector {
+@CompileStatic
+abstract class GrapeEngineInstaller {
 
-    private final List<ProxySelector> selectors;
-
-    public CompositeProxySelector(List<ProxySelector> selectors) {
-        this.selectors = selectors;
-    }
-
-    @Override
-    public Proxy getProxy(RemoteRepository repository) {
-        for (ProxySelector selector : this.selectors) {
-            Proxy proxy = selector.getProxy(repository);
-            if (proxy != null) {
-                return proxy;
+    static void install(GrapeEngine engine) {
+        synchronized (Grape) {
+            try {
+                Field field = Grape.getDeclaredField('instance')
+                field.setAccessible(true)
+                field.set(null, engine)
+            }
+            catch (Exception ex) {
+                throw new IllegalStateException('Failed to install GrapeEngine', ex)
             }
         }
-        return null;
     }
 
 }

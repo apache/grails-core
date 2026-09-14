@@ -16,32 +16,26 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli.compiler.grape;
+package org.grails.cli.compiler.grape
 
-import java.lang.reflect.Field;
-
-import groovy.grape.Grape;
-import groovy.grape.GrapeEngine;
+import org.eclipse.aether.DefaultRepositorySystemSession
+import org.eclipse.aether.RepositorySystem
 
 /**
- * Utility to install a specific {@link Grape} engine with Groovy.
+ * Strategy that can be used to apply some auto-configuration during the installation of a
+ * {@link MavenResolverGrapeEngine}.
  *
  * @author Andy Wilkinson
  * @since 1.0.0
  */
-public abstract class GrapeEngineInstaller {
+@FunctionalInterface
+interface RepositorySystemSessionAutoConfiguration {
 
-    public static void install(GrapeEngine engine) {
-        synchronized (Grape.class) {
-            try {
-                Field field = Grape.class.getDeclaredField("instance");
-                field.setAccessible(true);
-                field.set(null, engine);
-            }
-            catch (Exception ex) {
-                throw new IllegalStateException("Failed to install GrapeEngine", ex);
-            }
-        }
-    }
+    /**
+     * Apply the configuration.
+     * @param session the repository system session
+     * @param repositorySystem the repository system
+     */
+    void apply(DefaultRepositorySystemSession session, RepositorySystem repositorySystem)
 
 }

@@ -16,19 +16,16 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli.compiler.grape;
+package org.grails.cli.compiler.grape
 
-import java.io.File;
-import java.util.Arrays;
-
-import org.eclipse.aether.DefaultRepositorySystemSession;
-import org.eclipse.aether.RepositorySystem;
-import org.eclipse.aether.repository.LocalRepository;
-import org.eclipse.aether.repository.LocalRepositoryManager;
-import org.eclipse.aether.repository.ProxySelector;
-import org.eclipse.aether.util.repository.JreProxySelector;
-
-import org.springframework.util.StringUtils;
+import groovy.transform.CompileStatic
+import org.eclipse.aether.DefaultRepositorySystemSession
+import org.eclipse.aether.RepositorySystem
+import org.eclipse.aether.repository.LocalRepository
+import org.eclipse.aether.repository.LocalRepositoryManager
+import org.eclipse.aether.repository.ProxySelector
+import org.eclipse.aether.util.repository.JreProxySelector
+import org.springframework.util.StringUtils
 
 /**
  * A {@link RepositorySystemSessionAutoConfiguration} that, in the absence of any
@@ -37,33 +34,34 @@ import org.springframework.util.StringUtils;
  * @author Andy Wilkinson
  * @since 1.0.0
  */
-public class DefaultRepositorySystemSessionAutoConfiguration implements RepositorySystemSessionAutoConfiguration {
+@CompileStatic
+class DefaultRepositorySystemSessionAutoConfiguration implements RepositorySystemSessionAutoConfiguration {
 
     /**
      * System property that sets the number of threads Maven Resolver uses to collect the dependency
      * graph and to transfer metadata and artifacts in parallel. When unset (or not a positive
      * integer) it defaults to {@code max(8, availableProcessors * 2)}.
      */
-    public static final String RESOLUTION_THREADS_PROPERTY = "grails.dependency.resolution.threads";
+    public static final String RESOLUTION_THREADS_PROPERTY = 'grails.dependency.resolution.threads'
 
     @Override
-    public void apply(DefaultRepositorySystemSession session, RepositorySystem repositorySystem) {
+    void apply(DefaultRepositorySystemSession session, RepositorySystem repositorySystem) {
 
-        applyParallelResolution(session);
+        applyParallelResolution(session)
 
         if (session.getLocalRepositoryManager() == null) {
-            LocalRepository localRepository = new LocalRepository(getM2RepoDirectory());
+            LocalRepository localRepository = new LocalRepository(getM2RepoDirectory())
             LocalRepositoryManager localRepositoryManager = repositorySystem.newLocalRepositoryManager(session,
-                    localRepository);
-            session.setLocalRepositoryManager(localRepositoryManager);
+                    localRepository)
+            session.setLocalRepositoryManager(localRepositoryManager)
         }
 
-        ProxySelector existing = session.getProxySelector();
+        ProxySelector existing = session.getProxySelector()
         if (!(existing instanceof CompositeProxySelector)) {
-            JreProxySelector fallback = new JreProxySelector();
+            JreProxySelector fallback = new JreProxySelector()
             ProxySelector selector = (existing != null) ? new CompositeProxySelector(Arrays.asList(existing, fallback)) :
-                    fallback;
-            session.setProxySelector(selector);
+                    fallback
+            session.setProxySelector(selector)
         }
     }
 
@@ -75,15 +73,15 @@ public class DefaultRepositorySystemSessionAutoConfiguration implements Reposito
      * an explicit user/system-property override always wins.
      */
     private void applyParallelResolution(DefaultRepositorySystemSession session) {
-        int threads = resolveThreadCount();
+        int threads = resolveThreadCount()
         // Breadth-first collector resolves sibling dependencies concurrently (vs. the serial
         // depth-first default), which is the dominant win against high-latency remote repositories.
-        setConfigPropertyIfAbsent(session, "aether.dependencyCollector.impl", "bf");
-        setConfigPropertyIfAbsent(session, "aether.dependencyCollector.bf.threads", String.valueOf(threads));
+        setConfigPropertyIfAbsent(session, 'aether.dependencyCollector.impl', 'bf')
+        setConfigPropertyIfAbsent(session, 'aether.dependencyCollector.bf.threads', String.valueOf(threads))
         // Parallelise the maven-metadata.xml lookups performed while collecting the graph.
-        setConfigPropertyIfAbsent(session, "aether.metadataResolver.threads", String.valueOf(threads));
+        setConfigPropertyIfAbsent(session, 'aether.metadataResolver.threads', String.valueOf(threads))
         // Parallelise the actual artifact (jar/pom) downloads within a single resolve request.
-        setConfigPropertyIfAbsent(session, "aether.connector.basic.threads", String.valueOf(threads));
+        setConfigPropertyIfAbsent(session, 'aether.connector.basic.threads', String.valueOf(threads))
     }
 
     /**
@@ -91,38 +89,38 @@ public class DefaultRepositorySystemSessionAutoConfiguration implements Reposito
      * of {@code max(8, availableProcessors * 2)} when the property is unset or not a positive integer.
      */
     private int resolveThreadCount() {
-        int defaultThreads = Math.max(8, Runtime.getRuntime().availableProcessors() * 2);
-        String configured = System.getProperty(RESOLUTION_THREADS_PROPERTY);
+        int defaultThreads = Math.max(8, Runtime.getRuntime().availableProcessors() * 2)
+        String configured = System.getProperty(RESOLUTION_THREADS_PROPERTY)
         if (configured != null && !configured.isBlank()) {
             try {
-                int value = Integer.parseInt(configured.trim());
+                int value = Integer.parseInt(configured.trim())
                 if (value > 0) {
-                    return value;
+                    return value
                 }
             }
             catch (NumberFormatException ignored) {
                 // fall through to the computed default
             }
         }
-        return defaultThreads;
+        return defaultThreads
     }
 
     private void setConfigPropertyIfAbsent(DefaultRepositorySystemSession session, String key, String value) {
         if (!session.getConfigProperties().containsKey(key)) {
-            session.setConfigProperty(key, value);
+            session.setConfigProperty(key, value)
         }
     }
 
     private File getM2RepoDirectory() {
-        return new File(getDefaultM2HomeDirectory(), "repository");
+        return new File(getDefaultM2HomeDirectory(), 'repository')
     }
 
     private File getDefaultM2HomeDirectory() {
-        String mavenRoot = System.getProperty("maven.home");
+        String mavenRoot = System.getProperty('maven.home')
         if (StringUtils.hasLength(mavenRoot)) {
-            return new File(mavenRoot);
+            return new File(mavenRoot)
         }
-        return new File(System.getProperty("user.home"), ".m2");
+        return new File(System.getProperty('user.home'), '.m2')
     }
 
 }

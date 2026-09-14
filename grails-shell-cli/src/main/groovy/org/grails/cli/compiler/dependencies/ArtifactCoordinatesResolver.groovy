@@ -16,7 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli.compiler.dependencies;
+package org.grails.cli.compiler.dependencies
 
 /**
  * A resolver for artifacts' Maven coordinates, allowing group id, artifact id, or version
@@ -29,7 +29,7 @@ package org.grails.cli.compiler.dependencies;
  * @author Andy Wilkinson
  * @since 1.0.0
  */
-public interface ArtifactCoordinatesResolver {
+interface ArtifactCoordinatesResolver {
 
     /**
      * Gets the group id of the artifact identified by the given {@code module}. Returns
@@ -37,7 +37,7 @@ public interface ArtifactCoordinatesResolver {
      * @param module the id of the module
      * @return the group id of the module
      */
-    String getGroupId(String module);
+    String getGroupId(String module)
 
     /**
      * Gets the artifact id of the artifact identified by the given {@code module}.
@@ -45,7 +45,7 @@ public interface ArtifactCoordinatesResolver {
      * @param module the id of the module
      * @return the artifact id of the module
      */
-    String getArtifactId(String module);
+    String getArtifactId(String module)
 
     /**
      * Gets the version of the artifact identified by the given {@code module}. Returns
@@ -53,6 +53,6 @@ public interface ArtifactCoordinatesResolver {
      * @param module the id of the module
      * @return the version of the module
      */
-    String getVersion(String module);
+    String getVersion(String module)
 
 }

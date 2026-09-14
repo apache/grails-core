@@ -16,19 +16,37 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli.compiler.grape;
+package org.grails.cli.compiler.grape
+
+import groovy.transform.CompileStatic
+import org.eclipse.aether.repository.Proxy
+import org.eclipse.aether.repository.ProxySelector
+import org.eclipse.aether.repository.RemoteRepository
 
 /**
- * Reports progress on a dependency resolution operation.
+ * Composite {@link ProxySelector}.
  *
- * @author Andy Wilkinson
+ * @author Dave Syer
+ * @since 1.1.0
  */
-@FunctionalInterface
-interface ProgressReporter {
+@CompileStatic
+class CompositeProxySelector implements ProxySelector {
 
-    /**
-     * Notification that the operation has completed.
-     */
-    void finished();
+    private final List<ProxySelector> selectors
+
+    CompositeProxySelector(List<ProxySelector> selectors) {
+        this.selectors = selectors
+    }
+
+    @Override
+    Proxy getProxy(RemoteRepository repository) {
+        for (ProxySelector selector in this.selectors) {
+            Proxy proxy = selector.getProxy(repository)
+            if (proxy != null) {
+                return proxy
+            }
+        }
+        return null
+    }
 
 }

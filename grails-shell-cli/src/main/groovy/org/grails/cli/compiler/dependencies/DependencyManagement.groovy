@@ -16,24 +16,33 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli.compiler.grape;
+package org.grails.cli.compiler.dependencies
 
 /**
- * Thrown to indicate a failure during dependency resolution.
+ * An encapsulation of dependency management information.
  *
  * @author Andy Wilkinson
- * @since 1.0.0
+ * @since 1.3.0
  */
-@SuppressWarnings("serial")
-public class DependencyResolutionFailedException extends RuntimeException {
+interface DependencyManagement {
 
     /**
-     * Creates a new {@code DependencyResolutionFailedException} with the given
-     * {@code cause}.
-     * @param cause the cause of the resolution failure
+     * Returns the managed dependencies.
+     * @return the managed dependencies
      */
-    public DependencyResolutionFailedException(Throwable cause) {
-        super(cause);
-    }
+    List<Dependency> getDependencies()
+
+    /**
+     * Returns the managed version of Spring Boot. May be {@code null}.
+     * @return the Spring Boot version, or {@code null}
+     */
+    String getSpringBootVersion()
+
+    /**
+     * Finds the managed dependency with the given {@code artifactId}.
+     * @param artifactId the artifact ID of the dependency to find
+     * @return the dependency, or {@code null}
+     */
+    Dependency find(String artifactId)
 
 }

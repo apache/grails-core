@@ -16,26 +16,27 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli.compiler.grape;
+package org.grails.cli.compiler.grape
 
-import org.eclipse.aether.DefaultRepositorySystemSession;
-import org.eclipse.aether.RepositorySystem;
+import groovy.transform.CompileStatic
 
 /**
- * Strategy that can be used to apply some auto-configuration during the installation of a
- * {@link MavenResolverGrapeEngine}.
+ * Thrown to indicate a failure during dependency resolution.
  *
  * @author Andy Wilkinson
  * @since 1.0.0
  */
-@FunctionalInterface
-public interface RepositorySystemSessionAutoConfiguration {
+@SuppressWarnings('serial')
+@CompileStatic
+class DependencyResolutionFailedException extends RuntimeException {
 
     /**
-     * Apply the configuration.
-     * @param session the repository system session
-     * @param repositorySystem the repository system
+     * Creates a new {@code DependencyResolutionFailedException} with the given
+     * {@code cause}.
+     * @param cause the cause of the resolution failure
      */
-    void apply(DefaultRepositorySystemSession session, RepositorySystem repositorySystem);
+    DependencyResolutionFailedException(Throwable cause) {
+        super(cause)
+    }
 
 }

@@ -16,16 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli.compiler.dependencies;
+package org.grails.cli.compiler.dependencies
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import groovy.transform.CompileStatic
+import org.apache.maven.model.Model
 
-import org.apache.maven.model.Model;
-
-import org.grails.cli.compiler.dependencies.Dependency.Exclusion;
+import org.grails.cli.compiler.dependencies.Dependency.Exclusion
 
 /**
  * {@link DependencyManagement} derived from a Maven {@link Model}.
@@ -33,46 +29,47 @@ import org.grails.cli.compiler.dependencies.Dependency.Exclusion;
  * @author Andy Wilkinson
  * @since 1.3.0
  */
-public class MavenModelDependencyManagement implements DependencyManagement {
+@CompileStatic
+class MavenModelDependencyManagement implements DependencyManagement {
 
-    private final List<Dependency> dependencies;
+    private final List<Dependency> dependencies
 
-    private final Map<String, Dependency> byArtifactId = new LinkedHashMap<>();
+    private final Map<String, Dependency> byArtifactId = new LinkedHashMap<>()
 
-    public MavenModelDependencyManagement(Model model) {
-        this.dependencies = extractDependenciesFromModel(model);
-        for (Dependency dependency : this.dependencies) {
-            this.byArtifactId.put(dependency.getArtifactId(), dependency);
+    MavenModelDependencyManagement(Model model) {
+        this.dependencies = extractDependenciesFromModel(model)
+        for (Dependency dependency in this.dependencies) {
+            this.byArtifactId.put(dependency.getArtifactId(), dependency)
         }
     }
 
     private static List<Dependency> extractDependenciesFromModel(Model model) {
-        List<Dependency> dependencies = new ArrayList<>();
+        List<Dependency> dependencies = new ArrayList<>()
         for (org.apache.maven.model.Dependency mavenDependency : model.getDependencyManagement().getDependencies()) {
-            List<Exclusion> exclusions = new ArrayList<>();
+            List<Exclusion> exclusions = new ArrayList<>()
             for (org.apache.maven.model.Exclusion mavenExclusion : mavenDependency.getExclusions()) {
-                exclusions.add(new Exclusion(mavenExclusion.getGroupId(), mavenExclusion.getArtifactId()));
+                exclusions.add(new Exclusion(mavenExclusion.getGroupId(), mavenExclusion.getArtifactId()))
             }
             Dependency dependency = new Dependency(mavenDependency.getGroupId(), mavenDependency.getArtifactId(),
-                    mavenDependency.getVersion(), exclusions);
-            dependencies.add(dependency);
+                    mavenDependency.getVersion(), exclusions)
+            dependencies.add(dependency)
         }
-        return dependencies;
+        return dependencies
     }
 
     @Override
-    public List<Dependency> getDependencies() {
-        return this.dependencies;
+    List<Dependency> getDependencies() {
+        return this.dependencies
     }
 
     @Override
-    public String getSpringBootVersion() {
-        return find("spring-boot").getVersion();
+    String getSpringBootVersion() {
+        return find('spring-boot').getVersion()
     }
 
     @Override
-    public Dependency find(String artifactId) {
-        return this.byArtifactId.get(artifactId);
+    Dependency find(String artifactId) {
+        return this.byArtifactId.get(artifactId)
     }
 
 }

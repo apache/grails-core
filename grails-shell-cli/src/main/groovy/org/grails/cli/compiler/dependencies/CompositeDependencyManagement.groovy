@@ -16,11 +16,9 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli.compiler.dependencies;
+package org.grails.cli.compiler.dependencies
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import groovy.transform.CompileStatic
 
 /**
  * {@link DependencyManagement} that delegates to one or more {@link DependencyManagement}
@@ -29,44 +27,45 @@ import java.util.List;
  * @author Andy Wilkinson
  * @since 1.3.0
  */
-public class CompositeDependencyManagement implements DependencyManagement {
+@CompileStatic
+class CompositeDependencyManagement implements DependencyManagement {
 
-    private final List<DependencyManagement> delegates;
+    private final List<DependencyManagement> delegates
 
-    private final List<Dependency> dependencies = new ArrayList<>();
+    private final List<Dependency> dependencies = new ArrayList<>()
 
-    public CompositeDependencyManagement(DependencyManagement... delegates) {
-        this.delegates = Arrays.asList(delegates);
-        for (DependencyManagement delegate : delegates) {
-            this.dependencies.addAll(delegate.getDependencies());
+    CompositeDependencyManagement(DependencyManagement... delegates) {
+        this.delegates = Arrays.asList(delegates)
+        for (DependencyManagement delegate in delegates) {
+            this.dependencies.addAll(delegate.getDependencies())
         }
     }
 
     @Override
-    public List<Dependency> getDependencies() {
-        return this.dependencies;
+    List<Dependency> getDependencies() {
+        return this.dependencies
     }
 
     @Override
-    public String getSpringBootVersion() {
-        for (DependencyManagement delegate : this.delegates) {
-            String version = delegate.getSpringBootVersion();
+    String getSpringBootVersion() {
+        for (DependencyManagement delegate in this.delegates) {
+            String version = delegate.getSpringBootVersion()
             if (version != null) {
-                return version;
+                return version
             }
         }
-        return null;
+        return null
     }
 
     @Override
-    public Dependency find(String artifactId) {
-        for (DependencyManagement delegate : this.delegates) {
-            Dependency found = delegate.find(artifactId);
+    Dependency find(String artifactId) {
+        for (DependencyManagement delegate in this.delegates) {
+            Dependency found = delegate.find(artifactId)
             if (found != null) {
-                return found;
+                return found
             }
         }
-        return null;
+        return null
     }
 
 }

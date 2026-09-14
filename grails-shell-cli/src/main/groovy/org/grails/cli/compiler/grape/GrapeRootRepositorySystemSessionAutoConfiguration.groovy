@@ -16,16 +16,14 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli.compiler.grape;
+package org.grails.cli.compiler.grape
 
-import java.io.File;
-
-import org.eclipse.aether.DefaultRepositorySystemSession;
-import org.eclipse.aether.RepositorySystem;
-import org.eclipse.aether.repository.LocalRepository;
-import org.eclipse.aether.repository.LocalRepositoryManager;
-
-import org.springframework.util.StringUtils;
+import groovy.transform.CompileStatic
+import org.eclipse.aether.DefaultRepositorySystemSession
+import org.eclipse.aether.RepositorySystem
+import org.eclipse.aether.repository.LocalRepository
+import org.eclipse.aether.repository.LocalRepositoryManager
+import org.springframework.util.StringUtils
 
 /**
  * Honours the configuration of {@code grape.root} by customizing the session's local
@@ -34,23 +32,24 @@ import org.springframework.util.StringUtils;
  * @author Andy Wilkinson
  * @since 1.2.5
  */
-public class GrapeRootRepositorySystemSessionAutoConfiguration implements RepositorySystemSessionAutoConfiguration {
+@CompileStatic
+class GrapeRootRepositorySystemSessionAutoConfiguration implements RepositorySystemSessionAutoConfiguration {
 
     @Override
-    public void apply(DefaultRepositorySystemSession session, RepositorySystem repositorySystem) {
-        String grapeRoot = System.getProperty("grape.root");
+    void apply(DefaultRepositorySystemSession session, RepositorySystem repositorySystem) {
+        String grapeRoot = System.getProperty('grape.root')
         if (StringUtils.hasLength(grapeRoot)) {
-            configureLocalRepository(session, repositorySystem, grapeRoot);
+            configureLocalRepository(session, repositorySystem, grapeRoot)
         }
     }
 
     private void configureLocalRepository(DefaultRepositorySystemSession session, RepositorySystem repositorySystem,
             String grapeRoot) {
-        File repositoryDir = new File(grapeRoot, "repository");
-        LocalRepository localRepository = new LocalRepository(repositoryDir);
+        File repositoryDir = new File(grapeRoot, 'repository')
+        LocalRepository localRepository = new LocalRepository(repositoryDir)
         LocalRepositoryManager localRepositoryManager = repositorySystem.newLocalRepositoryManager(session,
-                localRepository);
-        session.setLocalRepositoryManager(localRepositoryManager);
+                localRepository)
+        session.setLocalRepositoryManager(localRepositoryManager)
     }
 
 }

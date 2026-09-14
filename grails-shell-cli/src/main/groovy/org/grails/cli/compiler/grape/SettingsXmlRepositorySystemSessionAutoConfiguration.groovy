@@ -16,14 +16,15 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli.compiler.grape;
+package org.grails.cli.compiler.grape
 
-import org.eclipse.aether.DefaultRepositorySystemSession;
-import org.eclipse.aether.RepositorySystem;
-import org.eclipse.aether.repository.LocalRepository;
+import groovy.transform.CompileStatic
+import org.eclipse.aether.DefaultRepositorySystemSession
+import org.eclipse.aether.RepositorySystem
+import org.eclipse.aether.repository.LocalRepository
 
-import org.grails.cli.compiler.maven.MavenSettings;
-import org.grails.cli.compiler.maven.MavenSettingsReader;
+import org.grails.cli.compiler.maven.MavenSettings
+import org.grails.cli.compiler.maven.MavenSettingsReader
 
 /**
  * Auto-configuration for a RepositorySystemSession that uses Maven's settings.xml to
@@ -32,25 +33,26 @@ import org.grails.cli.compiler.maven.MavenSettingsReader;
  * @author Andy Wilkinson
  * @since 1.0.0
  */
-public class SettingsXmlRepositorySystemSessionAutoConfiguration implements RepositorySystemSessionAutoConfiguration {
+@CompileStatic
+class SettingsXmlRepositorySystemSessionAutoConfiguration implements RepositorySystemSessionAutoConfiguration {
 
     @Override
-    public void apply(DefaultRepositorySystemSession session, RepositorySystem repositorySystem) {
-        MavenSettings settings = getSettings(session);
-        String localRepository = settings.getLocalRepository();
+    void apply(DefaultRepositorySystemSession session, RepositorySystem repositorySystem) {
+        MavenSettings settings = getSettings(session)
+        String localRepository = settings.getLocalRepository()
         if (localRepository != null) {
             session.setLocalRepositoryManager(
-                    repositorySystem.newLocalRepositoryManager(session, new LocalRepository(localRepository)));
+                    repositorySystem.newLocalRepositoryManager(session, new LocalRepository(localRepository)))
         }
     }
 
     private MavenSettings getSettings(DefaultRepositorySystemSession session) {
-        MavenSettings settings = new MavenSettingsReader().readSettings();
-        session.setOffline(settings.getOffline());
-        session.setMirrorSelector(settings.getMirrorSelector());
-        session.setAuthenticationSelector(settings.getAuthenticationSelector());
-        session.setProxySelector(settings.getProxySelector());
-        return settings;
+        MavenSettings settings = new MavenSettingsReader().readSettings()
+        session.setOffline(settings.getOffline())
+        session.setMirrorSelector(settings.getMirrorSelector())
+        session.setAuthenticationSelector(settings.getAuthenticationSelector())
+        session.setProxySelector(settings.getProxySelector())
+        return settings
     }
 
 }

@@ -16,11 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli.compiler.grape;
+package org.grails.cli.compiler.grape
 
-import java.net.URI;
-
-import org.springframework.util.ObjectUtils;
+import groovy.transform.CompileStatic
+import org.springframework.util.ObjectUtils
 
 /**
  * The configuration of a repository.
@@ -28,13 +27,14 @@ import org.springframework.util.ObjectUtils;
  * @author Andy Wilkinson
  * @since 1.0.0
  */
-public final class RepositoryConfiguration {
+@CompileStatic
+final class RepositoryConfiguration {
 
-    private final String name;
+    private final String name
 
-    private final URI uri;
+    private final URI uri
 
-    private final boolean snapshotsEnabled;
+    private final boolean snapshotsEnabled
 
     /**
      * Creates a new {@code RepositoryConfiguration} instance.
@@ -43,60 +43,60 @@ public final class RepositoryConfiguration {
      * @param snapshotsEnabled {@code true} if the repository should enable access to
      * snapshots, {@code false} otherwise
      */
-    public RepositoryConfiguration(String name, URI uri, boolean snapshotsEnabled) {
-        this.name = name;
-        this.uri = uri;
-        this.snapshotsEnabled = snapshotsEnabled;
+    RepositoryConfiguration(String name, URI uri, boolean snapshotsEnabled) {
+        this.name = name
+        this.uri = uri
+        this.snapshotsEnabled = snapshotsEnabled
     }
 
     /**
      * Return the name of the repository.
      * @return the repository name
      */
-    public String getName() {
-        return this.name;
+    String getName() {
+        return this.name
     }
 
     /**
      * Return the URI of the repository.
      * @return the repository URI
      */
-    public URI getUri() {
-        return this.uri;
+    URI getUri() {
+        return this.uri
     }
 
     /**
      * Return if the repository should enable access to snapshots.
      * @return {@code true} if snapshot access is enabled
      */
-    public boolean getSnapshotsEnabled() {
-        return this.snapshotsEnabled;
+    boolean getSnapshotsEnabled() {
+        return this.snapshotsEnabled
     }
 
     @Override
-    public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
+    boolean equals(Object obj) {
+        if (this.is(obj)) {
+            return true
         }
         if (obj == null) {
-            return false;
+            return false
         }
         if (getClass() != obj.getClass()) {
-            return false;
+            return false
         }
-        RepositoryConfiguration other = (RepositoryConfiguration) obj;
-        return ObjectUtils.nullSafeEquals(this.name, other.name);
+        RepositoryConfiguration other = (RepositoryConfiguration) obj
+        return ObjectUtils.nullSafeEquals(this.name, other.name)
     }
 
     @Override
-    public int hashCode() {
-        return ObjectUtils.nullSafeHashCode(this.name);
+    int hashCode() {
+        return ObjectUtils.nullSafeHashCode(this.name)
     }
 
     @Override
-    public String toString() {
-        return "RepositoryConfiguration [name=" + this.name + ", uri=" + this.uri + ", snapshotsEnabled=" +
-                this.snapshotsEnabled + "]";
+    String toString() {
+        return 'RepositoryConfiguration [name=' + this.name + ', uri=' + this.uri + ', snapshotsEnabled=' +
+                this.snapshotsEnabled + ']'
     }
 
 }
