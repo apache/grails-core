@@ -223,7 +223,7 @@ class DefaultGrailsControllerClass extends AbstractInjectableGrailsClass impleme
 
         @Override
         Object invoke(Object controller) throws Throwable {
-            return handle.invoke(controller)
+            return handle.invokeWithArguments(controller)
         }
     }
 
