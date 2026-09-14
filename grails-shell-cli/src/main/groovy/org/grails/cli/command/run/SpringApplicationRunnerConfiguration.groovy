@@ -16,27 +16,31 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli.command.install;
+package org.grails.cli.command.run
 
-import java.io.File;
-import java.util.List;
+import java.util.logging.Level
+
+import org.grails.cli.compiler.GroovyCompilerConfiguration
 
 /**
- * Resolve artifact identifiers (typically in the form {@literal group:artifact:version})
- * to {@link File}s.
+ * Configuration for the {@link SpringApplicationRunner}.
  *
- * @author Andy Wilkinson
+ * @author Phillip Webb
+ * @since 1.0.0
  */
-@FunctionalInterface
-interface DependencyResolver {
+interface SpringApplicationRunnerConfiguration extends GroovyCompilerConfiguration {
 
     /**
-     * Resolves the given {@code artifactIdentifiers}, typically in the form
-     * "group:artifact:version", and their dependencies.
-     * @param artifactIdentifiers the artifacts to resolve
-     * @return the {@code File}s for the resolved artifacts
-     * @throws Exception if dependency resolution fails
+     * Returns {@code true} if the source file should be monitored for changes and
+     * automatically recompiled.
+     * @return {@code true} if file watching should be performed, otherwise {@code false}
      */
-    List<File> resolve(List<String> artifactIdentifiers) throws Exception;
+    boolean isWatchForFileChanges()
+
+    /**
+     * Returns the logging level to use.
+     * @return the logging level
+     */
+    Level getLogLevel()
 
 }

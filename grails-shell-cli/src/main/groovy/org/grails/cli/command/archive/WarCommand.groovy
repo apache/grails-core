@@ -16,15 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli.command.archive;
+package org.grails.cli.command.archive
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-
-import org.springframework.boot.loader.tools.JarWriter;
-import org.springframework.boot.loader.tools.Layouts;
-import org.springframework.boot.loader.tools.LibraryScope;
+import groovy.transform.CompileStatic
+import org.springframework.boot.loader.tools.JarWriter
+import org.springframework.boot.loader.tools.Layouts
+import org.springframework.boot.loader.tools.LibraryScope
 
 /**
  * {@link org.springframework.boot.cli.command.Command} to create a self-contained executable jar file from a CLI application.
@@ -34,36 +31,37 @@ import org.springframework.boot.loader.tools.LibraryScope;
  * @author Henri Kerola
  * @since 1.3.0
  */
-public class WarCommand extends ArchiveCommand {
+@CompileStatic
+class WarCommand extends ArchiveCommand {
 
-    public WarCommand() {
-        super("war", "Create a self-contained executable war file from a Spring Groovy script", new WarOptionHandler());
+    WarCommand() {
+        super('war', 'Create a self-contained executable war file from a Spring Groovy script', new WarOptionHandler())
     }
 
-    private static final class WarOptionHandler extends ArchiveOptionHandler {
+    private static final class WarOptionHandler extends ArchiveCommand.ArchiveOptionHandler {
 
         WarOptionHandler() {
-            super("war", new Layouts.War());
+            super('war', new Layouts.War())
         }
 
         @Override
         protected LibraryScope getLibraryScope(File file) {
-            String fileName = file.getName();
-            if (fileName.contains("tomcat-embed") || fileName.contains("spring-boot-starter-tomcat")) {
-                return LibraryScope.PROVIDED;
+            String fileName = file.getName()
+            if (fileName.contains('tomcat-embed') || fileName.contains('spring-boot-starter-tomcat')) {
+                return LibraryScope.PROVIDED
             }
-            return LibraryScope.COMPILE;
+            return LibraryScope.COMPILE
         }
 
         @Override
         protected void addCliClasses(JarWriter writer) throws IOException {
-            addClass(writer, null, "org.grails.cli.boot.SpringApplicationWebApplicationInitializer");
-            super.addCliClasses(writer);
+            addClass(writer, null, 'org.grails.cli.boot.SpringApplicationWebApplicationInitializer')
+            super.addCliClasses(writer)
         }
 
         @Override
         protected void writeClasspathEntry(JarWriter writer, ResourceMatcher.MatchedResource entry) throws IOException {
-            writer.writeEntry(getLayout().getClassesLocation() + entry.getName(), new FileInputStream(entry.getFile()));
+            writer.writeEntry(getLayout().getClassesLocation() + entry.getName(), new FileInputStream(entry.getFile()))
         }
 
     }

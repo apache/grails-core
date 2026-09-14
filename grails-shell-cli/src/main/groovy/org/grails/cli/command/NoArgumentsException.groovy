@@ -16,31 +16,27 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli.command.run;
+package org.grails.cli.command
 
-import java.util.logging.Level;
-
-import org.grails.cli.compiler.GroovyCompilerConfiguration;
+import groovy.transform.CompileStatic
+import org.springframework.boot.cli.command.CommandException
 
 /**
- * Configuration for the {@link SpringApplicationRunner}.
+ * Exception used to indicate that no arguments were specified.
  *
  * @author Phillip Webb
- * @since 1.0.0
  */
-public interface SpringApplicationRunnerConfiguration extends GroovyCompilerConfiguration {
+@CompileStatic
+class NoArgumentsException extends CommandException {
 
-    /**
-     * Returns {@code true} if the source file should be monitored for changes and
-     * automatically recompiled.
-     * @return {@code true} if file watching should be performed, otherwise {@code false}
-     */
-    boolean isWatchForFileChanges();
+    private static final long serialVersionUID = 1L
 
-    /**
-     * Returns the logging level to use.
-     * @return the logging level
-     */
-    Level getLogLevel();
+    // CommandException has no no-arg constructor, only varargs ones; Groovy's compiler
+    // (unlike Java's) does not resolve an implicit generated default constructor against a
+    // varargs-only superclass constructor, so this explicit super() call is required.
+    @SuppressWarnings('UnnecessaryConstructor')
+    NoArgumentsException() {
+        super()
+    }
 
 }

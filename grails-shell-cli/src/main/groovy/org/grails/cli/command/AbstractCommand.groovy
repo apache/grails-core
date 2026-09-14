@@ -16,14 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli.command;
+package org.grails.cli.command
 
-import java.util.Collection;
-import java.util.Collections;
-
-import org.springframework.boot.cli.command.Command;
-import org.springframework.boot.cli.command.HelpExample;
-import org.springframework.boot.cli.command.options.OptionHelp;
+import groovy.transform.CompileStatic
+import org.springframework.boot.cli.command.Command
+import org.springframework.boot.cli.command.HelpExample
+import org.springframework.boot.cli.command.options.OptionHelp
 
 /**
  * Abstract {@link org.springframework.boot.cli.command.Command} implementation.
@@ -32,11 +30,12 @@ import org.springframework.boot.cli.command.options.OptionHelp;
  * @author Dave Syer
  * @since 1.0.0
  */
-public abstract class AbstractCommand implements Command {
+@CompileStatic
+abstract class AbstractCommand implements Command {
 
-    private final String name;
+    private final String name
 
-    private final String description;
+    private final String description
 
     /**
      * Create a new {@link AbstractCommand} instance.
@@ -44,38 +43,38 @@ public abstract class AbstractCommand implements Command {
      * @param description the command description
      */
     protected AbstractCommand(String name, String description) {
-        this.name = name;
-        this.description = description;
+        this.name = name
+        this.description = description
     }
 
     @Override
-    public String getName() {
-        return this.name;
+    String getName() {
+        return this.name
     }
 
     @Override
-    public String getDescription() {
-        return this.description;
+    String getDescription() {
+        return this.description
     }
 
     @Override
-    public String getUsageHelp() {
-        return null;
+    String getUsageHelp() {
+        return null
     }
 
     @Override
-    public String getHelp() {
-        return null;
+    String getHelp() {
+        return null
     }
 
     @Override
-    public Collection<OptionHelp> getOptionsHelp() {
-        return Collections.emptyList();
+    Collection<OptionHelp> getOptionsHelp() {
+        return Collections.emptyList()
     }
 
     @Override
-    public Collection<HelpExample> getExamples() {
-        return null;
+    Collection<HelpExample> getExamples() {
+        return null
     }
 
 }

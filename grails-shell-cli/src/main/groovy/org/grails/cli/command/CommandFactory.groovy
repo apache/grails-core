@@ -16,17 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli.command;
+package org.grails.cli.command
 
-import org.springframework.boot.cli.command.CommandException;
+import org.springframework.boot.cli.command.Command
 
 /**
- * Exception used to indicate that no arguments were specified.
+ * Factory used to create CLI {@link org.springframework.boot.cli.command.Command}s. Intended for use with a Java
+ * {@link java.util.ServiceLoader}.
  *
- * @author Phillip Webb
+ * @author Dave Syer
+ * @since 1.0.0
  */
-class NoArgumentsException extends CommandException {
+@FunctionalInterface
+interface CommandFactory {
 
-    private static final long serialVersionUID = 1L;
+    /**
+     * Returns the CLI {@link org.springframework.boot.cli.command.Command}s.
+     * @return the commands
+     */
+    Collection<Command> getCommands()
 
 }

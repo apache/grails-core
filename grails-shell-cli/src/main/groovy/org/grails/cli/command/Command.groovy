@@ -16,13 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli.command;
+package org.grails.cli.command
 
-import java.util.Collection;
-
-import org.springframework.boot.cli.command.HelpExample;
-import org.springframework.boot.cli.command.options.OptionHelp;
-import org.springframework.boot.cli.command.status.ExitStatus;
+import org.springframework.boot.cli.command.HelpExample
+import org.springframework.boot.cli.command.options.OptionHelp
+import org.springframework.boot.cli.command.status.ExitStatus
 
 /**
  * A single command that can be run from the CLI.
@@ -33,19 +31,19 @@ import org.springframework.boot.cli.command.status.ExitStatus;
  * @since 1.0.0
  * @see #run(String...)
  */
-public interface Command {
+interface Command {
 
     /**
      * Returns the name of the command.
      * @return the command's name
      */
-    String getName();
+    String getName()
 
     /**
      * Returns a description of the command.
      * @return the command's description
      */
-    String getDescription();
+    String getDescription()
 
     /**
      * Returns usage help for the command. This should be a simple one-line string
@@ -53,26 +51,26 @@ public interface Command {
      * the command in this string.
      * @return the command's usage help
      */
-    String getUsageHelp();
+    String getUsageHelp()
 
     /**
      * Gets full help text for the command, e.g. a longer description and one line per
      * option.
      * @return the command's help text
      */
-    String getHelp();
+    String getHelp()
 
     /**
      * Returns help for each supported option.
      * @return help for each of the command's options
      */
-    Collection<OptionHelp> getOptionsHelp();
+    Collection<OptionHelp> getOptionsHelp()
 
     /**
      * Return some examples for the command.
      * @return the command's examples
      */
-    Collection<HelpExample> getExamples();
+    Collection<HelpExample> getExamples()
 
     /**
      * Run the command.
@@ -80,6 +78,6 @@ public interface Command {
      * @return the outcome of the command
      * @throws Exception if the command fails
      */
-    ExitStatus run(String... args) throws Exception;
+    ExitStatus run(String... args) throws Exception
 
 }

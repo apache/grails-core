@@ -16,26 +16,39 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli.command;
+package org.grails.cli.command
 
-import java.util.Collection;
-
-import org.springframework.boot.cli.command.Command;
+import groovy.transform.CompileStatic
 
 /**
- * Factory used to create CLI {@link org.springframework.boot.cli.command.Command}s. Intended for use with a Java
- * {@link java.util.ServiceLoader}.
+ * An example that can be displayed in the help.
  *
- * @author Dave Syer
- * @since 1.0.0
+ * @author Phillip Webb
+ * @since 1.2.0
  */
-@FunctionalInterface
-public interface CommandFactory {
+@CompileStatic
+class HelpExample {
+
+    private final String description
+
+    private final String example
 
     /**
-     * Returns the CLI {@link org.springframework.boot.cli.command.Command}s.
-     * @return the commands
+     * Create a new {@link HelpExample} instance.
+     * @param description the description (in the form "to ....")
+     * @param example the example
      */
-    Collection<Command> getCommands();
+    HelpExample(String description, String example) {
+        this.description = description
+        this.example = example
+    }
+
+    String getDescription() {
+        return this.description
+    }
+
+    String getExample() {
+        return this.example
+    }
 
 }

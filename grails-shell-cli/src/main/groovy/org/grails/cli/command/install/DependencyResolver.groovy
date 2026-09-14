@@ -16,22 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli.command;
-
-import org.springframework.boot.cli.command.CommandException;
+package org.grails.cli.command.install
 
 /**
- * Exception used to when the help command is called without arguments.
+ * Resolve artifact identifiers (typically in the form {@literal group:artifact:version})
+ * to {@link File}s.
  *
- * @author Phillip Webb
- * @since 1.0.0
+ * @author Andy Wilkinson
  */
-public class NoHelpCommandArgumentsException extends CommandException {
+@FunctionalInterface
+interface DependencyResolver {
 
-    private static final long serialVersionUID = 1L;
-
-    public NoHelpCommandArgumentsException() {
-        super(Option.SHOW_USAGE, Option.HIDE_MESSAGE);
-    }
+    /**
+     * Resolves the given {@code artifactIdentifiers}, typically in the form
+     * "group:artifact:version", and their dependencies.
+     * @param artifactIdentifiers the artifacts to resolve
+     * @return the {@code File}s for the resolved artifacts
+     * @throws Exception if dependency resolution fails
+     */
+    List<File> resolve(List<String> artifactIdentifiers) throws Exception
 
 }

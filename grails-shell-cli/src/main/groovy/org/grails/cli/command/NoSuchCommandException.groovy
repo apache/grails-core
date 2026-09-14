@@ -16,36 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli.command;
+package org.grails.cli.command
+
+import groovy.transform.CompileStatic
+import org.springframework.boot.cli.command.CommandException
 
 /**
- * An example that can be displayed in the help.
+ * Exception used when a command is not found.
  *
  * @author Phillip Webb
- * @since 1.2.0
+ * @since 1.0.0
  */
-public class HelpExample {
+@CompileStatic
+class NoSuchCommandException extends CommandException {
 
-    private final String description;
+    private static final long serialVersionUID = 1L
 
-    private final String example;
-
-    /**
-     * Create a new {@link HelpExample} instance.
-     * @param description the description (in the form "to ....")
-     * @param example the example
-     */
-    public HelpExample(String description, String example) {
-        this.description = description;
-        this.example = example;
-    }
-
-    public String getDescription() {
-        return this.description;
-    }
-
-    public String getExample() {
-        return this.example;
+    NoSuchCommandException(String name) {
+        super(String.format('\'%1$s\' is not a valid command. See \'help\'.', name))
     }
 
 }

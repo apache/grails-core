@@ -16,19 +16,14 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli.command.options;
+package org.grails.cli.command.options
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import groovy.transform.CompileStatic
+import joptsimple.OptionSet
+import org.springframework.util.Assert
+import org.springframework.util.StringUtils
 
-import joptsimple.OptionSet;
-
-import org.springframework.util.Assert;
-import org.springframework.util.StringUtils;
-
-import org.grails.cli.util.ResourceUtils;
+import org.grails.cli.util.ResourceUtils
 
 /**
  * Extract source file options (anything following '--' in an {@link OptionSet}).
@@ -39,26 +34,27 @@ import org.grails.cli.util.ResourceUtils;
  * @author Andy Wilkinson
  * @since 1.0.0
  */
-public class SourceOptions {
+@CompileStatic
+class SourceOptions {
 
-    private final List<String> sources;
+    private final List<String> sources
 
-    private final List<?> args;
+    private final List<?> args
 
     /**
      * Create a new {@link SourceOptions} instance.
      * @param options the source option set
      */
-    public SourceOptions(OptionSet options) {
-        this(options, null);
+    SourceOptions(OptionSet options) {
+        this(options, null)
     }
 
     /**
      * Create a new {@link SourceOptions} instance.
      * @param arguments the source arguments
      */
-    public SourceOptions(List<?> arguments) {
-        this(arguments, null);
+    SourceOptions(List<?> arguments) {
+        this(arguments, null)
     }
 
     /**
@@ -71,77 +67,77 @@ public class SourceOptions {
      * @param classLoader an optional classloader used to try and load files that are not
      * found in the local filesystem
      */
-    public SourceOptions(OptionSet optionSet, ClassLoader classLoader) {
-        this(optionSet.nonOptionArguments(), classLoader);
+    SourceOptions(OptionSet optionSet, ClassLoader classLoader) {
+        this(optionSet.nonOptionArguments(), classLoader)
     }
 
     private SourceOptions(List<?> nonOptionArguments, ClassLoader classLoader) {
-        List<String> sources = new ArrayList<>();
-        int sourceArgCount = 0;
-        for (Object option : nonOptionArguments) {
+        List<String> sources = new ArrayList<>()
+        int sourceArgCount = 0
+        for (Object option in nonOptionArguments) {
             if (option instanceof String) {
-                String filename = (String) option;
-                if ("--".equals(filename)) {
-                    break;
+                String filename = (String) option
+                if ('--'.equals(filename)) {
+                    break
                 }
-                List<String> urls = new ArrayList<>();
-                File fileCandidate = new File(filename);
+                List<String> urls = new ArrayList<>()
+                File fileCandidate = new File(filename)
                 if (fileCandidate.isFile()) {
-                    urls.add(fileCandidate.getAbsoluteFile().toURI().toString());
+                    urls.add(fileCandidate.getAbsoluteFile().toURI().toString())
                 }
                 else if (!isAbsoluteWindowsFile(fileCandidate)) {
-                    urls.addAll(ResourceUtils.getUrls(filename, classLoader));
+                    urls.addAll(ResourceUtils.getUrls(filename, classLoader))
                 }
-                for (String url : urls) {
+                for (String url in urls) {
                     if (isSource(url)) {
-                        sources.add(url);
+                        sources.add(url)
                     }
                 }
                 if (isSource(filename)) {
                     if (urls.isEmpty()) {
-                        throw new IllegalArgumentException("Can't find " + filename);
+                        throw new IllegalArgumentException("Can't find " + filename)
                     }
                     else {
-                        sourceArgCount++;
+                        sourceArgCount++
                     }
                 }
             }
         }
-        this.args = Collections.unmodifiableList(nonOptionArguments.subList(sourceArgCount, nonOptionArguments.size()));
-        Assert.isTrue(!sources.isEmpty(), "Please specify at least one file");
-        this.sources = Collections.unmodifiableList(sources);
+        this.args = Collections.unmodifiableList((List<Object>) nonOptionArguments.subList(sourceArgCount, nonOptionArguments.size()))
+        Assert.isTrue(!sources.isEmpty(), 'Please specify at least one file')
+        this.sources = Collections.unmodifiableList(sources)
     }
 
     private boolean isAbsoluteWindowsFile(File file) {
-        return isWindows() && file.isAbsolute();
+        return isWindows() && file.isAbsolute()
     }
 
     private boolean isWindows() {
-        return File.separatorChar == '\\';
+        return File.separatorChar == '\\'
     }
 
     private boolean isSource(String name) {
-        return name.endsWith(".java") || name.endsWith(".groovy");
+        return name.endsWith('.java') || name.endsWith('.groovy')
     }
 
-    public List<?> getArgs() {
-        return this.args;
+    List<?> getArgs() {
+        return this.args
     }
 
-    public String[] getArgsArray() {
-        return this.args.stream().map(this::asString).toArray(String[]::new);
+    String[] getArgsArray() {
+        return this.args.stream().map(this::asString).toArray(String[]::new)
     }
 
     private String asString(Object arg) {
-        return (arg != null) ? String.valueOf(arg) : null;
+        return (arg != null) ? String.valueOf(arg) : null
     }
 
-    public List<String> getSources() {
-        return this.sources;
+    List<String> getSources() {
+        return this.sources
     }
 
-    public String[] getSourcesArray() {
-        return StringUtils.toStringArray(this.sources);
+    String[] getSourcesArray() {
+        return StringUtils.toStringArray(this.sources)
     }
 
 }

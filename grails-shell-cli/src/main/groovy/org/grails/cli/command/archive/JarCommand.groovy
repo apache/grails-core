@@ -16,12 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli.command.archive;
+package org.grails.cli.command.archive
 
-import java.io.File;
-
-import org.springframework.boot.loader.tools.Layouts;
-import org.springframework.boot.loader.tools.LibraryScope;
+import groovy.transform.CompileStatic
+import org.springframework.boot.loader.tools.Layouts
+import org.springframework.boot.loader.tools.LibraryScope
 
 /**
  * {@link org.springframework.boot.cli.command.Command} to create a self-contained executable jar file from a CLI application.
@@ -30,21 +29,22 @@ import org.springframework.boot.loader.tools.LibraryScope;
  * @author Phillip Webb
  * @since 1.3.0
  */
-public class JarCommand extends ArchiveCommand {
+@CompileStatic
+class JarCommand extends ArchiveCommand {
 
-    public JarCommand() {
-        super("jar", "Create a self-contained executable jar file from a Spring Groovy script", new JarOptionHandler());
+    JarCommand() {
+        super('jar', 'Create a self-contained executable jar file from a Spring Groovy script', new JarOptionHandler())
     }
 
-    private static final class JarOptionHandler extends ArchiveOptionHandler {
+    private static final class JarOptionHandler extends ArchiveCommand.ArchiveOptionHandler {
 
         JarOptionHandler() {
-            super("jar", new Layouts.Jar());
+            super('jar', new Layouts.Jar())
         }
 
         @Override
         protected LibraryScope getLibraryScope(File file) {
-            return LibraryScope.COMPILE;
+            return LibraryScope.COMPILE
         }
 
     }

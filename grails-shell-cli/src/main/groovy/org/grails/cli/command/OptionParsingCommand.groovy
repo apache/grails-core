@@ -16,14 +16,13 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli.command;
+package org.grails.cli.command
 
-import java.util.Collection;
-
-import org.springframework.boot.cli.command.AbstractCommand;
-import org.springframework.boot.cli.command.options.OptionHandler;
-import org.springframework.boot.cli.command.options.OptionHelp;
-import org.springframework.boot.cli.command.status.ExitStatus;
+import groovy.transform.CompileStatic
+import org.springframework.boot.cli.command.AbstractCommand
+import org.springframework.boot.cli.command.options.OptionHandler
+import org.springframework.boot.cli.command.options.OptionHelp
+import org.springframework.boot.cli.command.status.ExitStatus
 
 /**
  * Base class for a {@link org.springframework.boot.cli.command.Command} that parse options using an {@link OptionHandler}.
@@ -33,32 +32,33 @@ import org.springframework.boot.cli.command.status.ExitStatus;
  * @since 1.0.0
  * @see OptionHandler
  */
-public abstract class OptionParsingCommand extends AbstractCommand {
+@CompileStatic
+abstract class OptionParsingCommand extends AbstractCommand {
 
-    private final OptionHandler handler;
+    private final OptionHandler handler
 
     protected OptionParsingCommand(String name, String description, OptionHandler handler) {
-        super(name, description);
-        this.handler = handler;
+        super(name, description)
+        this.handler = handler
     }
 
     @Override
-    public String getHelp() {
-        return this.handler.getHelp();
+    String getHelp() {
+        return this.handler.getHelp()
     }
 
     @Override
-    public Collection<OptionHelp> getOptionsHelp() {
-        return this.handler.getOptionsHelp();
+    Collection<OptionHelp> getOptionsHelp() {
+        return this.handler.getOptionsHelp()
     }
 
     @Override
-    public final ExitStatus run(String... args) throws Exception {
-        return this.handler.run(args);
+    final ExitStatus run(String... args) throws Exception {
+        return this.handler.run(args)
     }
 
     protected OptionHandler getHandler() {
-        return this.handler;
+        return this.handler
     }
 
 }
