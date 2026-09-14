@@ -22,6 +22,7 @@ import grails.gorm.annotation.Entity
 
 import org.apache.grails.testing.mongo.EmbeddedReplicaSetSpec
 import org.grails.datastore.mapping.mongo.MongoDatastore
+import org.springframework.transaction.support.TransactionTemplate
 import spock.lang.AutoCleanup
 import spock.lang.Shared
 
@@ -62,6 +63,32 @@ class MongoTransactionDisabledSpec extends EmbeddedReplicaSetSpec {
 
         and: "the already-flushed write remains, because there was no server-side transaction to abort"
         LegacyThing.withNewSession { LegacyThing.count() } == 1
+    }
+
+    void "a read-only transaction commits without flushing the surrounding session"() {
+        when: "a read-only transaction commits while the session holds an unflushed write"
+        int written = LegacyThing.withNewSession {
+            new LegacyThing(name: "queued").save()
+            TransactionTemplate txTemplate = new TransactionTemplate(datastore.transactionManager)
+            txTemplate.readOnly = true
+            txTemplate.execute {}
+            LegacyThing.withNewSession { LegacyThing.count() }
+        }
+
+        then: "the queued write was left where it was, rather than committed by a read"
+        written == 0
+    }
+
+    void "a read-write transaction still flushes the surrounding session"() {
+        when: "the same sequence runs without the read-only flag"
+        int written = LegacyThing.withNewSession {
+            new LegacyThing(name: "queued").save()
+            new TransactionTemplate(datastore.transactionManager).execute {}
+            LegacyThing.withNewSession { LegacyThing.count() }
+        }
+
+        then: "the flush on commit is unchanged"
+        written == 1
     }
 }
 

@@ -33,6 +33,7 @@ import org.bson.Document;
 import org.bson.conversions.Bson;
 
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.transaction.TransactionDefinition;
 
 import org.grails.datastore.mapping.core.AbstractSession;
 import org.grails.datastore.mapping.core.impl.PendingOperation;
@@ -268,6 +269,15 @@ public abstract class AbstractMongoSession extends AbstractSession<MongoClient> 
 
     @Override
     protected Transaction beginTransactionInternal() {
+        return beginTransactionInternal(false);
+    }
+
+    @Override
+    protected Transaction beginTransactionInternal(TransactionDefinition definition) {
+        return beginTransactionInternal(definition.isReadOnly());
+    }
+
+    private Transaction beginTransactionInternal(boolean readOnly) {
         if (getDatastore().isTransactionsEnabled()) {
             // Defensive: if a previous transaction did not complete cleanly, close its orphaned
             // session before starting a new one so it cannot leak.
@@ -281,9 +291,9 @@ public abstract class AbstractMongoSession extends AbstractSession<MongoClient> 
                 throw e;
             }
             this.clientSession = session;
-            return new MongoTransaction(this, session);
+            return new MongoTransaction(this, session, readOnly);
         }
-        return new SessionOnlyTransaction<>(getNativeInterface(), this);
+        return new SessionOnlyTransaction<>(getNativeInterface(), this, readOnly);
     }
 
     // The driver exposes a session-less and a ClientSession overload for every operation, and the

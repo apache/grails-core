@@ -119,11 +119,14 @@ public class DatastoreTransactionManager extends AbstractPlatformTransactionMana
             session = txObject.getSessionHolder().getSession();
 
             if (definition.isReadOnly()) {
-                // Just set to NEVER in case of a new Session for this transaction.
+                // FlushModeType has no MANUAL/NEVER equivalent, so this only keeps an AUTO session
+                // from flushing ahead of queries. What stops a read-only transaction from writing is
+                // the transaction itself declining to flush on commit, which is why the definition is
+                // handed to the session below.
                 session.setFlushMode(FlushModeType.COMMIT);
             }
 
-            Transaction<?> tx = session.beginTransaction();
+            Transaction<?> tx = session.beginTransaction(definition);
             // Register transaction timeout.
             int timeout = determineTimeout(definition);
             if (timeout != TransactionDefinition.TIMEOUT_DEFAULT) {
