@@ -16,23 +16,41 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.core.io.watch;
+package org.grails.core.io
+
+import groovy.transform.CompileStatic
+import org.springframework.core.io.Resource
 
 /**
- * Exception thrown when there was an error in the packing process of an application.
+ *
+ * A static resource locator that uses an internal map to locate resources. Used largely for testing.
  *
  * @author Graeme Rocher
  * @since 2.0
  */
-public class PackagingException extends RuntimeException {
+@CompileStatic
+class StaticResourceLocator implements ResourceLocator {
 
-    private static final long serialVersionUID = 1;
+    private Map<String, Resource> classToResourceMap = new HashMap<>()
 
-    public PackagingException(String message) {
-        super(message);
+    void setSearchLocation(String searchLocation) {
+        // do nothing
     }
 
-    public PackagingException(String message, Throwable cause) {
-        super(message, cause);
+    void setSearchLocations(Collection<String> searchLocations) {
+        // do nothing
     }
+
+    Resource findResourceForURI(String uri) {
+        return null // TODO implement static resource location
+    }
+
+    Resource findResourceForClassName(String className) {
+        return classToResourceMap.get(className)
+    }
+
+    void addClassResource(String className, Resource res) {
+        classToResourceMap.put(className, res)
+    }
+
 }

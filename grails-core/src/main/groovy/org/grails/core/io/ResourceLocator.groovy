@@ -16,11 +16,9 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.core.io;
+package org.grails.core.io
 
-import java.util.Collection;
-
-import org.springframework.core.io.Resource;
+import org.springframework.core.io.Resource
 
 /**
  * Used to locate resources at development or production time.
@@ -28,7 +26,7 @@ import org.springframework.core.io.Resource;
  * @author Graeme Rocher
  * @since 2.0
  */
-public interface ResourceLocator {
+interface ResourceLocator {
 
     /**
      * The basic location from which to conduct the search. At development time this is the
@@ -36,20 +34,20 @@ public interface ResourceLocator {
      *
      * @param searchLocation The search location
      */
-    void setSearchLocation(String searchLocation);
+    void setSearchLocation(String searchLocation)
 
     /**
      * Multiple locations to search. See #setSearchLocation
      * @param searchLocations The locations to search
      */
-    void setSearchLocations(Collection<String> searchLocations);
+    void setSearchLocations(Collection<String> searchLocations)
 
     /**
      * Finds a resource for the given URI
      * @param uri The URI
      * @return The resource or null if it doesn't exist
      */
-    Resource findResourceForURI(String uri);
+    Resource findResourceForURI(String uri)
 
     /**
      * Finds the .groovy file or .java file for a given class from a Grails project.
@@ -60,5 +58,6 @@ public interface ResourceLocator {
      * @param className The class name
      * @return The resource or null
      */
-    Resource findResourceForClassName(String className);
+    Resource findResourceForClassName(String className)
+
 }

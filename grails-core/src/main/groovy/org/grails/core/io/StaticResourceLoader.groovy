@@ -16,16 +16,15 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.core.io;
+package org.grails.core.io
 
-import java.io.IOException;
+import groovy.transform.CompileStatic
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
-import org.springframework.util.Assert;
+import org.springframework.core.io.Resource
+import org.springframework.core.io.ResourceLoader
+import org.springframework.util.Assert
 
 /**
  * A ResourceLoader that loads resources from a statically defined base resource.
@@ -33,36 +32,39 @@ import org.springframework.util.Assert;
  * @author Graeme Rocher
  * @since 0.5
  */
-public class StaticResourceLoader implements ResourceLoader {
-    private static final Logger LOG = LoggerFactory.getLogger(StaticResourceLoader.class);
-    private Resource baseResource;
+@CompileStatic
+class StaticResourceLoader implements ResourceLoader {
 
-    public void setBaseResource(Resource baseResource) {
-        this.baseResource = baseResource;
+    private static final Logger LOG = LoggerFactory.getLogger(StaticResourceLoader)
+    private Resource baseResource
+
+    void setBaseResource(Resource baseResource) {
+        this.baseResource = baseResource
     }
 
-    public Resource getResource(String location) {
-        Assert.state(baseResource != null, "Property [baseResource] not set!");
+    Resource getResource(String location) {
+        Assert.state(baseResource != null, 'Property [baseResource] not set!')
 
         if (LOG.isDebugEnabled()) {
-            LOG.debug("Loading resource for path {} from base resource {}", location, baseResource);
+            LOG.debug('Loading resource for path {} from base resource {}', location, baseResource)
         }
         try {
-            Resource resource = baseResource.createRelative(location);
+            Resource resource = baseResource.createRelative(location)
             if (LOG.isDebugEnabled() && resource.exists()) {
-                LOG.debug("Found resource for path {} from base resource {}", location, baseResource);
+                LOG.debug('Found resource for path {} from base resource {}', location, baseResource)
             }
-            return resource;
+            return resource
         }
         catch (IOException e) {
             if (LOG.isDebugEnabled()) {
-                LOG.debug("Error loading resource for path: " + location, e);
+                LOG.debug("Error loading resource for path: ${location}", e)
             }
-            return null;
+            return null
         }
     }
 
-    public ClassLoader getClassLoader() {
-        return Thread.currentThread().getContextClassLoader();
+    ClassLoader getClassLoader() {
+        return Thread.currentThread().contextClassLoader
     }
+
 }

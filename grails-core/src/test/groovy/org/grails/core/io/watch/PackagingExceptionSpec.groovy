@@ -16,33 +16,27 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.core.io;
+package org.grails.core.io.watch
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import spock.lang.Specification
 
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
+class PackagingExceptionSpec extends Specification {
 
-/**
- * Simple implementation of the ResourceLoader interface that uses a Map to load resources.
- *
- * @author Graeme Rocher
- * @since 2.0
- */
-public class SimpleMapResourceLoader implements ResourceLoader {
-
-    private Map<String, Resource> resources = new ConcurrentHashMap<>();
-
-    public Map<String, Resource> getResources() {
-        return resources;
+    void 'carries a message'() {
+        expect:
+        new PackagingException('boom').message == 'boom'
     }
 
-    public Resource getResource(String location) {
-        return resources.get(location);
+    void 'carries a message and a cause'() {
+        given:
+        def cause = new IllegalStateException('root cause')
+
+        when:
+        def exception = new PackagingException('boom', cause)
+
+        then:
+        exception.message == 'boom'
+        exception.cause.is(cause)
     }
 
-    public ClassLoader getClassLoader() {
-        return SimpleMapResourceLoader.class.getClassLoader();
-    }
 }

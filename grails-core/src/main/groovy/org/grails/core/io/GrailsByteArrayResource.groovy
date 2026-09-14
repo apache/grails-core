@@ -16,14 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.core.io;
+package org.grails.core.io
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-
-import org.springframework.core.io.ByteArrayResource;
+import groovy.transform.CompileStatic
+import org.springframework.core.io.ByteArrayResource
 
 /**
  * Hacky version of the ByteArrayResource that implements the {@link
@@ -32,14 +28,15 @@ import org.springframework.core.io.ByteArrayResource;
  *
  * @author pledbrook
  */
-public class GrailsByteArrayResource extends ByteArrayResource {
+@CompileStatic
+class GrailsByteArrayResource extends ByteArrayResource {
 
-    public GrailsByteArrayResource(byte[] byteArray) {
-        super(byteArray);
+    GrailsByteArrayResource(byte[] byteArray) {
+        super(byteArray)
     }
 
-    public GrailsByteArrayResource(byte[] byteArray, String location) {
-        super(byteArray, location);
+    GrailsByteArrayResource(byte[] byteArray, String location) {
+        super(byteArray, location)
     }
 
     /**
@@ -47,16 +44,18 @@ public class GrailsByteArrayResource extends ByteArrayResource {
      * so that the resource can be used from a ServletContextResource.
      */
     @Override
-    public URL getURL() throws IOException {
+    URL getURL() throws IOException {
         try {
-            return new URI("file", null, getDescription(), null).toURL();
-        } catch (URISyntaxException e) {
-            throw new IOException("Invalid fake file URL: " + getDescription(), e);
+            return new URI('file', null, getDescription(), null).toURL()
+        }
+        catch (URISyntaxException e) {
+            throw new IOException("Invalid fake file URL: ${getDescription()}", e)
         }
     }
 
     @Override
-    public String getFilename() throws IllegalStateException {
-        return super.getDescription();
+    String getFilename() throws IllegalStateException {
+        return super.getDescription()
     }
+
 }

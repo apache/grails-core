@@ -73,6 +73,20 @@ class ResourceLocatorSpec extends Specification {
         resource
     }
 
+    void 'a missing resource is cached as the null sentinel and never leaks it to callers'() {
+        given: 'a war-deployed resource locator with nothing registered'
+        def resourceLocator = new MockResourceLocator(defaultResourceLoader: new MockStringResourceLoader())
+        resourceLocator.warDeployed = true
+
+        when: 'the same missing URI is resolved twice'
+        def first = resourceLocator.findResourceForURI('/css/missing.css')
+        def second = resourceLocator.findResourceForURI('/css/missing.css')
+
+        then: 'both calls return null, not the internal sentinel'
+        first == null
+        second == null
+    }
+
     private static BinaryGrailsPlugin getBinaryPlugin() {
         def pluginXml = '''
             <plugin name='testBinary'>
