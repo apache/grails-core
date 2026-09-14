@@ -16,11 +16,14 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+package grails.databinding
 
-package grails.databinding.initializers;
+/**
+ * @see DataBindingSource
+ * @since 3.0
+ */
+interface CollectionDataBindingSource {
 
-public interface ValueInitializer {
-    Object initialize();
+    List<DataBindingSource> getDataBindingSources()
 
-    Class<?> getTargetType();
 }

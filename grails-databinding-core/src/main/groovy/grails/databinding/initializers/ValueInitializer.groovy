@@ -16,36 +16,13 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.databinding.errors;
 
-/**
- * Represents a problem which occurred during data binding.
- * 
- * @author Jeff Brown
- * @since 3.0
- */
-public interface BindingError {
-    /**
-     * 
-     * @return the object that data binding was being imposed upon
-     */
-    Object getObject();
+package grails.databinding.initializers
 
-    /**
-     * 
-     * @return the name of the property that the data binding error occurred on
-     */
-    String getPropertyName();
+interface ValueInitializer {
 
-    /**
-     * 
-     * @return The value which could not be bound to the property
-     */
-    Object getRejectedValue();
+    Object initialize()
 
-    /**
-     * 
-     * @return an exception thrown during the data binding process
-     */
-    Throwable getCause();
+    Class<?> getTargetType()
+
 }

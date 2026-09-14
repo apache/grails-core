@@ -16,9 +16,9 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.databinding;
+package grails.databinding
 
-import java.util.Set;
+import groovy.transform.CompileStatic
 
 /**
  * Property names managed by the language runtime or Grails rather than ordinary request data.
@@ -28,28 +28,30 @@ import java.util.Set;
  * application explicitly opts them in (for example {@code bindable: true}); intrinsic runtime
  * properties remain protected.
  */
-public final class FrameworkPropertyNames {
+@CompileStatic
+final class FrameworkPropertyNames {
 
     /**
      * Language / MetaClass properties that must never be bound from request data.
      */
     public static final Set<String> INTRINSIC_RUNTIME_PROPERTIES = Set.of(
-            "class", "classLoader", "protectionDomain", "metaClass", "metaPropertyValues", "properties");
+            'class', 'classLoader', 'protectionDomain', 'metaClass', 'metaPropertyValues', 'properties')
 
     /**
      * Grails domain lifecycle properties excluded from default binding allowlists but eligible
      * for {@code clearMissing} when explicitly included.
      */
     public static final Set<String> GRAILS_MANAGED_PROPERTIES = Set.of(
-            "errors", "id", "version", "dateCreated", "lastUpdated");
+            'errors', 'id', 'version', 'dateCreated', 'lastUpdated')
 
     /**
      * Union of {@link #INTRINSIC_RUNTIME_PROPERTIES} and {@link #GRAILS_MANAGED_PROPERTIES}.
      */
     public static final Set<String> FRAMEWORK_MANAGED_PROPERTIES = Set.of(
-            "class", "classLoader", "protectionDomain", "metaClass", "metaPropertyValues", "properties",
-            "errors", "id", "version", "dateCreated", "lastUpdated");
+            'class', 'classLoader', 'protectionDomain', 'metaClass', 'metaPropertyValues', 'properties',
+            'errors', 'id', 'version', 'dateCreated', 'lastUpdated')
 
     private FrameworkPropertyNames() {
     }
+
 }

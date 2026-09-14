@@ -16,33 +16,28 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.databinding;
-
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
-import org.codehaus.groovy.transform.GroovyASTTransformationClass;
+package grails.databinding
 
 /**
- * Apply BindingFormat to a field to provide a format
- * to be used when binding a String to this field.
- *
-<pre>
-class DateContainer {
-    &#064;BindingFormat('MMddyyyy')
-    Date someDate
-}
-</pre>
+ * Classes which implement this interface may participate in the data binding
+ * process.  Instances of this interface may be registered with the
+ * data binder by applying the {@link BindUsing} annotation to a class.
  *
  * @author Jeff Brown
- * @since 2.3
+ * @since 3.0
+ * @see BindUsing
  */
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.FIELD)
-@GroovyASTTransformationClass("org.grails.databinding.compiler.BindingFormatASTTransformation")
-public @interface BindingFormat {
-    String value() default "";
-    String code() default "";
+interface BindingHelper<T> {
+
+    /**
+     * The value returned from this method will be bound to
+     * the property specified by propertyName.
+     *
+     * @param obj The object that data binding is being applied to
+     * @param propertyName The name of the property data binding is being applied to
+     * @param source The Map containing all of the values being bound to this object
+     * @return The value which should be bound to propertyName
+     */
+    T getPropertyValue(Object obj, String propertyName, DataBindingSource source)
+
 }

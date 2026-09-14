@@ -16,24 +16,22 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.databinding;
+package grails.databinding
 
-import java.util.List;
+import groovy.xml.slurpersupport.GPathResult
 
-import groovy.xml.slurpersupport.GPathResult;
-
-import grails.databinding.events.DataBindingListener;
+import grails.databinding.events.DataBindingListener
 
 /**
  * @author Jeff Brown
  * @since 3.0
  */
-public interface DataBinder {
+interface DataBinder {
 
-    String DEFAULT_DATE_FORMAT = "yyyy-MM-dd HH:mm:ss.S";
+    String DEFAULT_DATE_FORMAT = 'yyyy-MM-dd HH:mm:ss.S'
 
     /**
-     * 
+     *
      * @param obj The object being bound to
      * @param source The data binding source
      * @param filter Only properties beginning with filter will be included in the
@@ -41,21 +39,21 @@ public interface DataBinder {
      * source contains data for properties &quot;person.name&quot; and &quot;author.name&quot;
      * the value of &quot;person.name&quot; will be bound to obj.name.  The value of
      * &quot;author.name&quot; will be ignored.
-     * @param whiteList A list of property names to be included during this 
-     * data binding.  All other properties represented in the binding source 
+     * @param whiteList A list of property names to be included during this
+     * data binding.  All other properties represented in the binding source
      * will be ignored
      * @param blackList A list of properties names to be excluded during
-     * this data binding.  
+     * this data binding.
      * @param listener A listener which will be notified of data binding events triggered
      * by this binding
      * @see DataBindingSource
      * @see DataBindingListener
      */
     void bind(Object obj, DataBindingSource source, String filter, List<String> whiteList,
-              List<String> blackList, DataBindingListener listener);
+              List<String> blackList, DataBindingListener listener)
 
     /**
-     * 
+     *
      * @param obj The object being bound to
      * @param source The data binding source
      * @param filter Only properties beginning with filter will be included in the
@@ -63,51 +61,51 @@ public interface DataBinder {
      * source contains data for properties &quot;person.name&quot; and &quot;author.name&quot;
      * the value of &quot;person.name&quot; will be bound to obj.name.  The value of
      * &quot;author.name&quot; will be ignored.
-     * @param whiteList A list of property names to be included during this 
-     * data binding.  All other properties represented in the binding source 
+     * @param whiteList A list of property names to be included during this
+     * data binding.  All other properties represented in the binding source
      * will be ignored
      * @param blackList A list of properties names to be excluded during
-     * this data binding.  
+     * this data binding.
      * @see DataBindingSource
      */
     void bind(Object obj, DataBindingSource source, String filter, List<String> whiteList,
-              List<String> blackList);
+              List<String> blackList)
 
     /**
-     * 
+     *
      * @param obj The object being bound to
-     * @param gpath A GPathResult which represents the data being bound.  
+     * @param gpath A GPathResult which represents the data being bound.
      * @see DataBindingSource
      */
-    void bind(Object obj, GPathResult gpath);
+    void bind(Object obj, GPathResult gpath)
 
     /**
-     * 
+     *
      * @param obj The object being bound to
      * @param source The data binding source
-     * @param whiteList A list of property names to be included during this 
-     * data binding.  All other properties represented in the binding source 
+     * @param whiteList A list of property names to be included during this
+     * data binding.  All other properties represented in the binding source
      * will be ignored
      * @param blackList A list of properties names to be excluded during
-     * this data binding.  
+     * this data binding.
      * @see DataBindingSource
      */
     void bind(Object obj, DataBindingSource source, List<String> whiteList,
-              List<String> blackList);
+              List<String> blackList)
 
     /**
-     * 
+     *
      * @param obj The object being bound to
      * @param source The data binding source
-     * @param whiteList A list of property names to be included during this 
-     * data binding.  All other properties represented in the binding source 
+     * @param whiteList A list of property names to be included during this
+     * data binding.  All other properties represented in the binding source
      * will be ignored
      * @see DataBindingSource
      */
-    void bind(Object obj, DataBindingSource source, List<String> whiteList);
+    void bind(Object obj, DataBindingSource source, List<String> whiteList)
 
     /**
-     * 
+     *
      * @param obj The object being bound to
      * @param source The data binding source
      * @param listener A listener which will be notified of data binding events triggered
@@ -115,14 +113,14 @@ public interface DataBinder {
      * @see DataBindingSource
      * @see DataBindingListener
      */
-    void bind(Object obj, DataBindingSource source, DataBindingListener listener);
+    void bind(Object obj, DataBindingSource source, DataBindingListener listener)
 
     /**
-     * 
+     *
      * @param obj The object being bound to
      * @param source The data binding source
      * @see DataBindingSource
      */
-    void bind(Object obj, DataBindingSource source);
+    void bind(Object obj, DataBindingSource source)
 
 }

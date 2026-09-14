@@ -16,18 +16,19 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.databinding;
+package grails.databinding
 
 /**
- * 
+ *
  * @since 3.0
  * @see StructuredBindingEditor
  */
-public interface TypedStructuredBindingEditor<T> extends StructuredBindingEditor<T> {
+interface TypedStructuredBindingEditor<T> extends StructuredBindingEditor<T> {
 
     /**
-     * 
+     *
      * @return the type that this editor is used for binding to
      */
-    Class<T> getTargetType();
+    Class<T> getTargetType()
+
 }

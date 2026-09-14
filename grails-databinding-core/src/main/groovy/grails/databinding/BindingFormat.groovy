@@ -16,14 +16,36 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.databinding;
+package grails.databinding
 
-import java.util.List;
+import java.lang.annotation.ElementType
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
+
+import org.codehaus.groovy.transform.GroovyASTTransformationClass
 
 /**
- * @see DataBindingSource
- * @since 3.0
+ * Apply BindingFormat to a field to provide a format
+ * to be used when binding a String to this field.
+ *
+<pre>
+class DateContainer {
+
+    &#064;BindingFormat('MMddyyyy')
+    Date someDate
+}
+</pre>
+ *
+ * @author Jeff Brown
+ * @since 2.3
  */
-public interface CollectionDataBindingSource {
-    List<DataBindingSource> getDataBindingSources();
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.FIELD)
+@GroovyASTTransformationClass('org.grails.databinding.compiler.BindingFormatASTTransformation')
+@interface BindingFormat {
+
+    String value() default ''
+    String code() default ''
+
 }
