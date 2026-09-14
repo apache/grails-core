@@ -16,22 +16,22 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.core.aot;
+package org.apache.grails.core.aot
 
-import java.util.function.Predicate;
+import java.util.function.Predicate
 
-import org.jspecify.annotations.Nullable;
-
-import org.springframework.aot.generate.GenerationContext;
-import org.springframework.beans.factory.aot.BeanRegistrationAotContribution;
-import org.springframework.beans.factory.aot.BeanRegistrationAotProcessor;
-import org.springframework.beans.factory.aot.BeanRegistrationCode;
-import org.springframework.beans.factory.aot.BeanRegistrationCodeFragments;
-import org.springframework.beans.factory.aot.BeanRegistrationCodeFragmentsDecorator;
-import org.springframework.beans.factory.support.AbstractBeanDefinition;
-import org.springframework.beans.factory.support.RegisteredBean;
-import org.springframework.beans.factory.support.RootBeanDefinition;
-import org.springframework.javapoet.CodeBlock;
+import groovy.transform.CompileStatic
+import org.jspecify.annotations.Nullable
+import org.springframework.aot.generate.GenerationContext
+import org.springframework.beans.factory.aot.BeanRegistrationAotContribution
+import org.springframework.beans.factory.aot.BeanRegistrationAotProcessor
+import org.springframework.beans.factory.aot.BeanRegistrationCode
+import org.springframework.beans.factory.aot.BeanRegistrationCodeFragments
+import org.springframework.beans.factory.aot.BeanRegistrationCodeFragmentsDecorator
+import org.springframework.beans.factory.support.AbstractBeanDefinition
+import org.springframework.beans.factory.support.RegisteredBean
+import org.springframework.beans.factory.support.RootBeanDefinition
+import org.springframework.javapoet.CodeBlock
 
 /**
  * Carries a bean's autowire mode into the code generated for it ahead of time.
@@ -49,44 +49,46 @@ import org.springframework.javapoet.CodeBlock;
  *
  * @since 8.0
  */
-public class AutowireModeBeanRegistrationAotProcessor implements BeanRegistrationAotProcessor {
+@CompileStatic
+class AutowireModeBeanRegistrationAotProcessor implements BeanRegistrationAotProcessor {
 
     @Override
     @Nullable
-    public BeanRegistrationAotContribution processAheadOfTime(RegisteredBean registeredBean) {
-        int autowireMode = autowireModeOf(registeredBean);
+    BeanRegistrationAotContribution processAheadOfTime(RegisteredBean registeredBean) {
+        int autowireMode = autowireModeOf(registeredBean)
         if (autowireMode == AbstractBeanDefinition.AUTOWIRE_NO) {
-            return null;
+            return null
         }
         return BeanRegistrationAotContribution.withCustomCodeFragments(
-                codeFragments -> new AutowireModeCodeFragments(codeFragments, autowireMode));
+                codeFragments -> new AutowireModeCodeFragments(codeFragments, autowireMode))
     }
 
     private int autowireModeOf(RegisteredBean registeredBean) {
-        RootBeanDefinition definition = registeredBean.getMergedBeanDefinition();
-        return definition.getAutowireMode();
+        RootBeanDefinition definition = registeredBean.getMergedBeanDefinition()
+        return definition.getAutowireMode()
     }
 
     /** Appends the assignment the generator leaves out to the properties it does write. */
     private static final class AutowireModeCodeFragments extends BeanRegistrationCodeFragmentsDecorator {
 
-        private final int autowireMode;
+        private final int autowireMode
 
         private AutowireModeCodeFragments(BeanRegistrationCodeFragments delegate, int autowireMode) {
-            super(delegate);
-            this.autowireMode = autowireMode;
+            super(delegate)
+            this.autowireMode = autowireMode
         }
 
         @Override
-        public CodeBlock generateSetBeanDefinitionPropertiesCode(GenerationContext generationContext,
+        CodeBlock generateSetBeanDefinitionPropertiesCode(GenerationContext generationContext,
                 BeanRegistrationCode beanRegistrationCode, RootBeanDefinition beanDefinition,
                 Predicate<String> attributeFilter) {
             CodeBlock properties = super.generateSetBeanDefinitionPropertiesCode(generationContext,
-                    beanRegistrationCode, beanDefinition, attributeFilter);
+                    beanRegistrationCode, beanDefinition, attributeFilter)
             return CodeBlock.builder()
                     .add(properties)
-                    .addStatement("$L.setAutowireMode($L)", BEAN_DEFINITION_VARIABLE, this.autowireMode)
-                    .build();
+                    .addStatement('\$L.setAutowireMode(\$L)', BEAN_DEFINITION_VARIABLE, this.autowireMode)
+                    .build()
         }
     }
+
 }

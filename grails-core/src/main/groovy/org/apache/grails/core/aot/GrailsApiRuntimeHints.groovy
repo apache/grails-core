@@ -16,26 +16,26 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.core.aot;
+package org.apache.grails.core.aot
 
-import org.jspecify.annotations.Nullable;
+import groovy.transform.CompileStatic
+import org.jspecify.annotations.Nullable
+import org.springframework.aot.hint.MemberCategory
+import org.springframework.aot.hint.RuntimeHints
+import org.springframework.aot.hint.RuntimeHintsRegistrar
+import org.springframework.context.ApplicationContext
+import org.springframework.context.ConfigurableApplicationContext
+import org.springframework.core.env.ConfigurableEnvironment
+import org.springframework.core.env.Environment
+import org.springframework.core.env.PropertyResolver
+import org.springframework.core.io.ResourceLoader
 
-import org.springframework.aot.hint.MemberCategory;
-import org.springframework.aot.hint.RuntimeHints;
-import org.springframework.aot.hint.RuntimeHintsRegistrar;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.core.env.ConfigurableEnvironment;
-import org.springframework.core.env.Environment;
-import org.springframework.core.env.PropertyResolver;
-import org.springframework.core.io.ResourceLoader;
-
-import grails.config.Config;
-import grails.config.ConfigMap;
-import grails.core.GrailsApplication;
-import grails.core.GrailsClass;
-import grails.plugins.GrailsPlugin;
-import grails.plugins.GrailsPluginManager;
+import grails.config.Config
+import grails.config.ConfigMap
+import grails.core.GrailsApplication
+import grails.core.GrailsClass
+import grails.plugins.GrailsPlugin
+import grails.plugins.GrailsPluginManager
 
 /**
  * Registers the interfaces a plugin reaches through dynamically: the framework's own, and the
@@ -62,29 +62,31 @@ import grails.plugins.GrailsPluginManager;
  *
  * @since 8.0
  */
-public class GrailsApiRuntimeHints implements RuntimeHintsRegistrar {
+@CompileStatic
+class GrailsApiRuntimeHints implements RuntimeHintsRegistrar {
 
     /** What a descriptor written without static compilation calls on the framework. */
-    private static final Class<?>[] TYPES = {
-        Config.class,
-        ConfigMap.class,
-        GrailsApplication.class,
-        GrailsClass.class,
-        GrailsPlugin.class,
-        GrailsPluginManager.class,
+    private static final Class<?>[] TYPES = [
+        Config,
+        ConfigMap,
+        GrailsApplication,
+        GrailsClass,
+        GrailsPlugin,
+        GrailsPluginManager,
         // What a descriptor is handed by Spring and calls the same way
-        Environment.class,
-        ConfigurableEnvironment.class,
-        PropertyResolver.class,
-        ApplicationContext.class,
-        ConfigurableApplicationContext.class,
-        ResourceLoader.class
-    };
+        Environment,
+        ConfigurableEnvironment,
+        PropertyResolver,
+        ApplicationContext,
+        ConfigurableApplicationContext,
+        ResourceLoader
+    ] as Class<?>[]
 
     @Override
-    public void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
-        for (Class<?> type : TYPES) {
-            hints.reflection().registerType(type, MemberCategory.INVOKE_DECLARED_METHODS);
+    void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
+        for (Class<?> type in TYPES) {
+            hints.reflection().registerType(type, MemberCategory.INVOKE_DECLARED_METHODS)
         }
     }
+
 }

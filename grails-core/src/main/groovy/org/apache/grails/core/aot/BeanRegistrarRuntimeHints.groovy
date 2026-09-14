@@ -16,18 +16,18 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.core.aot;
+package org.apache.grails.core.aot
 
-import org.jspecify.annotations.Nullable;
-
-import org.springframework.aot.hint.MemberCategory;
-import org.springframework.aot.hint.RuntimeHints;
-import org.springframework.aot.hint.RuntimeHintsRegistrar;
-import org.springframework.beans.factory.BeanRegistrar;
-import org.springframework.beans.factory.BeanRegistry;
-import org.springframework.beans.factory.ListableBeanFactory;
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.beans.factory.support.BeanDefinitionRegistry;
+import groovy.transform.CompileStatic
+import org.jspecify.annotations.Nullable
+import org.springframework.aot.hint.MemberCategory
+import org.springframework.aot.hint.RuntimeHints
+import org.springframework.aot.hint.RuntimeHintsRegistrar
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
+import org.springframework.beans.factory.ListableBeanFactory
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
+import org.springframework.beans.factory.support.BeanDefinitionRegistry
 
 /**
  * Registers the registry a plugin declares its beans against.
@@ -49,25 +49,27 @@ import org.springframework.beans.factory.support.BeanDefinitionRegistry;
  *
  * @since 8.0
  */
-public class BeanRegistrarRuntimeHints implements RuntimeHintsRegistrar {
+@CompileStatic
+class BeanRegistrarRuntimeHints implements RuntimeHintsRegistrar {
 
     /** The registry, what hands a plugin to it, and the types its calls pass through. */
-    private static final Class<?>[] TYPES = {
-        BeanRegistrar.class,
-        BeanRegistry.class,
-        BeanRegistry.Spec.class,
-        BeanRegistry.SupplierContext.class,
+    private static final Class<?>[] TYPES = [
+        BeanRegistrar,
+        BeanRegistry,
+        BeanRegistry.Spec,
+        BeanRegistry.SupplierContext,
         // The registry the older bean DSL is handed, which the plugins that still use it call the
         // same way: asking whether a bean is already there, registering one, naming an alias.
-        BeanDefinitionRegistry.class,
-        ListableBeanFactory.class,
-        ConfigurableListableBeanFactory.class
-    };
+        BeanDefinitionRegistry,
+        ListableBeanFactory,
+        ConfigurableListableBeanFactory
+    ] as Class<?>[]
 
     @Override
-    public void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
-        for (Class<?> type : TYPES) {
-            hints.reflection().registerType(type, MemberCategory.INVOKE_DECLARED_METHODS);
+    void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
+        for (Class<?> type in TYPES) {
+            hints.reflection().registerType(type, MemberCategory.INVOKE_DECLARED_METHODS)
         }
     }
+
 }

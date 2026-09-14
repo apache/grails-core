@@ -16,25 +16,23 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.core.aot;
+package org.apache.grails.core.aot
 
-import java.io.IOException;
+import groovy.transform.CompileStatic
+import org.apache.commons.logging.Log
+import org.apache.commons.logging.LogFactory
+import org.jspecify.annotations.Nullable
+import org.springframework.aot.hint.MemberCategory
+import org.springframework.aot.hint.RuntimeHints
+import org.springframework.aot.hint.RuntimeHintsRegistrar
+import org.springframework.core.io.Resource
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver
+import org.springframework.core.io.support.ResourcePatternResolver
+import org.springframework.core.type.classreading.CachingMetadataReaderFactory
+import org.springframework.core.type.classreading.MetadataReaderFactory
+import org.springframework.util.ClassUtils
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.jspecify.annotations.Nullable;
-
-import org.springframework.aot.hint.MemberCategory;
-import org.springframework.aot.hint.RuntimeHints;
-import org.springframework.aot.hint.RuntimeHintsRegistrar;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
-import org.springframework.core.io.support.ResourcePatternResolver;
-import org.springframework.core.type.classreading.CachingMetadataReaderFactory;
-import org.springframework.core.type.classreading.MetadataReaderFactory;
-import org.springframework.util.ClassUtils;
-
-import org.apache.grails.common.aot.RegistrableTypes;
+import org.apache.grails.common.aot.RegistrableTypes
 
 /**
  * Registers the framework closures Groovy dispatches through.
@@ -56,15 +54,16 @@ import org.apache.grails.common.aot.RegistrableTypes;
  *
  * @since 8.0
  */
-public class GrailsClosureRuntimeHints implements RuntimeHintsRegistrar {
+@CompileStatic
+class GrailsClosureRuntimeHints implements RuntimeHintsRegistrar {
 
-    private static final Log logger = LogFactory.getLog(GrailsClosureRuntimeHints.class);
+    private static final Log logger = LogFactory.getLog(GrailsClosureRuntimeHints)
 
     /**
      * Where the plugins are listed, read to find them at all. Written out rather than taken from
      * {@code FactoriesLoaderSupport}, whose constant is a Groovy property and so not visible here.
      */
-    private static final String PLUGIN_LISTING = "META-INF/grails.factories";
+    private static final String PLUGIN_LISTING = 'META-INF/grails.factories'
 
     /**
      * Where the framework's closures are found. The first two cover its own packages; the third
@@ -72,39 +71,39 @@ public class GrailsClosureRuntimeHints implements RuntimeHintsRegistrar {
      * asset pipeline names its own {@code asset.pipeline}, and its bean definitions are closures
      * the container calls while the context is built.
      */
-    private static final String[] PATTERNS = {
-        ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX + "grails/**/*_closure*.class",
-        ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX + "org/grails/**/*_closure*.class",
-        ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX + "**/*GrailsPlugin$*_closure*.class"
-    };
+    private static final String[] PATTERNS = [
+        ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX + 'grails/**/*_closure*.class',
+        ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX + 'org/grails/**/*_closure*.class',
+        ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX + '**/*GrailsPlugin$*_closure*.class'
+    ] as String[]
 
     @Override
-    public void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
-        hints.resources().registerPattern(PLUGIN_LISTING);
-        ClassLoader loader = (classLoader != null) ? classLoader : ClassUtils.getDefaultClassLoader();
-        ResourcePatternResolver resolver = new PathMatchingResourcePatternResolver(loader);
-        MetadataReaderFactory metadataReaderFactory = new CachingMetadataReaderFactory(resolver);
-        int registered = 0;
-        for (String pattern : PATTERNS) {
-            Resource[] resources;
+    void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
+        hints.resources().registerPattern(PLUGIN_LISTING)
+        ClassLoader loader = (classLoader != null) ? classLoader : ClassUtils.getDefaultClassLoader()
+        ResourcePatternResolver resolver = new PathMatchingResourcePatternResolver(loader)
+        MetadataReaderFactory metadataReaderFactory = new CachingMetadataReaderFactory(resolver)
+        int registered = 0
+        for (String pattern in PATTERNS) {
+            Resource[] resources
             try {
-                resources = resolver.getResources(pattern);
+                resources = resolver.getResources(pattern)
             }
             catch (IOException ex) {
-                logger.warn("Unable to scan for Grails closures matching " + pattern, ex);
-                continue;
+                logger.warn('Unable to scan for Grails closures matching ' + pattern, ex)
+                continue
             }
-            for (Resource resource : resources) {
-                String className = classNameOf(metadataReaderFactory, resource);
+            for (Resource resource in resources) {
+                String className = classNameOf(metadataReaderFactory, resource)
                 if (className != null && registrable(className, resource, loader)) {
                     hints.reflection().registerTypeIfPresent(loader, className,
                             MemberCategory.INVOKE_DECLARED_METHODS,
-                            MemberCategory.INVOKE_DECLARED_CONSTRUCTORS);
-                    registered++;
+                            MemberCategory.INVOKE_DECLARED_CONSTRUCTORS)
+                    registered++
                 }
             }
         }
-        logger.debug("Registered " + registered + " Grails closures for reflection");
+        logger.debug('Registered ' + registered + ' Grails closures for reflection')
     }
 
     /**
@@ -115,13 +114,13 @@ public class GrailsClosureRuntimeHints implements RuntimeHintsRegistrar {
      */
     private boolean registrable(String className, Resource resource, ClassLoader loader) {
         if (!RegistrableTypes.loads(className, loader) || !enclosingLoads(className, loader)) {
-            return false;
+            return false
         }
         try {
-            return RegistrableTypes.referencesLoad(resource.getInputStream(), loader);
+            return RegistrableTypes.referencesLoad(resource.getInputStream(), loader)
         }
         catch (IOException ex) {
-            return false;
+            return false
         }
     }
 
@@ -136,20 +135,20 @@ public class GrailsClosureRuntimeHints implements RuntimeHintsRegistrar {
      * build rather than the closure.</p>
      */
     boolean enclosingLoads(String className, ClassLoader loader) {
-        int closure = className.indexOf("$_");
+        int closure = className.indexOf('\$_')
         if (closure < 0) {
-            return true;
+            return true
         }
-        return RegistrableTypes.loads(className.substring(0, closure), loader);
+        return RegistrableTypes.loads(className.substring(0, closure), loader)
     }
 
     @Nullable
     private String classNameOf(MetadataReaderFactory factory, Resource resource) {
         try {
-            return factory.getMetadataReader(resource).getClassMetadata().getClassName();
+            return factory.getMetadataReader(resource).getClassMetadata().getClassName()
         }
         catch (IOException | RuntimeException ex) {
-            return null;
+            return null
         }
     }
 

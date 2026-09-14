@@ -16,28 +16,21 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.core.aot;
+package org.apache.grails.core.aot
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import groovy.transform.CompileStatic
+import javax.lang.model.element.Modifier
+import org.jspecify.annotations.Nullable
+import org.springframework.aot.generate.GeneratedMethod
+import org.springframework.beans.factory.aot.BeanFactoryInitializationAotContribution
+import org.springframework.beans.factory.aot.BeanFactoryInitializationAotProcessor
+import org.springframework.beans.factory.aot.BeanFactoryInitializationCode
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
+import org.springframework.javapoet.CodeBlock
 
-import javax.lang.model.element.Modifier;
-
-import org.jspecify.annotations.Nullable;
-
-import org.springframework.aot.generate.GeneratedMethod;
-import org.springframework.beans.factory.aot.BeanFactoryInitializationAotContribution;
-import org.springframework.beans.factory.aot.BeanFactoryInitializationAotProcessor;
-import org.springframework.beans.factory.aot.BeanFactoryInitializationCode;
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.javapoet.CodeBlock;
-
-import grails.core.GrailsApplication;
-import grails.plugins.GrailsPlugin;
-import grails.plugins.GrailsPluginManager;
+import grails.core.GrailsApplication
+import grails.plugins.GrailsPlugin
+import grails.plugins.GrailsPluginManager
 
 /**
  * Writes down the artefacts an application is made of, while they can still be found.
@@ -58,23 +51,24 @@ import grails.plugins.GrailsPluginManager;
  *
  * @since 8.0
  */
-public class ArtefactClassesBeanFactoryInitializationAotProcessor implements BeanFactoryInitializationAotProcessor {
+@CompileStatic
+class ArtefactClassesBeanFactoryInitializationAotProcessor implements BeanFactoryInitializationAotProcessor {
 
     /**
      * Where the classes are left for {@code classes()} to find. A singleton rather than a bean
      * definition, because it is read while the definitions are still being contributed.
      */
-    public static final String BEAN_NAME = "grailsArtefactClasses";
+    public static final String BEAN_NAME = 'grailsArtefactClasses'
 
     @Override
     @Nullable
-    public BeanFactoryInitializationAotContribution processAheadOfTime(ConfigurableListableBeanFactory beanFactory) {
-        List<Class<?>> artefacts = artefactsOf(beanFactory);
+    BeanFactoryInitializationAotContribution processAheadOfTime(ConfigurableListableBeanFactory beanFactory) {
+        List<Class<?>> artefacts = artefactsOf(beanFactory)
         if (artefacts.isEmpty()) {
-            return null;
+            return null
         }
         return (generationContext, beanFactoryInitializationCode) ->
-                contribute(artefacts, beanFactoryInitializationCode);
+                contribute(artefacts, beanFactoryInitializationCode)
     }
 
     /**
@@ -82,22 +76,22 @@ public class ArtefactClassesBeanFactoryInitializationAotProcessor implements Bea
      * application context -- a plain Spring one being generated has no {@code grailsApplication}.
      */
     private List<Class<?>> artefactsOf(ConfigurableListableBeanFactory beanFactory) {
-        List<Class<?>> artefacts = new ArrayList<>();
-        Object application = beanFactory.getSingleton(GrailsApplication.APPLICATION_ID);
+        List<Class<?>> artefacts = new ArrayList<>()
+        Object application = beanFactory.getSingleton(GrailsApplication.APPLICATION_ID)
         if (!(application instanceof GrailsApplication grailsApplication)) {
-            return artefacts;
+            return artefacts
         }
-        Class<?>[] allClasses = grailsApplication.getAllClasses();
+        Class<?>[] allClasses = grailsApplication.getAllClasses()
         if (allClasses == null) {
-            return artefacts;
+            return artefacts
         }
-        Set<Class<?>> providedByPlugins = providedByPlugins(beanFactory);
-        for (Class<?> artefact : allClasses) {
+        Set<Class<?>> providedByPlugins = providedByPlugins(beanFactory)
+        for (Class<?> artefact in allClasses) {
             if (artefact != null && isNamed(artefact) && !providedByPlugins.contains(artefact)) {
-                artefacts.add(artefact);
+                artefacts.add(artefact)
             }
         }
-        return artefacts;
+        return artefacts
     }
 
     /**
@@ -108,18 +102,18 @@ public class ArtefactClassesBeanFactoryInitializationAotProcessor implements Bea
      * as a plugin's and once as the application's, is not the same as registered once.</p>
      */
     private Set<Class<?>> providedByPlugins(ConfigurableListableBeanFactory beanFactory) {
-        Set<Class<?>> provided = new LinkedHashSet<>();
-        Object manager = beanFactory.getSingleton(GrailsPluginManager.BEAN_NAME);
+        Set<Class<?>> provided = new LinkedHashSet<>()
+        Object manager = beanFactory.getSingleton(GrailsPluginManager.BEAN_NAME)
         if (!(manager instanceof GrailsPluginManager pluginManager)) {
-            return provided;
+            return provided
         }
-        for (GrailsPlugin plugin : pluginManager.getAllPlugins()) {
-            Class<?>[] artefacts = plugin.getProvidedArtefacts();
+        for (GrailsPlugin plugin in pluginManager.getAllPlugins()) {
+            Class<?>[] artefacts = plugin.getProvidedArtefacts()
             if (artefacts != null) {
-                provided.addAll(Arrays.asList(artefacts));
+                provided.addAll(Arrays.asList(artefacts))
             }
         }
-        return provided;
+        return provided
     }
 
     /**
@@ -128,28 +122,29 @@ public class ArtefactClassesBeanFactoryInitializationAotProcessor implements Bea
      */
     private boolean isNamed(Class<?> artefact) {
         return !artefact.isSynthetic() && !artefact.isAnonymousClass() &&
-                !artefact.isLocalClass() && artefact.getCanonicalName() != null;
+                !artefact.isLocalClass() && artefact.getCanonicalName() != null
     }
 
     private void contribute(List<Class<?>> artefacts, BeanFactoryInitializationCode beanFactoryInitializationCode) {
         GeneratedMethod method = beanFactoryInitializationCode.getMethods()
-                .add("registerArtefactClasses", builder -> {
-                    builder.addJavadoc("Register the artefacts this application is made of.");
-                    builder.addModifiers(Modifier.PUBLIC, Modifier.STATIC);
-                    builder.addParameter(ConfigurableListableBeanFactory.class,
-                            BeanFactoryInitializationCode.BEAN_FACTORY_VARIABLE);
-                    builder.addStatement("$L.registerSingleton($S, $L)",
-                            BeanFactoryInitializationCode.BEAN_FACTORY_VARIABLE, BEAN_NAME, arrayOf(artefacts));
-                });
-        beanFactoryInitializationCode.addInitializer(method.toMethodReference());
+                .add('registerArtefactClasses', builder -> {
+                    builder.addJavadoc('Register the artefacts this application is made of.')
+                    builder.addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+                    builder.addParameter(ConfigurableListableBeanFactory,
+                            BeanFactoryInitializationCode.BEAN_FACTORY_VARIABLE)
+                    builder.addStatement('\$L.registerSingleton(\$S, \$L)',
+                            BeanFactoryInitializationCode.BEAN_FACTORY_VARIABLE, BEAN_NAME, arrayOf(artefacts))
+                })
+        beanFactoryInitializationCode.addInitializer(method.toMethodReference())
     }
 
     /** The classes as an array literal, in the order they were found, so a run reads as a build did. */
     private CodeBlock arrayOf(List<Class<?>> artefacts) {
-        CodeBlock.Builder array = CodeBlock.builder().add("new $T[] {", Class.class);
+        CodeBlock.Builder array = CodeBlock.builder().add('new \$T[] {', Class)
         for (int i = 0; i < artefacts.size(); i++) {
-            array.add(i == 0 ? "$T.class" : ", $T.class", artefacts.get(i));
+            array.add(i == 0 ? '\$T.class' : ', \$T.class', artefacts.get(i))
         }
-        return array.add("}").build();
+        return array.add('}').build()
     }
+
 }

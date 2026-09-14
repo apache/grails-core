@@ -16,30 +16,28 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.core.aot;
+package org.apache.grails.core.aot
 
-import java.lang.reflect.Array;
-import java.lang.reflect.Executable;
-import java.util.Collection;
-import java.util.List;
-import java.util.function.Predicate;
+import java.lang.reflect.Array
+import java.lang.reflect.Executable
+import java.util.function.Predicate
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.jspecify.annotations.Nullable;
-
-import org.springframework.aot.generate.GenerationContext;
-import org.springframework.beans.factory.aot.BeanRegistrationAotContribution;
-import org.springframework.beans.factory.aot.BeanRegistrationAotProcessor;
-import org.springframework.beans.factory.aot.BeanRegistrationCode;
-import org.springframework.beans.factory.aot.BeanRegistrationCodeFragments;
-import org.springframework.beans.factory.aot.BeanRegistrationCodeFragmentsDecorator;
-import org.springframework.beans.factory.config.ConstructorArgumentValues;
-import org.springframework.beans.factory.config.ConstructorArgumentValues.ValueHolder;
-import org.springframework.beans.factory.support.RegisteredBean;
-import org.springframework.beans.factory.support.RootBeanDefinition;
-import org.springframework.javapoet.CodeBlock;
-import org.springframework.util.ClassUtils;
+import groovy.transform.CompileStatic
+import org.apache.commons.logging.Log
+import org.apache.commons.logging.LogFactory
+import org.jspecify.annotations.Nullable
+import org.springframework.aot.generate.GenerationContext
+import org.springframework.beans.factory.aot.BeanRegistrationAotContribution
+import org.springframework.beans.factory.aot.BeanRegistrationAotProcessor
+import org.springframework.beans.factory.aot.BeanRegistrationCode
+import org.springframework.beans.factory.aot.BeanRegistrationCodeFragments
+import org.springframework.beans.factory.aot.BeanRegistrationCodeFragmentsDecorator
+import org.springframework.beans.factory.config.ConstructorArgumentValues
+import org.springframework.beans.factory.config.ConstructorArgumentValues.ValueHolder
+import org.springframework.beans.factory.support.RegisteredBean
+import org.springframework.beans.factory.support.RootBeanDefinition
+import org.springframework.javapoet.CodeBlock
+import org.springframework.util.ClassUtils
 
 /**
  * Gathers a variable-argument constructor argument into the array it feeds, ahead of time.
@@ -65,25 +63,26 @@ import org.springframework.util.ClassUtils;
  *
  * @since 8.0
  */
-public class VarargsBeanRegistrationAotProcessor implements BeanRegistrationAotProcessor {
+@CompileStatic
+class VarargsBeanRegistrationAotProcessor implements BeanRegistrationAotProcessor {
 
-    private static final Log logger = LogFactory.getLog(VarargsBeanRegistrationAotProcessor.class);
+    private static final Log logger = LogFactory.getLog(VarargsBeanRegistrationAotProcessor)
 
     @Override
     @Nullable
-    public BeanRegistrationAotContribution processAheadOfTime(RegisteredBean registeredBean) {
-        Executable executable = resolveExecutable(registeredBean);
+    BeanRegistrationAotContribution processAheadOfTime(RegisteredBean registeredBean) {
+        Executable executable = resolveExecutable(registeredBean)
         if (executable == null || !executable.isVarArgs()) {
-            return null;
+            return null
         }
-        Class<?>[] parameterTypes = executable.getParameterTypes();
-        RootBeanDefinition beanDefinition = registeredBean.getMergedBeanDefinition();
-        Object gathered = gatherTrailingArgument(beanDefinition.getConstructorArgumentValues(), parameterTypes);
+        Class<?>[] parameterTypes = executable.getParameterTypes()
+        RootBeanDefinition beanDefinition = registeredBean.getMergedBeanDefinition()
+        Object gathered = gatherTrailingArgument(beanDefinition.getConstructorArgumentValues(), parameterTypes)
         if (gathered == null) {
-            return null;
+            return null
         }
         return BeanRegistrationAotContribution.withCustomCodeFragments(
-                codeFragments -> new VarargsCodeFragments(codeFragments, gathered));
+                codeFragments -> new VarargsCodeFragments(codeFragments, gathered))
     }
 
     /**
@@ -101,14 +100,14 @@ public class VarargsBeanRegistrationAotProcessor implements BeanRegistrationAotP
     @Nullable
     private Executable resolveExecutable(RegisteredBean registeredBean) {
         try {
-            return registeredBean.resolveConstructorOrFactoryMethod();
+            return registeredBean.resolveConstructorOrFactoryMethod()
         }
         catch (Exception ex) {
             if (logger.isDebugEnabled()) {
                 logger.debug("Not gathering arguments for bean '" + registeredBean.getBeanName() +
-                        "', whose constructor could not be resolved", ex);
+                        "', whose constructor could not be resolved", ex)
             }
-            return null;
+            return null
         }
     }
 
@@ -122,23 +121,23 @@ public class VarargsBeanRegistrationAotProcessor implements BeanRegistrationAotP
     @Nullable
     private Object gatherTrailingArgument(ConstructorArgumentValues arguments, Class<?>[] parameterTypes) {
         if (!arguments.getIndexedArgumentValues().isEmpty()) {
-            return null;
+            return null
         }
-        List<ValueHolder> supplied = arguments.getGenericArgumentValues();
+        List<ValueHolder> supplied = arguments.getGenericArgumentValues()
         if (supplied.size() != parameterTypes.length) {
-            return null;
+            return null
         }
-        Class<?> arrayType = parameterTypes[parameterTypes.length - 1];
+        Class<?> arrayType = parameterTypes[parameterTypes.length - 1]
         if (!arrayType.isArray()) {
-            return null;
+            return null
         }
-        Object value = supplied.get(supplied.size() - 1).getValue();
+        Object value = supplied.get(supplied.size() - 1).getValue()
         if (value == null || ClassUtils.isAssignableValue(arrayType, value)) {
-            return null;
+            return null
         }
-        Class<?> componentType = arrayType.getComponentType();
-        Collection<?> elements = value instanceof Collection<?> collection ? collection : List.of(value);
-        return toArray(elements, componentType);
+        Class<?> componentType = arrayType.getComponentType()
+        Collection<?> elements = value instanceof Collection<?> collection ? collection : List.of(value)
+        return toArray(elements, componentType)
     }
 
     /**
@@ -148,35 +147,35 @@ public class VarargsBeanRegistrationAotProcessor implements BeanRegistrationAotP
      */
     @Nullable
     private Object toArray(Collection<?> elements, Class<?> componentType) {
-        for (Object element : elements) {
+        for (Object element in elements) {
             if (element == null || !ClassUtils.isAssignableValue(componentType, element)) {
-                return null;
+                return null
             }
         }
-        Object array = Array.newInstance(componentType, elements.size());
-        int index = 0;
-        for (Object element : elements) {
-            Array.set(array, index++, element);
+        Object array = Array.newInstance(componentType, elements.size())
+        int index = 0
+        for (Object element in elements) {
+            Array.set(array, index++, element)
         }
-        return array;
+        return array
     }
 
     /** Writes the definition out with the gathered argument in place of the one supplied. */
     private static final class VarargsCodeFragments extends BeanRegistrationCodeFragmentsDecorator {
 
-        private final Object gathered;
+        private final Object gathered
 
         private VarargsCodeFragments(BeanRegistrationCodeFragments delegate, Object gathered) {
-            super(delegate);
-            this.gathered = gathered;
+            super(delegate)
+            this.gathered = gathered
         }
 
         @Override
-        public CodeBlock generateSetBeanDefinitionPropertiesCode(GenerationContext generationContext,
+        CodeBlock generateSetBeanDefinitionPropertiesCode(GenerationContext generationContext,
                 BeanRegistrationCode beanRegistrationCode, RootBeanDefinition beanDefinition,
                 Predicate<String> attributeFilter) {
             return super.generateSetBeanDefinitionPropertiesCode(generationContext, beanRegistrationCode,
-                    withGatheredArgument(beanDefinition), attributeFilter);
+                    withGatheredArgument(beanDefinition), attributeFilter)
         }
 
         /**
@@ -184,10 +183,11 @@ public class VarargsBeanRegistrationAotProcessor implements BeanRegistrationAotP
          * the argument it was given and only the generated code differs.
          */
         private RootBeanDefinition withGatheredArgument(RootBeanDefinition beanDefinition) {
-            RootBeanDefinition copy = new RootBeanDefinition(beanDefinition);
-            List<ValueHolder> supplied = copy.getConstructorArgumentValues().getGenericArgumentValues();
-            supplied.get(supplied.size() - 1).setValue(this.gathered);
-            return copy;
+            RootBeanDefinition copy = new RootBeanDefinition(beanDefinition)
+            List<ValueHolder> supplied = copy.getConstructorArgumentValues().getGenericArgumentValues()
+            supplied.get(supplied.size() - 1).setValue(this.gathered)
+            return copy
         }
     }
+
 }

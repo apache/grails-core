@@ -16,16 +16,16 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.core.aot;
+package org.apache.grails.core.aot
 
-import org.jspecify.annotations.Nullable;
+import groovy.transform.CompileStatic
+import org.jspecify.annotations.Nullable
+import org.springframework.aot.hint.MemberCategory
+import org.springframework.aot.hint.RuntimeHints
+import org.springframework.aot.hint.RuntimeHintsRegistrar
+import org.springframework.aot.hint.TypeReference
 
-import org.springframework.aot.hint.MemberCategory;
-import org.springframework.aot.hint.RuntimeHints;
-import org.springframework.aot.hint.RuntimeHintsRegistrar;
-import org.springframework.aot.hint.TypeReference;
-
-import grails.boot.GrailsBanner;
+import grails.boot.GrailsBanner
 
 /**
  * Keeps the banner's option enums usable in an image, including the ones an application has not
@@ -46,25 +46,27 @@ import grails.boot.GrailsBanner;
  *
  * @since 8.0
  */
-public class GrailsBannerRuntimeHints implements RuntimeHintsRegistrar {
+@CompileStatic
+class GrailsBannerRuntimeHints implements RuntimeHintsRegistrar {
 
-    private static final Class<?>[] OPTION_TYPES = {
-        GrailsBanner.VersionOption.class,
-        GrailsBanner.DefaultVersionOption.class,
-        GrailsBanner.OptionalVersionOption.class
-    };
+    private static final Class<?>[] OPTION_TYPES = [
+        GrailsBanner.VersionOption,
+        GrailsBanner.DefaultVersionOption,
+        GrailsBanner.OptionalVersionOption
+    ] as Class<?>[]
 
     @Override
-    public void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
-        for (Class<?> type : OPTION_TYPES) {
+    void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
+        for (Class<?> type in OPTION_TYPES) {
             hints.reflection().registerType(type,
                     MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
                     MemberCategory.INVOKE_DECLARED_METHODS,
-                    MemberCategory.ACCESS_DECLARED_FIELDS);
+                    MemberCategory.ACCESS_DECLARED_FIELDS)
             // The name Groovy looks up before deciding an enum has no metaclass of its own. It is
             // not a class anyone writes, so it is named rather than referenced.
             hints.reflection().registerType(
-                    TypeReference.of("groovy.runtime.metaclass." + type.getName() + "MetaClass"));
+                    TypeReference.of('groovy.runtime.metaclass.' + type.getName() + 'MetaClass'))
         }
     }
+
 }

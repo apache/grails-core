@@ -16,10 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.core.aot;
+package org.apache.grails.core.aot
 
-import org.springframework.beans.factory.aot.BeanRegistrationExcludeFilter;
-import org.springframework.beans.factory.support.RegisteredBean;
+import groovy.transform.CompileStatic
+import org.springframework.beans.factory.aot.BeanRegistrationExcludeFilter
+import org.springframework.beans.factory.support.RegisteredBean
 
 /**
  * Keeps abstract bean definitions out of ahead-of-time processing.
@@ -38,11 +39,12 @@ import org.springframework.beans.factory.support.RegisteredBean;
  * @since 8.0
  * @see org.grails.spring.beans.AbstractResourceLocatorPostProcessor
  */
-public class AbstractBeanDefinitionExcludeFilter implements BeanRegistrationExcludeFilter {
+@CompileStatic
+class AbstractBeanDefinitionExcludeFilter implements BeanRegistrationExcludeFilter {
 
     @Override
-    public boolean isExcludedFromAotProcessing(RegisteredBean registeredBean) {
-        return registeredBean.getMergedBeanDefinition().isAbstract();
+    boolean isExcludedFromAotProcessing(RegisteredBean registeredBean) {
+        return registeredBean.getMergedBeanDefinition().isAbstract()
     }
 
 }

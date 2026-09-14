@@ -16,14 +16,14 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.core.aot;
+package org.apache.grails.core.aot
 
-import org.jspecify.annotations.Nullable;
-
-import org.springframework.aot.hint.RuntimeHints;
-import org.springframework.aot.hint.RuntimeHintsRegistrar;
-import org.springframework.core.SpringProperties;
-import org.springframework.util.StringUtils;
+import groovy.transform.CompileStatic
+import org.jspecify.annotations.Nullable
+import org.springframework.aot.hint.RuntimeHints
+import org.springframework.aot.hint.RuntimeHintsRegistrar
+import org.springframework.core.SpringProperties
+import org.springframework.util.StringUtils
 
 /**
  * The resources a Grails application reads by name at run time, which an image cannot prove are
@@ -44,17 +44,18 @@ import org.springframework.util.StringUtils;
  *
  * @since 8.0
  */
-public class GrailsResourceRuntimeHints implements RuntimeHintsRegistrar {
+@CompileStatic
+class GrailsResourceRuntimeHints implements RuntimeHintsRegistrar {
 
     /**
      * Where a message bundle is looked for: the root of the classpath, which is what
      * {@code PluginAwareResourceBundleMessageSource} scans and where a plugin's own bundles land.
      * Not below it, because nothing reads them there.
      */
-    private static final String MESSAGE_BUNDLES = "*.properties";
+    private static final String MESSAGE_BUNDLES = '*.properties'
 
     /** Compiled assets, which asset-pipeline serves from the classpath by the path asked for. */
-    private static final String[] ASSETS = { "assets/*", "assets/**" };
+    private static final String[] ASSETS = [ 'assets/*', 'assets/**' ] as String[]
 
     /**
      * Where an application says what else it reads by name, as a comma-separated list of patterns.
@@ -68,16 +69,16 @@ public class GrailsResourceRuntimeHints implements RuntimeHintsRegistrar {
      * }
      * </pre>
      */
-    public static final String ADDITIONAL_PATTERNS_PROPERTY = "grails.aot.resource-patterns";
+    public static final String ADDITIONAL_PATTERNS_PROPERTY = 'grails.aot.resource-patterns'
 
     @Override
-    public void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
-        for (String pattern : ASSETS) {
-            hints.resources().registerPattern(pattern);
+    void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
+        for (String pattern in ASSETS) {
+            hints.resources().registerPattern(pattern)
         }
-        hints.resources().registerPattern(MESSAGE_BUNDLES);
-        for (String pattern : additionalPatterns()) {
-            hints.resources().registerPattern(pattern);
+        hints.resources().registerPattern(MESSAGE_BUNDLES)
+        for (String pattern in additionalPatterns()) {
+            hints.resources().registerPattern(pattern)
         }
     }
 
@@ -89,11 +90,11 @@ public class GrailsResourceRuntimeHints implements RuntimeHintsRegistrar {
      * leaving out exactly the resource the application asked to keep.</p>
      */
     private String[] additionalPatterns() {
-        String configured = SpringProperties.getProperty(ADDITIONAL_PATTERNS_PROPERTY);
+        String configured = SpringProperties.getProperty(ADDITIONAL_PATTERNS_PROPERTY)
         if (!StringUtils.hasText(configured)) {
-            return new String[0];
+            return new String[0]
         }
-        return StringUtils.tokenizeToStringArray(configured, ",");
+        return StringUtils.tokenizeToStringArray(configured, ',')
     }
 
 }

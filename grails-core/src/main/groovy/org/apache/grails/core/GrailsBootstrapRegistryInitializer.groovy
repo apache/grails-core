@@ -16,25 +16,25 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.core;
+package org.apache.grails.core
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import groovy.transform.CompileStatic
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import org.springframework.beans.BeanUtils
+import org.springframework.boot.bootstrap.BootstrapRegistry
+import org.springframework.boot.bootstrap.BootstrapRegistryInitializer
+import org.springframework.context.ConfigurableApplicationContext
+import org.springframework.core.env.Environment
+import org.springframework.util.ClassUtils
+import org.springframework.util.StringUtils
 
-import org.springframework.beans.BeanUtils;
-import org.springframework.boot.bootstrap.BootstrapRegistry;
-import org.springframework.boot.bootstrap.BootstrapRegistryInitializer;
-import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.core.env.Environment;
-import org.springframework.util.ClassUtils;
-import org.springframework.util.StringUtils;
-
-import grails.config.Settings;
-import grails.util.GrailsUtil;
-import org.apache.grails.core.plugins.DefaultPluginDiscovery;
-import org.apache.grails.core.plugins.PluginDiscovery;
-import org.grails.exceptions.reporting.DefaultStackTraceFilterer;
-import org.grails.exceptions.reporting.StackTraceFilterer;
+import grails.config.Settings
+import grails.util.GrailsUtil
+import org.apache.grails.core.plugins.DefaultPluginDiscovery
+import org.apache.grails.core.plugins.PluginDiscovery
+import org.grails.exceptions.reporting.DefaultStackTraceFilterer
+import org.grails.exceptions.reporting.StackTraceFilterer
 
 /**
  * Registers the {@link PluginDiscovery} in the Spring Boot Bootstrap context so it can be accessed during
@@ -57,7 +57,8 @@ import org.grails.exceptions.reporting.StackTraceFilterer;
  *
  * @since 7.1
  */
-public class GrailsBootstrapRegistryInitializer implements BootstrapRegistryInitializer {
+@CompileStatic
+class GrailsBootstrapRegistryInitializer implements BootstrapRegistryInitializer {
 
     /**
      * Name under which the config-resolved {@link StackTraceFilterer} is promoted as an
@@ -72,14 +73,14 @@ public class GrailsBootstrapRegistryInitializer implements BootstrapRegistryInit
      *
      * @since 8.0
      */
-    public static final String STACK_TRACE_FILTERER_BEAN_NAME = "stackTraceFilterer";
+    public static final String STACK_TRACE_FILTERER_BEAN_NAME = 'stackTraceFilterer'
 
-    private static final Logger LOG = LoggerFactory.getLogger(GrailsBootstrapRegistryInitializer.class);
+    private static final Logger LOG = LoggerFactory.getLogger(GrailsBootstrapRegistryInitializer)
 
     @Override
-    public void initialize(BootstrapRegistry registry) {
-        LOG.debug("Registering GrailsPluginDiscovery in BootstrapRegistry");
-        registry.register(PluginDiscovery.class, context -> new DefaultPluginDiscovery());
+    void initialize(BootstrapRegistry registry) {
+        LOG.debug('Registering GrailsPluginDiscovery in BootstrapRegistry')
+        registry.register(PluginDiscovery, context -> new DefaultPluginDiscovery())
 
         // Promote the GrailsPluginDiscovery singleton to the ApplicationContext
         // so that later-lifecycle components (e.g., DefaultGrailsPluginManager)
@@ -87,23 +88,23 @@ public class GrailsBootstrapRegistryInitializer implements BootstrapRegistryInit
         // refresh(), so the bean is available during the full Spring lifecycle.
         registry.addCloseListener(event -> {
             PluginDiscovery discovery = event.getBootstrapContext()
-                    .get(PluginDiscovery.class);
+                    .get(PluginDiscovery)
             event.getApplicationContext()
                     .getBeanFactory()
-                    .registerSingleton(PluginDiscovery.BEAN_NAME, discovery);
-            LOG.debug("Promoted GrailsPluginDiscovery to ApplicationContext as '{}'", PluginDiscovery.BEAN_NAME);
-        });
+                    .registerSingleton(PluginDiscovery.BEAN_NAME, discovery)
+            LOG.debug("Promoted GrailsPluginDiscovery to ApplicationContext as '{}'", PluginDiscovery.BEAN_NAME)
+        })
 
         // Resolve the configured StackTraceFilterer from the environment (same two keys
         // GrailsExceptionResolver honours) and install + promote it the same way, before refresh().
         registry.addCloseListener(event -> {
-            ConfigurableApplicationContext applicationContext = event.getApplicationContext();
-            StackTraceFilterer filterer = resolveConfiguredStackTraceFilterer(applicationContext);
-            GrailsUtil.initializeStackFilterer(filterer);
+            ConfigurableApplicationContext applicationContext = event.getApplicationContext()
+            StackTraceFilterer filterer = resolveConfiguredStackTraceFilterer(applicationContext)
+            GrailsUtil.initializeStackFilterer(filterer)
             applicationContext.getBeanFactory()
-                    .registerSingleton(STACK_TRACE_FILTERER_BEAN_NAME, filterer);
-            LOG.debug("Promoted StackTraceFilterer to ApplicationContext as '{}'", STACK_TRACE_FILTERER_BEAN_NAME);
-        });
+                    .registerSingleton(STACK_TRACE_FILTERER_BEAN_NAME, filterer)
+            LOG.debug("Promoted StackTraceFilterer to ApplicationContext as '{}'", STACK_TRACE_FILTERER_BEAN_NAME)
+        })
     }
 
     /**
@@ -116,24 +117,24 @@ public class GrailsBootstrapRegistryInitializer implements BootstrapRegistryInit
      * {@link DefaultStackTraceFilterer} with a logged warning.
      */
     private StackTraceFilterer resolveConfiguredStackTraceFilterer(ConfigurableApplicationContext applicationContext) {
-        Environment environment = applicationContext.getEnvironment();
+        Environment environment = applicationContext.getEnvironment()
         Class<? extends StackTraceFilterer> filtererClass =
-                resolveFiltererClass(environment, applicationContext.getClassLoader());
-        boolean logFullStackTraceOnFilter = resolveLogFullStackTraceOnFilter(environment);
+                resolveFiltererClass(environment, applicationContext.getClassLoader())
+        boolean logFullStackTraceOnFilter = resolveLogFullStackTraceOnFilter(environment)
 
-        StackTraceFilterer filterer;
+        StackTraceFilterer filterer
         try {
-            filterer = BeanUtils.instantiateClass(filtererClass, StackTraceFilterer.class);
+            filterer = BeanUtils.instantiateClass(filtererClass, StackTraceFilterer)
         }
         catch (Throwable t) {
-            LOG.warn("Problem instantiating configured StackTraceFilterer [{}], falling back to default: {}",
-                    filtererClass.getName(), t.getMessage());
-            filterer = new DefaultStackTraceFilterer();
+            LOG.warn('Problem instantiating configured StackTraceFilterer [{}], falling back to default: {}',
+                    filtererClass.getName(), t.getMessage())
+            filterer = new DefaultStackTraceFilterer()
         }
         if (filterer instanceof DefaultStackTraceFilterer) {
-            ((DefaultStackTraceFilterer) filterer).setLogFullStackTraceOnFilter(logFullStackTraceOnFilter);
+            ((DefaultStackTraceFilterer) filterer).setLogFullStackTraceOnFilter(logFullStackTraceOnFilter)
         }
-        return filterer;
+        return filterer
     }
 
     /**
@@ -153,37 +154,37 @@ public class GrailsBootstrapRegistryInitializer implements BootstrapRegistryInit
      * {@code grails-app} or {@code src/main/groovy} is invisible to the latter.
      */
     private Class<? extends StackTraceFilterer> resolveFiltererClass(Environment environment, ClassLoader classLoader) {
-        Object configured;
+        Object configured
         try {
-            configured = environment.getProperty(Settings.SETTING_LOGGING_STACKTRACE_FILTER_CLASS, Object.class);
+            configured = environment.getProperty(Settings.SETTING_LOGGING_STACKTRACE_FILTER_CLASS, Object)
         }
         catch (Throwable t) {
-            LOG.warn("Problem reading [{}], falling back to the default StackTraceFilterer: {}",
-                    Settings.SETTING_LOGGING_STACKTRACE_FILTER_CLASS, t.getMessage());
-            return DefaultStackTraceFilterer.class;
+            LOG.warn('Problem reading [{}], falling back to the default StackTraceFilterer: {}',
+                    Settings.SETTING_LOGGING_STACKTRACE_FILTER_CLASS, t.getMessage())
+            return DefaultStackTraceFilterer
         }
         if (configured == null) {
-            return DefaultStackTraceFilterer.class;
+            return DefaultStackTraceFilterer
         }
         try {
             if (configured instanceof Class<?> configuredClass) {
-                return configuredClass.asSubclass(StackTraceFilterer.class);
+                return configuredClass.asSubclass(StackTraceFilterer)
             }
             if (configured instanceof CharSequence configuredName) {
                 if (!StringUtils.hasText(configuredName)) {
-                    return DefaultStackTraceFilterer.class;
+                    return DefaultStackTraceFilterer
                 }
                 return ClassUtils.forName(configuredName.toString(), classLoader)
-                        .asSubclass(StackTraceFilterer.class);
+                        .asSubclass(StackTraceFilterer)
             }
-            LOG.warn("Configured StackTraceFilterer [{}] for [{}] is neither a Class nor a String, falling back to default",
-                    configured, Settings.SETTING_LOGGING_STACKTRACE_FILTER_CLASS);
+            LOG.warn('Configured StackTraceFilterer [{}] for [{}] is neither a Class nor a String, falling back to default',
+                    configured, Settings.SETTING_LOGGING_STACKTRACE_FILTER_CLASS)
         }
         catch (Throwable t) {
-            LOG.warn("Problem loading configured StackTraceFilterer class [{}], falling back to default: {}",
-                    configured, t.getMessage());
+            LOG.warn('Problem loading configured StackTraceFilterer class [{}], falling back to default: {}',
+                    configured, t.getMessage())
         }
-        return DefaultStackTraceFilterer.class;
+        return DefaultStackTraceFilterer
     }
 
     /**
@@ -194,12 +195,13 @@ public class GrailsBootstrapRegistryInitializer implements BootstrapRegistryInit
     private boolean resolveLogFullStackTraceOnFilter(Environment environment) {
         try {
             return environment.getProperty(
-                    Settings.SETTING_LOG_FULL_STACKTRACE_ON_FILTER, Boolean.class, Boolean.TRUE);
+                    Settings.SETTING_LOG_FULL_STACKTRACE_ON_FILTER, Boolean, Boolean.TRUE)
         }
         catch (Throwable t) {
-            LOG.warn("Problem reading [{}], defaulting to true: {}",
-                    Settings.SETTING_LOG_FULL_STACKTRACE_ON_FILTER, t.getMessage());
-            return true;
+            LOG.warn('Problem reading [{}], defaulting to true: {}',
+                    Settings.SETTING_LOG_FULL_STACKTRACE_ON_FILTER, t.getMessage())
+            return true
         }
     }
+
 }

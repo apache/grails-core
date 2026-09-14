@@ -16,28 +16,22 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.core.aot;
+package org.apache.grails.core.aot
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.LinkedHashSet;
-import java.util.Properties;
-import java.util.Set;
+import groovy.transform.CompileStatic
+import org.apache.commons.logging.Log
+import org.apache.commons.logging.LogFactory
+import org.jspecify.annotations.Nullable
+import org.springframework.aot.hint.MemberCategory
+import org.springframework.aot.hint.RuntimeHints
+import org.springframework.aot.hint.RuntimeHintsRegistrar
+import org.springframework.core.io.Resource
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver
+import org.springframework.core.io.support.ResourcePatternResolver
+import org.springframework.util.ClassUtils
+import org.springframework.util.StringUtils
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.jspecify.annotations.Nullable;
-
-import org.springframework.aot.hint.MemberCategory;
-import org.springframework.aot.hint.RuntimeHints;
-import org.springframework.aot.hint.RuntimeHintsRegistrar;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
-import org.springframework.core.io.support.ResourcePatternResolver;
-import org.springframework.util.ClassUtils;
-import org.springframework.util.StringUtils;
-
-import org.apache.grails.common.aot.RegistrableTypes;
+import org.apache.grails.common.aot.RegistrableTypes
 
 /**
  * Registers the classes that extend types Groovy did not declare.
@@ -62,74 +56,75 @@ import org.apache.grails.common.aot.RegistrableTypes;
  *
  * @since 8.0
  */
-public class GroovyExtensionModuleRuntimeHints implements RuntimeHintsRegistrar {
+@CompileStatic
+class GroovyExtensionModuleRuntimeHints implements RuntimeHintsRegistrar {
 
-    private static final Log logger = LogFactory.getLog(GroovyExtensionModuleRuntimeHints.class);
+    private static final Log logger = LogFactory.getLog(GroovyExtensionModuleRuntimeHints)
 
-    private static final String DESCRIPTOR_NAME = "org.codehaus.groovy.runtime.ExtensionModule";
+    private static final String DESCRIPTOR_NAME = 'org.codehaus.groovy.runtime.ExtensionModule'
 
     /** Both places Groovy reads module descriptors from. */
-    private static final String[] DESCRIPTORS = {
-        ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX + "META-INF/services/" + DESCRIPTOR_NAME,
-        ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX + "META-INF/groovy/" + DESCRIPTOR_NAME
-    };
+    private static final String[] DESCRIPTORS = [
+        ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX + 'META-INF/services/' + DESCRIPTOR_NAME,
+        ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX + 'META-INF/groovy/' + DESCRIPTOR_NAME
+    ] as String[]
 
     /** The two kinds of extension a descriptor names: one extends instances, the other the type. */
-    private static final String[] CLASS_PROPERTIES = { "extensionClasses", "staticExtensionClasses" };
+    private static final String[] CLASS_PROPERTIES = [ 'extensionClasses', 'staticExtensionClasses' ] as String[]
 
     /**
      * What the Groovy runtime reads as it starts: the table of the methods it adds to every type,
      * the version it reports, and the descriptors naming the extensions above.
      */
-    private static final String[] RESOURCES = {
-        "META-INF/dgminfo",
-        "META-INF/groovy-release-info.properties",
-        "META-INF/services/" + DESCRIPTOR_NAME,
-        "META-INF/groovy/" + DESCRIPTOR_NAME
-    };
+    private static final String[] RESOURCES = [
+        'META-INF/dgminfo',
+        'META-INF/groovy-release-info.properties',
+        'META-INF/services/' + DESCRIPTOR_NAME,
+        'META-INF/groovy/' + DESCRIPTOR_NAME
+    ] as String[]
 
     @Override
-    public void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
-        for (String resource : RESOURCES) {
-            hints.resources().registerPattern(resource);
+    void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
+        for (String resource in RESOURCES) {
+            hints.resources().registerPattern(resource)
         }
-        ClassLoader loader = (classLoader != null) ? classLoader : ClassUtils.getDefaultClassLoader();
-        ResourcePatternResolver resolver = new PathMatchingResourcePatternResolver(loader);
-        Set<String> extensionClasses = new LinkedHashSet<>();
-        for (String descriptor : DESCRIPTORS) {
-            collectFrom(resolver, descriptor, extensionClasses);
+        ClassLoader loader = (classLoader != null) ? classLoader : ClassUtils.getDefaultClassLoader()
+        ResourcePatternResolver resolver = new PathMatchingResourcePatternResolver(loader)
+        Set<String> extensionClasses = new LinkedHashSet<>()
+        for (String descriptor in DESCRIPTORS) {
+            collectFrom(resolver, descriptor, extensionClasses)
         }
-        int registered = 0;
-        for (String className : extensionClasses) {
+        int registered = 0
+        for (String className in extensionClasses) {
             if (RegistrableTypes.loads(className, loader)) {
                 hints.reflection().registerTypeIfPresent(loader, className,
-                        MemberCategory.INVOKE_DECLARED_METHODS);
-                registered++;
+                        MemberCategory.INVOKE_DECLARED_METHODS)
+                registered++
             }
         }
-        logger.debug("Registered " + registered + " Groovy extension classes for reflection");
+        logger.debug('Registered ' + registered + ' Groovy extension classes for reflection')
     }
 
     private void collectFrom(ResourcePatternResolver resolver, String descriptor, Set<String> collected) {
-        Resource[] resources;
+        Resource[] resources
         try {
-            resources = resolver.getResources(descriptor);
+            resources = resolver.getResources(descriptor)
         }
         catch (IOException ex) {
-            logger.warn("Unable to read Groovy extension modules from " + descriptor, ex);
-            return;
+            logger.warn('Unable to read Groovy extension modules from ' + descriptor, ex)
+            return
         }
-        for (Resource resource : resources) {
-            Properties module = read(resource);
+        for (Resource resource in resources) {
+            Properties module = read(resource)
             if (module == null) {
-                continue;
+                continue
             }
-            for (String property : CLASS_PROPERTIES) {
-                for (String className : StringUtils.commaDelimitedListToStringArray(
-                        module.getProperty(property, ""))) {
-                    String trimmed = className.trim();
+            for (String property in CLASS_PROPERTIES) {
+                for (String className in StringUtils.commaDelimitedListToStringArray(
+                        module.getProperty(property, ''))) {
+                    String trimmed = className.trim()
                     if (!trimmed.isEmpty()) {
-                        collected.add(trimmed);
+                        collected.add(trimmed)
                     }
                 }
             }
@@ -140,13 +135,14 @@ public class GroovyExtensionModuleRuntimeHints implements RuntimeHintsRegistrar 
     @Nullable
     private Properties read(Resource resource) {
         try (InputStream input = resource.getInputStream()) {
-            Properties module = new Properties();
-            module.load(input);
-            return module;
+            Properties module = new Properties()
+            module.load(input)
+            return module
         }
         catch (IOException | RuntimeException ex) {
-            logger.warn("Unable to read Groovy extension module " + resource, ex);
-            return null;
+            logger.warn('Unable to read Groovy extension module ' + resource, ex)
+            return null
         }
     }
+
 }
