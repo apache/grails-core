@@ -16,13 +16,13 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.web.mapping.aot;
+package org.apache.grails.web.mapping.aot
 
-import org.jspecify.annotations.Nullable;
-
-import org.springframework.aot.hint.MemberCategory;
-import org.springframework.aot.hint.RuntimeHints;
-import org.springframework.aot.hint.RuntimeHintsRegistrar;
+import groovy.transform.CompileStatic
+import org.jspecify.annotations.Nullable
+import org.springframework.aot.hint.MemberCategory
+import org.springframework.aot.hint.RuntimeHints
+import org.springframework.aot.hint.RuntimeHintsRegistrar
 
 /**
  * Registers the URL mapping API a request is dispatched through.
@@ -34,28 +34,30 @@ import org.springframework.aot.hint.RuntimeHintsRegistrar;
  *
  * @since 8.0
  */
-public class UrlMappingRuntimeHints implements RuntimeHintsRegistrar {
+@CompileStatic
+class UrlMappingRuntimeHints implements RuntimeHintsRegistrar {
 
     /**
      * Types Groovy dispatches on. Named as strings, and registered only when present, so this stays
      * correct for an application that does not use every plugin.
      */
-    private static final String[] DISPATCHED_TYPES = {
-        "grails.web.mapping.UrlMappingInfo",
-        "grails.web.mapping.UrlMapping",
-        "grails.web.mapping.UrlMappings",
-        "grails.web.mapping.UrlCreator",
-        "grails.web.mapping.LinkGenerator",
-        "grails.web.mapping.UrlMappingData"
-    };
+    private static final String[] DISPATCHED_TYPES = [
+        'grails.web.mapping.UrlMappingInfo',
+        'grails.web.mapping.UrlMapping',
+        'grails.web.mapping.UrlMappings',
+        'grails.web.mapping.UrlCreator',
+        'grails.web.mapping.LinkGenerator',
+        'grails.web.mapping.UrlMappingData'
+    ] as String[]
 
     @Override
-    public void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
-        for (String type : DISPATCHED_TYPES) {
+    void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
+        for (String type in DISPATCHED_TYPES) {
             hints.reflection().registerTypeIfPresent(classLoader, type,
                     MemberCategory.INVOKE_DECLARED_METHODS,
                     MemberCategory.INVOKE_PUBLIC_METHODS,
-                    MemberCategory.INVOKE_DECLARED_CONSTRUCTORS);
+                    MemberCategory.INVOKE_DECLARED_CONSTRUCTORS)
         }
     }
+
 }

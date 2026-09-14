@@ -16,25 +16,21 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.web.mapping.exceptions;
-
-import org.grails.core.exceptions.GrailsException;
+package grails.web.mapping.mvc
 
 /**
- * Thrown when an error occurs evaluating an URL mapping.
+ * Listener interface that gets fired when the redirect(..) method is called
  *
  * @author Graeme Rocher
- * @since 0.5
+ * @since 1.2
  */
-public class UrlMappingException extends GrailsException {
+interface RedirectEventListener {
 
-    private static final long serialVersionUID = -2062478398945064606L;
+    /**
+     * Called when the response is redirected
+     *
+     * @param url The URL or the redirect
+     */
+    void responseRedirected(String url)
 
-    public UrlMappingException(String message) {
-        super(message);
-    }
-
-    public UrlMappingException(String message, Throwable e) {
-        super(message, e);
-    }
 }

@@ -16,11 +16,9 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.web.mapping;
+package grails.web.mapping
 
-import java.util.Map;
-
-import org.grails.web.servlet.mvc.GrailsWebRequest;
+import org.grails.web.servlet.mvc.GrailsWebRequest
 
 /**
  * Defines that data that was produced when matching a URI with a UrlMapping instance.
@@ -29,7 +27,7 @@ import org.grails.web.servlet.mvc.GrailsWebRequest;
  * @author Graeme Rocher
  * @since 0.5
  */
-public interface UrlMappingInfo {
+interface UrlMappingInfo {
 
     /**
      * The URI to map to. Note when the URI is specified it overrides any
@@ -38,74 +36,74 @@ public interface UrlMappingInfo {
      *
      * @return The URI to use
      */
-    String getURI();
+    String getURI()
 
     /**
      * The HTTP method that this URL mapping maps to
      *
      * @return The http method
      */
-    String getHttpMethod();
+    String getHttpMethod()
 
     /**
      * @return The version of the API (for REST)
      */
-    String getVersion();
+    String getVersion()
 
     /**
      * The name of the controller that the URL mapping maps to
      *
      * @return The name of the controller
      */
-    String getControllerName();
+    String getControllerName()
 
     /**
      * The name of the action that the URL mappping maps to
      *
      * @return The name of the action or null if not known
      */
-    String getActionName();
+    String getActionName()
 
     /**
      * @return the namespace of the corresponding controller, null if none was specified
      */
-    String getNamespace();
+    String getNamespace()
 
     /**
      * The name of the plugin that this UrlMappingInfo maps to
      *
      * @return The plugin name
      */
-    String getPluginName();
+    String getPluginName()
 
     /**
      * The name of the view that the URL mappping maps to
      *
      * @return The name of the view or null if not known
      */
-    String getViewName();
+    String getViewName()
 
     /**
      * The id part of the URL mapping if any
      *
      * @return The id or null
      */
-    String getId();
+    String getId()
 
     /**
      * The parameters that were extracted from the URI that was matched
      *
      * @return A Map of parameters
      */
-    @SuppressWarnings("rawtypes")
-    Map getParameters();
+    @SuppressWarnings('rawtypes')
+    Map getParameters()
 
     /**
      * Configure this UrlMappingInfo the for the given GrailsWebRequest
      *
      * @param webRequest  The GrailsWebRequest instance
      */
-    void configure(GrailsWebRequest webRequest);
+    void configure(GrailsWebRequest webRequest)
 
     /**
      * Returns true of the request body should be parsed. This typically happens
@@ -113,7 +111,7 @@ public interface UrlMappingInfo {
      *
      * @return true if it is
      */
-    boolean isParsingRequest();
+    boolean isParsingRequest()
 
     /**
      * The redirect information should be a String or a Map.  If it
@@ -123,14 +121,14 @@ public interface UrlMappingInfo {
      *
      * @return redirect information for this url mapping, null if no redirect is specified
      */
-    Object getRedirectInfo();
+    Object getRedirectInfo()
 
     /**
      * Retrieves the UrlMappingData (information about a parsed URL) if any
      *
      * @return The UrlMappingData instance
      */
-    UrlMappingData getUrlData();
+    UrlMappingData getUrlData()
 
     /**
      * Returns true if any of the controller name, action name, or namespace
@@ -145,6 +143,7 @@ public interface UrlMappingInfo {
      * @since 7.1
      */
     default boolean hasWildcardCaptures() {
-        return false;
+        return false
     }
+
 }

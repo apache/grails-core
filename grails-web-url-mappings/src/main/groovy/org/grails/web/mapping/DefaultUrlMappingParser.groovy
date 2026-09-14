@@ -16,29 +16,32 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.web.mapping;
+package org.grails.web.mapping
+
+import groovy.transform.CompileStatic
+
+import grails.web.mapping.UrlMappingData
+import grails.web.mapping.UrlMappingParser
 
 /**
- * <p>Parses a Grails URL mapping into a UrlMappingData object that holds various information about the mapping</p>
+ * A simple implementation of the UrlMappingParser interface. Most of the logical is encapsulated in the
+ * DefaultUrlMappingData class.
  *
- * <p>A Grails URL pattern is not a regex, but is an extension to the form defined by Apache Ant and used by
- * Spring AntPathMatcher. Unlike regular Ant paths Grails URL patterns allow for capturing groups in the form:</p>
- *
- * <code>/blog/(*)&#47;**</code>
- *
- * <p>The parenthesis define a capturing group. This implementation transforms regular Ant paths into regular expressions
- * that are able to use capturing groups</p>
+ * @see DefaultUrlMappingData
  *
  * @author Graeme Rocher
  * @since 0.5
+ *
+ *
+ * <p>
+ * Created: Mar 5, 2007
+ * Time: 8:35:26 AM
  */
-public interface UrlMappingParser {
+@CompileStatic
+class DefaultUrlMappingParser implements UrlMappingParser {
 
-    /**
-     * Parses the given URI pattern into a UrlMappingData instance
-     *
-     * @param url The URL pattern to parse
-     * @return The UrlMappingData instance
-     */
-    UrlMappingData parse(String url);
+    UrlMappingData parse(String url) {
+        return new DefaultUrlMappingData(url)
+    }
+
 }

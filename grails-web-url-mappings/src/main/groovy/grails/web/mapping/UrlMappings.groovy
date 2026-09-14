@@ -16,26 +16,23 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.web.mapping.mvc.exceptions;
-
-import org.grails.web.servlet.mvc.exceptions.ControllerExecutionException;
+package grails.web.mapping
 
 /**
- * Thrown when the request cannot be redirected.
+ * Interface that allows access to all defined URL mappings and registration of new mappings at runtime
+ *
  *
  * @author Graeme Rocher
- * @since 1.2
+ * @since 2.3
  */
-public class CannotRedirectException extends ControllerExecutionException {
-    private static final long serialVersionUID = 1L;
+interface UrlMappings extends UrlMappingsHolder {
 
-    public CannotRedirectException() {}
+    /**
+     * Adds URL mappings to the current definition for the given closure
+     *
+     * @param mappings The mappings
+     * @return Only the added mappings. To obtain all mappings use {@link UrlMappingsHolder#getUrlMappings()}
+     */
+    Collection<UrlMapping> addMappings(Closure mappings)
 
-    public CannotRedirectException(String message, Throwable t) {
-        super(message, t);
-    }
-
-    public CannotRedirectException(String message) {
-        super(message);
-    }
 }

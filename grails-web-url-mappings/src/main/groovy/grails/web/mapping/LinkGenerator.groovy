@@ -16,12 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.web.mapping;
+package grails.web.mapping
 
-import java.util.Map;
-import java.util.Set;
+import groovy.transform.CompileStatic
 
-import grails.util.CollectionUtils;
+import grails.util.CollectionUtils
 
 /**
  * Generates links for a Grails application based on URL mapping rules and/or base context settings.
@@ -29,28 +28,29 @@ import grails.util.CollectionUtils;
  * @author Graeme Rocher
  * @since 2.0
  */
-public interface LinkGenerator {
+@CompileStatic
+interface LinkGenerator {
 
-    String BEAN_NAME = "grailsLinkGenerator";
-    String ATTRIBUTE_CONTROLLER = "controller";
-    String ATTRIBUTE_RESOURCE = "resource";
-    String ATTRIBUTE_ACTION = "action";
-    String ATTRIBUTE_METHOD = "method";
-    String ATTRIBUTE_URI = "uri";
-    String ATTRIBUTE_RELATIVE_URI = "relativeUri";
-    String ATTRIBUTE_INCLUDE_CONTEXT = "includeContext";
-    String ATTRIBUTE_CONTEXT_PATH = "contextPath";
-    String ATTRIBUTE_URL = "url";
-    String ATTRIBUTE_BASE = "base";
-    String ATTRIBUTE_ABSOLUTE = "absolute";
-    String ATTRIBUTE_ID = "id";
-    String ATTRIBUTE_FRAGMENT = "fragment";
-    String ATTRIBUTE_PARAMS = "params";
-    String ATTRIBUTE_MAPPING = "mapping";
-    String ATTRIBUTE_EVENT = "event";
-    String ATTRIBUTE_ELEMENT_ID = "elementId";
-    String ATTRIBUTE_PLUGIN = "plugin";
-    String ATTRIBUTE_NAMESPACE = "namespace";
+    String BEAN_NAME = 'grailsLinkGenerator'
+    String ATTRIBUTE_CONTROLLER = 'controller'
+    String ATTRIBUTE_RESOURCE = 'resource'
+    String ATTRIBUTE_ACTION = 'action'
+    String ATTRIBUTE_METHOD = 'method'
+    String ATTRIBUTE_URI = 'uri'
+    String ATTRIBUTE_RELATIVE_URI = 'relativeUri'
+    String ATTRIBUTE_INCLUDE_CONTEXT = 'includeContext'
+    String ATTRIBUTE_CONTEXT_PATH = 'contextPath'
+    String ATTRIBUTE_URL = 'url'
+    String ATTRIBUTE_BASE = 'base'
+    String ATTRIBUTE_ABSOLUTE = 'absolute'
+    String ATTRIBUTE_ID = 'id'
+    String ATTRIBUTE_FRAGMENT = 'fragment'
+    String ATTRIBUTE_PARAMS = 'params'
+    String ATTRIBUTE_MAPPING = 'mapping'
+    String ATTRIBUTE_EVENT = 'event'
+    String ATTRIBUTE_ELEMENT_ID = 'elementId'
+    String ATTRIBUTE_PLUGIN = 'plugin'
+    String ATTRIBUTE_NAMESPACE = 'namespace'
 
     Set<String> LINK_ATTRIBUTES = CollectionUtils.newSet(
         ATTRIBUTE_RESOURCE,
@@ -71,27 +71,27 @@ public interface LinkGenerator {
         ATTRIBUTE_ELEMENT_ID,
         ATTRIBUTE_PLUGIN,
         ATTRIBUTE_NAMESPACE
-    );
+    )
 
     Map<String, String> REST_RESOURCE_ACTION_TO_HTTP_METHOD_MAP = CollectionUtils.<String, String>newMap(
-        "create", "GET",
-        "save", "POST",
-        "show", "GET",
-        "index", "GET",
-        "edit", "GET",
-        "update", "PUT",
-        "patch", "PATCH",
-        "delete", "DELETE"
-    );
+        'create', 'GET',
+        'save', 'POST',
+        'show', 'GET',
+        'index', 'GET',
+        'edit', 'GET',
+        'update', 'PUT',
+        'patch', 'PATCH',
+        'delete', 'DELETE'
+    )
 
     Map<String, String> REST_RESOURCE_HTTP_METHOD_TO_ACTION_MAP = CollectionUtils.<String, String>newMap(
-        "GET_ID", "show",
-        "GET", "index",
-        "POST", "save",
-        "DELETE", "delete",
-        "PUT", "update",
-        "PATCH", "patch"
-    );
+        'GET_ID', 'show',
+        'GET', 'index',
+        'POST', 'save',
+        'DELETE', 'delete',
+        'PUT', 'update',
+        'PATCH', 'patch'
+    )
 
     /**
      * Generates a link to a static resource for the given named parameters.
@@ -110,7 +110,7 @@ public interface LinkGenerator {
      * @param params The named parameters
      * @return The link to the static resource
      */
-    String resource(@SuppressWarnings("rawtypes") Map params);
+    String resource(@SuppressWarnings('rawtypes') Map params)
 
     /**
      * Generates a link to a controller, action or URI for the given named parameters.
@@ -135,7 +135,7 @@ public interface LinkGenerator {
      * @param params The named parameters
      * @return The generator link
      */
-    String link(@SuppressWarnings("rawtypes") Map params);
+    String link(@SuppressWarnings('rawtypes') Map params)
 
     /**
      * Generates a link to a controller, action or URI for the given named parameters.
@@ -160,7 +160,7 @@ public interface LinkGenerator {
      * @param encoding The character encoding to use
      * @return The generator link
      */
-    String link(@SuppressWarnings("rawtypes") Map params, String encoding);
+    String link(@SuppressWarnings('rawtypes') Map params, String encoding)
 
     /**
      * Resolves the effective namespace to use for a link/redirect that targets the given controller
@@ -194,7 +194,7 @@ public interface LinkGenerator {
      * @return The resolved namespace, or {@code null} for the default namespace
      */
     default String getDefaultNamespace(String controller, String pluginName) {
-        return null;
+        return null
     }
 
     /**
@@ -211,17 +211,17 @@ public interface LinkGenerator {
      * @param attrs The attributes that may contain {@link #ATTRIBUTE_NAMESPACE}
      * @return The explicit or inferred namespace, or {@code null} for the default namespace
      */
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings('rawtypes')
     default String resolveNamespace(String controller, String pluginName, Map attrs) {
         if (attrs != null && attrs.containsKey(ATTRIBUTE_NAMESPACE)) {
-            Object namespace = attrs.get(ATTRIBUTE_NAMESPACE);
+            Object namespace = attrs.get(ATTRIBUTE_NAMESPACE)
             if (namespace == null) {
-                return null;
+                return null
             }
-            String namespaceValue = namespace.toString();
-            return namespaceValue.trim().isEmpty() ? null : namespaceValue;
+            String namespaceValue = namespace.toString()
+            return namespaceValue.trim().isEmpty() ? null : namespaceValue
         }
-        return getDefaultNamespace(controller, pluginName);
+        return getDefaultNamespace(controller, pluginName)
     }
 
     /**
@@ -229,12 +229,13 @@ public interface LinkGenerator {
      *
      * @return The base context path
      */
-    String getContextPath();
+    String getContextPath()
 
     /**
      * The base URL of the server used for creating absolute links.
      *
      * @return The base URL of the server
      */
-    String getServerBaseURL();
+    String getServerBaseURL()
+
 }

@@ -16,26 +16,30 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.web.mapping;
-
-import java.util.Collection;
-
-import groovy.lang.Closure;
+package grails.web.mapping
 
 /**
- * Interface that allows access to all defined URL mappings and registration of new mappings at runtime
+ * <p>Parses a Grails URL mapping into a UrlMappingData object that holds various information about the mapping</p>
  *
+ * <p>A Grails URL pattern is not a regex, but is an extension to the form defined by Apache Ant and used by
+ * Spring AntPathMatcher. Unlike regular Ant paths Grails URL patterns allow for capturing groups in the form:</p>
+ *
+ * <code>/blog/(*)&#47;**</code>
+ *
+ * <p>The parenthesis define a capturing group. This implementation transforms regular Ant paths into regular expressions
+ * that are able to use capturing groups</p>
  *
  * @author Graeme Rocher
- * @since 2.3
+ * @since 0.5
  */
-public interface UrlMappings extends UrlMappingsHolder {
+interface UrlMappingParser {
 
     /**
-     * Adds URL mappings to the current definition for the given closure
+     * Parses the given URI pattern into a UrlMappingData instance
      *
-     * @param mappings The mappings
-     * @return Only the added mappings. To obtain all mappings use {@link UrlMappingsHolder#getUrlMappings()}
+     * @param url The URL pattern to parse
+     * @return The UrlMappingData instance
      */
-    Collection<UrlMapping> addMappings(Closure mappings);
+    UrlMappingData parse(String url)
+
 }
