@@ -16,11 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.build.parsing;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+package org.grails.build.parsing
 
 /**
  * Represents the parsed command line options.
@@ -28,94 +24,95 @@ import java.util.Properties;
  * @author Graeme Rocher
  * @since 2.0
  */
-public interface CommandLine {
+interface CommandLine {
 
-    String DEBUG_FORK = "debug-fork";
-    String OFFLINE_ARGUMENT = "offline";
-    String VERBOSE_ARGUMENT = "verbose";
-    String STACKTRACE_ARGUMENT = "stacktrace";
-    String AGENT_ARGUMENT = "reloading";
-    String VERSION_ARGUMENT = "version";
-    String REFRESH_DEPENDENCIES_ARGUMENT = "refresh-dependencies";
-    String HELP_ARGUMENT = "help";
-    String NOANSI_ARGUMENT = "plain-output";
-    String NON_INTERACTIVE_ARGUMENT = "non-interactive";
+    String DEBUG_FORK = 'debug-fork'
+    String OFFLINE_ARGUMENT = 'offline'
+    String VERBOSE_ARGUMENT = 'verbose'
+    String STACKTRACE_ARGUMENT = 'stacktrace'
+    String AGENT_ARGUMENT = 'reloading'
+    String VERSION_ARGUMENT = 'version'
+    String REFRESH_DEPENDENCIES_ARGUMENT = 'refresh-dependencies'
+    String HELP_ARGUMENT = 'help'
+    String NOANSI_ARGUMENT = 'plain-output'
+    String NON_INTERACTIVE_ARGUMENT = 'non-interactive'
 
     /**
      * @return The environment specified
      */
-    String getEnvironment();
+    String getEnvironment()
 
     /**
      * @return Whether the environment is user specified
      */
-    boolean isEnvironmentSet();
+    boolean isEnvironmentSet()
 
     /**
      * @return The command name specified
      */
-    String getCommandName();
+    String getCommandName()
 
     /**
      * @return The remaining arguments after the command name
      */
-    List<String> getRemainingArgs();
+    List<String> getRemainingArgs()
 
     /**
      * @return The remaining arguments as an array
      */
-    String[] getRemainingArgsArray();
+    String[] getRemainingArgsArray()
 
     /**
      * @return The system properties specified
      */
-    Properties getSystemProperties();
+    Properties getSystemProperties()
 
     /**
      * @param name The name of the option
      * @return Whether the given option is specified
      */
-    boolean hasOption(String name);
+    boolean hasOption(String name)
 
     /**
      * The value of an option
      * @param name The option
      * @return The value
      */
-    Object optionValue(String name);
+    Object optionValue(String name)
 
     /**
      * @return The last specified option
      */
-    Map.Entry<String, Object> lastOption();
+    Map.Entry<String, Object> lastOption()
 
     /**
      * @return The remaining args as one big string
      */
-    String getRemainingArgsString();
+    String getRemainingArgsString()
 
     /**
      * @return The remaining args as one big string without undeclared options
      */
-    String getRemainingArgsWithOptionsString();
+    String getRemainingArgsWithOptionsString()
 
     /**
      * @return The remaining args separated by the line separator char
      */
-    String getRemainingArgsLineSeparated();
+    String getRemainingArgsLineSeparated()
 
-    Map<String, Object> getUndeclaredOptions();
+    Map<String, Object> getUndeclaredOptions()
 
-    String lookupEnvironmentForCommand();
+    String lookupEnvironmentForCommand()
 
-    void setCommand(String scriptName);
+    void setCommand(String scriptName)
 
     /**
      * Parses a new {@link CommandLine} instance that combines this instance with the given arguments
      * @param args The arguments
      * @return A new {@link CommandLine} instance
      */
-    CommandLine parseNew(String[] args);
+    CommandLine parseNew(String[] args)
 
-    String[] getRawArguments();
+    String[] getRawArguments()
+
 }

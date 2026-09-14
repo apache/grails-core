@@ -16,10 +16,9 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.io.support;
+package org.grails.io.support
 
-import java.net.MalformedURLException;
-import java.net.URL;
+import groovy.transform.CompileStatic
 
 /**
  * Default implementation of the ResourceLoader interface.
@@ -31,9 +30,10 @@ import java.net.URL;
  * @author Juergen Hoeller
  * @since 10.03.2004
  */
-public class DefaultResourceLoader implements ResourceLoader {
+@CompileStatic
+class DefaultResourceLoader implements ResourceLoader {
 
-    private ClassLoader classLoader;
+    private ClassLoader classLoader
 
     /**
      * Create a new DefaultResourceLoader.
@@ -41,23 +41,23 @@ public class DefaultResourceLoader implements ResourceLoader {
      * at the time of this ResourceLoader's initialization.
      * @see java.lang.Thread#getContextClassLoader()
      */
-    public DefaultResourceLoader() {
-        classLoader = getDefaultClassLoader();
+    DefaultResourceLoader() {
+        classLoader = getDefaultClassLoader()
     }
 
-    public static ClassLoader getDefaultClassLoader() {
-        ClassLoader cl = null;
+    static ClassLoader getDefaultClassLoader() {
+        ClassLoader cl = null
         try {
-            cl = Thread.currentThread().getContextClassLoader();
+            cl = Thread.currentThread().getContextClassLoader()
         }
-        catch (Throwable ex) {
+        catch (Throwable ignored) {
             // Cannot access thread context ClassLoader - falling back to system class loader...
         }
         if (cl == null) {
             // No thread context class loader -> use class loader of this class.
-            cl = DefaultResourceLoader.class.getClassLoader();
+            cl = DefaultResourceLoader.getClassLoader()
         }
-        return cl;
+        return cl
     }
 
     /**
@@ -65,8 +65,8 @@ public class DefaultResourceLoader implements ResourceLoader {
      * @param classLoader the ClassLoader to load class path resources with, or <code>null</code>
      * for using the thread context class loader at the time of actual resource access
      */
-    public DefaultResourceLoader(ClassLoader classLoader) {
-        this.classLoader = classLoader;
+    DefaultResourceLoader(ClassLoader classLoader) {
+        this.classLoader = classLoader
     }
 
     /**
@@ -75,30 +75,30 @@ public class DefaultResourceLoader implements ResourceLoader {
      * <p>The default is that ClassLoader access will happen using the thread context
      * class loader at the time of this ResourceLoader's initialization.
      */
-    public void setClassLoader(ClassLoader classLoader) {
-        this.classLoader = classLoader;
+    void setClassLoader(ClassLoader classLoader) {
+        this.classLoader = classLoader
     }
 
     /**
      * Return the ClassLoader to load class path resources with.
      */
-    public ClassLoader getClassLoader() {
-        return classLoader == null ? getDefaultClassLoader() : classLoader;
+    ClassLoader getClassLoader() {
+        return classLoader == null ? getDefaultClassLoader() : classLoader
     }
 
-    public Resource getResource(String location) {
+    Resource getResource(String location) {
         if (location.startsWith(CLASSPATH_URL_PREFIX)) {
-            return new ClassPathResource(location.substring(CLASSPATH_URL_PREFIX.length()), getClassLoader());
+            return new ClassPathResource(location.substring(CLASSPATH_URL_PREFIX.length()), getClassLoader())
         }
 
         try {
             // Try to parse the location as a URL...
-            URL url = new URL(location);
-            return new UrlResource(url);
+            URL url = new URL(location)
+            return new UrlResource(url)
         }
         catch (MalformedURLException ex) {
             // No URL -> resolve as resource path.
-            return getResourceByPath(location);
+            return getResourceByPath(location)
         }
     }
 
@@ -112,7 +112,7 @@ public class DefaultResourceLoader implements ResourceLoader {
      * @see ClassPathResource
      */
     protected Resource getResourceByPath(String path) {
-        return new ClassPathContextResource(path, getClassLoader());
+        return new ClassPathContextResource(path, getClassLoader())
     }
 
     /**
@@ -121,19 +121,20 @@ public class DefaultResourceLoader implements ResourceLoader {
      */
     private static class ClassPathContextResource extends ClassPathResource {
 
-        public ClassPathContextResource(String path, ClassLoader classLoader) {
-            super(path, classLoader);
+        ClassPathContextResource(String path, ClassLoader classLoader) {
+            super(path, classLoader)
         }
 
-        @SuppressWarnings("unused")
-        public String getPathWithinContext() {
-            return getPath();
+        @SuppressWarnings('unused')
+        String getPathWithinContext() {
+            return getPath()
         }
 
         @Override
-        public Resource createRelative(String relativePath) {
-            String pathToUse = GrailsResourceUtils.applyRelativePath(getPath(), relativePath);
-            return new ClassPathContextResource(pathToUse, getClassLoader());
+        Resource createRelative(String relativePath) {
+            String pathToUse = GrailsResourceUtils.applyRelativePath(getPath(), relativePath)
+            return new ClassPathContextResource(pathToUse, getClassLoader())
         }
     }
+
 }

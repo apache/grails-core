@@ -16,33 +16,27 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.build.parsing;
+package org.grails.build.parsing
+
+import groovy.transform.CompileStatic
 
 /**
- * Represents a command line option.
+ * Exception that is thrown in command line parsing fails.
  *
  * @author Graeme Rocher
  * @since 2.0
  */
-public class Option {
+@CompileStatic
+class ParseException extends RuntimeException {
 
-    private String name;
-    private String description;
+    private static final long serialVersionUID = 1
 
-    public Option(String name, String description) {
-        if (name == null || name.length() == 0) {
-            throw new IllegalArgumentException("illegal option specified");
-        }
-
-        this.name = name;
-        this.description = description == null ? "" : description;
+    ParseException(String message) {
+        super(message)
     }
 
-    public String getName() {
-        return name;
+    ParseException(Throwable cause) {
+        super(cause)
     }
 
-    public String getDescription() {
-        return description;
-    }
 }
