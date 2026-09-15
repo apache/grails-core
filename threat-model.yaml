@@ -94,9 +94,9 @@ components:
       - grails-console/src/main/groovy/grails/ui/console/support/GroovyConsoleApplicationContext.groovy
   - name: grails_forge_http_api
     in_model: false
-    out_of_model_reason: "Separate Micronaut-based service deployed independently from any application built with Grails (§3)."
+    out_of_model_reason: "Separate Grails 8 web application deployed independently from user applications built with Grails (§3)."
     representative_files:
-      - grails-forge/grails-forge-api/src/main/java/org/grails/forge/api/create/zip/ZipCreateController.java
+      - grails-forge/grails-forge-web/grails-app/controllers/org/grails/forge/web/ZipCreateController.groovy
   - name: generated_scaffolding_demo_apps
     in_model: false
     out_of_model_reason: "Separately authored; not shipped in framework distributions (§3)."

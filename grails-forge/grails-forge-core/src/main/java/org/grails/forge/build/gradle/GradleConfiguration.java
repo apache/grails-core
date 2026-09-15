@@ -18,8 +18,8 @@
  */
 package org.grails.forge.build.gradle;
 
-import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.order.Ordered;
+import jakarta.annotation.Nonnull;
+import org.springframework.core.Ordered;
 import org.grails.forge.build.dependencies.Phase;
 import org.grails.forge.build.dependencies.Scope;
 import org.grails.forge.options.DevelopmentReloading;
@@ -69,9 +69,9 @@ public enum GradleConfiguration implements Ordered {
         return order;
     }
 
-    @NonNull
-    public static Optional<GradleConfiguration> of(@NonNull Scope scope,
-                                                   @NonNull DevelopmentReloading reloading) {
+    @Nonnull
+    public static Optional<GradleConfiguration> of(@Nonnull Scope scope,
+                                                   @Nonnull DevelopmentReloading reloading) {
         switch (scope.getSource()) {
             case BUILD_SRC:
                 if (scope.getPhases().contains(Phase.BUILD)) {

@@ -18,7 +18,7 @@
  */
 package org.grails.forge.build.gradle;
 
-import io.micronaut.core.annotation.NonNull;
+import jakarta.annotation.Nonnull;
 import org.grails.forge.template.Writable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,18 +48,18 @@ public class GradleBuild {
         this(GradleDsl.GROOVY, Collections.emptyList(), Collections.emptyList());
     }
 
-    public GradleBuild(@NonNull GradleDsl gradleDsl,
-                       @NonNull List<GradleDependency> dependencies,
-                       @NonNull List<GradleDependency> buildscriptDependencies) {
+    public GradleBuild(@Nonnull GradleDsl gradleDsl,
+                       @Nonnull List<GradleDependency> dependencies,
+                       @Nonnull List<GradleDependency> buildscriptDependencies) {
         this(gradleDsl, dependencies, buildscriptDependencies, Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
     }
 
-    public GradleBuild(@NonNull GradleDsl gradleDsl,
-                       @NonNull List<GradleDependency> dependencies,
-                       @NonNull List<GradleDependency> buildscriptDependencies,
-                       @NonNull List<GradlePlugin> plugins,
-                       @NonNull List<GradleRepository> buildRepositories,
-                       @NonNull List<GradleRepository> repositories) {
+    public GradleBuild(@Nonnull GradleDsl gradleDsl,
+                       @Nonnull List<GradleDependency> dependencies,
+                       @Nonnull List<GradleDependency> buildscriptDependencies,
+                       @Nonnull List<GradlePlugin> plugins,
+                       @Nonnull List<GradleRepository> buildRepositories,
+                       @Nonnull List<GradleRepository> repositories) {
         this.dsl = gradleDsl;
         this.dependencies = dependencies;
         this.buildscriptDependencies = buildscriptDependencies;
@@ -68,74 +68,74 @@ public class GradleBuild {
         this.repositories = repositories;
     }
 
-    @NonNull
+    @Nonnull
     public GradleDsl getDsl() {
         return dsl;
     }
 
-    @NonNull
+    @Nonnull
     public List<GradleDependency> getDependencies() {
         return dependencies;
     }
 
-    @NonNull
+    @Nonnull
     public List<GradleRepository> getBuildRepositories() {
         return buildRepositories;
     }
 
-    @NonNull
+    @Nonnull
     public List<GradleRepository> getRepositories() {
         return repositories;
     }
 
-    @NonNull
+    @Nonnull
     public List<GradleDependency> getBuildSrcDependencies() {
         return buildscriptDependencies.stream().filter(gradleDependency -> !gradleDependency.getConfiguration().equals(GradleConfiguration.CLASSPATH)).collect(Collectors.toList());
     }
 
-    @NonNull
+    @Nonnull
     public List<GradleDependency> getBuildscriptDependencies() {
         return buildscriptDependencies.stream().filter(gradleDependency -> gradleDependency.getConfiguration().equals(GradleConfiguration.CLASSPATH)).collect(Collectors.toList());
     }
 
-    @NonNull
+    @Nonnull
     public List<GradleDependency> getAllBuildscriptDependencies() {
         return buildscriptDependencies;
     }
 
-    @NonNull
+    @Nonnull
     public List<GradlePlugin> getPlugins() {
         return plugins;
     }
 
-    @NonNull
+    @Nonnull
     public List<GradlePlugin> getPluginsWithVersion() {
         return plugins.stream().filter(plugin -> plugin.getVersion() != null).collect(Collectors.toList());
     }
 
-    @NonNull
+    @Nonnull
     public List<GradlePlugin> getPluginsWithoutApply() {
         return plugins.stream().filter(plugin -> !plugin.useApplyPlugin()).collect(Collectors.toList());
     }
 
-    @NonNull
+    @Nonnull
     public List<GradlePlugin> getPluginsWithApply() {
         return plugins.stream().filter(plugin -> plugin.useApplyPlugin()).collect(Collectors.toList());
     }
 
-    @NonNull
+    @Nonnull
     public String renderExtensions() {
         return renderWritableExtensions(Stream.concat(
                 buildscriptDependencies.stream().map(GradleDependency::getExtension).filter(Objects::nonNull),
                 plugins.stream().map(GradlePlugin::getExtension)));
     }
 
-    @NonNull
+    @Nonnull
     public String renderSettingsExtensions() {
         return renderWritableExtensions(plugins.stream().map(GradlePlugin::getSettingsExtension));
     }
 
-    @NonNull
+    @Nonnull
     private String renderWritableExtensions(Stream<Writable> extensions) {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         extensions
@@ -153,7 +153,7 @@ public class GradleBuild {
         return new String(outputStream.toByteArray(), StandardCharsets.UTF_8);
     }
 
-    @NonNull
+    @Nonnull
     public Set<String> getPluginsImports() {
         Set<String> imports = new HashSet<>();
         for (GradlePlugin p : plugins) {

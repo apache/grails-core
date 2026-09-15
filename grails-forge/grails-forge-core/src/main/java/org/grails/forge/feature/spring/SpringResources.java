@@ -18,7 +18,7 @@
  */
 package org.grails.forge.feature.spring;
 
-import jakarta.inject.Singleton;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.feature.Category;
@@ -30,7 +30,7 @@ import org.grails.forge.template.RockerTemplate;
 
 import java.util.Set;
 
-@Singleton
+@Component
 public class SpringResources implements DefaultFeature {
     @Override
     public boolean shouldApply(ApplicationType applicationType, Options options, Set<Feature> selectedFeatures) {

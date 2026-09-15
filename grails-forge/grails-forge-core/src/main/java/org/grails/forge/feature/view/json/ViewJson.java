@@ -18,8 +18,8 @@
  */
 package org.grails.forge.feature.view.json;
 
-import io.micronaut.core.annotation.NonNull;
-import jakarta.inject.Singleton;
+import jakarta.annotation.Nonnull;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
@@ -34,7 +34,7 @@ import org.grails.forge.template.RockerTemplate;
 
 import java.util.Set;
 
-@Singleton
+@Component
 public class ViewJson extends GrailsViews implements DefaultFeature {
 
     public ViewJson(GrailsWeb grailsWeb) {
@@ -42,7 +42,7 @@ public class ViewJson extends GrailsViews implements DefaultFeature {
     }
 
     @Override
-    @NonNull
+    @Nonnull
     public String getName() {
         return "views-json";
     }
@@ -53,7 +53,7 @@ public class ViewJson extends GrailsViews implements DefaultFeature {
     }
 
     @Override
-    @NonNull
+    @Nonnull
     public String getDescription() {
         return "JSON views are written in Groovy, end with the file extension gson and reside in the grails-app/views directory. They provide a DSL for producing output in the JSON format.";
     }

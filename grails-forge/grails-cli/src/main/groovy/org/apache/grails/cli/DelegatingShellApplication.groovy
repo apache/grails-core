@@ -30,7 +30,7 @@ class DelegatingShellApplication {
 
     static void main(String[] args) {
         // Ideally, we'd use pico cli to delegate between them and get autocomplete, but we can't easily do that because
-        // grails-forge-cli does not implement picocli compliant commands (they can't be nested because they're beans that micronaut expects to create)
+        // grails-forge-cli commands are not nested picocli subcommands of this entry point.
 
         Tuple2<Boolean, String[]> info = determineForge(args)
 

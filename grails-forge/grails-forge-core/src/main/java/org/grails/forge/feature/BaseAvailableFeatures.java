@@ -18,7 +18,7 @@
  */
 package org.grails.forge.feature;
 
-import io.micronaut.core.annotation.NonNull;
+import jakarta.annotation.Nonnull;
 import org.grails.forge.application.ApplicationType;
 
 import java.util.Iterator;
@@ -53,12 +53,12 @@ public class BaseAvailableFeatures implements AvailableFeatures {
     }
 
     @Override
-    public Optional<Feature> findFeature(@NonNull String name) {
+    public Optional<Feature> findFeature(@Nonnull String name) {
         return findFeature(name, false);
     }
 
     @Override
-    public Optional<Feature> findFeature(@NonNull String name, boolean ignoreVisibility) {
+    public Optional<Feature> findFeature(@Nonnull String name, boolean ignoreVisibility) {
         Feature feature = features.get(name);
         if (feature != null) {
             if (ignoreVisibility || feature.isVisible()) {

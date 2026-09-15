@@ -18,9 +18,7 @@
  */
 package org.grails.forge.cli.command;
 
-import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.annotation.ReflectiveAccess;
-import io.micronaut.core.util.StringUtils;
+import jakarta.annotation.Nonnull;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.ContextFactory;
 import org.grails.forge.application.Project;
@@ -41,31 +39,24 @@ public abstract class CreateCommand extends BaseCommand implements Callable<Inte
 
     protected final AvailableFeatures availableFeatures;
 
-    @ReflectiveAccess
     @CommandLine.Parameters(arity = "0..1", paramLabel = "NAME", description = "The name of the application to create.")
     String name;
 
-    @ReflectiveAccess
     @CommandLine.Option(names = {"-r", "--reloading"}, paramLabel = "RELOADING", description = "Which development reloading option to use. Possible values: ${COMPLETION-CANDIDATES}.", completionCandidates = DevelopmentReloadingCandidates.class, converter = DevelopmentReloadingConverter.class)
     DevelopmentReloading reloading;
 
-    @ReflectiveAccess
     @CommandLine.Option(names = {"-d", "--data", "-g", "--gorm"}, paramLabel = "Grails Data Implementation", description = "Which Grails Data implementation to configure (-g, --gorm are legacy aliases). Possible values: ${COMPLETION-CANDIDATES}.", completionCandidates = GormImplCandidates.class, converter = GormImplConverter.class)
     GormImpl gormImpl;
 
-    @ReflectiveAccess
     @CommandLine.Option(names = {"-s", "--servlet"}, paramLabel = "Servlet Implementation", description = "Which Servlet Implementation to configure. Possible values: ${COMPLETION-CANDIDATES}.", completionCandidates = ServletImplCandidates.class, converter = ServletImplConverter.class)
     ServletImpl servletImpl;
 
-    @ReflectiveAccess
     @CommandLine.Option(names = {"-i", "--inplace"}, description = "Create a service using the current directory")
     boolean inplace;
 
-    @ReflectiveAccess
     @CommandLine.Option(names = {"--list-features"}, description = "Output the available features and their descriptions")
     boolean listFeatures;
 
-    @ReflectiveAccess
     @CommandLine.Option(names = {"--jdk", "--java-version"}, description = "The JDK version the project should target")
     Integer javaVersion;
 
@@ -86,7 +77,7 @@ public abstract class CreateCommand extends BaseCommand implements Callable<Inte
     /**
      * @return The selected features.
      */
-    protected abstract @NonNull List<String> getSelectedFeatures();
+    protected abstract @Nonnull List<String> getSelectedFeatures();
 
     protected Map<String, Object> getAdditionalOptions() {
         return Collections.emptyMap();
@@ -106,7 +97,7 @@ public abstract class CreateCommand extends BaseCommand implements Callable<Inte
         try {
             project = NameUtils.parse(name);
         } catch (IllegalArgumentException e) {
-            throw new CommandLine.ParameterException(this.spec.commandLine(), StringUtils.isEmpty(name) ? "Specify an application name or use --inplace to create an application in the current directory" : e.getMessage());
+            throw new CommandLine.ParameterException(this.spec.commandLine(), (name == null || name.isEmpty()) ? "Specify an application name or use --inplace to create an application in the current directory" : e.getMessage());
         }
 
         OutputHandler outputHandler = new FileSystemOutputHandler(project, inplace, this);

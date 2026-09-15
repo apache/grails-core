@@ -79,19 +79,27 @@ jobs:
           cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "🔎 Check Forge Projects"
-        working-directory: grails-forge
-        run: ./gradlew codeStyle
+        run: >
+          ./gradlew
+          :grails-cli:codeStyle
+          :grails-forge-api:codeStyle
+          :grails-forge-cli:codeStyle
+          :grails-forge-core:codeStyle
+          :grails-forge-web:codeStyle
       - name: "📤 Upload Failure Reports"
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: forge-reports
-          path: grails-forge/build/reports/code-style/
+          path: |
+            grails-forge/**/build/reports/checkstyle/
+            grails-forge/**/build/reports/codenarc/
+            grails-forge/**/build/reports/code-style/
       - name: "📋 Publish Code Style Report in Job Summary"
         if: always()
         run: |
           echo "## 🔎 Code Style Report - Forge Projects" >> $GITHUB_STEP_SUMMARY
-          for file in grails-forge/build/reports/code-style/checkstyle/*.xml grails-forge/build/reports/code-style/codenarc/*.xml; do
+          for file in grails-forge/*/build/reports/checkstyle/*.xml grails-forge/*/build/reports/codenarc/*.xml grails-forge/*/build/reports/code-style/checkstyle/*.xml grails-forge/*/build/reports/code-style/codenarc/*.xml; do
             [ -f "$file" ] || continue
             if grep -q "<error " "$file" || grep -q "<Violation " "$file"; then
               echo "### ❌ $(basename "$file" .xml)" >> $GITHUB_STEP_SUMMARY

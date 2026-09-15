@@ -18,7 +18,7 @@
  */
 package org.grails.forge.feature.database;
 
-import jakarta.inject.Singleton;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
@@ -26,7 +26,7 @@ import org.grails.forge.feature.Category;
 
 import java.util.Map;
 
-@Singleton
+@Component
 public class MongoSync extends MongoFeature {
 
     public MongoSync(TestContainers testContainers) {

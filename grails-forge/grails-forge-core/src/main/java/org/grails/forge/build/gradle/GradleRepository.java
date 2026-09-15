@@ -18,8 +18,8 @@
  */
 package org.grails.forge.build.gradle;
 
-import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.order.Ordered;
+import jakarta.annotation.Nonnull;
+import org.springframework.core.Ordered;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -33,7 +33,7 @@ public interface GradleRepository extends Ordered {
 
     Pattern URL_SCHEME_PREFIX = Pattern.compile("[A-Za-z][A-Za-z0-9+.-]*://.*");
 
-    @NonNull
+    @Nonnull
     String toSnippet(String basePadding);
 
     static Set<GradleRepository> getDefaultRepositories(String grailsVersion) {

@@ -18,7 +18,7 @@
  */
 package org.grails.forge.feature.migration;
 
-import jakarta.inject.Singleton;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
 import org.grails.forge.feature.database.GrailsDataHibernate7;
@@ -27,7 +27,7 @@ import org.grails.forge.template.RockerWritable;
 import org.grails.forge.template.URLTemplate;
 import org.grails.forge.util.VersionInfo;
 
-@Singleton
+@Component
 public class DatabaseMigrationPlugin implements MigrationFeature {
 
     @Override

@@ -19,7 +19,6 @@
 
 package org.grails.forge.cli.command
 
-import io.micronaut.configuration.picocli.PicocliRunner
 import org.grails.forge.cli.CodeGenConfig
 import org.grails.forge.utils.CommandSpec
 import spock.lang.Ignore
@@ -30,13 +29,14 @@ class CreateInterceptorSpec extends CommandSpec {
     void "test create-interceptor command"() {
         when:
         generateProjectWithDefaults()
-        applicationContext.createBean(CodeGenConfig.class, new CodeGenConfig())
+        applicationContext.beanFactory.registerSingleton(CodeGenConfig.name, new CodeGenConfig())
+        applicationContext.registerBean(CreateInterceptorCommand)
 
         then:
         applicationContext.getBean(CodeGenConfig.class)
 
         when:
-        PicocliRunner.run(CreateInterceptorCommand.class, applicationContext, "test")
+        org.grails.forge.cli.CliRunner.run(CreateInterceptorCommand.class, applicationContext, "test")
 
         then:
         new File(dir, "grails-app/controllers/example/grails/TestInterceptor.groovy").exists()

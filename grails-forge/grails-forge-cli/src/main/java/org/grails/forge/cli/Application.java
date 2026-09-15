@@ -18,19 +18,23 @@
  */
 package org.grails.forge.cli;
 
-import io.micronaut.context.ApplicationContext;
-import io.micronaut.context.BeanContext;
-import io.micronaut.context.annotation.Prototype;
-import io.micronaut.core.annotation.TypeHint;
-import io.micronaut.inject.BeanDefinition;
-import org.grails.forge.cli.command.*;
+import org.grails.forge.ForgeContexts;
+import org.grails.forge.cli.command.BaseCommand;
+import org.grails.forge.cli.command.CodeGenCommand;
+import org.grails.forge.cli.command.CreateAppCommand;
+import org.grails.forge.cli.command.CreatePluginCommand;
+import org.grails.forge.cli.command.CreateRestApiCommand;
+import org.grails.forge.cli.command.CreateWebPluginCommand;
+import org.grails.forge.cli.command.CreateWebappCommand;
 import org.grails.forge.io.ConsoleOutput;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
 import picocli.CommandLine;
 
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.function.BiFunction;
-
-
 
 @CommandLine.Command(name = "grails-forge-cli", description = {
         "Grails Forge CLI command line interface for generating projects and services.",
@@ -46,27 +50,27 @@ import java.util.function.BiFunction;
         optionListHeading = "%n@|bold,underline Options:|@%n",
         commandListHeading = "%n@|bold,underline Commands:|@%n",
         subcommands = {
-                // Creation commands
                 CreateAppCommand.class,
                 CreateWebappCommand.class,
                 CreatePluginCommand.class,
                 CreateWebPluginCommand.class,
                 CreateRestApiCommand.class
         })
-@Prototype
-@TypeHint({
-        Application.class,
-        GormImplCandidates.class,
-        GormImplConverter.class,
-        ServletImplCandidates.class,
-        ServletImplConverter.class,
-        CommonOptionsMixin.class,
-        DevelopmentReloadingCandidates.class,
-        DevelopmentReloadingConverter.class
-})
+@Component
+@Scope("prototype")
 public class Application extends BaseCommand implements Callable<Integer> {
 
     private static Boolean interactiveShell = false;
+
+    private static final List<Class<? extends CodeGenCommand>> CODE_GEN_COMMANDS = List.of(
+            org.grails.forge.cli.command.CreateControllerCommand.class,
+            org.grails.forge.cli.command.CreateServiceCommand.class,
+            org.grails.forge.cli.command.CreateDomainClassCommand.class,
+            org.grails.forge.cli.command.CreateTagLibCommand.class,
+            org.grails.forge.cli.command.CreateInterceptorCommand.class,
+            org.grails.forge.cli.command.CreateJobCommand.class,
+            org.grails.forge.cli.command.AddPropertyCommand.class
+    );
 
     private static final BiFunction<Throwable, CommandLine, Integer> EXCEPTION_HANDLER = (e, commandLine) -> {
         BaseCommand command = commandLine.getCommand();
@@ -79,8 +83,6 @@ public class Application extends BaseCommand implements Callable<Integer> {
 
     public static void main(String[] args) {
         if (args.length == 0) {
-            //The first command line isn't technically in the shell yet so this is called
-            //before setting the static flag
             CommandLine commandLine = createCommandLine();
             Application.interactiveShell = true;
             new InteractiveShell(commandLine, Application::execute, EXCEPTION_HANDLER).start();
@@ -91,19 +93,19 @@ public class Application extends BaseCommand implements Callable<Integer> {
 
     static CommandLine createCommandLine() {
         boolean noOpConsole = Application.interactiveShell;
-        try (BeanContext beanContext = ApplicationContext.builder().deduceEnvironment(false).start()) {
+        try (AnnotationConfigApplicationContext beanContext = ForgeContexts.create()) {
             return createCommandLine(beanContext, noOpConsole);
         }
     }
 
     static int execute(String[] args) {
         boolean noOpConsole = args.length > 0 && args[0].startsWith("update-cli-config");
-        try (BeanContext beanContext = ApplicationContext.builder().deduceEnvironment(false).start()) {
+        try (AnnotationConfigApplicationContext beanContext = ForgeContexts.create()) {
             return createCommandLine(beanContext, noOpConsole).execute(args);
         }
     }
 
-    private static CommandLine createCommandLine(BeanContext beanContext, boolean noOpConsole) {
+    private static CommandLine createCommandLine(AnnotationConfigApplicationContext beanContext, boolean noOpConsole) {
         Application application = beanContext.getBean(Application.class);
         CommandLine commandLine = new CommandLine(application, new GrailsPicocliFactory(beanContext));
         commandLine.setExecutionExceptionHandler((ex, commandLine1, parseResult) -> EXCEPTION_HANDLER.apply(ex, commandLine1));
@@ -111,11 +113,16 @@ public class Application extends BaseCommand implements Callable<Integer> {
 
         CodeGenConfig codeGenConfig = CodeGenConfig.load(beanContext, noOpConsole ? ConsoleOutput.NOOP : application);
         if (codeGenConfig != null) {
-            beanContext.getBeanDefinitions(CodeGenCommand.class).stream()
-                    .map(BeanDefinition::getBeanType)
-                    .map(bt -> beanContext.createBean(bt, codeGenConfig))
-                    .filter(CodeGenCommand::applies)
-                    .forEach(commandLine::addSubcommand);
+            for (Class<? extends CodeGenCommand> type : CODE_GEN_COMMANDS) {
+                try {
+                    CodeGenCommand command = type.getConstructor(CodeGenConfig.class).newInstance(codeGenConfig);
+                    if (command.applies()) {
+                        commandLine.addSubcommand(command);
+                    }
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException("Unable to create command " + type.getName(), e);
+                }
+            }
         }
 
         return commandLine;

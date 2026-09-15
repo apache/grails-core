@@ -50,7 +50,7 @@ class GrailsDataMongoDBSpec extends ApplicationContextSpec implements CommandOut
 
     void "test there can only be one of either MongoDB or Neo4j feature"() {
         when:
-        getFeatures(beanContext.getBeansOfType(GormOneOfFeature)*.name)
+        getFeatures(beanContext.getBeansOfType(GormOneOfFeature).values()*.name)
 
         then:
         def ex = thrown(IllegalArgumentException)

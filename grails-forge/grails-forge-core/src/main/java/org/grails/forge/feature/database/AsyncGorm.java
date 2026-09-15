@@ -18,7 +18,7 @@
  */
 package org.grails.forge.feature.database;
 
-import jakarta.inject.Singleton;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
@@ -36,7 +36,7 @@ import org.grails.forge.util.VersionInfo;
  * selecting a GORM persistence layer, Hibernate is added as a sensible default
  * via {@link #processSelectedFeatures(FeatureContext)}.</p>
  */
-@Singleton
+@Component
 public class AsyncGorm implements Feature {
 
     private final GrailsDataHibernate5 grailsDataHibernate5;

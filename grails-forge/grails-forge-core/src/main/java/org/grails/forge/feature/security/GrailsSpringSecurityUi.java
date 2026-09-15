@@ -20,7 +20,7 @@ package org.grails.forge.feature.security;
 
 import java.util.List;
 
-import jakarta.inject.Singleton;
+import org.springframework.stereotype.Component;
 
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
@@ -36,7 +36,7 @@ import org.grails.forge.feature.view.Scaffolding;
  *
  * @since 8.0
  */
-@Singleton
+@Component
 public class GrailsSpringSecurityUi extends SecurityFeature {
 
     private final GrailsSpringSecurity grailsSpringSecurity;

@@ -18,9 +18,8 @@
  */
 package org.grails.forge.build.gradle;
 
-import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.annotation.Nullable;
-import io.micronaut.core.order.OrderUtil;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Coordinate;
 import org.grails.forge.build.dependencies.Dependency;
@@ -35,7 +34,7 @@ import static org.grails.forge.build.gradle.GradleConfiguration.INTEGRATION_TEST
 public class GradleDependency extends DependencyCoordinate {
 
     public static final Comparator<GradleDependency> COMPARATOR = (o1, o2) -> {
-        int comparison = OrderUtil.COMPARATOR.compare(o1, o2);
+        int comparison = Integer.compare(o1.getOrder(), o2.getOrder());
         if (comparison != 0) {
             return comparison;
         }
@@ -48,16 +47,16 @@ public class GradleDependency extends DependencyCoordinate {
 
     private final Writable extension;
 
-    @NonNull
+    @Nonnull
     private final GradleConfiguration gradleConfiguration;
 
-    public GradleDependency(@NonNull Dependency dependency,
-                            @NonNull GeneratorContext generatorContext) {
+    public GradleDependency(@Nonnull Dependency dependency,
+                            @Nonnull GeneratorContext generatorContext) {
         this(dependency, generatorContext, null);
     }
 
-    public GradleDependency(@NonNull Dependency dependency,
-                            @NonNull GeneratorContext generatorContext,
+    public GradleDependency(@Nonnull Dependency dependency,
+                            @Nonnull GeneratorContext generatorContext,
                             @Nullable Writable extension) {
         super(dependency);
         gradleConfiguration = GradleConfiguration.of(
@@ -68,7 +67,7 @@ public class GradleDependency extends DependencyCoordinate {
         this.extension = extension;
     }
 
-    @NonNull
+    @Nonnull
     public GradleConfiguration getConfiguration() {
         return gradleConfiguration;
     }
@@ -100,7 +99,7 @@ public class GradleDependency extends DependencyCoordinate {
         return result;
     }
 
-    @NonNull
+    @Nonnull
     public String toSnippet() {
         String optionalSpace = gradleConfiguration == INTEGRATION_TEST_IMPLEMENTATION_TEST_FIXTURES ? "" : " ";
         String snippet = gradleConfiguration.getConfigurationName() + optionalSpace;

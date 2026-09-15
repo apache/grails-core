@@ -18,7 +18,7 @@
  */
 package org.grails.forge.feature.database;
 
-import jakarta.inject.Singleton;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
@@ -30,7 +30,7 @@ import org.grails.forge.options.Options;
 import java.util.Map;
 import java.util.Set;
 
-@Singleton
+@Component
 public class GrailsDataHibernate7 extends GormFeature implements DatabaseDriverConfigurationFeature {
 
     private static final String URL_KEY = DATASOURCE_PREFIX + "url";

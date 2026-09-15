@@ -18,7 +18,7 @@
  */
 package org.grails.forge.feature.config;
 
-import jakarta.inject.Singleton;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.feature.DefaultFeature;
 import org.grails.forge.feature.Feature;
@@ -30,7 +30,7 @@ import org.grails.forge.template.YamlTemplate;
 import java.util.Set;
 import java.util.function.Function;
 
-@Singleton
+@Component
 public class Yaml implements ConfigurationFeature, DefaultFeature {
 
     private static final String EXTENSION = "yml";

@@ -18,7 +18,7 @@
  */
 package org.grails.forge.feature;
 
-import io.micronaut.core.annotation.Nullable;
+import jakarta.annotation.Nullable;
 import org.grails.forge.application.generator.GeneratorContext;
 
 public interface ApplicationFeature extends Feature {

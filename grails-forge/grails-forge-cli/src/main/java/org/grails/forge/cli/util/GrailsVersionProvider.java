@@ -18,7 +18,7 @@
  */
 package org.grails.forge.cli.util;
 
-import jakarta.inject.Singleton;
+import org.springframework.stereotype.Component;
 import org.grails.forge.util.VersionInfo;
 import picocli.CommandLine.IVersionProvider;
 
@@ -44,7 +44,7 @@ import java.util.Objects;
  * @author Remko Popma
  * @version 1.0
  */
-@Singleton
+@Component
 public class GrailsVersionProvider implements IVersionProvider {
 
     public String[] getVersion() {

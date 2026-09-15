@@ -18,10 +18,9 @@
  */
 package org.grails.forge.feature.config;
 
-import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.annotation.Nullable;
-import io.micronaut.core.util.CollectionUtils;
-import io.micronaut.core.util.StringUtils;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
+import org.grails.forge.util.NameUtils;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -48,7 +47,7 @@ public class Configuration extends LinkedHashMap<String, Object> {
      * @param templateKey the file template key
      * @param environment the environment name
      */
-    public Configuration(@NonNull String sourceSet, @NonNull String fileName, @NonNull String templateKey, @Nullable String environment) {
+    public Configuration(@Nonnull String sourceSet, @Nonnull String fileName, @Nonnull String templateKey, @Nullable String environment) {
         super();
         this.path = environment != null && environment.equals("test") ? "src/" + sourceSet  + "/resources/" : "grails-app/conf/";
         this.fileName = fileName;
@@ -85,7 +84,7 @@ public class Configuration extends LinkedHashMap<String, Object> {
      * @return this configuration
      */
     public Configuration addNested(String path, Object value) {
-        if (StringUtils.isNotEmpty(path)) {
+        if (!NameUtils.isBlank(path)) {
             final String[] tokens = path.split("\\.");
             LinkedHashMap<String, Object> map = this;
             for (int i = 0; i < tokens.length; i++) {
@@ -108,28 +107,28 @@ public class Configuration extends LinkedHashMap<String, Object> {
      * @return this configuration
      */
     public Configuration addNested(Map<String, Object> values) {
-        if (CollectionUtils.isNotEmpty(values)) {
+        if (values != null && !values.isEmpty()) {
             values.forEach(this::addNested);
         }
         return this;
     }
 
-    @NonNull
+    @Nonnull
     public String getPath() {
         return path;
     }
 
-    @NonNull
+    @Nonnull
     public String getFileName() {
         return fileName;
     }
 
-    @NonNull
+    @Nonnull
     public String getFullPath(String extension) {
         return path + fileName + "." + extension;
     }
 
-    @NonNull
+    @Nonnull
     public String getTemplateKey() {
         return templateKey;
     }

@@ -18,7 +18,7 @@
  */
 package org.grails.forge.feature.reloading;
 
-import jakarta.inject.Singleton;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.gradle.GradlePlugin;
@@ -28,7 +28,7 @@ import org.grails.forge.options.Options;
 
 import java.util.Set;
 
-@Singleton
+@Component
 public class Jrebel implements ReloadingFeature {
 
     @Override

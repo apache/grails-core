@@ -18,8 +18,8 @@
  */
 package org.grails.forge.options;
 
-import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.annotation.Nullable;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 
 public enum GormImpl {
 
@@ -41,12 +41,12 @@ public enum GormImpl {
         this.label = label;
     }
 
-    @NonNull
+    @Nonnull
     public String getName() {
         return featureName;
     }
 
-    @NonNull
+    @Nonnull
     public String getLabel() {
         return label;
     }

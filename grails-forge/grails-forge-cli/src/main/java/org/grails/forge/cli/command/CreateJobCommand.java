@@ -18,9 +18,7 @@
  */
 package org.grails.forge.cli.command;
 
-import io.micronaut.context.annotation.Parameter;
-import io.micronaut.core.annotation.ReflectiveAccess;
-import io.micronaut.core.util.functional.ThrowingSupplier;
+import org.grails.forge.util.ThrowingSupplier;
 import jakarta.inject.Inject;
 import java.io.IOException;
 import org.grails.forge.application.Project;
@@ -38,12 +36,11 @@ public class CreateJobCommand extends CodeGenCommand {
 
     public static final String NAME = "create-job";
 
-    @ReflectiveAccess
     @CommandLine.Parameters(paramLabel = "JOB-NAME", description = "The name of the job")
     String jobName;
 
     @Inject
-    public CreateJobCommand(@Parameter CodeGenConfig config) {
+    public CreateJobCommand(CodeGenConfig config) {
         super(config);
     }
 

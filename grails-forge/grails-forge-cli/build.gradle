@@ -34,8 +34,6 @@ plugins {
 version = projectVersion
 group = 'org.apache.grails.forge'
 
-apply from: rootProject.layout.projectDirectory.file('../dependencies.gradle')
-
 sourceSets {
     main {
         rocker {
@@ -65,49 +63,33 @@ configurations {
 }
 
 ext {
+    pomTitle = 'Apache Grails® Application Forge'
+    pomDescription = 'Generates Apache Grails® applications'
     cliProject = true
     startMainClass = 'org.grails.forge.cli.Application'
     sbomProjectType = org.cyclonedx.model.Component.Type.APPLICATION.name()
 }
 
 dependencies {
-    annotationProcessor platform("io.micronaut.platform:micronaut-platform:$micronautVersion")
-    implementation platform("io.micronaut.platform:micronaut-platform:$micronautVersion")
-    annotationProcessor 'io.micronaut:micronaut-inject-java'
-    testAnnotationProcessor platform("io.micronaut.platform:micronaut-platform:$micronautVersion")
-    testAnnotationProcessor 'io.micronaut:micronaut-inject-java'
+    implementation platform(project(':grails-bom'))
+    testAnnotationProcessor platform(project(':grails-bom'))
 
     generateConfig "info.picocli:picocli-codegen:$picocliVersion"
 
-    annotationProcessor 'io.micronaut:micronaut-graal'
-    annotationProcessor 'io.micronaut:micronaut-inject-java'
-
     implementation project(':grails-forge-core')
-    implementation("org.apache.grails.bootstrap:grails-bootstrap:$projectVersion") {
-        exclude group: 'org.apache.grails', module: 'grails-bom'
-        exclude group: 'org.apache.groovy'
-    }
+    implementation project(':grails-bootstrap')
     compileOnly 'org.apache.groovy:groovy'
     implementation "com.fizzed:rocker-runtime:$rockerVersion"
     implementation "info.picocli:picocli:$picocliVersion"
     implementation "info.picocli:picocli-shell-jline3:$picocliVersion"
     implementation 'jakarta.inject:jakarta.inject-api'
-    // InteractiveShell drives JLine directly, and since the ansi stream install was dropped it also
-    // relies on JLine's terminal for virtual-terminal processing; pin it rather than inheriting
-    // whatever version picocli-shell-jline3 happens to bring
-    implementation "org.jline:jline:${gradleBomDependencyVersions['jline.version']}"
+    implementation 'org.springframework:spring-context'
+    implementation 'org.jline:jline'
     implementation "org.slf4j:slf4j-nop"
     implementation "org.yaml:snakeyaml"
 
-    compileOnly 'com.google.code.findbugs:jsr305'
-
-    testImplementation enforcedPlatform('org.spockframework:spock-bom:2.4-groovy-4.0')
-    testImplementation 'io.micronaut.picocli:micronaut-picocli'
     testImplementation "org.reflections:reflections:$reflectionsVersion"
-    testImplementation "org.testcontainers:spock"
-    if (project.hasProperty('micronautVersion')) {
-        testCompileOnly "io.micronaut:micronaut-inject-groovy:$micronautVersion"
-    }
+    testImplementation "org.testcontainers:spock:$testcontainersVersion"
 
     testImplementation 'org.apache.groovy:groovy'
     testImplementation "org.spockframework:spock-core", {
@@ -115,7 +97,7 @@ dependencies {
     }
 
     testRuntimeOnly "ch.qos.logback:logback-classic"
-    testRuntimeOnly "org.objenesis:objenesis:$objenesisVersion"
+    testRuntimeOnly 'org.objenesis:objenesis'
     testImplementation 'org.apache.groovy:groovy-test'
 }
 
@@ -124,10 +106,9 @@ rocker {
 }
 
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/groovy-version-pin.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/doc-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/forge-code-style-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/forge-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/forge-doc-config.gradle')
 }
 
 def generateManpageAsciiDoc = tasks.register('generateManpageAsciiDoc', GenerateManpageAsciidoc) {

@@ -175,10 +175,16 @@ jobs:
         # container for most of them, an embedded server for the ones that need a replica set. It
         # keeps those two on the same release. This workflow validates Grails against a Groovy
         # snapshot rather than against a range of MongoDB releases, which is gradle.yml's matrix.
+        # -PskipForgeTests keeps this canary a Groovy-snapshot check of grails-core. Forge has
+        # dedicated gradle.yml jobs; after fold-in, unfiltered testShard selected Forge
+        # generate-app tests that fail against the swapped Groovy snapshot (nested generated-app
+        # builds). Do not use -PonlyCoreTests here: that also skips Hibernate, MongoDB, and
+        # functional suites this workflow is meant to run.
         run: >
           ./gradlew ${{ matrix.gradle_task }}
           --continue
           --stacktrace
+          -PskipForgeTests
           -PskipCodeStyle
           -PmaxTestParallel=3
           -PtestShardCount=3

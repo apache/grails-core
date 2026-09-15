@@ -23,9 +23,9 @@ import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
-import io.micronaut.context.ApplicationContext
-import io.micronaut.core.io.ResourceResolver
+import org.grails.forge.ForgeContexts
 import org.slf4j.LoggerFactory
+import org.springframework.context.ApplicationContext
 import spock.lang.AutoCleanup
 import spock.lang.Shared
 import spock.lang.Specification
@@ -35,7 +35,7 @@ class PomDependencyVersionResolverSpec extends Specification {
 
     @AutoCleanup
     @Shared
-    ApplicationContext applicationContext  = ApplicationContext.run()
+    ApplicationContext applicationContext  = ForgeContexts.create()
 
     @Shared
     @Subject
@@ -50,8 +50,6 @@ class PomDependencyVersionResolverSpec extends Specification {
         given:
         def malformedPom = File.createTempFile('malformed-pom', '.xml')
         malformedPom.text = '<project><dependencies><dependency></project>'
-        def resourceResolver = Mock(ResourceResolver)
-        resourceResolver.getResources('classpath:pom.xml') >> [malformedPom.toURI().toURL()].stream()
         Logger logger = (Logger) LoggerFactory.getLogger(PomDependencyVersionResolver)
         def originalLevel = logger.level
         def appender = new ListAppender<ILoggingEvent>()
@@ -60,7 +58,7 @@ class PomDependencyVersionResolverSpec extends Specification {
         logger.level = Level.WARN
 
         when:
-        def resolver = new PomDependencyVersionResolver(resourceResolver)
+        def resolver = new PomDependencyVersionResolver([malformedPom.toURI().toURL()])
 
         then:
         resolver.coordinates.isEmpty()

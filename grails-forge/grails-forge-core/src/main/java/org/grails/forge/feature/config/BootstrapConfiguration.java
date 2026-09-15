@@ -18,15 +18,15 @@
  */
 package org.grails.forge.feature.config;
 
-import io.micronaut.core.annotation.NonNull;
+import jakarta.annotation.Nonnull;
 
 public class BootstrapConfiguration extends Configuration {
 
-    public BootstrapConfiguration(@NonNull String sourceSet, @NonNull String environment) {
+    public BootstrapConfiguration(@Nonnull String sourceSet, @Nonnull String environment) {
         super(sourceSet, ("bootstrap-" + environment), ("bootstrap-config-" + environment), environment);
     }
 
-    public BootstrapConfiguration(@NonNull String environment) {
+    public BootstrapConfiguration(@Nonnull String environment) {
         this("main", environment);
     }
 

@@ -18,15 +18,13 @@
  */
 package org.grails.forge.api;
 
-import io.micronaut.context.BeanLocator;
-import io.micronaut.context.MessageSource;
-import io.micronaut.inject.qualifiers.Qualifiers;
-import jakarta.inject.Singleton;
 import org.grails.forge.application.ApplicationType;
-import org.grails.forge.feature.AvailableFeatures;
 import org.grails.forge.feature.DefaultFeature;
 import org.grails.forge.feature.Feature;
+import org.grails.forge.feature.FeatureRegistry;
 import org.grails.forge.options.Options;
+import org.springframework.context.MessageSource;
+import org.springframework.stereotype.Service;
 
 import java.util.Comparator;
 import java.util.HashSet;
@@ -34,49 +32,31 @@ import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
 
-/**
- * Implements the {@link FeatureOperations} interface.
- *
- * @author graemerocher
- * @since 6.0.0
- */
-@Singleton
+@Service
 public class FeatureService implements FeatureOperations {
 
-    private final List<Feature> features;
-    private final BeanLocator beanLocator;
+    private final FeatureRegistry featureRegistry;
     private final MessageSource messageSource;
 
-    /**
-     * Default constructor.
-     *
-     * @param features      The features
-     * @param beanLocator   The bean locator
-     * @param messageSource The {@link MessageSource} to support internationalization
-     */
-    public FeatureService(List<Feature> features, BeanLocator beanLocator, MessageSource messageSource) {
-        this.features = features;
-        this.beanLocator = beanLocator;
+    public FeatureService(FeatureRegistry featureRegistry, MessageSource messageSource) {
+        this.featureRegistry = featureRegistry;
         this.messageSource = messageSource;
     }
 
     @Override
     public List<FeatureDTO> getAllFeatures(Locale locale) {
-        MessageSource.MessageContext context = MessageSource.MessageContext.of(locale);
-        return features.stream()
-                .filter(Feature::isVisible)
-                .map(feature -> new FeatureDTO(feature, messageSource, context))
+        return featureRegistry.visible()
+                .map(feature -> new FeatureDTO(feature, messageSource, locale))
                 .sorted(Comparator.comparing(FeatureDTO::getName))
                 .collect(Collectors.toList());
     }
 
     @Override
     public List<FeatureDTO> getFeatures(Locale locale, ApplicationType type, Options options) {
-        MessageSource.MessageContext context = MessageSource.MessageContext.of(locale);
-        return beanLocator.getBean(AvailableFeatures.class, Qualifiers.byName(type.getName()))
+        return featureRegistry.availableFeatures(type)
                 .getFeatures()
                 .filter(f -> !shouldApplyDefaultFeature(type, f, options))
-                .map(feature -> new FeatureDTO(feature, messageSource, context))
+                .map(feature -> new FeatureDTO(feature, messageSource, locale))
                 .sorted(Comparator.comparing(FeatureDTO::getName))
                 .collect(Collectors.toList());
     }
@@ -88,16 +68,12 @@ public class FeatureService implements FeatureOperations {
 
     @Override
     public List<FeatureDTO> getDefaultFeatures(Locale locale, ApplicationType type, Options options) {
-        MessageSource.MessageContext context = MessageSource.MessageContext.of(locale);
-        return beanLocator.getBean(AvailableFeatures.class, Qualifiers.byName(type.getName()))
+        return featureRegistry.availableFeatures(type)
                 .getFeatures()
                 .filter(f -> f instanceof DefaultFeature)
                 .map(DefaultFeature.class::cast)
-                .filter(f -> f.shouldApply(
-                        type,
-                        options,
-                        new HashSet<>()))
-                .map(feature -> new FeatureDTO(feature, messageSource, context))
+                .filter(f -> f.shouldApply(type, options, new HashSet<>()))
+                .map(feature -> new FeatureDTO(feature, messageSource, locale))
                 .sorted(Comparator.comparing(FeatureDTO::getName))
                 .collect(Collectors.toList());
     }

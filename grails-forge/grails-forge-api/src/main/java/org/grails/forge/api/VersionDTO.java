@@ -18,9 +18,7 @@
  */
 package org.grails.forge.api;
 
-import io.micronaut.core.annotation.Introspected;
 import org.grails.forge.util.VersionInfo;
-import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.Map;
 
@@ -30,8 +28,6 @@ import java.util.Map;
  * @author graemerocher
  * @since 6.0.0
  */
-@Introspected
-@Schema(name = "Version")
 public class VersionDTO extends Linkable {
 
     /**

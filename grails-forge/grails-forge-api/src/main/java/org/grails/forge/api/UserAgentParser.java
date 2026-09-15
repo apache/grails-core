@@ -18,7 +18,6 @@
  */
 package org.grails.forge.api;
 
-import io.micronaut.core.util.StringUtils;
 import org.grails.forge.application.OperatingSystem;
 
 import java.util.Arrays;
@@ -33,7 +32,7 @@ public class UserAgentParser {
     private static final Pattern[] SOLARIS_PATTERNS = new Pattern[] { Pattern.compile("SunOS") };
 
     public static OperatingSystem getOperatingSystem(String userAgent) {
-        if (StringUtils.isNotEmpty(userAgent)) {
+        if (userAgent != null && !userAgent.isEmpty()) {
             if (matches(WINDOWS_PATTERNS, userAgent)) {
                 return OperatingSystem.WINDOWS;
             }

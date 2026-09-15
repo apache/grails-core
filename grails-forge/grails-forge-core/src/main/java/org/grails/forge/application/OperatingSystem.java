@@ -18,7 +18,7 @@
  */
 package org.grails.forge.application;
 
-import javax.annotation.Nullable;
+import jakarta.annotation.Nullable;
 
 public enum OperatingSystem {
     MACOS_ARCH64("aarch64"),

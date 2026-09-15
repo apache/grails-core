@@ -30,6 +30,12 @@ pluginManagement {
     repositories {
         configurePluginRepositories(delegate)
     }
+    plugins {
+        id 'com.gradleup.shadow' version shadowVersion
+        id 'io.sdkman.vendors' version gradleSdkvendorPluginVersion
+        id 'com.diffplug.spotless' version spotlessVersion
+        id 'io.spring.nohttp' version nohttpGradleVersion
+    }
 }
 
 plugins {
@@ -224,6 +230,15 @@ include(
 
         // wrapper
         'grails-wrapper',
+
+        // Forge
+        'grails-cli',
+        'grails-cli-shadow',
+        'grails-forge-api',
+        'grails-forge-cli',
+        'grails-forge-core',
+        'grails-forge-web',
+        'grails-forge-test-core',
 )
 
 project(':grails-bom').projectDir = file('grails-bom/default')
@@ -231,6 +246,14 @@ project(':grails-base-bom').projectDir = file('grails-bom/base')
 project(':grails-hibernate5-bom').projectDir = file('grails-bom/hibernate5')
 project(':grails-hibernate7-bom').projectDir = file('grails-bom/hibernate7')
 project(':grails-neo4j-bom').projectDir = file('grails-bom/neo4j')
+
+project(':grails-cli').projectDir = file('grails-forge/grails-cli')
+project(':grails-cli-shadow').projectDir = file('grails-forge/grails-cli-shadow')
+project(':grails-forge-api').projectDir = file('grails-forge/grails-forge-api')
+project(':grails-forge-cli').projectDir = file('grails-forge/grails-forge-cli')
+project(':grails-forge-core').projectDir = file('grails-forge/grails-forge-core')
+project(':grails-forge-web').projectDir = file('grails-forge/grails-forge-web')
+project(':grails-forge-test-core').projectDir = file('grails-forge/test-core')
 
 // Instead of using : to separate nested projects, fix the project directories by setting the projectDir explicitly
 // (Preserve the parent directory name as part of the nested project name)

@@ -18,10 +18,8 @@
  */
 package org.grails.forge.api;
 
-import io.micronaut.context.MessageSource;
-import io.micronaut.core.annotation.Creator;
-import io.micronaut.core.annotation.Introspected;
-import io.swagger.v3.oas.annotations.media.Schema;
+import org.springframework.context.MessageSource;
+import java.util.Locale;
 import org.grails.forge.api.options.*;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.options.DevelopmentReloading;
@@ -36,8 +34,6 @@ import java.util.stream.Collectors;
  *
  * @since 6.0.0
  */
-@Schema(name = "SelectOptions")
-@Introspected
 public class SelectOptionsDTO {
 
     private ApplicationTypeSelectOptions type;
@@ -55,7 +51,6 @@ public class SelectOptionsDTO {
     SelectOptionsDTO() {
     }
 
-    @Creator
     public SelectOptionsDTO(ApplicationTypeSelectOptions type,
                             JdkVersionSelectOptions jdkVersion,
                             LanguageSelectOptions lang,
@@ -70,97 +65,91 @@ public class SelectOptionsDTO {
         this.servlet = servlet;
     }
 
-    @Schema(description = "supported options for application type")
-    public ApplicationTypeSelectOptions getType() {
+        public ApplicationTypeSelectOptions getType() {
         return type;
     }
 
-    @Schema(description = "supported options for jdk versions")
-    public JdkVersionSelectOptions getJdkVersion() {
+        public JdkVersionSelectOptions getJdkVersion() {
         return jdkVersion;
     }
 
-    @Schema(description = "supported options for code languages")
-    public LanguageSelectOptions getLang() {
+        public LanguageSelectOptions getLang() {
         return lang;
     }
 
-    @Schema(description = "supported options for development reloading")
-    public DevelopmentReloadingSelectOptions getReloading() {
+        public DevelopmentReloadingSelectOptions getReloading() {
         return reloading;
     }
 
-    @Schema(description = "supported options for the Grails Data implementation")
-    public GormImplSelectOptions getGorm() {
+        public GormImplSelectOptions getGorm() {
         return gorm;
     }
 
-    @Schema(description = "supported options for Servlet Implementation")
-    public ServletImplSelectOptions getServlet() {
+        public ServletImplSelectOptions getServlet() {
         return servlet;
     }
 
     /**
      * Build the options
      *
-     * @param messageSource  The {@link io.micronaut.context.MessageSource} to support internationalization
-     * @param messageContext The {@link io.micronaut.context.MessageSource.MessageContext}
+     * @param messageSource The message source
+     * @param locale The locale
      * @return the supported options
      */
-    public static SelectOptionsDTO make(MessageSource messageSource, MessageSource.MessageContext messageContext) {
+    public static SelectOptionsDTO make(MessageSource messageSource, Locale locale) {
 
         List<ApplicationTypeDTO> applications = Arrays.stream(ApplicationType.values())
-                .map(it -> new ApplicationTypeDTO(it, null, messageSource, messageContext))
+                .map(it -> new ApplicationTypeDTO(it, null, messageSource, locale))
                 .collect(Collectors.toList());
 
         ApplicationTypeSelectOptions applicationOpts = new ApplicationTypeSelectOptions(
                 applications,
-                new ApplicationTypeDTO(ApplicationType.DEFAULT_OPTION, null, messageSource, messageContext)
+                new ApplicationTypeDTO(ApplicationType.DEFAULT_OPTION, null, messageSource, locale)
         );
 
         List<JdkVersionDTO> jdkVersions = Arrays.stream(JdkVersion.values())
-                .map(it -> new JdkVersionDTO(it, messageSource, messageContext))
+                .map(it -> new JdkVersionDTO(it, messageSource, locale))
                 .collect(Collectors.toList());
 
         JdkVersionSelectOptions jdkVersionOpts = new JdkVersionSelectOptions(
                 jdkVersions,
-                new JdkVersionDTO(JdkVersion.DEFAULT_OPTION, messageSource, messageContext)
+                new JdkVersionDTO(JdkVersion.DEFAULT_OPTION, messageSource, locale)
         );
 
         List<LanguageDTO> languages = Arrays.stream(Language.values())
-                .map(it -> new LanguageDTO(it, messageSource, messageContext))
+                .map(it -> new LanguageDTO(it, messageSource, locale))
                 .collect(Collectors.toList());
 
         LanguageSelectOptions languageOpts = new LanguageSelectOptions(
                 languages,
-                new LanguageDTO(Language.DEFAULT_OPTION, messageSource, messageContext)
+                new LanguageDTO(Language.DEFAULT_OPTION, messageSource, locale)
         );
 
         List<DevelopmentReloadingDTO> developmentReloading = Arrays.stream(DevelopmentReloading.values())
-                .map(it -> new DevelopmentReloadingDTO(it, messageSource, messageContext))
+                .map(it -> new DevelopmentReloadingDTO(it, messageSource, locale))
                 .collect(Collectors.toList());
 
         DevelopmentReloadingSelectOptions developmentReloadingOpts = new DevelopmentReloadingSelectOptions(
             developmentReloading,
-                new DevelopmentReloadingDTO(DevelopmentReloading.DEFAULT_OPTION, messageSource, messageContext)
+                new DevelopmentReloadingDTO(DevelopmentReloading.DEFAULT_OPTION, messageSource, locale)
         );
 
         List<GormImplDTO> gormImpls = Arrays.stream(GormImpl.values())
-                .map(it -> new GormImplDTO(it, messageSource, messageContext))
+                .map(it -> new GormImplDTO(it, messageSource, locale))
                 .collect(Collectors.toList());
 
         GormImplSelectOptions gormImplOpts = new GormImplSelectOptions(
                 gormImpls,
-                new GormImplDTO(GormImpl.DEFAULT_OPTION, messageSource, messageContext)
+                new GormImplDTO(GormImpl.DEFAULT_OPTION, messageSource, locale)
         );
 
         List<ServletImplDTO> servletImpls = Arrays.stream(ServletImpl.values())
-                .map(it -> new ServletImplDTO(it, messageSource, messageContext))
+                .map(it -> new ServletImplDTO(it, messageSource, locale))
                 .collect(Collectors.toList());
 
         ServletImplSelectOptions servletImplOpts = new ServletImplSelectOptions(
                 servletImpls,
-                new ServletImplDTO(ServletImpl.DEFAULT_OPTION, messageSource, messageContext)
+                new ServletImplDTO(ServletImpl.DEFAULT_OPTION, messageSource, locale)
         );
 
 

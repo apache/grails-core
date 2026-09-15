@@ -43,6 +43,11 @@ dependencies {
     // GenerateAutoConfigurationImportsTask reads @AutoConfiguration out of class files rather than
     // loading them, so a class it cannot resolve can never be silently dropped from the imports file
     implementation "org.ow2.asm:asm:${gradleBomDependencyVersions['asm.version']}"
+    implementation "com.fizzed:rocker-compiler:${gradleProperties.rockerVersion}"
+    implementation "com.gradleup.shadow:shadow-gradle-plugin:${gradleProperties.shadowVersion}"
+    implementation "org.antlr:antlr4-runtime:${gradleProperties.antlr4Version}"
+    implementation "com.diffplug.spotless:spotless-plugin-gradle:${gradleProperties.spotlessVersion}"
+    implementation "io.spring.nohttp:nohttp-gradle:${gradleProperties.nohttpGradleVersion}"
 
     testImplementation "org.spockframework:spock-core:${gradleBomDependencyVersions['gradle-spock.version']}"
     testImplementation gradleTestKit()
@@ -126,6 +131,10 @@ gradlePlugin {
         register('testTaskShardingPlugin') {
             id = 'org.apache.grails.buildsrc.test-task-sharding'
             implementationClass = 'org.apache.grails.buildsrc.TestTaskShardingPlugin'
+        }
+        register('forgeRockerPlugin') {
+            id = 'org.grails.forge.rocker'
+            implementationClass = 'org.grails.forge.rocker.plugin.RockerPlugin'
         }
     }
 }

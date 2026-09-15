@@ -18,7 +18,7 @@
  */
 package org.grails.forge.build.gradle;
 
-import io.micronaut.core.annotation.NonNull;
+import jakarta.annotation.Nonnull;
 
 public class MavenLocalRepository implements GradleRepository {
     private final int order;
@@ -32,7 +32,7 @@ public class MavenLocalRepository implements GradleRepository {
     }
 
     @Override
-    @NonNull
+    @Nonnull
     public String toSnippet(String basePadding) {
         return "mavenLocal()";
     }

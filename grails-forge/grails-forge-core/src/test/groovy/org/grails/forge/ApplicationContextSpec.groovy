@@ -19,9 +19,9 @@
 
 package org.grails.forge
 
-import io.micronaut.context.ApplicationContext
 import org.grails.forge.fixture.ContextFixture
 import org.grails.forge.fixture.ProjectFixture
+import org.springframework.context.ApplicationContext
 import spock.lang.AutoCleanup
 import spock.lang.Shared
 import spock.lang.Specification
@@ -34,5 +34,5 @@ abstract class ApplicationContextSpec extends Specification implements ProjectFi
 
     @Shared
     @AutoCleanup
-    ApplicationContext beanContext = ApplicationContext.run(configuration)
+    ApplicationContext beanContext = ForgeContexts.create(configuration)
 }

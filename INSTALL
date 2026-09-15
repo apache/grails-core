@@ -28,7 +28,7 @@ Grails has a comprehensive test suite that includes unit, integration, and funct
 
 Project Structure
 ------------------------------
-The source of Grails is a multi-project Gradle build that uses composite multi-project builds via Gradle's includeBuild feature. The main project is `grails-core`, which contains the core framework code and all libraries that an end user would use in their application. The `grails-gradle` project contains code meant to run on the gradle build classpath.  `grails-forge` contains tooling related to App Generation.
+The source of Grails is a multi-project Gradle build that uses a composite build via Gradle's includeBuild feature. The main project is `grails-core`, which contains the core framework, application-generation tooling under `grails-forge/`, and all libraries that an end user would use in their application. The `grails-gradle` project contains code meant to run on the gradle build classpath.
 
 Building a Release Version
 ------------------------------
@@ -73,9 +73,9 @@ To build the libraries for the Gradle to use, run the following command under th
 
 Building grails-forge
 ------------------------------
-To build the Grails Forge, which is used for application generation, run the following command under the `grails-forge` directory:
+To build the Grails Forge, which is used for application generation, run the following command at the source root:
 
-        ./gradlew build -PskipTests
+        ./gradlew :grails-cli:build :grails-forge-api:build :grails-forge-cli:build :grails-forge-core:build :grails-forge-web:build :grails-forge-test-core:build -PskipTests
 
 Using built libraries
 ------------------------------
@@ -83,7 +83,6 @@ To use the built libraries in a Grails Application, libraries must be published 
 
         cd grails-gradle && ./gradlew build publishToMavenLocal -PskipTests && cd ..
         ./gradlew build publishToMavenLocal -PskipTests
-        cd grails-forge && ./gradlew build publishToMavenLocal -PskipTests
 
 Creating an Application
 ------------------------------

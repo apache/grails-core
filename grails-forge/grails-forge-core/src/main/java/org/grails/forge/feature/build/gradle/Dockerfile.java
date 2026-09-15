@@ -18,8 +18,8 @@
  */
 package org.grails.forge.feature.build.gradle;
 
-import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.annotation.Nullable;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +31,7 @@ public class Dockerfile {
     @Nullable
     private List<String> args;
 
-    public Dockerfile(@NonNull String baseImage, @NonNull List<String> args) {
+    public Dockerfile(@Nonnull String baseImage, @Nonnull List<String> args) {
         this.baseImage = baseImage;
         this.args = args;
     }
@@ -46,7 +46,7 @@ public class Dockerfile {
         return args;
     }
 
-    @NonNull
+    @Nonnull
     public static Builder builder() {
         return new Builder();
     }
@@ -56,13 +56,13 @@ public class Dockerfile {
         private String baseImage;
         private List<String> args;
 
-        @NonNull
+        @Nonnull
         public Builder baseImage(String baseImage) {
             this.baseImage = baseImage;
             return this;
         }
 
-        @NonNull
+        @Nonnull
         public Builder arg(String arg) {
             if (args == null) {
                 args = new ArrayList<>();
@@ -71,13 +71,13 @@ public class Dockerfile {
             return this;
         }
 
-        @NonNull
+        @Nonnull
         public Builder args(List<String> args) {
             this.args = args;
             return this;
         }
 
-        @NonNull
+        @Nonnull
         public Dockerfile build() {
             return new Dockerfile(baseImage, args);
         }

@@ -19,14 +19,14 @@
 package org.grails.forge.application;
 
 import jakarta.inject.Named;
-import jakarta.inject.Singleton;
+import org.springframework.stereotype.Component;
 import org.grails.forge.feature.BaseAvailableFeatures;
 import org.grails.forge.feature.Feature;
 
 import java.util.List;
 
 @Named("plugin")
-@Singleton
+@Component
 public class PluginAvailableFeatures extends BaseAvailableFeatures {
 
     public PluginAvailableFeatures(List<Feature> features) {
