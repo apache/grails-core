@@ -51,6 +51,22 @@ trait GormEntityApi<D> {
      */
     abstract D refresh()
     /**
+     * Refreshes the state of the current instance, with options.
+     *
+     * <p>Supported arguments:</p>
+     * <ul>
+     *   <li>{@code lock} - when {@code true}, reloads this instance's database state and version under a
+     *   pessimistic write lock in a single operation, discarding unflushed changes. Requires an active
+     *   transaction.</li>
+     * </ul>
+     *
+     * @param args The named arguments
+     * @return The instance
+     * @throws jakarta.persistence.TransactionRequiredException if {@code lock: true} is requested without an active transaction
+     * @throws UnsupportedOperationException if {@code lock: true} is requested and the datastore does not support it
+     */
+    abstract D refresh(Map args)
+    /**
      * Saves an object the datastore
      * @return Returns the instance
      */

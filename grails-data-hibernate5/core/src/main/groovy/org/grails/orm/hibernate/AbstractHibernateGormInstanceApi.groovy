@@ -21,11 +21,15 @@ package org.grails.orm.hibernate
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
+import jakarta.persistence.TransactionRequiredException
+
 import org.hibernate.FlushMode
 import org.hibernate.HibernateException
 import org.hibernate.LockMode
+import org.hibernate.LockOptions
 import org.hibernate.Session
 import org.hibernate.SessionFactory
+import org.hibernate.engine.spi.SessionImplementor
 
 import org.springframework.beans.BeanWrapperImpl
 import org.springframework.beans.InvalidPropertyException
@@ -65,6 +69,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     private static final String ARGUMENT_INSERT = 'insert'
     private static final String ARGUMENT_MERGE = 'merge'
     private static final String ARGUMENT_FAIL_ON_ERROR = 'failOnError'
+    private static final String REFRESH_LOCK_REQUIRES_TRANSACTION = 'An active transaction is required.'
     private static final Class DEFERRED_BINDING
 
     static {
@@ -249,6 +254,28 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     @Override
     D refresh(D instance) {
         hibernateTemplate.refresh(instance)
+        return instance
+    }
+
+    @Override
+    D refresh(D instance, Map args) {
+        if (!ClassUtils.getBooleanFromMap(ARGUMENT_LOCK, args)) {
+            return refresh(instance)
+        }
+        hibernateTemplate.execute { Session session ->
+            if (!session.getTransaction().isActive()) {
+                throw new TransactionRequiredException(REFRESH_LOCK_REQUIRES_TRANSACTION)
+            }
+            // Hibernate skips the locked refresh for an uninitialized proxy.
+            Object target = proxyHandler.unwrap(instance)
+            session.refresh(target, new LockOptions(LockMode.PESSIMISTIC_WRITE))
+            // Reset owner and embedded dirty flags left behind by native refresh.
+            if (target instanceof DirtyCheckable) {
+                SessionImplementor sessionImplementor = session.unwrap(SessionImplementor)
+                sessionImplementor.factory.customEntityDirtinessStrategy.resetDirty(
+                        target, sessionImplementor.getEntityPersister(null, target), sessionImplementor)
+            }
+        }
         return instance
     }
 

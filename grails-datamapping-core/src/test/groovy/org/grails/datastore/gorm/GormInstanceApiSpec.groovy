@@ -19,6 +19,7 @@
 package org.grails.datastore.gorm
 
 import grails.gorm.annotation.Entity
+import grails.gorm.api.GormInstanceOperations
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSources
@@ -33,10 +34,17 @@ import org.springframework.validation.Validator
 import spock.lang.AutoCleanup
 import spock.lang.Specification
 
+import java.lang.reflect.InvocationHandler
+import java.lang.reflect.Method
+import java.lang.reflect.Proxy
+
 class GormInstanceApiSpec extends Specification {
 
     @AutoCleanup
     SimpleMapDatastore datastore
+
+    @AutoCleanup
+    SimpleMapDatastore connectionDatastore
 
     void setup() {
         GormRegistry.instance.reset()
@@ -189,6 +197,129 @@ class GormInstanceApiSpec extends Specification {
 
         expect:
         api.refresh(saved).is(saved)
+    }
+
+    void "refresh(lock: true) rejects an unsupported datastore without changing the entity"() {
+        given:
+        def saved = new GormInstanceApiThing(name: 'persisted').save(flush: true)
+        saved.name = 'local change'
+
+        when:
+        saved.refresh(lock: true)
+
+        then:
+        def exception = thrown(UnsupportedOperationException)
+        exception.message == 'Datastore implementation does not support refreshing under a pessimistic lock'
+        saved.name == 'local change'
+    }
+
+    void "named connection refresh(lock: true) rejects an unsupported datastore"() {
+        given:
+        connectionDatastore = new SimpleMapDatastore(['secondary'], GormLockConnectionThing)
+        def instance = new GormLockConnectionThing(name: 'local change')
+
+        when:
+        instance.secondary.refresh(lock: true)
+
+        then:
+        def exception = thrown(UnsupportedOperationException)
+        exception.message == 'Datastore implementation does not support refreshing under a pessimistic lock'
+        instance.name == 'local change'
+    }
+
+    void "refresh with arguments that do not request a lock performs a plain refresh (#description)"() {
+        given:
+        def recording = new RecordingGormInstanceApi<GormInstanceApiThing>(GormInstanceApiThing, datastore)
+        registerInstanceApi(recording)
+        def instance = new GormInstanceApiThing(name: 'local change')
+
+        when:
+        def result = instance.refresh(args)
+
+        then:
+        recording.refreshInvocations == 1
+        recording.refreshedInstance.is(instance)
+        result.is(instance)
+
+        where:
+        description       | args
+        'empty map'       | [:]
+        'null map'        | null
+        'lock: false'     | [lock: false]
+        'other arguments' | [flush: true]
+    }
+
+    void "refresh(lock: true) passes the entity and arguments to the instance api and returns its result"() {
+        given:
+        def locking = new LockingGormInstanceApi<GormInstanceApiThing>(GormInstanceApiThing, datastore)
+        def reloaded = new GormInstanceApiThing(name: 'reloaded')
+        locking.refreshResult = reloaded
+        registerInstanceApi(locking)
+        def instance = new GormInstanceApiThing(name: 'local change')
+
+        when:
+        def result = instance.refresh(lock: true)
+
+        then:
+        locking.refreshInvocations == 1
+        locking.refreshedInstance.is(instance)
+        locking.refreshArguments == [lock: true]
+        result.is(reloaded)
+    }
+
+    void "the delegating entity api passes its target and arguments to the instance api and returns its result"() {
+        given:
+        def locking = new LockingGormInstanceApi<GormInstanceApiThing>(GormInstanceApiThing, datastore)
+        def reloaded = new GormInstanceApiThing(name: 'reloaded')
+        locking.refreshResult = reloaded
+        def target = new GormInstanceApiThing(name: 'local change')
+        def delegating = new DelegatingGormEntityApi<GormInstanceApiThing>(locking, target)
+
+        when:
+        def result = delegating.refresh([lock: true])
+
+        then:
+        locking.refreshInvocations == 1
+        locking.refreshedInstance.is(target)
+        locking.refreshArguments == [lock: true]
+        result.is(reloaded)
+    }
+
+    void "the default refresh(instance, args) of the instance operations contract splits on the lock argument"() {
+        given: 'an implementation that provides nothing beyond the interface defaults and records what they call'
+        def calls = []
+        GormInstanceOperations<Object> operations = (GormInstanceOperations<Object>) Proxy.newProxyInstance(
+                GormInstanceOperations.classLoader, [GormInstanceOperations] as Class[],
+                { Object proxy, Method method, Object[] methodArgs ->
+                    if (method.isDefault()) {
+                        return InvocationHandler.invokeDefault(proxy, method, methodArgs)
+                    }
+                    calls << [method.name, methodArgs as List]
+                    return methodArgs ? methodArgs[0] : null
+                } as InvocationHandler)
+        def instance = new Object()
+
+        when:
+        def result = operations.refresh(instance, [flush: true])
+
+        then:
+        calls == [['refresh', [instance]]]
+        result.is(instance)
+
+        when:
+        operations.refresh(instance, [lock: true])
+
+        then:
+        def exception = thrown(UnsupportedOperationException)
+        exception.message == GormInstanceOperations.REFRESH_LOCK_UNSUPPORTED
+        calls.size() == 1
+    }
+
+    private void registerInstanceApi(GormInstanceApi<GormInstanceApiThing> instanceApi) {
+        GormRegistry.instance.registerEntityApis(GormInstanceApiThing,
+                new GormStaticApi<GormInstanceApiThing>(GormInstanceApiThing, datastore, []),
+                instanceApi,
+                new GormValidationApi<GormInstanceApiThing>(GormInstanceApiThing, datastore))
     }
 
     void "read resolves a persisted instance by id"() {
@@ -407,4 +538,59 @@ class DynamicAttributesThing implements DynamicAttributes {
 
 class NonDirtyCheckableThing {
     String name
+}
+
+@Entity
+class GormLockConnectionThing {
+    String name
+
+    static mapping = {
+        datasource 'ALL'
+    }
+}
+
+/**
+ * An instance api for a datastore without locked-refresh support. Only the plain {@code refresh(instance)}
+ * is recorded, so the inherited default {@code refresh(instance, args)} can be observed delegating to it.
+ */
+class RecordingGormInstanceApi<D> extends GormInstanceApi<D> {
+
+    int refreshInvocations
+    D refreshedInstance
+
+    RecordingGormInstanceApi(Class<D> persistentClass, Datastore datastore) {
+        super(persistentClass, datastore)
+    }
+
+    @Override
+    D refresh(D instance) {
+        refreshInvocations++
+        refreshedInstance = instance
+        return instance
+    }
+}
+
+/**
+ * An instance api for a datastore that supports refreshing under a lock. It records the instance and
+ * arguments passed to {@code refresh(instance, args)}, so that delegation from the entity trait, the
+ * delegating entity api and the static api can be verified.
+ */
+class LockingGormInstanceApi<D> extends GormInstanceApi<D> {
+
+    int refreshInvocations
+    D refreshedInstance
+    Map refreshArguments
+    D refreshResult
+
+    LockingGormInstanceApi(Class<D> persistentClass, Datastore datastore) {
+        super(persistentClass, datastore)
+    }
+
+    @Override
+    D refresh(D instance, Map args) {
+        refreshInvocations++
+        refreshedInstance = instance
+        refreshArguments = args
+        return refreshResult
+    }
 }

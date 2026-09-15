@@ -25,24 +25,67 @@ under the License.
 === Purpose
 
 
-The `lock` method obtains a pessimistic lock using an SQL `select ... for update`.
+The `lock` method obtains a pessimistic lock on a database row, typically using SQL `select ... for update`. The instance method `entity.lock()` locks an already-loaded instance. The static method `DomainClass.lock(id)` loads and locks by identifier, and `DomainClass.lock(id, refresh: true)` additionally reloads the state and version of an instance that is already managed in the current session. To reload an already-loaded instance under a pessimistic write lock, use link:{domainClassesRefFromRef}refresh.html[refresh(lock: true)].
 
 
 === Examples
 
 
+Locking an already-loaded instance:
+
 [source,groovy]
 ----
-def book = Book.get(1)
-book.lock()
+Book.withTransaction {
+    def book = Book.get(1)
+    book.lock() // unchanged: lock without refreshing
+    book.title = 'Updated title'
+    book.save(failOnError: true)
+}
 ----
 
+Loading and locking by identifier:
+
+[source,groovy]
+----
+Book.withTransaction {
+    def book = Book.lock(1)
+    book.title = 'Updated title'
+    book.save(failOnError: true)
+}
+----
+
+Locking by identifier and reloading an already-managed instance under the lock:
+
+[source,groovy]
+----
+Book.withTransaction {
+    def book = Book.get(1)
+    // ... work that may leave book stale relative to the database ...
+    book = Book.lock(1, refresh: true) // same managed instance, reloaded under the lock
+    if (book.title == 'Draft') {
+        book.title = 'Ready for review'
+        book.save(failOnError: true)
+    }
+}
+----
 
 === Description
 
 
-The `lock` method obtains a pessimistic lock on an instance, locking the row in the database with `select ... for update`. The `lock` method is equivalent to using Hibernate's https://javadoc.io/doc/org.hibernate/hibernate-core/{hibernate5Version}/org/hibernate/LockMode.html#UPGRADE[LockMode.UPGRADE] in combination with the https://javadoc.io/doc/org.hibernate/hibernate-core/{hibernate5Version}/org/hibernate/Session.html#lock(java/lang/Object, org/hibernate/LockMode)[lock] method.
+Pessimistic locking requires an active transaction. Use `withTransaction` as above or a GORM `@Transactional` method, and keep the lock and the work it protects in the same transaction. The lock is held until that transaction commits or rolls back, not simply until a controller action returns.
 
-The lock is automatically released when the transaction commits. In Grails this is typically after an action has finished executing.
+The instance method `entity.lock()` is unchanged: it acquires a lock without reloading the entity's state. For an already-loaded, versioned entity, Hibernate still checks its version against the database; a concurrent update between loading and locking can therefore cause an optimistic locking failure.
+
+The static `DomainClass.lock(id)` method is also unchanged, as is `DomainClass.lock(id, [:])`: both lock without refreshing. When the entity is not yet in the session it is loaded under the lock, avoiding a separate unlocked `get()`. When the entity is already managed in the current session, its already-loaded state is locked and version-checked rather than reloaded.
+
+Pass `refresh: true` to reload instead. `DomainClass.lock(id, refresh: true)` behaves like `DomainClass.lock(id)`, except that when the entity is already managed in the current session it reloads that instance's state and version under the lock and returns that same managed instance. When the entity is not in the session it is loaded and locked. Both forms return `null` when no row exists for the identifier. Calling `lock(id, refresh: true)` without an active transaction throws `jakarta.persistence.TransactionRequiredException`.
+
+WARNING: `refresh: true` discards unflushed changes to the entity. Configured refresh cascades can also discard unflushed changes to associated entities; this is not a refresh of the whole object graph. Call it *before* making decisions based on the entity's state or applying mutations.
+
+Refreshing under a lock is supported by GORM for Hibernate 5 and Hibernate 7. Other datastores throw `UnsupportedOperationException` rather than silently falling back to a lock without a refresh.
+
+NOTE: There is no `entity.lock(refresh: true)`. Groovy resolves that call to the static `lock(Serializable id)` method with the options map as the identifier. To reload an already-loaded instance under a pessimistic write lock, use link:{domainClassesRefFromRef}refresh.html[refresh(lock: true)].
+
+Pessimistic locking does not guarantee freedom from deadlocks, lock timeouts, or transaction serialization failures. Locking and read visibility depend on the database and transaction isolation level; ordinary reads are not necessarily blocked by a write lock.
 
 Refer to the section on  link:{hibernate5GuideFromRef}index.html#locking[Optimistic and Pessimistic locking] in the user guide for info.

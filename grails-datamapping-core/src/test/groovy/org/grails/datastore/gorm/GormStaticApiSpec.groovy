@@ -18,7 +18,12 @@
  */
 package org.grails.datastore.gorm
 
+import groovy.transform.CompileStatic
+
 import grails.gorm.annotation.Entity
+import grails.gorm.api.GormAllOperations
+import grails.gorm.api.GormInstanceOperations
+import grails.gorm.api.GormStaticOperations
 import grails.gorm.multitenancy.Tenants
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.Session
@@ -35,6 +40,10 @@ import org.grails.datastore.mapping.simple.SimpleMapDatastore
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 import spock.lang.AutoCleanup
 import spock.lang.Specification
+
+import java.lang.reflect.InvocationHandler
+import java.lang.reflect.Method
+import java.lang.reflect.Proxy
 
 class GormStaticApiSpec extends Specification {
 
@@ -285,6 +294,160 @@ class GormStaticApiSpec extends Specification {
         api.proxy(saved.id) != null
         api.exists(saved.id)
         !api.exists(-999L)
+    }
+
+    void "all operations refresh(instance, lock: true) rejects an unsupported datastore"() {
+        given:
+        def instance = new GormStaticApiThing(name: 'local change')
+        GormAllOperations<GormStaticApiThing> operations = GormStaticApiThing.'default'
+
+        when:
+        refreshWithLock(operations, instance)
+
+        then:
+        def exception = thrown(UnsupportedOperationException)
+        exception.message == 'Datastore implementation does not support refreshing under a pessimistic lock'
+        instance.name == 'local change'
+    }
+
+    void "the static api passes the instance and arguments to the instance api for the persistent class and returns its result"() {
+        given:
+        def locking = new LockingGormInstanceApi<GormStaticApiThing>(GormStaticApiThing, datastore)
+        def reloaded = new GormStaticApiThing(name: 'reloaded')
+        locking.refreshResult = reloaded
+        def api = registerStaticApiWith(locking)
+        def instance = new GormStaticApiThing(name: 'local change')
+
+        when:
+        def result = api.refresh(instance, [lock: true])
+
+        then:
+        locking.refreshInvocations == 1
+        locking.refreshedInstance.is(instance)
+        locking.refreshArguments == [lock: true]
+        result.is(reloaded)
+
+        cleanup:
+        GormRegistry.instance.reset()
+    }
+
+    void "lock(args, id) without a refresh request locks by identifier only (#description)"() {
+        given:
+        def api = new LockRecordingGormStaticApi<GormStaticApiThing>(GormStaticApiThing, datastore)
+        def locked = new GormStaticApiThing(name: 'locked')
+        api.lockResult = locked
+
+        when:
+        def result = lockWithArguments(api, args, 42L)
+
+        then:
+        api.lockedIds == [42L]
+        api.resolvedIds.isEmpty()
+        result.is(locked)
+
+        where:
+        description       | args
+        'empty map'       | [:]
+        'null map'        | null
+        'refresh: false'  | [refresh: false]
+        'other arguments' | [flush: true]
+    }
+
+    void "lock(args, id) with refresh: true resolves the managed instance and refreshes it under a lock"() {
+        given:
+        def locking = new LockingGormInstanceApi<GormStaticApiThing>(GormStaticApiThing, datastore)
+        def api = registerStaticApiWith(locking)
+        def saved = new GormStaticApiThing(name: 'persisted').save(flush: true)
+        def reloaded = new GormStaticApiThing(name: 'reloaded')
+        locking.refreshResult = reloaded
+
+        when:
+        def result = api.lock([refresh: true], saved.id)
+
+        then:
+        locking.refreshInvocations == 1
+        locking.refreshedInstance.id == saved.id
+        locking.refreshArguments == [lock: true]
+        result.is(reloaded)
+
+        cleanup:
+        GormRegistry.instance.reset()
+    }
+
+    void "lock(args, id) with refresh: true returns null without refreshing when no instance exists"() {
+        given:
+        def locking = new LockingGormInstanceApi<GormStaticApiThing>(GormStaticApiThing, datastore)
+        def api = registerStaticApiWith(locking)
+
+        when:
+        def result = api.lock([refresh: true], -999L)
+
+        then:
+        result == null
+        locking.refreshInvocations == 0
+
+        cleanup:
+        GormRegistry.instance.reset()
+    }
+
+    void "the entity static lock(id, refresh: true) rejects an unsupported datastore"() {
+        given:
+        def saved = new GormStaticApiThing(name: 'persisted').save(flush: true)
+
+        when:
+        GormStaticApiThing.lock(saved.id, refresh: true)
+
+        then:
+        def exception = thrown(UnsupportedOperationException)
+        exception.message == 'Datastore implementation does not support refreshing under a pessimistic lock'
+    }
+
+    void "the default lock(args, id) of the static operations contract splits on the refresh argument"() {
+        given: 'an implementation that provides nothing beyond the interface defaults and records what they call'
+        def calls = []
+        GormStaticOperations<Object> operations = (GormStaticOperations<Object>) Proxy.newProxyInstance(
+                GormStaticOperations.classLoader, [GormStaticOperations] as Class[],
+                { Object proxy, Method method, Object[] methodArgs ->
+                    if (method.isDefault()) {
+                        return InvocationHandler.invokeDefault(proxy, method, methodArgs)
+                    }
+                    calls << [method.name, methodArgs as List]
+                    return 'locked'
+                } as InvocationHandler)
+
+        when:
+        def result = operations.lock([flush: true], 7L)
+
+        then:
+        calls == [['lock', [7L]]]
+        result == 'locked'
+
+        when:
+        operations.lock([refresh: true], 7L)
+
+        then:
+        def exception = thrown(UnsupportedOperationException)
+        exception.message == GormInstanceOperations.REFRESH_LOCK_UNSUPPORTED
+        calls.size() == 1
+    }
+
+    private GormStaticApi<GormStaticApiThing> registerStaticApiWith(GormInstanceApi<GormStaticApiThing> instanceApi) {
+        def api = new GormStaticApi<GormStaticApiThing>(GormStaticApiThing, datastore, [])
+        GormRegistry.instance.registerEntityApis(GormStaticApiThing, api, instanceApi,
+                new GormValidationApi<GormStaticApiThing>(GormStaticApiThing, datastore))
+        return api
+    }
+
+    @CompileStatic
+    private static GormStaticApiThing refreshWithLock(GormInstanceOperations<GormStaticApiThing> operations,
+                                                     GormStaticApiThing instance) {
+        operations.refresh(instance, [lock: true])
+    }
+
+    @CompileStatic
+    private static GormStaticApiThing lockWithArguments(GormStaticOperations<GormStaticApiThing> operations,
+                                                       Map args, Serializable id) {
+        operations.lock(args, id)
     }
 
     void "getAll resolves multiple persisted instances by varargs and iterable ids"() {
@@ -771,4 +934,31 @@ class GormStaticApiSpec extends Specification {
 class GormStaticApiThing {
 
     String name
+}
+
+/**
+ * A static api that records identifier locks and resolutions, so that {@code lock(args, id)} can be
+ * verified to delegate to {@code lock(id)} alone when no refresh is requested.
+ */
+class LockRecordingGormStaticApi<D> extends GormStaticApi<D> {
+
+    List<Serializable> lockedIds = []
+    List<Serializable> resolvedIds = []
+    D lockResult
+
+    LockRecordingGormStaticApi(Class<D> persistentClass, Datastore datastore) {
+        super(persistentClass, datastore, [])
+    }
+
+    @Override
+    D lock(Serializable id) {
+        lockedIds << id
+        return lockResult
+    }
+
+    @Override
+    D get(Serializable id) {
+        resolvedIds << id
+        return super.get(id)
+    }
 }

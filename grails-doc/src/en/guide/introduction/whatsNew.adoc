@@ -269,6 +269,41 @@ written rather than one to switch on over an existing database. See the
 link:{mongodb5Guide}index.html#idGeneration[Identity Generation] section of the GORM for MongoDB guide for
 details.
 
+==== Refreshing an Entity Under a Pessimistic Lock
+
+GORM for Hibernate 5 and Hibernate 7 can now reload an entity's database state and version directly under a pessimistic WRITE lock. The instance method link:{domainClassesRef}refresh.html[refresh] accepts `lock: true`, and the static link:{domainClassesRef}lock.html[lock] method accepts `refresh: true` when locking by identifier. Both reload the version under the lock rather than locking the already-loaded version, and return the same instance.
+
+[source,groovy]
+----
+Book.withTransaction {
+    def book = Book.get(1)
+    book.refresh(lock: true)
+    if (book.title == 'Draft') {
+        book.title = 'Ready for review'
+        book.save(failOnError: true)
+    }
+}
+----
+
+`Book.lock(id, refresh: true)` behaves like `Book.lock(id)`, but when the entity is already managed in the current session it reloads that instance's state and version under the lock instead of locking the already-loaded state, and returns that same managed instance. When the entity is not in the session it is loaded and locked. `null` is returned when no row exists for the identifier.
+
+[source,groovy]
+----
+Book.withTransaction {
+    def book = Book.lock(1, refresh: true)
+    if (book?.title == 'Draft') {
+        book.title = 'Ready for review'
+        book.save(failOnError: true)
+    }
+}
+----
+
+The existing `entity.lock()`, `DomainClass.lock(id)` and `entity.refresh()` methods are unchanged. `entity.lock()` does not reload state and still checks the version of an already-loaded, versioned entity, so a concurrent update can cause an optimistic locking failure. `DomainClass.lock(id)` and `DomainClass.lock(id, [:])` lock without refreshing. `entity.refresh([:])` and `entity.refresh(lock: false)` behave exactly like `entity.refresh()`. There is no `entity.lock(refresh: true)`: Groovy resolves that call to the static `lock(Serializable id)` method with the options map as the identifier. Unsupported datastores throw `UnsupportedOperationException` rather than silently falling back to a plain refresh or an ordinary lock.
+
+WARNING: Refreshing discards unflushed entity changes, including changes to associated entities reached by configured refresh cascades; it does not refresh the whole object graph. Call `refresh(lock: true)` or `lock(id, refresh: true)` *before* making decisions based on the entity's state or applying mutations.
+
+An active transaction is required — without one both forms throw `jakarta.persistence.TransactionRequiredException` — and the lock is held until that transaction commits or rolls back. The same operation is available on a named connection (`book.secondary.refresh(lock: true)`) and under a bound tenant. The database and transaction isolation level determine which state is visible. A locked refresh does not guarantee that every concurrent attempt succeeds: deadlocks, lock timeouts, and transaction serialization failures remain possible.
+
 ==== Test HTTP Client Form Requests
 
 Integration tests that implement `HttpClientSupport` can now use `httpPostForm(...)` to send `application/x-www-form-urlencoded`

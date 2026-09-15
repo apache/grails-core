@@ -25,34 +25,86 @@ GORM enables optimistic locking by default via a `version` column. See xref:ormd
 
 === Pessimistic Locking
 
-To acquire a database-level lock on a row, use `lock()`:
+Pessimistic locking acquires a database row lock, typically using SQL `SELECT ... FOR UPDATE`. Conflicting writes and lock requests may block; ordinary reads are not necessarily blocked. The exact behavior depends on the database and transaction isolation level.
+
+An active transaction is required. Use `withTransaction` as below or a GORM `@Transactional` method, keeping the lock and the work it protects in the same transaction. The lock is held until that transaction commits or rolls back. Refreshing under a lock with `refresh(lock: true)` or `lock(id, refresh: true)` without an active transaction throws `jakarta.persistence.TransactionRequiredException`.
+
+To load an entity by identifier under a lock, use the static `lock(id)` method:
 
 [source,groovy]
 ----
 Book.withTransaction {
-    def book = Book.lock(1)         // <1>
+    def book = Book.lock(1)
     book.title = 'Updated Safely'
-    book.save()
-}                                   // <2>
+    book.save(failOnError: true)
+}
 ----
-<1> Issues `SELECT ... FOR UPDATE`, preventing concurrent reads/writes to this row.
-<2> Lock is released when the transaction commits.
+
+The static `Book.lock(id)` method is unchanged, as is `Book.lock(id, [:])`. It avoids a separate unlocked `get()` when the entity is not already managed, but when the entity is already managed in the current session it locks and version-checks the already-loaded state rather than reloading it. Pass `refresh: true` to reload that instance's state and version under the lock instead:
+
+[source,groovy]
+----
+Book.withTransaction {
+    def book = Book.lock(1, refresh: true)
+    if (book?.title == 'Draft') {
+        book.title = 'Ready for review'
+        book.save(failOnError: true)
+    }
+}
+----
+
+`Book.lock(id, refresh: true)` returns the same managed instance when the entity is already in the session, loads and locks the entity when it is not, and returns `null` when no row exists for the identifier. It has the same transaction requirement as `refresh(lock: true)`, discards unflushed changes in the same way, and throws `UnsupportedOperationException` on datastores that do not support it.
 
 You can also lock an already-loaded instance:
 
 [source,groovy]
 ----
-def book = Book.get(1)
-book.lock()                         // upgrades to a pessimistic lock
+Book.withTransaction {
+    def book = Book.get(1)
+    book.lock() // lock without refreshing
+    book.title = 'Updated title'
+    book.save(failOnError: true)
+}
 ----
 
-=== Refresh
+The instance method `book.lock()` is unchanged: it acquires a lock without reloading the entity's state. For an already-loaded, versioned entity, Hibernate still checks its version against the database. Another transaction can update the row between `get()` and `lock()`, causing an optimistic locking failure.
 
-To reload the current state from the database (discarding in-memory changes):
+==== Refreshing While Locking
+
+To reload an already-loaded entity's database state and version directly under a pessimistic WRITE lock, pass `lock: true` to the link:../api/org/grails/datastore/gorm/GormEntity.html#refresh(java.util.Map)[refresh(Map)] instance method. This refreshes the same instance in a single refresh-with-lock operation, not two separate calls to `lock()` and `refresh()` in either order. It reloads the version rather than trying to lock using the already-loaded version, and returns the same instance.
 
 [source,groovy]
 ----
-def book = Book.get(1)
-// ... another thread modifies the book ...
-book.refresh()                      // re-reads from the database
+Book.withTransaction {
+    def book = Book.get(1)
+    book.refresh(lock: true)
+    if (book.title == 'Draft') {
+        book.title = 'Ready for review'
+        book.save(failOnError: true)
+    }
+}
 ----
+
+The instance must be attached to the current session. `book.refresh()` is unchanged, and `book.refresh([:])` or `book.refresh(lock: false)` behave exactly like it: a plain refresh with no lock and no transaction requirement. To lock by identifier and reload at the same time, use `Book.lock(id, refresh: true)` as described above.
+
+NOTE: There is no `book.lock(refresh: true)`. Groovy resolves that call to the static `lock(Serializable id)` method with the options map as the identifier. The instance form is `book.refresh(lock: true)`.
+
+WARNING: Refreshing discards unflushed changes to the entity. Configured refresh cascades can also discard unflushed changes to associated entities; this is not a refresh of the whole object graph. Call `refresh(lock: true)` *before* making decisions based on the entity's state or applying mutations. It does not preserve or merge pending edits.
+
+Refreshing under a lock is supported by GORM for Hibernate 5 and Hibernate 7. Datastores that do not support it throw `UnsupportedOperationException` rather than silently falling back to a plain refresh.
+
+The database and transaction isolation level determine which state is visible to the locked refresh. `refresh(lock: true)` does not override isolation rules or guarantee that every concurrent attempt succeeds. Deadlocks, lock timeouts, and transaction serialization failures remain possible.
+
+=== Refresh
+
+To reload state from the database without requesting a pessimistic lock (discarding unflushed in-memory changes), use `refresh()`:
+
+[source,groovy]
+----
+Book.withTransaction {
+    def book = Book.get(1)
+    book.refresh()
+}
+----
+
+Read visibility still depends on transaction isolation. `book.refresh([:])` and `book.refresh(lock: false)` behave exactly like `book.refresh()`. If subsequent decisions or mutations require a reload protected by a write lock, use `book.refresh(lock: true)` instead of separate `refresh()` and `lock()` calls.

@@ -102,6 +102,33 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     }
 
     /**
+     * Refreshes the state of the current instance, with options.
+     *
+     * <p>Supported arguments:</p>
+     * <ul>
+     *   <li>{@code lock} - when {@code true}, reloads this instance's database state and version under a
+     *   pessimistic write lock in a single operation, discarding unflushed changes. Requires an active
+     *   transaction, which holds the lock until it commits or rolls back.</li>
+     * </ul>
+     *
+     * <pre>
+     * Book.withTransaction {
+     *     def book = Book.get(id)
+     *     book.refresh(lock: true)
+     * }
+     * </pre>
+     *
+     * @param args The named arguments
+     * @return The instance
+     * @throws jakarta.persistence.TransactionRequiredException if {@code lock: true} is requested without an active transaction
+     * @throws UnsupportedOperationException if {@code lock: true} is requested and the datastore does not support it
+     */
+    @Generated
+    D refresh(Map args) {
+        currentGormInstanceApi().refresh(this, args)
+    }
+
+    /**
      * Saves an object the datastore
      * @return Returns the instance
      */
@@ -712,6 +739,33 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     @Generated
     static D lock(Serializable id) {
         currentGormStaticApi().lock(id)
+    }
+
+    /**
+     * Locks an instance for an update, with options.
+     *
+     * <p>Supported arguments:</p>
+     * <ul>
+     *   <li>{@code refresh} - when {@code true}, reloads the instance's database state and version under the
+     *   lock instead of locking the version already loaded in the current session. Unflushed changes to the
+     *   instance are discarded. Requires an active transaction.</li>
+     * </ul>
+     *
+     * <pre>
+     * Book.withTransaction {
+     *     def book = Book.lock(id, refresh: true)
+     * }
+     * </pre>
+     *
+     * @param args The named arguments
+     * @param id The identifier
+     * @return The instance, or {@code null} if no instance exists for the identifier
+     * @throws jakarta.persistence.TransactionRequiredException if {@code refresh: true} is requested without an active transaction
+     * @throws UnsupportedOperationException if {@code refresh: true} is requested and the datastore does not support it
+     */
+    @Generated
+    static D lock(Map args, Serializable id) {
+        currentGormStaticApi().lock(args, id)
     }
 
     /**

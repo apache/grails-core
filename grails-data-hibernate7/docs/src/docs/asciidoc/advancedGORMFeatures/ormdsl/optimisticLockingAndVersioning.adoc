@@ -81,3 +81,5 @@ Book.withTransaction {
 }
 ----
 <1> Issues a `SELECT ... FOR UPDATE`, preventing other transactions from reading or modifying the row until the transaction commits.
+
+If the entity is already loaded in the current session, `Book.lock(1)` locks and version-checks the loaded state rather than reloading it. Pass `refresh: true` (`Book.lock(1, refresh: true)`) or call `book.refresh(lock: true)` to reload its state and version under the lock instead. See xref:persistenceBasics-locking[Optimistic and Pessimistic Locking] for details.

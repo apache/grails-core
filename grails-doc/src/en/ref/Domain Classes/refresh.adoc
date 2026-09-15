@@ -38,6 +38,20 @@ def b = Book.get(1)
 b.refresh()
 ----
 
+Refreshing under a pessimistic write lock:
+
+[source,groovy]
+----
+Book.withTransaction {
+    def book = Book.get(1)
+    book.refresh(lock: true)
+    if (book.title == 'Draft') {
+        book.title = 'Ready for review'
+        book.save(failOnError: true)
+    }
+}
+----
+
 
 === Description
 
@@ -49,3 +63,26 @@ Re-reads the state of the given instance from the underlying database. It is ina
 * where a database trigger alters the object state upon insert or update
 * after executing direct SQL (e.g. a bulk update) in the same Session
 * after inserting a Blob or Clob
+
+Pass `lock: true` to reload the instance's database state and version under a pessimistic WRITE lock. `entity.refresh(lock: true)` performs a single refresh-with-lock operation, not separate `lock()` and `refresh()` calls, and returns the same instance. It reloads the version rather than locking using the already-loaded version.
+
+An active transaction is required. Use link:{domainClassesRefFromRef}withTransaction.html[withTransaction] as above or a GORM `@Transactional` method, and keep the lock and the work it protects in the same transaction. The lock is held until that transaction commits or rolls back. Calling `refresh(lock: true)` without an active transaction throws `jakarta.persistence.TransactionRequiredException`. The instance must be attached to the current session; a detached instance can be re-attached with link:{domainClassesRefFromRef}attach.html[attach] first.
+
+WARNING: `refresh(lock: true)` discards unflushed changes to the entity. Configured refresh cascades can also discard unflushed changes to associated entities; this is not a refresh of the whole object graph. Call it *before* making decisions based on the entity's state or applying mutations. It does not preserve or merge pending edits.
+
+The database and transaction isolation level determine which state is visible to the locked refresh. `refresh(lock: true)` does not override isolation rules or guarantee that every concurrent attempt succeeds. Deadlocks, lock timeouts, and transaction serialization failures remain possible.
+
+The same operation is available on a named connection and under a bound tenant:
+
+[source,groovy]
+----
+Book.withTransaction {
+    def book = Book.get(1)
+    book.secondary.refresh(lock: true)     // <1>
+}
+----
+<1> Reloads and locks the row on the `secondary` connection.
+
+Refreshing under a lock is supported by GORM for Hibernate 5 and Hibernate 7. Other datastores throw `UnsupportedOperationException` rather than silently falling back to a plain refresh.
+
+`entity.refresh()` is unchanged. `entity.refresh([:])` and `entity.refresh(lock: false)` behave exactly like `entity.refresh()`: a plain refresh with no lock and no transaction requirement. To lock by identifier and reload an already-managed instance under the lock, use link:{domainClassesRefFromRef}lock.html[DomainClass.lock(id, refresh: true)]; there is no `entity.lock(refresh: true)`.

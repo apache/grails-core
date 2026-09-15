@@ -48,6 +48,7 @@ import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.query.api.BuildableCriteria
+import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 
 /**
@@ -247,6 +248,11 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     @Override
     D refresh(D instance) {
         registry.findInstanceApi(persistentClass, null).refresh(instance)
+    }
+
+    @Override
+    D refresh(D instance, Map args) {
+        registry.findInstanceApi(persistentClass, null).refresh(instance, args)
     }
 
     @Override
@@ -490,6 +496,20 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
         execute({ Session session ->
             session.lock(persistentClass, id)
         } as SessionCallback<D>)
+    }
+
+    @Override
+    D lock(Map args, Serializable id) {
+        if (!ClassUtils.getBooleanFromMap(ARGUMENT_REFRESH, args)) {
+            return lock(id)
+        }
+        // Resolve the managed instance first (no query when it is already in the session), then let the
+        // instance api reload state and version under the lock instead of checking the loaded version.
+        D instance = get(id)
+        if (instance == null) {
+            return null
+        }
+        refresh(instance, [(ARGUMENT_LOCK): true])
     }
 
     @Override
