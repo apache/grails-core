@@ -17,22 +17,22 @@
  *  under the License.
  */
 
-package org.grails.plugins;
+package org.grails.plugins
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Component;
+import org.springframework.boot.context.properties.ConfigurationProperties
+import org.springframework.stereotype.Component
 
 @Component
-@ConfigurationProperties(prefix = "example")
+@ConfigurationProperties(prefix = 'example')
 class ConfigBindingExampleProperties {
 
-    private String bar = "default";
+    private String bar = 'default'
 
-    public String getBar() {
-        return bar;
+    String getBar() {
+        return bar
     }
 
-    public void setBar(String bar) {
-        this.bar = bar;
+    void setBar(String bar) {
+        this.bar = bar
     }
 }

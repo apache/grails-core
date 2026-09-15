@@ -14,16 +14,15 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package grails.util;
+package grails.util
 
-import java.lang.management.ManagementFactory;
-import java.util.List;
+import java.lang.management.ManagementFactory
 
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Test
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals
+import static org.junit.jupiter.api.Assertions.assertNotNull
+import static org.junit.jupiter.api.Assertions.assertTrue
 
 /**
  * Asserts that {@code -XX:ActiveProcessorCount} from the root build's
@@ -33,26 +32,26 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class ActiveProcessorCountForkTests {
 
-    private static final String FLAG_PREFIX = "-XX:ActiveProcessorCount=";
+    private static final String FLAG_PREFIX = '-XX:ActiveProcessorCount='
 
     @Test
     void forkedTestJvmReceivesActiveProcessorCount() {
-        String flag = findActiveProcessorCountFlag();
+        String flag = findActiveProcessorCountFlag()
         assertNotNull(flag,
-                "forked test JVM must receive -XX:ActiveProcessorCount from jvmArgumentProviders");
-        int advertised = Integer.parseInt(flag.substring(FLAG_PREFIX.length()));
-        assertTrue(advertised >= 2, "floor is 2 so HotSpot keeps G1: " + advertised);
+                'forked test JVM must receive -XX:ActiveProcessorCount from jvmArgumentProviders')
+        int advertised = Integer.parseInt(flag.substring(FLAG_PREFIX.length()))
+        assertTrue(advertised >= 2, 'floor is 2 so HotSpot keeps G1: ' + advertised)
         assertEquals(advertised, Runtime.getRuntime().availableProcessors(),
-                "HotSpot must honour the advertised processor count");
+                'HotSpot must honour the advertised processor count')
     }
 
     private static String findActiveProcessorCountFlag() {
-        List<String> args = ManagementFactory.getRuntimeMXBean().getInputArguments();
-        for (String arg : args) {
+        List<String> args = ManagementFactory.getRuntimeMXBean().getInputArguments()
+        for (String arg in args) {
             if (arg.startsWith(FLAG_PREFIX)) {
-                return arg;
+                return arg
             }
         }
-        return null;
+        return null
     }
 }

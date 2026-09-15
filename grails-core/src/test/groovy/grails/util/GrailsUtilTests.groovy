@@ -16,12 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.util;
+package grails.util
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Test
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals
 
 /**
  * Tests for the GrailsUtils class.
@@ -29,15 +29,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * @author Graeme Rocher
  * @since 0.4
  */
-public class GrailsUtilTests {
+class GrailsUtilTests {
 
     @Test
-    public void testGrailsVersion() {
-        assertEquals("9.0.0-SNAPSHOT", GrailsUtil.getGrailsVersion());
+    void testGrailsVersion() {
+        assertEquals('9.0.0-SNAPSHOT', GrailsUtil.getGrailsVersion())
     }
 
     @AfterEach
-    protected void tearDown() throws Exception {
-        System.setProperty(Environment.KEY, "");
+    protected void tearDown() {
+        System.setProperty(Environment.KEY, '')
     }
 }

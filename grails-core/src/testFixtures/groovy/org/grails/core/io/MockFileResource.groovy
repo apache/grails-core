@@ -16,17 +16,36 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+package org.grails.core.io
 
-package org.grails.plugins;
+import java.nio.charset.StandardCharsets
 
-import org.springframework.context.annotation.Configuration;
+import groovy.transform.CompileStatic
+import org.springframework.core.io.ByteArrayResource
 
-@Configuration
-class ConfigBindingExampleConfiguration {
+/**
+ * Mocks the behavior of a FileResource.
+ *
+ * @author Graeme Rocher
+ * @since 1.1
+ */
+@CompileStatic
+class MockFileResource extends ByteArrayResource {
 
-    private final ConfigBindingExampleProperties configBindingExampleProperties;
+    private String fileName
 
-    ConfigBindingExampleConfiguration(ConfigBindingExampleProperties configBindingExampleProperties) {
-        this.configBindingExampleProperties = configBindingExampleProperties;
+    MockFileResource(String fileName, String contents) {
+        super(contents.getBytes(StandardCharsets.UTF_8))
+        this.fileName = fileName
+    }
+
+    MockFileResource(String fileName, String contents, String encoding) {
+        super(contents.getBytes(encoding))
+        this.fileName = fileName
+    }
+
+    @Override
+    String getFilename() {
+        return fileName
     }
 }

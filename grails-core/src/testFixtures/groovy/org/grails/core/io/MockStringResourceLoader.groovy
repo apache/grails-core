@@ -16,13 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.core.io;
+package org.grails.core.io
 
-import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
+import java.nio.charset.StandardCharsets
 
-import org.springframework.core.io.Resource;
+import groovy.transform.CompileStatic
+import org.springframework.core.io.Resource
 
 /**
  * Loads Resources from Strings that are registered as Mock resources.
@@ -30,17 +29,18 @@ import org.springframework.core.io.Resource;
  * @author Graeme Rocher
  * @since 0.4
  */
-public class MockStringResourceLoader extends MockResourceLoader {
+@CompileStatic
+class MockStringResourceLoader extends MockResourceLoader {
 
-    private Map<String, Resource> mockResources = new HashMap<>();
+    private Map<String, Resource> mockResources = new HashMap<>()
 
     @Override
-    public Resource getResource(String location) {
+    Resource getResource(String location) {
         if (mockResources.containsKey(location)) {
-            return mockResources.get(location);
+            return mockResources.get(location)
         }
 
-        return super.getResource(location);
+        return super.getResource(location)
     }
 
     /**
@@ -50,8 +50,8 @@ public class MockStringResourceLoader extends MockResourceLoader {
      * @param location The location
      * @param res The resource itself
      */
-    public void registerMockResource(String location, Resource res) {
-        mockResources.put(location, res);
+    void registerMockResource(String location, Resource res) {
+        mockResources.put(location, res)
     }
 
     /**
@@ -61,8 +61,8 @@ public class MockStringResourceLoader extends MockResourceLoader {
      * @param location The location
      * @param contents The contents of the resource
      */
-    public void registerMockResource(String location, String contents) {
-        mockResources.put(location, new GrailsByteArrayResource(contents.getBytes(StandardCharsets.UTF_8), location));
+    void registerMockResource(String location, String contents) {
+        mockResources.put(location, new GrailsByteArrayResource(contents.getBytes(StandardCharsets.UTF_8), location))
     }
 
     /**
@@ -72,7 +72,7 @@ public class MockStringResourceLoader extends MockResourceLoader {
      * @param location The location
      * @param contents The contents of the resource
      */
-    public void registerMockResource(String location, byte[] contents) {
-        mockResources.put(location, new GrailsByteArrayResource(contents, location));
+    void registerMockResource(String location, byte[] contents) {
+        mockResources.put(location, new GrailsByteArrayResource(contents, location))
     }
 }

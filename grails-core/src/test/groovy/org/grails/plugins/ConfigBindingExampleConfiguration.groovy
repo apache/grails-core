@@ -16,35 +16,17 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.core.io;
 
-import java.io.UnsupportedEncodingException;
-import java.nio.charset.StandardCharsets;
+package org.grails.plugins
 
-import org.springframework.core.io.ByteArrayResource;
+import org.springframework.context.annotation.Configuration
 
-/**
- * Mocks the behavior of a FileResource.
- *
- * @author Graeme Rocher
- * @since 1.1
- */
-public class MockFileResource extends ByteArrayResource {
+@Configuration
+class ConfigBindingExampleConfiguration {
 
-    private String fileName;
+    private final ConfigBindingExampleProperties configBindingExampleProperties
 
-    public MockFileResource(String fileName, String contents) throws UnsupportedEncodingException {
-        super(contents.getBytes(StandardCharsets.UTF_8));
-        this.fileName = fileName;
-    }
-
-    public MockFileResource(String fileName, String contents, String encoding) throws UnsupportedEncodingException {
-        super(contents.getBytes(encoding));
-        this.fileName = fileName;
-    }
-
-    @Override
-    public String getFilename() {
-        return fileName;
+    ConfigBindingExampleConfiguration(ConfigBindingExampleProperties configBindingExampleProperties) {
+        this.configBindingExampleProperties = configBindingExampleProperties
     }
 }
