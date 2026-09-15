@@ -17,14 +17,14 @@
  *  under the License.
  */
 
-package org.grails.datastore.gorm.transform;
+package org.grails.datastore.gorm.transform
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.ElementType
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
 
-import org.codehaus.groovy.transform.GroovyASTTransformationClass;
+import org.codehaus.groovy.transform.GroovyASTTransformationClass
 
 /**
  * Local marker annotation used only for testing {@link AbstractTraitApplyingGormASTTransformation}
@@ -32,7 +32,7 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass;
  * annotated class is woven with {@link TestWeavableTrait} via a genuine {@code CompilationUnit}.
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.TYPE})
-@GroovyASTTransformationClass("org.grails.datastore.gorm.transform.TestTraitWeavingTransformation")
-public @interface ApplyTestTraitWeaving {
+@Target([ElementType.TYPE])
+@GroovyASTTransformationClass('org.grails.datastore.gorm.transform.TestTraitWeavingTransformation')
+@interface ApplyTestTraitWeaving {
 }
