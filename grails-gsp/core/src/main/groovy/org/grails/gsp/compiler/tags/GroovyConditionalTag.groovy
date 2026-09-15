@@ -16,66 +16,70 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.gsp.compiler.tags;
+package org.grails.gsp.compiler.tags
 
-import grails.util.GrailsStringUtils;
-import org.grails.taglib.GrailsTagException;
+import groovy.transform.CompileStatic
 
+import grails.util.GrailsStringUtils
+import org.grails.taglib.GrailsTagException
+
+@CompileStatic
 abstract class GroovyConditionalTag extends GroovySyntaxTag {
 
-    static final String ATTRIBUTE_TEST = "test";
-    static final String ATTRIBUTE_ENV = "env";
+    static final String ATTRIBUTE_TEST = 'test'
+    static final String ATTRIBUTE_ENV = 'env'
 
-    public void doStartTag() {
-        String env = attributeValueOrNull(ATTRIBUTE_ENV);
-        String test = attributeValueOrNull(ATTRIBUTE_TEST);
+    void doStartTag() {
+        String env = attributeValueOrNull(ATTRIBUTE_ENV)
+        String test = attributeValueOrNull(ATTRIBUTE_TEST)
 
         if ((env == null) && (test == null)) {
-            throw new GrailsTagException("Tag [" + getName() +
-                    "] must have one or both of the attributes [" +
-                    ATTRIBUTE_TEST + "] or [" + ATTRIBUTE_ENV + "]", parser.getPageName(), parser.getCurrentOutputLineNumber());
+            throw new GrailsTagException('Tag [' + getName() +
+                    '] must have one or both of the attributes [' +
+                    ATTRIBUTE_TEST + '] or [' + ATTRIBUTE_ENV + ']', parser.getPageName(), parser.getCurrentOutputLineNumber())
         }
 
-        String envExpression = environmentExpressionOrTrue(env);
-        String testExpression = testExpressionOrTrue(test);
+        String envExpression = environmentExpressionOrTrue(env)
+        String testExpression = testExpressionOrTrue(test)
 
-        outputStartTag(envExpression, testExpression);
+        outputStartTag(envExpression, testExpression)
     }
 
-    protected abstract void outputStartTag(String envExpression, String testExpression);
+    protected abstract void outputStartTag(String envExpression, String testExpression)
 
-    public void doEndTag() {
-        out.println("}");
+    void doEndTag() {
+        out.println('}')
     }
 
     protected String attributeValueOrNull(String attributeName) {
-        String attributeValue = attributes.get(attributeName);
-        return GrailsStringUtils.isBlank(attributeValue) ? null : attributeValue;
+        String attributeValue = attributes.get(attributeName)
+        return GrailsStringUtils.isBlank(attributeValue) ? null : attributeValue
     }
 
     private String environmentExpressionOrTrue(String envAttributeValue) {
-        String expression = "true";
+        String expression = 'true'
         if (envAttributeValue != null) {
-            expression = "(grails.util.Environment.current.name == '" + calculateExpression(envAttributeValue) + "')";
+            expression = "(grails.util.Environment.current.name == '" + calculateExpression(envAttributeValue) + "')"
         }
-        return expression;
+        return expression
     }
 
     private String testExpressionOrTrue(String testAttributeValue) {
-        String expression = "true";
+        String expression = 'true'
         if (testAttributeValue != null) {
-            expression = "(" + testAttributeValue + ")";
+            expression = '(' + testAttributeValue + ')'
         }
-        return expression;
+        return expression
     }
 
     @Override
-    public boolean isKeepPrecedingWhiteSpace() {
-        return true;
+    boolean isKeepPrecedingWhiteSpace() {
+        return true
     }
 
     @Override
-    public boolean isAllowPrecedingContent() {
-        return true;
+    boolean isAllowPrecedingContent() {
+        return true
     }
+
 }

@@ -16,42 +16,46 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.gsp.compiler.tags;
+package org.grails.gsp.compiler.tags
 
-import grails.util.GrailsStringUtils;
-import org.grails.taglib.GrailsTagException;
+import groovy.transform.CompileStatic
+
+import grails.util.GrailsStringUtils
+import org.grails.taglib.GrailsTagException
 
 /**
  * @author Graeme Rocher
  */
-public class GroovyEachTag extends GroovySyntaxTag {
+@CompileStatic
+class GroovyEachTag extends GroovySyntaxTag {
 
-    public static final String TAG_NAME = "each";
+    public static final String TAG_NAME = 'each'
 
-    public void doStartTag() {
-        String in = attributes.get(ATTRIBUTE_IN);
+    void doStartTag() {
+        String in = attributes.get(ATTRIBUTE_IN)
         if (GrailsStringUtils.isBlank(in)) {
-            throw new GrailsTagException("Tag [" + TAG_NAME + "] missing required attribute [" + ATTRIBUTE_IN + "]", parser.getPageName(), parser.getCurrentOutputLineNumber());
+            throw new GrailsTagException('Tag [' + TAG_NAME + '] missing required attribute [' + ATTRIBUTE_IN + ']', parser.getPageName(), parser.getCurrentOutputLineNumber())
         }
 
-        doEachMethod(in);
+        doEachMethod(in)
     }
 
-    public void doEndTag() {
-        endEachMethod();
+    void doEndTag() {
+        endEachMethod()
     }
 
-    public String getName() {
-        return TAG_NAME;
-    }
-
-    @Override
-    public boolean isKeepPrecedingWhiteSpace() {
-        return true;
+    String getName() {
+        return TAG_NAME
     }
 
     @Override
-    public boolean isAllowPrecedingContent() {
-        return true;
+    boolean isKeepPrecedingWhiteSpace() {
+        return true
     }
+
+    @Override
+    boolean isAllowPrecedingContent() {
+        return true
+    }
+
 }

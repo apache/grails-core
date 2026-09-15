@@ -16,37 +16,41 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.gsp.compiler.tags;
+package org.grails.gsp.compiler.tags
 
-public class GroovyElseIfTag extends GroovyConditionalTag {
+import groovy.transform.CompileStatic
 
-    public static final String TAG_NAME = "elseif";
+@CompileStatic
+class GroovyElseIfTag extends GroovyConditionalTag {
+
+    public static final String TAG_NAME = 'elseif'
 
     @Override
     protected void outputStartTag(String env, String test) {
-        out.print("else if (");
-        out.print(env);
-        out.print(" && ");
-        out.print(test);
-        out.println(") {");
+        out.print('else if (')
+        out.print(env)
+        out.print(' && ')
+        out.print(test)
+        out.println(') {')
     }
 
     @Override
-    public void doEndTag() {
-        out.println("}");
+    void doEndTag() {
+        out.println('}')
     }
 
-    public String getName() {
-        return TAG_NAME;
-    }
-
-    @Override
-    public boolean isKeepPrecedingWhiteSpace() {
-        return false;
+    String getName() {
+        return TAG_NAME
     }
 
     @Override
-    public boolean isAllowPrecedingContent() {
-        return false;
+    boolean isKeepPrecedingWhiteSpace() {
+        return false
     }
+
+    @Override
+    boolean isAllowPrecedingContent() {
+        return false
+    }
+
 }

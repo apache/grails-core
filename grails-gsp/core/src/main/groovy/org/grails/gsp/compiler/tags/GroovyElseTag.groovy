@@ -16,34 +16,38 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.gsp.compiler.tags;
+package org.grails.gsp.compiler.tags
+
+import groovy.transform.CompileStatic
 
 /**
  * @author Graeme Rocher
  */
-public class GroovyElseTag extends GroovySyntaxTag {
+@CompileStatic
+class GroovyElseTag extends GroovySyntaxTag {
 
-    public static final String TAG_NAME = "else";
+    public static final String TAG_NAME = 'else'
 
-    public void doStartTag() {
-        out.println("else {");
+    void doStartTag() {
+        out.println('else {')
     }
 
-    public void doEndTag() {
-        out.println("}");
+    void doEndTag() {
+        out.println('}')
     }
 
-    public String getName() {
-        return TAG_NAME;
-    }
-
-    @Override
-    public boolean isKeepPrecedingWhiteSpace() {
-        return false;
+    String getName() {
+        return TAG_NAME
     }
 
     @Override
-    public boolean isAllowPrecedingContent() {
-        return false;
+    boolean isKeepPrecedingWhiteSpace() {
+        return false
     }
+
+    @Override
+    boolean isAllowPrecedingContent() {
+        return false
+    }
+
 }

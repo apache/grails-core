@@ -16,10 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.gsp.compiler.tags;
-
-import java.io.Writer;
-import java.util.Map;
+package org.grails.gsp.compiler.tags
 
 /**
  * Allows to tag implementation to be abstracted from the JSP custom tag spec.. hence allowing
@@ -27,43 +24,44 @@ import java.util.Map;
  *
  * @author Graeme Rocher
  */
-public interface GrailsTag {
+interface GrailsTag {
 
-    @SuppressWarnings("rawtypes")
-    void init(Map tagContext);
+    @SuppressWarnings('rawtypes')
+    void init(Map tagContext)
 
     /**
      * Sets the writer that processes the tag
      * @param w
      */
-    void setWriter(Writer w);
+    void setWriter(Writer w)
 
     /**
      * Sets the attributes of the tag
      * @param attributes
      */
-    @SuppressWarnings("rawtypes")
-    void setAttributes(Map attributes);
+    @SuppressWarnings('rawtypes')
+    void setAttributes(Map attributes)
 
     /**
      * Sets an attribute of the tag
      * @param name
      * @param value
      */
-    void setAttribute(String name, Object value);
+    void setAttribute(String name, Object value)
 
     /**
      * Process the start tag
      */
-    void doStartTag();
+    void doStartTag()
 
     /**
      * process the end tag
      */
-    void doEndTag();
+    void doEndTag()
 
     /**
      * @return The name of the tag
      */
-    String getName();
+    String getName()
+
 }

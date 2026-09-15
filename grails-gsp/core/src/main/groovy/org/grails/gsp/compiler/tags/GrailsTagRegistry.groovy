@@ -16,76 +16,79 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.gsp.compiler.tags;
+package org.grails.gsp.compiler.tags
 
-import java.lang.reflect.InvocationTargetException;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.lang.reflect.InvocationTargetException
+import java.util.concurrent.ConcurrentHashMap
 
-import org.grails.taglib.GrailsTagException;
+import groovy.transform.CompileStatic
+
+import org.grails.taglib.GrailsTagException
 
 /**
  * A registry for holding all Grails tag implementations.
  *
  * @author Graeme Rocher
  */
-public class GrailsTagRegistry {
+@CompileStatic
+class GrailsTagRegistry {
 
-    private static GrailsTagRegistry instance = new GrailsTagRegistry();
+    private static GrailsTagRegistry instance = new GrailsTagRegistry()
 
-    private static Map<String, Class<?>> tagRegistry = new ConcurrentHashMap<>();
+    private static Map<String, Class<?>> tagRegistry = new ConcurrentHashMap<>()
 
     static {
-        instance.registerTag(GroovyEachTag.TAG_NAME, GroovyEachTag.class);
-        instance.registerTag(GroovyIfTag.TAG_NAME, GroovyIfTag.class);
-        instance.registerTag(GroovyUnlessTag.TAG_NAME, GroovyUnlessTag.class);
-        instance.registerTag(GroovyElseTag.TAG_NAME, GroovyElseTag.class);
-        instance.registerTag(GroovyElseIfTag.TAG_NAME, GroovyElseIfTag.class);
-        instance.registerTag(GroovyFindAllTag.TAG_NAME, GroovyFindAllTag.class);
-        instance.registerTag(GroovyCollectTag.TAG_NAME, GroovyCollectTag.class);
-        instance.registerTag(GroovyGrepTag.TAG_NAME, GroovyGrepTag.class);
-        instance.registerTag(GroovyWhileTag.TAG_NAME, GroovyWhileTag.class);
-        instance.registerTag(GroovyDefTag.TAG_NAME, GroovyDefTag.class);
+        instance.registerTag(GroovyEachTag.TAG_NAME, GroovyEachTag)
+        instance.registerTag(GroovyIfTag.TAG_NAME, GroovyIfTag)
+        instance.registerTag(GroovyUnlessTag.TAG_NAME, GroovyUnlessTag)
+        instance.registerTag(GroovyElseTag.TAG_NAME, GroovyElseTag)
+        instance.registerTag(GroovyElseIfTag.TAG_NAME, GroovyElseIfTag)
+        instance.registerTag(GroovyFindAllTag.TAG_NAME, GroovyFindAllTag)
+        instance.registerTag(GroovyCollectTag.TAG_NAME, GroovyCollectTag)
+        instance.registerTag(GroovyGrepTag.TAG_NAME, GroovyGrepTag)
+        instance.registerTag(GroovyWhileTag.TAG_NAME, GroovyWhileTag)
+        instance.registerTag(GroovyDefTag.TAG_NAME, GroovyDefTag)
     }
 
     private GrailsTagRegistry() {
         // singleton
     }
 
-    public static GrailsTagRegistry getInstance() {
-        return instance;
+    static GrailsTagRegistry getInstance() {
+        return instance
     }
 
-    public void registerTag(String tagName, Class<?> tag) {
-        tagRegistry.put(tagName, tag);
+    void registerTag(String tagName, Class<?> tag) {
+        tagRegistry.put(tagName, tag)
     }
 
-    public boolean tagSupported(String tagName) {
-        return tagRegistry.containsKey(tagName);
+    boolean tagSupported(String tagName) {
+        return tagRegistry.containsKey(tagName)
     }
 
-    public boolean isSyntaxTag(String tagName) {
+    boolean isSyntaxTag(String tagName) {
         if (tagRegistry.containsKey(tagName)) {
-            return GroovySyntaxTag.class.isAssignableFrom(tagRegistry.get(tagName));
+            return GroovySyntaxTag.isAssignableFrom(tagRegistry.get(tagName))
         }
-        return false;
+        return false
     }
 
-    public GrailsTag newTag(String tagName) {
+    GrailsTag newTag(String tagName) {
         if (!tagRegistry.containsKey(tagName)) {
-            throw new GrailsTagException("Tag [" + tagName + "] is not a a valid grails tag");
+            throw new GrailsTagException('Tag [' + tagName + '] is not a a valid grails tag')
         }
 
-        Class<?> tagClass = tagRegistry.get(tagName);
+        Class<?> tagClass = tagRegistry.get(tagName)
 
         try {
-            return (GrailsTag) tagClass.getDeclaredConstructor().newInstance();
+            return (GrailsTag) tagClass.getDeclaredConstructor().newInstance()
         }
         catch (InstantiationException | InvocationTargetException | NoSuchMethodException e) {
-            throw new GrailsTagException("Instantiation error loading tag [" + tagName + "]: " + e.getMessage(), e);
+            throw new GrailsTagException('Instantiation error loading tag [' + tagName + ']: ' + e.getMessage(), e)
         }
         catch (IllegalAccessException e) {
-            throw new GrailsTagException("Illegal access error loading tag [" + tagName + "]: " + e.getMessage(), e);
+            throw new GrailsTagException('Illegal access error loading tag [' + tagName + ']: ' + e.getMessage(), e)
         }
     }
+
 }

@@ -16,21 +16,26 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.gsp.compiler.tags;
+package org.grails.gsp.compiler.tags
 
-public class GroovyUnlessTag extends GroovyConditionalTag {
-    public static final String TAG_NAME = "unless";
+import groovy.transform.CompileStatic
+
+@CompileStatic
+class GroovyUnlessTag extends GroovyConditionalTag {
+
+    public static final String TAG_NAME = 'unless'
 
     @Override
     protected void outputStartTag(String envExpression, String testExpression) {
-        out.print("if(!(");
-        out.print(envExpression);
-        out.print(" && ");
-        out.print(testExpression);
-        out.println(")) {");
+        out.print('if(!(')
+        out.print(envExpression)
+        out.print(' && ')
+        out.print(testExpression)
+        out.println(')) {')
     }
 
-    public String getName() {
-        return TAG_NAME;
+    String getName() {
+        return TAG_NAME
     }
+
 }
