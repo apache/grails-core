@@ -610,7 +610,7 @@ class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine implements R
                 path = file.getAbsolutePath()
             }
         }
-        catch (IOException e) {
+        catch (IOException ignored) {
             // ignore
         }
         if (path != null) {

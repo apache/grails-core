@@ -520,7 +520,7 @@ class GroovyPageMetaInfo implements GrailsApplicationAware {
                     if (is != null) {
                         is.close()
                     }
-                } catch (IOException e) {
+                } catch (IOException ignored) {
                     // ignore
                 }
             }

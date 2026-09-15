@@ -241,7 +241,7 @@ class GroovyPageWritable implements Writable {
         try {
             try {
                 in.reset()
-            } catch (IOException e) {
+            } catch (IOException ignored) {
                 // ignore
             }
             BufferedReader reader = new BufferedReader(new InputStreamReader(in, 'UTF-8'))
