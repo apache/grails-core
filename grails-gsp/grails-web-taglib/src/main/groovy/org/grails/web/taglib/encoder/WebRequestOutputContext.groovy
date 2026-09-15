@@ -16,21 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.taglib.encoder;
+package org.grails.web.taglib.encoder
 
-import org.grails.web.servlet.mvc.GrailsWebRequest;
+import groovy.transform.CompileStatic
+import org.grails.web.servlet.mvc.GrailsWebRequest
 
 /**
  * Created by lari on 02/01/15.
  */
-public class WebRequestOutputContext extends WebOutputContextLookup.WebOutputContext {
-    private final GrailsWebRequest webRequest;
+@CompileStatic
+class WebRequestOutputContext extends WebOutputContextLookup.WebOutputContext {
 
-    public WebRequestOutputContext(GrailsWebRequest webRequest) {
-        this.webRequest = webRequest;
+    private final GrailsWebRequest webRequest
+
+    WebRequestOutputContext(GrailsWebRequest webRequest) {
+        this.webRequest = webRequest
     }
 
     protected GrailsWebRequest lookupWebRequest() {
-        return webRequest;
+        return webRequest
     }
 }

@@ -16,22 +16,20 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.gsp.taglib.compiler;
+package grails.gsp.taglib.compiler
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import groovy.transform.CompileStatic
 
-import org.codehaus.groovy.ast.CodeVisitorSupport;
-import org.codehaus.groovy.ast.Parameter;
-import org.codehaus.groovy.ast.expr.ClosureExpression;
-import org.codehaus.groovy.ast.expr.DeclarationExpression;
-import org.codehaus.groovy.ast.expr.Expression;
-import org.codehaus.groovy.ast.expr.TupleExpression;
-import org.codehaus.groovy.ast.expr.VariableExpression;
-import org.codehaus.groovy.ast.stmt.CatchStatement;
-import org.codehaus.groovy.ast.stmt.ForStatement;
-import org.codehaus.groovy.ast.stmt.Statement;
+import org.codehaus.groovy.ast.CodeVisitorSupport
+import org.codehaus.groovy.ast.Parameter
+import org.codehaus.groovy.ast.expr.ClosureExpression
+import org.codehaus.groovy.ast.expr.DeclarationExpression
+import org.codehaus.groovy.ast.expr.Expression
+import org.codehaus.groovy.ast.expr.TupleExpression
+import org.codehaus.groovy.ast.expr.VariableExpression
+import org.codehaus.groovy.ast.stmt.CatchStatement
+import org.codehaus.groovy.ast.stmt.ForStatement
+import org.codehaus.groovy.ast.stmt.Statement
 
 /**
  * Collects every name declared within a body: its parameters, its local variables, the parameters of
@@ -44,14 +42,15 @@ import org.codehaus.groovy.ast.stmt.Statement;
  *
  * @since 8.0.0
  */
+@CompileStatic
 final class LocalNameCollector extends CodeVisitorSupport {
 
     /**
      * The parameter a closure that names none still has.
      */
-    private static final String IMPLICIT_CLOSURE_PARAMETER = "it";
+    private static final String IMPLICIT_CLOSURE_PARAMETER = 'it'
 
-    private final Set<String> names = new HashSet<>();
+    private final Set<String> names = new HashSet<>()
 
     private LocalNameCollector() {
     }
@@ -62,70 +61,71 @@ final class LocalNameCollector extends CodeVisitorSupport {
      * @return every name declared within, never {@code null}
      */
     static Set<String> collect(Statement code, Parameter[] parameters) {
-        LocalNameCollector collector = new LocalNameCollector();
-        collector.addParameters(parameters);
+        LocalNameCollector collector = new LocalNameCollector()
+        collector.addParameters(parameters)
         if (code != null) {
-            code.visit(collector);
+            code.visit(collector)
         }
-        return collector.names.isEmpty() ? Collections.emptySet() : collector.names;
+        return collector.names.isEmpty() ? Collections.emptySet() : collector.names
     }
 
     private void addParameters(Parameter[] parameters) {
         if (parameters == null) {
-            return;
+            return
         }
-        for (Parameter parameter : parameters) {
-            names.add(parameter.getName());
+        for (Parameter parameter in parameters) {
+            names.add(parameter.getName())
         }
     }
 
     @Override
-    public void visitDeclarationExpression(DeclarationExpression expression) {
+    void visitDeclarationExpression(DeclarationExpression expression) {
         if (expression.isMultipleAssignmentDeclaration()) {
-            TupleExpression tuple = expression.getTupleExpression();
-            for (Expression declared : tuple.getExpressions()) {
-                if (declared instanceof VariableExpression variable) {
-                    names.add(variable.getName());
+            TupleExpression tuple = expression.getTupleExpression()
+            for (Expression declared in tuple.getExpressions()) {
+                if (declared instanceof VariableExpression) {
+                    VariableExpression variable = (VariableExpression) declared
+                    names.add(variable.getName())
                 }
             }
         }
         else {
-            names.add(expression.getVariableExpression().getName());
+            names.add(expression.getVariableExpression().getName())
         }
-        super.visitDeclarationExpression(expression);
+        super.visitDeclarationExpression(expression)
     }
 
     @Override
-    public void visitClosureExpression(ClosureExpression expression) {
+    void visitClosureExpression(ClosureExpression expression) {
         if (expression.isParameterSpecified()) {
-            addParameters(expression.getParameters());
+            addParameters(expression.getParameters())
         }
         else {
             // A closure that names no parameter still has one, and a call to it is that parameter's
             // method rather than a tag.
-            names.add(IMPLICIT_CLOSURE_PARAMETER);
+            names.add(IMPLICIT_CLOSURE_PARAMETER)
         }
-        super.visitClosureExpression(expression);
+        super.visitClosureExpression(expression)
     }
 
     @Override
-    public void visitForLoop(ForStatement forLoop) {
+    void visitForLoop(ForStatement forLoop) {
         // A classic for carries both, an enhanced for only the value, so both are asked for.
-        addVariable(forLoop.getIndexVariable());
-        addVariable(forLoop.getValueVariable());
-        super.visitForLoop(forLoop);
+        addVariable(forLoop.getIndexVariable())
+        addVariable(forLoop.getValueVariable())
+        super.visitForLoop(forLoop)
     }
 
     @Override
-    public void visitCatchStatement(CatchStatement statement) {
+    void visitCatchStatement(CatchStatement statement) {
         // CodeVisitorSupport visits the body but not the parameter the exception is caught into.
-        addVariable(statement.getVariable());
-        super.visitCatchStatement(statement);
+        addVariable(statement.getVariable())
+        super.visitCatchStatement(statement)
     }
 
     private void addVariable(Parameter parameter) {
         if (parameter != null) {
-            names.add(parameter.getName());
+            names.add(parameter.getName())
         }
     }
 }
