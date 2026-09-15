@@ -31,6 +31,11 @@ import spock.lang.Specification
  */
 class CompiledTagInvocationSpec extends Specification implements TagLibUnitTest<ApplicationTagLib> {
 
+    void setup() {
+        // Links without controller attributes resolve against the current request.
+        webRequest.controllerName = 'book'
+    }
+
     private TagLibraryLookup getLookup() {
         applicationContext.getBean(TagLibraryLookup)
     }

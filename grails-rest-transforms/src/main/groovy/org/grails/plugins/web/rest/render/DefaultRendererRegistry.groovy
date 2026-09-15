@@ -37,11 +37,13 @@ import grails.core.support.proxy.ProxyHandler
 import grails.rest.render.ContainerRenderer
 import grails.rest.render.Renderer
 import grails.rest.render.RendererRegistry
+import grails.rest.render.errors.ValidationProblemDetailFactory
 import grails.util.GrailsClassUtils
 import grails.web.mime.MimeType
+import grails.web.render.NamedJsonRenderer
 import org.grails.plugins.web.rest.render.html.DefaultHtmlRenderer
 import org.grails.plugins.web.rest.render.json.DefaultJsonRenderer
-import org.grails.plugins.web.rest.render.xml.DefaultXmlRenderer
+import org.grails.web.converters.jackson.GrailsJsonMapperCustomizer
 import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator
 import org.grails.web.util.ClassAndMimeTypeRegistry
 
@@ -77,13 +79,26 @@ class DefaultRendererRegistry extends ClassAndMimeTypeRegistry<Renderer, Rendere
     @Value('${grails.converters.encoding:UTF-8}')
     String encoding = grails.util.GrailsWebUtil.DEFAULT_ENCODING
 
+    @Autowired(required = false)
+    SpringMessageConverters springMessageConverters
+
+    @Autowired(required = false)
+    GrailsJsonMapperCustomizer grailsJsonMapperCustomizer
+
+    @Autowired(required = false)
+    NamedJsonRenderer namedJsonRenderer
+
+    @Autowired(required = false)
+    ValidationProblemDetailFactory validationProblemDetailFactory
+
+    @Value('${grails.web.rendering.json.spring:false}')
+    boolean useSpringJson
+
     @PostConstruct
     void initialize() {
-        final defaultXmlRenderer = new DefaultXmlRenderer<Object>(Object, groovyPageLocator, this)
-        defaultXmlRenderer.encoding = encoding
-        addDefaultRenderer(defaultXmlRenderer)
         final defaultJsonRenderer = new DefaultJsonRenderer<Object>(Object, groovyPageLocator, this)
         defaultJsonRenderer.encoding = encoding
+        configureJsonRenderer(defaultJsonRenderer)
         addDefaultRenderer(defaultJsonRenderer)
         final defaultHtmlRenderer = new DefaultHtmlRenderer<Object>(Object)
         defaultHtmlRenderer.suffix = modelSuffix
@@ -95,14 +110,10 @@ class DefaultRendererRegistry extends ClassAndMimeTypeRegistry<Renderer, Rendere
         allHtmlRenderer.proxyHandler = proxyHandler
         allHtmlRenderer.encoding = encoding
         addDefaultRenderer(allHtmlRenderer)
-        [MimeType.XML, MimeType.TEXT_XML].each { MimeType mimeType ->
-            final errorsXmlRenderer = new DefaultXmlRenderer(Errors)
-            errorsXmlRenderer.encoding = encoding
-            containerRenderers.put(new ContainerRendererCacheKey(Errors, Object, mimeType), errorsXmlRenderer)
-        }
-        [MimeType.JSON, MimeType.TEXT_JSON].each { MimeType mimeType ->
+        [DefaultJsonRenderer.PROBLEM_JSON, MimeType.JSON, MimeType.TEXT_JSON].each { MimeType mimeType ->
             final errorsJsonRenderer = new DefaultJsonRenderer(Errors)
             errorsJsonRenderer.encoding = encoding
+            configureJsonRenderer(errorsJsonRenderer)
             containerRenderers.put(new ContainerRendererCacheKey(Errors, Object, mimeType), errorsJsonRenderer)
         }
         final defaultContainerHtmlRenderer = new DefaultHtmlRenderer(Errors)
@@ -111,6 +122,18 @@ class DefaultRendererRegistry extends ClassAndMimeTypeRegistry<Renderer, Rendere
         defaultContainerHtmlRenderer.encoding = encoding
         containerRenderers.put(new ContainerRendererCacheKey(Errors, Object, MimeType.HTML), defaultContainerHtmlRenderer)
         containerRenderers.put(new ContainerRendererCacheKey(Errors, Object, MimeType.ALL), defaultContainerHtmlRenderer)
+    }
+
+    private void configureJsonRenderer(DefaultJsonRenderer renderer) {
+        renderer.useSpringJson = useSpringJson
+        renderer.namedJsonRenderer = namedJsonRenderer
+        renderer.grailsJsonMapperCustomizer = grailsJsonMapperCustomizer
+        if (validationProblemDetailFactory != null) {
+            renderer.validationProblemDetailFactory = validationProblemDetailFactory
+        }
+        if (springMessageConverters != null) {
+            renderer.springHttpMessageConvertersSupplier = springMessageConverters::getConverters
+        }
     }
 
     @Autowired(required = false)

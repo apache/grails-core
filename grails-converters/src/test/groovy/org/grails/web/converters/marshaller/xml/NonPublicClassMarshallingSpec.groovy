@@ -36,7 +36,7 @@ import org.grails.web.converters.beans.GroovyPersonFactory
 import org.grails.web.converters.beans.JavaPersonFactory
 import org.grails.web.converters.beans.SerializableGroovyBean
 import org.grails.web.converters.beans.SerializableJavaBean
-import org.grails.web.converters.configuration.ConvertersConfigurationInitializer
+import org.grails.web.converters.configuration.XmlConvertersConfigurationInitializer
 
 /**
  * Marshalling objects whose class is not public (anonymous, inner or package-private) and ordinary
@@ -49,7 +49,7 @@ class NonPublicClassMarshallingSpec extends Specification {
 
     void setup() {
         ReflectionUtils.resetWarnedClasses()
-        def initializer = new ConvertersConfigurationInitializer()
+        def initializer = new XmlConvertersConfigurationInitializer()
         def grailsApplication = new DefaultGrailsApplication()
         grailsApplication.initialise()
         def mappingContext = new KeyValueMappingContext('xml')
