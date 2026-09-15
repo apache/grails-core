@@ -16,8 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.gsp;
+package org.grails.gsp
 
-public interface GroovyPageSourceDecorator {
-    StringBuilder decorate(StringBuilder source);
+interface GroovyPageSourceDecorator {
+
+    StringBuilder decorate(StringBuilder source)
+
 }

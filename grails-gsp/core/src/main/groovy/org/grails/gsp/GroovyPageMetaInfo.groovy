@@ -1,0 +1,651 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+package org.grails.gsp
+
+import java.lang.ref.SoftReference
+import java.lang.reflect.Constructor
+import java.lang.reflect.Field
+import java.lang.reflect.InvocationTargetException
+import java.lang.reflect.Modifier
+import java.security.PrivilegedAction
+import java.util.concurrent.Callable
+
+import groovy.transform.CompileStatic
+import org.apache.commons.logging.Log
+import org.apache.commons.logging.LogFactory
+import org.springframework.context.ApplicationContext
+import org.springframework.core.io.FileSystemResource
+import org.springframework.core.io.Resource
+import org.springframework.util.ReflectionUtils
+
+import grails.core.GrailsApplication
+import grails.core.support.GrailsApplicationAware
+import grails.io.IOUtils
+import grails.plugins.GrailsPlugin
+import grails.plugins.GrailsPluginManager
+import grails.util.CacheEntry
+import org.grails.encoder.Encoder
+import org.grails.gsp.compiler.GroovyPageParser
+import org.grails.gsp.jsp.TagLibraryResolver
+import org.grails.taglib.TagLibraryLookup
+import org.grails.taglib.encoder.WithCodecHelper
+
+/**
+ * Encapsulates the information necessary to describe a GSP.
+ *
+ * @author Graeme Rocher
+ * @author Lari Hotari
+ * @since 0.5
+ */
+@CompileStatic
+class GroovyPageMetaInfo implements GrailsApplicationAware {
+
+    private static final Log LOG = LogFactory.getLog(GroovyPageMetaInfo)
+    private TagLibraryLookup tagLibraryLookup
+    private TagLibraryResolver jspTagLibraryResolver
+    private ThreadLocal<SoftReference<GroovyPage>> pageInstance = new ThreadLocal<>()
+
+    private boolean precompiledMode = false
+    private Class<?> pageClass
+    private Constructor<?> pageClassConstructor
+    private String sourceChecksum
+    private volatile SourceStamp checksumStamp
+    private InputStream groovySource
+    private String contentType
+    private int[] lineNumbers
+    private String[] htmlParts
+    private Set<Integer> htmlPartsSet
+
+    @SuppressWarnings('rawtypes')
+    private Map jspTags = Collections.emptyMap()
+    private GroovyPagesException compilationException
+    private Encoder expressionEncoder
+    private Encoder staticEncoder
+    private Encoder outEncoder
+    private Encoder taglibEncoder
+    private String expressionCodecName
+    private String staticCodecName
+    private String outCodecName
+    private String taglibCodecName
+    private boolean compileStaticMode
+    private boolean modelFieldsMode
+    private Set<Field> modelFields
+
+    public static final String HTML_DATA_POSTFIX = '_html.data'
+    public static final String LINENUMBERS_DATA_POSTFIX = '_linenumbers.data'
+
+    public static final long LASTMODIFIED_CHECK_INTERVAL = Long.getLong('grails.gsp.reload.interval', 5000).longValue()
+    private GrailsApplication grailsApplication
+
+    private String pluginPath
+    private GrailsPlugin pagePlugin
+    private boolean initialized = false
+
+    private CacheEntry<Resource> shouldReloadCacheEntry = new CacheEntry<>()
+    static String DEFAULT_PLUGIN_PATH = ''
+
+    volatile boolean metaClassShouldBeRemoved = false
+
+    GroovyPageMetaInfo() {
+
+    }
+
+    @SuppressWarnings('rawtypes')
+    GroovyPageMetaInfo(Class<?> pageClass) {
+        this()
+        precompiledMode = true
+        this.pageClass = pageClass
+        try {
+            this.pageClassConstructor = pageClass.getConstructor()
+        } catch (NoSuchMethodException e) {
+            throw new RuntimeException(e)
+        }
+        contentType = (String) ReflectionUtils.getField(ReflectionUtils.findField(pageClass, GroovyPageParser.CONSTANT_NAME_CONTENT_TYPE), null)
+        jspTags = (Map) ReflectionUtils.getField(ReflectionUtils.findField(pageClass, GroovyPageParser.CONSTANT_NAME_JSP_TAGS), null)
+        Field sourceChecksumField = ReflectionUtils.findField(pageClass, GroovyPageParser.CONSTANT_NAME_SOURCE_CHECKSUM)
+        if (sourceChecksumField != null) {
+            sourceChecksum = (String) ReflectionUtils.getField(sourceChecksumField, null)
+        }
+        expressionCodecName = (String) ReflectionUtils.getField(ReflectionUtils.findField(pageClass, GroovyPageParser.CONSTANT_NAME_EXPRESSION_CODEC), null)
+        staticCodecName = (String) ReflectionUtils.getField(ReflectionUtils.findField(pageClass, GroovyPageParser.CONSTANT_NAME_STATIC_CODEC), null)
+        outCodecName = (String) ReflectionUtils.getField(ReflectionUtils.findField(pageClass, GroovyPageParser.CONSTANT_NAME_OUT_CODEC), null)
+        taglibCodecName = (String) ReflectionUtils.getField(ReflectionUtils.findField(pageClass, GroovyPageParser.CONSTANT_NAME_TAGLIB_CODEC), null)
+        Field compileStaticModeField = ReflectionUtils.findField(pageClass, GroovyPageParser.CONSTANT_NAME_COMPILE_STATIC_MODE)
+        if (compileStaticModeField != null) {
+            compileStaticMode = (Boolean) ReflectionUtils.getField(compileStaticModeField, null)
+        }
+        Field modelFieldsModeField = ReflectionUtils.findField(pageClass, GroovyPageParser.CONSTANT_NAME_MODEL_FIELDS_MODE)
+        if (modelFieldsModeField != null) {
+            modelFieldsMode = (Boolean) ReflectionUtils.getField(modelFieldsModeField, null)
+        }
+
+        try {
+            readHtmlData()
+        } catch (IOException e) {
+            throw new RuntimeException('Problem reading html data for page class ' + pageClass, e)
+        }
+    }
+
+    static interface GroovyPageMetaInfoInitializer {
+        void initialize(GroovyPageMetaInfo metaInfo)
+    }
+
+    synchronized void initializeOnDemand(GroovyPageMetaInfoInitializer initializer) {
+        if (!initialized) {
+            initializer.initialize(this)
+        }
+    }
+
+    void initialize() {
+        expressionEncoder = getCodec(expressionCodecName)
+        staticEncoder = getCodec(staticCodecName)
+        outEncoder = getCodec(outCodecName)
+        taglibEncoder = getCodec(taglibCodecName)
+
+        initializePluginPath()
+        initializeModelFields()
+
+        initialized = true
+    }
+
+    private synchronized void initializeModelFields() {
+        if (getPageClass() != null) {
+            Set<Field> modelFields = new HashSet<>()
+            if (modelFieldsMode) {
+                for (Field field in getPageClass().getDeclaredFields()) {
+                    if (!Modifier.isStatic(field.getModifiers()) && !field.isSynthetic()) {
+                        ReflectionUtils.makeAccessible(field)
+                        modelFields.add(field)
+                    }
+                }
+            }
+            this.modelFields = Collections.unmodifiableSet(modelFields)
+        }
+    }
+
+    private Encoder getCodec(String codecName) {
+        return WithCodecHelper.lookupEncoder(grailsApplication, codecName)
+    }
+
+    private void initializePluginPath() {
+        if (grailsApplication == null || pageClass == null) {
+            return
+        }
+
+        final ApplicationContext applicationContext = grailsApplication.getMainContext()
+        if (applicationContext == null || !applicationContext.containsBean(GrailsPluginManager.BEAN_NAME)) {
+            return
+        }
+
+        GrailsPluginManager pluginManager = applicationContext.getBean(GrailsPluginManager.BEAN_NAME, GrailsPluginManager)
+        pluginPath = pluginManager.getPluginPathForClass(pageClass)
+        if (pluginPath == null) pluginPath = DEFAULT_PLUGIN_PATH
+        pagePlugin = pluginManager.getPluginForClass(pageClass)
+    }
+
+    /**
+     * Reads the static html parts from a file stored in a separate file in the same package as the precompiled GSP class
+     *
+     * @throws IOException
+     */
+    private void readHtmlData() throws IOException {
+        String dataResourceName = resolveDataResourceName(HTML_DATA_POSTFIX)
+
+        DataInputStream input = null
+        try {
+            InputStream resourceStream = pageClass.getResourceAsStream(dataResourceName)
+
+            if (resourceStream != null) {
+
+                input = new DataInputStream(resourceStream)
+                int arrayLen = input.readInt()
+                htmlParts = new String[arrayLen]
+                for (int i = 0; i < arrayLen; i++) {
+                    htmlParts[i] = input.readUTF()
+                }
+            }
+        } finally {
+            IOUtils.closeQuietly(input)
+        }
+    }
+
+    /**
+     * reads the linenumber mapping information from a separate file that has been generated at precompile time
+     *
+     * @throws IOException
+     */
+    private void readLineNumbers() throws IOException {
+        String dataResourceName = resolveDataResourceName(LINENUMBERS_DATA_POSTFIX)
+
+        DataInputStream input = null
+        try {
+            input = new DataInputStream(pageClass.getResourceAsStream(dataResourceName))
+            int arrayLen = input.readInt()
+            lineNumbers = new int[arrayLen]
+            for (int i = 0; i < arrayLen; i++) {
+                lineNumbers[i] = input.readInt()
+            }
+        } finally {
+            IOUtils.closeQuietly(input)
+        }
+    }
+
+    /**
+     * resolves the file name for html and linenumber data files
+     * the file name is the classname + POSTFIX
+     *
+     * @param postfix
+     * @return The data resource name
+     */
+    private String resolveDataResourceName(String postfix) {
+        String dataResourceName = pageClass.getName()
+        int pos = dataResourceName.lastIndexOf('.')
+        if (pos > -1) {
+            dataResourceName = dataResourceName.substring(pos + 1)
+        }
+        dataResourceName += postfix
+        return dataResourceName
+    }
+
+    TagLibraryLookup getTagLibraryLookup() {
+        return tagLibraryLookup
+    }
+
+    void setTagLibraryLookup(TagLibraryLookup tagLibraryLookup) {
+        this.tagLibraryLookup = tagLibraryLookup
+    }
+
+    TagLibraryResolver getJspTagLibraryResolver() {
+        return jspTagLibraryResolver
+    }
+
+    void setJspTagLibraryResolver(TagLibraryResolver jspTagLibraryResolver) {
+        this.jspTagLibraryResolver = jspTagLibraryResolver
+    }
+
+    Class<?> getPageClass() {
+        return pageClass
+    }
+
+    GroovyPage getPageClassInstance() throws InstantiationException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+        SoftReference<GroovyPage> pageSoftRef = pageInstance.get()
+        GroovyPage pageCacheEntry = pageSoftRef != null ? pageSoftRef.get() : null
+        if (pageCacheEntry == null) {
+            pageCacheEntry = (GroovyPage) pageClassConstructor.newInstance()
+            pageCacheEntry.initCommonRun(this)
+            if (!isModelFieldsMode()) {
+                pageInstance.set(new SoftReference<>(pageCacheEntry))
+            }
+        }
+        return pageCacheEntry
+    }
+
+    void setPageClass(Class<?> pageClass) {
+        this.pageClass = pageClass
+
+        try {
+            this.pageClassConstructor = pageClass.getConstructor()
+        } catch (NoSuchMethodException e) {
+            throw new RuntimeException(e)
+        }
+        pageInstance.set(null)
+        initializePluginPath()
+    }
+
+    /**
+     * @return the checksum of the GSP source this page was compiled from, or {@code null} if none was recorded
+     * @since 8.0.0
+     */
+    String getSourceChecksum() {
+        return this.sourceChecksum
+    }
+
+    /**
+     * @param sourceChecksum the checksum of the GSP source this page was compiled from
+     * @since 8.0.0
+     */
+    void setSourceChecksum(String sourceChecksum) {
+        this.sourceChecksum = sourceChecksum
+    }
+
+    InputStream getGroovySource() {
+        return groovySource
+    }
+
+    void setGroovySource(InputStream groovySource) {
+        this.groovySource = groovySource
+    }
+
+    String getContentType() {
+        return contentType
+    }
+
+    void setContentType(String contentType) {
+        this.contentType = contentType
+    }
+
+    int[] getLineNumbers() {
+        if (precompiledMode) {
+            return getPrecompiledLineNumbers()
+        }
+
+        return lineNumbers
+    }
+
+    private synchronized int[] getPrecompiledLineNumbers() {
+        if (lineNumbers == null) {
+            try {
+                readLineNumbers()
+            } catch (IOException e) {
+                LOG.warn('Problem reading precompiled linenumbers', e)
+            }
+        }
+        return lineNumbers
+    }
+
+    void setLineNumbers(int[] lineNumbers) {
+        this.lineNumbers = lineNumbers
+    }
+
+    @SuppressWarnings('rawtypes')
+    void setJspTags(Map jspTags) {
+        this.jspTags = jspTags != null ? jspTags : Collections.emptyMap()
+    }
+
+    @SuppressWarnings('rawtypes')
+    Map getJspTags() {
+        return jspTags
+    }
+
+    void setCompilationException(GroovyPagesException e) {
+        compilationException = e
+    }
+
+    GroovyPagesException getCompilationException() {
+        return compilationException
+    }
+
+    String[] getHtmlParts() {
+        return htmlParts
+    }
+
+    void setHtmlParts(String[] htmlParts) {
+        this.htmlParts = htmlParts
+        this.htmlPartsSet = new HashSet<>()
+        if (htmlParts != null) {
+            for (String htmlPart in htmlParts) {
+                if (htmlPart != null) {
+                    htmlPartsSet.add(System.identityHashCode(htmlPart))
+                }
+            }
+        }
+    }
+
+    Set<Integer> getHtmlPartsSet() {
+        return this.htmlPartsSet
+    }
+
+    /**
+     * The modification time and length a page's source had when it last matched the recorded checksum.
+     */
+    private static record SourceStamp(long lastModified, long contentLength) {
+    }
+
+    /**
+     * Decides whether the given source still hashes to the checksum this page recorded.
+     * <p>
+     * Hashing means reading the page in full, so the modification time and length observed the last time the
+     * two matched are kept, and the read is skipped while neither has moved. That returns the steady-state
+     * cost of a reload-enabled application to one stat per page per check interval, which is what the
+     * timestamp comparison used to cost.
+     * <p>
+     * Note what role the timestamp plays here: it is a fast path for skipping work, never the thing that
+     * decides staleness. Anything that moves it without changing the page -- a fresh checkout, a copy, a
+     * touch -- costs one hash and then correctly reports no change, where the old comparison reported the
+     * page stale. The one edit this misses is an edit preserving both the modification time and the exact
+     * length, which no ordinary save produces.
+     *
+     * @param resource the source to compare against the recorded checksum
+     * @return true if the source no longer matches
+     */
+    private boolean hasSourceChecksumChanged(Resource resource) {
+        SourceStamp stamp = readSourceStamp(resource)
+        if (stamp != null && stamp.equals(this.checksumStamp)) {
+            return false
+        }
+        String currentChecksum = establishChecksum(resource)
+        if (currentChecksum == null) {
+            return false
+        }
+        if (this.sourceChecksum.equals(currentChecksum)) {
+            this.checksumStamp = stamp
+            return false
+        }
+        return true
+    }
+
+    /**
+     * @param resource the Resource to stamp
+     * @return its modification time and length, or null if either could not be read -- in which case the
+     * caller must hash rather than assume the source is unchanged
+     */
+    private SourceStamp readSourceStamp(Resource resource) {
+        long modified = establishLastModified(resource)
+        if (modified <= 0) {
+            return null
+        }
+        try {
+            long length = resource.contentLength()
+            return length >= 0 ? new SourceStamp(modified, length) : null
+        }
+        catch (IOException e) {
+            return null
+        }
+    }
+
+    /**
+     * Attempts to checksum the given resource. If it cannot be read, {@code null} is returned, which is
+     * treated the same way an unobtainable modification time is: the page is left alone rather than
+     * reloaded on the strength of a failed read.
+     *
+     * @param resource the Resource to digest
+     * @return the checksum, or null if it could not be established
+     */
+    private String establishChecksum(Resource resource) {
+        if (resource == null) {
+            return null
+        }
+        try {
+            return GroovyPageParser.checksumOf(resource.getContentAsByteArray())
+        }
+        catch (IOException e) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug('Unable to checksum GSP source [' + resource + '], leaving the compiled page in place', e)
+            }
+            return null
+        }
+    }
+
+    /**
+     * Attempts to establish what the last modified date of the given resource is. If the last modified date cannot
+     * be etablished -1 is returned
+     *
+     * @param resource The Resource to evaluate
+     * @return The last modified date or -1
+     */
+    private long establishLastModified(Resource resource) {
+        if (resource == null) return -1
+
+        if (resource instanceof FileSystemResource) {
+            return ((FileSystemResource) resource).getFile().lastModified()
+        }
+
+        long last
+        URLConnection urlc = null
+
+        try {
+            URL url = resource.getURL()
+            if ('file'.equals(url.getProtocol())) {
+                File file = new File(url.getFile())
+                if (file.exists()) {
+                    return file.lastModified()
+                }
+            }
+            urlc = url.openConnection()
+            urlc.setDoInput(false)
+            urlc.setDoOutput(false)
+            last = urlc.getLastModified()
+        } catch (FileNotFoundException fnfe) {
+            last = -1
+        } catch (IOException e) {
+            last = -1
+        } finally {
+            if (urlc != null) {
+                try {
+                    InputStream is = urlc.getInputStream()
+                    if (is != null) {
+                        is.close()
+                    }
+                } catch (IOException e) {
+                    // ignore
+                }
+            }
+        }
+
+        return last
+    }
+
+    /**
+     * Checks if this GSP has expired and should be reloaded (there is a newer source gsp available)
+     * PrivilegedAction is used so that locating the Resource is lazily evaluated.
+     *
+     * lastModified checking is done only when enough time has expired since the last check. This setting is controlled by the grails.gsp.reload.interval System property,
+     * by default it's value is 5000 (ms).
+     *
+     * @param resourceCallable call back that resolves the source gsp lazily
+     * @return true if the available gsp source file is newer than the loaded one.
+     */
+    boolean shouldReload(final PrivilegedAction<Resource> resourceCallable) {
+        if (resourceCallable == null) return false
+        Resource resource = checkIfReloadableResourceHasChanged(resourceCallable)
+        return (resource != null)
+    }
+
+    Resource checkIfReloadableResourceHasChanged(final PrivilegedAction<Resource> resourceCallable) {
+        Callable<Resource> checkerCallable = new Callable<Resource>() {
+            Resource call() {
+                Resource resource = resourceCallable.run()
+                if (resource != null && resource.exists() && sourceChecksum != null) {
+                    // Staleness is decided by comparing content. A page that was merely touched is not stale,
+                    // and an edit is caught however close together the writes fall.
+                    return hasSourceChecksumChanged(resource) ? resource : null
+                }
+                return null
+            }
+        }
+        return shouldReloadCacheEntry.getValue(LASTMODIFIED_CHECK_INTERVAL, checkerCallable, true, null)
+    }
+
+    boolean isPrecompiledMode() {
+        return precompiledMode
+    }
+
+    GrailsApplication getGrailsApplication() {
+        return grailsApplication
+    }
+
+    void setGrailsApplication(GrailsApplication grailsApplication) {
+        this.grailsApplication = grailsApplication
+    }
+
+    String getPluginPath() {
+        return pluginPath
+    }
+
+    GrailsPlugin getPagePlugin() {
+        return pagePlugin
+    }
+
+    Encoder getOutEncoder() {
+        return outEncoder
+    }
+
+    Encoder getStaticEncoder() {
+        return staticEncoder
+    }
+
+    Encoder getExpressionEncoder() {
+        return expressionEncoder
+    }
+
+    Encoder getTaglibEncoder() {
+        return taglibEncoder
+    }
+
+    void setExpressionCodecName(String expressionCodecName) {
+        this.expressionCodecName = expressionCodecName
+    }
+
+    void setStaticCodecName(String staticCodecName) {
+        this.staticCodecName = staticCodecName
+    }
+
+    void setOutCodecName(String pageCodecName) {
+        this.outCodecName = pageCodecName
+    }
+
+    void setTaglibCodecName(String taglibCodecName) {
+        this.taglibCodecName = taglibCodecName
+    }
+
+    boolean isCompileStaticMode() {
+        return compileStaticMode
+    }
+
+    void setCompileStaticMode(boolean compileStaticMode) {
+        this.compileStaticMode = compileStaticMode
+    }
+
+    boolean isModelFieldsMode() {
+        return modelFieldsMode
+    }
+
+    void setModelFieldsMode(boolean modelFieldsMode) {
+        this.modelFieldsMode = modelFieldsMode
+    }
+
+    Set<Field> getModelFields() {
+        if (modelFields == null) {
+            initializeModelFields()
+        }
+        return modelFields
+    }
+
+    void removePageMetaClass() {
+        metaClassShouldBeRemoved = true
+        if (pageClass != null) {
+            GroovySystem.getMetaClassRegistry().removeMetaClass(pageClass)
+        }
+    }
+
+    void writeToFinished(Writer out) {
+        if (metaClassShouldBeRemoved) {
+            removePageMetaClass()
+        }
+    }
+
+}

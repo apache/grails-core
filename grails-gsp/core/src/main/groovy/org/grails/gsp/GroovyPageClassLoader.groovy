@@ -16,16 +16,16 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.gsp;
+package org.grails.gsp
 
-import java.security.CodeSource;
+import java.security.CodeSource
 
-import groovy.lang.GroovyClassLoader;
-import org.codehaus.groovy.control.CompilationUnit;
-import org.codehaus.groovy.control.CompilerConfiguration;
-import org.codehaus.groovy.control.Phases;
+import groovy.transform.CompileStatic
+import org.codehaus.groovy.control.CompilationUnit
+import org.codehaus.groovy.control.CompilerConfiguration
+import org.codehaus.groovy.control.Phases
 
-import org.grails.gsp.compiler.transform.GroovyPageInjectionOperation;
+import org.grails.gsp.compiler.transform.GroovyPageInjectionOperation
 
 /**
  * A class loader that is aware of Groovy Pages and injection operations.
@@ -33,26 +33,27 @@ import org.grails.gsp.compiler.transform.GroovyPageInjectionOperation;
  * @author Stephane Maldini
  * @since 2.0
  */
-public class GroovyPageClassLoader extends GroovyClassLoader {
+@CompileStatic
+class GroovyPageClassLoader extends GroovyClassLoader {
 
-    public GroovyPageClassLoader() {
+    GroovyPageClassLoader() {
         // default
     }
 
-    public GroovyPageClassLoader(ClassLoader loader) {
-        super(loader);
+    GroovyPageClassLoader(ClassLoader loader) {
+        super(loader)
     }
 
-    public GroovyPageClassLoader(GroovyClassLoader parent) {
-        super(parent);
+    GroovyPageClassLoader(GroovyClassLoader parent) {
+        super(parent)
     }
 
-    public GroovyPageClassLoader(ClassLoader parent, CompilerConfiguration config, boolean useConfigurationClasspath) {
-        super(parent, config, useConfigurationClasspath);
+    GroovyPageClassLoader(ClassLoader parent, CompilerConfiguration config, boolean useConfigurationClasspath) {
+        super(parent, config, useConfigurationClasspath)
     }
 
-    public GroovyPageClassLoader(ClassLoader loader, CompilerConfiguration config) {
-        super(loader, config);
+    GroovyPageClassLoader(ClassLoader loader, CompilerConfiguration config) {
+        super(loader, config)
     }
 
     /**
@@ -60,13 +61,14 @@ public class GroovyPageClassLoader extends GroovyClassLoader {
      */
     @Override
     protected CompilationUnit createCompilationUnit(CompilerConfiguration config, CodeSource source) {
-        CompilationUnit cu = super.createCompilationUnit(config, source);
+        CompilationUnit cu = super.createCompilationUnit(config, source)
 
-        GroovyPageInjectionOperation operation;
+        GroovyPageInjectionOperation operation
 
-        operation = new GroovyPageInjectionOperation();
+        operation = new GroovyPageInjectionOperation()
 
-        cu.addPhaseOperation(operation, Phases.CANONICALIZATION);
-        return cu;
+        cu.addPhaseOperation(operation, Phases.CANONICALIZATION)
+        return cu
     }
+
 }

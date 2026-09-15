@@ -16,14 +16,14 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.gsp.aot;
+package org.apache.grails.gsp.aot
 
-import org.jspecify.annotations.Nullable;
+import groovy.transform.CompileStatic
+import org.jspecify.annotations.Nullable
+import org.springframework.aot.hint.RuntimeHints
+import org.springframework.aot.hint.RuntimeHintsRegistrar
 
-import org.springframework.aot.hint.RuntimeHints;
-import org.springframework.aot.hint.RuntimeHintsRegistrar;
-
-import org.grails.gsp.GroovyPageMetaInfo;
+import org.grails.gsp.GroovyPageMetaInfo
 
 /**
  * Registers what a page compiled at build time is read from.
@@ -38,15 +38,17 @@ import org.grails.gsp.GroovyPageMetaInfo;
  *
  * @since 8.0
  */
-public class PrecompiledPageRuntimeHints implements RuntimeHintsRegistrar {
+@CompileStatic
+class PrecompiledPageRuntimeHints implements RuntimeHintsRegistrar {
 
     /** Where the pages compiled at build time are listed, read to find them at all. */
-    private static final String VIEWS = "gsp/views.properties";
+    private static final String VIEWS = 'gsp/views.properties'
 
     @Override
-    public void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
-        hints.resources().registerPattern(VIEWS);
-        hints.resources().registerPattern("*" + GroovyPageMetaInfo.HTML_DATA_POSTFIX);
-        hints.resources().registerPattern("*" + GroovyPageMetaInfo.LINENUMBERS_DATA_POSTFIX);
+    void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
+        hints.resources().registerPattern(VIEWS)
+        hints.resources().registerPattern('*' + GroovyPageMetaInfo.HTML_DATA_POSTFIX)
+        hints.resources().registerPattern('*' + GroovyPageMetaInfo.LINENUMBERS_DATA_POSTFIX)
     }
+
 }

@@ -16,10 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.gsp;
+package org.grails.gsp
 
-import org.grails.core.exceptions.GrailsException;
-import org.grails.exceptions.reporting.SourceCodeAware;
+import groovy.transform.CompileStatic
+
+import org.grails.core.exceptions.GrailsException
+import org.grails.exceptions.reporting.SourceCodeAware
 
 /**
  * Thrown when processing GSP pages.
@@ -27,37 +29,39 @@ import org.grails.exceptions.reporting.SourceCodeAware;
  * @author Graeme Rocher
  * @since 0.5
  */
-public class GroovyPagesException extends GrailsException implements SourceCodeAware {
+@CompileStatic
+class GroovyPagesException extends GrailsException implements SourceCodeAware {
 
-    private static final long serialVersionUID = 6142857809397583528L;
-    private int lineNumber;
-    private String fileName;
+    private static final long serialVersionUID = 6142857809397583528L
+    private int lineNumber
+    private String fileName
 
-    public GroovyPagesException(String message, Throwable e) {
-        super(message, e);
+    GroovyPagesException(String message, Throwable e) {
+        super(message, e)
     }
 
-    public GroovyPagesException(String message, Throwable exception, int lineNumber, String fileName) {
-        super(message, exception);
-        this.lineNumber = lineNumber;
-        this.fileName = fileName;
+    GroovyPagesException(String message, Throwable exception, int lineNumber, String fileName) {
+        super(message, exception)
+        this.lineNumber = lineNumber
+        this.fileName = fileName
     }
 
-    public GroovyPagesException(String message) {
-        super(message);
+    GroovyPagesException(String message) {
+        super(message)
     }
 
-    public String getFileName() {
+    String getFileName() {
         if (fileName == null && getCause() instanceof SourceCodeAware) {
-            return ((SourceCodeAware) getCause()).getFileName();
+            return ((SourceCodeAware) getCause()).getFileName()
         }
-        return fileName;
+        return fileName
     }
 
-    public int getLineNumber() {
+    int getLineNumber() {
         if (lineNumber == -1 && getCause() instanceof SourceCodeAware) {
-            return ((SourceCodeAware) getCause()).getLineNumber();
+            return ((SourceCodeAware) getCause()).getLineNumber()
         }
-        return lineNumber;
+        return lineNumber
     }
+
 }

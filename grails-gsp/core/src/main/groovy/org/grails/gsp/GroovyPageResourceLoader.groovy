@@ -16,15 +16,15 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.gsp;
+package org.grails.gsp
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import groovy.transform.CompileStatic
+import org.apache.commons.logging.Log
+import org.apache.commons.logging.LogFactory
+import org.springframework.core.io.Resource
+import org.springframework.util.Assert
 
-import org.springframework.core.io.Resource;
-import org.springframework.util.Assert;
-
-import org.grails.core.io.StaticResourceLoader;
+import org.grails.core.io.StaticResourceLoader
 
 /**
  * A StaticResourceLoader that loads GSPs from a local grails-app folder instead of from WEB-INF in
@@ -35,34 +35,36 @@ import org.grails.core.io.StaticResourceLoader;
  * @author Graeme Rocher
  * @since 0.5
  */
-public class GroovyPageResourceLoader extends StaticResourceLoader {
+@CompileStatic
+class GroovyPageResourceLoader extends StaticResourceLoader {
 
     /**
      * The id of the instance of this bean to be used in the Spring context
      */
-    public static final String BEAN_ID = "groovyPageResourceLoader";
+    public static final String BEAN_ID = 'groovyPageResourceLoader'
 
-    private static final Log LOG = LogFactory.getLog(GroovyPageResourceLoader.class);
-    private static final String PLUGINS_PATH = "/plugins/";
+    private static final Log LOG = LogFactory.getLog(GroovyPageResourceLoader)
+    private static final String PLUGINS_PATH = '/plugins/'
 
-    private Resource localBaseResource;
+    private Resource localBaseResource
 
     @Override
-    public void setBaseResource(Resource baseResource) {
-        localBaseResource = baseResource;
-        super.setBaseResource(baseResource);
+    void setBaseResource(Resource baseResource) {
+        localBaseResource = baseResource
+        super.setBaseResource(baseResource)
     }
 
     @Override
-    public Resource getResource(String location) {
-        Assert.hasLength(location, "Argument [location] cannot be null or blank");
+    Resource getResource(String location) {
+        Assert.hasLength(location, 'Argument [location] cannot be null or blank')
 
-        Resource resource = super.getResource(location);
+        Resource resource = super.getResource(location)
 
         if (LOG.isDebugEnabled()) {
-            LOG.debug("Resolved GSP location [" + location + "] to resource [" + resource +
-                    "] (exists? [" + resource.exists() + "]) using base resource [" + localBaseResource + "]");
+            LOG.debug('Resolved GSP location [' + location + '] to resource [' + resource +
+                    '] (exists? [' + resource.exists() + ']) using base resource [' + localBaseResource + ']')
         }
-        return resource;
+        return resource
     }
+
 }
