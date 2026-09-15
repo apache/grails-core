@@ -380,9 +380,24 @@ class GrailsGradlePlugin implements Plugin<Project> {
             // on the property directly tries to convert the file itself into a task, and building a
             // collection from a property with no value fails while dependencies are resolved.
             t.dependsOn({
-                RegularFileProperty configured = project.tasks.named(compileTaskName, GroovyCompile)
-                        .get().groovyOptions.configurationScriptFile
-                configured.present ? [project.files(configured)] : []
+                GroovyCompile compile = project.tasks.named(compileTaskName, GroovyCompile).get()
+                RegularFileProperty configured = compile.groovyOptions.configurationScriptFile
+                if (!configured.present) {
+                    return []
+                }
+                FileCollection scriptFiles = project.files(configured)
+                List<Object> dependencies = [scriptFiles]
+                if (scriptFiles.buildDependencies.getDependencies(t).isEmpty()) {
+                    // A plain file has no producer metadata. Preserve the older file + dependsOn
+                    // wiring by matching only direct compile dependencies that declare this exact
+                    // output. Inheriting unrelated dependencies could introduce a cycle, and
+                    // reading the compile or runtime classpath would restore the original bug.
+                    File scriptFile = configured.asFile.get()
+                    dependencies.addAll(compile.taskDependencies.getDependencies(compile).findAll { Task dependency ->
+                        dependency != t && dependency.outputs.files.contains(scriptFile)
+                    })
+                }
+                dependencies
             } as Callable)
         }
     }

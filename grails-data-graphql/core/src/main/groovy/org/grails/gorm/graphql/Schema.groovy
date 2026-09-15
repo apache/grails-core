@@ -381,7 +381,7 @@ class Schema {
                     DataFetcher countFetcher = dataFetcherManager.getReadingFetcher(entity, COUNT).orElse(new CountEntityDataFetcher(entity))
 
                     final String countFieldName = namingConvention.getCount(entity)
-                    final GraphQLOutputType countOutputType = (GraphQLOutputType) typeManager.getType(Integer)
+                    final GraphQLOutputType countOutputType = (GraphQLOutputType) typeManager.getType(Long)
 
                     GraphQLFieldDefinition.Builder queryCount = newFieldDefinition()
                             .name(countFieldName)

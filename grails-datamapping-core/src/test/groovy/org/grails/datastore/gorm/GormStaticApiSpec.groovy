@@ -28,6 +28,7 @@ import org.grails.datastore.mapping.core.connections.ConnectionSources
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
 import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.simple.SimpleMapDatastore
@@ -105,10 +106,33 @@ class GormStaticApiSpec extends Specification {
         def api = new GormStaticApi(GormStaticApiThing, datastore, [])
 
         when:
-        Integer n = api.count()
+        Long n = api.count()
 
         then:
-        n == 0
+        n == 0L
+    }
+
+    void "count() preserves a datastore count above Integer.MAX_VALUE"() {
+        given:
+        def ds = Stub(Datastore)
+        def session = Stub(Session)
+        def query = Mock(Query)
+        ds.getMappingContext() >> datastore.mappingContext
+        ds.connect() >> session
+        session.getDatastore() >> ds
+        session.createQuery(GormStaticApiThing) >> query
+        query.projections() >> Mock(Query.ProjectionList)
+        query.singleResult() >> 3_000_000_000L
+        def api = new GormStaticApi(GormStaticApiThing, ds, [])
+
+        expect: 'the value survives instead of wrapping to a negative int'
+        api.count() == 3_000_000_000L
+    }
+
+    void "the count members a domain class exposes are Long"() {
+        expect:
+        GormStaticApiThing.count() instanceof Long
+        GormStaticApiThing.count instanceof Long
     }
 
     void "getGormDynamicFinders returns the finders the api was constructed with"() {

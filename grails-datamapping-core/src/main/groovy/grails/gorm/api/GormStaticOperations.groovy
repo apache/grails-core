@@ -235,12 +235,12 @@ interface GormStaticOperations<D> {
      * Counts the number of persisted entities
      * @return The number of persisted entities
      */
-    Integer count()
+    Long count()
 
     /**
      * Same as {@link #count()} but allows property-style syntax (Foo.count)
      */
-    Integer getCount()
+    Long getCount()
 
     /**
      * Checks whether an entity exists

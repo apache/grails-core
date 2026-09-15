@@ -423,7 +423,11 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
 
     protected void encodeEmbeddedCollectionUpdate(EntityAccess parentAccess, BsonDocument sets, Document unsets, Association association, Object v) {
         if (v instanceof Collection) {
-            if ((v instanceof DirtyCheckableCollection) && !((DirtyCheckableCollection) v).hasChangedSize()) {
+            // Per-element updates are only valid for the decoded collection mutated in place —
+            // an ASSIGNED wrapper is a wholesale replacement whose layout need not match the
+            // stored array, so it must fall through to the full re-encode below.
+            if ((v instanceof DirtyCheckableCollection) && !((DirtyCheckableCollection) v).hasChangedSize()
+                    && !((DirtyCheckableCollection) v).isAssigned()) {
                 int i = 0
                 for (o in (v as Collection)) {
                     def embeddedUpdate = encodeUpdate(o, createEntityAccess(o), EncoderContext.builder().build(), true)

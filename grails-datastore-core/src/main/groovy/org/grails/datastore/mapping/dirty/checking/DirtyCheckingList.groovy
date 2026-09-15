@@ -19,6 +19,8 @@
 
 package org.grails.datastore.mapping.dirty.checking
 
+import java.util.function.UnaryOperator
+
 import groovy.transform.CompileStatic
 
 /**
@@ -33,7 +35,11 @@ class DirtyCheckingList extends DirtyCheckingCollection implements List {
     @Delegate List target
 
     DirtyCheckingList(List target, DirtyCheckable parent, String property) {
-        super(target, parent, property)
+        this(target, parent, property, false)
+    }
+
+    DirtyCheckingList(List target, DirtyCheckable parent, String property, boolean assigned) {
+        super(target, parent, property, assigned)
         this.target = target
     }
 
@@ -59,5 +65,109 @@ class DirtyCheckingList extends DirtyCheckingCollection implements List {
     Object remove(int index) {
         parent.markDirty(property)
         target.remove((int) index)
+    }
+
+    @Override
+    void sort(Comparator c) {
+        parent.markDirty(property)
+        target.sort(c)
+    }
+
+    @Override
+    void replaceAll(UnaryOperator operator) {
+        parent.markDirty(property)
+        target.replaceAll(operator)
+    }
+
+    // SequencedCollection (Java 21) mutators. Without these the @Delegate-generated versions
+    // call straight through to the target, bypassing change tracking entirely.
+    @Override
+    void addFirst(Object element) {
+        parent.markDirty(property)
+        target.addFirst(element)
+    }
+
+    @Override
+    void addLast(Object element) {
+        parent.markDirty(property)
+        target.addLast(element)
+    }
+
+    @Override
+    Object removeFirst() {
+        parent.markDirty(property)
+        target.removeFirst()
+    }
+
+    @Override
+    Object removeLast() {
+        parent.markDirty(property)
+        target.removeLast()
+    }
+
+    @Override
+    List reversed() {
+        // A live view that writes through to this list — return it tracking the same parent
+        // Flagged as assigned: a view stored on a property IS a wholesale replacement, and a
+        // persister must re-encode it rather than diff it element-by-element against what the
+        // property held before. The flag is inert for a view that is only traversed.
+        return new DirtyCheckingList(target.reversed(), parent, property, true)
+    }
+
+    @Override
+    List subList(int fromIndex, int toIndex) {
+        // A live view that writes through to this list — return it tracking the same parent
+        return new DirtyCheckingList(target.subList(fromIndex, toIndex), parent, property, true)
+    }
+
+    @Override
+    ListIterator listIterator() {
+        trackingListIterator(target.listIterator())
+    }
+
+    @Override
+    ListIterator listIterator(int index) {
+        trackingListIterator(target.listIterator(index))
+    }
+
+    /** A list iterator whose mutating operations mark the parent dirty (see {@link DirtyCheckingCollection#iterator()}). */
+    private ListIterator trackingListIterator(final ListIterator underlying) {
+        return new ListIterator() {
+            @Override
+            boolean hasNext() { underlying.hasNext() }
+
+            @Override
+            Object next() { underlying.next() }
+
+            @Override
+            boolean hasPrevious() { underlying.hasPrevious() }
+
+            @Override
+            Object previous() { underlying.previous() }
+
+            @Override
+            int nextIndex() { underlying.nextIndex() }
+
+            @Override
+            int previousIndex() { underlying.previousIndex() }
+
+            @Override
+            void remove() {
+                parent.markDirty(property)
+                underlying.remove()
+            }
+
+            @Override
+            void set(Object o) {
+                parent.markDirty(property)
+                underlying.set(o)
+            }
+
+            @Override
+            void add(Object o) {
+                parent.markDirty(property)
+                underlying.add(o)
+            }
+        }
     }
 }

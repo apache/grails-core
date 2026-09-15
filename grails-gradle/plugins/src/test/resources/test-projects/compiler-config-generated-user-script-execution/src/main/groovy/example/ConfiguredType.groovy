@@ -16,28 +16,14 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+package example
 
-package org.grails.datastore.mapping.dirty.checking
+class ConfiguredType {
 
-import groovy.transform.CompileStatic
-
-/**
- * Wrapper list to dirty check a list and mark a parent as dirty
- *
- * @author Graeme Rocher
- * @since 4.1
- */
-@CompileStatic
-class DirtyCheckingSet extends DirtyCheckingCollection implements Set {
-
-    @Delegate Set target
-
-    DirtyCheckingSet(Set target, DirtyCheckable parent, String property) {
-        this(target, parent, property, false)
-    }
-
-    DirtyCheckingSet(Set target, DirtyCheckable parent, String property, boolean assigned) {
-        super(target, parent, property, assigned)
-        this.target = target
+    static void main(String[] args) {
+        ImportedType value = null
+        AtomicInteger count = new AtomicInteger()
+        println "CONFIGURED_TYPE=${ImportedType.name}"
+        println "GRAILS_IMPORT=${count.incrementAndGet()}"
     }
 }

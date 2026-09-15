@@ -475,7 +475,7 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
                         if (!paginationArgs.containsKey(PAGINATION_TOTAL) || !paginationArgs.containsKey(PAGINATION_RESROUCE)) {
                             throw new IllegalArgumentException('JSON API pagination arguments must contain resource and total')
                         }
-                        Integer total = (Integer) paginationArgs.get(PAGINATION_TOTAL)
+                        Long total = ((Number) paginationArgs.get(PAGINATION_TOTAL)).longValue()
                         Object resource = paginationArgs.get(PAGINATION_RESROUCE)
                         Parameters params = defaultPaginateParams(paginationArgs)
                         List<Link> links = getPaginationLinks(resource, total, params)
