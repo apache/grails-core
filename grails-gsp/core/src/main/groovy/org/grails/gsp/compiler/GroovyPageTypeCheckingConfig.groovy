@@ -17,17 +17,18 @@
  *  under the License.
  */
 
-package org.grails.gsp.compiler;
+package org.grails.gsp.compiler
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.ElementType
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
 
 @Retention(RetentionPolicy.SOURCE)
 @Target(ElementType.TYPE)
-public @interface GroovyPageTypeCheckingConfig {
-    String[] taglibs() default {};
+@interface GroovyPageTypeCheckingConfig {
+
+    String[] taglibs() default []
 
     /**
      * Names the page introduces for itself, through the {@code var} and {@code status} attributes of
@@ -38,7 +39,7 @@ public @interface GroovyPageTypeCheckingConfig {
      * rather than reported, so that using a tag to introduce a name does not require declaring it a
      * second time in the model directive.</p>
      */
-    String[] pageScopeVariables() default {};
+    String[] pageScopeVariables() default []
 
     /**
      * Whether a name the page never declares, and a member read from something whose type is not
@@ -49,5 +50,6 @@ public @interface GroovyPageTypeCheckingConfig {
      * has not declared the model of every page: what can be checked is checked, and what cannot is
      * left to run as it always has. Turning it on asks for the guarantee instead.</p>
      */
-    boolean strict() default false;
+    boolean strict() default false
+
 }

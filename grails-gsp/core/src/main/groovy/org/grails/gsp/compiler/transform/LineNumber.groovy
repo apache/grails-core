@@ -16,22 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.gsp.compiler.transform;
+package org.grails.gsp.compiler.transform
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.ElementType
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
 
-import org.codehaus.groovy.transform.GroovyASTTransformationClass;
+import org.codehaus.groovy.transform.GroovyASTTransformationClass
 
 /**
  * @author Andrew Eisenberg
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ ElementType.TYPE })
-@GroovyASTTransformationClass({"org.grails.gsp.compiler.transform.LineNumberTransform"})
-public @interface LineNumber {
-    int[] lines();
-    String sourceName();
+@Target([ ElementType.TYPE ])
+@GroovyASTTransformationClass(['org.grails.gsp.compiler.transform.LineNumberTransform'])
+@interface LineNumber {
+
+    int[] lines()
+    String sourceName()
+
 }
