@@ -16,25 +16,27 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.plugins.support;
+package org.grails.commons
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import grails.core.ArtefactHandler
+import groovy.lang.GroovyClassLoader
+import org.grails.core.artefact.ServiceArtefactHandler
+import org.junit.jupiter.api.Test
 
-import org.springframework.web.servlet.HandlerInterceptor;
-import org.springframework.web.servlet.ModelAndView;
+import static org.junit.jupiter.api.Assertions.assertTrue
 
-public class MyHandlerInterceptor implements HandlerInterceptor {
+/**
+ * @author Marc Palmer
+ */
+class ServiceArtefactHandlerTests {
 
-    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
-        // do nothing
-    }
+    @Test
+    void testIsServiceClass() {
+        GroovyClassLoader gcl = new GroovyClassLoader()
 
-    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) {
-        // do nothing
-    }
+        Class<?> c = gcl.parseClass('class TestService { }\n')
 
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-        return false;
+        ArtefactHandler handler = new ServiceArtefactHandler()
+        assertTrue(handler.isArtefact(c))
     }
 }

@@ -16,27 +16,23 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.commons;
+package org.grails.web.plugins.support
 
-import grails.core.ArtefactHandler;
-import groovy.lang.GroovyClassLoader;
-import org.grails.core.artefact.gsp.TagLibArtefactHandler;
-import org.junit.jupiter.api.Test;
+import org.springframework.ui.ModelMap
+import org.springframework.web.context.request.WebRequest
+import org.springframework.web.context.request.WebRequestInterceptor
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+class MyWebRequestInterceptor implements WebRequestInterceptor {
 
-/**
- * @author Marc Palmer
- */
-public class TagLibArtefactHandlerTests {
+    void afterCompletion(WebRequest request, Exception ex) {
+        // do nothing
+    }
 
-    @Test
-    public void testIsTagLibClass() {
-        GroovyClassLoader gcl = new GroovyClassLoader();
+    void postHandle(WebRequest request, ModelMap model) {
+        // do nothing
+    }
 
-        Class<?> c = gcl.parseClass("class TestTagLib { }\n");
-
-        ArtefactHandler handler = new TagLibArtefactHandler();
-        assertTrue(handler.isArtefact(c));
+    void preHandle(WebRequest request) {
+        // do nothing
     }
 }

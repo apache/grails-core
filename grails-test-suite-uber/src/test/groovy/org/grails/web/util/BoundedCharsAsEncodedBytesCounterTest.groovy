@@ -16,19 +16,25 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.commons.spring;
 
-import grails.core.GrailsApplication;
+package org.grails.web.util
 
-public class GrailsMockDependantObject {
+import org.junit.jupiter.api.Test
 
-    GrailsApplication application;
+import static org.junit.jupiter.api.Assertions.assertEquals
 
-    public GrailsApplication getApplication() {
-        return application;
-    }
+class BoundedCharsAsEncodedBytesCounterTest {
 
-    public void setApplication(GrailsApplication application) {
-        this.application = application;
+    private static final String TEST_STRING = 'Hello öäåÖÄÅ!'
+
+    @Test
+    void testCalculation() {
+        BoundedCharsAsEncodedBytesCounter counter = new BoundedCharsAsEncodedBytesCounter(1024, 'ISO-8859-1')
+        counter.getCountingWriter()
+        counter.update(TEST_STRING)
+        assertEquals(13, counter.size())
+        assertEquals(13, TEST_STRING.getBytes('ISO-8859-1').length)
+        counter.update(TEST_STRING)
+        assertEquals(26, counter.size())
     }
 }

@@ -16,15 +16,15 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.support;
+package org.grails.support
 
-import org.grails.core.io.StaticResourceLoader;
-import org.junit.jupiter.api.Test;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
+import org.grails.core.io.StaticResourceLoader
+import org.junit.jupiter.api.Test
+import org.springframework.core.io.Resource
+import org.springframework.core.io.UrlResource
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals
+import static org.junit.jupiter.api.Assertions.fail
 
 /**
  * Tests for the StaticResourceLoader class
@@ -35,25 +35,25 @@ import static org.junit.jupiter.api.Assertions.fail;
  *        Created: Feb 26, 2007
  *        Time: 3:49:27 PM
  */
-public class StaticResourceLoaderTests {
+class StaticResourceLoaderTests {
 
     @Test
-    public void testGetResource() throws Exception {
-        StaticResourceLoader srl = new StaticResourceLoader();
-        srl.setBaseResource(new UrlResource("https://grails.apache.org/"));
+    void testGetResource() {
+        StaticResourceLoader srl = new StaticResourceLoader()
+        srl.setBaseResource(new UrlResource('https://grails.apache.org/'))
 
-        Resource r = srl.getResource("/Home");
-        assertEquals("https://grails.apache.org/Home", r.getURL().toString());
+        Resource r = srl.getResource('/Home')
+        assertEquals('https://grails.apache.org/Home', r.getURL().toString())
     }
 
     @Test
-    public void testIllegalState() {
-        StaticResourceLoader srl = new StaticResourceLoader();
+    void testIllegalState() {
+        StaticResourceLoader srl = new StaticResourceLoader()
 
         try {
-            srl.getResource("/foo");
-            fail("Should have thrown IllegalStateException");
-        } catch (IllegalStateException ise) {
+            srl.getResource('/foo')
+            fail('Should have thrown IllegalStateException')
+        } catch (IllegalStateException ignored) {
             // expected
         }
     }

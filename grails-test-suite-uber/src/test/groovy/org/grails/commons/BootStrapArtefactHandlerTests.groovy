@@ -16,23 +16,27 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.plugins.support;
+package org.grails.commons
 
-import org.springframework.ui.ModelMap;
-import org.springframework.web.context.request.WebRequest;
-import org.springframework.web.context.request.WebRequestInterceptor;
+import grails.core.ArtefactHandler
+import groovy.lang.GroovyClassLoader
+import org.grails.web.servlet.boostrap.BootstrapArtefactHandler
+import org.junit.jupiter.api.Test
 
-public class MyWebRequestInterceptor implements WebRequestInterceptor {
+import static org.junit.jupiter.api.Assertions.assertTrue
 
-    public void afterCompletion(WebRequest request, Exception ex) {
-        // do nothing
-    }
+/**
+ * @author Marc Palmer
+ */
+class BootStrapArtefactHandlerTests {
 
-    public void postHandle(WebRequest request, ModelMap model) {
-        // do nothing
-    }
+    @Test
+    void testIsBootStrapClass() {
+        GroovyClassLoader gcl = new GroovyClassLoader()
 
-    public void preHandle(WebRequest request) throws Exception {
-        // do nothing
+        Class<?> c = gcl.parseClass('class TestBootStrap { }\n')
+
+        ArtefactHandler handler = new BootstrapArtefactHandler()
+        assertTrue(handler.isArtefact(c))
     }
 }

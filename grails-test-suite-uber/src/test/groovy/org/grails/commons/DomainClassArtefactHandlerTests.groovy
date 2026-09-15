@@ -16,26 +16,27 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.commons;
+package org.grails.commons
 
-import grails.core.ArtefactHandler;
-import groovy.lang.GroovyClassLoader;
-import org.grails.core.artefact.ControllerArtefactHandler;
-import org.junit.jupiter.api.Test;
+import grails.core.ArtefactHandler
+import groovy.lang.GroovyClassLoader
+import org.grails.core.artefact.DomainClassArtefactHandler
+import org.junit.jupiter.api.Test
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue
 
 /**
  * @author Marc Palmer
  */
-public class ControllerArtefactHandlerTests {
+class DomainClassArtefactHandlerTests {
 
     @Test
-    public void testIsControllerClass() {
-        GroovyClassLoader gcl = new GroovyClassLoader();
-        Class<?> c = gcl.parseClass("class TestController { }\n");
+    void testIsDomainClass() {
 
-        ArtefactHandler handler = new ControllerArtefactHandler();
-        assertTrue(handler.isArtefact(c));
+        GroovyClassLoader gcl = new GroovyClassLoader()
+        Class<?> c = gcl.parseClass('@grails.persistence.Entity\nclass Test { Long id;Long version;}\n')
+
+        ArtefactHandler handler = new DomainClassArtefactHandler()
+        assertTrue(handler.isArtefact(c))
     }
 }
