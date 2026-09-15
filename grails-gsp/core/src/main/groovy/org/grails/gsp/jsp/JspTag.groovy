@@ -16,17 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.gsp.jsp;
-
-import java.io.Writer;
-import java.util.Map;
-
-import groovy.lang.Closure;
+package org.grails.gsp.jsp
 
 /**
  * An interface that represents a JSP tag that can be invoked by Grails
  */
-public interface JspTag {
+interface JspTag {
 
     /**
      * Main method to invoke a tag library and output to the target write
@@ -34,7 +29,7 @@ public interface JspTag {
      * @param targetWriter The writer the tag should write to
      * @param attributes The tag attributes
      */
-    void doTag(Writer targetWriter, Map<String, Object> attributes);
+    void doTag(Writer targetWriter, Map<String, Object> attributes)
 
     /**
      * Invokes a tag with a closure representing the body of the tag
@@ -42,20 +37,21 @@ public interface JspTag {
      * @param attributes The tag attributes
      * @param body The body of the tag
      */
-    void doTag(Writer targetWriter, Map<String, Object> attributes, Closure<?> body);
+    void doTag(Writer targetWriter, Map<String, Object> attributes, Closure<?> body)
 
     /**
      * @return Return true if the tag class implements the TryCatchFinally interface
      */
-    boolean isTryCatchFinallyTag();
+    boolean isTryCatchFinallyTag()
 
     /**
      * @return Return true if the tag class implements the IterationTag interface
      */
-    boolean isIterationTag();
+    boolean isIterationTag()
 
     /**
      * @return Return true if the tag class implements the BodyTag interface
      */
-    boolean isBodyTag();
+    boolean isBodyTag()
+
 }

@@ -16,11 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.gsp.io;
+package org.grails.gsp.io
 
-import org.springframework.core.io.ResourceLoader;
+import org.springframework.core.io.ResourceLoader
 
-import org.grails.taglib.TemplateVariableBinding;
+import org.grails.taglib.TemplateVariableBinding
 
 /**
  * Used to locate GSPs whether in development or WAR deployed mode.
@@ -28,14 +28,14 @@ import org.grails.taglib.TemplateVariableBinding;
  * @author Graeme Rocher
  * @since 2.0
  */
-public interface GroovyPageLocator {
+interface GroovyPageLocator {
 
     /**
      * Adds a new resource loader to search
      *
      * @param resourceLoader The resource loader to search
      */
-    void addResourceLoader(ResourceLoader resourceLoader);
+    void addResourceLoader(ResourceLoader resourceLoader)
 
     /**
      * Finds a page for the given URI
@@ -43,7 +43,7 @@ public interface GroovyPageLocator {
      * @param uri The URI
      * @return A script source
      */
-    GroovyPageScriptSource findPage(String uri);
+    GroovyPageScriptSource findPage(String uri)
 
     /**
      * Finds a page for the given URI
@@ -53,7 +53,7 @@ public interface GroovyPageLocator {
      * @param binding The biding to use
      * @return A script source
      */
-    GroovyPageScriptSource findPageInBinding(String pluginName, String uri, TemplateVariableBinding binding);
+    GroovyPageScriptSource findPageInBinding(String pluginName, String uri, TemplateVariableBinding binding)
 
     /**
      * Finds a page for the URI and binding
@@ -62,12 +62,13 @@ public interface GroovyPageLocator {
      * @param binding The binding
      * @return The page source
      */
-    GroovyPageScriptSource findPageInBinding(String uri, TemplateVariableBinding binding);
+    GroovyPageScriptSource findPageInBinding(String uri, TemplateVariableBinding binding)
 
     /**
      * Removes any precompiled pages for the given URI so that they can be replaced by dynamic pages
      *
      * @param compiledScriptSource The compiled script source
      */
-    void removePrecompiledPage(GroovyPageCompiledScriptSource compiledScriptSource);
+    void removePrecompiledPage(GroovyPageCompiledScriptSource compiledScriptSource)
+
 }

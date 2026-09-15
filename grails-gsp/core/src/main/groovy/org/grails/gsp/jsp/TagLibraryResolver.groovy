@@ -17,10 +17,10 @@
  *  under the License.
  */
 
-package org.grails.gsp.jsp;
+package org.grails.gsp.jsp
 
-public interface TagLibraryResolver {
+interface TagLibraryResolver {
 
-    JspTagLib resolveTagLibrary(String uri);
+    JspTagLib resolveTagLibrary(String uri)
 
 }

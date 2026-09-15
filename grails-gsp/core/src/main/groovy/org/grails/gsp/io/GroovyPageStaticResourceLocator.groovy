@@ -16,17 +16,18 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.gsp.io;
+package org.grails.gsp.io
 
-import org.springframework.core.io.Resource;
+import groovy.transform.CompileStatic
+import org.springframework.core.io.Resource
 
-import grails.plugins.GrailsPlugin;
-import org.grails.core.io.DefaultResourceLocator;
-import org.grails.gsp.GroovyPageBinding;
-import org.grails.io.support.GrailsResourceUtils;
-import org.grails.taglib.AbstractTemplateVariableBinding;
-import org.grails.taglib.encoder.OutputContext;
-import org.grails.taglib.encoder.OutputContextLookupHelper;
+import grails.plugins.GrailsPlugin
+import org.grails.core.io.DefaultResourceLocator
+import org.grails.gsp.GroovyPageBinding
+import org.grails.io.support.GrailsResourceUtils
+import org.grails.taglib.AbstractTemplateVariableBinding
+import org.grails.taglib.encoder.OutputContext
+import org.grails.taglib.encoder.OutputContextLookupHelper
 
 /**
  * <p>
@@ -38,45 +39,46 @@ import org.grails.taglib.encoder.OutputContextLookupHelper;
  * @author Graeme Rocher
  * @since 2.0
  */
-public class GroovyPageStaticResourceLocator extends DefaultResourceLocator {
+@CompileStatic
+class GroovyPageStaticResourceLocator extends DefaultResourceLocator {
 
     @Override
-    public Resource findResourceForURI(String uri) {
-        Resource resource = super.findResourceForURI(uri);
+    Resource findResourceForURI(String uri) {
+        Resource resource = super.findResourceForURI(uri)
         if (resource == null || !resource.exists()) {
-            AbstractTemplateVariableBinding binding = findBindingInOutputContext();
+            AbstractTemplateVariableBinding binding = findBindingInOutputContext()
             if (binding instanceof GroovyPageBinding) {
-                GrailsPlugin pagePlugin = ((GroovyPageBinding) binding).getPagePlugin();
+                GrailsPlugin pagePlugin = ((GroovyPageBinding) binding).getPagePlugin()
                 if (pagePlugin != null && pluginManager != null) {
-                    resource = findResourceForPlugin(pagePlugin, uri);
+                    resource = findResourceForPlugin(pagePlugin, uri)
                 }
             }
             else if (pluginManager != null) {
                 // attempt brute force search of all plugins
-                for (GrailsPlugin plugin : pluginManager.getAllPlugins()) {
-                    resource = findResourceForPlugin(plugin, uri);
-                    if (resource != null) break;
+                for (GrailsPlugin plugin in pluginManager.getAllPlugins()) {
+                    resource = findResourceForPlugin(plugin, uri)
+                    if (resource != null) break
                 }
             }
         }
-        return resource;
+        return resource
 
     }
 
     private Resource findResourceForPlugin(GrailsPlugin plugin, String uri) {
-        Resource resource;
-        String pluginPath = pluginManager.getPluginPath(plugin.getName());
-        String pluginUri = GrailsResourceUtils.appendPiecesForUri(pluginPath, uri);
-        resource = super.findResourceForURI(pluginUri);
-        return resource;
+        Resource resource
+        String pluginPath = pluginManager.getPluginPath(plugin.getName())
+        String pluginUri = GrailsResourceUtils.appendPiecesForUri(pluginPath, uri)
+        resource = super.findResourceForURI(pluginUri)
+        return resource
     }
 
     protected AbstractTemplateVariableBinding findBindingInOutputContext() {
-        OutputContext outputContext = OutputContextLookupHelper.lookupOutputContext();
+        OutputContext outputContext = OutputContextLookupHelper.lookupOutputContext()
         if (outputContext != null) {
-            return outputContext.getBinding();
+            return outputContext.getBinding()
         }
-        return null;
+        return null
     }
 
 }

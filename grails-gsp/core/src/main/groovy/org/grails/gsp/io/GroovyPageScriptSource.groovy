@@ -16,26 +16,26 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.gsp.jsp;
+package org.grails.gsp.io
+
+import org.springframework.scripting.ScriptSource
 
 /**
- * An interface that represents a Jsp taglib
- *
  * @author Graeme Rocher
+ * @since 2.0
  */
-public interface JspTagLib {
+interface GroovyPageScriptSource extends ScriptSource {
 
     /**
-     * @return The URI of the tag library
+     * @return The URI of the Groovy page
      */
-    String getURI();
+    String getURI()
 
     /**
-     * Obtains a reference to a JspTag instance contained within the library
+     * Whether the GSP is publicly accessible directly, or only usable using internal rendering
      *
-     * @param name The name of the tag
-     * @return A JspTag instance or null if it doesn't exist
+     * @return true if it can be rendered publicly
      */
-    JspTag getTag(String name);
+    boolean isPublic()
 
 }

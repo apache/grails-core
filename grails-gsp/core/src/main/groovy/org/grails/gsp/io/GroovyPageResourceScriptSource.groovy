@@ -16,20 +16,19 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.gsp.io;
+package org.grails.gsp.io
 
-import java.io.IOException;
-import java.net.URL;
+import groovy.transform.CompileStatic
+import org.springframework.core.io.Resource
+import org.springframework.scripting.support.ResourceScriptSource
 
-import org.springframework.core.io.Resource;
-import org.springframework.scripting.support.ResourceScriptSource;
+import org.grails.io.support.GrailsResourceUtils
 
-import org.grails.io.support.GrailsResourceUtils;
+@CompileStatic
+class GroovyPageResourceScriptSource extends ResourceScriptSource implements GroovyPageScriptSource {
 
-public class GroovyPageResourceScriptSource extends ResourceScriptSource implements GroovyPageScriptSource {
-
-    private String uri;
-    private boolean isPublic;
+    private String uri
+    private boolean isPublic
 
     /**
      * Create a new ResourceScriptSource for the given resource.
@@ -37,28 +36,28 @@ public class GroovyPageResourceScriptSource extends ResourceScriptSource impleme
      * @param uri The URI of the resource
      * @param resource the Resource to load the script from
      */
-    public GroovyPageResourceScriptSource(String uri, Resource resource) {
-        super(resource);
-        this.uri = uri;
+    GroovyPageResourceScriptSource(String uri, Resource resource) {
+        super(resource)
+        this.uri = uri
         try {
-            URL u = getResource().getURL();
+            URL u = getResource().getURL()
             if (u == null) {
-                isPublic = isPublicPath(uri);
+                isPublic = isPublicPath(uri)
             }
             else {
-                isPublic = isPublicPath(u.getPath());
+                isPublic = isPublicPath(u.getPath())
             }
         } catch (IOException e) {
-            isPublic = isPublicPath(uri);
+            isPublic = isPublicPath(uri)
         }
     }
 
-    public static boolean isPublicPath(String path) {
-        return !(path.contains(GrailsResourceUtils.WEB_INF) || path.contains(GrailsResourceUtils.VIEWS_DIR_PATH));
+    static boolean isPublicPath(String path) {
+        return !(path.contains(GrailsResourceUtils.WEB_INF) || path.contains(GrailsResourceUtils.VIEWS_DIR_PATH))
     }
 
-    public String getURI() {
-        return uri;
+    String getURI() {
+        return uri
     }
 
     /**
@@ -66,7 +65,8 @@ public class GroovyPageResourceScriptSource extends ResourceScriptSource impleme
      *
      * @return true if it can be rendered publicly
      */
-    public boolean isPublic() {
-        return isPublic;
+    boolean isPublic() {
+        return isPublic
     }
+
 }
