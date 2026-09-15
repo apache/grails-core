@@ -16,63 +16,63 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.web.layout;
+package org.apache.grails.web.layout
 
-import java.io.IOException;
-import java.io.Writer;
+import groovy.transform.CompileStatic
 
-import com.opensymphony.module.sitemesh.parser.TokenizedHTMLPage;
-import com.opensymphony.sitemesh.Content;
+import com.opensymphony.module.sitemesh.parser.TokenizedHTMLPage
+import com.opensymphony.sitemesh.Content
 
+@CompileStatic
 final class TokenizedHTMLPage2Content implements Content {
 
-    private final TokenizedHTMLPage page;
+    private final TokenizedHTMLPage page
 
     TokenizedHTMLPage2Content(TokenizedHTMLPage page) {
-        this.page = page;
+        this.page = page
     }
 
     @Override
-    public void writeOriginal(Writer out) throws IOException {
-        page.writePage(out);
+    void writeOriginal(Writer out) throws IOException {
+        page.writePage(out)
     }
 
     @Override
-    public void writeHead(Writer out) throws IOException {
-        page.writeHead(out);
+    void writeHead(Writer out) throws IOException {
+        page.writeHead(out)
     }
 
     @Override
-    public void writeBody(Writer out) throws IOException {
-        page.writeBody(out);
+    void writeBody(Writer out) throws IOException {
+        page.writeBody(out)
     }
 
     @Override
-    public int originalLength() {
-        return page.getContentLength();
+    int originalLength() {
+        return page.getContentLength()
     }
 
     @Override
-    public String getTitle() {
-        return page.getTitle();
+    String getTitle() {
+        return page.getTitle()
     }
 
     @Override
-    public String[] getPropertyKeys() {
-        return getPropertyKeys();
+    String[] getPropertyKeys() {
+        return getPropertyKeys()
     }
 
     @Override
-    public String getProperty(String name) {
-        return page.getProperty(name);
+    String getProperty(String name) {
+        return page.getProperty(name)
     }
 
     @Override
-    public void addProperty(String name, String value) {
-        page.addProperty(name, value);
+    void addProperty(String name, String value) {
+        page.addProperty(name, value)
     }
 
-    public TokenizedHTMLPage getPage() {
-        return page;
+    TokenizedHTMLPage getPage() {
+        return page
     }
 }

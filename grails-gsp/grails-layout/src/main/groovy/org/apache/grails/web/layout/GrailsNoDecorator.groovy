@@ -17,42 +17,43 @@
  *  under the License.
  */
 
-package org.apache.grails.web.layout;
+package org.apache.grails.web.layout
 
-import java.util.Iterator;
+import groovy.transform.CompileStatic
 
-import com.opensymphony.module.sitemesh.Decorator;
-import com.opensymphony.sitemesh.webapp.decorator.NoDecorator;
+import com.opensymphony.module.sitemesh.Decorator
+import com.opensymphony.sitemesh.webapp.decorator.NoDecorator
 
 /**
  * Grails version of Sitemesh's NoDecorator
  *
  * @author Lari Hotari, Sagire Software Oy
  */
-public class GrailsNoDecorator extends NoDecorator implements Decorator {
+@CompileStatic
+class GrailsNoDecorator extends NoDecorator implements Decorator {
 
-    public String getPage() {
-        return null;
+    String getPage() {
+        return null
     }
 
-    public String getName() {
-        return null;
+    String getName() {
+        return null
     }
 
-    public String getURIPath() {
-        return null;
+    String getURIPath() {
+        return null
     }
 
-    public String getRole() {
-        return null;
+    String getRole() {
+        return null
     }
 
-    public String getInitParameter(String paramName) {
-        return null;
+    String getInitParameter(String paramName) {
+        return null
     }
 
-    @SuppressWarnings("rawtypes")
-    public Iterator getInitParameterNames() {
-        return null;
+    @SuppressWarnings('rawtypes')
+    Iterator getInitParameterNames() {
+        return null
     }
 }

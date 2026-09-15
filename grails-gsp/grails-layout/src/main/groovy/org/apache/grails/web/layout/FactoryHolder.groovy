@@ -17,11 +17,13 @@
  *  under the License.
  */
 
-package org.apache.grails.web.layout;
+package org.apache.grails.web.layout
 
-import com.opensymphony.module.sitemesh.Factory;
+import groovy.transform.CompileStatic
 
-import grails.util.Holder;
+import com.opensymphony.module.sitemesh.Factory
+
+import grails.util.Holder
 
 /**
  * Holds a reference to the Grails Layout Factory object.
@@ -29,24 +31,25 @@ import grails.util.Holder;
  * @author Graeme Rocher
  * @since 0.6
  */
-public class FactoryHolder {
+@CompileStatic
+class FactoryHolder {
 
-    private static Holder<Factory> holder = new Holder<>("factory");
+    private static Holder<Factory> holder = new Holder<>('factory')
 
     private FactoryHolder() {
         // static only
     }
 
-    public static Factory getFactory() {
-        Factory factory = holder.get();
-        return factory;
+    static Factory getFactory() {
+        Factory factory = holder.get()
+        return factory
     }
 
-    public static Factory getGrailsLayoutFactory() {
-        return getFactory();
+    static Factory getGrailsLayoutFactory() {
+        return getFactory()
     }
 
-    public static synchronized void setFactory(Factory factory) {
-        holder.set(factory);
+    static synchronized void setFactory(Factory factory) {
+        holder.set(factory)
     }
 }

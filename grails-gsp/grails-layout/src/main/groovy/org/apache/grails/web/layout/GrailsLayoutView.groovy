@@ -17,32 +17,33 @@
  *  under the License.
  */
 
-package org.apache.grails.web.layout;
+package org.apache.grails.web.layout
 
-import java.util.Map;
+import groovy.transform.CompileStatic
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
 
-import com.opensymphony.sitemesh.ContentProcessor;
-import com.opensymphony.sitemesh.webapp.SiteMeshWebAppContext;
+import com.opensymphony.sitemesh.ContentProcessor
+import com.opensymphony.sitemesh.webapp.SiteMeshWebAppContext
 
-import org.springframework.web.servlet.View;
+import org.springframework.web.servlet.View
 
-import org.grails.web.servlet.mvc.GrailsWebRequest;
+import org.grails.web.servlet.mvc.GrailsWebRequest
 
-public class GrailsLayoutView extends EmbeddedGrailsLayoutView {
+@CompileStatic
+class GrailsLayoutView extends EmbeddedGrailsLayoutView {
 
-    private final ContentProcessor contentProcessor;
+    private final ContentProcessor contentProcessor
 
-    public GrailsLayoutView(GroovyPageLayoutFinder groovyPageLayoutFinder, View innerView, ContentProcessor contentProcessor) {
-        super(groovyPageLayoutFinder, innerView);
-        this.contentProcessor = contentProcessor;
+    GrailsLayoutView(GroovyPageLayoutFinder groovyPageLayoutFinder, View innerView, ContentProcessor contentProcessor) {
+        super(groovyPageLayoutFinder, innerView)
+        this.contentProcessor = contentProcessor
     }
 
     @Override
     protected GrailsContentBufferingResponse createContentBufferingResponse(Map<String, Object> model,
                                                                             GrailsWebRequest webRequest, HttpServletRequest request, HttpServletResponse response) {
-        return new GrailsContentBufferingResponse(response, contentProcessor, new SiteMeshWebAppContext(request, response, webRequest.getServletContext()));
+        return new GrailsContentBufferingResponse(response, contentProcessor, new SiteMeshWebAppContext(request, response, webRequest.getServletContext()))
     }
 }
