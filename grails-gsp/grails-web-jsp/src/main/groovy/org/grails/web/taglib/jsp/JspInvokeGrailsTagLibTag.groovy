@@ -204,7 +204,7 @@ class JspInvokeGrailsTagLibTag extends BodyTagSupport implements DynamicAttribut
         }
         Closure tag = (Closure) tagLibProp
         if (tag.getParameterTypes().length == 1) {
-            tag.call(new Object[]{ attributes })
+            tag.call(attributes)
             if (body != null) {
                 body.call()
             }

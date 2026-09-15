@@ -54,7 +54,7 @@ class ClosureObjectMarshaller<T extends Converter> implements ObjectMarshaller<T
                 result = closure.call(object)
             }
             else if (argCount == 2) {
-                result = closure.call(new Object[]{ object, converter })
+                result = closure.call(object, converter)
             }
             else {
                 throw new ConverterException(

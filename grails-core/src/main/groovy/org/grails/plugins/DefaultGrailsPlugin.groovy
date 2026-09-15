@@ -657,12 +657,12 @@ class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentApplicat
         }
 
         closureHook.setDelegate(this)
-        closureHook.call([event] as Object[])
+        closureHook.call(event)
     }
 
     private void invokeOnChangeListener(Map event) {
         onChangeListener.setDelegate(this)
-        onChangeListener.call([event] as Object[])
+        onChangeListener.call(event)
 
         if (!(applicationContext instanceof GenericApplicationContext)) {
             return

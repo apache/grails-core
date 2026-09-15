@@ -80,7 +80,7 @@ class TagOutput {
 
                 switch (tag.getParameterTypes().length) {
                     case 1:
-                        bodyResult = tag.call(new Object[]{attrs})
+                        bodyResult = tag.call(attrs)
                         if (actualBody != null && actualBody != EMPTY_BODY_CLOSURE) {
                             Object bodyResult2 = actualBody.call()
                             if (bodyResult2 != null) {
@@ -95,7 +95,7 @@ class TagOutput {
 
                         break
                     case 2:
-                        bodyResult = tag.call(new Object[]{attrs, actualBody})
+                        bodyResult = tag.call(attrs, actualBody)
                         break
                     default:
                         throw new GrailsTagException("Tag [$tagName] does not specify expected number of params in tag library [" +
