@@ -16,15 +16,13 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.plugins.sitemesh3;
+package org.grails.plugins.sitemesh3
 
-import java.util.Locale;
+import groovy.transform.CompileStatic
+import org.sitemesh.webmvc.SiteMeshView
+import org.springframework.web.servlet.View
 
-import org.sitemesh.webmvc.SiteMeshView;
-
-import org.springframework.web.servlet.View;
-
-import grails.web.pages.GrailsRenderViewMutator;
+import grails.web.pages.GrailsRenderViewMutator
 
 /**
  * Unwraps the SiteMesh decorating view for partial renders. A controller's
@@ -37,13 +35,15 @@ import grails.web.pages.GrailsRenderViewMutator;
  * ({@code render template: 'x', layout: 'y'}) the wrapping is kept and the
  * layout is applied as usual.
  */
-public class Sitemesh3RenderViewMutator implements GrailsRenderViewMutator {
+@CompileStatic
+class Sitemesh3RenderViewMutator implements GrailsRenderViewMutator {
 
     @Override
-    public View mutateView(boolean renderWithLayout, String templateUri, Locale locale, View existingView) {
+    View mutateView(boolean renderWithLayout, String templateUri, Locale locale, View existingView) {
         if (!renderWithLayout && existingView instanceof SiteMeshView) {
-            return ((SiteMeshView) existingView).getInnerView();
+            return ((SiteMeshView) existingView).getInnerView()
         }
-        return existingView;
+        return existingView
     }
+
 }

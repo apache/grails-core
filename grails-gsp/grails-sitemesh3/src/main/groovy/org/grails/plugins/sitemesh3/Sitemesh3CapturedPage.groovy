@@ -16,22 +16,18 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.plugins.sitemesh3;
+package org.grails.plugins.sitemesh3
 
-import java.io.IOException;
-import java.io.Writer;
-import java.nio.CharBuffer;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.nio.CharBuffer
 
-import org.sitemesh.content.Content;
-import org.sitemesh.content.ContentChunk;
-import org.sitemesh.content.ContentProperty;
-import org.sitemesh.content.memory.InMemoryContent;
-import org.sitemesh.tagprocessor.CharSequenceBuffer;
+import groovy.transform.CompileStatic
+import org.sitemesh.content.Content
+import org.sitemesh.content.ContentChunk
+import org.sitemesh.content.ContentProperty
+import org.sitemesh.content.memory.InMemoryContent
+import org.sitemesh.tagprocessor.CharSequenceBuffer
 
-import org.grails.buffer.StreamCharBuffer;
+import org.grails.buffer.StreamCharBuffer
 
 /**
  * A SiteMesh 3 {@link Content} implementation that is populated by the GSP
@@ -43,45 +39,46 @@ import org.grails.buffer.StreamCharBuffer;
  * can be traversed in the usual way (e.g. {@code head}, {@code body}, {@code
  * title}, {@code page.<name>}, {@code meta.<name>}).</p>
  */
-public class Sitemesh3CapturedPage implements Content {
+@CompileStatic
+class Sitemesh3CapturedPage implements Content {
 
-    public static final String REQUEST_ATTRIBUTE = Sitemesh3CapturedPage.class.getName();
+    public static final String REQUEST_ATTRIBUTE = Sitemesh3CapturedPage.getName()
 
-    private final InMemoryContent delegate = new InMemoryContent();
+    private final InMemoryContent delegate = new InMemoryContent()
 
-    private StreamCharBuffer headBuffer;
-    private StreamCharBuffer bodyBuffer;
-    private StreamCharBuffer titleBuffer;
-    private StreamCharBuffer pageBuffer;
-    private CharSequence renderedContent;
+    private StreamCharBuffer headBuffer
+    private StreamCharBuffer bodyBuffer
+    private StreamCharBuffer titleBuffer
+    private StreamCharBuffer pageBuffer
+    private CharSequence renderedContent
 
-    private final Map<String, StreamCharBuffer> contentBuffers = new LinkedHashMap<>();
-    private final Map<String, String> pageProperties = new HashMap<>();
+    private final Map<String, StreamCharBuffer> contentBuffers = new LinkedHashMap<>()
+    private final Map<String, String> pageProperties = new HashMap<>()
 
     // Volatile: a captured page can be passed to an async dispatch thread
     // (Grails 7 supports @Async controller returns and Callable-returning
     // actions). Without volatile, the JMM gives no happens-before guarantee
     // on these flags across threads.
-    private volatile boolean used;
-    private volatile boolean titleCaptured;
-    private volatile boolean propertiesMaterialized;
+    private volatile boolean used
+    private volatile boolean titleCaptured
+    private volatile boolean propertiesMaterialized
 
-    public void setHeadBuffer(StreamCharBuffer buffer) {
-        this.headBuffer = buffer;
-        markUsed();
+    void setHeadBuffer(StreamCharBuffer buffer) {
+        this.headBuffer = buffer
+        markUsed()
     }
 
-    public void setBodyBuffer(StreamCharBuffer buffer) {
-        this.bodyBuffer = buffer;
-        markUsed();
+    void setBodyBuffer(StreamCharBuffer buffer) {
+        this.bodyBuffer = buffer
+        markUsed()
     }
 
-    public void setTitleBuffer(StreamCharBuffer buffer) {
-        this.titleBuffer = buffer;
+    void setTitleBuffer(StreamCharBuffer buffer) {
+        this.titleBuffer = buffer
     }
 
-    public void setPageBuffer(StreamCharBuffer buffer) {
-        this.pageBuffer = buffer;
+    void setPageBuffer(StreamCharBuffer buffer) {
+        this.pageBuffer = buffer
     }
 
     // Attaches fully-rendered content (e.g. a layout's output after
@@ -90,54 +87,54 @@ public class Sitemesh3CapturedPage implements Content {
     // buffers. Held as a CharSequence so callers can pass a CharBuffer
     // straight through without allocating an intermediate String — the
     // RawDataChunk writes via Writer.write(char[], int, int) when possible.
-    public void setRenderedContent(CharSequence content) {
-        this.renderedContent = content;
-        markUsed();
+    void setRenderedContent(CharSequence content) {
+        this.renderedContent = content
+        markUsed()
     }
 
-    public StreamCharBuffer getHeadBuffer() {
-        return headBuffer;
+    StreamCharBuffer getHeadBuffer() {
+        return headBuffer
     }
 
-    public StreamCharBuffer getBodyBuffer() {
-        return bodyBuffer;
+    StreamCharBuffer getBodyBuffer() {
+        return bodyBuffer
     }
 
-    public StreamCharBuffer getTitleBuffer() {
-        return titleBuffer;
+    StreamCharBuffer getTitleBuffer() {
+        return titleBuffer
     }
 
-    public StreamCharBuffer getPageBuffer() {
-        return pageBuffer;
+    StreamCharBuffer getPageBuffer() {
+        return pageBuffer
     }
 
-    public void addContentBuffer(String tag, StreamCharBuffer buffer) {
-        contentBuffers.put(tag, buffer);
-        markUsed();
+    void addContentBuffer(String tag, StreamCharBuffer buffer) {
+        contentBuffers.put(tag, buffer)
+        markUsed()
     }
 
-    public void addProperty(String name, String value) {
+    void addProperty(String name, String value) {
         if (name == null || value == null) {
-            return;
+            return
         }
-        pageProperties.put(name, value);
-        markUsed();
+        pageProperties.put(name, value)
+        markUsed()
     }
 
-    public boolean isUsed() {
-        return used;
+    boolean isUsed() {
+        return used
     }
 
-    public void markUsed() {
-        this.used = true;
+    void markUsed() {
+        this.used = true
     }
 
-    public boolean isTitleCaptured() {
-        return titleCaptured;
+    boolean isTitleCaptured() {
+        return titleCaptured
     }
 
-    public void setTitleCaptured(boolean titleCaptured) {
-        this.titleCaptured = titleCaptured;
+    void setTitleCaptured(boolean titleCaptured) {
+        this.titleCaptured = titleCaptured
     }
 
     /**
@@ -145,35 +142,35 @@ public class Sitemesh3CapturedPage implements Content {
      * Used when decoration is skipped and the caller needs to fall back to
      * the raw response.
      */
-    public void writeOriginal(Appendable out) throws IOException {
+    void writeOriginal(Appendable out) throws IOException {
         if (pageBuffer != null) {
-            pageBuffer.writeTo(appendableToWriter(out));
+            pageBuffer.writeTo(appendableToWriter(out))
         }
     }
 
     @Override
-    public ContentChunk getData() {
-        materializeProperties();
+    ContentChunk getData() {
+        materializeProperties()
         if (renderedContent != null) {
-            return new RawDataChunk(renderedContent, this);
+            return new RawDataChunk(renderedContent, this)
         }
-        return delegate.getData();
+        return delegate.getData()
     }
 
     @Override
-    public ContentProperty getExtractedProperties() {
-        materializeProperties();
-        return delegate.getExtractedProperties();
+    ContentProperty getExtractedProperties() {
+        materializeProperties()
+        return delegate.getExtractedProperties()
     }
 
     @Override
-    public CharSequenceBuffer createDataOnlyBuffer() {
-        return delegate.createDataOnlyBuffer();
+    CharSequenceBuffer createDataOnlyBuffer() {
+        return delegate.createDataOnlyBuffer()
     }
 
     private void materializeProperties() {
         if (propertiesMaterialized) {
-            return;
+            return
         }
         // Double-checked locking: two async-dispatch threads could both see
         // propertiesMaterialized == false before either sets it. Without the
@@ -181,41 +178,41 @@ public class Sitemesh3CapturedPage implements Content {
         // delegate concurrently, leaving it in a partially-initialized state.
         synchronized (this) {
             if (propertiesMaterialized) {
-                return;
+                return
             }
-            propertiesMaterialized = true;
-            doMaterializeProperties();
+            propertiesMaterialized = true
+            doMaterializeProperties()
         }
     }
 
     private void doMaterializeProperties() {
-        ContentProperty root = delegate.getExtractedProperties();
+        ContentProperty root = delegate.getExtractedProperties()
 
         // pageBuffer is only set for fallback paths where the full rendered
         // output is wrapped; renderedContent is the hot path (handled by
         // getData() returning a RawDataChunk directly, no setValue needed).
         if (pageBuffer != null) {
-            delegate.getData().setValue(pageBuffer);
+            delegate.getData().setValue(pageBuffer)
         }
 
         if (headBuffer != null) {
             // extractHead() strips the <title> via regex, so it materializes
             // as String — the other captures pass through as CharSequence.
-            root.getChild("head").setValue(extractHead());
+            root.getChild('head').setValue(extractHead())
         }
         if (bodyBuffer != null) {
-            root.getChild("body").setValue(bodyBuffer);
+            root.getChild('body').setValue(bodyBuffer)
         }
         if (titleBuffer != null) {
-            root.getChild("title").setValue(titleBuffer);
+            root.getChild('title').setValue(titleBuffer)
         }
 
         for (Map.Entry<String, StreamCharBuffer> entry : contentBuffers.entrySet()) {
-            root.getChild("page").getChild(entry.getKey()).setValue(entry.getValue());
+            root.getChild('page').getChild(entry.getKey()).setValue(entry.getValue())
         }
 
         for (Map.Entry<String, String> entry : pageProperties.entrySet()) {
-            setByDottedName(root, entry.getKey(), entry.getValue());
+            setByDottedName(root, entry.getKey(), entry.getValue())
         }
     }
 
@@ -225,28 +222,28 @@ public class Sitemesh3CapturedPage implements Content {
     // saves ~head-size bytes of allocation per decorated request, and
     // avoids regex compilation on the hot path.
     private CharSequence extractHead() {
-        CharSequence head = headBuffer;
+        CharSequence head = headBuffer
         if (!titleCaptured) {
-            return head;
+            return head
         }
-        int titleStart = indexOfTitleOpenTag(head);
+        int titleStart = indexOfTitleOpenTag(head)
         if (titleStart < 0) {
-            return head;
+            return head
         }
-        int openTagEnd = indexOf(head, '>', titleStart + 6);
+        int openTagEnd = indexOf(head, '>'.charAt(0), titleStart + 6)
         if (openTagEnd < 0) {
-            return head;
+            return head
         }
-        int closeStart = indexOfIgnoreCase(head, "</title>", openTagEnd + 1);
+        int closeStart = indexOfIgnoreCase(head, '</title>', openTagEnd + 1)
         if (closeStart < 0) {
-            return head;
+            return head
         }
-        int closeEnd = closeStart + 8;
-        int len = head.length();
-        StringBuilder sb = new StringBuilder(len - (closeEnd - titleStart));
-        sb.append(head, 0, titleStart);
-        sb.append(head, closeEnd, len);
-        return sb;
+        int closeEnd = closeStart + 8
+        int len = head.length()
+        StringBuilder sb = new StringBuilder(len - (closeEnd - titleStart))
+        sb.append(head, 0, titleStart)
+        sb.append(head, closeEnd, len)
+        return sb
     }
 
     // Finds the start of a real <title> open tag. A bare "<title" prefix
@@ -255,58 +252,58 @@ public class Sitemesh3CapturedPage implements Content {
     // following the prefix must terminate the tag name ('>' or
     // whitespace before attributes).
     private static int indexOfTitleOpenTag(CharSequence head) {
-        int len = head.length();
-        int from = 0;
+        int len = head.length()
+        int from = 0
         while (true) {
-            int i = indexOfIgnoreCase(head, "<title", from);
+            int i = indexOfIgnoreCase(head, '<title', from)
             if (i < 0) {
-                return -1;
+                return -1
             }
-            int boundary = i + 6;
+            int boundary = i + 6
             if (boundary < len) {
-                char c = head.charAt(boundary);
+                char c = head.charAt(boundary)
                 if (c == '>' || Character.isWhitespace(c)) {
-                    return i;
+                    return i
                 }
             }
-            from = i + 1;
+            from = i + 1
         }
     }
 
     private static int indexOfIgnoreCase(CharSequence seq, String needle, int fromIndex) {
-        int needleLen = needle.length();
-        int max = seq.length() - needleLen;
+        int needleLen = needle.length()
+        int max = seq.length() - needleLen
         outer:
         for (int i = fromIndex; i <= max; i++) {
             for (int j = 0; j < needleLen; j++) {
-                char c = seq.charAt(i + j);
-                char n = needle.charAt(j);
+                char c = seq.charAt(i + j)
+                char n = needle.charAt(j)
                 if (Character.toLowerCase(c) != Character.toLowerCase(n)) {
-                    continue outer;
+                    continue outer
                 }
             }
-            return i;
+            return i
         }
-        return -1;
+        return -1
     }
 
     private static int indexOf(CharSequence seq, char target, int fromIndex) {
-        int len = seq.length();
+        int len = seq.length()
         for (int i = fromIndex; i < len; i++) {
             if (seq.charAt(i) == target) {
-                return i;
+                return i
             }
         }
-        return -1;
+        return -1
     }
 
     private void setByDottedName(ContentProperty root, String dottedName, String value) {
-        String[] parts = dottedName.split("\\.");
-        ContentProperty current = root;
-        for (String part : parts) {
-            current = current.getChild(part);
+        String[] parts = dottedName.split('\\.')
+        ContentProperty current = root
+        for (String part in parts) {
+            current = current.getChild(part)
         }
-        current.setValue(value);
+        current.setValue(value)
     }
 
     // ContentChunk whose writeValueTo emits the raw rendered content verbatim
@@ -321,74 +318,75 @@ public class Sitemesh3CapturedPage implements Content {
     // CharBuffers out of BaseSiteMeshContext's CharArrayWriter. Falls back
     // to Appendable.append for any other CharSequence shape.
     private static final class RawDataChunk implements ContentChunk {
-        private CharSequence value;
-        private final Content owner;
+        private CharSequence value
+        private final Content owner
 
         RawDataChunk(CharSequence value, Content owner) {
-            this.value = value;
-            this.owner = owner;
+            this.value = value
+            this.owner = owner
         }
 
         @Override
-        public boolean hasValue() {
-            return value != null;
+        boolean hasValue() {
+            return value != null
         }
 
         @Override
-        public String getValue() {
-            return value == null ? null : value.toString();
+        String getValue() {
+            return value == null ? null : value.toString()
         }
 
         @Override
-        public String getNonNullValue() {
-            return value == null ? "" : value.toString();
+        String getNonNullValue() {
+            return value == null ? '' : value.toString()
         }
 
         @Override
-        public void writeValueTo(Appendable out) throws IOException {
+        void writeValueTo(Appendable out) throws IOException {
             if (value == null) {
-                return;
+                return
             }
             if (out instanceof Writer && value instanceof CharBuffer) {
-                CharBuffer cb = (CharBuffer) value;
+                CharBuffer cb = (CharBuffer) value
                 if (cb.hasArray()) {
                     ((Writer) out).write(cb.array(),
                             cb.arrayOffset() + cb.position(),
-                            cb.remaining());
-                    return;
+                            cb.remaining())
+                    return
                 }
             }
-            out.append(value);
+            out.append(value)
         }
 
         @Override
-        public void setValue(CharSequence newValue) {
-            this.value = newValue;
+        void setValue(CharSequence newValue) {
+            this.value = newValue
         }
 
         @Override
-        public Content getOwningContent() {
-            return owner;
+        Content getOwningContent() {
+            return owner
         }
     }
 
     private static java.io.Writer appendableToWriter(Appendable out) {
         if (out instanceof java.io.Writer) {
-            return (java.io.Writer) out;
+            return (java.io.Writer) out
         }
         return new java.io.Writer() {
             @Override
-            public void write(char[] cbuf, int off, int len) throws IOException {
-                out.append(java.nio.CharBuffer.wrap(cbuf, off, len));
+            void write(char[] cbuf, int off, int len) throws IOException {
+                out.append(java.nio.CharBuffer.wrap(cbuf, off, len))
             }
 
             @Override
-            public void flush() {
+            void flush() {
             }
 
             @Override
-            public void close() {
+            void close() {
             }
-        };
+        }
     }
+
 }

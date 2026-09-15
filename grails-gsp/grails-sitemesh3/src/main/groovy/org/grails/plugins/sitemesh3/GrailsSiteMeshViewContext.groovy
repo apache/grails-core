@@ -16,24 +16,19 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.plugins.sitemesh3;
+package org.grails.plugins.sitemesh3
 
-import java.io.IOException;
-import java.util.Collections;
-import java.util.Locale;
-import java.util.Map;
+import jakarta.servlet.ServletContext
+import jakarta.servlet.ServletException
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
 
-import jakarta.servlet.ServletContext;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
-import org.sitemesh.content.ContentProcessor;
-import org.sitemesh.webapp.contentfilter.ResponseMetaData;
-import org.sitemesh.webmvc.SiteMeshViewContext;
-
-import org.springframework.web.servlet.View;
-import org.springframework.web.servlet.ViewResolver;
+import groovy.transform.CompileStatic
+import org.sitemesh.content.ContentProcessor
+import org.sitemesh.webapp.contentfilter.ResponseMetaData
+import org.sitemesh.webmvc.SiteMeshViewContext
+import org.springframework.web.servlet.View
+import org.springframework.web.servlet.ViewResolver
 
 /**
  * Grails-flavoured {@link SiteMeshViewContext} that pushes a fresh
@@ -53,16 +48,17 @@ import org.springframework.web.servlet.ViewResolver;
  * entirely within the Spring MVC view-resolver chain and avoids re-entering
  * the filter stack.</p>
  */
-public class GrailsSiteMeshViewContext extends SiteMeshViewContext {
+@CompileStatic
+class GrailsSiteMeshViewContext extends SiteMeshViewContext {
 
     // Model handed to the layout view render. SiteMesh 2's <g:applyLayout>
     // renders the decorator template with the supplied model
     // (template.make(viewModel)); callers that need the same behavior set
     // this before decorating. Defaults to an empty map so the standard
     // decoration path is unchanged.
-    private Map<String, ?> viewModel = Collections.emptyMap();
+    private Map<String, ?> viewModel = Collections.emptyMap()
 
-    public GrailsSiteMeshViewContext(String contentType,
+    GrailsSiteMeshViewContext(String contentType,
                                      HttpServletRequest request,
                                      HttpServletResponse response,
                                      ServletContext servletContext,
@@ -72,15 +68,15 @@ public class GrailsSiteMeshViewContext extends SiteMeshViewContext {
                                      ViewResolver viewResolver,
                                      Locale locale) {
         super(contentType, request, response, servletContext, contentProcessor, metaData,
-                includeErrorPages, viewResolver, locale);
+                includeErrorPages, viewResolver, locale)
     }
 
-    public void setViewModel(Map<String, ?> viewModel) {
-        this.viewModel = viewModel != null ? viewModel : Collections.emptyMap();
+    void setViewModel(Map<String, ?> viewModel) {
+        this.viewModel = viewModel != null ? viewModel : Collections.emptyMap()
     }
 
     @Override
-    public void dispatch(HttpServletRequest request, HttpServletResponse response, String path)
+    void dispatch(HttpServletRequest request, HttpServletResponse response, String path)
             throws ServletException, IOException {
         // Push a fresh Sitemesh3CapturedPage for the decorator render.
         // DO NOT restore the previous value on exit — chained decoration
@@ -90,26 +86,27 @@ public class GrailsSiteMeshViewContext extends SiteMeshViewContext {
         // without a second HTML parse. The outer GrailsSiteMeshView.postRender
         // is responsible for clearing the attribute at the end of the
         // top-level render.
-        request.setAttribute(Sitemesh3CapturedPage.REQUEST_ATTRIBUTE, new Sitemesh3CapturedPage());
+        request.setAttribute(Sitemesh3CapturedPage.REQUEST_ATTRIBUTE, new Sitemesh3CapturedPage())
 
         // SiteMeshViewContext.dispatch() only uses the ViewResolver for paths
         // that do NOT start with "/"; absolute paths fall through to
         // WebAppContext.dispatch() (a RequestDispatcher.forward()). All Grails
         // layout paths are absolute (/layouts/...), so we resolve them via the
         // ViewResolver directly to stay within the Spring MVC view chain.
-        if (path != null && path.startsWith("/")) {
+        if (path != null && path.startsWith('/')) {
             try {
-                View view = getViewResolver().resolveViewName(path, getLocale());
+                View view = getViewResolver().resolveViewName(path, getLocale())
                 if (view != null) {
-                    view.render(viewModel, request, response);
-                    return;
+                    view.render(viewModel, request, response)
+                    return
                 }
             } catch (IOException | ServletException e) {
-                throw e;
+                throw e
             } catch (Exception e) {
-                throw new ServletException("Error rendering layout view: " + path, e);
+                throw new ServletException('Error rendering layout view: ' + path, e)
             }
         }
-        super.dispatch(request, response, path);
+        super.dispatch(request, response, path)
     }
+
 }

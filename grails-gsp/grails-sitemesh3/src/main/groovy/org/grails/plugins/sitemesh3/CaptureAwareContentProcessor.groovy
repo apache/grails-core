@@ -16,22 +16,21 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.plugins.sitemesh3;
+package org.grails.plugins.sitemesh3
 
-import java.io.IOException;
-import java.nio.CharBuffer;
+import jakarta.servlet.http.HttpServletRequest
+import java.nio.CharBuffer
 
-import jakarta.servlet.http.HttpServletRequest;
-
-import org.sitemesh.SiteMeshContext;
-import org.sitemesh.content.Content;
-import org.sitemesh.content.ContentProcessor;
-import org.sitemesh.content.tagrules.TagBasedContentProcessor;
-import org.sitemesh.content.tagrules.TagRuleBundle;
-import org.sitemesh.content.tagrules.decorate.DecoratorTagRuleBundle;
-import org.sitemesh.content.tagrules.html.CoreHtmlTagRuleBundle;
-import org.sitemesh.content.tagrules.html.Sm2TagRuleBundle;
-import org.sitemesh.webapp.WebAppContext;
+import groovy.transform.CompileStatic
+import org.sitemesh.SiteMeshContext
+import org.sitemesh.content.Content
+import org.sitemesh.content.ContentProcessor
+import org.sitemesh.content.tagrules.TagBasedContentProcessor
+import org.sitemesh.content.tagrules.TagRuleBundle
+import org.sitemesh.content.tagrules.decorate.DecoratorTagRuleBundle
+import org.sitemesh.content.tagrules.html.CoreHtmlTagRuleBundle
+import org.sitemesh.content.tagrules.html.Sm2TagRuleBundle
+import org.sitemesh.webapp.WebAppContext
 
 /**
  * {@link ContentProcessor} that short-circuits the HTML parse when a
@@ -40,28 +39,29 @@ import org.sitemesh.webapp.WebAppContext;
  * {@link TagBasedContentProcessor} with the SiteMesh 2 bundle for responses
  * that were not produced by the capture taglib.
  */
-public class CaptureAwareContentProcessor implements ContentProcessor {
+@CompileStatic
+class CaptureAwareContentProcessor implements ContentProcessor {
 
-    private final ContentProcessor fallback;
+    private final ContentProcessor fallback
 
-    public CaptureAwareContentProcessor() {
+    CaptureAwareContentProcessor() {
         this(new TagBasedContentProcessor(
                 new CoreHtmlTagRuleBundle(),
                 new DecoratorTagRuleBundle(),
-                new Sm2TagRuleBundle()));
+                new Sm2TagRuleBundle()))
     }
 
-    public CaptureAwareContentProcessor(ContentProcessor fallback) {
-        this.fallback = fallback;
+    CaptureAwareContentProcessor(ContentProcessor fallback) {
+        this.fallback = fallback
     }
 
-    public CaptureAwareContentProcessor(TagRuleBundle... bundles) {
-        this(new TagBasedContentProcessor(bundles));
+    CaptureAwareContentProcessor(TagRuleBundle... bundles) {
+        this(new TagBasedContentProcessor(bundles))
     }
 
     @Override
-    public Content build(CharBuffer data, SiteMeshContext context) throws IOException {
-        Sitemesh3CapturedPage captured = findCapturedPage(context);
+    Content build(CharBuffer data, SiteMeshContext context) throws IOException {
+        Sitemesh3CapturedPage captured = findCapturedPage(context)
 
         // Decoration phase: RenderSitemeshTagLib has already inlined layout
         // placeholders at tag-render time, so the layout output is final.
@@ -73,10 +73,10 @@ public class CaptureAwareContentProcessor implements ContentProcessor {
         // happened (e.g. a layout with no HTML skeleton).
         if (context.getContentToMerge() != null) {
             if (captured != null && captured.isUsed()) {
-                captured.setRenderedContent(data);
-                return captured;
+                captured.setRenderedContent(data)
+                return captured
             }
-            return fallback.build(data, context);
+            return fallback.build(data, context)
         }
 
         if (captured != null && captured.isUsed()) {
@@ -87,21 +87,22 @@ public class CaptureAwareContentProcessor implements ContentProcessor {
             // of the (empty) reconstructed-from-properties data chunk. Head/body
             // child properties are still materialized for any decorator that IS
             // selected, so meta-layout pages are unaffected.
-            captured.setRenderedContent(data);
-            return captured;
+            captured.setRenderedContent(data)
+            return captured
         }
-        return fallback.build(data, context);
+        return fallback.build(data, context)
     }
 
     private Sitemesh3CapturedPage findCapturedPage(SiteMeshContext context) {
         if (!(context instanceof WebAppContext)) {
-            return null;
+            return null
         }
-        HttpServletRequest request = ((WebAppContext) context).getRequest();
+        HttpServletRequest request = ((WebAppContext) context).getRequest()
         if (request == null) {
-            return null;
+            return null
         }
-        Object attr = request.getAttribute(Sitemesh3CapturedPage.REQUEST_ATTRIBUTE);
-        return attr instanceof Sitemesh3CapturedPage ? (Sitemesh3CapturedPage) attr : null;
+        Object attr = request.getAttribute(Sitemesh3CapturedPage.REQUEST_ATTRIBUTE)
+        return attr instanceof Sitemesh3CapturedPage ? (Sitemesh3CapturedPage) attr : null
     }
+
 }

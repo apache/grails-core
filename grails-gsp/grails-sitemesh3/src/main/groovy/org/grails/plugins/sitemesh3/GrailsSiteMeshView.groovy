@@ -16,21 +16,21 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.plugins.sitemesh3;
+package org.grails.plugins.sitemesh3
 
-import jakarta.servlet.ServletContext;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletContext
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
 
-import org.sitemesh.DecoratorSelector;
-import org.sitemesh.SiteMeshContext;
-import org.sitemesh.content.ContentProcessor;
-import org.sitemesh.webapp.contentfilter.ResponseMetaData;
-import org.sitemesh.webmvc.SiteMeshView;
-import org.sitemesh.webmvc.SiteMeshViewContext;
-
-import org.springframework.web.servlet.View;
-import org.springframework.web.servlet.ViewResolver;
+import groovy.transform.CompileStatic
+import org.sitemesh.DecoratorSelector
+import org.sitemesh.SiteMeshContext
+import org.sitemesh.content.ContentProcessor
+import org.sitemesh.webapp.contentfilter.ResponseMetaData
+import org.sitemesh.webmvc.SiteMeshView
+import org.sitemesh.webmvc.SiteMeshViewContext
+import org.springframework.web.servlet.View
+import org.springframework.web.servlet.ViewResolver
 
 /**
  * Grails-flavoured {@link SiteMeshView}. Pushes a fresh
@@ -46,29 +46,30 @@ import org.springframework.web.servlet.ViewResolver;
  * without clobbering each other, even for nested
  * <code>&lt;g:applyLayout&gt;</code>.</p>
  */
-public class GrailsSiteMeshView extends SiteMeshView {
+@CompileStatic
+class GrailsSiteMeshView extends SiteMeshView {
 
-    public GrailsSiteMeshView(View innerView,
+    GrailsSiteMeshView(View innerView,
                               ContentProcessor contentProcessor,
                               DecoratorSelector<SiteMeshContext> decoratorSelector,
                               ServletContext servletContext,
                               ViewResolver viewResolver) {
-        super(innerView, contentProcessor, decoratorSelector, servletContext, viewResolver);
+        super(innerView, contentProcessor, decoratorSelector, servletContext, viewResolver)
     }
 
     @Override
     protected Object preRender(HttpServletRequest request) {
-        Object previousCaptured = request.getAttribute(Sitemesh3CapturedPage.REQUEST_ATTRIBUTE);
-        request.setAttribute(Sitemesh3CapturedPage.REQUEST_ATTRIBUTE, new Sitemesh3CapturedPage());
-        return previousCaptured;
+        Object previousCaptured = request.getAttribute(Sitemesh3CapturedPage.REQUEST_ATTRIBUTE)
+        request.setAttribute(Sitemesh3CapturedPage.REQUEST_ATTRIBUTE, new Sitemesh3CapturedPage())
+        return previousCaptured
     }
 
     @Override
     protected void postRender(HttpServletRequest request, Object token) {
         if (token != null) {
-            request.setAttribute(Sitemesh3CapturedPage.REQUEST_ATTRIBUTE, token);
+            request.setAttribute(Sitemesh3CapturedPage.REQUEST_ATTRIBUTE, token)
         } else {
-            request.removeAttribute(Sitemesh3CapturedPage.REQUEST_ATTRIBUTE);
+            request.removeAttribute(Sitemesh3CapturedPage.REQUEST_ATTRIBUTE)
         }
     }
 
@@ -80,6 +81,7 @@ public class GrailsSiteMeshView extends SiteMeshView {
         return new GrailsSiteMeshViewContext(
                 contentType, request, response, getServletContext(),
                 getContentProcessor(), metaData, false,
-                getViewResolver(), request.getLocale());
+                getViewResolver(), request.getLocale())
     }
+
 }

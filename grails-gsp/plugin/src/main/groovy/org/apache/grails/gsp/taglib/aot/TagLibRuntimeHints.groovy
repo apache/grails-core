@@ -16,25 +16,23 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.gsp.taglib.aot;
+package org.apache.grails.gsp.taglib.aot
 
-import java.io.IOException;
+import groovy.transform.CompileStatic
+import org.apache.commons.logging.Log
+import org.apache.commons.logging.LogFactory
+import org.jspecify.annotations.Nullable
+import org.springframework.aot.hint.MemberCategory
+import org.springframework.aot.hint.RuntimeHints
+import org.springframework.aot.hint.RuntimeHintsRegistrar
+import org.springframework.core.io.Resource
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver
+import org.springframework.core.io.support.ResourcePatternResolver
+import org.springframework.core.type.classreading.CachingMetadataReaderFactory
+import org.springframework.core.type.classreading.MetadataReaderFactory
+import org.springframework.util.ClassUtils
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.jspecify.annotations.Nullable;
-
-import org.springframework.aot.hint.MemberCategory;
-import org.springframework.aot.hint.RuntimeHints;
-import org.springframework.aot.hint.RuntimeHintsRegistrar;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
-import org.springframework.core.io.support.ResourcePatternResolver;
-import org.springframework.core.type.classreading.CachingMetadataReaderFactory;
-import org.springframework.core.type.classreading.MetadataReaderFactory;
-import org.springframework.util.ClassUtils;
-
-import org.apache.grails.common.aot.RegistrableTypes;
+import org.apache.grails.common.aot.RegistrableTypes
 
 /**
  * Registers the tag libraries and page runtime a rendered page dispatches through.
@@ -50,9 +48,10 @@ import org.apache.grails.common.aot.RegistrableTypes;
  *
  * @since 8.0
  */
-public class TagLibRuntimeHints implements RuntimeHintsRegistrar {
+@CompileStatic
+class TagLibRuntimeHints implements RuntimeHintsRegistrar {
 
-    private static final Log logger = LogFactory.getLog(TagLibRuntimeHints.class);
+    private static final Log logger = LogFactory.getLog(TagLibRuntimeHints)
 
     /**
      * A tag library is identified by its name, wherever it is declared. The trailing wildcard also
@@ -60,65 +59,65 @@ public class TagLibRuntimeHints implements RuntimeHintsRegistrar {
      * reads its bean from in one, and a tag that never nests does not reach it.
      */
     private static final String TAGLIB_PATTERN =
-            ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX + "**/*TagLib*.class";
+            ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX + '**/*TagLib*.class'
 
     /**
      * The page rendering runtime. Registered by package rather than by name: a compiled page reaches
      * all of it through Groovy, down to writing its output with an operator, and naming the types
      * one at a time only ever describes the pages that have been rendered so far.
      */
-    private static final String[] RUNTIME_PATTERNS = {
-        ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX + "org/grails/gsp/**/*.class",
-        ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX + "org/grails/taglib/**/*.class",
-        ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX + "org/grails/buffer/**/*.class"
-    };
+    private static final String[] RUNTIME_PATTERNS = [
+        ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX + 'org/grails/gsp/**/*.class',
+        ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX + 'org/grails/taglib/**/*.class',
+        ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX + 'org/grails/buffer/**/*.class'
+    ] as String[]
 
     private static String[] patterns() {
-        String[] all = new String[RUNTIME_PATTERNS.length + 1];
-        System.arraycopy(RUNTIME_PATTERNS, 0, all, 0, RUNTIME_PATTERNS.length);
-        all[RUNTIME_PATTERNS.length] = TAGLIB_PATTERN;
-        return all;
+        String[] all = new String[RUNTIME_PATTERNS.length + 1]
+        System.arraycopy(RUNTIME_PATTERNS, 0, all, 0, RUNTIME_PATTERNS.length)
+        all[RUNTIME_PATTERNS.length] = TAGLIB_PATTERN
+        return all
     }
 
     /**
      * Types the plugin descriptors call. A descriptor is Groovy, so even a static call on a utility
      * class is dispatched dynamically and needs the class to survive.
      */
-    private static final String[] CALLED_FROM_DESCRIPTORS = {
-        "org.springframework.aot.AotDetector"
-    };
+    private static final String[] CALLED_FROM_DESCRIPTORS = [
+        'org.springframework.aot.AotDetector'
+    ] as String[]
 
     @Override
-    public void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
-        ClassLoader loader = (classLoader != null) ? classLoader : ClassUtils.getDefaultClassLoader();
-        for (String type : CALLED_FROM_DESCRIPTORS) {
+    void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
+        ClassLoader loader = (classLoader != null) ? classLoader : ClassUtils.getDefaultClassLoader()
+        for (String type in CALLED_FROM_DESCRIPTORS) {
             hints.reflection().registerTypeIfPresent(loader, type,
                     MemberCategory.INVOKE_DECLARED_METHODS,
-                    MemberCategory.INVOKE_PUBLIC_METHODS);
+                    MemberCategory.INVOKE_PUBLIC_METHODS)
         }
-        ResourcePatternResolver resolver = new PathMatchingResourcePatternResolver(loader);
-        MetadataReaderFactory metadataReaderFactory = new CachingMetadataReaderFactory(resolver);
-        int registered = 0;
-        for (String pattern : patterns()) {
-            Resource[] resources;
+        ResourcePatternResolver resolver = new PathMatchingResourcePatternResolver(loader)
+        MetadataReaderFactory metadataReaderFactory = new CachingMetadataReaderFactory(resolver)
+        int registered = 0
+        for (String pattern in patterns()) {
+            Resource[] resources
             try {
-                resources = resolver.getResources(pattern);
+                resources = resolver.getResources(pattern)
             }
             catch (IOException ex) {
-                logger.warn("Unable to scan for " + pattern, ex);
-                continue;
+                logger.warn('Unable to scan for ' + pattern, ex)
+                continue
             }
-            for (Resource resource : resources) {
-                String className;
+            for (Resource resource in resources) {
+                String className
                 try {
                     className = metadataReaderFactory.getMetadataReader(resource)
-                            .getClassMetadata().getClassName();
+                            .getClassMetadata().getClassName()
                 }
                 catch (IOException | RuntimeException ex) {
-                    continue;
+                    continue
                 }
                 if (!RegistrableTypes.loads(className, loader)) {
-                    continue;
+                    continue
                 }
                 // declared rather than public throughout: a tag's body may call a private helper on
                 // its own library, and a page reads the shared empty body as a field
@@ -127,10 +126,11 @@ public class TagLibRuntimeHints implements RuntimeHintsRegistrar {
                         MemberCategory.INVOKE_PUBLIC_METHODS,
                         MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
                         MemberCategory.ACCESS_DECLARED_FIELDS,
-                        MemberCategory.ACCESS_PUBLIC_FIELDS);
-                registered++;
+                        MemberCategory.ACCESS_PUBLIC_FIELDS)
+                registered++
             }
         }
-        logger.debug("Registered " + registered + " tag library and page runtime types");
+        logger.debug('Registered ' + registered + ' tag library and page runtime types')
     }
+
 }

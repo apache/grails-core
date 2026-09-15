@@ -16,43 +16,44 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.plugins.sitemesh3;
+package org.grails.plugins.sitemesh3
 
-import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletContext
 
-import org.sitemesh.DecoratorSelector;
-import org.sitemesh.SiteMeshContext;
-import org.sitemesh.content.ContentProcessor;
-import org.sitemesh.webmvc.SiteMeshView;
-import org.sitemesh.webmvc.SiteMeshViewResolver;
-
-import org.springframework.web.servlet.View;
-import org.springframework.web.servlet.ViewResolver;
+import groovy.transform.CompileStatic
+import org.sitemesh.DecoratorSelector
+import org.sitemesh.SiteMeshContext
+import org.sitemesh.content.ContentProcessor
+import org.sitemesh.webmvc.SiteMeshView
+import org.sitemesh.webmvc.SiteMeshViewResolver
+import org.springframework.web.servlet.View
+import org.springframework.web.servlet.ViewResolver
 
 /**
  * Grails-flavoured {@link SiteMeshViewResolver} that wraps each inner view
  * with a {@link GrailsSiteMeshView} rather than the upstream default.
  */
-public class GrailsSiteMeshViewResolver extends SiteMeshViewResolver {
+@CompileStatic
+class GrailsSiteMeshViewResolver extends SiteMeshViewResolver {
 
-    private final ContentProcessor contentProcessor;
-    private final DecoratorSelector<SiteMeshContext> decoratorSelector;
+    private final ContentProcessor contentProcessor
+    private final DecoratorSelector<SiteMeshContext> decoratorSelector
 
-    public GrailsSiteMeshViewResolver(ViewResolver innerViewResolver,
+    GrailsSiteMeshViewResolver(ViewResolver innerViewResolver,
                                       ContentProcessor contentProcessor,
                                       DecoratorSelector<SiteMeshContext> decoratorSelector) {
-        super(innerViewResolver, contentProcessor, decoratorSelector);
-        this.contentProcessor = contentProcessor;
-        this.decoratorSelector = decoratorSelector;
+        super(innerViewResolver, contentProcessor, decoratorSelector)
+        this.contentProcessor = contentProcessor
+        this.decoratorSelector = decoratorSelector
     }
 
-    public GrailsSiteMeshViewResolver(ViewResolver innerViewResolver,
+    GrailsSiteMeshViewResolver(ViewResolver innerViewResolver,
                                       ContentProcessor contentProcessor,
                                       DecoratorSelector<SiteMeshContext> decoratorSelector,
                                       ServletContext servletContext) {
-        super(innerViewResolver, contentProcessor, decoratorSelector, servletContext);
-        this.contentProcessor = contentProcessor;
-        this.decoratorSelector = decoratorSelector;
+        super(innerViewResolver, contentProcessor, decoratorSelector, servletContext)
+        this.contentProcessor = contentProcessor
+        this.decoratorSelector = decoratorSelector
     }
 
     @Override
@@ -61,6 +62,7 @@ public class GrailsSiteMeshViewResolver extends SiteMeshViewResolver {
         // SiteMeshViewResolver.prepareForBufferedRender (keyed on
         // DispatchMode) before this hook runs.
         return new GrailsSiteMeshView(innerView, contentProcessor, decoratorSelector, getServletContext(),
-                getInnerViewResolver());
+                getInnerViewResolver())
     }
+
 }
