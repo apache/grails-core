@@ -870,6 +870,7 @@ jobs:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: "Neo4j Functional Tests (Java ${{ matrix.java }}, indy=${{ matrix.indy }})"
     runs-on: ubuntu-24.04
+    timeout-minutes: 105
     strategy:
       fail-fast: false
       matrix:
@@ -896,14 +897,9 @@ jobs:
       - name: "🏃 Run Functional Tests"
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-        run: >
-          ./gradlew bootJar check
-          --continue
-          --rerun-tasks
-          --stacktrace
-          -PgrailsIndy=${{ matrix.indy }}
-          -PonlyNeo4jTests
-          -PskipCodeStyle
+        run: |
+          python3 .github/tests/test_ci_run_neo4j.py
+          bash .github/ci-run-neo4j-tests.sh -PgrailsIndy=${{ matrix.indy }}
   publishGradle:
     if: github.repository_owner == 'apache' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     needs: [ buildGradle ]

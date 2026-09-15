@@ -100,7 +100,8 @@ class StartMongoGrailsUnitExtension extends AbstractMongoGrailsExtension impleme
                         Package[] packagesArray = packages.toArray(new Package[packages.size()])
 
                         Map<String, Object> configuration = ['grails.mongodb.url': createConnectionString(container.getHost(), container.getMappedPort(DEFAULT_MONGO_PORT))]
-                        def datastore = mongoDatastoreClass.getDeclaredConstructor(Map<String, Object>, Package[]).newInstance(configuration, packagesArray)
+                        // Groovy 6.0.0-RC-1 (GROOVY-12319): parameterized types are not class literals.
+                        def datastore = mongoDatastoreClass.getDeclaredConstructor(Map, Package[]).newInstance(configuration, packagesArray)
                         mongoDatastoreField.writeValue(invocation.sharedInstance, datastore)
                     }
                 }

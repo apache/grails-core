@@ -465,7 +465,7 @@ class WebDriverContainerHolder {
          */
         static Closure withSystemProperty(Closure target, String key, Object value) {
             Closure wrapped = { Object... args ->
-                SysPropScope.withProperty(key, value.toString()) {
+                ThreadLocalPropertyScope.withProperty(key, value.toString()) {
                     InvokerHelper.invokeClosure(target, args)
                 }
             }
@@ -476,46 +476,5 @@ class WebDriverContainerHolder {
             }
         }
 
-        @CompileStatic
-        private static class SysPropScope {
-
-            private static final ThreadLocal<Map<String,String>> OVERRIDDEN_SYSTEM_PROPERTIES =
-                    ThreadLocal.withInitial { [:] as Map<String,String> }
-
-            @Lazy // Thread-safe wrapping of system properties
-            private static Properties propertiesWrappedOnFirstAccess = {
-                new InterceptingProperties().tap {
-                    putAll(System.getProperties())
-                    System.setProperties(it)
-                }
-            }()
-
-            // Helper method for Groovy 5 static type checking compatibility
-            private static Map<String, String> getOverriddenProperties() {
-                OVERRIDDEN_SYSTEM_PROPERTIES.get()
-            }
-
-            static <T> T withProperty(String key, String value, Closure<T> body) {
-                propertiesWrappedOnFirstAccess // Access property to trigger property wrapping
-                def map = OVERRIDDEN_SYSTEM_PROPERTIES.get()
-                def prev = map.put(key, value)
-                try {
-                    return body.call()
-                } finally {
-                    if (prev == null) map.remove(key) else map[key] = prev
-                    if (map.isEmpty()) OVERRIDDEN_SYSTEM_PROPERTIES.remove()
-                }
-            }
-
-            @CompileStatic
-            private static class InterceptingProperties extends Properties {
-                @Override
-                String getProperty(String key) {
-                    Map<String, String> overrides = getOverriddenProperties()
-                    def v = overrides.get(key)
-                    v != null ? v : super.getProperty(key)
-                }
-            }
-        }
     }
 }

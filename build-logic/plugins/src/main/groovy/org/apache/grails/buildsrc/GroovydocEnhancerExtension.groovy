@@ -30,8 +30,8 @@ import org.gradle.api.provider.Property
  * Extension for configuring the Groovydoc Enhancer convention plugin.
  *
  * <p>This plugin replaces Gradle's built-in Groovydoc task execution with
- * a direct AntBuilder invocation of the Groovy {@code org.codehaus.groovy.ant.Groovydoc}
- * Ant task. This enables the {@code javaVersion} parameter (added in Groovy 4.0.27,
+ * an isolated JVM invocation of the Groovy {@code org.codehaus.groovy.ant.Groovydoc}
+ * Ant task. Each invocation releases its parser memory when the process exits. This enables the {@code javaVersion} parameter (added in Groovy 4.0.27,
  * GROOVY-11668) which controls the JavaParser language level used when parsing
  * Java source files.</p>
  *
@@ -67,9 +67,9 @@ class GroovydocEnhancerExtension {
 
     /**
      * Whether to replace Gradle's built-in Groovydoc task execution with
-     * AntBuilder invocation. When {@code true} (default), the plugin clears
-     * the task's actions and replaces them with a {@code doLast} that uses
-     * AntBuilder. When {@code false}, the plugin only applies property
+     * an isolated Ant invocation. When {@code true} (default), the plugin clears
+     * the task's actions and replaces them with a {@code doLast} that runs
+     * Ant in a separate JVM, honoring the task's Java launcher and maximum memory. When {@code false}, the plugin only applies property
      * defaults (footer, etc.) and lets Gradle's built-in task run normally.
      *
      * <p>Set to {@code false} when Gradle adds native {@code javaVersion}

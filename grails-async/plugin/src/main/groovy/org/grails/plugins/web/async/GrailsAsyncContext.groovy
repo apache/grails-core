@@ -23,6 +23,8 @@ import jakarta.servlet.AsyncListener
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 
+import org.springframework.web.context.request.RequestContextHolder
+
 import grails.async.web.AsyncGrailsWebRequest
 import grails.persistence.support.PersistenceContextInterceptor
 import org.grails.web.servlet.mvc.GrailsWebRequest
@@ -67,8 +69,13 @@ class GrailsAsyncContext implements AsyncContext {
                 for (PersistenceContextInterceptor i in interceptors) {
                     i.destroy()
                 }
-                webRequest.requestCompleted()
-                WebUtils.clearGrailsWebRequest()
+                try {
+                    webRequest.requestCompleted()
+                } finally {
+                    // Dispatch or completion may already have handed the servlet request back
+                    // to the container. Only unbind this worker; do not change request attributes.
+                    RequestContextHolder.resetRequestAttributes()
+                }
             }
         }
     }

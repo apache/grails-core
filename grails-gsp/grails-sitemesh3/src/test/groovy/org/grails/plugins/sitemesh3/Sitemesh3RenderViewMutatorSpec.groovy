@@ -37,8 +37,9 @@ class Sitemesh3RenderViewMutatorSpec extends Specification {
     View innerView = Mock(View)
 
     GrailsSiteMeshView siteMeshView() {
+        DecoratorSelector<SiteMeshContext> decoratorSelector = Mock()
         new GrailsSiteMeshView(innerView, Mock(ContentProcessor),
-                Mock(DecoratorSelector<SiteMeshContext>), Mock(ServletContext), Mock(ViewResolver))
+                decoratorSelector, Mock(ServletContext), Mock(ViewResolver))
     }
 
     void 'unwraps the SiteMesh view for partial renders without an explicit layout'() {
