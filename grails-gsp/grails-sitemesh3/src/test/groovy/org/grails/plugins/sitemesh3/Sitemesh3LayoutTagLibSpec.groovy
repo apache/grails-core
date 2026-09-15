@@ -18,6 +18,9 @@
  */
 package org.grails.plugins.sitemesh3
 
+import org.grails.buffer.FastStringWriter
+import org.grails.buffer.GrailsPrintWriter
+import org.grails.encoder.impl.StandaloneCodecLookup
 import org.grails.taglib.TagMethodInvoker
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -59,5 +62,22 @@ class Sitemesh3LayoutTagLibSpec extends Specification {
     def "every shipped tag is reported as an invokable method name"() {
         expect:
         TagMethodInvoker.getInvokableTagMethodNames(Sitemesh3LayoutTagLib).containsAll(TAGS)
+    }
+
+    def "an attribute value of a captured tag is encoded"() {
+        given: 'the layout preprocessor rewrites the <body> of a decorated page to a capture tag, so'
+        Sitemesh3LayoutTagLib tagLib = new Sitemesh3LayoutTagLib(codecLookup: codecLookup())
+        FastStringWriter out = new FastStringWriter()
+
+        when: 'its attributes are written here rather than by the page'
+        tagLib.captureTagContent(new GrailsPrintWriter(out), 'body', [class: '"><script>x</script>'], null)
+
+        then: 'the value stays inside the attribute instead of closing it and opening a tag'
+        !out.toString().contains('<script>')
+        out.toString().contains('&quot;&gt;&lt;script&gt;')
+    }
+
+    private static StandaloneCodecLookup codecLookup() {
+        new StandaloneCodecLookup().tap { it.afterPropertiesSet() }
     }
 }

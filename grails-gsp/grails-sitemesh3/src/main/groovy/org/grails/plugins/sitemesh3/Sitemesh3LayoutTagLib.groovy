@@ -22,6 +22,8 @@ import groovy.transform.CompileStatic
 
 import jakarta.servlet.http.HttpServletRequest
 
+import org.springframework.beans.factory.annotation.Autowired
+
 import grails.artefact.TagLibrary
 import grails.gsp.TagLib
 import org.grails.buffer.FastStringWriter
@@ -47,6 +49,12 @@ class Sitemesh3LayoutTagLib implements TagLibrary {
 
     static String namespace = 'grailsLayout'
 
+    /**
+     * Encodes the attribute values of every tag the layout preprocessor captures. Declared here
+     * rather than filled in by name, so that it is wired in an application whose tag libraries are
+     * beans of the context rather than artefacts of a plugin.
+     */
+    @Autowired
     CodecLookup codecLookup
 
     def captureTagContent(GrailsPrintWriter writer, String tagname, Map attrs, Object body, boolean noEndTagForEmpty = false) {

@@ -18,14 +18,20 @@
  */
 package hello;
 
+import asset.pipeline.springboot.AssetPipelineService;
+
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 
 @Configuration
 @ComponentScan
 @EnableAutoConfiguration
+// Serves what the asset pipeline compiled - see the assets block of build.gradle - from /assets/*.
+// The pipeline's Spring Boot module supplies the filter; the application imports its configuration.
+@Import(AssetPipelineService.class)
 public class Application {
 
     public static void main(String[] args) throws Exception {

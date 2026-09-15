@@ -3349,7 +3349,7 @@ serialVersionUID` field was accessible before checking that it was static, which
 every serializable bean declares that field, so this affected a large share of objects passed to `as JSON`.
 
 Grails 8 adds compatibility handling for the non-public case, and reports each such class once so that the
-code can be corrected — see 54.2 below. The shape that hits it is an anonymous implementation of a public
+code can be corrected — see 58.2 below. The shape that hits it is an anonymous implementation of a public
 interface:
 
 [source,groovy]
@@ -3368,7 +3368,7 @@ NOTE: Ordinary Groovy code is unaffected. Property access and method calls throu
 on such an object from any package, as does the JDK's `Introspector`; only raw reflection against the method
 as the non-public class declares it fails. That is what bean marshalling was doing.
 
-===== 54.1 Public Fields of Non-Public Classes Are Now Included
+===== 58.1 Public Fields of Non-Public Classes Are Now Included
 
 Java and Groovy beans are now treated alike. A `public` instance field declared on a class that is not
 public was silently omitted from the JSON or XML body when the bean was a plain Java object; it is now
@@ -3386,7 +3386,7 @@ A `public` *field* that cannot be read at all — because its class is in a name
 its package — is skipped, and the rest of the object still converts. A *getter* in that same situation is
 not skipped: the conversion fails, as it did before Grails 8.
 
-===== 54.2 The Warning
+===== 58.2 The Warning
 
 Reading a bean whose class is not public is compatibility handling rather than a supported contract, so each
 such class is reported once:
@@ -3697,3 +3697,67 @@ schema snapshots need regenerating. The count fetcher previously narrowed the da
 Paginated list responses already type `totalCount` as `Long` through the same type manager, in
 `DefaultGraphQLPaginationResponseHandler`, so this aligns the count field with a scalar the schema
 already used rather than introducing a new one.
+
+==== 64. Grails Plugins Run for a Grails Application Only
+
+In earlier Grails 8 milestones, the Grails plugin lifecycle ran for any Spring Boot application that had
+`grails-core` on its class path, whether or not it was a Grails application. An application that depended on
+a Grails library — GSP for its views, say — had Grails plugin beans registered alongside the library's own
+auto-configuration. This could prevent the context from starting because of duplicate beans or circular
+references. Grails 7 did not run the plugin lifecycle for a context that omitted the Grails application class.
+
+The lifecycle now runs only for a Grails application: one that `GrailsApp` launched, or one where a source of
+the context is a Grails application class, which is what `grails-app/init/Application.groovy` is. A Grails
+application is unaffected either way. A Spring Boot application using a Grails library gets that library's
+auto-configuration and nothing else.
+
+This matters if you deliberately put a Grails plugin on the class path of an application that is not a Grails
+application and relied on its `doWithSpring` or `beanRegistrar` beans being contributed. Those beans are no
+longer registered. A plugin that also publishes an auto-configuration — as the Grails modules do, and as
+`@GrailsBeans` generates for a plugin's `beans` block — continues to contribute through Spring Boot's own
+auto-configuration, which needs no lifecycle.
+
+Inside a Grails application, `@SpringBootTest(classes = SomeConfig)` uses the explicitly named configuration
+classes. If those sources do not include the Grails application class, the plugin lifecycle does not run.
+This matches Grails 7. Earlier Grails 8 milestones attempted to register plugin beans in this context; with
+Hibernate, that could fail during startup because a plain Spring Boot application disallows circular references.
+
+A bare `@SpringBootTest` can discover the application's `Application` class automatically, so it does not
+need an explicit `classes` attribute to select the Grails lifecycle. When specifying custom configuration
+classes, include `Application` only if the test needs the Grails plugin runtime:
+
+[source,groovy]
+----
+// A context using only this configuration, without the Grails plugin lifecycle
+@SpringBootTest(classes = SomeConfig)
+class ConfigurationSpec extends Specification { }
+
+// Include the application and start through its main method to apply GrailsApp's defaults
+@SpringBootTest(classes = [Application, SomeConfig], useMainMethod = SpringBootTest.UseMainMethod.ALWAYS)
+class ApplicationSpec extends Specification { }
+----
+
+Selecting the application class and applying the startup defaults from `GrailsApp` are separate concerns.
+By default, `@SpringBootTest` does not invoke the application's main method. In a Grails application with
+Hibernate, it can therefore fail on bean overriding or circular references even when the application class
+is selected. Use `useMainMethod = SpringBootTest.UseMainMethod.ALWAYS`, as above, or set both
+`spring.main.allow-bean-definition-overriding=true` and `spring.main.allow-circular-references=true` on the
+test. This startup limitation also existed before the lifecycle change.
+
+`@Integration` tests are unaffected: they name the application class and invoke its main method. So are
+tests using the `grails-testing-support` unit test mixins, which build their context without the lifecycle
+either way.
+
+==== 65. `sitemesh.decorator.default` Is Consulted for the Default Layout
+
+The SiteMesh 3 integration resolved the default layout from `grails.sitemesh.default.layout`, falling back to
+the legacy `grails.views.layout.default`. With neither set it used the implicit `application` layout.
+
+SiteMesh's own `sitemesh.decorator.default` is now consulted as a last fallback, after both Grails keys. It is
+the property a Spring Boot application rendering views with GSP configures, and a Grails application has it
+set from the Grails keys already, so it decides only where neither Grails key is set.
+
+This changes behaviour for a Grails application that set `sitemesh.decorator.default` and neither Grails key:
+it was decorated with the implicit `application` layout and is now decorated with the layout that property
+names. Set `grails.sitemesh.default.layout` to be explicit, or remove `sitemesh.decorator.default` to keep the
+implicit `application` layout. An application that sets either Grails key is unaffected — those still win.
