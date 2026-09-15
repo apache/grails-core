@@ -35,11 +35,10 @@ import java.nio.file.Path
 /**
  * Exercises both backends against real servers, and stops every one of them.
  *
- * <p>Leaving them to the shutdown hook the initializer registers does not work here: a Gradle test
- * worker cannot exit while a server it started holds a thread that is not a daemon, and the hook
- * that would stop the server runs only on the way out. The worker waits for what only its own exit
- * would release, Gradle waits for the worker, and a build whose tests have all passed never
- * finishes.
+ * <p>Leaving them to the shutdown hook the initializer registers is not enough here. That hook runs
+ * only as the test worker exits, after every test has reported, so a stop that fails there names no
+ * feature. And the worker exits through {@code System.exit}, which waits for every shutdown hook to
+ * finish: a stop that hangs there keeps a build whose tests have all passed from ever finishing.
  */
 class EmbeddedMongoInitializerSpec extends Specification {
 

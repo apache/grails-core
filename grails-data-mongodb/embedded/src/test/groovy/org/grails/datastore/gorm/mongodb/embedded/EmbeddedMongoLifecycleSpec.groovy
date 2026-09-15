@@ -31,6 +31,8 @@ import spock.lang.TempDir
 import spock.util.concurrent.PollingConditions
 
 import java.nio.file.Path
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
 
 /**
  * Exercises the stop and restart that a CRaC checkpoint and restore drive.
@@ -150,6 +152,7 @@ class EmbeddedMongoLifecycleSpec extends Specification {
 
         then: 'the second stop finds the files the first one removed, and says nothing of it'
         noExceptionThrown()
+        !running.running
         conditions.eventually { assert !listening(27979) }
     }
 
@@ -186,6 +189,7 @@ class EmbeddedMongoLifecycleSpec extends Specification {
 
         then:
         noExceptionThrown()
+        !running.running
         conditions.eventually { assert !listening(27978) }
     }
 
@@ -275,19 +279,38 @@ class EmbeddedMongoLifecycleSpec extends Specification {
         second?.stop()
     }
 
-    void 'stopping a server that is already stopped is what a shutdown hook does'() {
-        given: 'an in-memory server the context has stopped'
+    void 'stopping a server that is already stopped is what a shutdown hook does on port #port'() {
+        given: 'an in-memory server the context stopped just after a client connected to it'
         RunningEmbeddedMongo running = new InMemoryMongoBackend()
-                .start(new EmbeddedMongoSettings(27974, null, null))
-        new Socket('localhost', 27974).withCloseable { }
+                .start(new EmbeddedMongoSettings(port, null, null))
+        new Socket('localhost', port).withCloseable { }
         running.stop()
 
-        when: 'the JVM shutdown hook stops it again on the way out'
-        running.stop()
+        when: 'the JVM shutdown hook stops it again on the way out, which has to return for the JVM to exit'
+        CompletableFuture.runAsync { running.stop() }.get(30, TimeUnit.SECONDS)
 
-        then: 'it says nothing, because a hook has nowhere to report to'
+        then: 'it returns, and says nothing, because a hook has nowhere to report to'
         noExceptionThrown()
         !running.running
+
+        where: 'ten attempts give the race more chances to reproduce, on ports no other feature uses'
+        port << (27950..27959)
+    }
+
+    void 'an application whose context stopped its in-memory server still exits'() {
+        given:
+        File log = temp.resolve('application.log').toFile()
+
+        when: 'an application starts a server, lets a client connect, stops it as its context closes and returns'
+        Process application = startApplication(27969, log)
+        boolean exited = application.waitFor(30, TimeUnit.SECONDS)
+
+        then: 'the JVM exits, rather than its shutdown hook waiting forever to stop a server that is already stopped'
+        assert exited : "still running 30 seconds after its main method returned:\n${log.text}"
+        assert application.exitValue() == 0 : log.text
+
+        cleanup:
+        application?.destroyForcibly()
     }
 
     private static void write(String url, String title) {
@@ -321,5 +344,31 @@ class EmbeddedMongoLifecycleSpec extends Specification {
         GenericApplicationContext context = new GenericApplicationContext()
         context.environment.propertySources.addFirst(new MapPropertySource('test', properties))
         context
+    }
+
+    /**
+     * {@link ContextStoppedServerApplication} in a JVM of its own, because whether that JVM exits is
+     * the question. The command is written to an argument file, since a test class path is longer
+     * than some platforms allow a command line to be.
+     */
+    private Process startApplication(int port, File log) {
+        File arguments = temp.resolve('application.args').toFile()
+        arguments.text = [
+                '-cp',
+                System.getProperty('java.class.path'),
+                ContextStoppedServerApplication.name,
+                String.valueOf(port),
+        ].collect { String argument -> quoted(argument) }.join('\n')
+        Process application = new ProcessBuilder(
+                new File(System.getProperty('java.home'), 'bin/java').absolutePath,
+                "@${arguments.absolutePath}".toString()
+        ).redirectErrorStream(true).redirectOutput(log).start()
+        application.outputStream.close()
+        application
+    }
+
+    /** An argument file separates arguments at whitespace, which a path may contain. */
+    private static String quoted(String argument) {
+        '"' + argument.replace('\\', '\\\\').replace('"', '\\"') + '"'
     }
 }

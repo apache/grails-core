@@ -128,8 +128,25 @@ public class InMemoryMongoBackend implements EmbeddedMongoBackend {
             return this.port;
         }
 
+        /**
+         * Stopping twice is what an ordinary shutdown does: the lifecycle bean stops the server when
+         * the application context closes, and the JVM shutdown hook - which is there for a context
+         * that never closes - runs after it. A server that is already stopped is left alone.
+         *
+         * <p>Shutting a {@code MongoServer} down a second time is not harmless. It closes the clients
+         * it still tracks and waits, without a timeout, for them to close, and a client that connected
+         * as the first shutdown began can be left tracked on an event loop that has since terminated,
+         * where closing it never completes. From the shutdown hook, that wait kept the JVM from
+         * exiting at all.
+         *
+         * <p>Synchronized because the context's shutdown hook and the initializer's run at the same
+         * time on the way out.
+         */
         @Override
-        public void stop() {
+        public synchronized void stop() {
+            if (!this.running) {
+                return;
+            }
             this.server.shutdownNow();
             this.running = false;
         }
@@ -140,7 +157,7 @@ public class InMemoryMongoBackend implements EmbeddedMongoBackend {
         }
 
         @Override
-        public void restart() {
+        public synchronized void restart() {
             MongoServer restarted = new MongoServer(this.backend);
             restarted.bind("localhost", this.port);
             this.server = restarted;

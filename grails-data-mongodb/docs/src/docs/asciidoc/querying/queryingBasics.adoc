@@ -41,3 +41,48 @@ include::{grailsDataMongodbCoreDir}/src/test/groovy/grails/gorm/tests/FindNative
 ...
 include::{grailsDataMongodbCoreDir}/src/test/groovy/grails/gorm/tests/FindNativeSpec.groovy[tags=collectionFind,indent=0]
 ----
+
+=== Bulk Updates
+
+`updateAll` sets the given properties on every document the criteria match, in a single `updateMany`, without loading the entities:
+
+[source,groovy]
+----
+Ticket.where { status == 'open' }.updateAll(assignee: user)
+----
+
+An association value is written the way normal persistence writes it: the target's identifier, in the type that target's `_id` is stored as, and as a `DBRef` where the mapping declares `reference: true`. Either the associated instance or its identifier can be passed, so `updateAll(assignee: user)` and `updateAll(assignee: user.id)` write the same value.
+
+Whether an association can be bulk-updated depends on which document holds the reference:
+
+[cols="2,1,3"]
+|===
+|Association |Supported |Reason
+
+|to-one reference
+|Yes
+|The reference is a field on this document.
+
+|unidirectional one-to-many, many-to-many
+|Yes
+|The identifiers are stored as an array on this document.
+
+|embedded, and collections of simple values such as `hasMany = [labels: String]`
+|Yes
+|The value is written like any other property.
+
+|`hasOne`
+|No
+|The foreign key is held by the associated document.
+
+|bidirectional one-to-many
+|No
+|The foreign key is held by each child.
+|===
+
+The unsupported kinds throw `UnsupportedOperationException` rather than writing a field normal persistence never reads. Update the side that holds the foreign key instead. For a bidirectional one-to-many, that means updating the children:
+
+[source,groovy]
+----
+Child.where { id in childIds }.updateAll(parent: newParent)
+----

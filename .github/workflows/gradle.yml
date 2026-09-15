@@ -371,9 +371,13 @@ jobs:
           include-hidden-files: true
           path: grails-forge/tmp1/cli/**/*
           if-no-files-found: 'error'
+  # Every test job from here through neo4jFunctional sets timeout-minutes to twice the slowest run that
+  # finished on its own, passed or failed, over the 160 CI runs of 2026-09-03 to 2026-09-13, rounded up to
+  # the half hour. Without a limit, a test JVM that never exits holds its job for GitHub's six-hour default.
   functional:
     name: "Functional Tests (${{ matrix.job_name }})"
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
+    timeout-minutes: 150 # slowest run: 63 min
     strategy:
       fail-fast: false
       matrix:
@@ -484,6 +488,7 @@ jobs:
   security:
     name: "Spring Security Tests (${{ matrix.job_name }})"
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
+    timeout-minutes: 150 # slowest run: 71 min
     strategy:
       fail-fast: false
       matrix:
@@ -529,6 +534,7 @@ jobs:
   securityConfig:
     name: "Spring Security Config Functional Tests"
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
+    timeout-minutes: 90 # slowest run: 39 min
     strategy:
       fail-fast: false
       matrix:
@@ -568,6 +574,7 @@ jobs:
   casSecurityConfig:
     name: "Spring Security CAS Functional Tests"
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
+    timeout-minutes: 90 # slowest run: 35 min
     strategy:
       fail-fast: false
       matrix:
@@ -609,6 +616,7 @@ jobs:
   redis:
     name: "Redis Tests"
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
+    timeout-minutes: 180 # slowest run: 86 min
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -644,6 +652,7 @@ jobs:
   mongodbFunctional:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: "Mongodb Functional Tests (Java ${{ matrix.java }}, MongoDB ${{ matrix.mongodb-version }}, indy=${{ matrix.indy }})"
+    timeout-minutes: 150 # slowest run: 70 min
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -707,6 +716,7 @@ jobs:
   hibernate5Functional:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: "Hibernate5 Functional Tests (Java ${{ matrix.java }}, indy=${{ matrix.indy }})"
+    timeout-minutes: 120 # slowest run: 58 min
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -756,6 +766,7 @@ jobs:
   hibernate7Functional:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: "Hibernate7 Functional Tests (${{ matrix.job_name }})"
+    timeout-minutes: 210 # slowest run: 104 min, which failed; the slowest that passed took 86
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -826,6 +837,7 @@ jobs:
   neo4jFunctional:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: "Neo4j Functional Tests (Java ${{ matrix.java }}, indy=${{ matrix.indy }})"
+    timeout-minutes: 180 # slowest run: 90 min
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
