@@ -19,8 +19,11 @@
 
 package org.grails.gsp
 
+import java.util.concurrent.atomic.AtomicLong
+
 import grails.core.gsp.GrailsTagLibClass
 import org.grails.core.gsp.DefaultGrailsTagLibClass
+import org.codehaus.groovy.runtime.typehandling.GroovyCastException
 import org.grails.taglib.TagLibraryLookup
 import spock.lang.Specification
 
@@ -236,6 +239,112 @@ Date d4=new Date(123L)
         def rendered = renderTemplate(template, [:], true, true)
         then:
         rendered == '123-456-789-123'
+    }
+
+    def "model field is applied when the model supplies the declared type"() {
+        given:
+        def template = '''@{ model="Long sampleCount"}${sampleCount}'''
+        when:
+        def rendered = renderTemplate(template, [sampleCount: 42L], true)
+        then:
+        rendered == '42'
+    }
+
+    def "a Number model field accepts every numeric type a controller may supply"() {
+        given:
+        def template = '''@{ model="Number sampleCount"}${sampleCount}'''
+        when:
+        def rendered = renderTemplate(template, [sampleCount: supplied], true)
+        then:
+        rendered == '42'
+        where:
+        // scaffolded controllers supply Long via the generated service and Integer
+        // via RestfulController.countResources()
+        supplied << [42 as Integer, 42L, 42 as Short, 42 as BigInteger]
+    }
+
+    def "a model value is converted to the declared type the way a Groovy assignment converts it"() {
+        given:
+        def template = """@{ model="${declared} sampleCount"}\${sampleCount}"""
+        when:
+        def rendered = renderTemplate(template, [sampleCount: supplied], true)
+        then:
+        rendered == expected
+        where:
+        declared     | supplied                 | expected
+        'Integer'    | 42L                      | '42'
+        'int'        | 42L                      | '42'
+        'Long'       | 42                       | '42'
+        'long'       | (42 as Short)            | '42'
+        'Integer'    | 42.0G                    | '42'
+        'String'     | "${40 + 2}"              | '42'
+        'Double'     | 0.1f                     | Double.toString((double) 0.1f)
+        'double'     | 1.1f                     | Double.toString((double) 1.1f)
+        'Float'      | 0.5d                     | '0.5'
+        'float'      | -0.0d                    | '-0.0'
+        'Double'     | Float.NaN                | 'NaN'
+        'Float'      | Double.POSITIVE_INFINITY | 'Infinity'
+        'Double'     | Double.NEGATIVE_INFINITY | '-Infinity'
+        'BigDecimal' | 0.5d                     | '0.5'
+        'Double'     | 0.5G                     | '0.5'
+        'Long'       | new AtomicLong(42L)      | '42'
+    }
+
+    def "a conversion that would change the value names the field and both types"() {
+        given:
+        def template = """@{ model="${declared} sampleCount"}\${sampleCount}"""
+        when:
+        renderTemplate(template, [sampleCount: supplied], true)
+        then:
+        GroovyPagesException e = thrown()
+        e.message.contains("Model field 'sampleCount'")
+        e.message.contains(declaredName)
+        e.message.contains(supplied.getClass().name)
+        where:
+        declared     | supplied                | declaredName
+        'Integer'    | 3_000_000_000L          | 'java.lang.Integer'
+        'int'        | 3_000_000_000L          | 'int'
+        'Integer'    | 42.9G                   | 'java.lang.Integer'
+        'Short'      | 70_000                  | 'java.lang.Short'
+        'Float'      | 0.1d                    | 'java.lang.Float'
+        'float'      | 1.1d                    | 'float'
+        'Double'     | Long.MAX_VALUE          | 'java.lang.Double'
+        'Float'      | 16_777_217              | 'java.lang.Float'
+        'Double'     | 9_007_199_254_740_993G  | 'java.lang.Double'
+        'Double'     | 0.1G                    | 'java.lang.Double'
+        'BigDecimal' | 0.1d                    | 'java.math.BigDecimal'
+        'Integer'    | Double.NaN              | 'java.lang.Integer'
+        'Double'     | new BigDecimal('1E400') | 'java.lang.Double'
+        'Double'     | Float.NEGATIVE_INFINITY | 'java.lang.Double'
+    }
+
+    def "a model value that cannot be converted names the field and both types"() {
+        given:
+        def template = '''@{ model="Integer sampleCount"}${sampleCount}'''
+        when:
+        renderTemplate(template, [sampleCount: new Date()], true)
+        then:
+        GroovyPagesException e = thrown()
+        e.message.contains("Model field 'sampleCount'")
+        e.message.contains('java.lang.Integer')
+        e.message.contains('java.util.Date')
+        e.cause instanceof GroovyCastException
+    }
+
+    def "a non-finite value that cannot be converted names the field and both types"() {
+        given:
+        def template = """@{ model="${declared} sampleCount"}\${sampleCount}"""
+        when:
+        renderTemplate(template, [sampleCount: supplied], true)
+        then:
+        GroovyPagesException e = thrown()
+        e.message.contains("Model field 'sampleCount'")
+        e.message.contains("java.math.${declared}")
+        e.message.contains(supplied.getClass().name)
+        e.cause instanceof NumberFormatException
+        where:
+        [declared, supplied] << [['BigDecimal', 'BigInteger'],
+                                [Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY]].combinations()
     }
 
     def renderTemplate(templateSource, model, expectedCompileStaticMode, printSource = false) {
