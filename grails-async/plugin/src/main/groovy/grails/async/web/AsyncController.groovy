@@ -38,7 +38,9 @@ import org.grails.web.util.GrailsApplicationAttributes
  *
  * @author Graeme Rocher
  * @since 3.3
+ * @deprecated Return a Grails promise from a controller and let Spring MVC manage asynchronous request processing.
  */
+@Deprecated(since = '8.0', forRemoval = true)
 @CompileStatic
 trait AsyncController {
 

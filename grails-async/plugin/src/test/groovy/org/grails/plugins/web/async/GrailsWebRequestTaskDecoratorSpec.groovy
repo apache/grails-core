@@ -18,31 +18,31 @@
  */
 package org.grails.plugins.web.async
 
-import groovy.transform.CompileStatic
+import org.springframework.web.context.request.RequestContextHolder
 
-import grails.async.decorator.PromiseDecorator
-import grails.async.decorator.PromiseDecoratorLookupStrategy
+import grails.util.GrailsWebMockUtil
 import org.grails.web.servlet.mvc.GrailsWebRequest
+import spock.lang.Specification
 
-/**
- * A promise decorated lookup strategy that binds a WebRequest to the promise thread
- *
- * @author Graeme Rocher
- * @since 2.3
- * @deprecated Request propagation is now provided by {@link GrailsWebRequestTaskDecorator} on Boot's application task executor.
- */
-@Deprecated(since = '8.0', forRemoval = true)
-@CompileStatic
-class AsyncWebRequestPromiseDecoratorLookupStrategy implements PromiseDecoratorLookupStrategy {
+class GrailsWebRequestTaskDecoratorSpec extends Specification {
 
-    @Override
-    List<PromiseDecorator> findDecorators() {
-        final webRequest = GrailsWebRequest.lookup()
-        if (webRequest) {
-            List<PromiseDecorator> decorators = []
-            decorators.add(new AsyncWebRequestPromiseDecorator(webRequest))
-            return decorators
+    void cleanup() {
+        RequestContextHolder.resetRequestAttributes()
+    }
+
+    void 'propagates and then clears the current Grails web request'() {
+        given:
+        GrailsWebRequest original = GrailsWebMockUtil.bindMockWebRequest()
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            assert GrailsWebRequest.lookup().currentRequest.is(original.currentRequest)
+            assert !GrailsWebRequest.lookup().is(original)
         }
-        return Collections.emptyList()
+        RequestContextHolder.resetRequestAttributes()
+
+        when:
+        decorated.run()
+
+        then:
+        GrailsWebRequest.lookup() == null
     }
 }
