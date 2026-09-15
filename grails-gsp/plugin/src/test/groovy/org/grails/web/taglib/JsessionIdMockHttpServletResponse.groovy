@@ -16,37 +16,15 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.taglib.jsp;
+package org.grails.web.taglib
 
-/**
- * @author Graeme Rocher
- * @since 28-Feb-2006
- */
-public class JspCurrencySelectTag extends JspInvokeGrailsTagLibTag {
-    private static final long serialVersionUID = -7627197546193185836L;
+import groovy.transform.CompileStatic
+import org.springframework.mock.web.MockHttpServletResponse
 
-    private static final String TAG_NAME = "currencySelect";
-
-    private String name;
-    private String value;
-
-    public JspCurrencySelectTag() {
-        setTagName(TAG_NAME);
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getValue() {
-        return value;
-    }
-
-    public void setValue(String value) {
-        this.value = value;
+@CompileStatic
+class JsessionIdMockHttpServletResponse extends MockHttpServletResponse {
+    @Override
+    String encodeURL(String url) {
+        return super.encodeURL(url + ';jsessionid=test')
     }
 }

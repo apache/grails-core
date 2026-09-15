@@ -16,48 +16,21 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.taglib.jsp;
+package org.grails.web.pages
+
+import org.grails.gsp.GroovyPageResourceLoader
+import org.junit.jupiter.api.Test
 
 /**
- * JSP facade onto the GSP hasErrors tag
+ * Tests for the development ResourceLoader instance of Groovy Server Pages.
  *
  * @author Graeme Rocher
- * @since 28-Feb-2006
+ * @since 0.5
  */
-public class JspHasErrorsTag extends JspInvokeGrailsTagLibTag {
-    private static final long serialVersionUID = -5226668051247749800L;
+class GroovyPageResourceLoaderTests {
 
-    private static final String TAG_NAME = "hasErrors";
-
-    private String bean;
-    private String model;
-    private String field;
-
-    public JspHasErrorsTag() {
-        setTagName(TAG_NAME);
-    }
-
-    public String getBean() {
-        return bean;
-    }
-
-    public void setBean(String bean) {
-        this.bean = bean;
-    }
-
-    public String getModel() {
-        return model;
-    }
-
-    public void setModel(String model) {
-        this.model = model;
-    }
-
-    public String getField() {
-        return field;
-    }
-
-    public void setField(String field) {
-        this.field = field;
+    @Test
+    void testGetRealLocationInProject() {
+        /*GroovyPageResourceLoader rl =*/ new GroovyPageResourceLoader()
     }
 }
