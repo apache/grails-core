@@ -16,14 +16,14 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.servlet.view;
+package org.grails.web.servlet.view
 
-import java.util.Map;
+import groovy.transform.CompileStatic
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
 
-import org.springframework.web.servlet.View;
+import org.springframework.web.servlet.View
 
 /**
  * A view that does nothing.
@@ -31,20 +31,21 @@ import org.springframework.web.servlet.View;
  * @author Graeme Rocher
  * @since 1.0
  */
-public class NullView implements View {
+@CompileStatic
+class NullView implements View {
 
-    private String contentType;
+    private String contentType
 
-    public NullView(String contentType) {
-        this.contentType = contentType;
+    NullView(String contentType) {
+        this.contentType = contentType
     }
 
-    public String getContentType() {
-        return contentType;
+    String getContentType() {
+        return contentType
     }
 
-    @SuppressWarnings("rawtypes")
-    public void render(Map model, HttpServletRequest request, HttpServletResponse response) {
+    @SuppressWarnings('rawtypes')
+    void render(Map model, HttpServletRequest request, HttpServletResponse response) {
         // do nothing
     }
 }
