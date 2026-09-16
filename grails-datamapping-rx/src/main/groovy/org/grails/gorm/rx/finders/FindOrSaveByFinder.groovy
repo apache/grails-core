@@ -27,6 +27,7 @@ import org.grails.datastore.rx.RxDatastoreClient
  */
 @CompileStatic
 class FindOrSaveByFinder extends FindOrCreateByFinder {
+
     FindOrSaveByFinder(RxDatastoreClient datastoreClient) {
         super(datastoreClient)
         setPattern(org.grails.datastore.gorm.finders.FindOrSaveByFinder.METHOD_PATTERN)
@@ -34,6 +35,6 @@ class FindOrSaveByFinder extends FindOrCreateByFinder {
 
     @Override
     protected boolean shouldSaveOnCreate() {
-        return true;
+        return true
     }
 }

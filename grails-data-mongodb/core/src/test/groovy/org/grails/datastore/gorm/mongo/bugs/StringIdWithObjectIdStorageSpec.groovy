@@ -370,6 +370,28 @@ class StringIdWithObjectIdStorageSpec extends GrailsDataTckSpec<GrailsDataMongoT
         raw.getString('title') == 'Updated'
     }
 
+    void "an empty assigned String id can be deleted"() {
+        given: 'an empty String is a valid BSON _id; Groovy truthiness used to skip it'
+        AssignedNonHexVideo v = new AssignedNonHexVideo(id: '', title: 'Empty key')
+        v.save(flush: true)
+
+        expect:
+        assignedRawCollection().find(new Document('_id', '')).first() != null
+
+        when:
+        manager.session.clear()
+        AssignedNonHexVideo.get('').delete(flush: true)
+
+        then: 'the document is actually removed'
+        assignedRawCollection().find(new Document('_id', '')).first() == null
+    }
+
+    private com.mongodb.client.MongoCollection<Document> assignedRawCollection() {
+        manager.mongoClient
+                .getDatabase('test')
+                .getCollection('assignedNonHexVideo')
+    }
+
     private com.mongodb.client.MongoCollection<Document> rawCollection() {
         manager.mongoClient
                 .getDatabase('test')
@@ -387,6 +409,15 @@ class StringIdWithObjectIdStorageSpec extends GrailsDataTckSpec<GrailsDataMongoT
 class LegacyVideo {
     String id
     String title
+
+    // Pinned to the pre-8.0.0 default. Since 8.0.0 a bare `String id` stores _id as an
+    // ObjectId, which is exactly what the cases below are demonstrating the absence of --
+    // they document what an application that opts out (globally via
+    // grails.mongodb.stringIds.defaultStoredAs: string, or per domain like this) still
+    // hits when its stored data holds ObjectId _id values.
+    static mapping = {
+        id storedAs: String
+    }
 }
 
 @Entity

@@ -18,18 +18,16 @@
  */
 package grails.gorm.rx.collection;
 
-
-import grails.gorm.rx.PersistentObservable;
-import rx.Observable;
-
 import java.util.List;
 
+import rx.Observable;
+
+import grails.gorm.rx.PersistentObservable;
+
 /**
- * @author Graeme Rocher
  * @since 6.0
  */
 public interface ObservableCollection<T> extends PersistentObservable<T> {
-
 
     /**
      * Returns an Observable for the operation

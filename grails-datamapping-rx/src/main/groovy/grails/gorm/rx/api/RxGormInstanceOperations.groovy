@@ -24,7 +24,6 @@ import rx.Observable
 /**
  * Methods on instances
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 interface RxGormInstanceOperations<D> {
@@ -52,7 +51,6 @@ interface RxGormInstanceOperations<D> {
      * @return An {@link Observable} with the result of the operation
      */
     Observable<D> save(D instance, Map arguments)
-
 
     /**
      * Saves an entity and returns an {@link Observable}, forcing an insert operation regardless whether an identifier is already present or not

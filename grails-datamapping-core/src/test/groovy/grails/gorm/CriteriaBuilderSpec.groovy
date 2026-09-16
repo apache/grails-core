@@ -32,8 +32,8 @@ import spock.lang.Specification
  * toward this module's report - see item 14's note on cross-module coverage attribution).
  *
  * This PR's diff added {@code ensureQueryIsInitialized()} guards to several
- * {@code AbstractCriteriaBuilder} methods (`cache`, `join`, `select`, `order`, `list`,
- * `invokeList`, `projections`) plus a new `getPersistentEntity()` getter - fixing the exact NPE
+ * {@code AbstractCriteriaBuilder} methods (`cache`, `join`, `select`, `order`, `invokeList`,
+ * `projections`) plus a new `getPersistentEntity()` getter - fixing the exact NPE
  * item 9 found and left as a known gap: {@code query} is null on a criteria builder obtained
  * directly from `createCriteria()` until something inside a `.list{}`/`.get{}` closure first
  * touches it.
@@ -75,6 +75,7 @@ class CriteriaBuilderSpec extends Specification {
         }
 
         then:
+        results instanceof List
         results.size() == 2
         results.every { it.title.contains('Action') }
     }

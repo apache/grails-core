@@ -57,8 +57,15 @@ import org.grails.datastore.mapping.query.Query;
  *
  * @author Graeme Rocher
  * @since 1.0
+ *
+ * @deprecated The non-codec ("mapping") persistence engine is deprecated and will be removed
+ * in a future release. Use the default codec engine, which is what
+ * {@code grails.mongodb.engine} selects when unset. This engine reaches MongoDB through a
+ * separate persister hierarchy that has to be kept in step with the codec one for every
+ * storage-layer change, and it carries no feature the codec engine lacks.
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
+@Deprecated
 public class MongoEntityPersister extends AbstractMongoObectEntityPersister<Document> {
 
     public static final ValueRetrievalStrategy<Document> VALUE_RETRIEVAL_STRATEGY = new ValueRetrievalStrategy<>() {
@@ -331,8 +338,11 @@ public class MongoEntityPersister extends AbstractMongoObectEntityPersister<Docu
     protected Object storeEntry(final PersistentEntity persistentEntity, final EntityAccess entityAccess,
                                 final Object storeId, final Document nativeEntry) {
 
-        nativeEntry.put(MONGO_ID_FIELD, storeId);
-        return nativeEntry.get(MONGO_ID_FIELD);
+        // Honour the id mapping's storedAs, which the codec engine applies via IdentityEncoder.
+        // This is the single point where _id is written for this engine. The declared-type
+        // value is still returned, so the domain keeps the String id it declared.
+        nativeEntry.put(MONGO_ID_FIELD, MongoIdCoercion.coerceIdToStoredType(storeId, persistentEntity));
+        return storeId;
     }
 
     protected String getCollectionName(PersistentEntity persistentEntity, Document nativeEntry) {
@@ -410,7 +420,9 @@ public class MongoEntityPersister extends AbstractMongoObectEntityPersister<Docu
     protected Document createDBObjectWithKey(Object key) {
         Document dbo = new Document();
         if (hasNumericalIdentifier || hasStringIdentifier) {
-            dbo.put(MONGO_ID_FIELD, key);
+            // Match the type storeEntry wrote: a String-id domain resolved to
+            // storedAs: ObjectId is filtered by ObjectId, not by the hex String.
+            dbo.put(MONGO_ID_FIELD, MongoIdCoercion.coerceIdToStoredType(key, getPersistentEntity()));
         }
         else {
             if (key instanceof ObjectId) {

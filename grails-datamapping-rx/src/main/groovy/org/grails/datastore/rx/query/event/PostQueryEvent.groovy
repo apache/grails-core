@@ -28,7 +28,6 @@ import rx.Observable
 /**
  * Post query event fired by RxGORM
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 @CompileStatic

@@ -27,7 +27,6 @@ import org.grails.gorm.rx.api.RxGormEnhancer
 /**
  * Utility methods for RxCollections
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 @CompileStatic
@@ -42,7 +41,7 @@ class RxCollectionUtils {
      * @return
      */
     static Collection createConcreteCollection(Association association, Serializable foreignKey, QueryState queryState) {
-        switch(association.type) {
+        switch (association.type) {
             case SortedSet:
                 return new RxPersistentSortedSet(RxGormEnhancer.findInstanceApi(association.associatedEntity.javaClass).datastoreClient, association, foreignKey, queryState)
             case List:
@@ -61,7 +60,7 @@ class RxCollectionUtils {
      * @return
      */
     static Collection createConcreteCollection(Association association, Query initializerQuery, QueryState queryState) {
-        switch(association.type) {
+        switch (association.type) {
             case SortedSet:
                 return new RxPersistentSortedSet(RxGormEnhancer.findInstanceApi(association.associatedEntity.javaClass).datastoreClient, association, initializerQuery, queryState)
             case List:

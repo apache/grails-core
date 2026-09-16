@@ -20,11 +20,12 @@
 package grails.gorm.rx
 
 import groovy.transform.CompileStatic
-import groovy.transform.InheritConstructors
+import java.lang.reflect.InvocationHandler
+import java.lang.reflect.Method
+import java.lang.reflect.Proxy
 import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.query.criteria.AbstractDetachedCriteria
 import org.grails.datastore.mapping.query.Query
-import org.grails.datastore.mapping.query.api.Criteria
 import org.grails.datastore.mapping.query.api.ProjectionList
 import org.grails.datastore.mapping.query.api.QueryArgumentsAware
 import org.grails.datastore.mapping.query.api.QueryableCriteria
@@ -34,16 +35,14 @@ import rx.Observable
 import rx.Subscriber
 import rx.Subscription
 
-import jakarta.persistence.FetchType
-
 /**
  * Reactive version of {@link grails.gorm.DetachedCriteria}
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 @CompileStatic
 class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implements PersistentObservable<T> {
+
     DetachedCriteria(Class<Observable<T>> targetClass, String alias) {
         super(targetClass, alias)
     }
@@ -263,11 +262,12 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
 
     @Override
     protected QueryableCriteria buildQueryableCriteria(Closure queryClosure) {
-        return (QueryableCriteria)new DetachedCriteria(targetClass).build(queryClosure)
+        DetachedCriteria<T> subquery = (DetachedCriteria<T>) new DetachedCriteria(targetClass).build(queryClosure)
+        return buildQueryableCriteriaAdapter(subquery)
     }
 
     @Override
-    protected DetachedCriteria<T> clone() {
+    DetachedCriteria<T> clone() {
         return (DetachedCriteria)super.clone()
     }
 
@@ -644,16 +644,6 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
         }
         DynamicFinder.applyDetachedCriteria(query, this)
 
-        for(entry in fetchStrategies) {
-            switch(entry.value) {
-                case FetchType.EAGER:
-                    query.join(entry.key)
-                break
-                default:
-                    query.select(entry.key)
-            }
-        }
-
         if (query instanceof QueryArgumentsAware) {
             query.arguments = args
         }
@@ -675,5 +665,51 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
     @Override
     Subscription subscribe(Subscriber<? super T> subscriber) {
         findAll().subscribe(subscriber)
+    }
+
+    /**
+     * Adapts a {@link DetachedCriteria} into a {@link QueryableCriteria} so it can be used as a subquery
+     * (for example by {@code in}, {@code eqAll} or {@code gtSome}).
+     *
+     * {@link DetachedCriteria} cannot implement {@link QueryableCriteria} directly because its own
+     * {@code find()}/{@code list()} methods return {@link Observable} rather than the synchronous
+     * {@code T}/{@code List<T>} that {@link QueryableCriteria} requires. Every other {@code Criteria} method
+     * is forwarded as-is to the wrapped {@link DetachedCriteria} through a dynamic proxy, since query engines
+     * that consume a subquery (see {@code Restrictions.in}, {@code Query.SubqueryCriterion} and their
+     * translators such as {@code JpaQueryBuilder}/{@code PredicateGenerator}) only ever read
+     * {@link QueryableCriteria#getCriteria()}, {@link QueryableCriteria#getPersistentEntity()},
+     * {@link QueryableCriteria#getProjections()} and {@link QueryableCriteria#getAlias()} to build a nested
+     * query; they never call {@code find()}/{@code list()} on the subquery, so those two methods throw
+     * rather than blocking the reactive pipeline.
+     *
+     * @param subquery The built subquery to adapt
+     * @return A {@link QueryableCriteria} view of the subquery
+     */
+    @CompileStatic
+    private static QueryableCriteria buildQueryableCriteriaAdapter(DetachedCriteria subquery) {
+        InvocationHandler handler = new QueryableCriteriaInvocationHandler(subquery)
+        return (QueryableCriteria) Proxy.newProxyInstance(
+                QueryableCriteria.classLoader, [QueryableCriteria] as Class[], handler)
+    }
+
+    @CompileStatic
+    private static class QueryableCriteriaInvocationHandler implements InvocationHandler {
+
+        private final DetachedCriteria criteria
+
+        QueryableCriteriaInvocationHandler(DetachedCriteria criteria) {
+            this.criteria = criteria
+        }
+
+        @Override
+        Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+            String name = method.name
+            if (name == 'find' || name == 'list') {
+                throw new UnsupportedOperationException(
+                        "${name}() cannot be invoked on a subquery; query engines build a nested query from " +
+                        'getCriteria()/getPersistentEntity()/getProjections()/getAlias() instead of executing it directly')
+            }
+            return criteria.invokeMethod(name, args)
+        }
     }
 }

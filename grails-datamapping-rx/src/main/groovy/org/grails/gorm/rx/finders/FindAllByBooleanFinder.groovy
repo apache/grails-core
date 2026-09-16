@@ -29,13 +29,14 @@ import org.grails.datastore.rx.RxDatastoreClient
  */
 @CompileStatic
 class FindAllByBooleanFinder extends FindAllByFinder {
+
     FindAllByBooleanFinder(RxDatastoreClient datastoreClient) {
         super(datastoreClient)
         setPattern(org.grails.datastore.gorm.finders.FindAllByBooleanFinder.METHOD_PATTERN)
     }
 
     @Override
-    public boolean firstExpressionIsRequiredBoolean() {
-        return true;
+    boolean firstExpressionIsRequiredBoolean() {
+        return true
     }
 }

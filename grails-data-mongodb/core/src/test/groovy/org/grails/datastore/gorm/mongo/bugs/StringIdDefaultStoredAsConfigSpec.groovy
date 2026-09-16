@@ -41,16 +41,30 @@ class StringIdDefaultStoredAsConfigSpec extends Specification {
         new MongoMappingContext(settings, domainClasses)
     }
 
-    void "without the global config, String id has no storedAs (default behavior unchanged)"() {
+    void "without the global config, String id defaults to ObjectId storedAs"() {
         given:
         MongoMappingContext ctx = contextFor([:], PlainStringIdDomain)
 
         when:
         PersistentEntity entity = ctx.getPersistentEntity(PlainStringIdDomain.name)
 
-        then:
+        then: 'objectid is the default as of 8.0.0 -- no config needed'
         entity != null
-        entity.mapping.identifier.storedAs == null
+        entity.mapping.identifier.storedAs == ObjectId
+    }
+
+    void "the global default can be pinned back to string for legacy data"() {
+        given:
+        MongoMappingContext ctx = contextFor(
+                [(MongoSettings.SETTING_STRING_IDS_DEFAULT_STORED_AS): 'string'],
+                PlainStringIdDomain
+        )
+
+        when:
+        PersistentEntity entity = ctx.getPersistentEntity(PlainStringIdDomain.name)
+
+        then: 'the pre-8.0.0 behavior, for applications with existing string _id data'
+        entity.mapping.identifier.storedAs == String
     }
 
     void "with the global default set to objectid, String id picks up ObjectId storedAs"() {
@@ -95,7 +109,41 @@ class StringIdDefaultStoredAsConfigSpec extends Specification {
         entity.mapping.identifier.storedAs == null
     }
 
-    void "unrecognized storedAs value parses as null (safe fallback, no boot failure)"() {
+    void "the objectid default applies to the codec engine"() {
+        given:
+        MongoMappingContext ctx = contextFor(
+                [(MongoSettings.SETTING_ENGINE): 'codec'],
+                PlainStringIdDomain
+        )
+
+        expect:
+        ctx.getPersistentEntity(PlainStringIdDomain.name).mapping.identifier.storedAs == ObjectId
+    }
+
+    void "the objectid default applies to the non-codec engine too"() {
+        given: 'both engines coerce _id and association references through the id mapping'
+        MongoMappingContext ctx = contextFor(
+                [(MongoSettings.SETTING_ENGINE): 'mapping'],
+                PlainStringIdDomain
+        )
+
+        expect:
+        ctx.getPersistentEntity(PlainStringIdDomain.name).mapping.identifier.storedAs == ObjectId
+    }
+
+    void "an explicit value still applies to the non-codec engine"() {
+        given: 'scoping affects the default only -- an explicit request is still honoured'
+        MongoMappingContext ctx = contextFor(
+                [(MongoSettings.SETTING_ENGINE)                    : 'mapping',
+                 (MongoSettings.SETTING_STRING_IDS_DEFAULT_STORED_AS): 'objectid'],
+                PlainStringIdDomain
+        )
+
+        expect:
+        ctx.getPersistentEntity(PlainStringIdDomain.name).mapping.identifier.storedAs == ObjectId
+    }
+
+    void "unrecognized storedAs value falls back to the default (safe, no boot failure)"() {
         given:
         MongoMappingContext ctx = contextFor(
                 [(MongoSettings.SETTING_STRING_IDS_DEFAULT_STORED_AS): 'banana'],
@@ -105,8 +153,8 @@ class StringIdDefaultStoredAsConfigSpec extends Specification {
         when:
         PersistentEntity entity = ctx.getPersistentEntity(PlainStringIdDomain.name)
 
-        then:
-        entity.mapping.identifier.storedAs == null
+        then: 'a typo warns and yields the default rather than a third, silent behavior'
+        entity.mapping.identifier.storedAs == ObjectId
     }
 }
 

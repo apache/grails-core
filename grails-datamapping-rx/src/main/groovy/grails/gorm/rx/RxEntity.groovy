@@ -22,6 +22,7 @@ package grails.gorm.rx
 import groovy.transform.CompileStatic
 import groovy.transform.Generated
 
+import rx.Observable
 import rx.Subscriber
 
 import grails.gorm.rx.api.RxGormAllOperations
@@ -47,7 +48,6 @@ import org.grails.gorm.rx.api.RxGormStaticApi
 /**
  * Represents a reactive GORM entity
  *
- * @author Graeme Rocher
  * @since 6.0
  *
  * @param <D> The entity type
@@ -100,7 +100,7 @@ trait RxEntity<D> implements RxGormOperations<D>, GormValidateable, DirtyCheckab
 
     @Generated
     private Observable<D> doSave(Map arguments, boolean isInsert) {
-        boolean shouldValidate = arguments?.containsKey("validate") ? arguments.validate : true
+        boolean shouldValidate = arguments?.containsKey('validate') ? arguments.validate : true
         if (shouldValidate) {
             def hasErrors = !validate()
             if (hasErrors) {
@@ -143,7 +143,6 @@ trait RxEntity<D> implements RxGormOperations<D>, GormValidateable, DirtyCheckab
         currentRxGormInstanceApi().delete this, arguments
     }
 
-
     /**
      * Checks whether a field is dirty
      *
@@ -182,11 +181,11 @@ trait RxEntity<D> implements RxGormOperations<D>, GormValidateable, DirtyCheckab
         final MappingContext mappingContext = entity.mappingContext
         final EntityReflector entityReflector = mappingContext.getEntityReflector(entity)
 
-        if(prop instanceof Association) {
+        if (prop instanceof Association) {
             Association association = (Association)prop
             Class javaClass = association.associatedEntity?.javaClass
             final boolean isBasic = association instanceof Basic
-            if(isBasic) {
+            if (isBasic) {
                 javaClass = ((Basic)association).componentType
             }
 
@@ -228,14 +227,14 @@ trait RxEntity<D> implements RxGormOperations<D>, GormValidateable, DirtyCheckab
     Serializable getAssociationId(String associationName) {
         PersistentEntity entity = getGormPersistentEntity()
         def association = entity.getPropertyByName(associationName)
-        if(association instanceof ToOne) {
+        if (association instanceof ToOne) {
             MappingContext mappingContext = currentRxGormStaticApi().datastoreClient.mappingContext
             def proxyHandler = mappingContext.getProxyHandler()
             def entityReflector = mappingContext.getEntityReflector(entity)
             def value = entityReflector.getProperty(this, associationName)
-            if(value != null) {
+            if (value != null) {
 
-                if(proxyHandler.isProxy(value)) {
+                if (proxyHandler.isProxy(value)) {
                     return proxyHandler.getIdentifier(value)
                 }
                 else {
@@ -260,7 +259,7 @@ trait RxEntity<D> implements RxGormOperations<D>, GormValidateable, DirtyCheckab
 
         final MappingContext mappingContext = entity.mappingContext
         final EntityReflector reflector = mappingContext.getEntityReflector(entity)
-        if(reflector != null && (prop instanceof Association)) {
+        if (reflector != null && (prop instanceof Association)) {
 
             final Association association = (Association)prop
             final propertyName = association.name
@@ -274,7 +273,7 @@ trait RxEntity<D> implements RxGormOperations<D>, GormValidateable, DirtyCheckab
 
             Class javaClass = association.associatedEntity?.javaClass
             final boolean isBasic = association instanceof Basic
-            if(isBasic) {
+            if (isBasic) {
                 javaClass = ((Basic)association).componentType
             }
 
@@ -286,7 +285,7 @@ trait RxEntity<D> implements RxGormOperations<D>, GormValidateable, DirtyCheckab
             }
             else {
                 def conversionService = mappingContext.conversionService
-                if(conversionService.canConvert(arg.getClass(), javaClass)) {
+                if (conversionService.canConvert(arg.getClass(), javaClass)) {
                     obj = conversionService.convert(arg, javaClass)
                 }
                 else {
@@ -310,11 +309,11 @@ trait RxEntity<D> implements RxGormOperations<D>, GormValidateable, DirtyCheckab
 
                     Collection otherSideValue = (Collection)associationReflector.getProperty(obj, name)
                     if (otherSideValue == null) {
-                        otherSideValue =  (Collection)( [].asType(otherSide.type) )
+                        otherSideValue =  (Collection)([].asType(otherSide.type))
                         associationReflector.setProperty(obj, name, otherSideValue)
                     }
                     otherSideValue.add(targetObject)
-                    if(obj instanceof DirtyCheckable) {
+                    if (obj instanceof DirtyCheckable) {
                         ((DirtyCheckable)obj).markDirty(name)
                     }
                 }
@@ -359,7 +358,6 @@ trait RxEntity<D> implements RxGormOperations<D>, GormValidateable, DirtyCheckab
         currentRxGormStaticApi().proxy(id, args)
     }
 
-
     /**
      * Obtain a proxy to the given instance
      *
@@ -386,7 +384,7 @@ trait RxEntity<D> implements RxGormOperations<D>, GormValidateable, DirtyCheckab
      */
     @Generated
     static Observable<Number> deleteAll(D...objects) {
-        deleteAll( (Iterable<D>)Arrays.asList(objects) )
+        deleteAll((Iterable<D>) Arrays.asList(objects))
     }
 
     /**
@@ -454,7 +452,7 @@ trait RxEntity<D> implements RxGormOperations<D>, GormValidateable, DirtyCheckab
     static Observable<Boolean> exists(Serializable id) {
         get(id).map { D o ->
             o != null
-        }.switchIfEmpty(Observable.create( { Subscriber s ->
+        }.switchIfEmpty(Observable.create({ Subscriber s ->
             s.onNext(false)
         } as Observable.OnSubscribe))
     }
@@ -530,8 +528,6 @@ trait RxEntity<D> implements RxGormOperations<D>, GormValidateable, DirtyCheckab
     static Observable<D> last(Map<String,Object> params) {
         currentRxGormStaticApi().last params
     }
-
-
 
     /**
      * List all entities and return an observable
@@ -740,7 +736,7 @@ trait RxEntity<D> implements RxGormOperations<D>, GormValidateable, DirtyCheckab
      * @return
      */
     @Generated
-    static <T> T withConnection(String connectionName, @DelegatesTo(RxGormAllOperations) Closure<T> callable ) {
+    static <T> T withConnection(String connectionName, @DelegatesTo(RxGormAllOperations) Closure<T> callable) {
         def staticOperations = (RxGormAllOperations<D>) RxGormEnhancer.findStaticApi(this, connectionName)
         callable.setDelegate(staticOperations)
         return callable.call()
