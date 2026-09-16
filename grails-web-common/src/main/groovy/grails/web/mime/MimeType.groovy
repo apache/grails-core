@@ -66,7 +66,7 @@ class MimeType {
     MimeType(String name, String extension, Map<String, String> params = [:]) {
         if (name && name.contains(';')) {
             List tokenWithArgs = name.split(';').toList()
-            name = tokenWithArgs[0]
+            name = ((String) tokenWithArgs[0]).trim()
             final paramsList = tokenWithArgs[1..-1]
             paramsList.each { String it ->
                 def i = it.indexOf('=')

@@ -23,6 +23,35 @@ import spock.lang.Issue
 import spock.lang.Specification
 
 class JSONWriterSpec extends Specification {
+
+    void 'a scalar root is a complete JSON document'() {
+        given:
+        def output = new StringWriter()
+        def writer = new JSONWriter(output)
+
+        when:
+        writer.value(value)
+
+        then:
+        output.toString() == expected
+
+        when:
+        writer.value('another root')
+
+        then:
+        thrown(JSONException)
+        output.toString() == expected
+
+        where:
+        value          | expected
+        'ok'           | '"ok"'
+        'a"b\nc'       | '"a\\"b\\nc"'
+        "Hi ${'Ada'}"  | '"Hi Ada"'
+        42L            | '42'
+        1.5d           | '1.5'
+        true           | 'true'
+        null           | 'null'
+    }
     
     @Issue('GRAILS-10823')
     void 'Test rendering a forward slash'() {
