@@ -59,7 +59,7 @@ class AsyncWebRequestPromiseDecorator implements PromiseDecorator {
 
     AsyncWebRequestPromiseDecorator(GrailsWebRequest webRequest) {
         this.webRequest = webRequest
-        HttpServletRequest currentServletRequest = webRequest.currentRequest
+        HttpServletRequest currentServletRequest = webRequest.request
         WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(currentServletRequest)
         AsyncGrailsWebRequest newWebRequest = AsyncGrailsWebRequest.lookup(currentServletRequest)
         boolean startedHere = false

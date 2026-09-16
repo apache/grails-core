@@ -18,8 +18,11 @@
  */
 package org.apache.grails.buildsrc
 
+import javax.inject.Inject
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+import groovy.xml.MarkupBuilder
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -29,9 +32,13 @@ import org.gradle.api.attributes.Usage
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.javadoc.Groovydoc
+import org.gradle.process.ExecOperations
 
 @CompileStatic
-class GroovydocEnhancerPlugin implements Plugin<Project> {
+abstract class GroovydocEnhancerPlugin implements Plugin<Project> {
+
+    @Inject
+    protected abstract ExecOperations getExecOperations()
 
     @Override
     void apply(Project project) {
@@ -40,9 +47,16 @@ class GroovydocEnhancerPlugin implements Plugin<Project> {
                 GroovydocEnhancerExtension,
                 project
         )
+        Provider<GroovydocMemoryThrottle> throttle = project.gradle.sharedServices.registerIfAbsent(
+                'groovydocMemoryThrottle', GroovydocMemoryThrottle) {
+            it.maxParallelUsages.set(1)
+        }
+        project.tasks.withType(Groovydoc).configureEach {
+            it.usesService(throttle)
+        }
         registerDocumentationConfiguration(project)
         configureGroovydocDefaults(project, extension)
-        configureAntBuilderExecution(project, extension)
+        configureAntBuilderExecution(project, extension, execOperations)
     }
 
     private static void registerDocumentationConfiguration(Project project) {
@@ -75,11 +89,20 @@ class GroovydocEnhancerPlugin implements Plugin<Project> {
             if (project.configurations.names.contains('documentation')) {
                 it.groovyClasspath = project.configurations.getByName('documentation')
             }
+            // Groovydoc Class.forName's referenced types against this classpath. Compile
+            // classpath is not enough: Hibernate 7 (and similar libraries) publish logging
+            // APIs such as jboss-logging as runtime-only transitives, and loading those
+            // classes without the jar fails with NoClassDefFoundError.
+            def runtimeClasspath = project.configurations.findByName('runtimeClasspath')
+            if (runtimeClasspath != null) {
+                it.classpath = it.classpath ? it.classpath.plus(runtimeClasspath) : runtimeClasspath
+            }
         }
     }
 
     @CompileDynamic
-    private static void configureAntBuilderExecution(Project project, GroovydocEnhancerExtension extension) {
+    private static void configureAntBuilderExecution(Project project, GroovydocEnhancerExtension extension,
+                                                     ExecOperations execOperations) {
         project.tasks.withType(Groovydoc).configureEach { gdoc ->
             if (!extension.useAntBuilder.get()) {
                 return
@@ -88,6 +111,7 @@ class GroovydocEnhancerPlugin implements Plugin<Project> {
             // The external javadoc mapping changes the generated HTML, so a change to it has to
             // invalidate the task's output.
             gdoc.inputs.property('groovydocLinks', project.provider { resolveLinks(gdoc) })
+            gdoc.maxMemory.convention('3g')
 
             gdoc.actions.clear()
             gdoc.doLast {
@@ -110,16 +134,11 @@ class GroovydocEnhancerPlugin implements Plugin<Project> {
 
                 // Groovydoc resolves references to types outside the documented sources with
                 // Class.forName against its own classloader; anything it cannot load becomes a
-                // link to a page that was never generated. Adding the documented sources'
-                // compile classpath lets those types resolve, at which point the 'links'
-                // below turn them into external javadoc URLs.
+                // link to a page that was never generated. The groovydoc classpath includes
+                // compile and runtime dependencies so types such as Hibernate (which need
+                // runtime-only jars like jboss-logging) can load; the 'links' below then turn
+                // those types into external javadoc URLs.
                 def antClasspath = gdoc.classpath ? classpath.plus(gdoc.classpath) : classpath
-
-                project.ant.taskdef(
-                        name: 'groovydoc',
-                        classname: 'org.codehaus.groovy.ant.Groovydoc',
-                        classpath: antClasspath.asPath
-                )
 
                 def links = resolveLinks(gdoc)
                 def sourcepath = sourceDirs
@@ -145,11 +164,31 @@ class GroovydocEnhancerPlugin implements Plugin<Project> {
                     antArgs.put('javaVersion', extension.javaVersion.get())
                 }
 
-                project.ant.groovydoc(antArgs) {
-                    for (var l in links) {
-                        link(packages: l.packages, href: l.href)
+                // A fresh process releases parser trees and classloaders after each task.
+                // Running sequentially inside Gradle still retains enough state to exhaust
+                // its heap when the aggregate documentation follows the module docs.
+                File buildFile = new File(gdoc.temporaryDir, 'groovydoc.xml')
+                buildFile.withWriter('UTF-8') { writer ->
+                    new MarkupBuilder(writer).project(name: 'groovydoc', default: 'docs') {
+                        taskdef(name: 'groovydoc', classname: 'org.codehaus.groovy.ant.Groovydoc')
+                        target(name: 'docs') {
+                            groovydoc(antArgs) {
+                                for (var l in links) {
+                                    link(packages: l.packages, href: l.href)
+                                }
+                            }
+                        }
                     }
                 }
+                execOperations.javaexec { spec ->
+                    spec.executable = gdoc.javaLauncher.get().executablePath.asFile.absolutePath
+                    spec.classpath(antClasspath)
+                    spec.mainClass.set('org.apache.tools.ant.Main')
+                    // Included builds (such as Forge) do not inherit the root JVM settings.
+                    spec.systemProperty('spock.iKnowWhatImDoing.disableGroovyVersionCheck', 'true')
+                    spec.maxHeapSize = gdoc.maxMemory.get()
+                    spec.args('-f', buildFile.absolutePath)
+                }.assertNormalExitValue()
             }
         }
     }

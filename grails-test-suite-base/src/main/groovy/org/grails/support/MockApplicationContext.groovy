@@ -454,22 +454,22 @@ class MockApplicationContext extends GroovyObjectSupport implements WebApplicati
         return new ObjectProvider<T>() {
             @Override
             T getObject(Object... args) throws BeansException {
-                return getBean(requiredType)
+                return (T) getBean(requiredType)
             }
 
             @Override
             T getIfAvailable() throws BeansException {
-                return getBean(requiredType)
+                return (T) getBean(requiredType)
             }
 
             @Override
             T getIfUnique() throws BeansException {
-                return getBean(requiredType)
+                return (T) getBean(requiredType)
             }
 
             @Override
             T getObject() throws BeansException {
-                return getBean(requiredType)
+                return (T) getBean(requiredType)
             }
         }
     }

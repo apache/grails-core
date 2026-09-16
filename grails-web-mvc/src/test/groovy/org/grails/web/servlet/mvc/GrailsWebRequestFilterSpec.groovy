@@ -21,9 +21,11 @@ package org.grails.web.servlet.mvc
 import jakarta.servlet.FilterChain
 
 import org.springframework.context.i18n.LocaleContextHolder
+import org.springframework.context.i18n.SimpleTimeZoneAwareLocaleContext
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.mock.web.MockServletContext
+import org.springframework.web.context.support.StaticWebApplicationContext
 import spock.lang.Specification
 
 import grails.web.mvc.FlashScope
@@ -41,7 +43,7 @@ class GrailsWebRequestFilterSpec extends Specification {
 
     void cleanup() {
         WebUtils.clearGrailsWebRequest()
-        LocaleContextHolder.setLocale(null)
+        LocaleContextHolder.resetLocaleContext()
     }
 
     void 'a plain request binds a GrailsWebRequest for the chain and clears it afterward'() {
@@ -127,6 +129,63 @@ class GrailsWebRequestFilterSpec extends Specification {
 
         then:
         seen.size() == 1
+    }
+
+    void 'the locale context established outside Grails is restored after the request'() {
+        given: 'a LocaleContext installed by a filter outside Grails, carrying a time zone'
+        def outerContext = new SimpleTimeZoneAwareLocaleContext(Locale.FRANCE, TimeZone.getTimeZone('Europe/Paris'))
+        LocaleContextHolder.setLocaleContext(outerContext)
+
+        when:
+        newFilter().doFilter(requestWithLocale(Locale.GERMANY), new MockHttpServletResponse(), { req, res -> } as FilterChain)
+
+        then: 'the outer context is put back, time zone and all'
+        LocaleContextHolder.localeContext.is(outerContext)
+        LocaleContextHolder.timeZone.ID == 'Europe/Paris'
+    }
+
+    void 'an include restores the locale context of the enclosing request'() {
+        given: 'an outer request whose locale context is in place'
+        def outerContext = new SimpleTimeZoneAwareLocaleContext(Locale.FRANCE, TimeZone.getTimeZone('Europe/Paris'))
+        LocaleContextHolder.setLocaleContext(outerContext)
+
+        when: 'an include is dispatched through the filter'
+        def includeRequest = requestWithLocale(Locale.JAPAN)
+        includeRequest.setAttribute(WebUtils.INCLUDE_REQUEST_URI_ATTRIBUTE, '/some/include')
+        newFilter().doFilter(includeRequest, new MockHttpServletResponse(), { req, res -> } as FilterChain)
+
+        then: 'the include does not leave its own locale behind for the rest of the outer request'
+        LocaleContextHolder.localeContext.is(outerContext)
+        LocaleContextHolder.timeZone.ID == 'Europe/Paris'
+    }
+
+    void 'the request locale is in effect while the chain runs'() {
+        given:
+        LocaleContextHolder.setLocaleContext(new SimpleTimeZoneAwareLocaleContext(Locale.FRANCE, TimeZone.default))
+        Locale seen = null
+
+        when:
+        newFilter().doFilter(requestWithLocale(Locale.GERMANY), new MockHttpServletResponse(),
+                { req, res -> seen = LocaleContextHolder.locale } as FilterChain)
+
+        then: 'the filter installs the locale of the request being handled'
+        seen == Locale.GERMANY
+    }
+
+    private MockHttpServletRequest requestWithLocale(Locale locale) {
+        new MockHttpServletRequest(servletContext).tap {
+            it.addPreferredLocale(locale)
+        }
+    }
+
+    private GrailsWebRequestFilter newFilter() {
+        def applicationContext = new StaticWebApplicationContext()
+        applicationContext.servletContext = servletContext
+        applicationContext.refresh()
+        def newFilter = new GrailsWebRequestFilter()
+        newFilter.setApplicationContext(applicationContext)
+        newFilter.setServletContext(servletContext)
+        newFilter
     }
 
 }

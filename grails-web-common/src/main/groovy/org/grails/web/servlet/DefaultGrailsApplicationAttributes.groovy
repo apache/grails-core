@@ -24,8 +24,8 @@ import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpSession
 
 import groovy.transform.CompileStatic
-import org.apache.commons.logging.Log
-import org.apache.commons.logging.LogFactory
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.beans.BeansException
 import org.springframework.context.ApplicationContext
 import org.springframework.context.MessageSource
@@ -41,6 +41,7 @@ import grails.web.mvc.FlashScope
 import grails.web.pages.GroovyPagesUriService
 import org.grails.gsp.ResourceAwareTemplateEngine
 import org.grails.web.pages.DefaultGroovyPagesUriService
+import org.grails.web.servlet.view.CompositeViewResolver
 import org.grails.web.util.GrailsApplicationAttributes
 
 /**
@@ -57,28 +58,31 @@ class DefaultGrailsApplicationAttributes implements GrailsApplicationAttributes 
 
     protected static final String DEFAULT_NAMESPACE = 'g'
 
-    private static Log LOG = LogFactory.getLog(DefaultGrailsApplicationAttributes)
+    private static final Logger LOG = LoggerFactory.getLogger(DefaultGrailsApplicationAttributes)
 
-    private UrlPathHelper urlHelper = new UrlPathHelper()
+    private final UrlPathHelper urlHelper = UrlPathHelper.defaultInstance
 
-    private ServletContext context
-    private ApplicationContext appContext
+    private final ServletContext context
+    private final ApplicationContext appContext
 
     // Beans used very often
-    private ResourceAwareTemplateEngine pagesTemplateEngine
-    private GrailsApplication grailsApplication
-    private GroovyPagesUriService groovyPagesUriService
-    private MessageSource messageSource
-    private GrailsPluginManager pluginManager
+    private volatile ResourceAwareTemplateEngine pagesTemplateEngine
+    private volatile GrailsApplication grailsApplication
+    private volatile GroovyPagesUriService groovyPagesUriService
+    private volatile MessageSource messageSource
+    private volatile GrailsPluginManager pluginManager
+    private volatile CompositeViewResolver compositeViewResolver
 
     DefaultGrailsApplicationAttributes(ServletContext context) {
         this.context = context
+        ApplicationContext resolved = null
         if (context != null) {
-            appContext = (ApplicationContext) context.getAttribute(APPLICATION_CONTEXT)
-            if (appContext == null) {
-                appContext = Holders.findApplicationContext()
+            resolved = (ApplicationContext) context.getAttribute(APPLICATION_CONTEXT)
+            if (resolved == null) {
+                resolved = Holders.findApplicationContext()
             }
         }
+        this.appContext = resolved
     }
 
     ApplicationContext getApplicationContext() {
@@ -105,7 +109,7 @@ class DefaultGrailsApplicationAttributes implements GrailsApplicationAttributes 
             }
         }
         catch (BeansException e) {
-            LOG.warn("Bean named '" + name + "' is missing.")
+            LOG.warn("Bean named '{}' is missing.", name)
             return null
         }
     }
@@ -214,8 +218,8 @@ class DefaultGrailsApplicationAttributes implements GrailsApplicationAttributes 
         if (pagesTemplateEngine == null) {
             pagesTemplateEngine = fetchBeanFromAppCtx(ResourceAwareTemplateEngine.BEAN_ID)
         }
-        if (pagesTemplateEngine == null && LOG.isWarnEnabled()) {
-            LOG.warn('No bean named [' + ResourceAwareTemplateEngine.BEAN_ID + '] defined in Spring application context!')
+        if (pagesTemplateEngine == null) {
+            LOG.warn('No bean named [{}] defined in Spring application context!', ResourceAwareTemplateEngine.BEAN_ID)
         }
         return pagesTemplateEngine
     }
@@ -266,6 +270,23 @@ class DefaultGrailsApplicationAttributes implements GrailsApplicationAttributes 
             messageSource = fetchBeanFromAppCtx('messageSource')
         }
         return messageSource
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Resolved from the application context on first use and held afterwards. Unlike the beans above this one is
+     * required rather than optional - a template cannot be rendered without it - so a missing bean is left to raise
+     * the same {@code NoSuchBeanDefinitionException} it always has rather than being turned into a null.</p>
+     */
+    @Override
+    CompositeViewResolver getCompositeViewResolver() {
+        CompositeViewResolver resolver = compositeViewResolver
+        if (resolver == null) {
+            resolver = getApplicationContext().getBean(CompositeViewResolver.BEAN_NAME, CompositeViewResolver)
+            compositeViewResolver = resolver
+        }
+        return resolver
     }
 
 }

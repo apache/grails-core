@@ -1,0 +1,40 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+grails {
+    starImports = ['com.example.custom']
+}
+
+// A task that runs after the classes are compiled and puts its output on the runtime
+// classpath: the shape of asset-pipeline, the exploded plugin directory, or any other
+// post-compile packaging step. Its output reaches compileGroovy only through the
+// runtime classpath, which the compile classpath does not include.
+def packageRuntimeExtra = tasks.register('packageRuntimeExtra') {
+    dependsOn 'classes'
+    def out = layout.buildDirectory.dir('runtime-extra')
+    outputs.dir(out)
+    doLast {
+        def dir = out.get().asFile
+        dir.mkdirs()
+        new File(dir, 'extra.properties').text = 'generated=true'
+    }
+}
+
+dependencies {
+    runtimeOnly files(packageRuntimeExtra)
+}
+
+tasks.register('inspectRuntimeProducer') {
+    dependsOn 'generateCompileGroovyGrailsCompilerConfig'
+    doLast {
+        def gen = tasks.named('generateCompileGroovyGrailsCompilerConfig').get()
+        def deps = gen.taskDependencies.getDependencies(gen)*.path
+        println "GENERATOR_DEPENDENCIES=${deps}"
+        println "GENERATOR_DEPENDS_ON_RUNTIME_PRODUCER=${deps.any { it == ':packageRuntimeExtra' }}"
+        def runtimeProducers = configurations.runtimeClasspath.buildDependencies.getDependencies(null)*.path
+        println "RUNTIME_CLASSPATH_BUILT_BY_PRODUCER=${runtimeProducers.any { it == ':packageRuntimeExtra' }}"
+        def combined = file('build/grailsGroovyCompilerConfig-compileGroovy.groovy')
+        println "COMBINED_CONTAINS_GRAILS_IMPORT=${combined.exists() && combined.text.contains(/star 'com.example.custom'/)}"
+    }
+}

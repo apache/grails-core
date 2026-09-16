@@ -21,6 +21,8 @@ package org.grails.plugins.web.controllers
 
 import java.util.function.Supplier
 
+import jakarta.servlet.Filter
+
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
 

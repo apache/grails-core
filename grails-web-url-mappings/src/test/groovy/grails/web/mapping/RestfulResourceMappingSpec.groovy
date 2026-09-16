@@ -57,7 +57,7 @@ class RestfulResourceMappingSpec extends Specification{
         def urlMappings = urlMappingsHolder.urlMappings
 
         then:"There are correct of them in total"
-        urlMappings.size() == 16
+        urlMappings.size() == 18
 
         expect:"That the appropriate URLs are matched for the appropriate HTTP methods"
         urlMappingsHolder.matchAll('/api/work', 'GET')
@@ -93,7 +93,7 @@ class RestfulResourceMappingSpec extends Specification{
         def urlMappings = urlMappingsHolder.urlMappings
 
         then:"There are correct of them in total"
-        urlMappings.size() == 9
+        urlMappings.size() == 10
 
         expect:"That the appropriate URLs are matched for the appropriate HTTP methods"
         urlMappingsHolder.matchAll('/foo', 'GET')
@@ -355,14 +355,14 @@ class RestfulResourceMappingSpec extends Specification{
         def locationsMappings = urlMappings.findAll { it.controllerName == 'location' }
         
         then: 'There are the correct number of mappings'
-        urlMappings.size() == 40
+        urlMappings.size() == 45
         
         and: 'Each controller has 7 mappings'
-        bookMappings.size() == 8
-        authorMappings.size() == 8
-        titleMappings.size() == 8
-        sellersMappings.size() == 8
-        locationsMappings.size() == 8
+        bookMappings.size() == 9
+        authorMappings.size() == 9
+        titleMappings.size() == 9
+        sellersMappings.size() == 9
+        locationsMappings.size() == 9
         
         and: 'the book mappings have the expected constrained properties'
         bookMappings.find { it.actionName == 'index' }.constraints*.propertyName == ['format']
@@ -430,7 +430,7 @@ class RestfulResourceMappingSpec extends Specification{
             def urlMappings = urlMappingsHolder.urlMappings
 
         then:"There are correct number of them in total"
-            urlMappings.size() == 23
+            urlMappings.size() == 25
 
         expect:
             urlMappingsHolder.matchAll('/books/1/authors/create', 'GET')
@@ -455,7 +455,7 @@ class RestfulResourceMappingSpec extends Specification{
         def urlMappings = urlMappingsHolder.urlMappings
 
         then: "There are correct number of them in total"
-        urlMappings.size() == 23
+        urlMappings.size() == 25
 
         expect:
         urlMappingsHolder.matchAll('/books/1/authors/create', 'GET')
@@ -476,11 +476,11 @@ class RestfulResourceMappingSpec extends Specification{
             def urlMappings = urlMappingsHolder.urlMappings
 
         then:"There are the correct number of them in total"
-            urlMappings.size() == 9
+            urlMappings.size() == 10
 
         expect:"That the appropriate URLs are matched for the appropriate HTTP methods"
             urlMappingsHolder.allowedMethods('/books') == [HttpMethod.POST, HttpMethod.GET] as Set
-            urlMappingsHolder.allowedMethods('/books/1') == [HttpMethod.GET, HttpMethod.DELETE, HttpMethod.PUT, HttpMethod.PATCH] as Set
+            urlMappingsHolder.allowedMethods('/books/1') == [HttpMethod.GET, HttpMethod.DELETE, HttpMethod.PUT, HttpMethod.PATCH, HttpMethod.POST] as Set
             urlMappingsHolder.matchAll('/books', 'GET')
             urlMappingsHolder.matchAll('/books', 'GET')[0].actionName == 'index'
             urlMappingsHolder.matchAll('/books', 'GET')[0].httpMethod == 'GET'
@@ -528,7 +528,7 @@ class RestfulResourceMappingSpec extends Specification{
             def urlMappings = urlMappingsHolder.urlMappings
 
         then:"There are the correct number of them in total"
-            urlMappings.size() == 16
+            urlMappings.size() == 18
 
         expect:"That the appropriate URLs are matched for the appropriate HTTP methods"
             !urlMappingsHolder.matchAll('/author/create', 'GET')
@@ -614,7 +614,7 @@ class RestfulResourceMappingSpec extends Specification{
             def urlMappings = urlMappingsHolder.urlMappings
 
         then:"There are the correct number of them in total"
-            urlMappings.size() == 15
+            urlMappings.size() == 16
 
         expect:"That the appropriate URLs are matched for the appropriate HTTP methods"
             !urlMappingsHolder.matchAll('/author/create', 'GET')
@@ -705,7 +705,7 @@ class RestfulResourceMappingSpec extends Specification{
         def urlMappings = urlMappingsHolder.urlMappings
 
         then: "There are the correct number of them in total"
-        urlMappings.size() == 15
+        urlMappings.size() == 16
 
         expect: "That the appropriate URLs are matched for the appropriate HTTP methods"
         !urlMappingsHolder.matchAll('/author/create', 'GET')
@@ -794,7 +794,7 @@ class RestfulResourceMappingSpec extends Specification{
             def urlMappings = urlMappingsHolder.urlMappings
 
         then:"There are the correct number of them in total"
-            urlMappings.size() == 8
+            urlMappings.size() == 9
 
         expect:"That the appropriate URLs are matched for the appropriate HTTP methods"
             urlMappingsHolder.matchAll('/books/create', 'GET')
@@ -839,7 +839,7 @@ class RestfulResourceMappingSpec extends Specification{
             def urlMappings = urlMappingsHolder.urlMappings
 
         then:"There are the correct number of them in total"
-            urlMappings.size() == 7
+            urlMappings.size() == 8
 
         expect:"That the appropriate URLs are matched for the appropriate HTTP methods"
 
@@ -882,7 +882,7 @@ class RestfulResourceMappingSpec extends Specification{
             def urlMappings = urlMappingsHolder.urlMappings
 
         then:"There are seven of them in total"
-            urlMappings.size() == 3
+            urlMappings.size() == 4
 
         expect:"That the appropriate URLs are matched for the appropriate HTTP methods"
 

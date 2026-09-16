@@ -296,6 +296,7 @@ Each property is stated with its conditions, the symptom of a violation, a sever
 | P7 | **Compile-time AST transforms (`@Resource`, `@Validateable`, etc.) only act on developer-authored source.** | [CWE-94](https://cwe.mitre.org/data/definitions/94.html) | Build runs on developer-controlled source. | A transform fires on or is influenced by attacker-supplied input. | **Correctness** (security-critical only if reachable from a non-build attacker) | *(inferred)* |
 | P8 | **Configuration loading does not evaluate `application.groovy` from a path the framework itself chose at runtime - paths come from build-time classpath and operator-supplied environment/system properties.** | [CWE-94](https://cwe.mitre.org/data/definitions/94.html) | Operator has not pointed `grails.config.locations` at attacker-writable storage. | A user request causes evaluation of a Groovy file the operator did not authorize. | **Security-critical (CVE-eligible)** if violated. | *(inferred)* (§14 wave 1) |
 | P9 | **`maxFileSize` / `maxRequestSize` / `autoGrowCollectionLimit` provide bounded data-binding memory.** | [CWE-770](https://cwe.mitre.org/data/definitions/770.html) | Operator does not raise the limits past application needs. | Memory growth proportional to attacker-controlled input regardless of limit. | **Resource bug** | *(inferred)* (§14 wave 2) |
+| P10 | **XML the framework parses is XXE-hardened: external general and parameter entities, external DTDs and DTD grammars are refused, and a request body that declares a `DOCTYPE` is rejected.** | [CWE-611](https://cwe.mitre.org/data/definitions/611.html) | Document is parsed by the framework's XML data binding (`application/xml`, `text/xml`, `application/hal+xml`) or by `XML.parse`; a parser the application constructs itself gets the JDK defaults. | Content of an external entity appears in bound data, or a body carrying a `DOCTYPE` is bound. | **Security-critical (CVE-eligible)** | *(documented: [upgrading.adoc](./grails-doc/src/en/guide/upgrading.adoc) "XML Parsing Defaults")* |
 
 ### Resource consumption line
 
@@ -335,6 +336,7 @@ Features that **look like** a security property but are not one. Reports that co
 - **`grails.serverURL` is for link generation, not an authoritative declaration of the deployment URL for security purposes.** Setting it does not bind the application to that origin; the embedded container still serves whatever the operator binds it to. *(inferred)*
 - **`GRAILS_ENV=development` is not a security boundary.** Stack traces, verbose error pages, and dev-tool endpoints surfaced in `development` mode are a deployment-configuration symptom, not a framework vulnerability. A report that requires `GRAILS_ENV=development` to reproduce is `OUT-OF-MODEL: non-default-build` (§13), not `VALID`. *(inferred)* (§14 wave 1)
 - **`grails.config.locations` is a Groovy code-execution path, not a configuration-file path.** Any file the application process can read AND an attacker can write to is equivalent to classpath compromise: the `.groovy` form is evaluated via `ConfigSlurper`. A path that looks like "just config" but lives in attacker-writable storage (e.g. an S3 bucket without write controls, a world-writable `/tmp` derivative, a CI artifact directory) is `BY-DESIGN: property-disclaimed` (§13). *(inferred)* (§14 wave 1)
+- **XML hardening covers documents the framework parses, not parsers the application constructs.** Request bodies bound through the framework and descriptors it reads from the classpath are parsed with external entities and external DTDs refused, and request bodies additionally reject a `DOCTYPE` (§8 P10). An `XmlSlurper` or `XmlParser` the application creates itself gets the JDK defaults; XXE through such a parser is application code, not a framework finding. *(inferred)*
 
 ### Well-known attack classes against this category of project that the framework does not defend against
 
@@ -343,7 +345,6 @@ One sentence per class.
 - **Mass assignment.** Binding the request map directly to a domain class without `bindable`/allow-lists. *(inferred)*
 - **Open redirect.** Using a request parameter as a `redirect(url: params.next)` target. *(documented: [securingAgainstAttacks.adoc](./grails-doc/src/en/guide/security/securingAgainstAttacks.adoc) "XSS - cross-site scripting injection" mentions this in the `successURL` example)*
 - **Server-Side Request Forgery (SSRF).** No built-in URL-fetch allow-list. *(inferred)*
-- **XXE in XML data binding.** XML parsing is delegated to the underlying parser; the framework does not impose a parser configuration. *(inferred)*
 - **ReDoS in developer-authored URL mappings and constraint regexes.** No complexity ceiling. *(inferred)*
 - **Zip-bomb / archive expansion** in multipart and `grails-forge` ZIP generation. Bounded only by container size limits. *(inferred)*
 - **Path traversal** through `MultipartFile.originalFilename` if used as a filesystem path. *(inferred)*
@@ -467,7 +468,7 @@ The model is **draft-first**. The questions below are grouped in waves of 3-7 pe
 10. **`SimpleDataBinder` mass-assignment.** *Proposed*: binding `new Book(params)` without an allow-list is `VALID-HARDENING` (the framework should warn, not block, but documents should call this out more loudly). Or is it `BY-DESIGN: property-disclaimed`? Choose.
 11. **Multipart limits.** *Proposed*: the framework does not impose multipart caps beyond Spring Boot's defaults; this is operator responsibility. Confirm.
 12. **`bindable=false` semantics.** *Proposed*: `bindable=false` is enforced for all binding paths (`bindData`, command-object binding, domain-class constructor binding, `properties=`). Confirm coverage - is there any binding path that ignores it?
-13. **XML data binding parser configuration.** *Proposed*: the framework does not impose XXE-hardening configuration on the XML parser; XXE in `XmlDataBindingSourceCreator` is the parser's threat model, not the framework's. Confirm.
+13. **XML data binding parser configuration.** *Resolved*: the framework imposes XXE hardening on every XML document it parses and rejects a `DOCTYPE` in request bodies (§8 P10). XXE through a parser the application constructs itself remains the application's responsibility (§9 false friend). Confirm the wording of P10 and promote it to *(maintainer)*.
 
 ### Wave 3 - misuse, false friends, and §11a curation
 
@@ -512,5 +513,6 @@ This back-map proves §3.1a coverage. Every threat-model-shaped claim already in
 | [`SECURITY.md`](./SECURITY.md) | Disclosure routes through the ASF Security Team. | §1 reporting cross-reference |
 | [`AGENTS.md`](./AGENTS.md) | JDK 21, Groovy 4.0.x, Spring Boot 4.0.x, Jakarta EE 10, Spock 2.3. | §5 runtime assumptions |
 | [`README.md`](./README.md) | The framework is embedded in a user web application; not a service. | §1 description, §2 deployment context |
+| [`grails-doc/.../upgrading.adoc`](./grails-doc/src/en/guide/upgrading.adoc) "XML Parsing Defaults" | Framework-parsed XML refuses external entities and external DTDs; a request body declaring a `DOCTYPE` is rejected. | §8 P10, §9 false friend |
 
 No claim in the existing documentation is dropped, weakened, or contradicted by this document. Where the existing documentation and this document would conflict, the documentation wins; raise a §14 question rather than silently editing.

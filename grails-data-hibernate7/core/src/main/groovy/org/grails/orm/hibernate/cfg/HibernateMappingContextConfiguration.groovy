@@ -60,6 +60,7 @@ import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.reflect.DevToolsClassLoaders
 import org.grails.orm.hibernate.EventListenerIntegrator
 import org.grails.orm.hibernate.GrailsSessionContext
 import org.grails.orm.hibernate.HibernateEventListeners
@@ -141,9 +142,13 @@ class HibernateMappingContextConfiguration extends Configuration
             properties.put('hibernate.enhancer.enableLazyInitialization', FALSE_LITERAL)
             properties.put('hibernate.enhancer.enableDirtyTracking', FALSE_LITERAL)
             properties.put('hibernate.enhancer.enableAssociationManagement', FALSE_LITERAL)
-            ClassLoader classLoader = applicationContext.classLoader
-            if (classLoader != null) {
-                properties.put(AvailableSettings.CLASSLOADERS, classLoader)
+            ClassLoader applicationClassLoader = applicationContext.classLoader
+            // Keep CLASSLOADERS absent when the context loader is null and DevTools restart is not
+            // active so buildSessionFactory can fall back to this class's loader.
+            if (applicationClassLoader != null ||
+                    DevToolsClassLoaders.isRestartClassLoaderOrDescendant(Thread.currentThread().contextClassLoader)) {
+                properties.put(AvailableSettings.CLASSLOADERS,
+                        DevToolsClassLoaders.preferRestartClassLoader(applicationClassLoader))
             }
         }
     }
@@ -163,16 +168,8 @@ class HibernateMappingContextConfiguration extends Configuration
         properties.put(JdbcSettings.JAKARTA_NON_JTA_DATASOURCE, source)
         properties.put(Environment.CURRENT_SESSION_CONTEXT_CLASS, GrailsSessionContext.name)
         setBytecodeProvider(grailsBytecodeProvider)
-        final ClassLoader contextClassLoader = Thread.currentThread().contextClassLoader
-        if (contextClassLoader != null &&
-                contextClassLoader.class.simpleName.equalsIgnoreCase('RestartClassLoader')) {
-            properties.put(AvailableSettings.CLASSLOADERS, contextClassLoader)
-        }
-        else {
-            properties.put(
-                    AvailableSettings.CLASSLOADERS,
-                    connectionSource.class.classLoader)
-        }
+        properties.put(AvailableSettings.CLASSLOADERS,
+                DevToolsClassLoaders.preferRestartClassLoader(connectionSource.class.classLoader))
     }
 
     /**
@@ -280,15 +277,7 @@ class HibernateMappingContextConfiguration extends Configuration
         // work around for HHH-2624
         SessionFactory sessionFactory
 
-        Object classLoaderObject = properties.get(AvailableSettings.CLASSLOADERS)
-        ClassLoader appClassLoader
-
-        if (classLoaderObject instanceof ClassLoader) {
-            appClassLoader = classLoaderObject
-        }
-        else {
-            appClassLoader = getClass().classLoader
-        }
+        ClassLoader appClassLoader = resolveSessionFactoryClassLoader()
 
         ConfigurationHelper.resolvePlaceHolders(properties)
 
@@ -355,15 +344,30 @@ class HibernateMappingContextConfiguration extends Configuration
         standardServiceRegistryBuilder.addService(BytecodeProvider, bytecodeProvider)
 
         StandardServiceRegistry ssr = standardServiceRegistryBuilder.build()
+        ClassLoader previous = Thread.currentThread().contextClassLoader
         try {
+            Thread.currentThread().contextClassLoader = appClassLoader
             sessionFactory = super.buildSessionFactory(ssr)
         }
         catch (Exception e) {
             throw new RuntimeException(e)
         }
+        finally {
+            Thread.currentThread().contextClassLoader = previous
+        }
         this.serviceRegistry = ssr
 
         return sessionFactory
+    }
+
+    ClassLoader resolveSessionFactoryClassLoader() {
+        Object classLoaderObject = properties.get(AvailableSettings.CLASSLOADERS)
+        ClassLoader storedClassLoader = classLoaderObject instanceof ClassLoader ?
+                (ClassLoader) classLoaderObject : getClass().classLoader
+        // addProperties() or a custom configClass may have replaced CLASSLOADERS after the
+        // setters ran. GrailsDomainBinder binds entities by class name and Hibernate resolves
+        // them through this loader, so it has to see the restarted application classes.
+        return DevToolsClassLoaders.preferRestartClassLoader(storedClassLoader)
     }
 
     /**

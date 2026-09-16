@@ -64,4 +64,24 @@ All named arguments except for `uri` accept either a String or a Regex expressio
 * `controller` - The name of the controller
 * `action` - The name of the action
 * `method` - The HTTP method
-* `uri` - The URI of the request. If this argument is used then all other arguments will be ignored and only this will be used.
+* `uri` - The path of the request within the application. If this argument is used then all other arguments will be ignored and only this will be used.
+
+The `uri` argument is matched against the same path that URL mappings use to select the controller: percent-encoded characters are decoded, matrix parameters (`;name=value`) are removed, and the context path is not included. When an application is deployed under the context path `/app`, a request for `/app/%61dmin;x=1/users` is matched as `/admin/users`, so the following interceptor applies to it:
+
+[source,groovy]
+----
+class AdminInterceptor {
+  AdminInterceptor() {
+    match(uri: '/admin/**')
+    .excludes(uri: '/admin/health')
+  }
+
+  boolean before() {
+    ...
+  }
+}
+----
+
+This is the canonical form defined by RFC 3986 and the Jakarta Servlet specification: path parameters are removed from each segment before percent-decoding, so an encoded semicolon (`%3B`) is a literal character rather than a parameter delimiter, and the path is decoded exactly once.
+
+A pattern that starts with the context path, such as `match(uri: '/app/admin/**')`, is also accepted for backwards compatibility. Requests dispatched through `<g:include>` are matched against the included path, which is the path the include is dispatched to.

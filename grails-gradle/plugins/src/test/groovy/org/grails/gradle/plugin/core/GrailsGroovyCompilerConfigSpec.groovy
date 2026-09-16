@@ -59,6 +59,29 @@ class GrailsGroovyCompilerConfigSpec extends GradleSpecification {
         result.output.contains('GENERATOR_HAS_CONTENT_INPUT=true')
     }
 
+    def "a task that adds to the runtime classpath after compiling does not cycle through the generator"() {
+        given: 'an application whose runtime classpath carries the output of a task that runs after classes'
+        setupTestResourceProject('compiler-config-runtime-classpath-producer')
+
+        when: 'the wiring is inspected'
+        def result = executeTask('inspectRuntimeProducer')
+
+        then: 'the producer is on the runtime classpath, and the generator does not depend on it'
+        result.output.contains('RUNTIME_CLASSPATH_BUILT_BY_PRODUCER=true')
+        result.output.contains('GENERATOR_DEPENDS_ON_RUNTIME_PRODUCER=false')
+        result.output.contains('COMBINED_CONTAINS_GRAILS_IMPORT=true')
+
+        when: 'the compile task and that producer are scheduled together'
+        def graph = executeTask('compileGroovy', ['packageRuntimeExtra', '--dry-run'])
+
+        then: 'the graph builds without a cycle, the generator ahead of the compile and the producer after'
+        def order = graph.output.readLines().findAll { it.startsWith(':') }
+        order.findIndexOf { it.startsWith(':generateCompileGroovyGrailsCompilerConfig') } <
+                order.findIndexOf { it.startsWith(':compileGroovy') }
+        order.findIndexOf { it.startsWith(':compileGroovy') } <
+                order.findIndexOf { it.startsWith(':packageRuntimeExtra') }
+    }
+
     def "a configurationScript assigned from a later callback is folded in, not clobbered"() {
         given: 'a user assigning configurationScript from projectsEvaluated'
         setupTestResourceProject('compiler-config-late-assignment')

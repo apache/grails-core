@@ -11,7 +11,7 @@ Licensed to the Apache Software Foundation (ASF) under one or more contributor l
 
 ## What I Do
 
-- Provide deep expertise in Groovy 5.0, including core language features: syntax, closures, traits, GStrings, operators, and Groovy Truth.
+- Provide deep expertise in Groovy 5.1, including core language features: syntax, closures, traits, GStrings, operators, and Groovy Truth.
 - Guide metaprogramming techniques: runtime (categories, ExpandoMetaClass, extension modules) and compile-time (AST transformations like @Immutable, @Builder, @Delegate, @Singleton, @Log, @Memoized).
 - Assist with DSL creation and usage (MarkupBuilder, JsonBuilder, builders for configuration).
 - Support testing with Spock Framework (BDD, data-driven tests, mocking) and built-in power assertions.
@@ -27,7 +27,7 @@ Activate this skill for any Groovy-related task, including:
 - Building or enhancing Gradle build scripts (build.gradle).
 - Creating DSLs for configuration, testing, or business rules.
 - Writing Spock specifications for unit and integration tests.
-- Migrating from older Groovy versions (2.x/3.x/4.x) to 5.0.
+- Migrating from older Groovy versions (2.x/3.x/4.x) to 5.1.
 - Performance optimization with static compilation.
 - Working with JSON/XML data, GORM criteria queries, or builders.
 
@@ -509,7 +509,7 @@ sql.execute("INSERT INTO books (title) VALUES ($title)")
 
 ## Resources
 
-- **Groovy 5 Documentation**: https://groovy-lang.org/documentation.html#all-versions (select latest 5.0.x)
+- **Groovy 5 Documentation**: https://groovy-lang.org/documentation.html#all-versions (select latest 5.1.x)
 - **Groovy Style Guide**: https://groovy-lang.org/style-guide.html
 - **GORM Documentation**: https://grails.apache.org/docs/latest/grails-data/
 - **Spock Framework**: https://spockframework.org/spock/docs/2.4/all_in_one.html

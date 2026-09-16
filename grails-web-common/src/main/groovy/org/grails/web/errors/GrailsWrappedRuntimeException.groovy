@@ -24,8 +24,8 @@ import java.util.regex.Matcher
 import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
-import org.apache.commons.logging.Log
-import org.apache.commons.logging.LogFactory
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage
 import org.springframework.core.io.Resource
@@ -65,7 +65,7 @@ class GrailsWrappedRuntimeException extends GrailsException {
     private static final Pattern PARSE_DETAILS_STEP2 = Pattern.compile('at\\s{1}(\\w+)\\\$_closure\\d+\\.doCall\\(\\1:(\\d+)\\)')
     private static final Pattern PARSE_GSP_DETAILS_STEP1 = Pattern.compile('_gsp\\.run\\(((\\w+?)_.*?):(\\d+)\\)')
     public static final String URL_PREFIX = '/WEB-INF/grails-app/'
-    private static final Log LOG = LogFactory.getLog(GrailsWrappedRuntimeException)
+    private static final Logger LOG = LoggerFactory.getLogger(GrailsWrappedRuntimeException)
     private String className = UNKNOWN
     private int lineNumber = -1
     private String stackTrace
@@ -189,7 +189,7 @@ class GrailsWrappedRuntimeException extends GrailsException {
                 InputStream in = null
                 if (!GrailsStringUtils.isBlank(url)) {
                     in = servletContext.getResourceAsStream(url)
-                    LOG.debug('Attempting to display code snippet found in url ' + url)
+                    LOG.debug('Attempting to display code snippet found in url {}', url)
                 }
                 if (in == null) {
                     Resource r = null
@@ -236,7 +236,7 @@ class GrailsWrappedRuntimeException extends GrailsException {
             }
         }
         catch (IOException e) {
-            LOG.warn('[GrailsWrappedRuntimeException] I/O error reading line diagnostics: ' + e.getMessage(), e)
+            LOG.warn('[GrailsWrappedRuntimeException] I/O error reading line diagnostics: {}', e.getMessage(), e)
         }
         finally {
             if (reader != null) {

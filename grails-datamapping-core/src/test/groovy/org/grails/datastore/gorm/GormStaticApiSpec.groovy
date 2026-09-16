@@ -100,6 +100,17 @@ class GormStaticApiSpec extends Specification {
         api.executeQualified(ConnectionSource.DEFAULT, { Session session -> 'ran' }) == 'ran'
     }
 
+    void "count() does not dispatch log.debug through methodMissing"() {
+        given:
+        def api = new GormStaticApi(GormStaticApiThing, datastore, [])
+
+        when:
+        Integer n = api.count()
+
+        then:
+        n == 0
+    }
+
     void "getGormDynamicFinders returns the finders the api was constructed with"() {
         given:
         def finder = Stub(org.grails.datastore.gorm.finders.FinderMethod)

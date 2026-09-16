@@ -50,7 +50,7 @@ trait AsyncController {
     AsyncContext startAsync() {
         GrailsWebRequest webRequest = (GrailsWebRequest) RequestContextHolder.currentRequestAttributes()
 
-        HttpServletRequest request = webRequest.currentRequest
+        HttpServletRequest request = webRequest.request
         WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(request)
 
         AsyncWebRequest asyncWebRequest = new AsyncGrailsWebRequest(request, webRequest.currentResponse, webRequest.servletContext)

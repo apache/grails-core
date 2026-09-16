@@ -336,7 +336,7 @@ class GrailsConventionGroovyPageLocator extends DefaultGroovyPageLocator impleme
                 GrailsWebRequest.lookup()
             if (webRequest != null) {
 
-                HttpServletRequest request = webRequest.getCurrentRequest()
+                HttpServletRequest request = webRequest.getRequest()
                 Object format = request.getAttribute(GrailsApplicationAttributes.RESPONSE_FORMAT)
                 return format == null ? null : format.toString()
             }

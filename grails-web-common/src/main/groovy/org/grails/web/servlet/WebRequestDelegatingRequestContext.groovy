@@ -55,7 +55,7 @@ class WebRequestDelegatingRequestContext implements GrailsRequestContext {
     }
 
     HttpServletRequest getRequest() {
-        return webRequest.getCurrentRequest()
+        return webRequest.getRequest()
     }
 
     HttpServletResponse getResponse() {

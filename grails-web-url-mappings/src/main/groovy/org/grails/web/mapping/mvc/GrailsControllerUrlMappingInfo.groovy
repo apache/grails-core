@@ -18,6 +18,8 @@
  */
 package org.grails.web.mapping.mvc
 
+import groovy.transform.CompileStatic
+
 import grails.core.GrailsControllerClass
 import grails.web.mapping.UrlMappingInfo
 
@@ -26,6 +28,7 @@ import grails.web.mapping.UrlMappingInfo
  *
  * @since 3.0
  */
+@CompileStatic
 class GrailsControllerUrlMappingInfo implements UrlMappingInfo {
 
     GrailsControllerClass controllerClass

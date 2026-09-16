@@ -80,7 +80,7 @@ class GroovyPagesPageContext extends PageContext {
         webRequest = (GrailsWebRequest) RequestContextHolder.currentRequestAttributes()
 
         servletContext = webRequest.getServletContext()
-        request = webRequest.getCurrentRequest()
+        request = webRequest.getRequest()
         response = webRequest.getCurrentResponse()
         servlet = pagesServlet
         servletConfig = pagesServlet.getServletConfig()

@@ -38,6 +38,7 @@ import org.springframework.web.util.UrlPathHelper
 
 import grails.core.GrailsApplication
 import grails.core.GrailsControllerClass
+import grails.util.Holders
 import grails.validation.DeferredBindingActions
 import grails.web.mvc.FlashScope
 import grails.web.servlet.mvc.GrailsHttpSession
@@ -54,12 +55,18 @@ import org.grails.web.beans.PropertyEditorRegistryUtils
 import org.grails.web.pages.FilteringCodecsByContentTypeSettings
 import org.grails.web.servlet.mvc.exceptions.ControllerExecutionException
 import org.grails.web.util.GrailsApplicationAttributes
+import org.grails.web.util.WebUtils
 
 /**
  * Encapsulates a Grails request. An instance of this class is bound to the current thread using
  * Spring's RequestContextHolder which can later be retrieved using:
  *
  * def webRequest = RequestContextHolder.currentRequestAttributes()
+ *
+ * <p>The request this exposes through {@link #getRequest()} is always the outermost request, so wrappers
+ * contributed by other filters keep working. Multipart capabilities are discovered from its wrapper chain
+ * rather than by substituting the request - see
+ * {@link org.grails.web.util.WebUtils#resolveMultipartRequest(HttpServletRequest)}.
  *
  * @author Graeme Rocher
  * @since 3.0
@@ -68,6 +75,9 @@ import org.grails.web.util.GrailsApplicationAttributes
 class GrailsWebRequest extends DispatcherServletWebRequest {
 
     private static final String REDIRECT_CALLED = GrailsApplicationAttributes.REDIRECT_ISSUED
+
+    /** Servlet context attribute caching the {@link GrailsApplicationAttributes} for that context. */
+    private static final String GRAILS_APPLICATION_ATTRIBUTES = GrailsWebRequest.name + '.ATTRIBUTES'
 
     private static final Class<? extends GrailsApplicationAttributes> grailsApplicationAttributesClass = GrailsFactoriesLoader.loadFactoryClasses(GrailsApplicationAttributes, GrailsWebRequest.getClassLoader()).get(0)
     private static final Constructor<? extends GrailsApplicationAttributes> grailsApplicationAttributesConstructor = ClassUtils.getConstructorIfAvailable(grailsApplicationAttributesClass, ServletContext)
@@ -80,13 +90,12 @@ class GrailsWebRequest extends DispatcherServletWebRequest {
     private Encoder filteringEncoder
     public static final String ID_PARAMETER = 'id'
     private final List<ParameterCreationListener> parameterCreationListeners = new ArrayList<>()
-    private final UrlPathHelper urlHelper = new UrlPathHelper()
+    private final UrlPathHelper urlHelper = UrlPathHelper.defaultInstance
     private ApplicationContext applicationContext
     private String baseUrl
     private HttpServletResponse wrappedResponse
 
     private EncodingStateRegistry encodingStateRegistry
-    private HttpServletRequest multipartRequest
 
     GrailsWebRequest(HttpServletRequest request, HttpServletResponse response, GrailsApplicationAttributes attributes) {
         super(request, response)
@@ -97,14 +106,50 @@ class GrailsWebRequest extends DispatcherServletWebRequest {
 
     GrailsWebRequest(HttpServletRequest request, HttpServletResponse response, ServletContext servletContext) {
         super(request, response)
+        attributes = resolveAttributes(servletContext)
+        this.applicationContext = attributes.getApplicationContext()
+        inheritEncodingStateRegistry()
+    }
+
+    /**
+     * Returns the {@link GrailsApplicationAttributes} for the given servlet context, creating it on first
+     * use and caching it in the servlet context afterwards.
+     * <p>
+     * The attributes object holds no request state - it caches the beans it describes as "used very often" -
+     * so building one per request both paid for a reflective construction and discarded those caches every
+     * request. It is rebuilt if the {@code ApplicationContext} it was resolved against is no longer current,
+     * which keeps a restarted or re-created context (as happens between tests) from being served a stale one.
+     */
+    private static GrailsApplicationAttributes resolveAttributes(ServletContext servletContext) {
+        if (servletContext == null) {
+            return createAttributes(null)
+        }
+        Object cached = servletContext.getAttribute(GRAILS_APPLICATION_ATTRIBUTES)
+        if (cached instanceof GrailsApplicationAttributes &&
+                cached.getApplicationContext() == currentApplicationContext(servletContext)) {
+            return (GrailsApplicationAttributes) cached
+        }
+        GrailsApplicationAttributes attributes = createAttributes(servletContext)
+        servletContext.setAttribute(GRAILS_APPLICATION_ATTRIBUTES, attributes)
+        return attributes
+    }
+
+    private static ApplicationContext currentApplicationContext(ServletContext servletContext) {
+        Object applicationContext = servletContext.getAttribute(GrailsApplicationAttributes.APPLICATION_CONTEXT)
+        if (applicationContext instanceof ApplicationContext) {
+            return (ApplicationContext) applicationContext
+        }
+        return Holders.findApplicationContext()
+    }
+
+    private static GrailsApplicationAttributes createAttributes(ServletContext servletContext) {
         try {
-            attributes = grailsApplicationAttributesConstructor.newInstance(servletContext)
-            this.applicationContext = attributes.getApplicationContext()
+            return grailsApplicationAttributesConstructor.newInstance(servletContext)
         }
         catch (Exception e) {
             ReflectionUtils.rethrowRuntimeException(e)
+            return null
         }
-        inheritEncodingStateRegistry()
     }
 
     GrailsWebRequest(HttpServletRequest request, HttpServletResponse response, ServletContext servletContext, ApplicationContext applicationContext) {
@@ -113,13 +158,32 @@ class GrailsWebRequest extends DispatcherServletWebRequest {
     }
 
     /**
-     * Holds a reference to the {@link org.springframework.web.multipart.MultipartRequest}
+     * Discards the cached params so they are rebuilt and pick up uploaded files, for when multipart
+     * resolution happens after params were already read.
+     * See <a href="https://github.com/apache/grails-core/issues/13837">gh-13837</a>.
      *
-     * @param multipartRequest The multipart request
+     * @since 8.0
      */
+    void multipartRequestResolved() {
+        this.originalParams = null
+        this.params = null
+    }
+
+    /**
+     * @param multipartRequest the resolved multipart request
+     *
+     * @deprecated as of 8.0, use {@link #multipartRequestResolved()} instead. Grails no longer holds the
+     *             resolved multipart request in place of the request it was bound to; the resolver publishes
+     *             it as {@link org.grails.web.util.WebUtils#MULTIPART_HTTP_SERVLET_REQUEST_ATTRIBUTE} and it
+     *             is found from there or by unwrapping. This publishes the argument on the current request
+     *             and discards the cached params, so an existing caller keeps working.
+     */
+    @Deprecated(since = '8.0')
     void setMultipartRequest(HttpServletRequest multipartRequest) {
-        this.multipartRequest = multipartRequest
-        this.originalParams = null // originalParams will need to be re-initialized. See https://github.com/apache/grails-core/issues/13837
+        if (multipartRequest != null) {
+            getRequest().setAttribute(WebUtils.MULTIPART_HTTP_SERVLET_REQUEST_ATTRIBUTE, multipartRequest)
+        }
+        multipartRequestResolved()
     }
 
     private void inheritEncodingStateRegistry() {
@@ -153,7 +217,7 @@ class GrailsWebRequest extends DispatcherServletWebRequest {
      * @return the out
      */
     Writer getOut() {
-        Writer out = attributes.getOut(getCurrentRequest())
+        Writer out = attributes.getOut(getRequest())
         if (out == null) {
             try {
                 return getCurrentResponse().getWriter()
@@ -176,7 +240,7 @@ class GrailsWebRequest extends DispatcherServletWebRequest {
      * @param out the out to set
      */
     void setOut(Writer out) {
-        attributes.setOut(getCurrentRequest(), out)
+        attributes.setOut(getRequest(), out)
     }
 
     /**
@@ -192,7 +256,7 @@ class GrailsWebRequest extends DispatcherServletWebRequest {
      */
     @Override
     String getContextPath() {
-        final HttpServletRequest request = getCurrentRequest()
+        final HttpServletRequest request = getRequest()
         String appUri = (String) request.getAttribute(GrailsApplicationAttributes.APP_URI_ATTRIBUTE)
         if (appUri == null) {
             appUri = urlHelper.getContextPath(request)
@@ -209,14 +273,13 @@ class GrailsWebRequest extends DispatcherServletWebRequest {
 
     /**
      * @return The currently executing request
+     *
+     * <p>This used to return the resolved multipart request in place of the request Grails was bound to.
+     * That substitution is gone, so this and {@link #getRequest()} are the same object; either may be
+     * called.</p>
      */
     HttpServletRequest getCurrentRequest() {
-        if (multipartRequest != null) {
-            return multipartRequest
-        }
-        else {
-            return getRequest()
-        }
+        return getRequest()
     }
 
     HttpServletResponse getCurrentResponse() {
@@ -250,7 +313,7 @@ class GrailsWebRequest extends DispatcherServletWebRequest {
      */
     GrailsParameterMap getOriginalParams() {
         if (originalParams == null) {
-            originalParams = new GrailsParameterMap(getCurrentRequest())
+            originalParams = new GrailsParameterMap(getRequest())
         }
         return originalParams
     }
@@ -288,7 +351,7 @@ class GrailsWebRequest extends DispatcherServletWebRequest {
      */
     GrailsHttpSession getSession() {
         if (session == null) {
-            session = new GrailsHttpSession(getCurrentRequest())
+            session = new GrailsHttpSession(getRequest())
         }
 
         return session
@@ -302,36 +365,36 @@ class GrailsWebRequest extends DispatcherServletWebRequest {
     }
 
     void setActionName(String actionName) {
-        getCurrentRequest().setAttribute(GrailsApplicationAttributes.ACTION_NAME_ATTRIBUTE, actionName)
+        getRequest().setAttribute(GrailsApplicationAttributes.ACTION_NAME_ATTRIBUTE, actionName)
     }
 
     void setControllerName(String controllerName) {
-        getCurrentRequest().setAttribute(GrailsApplicationAttributes.CONTROLLER_NAME_ATTRIBUTE, controllerName)
+        getRequest().setAttribute(GrailsApplicationAttributes.CONTROLLER_NAME_ATTRIBUTE, controllerName)
     }
 
     void setControllerNamespace(String controllerNamespace) {
-        getCurrentRequest().setAttribute(GrailsApplicationAttributes.CONTROLLER_NAMESPACE_ATTRIBUTE, controllerNamespace)
+        getRequest().setAttribute(GrailsApplicationAttributes.CONTROLLER_NAMESPACE_ATTRIBUTE, controllerNamespace)
     }
 
     /**
      * @return the actionName
      */
     String getActionName() {
-        return (String) getCurrentRequest().getAttribute(GrailsApplicationAttributes.ACTION_NAME_ATTRIBUTE)
+        return (String) getRequest().getAttribute(GrailsApplicationAttributes.ACTION_NAME_ATTRIBUTE)
     }
 
     /**
      * @return the controllerName
      */
     String getControllerName() {
-        return (String) getCurrentRequest().getAttribute(GrailsApplicationAttributes.CONTROLLER_NAME_ATTRIBUTE)
+        return (String) getRequest().getAttribute(GrailsApplicationAttributes.CONTROLLER_NAME_ATTRIBUTE)
     }
 
     /**
      * @return the controllerClass
      */
     GrailsControllerClass getControllerClass() {
-        HttpServletRequest currentRequest = getCurrentRequest()
+        HttpServletRequest currentRequest = getRequest()
         GrailsControllerClass controllerClass = (GrailsControllerClass) currentRequest.getAttribute(GrailsApplicationAttributes.GRAILS_CONTROLLER_CLASS)
         if (controllerClass == null) {
             Object controllerNameObject = currentRequest.getAttribute(GrailsApplicationAttributes.CONTROLLER_NAME_ATTRIBUTE)
@@ -351,7 +414,7 @@ class GrailsWebRequest extends DispatcherServletWebRequest {
     * @return the controllerNamespace
     */
     String getControllerNamespace() {
-        return (String) getCurrentRequest().getAttribute(GrailsApplicationAttributes.CONTROLLER_NAMESPACE_ATTRIBUTE)
+        return (String) getRequest().getAttribute(GrailsApplicationAttributes.CONTROLLER_NAMESPACE_ATTRIBUTE)
     }
 
     void setRenderView(boolean renderView) {
@@ -362,7 +425,7 @@ class GrailsWebRequest extends DispatcherServletWebRequest {
      * @return true if the view for this GrailsWebRequest should be rendered
      */
     boolean isRenderView() {
-        final HttpServletRequest currentRequest = getCurrentRequest()
+        final HttpServletRequest currentRequest = getRequest()
         HttpServletResponse currentResponse = getCurrentResponse()
         return renderView &&
                 !currentResponse.isCommitted() &&
@@ -415,7 +478,7 @@ class GrailsWebRequest extends DispatcherServletWebRequest {
      * @return The PropertyEditorRegistry
      */
     PropertyEditorRegistry getPropertyEditorRegistry() {
-        final HttpServletRequest servletRequest = getCurrentRequest()
+        final HttpServletRequest servletRequest = getRequest()
         PropertyEditorRegistry registry = (PropertyEditorRegistry) servletRequest.getAttribute(GrailsApplicationAttributes.PROPERTY_REGISTRY)
         if (registry == null) {
             registry = new PropertyEditorRegistrySupport()
@@ -458,7 +521,7 @@ class GrailsWebRequest extends DispatcherServletWebRequest {
 
     String getBaseUrl() {
         if (baseUrl == null) {
-            HttpServletRequest request = getCurrentRequest()
+            HttpServletRequest request = getRequest()
             String scheme = request.getScheme()
             String forwardedScheme = request.getHeader('X-Forwarded-Proto')
             StringBuilder sb = new StringBuilder()

@@ -1,4 +1,5 @@
 org.grails.plugins.web.controllers.ControllersAutoConfiguration
 org.grails.plugins.web.controllers.GrailsFormContentFilterAutoConfiguration
+org.grails.plugins.web.controllers.GrailsHiddenHttpMethodFilterAutoConfiguration
 org.grails.plugins.web.controllers.GrailsViewResolverAutoConfiguration
 org.grails.plugins.web.controllers.GrailsWelcomePageAutoConfiguration

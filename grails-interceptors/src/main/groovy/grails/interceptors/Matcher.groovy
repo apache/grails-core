@@ -51,6 +51,26 @@ interface Matcher {
     boolean doesMatch(String uri, UrlMappingInfo info, String method)
 
     /**
+     * Performs the match for a request deployed under a context path.
+     *
+     * <p>{@link grails.artefact.Interceptor#doesMatch(jakarta.servlet.http.HttpServletRequest)} canonicalizes the
+     * request path once and calls this method for every matcher. The default implementation delegates to
+     * {@link #doesMatch(String, UrlMappingInfo, String)} with the same path, so a custom matcher only needs to
+     * implement this method if it wants to take the context path into account.
+     *
+     * @param uri The path of the request within the application: decoded, with matrix parameters removed and the
+     * context path stripped, exactly as URL mappings route it
+     * @param info The {@link UrlMappingInfo} matched for the request, or {@code null} if none was matched
+     * @param method The HTTP method of the request
+     * @param contextPath The context path of the request, empty when the application is deployed at the root
+     * @return True if it does match
+     * @since 8.0
+     */
+    default boolean doesMatch(String uri, UrlMappingInfo info, String method, String contextPath) {
+        doesMatch(uri, info, method)
+    }
+
+    /**
      * Defines the match for the given arguments
      *
      * @param arguments A named argument map including one or more of the controller name, action name, namespace and method

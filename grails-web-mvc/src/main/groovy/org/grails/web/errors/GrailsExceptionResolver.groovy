@@ -24,8 +24,8 @@ import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 
 import groovy.transform.CompileStatic
-import org.apache.commons.logging.Log
-import org.apache.commons.logging.LogFactory
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.codehaus.groovy.control.CompilationFailedException
 import org.codehaus.groovy.runtime.InvokerInvocationException
 import org.springframework.beans.BeanUtils
@@ -67,7 +67,11 @@ class GrailsExceptionResolver extends SimpleMappingExceptionResolver implements 
 
     public static final String EXCEPTION_ATTRIBUTE = WebUtils.EXCEPTION_ATTRIBUTE
 
-    protected static final Log LOG = LogFactory.getLog(GrailsExceptionResolver)
+    /** Marks a request that is currently inside a forward to a status-code controller mapping. */
+    private static final String ERROR_HANDLER_FORWARD_IN_PROGRESS_ATTRIBUTE =
+            'org.grails.web.errors.ERROR_HANDLER_FORWARD_IN_PROGRESS'
+
+    protected static final Logger LOG = LoggerFactory.getLogger(GrailsExceptionResolver)
     protected static final String LINE_SEPARATOR = System.getProperty('line.separator')
 
     protected ServletContext servletContext
@@ -203,13 +207,23 @@ class GrailsExceptionResolver extends SimpleMappingExceptionResolver implements 
                 resolveView(request, info, mv)
             }
             else if (info != null && info.getControllerName() != null) {
+                if (isErrorHandlerForwardInProgress(request)) {
+                    LOG.error('The error handler for this request failed as well; not forwarding to it again')
+                    return mv
+                }
                 String uri = determineUri(request)
                 if (!response.isCommitted()) {
                     if (response instanceof GrailsResponseMutator) {
                         // prevent further mutation of the request since an error page needs rendered instead
                         ((GrailsResponseMutator) response).deactivateResponseMutator()
                     }
-                    forwardRequest(info, request, response, mv, uri)
+                    request.setAttribute(ERROR_HANDLER_FORWARD_IN_PROGRESS_ATTRIBUTE, Boolean.TRUE)
+                    try {
+                        forwardRequest(info, request, response, mv, uri)
+                    }
+                    finally {
+                        request.removeAttribute(ERROR_HANDLER_FORWARD_IN_PROGRESS_ATTRIBUTE)
+                    }
                     // return an empty ModelAndView since the error handler has been processed
                     return new ModelAndView()
                 }
@@ -217,9 +231,29 @@ class GrailsExceptionResolver extends SimpleMappingExceptionResolver implements 
             return mv
         }
         catch (Exception e) {
-            LOG.error('Unable to render errors view: ' + e.getMessage(), e)
+            LOG.error('Unable to render errors view: {}', e.getMessage(), e)
             throw new GrailsRuntimeException(e)
         }
+    }
+
+    /**
+     * Whether a forward to a status-code controller mapping is already running for this request.
+     * <p>
+     * The forward re-enters the {@code DispatcherServlet} and resolves the same status-code mapping again,
+     * since {@link WebUtils#ERROR_STATUS_CODE_ATTRIBUTE} is set. An error handler failing for a reason that
+     * belongs to the request rather than the moment - an unparseable multipart body, a missing collaborator
+     * - therefore fails again inside that forward and resolves back into this method, recursing until
+     * {@code StackOverflowError}.
+     * <p>
+     * So the handler is not forwarded to from inside itself; the exception goes back to the
+     * {@code DispatcherServlet}, which reports it once through the container. The flag is cleared when the
+     * forward returns, leaving a later error on the same request free to use the handler again.
+     *
+     * @param request The request
+     * @return True when this request is inside an error handler forward
+     */
+    protected boolean isErrorHandlerForwardInProgress(HttpServletRequest request) {
+        return request.getAttribute(ERROR_HANDLER_FORWARD_IN_PROGRESS_ATTRIBUTE) != null
     }
 
     protected void forwardRequest(UrlMappingInfo info, HttpServletRequest request, HttpServletResponse response,
@@ -227,10 +261,8 @@ class GrailsExceptionResolver extends SimpleMappingExceptionResolver implements 
         info.configure(WebUtils.retrieveGrailsWebRequest())
         String forwardUrl = UrlMappingUtils.forwardRequestForUrlMappingInfo(
                 request, response, info, mv.getModel(), true)
-        if (LOG.isDebugEnabled()) {
-            LOG.debug('Matched URI [' + uri + '] to URL mapping [' + info +
-                    '], forwarding to [' + forwardUrl + '] with response [' + response.getClass() + ']')
-        }
+        LOG.debug('Matched URI [{}] to URL mapping [{}], forwarding to [{}] with response [{}]',
+                uri, info, forwardUrl, response.getClass())
     }
 
     protected String determineUri(HttpServletRequest request) {
@@ -382,7 +414,9 @@ class GrailsExceptionResolver extends SimpleMappingExceptionResolver implements 
         final boolean shouldLogRequestParameters = config != null ? config.getProperty(Settings.SETTING_LOG_REQUEST_PARAMETERS, Boolean, Environment.getCurrent() == Environment.DEVELOPMENT) : false
 
         if (shouldLogRequestParameters) {
-            Enumeration<String> params = request.getParameterNames()
+            // The exception being logged may be the container refusing to parse a multipart body, in which
+            // case every parameter read on this request fails too - see WebUtils.readParameterNames.
+            Enumeration<String> params = WebUtils.readParameterNames(request)
 
             if (params.hasMoreElements()) {
                 String param

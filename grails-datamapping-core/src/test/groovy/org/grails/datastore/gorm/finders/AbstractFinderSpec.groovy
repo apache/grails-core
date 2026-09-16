@@ -22,6 +22,7 @@ import grails.gorm.annotation.Entity
 import org.grails.datastore.mapping.simple.SimpleMapDatastore
 import spock.lang.AutoCleanup
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  * {@code AbstractFinder} is the common base for the "named" dynamic finder classes
@@ -61,6 +62,32 @@ class AbstractFinderSpec extends Specification {
 
         expect:
         AbstractFinderThing.listOrderByTitle()*.title == ['A', 'B']
+    }
+
+    void "listOrderBy normalizes the order direction regardless of case and surrounding whitespace"() {
+        given:
+        AbstractFinderThing.newInstance(title: 'B').save(flush: true)
+        AbstractFinderThing.newInstance(title: 'A').save(flush: true)
+
+        expect:
+        AbstractFinderThing.listOrderByTitle(order: ' DESC ')*.title == ['B', 'A']
+        AbstractFinderThing.listOrderByTitle(order: 'Asc')*.title == ['A', 'B']
+        AbstractFinderThing.listOrderByTitle(order: '')*.title == ['A', 'B']
+    }
+
+    @Unroll
+    void "listOrderBy rejects order direction #description without echoing it"() {
+        when:
+        AbstractFinderThing.listOrderByTitle(order: order)
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == 'Invalid sort direction'
+
+        where:
+        order        | description
+        'sideways'   | 'that is not asc or desc'
+        'desc extra' | 'carrying extra tokens'
     }
 
     void "listOrderBy with an additional criteria closure applies it via applyAdditionalCriteria"() {

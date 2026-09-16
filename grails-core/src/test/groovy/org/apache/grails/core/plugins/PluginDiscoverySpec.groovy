@@ -82,6 +82,38 @@ class PluginDiscoverySpec extends Specification {
          tempDir.deleteDir()
      }
 
+    def 'skips a plugin descriptor that declares a doctype'() {
+        given: 'a descriptor that declares a DOCTYPE, which Grails never generates'
+        def doctypeDir = File.createTempDir()
+        def doctypeMetaInf = new File(doctypeDir, 'META-INF').tap { mkdirs() }
+        new File(doctypeMetaInf, 'grails-plugin.xml').text = """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plugin>
+<plugin name='doctype'>
+    <type>com.example.DoctypeGrailsPlugin</type>
+</plugin>
+"""
+
+        and: 'a second descriptor on the same classpath that declares none'
+        def plainDir = File.createTempDir()
+        def plainMetaInf = new File(plainDir, 'META-INF').tap { mkdirs() }
+        new File(plainMetaInf, 'grails-plugin.xml').text = """<plugin name='plain'>
+    <type>com.example.PlainGrailsPlugin</type>
+</plugin>
+"""
+        def classLoader = new URLClassLoader(
+                [doctypeDir.toURI().toURL(), plainDir.toURI().toURL()] as URL[], (ClassLoader) null)
+
+        when: 'plugin descriptor resources are scanned'
+        def descriptors = PluginUtils.scanPluginDescriptorResources(classLoader)
+
+        then: 'the declaration is refused and only the descriptor without one is discovered'
+        descriptors*.providedPlugins == [['com.example.PlainGrailsPlugin']]
+
+        cleanup:
+        doctypeDir.deleteDir()
+        plainDir.deleteDir()
+    }
+
     def 'ignores malformed plugin descriptor XML without failing discovery'() {
         given: 'a classloader that returns a grails-plugin.xml with invalid content'
         def badXml = '<plugin><type>valid.Class</type><broken'

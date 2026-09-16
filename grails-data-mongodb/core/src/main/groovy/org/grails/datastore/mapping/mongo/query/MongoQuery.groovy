@@ -1529,6 +1529,20 @@ class MongoQuery extends BsonQuery implements QueryArgumentsAware {
 
     }
 
+    /**
+     * Exposes the {@code protected static} handler maps inherited from {@link BsonQuery} to
+     * {@link AggregatePipeline}, which cannot reach them directly: it does not itself extend
+     * {@link BsonQuery}, so the cross-package protected access that {@link MongoQuery} has as a
+     * subclass does not carry over to a nested class merely enclosed by it.
+     */
+    private static Map<Class, ProjectionHandler> resolveProjectProjectionHandlers() {
+        projectProjectionHandlers
+    }
+
+    private static Map<Class, ProjectionHandler> resolveGroupByProjectionHandlers() {
+        groupByProjectionHandlers
+    }
+
     protected static class AggregatePipeline {
 
         private PersistentEntity entity
@@ -1575,7 +1589,7 @@ class MongoQuery extends BsonQuery implements QueryArgumentsAware {
             Document additionalGroupBy = null
 
             for (Projection projection : projectionList) {
-                ProjectionHandler projectionHandler = projectProjectionHandlers.get(projection.getClass())
+                ProjectionHandler projectionHandler = resolveProjectProjectionHandlers().get(projection.getClass())
                 ProjectedProperty projectedProperty = new ProjectedProperty()
                 projectedProperty.projection = projection
                 if (projection instanceof PropertyProjection) {
@@ -1597,7 +1611,7 @@ class MongoQuery extends BsonQuery implements QueryArgumentsAware {
                     projectedProperty.projectionKey = aggregationKey
                     projectedKeys.add(projectedProperty)
                 } else {
-                    projectionHandler = groupByProjectionHandlers.get(projection.getClass())
+                    projectionHandler = resolveGroupByProjectionHandlers().get(projection.getClass())
                     if (projectionHandler != null) {
                         projectedProperty.projectionKey = projectionHandler.handle(entity, projectObject, groupByObject, projection)
                         projectedKeys.add(projectedProperty)

@@ -32,6 +32,7 @@ import org.springframework.security.access.ConfigAttribute
 import org.springframework.security.web.util.matcher.IpAddressMatcher
 import org.springframework.util.AntPathMatcher
 import org.springframework.web.filter.GenericFilterBean
+import org.springframework.web.util.UrlPathHelper
 
 import grails.plugin.springsecurity.InterceptedUrl
 import grails.plugin.springsecurity.ReflectionUtils
@@ -54,6 +55,8 @@ class IpAddressFilter extends GenericFilterBean {
     protected static final String IPV6_LOOPBACK = '0:0:0:0:0:0:0:1'
 
     protected final AntPathMatcher pathMatcher = new AntPathMatcher()
+    protected final UrlPathHelper urlPathHelper = UrlPathHelper.defaultInstance
+    protected final UrlPathHelper rawUrlPathHelper = rawUrlPathHelper()
 
     protected List<InterceptedUrl> restrictions
 
@@ -112,14 +115,7 @@ class IpAddressFilter extends GenericFilterBean {
             return true
         }
 
-        String uri = request.getAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE)
-        if (!uri) {
-            uri = request.requestURI
-            String contextPath = request.contextPath
-            if (contextPath != '/' && uri.startsWith(contextPath)) {
-                uri = uri.substring(contextPath.length())
-            }
-        }
+        String uri = getPathWithinApplication(request)
 
         List<InterceptedUrl> matching = findMatchingRules(uri)
         if (!matching) {
@@ -136,6 +132,44 @@ class IpAddressFilter extends GenericFilterBean {
 
         log.warn 'disallowed request {} from {}', uri, ip
         false
+    }
+
+    /**
+     * Resolves the path that restriction patterns are matched against, in the form Grails URL mapping dispatch
+     * resolves it: path parameters removed per segment before percent-decoding (Jakarta Servlet 6.0 section 3.5.2),
+     * decoded exactly once (RFC 3986 section 2.4) and relative to the context path, so an encoded or matrix-parameter
+     * variant of a restricted path is subject to the same restriction. For a forwarded request the original request
+     * URI is checked, canonicalized the same way. Like dispatch, and unlike RFC 3986 section 6.2.2.1, the context
+     * path is compared case-insensitively. A URI with an illegal percent escape, which a Servlet 6.0 container
+     * rejects with 400 before the filter chain runs, is matched undecoded rather than aborting the chain.
+     */
+    protected String getPathWithinApplication(HttpServletRequest request) {
+        String forwardUri = request.getAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE) as String
+        if (!forwardUri) {
+            try {
+                return urlPathHelper.getPathWithinApplication(request)
+            } catch (IllegalArgumentException ignored) {
+                return rawUrlPathHelper.getPathWithinApplication(request)
+            }
+        }
+        String path = urlPathHelper.removeSemicolonContent(forwardUri)
+        String contextPath = (request.getAttribute(WebUtils.FORWARD_CONTEXT_PATH_ATTRIBUTE) as String) ?: request.contextPath
+        try {
+            path = urlPathHelper.decodeRequestString(request, path)
+            contextPath = urlPathHelper.decodeRequestString(request, contextPath)
+        } catch (IllegalArgumentException ignored) {
+            // illegal percent escape: match the undecoded path
+        }
+        if (contextPath && contextPath != '/' && path.regionMatches(true, 0, contextPath, 0, contextPath.length())) {
+            path = path.substring(contextPath.length())
+        }
+        path ?: '/'
+    }
+
+    private static UrlPathHelper rawUrlPathHelper() {
+        UrlPathHelper helper = new UrlPathHelper()
+        helper.urlDecode = false
+        helper
     }
 
     protected List<InterceptedUrl> findMatchingRules(String uri) {

@@ -42,11 +42,12 @@ class CachingGroovyPageStaticResourceLocator extends GroovyPageStaticResourceLoc
 
     @Override
     Resource findResourceForURI(final String uri) {
+        final Resource nullResource = NULL_RESOURCE
         Callable<Resource> updater = new Callable<Resource>() {
             Resource call() {
                 Resource resource = superFindResourceForURI(uri)
                 if (resource == null) {
-                    resource = NULL_RESOURCE
+                    resource = nullResource
                 }
                 return resource
             }
