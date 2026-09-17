@@ -69,6 +69,6 @@ if (!b) {
 === Description
 
 
-GORM supports the notion of  link:{hibernate5GuideFromRef}index.html#finders[Dynamic Finders]. The `findOrCreateBy*` method finds the first result for the given method expression.
+GORM supports the notion of  link:{hibernate7GuideFromRef}index.html#finders[Dynamic Finders]. The `findOrCreateBy*` method finds the first result for the given method expression.
 
 NOTE: Because this method potentially creates a new instance and populates properties on that instance, only exact match criteria are allowed.  For example, `Book.findOrCreateByDate(dateValue)` is valid but `Book.findOrCreateByDateGreaterThan(dateValue)` is not.

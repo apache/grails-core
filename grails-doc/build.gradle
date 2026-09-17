@@ -48,12 +48,14 @@ ext {
 
 dependencies {
     implementation platform(project(':grails-bom'))
+    implementation platform(project(':grails-hibernate7-bom'))
     implementation 'org.apache.grails:grails-docs-core'
     implementation 'org.apache.groovy:groovy'
 
     // Used to surface versions for groovydoc
     implementation project(':grails-dependencies-starter-web')
     implementation project(':grails-testing-support-core')
+    implementation project(':grails-data-hibernate7')
     implementation 'org.apache.grails:grails-gradle-plugins'
     implementation 'org.testcontainers:testcontainers'
     implementation 'org.springframework:spring-core'
@@ -584,7 +586,7 @@ publishGuideTask.configure { PublishGuideTask publish ->
         def springBootVersion = getVersion('spring-boot')
         def spockVersion = getVersion("spock-core")
         def spockVersionForURL = getVersion("spock-core")?.split("-")[0]
-        def hibernate5Guide = '../grails-data/hibernate5/manual/'
+        def hibernate7Guide = '../grails-data/hibernate7/manual/'
         def api = '../api/'
         def gspTagsRef = '../ref/Tags%20-%20GSP/'
         def controllersRef = '../ref/Controllers/'
@@ -609,11 +611,11 @@ publishGuideTask.configure { PublishGuideTask publish ->
                 'githubBranch'             : githubBranch,
                 'gormApiDocs'              : '../grails-data/api/',
                 'gormWebsite'              : '../grails-data/',
-                'hibernate5Guide'          : hibernate5Guide,
-                'hibernate5GuideFromRef'    : '../' + hibernate5Guide,
+                'hibernate7Guide'          : hibernate7Guide,
+                'hibernate7GuideFromRef'    : '../' + hibernate7Guide,
                 'mongodb5Guide'            : '../grails-data/mongodb/manual/',
                 'rxGORMGuide'              : 'https://gorm.grails.org/7.3.4/rx/manual/', // last version released
-                'hibernate5Reference'      : 'https://docs.jboss.org/hibernate/orm/5.6/userguide/html_single/Hibernate_User_Guide.html',
+                'hibernate7Reference'      : 'https://docs.jboss.org/hibernate/orm/7.4/userguide/html_single/Hibernate_User_Guide.html',
                 'springbootapi'            : "https://docs.spring.io/spring-boot/${springBootVersion}/api/java/",
                 'springBootReference'      : "https://docs.spring.io/spring-boot/${springBootVersion}/reference/",
                 'springBootHowTo'          : "https://docs.spring.io/spring-boot/${springBootVersion}/how-to/",
@@ -624,6 +626,7 @@ publishGuideTask.configure { PublishGuideTask publish ->
                 'grailsMajorVersion'       : grailsMajorVersion,
                 'version'                  : projectVersion,
                 'gormVersion'              : projectVersion,
+                'hibernate7Version'        : getVersion("hibernate-core"),
                 'spockVersion'             : spockVersion,
                 'spockDocs'                : "https://spockframework.org/spock/docs/${spockVersionForURL}/",
                 'testingSupportVersion'    : getVersion("grails-testing-support-core"),
