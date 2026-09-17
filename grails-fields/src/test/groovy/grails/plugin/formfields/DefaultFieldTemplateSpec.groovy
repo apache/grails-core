@@ -18,14 +18,15 @@
  */
 package grails.plugin.formfields
 
+import org.jsoup.Jsoup
+import org.jsoup.nodes.Element
+
 import grails.testing.web.taglib.TagLibUnitTest
-import jodd.lagarto.dom.jerry.Jerry
 import spock.lang.Specification
-import static jodd.lagarto.dom.jerry.Jerry.jerry
 
 class DefaultFieldTemplateSpec extends Specification implements TagLibUnitTest<FormFieldsTagLib> {
-	
-	Map model = [:]
+
+    Map model = [:]
 
     void setup() {
         model.invalid = false
@@ -46,54 +47,49 @@ class DefaultFieldTemplateSpec extends Specification implements TagLibUnitTest<F
     <%= widget %>
 </div>'''
     }
-	
-	static Jerry $(String html) {
-		jerry(html).children()
-	}
-	
-	void "default rendering"() {
-		when:
-		def output = tagLib.renderDefaultField(model)
 
-		then:
-		def root = $(output.toString())
-		root.is('div.fieldcontain')
+    void "default rendering"() {
+        when:
+        Element root = renderRoot()
 
-		and:
-		def label = root.find('label')
-		label.text() == 'label'
-		label.attr('for') == 'property'
-		
-		and:
-		label.next().is('input[name=property]')
-	}
+        then:
+        root.hasClass('fieldcontain')
 
-	void "container marked as invalid"() {
-		given:
-		model.invalid = true
+        and:
+        Element label = root.selectFirst('label')
+        label.text() == 'label'
+        label.attr('for') == 'property'
 
-		when:
-		def output = tagLib.renderDefaultField(model)
-		
-		then:
-		$(output.toString()).hasClass('error')
-	}
+        and:
+        label.nextElementSibling().is('input[name=property]')
+    }
 
-	void "container marked as required"() {
-		given:
-		model.required = true
+    void "container marked as invalid"() {
+        given:
+        model.invalid = true
 
-		when:
-		def output = tagLib.renderDefaultField(model)
+        expect:
+        renderRoot().hasClass('error')
+    }
 
-		then:
-		def root = $(output.toString())
-		root.hasClass('required')
-		
-		and:
-		def indicator = root.find('label .required-indicator')
-		indicator.size()
-		indicator.text() == '*'
-	}
+    void "container marked as required"() {
+        given:
+        model.required = true
+
+        when:
+        Element root = renderRoot()
+
+        then:
+        root.hasClass('required')
+
+        and:
+        Element indicator = root.selectFirst('label .required-indicator')
+        indicator.text() == '*'
+    }
+
+    private Element renderRoot() {
+        String output = tagLib.renderDefaultField(model).toString()
+        Jsoup.parseBodyFragment(output).body().children().first()
+    }
 
 }
