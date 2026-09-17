@@ -96,7 +96,6 @@ tasks.named('asciidoctor', AsciidoctorTask) { AsciidoctorTask it ->
             'pluginVersion'                          : projectVersion,
             'mongoDriverVersion'                     : resolveMongodbVersion.resolved,
             'grailsTestExamplesMongodbBaseDir'       : project.layout.projectDirectory.dir('src/docs/asciidoc').asFile.relativePath(rootProject.findProject(':grails-test-examples-mongodb-base').layout.projectDirectory.asFile),
-            'grailsTestExamplesMongodbHibernate5Dir' : project.layout.projectDirectory.dir('src/docs/asciidoc').asFile.relativePath(rootProject.findProject(':grails-test-examples-mongodb-hibernate5').layout.projectDirectory.asFile),
             'grailsDataMongodbCoreDir'               : project.layout.projectDirectory.dir('src/docs/asciidoc/querying').asFile.relativePath(rootProject.findProject(':grails-data-mongodb-core').layout.projectDirectory.asFile)
     ]
 }

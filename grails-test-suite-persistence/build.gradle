@@ -33,6 +33,7 @@ group = 'org.apache.grails.testing'
 dependencies {
     implementation platform(project(':grails-bom'))
     testImplementation platform(project(':grails-bom'))
+    testImplementation platform(project(':grails-hibernate7-bom'))
     testImplementation project(':grails-codecs')
 
     testImplementation project(':grails-test-suite-base')
@@ -46,7 +47,7 @@ dependencies {
     testImplementation project(':grails-spring')
 
     testImplementation project(':grails-datamapping-validation')
-    testImplementation project(':grails-data-hibernate5-core')
+    testImplementation project(':grails-data-hibernate7-core')
 
     api 'org.apache.tomcat:tomcat-jdbc'
     api 'org.apache.groovy:groovy'

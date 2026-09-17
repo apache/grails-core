@@ -28,7 +28,7 @@ version = '0.1'
 group = 'misc.integration.test.app'
 
 dependencies {
-    implementation platform(project(':grails-bom'))
+    implementation platform(project(':grails-hibernate7-bom'))
     implementation 'org.apache.grails:grails-spring-security'
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails.data:grails-datamapping-core'
@@ -38,7 +38,7 @@ dependencies {
 
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'com.zaxxer:HikariCP'
-    runtimeOnly 'org.apache.grails:grails-data-hibernate5'
+    runtimeOnly 'org.apache.grails:grails-data-hibernate7'
     runtimeOnly 'org.apache.grails:grails-services'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
     runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'

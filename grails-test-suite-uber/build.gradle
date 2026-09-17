@@ -31,6 +31,7 @@ group = 'org.apache.grails.testing'
 
 dependencies {
     implementation platform(project(':grails-bom'))
+    testImplementation platform(project(':grails-hibernate7-bom'))
 
     testImplementation project(':grails-async')
     testImplementation project(':grails-codecs')
@@ -50,7 +51,7 @@ dependencies {
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
     testImplementation 'tools.jackson.core:jackson-databind'
-    testImplementation project(':grails-data-hibernate5-core')
+    testImplementation project(':grails-data-hibernate7-core')
     testImplementation project(':grails-gsp')
     if (System.getenv('SITEMESH2_TESTING_ENABLED') == 'true') {
         implementation project(':grails-layout')
@@ -108,7 +109,6 @@ def isolatedTestPatterns = [
 
 def testSkippingProperties = [
         'onlyFunctionalTests',
-        'onlyHibernate5Tests',
         'onlyHibernate7Tests',
         'onlySpringSecurityTests',
         'onlyMongodbTests',

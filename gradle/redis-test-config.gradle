@@ -27,7 +27,6 @@ tasks.withType(Test).configureEach {
         ![
                 'skipRedisTests',
                 'onlyFunctionalTests',
-                'onlyHibernate5Tests',
                 'onlyHibernate7Tests',
                 'onlyMongodbTests',
                 'onlySpringSecurityTests',

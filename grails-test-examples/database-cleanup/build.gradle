@@ -31,11 +31,11 @@ apply plugin: 'org.apache.grails.gradle.grails-web'
 apply plugin: 'org.apache.grails.gradle.grails-gsp'
 
 dependencies {
-    implementation platform(project(':grails-bom'))
+    implementation platform(project(':grails-hibernate7-bom'))
 
     implementation 'org.apache.grails:grails-dependencies-starter-web'
     implementation 'com.h2database:h2'
-    implementation 'org.apache.grails:grails-data-hibernate5'
+    implementation 'org.apache.grails:grails-data-hibernate7'
     runtimeOnly 'org.hibernate:hibernate-ehcache', {
         exclude group: 'org.hibernate', module: 'hibernate-core'
     }
