@@ -75,8 +75,8 @@ One popular approach is to have a root changelog named changelog.groovy (or chan
 
 ## Documentation
 
-* Latest https://grails.apache.org/docs/latest/grails-data/hibernate5/manual/index.html#databaseMigration
-* Snapshot: https://grails.apache.org/docs/snapshot/grails-data/hibernate5/manual/index.html#databaseMigration
+* Latest https://grails.apache.org/docs/latest/grails-data/hibernate7/manual/index.html#databaseMigration
+* Snapshot: https://grails.apache.org/docs/snapshot/grails-data/hibernate7/manual/index.html#databaseMigration
 * Grails 2: https://grails.github.io/grails-database-migration/1.4.0/
 * Grails 3 (Hibernate 4): https://grails.github.io/grails-database-migration/2.0.x/index.html
 * Grails 3/4 (Hibernate 5): https://grails.github.io/grails-database-migration/3.0.x/index.html

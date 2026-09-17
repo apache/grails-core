@@ -14,8 +14,8 @@
 # limitations under the License.
 description: Profile for Web applications
 features:
-    defaults: 
-        - hibernate5
+    defaults:
+        - hibernate7
         - geb2
     required:
         - gsp

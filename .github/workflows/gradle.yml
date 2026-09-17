@@ -478,7 +478,6 @@ jobs:
             -PgrailsIndy=${{ matrix.indy }} \
             -PonlyFunctionalTests \
             -PskipCodeStyle \
-            -PskipHibernate5Tests \
             -PskipHibernate7Tests \
             -PskipMongodbTests \
             -PskipNeo4jTests \
@@ -747,55 +746,6 @@ jobs:
           -PonlyMongodbTests
           -PmongodbContainerVersion=${{ matrix.mongodb-version }}
           -PskipCodeStyle
-  hibernate5Functional:
-    if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
-    name: "Hibernate5 Functional Tests (Java ${{ matrix.java }}, indy=${{ matrix.indy }})"
-    runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        java: [ 21, 25 ]
-        indy: [ false ]
-        include:
-          - java: 21
-            indy: true
-    steps:
-      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
-        run: curl -s https://api.ipify.org
-      - name: "📥 Checkout the repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
-        with:
-          distribution: liberica
-          java-version: ${{ matrix.java }}
-      - name: "🗄️ Restore dependency jar cache"
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
-          # Keyed by branch version so each release branch maintains its own warm cache.
-          path: |
-            ~/.gradle/caches/modules-2
-            ~/.gradle/wrapper
-          key: gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-${{ hashFiles('**/dependencies.gradle', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
-      - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
-        with:
-          cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
-          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
-      - name: "🏃 Run Functional Tests"
-        env:
-          GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-        run: >
-          ./gradlew bootJar check
-          --continue
-          --rerun-tasks
-          --stacktrace
-          -PgrailsIndy=${{ matrix.indy }}
-          -PonlyHibernate5Tests
-          -PskipCodeStyle
   hibernate7Functional:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: "Hibernate7 Functional Tests (${{ matrix.job_name }})"
@@ -954,7 +904,7 @@ jobs:
           name: grails-gradle-artifacts.txt
           path: grails-gradle/build/grails-gradle-artifacts.txt
   publish:
-    needs: [ publishGradle, build, functional, security, securityConfig, redis, hibernate5Functional, hibernate7Functional, mongodbFunctional, neo4jFunctional ]
+    needs: [ publishGradle, build, functional, security, securityConfig, redis, hibernate7Functional, mongodbFunctional, neo4jFunctional ]
     if: >-
       ${{ always() &&
           github.repository_owner == 'apache' &&
@@ -965,7 +915,6 @@ jobs:
           (needs.security.result == 'success' || needs.security.result == 'skipped') &&
           (needs.securityConfig.result == 'success' || needs.securityConfig.result == 'skipped') &&
           (needs.redis.result == 'success' || needs.redis.result == 'skipped') &&
-          (needs.hibernate5Functional.result == 'success' || needs.hibernate5Functional.result == 'skipped') &&
           (needs.hibernate7Functional.result == 'success' || needs.hibernate7Functional.result == 'skipped') &&
           (needs.mongodbFunctional.result == 'success' || needs.mongodbFunctional.result == 'skipped') &&
           (needs.neo4jFunctional.result == 'success' || needs.neo4jFunctional.result == 'skipped')

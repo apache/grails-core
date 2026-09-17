@@ -47,5 +47,5 @@ Five demo applications live under `grails-test-examples/graphql/`:
 | `:grails-test-examples-graphql-grails-test-app`                | End-to-end Grails REST app exercising every type/feature |
 | `:grails-test-examples-graphql-grails-docs-app`                | Grails REST app backing the reference-guide examples     |
 | `:grails-test-examples-graphql-grails-tenant-app`              | Grails app demonstrating GORM multi-tenancy              |
-| `:grails-test-examples-graphql-grails-multi-datastore-app`     | Grails app combining Hibernate5 + MongoDB datastores     |
+| `:grails-test-examples-graphql-grails-multi-datastore-app`     | Grails app combining Hibernate7 + MongoDB datastores     |
 | `:grails-test-examples-graphql-spring-boot-app`                | Standalone Spring Boot app embedding the schema generator core |

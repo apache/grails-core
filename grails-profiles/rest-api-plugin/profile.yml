@@ -19,8 +19,8 @@ skeleton:
         - grails-app/views/**/*.*
         - grails-app/i18n/**/*.*
 features:
-    defaults: 
-        - hibernate5
+    defaults:
+        - hibernate7
     required:
         - json-views
 build:

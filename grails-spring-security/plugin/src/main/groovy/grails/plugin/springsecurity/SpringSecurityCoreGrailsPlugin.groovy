@@ -153,7 +153,7 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
 
     String grailsVersion = '7.0.0 > *'
     List observe = ['controllers']
-    List loadAfter = ['controllers', 'hibernate', 'hibernate4', 'hibernate5', 'services']
+    List loadAfter = ['controllers', 'hibernate', 'hibernate4', 'services']
     String author = 'Burt Beckwith'
     String authorEmail = ''
     String title = 'Spring Security Core Plugin'

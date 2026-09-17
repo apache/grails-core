@@ -60,7 +60,7 @@ components:
     representative_files:
       - grails-datamapping-core/src/main/groovy/org/grails/compiler/gorm/GormEntityTransformation.groovy
       - grails-datamapping-validation/src/main/groovy/grails/gorm/validation/PersistentEntityValidator.groovy
-      - grails-data-hibernate5/core/src/main/groovy/org/grails/orm/hibernate/cfg/HibernateMappingBuilder.groovy
+      - grails-data-hibernate7/core/src/main/groovy/org/grails/orm/hibernate/cfg/domainbinding/hibernate/HibernateMappingBuilder.groovy
   - name: configuration_loading
     in_model: true
     representative_files:

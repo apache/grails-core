@@ -129,7 +129,6 @@ class SbomPlugin implements Plugin<Project> {
             'pkg:maven/org.jline/jline-terminal-jna@3.30.16?type=jar'          : 'BSD-3-Clause',
             'pkg:maven/org.jline/jline-terminal-jni@3.30.16?type=jar'          : 'BSD-3-Clause',
             'pkg:maven/org.jruby/jzlib@1.1.5?type=jar'                        : 'BSD-3-Clause', // https://web.archive.org/web/20240822213507/http://www.jcraft.com/jzlib/LICENSE.txt shows it's a 3 clause
-            'pkg:maven/org.liquibase.ext/liquibase-hibernate5@4.27.0?type=jar': 'Apache-2.0', // maps incorrectly because of https://github.com/liquibase/liquibase/issues/2445 & the base pom does not define a license
             'pkg:maven/org.json/json@20251224?type=jar'                       : 'Public-Domain', // required due to jedis, https://issues.apache.org/jira/browse/LEGAL-666 approves this usage
             // Bouncy Castle Licence is the MIT license (https://www.bouncycastle.org/licence.html); pulled in transitively by the CAS client
             'pkg:maven/org.bouncycastle/bcpkix-jdk18on@1.84?type=jar'         : 'MIT',
@@ -153,29 +152,6 @@ class SbomPlugin implements Plugin<Project> {
     // Require a whitelist of any case of category X licenses to prevent accidental inclusion in a distributed artifact
     // this list will need to be updated anytime we change versions so we can revise the licenses
     private static Map<String, LinkedHashMap<String, String>> LICENSE_EXCEPTIONS = [
-            'grails-data-hibernate5-core'       : [
-                    'pkg:maven/org.hibernate.common/hibernate-commons-annotations@5.1.2.Final?type=jar': 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
-                    'pkg:maven/org.hibernate/hibernate-core-jakarta@5.6.15.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
-            ],
-            'grails-data-hibernate5'            : [
-                    'pkg:maven/org.hibernate.common/hibernate-commons-annotations@5.1.2.Final?type=jar': 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
-                    'pkg:maven/org.hibernate/hibernate-core-jakarta@5.6.15.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
-            ],
-            'grails-data-hibernate5-spring-boot': [
-                    'pkg:maven/org.hibernate.common/hibernate-commons-annotations@5.1.2.Final?type=jar': 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
-                    'pkg:maven/org.hibernate/hibernate-core-jakarta@5.6.15.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
-            ],
-            'grails-data-hibernate5-spring-orm' : [
-                    'pkg:maven/org.hibernate.common/hibernate-commons-annotations@5.1.2.Final?type=jar': 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
-                    'pkg:maven/org.hibernate/hibernate-core-jakarta@5.6.15.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
-            ],
-            'grails-data-hibernate5-dbmigration': [
-                    'pkg:maven/javax.xml.bind/jaxb-api@2.3.1?type=jar': 'CDDL-1.1', // api export
-            ],
-            'grails-data-hibernate5-dbmigration-cli': [
-                    'pkg:maven/org.hibernate.common/hibernate-commons-annotations@5.1.2.Final?type=jar': 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
-                    'pkg:maven/org.hibernate/hibernate-core-jakarta@5.6.15.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
-            ],
             'grails-data-hibernate7-dbmigration-core': [
                     'pkg:maven/javax.xml.bind/jaxb-api@2.3.1?type=jar': 'CDDL-1.1', // api export
             ],
