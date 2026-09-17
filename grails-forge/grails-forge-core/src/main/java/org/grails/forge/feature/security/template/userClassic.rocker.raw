@@ -58,7 +58,7 @@ class User implements Serializable {
         collection 'user'
     }
 
-} else if (features.contains("gorm-hibernate5") || features.contains("gorm-hibernate7")) {
+} else if (features.contains("gorm-hibernate7")) {
     static mapping = {
         table name: '`user`'
     }

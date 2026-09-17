@@ -128,7 +128,7 @@ class BuildBuilder implements ProjectFixture, ContextFixture {
         Project project = this.project ?: buildProject()
         JdkVersion jdkVersion = this.jdkVersion ?: JdkVersion.DEFAULT_OPTION
 
-        Options options = new Options(reloading, jdkVersion)
+        Options options = new Options(reloading, gormImpl, servletImpl, jdkVersion, operatingSystem)
         Features features = getFeatures(featureNames, options, type)
         String grailsVersion = VersionInfo.grailsVersion
         GradleBuild build = gradleBuild(options, features, project, type)

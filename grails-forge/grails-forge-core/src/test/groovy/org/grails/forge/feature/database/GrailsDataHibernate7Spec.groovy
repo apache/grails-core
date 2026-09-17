@@ -125,7 +125,8 @@ class GrailsDataHibernate7Spec extends ApplicationContextSpec implements Command
     void "test buildSrc uses the micronaut bom when micronaut is added without hibernate 7"() {
         when:
         final String template = new BuildBuilder(beanContext)
-                .features(["gorm-hibernate5", "grails-micronaut"])
+                .features(["gorm-mongodb", "grails-micronaut"])
+                .gormImpl(GormImpl.MONGODB)
                 .jdkVersion(JdkVersion.JDK_25)
                 .renderBuildSrc()
 
@@ -135,10 +136,11 @@ class GrailsDataHibernate7Spec extends ApplicationContextSpec implements Command
         !template.contains('org.apache.grails:grails-bom:')
     }
 
-    void "test hibernate 5 micronaut bom is used when micronaut is added without hibernate 7"() {
+    void "test micronaut bom is used when micronaut is added without hibernate 7"() {
         when:
         final String template = new BuildBuilder(beanContext)
-                .features(["gorm-hibernate5", "grails-micronaut"])
+                .features(["gorm-mongodb", "grails-micronaut"])
+                .gormImpl(GormImpl.MONGODB)
                 .jdkVersion(JdkVersion.JDK_25)
                 .render()
 
@@ -182,13 +184,13 @@ class GrailsDataHibernate7Spec extends ApplicationContextSpec implements Command
         !template.contains('grails-data-hibernate5-dbmigration')
     }
 
-    void "test selecting both hibernate implementations is rejected"() {
+    void "test gorm-hibernate5 is no longer a selectable feature"() {
         when:
-        getFeatures(['gorm-hibernate5', 'gorm-hibernate7'])
+        getFeatures(['gorm-hibernate5'])
 
         then:
         IllegalArgumentException e = thrown()
-        e.message.contains('Only one Grails Data for Hibernate implementation can be selected')
+        e.message.contains('The requested feature does not exist: gorm-hibernate5')
     }
 
     void "test config"() {

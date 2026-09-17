@@ -46,7 +46,7 @@ class PostgresSpec extends ApplicationContextSpec {
 
     void "test config"() {
         when:
-        GeneratorContext ctx = buildGeneratorContext(["gorm-hibernate5", "postgres"])
+        GeneratorContext ctx = buildGeneratorContext(["gorm-hibernate7", "postgres"])
 
         then:
         ctx.getConfiguration().get("dataSource.driverClassName") == 'org.postgresql.Driver'
