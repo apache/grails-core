@@ -18,7 +18,7 @@
  */
 package org.grails.forge.feature.test;
 
-import jakarta.inject.Singleton;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.feature.Feature;
 import org.grails.forge.feature.validation.FeatureValidator;
@@ -26,7 +26,7 @@ import org.grails.forge.options.Options;
 
 import java.util.Set;
 
-@Singleton
+@Component
 public class MockitoValidator implements FeatureValidator {
     @Override
     public void validatePreProcessing(Options options, ApplicationType applicationType, Set<Feature> features) {

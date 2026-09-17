@@ -18,11 +18,9 @@
  */
 package org.grails.forge.cli.command;
 
-import io.micronaut.core.annotation.Introspected;
 import org.grails.forge.options.GormImpl;
 import picocli.CommandLine;
 
-@Introspected
 public class GormImplConverter implements CommandLine.ITypeConverter<GormImpl> {
 
     @Override

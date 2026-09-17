@@ -18,8 +18,8 @@
  */
 package org.grails.forge.feature.database;
 
-import io.micronaut.context.annotation.Primary;
-import jakarta.inject.Singleton;
+import org.springframework.context.annotation.Primary;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
@@ -32,7 +32,7 @@ import java.util.Map;
 import java.util.Set;
 
 @Primary
-@Singleton
+@Component
 public class GrailsDataHibernate5 extends GormFeature implements DatabaseDriverConfigurationFeature {
 
     private static final String URL_KEY = DATASOURCE_PREFIX + "url";

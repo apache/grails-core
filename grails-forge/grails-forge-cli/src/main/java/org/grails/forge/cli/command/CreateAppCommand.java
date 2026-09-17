@@ -18,9 +18,9 @@
  */
 package org.grails.forge.cli.command;
 
-import io.micronaut.context.annotation.Prototype;
-import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.annotation.ReflectiveAccess;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
+import jakarta.annotation.Nonnull;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.ContextFactory;
 import org.grails.forge.application.WebAvailableFeatures;
@@ -31,13 +31,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 @CommandLine.Command(name = CreateAppCommand.NAME, description = "Creates an application")
-@Prototype
+@Component
+@Scope("prototype")
 public class CreateAppCommand extends CreateCommand {
 
     public static final String NAME = "create-app";
 
     @CommandLine.Option(names = {"-f", "--features"}, paramLabel = "FEATURE", split = ",", description = "The features to use. Possible values: ${COMPLETION-CANDIDATES}", completionCandidates = WebAvailableFeatures.class)
-    @ReflectiveAccess
     List<String> features = new ArrayList<>();
 
     public CreateAppCommand(WebAvailableFeatures availableFeatures,
@@ -46,7 +46,7 @@ public class CreateAppCommand extends CreateCommand {
         super(availableFeatures, contextFactory, ApplicationType.WEB, projectGenerator);
     }
 
-    @NonNull
+    @Nonnull
     @Override
     protected List<String> getSelectedFeatures() {
         return features;

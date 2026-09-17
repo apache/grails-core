@@ -18,9 +18,9 @@
  */
 package org.grails.forge.feature.spring;
 
-import io.micronaut.core.annotation.NonNull;
+import jakarta.annotation.Nonnull;
 
-import jakarta.inject.Singleton;
+import org.springframework.stereotype.Component;
 
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
@@ -31,7 +31,7 @@ import org.grails.forge.options.ServletImpl;
 
 import java.util.Set;
 
-@Singleton
+@Component
 public class SpringBootUndertowFeature extends SpringBootEmbeddedServlet {
 
     @Override
@@ -39,7 +39,7 @@ public class SpringBootUndertowFeature extends SpringBootEmbeddedServlet {
         return "Embedded Undertow";
     }
 
-    @NonNull
+    @Nonnull
     @Override
     public String getName() {
         return "grails-undertow";

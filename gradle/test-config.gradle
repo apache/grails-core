@@ -60,6 +60,7 @@ tasks.withType(Test).configureEach {
                 'onlyNeo4jTests',
                 'onlyRedisTests',
                 'onlySpringSecurityTests',
+                'onlyForgeTests',
                 'skipCoreTests',
                 'skipTests'
         ].find {

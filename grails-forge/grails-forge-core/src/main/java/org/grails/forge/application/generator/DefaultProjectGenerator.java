@@ -18,15 +18,14 @@
  */
 package org.grails.forge.application.generator;
 
-import io.micronaut.context.BeanContext;
-import io.micronaut.core.annotation.Nullable;
-import io.micronaut.inject.qualifiers.Qualifiers;
-import jakarta.inject.Singleton;
+import jakarta.annotation.Nullable;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.ContextFactory;
 import org.grails.forge.application.OperatingSystem;
 import org.grails.forge.application.Project;
 import org.grails.forge.feature.AvailableFeatures;
+import org.grails.forge.feature.FeatureRegistry;
+import org.springframework.stereotype.Component;
 import org.grails.forge.feature.FeatureContext;
 import org.grails.forge.feature.cli;
 import org.grails.forge.io.ConsoleOutput;
@@ -44,14 +43,14 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.function.Function;
 
-@Singleton
+@Component("projectGenerator")
 public class DefaultProjectGenerator implements ProjectGenerator {
     private final ContextFactory contextFactory;
-    private final BeanContext beanContext;
+    private final FeatureRegistry featureRegistry;
 
-    public DefaultProjectGenerator(ContextFactory contextFactory, BeanContext beanContext) {
+    public DefaultProjectGenerator(ContextFactory contextFactory, FeatureRegistry featureRegistry) {
         this.contextFactory = contextFactory;
-        this.beanContext = beanContext;
+        this.featureRegistry = featureRegistry;
     }
 
     @Override
@@ -116,7 +115,7 @@ public class DefaultProjectGenerator implements ProjectGenerator {
             @Nullable OperatingSystem operatingSystem,
             List<String> selectedFeatures,
             ConsoleOutput consoleOutput) {
-        AvailableFeatures availableFeatures = beanContext.getBean(AvailableFeatures.class, Qualifiers.byName(applicationType.getName()));
+        AvailableFeatures availableFeatures = featureRegistry.availableFeatures(applicationType);
 
         FeatureContext featureContext = contextFactory.createFeatureContext(availableFeatures, selectedFeatures, applicationType, options, operatingSystem);
         return contextFactory.createGeneratorContext(project, featureContext, consoleOutput);

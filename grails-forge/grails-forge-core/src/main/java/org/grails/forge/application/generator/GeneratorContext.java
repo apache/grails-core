@@ -19,8 +19,8 @@
 package org.grails.forge.application.generator;
 
 import com.fizzed.rocker.RockerModel;
-import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.annotation.Nullable;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.OperatingSystem;
 import org.grails.forge.application.Project;
@@ -132,14 +132,14 @@ public class GeneratorContext implements DependencyContext {
     /**
      * @return The build properties
      */
-    @NonNull public BuildProperties getBuildProperties() {
+    @Nonnull public BuildProperties getBuildProperties() {
         return buildProperties;
     }
 
     /**
      * @return The configuration
      */
-    @NonNull public ApplicationConfiguration getConfiguration() {
+    @Nonnull public ApplicationConfiguration getConfiguration() {
         return configuration;
     }
 
@@ -152,7 +152,7 @@ public class GeneratorContext implements DependencyContext {
         return applicationEnvironmentConfiguration.get(env);
     }
 
-    @NonNull public ApplicationConfiguration getConfiguration(String env, ApplicationConfiguration defaultConfig) {
+    @Nonnull public ApplicationConfiguration getConfiguration(String env, ApplicationConfiguration defaultConfig) {
         return applicationEnvironmentConfiguration.computeIfAbsent(env, (key) -> defaultConfig);
     }
 
@@ -164,22 +164,22 @@ public class GeneratorContext implements DependencyContext {
         return bootstrapEnvironmentConfiguration.get(env);
     }
 
-    @NonNull public BootstrapConfiguration getBootstrapConfiguration(String env, BootstrapConfiguration defaultConfig) {
+    @Nonnull public BootstrapConfiguration getBootstrapConfiguration(String env, BootstrapConfiguration defaultConfig) {
         return bootstrapEnvironmentConfiguration.computeIfAbsent(env, (key) -> defaultConfig);
     }
 
     /**
      * @return The bootstrap config
      */
-    @NonNull public BootstrapConfiguration getBootstrapConfiguration() {
+    @Nonnull public BootstrapConfiguration getBootstrapConfiguration() {
         return bootstrapConfiguration;
     }
 
-    public void addConfiguration(@NonNull Configuration configuration) {
+    public void addConfiguration(@Nonnull Configuration configuration) {
         otherConfiguration.add(configuration);
     }
 
-    @NonNull public Set<Configuration> getAllConfigurations() {
+    @Nonnull public Set<Configuration> getAllConfigurations() {
         Set<Configuration> allConfigurations = new HashSet<>();
         allConfigurations.add(configuration);
         allConfigurations.add(bootstrapConfiguration);
@@ -192,21 +192,21 @@ public class GeneratorContext implements DependencyContext {
     /**
      * @return The templates
      */
-    @NonNull public Map<String, Template> getTemplates() {
+    @Nonnull public Map<String, Template> getTemplates() {
         return Collections.unmodifiableMap(templates);
     }
 
     /**
      * @return The templates
      */
-    @NonNull public List<Writable> getHelpTemplates() {
+    @Nonnull public List<Writable> getHelpTemplates() {
         return Collections.unmodifiableList(helpTemplates);
     }
 
     /**
      * @return The development reloading
      */
-    @NonNull
+    @Nonnull
     public DevelopmentReloading getDevelopmentReloading() {
         return options.getDevelopmentReloading();
     }
@@ -214,42 +214,42 @@ public class GeneratorContext implements DependencyContext {
     /**
      * @return The Gorm Implementation
      */
-    @NonNull public GormImpl getGorm() {
+    @Nonnull public GormImpl getGorm() {
         return options.getGormImpl();
     }
 
     /**
      * @return The Servlet Implementation
      */
-    @NonNull public ServletImpl getServlet() {
+    @Nonnull public ServletImpl getServlet() {
         return options.getServletImpl();
     }
 
     /**
      * @return The project
      */
-    @NonNull public Project getProject() {
+    @Nonnull public Project getProject() {
         return project;
     }
 
     /**
      * @return The application type
      */
-    @NonNull public ApplicationType getApplicationType() {
+    @Nonnull public ApplicationType getApplicationType() {
         return command;
     }
 
     /**
      * @return The selected features
      */
-    @NonNull public Features getFeatures() {
+    @Nonnull public Features getFeatures() {
         return features;
     }
 
     /**
      * @return The JDK version
      */
-    @NonNull public JdkVersion getJdkVersion() {
+    @Nonnull public JdkVersion getJdkVersion() {
         return options.getJavaVersion();
     }
 
@@ -313,7 +313,7 @@ public class GeneratorContext implements DependencyContext {
     }
 
     @Override
-    public void addDependency(@NonNull Dependency dependency) {
+    public void addDependency(@Nonnull Dependency dependency) {
         if (dependency.requiresLookup()) {
             Coordinate coordinate = coordinateResolver.resolve(dependency.getArtifactId())
                     .orElseThrow(() -> new LookupFailedException(dependency.getArtifactId()));
@@ -324,7 +324,7 @@ public class GeneratorContext implements DependencyContext {
     }
 
     @Override
-    public void addBuildscriptDependency(@NonNull Dependency dependency) {
+    public void addBuildscriptDependency(@Nonnull Dependency dependency) {
         if (dependency.requiresLookup()) {
             Coordinate coordinate = coordinateResolver.resolve(dependency.getArtifactId())
                     .orElseThrow(() -> new LookupFailedException(dependency.getArtifactId()));
@@ -334,7 +334,7 @@ public class GeneratorContext implements DependencyContext {
         }
     }
 
-    private void addBuildscriptDependencyBasedOnFeatures(@NonNull Dependency dependency) {
+    private void addBuildscriptDependencyBasedOnFeatures(@Nonnull Dependency dependency) {
         if (getFeature(GradleBuildSrc.class).isPresent()) {
             // for buildSrc/build.gradle with initial scope
             this.buildscriptDependencies.add(dependency);
@@ -345,25 +345,25 @@ public class GeneratorContext implements DependencyContext {
     }
 
     @Override
-    @NonNull
+    @Nonnull
     public Set<Dependency> getDependencies() {
         return dependencies;
     }
 
     @Override
-    @NonNull
+    @Nonnull
     public Set<Dependency> getBuildscriptDependencies() {
         return buildscriptDependencies;
     }
 
     @Override
-    @NonNull
+    @Nonnull
     public Set<GradleRepository> getRepositories() {
         return repositories;
     }
 
     @Override
-    @NonNull
+    @Nonnull
     public Set<GradleRepository> getBuildRepositories() {
         return buildRepositories;
     }

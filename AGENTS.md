@@ -97,17 +97,16 @@ export GRADLE_OPTS="-Xms2G -Xmx5G"
 
 ## Project Structure
 
-This repository contains multiple independent Gradle projects:
+This repository contains multiple Gradle projects:
 
 | Project | Description | Build Command |
 |---------|-------------|---------------|
-| **grails-core** (root) | Main framework with 60+ modules | `./gradlew build` |
+| **grails-core** (root) | Main framework, including Forge modules | `./gradlew build` |
 | **build-logic/** | Gradle convention plugins for the build | `cd build-logic && ./gradlew build` |
 | **grails-gradle/** | Grails Gradle plugins | `cd grails-gradle && ./gradlew build` |
-| **grails-forge/** | Application generator (like Spring Initializr) | `cd grails-forge && ./gradlew build` |
 | **end-to-end/** | End-to-end tests consuming published Grails artifacts (see `end-to-end/README.md` for required setup) | `cd end-to-end && ./gradlew check` |
 
-Each project has its own `settings.gradle` and independent build. When working on a specific project, run Gradle commands from that project's directory.
+`grails-gradle` and `end-to-end` keep independent `settings.gradle` files. Forge lives under `grails-forge/` as root subprojects (`:grails-cli`, `:grails-forge-api`, `:grails-forge-cli`, `:grails-forge-core`, `:grails-forge-web`, `:grails-forge-test-core`).
 
 ## Dependency Management
 

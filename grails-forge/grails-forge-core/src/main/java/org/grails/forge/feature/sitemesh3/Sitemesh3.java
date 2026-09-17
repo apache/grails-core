@@ -18,7 +18,7 @@
  */
 package org.grails.forge.feature.sitemesh3;
 
-import jakarta.inject.Singleton;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
@@ -36,7 +36,7 @@ import java.util.Set;
  * is silently the default, mirroring how the legacy {@code grails-layout} was
  * silently the default before it.
  */
-@Singleton
+@Component
 public class Sitemesh3 extends GspLayout implements DefaultFeature {
 
     @Override

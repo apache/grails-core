@@ -18,7 +18,6 @@
  */
 package org.grails.forge.feature.build.gradle;
 
-import jakarta.inject.Singleton;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.CoordinateResolver;
@@ -28,8 +27,9 @@ import org.grails.forge.feature.build.gradle.templates.buildSrcBuildGradle;
 import org.grails.forge.options.BuildTool;
 import org.grails.forge.template.RockerTemplate;
 import org.grails.forge.util.VersionInfo;
+import org.springframework.stereotype.Component;
 
-@Singleton
+@Component
 public class GradleBuildSrc implements GradleBuildSrcFeature {
 
     private final GradleBuildCreator dependencyResolver;

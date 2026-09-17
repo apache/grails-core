@@ -18,18 +18,15 @@
  */
 package org.grails.forge.build.dependencies;
 
-import io.micronaut.core.annotation.Introspected;
-import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.annotation.Nullable;
-import io.micronaut.core.order.OrderUtil;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 
 import java.util.Comparator;
 
-@Introspected
 public interface Coordinate {
 
     Comparator<Coordinate> COMPARATOR = (o1, o2) -> {
-        int comparison = OrderUtil.COMPARATOR.compare(o1, o2);
+        int comparison = Integer.compare(o1.getOrder(), o2.getOrder());
         if (comparison != 0) {
             return comparison;
         }
@@ -40,10 +37,14 @@ public interface Coordinate {
         return o1.getArtifactId().compareTo(o2.getArtifactId());
     };
 
-    @NonNull
+    default int getOrder() {
+        return 0;
+    }
+
+    @Nonnull
     String getGroupId();
 
-    @NonNull
+    @Nonnull
     String getArtifactId();
 
     @Nullable

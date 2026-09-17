@@ -33,6 +33,7 @@ tasks.withType(Test).configureEach {
                 'onlyNeo4jTests',
                 'onlyRedisTests',
                 'onlyCoreTests',
+                'onlyForgeTests',
                 'skipTests'
         ].find {
             project.hasProperty(it)

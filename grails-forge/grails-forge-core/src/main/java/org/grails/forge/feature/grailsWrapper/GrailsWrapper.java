@@ -18,7 +18,7 @@
  */
 package org.grails.forge.feature.grailsWrapper;
 
-import jakarta.inject.Singleton;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.OperatingSystem;
 import org.grails.forge.application.generator.GeneratorContext;
@@ -30,7 +30,7 @@ import org.grails.forge.template.BinaryTemplate;
 
 import java.util.Set;
 
-@Singleton
+@Component
 public class GrailsWrapper implements DefaultFeature {
 
     @Override

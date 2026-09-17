@@ -19,9 +19,7 @@
 
 package org.grails.forge.cli.command
 
-import io.micronaut.configuration.picocli.PicocliRunner
-import io.micronaut.context.ApplicationContext
-import io.micronaut.context.env.Environment
+import org.springframework.context.ApplicationContext
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.WebAvailableFeatures
 import org.grails.forge.cli.CodeGenConfig
@@ -35,11 +33,11 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
 
     @Shared
     @AutoCleanup
-    ApplicationContext ctx = ApplicationContext.run(Environment.CLI)
+    ApplicationContext ctx = org.grails.forge.ForgeContexts.create()
 
     @Shared
     @AutoCleanup
-    ApplicationContext beanContext = ApplicationContext.run()
+    ApplicationContext beanContext = org.grails.forge.ForgeContexts.create()
 
     PrintStream originalOut
     PrintStream originalErr
@@ -60,7 +58,7 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
         System.setOut(new PrintStream(out))
 
         when:
-        PicocliRunner.run(CreateAppCommand, ctx, "foobar")
+        org.grails.forge.cli.CliRunner.run(CreateAppCommand, ctx, "foobar")
 
         then:
         noExceptionThrown()
@@ -73,7 +71,7 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
         System.setErr(new PrintStream(baos))
 
         when:
-        PicocliRunner.run(CreateAppCommand, ctx, "temp",  "--gorm", "xyz")
+        org.grails.forge.cli.CliRunner.run(CreateAppCommand, ctx, "temp",  "--gorm", "xyz")
 
         then:
         noExceptionThrown()
@@ -86,7 +84,7 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
         System.setOut(new PrintStream(out))
 
         when:
-        PicocliRunner.run(CreateAppCommand, ctx, "dataswitch", "--data", "hibernate7")
+        org.grails.forge.cli.CliRunner.run(CreateAppCommand, ctx, "dataswitch", "--data", "hibernate7")
 
         then:
         noExceptionThrown()
@@ -99,7 +97,7 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
         System.setOut(new PrintStream(out))
 
         when:
-        PicocliRunner.run(CreateAppCommand, ctx, "dshort", "-d", "hibernate7")
+        org.grails.forge.cli.CliRunner.run(CreateAppCommand, ctx, "dshort", "-d", "hibernate7")
 
         then:
         noExceptionThrown()
@@ -112,7 +110,7 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
         System.setOut(new PrintStream(out))
 
         when:
-        PicocliRunner.run(CreateAppCommand, ctx, "gshort", "-g", "hibernate5")
+        org.grails.forge.cli.CliRunner.run(CreateAppCommand, ctx, "gshort", "-g", "hibernate5")
 
         then:
         noExceptionThrown()
@@ -125,7 +123,7 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
         System.setOut(new PrintStream(out))
 
         when:
-        PicocliRunner.run(CreateAppCommand, ctx, "legacygorm", "--gorm", "hibernate")
+        org.grails.forge.cli.CliRunner.run(CreateAppCommand, ctx, "legacygorm", "--gorm", "hibernate")
 
         then:
         noExceptionThrown()
@@ -138,7 +136,7 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
         System.setOut(new PrintStream(out))
 
         when:
-        PicocliRunner.run(CreateAppCommand, ctx, "hib5gorm", "--gorm", "hibernate5")
+        org.grails.forge.cli.CliRunner.run(CreateAppCommand, ctx, "hib5gorm", "--gorm", "hibernate5")
 
         then:
         noExceptionThrown()
@@ -156,7 +154,7 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
         }
 
         when:
-        PicocliRunner.run(CreateAppCommand, ctx, "temp", "--list-features")
+        org.grails.forge.cli.CliRunner.run(CreateAppCommand, ctx, "temp", "--list-features")
 
         then:
         noExceptionThrown()

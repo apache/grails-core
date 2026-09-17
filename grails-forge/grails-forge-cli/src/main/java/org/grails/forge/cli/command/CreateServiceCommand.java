@@ -18,9 +18,7 @@
  */
 package org.grails.forge.cli.command;
 
-import io.micronaut.context.annotation.Parameter;
-import io.micronaut.core.annotation.ReflectiveAccess;
-import io.micronaut.core.util.functional.ThrowingSupplier;
+import org.grails.forge.util.ThrowingSupplier;
 import jakarta.inject.Inject;
 import org.grails.forge.application.Project;
 import org.grails.forge.cli.CodeGenConfig;
@@ -40,12 +38,11 @@ public class CreateServiceCommand extends CodeGenCommand {
 
     public static final String NAME = "create-service";
 
-    @ReflectiveAccess
     @CommandLine.Parameters(paramLabel = "SERVICE-NAME", description = "The name of the service to create")
     String serviceName;
 
     @Inject
-    public CreateServiceCommand(@Parameter CodeGenConfig config) {
+    public CreateServiceCommand(CodeGenConfig config) {
         super(config);
     }
 

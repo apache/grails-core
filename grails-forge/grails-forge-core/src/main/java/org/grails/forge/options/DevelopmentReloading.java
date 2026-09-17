@@ -18,7 +18,7 @@
  */
 package org.grails.forge.options;
 
-import io.micronaut.core.annotation.NonNull;
+import jakarta.annotation.Nonnull;
 
 import java.util.Locale;
 
@@ -40,12 +40,12 @@ public enum DevelopmentReloading {
         return this.name().toLowerCase();
     }
 
-    @NonNull
+    @Nonnull
     public String getName() {
         return name().toLowerCase(Locale.ENGLISH);
     }
 
-    @NonNull
+    @Nonnull
     public String getLabel() {
         return label;
     }

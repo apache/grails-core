@@ -18,39 +18,32 @@
  */
 package org.grails.forge.cli;
 
-import io.micronaut.context.ApplicationContext;
-import io.micronaut.context.BeanContext;
-import io.micronaut.core.annotation.TypeHint;
+import org.grails.forge.ForgeContexts;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
+import org.springframework.context.ApplicationContext;
 import picocli.CommandLine;
 
-import java.util.Optional;
-
 /**
- * Picocli factory implementation that uses a Micronaut BeanContext to obtain bean instances.
+ * Picocli factory that uses a Spring ApplicationContext to obtain bean instances.
  */
-@TypeHint(typeNames = {
-    "picocli.CommandLine$AutoHelpMixin",
-    "picocli.CommandLine$Model$CommandSpec"
-}, accessType = {TypeHint.AccessType.ALL_DECLARED_CONSTRUCTORS, TypeHint.AccessType.ALL_DECLARED_FIELDS})
 class GrailsPicocliFactory implements CommandLine.IFactory {
 
     private final CommandLine.IFactory defaultFactory = CommandLine.defaultFactory();
-    private final BeanContext beanContext;
+    private final ApplicationContext beanContext;
 
     public GrailsPicocliFactory() {
-        this(ApplicationContext.run());
+        this(ForgeContexts.create());
     }
 
-    public GrailsPicocliFactory(BeanContext beanContext) {
+    public GrailsPicocliFactory(ApplicationContext beanContext) {
         this.beanContext = beanContext;
     }
 
     @Override
     public <K> K create(Class<K> cls) throws Exception {
-        Optional<K> bean = beanContext.findOrInstantiateBean(cls);
-        if (bean.isPresent()) {
-            return bean.get();
-        } else {
+        try {
+            return beanContext.getBean(cls);
+        } catch (NoSuchBeanDefinitionException e) {
             return defaultFactory.create(cls);
         }
     }

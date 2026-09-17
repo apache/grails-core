@@ -18,9 +18,9 @@
  */
 package org.grails.forge.cli.command;
 
-import io.micronaut.context.annotation.Prototype;
-import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.annotation.ReflectiveAccess;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
+import jakarta.annotation.Nonnull;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.ContextFactory;
 import org.grails.forge.application.PluginAvailableFeatures;
@@ -31,13 +31,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 @CommandLine.Command(name = CreatePluginCommand.NAME, description = "Creates an Grails Plugin")
-@Prototype
+@Component
+@Scope("prototype")
 public class CreatePluginCommand extends CreateCommand {
 
     public static final String NAME = "create-plugin";
 
     @CommandLine.Option(names = {"-f", "--features"}, paramLabel = "FEATURE", split = ",", description = "The features to use. Possible values: ${COMPLETION-CANDIDATES}", completionCandidates = PluginAvailableFeatures.class)
-    @ReflectiveAccess
     List<String> features = new ArrayList<>();
 
     public CreatePluginCommand(PluginAvailableFeatures availableFeatures,
@@ -46,7 +46,7 @@ public class CreatePluginCommand extends CreateCommand {
         super(availableFeatures, contextFactory, ApplicationType.PLUGIN, projectGenerator);
     }
 
-    @NonNull
+    @Nonnull
     @Override
     protected List<String> getSelectedFeatures() {
         return features;

@@ -18,8 +18,8 @@
  */
 package org.grails.forge.feature.lang.groovy;
 
-import io.micronaut.core.annotation.Nullable;
-import jakarta.inject.Singleton;
+import jakarta.annotation.Nullable;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.gradle.GradlePlugin;
@@ -32,7 +32,7 @@ import org.grails.forge.template.RockerTemplate;
 
 import java.util.Set;
 
-@Singleton
+@Component("grailsApplicationFeature")
 public class GrailsApplication implements GrailsApplicationFeature, DefaultFeature {
 
     @Override

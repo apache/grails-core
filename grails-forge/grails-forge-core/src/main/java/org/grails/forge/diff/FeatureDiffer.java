@@ -21,8 +21,8 @@ package org.grails.forge.diff;
 import com.github.difflib.DiffUtils;
 import com.github.difflib.UnifiedDiffUtils;
 import com.github.difflib.patch.Patch;
-import io.micronaut.core.annotation.Nullable;
-import jakarta.inject.Singleton;
+import jakarta.annotation.Nullable;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.OperatingSystem;
 import org.grails.forge.application.Project;
@@ -44,7 +44,7 @@ import java.util.Map;
  * @author jameskleeh
  * @author graemerocher
  */
-@Singleton
+@Component
 public class FeatureDiffer {
 
     /**

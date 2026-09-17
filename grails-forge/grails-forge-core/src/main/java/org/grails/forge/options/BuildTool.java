@@ -18,7 +18,7 @@
  */
 package org.grails.forge.options;
 
-import io.micronaut.core.annotation.NonNull;
+import jakarta.annotation.Nonnull;
 import org.grails.forge.application.Project;
 import org.grails.forge.build.gradle.GradleDsl;
 
@@ -59,7 +59,7 @@ public enum BuildTool {
         return getName();
     }
 
-    @NonNull
+    @Nonnull
     public String getName() {
         return name().toLowerCase(Locale.ENGLISH);
     }

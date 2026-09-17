@@ -337,29 +337,40 @@ jobs:
         uses: testlens-app/setup-testlens@3f82d2dc6cd5c03f02ce5f7885a21195d85f8d14 # v1.9.3
       - name: "🔨 Build project without tests"
         if: ${{ contains(github.event.head_commit.message, '[skip tests]') }}
-        working-directory: 'grails-forge'
         run: >
-          ./gradlew build
+          ./gradlew
+          :grails-cli:build
+          :grails-forge-api:build
+          :grails-forge-cli:build
+          :grails-forge-core:build
+          :grails-forge-web:build
+          :grails-forge-test-core:build
           --continue
           --stacktrace
           -PgrailsIndy=${{ matrix.indy }}
           -PskipCodeStyle
           -PskipTests
+          -PonlyForgeTests
       - name: "🔨 Build project with tests"
         if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
-        working-directory: 'grails-forge'
         run: >
-          ./gradlew build
+          ./gradlew
+          :grails-cli:build
+          :grails-forge-api:build
+          :grails-forge-cli:build
+          :grails-forge-core:build
+          :grails-forge-web:build
+          :grails-forge-test-core:build
           --continue
           --rerun-tasks
           --stacktrace
           -PgrailsIndy=${{ matrix.indy }}
           -PskipCodeStyle
+          -PonlyForgeTests
       - name: "✅ Verify combined CLI"
         run: |
-          cd grails-forge
-          cp grails-cli/build/distributions/apache-grails-*.zip cli.zip
-          unzip cli -d tmp1
+          cp grails-forge/grails-cli/build/distributions/apache-grails-*.zip cli.zip
+          unzip cli.zip -d tmp1
           mv tmp1/apache-grails-* tmp1/cli
           ./tmp1/cli/bin/grails --version
           ./tmp1/cli/bin/grails-forge-cli --version
@@ -369,7 +380,7 @@ jobs:
         with:
           name: 'apache-grails-SNAPSHOT-bin.zip'
           include-hidden-files: true
-          path: grails-forge/tmp1/cli/**/*
+          path: tmp1/cli/**/*
           if-no-files-found: 'error'
   # Every test job from here through neo4jFunctional sets timeout-minutes to twice the slowest run that
   # finished on its own, passed or failed, over the 160 CI runs of 2026-09-03 to 2026-09-13, rounded up to
@@ -927,13 +938,14 @@ jobs:
           name: grails-gradle-artifacts.txt
           path: grails-gradle/build/grails-gradle-artifacts.txt
   publish:
-    needs: [ publishGradle, build, functional, security, securityConfig, redis, hibernate5Functional, hibernate7Functional, mongodbFunctional, neo4jFunctional ]
+    needs: [ publishGradle, build, buildForge, functional, security, securityConfig, redis, hibernate5Functional, hibernate7Functional, mongodbFunctional, neo4jFunctional ]
     if: >-
       ${{ always() &&
           github.repository_owner == 'apache' &&
           (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
           needs.publishGradle.result == 'success' &&
           (needs.build.result == 'success' || needs.build.result == 'skipped') &&
+          (needs.buildForge.result == 'success' || needs.buildForge.result == 'skipped') &&
           (needs.functional.result == 'success' || needs.functional.result == 'skipped') &&
           (needs.security.result == 'success' || needs.security.result == 'skipped') &&
           (needs.securityConfig.result == 'success' || needs.securityConfig.result == 'skipped') &&
@@ -1006,65 +1018,12 @@ jobs:
         with:
           name: apache-grails-wrapper-SNAPSHOT-bin
           path: build/tmp/wrapper
-  publishForge:
-    if: github.repository_owner == 'apache' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-    needs: [ buildForge, publishGradle, publish ]
-    runs-on: ubuntu-24.04
-    steps:
-      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
-        run: curl -s https://api.ipify.org
-      - name: "📥 Checkout repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
-        with:
-          distribution: liberica
-          java-version: 21
-      - name: "🗄️ Restore dependency jar cache"
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
-          # Keyed by branch version so each release branch maintains its own warm cache.
-          path: |
-            ~/.gradle/caches/modules-2
-            ~/.gradle/wrapper
-          key: gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-${{ hashFiles('**/dependencies.gradle', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
-      - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
-        with:
-          cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
-          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
-      - name: "🔍 Setup TestLens"
-        uses: testlens-app/setup-testlens@3f82d2dc6cd5c03f02ce5f7885a21195d85f8d14 # v1.9.3
-      - name: "📤 Publish Gradle Snapshot Artifacts"
-        env:
-          GRAILS_PUBLISH_RELEASE: 'false'
-          MAVEN_PUBLISH_URL: ${{ secrets.GRAILS_NEXUS_PUBLISH_SNAPSHOT_URL }}
-          MAVEN_PUBLISH_USERNAME: ${{ secrets.NEXUS_USER }}
-          MAVEN_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PW  }}
-        working-directory: 'grails-forge'
-        run: >
-          ./gradlew publish aggregateChecksums aggregatePublishedArtifacts
-          --no-build-cache
-          --rerun-tasks
-      - name: "📤 Upload grails-forge checksums"
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: grails-forge-checksums
-          path: grails-forge/build/grails-forge-checksums.txt
-      - name: "📤 Upload grails-gradle published artifacts"
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: grails-forge-artifacts.txt
-          path: grails-forge/build/grails-forge-artifacts.txt
   verifyWrapper:
     name: "Verify grails-wrapper"
-    # Verifies the wrapper works end-to-end. Must run after publishForge so that
+    # Verifies the wrapper works end-to-end. Must run after publish so that
     # grails-cli (which the wrapper resolves at runtime) is available in Nexus.
     if: github.repository_owner == 'apache' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-    needs: [ publish, publishForge ]
+    needs: [ publish ]
     runs-on: ubuntu-24.04
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it

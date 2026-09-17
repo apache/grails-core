@@ -18,8 +18,8 @@
  */
 package org.grails.forge.feature.assetPipeline;
 
-import io.micronaut.core.annotation.NonNull;
-import jakarta.inject.Singleton;
+import jakarta.annotation.Nonnull;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.CoordinateResolver;
@@ -34,7 +34,7 @@ import org.grails.forge.template.URLTemplate;
 import java.util.Set;
 import java.util.List;
 
-@Singleton
+@Component
 public class AssetPipeline implements DefaultFeature {
 
     private final CoordinateResolver coordinateResolver;
@@ -43,7 +43,7 @@ public class AssetPipeline implements DefaultFeature {
         this.coordinateResolver = coordinateResolver;
     }
 
-    @NonNull
+    @Nonnull
     @Override
     public String getName() {
         return "asset-pipeline-grails";
@@ -54,7 +54,7 @@ public class AssetPipeline implements DefaultFeature {
         return "Asset Pipeline";
     }
 
-    @NonNull
+    @Nonnull
     @Override
     public String getDescription() {
         return "Asset Pipeline is used for managing and processing static assets " +

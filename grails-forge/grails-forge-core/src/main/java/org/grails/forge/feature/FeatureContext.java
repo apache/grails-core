@@ -18,7 +18,7 @@
  */
 package org.grails.forge.feature;
 
-import io.micronaut.core.annotation.Nullable;
+import jakarta.annotation.Nullable;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.OperatingSystem;
 import org.grails.forge.feature.reloading.ReloadingFeature;

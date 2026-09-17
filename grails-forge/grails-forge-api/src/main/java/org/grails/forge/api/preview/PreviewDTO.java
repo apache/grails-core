@@ -19,9 +19,7 @@
 package org.grails.forge.api.preview;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import io.micronaut.core.annotation.Introspected;
 import org.grails.forge.api.Linkable;
-import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.Map;
 
@@ -31,8 +29,6 @@ import java.util.Map;
  * @author graemerocher
  * @since 6.0.0
  */
-@Introspected
-@Schema(name = "Preview", description = "Previews the contents of the generated ZIP")
 public class PreviewDTO extends Linkable  {
 
     @JsonInclude
@@ -54,8 +50,7 @@ public class PreviewDTO extends Linkable  {
     /**
      * @return The contents of the ZIP.
      */
-    @Schema(description = "The contents of the generated ZIP")
-    public Map<String, String> getContents() {
+        public Map<String, String> getContents() {
         return contents;
     }
 

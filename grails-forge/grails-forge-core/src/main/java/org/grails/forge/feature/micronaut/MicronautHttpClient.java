@@ -18,8 +18,8 @@
  */
 package org.grails.forge.feature.micronaut;
 
-import io.micronaut.core.annotation.NonNull;
-import jakarta.inject.Singleton;
+import jakarta.annotation.Nonnull;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Coordinate;
@@ -32,7 +32,7 @@ import org.grails.forge.options.JdkVersion;
 
 import java.util.Optional;
 
-@Singleton
+@Component
 public class MicronautHttpClient implements Feature {
 
     private final PomDependencyVersionResolver versionResolver;
@@ -42,7 +42,7 @@ public class MicronautHttpClient implements Feature {
     }
 
     @Override
-    @NonNull
+    @Nonnull
     public String getName() {
         return "micronaut-http-client";
     }

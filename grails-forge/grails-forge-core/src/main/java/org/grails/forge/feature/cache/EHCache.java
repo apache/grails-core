@@ -18,13 +18,13 @@
  */
 package org.grails.forge.feature.cache;
 
-import jakarta.inject.Singleton;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
 
 import java.util.Map;
 
-@Singleton
+@Component
 public class EHCache implements CacheFeature {
 
     @Override

@@ -107,6 +107,28 @@ final class ActiveProcessorCountArgumentProvider implements CommandLineArgumentP
     }
 }
 
+// Core CI runs `build -PonlyCoreTests`. Forge has its own job. Disabled tasks
+// still keep the project in the build, but skip shadowJar, distZip, AWS zip,
+// and Forge tests that would otherwise run as part of the root `build`.
+if (project.hasProperty('onlyCoreTests') && !project.hasProperty('onlyForgeTests')) {
+    Set<String> forgeProjectNames = [
+            'grails-cli',
+            'grails-cli-shadow',
+            'grails-forge-api',
+            'grails-forge-cli',
+            'grails-forge-core',
+            'grails-forge-web',
+            'grails-forge-test-core',
+    ] as Set
+    subprojects { Project subproject ->
+        if (forgeProjectNames.contains(subproject.name)) {
+            subproject.tasks.configureEach {
+                enabled = false
+            }
+        }
+    }
+}
+
 subprojects {
 
     tasks.withType(Test).configureEach { testTask ->
@@ -131,7 +153,7 @@ subprojects {
         rootProject.ext['docProjects'] << name
     }
 
-    if (name.startsWith('grails-wrapper')) {
+    if (name.startsWith('grails-wrapper') || name == 'grails-cli' || name == 'grails-cli-shadow') {
         rootProject.ext['cliProjects'] << name
     }
 
@@ -152,7 +174,7 @@ interface ExecSupport {
     @Inject ExecOperations getProcess()
 }
 tasks.register('publishAllToMavenLocal') {
-    description = 'Publishes grails-gradle, the root build, and grails-forge to the local Maven cache (in order).'
+    description = 'Publishes grails-gradle and the root build to the local Maven cache (in order).'
     group = 'publishing'
 
     def execSupport = objects.newInstance(ExecSupport)
@@ -173,10 +195,8 @@ tasks.register('publishAllToMavenLocal') {
 
         // 1. Publish grails-gradle (provides Gradle plugins used by the main build)
         runPublish(new File(projectRoot, 'grails-gradle'), 'grails-gradle')
-        // 2. Publish the root (main) build
+        // 2. Publish the root (main) build, including Forge modules
         runPublish(projectRoot, 'root build')
-        // 3. Publish grails-forge
-        runPublish(new File(projectRoot, 'grails-forge'), 'grails-forge')
     }
 }
 

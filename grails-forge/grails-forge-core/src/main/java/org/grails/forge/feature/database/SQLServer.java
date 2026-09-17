@@ -18,12 +18,12 @@
  */
 package org.grails.forge.feature.database;
 
-import io.micronaut.core.annotation.NonNull;
-import jakarta.inject.Singleton;
+import jakarta.annotation.Nonnull;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
 
-@Singleton
+@Component
 public class SQLServer extends DatabaseDriverFeature {
 
     public SQLServer(GrailsDataHibernate5 grailsDataHibernate5, TestContainers testContainers) {
@@ -31,7 +31,7 @@ public class SQLServer extends DatabaseDriverFeature {
     }
 
     @Override
-    @NonNull
+    @Nonnull
     public String getName() {
         return "sqlserver";
     }

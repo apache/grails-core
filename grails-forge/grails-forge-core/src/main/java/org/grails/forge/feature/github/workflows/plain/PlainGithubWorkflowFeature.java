@@ -18,13 +18,13 @@
  */
 package org.grails.forge.feature.github.workflows.plain;
 
-import jakarta.inject.Singleton;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.feature.github.workflows.GitHubWorkflowFeature;
 import org.grails.forge.feature.github.workflows.plain.templates.plainGithubWorkflow;
 import org.grails.forge.template.RockerTemplate;
 
-@Singleton
+@Component
 public class PlainGithubWorkflowFeature extends GitHubWorkflowFeature {
 
     private static final String NAME = "github-workflow-java-ci";

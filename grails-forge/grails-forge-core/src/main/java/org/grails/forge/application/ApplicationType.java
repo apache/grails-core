@@ -18,12 +18,11 @@
  */
 package org.grails.forge.application;
 
-import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.naming.Named;
+import jakarta.annotation.Nonnull;
 
 import java.util.Locale;
 
-public enum ApplicationType implements Named {
+public enum ApplicationType {
 
     WEB("Web Application", "A Grails® framework Web Application"),
     REST_API("Rest API", "A Grails® framework Rest API"),
@@ -55,8 +54,7 @@ public enum ApplicationType implements Named {
         return description;
     }
 
-    @NonNull
-    @Override
+    @Nonnull
     public String getName() {
         return name().toLowerCase(Locale.ENGLISH);
     }

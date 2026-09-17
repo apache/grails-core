@@ -18,7 +18,7 @@
  */
 package org.grails.forge.build.gradle;
 
-import io.micronaut.core.annotation.NonNull;
+import jakarta.annotation.Nonnull;
 
 import java.util.Collections;
 import java.util.List;
@@ -93,7 +93,7 @@ public class DefaultGradleRepository implements GradleRepository {
     }
 
     @Override
-    @NonNull
+    @Nonnull
     public String toSnippet(String basePadding) {
         String indent = "   ";
         StringBuilder snippet = new StringBuilder();

@@ -18,7 +18,6 @@
  */
 package org.grails.forge.util;
 
-import io.micronaut.core.util.StringUtils;
 import org.grails.forge.application.Project;
 import org.grails.forge.application.ProjectIdentifier;
 
@@ -74,7 +73,7 @@ public final class NameUtils {
      * @return True if it is valid
      */
     public static boolean isValidAppName(String appName) {
-        return !StringUtils.isEmpty(appName) && !appName.equalsIgnoreCase(MICRONAUT);
+        return !isBlank(appName) && !appName.equalsIgnoreCase(MICRONAUT);
     }
 
     public static Project parse(String name) throws IllegalArgumentException {
@@ -523,7 +522,7 @@ public final class NameUtils {
      * @return The converted property name
      */
     public static String getNaturalNameOfEnum(String name) {
-        return getNaturalName(io.micronaut.core.naming.NameUtils.camelCase(name.toLowerCase()));
+        return getNaturalName(camelCase(name.toLowerCase()));
     }
 
     /**
@@ -541,6 +540,30 @@ public final class NameUtils {
      */
     public static boolean isBlank(String str) {
         return str == null || str.trim().length() == 0;
+    }
+
+    static String camelCase(String name) {
+        if (name == null || name.isEmpty()) {
+            return name;
+        }
+        StringBuilder result = new StringBuilder();
+        boolean capitalizeNext = false;
+        for (int i = 0; i < name.length(); i++) {
+            char current = name.charAt(i);
+            if (current == '_' || current == '-' || current == '.' || Character.isWhitespace(current)) {
+                capitalizeNext = true;
+                continue;
+            }
+            if (result.length() == 0) {
+                result.append(Character.toLowerCase(current));
+            } else if (capitalizeNext) {
+                result.append(Character.toUpperCase(current));
+                capitalizeNext = false;
+            } else {
+                result.append(current);
+            }
+        }
+        return result.toString();
     }
 
     /**

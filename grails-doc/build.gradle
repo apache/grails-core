@@ -177,10 +177,15 @@ generateBomDocumentation.configure { Task it ->
     it.description = 'Generates AsciiDoc tables listing Group, Artifact, and Version for all BOM variants (default, hibernate5, hibernate7, neo4j).'
     it.group = 'documentation'
 
-    it.inputs.files(project(':grails-bom').layout.projectDirectory.asFileTree)
-    it.inputs.files(project(':grails-hibernate5-bom').layout.projectDirectory.asFileTree)
-    it.inputs.files(project(':grails-hibernate7-bom').layout.projectDirectory.asFileTree)
-    it.inputs.files(project(':grails-neo4j-bom').layout.projectDirectory.asFileTree)
+    // Depend on the extractConstraints outputs only. Using the whole BOM
+    // project tree as an input collides with publish checksum/artifact tasks
+    // that write into those project directories.
+    it.inputs.files(
+            project(':grails-bom').layout.buildDirectory.file('grails-bom-constraints.adoc'),
+            project(':grails-hibernate5-bom').layout.buildDirectory.file('grails-hibernate5-bom-constraints.adoc'),
+            project(':grails-hibernate7-bom').layout.buildDirectory.file('grails-hibernate7-bom-constraints.adoc'),
+            project(':grails-neo4j-bom').layout.buildDirectory.file('grails-neo4j-bom-constraints.adoc')
+    )
     it.outputs.file(project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM.adoc'))
     it.outputs.file(project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Hibernate5.adoc'))
     it.outputs.file(project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Hibernate7.adoc'))

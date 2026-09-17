@@ -18,7 +18,6 @@
  */
 package org.grails.forge.io;
 
-import io.micronaut.core.util.StringUtils;
 import org.apache.commons.compress.archivers.zip.UnixStat;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
@@ -83,7 +82,7 @@ public class ZipOutputHandler implements OutputHandler {
 
     @Override
     public void write(String path, Template contents) throws IOException {
-        String entryName = (directory != null ? StringUtils.prependUri(directory, path) : path);
+        String entryName = (directory != null ? joinUri(directory, path) : path);
 
         // ensure parent directories exist as explicit dir entries
         // https://github.com/apache/grails-core/issues/15186
@@ -123,6 +122,24 @@ public class ZipOutputHandler implements OutputHandler {
             }
             i++;
         }
+    }
+
+    static String joinUri(String directory, String path) {
+        if (directory == null || directory.isEmpty()) {
+            return path;
+        }
+        if (path == null || path.isEmpty()) {
+            return directory;
+        }
+        boolean directoryEndsWithSlash = directory.endsWith("/");
+        boolean pathStartsWithSlash = path.startsWith("/");
+        if (directoryEndsWithSlash && pathStartsWithSlash) {
+            return directory + path.substring(1);
+        }
+        if (!directoryEndsWithSlash && !pathStartsWithSlash) {
+            return directory + "/" + path;
+        }
+        return directory + path;
     }
 
     private void setZipEntryMetadata(ZipArchiveEntry zipEntry, FileTime lastModified, int unixMode) {

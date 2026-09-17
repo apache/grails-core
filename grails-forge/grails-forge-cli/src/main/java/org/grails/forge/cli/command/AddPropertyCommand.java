@@ -21,9 +21,7 @@ package org.grails.forge.cli.command;
 import grails.codegen.model.AbstractMemberDefinition;
 import grails.codegen.model.DomainFieldModifier;
 import grails.codegen.model.PropertyDefinition;
-import io.micronaut.context.annotation.Parameter;
-import io.micronaut.core.annotation.ReflectiveAccess;
-import io.micronaut.core.util.functional.ThrowingSupplier;
+import org.grails.forge.util.ThrowingSupplier;
 import jakarta.inject.Inject;
 import org.grails.forge.cli.CodeGenConfig;
 import org.grails.forge.io.ConsoleOutput;
@@ -46,48 +44,39 @@ public class AddPropertyCommand extends CodeGenCommand {
 
     public static final String NAME = "add-property";
 
-    @ReflectiveAccess
     @Parameters(index = "0", paramLabel = "DOMAIN-CLASS",
             description = "The name of the domain class (e.g., Book)")
     String domainClassName;
 
-    @ReflectiveAccess
     @Parameters(index = "1", paramLabel = "PROPERTY:TYPE",
             description = "The property specification in name:Type format (e.g., title:String)")
     String propertySpec;
 
-    @ReflectiveAccess
     @Option(names = {"--nullable"}, description = "Mark the property as nullable")
     boolean nullableFlag;
 
-    @ReflectiveAccess
     @Option(names = {"--not-nullable"}, description = "Mark the property as NOT nullable (generates @NotNull)")
     boolean notNullableFlag;
 
-    @ReflectiveAccess
     @Option(names = {"--blank"}, description = "Allow blank values (String properties only)")
     boolean blankFlag;
 
-    @ReflectiveAccess
     @Option(names = {"--not-blank"}, description = "Disallow blank values (generates @NotBlank)")
     boolean notBlankFlag;
 
-    @ReflectiveAccess
     @Option(names = {"--max-size"}, description = "Maximum size constraint (String properties only)")
     Integer maxSize;
 
-    @ReflectiveAccess
     @Option(names = {"--min-size"}, description = "Minimum size constraint (String properties only)")
     Integer minSize;
 
-    @ReflectiveAccess
     @Option(names = {"--constraint-style"}, description = "Constraint style: grails (default), jakarta, or both")
     String constraintStyle;
 
     private final DomainFieldModifier domainFieldModifier;
 
     @Inject
-    public AddPropertyCommand(@Parameter CodeGenConfig config) {
+    public AddPropertyCommand(CodeGenConfig config) {
         super(config);
         this.domainFieldModifier = new DomainFieldModifier();
     }

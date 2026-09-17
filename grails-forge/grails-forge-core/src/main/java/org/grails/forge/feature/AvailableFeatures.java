@@ -18,16 +18,16 @@
  */
 package org.grails.forge.feature;
 
-import io.micronaut.core.annotation.NonNull;
+import jakarta.annotation.Nonnull;
 
 import java.util.Optional;
 import java.util.stream.Stream;
 
 public interface AvailableFeatures extends Iterable<String> {
 
-    Optional<Feature> findFeature(@NonNull String name);
+    Optional<Feature> findFeature(@Nonnull String name);
 
-    Optional<Feature> findFeature(@NonNull String name, boolean ignoreVisibility);
+    Optional<Feature> findFeature(@Nonnull String name, boolean ignoreVisibility);
 
     Stream<Feature> getFeatures();
 

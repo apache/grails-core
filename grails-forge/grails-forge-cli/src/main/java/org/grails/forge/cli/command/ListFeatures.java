@@ -18,7 +18,7 @@
  */
 package org.grails.forge.cli.command;
 
-import io.micronaut.core.annotation.Nullable;
+import jakarta.annotation.Nullable;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.ContextFactory;
 import org.grails.forge.application.OperatingSystem;

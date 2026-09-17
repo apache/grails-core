@@ -29,8 +29,6 @@ under the License.
 
 Grails Forge generates example project for the Grails® framework (https://grails.apache.org).
 
-The API is defined by the OpenAPI 3 specification @serverURL/swagger/views/swagger-ui/index.html
-
 The primary API for generating application is @serverURL/create/{type}/{name}.
 
 The application type can be one of the following:

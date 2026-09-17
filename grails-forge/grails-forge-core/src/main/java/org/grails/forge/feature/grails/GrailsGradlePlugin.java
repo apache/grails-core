@@ -18,7 +18,7 @@
  */
 package org.grails.forge.feature.grails;
 
-import jakarta.inject.Singleton;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.CoordinateResolver;
@@ -32,7 +32,7 @@ import org.grails.forge.options.Options;
 
 import java.util.Set;
 
-@Singleton
+@Component
 class GrailsGradlePlugin implements DefaultFeature {
 
     private final CoordinateResolver resolver;

@@ -18,8 +18,8 @@
  */
 package org.grails.forge.feature.other;
 
-import io.micronaut.core.annotation.NonNull;
-import jakarta.inject.Singleton;
+import jakarta.annotation.Nonnull;
+import org.springframework.stereotype.Component;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.feature.DefaultFeature;
@@ -38,7 +38,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-@Singleton
+@Component
 public class Readme implements DefaultFeature {
 
     @Override
@@ -46,7 +46,7 @@ public class Readme implements DefaultFeature {
         return true;
     }
 
-    @NonNull
+    @Nonnull
     @Override
     public String getName() {
         return "readme";

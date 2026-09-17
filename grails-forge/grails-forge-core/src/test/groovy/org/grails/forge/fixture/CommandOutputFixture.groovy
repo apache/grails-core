@@ -20,7 +20,6 @@
 package org.grails.forge.fixture
 
 import groovy.transform.CompileStatic
-import io.micronaut.context.BeanContext
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.OperatingSystem
 import org.grails.forge.application.generator.GeneratorContext
@@ -29,10 +28,11 @@ import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.MapOutputHandler
 import org.grails.forge.options.Options
 import org.grails.forge.util.NameUtils
+import org.springframework.context.ApplicationContext
 
 @CompileStatic
 trait CommandOutputFixture {
-    abstract BeanContext getBeanContext()
+    abstract ApplicationContext getBeanContext()
 
     Map<String, String> generate(ApplicationType type, Options options, List<String> features = []) {
         def handler = new MapOutputHandler()

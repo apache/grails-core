@@ -18,7 +18,7 @@
  */
 package org.grails.forge.feature.security;
 
-import jakarta.inject.Singleton;
+import org.springframework.stereotype.Component;
 
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
@@ -39,7 +39,7 @@ import org.grails.forge.template.RockerTemplate;
  *
  * @since 8.0
  */
-@Singleton
+@Component
 public class GrailsSpringSecurity extends SecurityFeature implements PrimarySecurityFeature {
 
     public GrailsSpringSecurity(Scaffolding scaffolding) {
