@@ -59,29 +59,15 @@ export GRADLE_OPTS="-Xms2G -Xmx5G"
 
 ## Available Skills
 
-> **AI AGENTS - MANDATORY**: Before writing or modifying any code, you **MUST** read the relevant skill file(s) below. Do not write Groovy/Grails/Gradle code without first loading these instructions:
-> - Writing Grails code → Read `.agents/skills/grails-developer/SKILL.md`
-> - Writing Groovy code → Read `.agents/skills/groovy-developer/SKILL.md`
-> - Writing Java code → Read `.agents/skills/java-developer/SKILL.md`
-> - Writing or changing Gradle builds → Read `.agents/skills/gradle-developer/SKILL.md`
-> - Upgrading applications to Grails 8 → Read `.agents/skills/grails-8-upgrade/SKILL.md`
-> - Writing Hibernate code → Read `.agents/skills/hibernate-developer/SKILL.md`
-> - Fixing style/analysis violations → Read `.agents/skills/violation-fixer/SKILL.md`
-> - Fixing broken test → Read `.agents/skills/test-fixer/SKILL.md`
+> **AI AGENTS - MANDATORY**: Before writing or modifying any code, list `.agents/skills/*/SKILL.md`, read each one's front-matter `description`, and load the full file for any skill whose description matches the task at hand. Do not write Groovy/Grails/Java code without first loading the skill(s) that apply.
 >
-> Use your file reading capability to load the skill content before proceeding with any code changes.
-
-| Skill | Path | Use For |
-|-------|------|---------|
-| **grails-developer** | `.agents/skills/grails-developer/SKILL.md` | Current Grails apps, GORM, controllers, views |
-| **groovy-developer** | `.agents/skills/groovy-developer/SKILL.md` | Groovy 5 syntax, closures, DSLs, Spock |
-| **gradle-developer** | `.agents/skills/gradle-developer/SKILL.md` | Gradle 9 builds, BOM/platforms, convention plugins, wrappers |
-| **grails-8-upgrade** | `.agents/skills/grails-8-upgrade/SKILL.md` | Upgrading Grails applications from 7.x to 8 |
-| **java-developer** | `.agents/skills/java-developer/SKILL.md` | Java 21 features, Groovy interop |
-| **hibernate-developer** | `.agents/skills/hibernate-developer/SKILL.md` | Hibernate 7 mapping, binders, generators |
-| **violation-fixer** | `.agents/skills/violation-fixer/SKILL.md` | Fix style/analysis violations (CodeNarc, Checkstyle, PMD, SpotBugs) |
-| **test-fixer** | `.agents/skills/test-fixer/SKILL.md` | Aggregate and fix test failures |
-| **mono-repo-integration** | `.agents/skills/mono-repo-integration/SKILL.md` | Merge a standalone Grails plugin repository into this monorepo |
+> ```bash
+> for f in .agents/skills/*/SKILL.md; do awk -F': *' '/^description:/{d=$2} /^paths:/{p=$2} END{print FILENAME": "d (p?" [paths: "p"]":"")}' "$f"; done
+> ```
+>
+> Some skills also declare an optional front-matter `paths:` glob (e.g. `paths: grails-data-hibernate7/**`) scoping them to a specific module — if the file(s) you're touching match a skill's `paths`, load it regardless of whether you'd have matched it on description alone. `paths` is a stronger, structural signal than prose; not every skill needs one (repo-wide skills like `groovy-developer`/`java-developer` intentionally have none). Skills may also declare an optional `compatibility:` field listing which agent tools they've been verified against — its absence doesn't mean a skill is unusable, just unverified.
+>
+> The directory is the source of truth, not a list in this file — a hardcoded skill index here would drift the moment a skill is added, renamed, or removed. Each `SKILL.md`'s front-matter (`name`, `description`, and optionally `paths`, `compatibility`) is what makes it discoverable to any agent, per the Agent Skills Specification.
 
 ## Technology Stack
 
@@ -102,12 +88,12 @@ This repository contains multiple independent Gradle projects:
 | Project | Description | Build Command |
 |---------|-------------|---------------|
 | **grails-core** (root) | Main framework with 60+ modules | `./gradlew build` |
-| **build-logic/** | Gradle convention plugins for the build | `cd build-logic && ./gradlew build` |
-| **grails-gradle/** | Grails Gradle plugins | `cd grails-gradle && ./gradlew build` |
-| **grails-forge/** | Application generator (like Spring Initializr) | `cd grails-forge && ./gradlew build` |
+| **build-logic/** | Gradle convention plugins for the build — every other build here consumes it transitively; see [`build-logic/AGENTS.md`](build-logic/AGENTS.md) | `cd build-logic && ../gradlew build` |
+| **grails-gradle/** | Grails Gradle plugins — hybrid: own settings.gradle/tests, but shares root's dependency versions; see [`grails-gradle/AGENTS.md`](grails-gradle/AGENTS.md) | `cd grails-gradle && ./gradlew build` |
+| **grails-forge/** | Application generator (like Spring Initializr) — Micronaut, not Grails; see [`grails-forge/AGENTS.md`](grails-forge/AGENTS.md) | `cd grails-forge && ./gradlew build` |
 | **end-to-end/** | End-to-end tests consuming published Grails artifacts (see `end-to-end/README.md` for required setup) | `cd end-to-end && ./gradlew check` |
 
-Each project has its own `settings.gradle` and independent build. When working on a specific project, run Gradle commands from that project's directory.
+Each project has its own `settings.gradle` and independent build. When working on a specific project, run Gradle commands from that project's directory. All three subprojects above have their own nested `AGENTS.md` — read the relevant one before working there. `grails-forge/` is the cleanest case (fully independent, most of this file's Grails/GORM/Hibernate content doesn't apply); `grails-gradle/` and `build-logic/` are hybrids — independent `settings.gradle`/testing, but they deliberately share this file's dependency-version management rather than pinning their own.
 
 ## Dependency Management
 
@@ -240,6 +226,21 @@ class MyService { }
 | Build docs | `./gradlew :grails-doc:publishGuide -x aggregateGroovydoc` |
 | Debug | `./gradlew bootRun --debug-jvm` |
 
+## Coverage
+
+Coverage is uploaded to Codecov (`codecov.yml`), but the underlying data is fully visible locally — it does not require CI:
+
+| Task | Output | Scope |
+|------|--------|-------|
+| `./gradlew aggregateJacocoCoverage` | `build/reports/violations/JACOCO_COVERAGE.md` | Human-readable per-module Markdown table |
+| `./gradlew jacocoAggregateReport` | `build/reports/jacoco/aggregate/jacocoAggregateReport.xml` | The exact XML CI uploads to Codecov — same data, same command, runnable locally |
+
+Both are ordinary local Gradle tasks (`GrailsJacocoPlugin`/`GrailsViolationAggregationPlugin` in `build-logic`); neither needs network access or a Codecov token. Run either before committing to see current coverage — don't wait on a CI round-trip to find out.
+
+Diff coverage (coverage of only the lines you changed, which is what Codecov's PR comment shows) is also reproducible locally — see the `diff-coverage-check` skill, which cross-references a module's JaCoCo XML against `git diff`. What's still cloud-only: the PR comment itself, and the codecov.io dashboard/badge. Per `codecov.yml`, both the `patch` and `project` status checks are `informational: true` — they don't block merge today, so a red Codecov check is a signal to look at, not a hard gate.
+
+`grails-forge/` and `build-logic/` are not wired into `coverage.yml` (only `grails-core` and `grails-gradle` are) — no Codecov data exists for them either locally or in CI.
+
 ## GitHub Actions
 
 Apache GitHub Actions policy blocks third-party actions unless they are on the organization allowlist. A workflow that uses an unlisted `uses:` SHA fails at **startup** before any job runs.
@@ -267,13 +268,33 @@ Rules:
 
 ## Pull Request Guidelines
 
+### PR Sizing: Prefer One Large PR Over a Reviewability Stack
+
+Stacking a feature/migration into a chain of small PRs (as with the Neo4j GormRegistry
+migration: #15779 → #15780 → #15790 → #15816 → #15817, later consolidated into #15972)
+was a strategy for keeping individual diffs small enough for human reviewers and for
+GitHub's Copilot PR reviewer, which refuses to review a PR over ~300 files (#15972 hit
+this cap and got zero automated review on the consolidated result — each sub-PR had been
+reviewed individually, but the integration between them never was).
+
+Now that adversarial self-review (Guideline 6 below) is mandatory on every PR regardless
+of size, and collaborators are routinely using agents to review PRs, splitting for
+reviewability no longer buys review coverage — it only adds coordination overhead
+(rebasing a stack, keeping sub-PRs in sync, re-reviewing everything again at consolidation
+time). **Default to a single PR for a feature or migration.** Split only for reasons other
+than reviewability — e.g. independently revertable or independently mergeable units of
+work.
+
+### Checklist
+
 1. **Fork & branch** from the target release branch (e.g., `7.0.x`)
-2. **Run tests** before submitting: `./gradlew build --rerun-tasks`
+2. **Run tests** before submitting: `./gradlew build --rerun-tasks`. If anything fails, use the `test-fixer` skill rather than guessing.
 3. **Run code style checks**: `./gradlew codeStyle`
 4. **Clean violations**: Before committing, run `./gradlew clean aggregateViolations` from the root and ensure that `build/reports/violations/CHECKSTYLE_VIOLATIONS.md`, `build/reports/violations/CODENARC_VIOLATIONS.md`, `build/reports/violations/PMD_VIOLATIONS.md`, and `build/reports/violations/SPOTBUGS_VIOLATIONS.md` have no issues.
-5. **Verify test coverage**: Ensure any touched class is covered by tests verifying all behavior. You must run ALL tests in the affected module(s) and ensure they pass before submission.
-6. **Squash commits** into a single meaningful commit message
-6. **Reference issues** in PR description (e.g., "Fixes #1234")
+5. **Verify test coverage**: Ensure any touched class is covered by tests verifying all behavior. You must run ALL tests in the affected module(s) and ensure they pass before submission. Run the `diff-coverage-check` skill against your changed files before submitting — don't rely on "the class has some tests" as a proxy for "the lines I changed are covered."
+6. **Adversarial self-review (always, regardless of PR size)**: Before requesting human review, get a fresh-context pass on the diff — a new agent session/conversation with no memory of writing the change, not the same context that just wrote it — and explicitly instruct it to try to *refute* the change: find what's wrong, not confirm it looks fine. That adversarial framing is what does the work, not which vendor's model runs it — a same-tool fresh-context review with a refute-first instruction catches most of what a second vendor would, and it's what every contributor actually has access to, unlike a second AI subscription. If you do have access to a different model/vendor (e.g. Codex, Gemini), prefer that for the strongest independence — but it's an upgrade, not a requirement. Check against this file's rules (jakarta not javax, no wildcard imports, BOM version rules, test coverage) and the change's own logic. Do this for every PR, including large/consolidated ones; do not rely on GitHub's Copilot reviewer alone, since it silently skips PRs over ~300 files. Fix or flag anything it finds. This is a supplement to human review, not a replacement for it.
+7. **Squash commits** into a single meaningful commit message
+8. **Reference issues** in PR description (e.g., "Fixes #1234")
 
 ### Review Process
 

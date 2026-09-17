@@ -2,6 +2,7 @@
 name: hibernate-developer
 description: Guide for working in the grails-data-hibernate7 module, especially Hibernate 7 domain binding, mapping migration, generators, and integration tests. Use this when changing code or tests under grails-data-hibernate7.
 license: Apache-2.0
+paths: grails-data-hibernate7/**
 ---
 <!--
 SPDX-License-Identifier: Apache-2.0
