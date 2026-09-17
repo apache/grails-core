@@ -18,38 +18,42 @@
  */
 package org.grails.plugins.codecs
 
+import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 
 import org.codehaus.groovy.runtime.NullObject
 
 import org.apache.commons.codec.binary.Base64
 
+import groovy.transform.CompileStatic
+
 /**
  * A codec that encodes and decodes Objects using Base64 encoding.
  *
  * @author Drew Varner
  */
+@CompileStatic
 class Base64CodecExtensionMethods {
 
-    static encodeAsBase64(theTarget) {
+    static Object encodeAsBase64(Object theTarget, Charset charset = StandardCharsets.UTF_8) {
         if (theTarget == null || theTarget instanceof NullObject) {
             return null
         }
 
         if (theTarget instanceof Byte[] || theTarget instanceof byte[]) {
-            return new String(Base64.encodeBase64(theTarget))
+            return new String(Base64.encodeBase64(DigestUtils.toByteArray(theTarget)), StandardCharsets.UTF_8)
         }
 
-        return new String(Base64.encodeBase64(theTarget.toString().getBytes(StandardCharsets.UTF_8)))
+        return new String(Base64.encodeBase64(theTarget.toString().getBytes(charset)), StandardCharsets.UTF_8)
     }
 
-    static decodeBase64(theTarget) {
+    static Object decodeBase64(Object theTarget, Charset charset = StandardCharsets.UTF_8) {
         if (theTarget == null || theTarget instanceof NullObject) {
             return null
         }
 
         if (theTarget instanceof Byte[] || theTarget instanceof byte[]) {
-            return Base64.decodeBase64(theTarget)
+            return Base64.decodeBase64(DigestUtils.toByteArray(theTarget))
         }
 
         return Base64.decodeBase64(theTarget.toString().getBytes(StandardCharsets.UTF_8))

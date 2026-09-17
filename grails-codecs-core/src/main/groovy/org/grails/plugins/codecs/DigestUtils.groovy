@@ -18,30 +18,89 @@
  */
 package org.grails.plugins.codecs
 
+import java.lang.reflect.Array
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 
+import groovy.transform.CompileStatic
+import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
+
+@CompileStatic
 abstract class DigestUtils {
 
     // Digest byte[], any list/array or string into a byte[]
-    static digest(String algorithm, data) {
+    static Object digest(String algorithm, Object data) {
         if (data == null) {
             return null
         }
 
-        def md = MessageDigest.getInstance(algorithm)
-        def src
-        if (data instanceof Byte[] || data instanceof byte[]) {
-            src = data
-        }
-        else if (data instanceof List || data.getClass().isArray()) {
-            src = new byte[data.size()]
-            data.eachWithIndex { v, i -> src[i] = v }
-        }
-        else {
-            src = data.toString().getBytes(StandardCharsets.UTF_8)
-        }
+        MessageDigest md = MessageDigest.getInstance(algorithm)
+        byte[] src = toByteArray(data)
         md.update(src) // This probably needs to use the thread's Locale encoding
         return md.digest()
+    }
+
+    protected static byte[] toByteArray(Object data) {
+        if (data instanceof byte[]) {
+            return (byte[]) data
+        }
+        if (data instanceof Byte[]) {
+            return toByteArrayFromWrapper((Byte[]) data)
+        }
+        if (data instanceof Iterable) {
+            return toByteArrayFromIterable((Iterable<?>) data)
+        }
+        if (data instanceof Iterator) {
+            return toByteArrayFromIterator((Iterator<?>) data)
+        }
+        if (data.getClass().isArray()) {
+            return toByteArrayFromArray(data, Array.getLength(data))
+        }
+
+        return data.toString().getBytes(StandardCharsets.UTF_8)
+    }
+
+    private static byte[] toByteArrayFromWrapper(Byte[] data) {
+        byte[] result = new byte[data.length]
+        for (int i = 0; i < data.length; i++) {
+            result[i] = data[i].byteValue()
+        }
+        return result
+    }
+
+    private static byte[] toByteArrayFromIterable(Iterable<?> data) {
+        List<Byte> bytes = new ArrayList<Byte>()
+        for (Object value : data) {
+            bytes.add(toByte(value))
+        }
+        return toByteArrayFromList(bytes)
+    }
+
+    private static byte[] toByteArrayFromIterator(Iterator<?> data) {
+        List<Byte> bytes = new ArrayList<Byte>()
+        while (data.hasNext()) {
+            bytes.add(toByte(data.next()))
+        }
+        return toByteArrayFromList(bytes)
+    }
+
+    private static byte[] toByteArrayFromList(List<Byte> data) {
+        byte[] result = new byte[data.size()]
+        for (int i = 0; i < data.size(); i++) {
+            result[i] = data.get(i)
+        }
+        return result
+    }
+
+    private static byte[] toByteArrayFromArray(Object data, int length) {
+        byte[] result = new byte[length]
+        for (int i = 0; i < length; i++) {
+            result[i] = toByte(Array.get(data, i))
+        }
+        return result
+    }
+
+    private static byte toByte(Object value) {
+        DefaultTypeTransformation.castToNumber(value).byteValue()
     }
 }

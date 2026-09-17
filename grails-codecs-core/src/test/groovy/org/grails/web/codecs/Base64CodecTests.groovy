@@ -19,6 +19,8 @@
 
 package org.grails.web.codecs
 
+import java.nio.charset.StandardCharsets
+
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
@@ -78,5 +80,12 @@ class Base64CodecTests {
         assertEquals "dGVzdA==", "test".bytes.encodeAsBase64()
         assertEquals "dGVzdA==", "test".encodeAsBase64()
         assertEquals "test", new String("dGVzdA==".decodeBase64())
+    }
+
+    @Test
+    void testEncodeDecodeAsBase64WithCharset() {
+        assertEquals '6Q==', 'é'.encodeAsBase64(StandardCharsets.ISO_8859_1)
+        assertEquals 'é', new String('6Q=='.decodeBase64(StandardCharsets.ISO_8859_1), StandardCharsets.ISO_8859_1)
+        assertEquals '/v///g==', '￾'.encodeAsBase64(StandardCharsets.UTF_16)
     }
 }

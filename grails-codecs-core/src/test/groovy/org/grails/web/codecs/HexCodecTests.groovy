@@ -48,10 +48,25 @@ class HexCodecTests {
         assertIterableEquals(new Byte[] {65, 32, 66, 32, 67, 32, 68, 32, 69}.toList(), result.toList())
         //make sure decoding null returns null
         assertEquals(null.decodeHex(), null)
+
+        //make sure decoding Groovy-falsy values returns null
+        assertIterableEquals([], ''.decodeHex().toList())
+        assertEquals(null, 0.decodeHex())
+        assertEquals(null, false.decodeHex())
+        assertEquals(null, [].decodeHex())
+        assertEquals(null, new byte[0].decodeHex())
     }
 
+    @Test
     void testRoundtrip() {
-        assertIterableEquals([65, 32, 66, 32, 67, 32, 68, 32, 69], [65, 32, 66, 32, 67, 32, 68, 32, 69].encodeAsHex().decodeHex().toList())
-        assertIterableEquals([65, 32, 66, 32, 67, 32, 68, 32, 69], 'A B C D E'.encodeAsHex().decodeHex().toList())
+        List<Byte> expected = [65, 32, 66, 32, 67, 32, 68, 32, 69].collect { ((Number) it).byteValue() }
+        assertIterableEquals(expected, [65, 32, 66, 32, 67, 32, 68, 32, 69].encodeAsHex().decodeHex().toList())
+        assertIterableEquals(expected, 'A B C D E'.encodeAsHex().decodeHex().toList())
+    }
+
+    @Test
+    void testEncodeIterableCoercion() {
+        assertEquals('4142', ['A' as char, 'B' as char].encodeAsHex())
+        assertEquals('4142', new LinkedHashSet<Integer>([65, 66]).encodeAsHex())
     }
 }
