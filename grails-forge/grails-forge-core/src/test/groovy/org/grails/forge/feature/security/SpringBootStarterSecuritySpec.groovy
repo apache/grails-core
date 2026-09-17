@@ -122,7 +122,6 @@ class SpringBootStarterSecuritySpec extends ApplicationContextSpec implements Co
 
         where:
         gorm                | directive             | foreign
-        GormImpl.HIBERNATE5 | "table 'users'"       | "collection 'users'"
         GormImpl.HIBERNATE7 | "table 'users'"       | "collection 'users'"
         GormImpl.MONGODB    | "collection 'users'"  | "table 'users'"
     }

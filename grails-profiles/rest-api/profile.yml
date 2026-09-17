@@ -14,8 +14,8 @@
 # limitations under the License.
 description: Profile for REST API applications
 features:
-    defaults: 
-        - hibernate5
+    defaults:
+        - hibernate7
     required:
         - json-views
 build:

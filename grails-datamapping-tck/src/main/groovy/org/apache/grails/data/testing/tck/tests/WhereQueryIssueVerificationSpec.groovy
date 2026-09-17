@@ -92,7 +92,7 @@ class WhereQueryIssueVerificationSpec extends GrailsDataTckSpec {
 
     // Restricting by a nested association path requires join support: MongoDB rejects
     // join queries and the simple in-memory datastore cannot traverse two levels.
-    @Requires({ Boolean.getBoolean('hibernate5.gorm.suite') || Boolean.getBoolean('hibernate7.gorm.suite') })
+    @Requires({ Boolean.getBoolean('hibernate7.gorm.suite') })
     @Issue('https://github.com/apache/grails-core/issues/14622')
     void 'where-query with multi-level association restriction produces correct result'() {
         given: 'a sentence -> phrase -> word hierarchy'
@@ -204,7 +204,7 @@ class WhereQueryIssueVerificationSpec extends GrailsDataTckSpec {
     }
 
     // groupProperty projections are only implemented by the Hibernate datastores.
-    @Requires({ Boolean.getBoolean('hibernate5.gorm.suite') || Boolean.getBoolean('hibernate7.gorm.suite') })
+    @Requires({ Boolean.getBoolean('hibernate7.gorm.suite') })
     @Issue('https://github.com/apache/grails-core/issues/14569')
     void 'count() gives correct results with projection in where query'() {
         given: 'items with different groupings'

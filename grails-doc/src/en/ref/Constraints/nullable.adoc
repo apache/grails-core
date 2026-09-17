@@ -61,7 +61,7 @@ age nullable: true
 
 Set to `true` if the property allows `null` values.
 
-This constraint influences  link:{hibernate5GuideFromRef}index.html#constraints[schema generation].
+This constraint influences  link:{hibernate7GuideFromRef}index.html#constraints[schema generation].
 
 Error Code: `className.propertyName.nullable`
 

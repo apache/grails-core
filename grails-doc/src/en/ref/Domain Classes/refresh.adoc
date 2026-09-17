@@ -42,7 +42,7 @@ b.refresh()
 === Description
 
 
-Equivalent to the Hibernate https://javadoc.io/doc/org.hibernate/hibernate-core/{hibernate5Version}/org/hibernate/Session.html#refresh-java.lang.Object-[refresh] method.
+Equivalent to the Hibernate https://javadoc.io/doc/org.hibernate.orm/hibernate-core/{hibernate7Version}/org/hibernate/Session.html#refresh-java.lang.Object-[refresh] method.
 
 Re-reads the state of the given instance from the underlying database. It is inadvisable to use this to implement long-running sessions that span many business tasks. However this method is useful in certain special circumstances. For example
 

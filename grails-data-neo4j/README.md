@@ -40,5 +40,5 @@ This project is part of the main Grails monorepo build. The modules are wired in
 | Grails plugin  | `:grails-data-neo4j`           | `org.apache.grails:grails-data-neo4j`              |
 | Docs           | `:grails-data-neo4j-docs`      | (not published)                                    |
 
-Example apps live under `grails-test-examples/neo4j/` (`base`, `hibernate5`, `spring-boot`,
+Example apps live under `grails-test-examples/neo4j/` (`base`, `spring-boot`,
 `neo4j-standalone`, `test-data-service`), matching the layout used by the other datastores.

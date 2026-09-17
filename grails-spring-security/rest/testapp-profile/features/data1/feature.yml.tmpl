@@ -1,9 +1,11 @@
 description: First configuration of Grails Data Mapping
 dependencies:
     - scope: build
-      coords: "org.apache.grails:grails-data-hibernate5"
+      coords: "org.apache.grails:grails-data-hibernate7"
     - scope: implementation
-      coords: "org.apache.grails:grails-data-hibernate5"
+      coords: 'platform("org.apache.grails:grails-hibernate7-bom:$grailsVersion")'
+    - scope: implementation
+      coords: "org.apache.grails:grails-data-hibernate7"
     - scope: implementation
       coords: "org.apache.grails:grails-spring-security-rest-datamapping:${pluginVersion}"
     - scope: runtimeOnly

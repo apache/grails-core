@@ -34,7 +34,6 @@ These can be set on the command line like so:
 * `gebAtCheckWaiting` - enables Geb atCheckWaiting
 * `onlyCoreTests` - runs tests that do not include mongo, hibernate, or functional
 * `onlyFunctionalTests` - runs only grails-test-examples/* tests
-* `onlyHibernate5Tests` - runs only a hibernate5 related test
 * `onlyHibernate7Tests` - runs only a hibernate7 related test
 * `onlyMongodbTests` - runs only a mongodb related test
 * `onlyNeo4jTests` - runs only a neo4j related test
@@ -44,7 +43,6 @@ These can be set on the command line like so:
 * `skipCodeStyle` - does not run code style checks
 * `skipCoreTests` - does not run the "core" tests
 * `skipFunctionalTests` - does not run the functional tests
-* `skipHibernate5Tests` - does not run hibernate5 related tests
 * `skipHibernate7Tests` - does not run hibernate7 related tests
 * `skipMongodbTests` - does not run mongo related tests
 * `skipNeo4jTests` - does not run neo4j related tests

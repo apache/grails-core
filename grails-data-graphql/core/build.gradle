@@ -40,6 +40,7 @@ ext {
 dependencies {
 
     implementation platform(project(':grails-bom'))
+    testImplementation platform(project(':grails-hibernate7-bom'))
     testFixturesImplementation platform(project(':grails-bom'))
 
     api project(':grails-datamapping-core'), {
@@ -58,7 +59,7 @@ dependencies {
         // api: ClassPool, CtClass, CtMethod (used for runtime bytecode manipulation)
     }
 
-    testImplementation project(':grails-data-hibernate5-core')
+    testImplementation project(':grails-data-hibernate7-core')
     testImplementation 'com.h2database:h2'
     testImplementation 'org.apache.tomcat:tomcat-jdbc'
     testImplementation 'org.slf4j:slf4j-api'

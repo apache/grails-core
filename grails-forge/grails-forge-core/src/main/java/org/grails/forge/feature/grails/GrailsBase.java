@@ -59,8 +59,9 @@ public class GrailsBase implements DefaultFeature {
 
         // When Micronaut is used, the application must consume the Micronaut BOM variant as an
         // enforcedPlatform so the Micronaut platform cannot override the Grails BOM. The
-        // Hibernate 7 BOM variants pin the Hibernate 7 dependency versions (e.g. jandex) that
-        // conflict with the default (Hibernate 5) grails-bom - see grails-core issue #15942.
+        // Hibernate 7 BOM variants pin Hibernate 7 dependency versions (e.g. jandex) that the
+        // plain default grails-bom (used by apps with no Hibernate feature, e.g. MongoDB/Neo4j
+        // only) does not manage - see grails-core issue #15942.
         boolean useMicronautBom = generatorContext.isFeaturePresent(GrailsMicronaut.class);
         boolean useHibernate7Bom = generatorContext.isFeaturePresent(GrailsDataHibernate7.class);
         String bomArtifactId;

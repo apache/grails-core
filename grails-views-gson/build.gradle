@@ -39,6 +39,7 @@ ext {
 
 dependencies {
     implementation platform(project(':grails-bom'))
+    testImplementation platform(project(':grails-hibernate7-bom'))
     testFixturesImplementation platform(project(':grails-bom'))
 
     api project(':grails-views-core') // Used in public API
@@ -57,7 +58,7 @@ dependencies {
     testImplementation project(':grails-testing-support-views-gson')
     testImplementation project(':grails-testing-support-core')
     testImplementation project(':grails-testing-support-datamapping')
-    testImplementation project(':grails-data-hibernate5-core')
+    testImplementation project(':grails-data-hibernate7-core')
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
     testImplementation 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation and tests
     testImplementation 'org.spockframework:spock-core'

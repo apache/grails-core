@@ -46,7 +46,7 @@ class SQLServerSpec extends ApplicationContextSpec {
 
     void "test config"() {
         when:
-        GeneratorContext ctx = buildGeneratorContext(["gorm-hibernate5", "sqlserver"])
+        GeneratorContext ctx = buildGeneratorContext(["gorm-hibernate7", "sqlserver"])
 
         then:
         ctx.getConfiguration().get("dataSource.driverClassName") == 'com.microsoft.sqlserver.jdbc.SQLServerDriver'

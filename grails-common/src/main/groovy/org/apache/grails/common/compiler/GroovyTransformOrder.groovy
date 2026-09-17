@@ -151,14 +151,9 @@ interface GroovyTransformOrder {
     static final int JPA_GORM_ENTITY_ORDER = DIRTY_CHECK_ORDER + DECREMENT_PRIORITY
 
     /**
-     * getter/setter transforms for hibernate entities
-     */
-    static final int HIBERNATE5_ORDER = JPA_GORM_ENTITY_ORDER + DECREMENT_PRIORITY
-
-    /**
      * Transforms a given class to a GORM Entity
      */
-    static final int GORM_ENTITY_ORDER = HIBERNATE5_ORDER + DECREMENT_PRIORITY
+    static final int GORM_ENTITY_ORDER = JPA_GORM_ENTITY_ORDER + DECREMENT_PRIORITY
 
     /**
      * Adds basic fields like id, version, toString, and associations

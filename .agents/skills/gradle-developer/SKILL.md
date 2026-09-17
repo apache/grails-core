@@ -445,7 +445,7 @@ apply {
 | `publish-root-config.gradle` | Root publishing orchestration |
 | `rat-root-config.gradle` | Apache RAT |
 | `cli-companion-bom-constraints.gradle` | CLI artifact constraints on BOMs |
-| `hibernate5-test-config.gradle` / `hibernate7-test-config.gradle` | Datastore test stacks |
+| `hibernate7-test-config.gradle` | Datastore test stacks |
 | `spring-security-test-config.gradle` | Spring Security functional and integration tests |
 | `grails-data-tck-config.gradle` | GORM data TCK wiring and test filters |
 | `grails-extension-gradle-config.gradle` | Gradle extension module conventions |
@@ -459,7 +459,7 @@ apply {
 
 Presence of project properties skips/selects suites, e.g.:
 
-`skipTests`, `skipCoreTests`, `onlyFunctionalTests`, `onlyHibernate5Tests`, `onlyHibernate7Tests`, `onlyMongodbTests`, `onlyRedisTests`, `onlySpringSecurityTests`
+`skipTests`, `skipCoreTests`, `onlyFunctionalTests`, `onlyHibernate7Tests`, `onlyMongodbTests`, `onlyRedisTests`, `onlySpringSecurityTests`
 
 Parallelism: `configuredTestParallel` from `-PmaxTestParallel` or CI default **3** / local `availableProcessors * 3/4`.
 

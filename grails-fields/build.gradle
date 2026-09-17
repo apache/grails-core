@@ -41,6 +41,7 @@ ext {
 
 dependencies {
     implementation platform(project(':grails-bom'))
+    testImplementation platform(project(':grails-hibernate7-bom'))
 
     implementation project(':grails-gsp')
     compileOnly project(':grails-controllers')
@@ -50,7 +51,7 @@ dependencies {
     compileOnly 'org.springframework.boot:spring-boot-starter-logging'
 
     testImplementation 'org.apache.groovy:groovy-dateutil'
-    testImplementation project(':grails-data-hibernate5-core')
+    testImplementation project(':grails-data-hibernate7-core')
     testImplementation project(':grails-testing-support-datamapping')
     testImplementation project(':grails-testing-support-web')
     testImplementation "org.javassist:javassist:$javassistVersion"

@@ -56,7 +56,7 @@ The project is essentially a multi-project Gradle build. There is a core API and
 
 In addition to this, there are separate projects of GORM implementations for various datastores:
 
-* https://github.com/apache/grails-core/tree/HEAD/grails-data-hibernate5[GORM for Hibernate 5]
+* https://github.com/apache/grails-core/tree/HEAD/grails-data-hibernate7[GORM for Hibernate 7]
 * https://github.com/apache/grails-core/tree/HEAD/grails-data-mongodb[GORM for MongoDB]
 * https://github.com/apache/grails-core/tree/HEAD/grails-data-neo4j[GORM for Neo4j]
 * https://github.com/apache/grails-core/tree/HEAD/grails-data-graphql[GORM for GraphQL]

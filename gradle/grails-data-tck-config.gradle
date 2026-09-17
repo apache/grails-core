@@ -78,14 +78,6 @@ tasks.withType(Test).configureEach { Test it ->
             return false
         }
 
-        if (project.hasProperty('skipHibernate5Tests') && project.name.startsWith('grails-data-hibernate5')) {
-            return false
-        }
-
-        if (project.hasProperty('onlyHibernate5Tests') && !project.name.startsWith('grails-data-hibernate5')) {
-            return false
-        }
-
         if (project.hasProperty('skipMongoTests') && project.name.startsWith('grails-data-mongo')) {
             return false
         }

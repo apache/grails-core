@@ -99,7 +99,7 @@ class GrailsDataMongoDBSpec extends ApplicationContextSpec implements CommandOut
         !output.containsKey('src/main/resources/META-INF/spring.factories')
     }
 
-    void "test a SQL driver combined with MongoDB still adds Hibernate 5 as the default SQL implementation"() {
+    void "test a SQL driver combined with MongoDB still adds Hibernate 7 as the default SQL implementation"() {
         given:
         Options options = new Options(DevelopmentReloading.DEFAULT_OPTION, GormImpl.MONGODB, ServletImpl.DEFAULT_OPTION, JdkVersion.DEFAULT_OPTION)
 
@@ -109,8 +109,7 @@ class GrailsDataMongoDBSpec extends ApplicationContextSpec implements CommandOut
         then:
         features.contains("gorm-mongodb")
         features.contains("postgres")
-        features.contains("gorm-hibernate5")
-        !features.contains("gorm-hibernate7")
+        features.contains("gorm-hibernate7")
 
         when:
         String template = new BuildBuilder(beanContext)
@@ -120,7 +119,7 @@ class GrailsDataMongoDBSpec extends ApplicationContextSpec implements CommandOut
 
         then:
         template.contains("implementation \"org.apache.grails:grails-data-mongodb\"")
-        template.contains("implementation \"org.apache.grails:grails-data-hibernate5\"")
+        template.contains("implementation \"org.apache.grails:grails-data-hibernate7\"")
         template.contains("runtimeOnly \"org.postgresql:postgresql\"")
 
         when:
