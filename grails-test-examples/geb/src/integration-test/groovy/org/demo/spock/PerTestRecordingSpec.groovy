@@ -85,11 +85,44 @@ class PerTestRecordingSpec extends ContainerGebSpec {
         names.contains('setup_running_a_test_to_create_a_recording')
         names.contains('setup_running_a_second_test_to_create_another')
 
+        when: 'waiting for each recording to reach a meaningful size'
+        // A VNC recording container that was only just restarted (see
+        // WebDriverContainerHolder#restartVncRecordingContainer) is guaranteed to have
+        // connected, but not to have captured more than a frame or two by the time a fast
+        // iteration finishes. Two such near-blank captures can encode to identical,
+        // non-zero bytes via ffmpeg - that's exactly the flake this spec was originally
+        // written to catch (Files.mismatch returning -1 and failing the difference check
+        // below), not a case that quietly slips past it undetected. Requiring a sensible
+        // minimum size targets the real framework contract - a real, played-out recording -
+        // directly, rather than inferring it indirectly from a check that only tells us the
+        // two files aren't byte-identical. Polled with a timeout, rather than asserted
+        // immediately, so a recording that is still short at the moment minFileCount is
+        // reached gets a fair chance to clear the floor instead of failing outright.
+        def firstRecording = waitForMeaningfulRecording(
+                recordingFiles, 'setup_running_a_test_to_create_a_recording'
+        )
+        def secondRecording = waitForMeaningfulRecording(
+                recordingFiles, 'setup_running_a_second_test_to_create_another'
+        )
+
+        then: 'each recording captured meaningful content, not just a near-blank connection handshake'
+        firstRecording.length() > MIN_MEANINGFUL_RECORDING_BYTES
+        secondRecording.length() > MIN_MEANINGFUL_RECORDING_BYTES
+
         and: 'the recording files should have different content'
-        def firstRecording = recordingFiles.find { it.name.contains('setup_running_a_test_to_create_a_recording') }
-        def secondRecording = recordingFiles.find { it.name.contains('setup_running_a_second_test_to_create_another') }
+        // Kept alongside the size check above rather than dropped in favor of it: the size
+        // check only rules out near-blank captures, it says nothing about two recordings
+        // accidentally being the *same* file (e.g. a future regression in how recording
+        // files are named or matched). The two checks guard against different failure modes.
         Files.mismatch(firstRecording.toPath(), secondRecording.toPath()) != -1
     }
+
+    // Two local runs against a real VNC recording container measured every genuine,
+    // played-out recording at 75KB-855KB (org.demo.spock.PerTestRecordingSpec, recorded
+    // 2026-07-21 and 2026-07-31). 5,000 bytes stays more than an order of magnitude below
+    // the smallest of those, while still comfortably clearing a single near-blank keyframe
+    // from a just-restarted VNC connection.
+    private static final long MIN_MEANINGFUL_RECORDING_BYTES = 5_000L
 
     private static final DateTimeFormatter RECORDING_DIR_FORMAT = DateTimeFormatter.ofPattern('yyyyMMdd_HHmmss')
 
@@ -139,5 +172,22 @@ class PerTestRecordingSpec extends ContainerGebSpec {
             sleep(pollIntervalMillis)
         }
         return recordingFiles
+    }
+
+    private static File waitForMeaningfulRecording(
+            List<File> recordingFiles,
+            String testMethodNamePart,
+            long minBytes = MIN_MEANINGFUL_RECORDING_BYTES,
+            long timeoutMillis = 10_000L,
+            long pollIntervalMillis = 500L
+    ) {
+        File recording = recordingFiles.find { it.name.contains(testMethodNamePart) }
+        assert recording: "No recording file found matching [$testMethodNamePart] among ${recordingFiles*.name}"
+
+        long deadline = System.currentTimeMillis() + timeoutMillis
+        while (recording.length() <= minBytes && System.currentTimeMillis() < deadline) {
+            sleep(pollIntervalMillis)
+        }
+        return recording
     }
 }
