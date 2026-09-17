@@ -18,7 +18,6 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.PersonWithCompositeKey
 import org.apache.grails.data.testing.tck.domains.SimpleWidget
