@@ -17,8 +17,10 @@ specific language governing permissions and limitations
 under the License.
 ////
 
+= Providing Basic Artefacts
 
-==== Add Command Line Commands
+
+== Add Command Line Commands
 
 
 A plugin can add new commands to the Grails interactive shell in one of two ways. First, using the link:{commandLineRef}create-script.html[create-script] you can create a code generation script which will become available to the application. The `create-script` command will create the script in the `src/main/scripts` directory:
@@ -93,7 +95,7 @@ The main difference between code generation scripts and `ApplicationCommand` ins
 In Grails 2.x Gant scripts could be used to perform both these tasks, from Grails 3.x+ code generation and interacting with runtime application state has been cleanly separated.
 
 
-==== Adding a new grails-app artifact (Controller, Tag Library, Service, etc.)
+== Adding a new grails-app artifact (Controller, Tag Library, Service, etc.)
 
 
 A plugin can add new artifacts by creating the relevant file within the `grails-app` tree.
@@ -107,7 +109,7 @@ A plugin can add new artifacts by creating the relevant file within the `grails-
 ----
 
 
-==== Providing Views, Templates and View resolution
+== Providing Views, Templates and View resolution
 
 
 When a plugin provides a controller it may also provide default views to be rendered. This is an excellent way to modularize your application through plugins. Grails' view resolution mechanism will first look for the view in the application it is installed into and if that fails will attempt to look for the view within the plugin. This means that you can override views provided by a plugin by creating corresponding GSPs in the application's `grails-app/views` directory.
@@ -124,7 +126,7 @@ However if the view uses templates that are also provided by the plugin then the
 Note the usage of the `plugin` attribute, which contains the name of the plugin where the template resides. If this is not specified then Grails will look for the template relative to the application.
 
 
-==== Excluded Artefacts
+== Excluded Artefacts
 
 By default Grails excludes the following files during the packaging process:
 

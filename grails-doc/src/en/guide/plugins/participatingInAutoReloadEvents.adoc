@@ -17,8 +17,10 @@ specific language governing permissions and limitations
 under the License.
 ////
 
+= Participating in Auto Reload Events
 
-==== Monitoring Resources for Changes
+
+== Monitoring Resources for Changes
 
 
 Often it is valuable to monitor resources for changes and perform some action when they occur. This is how Grails implements advanced reloading of application state at runtime. For example, consider this simplified snippet from the Grails `ServicesPlugin`:
@@ -57,7 +59,7 @@ The `event` object defines a number of useful properties:
 These objects are available to help you apply the appropriate changes based on what changed. In the "Services" example above, a new service bean is re-registered with the `ApplicationContext` when one of the service classes changes.
 
 
-==== Influencing Other Plugins
+== Influencing Other Plugins
 
 
 In addition to reacting to changes, sometimes a plugin needs to "influence" another.
@@ -72,7 +74,7 @@ def influences = ['controllers']
 ----
 
 
-==== Observing other plugins
+== Observing other plugins
 
 
 If there is a particular plugin that you would like to observe for changes but not necessary watch the resources that it monitors you can use the "observe" property:

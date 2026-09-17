@@ -17,8 +17,10 @@ specific language governing permissions and limitations
 under the License.
 ////
 
+= Understanding Plugin Load Order
 
-==== Controlling Plugin Dependencies
+
+== Controlling Plugin Dependencies
 
 
 Plugins often depend on the presence of other plugins and can adapt depending on the presence of others. This is implemented with two properties. The first is called `dependsOn`. For example, take a look at this snippet from the Hibernate plugin:
@@ -58,7 +60,7 @@ When the wildcard * character is used it denotes "any" version. The expression s
 * 1.1-BETA2
 
 
-==== Controlling Load Order
+== Controlling Load Order
 
 
 Using `dependsOn` establishes a "hard" dependency in that if the dependency is not resolved, the plugin will give up and won't load.  It is possible though to have a weaker dependency using the `loadAfter` and `loadBefore` properties:
@@ -91,7 +93,7 @@ def loadBefore = ['rabbitmq']
 ----
 
 
-==== Scopes and Environments
+== Scopes and Environments
 
 
 It's not only plugin load order that you can control. You can also specify which environments your plugin should be loaded in and which scopes (stages of a build). Simply declare one or both of these properties in your plugin descriptor:

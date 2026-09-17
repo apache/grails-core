@@ -19,7 +19,9 @@ under the License.
 
 
 
-=== "grails run-app"
+= Standalone
+
+== "grails run-app"
 
 
 You should be very familiar with this approach by now, since it is the most common method of running an application during the development phase. An embedded Tomcat server is launched that loads the web application from the development sources, thus allowing it to pick up any changes to application files.
@@ -39,7 +41,7 @@ You can specify an environment supplying `grails.env` system property.
 
 `./gradlew -Dgrails.env=prod bootRun`
 
-=== Runnable WAR or JAR file
+== Runnable WAR or JAR file
 
 Another way to deploy in Grails 3.0 or above is to use the new support for runnable JAR or WAR files. To create runnable archives, run `grails package`:
 
@@ -59,12 +61,12 @@ You can then run either the WAR file or the JAR using your Java installation:
 java -Dgrails.env=prod -jar build/libs/mywar-0.1.war    (or .jar)
 ----
 
-=== A TAR/ZIP distribution
+== A TAR/ZIP distribution
 
 WARNING: Note: TAR/ZIP distribution assembly has been removed from Grails 3.1.
 
 
-=== "./gradlew bootRun"
+== "./gradlew bootRun"
 
 
 You should be very familiar with this approach by now, since it is the most common method of running an application during the development phase. An embedded Tomcat server is launched that loads the web application from the development sources, thus allowing it to pick up any changes to application files.
@@ -84,7 +86,7 @@ You can specify an environment supplying `grails.env` system property.
 
 `./gradlew -Dgrails.env=prod bootRun`
 
-=== Runnable WAR or JAR file
+== Runnable WAR or JAR file
 
 Another way to deploy in Grails 3.0 or above is to use the new support for runnable JAR or WAR files. To create runnable archives, run `grails package`:
 
@@ -104,6 +106,6 @@ You can then run either the WAR file or the JAR using your Java installation:
 java -Dgrails.env=prod -jar build/libs/mywar-0.1.war    (or .jar)
 ----
 
-=== A TAR/ZIP distribution
+== A TAR/ZIP distribution
 
 WARNING: Note: TAR/ZIP distribution assembly has been removed from Grails 3.1.

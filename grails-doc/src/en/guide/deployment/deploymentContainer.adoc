@@ -20,7 +20,9 @@ under the License.
 Grails apps can be deployed to a Servlet Container or Application Server.
 
 
-=== WAR file
+= Container Deployment (e.g. Tomcat)
+
+== WAR file
 
 
 A common approach to Grails application deployment in production is to deploy to an existing Servlet container via a WAR file. Containers allow multiple applications to be deployed on the same port with different paths.

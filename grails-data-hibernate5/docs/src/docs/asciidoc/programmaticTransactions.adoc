@@ -17,11 +17,13 @@ specific language governing permissions and limitations
 under the License.
 ////
 
+= Programmatic Transactions
+
 GORM's transaction management is built on Spring and uses Spring's Transaction abstraction for dealing with programmatic transactions.
 
 However, GORM classes have been enhanced to make this simpler with the link:../api/org/grails/datastore/gorm/GormEntity.html#withTransaction(groovy.lang.Closure)[withTransaction(Closure)]  method. This method has a single parameter, a Closure, which has a single parameter which is a Spring https://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/transaction/TransactionStatus.html[TransactionStatus] instance.
 
-==== Using the withTransaction Method
+== Using the withTransaction Method
 
 Here's an example of using `withTransaction` in a controller methods:
 
@@ -56,7 +58,7 @@ You can also use "save points" to rollback a transaction to a particular point i
 
 The `withTransaction` method deals with the begin/commit/rollback logic for you within the scope of the block.
 
-==== Using TransactionService
+== Using TransactionService
 
 Since GORM 6.1, if you need more flexibility then instead you can instead take advantage of the link:../api/grails/gorm/transactions/TransactionService.html[TransactionService], which can be obtained by looking it up from from the `HibernateDatastore`:
 

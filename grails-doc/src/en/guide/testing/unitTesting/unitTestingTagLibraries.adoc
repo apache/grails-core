@@ -18,7 +18,9 @@ under the License.
 ////
 
 
-=== The Basics
+= Unit Testing Tag Libraries
+
+== The Basics
 
 Tag libraries and GSP pages can be tested with the
 `grails.testing.web.taglib.TagLibUnitTest` trait.
@@ -87,7 +89,7 @@ important that the containing String be surrounded by single quotes, not double
 quotes.  `'<demo:renderSomeNumber value="${x + y}"/>'` works.
 `"<demo:renderSomeNumber value='${x + y}'/>"` would not.
 
-=== Mocking Tag Libraries
+== Mocking Tag Libraries
 
 In order to test a tag library which invokes tags from another tag library,
 the second tag library needs to be explicitly mocked by invoking the
