@@ -63,7 +63,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
     Observable<T> find(Map args = Collections.emptyMap(), @DelegatesTo(DetachedCriteria) Closure additionalCriteria = null) {
         Query query = prepareQuery(args, additionalCriteria)
         query.max(1)
-        return ((RxQuery)query).findAll(args)
+        return ((RxQuery<T>)query).findAll(args)
     }
 
     /**
@@ -77,7 +77,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
      */
     Observable<T> findAll(Map args = Collections.emptyMap(), @DelegatesTo(DetachedCriteria) Closure additionalCriteria = null) {
         Query query = prepareQuery(args, additionalCriteria)
-        return ((RxQuery)query).findAll(args)
+        return ((RxQuery<T>)query).findAll(args)
     }
 
     /**
@@ -88,7 +88,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
     Observable<T> get(Map args, @DelegatesTo(DetachedCriteria) Closure additionalCriteria = null) {
         Query query = prepareQuery(args, additionalCriteria)
         query.max(1)
-        return ((RxQuery)query).singleResult(args)
+        return ((RxQuery<T>)query).singleResult(args)
     }
 
     /**
@@ -99,7 +99,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
     Observable<T> get(@DelegatesTo(DetachedCriteria) Closure additionalCriteria = null) {
         Query query = prepareQuery(Collections.emptyMap(), additionalCriteria)
         query.max(1)
-        return ((RxQuery)query).singleResult()
+        return ((RxQuery<T>)query).singleResult()
     }
 
     /**
@@ -111,7 +111,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
      */
     Observable<List<T>> toList(Map args = Collections.emptyMap(), @DelegatesTo(DetachedCriteria) Closure additionalCriteria = null) {
         Query query = prepareQuery(args, additionalCriteria)
-        return ((RxQuery)query).findAll(args).toList()
+        return ((RxQuery<T>)query).findAll(args).toList()
     }
 
     /**
@@ -123,7 +123,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
      */
     Observable<List<T>> list(Map args = Collections.emptyMap(), @DelegatesTo(DetachedCriteria) Closure additionalCriteria = null) {
         Query query = prepareQuery(args, additionalCriteria)
-        return ((RxQuery)query).findAll(args).toList()
+        return ((RxQuery<T>)query).findAll(args).toList()
     }
 
     /**
@@ -136,7 +136,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
     Observable<Number> getCount(Map args = Collections.emptyMap(), @DelegatesTo(DetachedCriteria) Closure additionalCriteria = null) {
         Query query = prepareQuery(args, additionalCriteria)
         query.projections().count()
-        return ((RxQuery)query).singleResult(args) as Observable<Number>
+        return ((RxQuery<T>)query).singleResult(args) as Observable<Number>
     }
 
     /**
@@ -157,7 +157,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
      */
     Observable<Number> updateAll(Map propertiesMap) {
         Query query = prepareQuery(Collections.emptyMap(), null)
-        return ((RxQuery)query).updateAll(propertiesMap)
+        return ((RxQuery<T>)query).updateAll(propertiesMap)
     }
 
     /**
@@ -167,7 +167,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
      */
     Observable<Number> deleteAll() {
         Query query = prepareQuery(Collections.emptyMap(), null)
-        return ((RxQuery)query).deleteAll()
+        return ((RxQuery<T>)query).deleteAll()
     }
 
     /**
@@ -649,7 +649,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<Observable<T>> implem
         }
 
         if (additionalCriteria != null) {
-            def additionalDetached = new DetachedCriteria(targetClass).build(additionalCriteria)
+            def additionalDetached = new DetachedCriteria((Class<Observable<T>>) (Class) targetClass).build(additionalCriteria)
             DynamicFinder.applyDetachedCriteria(query, additionalDetached)
         }
 
