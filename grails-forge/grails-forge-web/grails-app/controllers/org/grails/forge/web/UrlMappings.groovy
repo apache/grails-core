@@ -32,6 +32,9 @@ class UrlMappings {
         "/diff/$type/feature/$feature"(controller: 'diff', action: 'diffFeature')
         "/diff/$type/$name"(controller: 'diff', action: 'diffApp')
         '/select-options'(controller: 'selectOptions', action: 'index')
+        '/v3/api-docs'(controller: 'forgeOpenApi', action: 'document')
+        '/swagger-ui/index.html'(controller: 'forgeOpenApi', action: 'swaggerUi')
+        '/rapidoc/index.html'(controller: 'forgeOpenApi', action: 'rapidoc')
         '/'(controller: 'forgeApplication', action: 'home')
     }
 }

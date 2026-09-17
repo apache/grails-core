@@ -75,6 +75,10 @@ tasks.withType(GroovyCompile).configureEach { GroovyCompile compile ->
     compile.groovyClasspath = configurations.groovyCompiler
 }
 
+ext {
+    forgeTestsNeedLocalMaven = true
+}
+
 apply {
     from rootProject.layout.projectDirectory.file('gradle/forge-test-config.gradle')
 }

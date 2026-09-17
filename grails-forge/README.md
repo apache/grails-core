@@ -43,13 +43,21 @@ The user interface is [written in React](https://github.com/apache/grails-forge-
 
 ## API
 
-API usage for the production instance is available at:
+The hosted generator still answers `GET /` with a plain-text usage summary. Parameter and response shapes are published as OpenAPI 3 from `grails-forge-web` (not Micronaut OpenAPI). Browse them with Swagger UI or RapiDoc. A general Grails `grails-openapi` module is tracked separately and is not required for these Forge endpoints.
 
-* [Production API](https://latest.grails.org/)
+API documentation for the production instance:
 
-API usage for the snapshot / development instance is available at:
+* [Swagger / OpenAPI](https://latest.grails.org/swagger-ui/index.html)
+* [RapiDoc](https://latest.grails.org/rapidoc/index.html)
+* [OpenAPI document](https://latest.grails.org/v3/api-docs)
+* [Plain-text usage](https://latest.grails.org/)
 
-* [Snapshot API](https://snapshot.grails.org/)
+API documentation for the snapshot / development instance:
+
+* [Swagger / OpenAPI](https://snapshot.grails.org/swagger-ui/index.html)
+* [RapiDoc](https://snapshot.grails.org/rapidoc/index.html)
+* [OpenAPI document](https://snapshot.grails.org/v3/api-docs)
+* [Plain-text usage](https://snapshot.grails.org/)
 
 ## Snapshots and Releases
 
@@ -70,5 +78,4 @@ The API hosts are `latest.grails.org`, `snapshot.grails.org`, `next.grails.org`,
 Deployments package the Grails 8 `grails-forge-web` Tomcat `bootJar` as `app.jar` in the `grails-forge-web-aws.zip` source bundle. The bundle also contains `Procfile` and `start.sh`. Analytics is not deployed.
 
 For deployment, rollback, monitoring, and GCP decommissioning, see [AWS Elastic Beanstalk Deployment Runbook](docs/aws-elastic-beanstalk.md).
-
 

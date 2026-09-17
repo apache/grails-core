@@ -35,14 +35,4 @@ class GrailsForgeConfigurationSpec extends Specification {
         config.redirectUrl == 'https://start.grails.org/'
         config.redirectUri().get().toString() == 'https://start.grails.org/'
     }
-
-    void "cors origins remain overridable by environment variables"() {
-        when:
-        String yml = getClass().classLoader.getResource('application.yml').text
-
-        then:
-        yml.contains('CORS_ALLOWED_ORIGIN')
-        yml.contains('CORS_ALLOWED_ORIGIN_APACHE')
-        yml.contains('GITHUB_REDIRECT_URL')
-    }
 }

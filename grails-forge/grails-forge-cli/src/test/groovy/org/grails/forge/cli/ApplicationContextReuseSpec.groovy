@@ -16,19 +16,33 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+package org.grails.forge.cli
 
-package org.grails.forge
-
-import org.grails.forge.fixture.ContextFixture
-import org.grails.forge.fixture.ProjectFixture
-import org.springframework.context.ApplicationContext
-import spock.lang.AutoCleanup
-import spock.lang.Shared
+import org.grails.forge.ForgeContexts
+import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import spock.lang.Specification
 
-abstract class ApplicationContextSpec extends Specification implements ProjectFixture, ContextFixture {
+class ApplicationContextReuseSpec extends Specification {
 
-    @Shared
-    @AutoCleanup
-    ApplicationContext beanContext = ForgeContexts.create()
+    void "execute reuses a live context without closing it"() {
+        given:
+        AnnotationConfigApplicationContext context = ForgeContexts.create()
+
+        when:
+        int first = Application.execute(context, ['--help'] as String[])
+        int second = Application.execute(context, ['create-app', '--help'] as String[])
+
+        then:
+        first == 0
+        second == 0
+        context.active
+
+        cleanup:
+        context.close()
+    }
+
+    void "one-shot execute still starts and closes its own context"() {
+        expect:
+        Application.execute(['--help'] as String[]) == 0
+    }
 }

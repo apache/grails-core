@@ -226,6 +226,60 @@ class ForgeApiIntegrationSpec extends Specification {
         json._links.self.href.startsWith('https://public.example')
     }
 
+    void "GET / with Accept text/html permanently redirects to the bound UI URL"() {
+        when:
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://127.0.0.1:${serverPort}/"))
+                .timeout(Duration.ofSeconds(120))
+                .header('Accept', 'text/html')
+                .GET()
+                .build()
+        HttpResponse<byte[]> response = HttpClient.newBuilder()
+                .followRedirects(HttpClient.Redirect.NEVER)
+                .build()
+                .send(request, HttpResponse.BodyHandlers.ofByteArray())
+
+        then:
+        response.statusCode() == 301
+        response.headers().firstValue('Location').orElse('').startsWith('https://start.grails.org')
+    }
+
+    void "CORS allowed origins have placeholders resolved"() {
+        expect:
+        grailsCorsConfiguration.corsConfigurations['/**'].allowedOrigins.every { String origin ->
+            !origin.contains('${')
+        }
+    }
+
+    void "OpenAPI document describes the public generator paths"() {
+        when:
+        Map response = get('/v3/api-docs')
+        Map spec = json(response)
+
+        then:
+        response.status == 200
+        response.contentType.startsWith('application/json')
+        spec.openapi
+        spec.paths.keySet().containsAll([
+                '/versions',
+                '/application-types',
+                '/create/{type}/{name}',
+                '/preview/{type}/{name}',
+                '/diff/{type}/{name}',
+                '/select-options'
+        ])
+    }
+
+    void "Swagger UI and RapiDoc are served"() {
+        expect:
+        get('/swagger-ui/index.html').status == 200
+        get('/swagger-ui/index.html').contentType.startsWith('text/html')
+        text(get('/swagger-ui/index.html')).contains('/v3/api-docs')
+        get('/rapidoc/index.html').status == 200
+        get('/rapidoc/index.html').contentType.startsWith('text/html')
+        text(get('/rapidoc/index.html')).contains('/v3/api-docs')
+    }
+
     private Map get(String path, Map headers = [:]) {
         exchange('GET', path, headers)
     }

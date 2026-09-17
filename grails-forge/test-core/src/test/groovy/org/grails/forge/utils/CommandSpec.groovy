@@ -56,7 +56,7 @@ abstract class CommandSpec extends Specification {
     File dir
 
     void setupSpec() {
-        applicationContext = ForgeContexts.create(getConfiguration())
+        applicationContext = ForgeContexts.create()
         testKit = Files.createTempDirectory("${tempDirectoryPrefix}TestKit").toFile()
         gradleRunner.withTestKitDir(testKit)
     }
@@ -68,10 +68,6 @@ abstract class CommandSpec extends Specification {
     void cleanup() {
         dir.deleteDir()
         testKit.deleteDir()
-    }
-
-    Map<String, Object> getConfiguration() {
-        return Collections.EMPTY_MAP
     }
 
     BuildResult executeGradle(String command) {

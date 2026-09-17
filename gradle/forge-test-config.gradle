@@ -39,10 +39,14 @@ boolean forgeTestsEnabled = !['skipTests', 'skipForgeTests'].any { project.hasPr
 
 tasks.withType(Test).configureEach { Test testTask ->
     if (forgeTestsEnabled) {
-        testTask.dependsOn(
-                ':publishAllPublicationsToTestCaseMavenRepoRepository',
-                gradle.includedBuild('grails-gradle').task(':publishAllPublicationsToTestCaseMavenRepoRepository')
-        )
+        boolean forgeTestsNeedLocalMaven = project.findProperty('forgeTestsNeedLocalMaven') == true
+        if (forgeTestsNeedLocalMaven) {
+            testTask.dependsOn(
+                    ':publishAllPublicationsToTestCaseMavenRepoRepository',
+                    gradle.includedBuild('grails-gradle').task(':publishAllPublicationsToTestCaseMavenRepoRepository')
+            )
+            testTask.environment('GRAILS_REPO_URL', uri(rootProject.layout.projectDirectory.dir('build/local-maven')))
+        }
     }
 
     // Honor DO_NOT_CACHE_TESTS=1 so developers can repeatedly invoke the same test command
@@ -59,12 +63,11 @@ tasks.withType(Test).configureEach { Test testTask ->
         showStackTraces = true
     }
 
-    environment('GRAILS_REPO_URL', uri(rootProject.layout.projectDirectory.dir('build/local-maven')))
+    maxHeapSize = '2G'
     jvmArgs('-Duser.country=US', '-Duser.language=en',
             '--add-opens', 'java.base/java.lang=ALL-UNNAMED')
     forkEvery = 100
     maxParallelForks = rootProject.ext.configuredTestParallel
-    maxHeapSize = '2G'
 
     useJUnitPlatform()
 }

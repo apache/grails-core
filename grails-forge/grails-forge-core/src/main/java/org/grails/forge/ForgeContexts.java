@@ -19,11 +19,6 @@
 package org.grails.forge;
 
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-import org.springframework.core.env.ConfigurableEnvironment;
-import org.springframework.core.env.MapPropertySource;
-import org.springframework.core.env.StandardEnvironment;
-
-import java.util.Map;
 
 public final class ForgeContexts {
 
@@ -31,16 +26,7 @@ public final class ForgeContexts {
     }
 
     public static AnnotationConfigApplicationContext create() {
-        return create(Map.of());
-    }
-
-    public static AnnotationConfigApplicationContext create(Map<String, Object> configuration) {
         AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
-        if (configuration != null && !configuration.isEmpty()) {
-            ConfigurableEnvironment environment = new StandardEnvironment();
-            environment.getPropertySources().addFirst(new MapPropertySource("forge-test", configuration));
-            context.setEnvironment(environment);
-        }
         context.register(ForgeCoreConfiguration.class);
         context.refresh();
         return context;

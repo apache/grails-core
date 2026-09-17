@@ -85,7 +85,7 @@ abstract class WriteGrailsVersionInfoTask extends DefaultTask {
         try {
             pom = new XmlSlurper().parse(pomFile)
         } catch (IOException | SAXException | ParserConfigurationException e) {
-            new GradleException("Unable to parse BOM publication file: ${pomFile.absolutePath}", e)
+            throw new GradleException("Unable to parse BOM publication file: ${pomFile.absolutePath}", e)
         }
 
         TreeMap<String, String> props = []

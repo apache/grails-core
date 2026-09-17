@@ -62,6 +62,9 @@ public class Application extends BaseCommand implements Callable<Integer> {
 
     private static Boolean interactiveShell = false;
 
+    // Registration point for code-gen commands: they take CodeGenConfig in their
+    // constructor and are not Spring beans, so a new command must be listed here
+    // as well as written.
     private static final List<Class<? extends CodeGenCommand>> CODE_GEN_COMMANDS = List.of(
             org.grails.forge.cli.command.CreateControllerCommand.class,
             org.grails.forge.cli.command.CreateServiceCommand.class,
@@ -83,26 +86,25 @@ public class Application extends BaseCommand implements Callable<Integer> {
 
     public static void main(String[] args) {
         if (args.length == 0) {
-            CommandLine commandLine = createCommandLine();
             Application.interactiveShell = true;
-            new InteractiveShell(commandLine, Application::execute, EXCEPTION_HANDLER).start();
+            try (AnnotationConfigApplicationContext beanContext = ForgeContexts.create()) {
+                CommandLine commandLine = createCommandLine(beanContext, true);
+                new InteractiveShell(commandLine, commandArgs -> execute(beanContext, commandArgs), EXCEPTION_HANDLER).start();
+            }
         } else {
             System.exit(execute(args));
         }
     }
 
-    static CommandLine createCommandLine() {
-        boolean noOpConsole = Application.interactiveShell;
+    static int execute(String[] args) {
         try (AnnotationConfigApplicationContext beanContext = ForgeContexts.create()) {
-            return createCommandLine(beanContext, noOpConsole);
+            return execute(beanContext, args);
         }
     }
 
-    static int execute(String[] args) {
+    static int execute(AnnotationConfigApplicationContext beanContext, String[] args) {
         boolean noOpConsole = args.length > 0 && args[0].startsWith("update-cli-config");
-        try (AnnotationConfigApplicationContext beanContext = ForgeContexts.create()) {
-            return createCommandLine(beanContext, noOpConsole).execute(args);
-        }
+        return createCommandLine(beanContext, noOpConsole).execute(args);
     }
 
     private static CommandLine createCommandLine(AnnotationConfigApplicationContext beanContext, boolean noOpConsole) {
