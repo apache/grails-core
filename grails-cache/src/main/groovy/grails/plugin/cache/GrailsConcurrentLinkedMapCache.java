@@ -20,10 +20,13 @@ package grails.plugin.cache;
 
 import java.io.Serializable;
 import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
 
-import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 
 import org.springframework.cache.support.SimpleValueWrapper;
 
@@ -35,7 +38,8 @@ public class GrailsConcurrentLinkedMapCache implements GrailsCache {
     private static final Object NULL_HOLDER = new NullHolder();
     private String name;
     private long capacity;
-    private final ConcurrentLinkedHashMap<Object, Object> store;
+    private final Cache<Object, Object> caffeineStore;
+    private final ConcurrentMap<Object, Object> store;
     private final boolean allowNullValues;
 
     /**
@@ -49,11 +53,10 @@ public class GrailsConcurrentLinkedMapCache implements GrailsCache {
         this.name = name;
         this.capacity = capacity;
         this.allowNullValues = allowNullValues;
-        // Workaround: using explicit type arguments to prevent groovydoc error (#53)
-        // Replace with diamond operator once a fix for GROOVY-8628 is included in groovy dependency
-        this.store = new ConcurrentLinkedHashMap.Builder<>()
-            .maximumWeightedCapacity(capacity)
+        this.caffeineStore = Caffeine.newBuilder()
+            .maximumSize(capacity)
             .build();
+        this.store = caffeineStore.asMap();
     }
 
     /**
@@ -67,7 +70,7 @@ public class GrailsConcurrentLinkedMapCache implements GrailsCache {
     }
 
     public final long getCapacity() {
-        return this.store.capacity();
+        return this.capacity;
     }
 
     @Override
@@ -81,6 +84,7 @@ public class GrailsConcurrentLinkedMapCache implements GrailsCache {
     }
 
     public final int getSize() {
+        this.caffeineStore.cleanUp();
         return this.store.size();
     }
 
@@ -114,7 +118,12 @@ public class GrailsConcurrentLinkedMapCache implements GrailsCache {
     }
 
     public Collection<Object> getHottestKeys() {
-        return this.store.descendingKeySet();
+        Optional<com.github.benmanes.caffeine.cache.Policy.Eviction<Object, Object>> eviction = this.caffeineStore.policy().eviction();
+        if (eviction.isPresent()) {
+            int limit = capacity > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) capacity;
+            return new LinkedHashSet<>(eviction.get().hottest(limit).keySet());
+        }
+        return this.store.keySet();
     }
 
     @Override
@@ -123,7 +132,7 @@ public class GrailsConcurrentLinkedMapCache implements GrailsCache {
     }
 
     public ValueWrapper putIfAbsent(Object key, Object value) {
-        Object existing = this.store.putIfAbsent(key, value);
+        Object existing = this.store.putIfAbsent(key, toStoreValue(value));
         return toWrapper(existing);
     }
 
