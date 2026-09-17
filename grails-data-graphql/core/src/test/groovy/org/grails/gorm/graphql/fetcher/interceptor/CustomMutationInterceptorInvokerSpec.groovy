@@ -20,39 +20,19 @@
 package org.grails.gorm.graphql.fetcher.interceptor
 
 import graphql.schema.DataFetchingEnvironment
-import org.grails.gorm.graphql.fetcher.GraphQLDataFetcherType
 import org.grails.gorm.graphql.interceptor.GraphQLFetcherInterceptor
 import spock.lang.Specification
 
-class MutationInterceptorInvokerSpec extends Specification {
+class CustomMutationInterceptorInvokerSpec extends Specification {
 
-    void "test invoke calls onMutation and returns its result"() {
-        given:
+    void "test invoke"() {
         GraphQLFetcherInterceptor interceptor = Mock(GraphQLFetcherInterceptor)
-        DataFetchingEnvironment environment = Mock(DataFetchingEnvironment) {
-            getFields() >> []
-        }
+        DataFetchingEnvironment environment = Mock(DataFetchingEnvironment)
 
         when:
-        boolean result = new MutationInterceptorInvoker().invoke(interceptor, environment, GraphQLDataFetcherType.CREATE)
+        new CustomMutationInterceptorInvoker().invoke(interceptor, 'foo', environment)
 
         then:
-        1 * interceptor.onMutation(environment, GraphQLDataFetcherType.CREATE) >> true
-        result
-    }
-
-    void "test invoke returns false when the interceptor prevents execution"() {
-        given:
-        GraphQLFetcherInterceptor interceptor = Mock(GraphQLFetcherInterceptor)
-        DataFetchingEnvironment environment = Mock(DataFetchingEnvironment) {
-            getFields() >> []
-        }
-
-        when:
-        boolean result = new MutationInterceptorInvoker().invoke(interceptor, environment, GraphQLDataFetcherType.UPDATE)
-
-        then:
-        1 * interceptor.onMutation(environment, GraphQLDataFetcherType.UPDATE) >> false
-        !result
+        1 * interceptor.onCustomMutation('foo', environment)
     }
 }
