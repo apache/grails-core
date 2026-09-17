@@ -65,6 +65,11 @@ dependencies {
     api 'org.springframework.boot:spring-boot-web-server'
     api 'org.springframework:spring-core'
     api 'org.springframework:spring-tx'
+    // JtaTransactionManager (referenced by ChainedTransactionManagerPostProcessor) declares a
+    // constructor taking jakarta.transaction.UserTransaction - Groovy's static compiler resolves
+    // full member signatures of referenced classes, unlike javac's separate-compilation model, so
+    // this must be present on the compile classpath even though nothing here uses JTA directly.
+    compileOnly 'jakarta.transaction:jakarta.transaction-api'
     api 'org.springframework:spring-beans'
     api 'org.springframework:spring-context'
     api 'org.springframework.boot:spring-boot-autoconfigure'

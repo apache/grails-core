@@ -36,11 +36,17 @@ import org.grails.datastore.gorm.events.AutoTimestampEventListener
 import org.grails.datastore.mapping.config.Property
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.engine.EntityAccess
+import org.grails.datastore.mapping.engine.event.PreInsertEvent
+import org.grails.datastore.mapping.engine.event.PreUpdateEvent
+import org.grails.datastore.mapping.engine.event.ValidationEvent
 import org.grails.datastore.mapping.model.ClassMapping
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.PropertyMapping
+import org.springframework.beans.factory.NoSuchBeanDefinitionException
+import org.springframework.context.ApplicationContext
+import org.springframework.context.ApplicationEvent
 
 class AutoTimestampEventListenerSpec extends Specification {
 
@@ -633,6 +639,105 @@ class AutoTimestampEventListenerSpec extends Specification {
         updated == [lastModifiedBy: 'testUser']
     }
 
+    void "supportsEventType returns true for PreInsertEvent and PreUpdateEvent and false otherwise"() {
+        expect:
+        listener.supportsEventType(PreInsertEvent)
+        listener.supportsEventType(PreUpdateEvent)
+        !listener.supportsEventType(ValidationEvent)
+        !listener.supportsEventType(ApplicationEvent)
+    }
+
+    void "onPersistenceEvent ignores events with no entity"() {
+        given:
+        def event = new PreInsertEvent(Stub(Datastore), (PersistentEntity) null, (EntityAccess) null)
+
+        when:
+        listener.onPersistenceEvent(event)
+
+        then:
+        noExceptionThrown()
+    }
+
+    void "onPersistenceEvent dispatches a PreInsertEvent to beforeInsert"() {
+        given:
+        def applied = new ConcurrentHashMap<String, Object>()
+        def event = new PreInsertEvent(Stub(Datastore), entityFor(Foo), recordingAccess(applied))
+
+        when:
+        listener.onPersistenceEvent(event)
+
+        then:
+        applied.keySet() == BOTH_TIMESTAMPS
+    }
+
+    void "onPersistenceEvent dispatches a PreUpdateEvent to beforeUpdate"() {
+        given:
+        def applied = new ConcurrentHashMap<String, Object>()
+        def event = new PreUpdateEvent(Stub(Datastore), entityFor(Foo), recordingAccess(applied))
+
+        when:
+        listener.onPersistenceEvent(event)
+
+        then:
+        applied.keySet() == LAST_UPDATED_ONLY
+    }
+
+    void "setApplicationContext looks up an AuditorAware bean and installs it"() {
+        given:
+        def auditorAware = [getCurrentAuditor: { -> Optional.of('ctxUser') }] as AuditorAware
+        def applicationContext = Stub(ApplicationContext) {
+            getBean(AuditorAware) >> auditorAware
+        }
+
+        when:
+        listener.setApplicationContext(applicationContext)
+
+        then:
+        listener.auditorAware.is(auditorAware)
+    }
+
+    void "setApplicationContext swallows a BeansException and leaves any existing auditorAware untouched"() {
+        given:
+        def existing = [getCurrentAuditor: { -> Optional.empty() }] as AuditorAware
+        listener.setAuditorAware(existing)
+        def applicationContext = Stub(ApplicationContext) {
+            getBean(AuditorAware) >> { throw new NoSuchBeanDefinitionException(AuditorAware) }
+        }
+
+        when:
+        listener.setApplicationContext(applicationContext)
+
+        then:
+        noExceptionThrown()
+        listener.auditorAware.is(existing)
+    }
+
+    void "getTimestampProvider defaults to a DefaultTimestampProvider and setTimestampProvider overrides it"() {
+        expect:
+        listener.timestampProvider instanceof DefaultTimestampProvider
+
+        when:
+        def custom = new DefaultTimestampProvider()
+        listener.setTimestampProvider(custom)
+
+        then:
+        listener.timestampProvider.is(custom)
+    }
+
+    void "getAuditorAware reflects the value installed by setAuditorAware"() {
+        given:
+        def auditorAware = [getCurrentAuditor: { -> Optional.empty() }] as AuditorAware
+
+        expect:
+        listener.auditorAware == null
+
+        when:
+        listener.setAuditorAware(auditorAware)
+
+        then:
+        listener.auditorAware.is(auditorAware)
+    }
+
     private PersistentEntity auditedEntity() {
         PersistentEntity entity = null
         PersistentProperty createdBy = auditedProperty('createdBy') { -> entity }
@@ -677,6 +782,7 @@ class AutoTimestampEventListenerSpec extends Specification {
 
     private static EntityAccess recordingAccess(Map<String, Object> applied) {
         [
+                getEntity       : { -> null },
                 getPropertyValue: { String name -> null },
                 getPropertyType : { String name -> Date },
                 setProperty     : { String name, Object value -> applied.put(name, value) }

@@ -1,0 +1,74 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.grails.web.converters.marshaller.json
+
+import java.text.Format
+import java.time.format.DateTimeFormatter
+
+import groovy.transform.CompileStatic
+
+import grails.converters.JSON
+import org.grails.web.converters.exceptions.ConverterException
+import org.grails.web.converters.marshaller.ObjectMarshaller
+import org.grails.web.json.JSONException
+
+/**
+ * JSON ObjectMarshaller which converts a Calendar Object to an RFC 3339 / ISO 8601
+ * UTC instant string (e.g. {@code 2024-06-15T14:30:45.123Z}).
+ *
+ * @since 7.0
+ */
+@CompileStatic
+class CalendarMarshaller implements ObjectMarshaller<JSON> {
+
+    private final Format legacyFormatter
+
+    /**
+     * Constructor with a custom formatter.
+     * @param formatter the formatter
+     */
+    CalendarMarshaller(Format formatter) {
+        this.legacyFormatter = formatter
+    }
+
+    /**
+     * Default constructor — uses {@link DateTimeFormatter#ISO_INSTANT}.
+     */
+    CalendarMarshaller() {
+        this(null)
+    }
+
+    boolean supports(Object object) {
+        return object instanceof Calendar
+    }
+
+    void marshalObject(Object object, JSON converter) throws ConverterException {
+        try {
+            Calendar calendar = (Calendar) object
+            String formatted = legacyFormatter != null ?
+                    legacyFormatter.format(calendar.getTime()) :
+                    DateTimeFormatter.ISO_INSTANT.format(calendar.toInstant())
+            converter.getWriter().value(formatted)
+        }
+        catch (JSONException e) {
+            throw new ConverterException(e)
+        }
+    }
+
+}

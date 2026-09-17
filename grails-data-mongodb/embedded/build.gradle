@@ -56,10 +56,13 @@ dependencies {
         // impl: Logger, LoggerFactory
     }
 
-    // This module is written in Java so that a plain Spring Boot application can use it,
-    // but every published module still produces a groovydoc jar, and groovydoc needs
-    // Groovy on the compile classpath to infer its own.
-    compileOnly 'org.apache.groovy:groovy'
+    implementation 'org.apache.groovy:groovy'
+
+    // mongo-java-server's API names netty types (MongoServer.bind returns a netty channel's
+    // address, for instance) but only carries netty at runtime. javac never had to resolve
+    // them; the Groovy compiler reflects over the whole class to pick an overload, so netty
+    // has to be visible at compile time. Consumers still get it transitively at runtime.
+    compileOnly 'io.netty:netty-transport'
 
     // Flapdoodle runs a real mongod but pulls in jgrapht, offered under LGPL-2.1 or
     // EPL-2.0, which an Apache release should not require. Applications that want a real

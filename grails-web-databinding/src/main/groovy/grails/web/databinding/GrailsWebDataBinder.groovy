@@ -545,7 +545,12 @@ class GrailsWebDataBinder extends SimpleDataBinder {
                                 }
                             }
                             if (persistentInstance == null) {
-                                if (item == null || referencedType.isAssignableFrom(item.getClass())) {
+                                // Evaluated into a local rather than tested inline: inside the true
+                                // branch of `item == null || ...` the static type checker narrows
+                                // `item` to the null type, and `itemsWhichNeedBinding << item` then
+                                // fails to resolve ArrayList#leftShift(void).
+                                boolean alreadyElementType = item == null || referencedType.isAssignableFrom(item.getClass())
+                                if (alreadyElementType) {
                                     // Already of the element type, so there is nothing to instantiate
                                     // and nothing to bind into. A raw collection always lands here:
                                     // Basic#componentType falls back to Object.class when a property

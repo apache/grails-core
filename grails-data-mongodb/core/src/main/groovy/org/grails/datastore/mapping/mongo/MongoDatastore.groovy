@@ -1,0 +1,1382 @@
+/* Copyright (C) 2010-2025 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.grails.datastore.mapping.mongo
+
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit
+
+import com.mongodb.MongoClientSettings
+import com.mongodb.MongoCommandException
+import com.mongodb.client.MongoClient
+import com.mongodb.client.MongoIterable
+import com.mongodb.client.model.IndexOptions
+import com.mongodb.connection.ClusterType
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+import jakarta.annotation.PreDestroy
+import jakarta.persistence.FlushModeType
+import org.bson.Document
+import org.bson.codecs.Codec
+import org.bson.codecs.configuration.CodecProvider
+import org.bson.codecs.configuration.CodecRegistries
+import org.bson.codecs.configuration.CodecRegistry
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.MessageSource
+import org.springframework.context.SmartLifecycle
+import org.springframework.context.support.StaticMessageSource
+import org.springframework.core.env.PropertyResolver
+import org.springframework.transaction.PlatformTransactionManager
+
+import grails.gorm.multitenancy.Tenants
+import grails.util.GrailsMessageSourceUtils
+import org.grails.datastore.bson.codecs.CodecExtensions
+import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.gorm.GormInstanceApi
+import org.grails.datastore.gorm.GormValidationApi
+import org.grails.datastore.gorm.events.AutoTimestampEventListener
+import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher
+import org.grails.datastore.gorm.events.DefaultApplicationEventPublisher
+import org.grails.datastore.gorm.events.DomainEventListener
+import org.grails.datastore.gorm.mongo.MongoGormEnhancer
+import org.grails.datastore.gorm.mongo.api.MongoStaticApi
+import org.grails.datastore.gorm.multitenancy.MultiTenantEventListener
+import org.grails.datastore.gorm.utils.ClasspathEntityScanner
+import org.grails.datastore.gorm.validation.constraints.MappingContextAwareConstraintFactory
+import org.grails.datastore.gorm.validation.constraints.builtin.UniqueConstraint
+import org.grails.datastore.gorm.validation.constraints.registry.ConstraintRegistry
+import org.grails.datastore.gorm.validation.listener.ValidationEventListener
+import org.grails.datastore.gorm.validation.registry.support.ValidatorRegistries
+import org.grails.datastore.mapping.config.Settings
+import org.grails.datastore.mapping.core.AbstractDatastore
+import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.core.DatastoreUtils
+import org.grails.datastore.mapping.core.Session
+import org.grails.datastore.mapping.core.StatelessDatastore
+import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.core.connections.ConnectionSources
+import org.grails.datastore.mapping.core.connections.ConnectionSourcesInitializer
+import org.grails.datastore.mapping.core.connections.ConnectionSourcesListener
+import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport
+import org.grails.datastore.mapping.core.connections.DefaultConnectionSource
+import org.grails.datastore.mapping.core.connections.InMemoryConnectionSources
+import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
+import org.grails.datastore.mapping.core.connections.SingletonConnectionSources
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException
+import org.grails.datastore.mapping.model.ClassMapping
+import org.grails.datastore.mapping.model.EmbeddedPersistentEntity
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.PersistentProperty
+import org.grails.datastore.mapping.model.PropertyMapping
+import org.grails.datastore.mapping.mongo.config.MongoAttribute
+import org.grails.datastore.mapping.mongo.config.MongoCollection
+import org.grails.datastore.mapping.mongo.config.MongoMappingContext
+import org.grails.datastore.mapping.mongo.config.MongoSettings
+import org.grails.datastore.mapping.mongo.connections.MongoConnectionSourceFactory
+import org.grails.datastore.mapping.mongo.connections.MongoConnectionSourceSettings
+import org.grails.datastore.mapping.mongo.connections.MongoConnectionSourceSettingsBuilder
+import org.grails.datastore.mapping.mongo.engine.codecs.PersistentEntityCodec
+import org.grails.datastore.mapping.multitenancy.AllTenantsResolver
+import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
+import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
+import org.grails.datastore.mapping.multitenancy.TenantResolver
+import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
+import org.grails.datastore.mapping.transactions.DatastoreTransactionManager
+import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
+import org.grails.datastore.mapping.validation.ValidatorRegistry
+
+/**
+ * A Datastore implementation for the Mongo document store.
+ *
+ * @author Graeme Rocher
+ * @since 1.0
+ */
+@CompileStatic
+class MongoDatastore extends AbstractDatastore implements MappingContext.Listener, Closeable, StatelessDatastore, MultipleConnectionSourceCapableDatastore, MultiTenantCapableDatastore<MongoClient, MongoConnectionSourceSettings>, TransactionCapableDatastore, SmartLifecycle {
+
+    public static final String SETTING_DATABASE_NAME = MongoSettings.SETTING_DATABASE_NAME
+    public static final String SETTING_CONNECTION_STRING = MongoSettings.SETTING_CONNECTION_STRING
+    public static final String SETTING_URL = MongoSettings.SETTING_URL
+    public static final String SETTING_DEFAULT_MAPPING = MongoSettings.SETTING_DEFAULT_MAPPING
+    public static final String SETTING_OPTIONS = MongoSettings.SETTING_OPTIONS
+    public static final String SETTING_HOST = MongoSettings.SETTING_HOST
+    public static final String SETTING_PORT = MongoSettings.SETTING_PORT
+    public static final String SETTING_USERNAME = MongoSettings.SETTING_USERNAME
+    public static final String SETTING_PASSWORD = MongoSettings.SETTING_PASSWORD
+    public static final String SETTING_STATELESS = MongoSettings.SETTING_STATELESS
+    public static final String SETTING_ENGINE = MongoSettings.SETTING_ENGINE
+    public static final String INDEX_ATTRIBUTES = 'indexAttributes'
+
+    /**
+     * TTL index attribute. MongoDB's {@link IndexOptions#expireAfter(Long, TimeUnit)} is the only
+     * way to set a TTL, but it is a two-argument setter that {@link MongoConstants#mapToObject}
+     * cannot reach (that helper only invokes single-argument setters). So {@code expireAfterSeconds}
+     * is pulled out of the index attributes and applied explicitly. TTL indexes are single-field
+     * only — MongoDB silently ignores the option on a compound index.
+     */
+    public static final String INDEX_EXPIRE_AFTER_SECONDS = 'expireAfterSeconds'
+
+    /**
+     * Opt-in index attribute: when an index already exists on the same keys with conflicting
+     * options that cannot be reconciled in place (i.e. anything other than a TTL change), drop the
+     * existing index and recreate it with the declared options instead of just logging the conflict.
+     */
+    public static final String INDEX_RECREATE_ON_CONFLICT = 'recreateOnConflict'
+
+    /** MongoDB server error code for {@code IndexOptionsConflict}. */
+    private static final int INDEX_OPTIONS_CONFLICT_CODE = 85
+    public static final String CODEC_ENGINE = MongoConstants.CODEC_ENGINE
+
+    /**
+     * Below the web server's phase so the client outlives the requests using it, and above
+     * {@code EmbeddedMongoLifecycle.PHASE} so an embedded server outlives this client:
+     * Spring starts in ascending phase order and stops in descending.
+     */
+    public static final int LIFECYCLE_PHASE = -1000
+
+    /**
+     * Not final because {@link #start()} replaces it after a CRaC restore. Everything other
+     * than construction reaches it through {@link #getMongoClient()}, so a replacement is
+     * picked up without anything else having to be told.
+     */
+    protected volatile MongoClient mongo
+    protected final String defaultDatabase
+    protected final Map<PersistentEntity, String> mongoCollections = new ConcurrentHashMap<>()
+    protected final Map<PersistentEntity, String> mongoDatabases = new ConcurrentHashMap<>()
+    protected final boolean stateless
+    protected final boolean codecEngine
+    protected final boolean transactionsEnabled
+    private volatile Boolean transactionsSupported
+    private volatile boolean warnedTransactionsUnsupported = false
+    protected CodecRegistry codecRegistry
+    protected final ConfigurableApplicationEventPublisher eventPublisher
+    protected final PlatformTransactionManager transactionManager
+    protected final GormEnhancer gormEnhancer
+    protected final ConnectionSources<MongoClient, MongoConnectionSourceSettings> connectionSources
+    protected final FlushModeType defaultFlushMode
+    protected final Map<String, MongoDatastore> datastoresByConnectionSource = new LinkedHashMap<>()
+    protected final MultiTenancySettings.MultiTenancyMode multiTenancyMode
+    protected final TenantResolver tenantResolver
+    protected final AutoTimestampEventListener autoTimestampEventListener
+
+    private volatile boolean running = true
+
+    /**
+     * Configures a new {@link MongoDatastore} for the given arguments
+     *
+     * @param connectionSources The {@link ConnectionSources} to use
+     * @param eventPublisher The Spring ApplicationContext
+     * @param mappingContext The mapping context
+     */
+    MongoDatastore(final ConnectionSources<MongoClient, MongoConnectionSourceSettings> connectionSources, final MongoMappingContext mappingContext, final ConfigurableApplicationEventPublisher eventPublisher) {
+        super(mappingContext, connectionSources != null ? connectionSources.getBaseConfiguration() : null, null)
+        if (connectionSources == null) {
+            throw new IllegalArgumentException('Argument [connectionSources] cannot be null')
+        }
+        if (mappingContext == null) {
+            throw new IllegalArgumentException('Argument [mappingContext] cannot be null')
+        }
+
+        this.connectionSources = connectionSources
+
+        final ConnectionSource<MongoClient, MongoConnectionSourceSettings> defaultConnectionSource = connectionSources.getDefaultConnectionSource()
+        MongoConnectionSourceSettings settings = defaultConnectionSource.getSettings()
+        MultiTenancySettings multiTenancySettings = settings.getMultiTenancy()
+
+        this.mongo = defaultConnectionSource.getSource()
+        this.multiTenancyMode = multiTenancySettings.getMode()
+        this.eventPublisher = eventPublisher
+        this.defaultDatabase = settings.getDatabase()
+        this.defaultFlushMode = settings.getFlushMode()
+        this.stateless = settings.isStateless()
+        this.codecEngine = settings.getEngine() == MongoConstants.CODEC_ENGINE
+        this.transactionsEnabled = settings.isTransactional()
+        codecRegistry = CodecRegistries.fromRegistries(
+                CodecRegistries.fromProviders(new CodecExtensions(), new PersistentEntityCodeRegistry()),
+                mappingContext.getCodecRegistry(),
+                MongoClientSettings.getDefaultCodecRegistry()
+        )
+
+        DatastoreTransactionManager datastoreTransactionManager = new DatastoreTransactionManager()
+        datastoreTransactionManager.setDatastore(this)
+        transactionManager = datastoreTransactionManager
+        for (PersistentEntity entity : mappingContext.getPersistentEntities()) {
+            registerEntity(entity)
+        }
+        if (!(connectionSources instanceof SingletonConnectionSources)) {
+            final MongoDatastore parent = this
+            Iterable<ConnectionSource<MongoClient, MongoConnectionSourceSettings>> allConnectionSources = connectionSources.getAllConnectionSources()
+            for (final ConnectionSource<MongoClient, MongoConnectionSourceSettings> connectionSource : allConnectionSources) {
+                SingletonConnectionSources<MongoClient, MongoConnectionSourceSettings> singletonConnectionSources = new SingletonConnectionSources<MongoClient, MongoConnectionSourceSettings>(connectionSource, connectionSources.getBaseConfiguration())
+                MongoDatastore childDatastore
+
+                if (ConnectionSource.DEFAULT == connectionSource.getName()) {
+                    childDatastore = this
+                } else {
+                    childDatastore = createChildDatastore(mappingContext, eventPublisher, parent, singletonConnectionSources)
+                }
+                datastoresByConnectionSource.put(connectionSource.getName(), childDatastore)
+            }
+
+            connectionSources.addListener(new ConnectionSourcesListener<MongoClient, MongoConnectionSourceSettings>() {
+                void newConnectionSource(final ConnectionSource<MongoClient, MongoConnectionSourceSettings> connectionSource) {
+                    final SingletonConnectionSources<MongoClient, MongoConnectionSourceSettings> singletonConnectionSources = new SingletonConnectionSources<MongoClient, MongoConnectionSourceSettings>(connectionSource, connectionSources.getBaseConfiguration())
+                    MongoDatastore childDatastore = createChildDatastore(mappingContext, eventPublisher, parent, singletonConnectionSources)
+                    datastoresByConnectionSource.put(connectionSource.getName(), childDatastore)
+                    registerAllEntitiesWithEnhancer()
+                }
+            })
+        }
+
+        if (multiTenancyMode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
+            final TenantResolver baseResolver = multiTenancySettings.getTenantResolver()
+            this.tenantResolver = new AllTenantsResolver() {
+                @Override
+                Iterable<Serializable> resolveTenantIds() {
+                    List<Serializable> ids = new ArrayList<>()
+                    MongoIterable<String> databaseNames = defaultConnectionSource.getSource().listDatabaseNames()
+                    for (String databaseName : databaseNames) {
+                        ids.add(databaseName)
+                    }
+                    return ids
+                }
+
+                @Override
+                Serializable resolveTenantIdentifier() throws TenantNotFoundException {
+                    return baseResolver.resolveTenantIdentifier()
+                }
+            }
+        } else {
+            this.tenantResolver = multiTenancySettings.getTenantResolver()
+        }
+
+        this.autoTimestampEventListener = new AutoTimestampEventListener(this)
+        registerEventListeners(this.eventPublisher)
+        this.gormEnhancer = initialize(settings)
+    }
+
+    @PackageScope
+    MongoDatastore createChildDatastore(MongoMappingContext mappingContext,
+                                        ConfigurableApplicationEventPublisher eventPublisher,
+                                        final MongoDatastore parent,
+                                        SingletonConnectionSources<MongoClient, MongoConnectionSourceSettings> singletonConnectionSources) {
+        return new MongoDatastore(singletonConnectionSources, mappingContext, eventPublisher) {
+            @Override
+            protected MongoGormEnhancer initialize(final MongoConnectionSourceSettings settings) {
+                super.buildIndex()
+                return null
+            }
+
+            @Override
+            MongoDatastore getDatastoreForConnection(String connectionName) {
+                if (connectionName == Settings.SETTING_DATASOURCE || connectionName == ConnectionSource.DEFAULT) {
+                    return parent
+                }
+                MongoDatastore mongoDatastore = parent.datastoresByConnectionSource.get(connectionName)
+                if (mongoDatastore == null) {
+                    throw new ConfigurationException('DataSource not found for name [' + connectionName + '] in configuration. Please check your multiple data sources configuration and try again.')
+                }
+                return mongoDatastore
+            }
+        }
+    }
+
+    /**
+     * Configures a new {@link MongoDatastore} for the given arguments
+     *
+     * @param connectionSources The {@link ConnectionSources} to use
+     * @param eventPublisher The Spring ApplicationContext
+     * @param classes The persistent classes
+     */
+    MongoDatastore(ConnectionSources<MongoClient, MongoConnectionSourceSettings> connectionSources, ConfigurableApplicationEventPublisher eventPublisher, Class... classes) {
+        this(connectionSources, createMappingContext(connectionSources, classes), eventPublisher)
+    }
+
+    /**
+     * Configures a new {@link MongoDatastore} for the given arguments
+     *
+     * @param mongoClient The {@link MongoClient} instance
+     * @param eventPublisher The Spring ApplicationContext
+     * @param mappingContext The mapping context
+     */
+    MongoDatastore(MongoClient mongoClient, PropertyResolver configuration, MongoMappingContext mappingContext, ConfigurableApplicationEventPublisher eventPublisher) {
+        // The client is supplied by the caller, so GORM must not close it (closeable = false).
+        this(createDefaultConnectionSources(mongoClient, configuration, mappingContext, false), mappingContext, eventPublisher)
+    }
+
+    /**
+     * Configures a new {@link MongoDatastore} for the given arguments
+     *
+     * @param mongoClient The {@link MongoClient} instance
+     * @param eventPublisher The Spring ApplicationContext
+     * @param classes The persistent classes
+     */
+    MongoDatastore(MongoClient mongoClient, PropertyResolver configuration, ConfigurableApplicationEventPublisher eventPublisher, Class... classes) {
+        this(mongoClient, configuration, createMappingContext(configuration, classes), eventPublisher)
+    }
+
+    /**
+     * Configures a new {@link MongoDatastore} for the given arguments
+     *
+     * @param mongoClient The {@link MongoClient} instance
+     * @param eventPublisher The Spring ApplicationContext
+     * @param packages The packages to scan
+     */
+    MongoDatastore(MongoClient mongoClient, PropertyResolver configuration, ConfigurableApplicationEventPublisher eventPublisher, Package... packages) {
+        this(mongoClient, configuration, createMappingContext(configuration, new ClasspathEntityScanner().scan(packages)), eventPublisher)
+    }
+
+    /**
+     * Configures a new {@link MongoDatastore} for the given arguments
+     *
+     * @param mongoClient The {@link MongoClient} instance
+     * @param classes The persistent classes
+     */
+    MongoDatastore(MongoClient mongoClient, PropertyResolver configuration, Class... classes) {
+        this(mongoClient, configuration, createMappingContext(configuration, classes), new DefaultApplicationEventPublisher())
+    }
+
+    /**
+     * Configures a new {@link MongoDatastore} for the given arguments
+     *
+     * @param mongoClient The {@link MongoClient} instance
+     * @param packages The packages to scan
+     */
+    MongoDatastore(MongoClient mongoClient, PropertyResolver configuration, Package... packages) {
+        this(mongoClient, configuration, createMappingContext(configuration, new ClasspathEntityScanner().scan(packages)), new DefaultApplicationEventPublisher())
+    }
+
+    /**
+     * Configures a new {@link MongoDatastore} for the given arguments
+     *
+     * @param mongoClient The {@link MongoClient} instance
+     * @param classes The persistent classes
+     */
+    MongoDatastore(MongoClient mongoClient, Class... classes) {
+        this(mongoClient, mapToPropertyResolver((Map) null), createMappingContext(mapToPropertyResolver((Map) null), classes), new DefaultApplicationEventPublisher())
+    }
+
+    /**
+     * Configures a new {@link MongoDatastore} for the given arguments
+     *
+     * @param clientOptions The {@link MongoClientSettings} instance
+     * @param configuration The configuration
+     * @param eventPublisher The Spring ApplicationContext
+     * @param mappingContext The mapping context
+     */
+    MongoDatastore(MongoClientSettings.Builder clientOptions, PropertyResolver configuration, MongoMappingContext mappingContext, ConfigurableApplicationEventPublisher eventPublisher) {
+        // GORM builds the client from the supplied options, so it owns it and must close it (closeable = true).
+        this(createDefaultConnectionSources(createMongoClient(configuration, clientOptions, mappingContext), configuration, mappingContext, true), mappingContext, eventPublisher)
+    }
+
+    /**
+     * Configures a new {@link MongoDatastore} for the given arguments
+     *
+     * @param clientOptions The {@link MongoClientSettings} instance
+     * @param configuration The configuration
+     * @param mappingContext The mapping context
+     */
+    MongoDatastore(MongoClientSettings.Builder clientOptions, PropertyResolver configuration, MongoMappingContext mappingContext) {
+        // GORM builds the client from the supplied options, so it owns it and must close it (closeable = true).
+        this(createDefaultConnectionSources(createMongoClient(configuration, clientOptions, mappingContext), configuration, mappingContext, true), mappingContext, new DefaultApplicationEventPublisher())
+    }
+
+    /**
+     * Configures a new {@link MongoDatastore} for the given arguments
+     *
+     * @param configuration The configuration for the datastore
+     * @param eventPublisher The Spring ApplicationContext
+     * @param mappingContext The mapping context
+     */
+    MongoDatastore(PropertyResolver configuration, MongoMappingContext mappingContext, ConfigurableApplicationEventPublisher eventPublisher) {
+        this(ConnectionSourcesInitializer.create(new MongoConnectionSourceFactory(), configuration), mappingContext, eventPublisher)
+    }
+
+    /**
+     * Configures a new {@link MongoDatastore} for the given arguments
+     *
+     * @param configuration The configuration for the datastore
+     * @param eventPublisher The Spring ApplicationContext
+     * @param connectionSourceFactory The connection source factory to use
+     * @param classes The persistent classes
+     */
+    MongoDatastore(PropertyResolver configuration, MongoConnectionSourceFactory connectionSourceFactory, ConfigurableApplicationEventPublisher eventPublisher, Class... classes) {
+        this(ConnectionSourcesInitializer.create(connectionSourceFactory, configuration), eventPublisher, classes)
+    }
+
+    /**
+     * Configures a new {@link MongoDatastore} for the given arguments
+     *
+     * @param configuration The configuration for the datastore
+     * @param eventPublisher The Spring ApplicationContext
+     * @param classes The persistent classes
+     */
+    MongoDatastore(PropertyResolver configuration, ConfigurableApplicationEventPublisher eventPublisher, Class... classes) {
+        this(configuration, new MongoConnectionSourceFactory(), eventPublisher, classes)
+    }
+
+    /**
+     * Configures a new {@link MongoDatastore} for the given arguments
+     *
+     * @param configuration The configuration for the datastore
+     * @param mappingContext The mapping context
+     */
+    MongoDatastore(PropertyResolver configuration, MongoMappingContext mappingContext) {
+        this(configuration, mappingContext, new DefaultApplicationEventPublisher())
+    }
+
+    /**
+     * Configures a new {@link MongoDatastore} for the given arguments
+     *
+     * @param configuration The configuration for the datastore
+     * @param classes The persistent classes
+     */
+    MongoDatastore(PropertyResolver configuration, Class... classes) {
+        this(configuration, new DefaultApplicationEventPublisher(), classes)
+    }
+
+    /**
+     * Configures a new {@link MongoDatastore} for the given arguments
+     *
+     * @param configuration The configuration
+     * @param eventPublisher The event publisher
+     * @param classes The persistent classes
+     */
+    MongoDatastore(Map<String, Object> configuration, ConfigurableApplicationEventPublisher eventPublisher, Class... classes) {
+        this(mapToPropertyResolver(configuration), eventPublisher, classes)
+    }
+
+    /**
+     * Configures a new {@link MongoDatastore} for the given arguments
+     *
+     * @param configuration The configuration
+     * @param classes The persistent classes
+     */
+    MongoDatastore(Map<String, Object> configuration, Class... classes) {
+        this(mapToPropertyResolver(configuration), new DefaultApplicationEventPublisher(), classes)
+    }
+
+    /**
+     * Creates a MongoDatastore with the given configuration
+     *
+     * @param configuration The configuration
+     */
+    MongoDatastore(Map<String, Object> configuration) {
+        this(configuration, new Class[0])
+    }
+
+    /**
+     * Configures a new {@link MongoDatastore} for the given arguments
+     *
+     * @param configuration The configuration
+     * @param mappingContext The {@link MongoMappingContext}
+     */
+    MongoDatastore(Map<String, Object> configuration, MongoMappingContext mappingContext) {
+        this(mapToPropertyResolver(configuration), mappingContext, new DefaultApplicationEventPublisher())
+    }
+
+    /**
+     * Configures a new {@link MongoDatastore} for the given arguments
+     *
+     * @param mappingContext The {@link MongoMappingContext}
+     */
+    MongoDatastore(MongoMappingContext mappingContext) {
+        this(mapToPropertyResolver((Map) null), mappingContext, new DefaultApplicationEventPublisher())
+    }
+
+    /**
+     * Configures a new {@link MongoDatastore} for the given arguments
+     *
+     * @param classes The persistent classes
+     */
+    MongoDatastore(Class... classes) {
+        this(mapToPropertyResolver((Map) null), classes)
+    }
+
+    /**
+     * Construct a Mongo datastore scanning the given packages
+     *
+     * @param packagesToScan The packages to scan
+     */
+    MongoDatastore(Package... packagesToScan) {
+        this(new ClasspathEntityScanner().scan(packagesToScan))
+    }
+
+    /**
+     * Construct a Mongo datastore scanning the given package
+     *
+     * @param packageToScan The packages to scan
+     */
+    MongoDatastore(Package packageToScan) {
+        this(new ClasspathEntityScanner().scan(packageToScan))
+    }
+
+    /**
+     * Construct a Mongo datastore scanning the given packages
+     *
+     * @param configuration The configuration
+     * @param packagesToScan The packages to scan
+     */
+    MongoDatastore(PropertyResolver configuration, Package... packagesToScan) {
+        this(configuration, new ClasspathEntityScanner().scan(packagesToScan))
+    }
+
+    /**
+     * Construct a Mongo datastore scanning the given packages
+     *
+     * @param configuration The configuration
+     * @param packagesToScan The packages to scan
+     */
+    MongoDatastore(Map<String, Object> configuration, Package... packagesToScan) {
+        this(DatastoreUtils.createPropertyResolver(configuration), packagesToScan)
+    }
+
+    /**
+     * Construct a Mongo datastore scanning the given packages
+     *
+     * @param configuration The configuration
+     * @param eventPublisher The event publisher
+     * @param packagesToScan The packages to scan
+     */
+    MongoDatastore(PropertyResolver configuration, ConfigurableApplicationEventPublisher eventPublisher, Package... packagesToScan) {
+        this(configuration, eventPublisher, new ClasspathEntityScanner().scan(packagesToScan))
+    }
+
+    /**
+     * @return The {@link ConnectionSources} for this datastore
+     */
+    ConnectionSources<MongoClient, MongoConnectionSourceSettings> getConnectionSources() {
+        return connectionSources
+    }
+
+    /**
+     * Builds the MongoDB index for this datastore
+     */
+    void buildIndex() {
+        for (PersistentEntity entity : getMappingContext().getPersistentEntities()) {
+            // Only create Mongo templates for entities that are mapped with Mongo
+            if (!entity.isExternal()) {
+                if (entity.isMultiTenant() && multiTenancyMode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
+                    continue
+                }
+
+                initializeIndices(entity)
+            }
+        }
+    }
+
+    /**
+     * @return The default flush mode
+     */
+    FlushModeType getDefaultFlushMode() {
+        return defaultFlushMode
+    }
+
+    /**
+     * @return The default database name
+     */
+    String getDefaultDatabase() {
+        return defaultDatabase
+    }
+
+    /**
+     * Sets any additional codec registries
+     *
+     * @param codecRegistries The {@link CodecRegistry} instances
+     */
+    @Autowired(required = false)
+    void setCodecRegistries(List<CodecRegistry> codecRegistries) {
+        this.codecRegistry = CodecRegistries.fromRegistries(
+                this.codecRegistry,
+                CodecRegistries.fromRegistries(codecRegistries))
+    }
+
+    /**
+     * Sets any additional codec providers
+     *
+     * @param codecProviders The {@link CodecProvider} instances
+     */
+    @Autowired(required = false)
+    void setCodecProviders(List<CodecProvider> codecProviders) {
+        this.codecRegistry = CodecRegistries.fromRegistries(
+                this.codecRegistry,
+                CodecRegistries.fromProviders(codecProviders))
+    }
+
+    /**
+     * Sets any additional codecs
+     *
+     * @param codecs The {@link Codec} instances
+     */
+    @Autowired(required = false)
+    void setCodecs(List<Codec<?>> codecs) {
+        this.codecRegistry = CodecRegistries.fromRegistries(
+                this.codecRegistry,
+                CodecRegistries.fromCodecs(codecs))
+    }
+
+    /**
+     * The message source used for validation messages
+     *
+     * @param messageSources The message source
+     */
+    @Autowired(required = false)
+    void setMessageSource(List<MessageSource> messageSources) {
+        setMessageSource(GrailsMessageSourceUtils.findPreferredMessageSource(messageSources))
+    }
+
+    void setMessageSource(MessageSource messageSource) {
+        if (messageSource != null) {
+            configureValidatorRegistry(connectionSources.getDefaultConnectionSource().getSettings(), getMappingContext(), messageSource)
+        }
+    }
+
+    /**
+     * @return The transaction manager
+     */
+    PlatformTransactionManager getTransactionManager() {
+        return transactionManager
+    }
+
+    /**
+     * @return The {@link CodecRegistry}
+     */
+    CodecRegistry getCodecRegistry() {
+        return codecRegistry
+    }
+
+    /**
+     * Obtains a {@link PersistentEntityCodec} for the given entity
+     *
+     * @param entity The entity
+     * @return The {@link PersistentEntityCodec}
+     */
+    PersistentEntityCodec getPersistentEntityCodec(PersistentEntity entity) {
+        if (entity instanceof EmbeddedPersistentEntity) {
+            return new PersistentEntityCodec(codecRegistry, entity)
+        }
+        return getPersistentEntityCodec(entity.getJavaClass())
+    }
+
+    /**
+     * Obtains a {@link PersistentEntityCodec} for the given entity
+     *
+     * @param entityClass The entity class
+     * @return The {@link PersistentEntityCodec}
+     */
+    PersistentEntityCodec getPersistentEntityCodec(Class entityClass) {
+        if (entityClass == null) {
+            throw new IllegalArgumentException('Argument [entityClass] cannot be null')
+        }
+
+        final PersistentEntity entity = getMappingContext().getPersistentEntity(entityClass.getName())
+        if (entity == null) {
+            throw new IllegalArgumentException('Argument [' + entityClass + '] is not an entity')
+        }
+
+        return (PersistentEntityCodec) getCodecRegistry().get(entity.getJavaClass())
+    }
+
+    /**
+     * @return The {@link ConfigurableApplicationEventPublisher} instance used by this datastore
+     */
+    @Override
+    ConfigurableApplicationEventPublisher getApplicationEventPublisher() {
+        return this.eventPublisher
+    }
+
+    /**
+     * @return The {@link MongoClient} instance
+     */
+    MongoClient getMongoClient() {
+        return mongo
+    }
+
+    /**
+     * Whether GORM should use real MongoDB multi-document transactions (a server-side
+     * {@code ClientSession}) for transactional operations. This is opt-in via
+     * {@code grails.mongodb.transactional} and additionally requires a replica set or sharded
+     * cluster; if a standalone topology is positively detected the feature is disabled (with a
+     * one-time warning) and GORM falls back to the legacy client-side flush behavior.
+     *
+     * @return {@code true} if server-side transactions should be used
+     * @since 8.0
+     */
+    boolean isTransactionsEnabled() {
+        if (!transactionsEnabled) {
+            return false
+        }
+        // Once the topology is positively known it does not change at runtime, so latch the result to
+        // avoid recomputing (and possibly flipping) on every transaction begin.
+        Boolean supported = transactionsSupported
+        if (supported != null) {
+            return supported
+        }
+        try {
+            ClusterType clusterType = mongo.getClusterDescription().getType()
+            switch (clusterType) {
+                case ClusterType.STANDALONE:
+                    transactionsSupported = Boolean.FALSE
+                    if (!warnedTransactionsUnsupported) {
+                        warnedTransactionsUnsupported = true
+                        LOG.warn('grails.mongodb.transactional is enabled but the connected MongoDB topology is standalone, ' +
+                                'which does not support multi-document transactions. Falling back to flush-only transaction behavior.')
+                    }
+                    return false
+                case ClusterType.REPLICA_SET:
+                case ClusterType.SHARDED:
+                case ClusterType.LOAD_BALANCED:
+                    transactionsSupported = Boolean.TRUE
+                    return true
+                default:
+                    // UNKNOWN: topology not discovered yet. Assume transactions are available for this
+                    // attempt without latching, so a later definitive determination can still apply.
+                    return true
+            }
+        } catch (RuntimeException e) {
+            LOG.debug('Could not determine MongoDB cluster topology for transaction support; assuming transactions are available: {}', e.getMessage(), e)
+            return true
+        }
+    }
+
+    String getDatabaseName(PersistentEntity entity) {
+        if (entity.isMultiTenant() && multiTenancyMode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
+            return Tenants.currentId(getClass()).toString()
+        }
+        final String databaseName = mongoDatabases.get(entity)
+        if (databaseName == null) {
+            mongoDatabases.put(entity, defaultDatabase)
+            return defaultDatabase
+        }
+        return databaseName
+    }
+
+    /**
+     * Gets the default collection name for the given entity
+     *
+     * @param entity The entity
+     * @return The collection name
+     */
+    String getCollectionName(PersistentEntity entity) {
+        final String collectionName = mongoCollections.get(entity)
+        if (collectionName == null) {
+            final String decapitalizedName = entity.isRoot() ? entity.getDecapitalizedName() : entity.getRootEntity().getDecapitalizedName()
+            mongoCollections.put(entity, decapitalizedName)
+            return decapitalizedName
+        }
+        return collectionName
+    }
+
+    /**
+     * Obtain the raw {@link com.mongodb.client.MongoCollection} for the given entity
+     *
+     * @param entity The entity
+     * @return The Mongo collection
+     */
+    com.mongodb.client.MongoCollection<Document> getCollection(PersistentEntity entity) {
+        return getMongoClient()
+                .getDatabase(getDatabaseName(entity))
+                .getCollection(getCollectionName(entity))
+                .withCodecRegistry(codecRegistry)
+    }
+
+    /**
+     * @return The mapping context
+     */
+    @Override
+    MongoMappingContext getMappingContext() {
+        return (MongoMappingContext) super.getMappingContext()
+    }
+
+    @Override
+    boolean isSchemaless() {
+        return true
+    }
+
+    protected void registerAllEntitiesWithEnhancer() {
+        for (PersistentEntity persistentEntity : getMappingContext().getPersistentEntities()) {
+            gormEnhancer.registerEntity(persistentEntity)
+        }
+    }
+
+    @Override
+    protected Session createSession(PropertyResolver connDetails) {
+        if (stateless) {
+            return createStatelessSession(connDetails)
+        }
+        if (codecEngine) {
+            return new MongoCodecSession(this, getMappingContext(), getApplicationEventPublisher(), false)
+        }
+        return new MongoSession(this, getMappingContext(), getApplicationEventPublisher(), false)
+    }
+
+    /**
+     * Runs the initialization sequence
+     * @param settings
+     */
+    protected MongoGormEnhancer initialize(final MongoConnectionSourceSettings settings) {
+        getMappingContext().addMappingContextListener(this)
+        initializeConverters(getMappingContext())
+
+        getMappingContext().addMappingContextListener(new MappingContext.Listener() {
+            @Override
+            void persistentEntityAdded(PersistentEntity entity) {
+                gormEnhancer.registerEntity(entity)
+                registerEntity(entity)
+            }
+        })
+
+        buildIndex()
+
+        return new MongoGormEnhancer(this, transactionManager, settings) {
+            @Override
+            protected <D> MongoStaticApi<D> getStaticApi(Class<D> cls, String qualifier) {
+                MongoDatastore mongoDatastore = getDatastoreForQualifier(cls, qualifier)
+                return new MongoStaticApi<D>(cls, mongoDatastore, createDynamicFinders(mongoDatastore), transactionManager)
+            }
+
+            @Override
+            protected <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, String qualifier) {
+                MongoDatastore mongoDatastore = getDatastoreForQualifier(cls, qualifier)
+
+                GormInstanceApi<D> instanceApi = new GormInstanceApi<D>(cls, mongoDatastore)
+                instanceApi.setFailOnError(getFailOnError())
+                instanceApi.setMarkDirty(getMarkDirty())
+                return instanceApi
+            }
+
+            @Override
+            protected <D> GormValidationApi<D> getValidationApi(Class<D> cls, String qualifier) {
+                MongoDatastore mongoDatastore = getDatastoreForQualifier(cls, qualifier)
+                return new GormValidationApi<D>(cls, mongoDatastore)
+            }
+
+            private <D> MongoDatastore getDatastoreForQualifier(Class<D> cls, String qualifier) {
+                String defaultConnectionSourceName = ConnectionSourcesSupport.getDefaultConnectionSourceName(getMappingContext().getPersistentEntity(cls.getName()))
+                if (defaultConnectionSourceName == ConnectionSource.ALL) {
+                    defaultConnectionSourceName = ConnectionSource.DEFAULT
+                }
+
+                boolean isDefaultQualifier = qualifier == ConnectionSource.DEFAULT
+                if (isDefaultQualifier && defaultConnectionSourceName == ConnectionSource.DEFAULT) {
+                    return MongoDatastore.this
+                }
+                String resolvedQualifier = qualifier
+                if (isDefaultQualifier) {
+                    resolvedQualifier = defaultConnectionSourceName
+                }
+                ConnectionSource<MongoClient, MongoConnectionSourceSettings> connectionSource = connectionSources.getConnectionSource(resolvedQualifier)
+                if (connectionSource == null) {
+                    throw new ConfigurationException('Invalid connection [' + defaultConnectionSourceName + '] configured for class [' + cls + ']')
+                }
+
+                return datastoresByConnectionSource.get(resolvedQualifier)
+            }
+        }
+    }
+
+    @Override
+    protected Session createStatelessSession(PropertyResolver connectionDetails) {
+        if (codecEngine) {
+            return new MongoCodecSession(this, getMappingContext(), getApplicationEventPublisher(), true)
+        }
+        return new MongoSession(this, getMappingContext(), getApplicationEventPublisher(), true)
+    }
+
+    protected void registerEventListeners(ConfigurableApplicationEventPublisher eventPublisher) {
+        eventPublisher.addApplicationListener(new DomainEventListener(this))
+        eventPublisher.addApplicationListener(autoTimestampEventListener)
+        eventPublisher.addApplicationListener(new ValidationEventListener(this))
+
+        if (multiTenancyMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
+            eventPublisher.addApplicationListener(new MultiTenantEventListener(this))
+        }
+    }
+
+    /**
+     * Indexes any properties that are mapped with index:true
+     *
+     * @param entity The entity
+     */
+    protected void initializeIndices(final PersistentEntity entity) {
+        final com.mongodb.client.MongoCollection<Document> collection = getCollection(entity)
+        final ClassMapping<MongoCollection> classMapping = (ClassMapping<MongoCollection>) entity.getMapping()
+        if (classMapping != null) {
+            final MongoCollection mappedForm = classMapping.getMappedForm()
+            if (mappedForm != null) {
+                List<MongoCollection.Index> indices = mappedForm.getIndices()
+                for (MongoCollection.Index index : indices) {
+                    createOrUpdateIndex(entity, collection, new Document(index.getDefinition()),
+                            index.getOptions(), 'with definition [' + index.getDefinition() + ']')
+                }
+
+                for (Map compoundIndex : mappedForm.getCompoundIndices()) {
+                    Map indexAttributes = null
+                    if (compoundIndex.containsKey(INDEX_ATTRIBUTES)) {
+                        Object o = compoundIndex.remove(INDEX_ATTRIBUTES)
+                        if (o instanceof Map) {
+                            indexAttributes = (Map) o
+                        }
+                    }
+                    Document indexDef = new Document((Map<String, Object>) compoundIndex)
+                    createOrUpdateIndex(entity, collection, indexDef, indexAttributes,
+                            'compound index with definition [' + indexDef + ']')
+                }
+            }
+        }
+
+        for (PersistentProperty<MongoAttribute> property : entity.getPersistentProperties()) {
+            final boolean indexed = isIndexed(property)
+
+            if (indexed) {
+                final MongoAttribute mongoAttributeMapping = property.getMapping().getMappedForm()
+                Document dbObject = new Document()
+                final String fieldName = getMongoFieldNameForProperty(property)
+                dbObject.put(fieldName, 1)
+                Document options = new Document()
+                if (mongoAttributeMapping != null) {
+                    Map attributes = mongoAttributeMapping.getIndexAttributes()
+                    if (attributes != null) {
+                        attributes = new HashMap(attributes)
+                        if (attributes.containsKey(MongoAttribute.INDEX_TYPE)) {
+                            dbObject.put(fieldName, attributes.remove(MongoAttribute.INDEX_TYPE))
+                        }
+                        options.putAll(attributes)
+                    }
+                }
+                createOrUpdateIndex(entity, collection, dbObject, options,
+                        'on property [' + property.getName() + ']')
+            }
+        }
+    }
+
+    /**
+     * Create an index, reconciling option conflicts with any pre-existing index on the same keys.
+     *
+     * <p>Two things this does beyond a raw {@code createIndex}:</p>
+     * <ol>
+     *   <li>Applies {@code expireAfterSeconds} (TTL) — the one option {@link MongoConstants#mapToObject}
+     *       cannot set, because the driver only exposes the two-argument {@link IndexOptions#expireAfter}.</li>
+     *   <li>On {@code IndexOptionsConflict} (an index already exists on these keys with different
+     *       options), reconciles instead of only logging: a TTL change is applied in place with
+     *       {@code collMod} (no drop, no rebuild, no gap); any other conflict is dropped and
+     *       recreated only when {@code recreateOnConflict:true} was declared, else logged with guidance.</li>
+     * </ol>
+     */
+    private void createOrUpdateIndex(PersistentEntity entity,
+                                     com.mongodb.client.MongoCollection<Document> collection,
+                                     Document keys, Map<String, Object> rawOptions, String descriptor) {
+        Map<String, Object> options = rawOptions != null ? new HashMap<String, Object>(rawOptions) : new HashMap<String, Object>()
+
+        // Control flag — not a Mongo index option.
+        boolean recreateOnConflict = Boolean.TRUE.equals(options.remove(INDEX_RECREATE_ON_CONFLICT))
+
+        Long expireAfterSeconds = null
+        Object ttl = options.remove(INDEX_EXPIRE_AFTER_SECONDS)
+        if (ttl instanceof Number) {
+            expireAfterSeconds = ((Number) ttl).longValue()
+        }
+
+        final IndexOptions indexOptions = MongoConstants.mapToObject(IndexOptions, options)
+        if (expireAfterSeconds != null) {
+            indexOptions.expireAfter(expireAfterSeconds, TimeUnit.SECONDS)
+        }
+
+        try {
+            collection.createIndex(keys, indexOptions)
+        } catch (MongoCommandException e) {
+            if (e.getErrorCode() == INDEX_OPTIONS_CONFLICT_CODE) {
+                reconcileIndexConflict(entity, collection, keys, indexOptions,
+                        expireAfterSeconds, recreateOnConflict, descriptor, e)
+            } else {
+                LOG.error('Failed to create index for entity [{}] {}: {}',
+                        entity.getName(), descriptor, e.getMessage(), e)
+            }
+        }
+    }
+
+    /**
+     * Reconcile an {@code IndexOptionsConflict}: an index already exists on the same keys with
+     * different options. A TTL difference is the common, safe case (e.g. a configurable retention
+     * changed between restarts) and is updated in place via {@code collMod}; anything else needs an
+     * explicit {@code recreateOnConflict:true} to authorise the drop-and-recreate.
+     */
+    private void reconcileIndexConflict(PersistentEntity entity,
+                                        com.mongodb.client.MongoCollection<Document> collection,
+                                        Document keys, IndexOptions desired, Long expireAfterSeconds,
+                                        boolean recreateOnConflict, String descriptor, MongoCommandException original) {
+        Document existing
+        try {
+            existing = findIndexByKeyPattern(collection, keys)
+        } catch (RuntimeException listError) {
+            LOG.error('Failed to create index for entity [{}] {} and could not inspect existing indexes: {}',
+                    entity.getName(), descriptor, listError.getMessage(), original)
+            return
+        }
+        if (existing == null) {
+            LOG.error('Failed to create index for entity [{}] {}: {}',
+                    entity.getName(), descriptor, original.getMessage(), original)
+            return
+        }
+
+        String existingName = existing.getString('name')
+        Object existingTtl = existing.get(INDEX_EXPIRE_AFTER_SECONDS)
+        Long existingTtlSeconds = existingTtl instanceof Number ? ((Number) existingTtl).longValue() : null
+
+        // TTL change on an existing index — update in place, no rebuild, no gap.
+        boolean ttlChange = expireAfterSeconds != null && !expireAfterSeconds.equals(existingTtlSeconds)
+        if (ttlChange) {
+            try {
+                getMongoClient().getDatabase(getDatabaseName(entity))
+                        .runCommand(new Document('collMod', getCollectionName(entity))
+                                .append('index', new Document('name', existingName)
+                                        .append(INDEX_EXPIRE_AFTER_SECONDS, expireAfterSeconds)))
+                LOG.info('Updated TTL of index [{}] on entity [{}] to {}s',
+                        existingName, entity.getName(), expireAfterSeconds)
+                return
+            } catch (MongoCommandException collModError) {
+                // collMod can't make every change (e.g. add a TTL to a non-TTL index on older
+                // servers) — fall through to recreate (if authorised) rather than fail outright.
+                LOG.warn('collMod TTL update failed for index [{}] on entity [{}]: {}{}',
+                        existingName, entity.getName(), collModError.getMessage(), recreateOnConflict ? ' — recreating' : '')
+            }
+        }
+
+        if (recreateOnConflict) {
+            try {
+                collection.dropIndex(existingName)
+                collection.createIndex(keys, desired)
+                LOG.info('Recreated index [{}] on entity [{}] {}', existingName, entity.getName(), descriptor)
+            } catch (MongoCommandException recreateError) {
+                LOG.error('Failed to recreate index [{}] on entity [{}] {}: {}',
+                        existingName, entity.getName(), descriptor, recreateError.getMessage(), recreateError)
+            }
+            return
+        }
+
+        LOG.error(
+                'Index conflict for entity [{}] {}: an index [{}] already exists on the same keys with different options. ' +
+                        'Declare indexAttributes:[recreateOnConflict:true] to drop and recreate it. Original error: {}',
+                entity.getName(), descriptor, existingName, original.getMessage())
+    }
+
+    /**
+     * Find an existing index whose key pattern matches the given keys, or {@code null} if none.
+     * Directions/types are compared numerically (1 vs 1.0) so driver-returned values match.
+     *
+     * <p>Text indexes are special-cased: a declared text index has key {@code {field: 'text'}}, but
+     * MongoDB reports an existing one with a synthetic {@code {_fts: 'text', _ftsx: 1}} key, so the
+     * two never match by pattern. Since MongoDB allows at most one text index per collection, an
+     * existing text index is unambiguously the one a newly-declared text index conflicts with —
+     * match it regardless of its key shape or name so {@code recreateOnConflict} can absorb it.</p>
+     */
+    private static Document findIndexByKeyPattern(com.mongodb.client.MongoCollection<Document> collection, Document keys) {
+        boolean desiredIsText = isTextIndex(keys)
+        for (Document idx : collection.listIndexes()) {
+            Object key = idx.get('key')
+            if (!(key instanceof Document)) {
+                continue
+            }
+            if (desiredIsText && isTextIndex((Document) key)) {
+                return idx
+            }
+            if (sameKeyPattern((Document) key, keys)) {
+                return idx
+            }
+        }
+        return null
+    }
+
+    /**
+     * True for a text index in either representation: a declaration ({@code {field: 'text'}}) or the
+     * synthetic key MongoDB reports for an existing one ({@code {_fts: 'text', _ftsx: 1}}).
+     */
+    private static boolean isTextIndex(Document key) {
+        if (key.containsKey('_fts')) {
+            return true
+        }
+        for (Object v : key.values()) {
+            if ('text' == v) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private static boolean sameKeyPattern(Document existingKey, Document desiredKey) {
+        if (existingKey.size() != desiredKey.size()) {
+            return false
+        }
+        for (Map.Entry<String, Object> entry : desiredKey.entrySet()) {
+            if (!existingKey.containsKey(entry.getKey())) {
+                return false
+            }
+            Object a = existingKey.get(entry.getKey())
+            Object b = entry.getValue()
+            if (a instanceof Number && b instanceof Number) {
+                if (((Number) a).doubleValue() != ((Number) b).doubleValue()) {
+                    return false
+                }
+            } else if (!Objects.equals(a, b)) {
+                return false
+            }
+        }
+        return true
+    }
+
+    @PackageScope
+    String getMongoFieldNameForProperty(PersistentProperty<MongoAttribute> property) {
+        PropertyMapping<MongoAttribute> pm = property.getMapping()
+        String propKey = null
+        if (pm.getMappedForm() != null) {
+            propKey = pm.getMappedForm().getField()
+        }
+        if (propKey == null) {
+            propKey = property.getName()
+        }
+        return propKey
+    }
+
+    void persistentEntityAdded(PersistentEntity entity) {
+        initializeIndices(entity)
+    }
+
+    /**
+     * Closes the {@link MongoClient} so the process can be checkpointed.
+     *
+     * <p>CRaC refuses to checkpoint a process holding open sockets, and a connected driver
+     * holds one per pooled connection plus its server monitors. Closing the client shuts the
+     * monitor threads down and releases every socket, which nothing else in the driver
+     * offers: draining the pool leaves the monitors connected.
+     *
+     * <p>A client the application supplied is left alone. Its lifecycle belongs to whoever
+     * created it, and this datastore stays {@link #isRunning() running} so that
+     * {@link #start()} does not later replace something it does not own.
+     */
+    @Override
+    void stop() {
+        if (!this.running || !ownsClient()) {
+            return
+        }
+        this.mongo.close()
+        this.running = false
+    }
+
+    /**
+     * Builds a replacement {@link MongoClient} after a restore, using the same factory and
+     * configuration the original was built from, so settings applied at startup still apply.
+     */
+    @Override
+    void start() {
+        if (this.running) {
+            return
+        }
+        this.mongo = connectionSources.getFactory()
+                .create(ConnectionSource.DEFAULT, connectionSources.getBaseConfiguration())
+                .getSource()
+        this.running = true
+    }
+
+    @Override
+    boolean isRunning() {
+        return this.running
+    }
+
+    @Override
+    int getPhase() {
+        return LIFECYCLE_PHASE
+    }
+
+    /**
+     * Whether GORM created the client and may close it, as opposed to it having been handed
+     * in by the application.
+     */
+    private boolean ownsClient() {
+        ConnectionSource<MongoClient, MongoConnectionSourceSettings> source = connectionSources.getDefaultConnectionSource()
+        return !(source instanceof DefaultConnectionSource) || ((DefaultConnectionSource) source).isCloseable()
+    }
+
+    @Override
+    @PreDestroy
+    void close() {
+        MongoClient current = this.mongo
+        try {
+            super.destroy()
+        } catch (Exception ignored) {
+            // ignore
+        }
+        try {
+            if (connectionSources != null) {
+                connectionSources.close()
+            }
+            // connectionSources closes the client it was built with, which is no longer the
+            // one in use once a restore has replaced it.
+            if (current != null && ownsClient()) {
+                current.close()
+            }
+        } catch (IOException e) {
+            LOG.error('There was an error shutting down GORM for an entity: ' + e.getMessage(), e)
+        } finally {
+            if (gormEnhancer != null) {
+                try {
+                    gormEnhancer.close()
+                } catch (Throwable ignored) {
+                    // Ignore
+                }
+            }
+        }
+    }
+
+    /**
+     * Creates the connection sources for a {@link MongoClient}.
+     *
+     * @param mongoClient The {@link MongoClient}
+     * @param configuration The configuration
+     * @param mappingContext The {@link MongoMappingContext}
+     * @param closeable whether GORM owns the client and should close it on shutdown. Pass
+     *                  {@code false} for an externally-supplied client (its lifecycle is owned by the
+     *                  caller, e.g. a Spring-managed bean) and {@code true} for a client GORM created
+     *                  itself, so it is not leaked.
+     * @return The {@link ConnectionSources}
+     */
+    protected static ConnectionSources<MongoClient, MongoConnectionSourceSettings> createDefaultConnectionSources(MongoClient mongoClient, PropertyResolver configuration, MongoMappingContext mappingContext, boolean closeable) {
+        MongoConnectionSourceSettings settings = new MongoConnectionSourceSettings()
+        settings.setDatabaseName(mappingContext.getDefaultDatabaseName())
+        ConnectionSource<MongoClient, MongoConnectionSourceSettings> defaultConnectionSource = new DefaultConnectionSource<MongoClient, MongoConnectionSourceSettings>(ConnectionSource.DEFAULT, mongoClient, settings, closeable)
+        return new InMemoryConnectionSources<MongoClient, MongoConnectionSourceSettings>(defaultConnectionSource, new MongoConnectionSourceFactory(), configuration)
+    }
+
+    protected static MongoClient createMongoClient(PropertyResolver configuration, MongoClientSettings.Builder mongoOptions, MongoMappingContext mappingContext) {
+        MongoConnectionSourceFactory mongoConnectionSourceFactory = new MongoConnectionSourceFactory()
+        mongoConnectionSourceFactory.setClientOptionsBuilder(mongoOptions)
+        return mongoConnectionSourceFactory.create(ConnectionSource.DEFAULT, configuration).getSource()
+    }
+
+    protected static MongoMappingContext createMappingContext(ConnectionSources<MongoClient, MongoConnectionSourceSettings> connectionSources, Class... classes) {
+        ConnectionSource<MongoClient, MongoConnectionSourceSettings> defaultConnectionSource = connectionSources.getDefaultConnectionSource()
+        MongoMappingContext mongoMappingContext = new MongoMappingContext(defaultConnectionSource.getSettings(), classes)
+        configureValidationRegistry(connectionSources.getDefaultConnectionSource().getSettings(), mongoMappingContext)
+        return mongoMappingContext
+    }
+
+    protected static MongoMappingContext createMappingContext(PropertyResolver configuration, Class... classes) {
+        MongoConnectionSourceSettingsBuilder builder = new MongoConnectionSourceSettingsBuilder(configuration)
+        MongoConnectionSourceSettings mongoConnectionSourceSettings = builder.build()
+        MongoMappingContext mongoMappingContext = new MongoMappingContext(mongoConnectionSourceSettings, classes)
+        configureValidationRegistry(mongoConnectionSourceSettings, mongoMappingContext)
+        return mongoMappingContext
+    }
+
+    protected void registerEntity(PersistentEntity entity) {
+        String collectionName = entity.isRoot() ? entity.getDecapitalizedName() : entity.getRootEntity().getDecapitalizedName()
+        String databaseName = this.defaultDatabase
+
+        MongoCollection collectionMapping = (MongoCollection) entity.getMapping().getMappedForm()
+        if (collectionMapping.getCollection() != null) {
+            collectionName = collectionMapping.getCollection()
+        }
+        if (collectionMapping.getDatabase() != null) {
+            databaseName = collectionMapping.getDatabase()
+        }
+
+        mongoCollections.put(entity, collectionName)
+        mongoDatabases.put(entity, databaseName)
+    }
+
+    private static void configureValidationRegistry(MongoConnectionSourceSettings settings, MongoMappingContext mongoMappingContext) {
+        MessageSource messageSource = new StaticMessageSource()
+        configureValidatorRegistry(settings, mongoMappingContext, messageSource)
+    }
+
+    private static void configureValidatorRegistry(MongoConnectionSourceSettings settings, MongoMappingContext mongoMappingContext, MessageSource messageSource) {
+        ValidatorRegistry validatorRegistry = ValidatorRegistries.createValidatorRegistry(mongoMappingContext, settings, messageSource)
+        if (validatorRegistry instanceof ConstraintRegistry) {
+            ((ConstraintRegistry) validatorRegistry).addConstraintFactory(
+                    new MappingContextAwareConstraintFactory(UniqueConstraint, messageSource, mongoMappingContext)
+            )
+        }
+        mongoMappingContext.setValidatorRegistry(
+                validatorRegistry
+        )
+    }
+
+    @Override
+    MultiTenancySettings.MultiTenancyMode getMultiTenancyMode() {
+        return this.multiTenancyMode
+    }
+
+    @Override
+    TenantResolver getTenantResolver() {
+        return this.tenantResolver
+    }
+
+    @Override
+    MongoDatastore getDatastoreForTenantId(Serializable tenantId) {
+        if (getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DATABASE) {
+            return this.datastoresByConnectionSource.get(tenantId.toString())
+        }
+        return this
+    }
+
+    @Override
+    Datastore getDatastoreForConnection(String connectionName) {
+        if (connectionName == Settings.SETTING_DATASOURCE || connectionName == ConnectionSource.DEFAULT) {
+            return this
+        }
+        MongoDatastore mongoDatastore = this.datastoresByConnectionSource.get(connectionName)
+        if (mongoDatastore == null) {
+            throw new ConfigurationException('DataSource not found for name [' + connectionName + '] in configuration. Please check your multiple data sources configuration and try again.')
+        }
+        return mongoDatastore
+    }
+
+    @Override
+    def <T1> T1 withNewSession(Serializable tenantId, Closure<T1> callable) {
+        MongoDatastore mongoDatastore = getDatastoreForTenantId(tenantId)
+        Session session = mongoDatastore.connect()
+        try {
+            DatastoreUtils.bindNewSession(session)
+            return callable.call(session)
+        } finally {
+            DatastoreUtils.unbindSession(session)
+        }
+    }
+
+    class PersistentEntityCodeRegistry implements CodecProvider {
+
+        Map<String, PersistentEntityCodec> codecs = new HashMap<>()
+
+        @Override
+        def <T> Codec<T> get(Class<T> clazz, CodecRegistry registry) {
+            final String entityName = clazz.getName()
+            PersistentEntityCodec codec = codecs.get(entityName)
+            if (codec == null) {
+                final PersistentEntity entity = getMappingContext().getPersistentEntity(entityName)
+                if (entity != null) {
+                    codec = new PersistentEntityCodec(codecRegistry, entity)
+                    codecs.put(entityName, codec)
+                }
+            }
+            return (Codec<T>) codec
+        }
+
+    }
+
+    AutoTimestampEventListener getAutoTimestampEventListener() {
+        return this.autoTimestampEventListener
+    }
+
+}

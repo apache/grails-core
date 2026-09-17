@@ -1,0 +1,78 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.grails.gsp.compiler.tags
+
+import org.grails.gsp.GroovyPage
+import org.grails.gsp.compiler.GroovyPageParser
+import org.grails.taglib.GrailsTagException
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+
+/**
+ * @author graemerocher
+ */
+class GroovyCollectTagTests {
+
+    private GroovyCollectTag tag = new GroovyCollectTag()
+    private StringWriter sw = new StringWriter()
+
+    @BeforeEach
+    protected void setUp() throws Exception {
+        Map context = new HashMap()
+        context.put(GroovyPage.OUT, new PrintWriter(sw))
+        GroovyPageParser parser = new GroovyPageParser('test', 'test', 'test', new ByteArrayInputStream(new byte[]{}), null)
+        context.put(GroovyPageParser, parser)
+        tag.init(context)
+    }
+
+    /**
+     * Test method for {@link org.grails.gsp.compiler.tags.GroovyCollectTag#isKeepPrecedingWhiteSpace()}.
+     */
+    @Test
+    void testIsKeepPrecedingWhiteSpace() {
+        Assertions.assertTrue(tag.isKeepPrecedingWhiteSpace())
+    }
+
+    /**
+     * Test method for {@link org.grails.gsp.compiler.tags.GroovyCollectTag#isAllowPrecedingContent()}.
+     */
+    @Test
+    void testIsAllowPrecedingContent() {
+        Assertions.assertTrue(tag.isAllowPrecedingContent())
+    }
+
+    /**
+     * Test method for {@link org.grails.gsp.compiler.tags.GroovyCollectTag#doStartTag()}.
+     */
+    @SuppressWarnings(['unchecked', 'rawtypes'])
+    @Test
+    void testDoStartTag() {
+        Map attrs = new HashMap()
+        Assertions.assertThrows(GrailsTagException, () -> tag.doStartTag(), "can't create this tag with no [in] and [expr] attributes")
+
+        attrs.put('"in"', 'myObj')
+        attrs.put('"expr"', ' ${ it.name }')
+        tag.setAttributes(attrs)
+        Assertions.assertFalse(tag.attributes.isEmpty())
+        tag.doStartTag()
+
+        Assertions.assertEquals('for( ' + tag.getForeachRenamedIt() + " in evaluate('myObj.collect {it.name}', 1, it) { return myObj.collect {it.name} } ) {" + System.getProperty('line.separator') + 'changeItVariable(' + tag.getForeachRenamedIt() + ')' + System.getProperty('line.separator'), sw.toString())
+    }
+}

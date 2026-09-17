@@ -1,0 +1,89 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.grails.cli.boot
+
+import java.lang.reflect.Constructor
+import java.lang.reflect.Method
+
+import groovy.transform.CompileStatic
+
+/**
+ * A launcher for {@code SpringApplication} or a {@code SpringApplication} subclass. The
+ * class that is used can be configured using the System property
+ * {@code spring.application.class.name} or the {@code SPRING_APPLICATION_CLASS_NAME}
+ * environment variable. Uses reflection to allow the launching code to exist in a
+ * separate ClassLoader from the application code.
+ *
+ * @author Andy Wilkinson
+ * @since 1.2.0
+ * @see System#getProperty(String)
+ * @see System#getenv(String)
+ */
+@CompileStatic
+class SpringApplicationLauncher {
+
+    private static final String DEFAULT_SPRING_APPLICATION_CLASS = 'org.springframework.boot.SpringApplication'
+
+    private final ClassLoader classLoader
+
+    /**
+     * Creates a new launcher that will use the given {@code classLoader} to load the
+     * configured {@code SpringApplication} class.
+     * @param classLoader the {@code ClassLoader} to use
+     */
+    SpringApplicationLauncher(ClassLoader classLoader) {
+        this.classLoader = classLoader
+    }
+
+    /**
+     * Launches the application created using the given {@code sources}. The application
+     * is launched with the given {@code args}.
+     * @param sources the sources for the application
+     * @param args the args for the application
+     * @return the application's {@code ApplicationContext}
+     * @throws Exception if the launch fails
+     */
+    Object launch(Class<?>[] sources, String[] args) throws Exception {
+        Map<String, Object> defaultProperties = new HashMap<>()
+        defaultProperties.put('spring.groovy.template.check-template-location', 'false')
+        Class<?> applicationClass = Class.forName(getSpringApplicationClassName(), false, this.classLoader)
+        Constructor<?> constructor = applicationClass.getDeclaredConstructor(Class[])
+        constructor.setAccessible(true)
+        Object application = constructor.newInstance((Object) sources)
+        applicationClass.getMethod('setDefaultProperties', Map).invoke(application, defaultProperties)
+        Method method = applicationClass.getMethod('run', String[])
+        return method.invoke(application, (Object) args)
+    }
+
+    private String getSpringApplicationClassName() {
+        String className = System.getProperty('spring.application.class.name')
+        if (className == null) {
+            className = getEnvironmentVariable('SPRING_APPLICATION_CLASS_NAME')
+        }
+        if (className == null) {
+            className = DEFAULT_SPRING_APPLICATION_CLASS
+        }
+        return className
+    }
+
+    protected String getEnvironmentVariable(String name) {
+        return System.getenv(name)
+    }
+
+}

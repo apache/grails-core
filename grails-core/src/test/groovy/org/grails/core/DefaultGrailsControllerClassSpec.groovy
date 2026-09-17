@@ -20,12 +20,29 @@ package org.grails.core
 
 import grails.config.Settings
 import grails.core.DefaultGrailsApplication
+import grails.util.Environment
+import grails.web.Action
 import spock.lang.Specification
 
 /**
  * @author James Kleeh
  */
 class DefaultGrailsControllerClassSpec extends Specification {
+
+    private String originalEnv
+
+    void setup() {
+        originalEnv = System.getProperty(Environment.KEY)
+    }
+
+    void cleanup() {
+        if (originalEnv != null) {
+            System.setProperty(Environment.KEY, originalEnv)
+        }
+        else {
+            System.clearProperty(Environment.KEY)
+        }
+    }
 
     static final String SINGLETON = "singleton"
     static final String PROTOTYPE = "prototype"
@@ -81,10 +98,29 @@ class DefaultGrailsControllerClassSpec extends Specification {
         configScopeValue << [SINGLETON, SESSION]
     }
 
+    void "test invoke executes an action method and returns its result without miscasting the controller"() {
+        given: "outside development mode, invoke() dispatches through a MethodHandle rather than reflection"
+        System.setProperty(Environment.KEY, Environment.PRODUCTION.name)
+        def controllerClass = new DefaultGrailsControllerClass(ActionController)
+        def controller = new ActionController()
+
+        expect: "the action is invoked on the correct controller instance, not miscast"
+        controllerClass.invoke(controller, 'sayHello') == 'hello from ActionController'
+    }
+
     class NotSpecifiedController {
     }
 
     class PrototypeController {
         static scope = "prototype"
+    }
+
+    class ActionController {
+
+        @Action
+        String sayHello() {
+            return 'hello from ActionController'
+        }
+
     }
 }

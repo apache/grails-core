@@ -57,6 +57,9 @@ class SpringIOUtilsSpec extends Specification {
     @TempDir
     Path tempDir
 
+    @TempDir
+    File tempFileDir
+
     private String externalEntityDocument() {
         Path secret = tempDir.resolve('secret.txt')
         Files.writeString(secret, SECRET)
@@ -122,6 +125,15 @@ class SpringIOUtilsSpec extends Specification {
         then:
         SAXParseException e = thrown()
         e.message.contains('DOCTYPE is disallowed')
+    }
+
+    void 'newSAXParser returns a namespace-aware, non-validating parser'() {
+        when:
+        def parser = SpringIOUtils.newSAXParser()
+
+        then:
+        parser.isNamespaceAware()
+        !parser.isValidating()
     }
 
     void 'asking for doctype tolerance parses a descriptor that declares one'() {
@@ -191,4 +203,112 @@ class SpringIOUtilsSpec extends Specification {
         where:
         allowDocType << [false, true]
     }
+
+    void 'byteArrayToHexString converts bytes to lowercase hex'() {
+        expect:
+        SpringIOUtils.byteArrayToHexString([0x00, 0x0f, (byte) 0xff] as byte[]) == '000fff'
+    }
+
+    void 'byteArrayToHexString returns null for a null or empty array'() {
+        expect:
+        SpringIOUtils.byteArrayToHexString(null) == null
+        SpringIOUtils.byteArrayToHexString(new byte[0]) == null
+    }
+
+    void 'copy(byte[], File) writes the bytes to the file'() {
+        given:
+        File out = new File(tempFileDir, 'out.bin')
+
+        when:
+        SpringIOUtils.copy('hello'.bytes, out)
+
+        then:
+        out.text == 'hello'
+    }
+
+    void 'copy(File, File) copies file contents'() {
+        given:
+        File source = new File(tempFileDir, 'source.txt')
+        source.text = 'copy me'
+        File target = new File(tempFileDir, 'target.txt')
+
+        when:
+        int count = SpringIOUtils.copy(source, target)
+
+        then:
+        target.text == 'copy me'
+        count == 'copy me'.bytes.length
+    }
+
+    void 'copyToByteArray(File) reads the whole file'() {
+        given:
+        File source = new File(tempFileDir, 'source.txt')
+        source.text = 'bytes here'
+
+        expect:
+        new String(SpringIOUtils.copyToByteArray(source)) == 'bytes here'
+    }
+
+    void 'copyToString(Reader) reads the whole reader'() {
+        expect:
+        SpringIOUtils.copyToString(new StringReader('reader contents')) == 'reader contents'
+    }
+
+    void 'copy(String, Writer) writes the string and closes the writer'() {
+        given:
+        StringWriter writer = new StringWriter()
+
+        when:
+        SpringIOUtils.copy('written text', writer)
+
+        then:
+        writer.toString() == 'written text'
+    }
+
+    void 'computeChecksum computes an md5 digest'() {
+        given:
+        File source = new File(tempFileDir, 'checksum.txt')
+        source.text = 'checksum me'
+
+        expect:
+        SpringIOUtils.computeChecksum(source, 'md5').length() == 32
+    }
+
+    void 'computeChecksum rejects an unknown algorithm'() {
+        given:
+        File source = new File(tempFileDir, 'checksum.txt')
+        source.text = 'checksum me'
+
+        when:
+        SpringIOUtils.computeChecksum(source, 'not-an-algorithm')
+
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    void 'closeQuietly closes without throwing'() {
+        given:
+        Closeable closeable = { -> } as Closeable
+
+        expect:
+        SpringIOUtils.closeQuietly(closeable)
+        SpringIOUtils.closeQuietly(null)
+    }
+
+    void 'closeQuietly swallows an IOException from close'() {
+        given:
+        Closeable closeable = { -> throw new IOException('boom') } as Closeable
+
+        when:
+        SpringIOUtils.closeQuietly(closeable)
+
+        then:
+        noExceptionThrown()
+    }
+
+    void 'addAll concatenates two arrays preserving order'() {
+        expect:
+        SpringIOUtils.addAll(['a', 'b'] as String[], ['c', 'd'] as String[]) == ['a', 'b', 'c', 'd']
+    }
+
 }

@@ -1,0 +1,230 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package grails.util
+
+import java.lang.reflect.InvocationTargetException
+
+import groovy.transform.CompileStatic
+import org.apache.commons.logging.Log
+import org.apache.commons.logging.LogFactory
+import org.springframework.context.ApplicationContext
+import org.springframework.context.Lifecycle
+import org.springframework.util.Assert
+
+import grails.config.Config
+import grails.core.GrailsApplication
+import grails.plugins.GrailsPluginManager
+import org.grails.core.io.support.GrailsFactoriesLoader
+import org.grails.core.support.GrailsApplicationDiscoveryStrategy
+
+/**
+ * Allows looking up key classes in a static context
+ *
+ *
+ * @author Burt Beckwith
+ * @author Graeme Rocher
+ *
+ * @since 2.0
+ */
+@CompileStatic
+class Holders {
+
+    private static final Log LOG = LogFactory.getLog(Holders)
+    private static Holder<GrailsPluginManager> pluginManagers = new Holder<>('PluginManager')
+    private static Holder<Boolean> pluginManagersInCreation = new Holder<>('PluginManagers in creation')
+    private static Holder<Config> configs = new Holder<>('config')
+    private static Holder<Map<?, ?>> flatConfigs = new Holder<>('flat config')
+
+    private static List<GrailsApplicationDiscoveryStrategy> applicationDiscoveryStrategies = GrailsFactoriesLoader.loadFactories(GrailsApplicationDiscoveryStrategy, Holders.getClassLoader())
+    private static Holder servletContexts
+
+    static {
+
+        createServletContextsHolder()
+    }
+
+    private static GrailsApplication applicationSingleton // TODO remove
+
+    private Holders() {
+        // static only
+    }
+
+    static void addApplicationDiscoveryStrategy(GrailsApplicationDiscoveryStrategy strategy) {
+        applicationDiscoveryStrategies.add(strategy)
+    }
+
+    static void clear() {
+        pluginManagers.set(null)
+        pluginManagersInCreation.set(null)
+        configs.set(null)
+        flatConfigs.set(null)
+        if (servletContexts != null) {
+            servletContexts.set(null)
+        }
+        applicationDiscoveryStrategies.clear()
+        applicationSingleton = null
+    }
+
+    static void setServletContext(final Object servletContext) {
+        servletContexts.set(servletContext)
+    }
+
+    static Object getServletContext() {
+        return get(servletContexts, 'servletContext')
+    }
+
+    static ApplicationContext getApplicationContext() {
+        for (GrailsApplicationDiscoveryStrategy strategy in applicationDiscoveryStrategies) {
+            ApplicationContext applicationContext = strategy.findApplicationContext()
+            if (applicationContext != null) {
+                boolean running = ((Lifecycle) applicationContext).isRunning()
+                if (running) {
+                    return applicationContext
+                }
+            }
+        }
+        throw new IllegalStateException('Could not find ApplicationContext, configure Grails correctly first')
+    }
+
+    /**
+     *
+     * @return The ApplicationContext or null if it doesn't exist
+     */
+    static ApplicationContext findApplicationContext() {
+        for (GrailsApplicationDiscoveryStrategy strategy in applicationDiscoveryStrategies) {
+            ApplicationContext applicationContext = strategy.findApplicationContext()
+            if (applicationContext != null) {
+                return applicationContext
+            }
+        }
+        return null
+    }
+
+    /**
+     *
+     * @return The ApplicationContext or null if it doesn't exist
+     */
+    static GrailsApplication findApplication() {
+        for (GrailsApplicationDiscoveryStrategy strategy in applicationDiscoveryStrategies) {
+            GrailsApplication grailsApplication = strategy.findGrailsApplication()
+            if (grailsApplication != null) {
+                return grailsApplication
+            }
+        }
+        return applicationSingleton
+    }
+
+    static GrailsApplication getGrailsApplication() {
+        GrailsApplication grailsApplication = findApplication()
+        Assert.notNull(grailsApplication, 'GrailsApplication not found')
+        return grailsApplication
+    }
+
+    static void setGrailsApplication(GrailsApplication application) {
+        applicationSingleton = application
+    }
+
+    static void setConfig(Config config) {
+        configs.set(config)
+
+        // reset flat config
+        flatConfigs.set(config == null ? null : config)
+    }
+
+    static Config getConfig() {
+        return get(configs, 'config')
+    }
+
+    static Map<?, ?> getFlatConfig() {
+        Map<?, ?> flatConfig = get(flatConfigs, 'flatConfig')
+        return flatConfig == null ? Collections.emptyMap() : flatConfig
+    }
+
+    static void setPluginManagerInCreation(boolean inCreation) {
+        pluginManagersInCreation.set(inCreation)
+    }
+
+    static void setPluginManager(GrailsPluginManager pluginManager) {
+        if (pluginManager != null) {
+            pluginManagersInCreation.set(false)
+        }
+        pluginManagers.set(pluginManager)
+    }
+
+    static GrailsPluginManager getPluginManager() {
+        return getPluginManager(false)
+    }
+
+    static GrailsPluginManager getPluginManager(boolean mappedOnly) {
+        while (true) {
+            Boolean inCreation = get(pluginManagersInCreation, 'PluginManager in creation', mappedOnly)
+            if (inCreation == null) {
+                inCreation = false
+            }
+            if (!inCreation) {
+                break
+            }
+
+            try {
+                Thread.sleep(100)
+            }
+            catch (InterruptedException e) {
+                break
+            }
+        }
+
+        return get(pluginManagers, 'PluginManager', mappedOnly)
+    }
+
+    static GrailsPluginManager currentPluginManager() {
+        GrailsPluginManager current = getPluginManager()
+        Assert.notNull(current, 'No PluginManager set')
+        return current
+    }
+
+    static void reset() {
+        setPluginManager(null)
+        setGrailsApplication(null)
+        setServletContext(null)
+        setPluginManager(null)
+        setPluginManagerInCreation(false)
+        setConfig(null)
+    }
+
+    private static <T> T get(Holder<T> holder, String type) {
+        return get(holder, type, false)
+    }
+
+    private static <T> T get(Holder<T> holder, String type, boolean mappedOnly) {
+        return holder.get(mappedOnly)
+    }
+
+    @SuppressWarnings('unchecked')
+    private static void createServletContextsHolder() {
+        try {
+            Class<?> clazz = Holders.getClassLoader().loadClass('grails.web.context.WebRequestServletHolder')
+            servletContexts = (Holder) clazz.getDeclaredConstructor().newInstance()
+        }
+        catch (ClassNotFoundException | InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+            // shouldn't happen
+            LOG.debug('Error initializing servlet context holder, not running in Servlet environment: ' + e.getMessage(), e)
+        }
+    }
+
+}

@@ -1,0 +1,80 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.grails.cli.command
+
+import groovy.transform.CompileStatic
+import org.springframework.boot.cli.command.Command
+import org.springframework.boot.cli.command.HelpExample
+import org.springframework.boot.cli.command.options.OptionHelp
+
+/**
+ * Abstract {@link org.springframework.boot.cli.command.Command} implementation.
+ *
+ * @author Phillip Webb
+ * @author Dave Syer
+ * @since 1.0.0
+ */
+@CompileStatic
+abstract class AbstractCommand implements Command {
+
+    private final String name
+
+    private final String description
+
+    /**
+     * Create a new {@link AbstractCommand} instance.
+     * @param name the name of the command
+     * @param description the command description
+     */
+    protected AbstractCommand(String name, String description) {
+        this.name = name
+        this.description = description
+    }
+
+    @Override
+    String getName() {
+        return this.name
+    }
+
+    @Override
+    String getDescription() {
+        return this.description
+    }
+
+    @Override
+    String getUsageHelp() {
+        return null
+    }
+
+    @Override
+    String getHelp() {
+        return null
+    }
+
+    @Override
+    Collection<OptionHelp> getOptionsHelp() {
+        return Collections.emptyList()
+    }
+
+    @Override
+    Collection<HelpExample> getExamples() {
+        return null
+    }
+
+}
