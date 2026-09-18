@@ -605,6 +605,7 @@ publishGuideTask.configure { PublishGuideTask publish ->
         def spockVersion = getVersion("spock-core")
         def spockVersionForURL = getVersion("spock-core")?.split("-")[0]
         def hibernate5Guide = '../grails-data/hibernate5/manual/'
+        def hibernate7Guide = '../grails-data/hibernate7/manual/'
         def api = '../api/'
         def gspTagsRef = '../ref/Tags%20-%20GSP/'
         def controllersRef = '../ref/Controllers/'
@@ -631,6 +632,8 @@ publishGuideTask.configure { PublishGuideTask publish ->
                 'gormWebsite'              : '../grails-data/',
                 'hibernate5Guide'          : hibernate5Guide,
                 'hibernate5GuideFromRef'    : '../' + hibernate5Guide,
+                'hibernate7Guide'          : hibernate7Guide,
+                'hibernate7GuideFromRef'    : '../' + hibernate7Guide,
                 'mongodb5Guide'            : '../grails-data/mongodb/manual/',
                 'rxGORMGuide'              : 'https://gorm.grails.org/7.3.4/rx/manual/', // last version released
                 'hibernate5Reference'      : 'https://docs.jboss.org/hibernate/orm/5.6/userguide/html_single/Hibernate_User_Guide.html',

@@ -26,6 +26,7 @@ import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 
 import org.hibernate.FlushMode
+import org.hibernate.LockMode
 import org.grails.orm.hibernate.query.SelectHqlQuery
 
 class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
@@ -297,20 +298,29 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
     }
 
     @Rollback
-    def "lock acquires a pessimistic write lock on the entity"() {
+    def "lock acquires a pessimistic write lock without refreshing the entity"() {
         given:
         Long savedId = PersonInstanceApi.withTransaction {
             new PersonInstanceApi(name: 'LockUser', age: 22).save(flush: true, failOnError: true)
         }.id
 
         when:
-        PersonInstanceApi.withTransaction {
+        Map outcome = PersonInstanceApi.withTransaction {
+            PersonInstanceApi.withSession { it.clear() }
             def person = PersonInstanceApi.get(savedId)
-            person.lock()
+            person.name = 'Pending change'
+            def result = person.lock()
+            [sameInstance: result.is(person),
+             name        : person.name,
+             version     : person.version,
+             lockMode    : PersonInstanceApi.withSession { it.getCurrentLockMode(person) }]
         }
 
         then:
-        noExceptionThrown()
+        outcome.sameInstance
+        outcome.name == 'Pending change'
+        outcome.version == 0
+        outcome.lockMode == LockMode.PESSIMISTIC_WRITE
     }
 
     @Rollback

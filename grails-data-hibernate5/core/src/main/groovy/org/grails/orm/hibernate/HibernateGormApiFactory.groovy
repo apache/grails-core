@@ -48,7 +48,7 @@ class HibernateGormApiFactory implements GormApiFactory {
     <D> GormStaticApi<D> createStaticApi(Class<D> persistentClass, MappingContext mappingContext, DatastoreResolver resolver, String qualifier, GormRegistry registry) {
         HibernateDatastore hds = (HibernateDatastore) resolver.resolve()
         List<FinderMethod> finders = new DefaultGormApiFactory().createDynamicFinders(resolver, mappingContext)
-        return new HibernateGormStaticApi<D>(persistentClass, hds, finders, classLoader, hds.getTransactionManager())
+        return new HibernateGormStaticApi<D>(persistentClass, hds, finders, classLoader, hds.getTransactionManager(), qualifier)
     }
 
     @Override

@@ -18,6 +18,8 @@
  */
 package org.grails.datastore.gorm
 
+import groovy.transform.Generated
+
 import grails.artefact.Artefact
 import grails.persistence.Entity
 import org.grails.datastore.gorm.query.GormQueryOperations
@@ -155,6 +157,61 @@ class SubMember extends Member {
 
         then:
         method.returnType == QueryMethodArtefactDomain
+    }
+
+    void "refresh(lock: true) and lock(id, refresh: true) resolve statically with the entity return type for #annotation"() {
+        given:
+        def classLoader = new GroovyClassLoader()
+
+        when:
+        def consumer = classLoader.parseClass("""
+            import groovy.transform.CompileStatic
+            import org.grails.datastore.gorm.GormEntityApi
+
+            @CompileStatic
+            class LockConsumer {
+                LockBook refreshWithLock(LockBook book) {
+                    book.refresh(lock: true)
+                }
+
+                LockBook refreshConnection(GormEntityApi<LockBook> connection) {
+                    connection.refresh([lock: true])
+                }
+
+                LockBook lockWithRefresh(Long id) {
+                    LockBook.lock(id, refresh: true)
+                }
+
+                LockBook lockById(Long id) {
+                    LockBook.lock(id)
+                }
+            }
+
+            @${annotation}
+            class LockBook {
+                String title
+            }
+        """)
+        def bookClass = classLoader.loadClass('LockBook')
+
+        then:
+        consumer.getMethod('refreshWithLock', bookClass).returnType == bookClass
+        consumer.getMethod('refreshConnection', GormEntityApi).returnType == bookClass
+        consumer.getMethod('lockWithRefresh', Long).returnType == bookClass
+        consumer.getMethod('lockById', Long).returnType == bookClass
+        bookClass.getMethod('refresh', Map).returnType == bookClass
+        bookClass.getMethod('refresh', Map).isAnnotationPresent(Generated)
+        !Modifier.isStatic(bookClass.getMethod('refresh', Map).modifiers)
+        bookClass.getMethod('lock', Map, Serializable).returnType == bookClass
+        bookClass.getMethod('lock', Map, Serializable).isAnnotationPresent(Generated)
+        Modifier.isStatic(bookClass.getMethod('lock', Map, Serializable).modifiers)
+        bookClass.getMethod('lock', Serializable).returnType == bookClass
+
+        cleanup:
+        classLoader.close()
+
+        where:
+        annotation << ['grails.persistence.Entity', "grails.artefact.Artefact('Domain')"]
     }
 }
 

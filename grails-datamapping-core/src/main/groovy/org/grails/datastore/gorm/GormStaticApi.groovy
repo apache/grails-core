@@ -21,6 +21,8 @@ package org.grails.datastore.gorm
 import groovy.transform.CompileDynamic
 import groovy.util.logging.Slf4j
 
+import jakarta.persistence.LockModeType
+
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.support.DefaultTransactionDefinition
@@ -33,6 +35,7 @@ import grails.gorm.api.GormStaticOperations
 import grails.gorm.multitenancy.Tenants
 import grails.gorm.transactions.GrailsTransactionTemplate
 import org.grails.datastore.gorm.finders.FinderMethod
+import org.grails.datastore.gorm.internal.RefreshLockArguments
 import org.grails.datastore.gorm.transactions.DefaultTransactionTemplateFactory
 import org.grails.datastore.gorm.transactions.TransactionTemplateFactory
 import org.grails.datastore.mapping.core.Datastore
@@ -226,92 +229,97 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     // GormInstanceOperations delegation
     @Override
     def propertyMissing(D instance, String name) {
-        registry.findInstanceApi(persistentClass, null).propertyMissing(instance, name)
+        registry.findInstanceApi(persistentClass, qualifier).propertyMissing(instance, name)
     }
 
     @Override
     boolean instanceOf(D instance, Class cls) {
-        registry.findInstanceApi(persistentClass, null).instanceOf(instance, cls)
+        registry.findInstanceApi(persistentClass, qualifier).instanceOf(instance, cls)
     }
 
     @Override
     D lock(D instance) {
-        registry.findInstanceApi(persistentClass, null).lock(instance)
+        registry.findInstanceApi(persistentClass, qualifier).lock(instance)
     }
 
     @Override
     def <T1> T1 mutex(D instance, Closure<T1> callable) {
-        registry.findInstanceApi(persistentClass, null).mutex(instance, callable)
+        registry.findInstanceApi(persistentClass, qualifier).mutex(instance, callable)
     }
 
     @Override
     D refresh(D instance) {
-        registry.findInstanceApi(persistentClass, null).refresh(instance)
+        registry.findInstanceApi(persistentClass, qualifier).refresh(instance)
+    }
+
+    @Override
+    D refresh(D instance, Map args) {
+        registry.findInstanceApi(persistentClass, qualifier).refresh(instance, args)
     }
 
     @Override
     D save(D instance) {
-        registry.findInstanceApi(persistentClass, null).save(instance)
+        registry.findInstanceApi(persistentClass, qualifier).save(instance)
     }
 
     @Override
     D insert(D instance) {
-        registry.findInstanceApi(persistentClass, null).insert(instance)
+        registry.findInstanceApi(persistentClass, qualifier).insert(instance)
     }
 
     @Override
     D insert(D instance, Map params) {
-        registry.findInstanceApi(persistentClass, null).insert(instance, params)
+        registry.findInstanceApi(persistentClass, qualifier).insert(instance, params)
     }
 
     @Override
     D merge(D instance) {
-        registry.findInstanceApi(persistentClass, null).merge(instance)
+        registry.findInstanceApi(persistentClass, qualifier).merge(instance)
     }
 
     @Override
     D merge(D instance, Map params) {
-        registry.findInstanceApi(persistentClass, null).merge(instance, params)
+        registry.findInstanceApi(persistentClass, qualifier).merge(instance, params)
     }
 
     @Override
     D save(D instance, boolean validate) {
-        registry.findInstanceApi(persistentClass, null).save(instance, validate)
+        registry.findInstanceApi(persistentClass, qualifier).save(instance, validate)
     }
 
     @Override
     D save(D instance, Map params) {
-        registry.findInstanceApi(persistentClass, null).save(instance, params)
+        registry.findInstanceApi(persistentClass, qualifier).save(instance, params)
     }
 
     @Override
     Serializable ident(D instance) {
-        registry.findInstanceApi(persistentClass, null).ident(instance)
+        registry.findInstanceApi(persistentClass, qualifier).ident(instance)
     }
 
     @Override
     D attach(D instance) {
-        registry.findInstanceApi(persistentClass, null).attach(instance)
+        registry.findInstanceApi(persistentClass, qualifier).attach(instance)
     }
 
     @Override
     boolean isAttached(D instance) {
-        registry.findInstanceApi(persistentClass, null).isAttached(instance)
+        registry.findInstanceApi(persistentClass, qualifier).isAttached(instance)
     }
 
     @Override
     void discard(D instance) {
-        registry.findInstanceApi(persistentClass, null).discard(instance)
+        registry.findInstanceApi(persistentClass, qualifier).discard(instance)
     }
 
     @Override
     void delete(D instance) {
-        registry.findInstanceApi(persistentClass, null).delete(instance)
+        registry.findInstanceApi(persistentClass, qualifier).delete(instance)
     }
 
     @Override
     void delete(D instance, Map params) {
-        registry.findInstanceApi(persistentClass, null).delete(instance, params)
+        registry.findInstanceApi(persistentClass, qualifier).delete(instance, params)
     }
 
     // GormStaticOperations
@@ -490,6 +498,35 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
         execute({ Session session ->
             session.lock(persistentClass, id)
         } as SessionCallback<D>)
+    }
+
+    @Override
+    D lock(Map args, Serializable id) {
+        if (RefreshLockArguments.lockTypeFrom(args) != LockModeType.PESSIMISTIC_WRITE) {
+            throw new UnsupportedOperationException(RefreshLockArguments.UNSUPPORTED_TYPE)
+        }
+        if (!RefreshLockArguments.refreshRequested(args)) {
+            return lock(id)
+        }
+        GormInstanceApi<D> instanceApi = registry.findInstanceApi(persistentClass, qualifier)
+        // Reject an unsupported request before reading anything, as the type check above does. A datastore
+        // that cannot reload under a lock cannot do so for any identifier, so the identifier is irrelevant
+        // to the outcome.
+        if (!instanceApi.supportsLockedRefresh()) {
+            throw new UnsupportedOperationException(RefreshLockArguments.UNSUPPORTED)
+        }
+        // Resolve the managed instance first (no query when it is already in the session), then let the
+        // instance api reload state and version under the lock instead of checking the loaded version.
+        D instance = get(id)
+        if (instance == null) {
+            return null
+        }
+        instanceApi.refresh(instance, [(RefreshLockArguments.LOCK): true])
+    }
+
+    @Override
+    boolean supportsLockedRefresh() {
+        registry.findInstanceApi(persistentClass, qualifier).supportsLockedRefresh()
     }
 
     @Override

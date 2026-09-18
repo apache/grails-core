@@ -38,15 +38,20 @@ import org.codehaus.groovy.runtime.InvokerHelper
 
 import jakarta.persistence.FlushModeType
 import jakarta.persistence.LockModeType
+import jakarta.persistence.TransactionRequiredException
 
+import org.hibernate.Hibernate
 import org.hibernate.HibernateException
 import org.hibernate.LockMode
+import org.hibernate.Locking
 import org.hibernate.Session
 import org.hibernate.SessionFactory
 import org.hibernate.collection.spi.PersistentCollection
 import org.hibernate.engine.spi.EntityEntry
 import org.hibernate.engine.spi.SessionImplementor
 import org.hibernate.persister.entity.EntityPersister
+import org.hibernate.persister.entity.UnionSubclassEntityPersister
+import org.hibernate.query.QueryFlushMode
 
 import org.springframework.beans.BeanWrapperImpl
 import org.springframework.beans.InvalidPropertyException
@@ -57,6 +62,7 @@ import org.springframework.validation.Validator
 import grails.gorm.validation.CascadingValidator
 import org.grails.datastore.gorm.GormInstanceApi
 import org.grails.datastore.gorm.GormValidateable
+import org.grails.datastore.gorm.internal.RefreshLockArguments
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.engine.event.ValidationEvent
 import org.grails.datastore.mapping.model.PersistentEntity
@@ -84,6 +90,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     private static final String ARGUMENT_INSERT = 'insert'
     private static final String ARGUMENT_MERGE = 'merge'
     private static final String ARGUMENT_FAIL_ON_ERROR = 'failOnError'
+    private static final String REFRESH_LOCK_REQUIRES_ATTACHED = 'The instance must be attached to the current session.'
     private static final Class DEFERRED_BINDING
 
     static {
@@ -236,6 +243,115 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     D refresh(D instance) {
         hibernateTemplate.refresh(instance)
         return instance
+    }
+
+    @Override
+    boolean supportsLockedRefresh() {
+        true
+    }
+
+    @Override
+    D refresh(D instance, Map args) {
+        LockModeType lockMode = RefreshLockArguments.lockModeFrom(args)
+        if (lockMode == null) {
+            return refresh(instance)
+        }
+        hibernateTemplate.execute { Session session ->
+            // Hibernate only rejects a lock without a transaction when out-of-transaction update
+            // operations are disallowed, so the contract is enforced here regardless of that setting.
+            if (!session.getTransaction().isActive()) {
+                throw new TransactionRequiredException(RefreshLockArguments.TRANSACTION_REQUIRED)
+            }
+            // Hibernate reports a detached instance with its own internal exception; report the contract instead.
+            if (!session.contains(instance)) {
+                throw new IllegalArgumentException(REFRESH_LOCK_REQUIRES_ATTACHED)
+            }
+            // Unlike Hibernate 5, Hibernate 7 refreshes an uninitialized proxy and resets GORM dirty state
+            // from its own post-load hook, so neither is done here.
+            if (RefreshLockArguments.pessimistic(lockMode)) {
+                lockRow(session, instance, lockMode)
+                session.refresh(instance)
+                recordLockMode(session, instance, lockMode)
+            } else {
+                session.refresh(instance, lockMode)
+            }
+        }
+        return instance
+    }
+
+    /**
+     * Takes the requested lock on the instance's own row, and nothing else, so that the state can then be
+     * reloaded under a lock that is already held.
+     * <p>
+     * {@code session.refresh(instance, lockMode)} cannot do this reliably in Hibernate 7.4. Its refresh
+     * statement join-fetches every refresh-cascaded association, lazy or not, and dialects that cannot lock
+     * outer-joined rows (H2, PostgreSQL) then have to fall back to follow-on locking, which fails with a
+     * NullPointerException when a join-fetched entity is already in the persistence context (reproduced with
+     * plain JPA entities and no GORM involved). {@code Locking.FollowOn.IGNORE} avoids the exception but drops
+     * the lock clause from the statement, so nothing is locked, and {@code Locking.Scope.ROOT_ONLY} fails the
+     * same way as the default. A scalar query has no joins, so it locks the root row the same way on every
+     * dialect, and unlike an entity query or {@code lock()} it performs no version check, so a stale instance
+     * can still be reloaded.
+     * <p>
+     * The query targets the hierarchy root, whose row holds the version and is the row {@code lock()} contends
+     * on: with joined-table inheritance a query against the subclass alone selects, and therefore locks, only
+     * the subclass table. A {@code tablePerConcreteClass} hierarchy goes the other way. Its root is rendered as
+     * a union of the concrete tables, through which databases such as H2 do not lock rows, so the query targets
+     * the instance's concrete class instead, whose table holds the whole row. An instance whose own class has
+     * union subclasses is still rendered as a union, a limit {@code lock()} has for every class in such a
+     * hierarchy because it always locks through the root.
+     */
+    private void lockRow(Session session, D instance, LockModeType lockMode) {
+        EntityPersister descriptor = session.unwrap(SessionImplementor).factory.mappingMetamodel
+                .getEntityDescriptor(persistentClass)
+        Object lockTarget = instance
+        String lockEntityName = descriptor.rootEntityName
+        if (descriptor instanceof UnionSubclassEntityPersister) {
+            // The query names the concrete entity, so a root-typed proxy cannot be bound to its parameter:
+            // bind the target instead. The proxy has to be initialized to know the concrete entity anyway.
+            lockTarget = Hibernate.unproxy(instance)
+            lockEntityName = session.getEntityName(lockTarget)
+        }
+        String hql = "select 1 from ${lockEntityName} e where e = :instance".toString()
+        // NO_FLUSH: the query must not flush the pending changes that the refresh is about to discard.
+        session.createSelectionQuery(hql, Integer)
+                .setParameter('instance', lockTarget)
+                .setLockMode(lockMode)
+                // DISALLOW: a dialect that cannot lock this statement must say so rather than quietly
+                // returning a row it never locked.
+                .setFollowOnStrategy(Locking.FollowOn.DISALLOW)
+                .setQueryFlushMode(QueryFlushMode.NO_FLUSH)
+                .getResultList()
+    }
+
+    /**
+     * Records the lock this transaction now holds on the instance's entity entry, which is what
+     * {@code getCurrentLockMode} reports and what Hibernate consults before it re-locks the row. The scalar lock
+     * query does not touch the entry and a plain refresh leaves it unlocked.
+     * <p>
+     * {@code session.lock} would record it too, at the cost of a version-checked lock statement that re-locks a
+     * row this transaction already holds, so the entry is set directly. Like Hibernate's own lock upgrade, this
+     * never weakens the recorded mode: the transaction still holds the stronger lock it took earlier.
+     * {@code PESSIMISTIC_FORCE_INCREMENT} keeps going through {@code session.lock}, which is what performs the
+     * increment.
+     */
+    private void recordLockMode(Session session, D instance, LockModeType lockMode) {
+        if (lockMode == LockModeType.PESSIMISTIC_FORCE_INCREMENT) {
+            session.lock(instance, lockMode)
+            return
+        }
+        EntityEntry entry = session.unwrap(SessionImplementor).persistenceContextInternal
+                .getEntry(Hibernate.unproxy(instance))
+        if (entry == null) {
+            // Nothing in the persistence context tracks the instance any more, so there is no entry to record
+            // the mode on. The row is locked either way; let lock() record it rather than fail on the entry.
+            session.lock(instance, lockMode)
+            return
+        }
+        LockMode requested = LockMode.fromJpaLockMode(lockMode)
+        if (requested.greaterThan(entry.lockMode)) {
+            entry.setLockMode(requested)
+        }
     }
 
     protected D performUpsert(D target, boolean shouldFlush) {

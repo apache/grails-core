@@ -58,7 +58,8 @@ class HibernateGormEnhancer extends GormEnhancer {
                 datastoreForConnection,
                 createDynamicFinders(datastoreForConnection),
                 Thread.currentThread().contextClassLoader,
-                datastoreForConnection.getTransactionManager()
+                datastoreForConnection.getTransactionManager(),
+                qualifier
         )
     }
 

@@ -26,6 +26,8 @@ import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEventListener
+import org.grails.datastore.mapping.engine.event.MergeEvent
+import org.grails.datastore.mapping.engine.event.PersistEvent
 import org.grails.datastore.mapping.engine.event.PostDeleteEvent
 import org.grails.datastore.mapping.engine.event.PostInsertEvent
 import org.grails.datastore.mapping.engine.event.PostLoadEvent
@@ -35,6 +37,7 @@ import org.grails.datastore.mapping.engine.event.PreInsertEvent
 import org.grails.datastore.mapping.engine.event.PreLoadEvent
 import org.grails.datastore.mapping.engine.event.PreUpdateEvent
 import org.hibernate.engine.spi.SessionFactoryImplementor
+import org.hibernate.event.internal.DefaultPersistOnFlushEventListener
 import org.hibernate.event.service.spi.EventListenerRegistry
 import org.hibernate.event.spi.EventType
 import org.hibernate.jpa.event.spi.CallbackRegistry
@@ -57,6 +60,7 @@ class ClosureEventTriggeringInterceptorSpec extends HibernateGormDatastoreSpec {
     void setupSpec() {
         manager.registerDomainClasses(
             InterceptorBook,
+            InterceptorShelf,
             TimestampedBook,
         )
     }
@@ -102,6 +106,93 @@ class ClosureEventTriggeringInterceptorSpec extends HibernateGormDatastoreSpec {
                     .listeners()
                     .any { it instanceof ClosureEventTriggeringInterceptor }
         }
+    }
+
+    void "the interceptor replaces Hibernate's default merge and persist listeners and supplies the persist-on-flush one"() {
+        given:
+        def sfi = sessionFactory.unwrap(SessionFactoryImplementor)
+        def registry = sfi.serviceRegistry.getService(EventListenerRegistry)
+        def interceptor = registry.getEventListenerGroup(EventType.PRE_INSERT)
+                .listeners()
+                .find { it instanceof ClosureEventTriggeringInterceptor } as ClosureEventTriggeringInterceptor
+
+        expect: "merge and persist each carry the interceptor alone, so its delegated listener does not run twice"
+        registry.getEventListenerGroup(EventType.MERGE).listeners().toList() == [interceptor]
+        registry.getEventListenerGroup(EventType.PERSIST).listeners().toList() == [interceptor]
+
+        and: "persist-on-flush carries the interceptor's own listener, which keeps Hibernate's PERSIST_ON_FLUSH cascade action"
+        def onFlush = registry.getEventListenerGroup(EventType.PERSIST_ONFLUSH).listeners().toList()
+        onFlush == [interceptor.persistOnFlushEventListener]
+        onFlush[0] instanceof DefaultPersistOnFlushEventListener
+    }
+
+    void "an entity persisted by the flush-time cascade fires a PersistEvent before its PostInsertEvent"() {
+        given:
+        def shelf = new InterceptorShelf(name: 'fiction').save(flush: true, failOnError: true)
+        def listener = addCapturingListener()
+
+        when: "a transient book is reached from a managed shelf only when the session flushes"
+        shelf.addToBooks(new InterceptorBook(title: 'Dune'))
+        InterceptorShelf.withSession { it.flush() }
+
+        then:
+        listener.eventTypes.contains(PersistEvent)
+        listener.eventTypes.contains(PostInsertEvent)
+        listener.eventTypes.indexOf(PersistEvent) < listener.eventTypes.indexOf(PostInsertEvent)
+        InterceptorBook.count() == 1
+    }
+
+    void "an entity persisted explicitly fires a PersistEvent and a merged one fires a MergeEvent"() {
+        given:
+        def listener = addCapturingListener()
+
+        when:
+        def book = new InterceptorBook(title: 'Emma').save(flush: true, failOnError: true)
+
+        then:
+        listener.eventTypes.contains(PersistEvent)
+
+        when:
+        InterceptorBook.withSession { it.clear() }
+        listener.eventTypes.clear()
+        book.title = 'Emma, revised'
+        book.merge(flush: true)
+
+        then:
+        listener.eventTypes.contains(MergeEvent)
+    }
+
+    @Rollback
+    void "the observing listener publishes the GORM #description event without performing the operation"() {
+        given: "the listener kept behind an application listener that performs the operation itself"
+        def interceptor = registeredInterceptor()
+        def listener = addCapturingListener()
+        def source = sessionFactory.unwrap(SessionFactoryImplementor).currentSession as org.hibernate.event.spi.EventSource
+        def book = new InterceptorBook(title: 'observed')
+
+        when:
+        fire(interceptor.observingEventListener, book, source)
+
+        then: "GORM's event is published and change tracking is activated"
+        listener.eventTypes.contains(eventClass)
+        book instanceof org.grails.datastore.mapping.dirty.checking.DirtyCheckable
+
+        and: "but nothing was persisted: the listener that replaced the group does that"
+        !source.contains(book)
+        book.id == null
+
+        where:
+        description | eventClass   | fire
+        'persist'   | PersistEvent | { l, b, s -> l.onPersist(new org.hibernate.event.spi.PersistEvent('entity', b, s)) }
+        'merge'     | MergeEvent   | { l, b, s -> l.onMerge(new org.hibernate.event.spi.MergeEvent('entity', b, s)) }
+    }
+
+    private ClosureEventTriggeringInterceptor registeredInterceptor() {
+        def sfi = sessionFactory.unwrap(SessionFactoryImplementor)
+        sfi.serviceRegistry.getService(EventListenerRegistry)
+                .getEventListenerGroup(EventType.PRE_INSERT)
+                .listeners()
+                .find { it instanceof ClosureEventTriggeringInterceptor } as ClosureEventTriggeringInterceptor
     }
 
     // -------------------------------------------------------------------------
@@ -327,6 +418,20 @@ class ClosureEventTriggeringInterceptorSpec extends HibernateGormDatastoreSpec {
         noExceptionThrown()
     }
 
+    @Rollback
+    void "native session.merge() of a transient entity does not fail for a missing callback registry on the merge delegate"() {
+        given: "the interceptor is wired into the real session factory, exercising the production injectCallbackRegistry call"
+        def sfi = sessionFactory.unwrap(SessionFactoryImplementor)
+
+        when: "merging a never-persisted entity through Hibernate's own merge event, not GORM's merge() (which does not use it)"
+        def merged = sfi.currentSession.merge(new InterceptorBook(title: 'merged via native session'))
+        sfi.currentSession.flush()
+
+        then: "DefaultMergeEventListener.performSave() calls callbackRegistry.preCreate() on its own listener instance - a missing injection throws NullPointerException here"
+        noExceptionThrown()
+        merged != null
+    }
+
     // -------------------------------------------------------------------------
     // setApplicationContext with non-ConfigurableApplicationContext
     // -------------------------------------------------------------------------
@@ -524,6 +629,18 @@ class InterceptorBook implements HibernateEntity<InterceptorBook> {
 
     static mapping = {
         id generator: 'identity'
+    }
+}
+
+@Entity
+class InterceptorShelf implements HibernateEntity<InterceptorShelf> {
+    String name
+
+    static hasMany = [books: InterceptorBook]
+
+    static mapping = {
+        id generator: 'identity'
+        books cascade: 'all'
     }
 }
 

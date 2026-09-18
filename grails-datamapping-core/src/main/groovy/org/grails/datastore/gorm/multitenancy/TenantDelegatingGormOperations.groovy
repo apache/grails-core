@@ -105,6 +105,18 @@ class TenantDelegatingGormOperations<D> implements GormAllOperations<D> {
     }
 
     @Override
+    boolean supportsLockedRefresh() {
+        allOperations.supportsLockedRefresh()
+    }
+
+    @Override
+    D refresh(D instance, Map args) {
+        Tenants.withId(requireMultiTenantCapableDatastore(), tenantId) {
+            allOperations.refresh(instance, args)
+        }
+    }
+
+    @Override
     D save(D instance) {
         Tenants.withId(requireMultiTenantCapableDatastore(), tenantId) {
             allOperations.save(instance)
@@ -375,6 +387,13 @@ class TenantDelegatingGormOperations<D> implements GormAllOperations<D> {
     D lock(Serializable id) {
         Tenants.withId(requireMultiTenantCapableDatastore(), tenantId) {
             allOperations.lock(id)
+        }
+    }
+
+    @Override
+    D lock(Map args, Serializable id) {
+        Tenants.withId(requireMultiTenantCapableDatastore(), tenantId) {
+            allOperations.lock(args, id)
         }
     }
 

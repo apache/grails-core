@@ -24,6 +24,7 @@ import org.codehaus.groovy.runtime.InvokerHelper
 import org.springframework.transaction.PlatformTransactionManager
 
 import grails.gorm.api.GormInstanceOperations
+import org.grails.datastore.gorm.internal.RefreshLockArguments
 import org.grails.datastore.gorm.schemaless.DynamicAttributes
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.DatastoreUtils
@@ -136,7 +137,14 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
     @Override
     def <T> T mutex(D instance, Closure<T> callable) {
         execute({ Session session ->
-            session.lock(instance)
+            if (supportsLockedRefresh()) {
+                // Reload the row under the lock instead of version-checking the state already loaded, so that a
+                // competing writer is waited for and the closure runs on the committed state. Always an
+                // exclusive lock: a shared or optimistic one would not give the closure mutual exclusion.
+                refresh(instance, [(RefreshLockArguments.LOCK): true])
+            } else {
+                session.lock(instance)
+            }
             callable?.call()
         } as SessionCallback)
     }

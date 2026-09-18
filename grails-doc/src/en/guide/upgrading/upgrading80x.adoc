@@ -3773,3 +3773,136 @@ The FutureTask-based promise implementations, `PromiseFactoryBean`, `AsyncContro
 Both eager web promises and returned promises now honor `spring.mvc.async.request-timeout`; the Servlet container default applies when unset (normally 30 seconds on Tomcat), rather than an infinite timeout for eager web promises. Timeouts return HTTP 503 and can use a `503` URL mapping. Set a timeout explicitly if your application requires long-running responses. With the default and virtual-thread factories, single and aggregate error callbacks receive the original failure, while both direct and chained `get()` methods use the `Future` contract's `ExecutionException` wrapper.
 
 The `grails.async.promiseFactory=virtual-thread` opt-in now uses the same CompletableFuture implementation with its own decorated executor; it no longer relies on the deprecated FutureTask classes. Its default event bus remains asynchronous and its web tasks propagate request context. Its aggregate `onComplete` resolves to the callback's result, and aggregate `onError` observes the original failure while leaving the returned promise failed, rather than recovering to an empty list.
+
+==== 67. GORM for Hibernate 7 Tracks Changes From Persist, Not From Insert
+
+GORM for Hibernate 7 now activates its dirty-check tracking when an entity is persisted or merged rather
+than after its row has been inserted. Two observable behaviours change for existing applications on
+Hibernate 7. Applications on Hibernate 5 are unaffected.
+
+===== 67.1 A New Entity Starts at Version 0
+
+An entity whose identifier is generated before the insert, for example one mapped with
+`id generator: 'increment'` or `'assigned'`, or any member of a `tablePerConcreteClass` hierarchy, was
+written with an `INSERT` immediately followed by an `UPDATE` of the same row, so it started at `version` 1.
+It now starts at `version` 0 and costs a single statement, as on Hibernate 5 and as entities using the
+default `identity` generator always did.
+
+Code that compared such a version against 1, or that counted statements or update events for a new entity,
+needs to expect the value it would have had on Hibernate 5:
+
+[source,groovy]
+----
+def book = new Book(title: 'Grails').save(flush: true)   // id generator: 'increment'
+assert book.version == 0                                  // was 1 before Grails 8.0
+----
+
+===== 67.2 Persistence Listeners Receive Persist and Merge Events
+
+An `AbstractPersistenceEventListener` on Hibernate 7 now receives a `PersistEvent` (`eventType` `Persist`)
+for every explicit or flush-time cascaded persist, and a `MergeEvent` (`eventType` `Merge`) for every
+merge. Neither can be cancelled. Hibernate 5 publishes `SaveOrUpdateEvent` when an entity is saved and
+publishes no event for a merge.
+
+A listener that switches over `event.eventType` and throws in its default branch must handle the new
+values:
+
+[source,groovy]
+----
+@Override
+protected void onPersistenceEvent(AbstractPersistenceEvent event) {
+    switch (event.eventType) {
+        case Persist:                      // new on Hibernate 7
+        case Merge:                        // new on Hibernate 7
+        case PreInsert:
+            // ...
+            break
+        default:
+            throw new IllegalStateException("Unhandled ${event.eventType}")
+    }
+}
+----
+
+==== 68. `lock(id)` Applies the Multi-Tenancy Filter
+
+`DomainClass.lock(id)` loaded the row by identifier, and Hibernate's tenant filter does not apply to a load
+by identifier. A `MultiTenant` entity could therefore be locked, and returned, by a tenant that does not own
+it, even though `get(id)` correctly returned `null` for the same identifier.
+
+The lock now loads a multi-tenant entity through a query, as `get(id)` does, so it resolves within the bound
+tenant and returns `null` for a row that belongs to another one. Entities that are not multi-tenant are
+unaffected, and so is the statement issued for them.
+
+Code that relied on `lock(id)` reaching across tenants has to bind the owning tenant explicitly:
+
+[source,groovy]
+----
+Tenants.withId('tenant1') {
+    Book.lock(id)
+}
+----
+
+==== 69. Instance Operations on a Named-Connection Static API Use That Connection
+
+Reaching an instance operation through a named-connection static API - `Book.secondary.save(book)`,
+`Book.secondary.delete(book)` and so on - resolved the instance API for the *default* connection rather than
+for `secondary`. With only the named connection's session open, which is the normal arrangement, the call
+failed with `No Session found for current thread`:
+
+[source,groovy]
+----
+Book.secondary.withNewSession {
+    Book.secondary.withTransaction {
+        Book.secondary.save(book)     // threw: resolved the default connection
+    }
+}
+----
+
+Every such operation now resolves the connection the handle was obtained for: `save`, `insert`, `merge`,
+`delete`, `attach`, `isAttached`, `discard`, `ident`, `lock`, `mutex`, `refresh` and `instanceOf`. The example
+above now saves to `secondary`.
+
+GORM for Hibernate 5 needed a second fix for this to take effect. Its static API discarded the connection
+qualifier it was created with and reported `DEFAULT` for every connection, so a named-connection handle could
+not resolve anything but the default one. It now records its own qualifier, as GORM for Hibernate 7 already
+did. Anything that reads the qualifier of a Hibernate 5 named-connection static API therefore sees the real
+connection name where it previously saw `default`.
+
+Applications using a single datasource are unaffected, and so is the instance form `book.secondary.save()`,
+which already resolved the named connection.
+
+==== 70. `mutex` Reloads the Instance Under the Lock
+
+`entity.mutex { }` took an exclusive lock on the instance's already-loaded state and ran the closure. Because
+that lock is version-checked, a transaction that committed to the row between the load and the `mutex` call
+made it fail with an optimistic locking failure - the closure never ran.
+
+Where the datastore supports it, GORM for Hibernate 5 and 7 included, `mutex` now acquires the lock without a
+version check and reloads the row under it, so it waits for a competing writer and the closure runs on the
+committed state. The lock stays exclusive; there is no argument to weaken it, since a shared or optimistic
+lock would not give the closure mutual exclusion.
+
+Three consequences for existing code:
+
+* **Unflushed changes to the instance are discarded**, as they are for `refresh`. Apply changes inside the
+closure, not before the `mutex` call:
++
+[source,groovy]
+----
+book.title = 'new title'
+book.mutex { book.save() }        // the pending title is discarded by the reload
+
+book.mutex {                      // apply the change inside instead
+    book.title = 'new title'
+    book.save()
+}
+----
+* **An active transaction is required.** Without one the call now throws
+`jakarta.persistence.TransactionRequiredException`.
+* **The instance must be attached** to the current session; a detached one throws `IllegalArgumentException`.
+Re-attach it with `attach()` first.
+
+Code that relied on `mutex` failing fast on a stale version should check the version itself, or use
+`entity.lock()`, which is unchanged.
+
+Datastores that cannot reload under a lock keep their previous behaviour.
