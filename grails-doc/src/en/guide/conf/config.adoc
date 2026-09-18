@@ -126,10 +126,16 @@ compiled classes, and the build merges those files after compilation. Nothing is
 the per-class files are not packaged. Java configuration classes are inspected from their compiled bytecode. This
 avoids Java annotation processing on Groovy sources, which would interfere with incremental Groovy compilation.
 
+Some plugins, such as Spring Security, declare their defaults in a Groovy configuration script rather than in a
+configuration class. The published metadata covers those settings as well. The script is read without being executed:
+a literal value becomes the documented default, while a value that comes from a method call, an environment block, or
+another dynamic expression is listed without a default, because its result depends on where the application runs.
+
 The generated metadata describes bindable fields and bean properties. A module can also provide
 `META-INF/additional-spring-configuration-metadata.json` for descriptions, hints, legacy or indirect properties, and
-other details that cannot be derived safely from bytecode. Curated values override generated values for the same
-property.
+other details that cannot be derived safely from bytecode or static DSL syntax. Curated values override generated values
+for the same property. The module build merges all generated and curated entries into the single standard
+`META-INF/spring-configuration-metadata.json` resource published in the module JAR.
 
 Generated types follow the Spring Boot convention of naming primitives by their wrapper, for example
 `java.lang.Boolean`. Properties contributed by a Groovy `@Delegate` field are generated when the delegate is compiled
