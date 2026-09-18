@@ -49,6 +49,65 @@ class MongoConnectionSourceSettingsSpec extends Specification {
         settings.options.build().readPreference == ReadPreference.secondary()
     }
 
+    void "test index building is enabled unless it is switched off in configuration"() {
+        when: "no buildIndexes setting is supplied"
+        def settings = new MongoConnectionSourceSettingsBuilder(DatastoreUtils.createPropertyResolver([:])).build()
+
+        then: "declared indexes are built on startup"
+        settings.buildIndexes
+
+        when: "the setting is switched off"
+        def resolver = DatastoreUtils.createPropertyResolver([(MongoSettings.SETTING_BUILD_INDEXES): 'false'])
+        settings = new MongoConnectionSourceSettingsBuilder(resolver).build()
+
+        then: "index building is disabled"
+        !settings.buildIndexes
+    }
+
+    void "test the index build is synchronous unless it is switched to asynchronous in configuration"() {
+        when: "no buildIndexesAsync setting is supplied"
+        def settings = new MongoConnectionSourceSettingsBuilder(DatastoreUtils.createPropertyResolver([:])).build()
+
+        then: "the index build blocks the thread creating the datastore"
+        !settings.buildIndexesAsync
+
+        when: "the setting is switched on"
+        def resolver = DatastoreUtils.createPropertyResolver([(MongoSettings.SETTING_BUILD_INDEXES_ASYNC): 'true'])
+        settings = new MongoConnectionSourceSettingsBuilder(resolver).build()
+
+        then: "the index build is asynchronous"
+        settings.buildIndexesAsync
+    }
+
+    void "test MongoDB setting names require the documented camel case spelling"() {
+        given:
+        def defaults = new MongoConnectionSourceSettings()
+
+        when:
+        def settings = new MongoConnectionSourceSettingsBuilder(DatastoreUtils.createPropertyResolver([
+                'grails.mongodb.database-name': 'ignoredDb',
+                'grails.mongodb.build-indexes': false,
+                'grails.mongodb.build-indexes-async': true
+        ])).build()
+
+        then:
+        settings.databaseName == defaults.databaseName
+        settings.buildIndexes
+        !settings.buildIndexesAsync
+
+        when:
+        settings = new MongoConnectionSourceSettingsBuilder(DatastoreUtils.createPropertyResolver([
+                'grails.mongodb.databaseName': 'configuredDb',
+                'grails.mongodb.buildIndexes': false,
+                'grails.mongodb.buildIndexesAsync': true
+        ])).build()
+
+        then:
+        settings.databaseName == 'configuredDb'
+        !settings.buildIndexes
+        settings.buildIndexesAsync
+    }
+
     void "test mongo client settings builder with URL"() {
         when:"using a property resolver"
         Map myMap = ['grails.mongodb.url': 'mongodb://foo:bar@mycompany/mydb?maxPoolSize=5']

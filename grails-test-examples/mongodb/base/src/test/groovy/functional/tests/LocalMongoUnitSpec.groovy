@@ -25,7 +25,6 @@ import org.apache.grails.testing.mongo.AbstractMongoGrailsExtension
 import org.testcontainers.containers.MongoDBContainer
 import org.testcontainers.utility.DockerImageName
 import spock.lang.AutoCleanup
-import spock.lang.PendingFeature
 import spock.lang.Shared
 
 class LocalMongoUnitSpec extends MongoSpec implements EmbeddedMongoClient {
@@ -50,7 +49,6 @@ class LocalMongoUnitSpec extends MongoSpec implements EmbeddedMongoClient {
     }
 
 //tag::structure[]
-    @PendingFeature(reason = 'A ValidationException is not thrown')
     void "test fail on error"() {
 
         when:
