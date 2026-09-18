@@ -44,6 +44,24 @@ Grails 8 requires a minimum of Java 21 to both build and run Grails applications
 This is an increase from Grails 7, which required Java 17.
 Update your project's toolchain, CI pipelines, and deployment environments to use JDK 21 or later.
 
+==== 1.1 Gradle 9.7 Minimum Requirement
+
+The Grails 8 Gradle plugins require Gradle 9.7 or later.
+Grails 7 applications were generated with a Gradle 8.14.x wrapper, and a wrapper carried over from Grails 7 does not work with Grails 8.
+The Groovy compiler configuration that the Grails Gradle plugin sets up relies on the `groovyOptions.configurationScriptFile` property, which only exists from Gradle 9.7 on.
+On an older Gradle version `compileGroovy` fails with a `NoSuchMethodError` for `GroovyCompileOptions.getConfigurationScriptFile()`.
+
+Update the Gradle wrapper of your project as part of the upgrade:
+
+[,console,subs="attributes"]
+----
+./gradlew wrapper --gradle-version {gradleVersion}
+----
+
+Afterwards, check that the `distributionUrl` in `gradle/wrapper/gradle-wrapper.properties` points to the new version.
+Gradle 9 has breaking changes of its own that may affect your build scripts and other Gradle plugins you use; consult the https://docs.gradle.org/{gradleVersion}/userguide/upgrading_major_version_9.html[Gradle 9 upgrade guide].
+See also <<groovy-compiler-config-scripts,Generated Groovy Compiler Configuration Scripts>> if your build assigns a Groovy compiler configuration script itself.
+
 ==== 2. Spring Boot 4.1.x
 
 Grails 8 upgrades from Spring Boot 3.5.x to Spring Boot 4.1.x.
@@ -3506,6 +3524,7 @@ declaration, so it is read strictly at compile time and at runtime alike.
 
 See <<upgrading>> for the full description of the XML parsing defaults.
 
+[[groovy-compiler-config-scripts]]
 ==== 62. Generated Groovy Compiler Configuration Scripts
 
 On Gradle 9.7+, configure `groovyOptions.configurationScriptFile` before task execution. Assigning
