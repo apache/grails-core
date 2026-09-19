@@ -23,6 +23,11 @@ info:
         name: '@info.app.name@'
         version: '@info.app.version@'
         grailsVersion: '@info.app.grailsVersion@'
+spring:
+    servlet:
+        multipart:
+            maxFileSize: 100KB
+            maxRequestSize: 100KB
 ---
 grails:
     views:

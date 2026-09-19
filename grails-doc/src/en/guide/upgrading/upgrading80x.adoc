@@ -109,7 +109,9 @@ org.springframework.boot.env.EnvironmentPostProcessor=com.example.MyPostProcesso
 org.springframework.boot.EnvironmentPostProcessor=com.example.MyPostProcessor
 ----
 
-==== 4. MongoDB Configuration Property Changes
+==== 4. Spring Boot Configuration Property Changes
+
+===== 4.1 MongoDB Configuration
 
 Spring Boot 4 renamed the MongoDB configuration property namespace for Spring Boot's own auto-configuration.
 If your `application.yml` or `application.groovy` uses `spring.data.mongodb.*` properties for Spring Boot auto-configuration, you must rename them to `spring.mongodb.*`.
@@ -135,6 +137,39 @@ spring:
         port: 27017
         database: mydb
 ----
+
+[[multipart-upload-configuration]]
+===== 4.2 Multipart Upload Configuration
+
+The `grails.controllers.upload.\*` configuration properties are no longer supported.
+Applications that still define any property under `grails.controllers.upload` fail at startup with migration instructions.
+This startup check is a migration aid for Grails 8 only and will be removed in Grails 9, after which leftover `grails.controllers.upload` properties are silently ignored.
+Move those settings to Spring Boot's `spring.servlet.multipart.*` namespace:
+
+[source,yaml]
+.application.yml - Before (Grails 7)
+----
+grails:
+    controllers:
+        upload:
+            maxFileSize: 200000
+            maxRequestSize: 200000
+----
+
+[source,yaml]
+.application.yml - After (Grails 8)
+----
+spring:
+    servlet:
+        multipart:
+            maxFileSize: 200MB
+            maxRequestSize: 200MB
+----
+
+Spring Boot also provides `spring.servlet.multipart.location`, `spring.servlet.multipart.fileSizeThreshold`, `spring.servlet.multipart.enabled`, `spring.servlet.multipart.resolveLazily`, and `spring.servlet.multipart.strictServletCompliance` as replacements for the corresponding legacy settings. See the {springBootReference}../appendix/application-properties/index.html[Spring Boot multipart application properties] reference for the complete list.
+
+Unlike the Grails 7 default, the multipart location is not set to `System.getProperty("java.io.tmpdir")`; when `spring.servlet.multipart.location` is not configured, the resulting `MultipartConfigElement` has an empty location and uploads use the servlet container's temporary directory. This can matter when the container's temporary storage is constrained or when an application expects uploaded files in `java.io.tmpdir`.
+When no upload limits are configured, Spring Boot's defaults apply: 1MB per file and 10MB per request. Set `spring.servlet.multipart.maxFileSize` and `spring.servlet.multipart.maxRequestSize` explicitly if your application requires different limits.
 
 ==== 5. Hibernate ORM Package Relocations
 
@@ -3083,14 +3118,14 @@ with a diagnostic message, the same way it previously failed with `MissingMethod
 
 ===== 53.1 Oversized uploads now reach the application's error handling
 
-An upload larger than `grails.controllers.upload.maxFileSize` or
-`grails.controllers.upload.maxRequestSize` (both 128000 bytes by default) fails when the servlet
-container parses the request parts, and every parameter read on that request fails with it from then
-on. Because Grails reads request parameters on paths that run before, alongside and after the handler
-— to resolve the `_method` override, whenever a filter such as Spring Security builds `params`, in the
-locale-change interceptor, and in the exception resolver's request log — that failure used to abort
-the request inside the filter chain, where no exception handler could see it. The application was left
-with the container's own error page.
+An upload larger than `spring.servlet.multipart.maxFileSize` or `spring.servlet.multipart.maxRequestSize`
+(1MB per file and 10MB per request by default, see <<multipart-upload-configuration,Multipart Upload
+Configuration>>) fails when the servlet container parses the request parts, and every parameter read on
+that request fails with it from then on. Because Grails reads request parameters on paths that run
+before, alongside and after the handler — to resolve the `_method` override, whenever a filter such as
+Spring Security builds `params`, in the locale-change interceptor, and in the exception resolver's
+request log — that failure used to abort the request inside the filter chain, where no exception
+handler could see it. The application was left with the container's own error page.
 
 Those reads now tolerate a multipart request the container refuses to parse, so the failure surfaces
 where Spring raises it, as a
@@ -3120,7 +3155,7 @@ handler resolution — so outside the error handler this is only observable in a
 Tomcat and Jetty both surface the failure to the application as described above. Undertow applies the
 limit while it reads the request entity and refuses the request at the HTTP layer, so no application
 code runs at all: the response is a bare `413` with an empty body, and a `"413"` mapping is not
-consulted. Raising `grails.controllers.upload.maxRequestSize` raises the point at which Undertow
+consulted. Raising `spring.servlet.multipart.maxRequestSize` raises the point at which Undertow
 refuses, but there is no way to render a body for a request the container never dispatches.
 
 ===== 53.2 An error handler that fails is no longer forwarded to from inside itself

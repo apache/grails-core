@@ -123,17 +123,17 @@ config_knobs:
     security_relevant: true
     maintainer_stance: unresolved
     section: "§5a"
-  - name: grails.controllers.upload.maxFileSize
-    default: 128000
+  - name: spring.servlet.multipart.maxFileSize
+    default: 1048576
     default_units: bytes
-    default_source: grails-controllers/.../ControllersAutoConfiguration.java
+    default_source: Spring Boot MultipartProperties
     security_relevant: true
     maintainer_stance: unresolved
     section: "§5a"
-  - name: grails.controllers.upload.maxRequestSize
-    default: 128000
+  - name: spring.servlet.multipart.maxRequestSize
+    default: 10485760
     default_units: bytes
-    default_source: grails-controllers/.../ControllersAutoConfiguration.java
+    default_source: Spring Boot MultipartProperties
     security_relevant: true
     maintainer_stance: unresolved
     section: "§5a"
@@ -297,7 +297,7 @@ properties_provided:
     provenance: inferred
     open_question: "§14 wave 1"
   - id: P9
-    description: "maxFileSize, maxRequestSize, autoGrowCollectionLimit provide bounded data-binding memory."
+    description: "Multipart upload limits and autoGrowCollectionLimit bound request-processing memory."
     cwe: CWE-770
     conditions: "Operator does not raise the limits past application needs."
     violation_symptom: "Memory growth proportional to input regardless of configured limit."
