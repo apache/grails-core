@@ -124,3 +124,13 @@ jobs:
           -PskipHibernate5Tests
           -PskipHibernate7Tests
           -PskipMongodbTests
+      # This job runs the same Geb suites as gradle.yml but, unlike gradle.yml, kept nothing when
+      # they failed. `reporting = true` on the specs already writes the page source and a
+      # screenshot at the moment of failure; without this step they die with the runner.
+      - name: "📤 Upload Geb Reports"
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: geb-reports-sitemesh2-functional-java${{ matrix.java }}-indy${{ matrix.indy }}
+          path: '**/build/geb-reports/'
+          if-no-files-found: ignore
