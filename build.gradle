@@ -180,6 +180,68 @@ tasks.register('publishAllToMavenLocal') {
     }
 }
 
+tasks.register('verifySkillsJarsSources') {
+    description = 'Verifies the SkillsJars publication paths point at the app-facing Grails skill sources.'
+    group = 'verification'
+
+    def skillsJarsDir = layout.projectDirectory.dir('skills')
+    def publishedSkills = [
+            'grails-8-upgrade': '../../.agents/skills/grails-8-upgrade/SKILL.md',
+            'grails-developer': '../../.agents/skills/grails-developer/SKILL.md',
+    ]
+
+    inputs.dir(layout.projectDirectory.dir('.agents/skills'))
+    inputs.dir(skillsJarsDir)
+
+    doLast {
+        if (!skillsJarsDir.asFile.directory) {
+            throw new GradleException('The SkillsJars publication path must be a skills directory containing app-facing skill symlinks.')
+        }
+
+        def actualSkillNames = skillsJarsDir.asFile.listFiles().findAll { File file -> file.directory }.collect { File file -> file.name } as Set
+        def expectedSkillNames = publishedSkills.keySet() as Set
+        def missingSkillNames = expectedSkillNames - actualSkillNames
+        def extraSkillNames = actualSkillNames - expectedSkillNames
+        if (missingSkillNames || extraSkillNames) {
+            throw new GradleException("SkillsJars must publish exactly ${expectedSkillNames}, but missing ${missingSkillNames} and found extra ${extraSkillNames}.")
+        }
+
+        publishedSkills.each { String skillName, String expectedSkillTarget ->
+            def skillDir = skillsJarsDir.dir(skillName).asFile
+            if (!skillDir.directory) {
+                throw new GradleException("The SkillsJars skill ${skillName} must be a directory containing SKILL.md.")
+            }
+
+            def skillLink = skillsJarsDir.file("${skillName}/SKILL.md").asFile
+            def skillPath = skillLink.toPath()
+            def actualTarget = null
+
+            if (java.nio.file.Files.isSymbolicLink(skillPath)) {
+                actualTarget = java.nio.file.Files.readSymbolicLink(skillPath).toString().replace('\\', '/')
+            }
+            else if (skillLink.isFile()) {
+                actualTarget = skillLink.getText('UTF-8').trim().replace('\\', '/')
+            }
+
+            if (actualTarget != expectedSkillTarget) {
+                throw new GradleException("The SkillsJars skill ${skillName} marker must be a symlink to ${expectedSkillTarget}, but found ${actualTarget ?: 'no link target'}.")
+            }
+
+            def gitMode = providers.exec {
+                commandLine 'git', 'ls-files', '-s', "skills/${skillName}/SKILL.md"
+            }.standardOutput.asText.get().trim().split(' ')[0]
+            if (gitMode != '120000') {
+                throw new GradleException("The SkillsJars skill ${skillName} marker must be committed as a symlink with git mode 120000, but found mode ${gitMode ?: 'none'}.")
+            }
+
+            def sourceSkillFile = layout.projectDirectory.file(expectedSkillTarget.substring(6))
+            if (!sourceSkillFile.asFile.file) {
+                throw new GradleException("The SkillsJars skill ${skillName} target ${expectedSkillTarget} does not exist.")
+            }
+        }
+    }
+}
+
 apply {
     from layout.projectDirectory.file('gradle/publish-root-config.gradle')
     from layout.projectDirectory.file('gradle/rat-root-config.gradle')
