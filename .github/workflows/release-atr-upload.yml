@@ -1,0 +1,130 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Experimental Apache Trusted Releases (ATR) compose step.
+# Uploads the signed source and binary distributions from a GitHub Release to
+# ATR using OIDC (apache/tooling-actions/upload-to-atr). This is opt-in and
+# does not replace the existing dist.apache.org/dev SVN upload.
+# ATR documentation and the official workflow example:
+# https://tooling.apache.org/
+# https://github.com/apache/tooling-asf-example/blob/main/.github/workflows/build-and-rsync-to-atr.yaml
+#
+# Layout matches Grails dist.apache.org convention:
+#   sources/     apache-grails-<version>-src.zip{,.asc,.sha512}
+#   distribution/ apache-grails-<version>-bin.zip{,.asc,.sha512}
+#                 apache-grails-wrapper-<version>-bin.zip{,.asc,.sha512}
+# rsync destination is /<project>/<version>/, so voters see the same
+# sources/ and distribution/ split used on dist/dev/grails/core/<version>/.
+#
+# Prerequisites (see RELEASE.md "Experimental: Apache Trusted Releases"):
+#   * Grails project registered on ATR with Trusted Publishing enabled
+#   * This workflow listed under the project's ATR compose workflow paths
+#   * Repository name on ATR set to "grails-core"
+name: "Release - ATR Upload (experimental)"
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version without the v prefix (e.g. 7.0.0 or 8.0.0-M1)'
+        required: true
+        type: string
+      project:
+        description: 'ATR project slug (must match the project registered on ATR)'
+        required: true
+        type: string
+        default: grails
+      atr_host:
+        description: 'ATR host (Alpha default is release-test.apache.org)'
+        required: true
+        type: string
+        default: release-test.apache.org
+      ssh_port:
+        description: 'ATR rsync SSH port'
+        required: true
+        type: string
+        default: '2222'
+permissions: { }
+env:
+  DIST_NAME: apache-grails
+  REPO_SLUG: ${{ github.repository }}
+  VERSION: ${{ inputs.version }}
+jobs:
+  upload:
+    name: "Upload distributions to ATR"
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write # required for GitHub OIDC → ATR
+      contents: read
+    steps:
+      - name: "📝 Establish tag"
+        run: echo "TAG=v${VERSION}" >> "$GITHUB_ENV"
+      - name: "📥 Download GitHub Release distributions"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p atr-dist/sources atr-dist/distribution
+          download_into() {
+            local dest="$1"
+            shift
+            local asset
+            for asset in "$@"; do
+              echo "Downloading ${asset} -> ${dest}"
+              gh release download "${TAG}" \
+                --repo "${REPO_SLUG}" \
+                --pattern "${asset}" \
+                --dir "${dest}" \
+                --clobber
+            done
+          }
+          download_into atr-dist/sources \
+            "${DIST_NAME}-${VERSION}-src.zip" \
+            "${DIST_NAME}-${VERSION}-src.zip.sha512" \
+            "${DIST_NAME}-${VERSION}-src.zip.asc"
+          download_into atr-dist/distribution \
+            "${DIST_NAME}-${VERSION}-bin.zip" \
+            "${DIST_NAME}-${VERSION}-bin.zip.sha512" \
+            "${DIST_NAME}-${VERSION}-bin.zip.asc" \
+            "${DIST_NAME}-wrapper-${VERSION}-bin.zip" \
+            "${DIST_NAME}-wrapper-${VERSION}-bin.zip.sha512" \
+            "${DIST_NAME}-wrapper-${VERSION}-bin.zip.asc"
+          echo "Downloaded the following files:"
+          find atr-dist -type f -print | sort
+      - name: "📤 Upload to ATR"
+        # Pin to a full SHA; apache/tooling-actions does not publish tags.
+        # SHA is apache/tooling-actions@e8594ee9cc5ef5fbb48c367a9ab87042c0ccbbc5 (2026-08-24)
+        uses: apache/tooling-actions/upload-to-atr@e8594ee9cc5ef5fbb48c367a9ab87042c0ccbbc5
+        with:
+          project: ${{ inputs.project }}
+          version: ${{ env.VERSION }}
+          src: atr-dist
+          atr-host: ${{ inputs.atr_host }}
+          ssh-port: ${{ inputs.ssh_port }}
+      - name: "📧 Next step — start the ATR vote"
+        env:
+          ATR_HOST: ${{ inputs.atr_host }}
+          ATR_PROJECT: ${{ inputs.project }}
+        run: |
+          echo "::group::Start the vote on ATR"
+          echo "Compose is complete. ATR has no GitHub Action for starting a vote."
+          echo "Start the vote from the ATR UI or the ATR client, then wait at least 72 hours:"
+          echo "  https://${ATR_HOST}/"
+          echo "  atr vote start ${ATR_PROJECT} ${VERSION} <REVISION> -m \"<ASF_UID>@apache.org\""
+          echo "When starting the vote, set the download path suffix to core/${VERSION}"
+          echo "(or core/{{VERSION}} if the UI uses that token). During Alpha, a committer moves"
+          echo "the exact version tree from dist/atr to dist/release after the successful announce."
+          echo "Discard any dist/dev [VOTE] email from the main Release workflow; ATR starts the sole vote."
+          echo "After the vote passes, run workflow 'Release - ATR Resolve Vote (experimental)'."
+          echo "::endgroup::"

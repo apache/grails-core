@@ -1,0 +1,95 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Experimental Apache Trusted Releases (ATR) vote-resolve step.
+# Replaces the manual "[RESULT][VOTE]" email: ATR records the outcome and
+# posts the result to the vote thread.
+# ATR documentation and the official workflow examples:
+# https://tooling.apache.org/
+# https://github.com/apache/tooling-asf-example/blob/main/.github/workflows/resolve-vote-on-atr.yaml
+#
+# Prerequisites (see RELEASE.md "Experimental: Apache Trusted Releases"):
+#   * This workflow listed under the project's ATR vote workflow paths
+#   * A vote already started on ATR for the given version
+name: "Release - ATR Resolve Vote (experimental)"
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version without the v prefix (e.g. 7.0.0 or 8.0.0-M1)'
+        required: true
+        type: string
+      resolve_resolution:
+        description: 'Vote resolution'
+        required: true
+        type: choice
+        options:
+          - passed
+          - failed
+        default: passed
+      atr_host:
+        description: 'ATR host (Alpha default is release-test.apache.org)'
+        required: true
+        type: string
+        default: release-test.apache.org
+permissions: { }
+jobs:
+  resolve:
+    name: "Resolve ATR vote"
+    environment: release
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write # required for GitHub OIDC → ATR
+      contents: read
+    steps:
+      - name: "🗳 Resolve vote on ATR"
+        # Pin to a full SHA; apache/tooling-actions does not publish tags.
+        # SHA is apache/tooling-actions@e8594ee9cc5ef5fbb48c367a9ab87042c0ccbbc5 (2026-08-24)
+        uses: apache/tooling-actions/release-on-atr@e8594ee9cc5ef5fbb48c367a9ab87042c0ccbbc5
+        with:
+          version: ${{ inputs.version }}
+          atr-host: ${{ inputs.atr_host }}
+          resolve: 'true'
+          resolve-resolution: ${{ inputs.resolve_resolution }}
+      - name: "📧 Next steps"
+        env:
+          RESOLVE_RESOLUTION: ${{ inputs.resolve_resolution }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          echo "::group::After resolving the vote"
+          if [ "${RESOLVE_RESOLUTION}" = "passed" ]; then
+            echo "Vote passed. During Alpha, ATR does not commit to dist/atr until the release is announced."
+            echo "Resolve plus announce complete the finish. Remaining steps, in this order:"
+            echo "  * 1. Promote Nexus staging through Actions → Release - Promote Nexus Staging"
+            echo "       with version ${VERSION}. ATR does not publish Maven Central."
+            echo "  * 2. Once Maven Central is live, run 'Release - ATR Record Distribution (experimental)' (platform=MAVEN)."
+            echo "  * 3. Run 'Release - ATR Announce (experimental)' ONCE. During Alpha this is what causes ATR to publish to dist/atr."
+            echo "     announce-path-suffix on the announce action is compatibility-only; the current ATR announce endpoint ignores it."
+            echo "  * 4. THEN move exactly"
+            echo "       https://dist.apache.org/repos/dist/atr/grails/core/${VERSION}"
+            echo "     to"
+            echo "       https://dist.apache.org/repos/dist/release/grails/core/${VERSION}"
+            echo "     using svn/svnmucc. Do NOT move the committee root dist/atr/grails."
+            echo "     Do NOT run releaseDistributions.sh (that promotes dist/dev)."
+            echo "  * 5. Remaining Grails-specific: Forge, docs, SDKMAN!, website, and blog as in RELEASE.md."
+            echo "When starting the ATR vote, set the download path suffix to core/${VERSION}"
+            echo "(or core/{{VERSION}} if the UI uses that token). The version-tree move occurs"
+            echo "manually after the successful announce, as listed above."
+          else
+            echo "Vote failed. Drop the Nexus staging repo and dist/dev copy with"
+            echo "  Release - Abort Release"
+            echo "and discard the ATR candidate from the ATR UI."
+          fi
+          echo "::endgroup::"
