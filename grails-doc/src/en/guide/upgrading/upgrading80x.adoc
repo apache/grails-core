@@ -739,6 +739,13 @@ The Spring annotations still work, so this is non-blocking, but new code should 
 * **Namespaced link generation is namespace-aware.**
 When a link, form action, pagination link, sortable column link, redirect, chain, or include targets a controller without an explicit `namespace`, Grails now resolves the namespace automatically. In the normal case, where only one controller has the target name, `controller` and `action` generate the correct namespaced or non-namespaced URL. Ambiguity only occurs when multiple controllers share the same name. In that case, specify `namespace` to choose the target explicitly. Pass `namespace: null` from Groovy code or `namespace=""` in a GSP tag to target the non-namespaced controller explicitly.
 
+* **A read-only transaction no longer flushes the session.**
+A read-only transaction (`@ReadOnly`, `@Transactional(readOnly = true)`) commits without flushing the session on every GORM datastore. Hibernate, Neo4j and the simple map datastore already behaved this way; GORM for MongoDB flushed the session when a read-only transaction committed, and no longer does.
++
+So on MongoDB, a write saved without `flush: true` before read-only code ran in the same session used to be persisted as a side effect of the read. It is now left queued in a session whose flush mode is `COMMIT`: later queries in that session do not see it, and it is discarded when the session closes. Flush such writes explicitly with `save(flush: true)`, or perform them in a read-write transaction. See link:{mongodb5Guide}index.html#readOnlyTransactions[Read-Only Transactions] in the GORM for MongoDB guide.
++
+A GORM datastore implementation outside the Grails repository inherits this if it uses `SessionOnlyTransaction`; one that supplies its own `Transaction` can honour `readOnly` by overriding the new `AbstractSession.beginTransactionInternal(TransactionDefinition)`, which now receives the transaction definition instead of discarding it.
+
 * **`bindData` can clear omitted included fields.**
 `bindData(target, source, [include: [...], clearMissing: true])` now clears included properties that are absent from the binding source. The behavior is opt-in, requires an `include` list, and does not apply globally. Existing `bindData` calls without `clearMissing: true` keep omitted fields unchanged.
 

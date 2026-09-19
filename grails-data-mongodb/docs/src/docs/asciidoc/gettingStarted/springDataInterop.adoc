@@ -64,6 +64,8 @@ The unified manager is registered as the primary `transactionManager` (it has to
 
 WARNING: Because it is primary, in an application that mixes this with another persistence stack (for example Hibernate/JPA), an unqualified `@Transactional` resolves to this MongoDB manager. If you run multiple persistence stacks, define your own primary `transactionManager` (or qualify every `@Transactional` explicitly) so each method targets the intended manager.
 
+NOTE: On the unified manager, `readOnly` only governs GORM's flush. A GORM write queued inside a read-only transaction is not flushed (see <<readOnlyTransactions,Read-Only Transactions>>), but a Spring Data write such as `mongoTemplate.insert(...)` goes directly into the shared `ClientSession` and still commits. A read-only transaction does not prevent Spring Data writes.
+
 NOTE: Like GORM's own transaction manager, the unified manager supports a single flat transaction (`PROPAGATION_REQUIRED`). Spring-native suspension propagations such as `REQUIRES_NEW` and `NESTED` are not supported — a nested transactional call joins the surrounding transaction rather than starting an independent one.
 
 ==== Boundary

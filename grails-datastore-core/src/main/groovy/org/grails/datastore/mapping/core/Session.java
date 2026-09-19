@@ -166,7 +166,7 @@ public interface Session extends QueryCreator {
     boolean contains(Object o);
 
     /**
-     * The flush mode, defaults to FlushModeType.COMMIT
+     * The flush mode, defaults to FlushModeType.AUTO
      *
      * @param flushMode The FlushModeType
      */

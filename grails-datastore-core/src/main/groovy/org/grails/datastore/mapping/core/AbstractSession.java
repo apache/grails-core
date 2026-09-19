@@ -880,11 +880,24 @@ public abstract class AbstractSession<N> extends AbstractAttributeStoringSession
 
     @Override
     public Transaction beginTransaction(TransactionDefinition definition) {
-        transaction = beginTransactionInternal();
+        transaction = beginTransactionInternal(definition);
         return transaction;
     }
 
     protected abstract Transaction beginTransactionInternal();
+
+    /**
+     * Begins a transaction for the given definition. The default implementation ignores the
+     * definition and delegates to {@link #beginTransactionInternal()}, which is the behaviour
+     * datastores had before the definition was passed down at all. Datastores that can honour
+     * definition attributes such as {@link TransactionDefinition#isReadOnly()} override this.
+     *
+     * @param definition the definition the transaction is being started for
+     * @return the started transaction
+     */
+    protected Transaction beginTransactionInternal(TransactionDefinition definition) {
+        return beginTransactionInternal();
+    }
 
     public Transaction getTransaction() {
         if (transaction == null) {

@@ -178,6 +178,23 @@ class MongoTransactionSpec extends EmbeddedReplicaSetSpec {
         TxCounter.withNewSession { TxCounter.count() } == 0
     }
 
+    void "a read-only transaction commits without flushing the surrounding session"() {
+        when: "a read-only transaction commits while the session holds an unflushed write"
+        int written = TxPerson.withNewSession {
+            new TxPerson(name: "Queued").save()
+            TransactionTemplate txTemplate = new TransactionTemplate(datastore.transactionManager)
+            txTemplate.readOnly = true
+            txTemplate.execute {}
+            TxPerson.withNewSession { TxPerson.count() }
+        }
+
+        then: "the read did not persist the queued write"
+        written == 0
+
+        and: "the write is dropped when its session closes, as it would be on Hibernate"
+        TxPerson.withNewSession { TxPerson.count() } == 0
+    }
+
     void "test a per-transaction timeout is rejected rather than silently ignored"() {
         given: "a transaction template that requests an explicit timeout"
         def txTemplate = new TransactionTemplate(datastore.transactionManager)
