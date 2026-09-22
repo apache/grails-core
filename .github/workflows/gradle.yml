@@ -141,7 +141,12 @@ jobs:
           - os: macos-latest
             java: 21
             job_name: macOS JDK 21
-            gradle_task: 'build :grails-shell-cli:installDist groovydoc'
+            # No groovydoc here, and :grails-doc:docs is excluded below: the documentation
+            # chain (aggregateGroovydoc followed by publishGuide, both running inside the
+            # daemon) exhausts the 5 GB daemon heap on this runner, and the Ubuntu and
+            # Windows shard 0 jobs already build the same docs. This job exists to run the
+            # build and tests on Apple silicon.
+            gradle_task: 'build :grails-shell-cli:installDist'
             # The macOS runner has ~7 GB of RAM and 3 CPUs, against ~16 GB and 4 CPUs on the
             # Linux and Windows runners, while org.gradle.jvmargs still asks for a 5 GB daemon
             # (groovydoc needs it). Capping only maxTestParallel would not help: that is a
@@ -151,7 +156,7 @@ jobs:
             # setting that actually limits concurrent test and compiler JVMs; maxTestParallel
             # is kept alongside it so no single task exceeds that cap either. This reduces
             # memory pressure on the smallest runner rather than proving the job fits.
-            runner_arguments: '--max-workers=2 -PmaxTestParallel=2'
+            runner_arguments: '--max-workers=2 -PmaxTestParallel=2 -x :grails-doc:docs'
             cache_writer: true
           - os: windows-latest
             java: 25
