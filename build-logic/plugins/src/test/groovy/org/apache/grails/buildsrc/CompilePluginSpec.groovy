@@ -27,6 +27,8 @@ import spock.lang.Specification
 import spock.lang.TempDir
 
 import java.nio.file.Path
+import java.util.zip.ZipEntry
+import java.util.zip.ZipFile
 
 class CompilePluginSpec extends Specification {
 
@@ -133,5 +135,76 @@ class CompilePluginSpec extends Specification {
                 .withArguments(['printIndy', '--stacktrace'] + (extraArgs as List))
                 .withPluginClasspath()
                 .build()
+    }
+
+    def "a disabled javadoc task's stale output stays out of the javadoc jar"() {
+        given: 'the javadoc jar is fed by another documentation directory, as grails-publish does with groovydoc'
+            writeFile('docs-from-groovydoc/help-doc.html', 'groovydoc help')
+            writeFile('docs-from-groovydoc/index.html', 'groovydoc index')
+            testProjectDir.resolve('build.gradle').toFile() << '''
+                tasks.named('javadoc') { enabled = false }
+                tasks.named('javadocJar') { from('docs-from-groovydoc') }
+            '''
+
+        and: 'a build/docs/javadoc left behind by a build where javadoc still ran'
+            writeFile('build/docs/javadoc/help-doc.html', 'stale javadoc help')
+            writeFile('build/docs/javadoc/p/A.html', 'stale javadoc page')
+
+        when:
+            def result = runJavadocJar()
+
+        then: 'the jar builds although both directories carry a help-doc.html'
+            result.task(':javadocJar').outcome == TaskOutcome.SUCCESS
+
+        and: 'it holds the other documentation only'
+        def entries = jarEntries()
+        entries['help-doc.html'] == 'groovydoc help'
+        entries['index.html'] == 'groovydoc index'
+        !entries.containsKey('p/A.html')
+    }
+
+    def "an enabled javadoc task's output is packaged in the javadoc jar"() {
+        given:
+            writeFile('src/main/java/p/A.java', 'package p;\n/** Documented. */\npublic class A {}\n')
+
+        when:
+            def result = runJavadocJar()
+
+        then:
+            result.task(':javadoc').outcome == TaskOutcome.SUCCESS
+            result.task(':javadocJar').outcome == TaskOutcome.SUCCESS
+            jarEntries().containsKey('p/A.html')
+    }
+
+    private def runJavadocJar() {
+        GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments(['javadocJar', '--stacktrace'])
+                .withPluginClasspath()
+                .build()
+    }
+
+    private void writeFile(String path, String text) {
+        testProjectDir.resolve(path).toFile().with {
+            parentFile.mkdirs()
+            it.text = text
+        }
+    }
+
+    private Map<String, String> jarEntries() {
+        def jar = testProjectDir
+                .resolve('build/libs')
+                .toFile()
+                .listFiles()
+                .find { it.name.endsWith('-javadoc.jar') }
+        def entries = [:] as Map<String, String>
+        new ZipFile(jar).withCloseable { ZipFile zip ->
+            zip.entries().each { ZipEntry entry ->
+                if (!entry.directory) {
+                    entries[entry.name] = zip.getInputStream(entry).text
+                }
+            }
+        }
+        entries
     }
 }

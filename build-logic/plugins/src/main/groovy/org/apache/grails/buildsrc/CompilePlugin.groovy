@@ -27,6 +27,7 @@ import groovy.transform.CompileStatic
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.file.DuplicatesStrategy
+import org.gradle.api.file.FileTreeElement
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
@@ -76,6 +77,7 @@ class CompilePlugin implements Plugin<Project> {
             it.withJavadocJar()
             it.withSourcesJar()
         }
+        excludeDisabledJavadocOutput(project)
 
         // Grails determines the grails version via the META-INF/MANIFEST.MF file
         // Note: we exclude attributes such as Built-By, Build-Jdk, Created-By to ensure the build is reproducible.
@@ -92,6 +94,33 @@ class CompilePlugin implements Plugin<Project> {
             )
             // Explicitly fail since duplicates indicate a double configuration that needs fixed
             jar.duplicatesStrategy = DuplicatesStrategy.FAIL
+        }
+    }
+
+    /**
+     * Keeps the output directory of a disabled {@code javadoc} task out of the javadoc jar.
+     *
+     * {@code withJavadocJar()} packages whatever sits in the javadoc task's destination directory.
+     * The grails-publish plugin disables that task on every module that has a groovydoc task and
+     * packages the groovydoc in its place, but a disabled task never cleans its outputs, so a
+     * {@code build/docs/javadoc} left behind by an earlier build (before the module published, or
+     * from a checkout where javadoc still ran) is copied next to the groovydoc and the duplicate
+     * {@code help-doc.html} fails the jar under {@link DuplicatesStrategy#FAIL}. A javadoc task that
+     * does not run has nothing to contribute, so its directory is excluded whether or not it exists.
+     */
+    private static void excludeDisabledJavadocOutput(Project project) {
+        def javadocTask = project.tasks.named('javadoc', Javadoc)
+        project.tasks.named('javadocJar', Jar) { Jar jar ->
+            // Both are read when the jar runs: grails-publish disables javadoc lazily, after this hook
+            def javadocEnabled = project.provider { javadocTask.get().enabled }
+            def javadocDir = project.provider { javadocTask.get().destinationDir }
+            jar.exclude { FileTreeElement element ->
+                if (javadocEnabled.get()) {
+                    return false
+                }
+                def dir = javadocDir.orNull
+                dir != null && element.file.absoluteFile.toPath().startsWith(dir.absoluteFile.toPath())
+            }
         }
     }
 
