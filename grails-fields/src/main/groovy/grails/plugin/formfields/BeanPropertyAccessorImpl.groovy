@@ -20,6 +20,7 @@ package grails.plugin.formfields
 
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
+import groovy.transform.MapConstructor
 import groovy.transform.Memoized
 import groovy.transform.TupleConstructor
 
@@ -42,6 +43,11 @@ import org.grails.scaffolding.model.property.Constrained
 @CompileStatic
 @Canonical
 @TupleConstructor(includes = ['beanType', 'propertyName', 'propertyType'])
+// Groovy 6.0.0 (#16157): @CompileStatic no longer resolves new BeanPropertyAccessorImpl(map) to the
+// implicit map-style construction ("Target constructor for constructor call expression hasn't been
+// set"). An explicit map constructor keeps that call shape. Keep permanently, or remove when the
+// implicit form compiles again. App source: a statically compiled `new Foo(map)` needs the same.
+@MapConstructor
 class BeanPropertyAccessorImpl implements BeanPropertyAccessor {
 
     Object rootBean

@@ -347,6 +347,19 @@ class MyValidateable implements Validateable {
     String town
     private String _someProperty = 'default value'
 
+    // Groovy 6.0.0 joint compilation (#16157): SomeJavaClass.java references this class, so the
+    // Groovy compiler writes a Java stub for it, and its stub generator emits a precompiled trait's
+    // static methods as `static abstract`, which javac rejects. Implementing them here keeps the
+    // stub legal. Remove when the stub generator handles static trait methods. App source: a Java
+    // class referencing a Groovy class that implements Validateable hits the same failure.
+    static Map<String, Constrained> getConstraintsMap() {
+        Validateable$Trait$Helper.getConstraintsMap(MyValidateable)
+    }
+
+    static void clearConstraintsMapCache() {
+        Validateable$Trait$Helper.clearConstraintsMapCache(MyValidateable)
+    }
+
     void setSomeOtherProperty(String s) {}
 
     void setSomeProperty(String s) {

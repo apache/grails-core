@@ -83,6 +83,8 @@ class CompilePluginSpec extends Specification {
                     println "TEST_INDY=\${testCompileTask.get().groovyOptions.optimizationOptions.indy}"
                     println "MAIN_JOINT_JAVAC_ARGS=\${compileTask.get().options.compilerArgs}"
                     println "MAIN_GROOVY_PARAMETERS=\${compileTask.get().groovyOptions.parameters}"
+                    println "MAIN_GROOVY_FORK_JVM_ARGS=\${compileTask.get().groovyOptions.forkOptions.jvmArgs}"
+                    println "TEST_GROOVY_FORK_JVM_ARGS=\${testCompileTask.get().groovyOptions.forkOptions.jvmArgs}"
                 }
             }
         """
@@ -105,6 +107,15 @@ class CompilePluginSpec extends Specification {
         then:
         result.output.contains('MAIN_GROOVY_PARAMETERS=true')
         result.output.contains('MAIN_JOINT_JAVAC_ARGS=[-parameters]')
+    }
+
+    def "switches off the Spock Groovy version check in the forked Groovy compiler"() {
+        when:
+        def result = runPrintIndy()
+
+        then:
+        result.output.contains('MAIN_GROOVY_FORK_JVM_ARGS=[-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true]')
+        result.output.contains('TEST_GROOVY_FORK_JVM_ARGS=[-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true]')
     }
 
     def "enables invokedynamic when grailsIndy is true"() {

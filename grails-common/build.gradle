@@ -42,6 +42,13 @@ dependencies {
 
     api 'org.apache.grails.gradle:grails-gradle-common'
     api 'org.apache.groovy:groovy'
+    // Groovy 6 (#16157, GROOVY-12185): the classic (non-invokedynamic) call-site runtime is the
+    // separate groovy-callsite module. Grails compiles with indy off by default; without the module
+    // the compiler refuses to generate such bytecode and the classes fail at runtime with
+    // NoClassDefFoundError for CallSiteArray. Exporting it here puts it on the compile and runtime
+    // classpath of every module and application that reaches grails-common, which is everything
+    // that depends on grails-core. Permanent while indy stays off. App runtime.
+    api 'org.apache.groovy:groovy-callsite'
     api 'org.slf4j:jcl-over-slf4j'
     api 'org.slf4j:slf4j-api'
     api 'org.springframework:spring-context', {

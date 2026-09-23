@@ -1,6 +1,6 @@
 ---
 name: groovy-developer
-description: Expert guide for Groovy 5 development, covering concise syntax, closures, DSLs, metaprogramming, static compilation, and integration with Java 21 and Grails
+description: Expert guide for Groovy 6 development, covering concise syntax, closures, DSLs, metaprogramming, static compilation, and integration with Java 21 and Grails
 license: Apache-2.0
 ---
 <!--
@@ -11,7 +11,7 @@ Licensed to the Apache Software Foundation (ASF) under one or more contributor l
 
 ## What I Do
 
-- Provide deep expertise in Groovy 5.1, including core language features: syntax, closures, traits, GStrings, operators, and Groovy Truth.
+- Provide deep expertise in Groovy 6.0, including core language features: syntax, closures, traits, GStrings, operators, and Groovy Truth.
 - Guide metaprogramming techniques: runtime (categories, ExpandoMetaClass, extension modules) and compile-time (AST transformations like @Immutable, @Builder, @Delegate, @Singleton, @Log, @Memoized).
 - Assist with DSL creation and usage (MarkupBuilder, JsonBuilder, builders for configuration).
 - Support testing with Spock Framework (BDD, data-driven tests, mocking) and built-in power assertions.
@@ -509,7 +509,7 @@ sql.execute("INSERT INTO books (title) VALUES ($title)")
 
 ## Resources
 
-- **Groovy 5 Documentation**: https://groovy-lang.org/documentation.html#all-versions (select latest 5.1.x)
+- **Groovy 6 Documentation**: https://groovy-lang.org/documentation.html#all-versions (select latest 6.0.x)
 - **Groovy Style Guide**: https://groovy-lang.org/style-guide.html
 - **GORM Documentation**: https://grails.apache.org/docs/latest/grails-data/
 - **Spock Framework**: https://spockframework.org/spock/docs/2.4/all_in_one.html

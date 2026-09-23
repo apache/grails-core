@@ -120,6 +120,15 @@ class GrailsGradlePluginToolchainSpec extends GradleSpecification {
         result.output.contains('HAS_ENV=true')
         result.output.contains('MIN_HEAP=768m')
         result.output.contains('MAX_HEAP=768m')
+
+        and: 'only Test tasks switch off the Spock Groovy major-version check, and a task that sets it keeps its value'
+        result.output.contains('JAVAEXEC_SPOCK_CHECK=null')
+        result.output.contains('TEST_HAS_ENV=true')
+        result.output.contains('TEST_SPOCK_CHECK=true')
+        result.output.contains('TEST_SPOCK_CHECK_OVERRIDDEN=false')
+
+        and: 'the forked Groovy compiler gets the same override for the Spock AST transform'
+        result.output.contains('COMPILE_FORK_JVM_ARGS=[-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true]')
     }
 
     def "BootRun tasks enable Spring Boot console colors"() {

@@ -27,6 +27,29 @@ import spock.lang.Specification
  */
 class TemplateRendererSpec extends Specification {
 
+    void "the render overloads of the view helper are available on the template renderer and forward to it"() {
+        given: "a template renderer"
+        def mockViewHelper = Mock(GrailsJsonViewHelper)
+        def tmpl = new TemplateRenderer(mockViewHelper)
+        def o = new Object()
+        def customizer = { -> }
+
+        when:
+        tmpl.render(template: 'foo')
+        tmpl.render(o)
+        tmpl.render(o, [includes: ['name']])
+        tmpl.render(o, customizer)
+        tmpl.render(o, [excludes: ['name']], customizer)
+
+        then:
+        1 * mockViewHelper.render([template: 'foo'])
+        1 * mockViewHelper.render(o)
+        1 * mockViewHelper.render(o, [includes: ['name']])
+        1 * mockViewHelper.render(o, customizer)
+        1 * mockViewHelper.render(o, [excludes: ['name']], customizer)
+        0 * _
+    }
+
     void "Test template renderer calls the correct render method"() {
         given:"A template renderer"
 

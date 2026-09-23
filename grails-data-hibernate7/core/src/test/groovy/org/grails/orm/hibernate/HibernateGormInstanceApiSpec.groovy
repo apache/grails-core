@@ -370,6 +370,25 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
     }
 
     @Rollback
+    def "a validation error marks the invalid instance's to-one association read-only"() {
+        given: 'a persisted author and a book that fails validation'
+        def author = new PersonInstanceApi(name: 'Author', age: 40).save(flush: true)
+        def book = new ConstrainedBook(title: '', author: author)
+
+        when:
+        def result = ConstrainedBook.withTransaction {
+            book.save(flush: true)
+        }
+
+        then:
+        result == null
+        book.hasErrors()
+
+        and: 'the author the session still manages cannot be flushed behind the failed save'
+        ConstrainedBook.withSession { it.isReadOnly(author) }
+    }
+
+    @Rollback
     def "save with invalid entity and failOnError:true throws an exception"() {
         given:
         def person = new ConstrainedPerson(name: '')

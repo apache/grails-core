@@ -81,6 +81,34 @@ class SbomPluginSpec extends Specification {
         location.get().asFile.name == 'grails-core-custom-cli-8.0.0-sbom.json'
     }
 
+    private static List bsd4Choice() {
+        [[license: [id: 'BSD-4-Clause']]]
+    }
+
+    void "JLine 4 Maven jars use the BSD-3-Clause correction for any version of that line"() {
+        expect:
+        SbomPlugin.pickLicense(LOGGER, 'grails-console', 'grails-console',
+                'pkg:maven/org.jline/jansi@4.4.5?type=jar', bsd4Choice()).id == 'BSD-3-Clause'
+        SbomPlugin.pickLicense(LOGGER, 'grails-console', 'grails-console',
+                'pkg:maven/org.jline/jline-console-ui@4.5.0?type=jar', bsd4Choice()).id == 'BSD-3-Clause'
+    }
+
+    void "the JLine 4 license correction is limited to JLine 4 Maven jars"() {
+        when:
+        SbomPlugin.pickLicense(LOGGER, 'grails-console', 'grails-console', bomRef, bsd4Choice())
+
+        then:
+        GradleException e = thrown(GradleException)
+        e.message.contains('BSD-4-Clause')
+
+        where:
+        bomRef << [
+                'pkg:maven/com.example/jansi@4.4.5?type=jar',
+                'pkg:maven/org.jline/jansi@3.30.16?type=jar',
+                'pkg:maven/org.jline/jansi@4.4.5?type=pom',
+        ]
+    }
+
     void "a category-X license is permitted when exempted for the sbom component (cli companion)"() {
         expect: "the hibernate 5 LGPL exemption keyed to the dbmigration cli companion is honoured"
         SbomPlugin.pickLicense(LOGGER, 'grails-data-hibernate5-dbmigration',

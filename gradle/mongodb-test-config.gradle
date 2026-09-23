@@ -25,7 +25,9 @@ dependencies {
 }
 
 tasks.named('compileTestGroovy', GroovyCompile) {
-    groovyOptions.forkOptions.jvmArgs = ['-Xmx768m']
+    // Append rather than assign: CompilePlugin already passes the Spock Groovy version-check
+    // opt-out to this fork (#16157).
+    groovyOptions.forkOptions.jvmArgs = (groovyOptions.forkOptions.jvmArgs ?: []) + ['-Xmx768m']
 }
 
 tasks.withType(Test).configureEach {

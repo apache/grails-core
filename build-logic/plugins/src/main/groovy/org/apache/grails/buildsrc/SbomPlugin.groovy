@@ -113,20 +113,9 @@ class SbomPlugin implements Plugin<Project> {
             'pkg:maven/de.bwaldvogel/mongo-java-server@1.47.0?type=jar'       : 'BSD-3-Clause',
             'pkg:maven/de.bwaldvogel/mongo-java-server-core@1.47.0?type=jar'  : 'BSD-3-Clause',
             'pkg:maven/de.bwaldvogel/mongo-java-server-memory-backend@1.47.0?type=jar': 'BSD-3-Clause',
-            // The whole org.jline group declares "The BSD License", which maps incorrectly because of
+            // The org.jline group is handled by forcedLicenseFor below: every artifact of it declares
+            // "The BSD License", which maps incorrectly because of
             // https://github.com/CycloneDX/cyclonedx-core-java/issues/205 - the POMs point at BSD-3-Clause.
-            // jline.version tracks the JLine version Groovy ships, so every module resolves to one version.
-            'pkg:maven/org.jline/jansi@3.30.16?type=jar'                       : 'BSD-3-Clause',
-            'pkg:maven/org.jline/jline@3.30.16?type=jar'                       : 'BSD-3-Clause',
-            'pkg:maven/org.jline/jline-builtins@3.30.16?type=jar'              : 'BSD-3-Clause',
-            'pkg:maven/org.jline/jline-console@3.30.16?type=jar'               : 'BSD-3-Clause',
-            'pkg:maven/org.jline/jline-native@3.30.16?type=jar'                : 'BSD-3-Clause',
-            'pkg:maven/org.jline/jline-reader@3.30.16?type=jar'                : 'BSD-3-Clause',
-            'pkg:maven/org.jline/jline-style@3.30.16?type=jar'                 : 'BSD-3-Clause',
-            'pkg:maven/org.jline/jline-terminal@3.30.16?type=jar'              : 'BSD-3-Clause',
-            'pkg:maven/org.jline/jline-terminal-jansi@3.30.16?type=jar'        : 'BSD-3-Clause',
-            'pkg:maven/org.jline/jline-terminal-jna@3.30.16?type=jar'          : 'BSD-3-Clause',
-            'pkg:maven/org.jline/jline-terminal-jni@3.30.16?type=jar'          : 'BSD-3-Clause',
             'pkg:maven/org.jruby/jzlib@1.1.5?type=jar'                        : 'BSD-3-Clause', // https://web.archive.org/web/20240822213507/http://www.jcraft.com/jzlib/LICENSE.txt shows it's a 3 clause
             'pkg:maven/org.liquibase.ext/liquibase-hibernate5@4.27.0?type=jar': 'Apache-2.0', // maps incorrectly because of https://github.com/liquibase/liquibase/issues/2445 & the base pom does not define a license
             'pkg:maven/org.json/json@20251224?type=jar'                       : 'Public-Domain', // required due to jedis, https://issues.apache.org/jira/browse/LEGAL-666 approves this usage
@@ -453,6 +442,20 @@ class SbomPlugin implements Plugin<Project> {
         }
     }
 
+    private static String forcedLicenseFor(String bomRef) {
+        if (LICENSE_MAPPING.containsKey(bomRef)) {
+            return LICENSE_MAPPING[bomRef]
+        }
+        // Groovy 6 ships on JLine 4 (#16157), and jline.version follows it. JLine's LICENSE.txt is
+        // BSD-3-Clause, but CycloneDX reads "The BSD License" as BSD-4-Clause
+        // (cyclonedx-core-java#205). Limited to the org.jline Maven jar family at 4.x so a bump
+        // inside that line needs no new entry. Framework only.
+        if (bomRef.matches('pkg:maven/org\\.jline/[^/@?]+@4\\.[^?]+\\?type=jar')) {
+            return 'BSD-3-Clause'
+        }
+        null
+    }
+
     /**
      * Picks the most appropriate license for a dependency from a list of license choices.
      * This method is called at execution time and should not access Task.project.
@@ -471,10 +474,10 @@ class SbomPlugin implements Plugin<Project> {
         }
 
         logger.info('Picking license for {} from {} choices', bomRef, licenseChoices.size())
-        if (LICENSE_MAPPING.containsKey(bomRef)) {
+        def licenseId = forcedLicenseFor(bomRef)
+        if (licenseId) {
             // There are several reasons that cyclone will get the license wrong, usually due to upstream not publishing information or publishing it incorrectly
             // see the licenseMapping map above for details
-            def licenseId = LICENSE_MAPPING[bomRef]
             logger.info('Forcing license for {} to {}', bomRef, licenseId)
 
             def licenseBlock = LICENSES[licenseId]

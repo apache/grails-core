@@ -38,7 +38,7 @@ class Sitemesh3RenderViewMutatorSpec extends Specification {
 
     GrailsSiteMeshView siteMeshView() {
         new GrailsSiteMeshView(innerView, Mock(ContentProcessor),
-                Mock(DecoratorSelector<SiteMeshContext>), Mock(ServletContext), Mock(ViewResolver))
+                Mock(DecoratorSelector) /* Groovy 6.0.0 (GROOVY-12319, #16157): parameterized types are not class literals */, Mock(ServletContext), Mock(ViewResolver))
     }
 
     void 'unwraps the SiteMesh view for partial renders without an explicit layout'() {

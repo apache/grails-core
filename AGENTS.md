@@ -74,7 +74,7 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 | Skill | Path | Use For |
 |-------|------|---------|
 | **grails-developer** | `.agents/skills/grails-developer/SKILL.md` | Current Grails apps, GORM, controllers, views |
-| **groovy-developer** | `.agents/skills/groovy-developer/SKILL.md` | Groovy 5 syntax, closures, DSLs, Spock |
+| **groovy-developer** | `.agents/skills/groovy-developer/SKILL.md` | Groovy 6 syntax, closures, DSLs, Spock |
 | **gradle-developer** | `.agents/skills/gradle-developer/SKILL.md` | Gradle 9 builds, BOM/platforms, convention plugins, wrappers |
 | **grails-8-upgrade** | `.agents/skills/grails-8-upgrade/SKILL.md` | Upgrading Grails applications from 7.x to 8 |
 | **java-developer** | `.agents/skills/java-developer/SKILL.md` | Java 21 features, Groovy interop |
@@ -88,7 +88,7 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 | Component | Version |
 |-----------|---------|
 | JDK | 21+ (baseline 21) |
-| Groovy | 5.1.x |
+| Groovy | 6.0.x |
 | Spring Boot | 4.1.x |
 | Spring Framework | 7.0.x |
 | Spock | 2.4-groovy-5.0 |
@@ -309,7 +309,7 @@ and known non-findings — before reporting issues.
 ## Resources
 
 - **Grails Guide**: https://grails.apache.org/docs/latest/guide/single.html
-- **Groovy 5 Docs**: https://groovy-lang.org/documentation.html#all-versions (select latest 5.1.x)
+- **Groovy 6 Docs**: https://groovy-lang.org/documentation.html#all-versions (select latest 6.0.x)
 - **Spock 2.4 Docs**: https://spockframework.org/spock/docs/2.4/all_in_one.html
 - **GORM Docs**: https://grails.apache.org/docs/latest/grails-data/
 - **Issues**: https://github.com/apache/grails-core/issues

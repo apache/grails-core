@@ -22,7 +22,7 @@
 // sources under Grails 8.
 //
 // This is deliberately not part of the end-to-end build and is not composed with includeBuild:
-// substitution would rewrite org.apache.grails:grails-core to this repo's Groovy 5 project, which
+// substitution would rewrite org.apache.grails:grails-core to this repo's Groovy 6 project, which
 // is exactly what the fixture exists to avoid.
 //
 // It builds under the JDK declared in .sdkmanrc (17, the minimum for a Grails 7 app) rather than a
