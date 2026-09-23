@@ -83,8 +83,11 @@ render(contentType: "application/json") {
 // render with status code
 render(status: 503, text: "Failed to update book ${b.id}")
 
-// render a file
+// render a file as an attachment
 render(file: new File(absolutePath), fileName: "book.pdf")
+
+// render a file inline
+render(file: new File(absolutePath), inline: true)
 ----
 
 
@@ -109,5 +112,6 @@ Parameters:
 * `encoding` (optional) - The encoding of the response
 * `plugin` (optional) - The plugin to look for the template in
 * `status` (optional) - The HTTP status code to use
-* `file` (optional) - The byte[], java.io.File, or inputStream you wish to send with the response
-* `fileName` (optional) - For specifying an attachment file name while rendering a file.
+* `file` (optional) - The byte[], java.io.File, or inputStream you wish to send with the response. File responses are rendered with `Content-Disposition: attachment` by default.
+* `fileName` (optional) - For specifying an attachment file name while rendering a file. Unsafe characters in the filename are escaped before they are written to the header.
+* `inline` (optional) - Set to `true` while rendering a file to omit the default attachment `Content-Disposition` header.

@@ -4093,3 +4093,20 @@ them. Name the connection, as in `@Transactional(connection = 'secondary')`, whe
 has to cover its writes.
 
 Applications using a single datasource are unaffected.
+
+==== 73. File Renders Default to Attachment Disposition
+
+Grails 8 makes `render(file: ...)` safer by default. File responses now set
+`Content-Disposition: attachment` unless you opt out. If a `fileName` is supplied
+(or derived from a `File`), unsafe characters in that name are escaped before the
+header is written.
+
+Use `inline: true` when the file should stay inline, or set the
+`Content-Disposition` header yourself before calling `render` — Grails leaves an
+existing header alone.
+
+[source,groovy]
+----
+render(file: new File(absolutePath), fileName: 'report.pdf')
+render(file: new File(absolutePath), inline: true)
+----
