@@ -401,6 +401,10 @@ deployment whose reverse proxy already sends these headers can set `grails.secur
 only explicitly configured headers on proxied requests. See the xref:security[Security] section of the user guide and
 the xref:upgrading#upgrading80x[upgrade guide] for details.
 
+==== Agent Skills Published with Grails
+
+Grails now publishes its app-facing https://agentskills.io[Agent Skills] with every release: `org.apache.grails.skills:grails-developer`, for building Grails applications, and `org.apache.grails.skills:grails-8-upgrade`, for upgrading an application from Grails 7. The jars use the https://www.skillsjars.com[SkillsJars] layout and the Grails BOM manages them, so an application applies the SkillsJars Gradle plugin, declares the skills without a version, and runs `./gradlew extractSkillsJars` to write the skills for its Grails version to the directory its AI coding agent reads. See xref:gettingStarted#agentSkills[Agent Skills].
+
 ==== Test HTTP Client Form Requests
 
 Integration tests that implement `HttpClientSupport` can now use `httpPostForm(...)` to send `application/x-www-form-urlencoded`

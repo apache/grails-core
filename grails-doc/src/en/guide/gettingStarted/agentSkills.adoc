@@ -1,0 +1,106 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+Grails publishes https://agentskills.io[Agent Skills] that teach AI coding agents how to work with Grails. A skill is a `SKILL.md` file of instructions that an agent loads when a task calls for it.
+
+[options="header",cols="1,2,3"]
+|===
+| Skill | Coordinates | Use
+
+| `grails-developer` | `org.apache.grails.skills:grails-developer` | Building Grails applications: controllers, services, GORM, views, plugins, and testing with Spock and Geb
+| `grails-8-upgrade` | `org.apache.grails.skills:grails-8-upgrade` | Upgrading an application from Grails 7 to Grails 8
+|===
+
+The skills are released with Grails, under the same version, and the Grails BOM manages them, so an application gets the skills written for the Grails version it builds with.
+
+==== Adding the Skills to an Application
+
+Agents read skills from directories in the repository rather than from the classpath. The https://github.com/skillsjars/skillsjars-gradle-plugin[SkillsJars Gradle plugin] extracts skill jars into such a directory. Apply it, declare the skills in the `skill` configuration it adds, and set the directory to write them to:
+
+[source,groovy]
+.build.gradle
+----
+plugins {
+    // the application's other plugins
+    id 'com.skillsjars.gradle-plugin' version '0.1.0'
+}
+
+dependencies {
+    skill 'org.apache.grails.skills:grails-developer'
+    skill 'org.apache.grails.skills:grails-8-upgrade'
+}
+
+skillsjars {
+    outputDir = layout.projectDirectory.dir('.agents/skills')
+}
+
+// Version 0.1.0 also packages a project's skills/ directory into its jar, and fails the build
+// when the project has no skills/ directory
+tasks.named('packageSkillsJars') {
+    enabled = false
+}
+----
+
+Then extract them:
+
+[source,bash]
+----
+./gradlew extractSkillsJars
+----
+
+Each skill is written to a directory named after its path in the jar, such as `+.agents/skills/skillsjars__apache__grails-core__grails-developer/SKILL.md+`. Set `outputDir` to the directory your agent reads skills from; Claude Code, for example, reads `.claude/skills`. `-PoutputDir=<directory>` overrides it for a single run.
+
+WARNING: `extractSkillsJars` deletes everything in the output directory before it writes the skills, and `clean` deletes the directory. Point it at a directory that holds only extracted skills, not one with skills the project keeps itself.
+
+The `skill` configuration stays off the application's compile and runtime classpaths. The Grails Gradle plugin applies the Grails BOM to it, as it does to the application's other configurations, which is why the dependencies need no version.
+
+TIP: Treat the extracted skills as build output: exclude them from version control and run `extractSkillsJars` again after upgrading Grails, so the skills match the new version.
+
+==== Builds Without the Grails Gradle Plugin
+
+A build that does not apply the Grails Gradle plugin, such as the root of a multi-project build whose Grails applications are subprojects, applies the SkillsJars Gradle plugin the same way and adds the Grails BOM to the `skill` configuration itself:
+
+[source,groovy,subs="attributes"]
+.build.gradle
+----
+dependencies {
+    skill platform('org.apache.grails:grails-bom:{version}')
+    skill 'org.apache.grails.skills:grails-developer'
+}
+----
+
+The `packageSkillsJars` workaround is only needed in a project that applies the `java` plugin, which the Grails Gradle plugin does.
+
+==== Grails 7 Applications
+
+The upgrade skill is for applications still on Grails 7. They apply the SkillsJars Gradle plugin as above, but the Grails 7 BOM does not manage the skills, so they name the version:
+
+[source,groovy,subs="attributes"]
+.build.gradle
+----
+dependencies {
+    skill 'org.apache.grails.skills:grails-8-upgrade:{version}'
+}
+----
+
+Once the application is on Grails 8, the version can be dropped.
+
+==== The SkillsJars Layout
+
+Each Grails skill jar holds its skill under `META-INF/skills/apache/grails-core/<skill>/`, the layout defined by https://www.skillsjars.com[SkillsJars], so other SkillsJars tools, such as its Maven plugin, extract the Grails skills as well. Skills published by other projects in that layout can be added to the `skill` configuration alongside them.

@@ -102,6 +102,10 @@ dependencyResolutionManagement {
 rootProject.name = 'grails-end-to-end'
 
 include(
+        // Example builds that resolve the published agent skill jars through the published BOM and
+        // extract them the way the guide shows. Only published metadata can prove a build gets them.
+        'agent-skills',
+        'agent-skills-plain-build',
         'legacy-commands',
         'legacy-commands-plugin',
         // Builds an application twice without a clean, to prove a renamed or deleted tag library

@@ -380,6 +380,7 @@ Plugin IDs (implementation under `build-logic/plugins/…/buildsrc/`):
 | `org.apache.grails.buildsrc.groovydoc` | Groovydoc |
 | `org.apache.grails.buildsrc.groovydoc-enhancer` | Groovydoc enhancer |
 | `org.apache.grails.buildsrc.repo` | Settings plugin: Apache snapshot/staging repo content filters |
+| `org.apache.grails.buildsrc.agent-skills` | Packages `skills/<skill>/` into the jar at `META-INF/skills/apache/grails-core/<skill>/` (SkillsJars layout); validates each skill's frontmatter `name` |
 | `org.apache.grails.gradle.grails-code-style` | Checkstyle + CodeNarc |
 | `org.apache.grails.gradle.grails-code-analysis` | PMD + SpotBugs (opt-in props) |
 | `org.apache.grails.gradle.grails-jacoco` | JaCoCo per project |

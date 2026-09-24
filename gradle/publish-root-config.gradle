@@ -167,6 +167,9 @@ def publishedProjects = [
         'grails-data-neo4j-spring-boot',
         // wrapper
         'grails-wrapper',
+        // agent skills
+        'grails-skills-developer',
+        'grails-skills-upgrade-guide-8',
         // profiles
         'grails-profiles-base',
         'grails-profiles-plugin',

@@ -26,6 +26,7 @@ gettingStarted:
   aHelloWorldExample: Creating a Simple Web Application with Grails
   usingInteractiveMode: Using Interactive Mode
   ide: Getting Set Up in an IDE
+  agentSkills: Agent Skills
   conventionOverConfiguration: Grails Directory Structure and Convention over Configuration
   runningAndDebuggingAnApplication: Running and Debugging an Application
   testingAnApplication: Testing an Application
