@@ -61,6 +61,9 @@ dependencies {
 
     // Added to be able to resolve the geb version from the BOM in the resolveVersions task
     compileOnly 'org.apache.groovy.geb:geb-spock'
+
+    testImplementation 'org.slf4j:slf4j-simple'
+    testImplementation 'org.spockframework:spock-core'
 }
 
 apply {

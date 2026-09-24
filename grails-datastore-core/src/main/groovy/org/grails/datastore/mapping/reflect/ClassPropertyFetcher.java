@@ -225,7 +225,11 @@ public class ClassPropertyFetcher {
         Class javaClass = cachedClass.getTheClass();
         List<T> values = new ArrayList<>(hierarchy.size());
         for (ClassInfo current : hierarchy) {
-            if (cachedClass.isInterface()) continue;
+            // Groovy 6 (#16157): the trait interfaces in the hierarchy no longer carry the static
+            // accessors the helper class implements, so asking one for `transients` failed with
+            // MissingMethodException (DomainConstraintGettersSpec). Skip interfaces. Remove if Groovy
+            // restores the accessors. App runtime.
+            if (current.getCachedClass().isInterface()) continue;
             MetaProperty metaProperty = current.getMetaClass().getMetaProperty(name);
             if (metaProperty != null && Modifier.isStatic(metaProperty.getModifiers())) {
                 Class type = metaProperty.getType();
