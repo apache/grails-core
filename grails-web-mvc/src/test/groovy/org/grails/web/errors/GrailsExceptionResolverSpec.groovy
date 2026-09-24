@@ -33,6 +33,8 @@ import org.springframework.context.ApplicationContext
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.mock.web.MockServletContext
+import org.springframework.web.context.request.RequestContextHolder
+import org.springframework.web.context.request.ServletRequestAttributes
 import org.springframework.web.context.request.async.AsyncRequestTimeoutException
 import org.springframework.web.util.WebUtils
 import org.springframework.web.context.WebApplicationContext
@@ -545,5 +547,45 @@ class GrailsExceptionResolverSpec extends Specification {
 
         then: 'the guard only suppresses re-entry, so both are forwarded'
         forwards.size() == 2
+    }
+
+    void "resolveViewOrForward does not mask the original exception when a plain ServletRequestAttributes is bound"() {
+        given: 'a plain ServletRequestAttributes (not a GrailsWebRequest) is bound in RequestContextHolder'
+        def request = new MockHttpServletRequest('GET', '/fail')
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request, new MockHttpServletResponse()))
+
+        and: 'a UrlMappingInfo whose getControllerName() triggers a closure-based name resolution'
+        def info = Mock(UrlMappingInfo)
+        info.getViewName() >> null
+        info.getControllerName() >> 'errors'
+        def urlMappings = Mock(UrlMappingsHolder)
+        urlMappings.match(_ as String) >> null
+        urlMappings.matchStatusCode(500, _ as Throwable) >> null
+        urlMappings.matchStatusCode(500) >> info
+
+        and: 'a resolver that records forwards without actually dispatching'
+        def forwards = []
+        def resolver = new GrailsExceptionResolver() {
+
+            @Override
+            protected void forwardRequest(UrlMappingInfo forwarded, HttpServletRequest req,
+                    HttpServletResponse res, ModelAndView mv, String uri) {
+                forwards << uri
+            }
+        }
+        def response = new MockHttpServletResponse()
+        def originalException = new RuntimeException('original application exception')
+
+        when: 'the original exception is resolved while only a plain ServletRequestAttributes is bound'
+        resolver.resolveViewOrForward(originalException, urlMappings, request, response, new ModelAndView())
+
+        then: 'no ClassCastException is thrown — the original exception is not masked'
+        noExceptionThrown()
+
+        and: 'the error handler forward was attempted'
+        forwards.size() == 1
+
+        cleanup:
+        RequestContextHolder.resetRequestAttributes()
     }
 }

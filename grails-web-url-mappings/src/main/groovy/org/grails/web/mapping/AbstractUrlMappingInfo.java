@@ -125,7 +125,9 @@ public abstract class AbstractUrlMappingInfo implements UrlMappingInfo {
             return evaluateCapturedName((RuntimeConstraintEvaluator) value);
         }
         else {
-            GrailsWebRequest webRequest = (GrailsWebRequest) RequestContextHolder.getRequestAttributes();
+            org.springframework.web.context.request.RequestAttributes attrs =
+                    RequestContextHolder.getRequestAttributes();
+            GrailsWebRequest webRequest = attrs instanceof GrailsWebRequest ? (GrailsWebRequest) attrs : null;
             return evaluateNameForValue(value, webRequest);
         }
     }
@@ -141,6 +143,9 @@ public abstract class AbstractUrlMappingInfo implements UrlMappingInfo {
 
         String name;
         if (value instanceof Closure) {
+            if (webRequest == null) {
+                return null;
+            }
             Closure callable = (Closure) value;
             final Closure cloned = (Closure) callable.clone();
             cloned.setDelegate(webRequest);
@@ -149,6 +154,9 @@ public abstract class AbstractUrlMappingInfo implements UrlMappingInfo {
             name = result != null ? result.toString() : null;
         }
         else if (value instanceof Map) {
+            if (webRequest == null) {
+                return null;
+            }
             Map httpMethods = (Map) value;
             name = (String) httpMethods.get(HiddenHttpMethod.effectiveMethod(webRequest.getRequest()));
         }

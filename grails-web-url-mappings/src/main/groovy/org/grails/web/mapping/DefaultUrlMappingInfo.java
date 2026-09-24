@@ -193,8 +193,10 @@ public class DefaultUrlMappingInfo extends AbstractUrlMappingInfo {
     }
 
     public String getActionName() {
-        var webRequest = (GrailsWebRequest) RequestContextHolder.getRequestAttributes();
-        var name = evaluateNameForValue(actionName, webRequest);
+        org.springframework.web.context.request.RequestAttributes attrs =
+                RequestContextHolder.getRequestAttributes();
+        GrailsWebRequest webRequest = attrs instanceof GrailsWebRequest ? (GrailsWebRequest) attrs : null;
+        String name = evaluateNameForValue(actionName, webRequest);
         return urlConverter.toUrlElement(name);
     }
 
