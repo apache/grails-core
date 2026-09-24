@@ -34,7 +34,6 @@ import grails.plugin.json.view.api.GrailsJsonViewHelper
 import grails.plugin.json.view.api.HalViewHelper
 import grails.plugin.json.view.api.JsonView
 import grails.rest.Link
-import grails.util.GrailsNameUtils
 import grails.views.WritableScriptTemplate
 import grails.views.api.GrailsView
 import grails.views.api.HttpView
@@ -110,7 +109,9 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
                     builder.call {
                         helper.setDelegate((StreamingJsonBuilder.StreamingJsonDelegate) delegate)
                         if (firstObject != null) {
-                            helper.links(GrailsNameUtils.getPropertyName(firstObject.getClass()))
+                            // The element class rather than a controller named after it, so the collection
+                            // links to the controller serving its elements, as each element's self link does.
+                            helper.links(firstObject.getClass())
                         }
                         call(EMBEDDED_ATTRIBUTE, jsonWritable)
 

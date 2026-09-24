@@ -16,28 +16,33 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.servlet.mvc.alpha
+package grails.plugin.scaffolding.redirect
 
-import grails.artefact.Artefact
+import grails.gorm.async.AsyncEntity
+import grails.gorm.services.Service
+import grails.persistence.Entity
 
-@Artefact('Controller')
-class NamespacedController {
+/**
+ * A domain class of an application using asynchronous GORM, as the asynchronous controller template expects.
+ */
+@Entity
+class Film implements AsyncEntity<Film> {
+    String title
+}
 
-    def redirectToSelf() {
-        // redirects to this controller
-        redirect action: 'demo'
-    }
+/**
+ * The data service the scaffolding Service template generates for {@link Film}.
+ */
+@Service(Film)
+interface FilmService {
 
-    def redirectToSecondary() {
-        // redirects to controller in the secondary namespace
-        redirect controller: 'namespaced', action: 'demo', namespace: 'secondary'
-    }
+    Film get(Serializable id)
 
-    def redirectToAnotherNamespaced() {
-        // redirects to anotherNamespaced without naming a namespace
-        redirect controller: 'anotherNamespaced', action: 'demo'
-    }
-    def demo() {
-        render 'Rendered by the primary Namespaced Controller'
-    }
+    List<Film> list(Map args)
+
+    Long count()
+
+    void delete(Serializable id)
+
+    Film save(Film film)
 }

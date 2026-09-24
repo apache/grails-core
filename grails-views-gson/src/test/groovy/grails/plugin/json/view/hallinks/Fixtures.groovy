@@ -16,28 +16,27 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.servlet.mvc.alpha
+package grails.plugin.json.view.hallinks
 
 import grails.artefact.Artefact
+import grails.persistence.Entity
 
+@Entity
+class Film {
+    String title
+}
+
+/**
+ * Stands in for a generic REST controller base class, which declares the domain class a controller serves.
+ */
+abstract class ServingControllerBase<T> {
+}
+
+/**
+ * Serves {@link Film} under another name, with no controller named after the domain class.
+ */
 @Artefact('Controller')
-class NamespacedController {
-
-    def redirectToSelf() {
-        // redirects to this controller
-        redirect action: 'demo'
-    }
-
-    def redirectToSecondary() {
-        // redirects to controller in the secondary namespace
-        redirect controller: 'namespaced', action: 'demo', namespace: 'secondary'
-    }
-
-    def redirectToAnotherNamespaced() {
-        // redirects to anotherNamespaced without naming a namespace
-        redirect controller: 'anotherNamespaced', action: 'demo'
-    }
-    def demo() {
-        render 'Rendered by the primary Namespaced Controller'
-    }
+class MoviesController extends ServingControllerBase<Film> {
+    def index() {}
+    def show() {}
 }

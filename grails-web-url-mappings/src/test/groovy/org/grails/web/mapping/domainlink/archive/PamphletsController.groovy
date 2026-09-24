@@ -16,28 +16,18 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.servlet.mvc.alpha
+package org.grails.web.mapping.domainlink.archive
 
 import grails.artefact.Artefact
+import org.grails.web.mapping.domainlink.Pamphlet
+import org.grails.web.mapping.domainlink.ResourceControllerBase
 
+/**
+ * Declares {@code Pamphlet} under the same name in the {@code archive} namespace, but does not show it, so a
+ * link to show a pamphlet resolves to the {@code print} controller while the name alone is ambiguous.
+ */
 @Artefact('Controller')
-class NamespacedController {
-
-    def redirectToSelf() {
-        // redirects to this controller
-        redirect action: 'demo'
-    }
-
-    def redirectToSecondary() {
-        // redirects to controller in the secondary namespace
-        redirect controller: 'namespaced', action: 'demo', namespace: 'secondary'
-    }
-
-    def redirectToAnotherNamespaced() {
-        // redirects to anotherNamespaced without naming a namespace
-        redirect controller: 'anotherNamespaced', action: 'demo'
-    }
-    def demo() {
-        render 'Rendered by the primary Namespaced Controller'
-    }
+class PamphletsController extends ResourceControllerBase<Pamphlet> {
+    static namespace = 'archive'
+    def index() {}
 }

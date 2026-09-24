@@ -74,6 +74,9 @@ dependencies {
     testImplementation project(':grails-layout')
     testImplementation project(':grails-web-gsp')
     testImplementation project(':grails-core')
+    testImplementation project(':grails-datamapping-async')
+    testImplementation project(':grails-testing-support-datamapping')
+    testImplementation project(':grails-testing-support-web')
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
     testImplementation 'org.springframework:spring-web'
     testImplementation 'net.bytebuddy:byte-buddy'

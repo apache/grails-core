@@ -229,6 +229,9 @@ If you have a domain class in a package or are generating from a https://hiberna
 grails generate-all com.bookstore.Book
 ----
 
+A generated controller redirects a successful form save or update to its own `show` action, so it keeps
+working when it is renamed, for example to serve the domain class at a different URL.
+
 ===== Generating Scaffolded Controllers and Services
 
 To generate a scaffolded controller (using `@Scaffold` annotation):

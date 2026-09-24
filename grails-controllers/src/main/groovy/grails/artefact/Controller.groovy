@@ -235,6 +235,8 @@ trait Controller implements ResponseRenderer, ResponseRedirector, RequestForward
         }
 
         GrailsWebRequest webRequest = (GrailsWebRequest) RequestContextHolder.currentRequestAttributes()
+        boolean resolveFromIssuingNamespace = false
+        String issuingNamespace = null
 
         if (this instanceof GroovyObject) {
             GroovyObject controller = (GroovyObject) this
@@ -253,11 +255,28 @@ trait Controller implements ResponseRenderer, ResponseRedirector, RequestForward
                 argMap.put(GrailsControllerClass.ACTION, action.toString())
             }
             if (!argMap.containsKey(GrailsControllerClass.NAMESPACE_PROPERTY)) {
-                argMap.put(GrailsControllerClass.NAMESPACE_PROPERTY, resolveNamespace(controller.getClass()))
+                resolveFromIssuingNamespace = true
+                issuingNamespace = resolveNamespace(controller.getClass())
             }
         }
 
-        super.redirect(argMap)
+        if (!resolveFromIssuingNamespace) {
+            super.redirect(argMap)
+            return
+        }
+        // Resolve the target the way a link is resolved, from the redirecting controller's namespace rather
+        // than forcing the link into it: the controller itself, a target that namespace defines, and one the
+        // application does not define all stay in it, as before, and a target defined only elsewhere is
+        // found there. The namespace is set on the request only while the redirect is issued.
+        HttpServletRequest request = webRequest.currentRequest
+        Object previousNamespace = request.getAttribute(GrailsApplicationAttributes.CONTROLLER_NAMESPACE_ATTRIBUTE)
+        request.setAttribute(GrailsApplicationAttributes.CONTROLLER_NAMESPACE_ATTRIBUTE, issuingNamespace)
+        try {
+            super.redirect(argMap)
+        }
+        finally {
+            request.setAttribute(GrailsApplicationAttributes.CONTROLLER_NAMESPACE_ATTRIBUTE, previousNamespace)
+        }
     }
 
     /**
@@ -272,7 +291,7 @@ trait Controller implements ResponseRenderer, ResponseRedirector, RequestForward
      * @param controllerClass The class of the controller issuing the redirect
      * @return The declared namespace, or null if the class declares none
      */
-    private Object resolveNamespace(Class<?> controllerClass) {
+    private String resolveNamespace(Class<?> controllerClass) {
         GrailsApplication application = getGrailsApplication()
         if (application != null) {
             GrailsClass controllerArtefact = application.getArtefact(ControllerArtefactHandler.TYPE, controllerClass.getName())
@@ -281,8 +300,8 @@ trait Controller implements ResponseRenderer, ResponseRedirector, RequestForward
             }
         }
         // A controller that was never registered as an artefact - one constructed directly, as a unit test may do -
-        // has no GrailsControllerClass to read, so fall back to the class itself.
-        GrailsClassUtils.getStaticFieldValue(controllerClass, GrailsControllerClass.NAMESPACE_PROPERTY)
+        // has no GrailsControllerClass to read, so fall back to the class itself, whose field may hold a GString.
+        GrailsClassUtils.getStaticFieldValue(controllerClass, GrailsControllerClass.NAMESPACE_PROPERTY)?.toString()
     }
 
     /**

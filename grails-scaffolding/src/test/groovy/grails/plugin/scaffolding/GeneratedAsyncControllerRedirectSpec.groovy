@@ -16,28 +16,28 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.servlet.mvc.alpha
+package grails.plugin.scaffolding
 
-import grails.artefact.Artefact
+import grails.async.Promises
+import org.grails.async.factory.SynchronousPromiseFactory
 
-@Artefact('Controller')
-class NamespacedController {
+/**
+ * The same redirects for a controller generated from the asynchronous scaffolding template, which
+ * generates a controller of the same name, so it has a specification of its own. Its actions run in
+ * promises, which run synchronously here so that each completes within the request.
+ */
+class GeneratedAsyncControllerRedirectSpec extends GeneratedControllerRedirectSpec {
 
-    def redirectToSelf() {
-        // redirects to this controller
-        redirect action: 'demo'
+    def setup() {
+        Promises.promiseFactory = new SynchronousPromiseFactory()
     }
 
-    def redirectToSecondary() {
-        // redirects to controller in the secondary namespace
-        redirect controller: 'namespaced', action: 'demo', namespace: 'secondary'
+    def cleanup() {
+        Promises.promiseFactory = null
     }
 
-    def redirectToAnotherNamespaced() {
-        // redirects to anotherNamespaced without naming a namespace
-        redirect controller: 'anotherNamespaced', action: 'demo'
-    }
-    def demo() {
-        render 'Rendered by the primary Namespaced Controller'
+    @Override
+    String getTemplateName() {
+        'AsyncController'
     }
 }

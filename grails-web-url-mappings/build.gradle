@@ -81,6 +81,7 @@ dependencies {
 
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
     testImplementation 'org.springframework:spring-test'
+    testImplementation testFixtures(project(':grails-core')) // LogCapture, and the Logback binding the tests log through
     testImplementation testFixtures(project(':grails-web-common'))
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'
@@ -95,7 +96,6 @@ dependencies {
 
     // Testing
     testImplementation 'org.apache.grails:grails-controllers' // @Controller
-    testImplementation 'org.slf4j:slf4j-simple'
     testImplementation 'org.spockframework:spock-core'
 }
 

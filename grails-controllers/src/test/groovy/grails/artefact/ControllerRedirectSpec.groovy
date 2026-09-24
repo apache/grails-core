@@ -32,6 +32,7 @@ import grails.util.GrailsWebMockUtil
 import grails.web.mapping.LinkGenerator
 import grails.web.mapping.mvc.RedirectEventListener
 import org.grails.core.artefact.ControllerArtefactHandler
+import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.servlet.mvc.ParameterCreationListener
 import org.grails.web.util.GrailsApplicationAttributes
 
@@ -41,10 +42,14 @@ class ControllerRedirectSpec extends Specification {
 
     List<Map> linkArguments = []
 
+    List<Object> namespacesInScope = []
+
     LinkGenerator linkGenerator = Stub(LinkGenerator) {
         getServerBaseURL() >> 'http://localhost:8080'
         link(_) >> { Map arguments ->
             linkArguments << arguments
+            // Read the namespace as link generation does
+            namespacesInScope << GrailsWebRequest.lookup().controllerNamespace
             "/${arguments.action}".toString()
         }
     }
@@ -87,9 +92,9 @@ class ControllerRedirectSpec extends Specification {
         bindRequest()
         namespaced.redirectToIndex()
 
-        then: 'each redirect carries the namespace of its own class'
-        linkArguments[0].namespace == null
-        linkArguments[1].namespace == 'admin'
+        then: 'each redirect is resolved from the namespace of its own class'
+        namespacesInScope[0] == null
+        namespacesInScope[1] == 'admin'
 
         when: 'the same two controller classes redirect again'
         bindRequest()
@@ -100,9 +105,12 @@ class ControllerRedirectSpec extends Specification {
         new NamespacedRedirectController().redirectToIndex()
 
         then: 'the value is still the one declared by each class, never shared between them'
-        linkArguments[2].namespace == 'admin'
-        linkArguments[3].namespace == null
-        linkArguments[4].namespace == 'admin'
+        namespacesInScope[2] == 'admin'
+        namespacesInScope[3] == null
+        namespacesInScope[4] == 'admin'
+
+        and: 'no namespace is forced onto any of the links'
+        linkArguments.every { !it.containsKey('namespace') }
     }
 
     void 'the namespace is taken from the artefact registered for the controller issuing the redirect'() {
@@ -123,7 +131,35 @@ class ControllerRedirectSpec extends Specification {
         new NamespacedRedirectController().redirectToIndex()
 
         then: 'the namespace is the one declared by the redirecting controller, not the executing one'
-        linkArguments[0].namespace == 'admin'
+        namespacesInScope[0] == 'admin'
+    }
+
+    void 'a redirect to another controller the application defines is resolved from the issuing namespace'() {
+        given: 'a request already carrying a namespace'
+        MockHttpServletRequest request = bindRequest()
+        request.setAttribute(GrailsApplicationAttributes.CONTROLLER_NAMESPACE_ATTRIBUTE, 'reporting')
+
+        when: 'an admin controller redirects to the registered plain controller without naming a namespace'
+        new NamespacedRedirectController().redirectToPlain()
+
+        then: 'no namespace is forced onto the link'
+        !linkArguments[0].containsKey('namespace')
+
+        and: 'the link is resolved from the issuing namespace'
+        namespacesInScope[0] == 'admin'
+
+        and: 'the request namespace is restored once the redirect is issued'
+        request.getAttribute(GrailsApplicationAttributes.CONTROLLER_NAMESPACE_ATTRIBUTE) == 'reporting'
+    }
+
+    void 'a redirect to a controller the application does not define is resolved from the issuing namespace too'() {
+        when:
+        bindRequest()
+        new NamespacedRedirectController().redirectToUndefined()
+
+        then: 'no namespace is forced onto the link, which is resolved from the issuing namespace as any other'
+        !linkArguments[0].containsKey('namespace')
+        namespacesInScope[0] == 'admin'
     }
 
     void 'a controller that is not a registered artefact still resolves its declared namespace'() {
@@ -136,7 +172,19 @@ class ControllerRedirectSpec extends Specification {
         new UnregisteredRedirectController().redirectToIndex()
 
         then: 'the namespace declared on the class is used'
-        linkArguments[0].namespace == 'reporting'
+        namespacesInScope[0] == 'reporting'
+    }
+
+    void 'a redirect from a controller declaring its namespace as a GString is resolved from that namespace'() {
+        expect: 'a controller class the application does not register, declaring its namespace as a GString'
+        GStringNamespacedRedirectController.namespace instanceof GString
+
+        when: 'it redirects without naming a namespace'
+        bindRequest()
+        new GStringNamespacedRedirectController().redirectToIndex()
+
+        then: 'the link is resolved from that namespace'
+        namespacesInScope[0] == 'reporting'
     }
 
     void 'an explicit namespace argument is never overwritten by the declared one'() {
@@ -218,11 +266,28 @@ class NamespacedRedirectController implements Controller {
     void redirectToIndexInNamespace(String explicitNamespace) {
         redirect(action: 'index', namespace: explicitNamespace)
     }
+
+    void redirectToPlain() {
+        redirect(controller: 'plainRedirect', action: 'index')
+    }
+
+    void redirectToUndefined() {
+        redirect(controller: 'nowhere', action: 'index')
+    }
 }
 
 class UnregisteredRedirectController implements Controller {
 
     static namespace = 'reporting'
+
+    void redirectToIndex() {
+        redirect(action: 'index')
+    }
+}
+
+class GStringNamespacedRedirectController implements Controller {
+
+    static namespace = "${'report'}ing"
 
     void redirectToIndex() {
         redirect(action: 'index')

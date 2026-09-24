@@ -929,24 +929,28 @@ class FormFieldsTagLib {
         Writer buffer = new FastStringWriter()
         buffer << '<ul>'
         def persistentProperty = model.persistentProperty
-        def controllerName
+        // The associated domain class, rather than a controller named after it, so each link reaches the
+        // controller serving the domain class wherever it is.
+        Class associatedClass = null
+        def propertyName
         def shortName
         if (persistentProperty instanceof Association) {
             Association prop = ((Association) persistentProperty)
-            controllerName = prop.associatedEntity.decapitalizedName
+            associatedClass = prop.associatedEntity.javaClass
+            propertyName = prop.associatedEntity.decapitalizedName
             shortName = prop.associatedEntity.javaClass.simpleName
         }
 
         attrs.value.each {
             buffer << '<li>'
-            buffer << g.link(controller: controllerName, action: 'show', id: it.id, it.toString().encodeAsHTML())
+            buffer << g.link(resource: associatedClass, action: 'show', id: it.id, it.toString().encodeAsHTML())
             buffer << '</li>'
         }
         buffer << '</ul>'
-        def referencedTypeLabel = message(code: "${controllerName}.label", default: shortName)
+        def referencedTypeLabel = message(code: "${propertyName}.label", default: shortName)
         def addLabel = g.message(code: 'default.add.label', args: [referencedTypeLabel])
         PersistentEntity beanClass = (PersistentEntity) model.beanClass
-        buffer << g.link(controller: controllerName, action: 'create', params: [("${beanClass.decapitalizedName}.id".toString()): model.bean.id], addLabel)
+        buffer << g.link(resource: associatedClass, action: 'create', params: [("${beanClass.decapitalizedName}.id".toString()): model.bean.id], addLabel)
         buffer.buffer
     }
 
@@ -1015,7 +1019,7 @@ class FormFieldsTagLib {
 
     private CharSequence displayAssociation(value, PersistentEntity referencedDomainClass) {
         if (value && referencedDomainClass) {
-            g.link(controller: referencedDomainClass.decapitalizedName, action: 'show', id: value.id, value.toString().encodeAsHTML())
+            g.link(resource: referencedDomainClass.javaClass, action: 'show', id: value.id, value.toString().encodeAsHTML())
         } else if (value) {
             value.toString()
         }
