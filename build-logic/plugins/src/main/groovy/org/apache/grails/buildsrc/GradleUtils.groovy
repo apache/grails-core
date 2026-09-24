@@ -35,8 +35,22 @@ class GradleUtils {
 
     static Directory findRootGrailsCoreDir(Project project) {
         // .github / .git related directories are purged from source releases, so use the .asf.yaml as an indicator of
-        // the parent directory
-        findAsfRootDir(project.layout.projectDirectory)
+        // the parent directory. The nearest one wins, so a worktree nested inside another checkout resolves to itself.
+        Directory root = findAsfRootDir(project.layout.projectDirectory)
+        if (root == null) {
+            throw new IllegalStateException(
+                    "Cannot locate the Grails repository root: no .asf.yaml found in ${project.projectDir} or any parent " +
+                            'directory. Build from a complete checkout, git worktree, or source release.')
+        }
+        root
+    }
+
+    /**
+     * Whether the project is the root of a Grails repository checkout, as opposed to the root of one of the
+     * independent builds nested inside it (such as grails-gradle, grails-forge, or end-to-end).
+     */
+    static boolean isRootGrailsCoreDir(Project project) {
+        project.layout.projectDirectory.file('.asf.yaml').asFile.isFile()
     }
 
     static Directory findAsfRootDir(Directory currentDirectory) {

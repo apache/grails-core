@@ -194,7 +194,7 @@ class GrailsViolationAggregationPluginSpec extends Specification {
                 .build()
 
         then: "validation and wrapper packaging succeed together"
-        result.task(':validateRepositoryConventions').outcome == TaskOutcome.SUCCESS
+        result.task(':validateRepositoryConventions').outcome in [TaskOutcome.SUCCESS, TaskOutcome.UP_TO_DATE]
         result.task(':copyGrailsWrapperScripts').outcome == TaskOutcome.SUCCESS
         result.task(':packageProfile').outcome == TaskOutcome.SUCCESS
         result.task(':sourcesJar').outcome == TaskOutcome.SUCCESS
@@ -471,6 +471,7 @@ public class App {
         result.task(':writeAnalysisViolations').outcome == TaskOutcome.FAILED
         def pmdReport = testProjectDir.resolve('build/reports/violations/PMD_VIOLATIONS.md').toFile().text
         pmdReport.contains('MissingReport')
+        pmdReport.contains('Modules analyzed: none')
     }
 
     def "aggregateAnalysisViolations aggregates SpotBugs reports from an extension-enabled project"() {
@@ -603,6 +604,7 @@ checkstyleVersion=${checkstyleVersion}
         def checkstyleReport = testProjectDir.resolve('build/reports/violations/CHECKSTYLE_VIOLATIONS.md').toFile().text
         checkstyleReport.contains('## Module: :app-module')
         checkstyleReport.contains('MissingReport')
+        checkstyleReport.contains('Modules analyzed: none')
     }
 
     def "aggregate Checkstyle task reports only its configured analyzer module"() {

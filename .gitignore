@@ -76,3 +76,6 @@ local-init.gradle
 .omo/
 # Standard location for agent/tooling git worktrees
 .worktrees/
+# Claude Code's default worktree location and personal settings
+.claude/worktrees/
+.claude/settings.local.json

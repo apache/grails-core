@@ -20,10 +20,12 @@ package org.apache.grails.buildsrc
 
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
+import spock.lang.IgnoreIf
 import spock.lang.Specification
 import spock.lang.TempDir
 
 import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 import java.nio.file.Path
 
 class RepositoryConventionsTaskSpec extends Specification {
@@ -259,6 +261,10 @@ runs:
       - uses: someorg/cache@${SHA.toUpperCase()}
 """)
         writeWorkflow('two.yml', "uses: someorg/checkout@${'f' * 40}")
+        writeActionManifest('local-action', '''runs:
+  using: composite
+  steps: []
+''')
         writeCompositeAction('sample', '''runs:
   using: composite
   steps:
@@ -412,18 +418,18 @@ runs:
         !result.output.contains('someorg/setup-node')
     }
 
-    def "validateRepositoryConventions ignores checkouts under .worktrees"() {
+    def "validateRepositoryConventions ignores checkouts under #worktrees"() {
         given:
         writeBuild()
         writeSkill('sample', 'sample')
         writeAgents('.agents/skills/sample/SKILL.md')
         writeWorkflow('valid.yml', 'uses: actions/checkout@v6')
-        writeActionManifest('.worktrees/feature/.github/actions/mutable', '''runs:
+        writeActionManifest("${worktrees}/feature/.github/actions/mutable", '''runs:
   using: composite
   steps:
     - uses: someorg/setup-node@v4
 ''')
-        writeProperties('.worktrees/feature/grails-app/i18n/messages.properties', '''message=one
+        writeProperties("${worktrees}/feature/grails-app/i18n/messages.properties", '''message=one
 message=two
 ''')
 
@@ -432,6 +438,74 @@ message=two
 
         then:
         result.task(':validateRepositoryConventions').outcome == TaskOutcome.SUCCESS
+
+        where:
+        worktrees << ['.worktrees', '.claude/worktrees']
+    }
+
+    def "validateRepositoryConventions reports local actions without a manifest"() {
+        given:
+        writeBuild()
+        writeSkill('sample', 'sample')
+        writeAgents('.agents/skills/sample/SKILL.md')
+        writeWorkflow('valid.yml', 'uses: ./.github/actions/missing')
+        testProjectDir.resolve('.github/actions/missing').toFile().mkdirs()
+        writeWorkflow('typo.yml', 'uses: ./.github/actions/misspelled')
+
+        when:
+        def result = runAndFail('validateRepositoryConventions')
+
+        then:
+        result.output.contains(".github/workflows/valid.yml:\$.steps[0].uses: local action './.github/actions/missing' has no action.yml or action.yaml")
+        result.output.contains(".github/workflows/typo.yml:\$.steps[0].uses: local action './.github/actions/misspelled' has no action.yml or action.yaml")
+    }
+
+    @IgnoreIf({ os.windows })
+    def "validateRepositoryConventions validates skills whose SKILL.md is a symlink into the repository"() {
+        given:
+        writeBuild()
+        def target = testProjectDir.resolve('grails-core/src/main/skills/linked/SKILL.md')
+        target.toFile().parentFile.mkdirs()
+        target.toFile().setText('''---
+name: linked
+description: Linked skill
+---
+''', StandardCharsets.UTF_8.name())
+        def link = testProjectDir.resolve('.agents/skills/linked/SKILL.md')
+        link.toFile().parentFile.mkdirs()
+        Files.createSymbolicLink(link, link.parent.relativize(target))
+        writeAgents('.agents/skills/linked/SKILL.md')
+        writeWorkflow('valid.yml', 'uses: actions/checkout@v6')
+
+        when:
+        def result = runAndFail('validateRepositoryConventions')
+
+        then:
+        result.output.contains(".agents/skills/linked/SKILL.md: skill front matter is missing 'license'")
+    }
+
+    def "validateRepositoryConventions is up to date until a convention source changes"() {
+        given:
+        writeBuild()
+        writeSkill('sample', 'sample')
+        writeAgents('.agents/skills/sample/SKILL.md')
+        writeWorkflow('valid.yml', 'uses: actions/checkout@v6')
+        writeProperties('grails-app/i18n/messages.properties', 'message=one\n')
+
+        when:
+        def first = run('validateRepositoryConventions')
+        def second = run('validateRepositoryConventions')
+
+        then:
+        first.task(':validateRepositoryConventions').outcome == TaskOutcome.SUCCESS
+        second.task(':validateRepositoryConventions').outcome == TaskOutcome.UP_TO_DATE
+
+        when:
+        testProjectDir.resolve('grails-app/i18n/messages.properties').toFile() << 'message=two\n'
+        def changed = runAndFail('validateRepositoryConventions')
+
+        then:
+        changed.output.contains("duplicate message key 'message'")
     }
 
     def "validateRepositoryConventions rejects local action paths outside the repository"() {
@@ -685,6 +759,8 @@ license: Apache-2.0
         result.output.contains('.agents/skills/malformed/SKILL.md: malformed skill front matter:')
         result.output.contains('.agents/skills/duplicate/SKILL.md: malformed skill front matter:')
         result.output.contains('found duplicate key name')
+        !result.output.contains('.agents/skills/malformed/SKILL.md: skill front matter is missing')
+        !result.output.contains('.agents/skills/duplicate/SKILL.md: skill front matter is missing')
     }
 
     def "validateRepositoryConventions rejects non-string metadata and non-mapping front matter"() {
@@ -709,6 +785,8 @@ license: Apache-2.0
         then:
         result.output.contains(".agents/skills/typed/SKILL.md: skill front matter field 'name' must be a string")
         result.output.contains('.agents/skills/root/SKILL.md: skill front matter must be a YAML mapping')
+        !result.output.contains(".agents/skills/typed/SKILL.md: skill front matter is missing 'name'")
+        !result.output.contains('.agents/skills/root/SKILL.md: skill front matter is missing')
     }
 
     def "validateRepositoryConventions rejects invalid skill directory names"() {

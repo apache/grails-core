@@ -89,13 +89,13 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 
 ## Repository Conventions
 
-Run `./gradlew validateRepositoryConventions` to check canonical skill front matter, including string `name`, `description`, and `license` values, directory and name matching, unique names, and dangling skill paths referenced by `AGENTS.md`. It does not require `AGENTS.md` to contain a complete skill index. It also checks external GitHub Action pins in workflows and local composite actions, immutable Docker and container-image digests, and duplicate message keys across `grails-app/i18n/**/*.properties`. The task writes `build/reports/violations/REPOSITORY_CONVENTIONS.md` and is included by `aggregateViolations`. RAT license provenance is checked by the separate `rat` task, which `aggregateViolations` also runs; `validateRepositoryConventions` is only ordered after it and does not pull it in on its own.
+Run `./gradlew validateRepositoryConventions` to check canonical skill front matter, including string `name`, `description`, and `license` values, directory and name matching, unique names, and dangling skill paths referenced by `AGENTS.md`. It does not require `AGENTS.md` to contain a complete skill index. It also checks external GitHub Action pins in workflows and local composite actions (a `./...` reference must resolve to an `action.yml` or `action.yaml`), immutable Docker and container-image digests, and duplicate message keys across `grails-app/i18n/**/*.properties`. The task writes `build/reports/violations/REPOSITORY_CONVENTIONS.md` and is included by `aggregateViolations`. RAT license provenance is checked by the separate `rat` task, which `aggregateViolations` also runs; `validateRepositoryConventions` is only ordered after it and does not pull it in on its own.
 
 Third-party GitHub Actions must use lowercase 40-hex immutable references. The `actions/*` and `apache/*` namespaces must use version or branch references and are rejected when pinned to a 40-hex SHA. A 40-hex reference can identify either a commit or an annotated-tag object, and both are accepted as immutable. Docker `uses`, Docker action `runs.image`, and workflow job or service container images must use literal `name@sha256:<digest>` values; expressions cannot be verified as immutable and are rejected.
 
 ### Agent and Tooling Worktrees
 
-Use `.worktrees/` as the standard location for agent and tooling Git worktrees. Each worktree is a complete checkout, so `.worktrees/` is gitignored and excluded from the repository-conventions scans, RAT, and the release source ZIP. A worktree nested anywhere else in the checkout is swept by the repository-conventions scans and by the RAT run that `aggregateViolations` triggers locally.
+Use `.worktrees/` as the standard location for agent and tooling Git worktrees. Each worktree is a complete checkout, so `.worktrees/` is gitignored and excluded from the repository-conventions scans, RAT, and the release source ZIP. Claude Code's default location, `.claude/worktrees/`, is treated the same way. A worktree nested anywhere else in the checkout is swept by the repository-conventions scans and by the RAT run that `aggregateViolations` triggers locally.
 
 Review-only checklist:
 
@@ -260,7 +260,7 @@ grailsCodeAnalysis {
 }
 ```
 
-Set `spotbugsEnabled = true` in the same extension to opt that module into SpotBugs. The `-Pgrails.code-analysis.enabled.pmd[.projects]` and `-Pgrails.code-analysis.enabled.spotbugs[.projects]` properties remain available as all-project or selected-project overrides for baseline runs.
+Set `spotbugsEnabled = true` in the same extension to opt that module into SpotBugs. The `-Pgrails.code-analysis.enabled.pmd[.projects]` and `-Pgrails.code-analysis.enabled.spotbugs[.projects]` properties remain available for baseline runs: an explicit `true` or `false` for the all-project property overrides every module's opt-in, and the `.projects` form additionally enables the listed project paths.
 
 PMD and SpotBugs tasks are registered during `afterEvaluate`. Wrap per-task customization in `afterEvaluate { tasks.named('pmdMain') { ... } }` or `afterEvaluate { tasks.named('spotbugsMain') { ... } }`.
 

@@ -30,15 +30,20 @@ class GradleUtilsSpec extends Specification {
     @TempDir
     Path testProjectDir
 
-    def "findRootGrailsCoreDir returns null when no ancestor has .asf.yaml"() {
+    def "findRootGrailsCoreDir fails with an explanation when no ancestor has .asf.yaml"() {
         given:
         Project project = ProjectBuilder.builder()
                 .withProjectDir(testProjectDir.toFile())
                 .withName('no-marker')
                 .build()
 
-        expect:
-        GradleUtils.findRootGrailsCoreDir(project) == null
+        when:
+        GradleUtils.findRootGrailsCoreDir(project)
+
+        then:
+        IllegalStateException exception = thrown()
+        exception.message.contains('no .asf.yaml found in')
+        exception.message.contains(testProjectDir.toFile().name)
     }
 
     def "findRootGrailsCoreDir finds an ancestor .asf.yaml marker"() {
@@ -54,5 +59,35 @@ class GradleUtilsSpec extends Specification {
         expect:
         GradleUtils.findRootGrailsCoreDir(project).asFile.canonicalFile ==
                 testProjectDir.toFile().canonicalFile
+    }
+
+    def "findRootGrailsCoreDir resolves a module of a worktree nested at #worktree to that worktree"() {
+        given:
+        testProjectDir.resolve('.asf.yaml').toFile().text = ''
+        Path worktreeRoot = testProjectDir.resolve(worktree)
+        Path module = worktreeRoot.resolve('grails-core')
+        module.toFile().mkdirs()
+        worktreeRoot.resolve('.asf.yaml').toFile().text = ''
+        Project project = ProjectBuilder.builder()
+                .withProjectDir(module.toFile())
+                .withName('grails-core')
+                .build()
+
+        expect:
+        GradleUtils.findRootGrailsCoreDir(project).asFile.canonicalFile == worktreeRoot.toFile().canonicalFile
+
+        where:
+        worktree << ['.worktrees/feature', '.claude/worktrees/feature']
+    }
+
+    def "isRootGrailsCoreDir distinguishes the repository root from nested builds"() {
+        given:
+        testProjectDir.resolve('.asf.yaml').toFile().text = ''
+        Path nestedBuild = testProjectDir.resolve('grails-gradle')
+        nestedBuild.toFile().mkdirs()
+
+        expect:
+        GradleUtils.isRootGrailsCoreDir(ProjectBuilder.builder().withProjectDir(testProjectDir.toFile()).build())
+        !GradleUtils.isRootGrailsCoreDir(ProjectBuilder.builder().withProjectDir(nestedBuild.toFile()).build())
     }
 }

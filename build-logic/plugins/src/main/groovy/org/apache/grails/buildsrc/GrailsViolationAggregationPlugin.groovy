@@ -74,6 +74,18 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
 
     static final String DEFAULT_JACOCO_EXCLUDED_CLASS_PREFIXES = 'org.grails.orm.hibernate.support.hibernate7.'
 
+    /**
+     * Paths the repository-conventions scan never reads: version-control and Gradle state, dependency caches, the
+     * build output of the independent builds nested in the checkout, and agent or tooling worktrees, which are
+     * complete checkouts of the repository.
+     */
+    private static final List<String> REPOSITORY_SCAN_EXCLUDES = [
+            '**/.git/**', '**/.hg/**', '**/.svn/**', '**/.gradle/**', '**/node_modules/**',
+            'build-logic/*/build/**', 'grails-gradle/**/build/**', 'grails-forge/build/**', 'grails-forge/*/build/**',
+            'end-to-end/**/build/**', 'gradle-bootstrap/build/**',
+            '.worktrees/**', '.claude/worktrees/**',
+    ].asImmutable()
+
     @Override
     void apply(Project project) {
         if (project != project.rootProject) {
@@ -84,8 +96,9 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
         }
 
         def violationsDir = project.layout.buildDirectory.dir('reports/violations')
-        TaskProvider<RepositoryConventionsTask> repositoryConventionsTask = project.file('.asf.yaml').isFile() &&
-                GradleUtils.findRootGrailsCoreDir(project).asFile == project.projectDir ?
+        // Repository conventions cover the whole checkout, so only the repository root registers them;
+        // the independent builds nested inside it (grails-gradle, grails-forge, end-to-end) do not
+        TaskProvider<RepositoryConventionsTask> repositoryConventionsTask = GradleUtils.isRootGrailsCoreDir(project) ?
                 registerRepositoryConventions(project, violationsDir) : null
         def styleTask = registerStyleAggregation(project, violationsDir)
         def analysisTask = registerAnalysisAggregation(project, violationsDir)
@@ -112,26 +125,17 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
                         .relativize(sub.layout.buildDirectory.get().asFile.toPath())
                         .toString().replace(File.separator, '/') + '/**'
             }
-            // .worktrees/ holds complete checkouts created by agents and tooling; scanning it would
-            // validate other copies of the repository
-            List<String> repositoryStateExcludes = ['**/.gradle/**', '**/.git/**', '**/.hg/**', '**/.svn/**', '.worktrees/**']
             task.conventionSources.from(
                     root.file('AGENTS.md'),
                     root.fileTree('.agents/skills') { include '*/SKILL.md' },
                     root.fileTree('.github/workflows') { include '**/*.yml', '**/*.yaml' },
                     root.fileTree('.') {
-                        include '**/action.yml', '**/action.yaml'
+                        include '**/action.yml', '**/action.yaml', '**/grails-app/i18n/**/*.properties'
                         exclude(buildOutputExcludes)
-                        exclude(repositoryStateExcludes)
-                    },
-                    root.fileTree('.') {
-                        include '**/grails-app/i18n/**/*.properties'
-                        exclude(buildOutputExcludes)
-                        exclude(repositoryStateExcludes)
+                        exclude(REPOSITORY_SCAN_EXCLUDES)
                     }
             )
             task.reportFile.set(violationsDir.map { it.file('REPOSITORY_CONVENTIONS.md') })
-            task.outputs.upToDateWhen { false }
             task.mustRunAfter(root.tasks.named { String name -> name == 'rat' })
         }
     }
@@ -417,15 +421,15 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
                 if (!marker.exists() || (!checkStyleTests && isTestFile(marker.name))) {
                     return
                 }
-                codenarcModules << resolveModule(marker.name)
+                def module = resolveModule(marker.name)
                 File file = reportForMarker(marker, rootDirectory)
                 if (!file || !file.exists() || file.size() == 0) {
-                    def violation = missingReportViolation(resolveModule(marker.name), 'CodeNarc')
+                    def violation = missingReportViolation(module, 'CodeNarc')
                     codenarcViolations << violation
                     missingReports << violation
                     return
                 }
-                def module = resolveModule(marker.name)
+                codenarcModules << module
                 def xml = slurper.parse(file)
                 xml.Package.each { pkg ->
                     pkg.File.each { f ->
@@ -462,15 +466,15 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
                 if (!marker.exists() || (!checkStyleTests && isTestFile(marker.name))) {
                     return
                 }
-                checkstyleModules << resolveModule(marker.name)
+                def module = resolveModule(marker.name)
                 File file = reportForMarker(marker, rootDirectory)
                 if (!file || !file.exists() || file.size() == 0) {
-                    def violation = missingReportViolation(resolveModule(marker.name), 'Checkstyle')
+                    def violation = missingReportViolation(module, 'Checkstyle')
                     checkstyleViolations << violation
                     missingReports << violation
                     return
                 }
-                def module = resolveModule(marker.name)
+                checkstyleModules << module
                 def xml = slurper.parse(file)
                 xml.file.each { f ->
                     String filePath = f.@name.text()
@@ -531,13 +535,13 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
                     return
                 }
                 def module = resolveModule(marker.name)
-                pmdModules << module
                 File file = reportForMarker(marker, rootDirectory)
                 if (!file || !file.exists() || file.size() == 0) {
                     def violation = missingReportViolation(module, 'PMD')
                     pmdViolations << violation
                     missingReports << violation
                 } else {
+                    pmdModules << module
                     def xml = slurper.parse(file)
                     xml.file.each { f ->
                         f.violation.each { v ->
@@ -570,13 +574,13 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
                     return
                 }
                 def module = resolveModule(marker.name)
-                spotbugsModules << module
                 File file = reportForMarker(marker, rootDirectory)
                 if (!file || !file.exists() || file.size() == 0) {
                     def violation = missingReportViolation(module, 'SpotBugs')
                     spotbugsViolations << violation
                     missingReports << violation
                 } else {
+                    spotbugsModules << module
                     def xml = slurper.parse(file)
                     xml.BugInstance.each { b ->
                         def className = b.Class.@classname.text()

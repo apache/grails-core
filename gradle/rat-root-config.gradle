@@ -21,7 +21,9 @@ tasks.named('rat') {
     def allExcludes = [
             '.omo/**', // local agent work state excluded from src zip
             '.worktrees/**', // standard location for agent/tooling git worktrees, never shipped
+            '.claude/worktrees/**', // Claude Code's default git worktree location, never shipped
             '.claude/settings.json', // JSON files cannot contain license headers
+            '.claude/settings.local.json', // personal Claude Code settings, never shipped; JSON cannot contain license headers
             // Symlinks to AGENTS.md and .agents/skills/**, which carry the license header. They ship in the
             // src zip as links, but cannot be audited here: on platforms without symlink support git
             // materializes them as plain text files containing the link target.

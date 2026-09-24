@@ -19,6 +19,7 @@
 package org.apache.grails.buildsrc
 
 import java.nio.charset.StandardCharsets
+import java.nio.file.Path
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 
@@ -65,7 +66,7 @@ abstract class RepositoryConventionsTask extends DefaultTask {
 
     @TaskAction
     void validateRepositoryConventions() {
-        File root = repositoryDirectory.get().asFile.canonicalFile
+        File root = repositoryDirectory.get().asFile.toPath().toAbsolutePath().normalize().toFile()
         List<File> files = conventionSources.files.toList()
         List<String> violations = []
         validateSkills(root, files, violations)
@@ -92,7 +93,7 @@ abstract class RepositoryConventionsTask extends DefaultTask {
                 return
             }
             ['name', 'description', 'license'].each { String key ->
-                if (!metadata[key]) {
+                if (!metadata.containsKey(key) || metadata[key] == '') {
                     violations.add("${path}: skill front matter is missing '${key}'".toString())
                 }
             }
@@ -154,11 +155,11 @@ abstract class RepositoryConventionsTask extends DefaultTask {
             document = new Yaml(new SafeConstructor(options)).load(lines.subList(1, end).join('\n'))
         } catch (YAMLException exception) {
             violations.add("${path}: malformed skill front matter: ${exception.message}".toString())
-            return [:]
+            return null
         }
         if (!(document instanceof Map)) {
             violations.add("${path}: skill front matter must be a YAML mapping".toString())
-            return [:]
+            return null
         }
         Map<String, String> values = [:]
         ['name', 'description', 'license'].each { String key ->
@@ -166,7 +167,9 @@ abstract class RepositoryConventionsTask extends DefaultTask {
             if (value instanceof String) {
                 values[key] = (String) value
             } else if (value != null) {
+                // Present but not a string: reported here, so the caller must not also report it as missing
                 violations.add("${path}: skill front matter field '${key}' must be a string".toString())
+                values[key] = null
             }
         }
         values
@@ -384,7 +387,7 @@ abstract class RepositoryConventionsTask extends DefaultTask {
             Map<String, String> actionShas, Map<String, String> actionFiles, List<String> violations,
             Set<String> validatedManifests) {
         File target = new File(root, use.substring(2)).canonicalFile
-        if (!target.toPath().startsWith(root.toPath())) {
+        if (!target.toPath().startsWith(root.canonicalFile.toPath())) {
             violations.add("${path}:${location}: local action '${use}' resolves outside the repository".toString())
             return
         }
@@ -392,11 +395,14 @@ abstract class RepositoryConventionsTask extends DefaultTask {
             validateActionManifest(root, target, actionShas, actionFiles, violations, validatedManifests)
             return
         }
-        ['action.yml', 'action.yaml'].each { String manifestName ->
-            File manifest = new File(target, manifestName)
-            if (manifest.isFile()) {
-                validateActionManifest(root, manifest, actionShas, actionFiles, violations, validatedManifests)
-            }
+        List<File> manifests = ['action.yml', 'action.yaml'].collect { String manifestName -> new File(target, manifestName) }
+                .findAll { File manifest -> manifest.isFile() }
+        if (manifests.isEmpty()) {
+            violations.add("${path}:${location}: local action '${use}' has no action.yml or action.yaml".toString())
+            return
+        }
+        manifests.each { File manifest ->
+            validateActionManifest(root, manifest, actionShas, actionFiles, violations, validatedManifests)
         }
     }
 
@@ -483,7 +489,15 @@ abstract class RepositoryConventionsTask extends DefaultTask {
     }
 
     private static String relativePath(File root, File file) {
-        root.toPath().relativize(file.canonicalFile.toPath()).toString().replace(File.separatorChar, '/' as char)
+        // Files inside the checkout keep their repository path even when they are symlinks, so a symlinked
+        // .agents/skills/<name>/SKILL.md is still validated as a skill. Anything else, such as a resolved local
+        // action or a checkout path with a symlinked component, is compared by canonical path.
+        Path rootPath = root.toPath()
+        Path filePath = file.toPath().toAbsolutePath().normalize()
+        Path relative = filePath.startsWith(rootPath) ?
+                rootPath.relativize(filePath) :
+                root.canonicalFile.toPath().relativize(file.canonicalFile.toPath())
+        relative.toString().replace(File.separatorChar, '/' as char)
     }
 
     private static final class PropertiesLine {

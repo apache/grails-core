@@ -124,7 +124,8 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
         def ignoreFailures = GradleUtils.booleanProvider(project, IGNORE_FAILURES_PROPERTY)
         def testStylingEnabled = GradleUtils.booleanProvider(project, TEST_ANALYSIS_PROPERTY)
         def skipCodeStyle = project.providers.gradleProperty('skipCodeStyle')
-        def projectBuildDirectory = project.layout.buildDirectory.map { it.asFile.toPath().toAbsolutePath().normalize() }
+        // configurePmd runs in afterEvaluate, so the module's build directory is final here
+        Path projectBuildDirectory = project.layout.buildDirectory.get().asFile.toPath().toAbsolutePath().normalize()
 
         project.extensions.configure(PmdExtension) {
             it.ruleSetFiles = project.files(project.extensions.getByType(GrailsCodeAnalysisExtension).pmdDirectory.file(PMD_CONFIG_FILE_NAME))
@@ -144,7 +145,7 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
             }
 
             it.exclude { FileTreeElement element ->
-                element.file.toPath().toAbsolutePath().normalize().startsWith(projectBuildDirectory.get())
+                element.file.toPath().toAbsolutePath().normalize().startsWith(projectBuildDirectory)
             }
 
             it.reports.xml.required.set(true)
@@ -199,12 +200,19 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
         }
     }
 
+    /**
+     * An explicit all-project property ({@code -Pgrails.code-analysis.enabled.pmd=true|false}) overrides every
+     * project's own setting. Otherwise a tool runs when the project is listed in the selected-projects property or
+     * opts in through the {@code grailsCodeAnalysis} extension.
+     */
     static boolean isToolEnabled(Project project, String enabledProperty, String enabledProjectsProperty,
             Property<Boolean> extensionEnabled) {
-        GradleUtils.booleanProvider(project, enabledProperty).get() ||
-                project.providers.gradleProperty(enabledProjectsProperty)
-                        .map { it.split(',')*.trim().contains(project.path) }
-                        .orElse(false)
-                        .get() || extensionEnabled.get()
+        if (project.providers.gradleProperty(enabledProperty).present) {
+            return GradleUtils.booleanProvider(project, enabledProperty).get()
+        }
+        project.providers.gradleProperty(enabledProjectsProperty)
+                .map { it.split(',')*.trim().contains(project.path) }
+                .orElse(false)
+                .get() || extensionEnabled.get()
     }
 }

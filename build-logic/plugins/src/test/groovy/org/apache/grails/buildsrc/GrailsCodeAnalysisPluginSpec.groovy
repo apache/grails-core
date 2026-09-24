@@ -29,7 +29,7 @@ class GrailsCodeAnalysisPluginSpec extends Specification {
     @TempDir
     Path testProjectDir
 
-    def "PMD is enabled per project when any opt-in applies (global: #global, projects: '#projects', extension on :selected: #extension)"() {
+    def "PMD enablement (global: #global, projects: '#projects', extension on :selected: #extension)"() {
         given:
         writeMultiProjectBuild(global, projects, extension)
 
@@ -42,12 +42,14 @@ class GrailsCodeAnalysisPluginSpec extends Specification {
 
         where:
         global | projects    | extension || selectedEnabled | excludedEnabled
-        false  | ''          | false     || false           | false
+        null   | ''          | false     || false           | false
         true   | ''          | false     || true            | true
-        false  | ':selected' | false     || true            | false
-        false  | ''          | true      || true            | false
-        false  | ':excluded' | true      || true            | true
+        null   | ':selected' | false     || true            | false
+        null   | ''          | true      || true            | false
+        null   | ':excluded' | true      || true            | true
         true   | ':selected' | true      || true            | true
+        false  | ''          | true      || false           | false
+        false  | ':selected' | false     || false           | false
     }
 
     def "PMD excludes generated build sources"() {
@@ -110,8 +112,8 @@ class GrailsCodeAnalysisPluginSpec extends Specification {
         """
     }
 
-    private void writeMultiProjectBuild(boolean global, String projects, boolean extension) {
-        testProjectDir.resolve('gradle.properties').toFile().text = """grails.code-analysis.enabled.pmd=${global}
+    private void writeMultiProjectBuild(Boolean global, String projects, boolean extension) {
+        testProjectDir.resolve('gradle.properties').toFile().text = """${global == null ? '' : "grails.code-analysis.enabled.pmd=${global}"}
 ${projects ? "grails.code-analysis.enabled.pmd.projects=${projects}" : ''}
 """
         testProjectDir.resolve('settings.gradle').toFile().text = "include 'selected', 'excluded'"
