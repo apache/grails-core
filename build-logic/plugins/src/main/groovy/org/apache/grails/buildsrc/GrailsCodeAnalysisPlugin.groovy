@@ -59,6 +59,9 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
     static String IGNORE_FAILURES_PROPERTY = 'grails.code-analysis.ignoreFailures'
     static String TEST_ANALYSIS_PROPERTY = 'grails.code-analysis.enabled.tests'
 
+    /** Skips PMD and SpotBugs only; {@link GrailsCodeStylePlugin#SKIP_CODE_STYLE_PROPERTY} also skips them. */
+    static String SKIP_CODE_ANALYSIS_PROPERTY = 'skipCodeAnalysis'
+
     static String BASE_RESOURCE_PATH = '/META-INF/org.apache.grails.buildsrc.grails-code-analysis'
 
     @Override
@@ -123,7 +126,8 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
 
         def ignoreFailures = GradleUtils.booleanProvider(project, IGNORE_FAILURES_PROPERTY)
         def testStylingEnabled = GradleUtils.booleanProvider(project, TEST_ANALYSIS_PROPERTY)
-        def skipCodeStyle = project.providers.gradleProperty('skipCodeStyle')
+        def skipCodeStyle = project.providers.gradleProperty(GrailsCodeStylePlugin.SKIP_CODE_STYLE_PROPERTY)
+        def skipCodeAnalysis = project.providers.gradleProperty(SKIP_CODE_ANALYSIS_PROPERTY)
         // configurePmd runs in afterEvaluate, so the module's build directory is final here
         Path projectBuildDirectory = project.layout.buildDirectory.get().asFile.toPath().toAbsolutePath().normalize()
 
@@ -137,7 +141,7 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
 
         project.tasks.withType(Pmd).configureEach {
             it.group = 'verification'
-            it.onlyIf { !skipCodeStyle.present }
+            it.onlyIf { !skipCodeStyle.present && !skipCodeAnalysis.present }
             it.ignoreFailures = ignoreFailures.get()
 
             if (it.name.contains('Test') || it.name.contains('test')) {
@@ -169,7 +173,8 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
 
         def ignoreFailures = GradleUtils.booleanProvider(project, IGNORE_FAILURES_PROPERTY)
         def testStylingEnabled = GradleUtils.booleanProvider(project, TEST_ANALYSIS_PROPERTY)
-        def skipCodeStyle = project.providers.gradleProperty('skipCodeStyle')
+        def skipCodeStyle = project.providers.gradleProperty(GrailsCodeStylePlugin.SKIP_CODE_STYLE_PROPERTY)
+        def skipCodeAnalysis = project.providers.gradleProperty(SKIP_CODE_ANALYSIS_PROPERTY)
 
         project.extensions.configure(SpotBugsExtension) {
             it.effort.set(Effort.valueOf('MAX'))
@@ -192,7 +197,7 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
             )
             GradleUtils.configureReportMarker(it, project.rootProject.layout.projectDirectory, xmlReport.outputLocation,
                     GradleUtils.reportMarker(project, 'spotbugs', it.name))
-            it.onlyIf { !skipCodeStyle.present }
+            it.onlyIf { !skipCodeStyle.present && !skipCodeAnalysis.present }
 
             if (it.name.contains('Test') || it.name.contains('test')) {
                 it.enabled = testStylingEnabled.get()

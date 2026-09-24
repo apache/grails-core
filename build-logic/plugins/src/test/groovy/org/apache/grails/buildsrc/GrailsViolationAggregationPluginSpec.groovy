@@ -516,7 +516,7 @@ public class App {
 
         then:
         result.task(':app-module:spotbugsMain').outcome == TaskOutcome.SUCCESS
-        File[] markers = testProjectDir.resolve('build/reports/aggregation-markers/spotbugs').toFile().listFiles()
+        File[] markers = testProjectDir.resolve('app-module/build/reports/aggregation-markers/spotbugs').toFile().listFiles()
         markers.length == 1
         markers[0].text.trim() == 'build/reports/code-analysis/spotbugs/3a6170702d6d6f64756c65-spotbugsMain.xml'
         def spotbugsReport = testProjectDir.resolve('build/reports/violations/SPOTBUGS_VIOLATIONS.md').toFile().text
@@ -875,7 +875,7 @@ public class App {
         result.task(':aggregateAnalysisViolations').outcome == TaskOutcome.SUCCESS
         moduleDir.resolve('build/custom-analysis/pmd/renamed-pmd.xml').toFile().isFile()
         testProjectDir.resolve('build/reports/violations/PMD_VIOLATIONS.md').toFile().text.contains('UnusedPrivateMethod')
-        File[] markers = testProjectDir.resolve('build/reports/aggregation-markers/pmd').toFile().listFiles()
+        File[] markers = moduleDir.resolve('build/reports/aggregation-markers/pmd').toFile().listFiles()
         markers.length == 1
         def marker = markers[0]
         marker.text.trim() == 'app-module/build/custom-analysis/pmd/renamed-pmd.xml'
@@ -937,7 +937,7 @@ codenarcVersion=${codenarcVersion}
         result.task(':aggregateStyleViolations').outcome in [TaskOutcome.SUCCESS, TaskOutcome.UP_TO_DATE]
         moduleDir.resolve('build/custom-style/codenarc/renamed-codenarc.xml').toFile().isFile()
         testProjectDir.resolve('build/reports/violations/CODENARC_VIOLATIONS.md').toFile().text.contains('App | CodeNarc')
-        File[] markers = testProjectDir.resolve('build/reports/aggregation-markers/codenarc').toFile().listFiles()
+        File[] markers = moduleDir.resolve('build/reports/aggregation-markers/codenarc').toFile().listFiles()
         markers.length == 1
         def marker = markers[0]
         marker.text.trim() == 'app-module/build/custom-style/codenarc/renamed-codenarc.xml'
@@ -1077,6 +1077,84 @@ pmdVersion=${pmdVersion}
         'PMD root-path' | GrailsCodeAnalysisPlugin.PMD_ENABLED_PROJECTS_PROPERTY                | ':'
     }
 
+    def "analyzers stay up to date across aggregate runs until clean or cleanViolationReports removes their reports"() {
+        given:
+        writeAnalyzedModule('package com.example;\n\npublic class App {\n\tpublic void run() {\n    }\n}\n')
+
+        when:
+        def first = runBuild('aggregateStyleViolations')
+        def second = runBuild('aggregateStyleViolations')
+
+        then:
+        first.task(':app-module:checkstyleMain').outcome == TaskOutcome.SUCCESS
+        second.task(':app-module:checkstyleMain').outcome == TaskOutcome.UP_TO_DATE
+        second.task(':writeStyleViolations').outcome == TaskOutcome.SUCCESS
+        checkstyleReport().contains('Modules analyzed: :app-module')
+        checkstyleReport().contains('FileTabCharacter')
+
+        when:
+        def cleaned = runBuild('clean', 'aggregateStyleViolations')
+
+        then:
+        cleaned.task(':cleanViolationReports').outcome == TaskOutcome.SUCCESS
+        cleaned.task(':app-module:checkstyleMain').outcome == TaskOutcome.SUCCESS
+        checkstyleReport().contains('FileTabCharacter')
+
+        when:
+        def reportsCleaned = runBuild('cleanViolationReports', 'aggregateStyleViolations')
+
+        then:
+        reportsCleaned.task(':app-module:checkstyleMain').outcome == TaskOutcome.SUCCESS
+        checkstyleReport().contains('FileTabCharacter')
+    }
+
+    def "analyzers whose sources are removed leave no stale findings in the next aggregate report"() {
+        given:
+        File source = writeAnalyzedModule('package com.example;\n\npublic class App {\n\tprivate void unused() {\n    }\n}\n')
+        runBuild('aggregateStyleViolations', 'aggregateAnalysisViolations')
+        def pmdReport = testProjectDir.resolve('build/reports/violations/PMD_VIOLATIONS.md').toFile()
+
+        expect:
+        checkstyleReport().contains('FileTabCharacter')
+        pmdReport.text.contains('UnusedPrivateMethod')
+
+        when: "each analyzer either re-runs over no files or is NO-SOURCE, which removes its outputs"
+        source.delete()
+        def result = runBuild('aggregateStyleViolations', 'aggregateAnalysisViolations')
+
+        then:
+        result.task(':app-module:checkstyleMain').outcome in [TaskOutcome.SUCCESS, TaskOutcome.NO_SOURCE]
+        result.task(':app-module:pmdMain').outcome in [TaskOutcome.SUCCESS, TaskOutcome.NO_SOURCE]
+        !checkstyleReport().contains('FileTabCharacter')
+        !checkstyleReport().contains('MissingReport')
+        !pmdReport.text.contains('UnusedPrivateMethod')
+        !pmdReport.text.contains('MissingReport')
+    }
+
+    def "#flag writes skipped reports instead of reading markers from an earlier run"() {
+        given:
+        writeAnalyzedModule('package com.example;\n\npublic class App {\n\tprivate void unused() {\n    }\n}\n')
+        runBuild('aggregateStyleViolations', 'aggregateAnalysisViolations')
+
+        when:
+        def result = runBuild('aggregateStyleViolations', 'aggregateAnalysisViolations', flag)
+        def violationsDir = testProjectDir.resolve('build/reports/violations')
+
+        then:
+        result.task(':app-module:checkstyleMain').outcome == (styleSkipped ? TaskOutcome.SKIPPED : TaskOutcome.UP_TO_DATE)
+        result.task(':app-module:pmdMain').outcome == TaskOutcome.SKIPPED
+        violationsDir.resolve('PMD_VIOLATIONS.md').toFile().text.contains("PMD was skipped (${flag}).")
+        violationsDir.resolve('SPOTBUGS_VIOLATIONS.md').toFile().text.contains("SpotBugs was skipped (${flag}).")
+        !violationsDir.resolve('PMD_VIOLATIONS.md').toFile().text.contains('UnusedPrivateMethod')
+        checkstyleReport().contains("Checkstyle was skipped (${flag}).") == styleSkipped
+        checkstyleReport().contains('FileTabCharacter') == !styleSkipped
+
+        where:
+        flag                 || styleSkipped
+        '-PskipCodeStyle'    || true
+        '-PskipCodeAnalysis' || false
+    }
+
     def "aggregateJacocoCoverage handles no csv reports gracefully"() {
         given: "root project with no subproject csv reports"
         testProjectDir.resolve('settings.gradle').toFile().text = ''
@@ -1162,5 +1240,45 @@ pmdVersion=${pmdVersion}
         def csv = testProjectDir.resolve('build/reports/jacoco/test/jacocoTestReport.csv').toFile()
         csv.parentFile.mkdirs()
         csv.text = (['GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED'] + dataRows).join('\n') + '\n'
+    }
+
+    private File writeAnalyzedModule(String source) {
+        testProjectDir.resolve('gradle.properties').toFile().text = """grails.code-style.ignoreFailures=true
+grails.code-analysis.ignoreFailures=true
+grails.code-analysis.enabled.pmd.projects=:app-module
+checkstyleVersion=${checkstyleVersion}
+pmdVersion=${pmdVersion}
+"""
+        testProjectDir.resolve('settings.gradle').toFile().text = "include 'app-module'"
+        testProjectDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'org.apache.grails.gradle.grails-violation-aggregation'
+            }
+        """
+        def moduleDir = testProjectDir.resolve('app-module')
+        moduleDir.toFile().mkdirs()
+        moduleDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'java'
+                id 'org.apache.grails.gradle.grails-code-style'
+            }
+            repositories { mavenCentral() }
+        """
+        def sourceFile = moduleDir.resolve('src/main/java/com/example/App.java').toFile()
+        sourceFile.parentFile.mkdirs()
+        sourceFile.text = source
+        sourceFile
+    }
+
+    private def runBuild(String... arguments) {
+        GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments(arguments + ['--stacktrace'])
+                .withPluginClasspath()
+                .build()
+    }
+
+    private String checkstyleReport() {
+        testProjectDir.resolve('build/reports/violations/CHECKSTYLE_VIOLATIONS.md').toFile().text
     }
 }

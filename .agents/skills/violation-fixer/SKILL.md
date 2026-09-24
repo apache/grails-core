@@ -45,6 +45,7 @@ Activate this skill when:
 | `./gradlew codeAnalysis` | per-project | Runs PMD and/or SpotBugs for that project (when enabled) |
 | `./gradlew aggregateViolations` | root | Runs all checks across every module, then writes `*_VIOLATIONS.md` to `build/reports/violations/` |
 | `./gradlew validateRepositoryConventions` | root | Validates canonical skill metadata, AGENTS paths, GitHub Action pins, and message keys. RAT provenance is the separate `rat` task, which `aggregateViolations` runs |
+| `./gradlew cleanViolationReports` | root | Deletes analyzer XML reports, their markers, and the aggregate Markdown so the next aggregate run re-analyzes every module. The root `clean` runs it |
 | `./gradlew aggregateJacocoCoverage` | root | Runs JaCoCo reports across every module, then writes `JACOCO_COVERAGE.md` to `build/reports/violations/` |
 | `./gradlew codenarcFix` | per-project | Auto-fixes a subset of CodeNarc violations |
 
@@ -59,6 +60,9 @@ Activate this skill when:
 
 # Full multi-module check + report (use --continue so the reports are written even when an analyzer fails)
 ./gradlew aggregateViolations --continue
+
+# Force every module to be re-analyzed instead of reusing UP-TO-DATE analyzer results
+./gradlew cleanViolationReports aggregateViolations --continue
 
 # Repository conventions only
 ./gradlew validateRepositoryConventions
@@ -103,7 +107,7 @@ All reports are inside `build/` and are excluded from version control via `.giti
 
 Each aggregated style or analysis report begins with `Modules analyzed:`, which names only modules that contributed data. Each file is a Markdown table grouped by module, with columns: **Class**, **Tool**, **Violation**, **Line**, **Message**.
 
-Only the aggregate lane (`aggregateViolations`, `aggregateStyleViolations`, `aggregateAnalysisViolations`) writes these Markdown files. Running an analyzer task directly, such as `./gradlew :grails-core:checkstyleMain`, produces only that task's own XML report and deliberately leaves the aggregate Markdown untouched, so a partial run can never overwrite an authoritative full-repository report. Because the writer is part of that lane rather than a per-task finalizer, pass `--continue` when you expect violations, otherwise the failing analyzer stops the build before the report explaining the failure is written.
+Only the aggregate lane (`aggregateViolations`, `aggregateStyleViolations`, `aggregateAnalysisViolations`) writes these Markdown files. Running an analyzer task directly, such as `./gradlew :grails-core:checkstyleMain`, produces only that task's own XML report and deliberately leaves the aggregate Markdown untouched, so a partial run can never overwrite an authoritative full-repository report. Because the writer is part of that lane rather than a per-task finalizer, pass `--continue` when you expect violations, otherwise the failing analyzer stops the build before the report explaining the failure is written. Analyzers for unchanged modules stay UP-TO-DATE between aggregate runs and their previous results are aggregated; run `cleanViolationReports` (or the root `clean`) first to force a full re-analysis.
 
 ## Repository Conventions
 
@@ -200,7 +204,7 @@ All properties can be set in `gradle.properties` or passed as `-P` flags:
 | `grails.code-style.codenarc.fix` | `false` | Run `codenarcFix` before CodeNarc tasks |
 | `grails.codestyle.dir.checkstyle` | (auto) | Custom path to Checkstyle config dir |
 | `grails.codestyle.dir.codenarc` | (auto) | Custom path to CodeNarc config dir |
-| `skipCodeStyle` | unset | If present, all style tasks are skipped |
+| `skipCodeStyle` | unset | If present, every static check is skipped: CodeNarc and Checkstyle, and PMD and SpotBugs as well. The aggregate reports say the tools were skipped |
 
 ### `grails-code-analysis` plugin (PMD + SpotBugs)
 
@@ -226,7 +230,7 @@ The Gradle properties below are all-project or selected-project overrides for ba
 | `grails.code-analysis.enabled.tests` | `false` | Also analyse test source sets |
 | `grails.code-analysis.ignoreFailures` | `false` | Collect ordinary findings without failing the build; missing expected XML always fails |
 | `grails.code-analysis.dir.pmd` | (auto) | Custom path to PMD config dir |
-| `skipCodeStyle` | unset | If present, all analysis tasks are also skipped |
+| `skipCodeAnalysis` | unset | If present, PMD and SpotBugs are skipped while CodeNarc and Checkstyle still run. `skipCodeStyle` also skips them |
 
 ---
 

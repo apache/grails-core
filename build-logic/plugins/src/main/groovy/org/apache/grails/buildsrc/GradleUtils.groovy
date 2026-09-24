@@ -81,7 +81,9 @@ class GradleUtils {
     }
 
     static Provider<RegularFile> reportMarker(Project project, String tool, String taskName) {
-        project.rootProject.layout.buildDirectory.file("reports/aggregation-markers/${tool}/${reportFileName(project, taskName)}.marker")
+        // Kept in the analyzed project's own build directory: Gradle only removes the previous outputs of a task that
+        // becomes NO-SOURCE inside build directories it owns, and a stale marker would republish an old report
+        project.layout.buildDirectory.file("reports/aggregation-markers/${tool}/${reportFileName(project, taskName)}.marker")
     }
 
     static void configureReportMarker(Task task, Directory rootDirectory, Provider<RegularFile> report,

@@ -57,6 +57,9 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
 
     static String TEST_STYLING_PROPERTY = 'grails.code-style.enabled.tests'
 
+    /** Skips every static check: CodeNarc and Checkstyle, and PMD and SpotBugs as well. */
+    static String SKIP_CODE_STYLE_PROPERTY = 'skipCodeStyle'
+
     static String BASE_RESOURCE_PATH = '/META-INF/org.apache.grails.buildsrc.grails-code-style'
 
     @Override
@@ -134,7 +137,7 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
         project.pluginManager.apply(CheckstylePlugin)
 
         def ignoreFailures = GradleUtils.booleanProvider(project, IGNORE_FAILURES_PROPERTY)
-        def skipCodeStyle = project.providers.gradleProperty('skipCodeStyle')
+        def skipCodeStyle = project.providers.gradleProperty(SKIP_CODE_STYLE_PROPERTY)
 
         project.extensions.configure(CheckstyleExtension) {
             // Explicit `it` is required in extension configuration
@@ -180,7 +183,7 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
 
         def ignoreFailures = GradleUtils.booleanProvider(project, IGNORE_FAILURES_PROPERTY)
         def codenarcFix = GradleUtils.booleanProvider(project, CODENARC_FIX_PROPERTY)
-        def skipCodeStyle = project.providers.gradleProperty('skipCodeStyle')
+        def skipCodeStyle = project.providers.gradleProperty(SKIP_CODE_STYLE_PROPERTY)
 
         project.extensions.configure(CodeNarcExtension) {
             it.configFile = project.extensions.getByType(GrailsCodeStyleExtension)
