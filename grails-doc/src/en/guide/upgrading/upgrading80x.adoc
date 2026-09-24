@@ -4135,10 +4135,17 @@ shape needs the same one-line change:
   `config.getProperty(name, List<String>, [])`, and `Mock(Foo)` rather than `Mock(Foo<Bar>)`.
 * `!x instanceof T` is rejected. It always parsed as `(!x) instanceof T`, which is never true, so the intended
   `!(x instanceof T)` may change behaviour where the old form silently did nothing.
-* Under `@CompileStatic` or `@GrailsCompileStatic`, `new Foo(map)` on a class without a map constructor fails with
-  `Target constructor for constructor call expression hasn't been set`. Add `@groovy.transform.MapConstructor` to the class.
-* A Java source that refers to a Groovy class implementing a trait with static methods, such as `Validateable` or
-  a GORM entity, cannot be joint-compiled: the generated stub declares those methods `static abstract` and javac
-  rejects it. Until the Groovy stub generator is fixed, implement the static methods on the Groovy class
+* `@TupleConstructor` (also through `@Canonical`) with `includes` no longer generates a `LinkedHashMap` constructor
+  just because the first declared property is an untyped or `Object` property left out of `includes`. Groovy 6
+  looks at the included properties only. Under `@CompileStatic` or `@GrailsCompileStatic`, `new Foo(map)` on such a
+  class then fails with `Target constructor for constructor call expression hasn't been set`. Add
+  `@groovy.transform.MapConstructor` to the class.
+* A Java source that refers to a Groovy class implementing a trait with static methods that comes precompiled from
+  a jar or another module, such as `Validateable` or a GORM entity, cannot be joint-compiled: the generated stub
+  declares those methods `static abstract` and javac rejects it. Until the Groovy stub generator is fixed, implement the static methods on the Groovy class
   explicitly (delegating to `Validateable$Trait$Helper`, for instance), or move the Java source out of the joint
   compilation.
+* `@Delegate` of a Groovy interface whose methods return a nested class of a Java source in the same joint
+  compilation generates no methods for them, and other classes in that compilation that implement the interface
+  directly then fail with `Can't have an abstract method in a non-abstract class`. Until this is fixed in Groovy,
+  implement the interface and write the forwarding methods explicitly instead of using `@Delegate`.

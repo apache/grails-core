@@ -43,10 +43,12 @@ import org.grails.scaffolding.model.property.Constrained
 @CompileStatic
 @Canonical
 @TupleConstructor(includes = ['beanType', 'propertyName', 'propertyType'])
-// Groovy 6.0.0 (#16157): @CompileStatic no longer resolves new BeanPropertyAccessorImpl(map) to the
-// implicit map-style construction ("Target constructor for constructor call expression hasn't been
-// set"). An explicit map constructor keeps that call shape. Keep permanently, or remove when the
-// implicit form compiles again. App source: a statically compiled `new Foo(map)` needs the same.
+// Groovy 6.0.0 (#16157): on Groovy 5, @TupleConstructor also generated a LinkedHashMap constructor
+// because the first declared property, rootBean, is an Object. Groovy 6 applies `includes` first, so
+// the first constructor parameter is beanType and that constructor is no longer generated. The
+// statically compiled new BeanPropertyAccessorImpl(params) in BeanPropertyAccessorFactory then fails
+// with "Target constructor for constructor call expression hasn't been set". Permanent: this is the
+// intended Groovy 6 behaviour. App source: a class with the same @TupleConstructor shape needs the same.
 @MapConstructor
 class BeanPropertyAccessorImpl implements BeanPropertyAccessor {
 
