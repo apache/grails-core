@@ -40,6 +40,8 @@ dependencies {
     implementation 'io.micrometer:micrometer-observation'
     api project(':grails-web-common')
     api 'org.apache.groovy:groovy'
+    api 'org.springframework.boot:spring-boot-jackson'
+    api 'tools.jackson.core:jackson-databind'
 
     // api needed downstream: ConvertersExtension is a Groovy extension module with HttpServletRequest
     // in its signatures, and the Groovy compiler loads it from any compile classpath it is on
@@ -54,6 +56,7 @@ dependencies {
     testImplementation 'org.springframework:spring-context'
     testImplementation project(':grails-core')
     testImplementation project(':grails-web-common')
+    testImplementation project(':grails-xml')
 
     compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 

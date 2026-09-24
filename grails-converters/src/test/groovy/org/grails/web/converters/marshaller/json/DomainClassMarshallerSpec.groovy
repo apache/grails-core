@@ -25,6 +25,7 @@ import grails.persistence.Entity
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.web.converters.configuration.ConvertersConfigurationInitializer
+import org.grails.web.converters.configuration.XmlConvertersConfigurationInitializer
 import org.springframework.context.ApplicationContext
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -51,6 +52,7 @@ class DomainClassMarshallerSpec extends Specification {
         grailsApplication.setMappingContext(mappingContext)
         initializer.grailsApplication = grailsApplication
         initializer.initialize()
+        new XmlConvertersConfigurationInitializer(grailsApplication: grailsApplication).initialize()
 
     }
 

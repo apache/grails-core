@@ -24,6 +24,8 @@ import java.io.Writer;
 import groovy.lang.Writable;
 
 import static org.grails.web.json.JSONWriter.Mode.ARRAY;
+import static org.grails.web.json.JSONWriter.Mode.DONE;
+import static org.grails.web.json.JSONWriter.Mode.INIT;
 import static org.grails.web.json.JSONWriter.Mode.KEY;
 import static org.grails.web.json.JSONWriter.Mode.OBJECT;
 
@@ -78,7 +80,7 @@ public class PrettyPrintJSONWriter extends JSONWriter {
 
     @Override
     protected JSONWriter append(Writable writableValue) {
-        if (mode == OBJECT || mode == ARRAY) {
+        if (mode == INIT || mode == OBJECT || mode == ARRAY) {
             try {
                 if (comma && mode == ARRAY) {
                     comma();
@@ -94,12 +96,14 @@ public class PrettyPrintJSONWriter extends JSONWriter {
             }
             if (mode == OBJECT) {
                 mode = KEY;
+            } else if (mode == INIT) {
+                mode = DONE;
             }
             comma = true;
             return this;
         }
 
-        throw new JSONException("Value out of sequence: expected mode to be OBJECT or ARRAY when writing '" + writableValue + "' but was " + this.mode);
+        throw new JSONException("Value out of sequence: expected mode to be INIT, OBJECT or ARRAY when writing '" + writableValue + "' but was " + this.mode);
     }
 
     @Override

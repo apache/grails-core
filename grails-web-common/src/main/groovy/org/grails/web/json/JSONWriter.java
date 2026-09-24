@@ -37,7 +37,8 @@ import static org.grails.web.json.JSONWriter.Mode.OBJECT;
  *     .endObject();</pre> which writes <pre>
  * {"JSON":"Hello, World!"}</pre>
  * <p>
- * The first method called must be <code>array</code> or <code>object</code>.
+ * The first method called must be <code>array</code>, <code>object</code>, or
+ * <code>value</code> for a scalar document. Only one root value may be written.
  * There are no methods for adding commas or colons. JSONWriter adds them for
  * you. Objects and arrays can be nested up to 20 levels deep.
  * <p>
@@ -109,7 +110,7 @@ public class JSONWriter {
     }
 
     protected JSONWriter append(Writable writableValue) {
-        if (this.mode == OBJECT || this.mode == ARRAY) {
+        if (this.mode == INIT || this.mode == OBJECT || this.mode == ARRAY) {
             try {
                 if (this.comma && this.mode == ARRAY) {
                     this.comma();
@@ -120,11 +121,13 @@ public class JSONWriter {
             }
             if (this.mode == OBJECT) {
                 this.mode = KEY;
+            } else if (this.mode == INIT) {
+                this.mode = DONE;
             }
             this.comma = true;
             return this;
         }
-        throw new JSONException("Value out of sequence: expected mode to be OBJECT or ARRAY when writing '" + writableValue + "' but was " + this.mode);
+        throw new JSONException("Value out of sequence: expected mode to be INIT, OBJECT or ARRAY when writing '" + writableValue + "' but was " + this.mode);
     }
 
     protected void comma() {

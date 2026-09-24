@@ -29,8 +29,8 @@ class PersonControllerHibernateSpec extends HibernateSpec implements ControllerU
     void "test action which invokes GORM method"() {
 
         setup:
-        new Person(firstName: 'Robert', lastName: 'Fripp').save()
-        new Person(firstName: 'Adrian', lastName: 'Belew').save()
+        new Person(firstName: 'Robert', lastName: 'Fripp').save(failOnError: true)
+        new Person(firstName: 'Adrian', lastName: 'Belew').save(failOnError: true)
 
         when:
         def model = controller.index()

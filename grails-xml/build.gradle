@@ -1,0 +1,72 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'groovy'
+    id 'java-library'
+    id 'project-report'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
+    id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-jacoco'
+}
+
+version = projectVersion
+group = 'org.apache.grails'
+
+dependencies {
+    implementation platform(project(':grails-bom'))
+
+    api project(':grails-converters')
+    api project(':grails-databinding')
+    api project(':grails-rest-transforms')
+    api 'org.apache.groovy:groovy'
+
+    implementation 'io.micrometer:micrometer-observation'
+    implementation project(':grails-datamapping-core')
+
+    compileOnly 'jakarta.servlet:jakarta.servlet-api'
+    compileOnly 'org.slf4j:slf4j-nop'
+
+    testImplementation 'jakarta.servlet:jakarta.servlet-api'
+    // Spring's XML message converter needs this at runtime. Applications opt in the same way a
+    // plain Spring Boot application does, by adding it themselves; it is only needed here to
+    // exercise that path in tests.
+    testImplementation 'tools.jackson.dataformat:jackson-dataformat-xml'
+    testImplementation project(':grails-core')
+    testImplementation project(':grails-datastore-core')
+    testImplementation 'org.springframework:spring-test'
+    testImplementation 'org.apache.groovy:groovy-test-junit5'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'org.junit.platform:junit-platform-suite'
+    testImplementation 'org.spockframework:spock-core'
+    testImplementation 'org.slf4j:slf4j-simple'
+
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+    testRuntimeOnly 'net.bytebuddy:byte-buddy'
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+}
