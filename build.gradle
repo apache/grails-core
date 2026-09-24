@@ -154,6 +154,24 @@ subprojects {
             dependencies.add(sourceSet.compileOnlyConfigurationName, groovyCallsite)
             dependencies.add(sourceSet.runtimeOnlyConfigurationName, groovyCallsite)
         }
+
+        // Groovy 6 with Spock 2.4-groovy-5.0 (#16157): Spock's global AST transform checks the Groovy
+        // major inside the forked compiler, and Spock checks it again when a Spec starts. CompilePlugin
+        // and the Grails Gradle plugin set the opt-out for the modules that apply them; this covers the
+        // rest, such as test-example helpers that apply only the groovy plugin, without doubling it.
+        // Remove when the BOM moves to a Spock build for Groovy 6.
+        String spockOptOut = '-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true'
+        tasks.withType(GroovyCompile).configureEach { GroovyCompile compile ->
+            List<String> forkJvmArgs = compile.groovyOptions.forkOptions.jvmArgs ?: []
+            if (!forkJvmArgs.any { String arg -> arg.startsWith('-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=') }) {
+                compile.groovyOptions.forkOptions.jvmArgs = forkJvmArgs + [spockOptOut]
+            }
+        }
+        tasks.withType(Test).configureEach { Test testTask ->
+            if (!testTask.systemProperties.containsKey('spock.iKnowWhatImDoing.disableGroovyVersionCheck')) {
+                testTask.systemProperty('spock.iKnowWhatImDoing.disableGroovyVersionCheck', 'true')
+            }
+        }
     }
 
     configurations.configureEach {

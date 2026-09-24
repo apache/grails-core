@@ -138,8 +138,11 @@ class CompilePlugin implements Plugin<Project> {
                 // version inside the forked compiler, failing with IncompatibleGroovyVersionException.
                 // Remove when the BOM moves to a Spock build for Groovy 6. App test build: an
                 // application's build gets the same flag from the Grails Gradle plugin.
-                it.groovyOptions.forkOptions.jvmArgs = (it.groovyOptions.forkOptions.jvmArgs ?: []) +
-                        ['-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true']
+                List<String> groovyForkJvmArgs = it.groovyOptions.forkOptions.jvmArgs ?: []
+                if (!groovyForkJvmArgs.any { String arg -> arg.startsWith('-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=') }) {
+                    it.groovyOptions.forkOptions.jvmArgs = groovyForkJvmArgs +
+                            ['-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true']
+                }
                 // Publish THIS project's base.dir to the forked Groovy compiler. Gradle reuses a forked
                 // compiler daemon for a task whose requested fork arguments the daemon already satisfies,
                 // so a compile that does NOT request base.dir can be handed a daemon started for another
