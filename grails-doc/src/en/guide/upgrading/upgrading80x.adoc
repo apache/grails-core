@@ -4140,12 +4140,14 @@ shape needs the same one-line change:
   looks at the included properties only. Under `@CompileStatic` or `@GrailsCompileStatic`, `new Foo(map)` on such a
   class then fails with `Target constructor for constructor call expression hasn't been set`. Add
   `@groovy.transform.MapConstructor` to the class.
-* A Java source that refers to a Groovy class implementing a trait with static methods that comes precompiled from
-  a jar or another module, such as `Validateable` or a GORM entity, cannot be joint-compiled: the generated stub
-  declares those methods `static abstract` and javac rejects it. Until the Groovy stub generator is fixed, implement the static methods on the Groovy class
-  explicitly (delegating to `Validateable$Trait$Helper`, for instance), or move the Java source out of the joint
-  compilation.
+* A Java source that refers to a Groovy class implementing a trait with static methods that comes precompiled from a
+  jar or another module, such as `Validateable` or a GORM entity, cannot be joint-compiled: the generated stub
+  declares those methods `static abstract` and javac rejects it
+  (https://issues.apache.org/jira/browse/GROOVY-12427[GROOVY-12427]). Until it is fixed, implement the static methods
+  on the Groovy class explicitly (delegating to `Validateable$Trait$Helper`, for instance), or move the Java source
+  out of the joint compilation.
 * `@Delegate` of a Groovy interface whose methods return a nested class of a Java source in the same joint
   compilation generates no methods for them, and other classes in that compilation that implement the interface
-  directly then fail with `Can't have an abstract method in a non-abstract class`. Until this is fixed in Groovy,
+  directly then fail with `Can't have an abstract method in a non-abstract class`
+  (https://issues.apache.org/jira/browse/GROOVY-12426[GROOVY-12426]). Until it is fixed,
   implement the interface and write the forwarding methods explicitly instead of using `@Delegate`.

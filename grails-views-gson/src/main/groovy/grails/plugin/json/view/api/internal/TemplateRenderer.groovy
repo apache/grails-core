@@ -35,13 +35,12 @@ import grails.util.GrailsNameUtils
 @CompileStatic
 class TemplateRenderer implements GrailsJsonViewHelper {
 
-    // Groovy 6.0.0 (#16157): @Delegate of GrailsJsonViewHelper generates no forwarders for the
-    // render(...) overloads, whose return type is a nested class of the joint-compiled
-    // JsonOutput.java, and once it has processed the interface, DefaultGrailsJsonViewHelper also
-    // fails the abstract-method check ("Can't have an abstract method in a non-abstract class").
-    // The forwarders below are the ones @Delegate generated on Groovy 5. Return to
-    // `final @Delegate GrailsJsonViewHelper jsonViewHelper` when @Delegate handles that return
-    // type again. Framework only.
+    // Groovy 6.0.0 (#16157, GROOVY-12426): @Delegate of GrailsJsonViewHelper generates no forwarders
+    // for the render(...) overloads, whose return type is a nested class of the joint-compiled
+    // JsonOutput.java, and once it has processed the interface, DefaultGrailsJsonViewHelper also fails
+    // the abstract-method check ("Can't have an abstract method in a non-abstract class"). The
+    // forwarders below are the ones @Delegate generated on Groovy 5. Return to `final @Delegate
+    // GrailsJsonViewHelper jsonViewHelper` when GROOVY-12426 is fixed. Framework only.
     final GrailsJsonViewHelper jsonViewHelper
 
     TemplateRenderer(GrailsJsonViewHelper jsonViewHelper) {
