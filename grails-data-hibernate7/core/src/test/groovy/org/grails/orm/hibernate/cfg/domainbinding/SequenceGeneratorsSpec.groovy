@@ -19,6 +19,12 @@
 
 package org.grails.orm.hibernate.cfg.domainbinding
 
+import java.sql.Connection
+import java.sql.ResultSet
+import java.sql.Statement
+
+import org.hibernate.Session
+
 import grails.gorm.annotation.Entity
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
@@ -30,6 +36,7 @@ class SequenceGeneratorsSpec extends HibernateGormDatastoreSpec {
         manager.registerDomainClasses(EntityWithIdentity,
                                      EntityWithNative,
                                      EntityWithSequence,
+                                     EntityWithImplicitSequence,
                                      EntityWithTable,
                                      EntityWithUUID,
                                      EntityWithAssigned)
@@ -61,6 +68,35 @@ class SequenceGeneratorsSpec extends HibernateGormDatastoreSpec {
 
         then:
         entity.id != null
+    }
+
+    @Rollback
+    void "test sequence generator with no explicit sequence name"() {
+        when: "the mapping names no sequence, so Hibernate must derive an implicit one from the table"
+        def entity = new EntityWithImplicitSequence(name: "test").save(flush: true)
+
+        then:
+        entity.id != null
+
+        and: "the derived name is the table with Hibernate's suffix, which is what the upgrade notes promise"
+        sequenceNames().contains('ENTITY_WITH_IMPLICIT_SEQUENCE_SEQ')
+    }
+
+    private static Set<String> sequenceNames() {
+        Set<String> names = [] as Set
+        EntityWithImplicitSequence.withSession { Session session ->
+            session.doWork { Connection connection ->
+                connection.createStatement().withCloseable { Statement statement ->
+                    statement.executeQuery('select sequence_name from information_schema.sequences')
+                            .withCloseable { ResultSet rows ->
+                                while (rows.next()) {
+                                    names << rows.getString(1).toUpperCase(Locale.ROOT)
+                                }
+                            }
+                }
+            }
+        }
+        names
     }
 
     @Rollback
@@ -116,6 +152,15 @@ class EntityWithSequence {
     String name
     static mapping = {
         id generator: 'sequence', params: [sequence_name: 'seq_test']
+    }
+}
+
+@Entity
+class EntityWithImplicitSequence {
+    Long id
+    String name
+    static mapping = {
+        id generator: 'sequence'
     }
 }
 

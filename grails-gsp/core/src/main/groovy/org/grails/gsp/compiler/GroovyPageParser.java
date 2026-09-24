@@ -258,20 +258,6 @@ public class GroovyPageParser implements Tokens {
     /** Whether what a page never declared fails the compilation rather than resolving at render time. */
     private boolean compileStaticStrict;
 
-    /**
-     * Matches the {@code var} and {@code status} attributes of a namespaced tag, which is how a page
-     * names something it introduces: {@code <g:set var="total"/>}, {@code <g:each var="book"
-     * status="i">}, {@code <g:eachError var="error">}.
-     *
-     * <p>Read from the page source rather than from the parsed attributes because attributes are
-     * parsed only on the pass that writes the class, by which point the annotation carrying these
-     * names has already been written. Matching a name that turns out not to be a page scope variable
-     * costs only that the name resolves dynamically, so the pattern errs towards matching.</p>
-     */
-    private static final Pattern PAGE_SCOPE_VARIABLE_PATTERN = Pattern.compile(
-            "<\\w+:(?:[^>\"']|\"[^\"]*\"|'[^']*')*?\\b(?:var|status)\\s*=\\s*[\"']([A-Za-z_$][\\w$]*)[\"']",
-            Pattern.DOTALL);
-
     public String getContentType() {
         return contentType;
     }
@@ -354,10 +340,7 @@ public class GroovyPageParser implements Tokens {
      * @param gspSource the page source
      */
     private void collectPageScopeVariables(String gspSource) {
-        Matcher matcher = PAGE_SCOPE_VARIABLE_PATTERN.matcher(gspSource);
-        while (matcher.find()) {
-            pageScopeVariables.add(matcher.group(1));
-        }
+        PageScopeVariableScanner.collect(gspSource, pageScopeVariables);
     }
 
     /**

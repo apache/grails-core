@@ -20,12 +20,20 @@ package org.grails.datastore.mapping.mongo
 
 import java.util.concurrent.TimeUnit
 
+import ch.qos.logback.classic.Level
 import com.mongodb.MongoClientSettings
 import com.mongodb.MongoTimeoutException
 import com.mongodb.client.MongoClient
 
+import org.grails.datastore.gorm.events.DefaultApplicationEventPublisher
+import org.grails.datastore.gorm.mongo.CapturedLog
 import org.grails.datastore.mapping.core.DatastoreUtils
+import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.core.connections.DefaultConnectionSource
 import org.grails.datastore.mapping.mongo.config.MongoMappingContext
+import org.grails.datastore.mapping.mongo.config.MongoSettings
+import org.grails.datastore.mapping.mongo.connections.MongoConnectionSourceFactory
+import org.grails.datastore.mapping.mongo.connections.MongoConnectionSourceSettings
 
 import spock.lang.Specification
 
@@ -159,6 +167,174 @@ class MongoDatastoreLifecycleSpec extends Specification {
         datastore.close()
     }
 
+    void 'stopping closes the client of every connection, not only the default one'() {
+        given: 'a connection that is configured and one added at runtime, each with a client of its own'
+        MongoDatastore datastore = ownedClientDatastore(withConnections())
+        datastore.connectionSources.addConnectionSource('late', [url: unreachableUrl('late')])
+        Map<String, MongoClient> clients = clientsByConnection(datastore)
+
+        expect:
+        clients.keySet() == ['default', 'reporting', 'late'] as Set
+        clients.values().every { !closed(it) }
+
+        when: 'the checkpoint stops it'
+        datastore.stop()
+
+        then: 'a socket left open on any of them would still fail the checkpoint'
+        !datastore.running
+        clients.values().every { closed(it) }
+
+        cleanup:
+        datastore.close()
+    }
+
+    void 'starting replaces every client stop closed, and each connection source hands out its replacement'() {
+        given:
+        MongoDatastore datastore = ownedClientDatastore(withConnections())
+        datastore.connectionSources.addConnectionSource('late', [url: unreachableUrl('late')])
+        Map<String, MongoClient> originals = clientsByConnection(datastore)
+        datastore.stop()
+
+        when: 'the restore starts it again'
+        datastore.start()
+        Map<String, MongoClient> restored = clientsByConnection(datastore)
+
+        then: 'every connection has a new, open client'
+        restored.every { String name, MongoClient client -> !client.is(originals[name]) && !closed(client) }
+
+        and: 'which is the one its connection source hands out, so nothing reading it from there gets the closed one'
+        restored.every { String name, MongoClient client ->
+            datastore.connectionSources.getConnectionSource(name).source.is(client)
+        }
+
+        cleanup:
+        datastore.close()
+    }
+
+    void 'closing after a restore closes the replacement of every connection'() {
+        given: 'a datastore with named connections that has been through a checkpoint and a restore'
+        MongoDatastore datastore = ownedClientDatastore(withConnections())
+        Map<String, MongoClient> originals = clientsByConnection(datastore)
+        datastore.stop()
+        datastore.start()
+        Map<String, MongoClient> restored = clientsByConnection(datastore)
+
+        expect: 'every connection is on a replacement'
+        restored.every { String name, MongoClient client -> !client.is(originals[name]) }
+
+        when:
+        datastore.close()
+
+        then:
+        restored.values().every { closed(it) }
+    }
+
+    void 'closing after a restore closes the replacements even when the connection sources cannot hand them out'() {
+        given: 'a factory whose connection sources keep the client they were built with'
+        def factory = new MongoConnectionSourceFactory() {
+            @Override
+            ConnectionSource<MongoClient, MongoConnectionSourceSettings> create(String name, MongoConnectionSourceSettings settings) {
+                new DefaultConnectionSource<MongoClient, MongoConnectionSourceSettings>(name, super.create(name, settings).source, settings)
+            }
+        }
+        MongoDatastore datastore = new MongoDatastore(
+                DatastoreUtils.createPropertyResolver([(MongoSettings.SETTING_URL): unreachableUrl('test')] + withConnections()),
+                factory, new DefaultApplicationEventPublisher())
+        Map<String, MongoClient> originals = clientsByConnection(datastore)
+
+        and:
+        def log = new CapturedLog('org.grails.datastore.mapping', Level.WARN)
+
+        when: 'it is checkpointed and restored'
+        datastore.stop()
+        datastore.start()
+        Map<String, MongoClient> restored = clientsByConnection(datastore)
+
+        then: 'the datastore still hands out the replacements'
+        restored.every { String name, MongoClient client -> !client.is(originals[name]) && !closed(client) }
+
+        and: 'and says which connection sources are left handing out the closed ones'
+        restored.keySet().every { String name ->
+            log.events.any {
+                it.level == Level.WARN &&
+                        it.formattedMessage.contains("The connection source for [${name}] is a DefaultConnectionSource")
+            }
+        }
+
+        when: 'the connection sources close only the clients they were built with, which stop already closed'
+        datastore.close()
+
+        then: 'the replacements are closed as well, rather than left holding sockets'
+        restored.values().every { closed(it) }
+
+        cleanup:
+        log?.close()
+    }
+
+    void 'the replacement of the default client is built with the client options the datastore was given'() {
+        given:
+        MongoDatastore datastore = ownedClientDatastore()
+        datastore.stop()
+
+        when:
+        datastore.start()
+
+        then: 'the options passed to the constructor, not only those in the configuration'
+        datastore.mongoClient.clusterDescription.clusterSettings.getServerSelectionTimeout(TimeUnit.MILLISECONDS) == 50
+
+        cleanup:
+        datastore.close()
+    }
+
+    void 'with a supplied default client, the clients GORM created for the named connections are still closed and replaced'() {
+        given:
+        MongoClient supplied = Mock(MongoClient)
+        MongoDatastore datastore = new MongoDatastore(supplied,
+                DatastoreUtils.createPropertyResolver(withConnections()),
+                new MongoMappingContext('test'),
+                new DefaultApplicationEventPublisher())
+        MongoClient reporting = datastore.getDatastoreForConnection('reporting').mongoClient
+
+        when: 'the checkpoint stops it'
+        datastore.stop()
+
+        then: 'the supplied client is left to whoever created it, and the one GORM created is closed'
+        0 * supplied.close()
+        closed(reporting)
+        !datastore.running
+
+        when: 'the restore starts it again'
+        datastore.start()
+        MongoClient restored = datastore.getDatastoreForConnection('reporting').mongoClient
+
+        then: 'only what stop closed is replaced'
+        datastore.running
+        datastore.mongoClient.is(supplied)
+        !restored.is(reporting)
+        !closed(restored)
+
+        cleanup:
+        datastore.close()
+    }
+
+    private static Map<String, MongoClient> clientsByConnection(MongoDatastore datastore) {
+        datastore.connectionSources.allConnectionSources.collectEntries { source ->
+            [(source.name): datastore.getDatastoreForConnection(source.name).mongoClient]
+        }
+    }
+
+    private static Map<String, Object> withConnections() {
+        [(MongoSettings.SETTING_CONNECTIONS): [reporting: [url: unreachableUrl('reporting')]]] as Map<String, Object>
+    }
+
+    /**
+     * Nothing listens on port 1, and the short server selection timeout lets {@link #closed} tell an open client
+     * from a closed one quickly.
+     */
+    private static String unreachableUrl(String database) {
+        "mongodb://localhost:1/${database}?serverSelectionTimeoutMS=50"
+    }
+
     /**
      * Whether the driver has been closed, which needs no MongoDB to answer: selecting a server
      * from a closed cluster is rejected outright, while an open client with nothing to connect
@@ -177,11 +353,11 @@ class MongoDatastoreLifecycleSpec extends Specification {
         }
     }
 
-    private static MongoDatastore ownedClientDatastore() {
+    private static MongoDatastore ownedClientDatastore(Map<String, Object> configuration = [:]) {
         MongoClientSettings.Builder clientOptions = MongoClientSettings.builder()
                 .applyToClusterSettings { it.serverSelectionTimeout(50, TimeUnit.MILLISECONDS) }
         new MongoDatastore(clientOptions,
-                DatastoreUtils.createPropertyResolver([:]),
+                DatastoreUtils.createPropertyResolver(configuration),
                 new MongoMappingContext('test'))
     }
 }

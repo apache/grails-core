@@ -75,9 +75,13 @@ class GormApiResolver {
             return qualifiedDatastoreSelector.select(registry, stateRegistry, className, qualifier, depth)
         }
 
-        selected = activeSessionDatastoreSelector.select(registry, className)
-        if (selected != null) {
-            return selected
+        // Not while a connection block is running: the session it opened belongs to the entity the block names, and
+        // an entity the block does not name keeps its own connection rather than following that session.
+        if (!GormRegistry.insideConnectionScope()) {
+            selected = activeSessionDatastoreSelector.select(registry, className)
+            if (selected != null) {
+                return selected
+            }
         }
 
         Datastore defaultDs = defaultDatastoreSelector.select(registry, stateRegistry, entity, className, depth, this)

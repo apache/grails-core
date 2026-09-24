@@ -22,6 +22,7 @@ package org.grails.compiler.web
 import grails.artefact.Artefact
 import grails.artefact.Enhanced
 import grails.testing.web.controllers.ControllerUnitTest
+import grails.validation.Validateable
 
 import jakarta.servlet.http.HttpServletResponse
 import spock.lang.Issue
@@ -183,22 +184,100 @@ class ControllerActionTransformerAllowedMethodsSpec extends Specification implem
         response.reset()
         request.method = 'PUT'
         controller.callPostMethodFromPutMethod()
-            
+
         then: 'the allowedMethods should not be checked by the second method'
         response.status == HttpServletResponse.SC_OK
+    }
+
+    void 'a restricted action which accepts a command object rejects an invalid request method'() {
+        when: 'the no-arg action wrapper is invoked with a request method which is not allowed'
+        request.method = 'GET'
+        controller.onlyPostAllowedWithCommand()
+
+        then: 'the wrapper imposes the allowedMethods check'
+        response.status == HttpServletResponse.SC_METHOD_NOT_ALLOWED
+    }
+
+    void 'a restricted action which accepts a command object binds and runs for a valid request method'() {
+        when: 'the no-arg action wrapper is invoked with an allowed request method'
+        request.method = 'POST'
+        params.name = 'Jeff'
+        controller.onlyPostAllowedWithCommand()
+
+        then: 'the check passes, the command object is bound and the delegate runs'
+        response.status == HttpServletResponse.SC_OK
+        response.contentAsString == 'Success Jeff'
+    }
+
+    void 'a restricted action which accepts a command object imposes the check when it is the first action of the request'() {
+        when: 'the action which accepts the command object is invoked directly with a request method which is not allowed'
+        request.method = 'GET'
+        controller.onlyPostAllowedWithCommand(new SomeAllowedMethodsCommand(name: 'Jeff'))
+
+        then: 'the allowedMethods check is imposed'
+        response.status == HttpServletResponse.SC_METHOD_NOT_ALLOWED
+    }
+
+    @Issue('GRAILS-11444')
+    void 'a restricted action which accepts a command object does not re-check when invoked from another action'() {
+        when: 'an unrestricted action invokes the restricted action which accepts a command object'
+        request.method = 'GET'
+        controller.callPostMethodWithCommand()
+
+        then: 'the allowedMethods should not be checked by the restricted method'
+        response.status == HttpServletResponse.SC_OK
+        response.contentAsString == 'Success Jeff'
+    }
+}
+
+class ControllerActionTransformerWithoutAllowedMethodsSpec extends Specification implements ControllerUnitTest<NoAllowedMethodsController> {
+
+    void 'a controller which declares no allowedMethods runs its actions for any request method'() {
+        when:
+        request.method = requestMethod
+        controller.index()
+
+        then:
+        response.status == HttpServletResponse.SC_OK
+        response.contentAsString == 'Success'
+
+        where:
+        requestMethod << ['GET', 'POST', 'PUT', 'DELETE']
+    }
+
+    void 'a controller which declares no allowedMethods binds command objects'() {
+        when:
+        request.method = 'GET'
+        params.name = 'Jeff'
+        controller.withCommand()
+
+        then:
+        response.status == HttpServletResponse.SC_OK
+        response.contentAsString == 'Success Jeff'
+    }
+
+    void 'a controller which declares no allowedMethods may invoke one action from another'() {
+        when:
+        request.method = 'DELETE'
+        controller.callIndex()
+
+        then:
+        response.status == HttpServletResponse.SC_OK
+        response.contentAsString == 'Success'
     }
 }
 
 @Artefact('Controller')
 class SomeAllowedMethodsController {
     
-    static allowedMethods = [callPostMethodFromPutMethod: 'PUT', 
-                             onlyPostAllowed: 'POST', 
-                             postOrPutAllowed: ['POST', 'PUT'], 
+    static allowedMethods = [callPostMethodFromPutMethod: 'PUT',
+                             onlyPostAllowed: 'POST',
+                             onlyPostAllowedWithCommand: 'POST',
+                             postOrPutAllowed: ['POST', 'PUT'],
                              mixedCasePost: 'pOsT',
                              postOne: 'POST',
                              postTwo: 'POST']
-    
+
     def anyMethodAllowed() {
         render 'Success'
     }
@@ -231,4 +310,32 @@ class SomeAllowedMethodsController {
     
     def postOne() {}
     def postTwo() {}
+
+    def onlyPostAllowedWithCommand(SomeAllowedMethodsCommand cmd) {
+        render "Success ${cmd.name}"
+    }
+
+    def callPostMethodWithCommand() {
+        onlyPostAllowedWithCommand(new SomeAllowedMethodsCommand(name: 'Jeff'))
+    }
+}
+
+class SomeAllowedMethodsCommand implements Validateable {
+    String name
+}
+
+@Artefact('Controller')
+class NoAllowedMethodsController {
+
+    def index() {
+        render 'Success'
+    }
+
+    def withCommand(SomeAllowedMethodsCommand cmd) {
+        render "Success ${cmd.name}"
+    }
+
+    def callIndex() {
+        index()
+    }
 }

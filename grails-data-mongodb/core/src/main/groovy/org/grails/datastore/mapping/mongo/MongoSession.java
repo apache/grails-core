@@ -29,6 +29,7 @@ import java.util.Set;
 
 import jakarta.persistence.FlushModeType;
 
+import com.mongodb.DBRef;
 import com.mongodb.WriteConcern;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.model.DeleteManyModel;
@@ -56,9 +57,17 @@ import org.grails.datastore.mapping.engine.Persister;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.config.GormProperties;
+import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.model.types.ManyToMany;
+import org.grails.datastore.mapping.model.types.OneToMany;
+import org.grails.datastore.mapping.model.types.ToOne;
+import org.grails.datastore.mapping.mongo.config.MongoAttribute;
 import org.grails.datastore.mapping.mongo.engine.AbstractMongoObectEntityPersister;
 import org.grails.datastore.mapping.mongo.engine.MongoEntityPersister;
+import org.grails.datastore.mapping.mongo.engine.MongoIdCoercion;
 import org.grails.datastore.mapping.mongo.query.MongoQuery;
+import org.grails.datastore.mapping.proxy.ProxyFactory;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
 
@@ -67,7 +76,14 @@ import org.grails.datastore.mapping.query.api.QueryableCriteria;
  *
  * @author Graeme Rocher
  * @since 1.0
+ *
+ * @deprecated The non-codec ("mapping") persistence engine is deprecated and will be removed
+ * in a future release. Use the default codec engine, which is what
+ * {@code grails.mongodb.engine} selects when unset. This engine reaches MongoDB through a
+ * separate persister hierarchy that has to be kept in step with the codec one for every
+ * storage-layer change, and it carries no feature the codec engine lacks.
  */
+@Deprecated
 public class MongoSession extends AbstractMongoSession {
 
     public MongoSession(MongoDatastore datastore, MappingContext mappingContext, ApplicationEventPublisher publisher) {
@@ -138,7 +154,8 @@ public class MongoSession extends AbstractMongoSession {
                         Document updateDoc = (Document) update.getNativeEntry();
                         updateDoc.remove(MongoConstants.MONGO_ID_FIELD);
                         updateDoc = createSetAndUnsetDoc(updateDoc);
-                        final Object nativeKey = update.getNativeKey();
+                        final Object nativeKey = MongoIdCoercion.coerceIdToStoredType(
+                                update.getNativeKey(), persistentEntity);
                         final Document id = new Document(MongoConstants.MONGO_ID_FIELD, nativeKey);
                         MongoEntityPersister documentEntityPersister = (MongoEntityPersister) getPersister(persistentEntity);
                         final EntityAccess entityAccess = update.getEntityAccess();
@@ -178,7 +195,8 @@ public class MongoSession extends AbstractMongoSession {
 
                         if (delete.isVetoed()) continue;
 
-                        final Object k = delete.getNativeKey();
+                        final Object k = MongoIdCoercion.coerceIdToStoredType(
+                                delete.getNativeKey(), persistentEntity);
                         if (k != null) {
                             if (k instanceof Document) {
                                 entityWrites.add(new DeleteManyModel<>((Document) k));
@@ -288,7 +306,13 @@ public class MongoSession extends AbstractMongoSession {
 
         for (final PersistentEntity persistentEntity : toDelete.keySet()) {
             final MongoQuery query = new MongoQuery(this, persistentEntity);
-            query.in(MongoEntityPersister.MONGO_ID_FIELD, toDelete.get(persistentEntity));
+            // Filters on the literal "_id" field, not the logical identity name, so the
+            // criterion preprocessing in MongoQuery does not recognise it as an id.
+            final List<Object> deleteKeys = new ArrayList<Object>();
+            for (Object k : toDelete.get(persistentEntity)) {
+                deleteKeys.add(MongoIdCoercion.coerceIdToStoredType(k, persistentEntity));
+            }
+            query.in(MongoEntityPersister.MONGO_ID_FIELD, deleteKeys);
             final Document mongoQuery = query.getMongoQuery();
             final EntityPersister persister = (EntityPersister) getPersister(persistentEntity);
             addPendingDelete(new PendingDeleteAdapter<Object, Object>(persistentEntity, mongoQuery, null) {
@@ -343,6 +367,25 @@ public class MongoSession extends AbstractMongoSession {
         }
     }
 
+    /**
+     * The identifier an updateAll association value stands for. A lazy proxy keeps its id in the
+     * proxy handler, so -- like ToOneEncoder -- the proxy factory is asked first. An instance of
+     * the associated class is reflected. Anything else is taken to be the identifier itself, so
+     * updateAll(project: project) and updateAll(project: project.id) write the same value.
+     * Before this normalization existed this engine sent the raw value through $set, so passing
+     * an identifier worked; reflecting it unconditionally would have broken that.
+     */
+    private Object identifierOf(Object value, PersistentEntity associatedEntity) {
+        final ProxyFactory proxyFactory = getMappingContext().getProxyFactory();
+        if (proxyFactory.isProxy(value)) {
+            return proxyFactory.getIdentifier(value);
+        }
+        if (associatedEntity.getJavaClass().isInstance(value)) {
+            return getMappingContext().getEntityReflector(associatedEntity).getIdentifier(value);
+        }
+        return value;
+    }
+
     @Override
     public long updateAll(QueryableCriteria criteria, Map<String, Object> properties) {
         final PersistentEntity entity = criteria.getPersistentEntity();
@@ -350,7 +393,104 @@ public class MongoSession extends AbstractMongoSession {
         final com.mongodb.client.MongoCollection<Document> collection = getCollection(entity);
         final UpdateOptions updateOptions = new UpdateOptions();
         updateOptions.upsert(false);
-        final UpdateResult updateResult = updateMany(collection, nativeQuery, new Document("$set", properties), updateOptions);
+        // Encode to-one association values the way normal persistence does: the target's
+        // identifier, in the type its _id is stored as, wrapped in a DBRef where the mapping
+        // asks for one. Without this a bulk update writes the domain object itself.
+        // Normalised into a copy -- the caller's map is theirs, and may be immutable.
+        final Map<String, Object> updateProperties = new LinkedHashMap<String, Object>(properties);
+        for (Association association : entity.getAssociations()) {
+            final String associationName = association.getName();
+            // Embedded extends ToOne, but an embedded value is a subdocument with no
+            // identity of its own -- normal persistence encodes it through the embedded
+            // path, not ToOneEncoder. Reflecting an id from one yields null.
+            // hasOne keeps the foreign key on the child, so ToOneEncoder writes nothing on the
+            // owner for it -- see its !isForeignKeyInChild() guard. Normalizing it here would
+            // put an id field on a document that never carries one.
+            if (association instanceof ToOne && !(association instanceof Embedded) &&
+                    ((ToOne) association).isForeignKeyInChild() &&
+                    updateProperties.containsKey(associationName)) {
+                throw new UnsupportedOperationException(
+                        "Cannot updateAll the hasOne association [" + entity.getName() + "." +
+                        associationName + "]: its foreign key is held by the inverse side, " +
+                        "so update that instead");
+            }
+            if (association instanceof ToOne && !(association instanceof Embedded) &&
+                    updateProperties.containsKey(associationName)) {
+                final Object value = updateProperties.get(associationName);
+                if (value != null) {
+                    final PersistentEntity associatedEntity = association.getAssociatedEntity();
+                    final Object associationId = MongoIdCoercion.coerceIdToStoredType(
+                            identifierOf(value, associatedEntity), associatedEntity);
+                    final MongoAttribute attr = (MongoAttribute) association.getMapping().getMappedForm();
+                    if (attr != null && attr.isReference()) {
+                        updateProperties.put(associationName,
+                                new DBRef(getCollectionName(associatedEntity), associationId));
+                    }
+                    else {
+                        updateProperties.put(associationName, associationId);
+                    }
+                }
+            }
+            // A bidirectional one-to-many keeps its foreign key on the inverse side, so there
+            // is no field on this document to update -- OneToManyEncoder's shouldEncodeIds
+            // skips it for the same reason, and nothing reads one back. This says so rather
+            // than leaving a stray field or silently doing nothing.
+            // ManyToMany extends ToMany, not OneToMany, so it never reaches this branch.
+            else if (association instanceof OneToMany && association.isBidirectional() &&
+                    updateProperties.containsKey(associationName)) {
+                throw new UnsupportedOperationException(
+                        "Cannot updateAll the bidirectional one-to-many [" + entity.getName() + "." +
+                        associationName + "]: its foreign key is held by the inverse side, " +
+                        "so update that instead");
+            }
+            // Unidirectional OneToMany and ManyToMany carry a collection of associated instances.
+            // Normal persistence stores their ids -- DBRefs where the mapping asks for it -- so
+            // the bulk path does the same rather than sending domain objects through $set.
+            // Only those two kinds: Basic also extends ToMany but is a collection of simple
+            // values with no associated entity, and must pass through untouched.
+            else if ((association instanceof OneToMany || association instanceof ManyToMany) &&
+                    association.getAssociatedEntity() != null &&
+                    updateProperties.containsKey(associationName)) {
+                final Object value = updateProperties.get(associationName);
+                if (value instanceof Collection) {
+                    final PersistentEntity associatedEntity = association.getAssociatedEntity();
+                    final MongoAttribute attr = (MongoAttribute) association.getMapping().getMappedForm();
+                    final List<Object> ids = new ArrayList<Object>();
+                    for (Object element : (Collection<?>) value) {
+                        if (element == null) {
+                            ids.add(null);
+                            continue;
+                        }
+                        ids.add(MongoIdCoercion.coerceIdToStoredType(
+                                identifierOf(element, associatedEntity), associatedEntity));
+                    }
+                    if (association instanceof ManyToMany) {
+                        // setManyToMany stores plain identifiers under a suffixed key and
+                        // getManyToManyKeys reads them back the same way -- never DBRefs -- so
+                        // writing the plain name, or wrapping these, would leave the field the
+                        // read path actually uses untouched.
+                        updateProperties.remove(associationName);
+                        updateProperties.put(associationName + "_$$manyToManyIds", ids);
+                    }
+                    else {
+                        // Exactly OneToManyEncoder's shape: nulls are dropped before wrapping,
+                        // never turned into DBRef(collection, null), and a non-reference list
+                        // keeps whatever the caller passed.
+                        List<Object> encoded = ids;
+                        if (attr != null && attr.isReference()) {
+                            encoded = new ArrayList<Object>();
+                            for (Object id : ids) {
+                                if (id != null) {
+                                    encoded.add(new DBRef(getCollectionName(associatedEntity), id));
+                                }
+                            }
+                        }
+                        updateProperties.put(associationName, encoded);
+                    }
+                }
+            }
+        }
+        final UpdateResult updateResult = updateMany(collection, nativeQuery, new Document("$set", updateProperties), updateOptions);
         if (updateResult.wasAcknowledged()) {
             try {
                 return updateResult.getModifiedCount();

@@ -30,7 +30,6 @@ import org.springframework.context.annotation.Primary
 import org.springframework.data.mongodb.MongoDatabaseFactory
 import org.springframework.data.mongodb.core.MongoOperations
 import org.springframework.data.mongodb.core.MongoTemplate
-import org.springframework.data.mongodb.core.SimpleMongoClientDatabaseFactory
 import org.springframework.data.mongodb.core.convert.DefaultDbRefResolver
 import org.springframework.data.mongodb.core.convert.MappingMongoConverter
 import org.springframework.data.mongodb.core.convert.MongoCustomConversions
@@ -61,9 +60,9 @@ class SpringDataMongoGormAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(MongoDatabaseFactory)
     MongoDatabaseFactory mongoDatabaseFactory(MongoDatastore mongoDatastore) {
-        // SimpleMongoClientDatabaseFactory(MongoClient, String) does not own the client - its
-        // destroy() will not close GORM's MongoClient, so the client's lifecycle stays with GORM.
-        new SimpleMongoClientDatabaseFactory(mongoDatastore.getMongoClient(), mongoDatastore.getDefaultDatabase())
+        // Does not own the client - its destroy() will not close GORM's MongoClient, so the client's
+        // lifecycle stays with GORM - and follows the datastore when a restore replaces it.
+        new DatastoreMongoClientDatabaseFactory(mongoDatastore)
     }
 
     @Bean

@@ -160,15 +160,15 @@ class DefaultJsonViewHelper extends DefaultGrailsViewHelper {
         ViewUtils.getBooleanFromMap(ASSOCIATIONS, arguments, true)
     }
 
-    protected List<Link> getPaginationLinks(Object object, Integer total, Parameters params) {
-        int offset = params.int(PAGINATION_OFFSET, 0)
+    protected List<Link> getPaginationLinks(Object object, Long total, Parameters params) {
+        long offset = params.long(PAGINATION_OFFSET, 0L)
         int max = params.int(PAGINATION_MAX, 10)
         String sort = params.get(PAGINATION_SORT)
         String order = params.get(PAGINATION_ORDER)
         getPaginationLinks(object, total, max, offset, sort, order)
     }
 
-    protected List<Link> getPaginationLinks(Object object, Integer total, Integer max, Integer offset, String sort, String order) {
+    protected List<Link> getPaginationLinks(Object object, Long total, Integer max, Long offset, String sort, String order) {
         Map<String, Object> linkParams = buildPaginateParams(max, offset, sort, order)
         List<Link> links = []
 
@@ -176,17 +176,17 @@ class DefaultJsonViewHelper extends DefaultGrailsViewHelper {
             if (total > max) {
                 Map firstParams = paramsWithOffset(linkParams, 0)
                 links << new Link('first', link(resource: object, method: HttpMethod.GET, absolute: true, params: firstParams))
-                Integer prevOffset = getPrevOffset(offset, max)
+                Long prevOffset = getPrevOffset(offset, max)
                 if (prevOffset != null) {
                     Map prevParams = paramsWithOffset(linkParams, prevOffset)
                     links << new Link('prev', link(resource: object, method: HttpMethod.GET, absolute: true, params: prevParams))
                 }
-                Integer nextOffset = getNextOffset(total, offset, max)
+                Long nextOffset = getNextOffset(total, offset, max)
                 if (nextOffset) {
                     Map nextParams = paramsWithOffset(linkParams, nextOffset)
                     links << new Link('next', link(resource: object, method: HttpMethod.GET, absolute: true, params: nextParams))
                 }
-                Integer lastOffset = getLastOffset(total, max)
+                Long lastOffset = getLastOffset(total, max)
                 if (lastOffset) {
                     Map lastParams = paramsWithOffset(linkParams, lastOffset)
                     links << new Link('last', link(resource: object, method: HttpMethod.GET, absolute: true, params: lastParams))
@@ -196,7 +196,7 @@ class DefaultJsonViewHelper extends DefaultGrailsViewHelper {
         return links
     }
 
-    protected Map<String, Object> buildPaginateParams(Integer max, Integer offset, String sort, String order) {
+    protected Map<String, Object> buildPaginateParams(Integer max, Long offset, String sort, String order) {
         Map<String, Object> params = [:]
         params.put(PAGINATION_OFFSET, offset)
         params.put(PAGINATION_MAX, max)
@@ -230,7 +230,7 @@ class DefaultJsonViewHelper extends DefaultGrailsViewHelper {
      * @param offset The new offset to use
      * @return The resulting parameters
      */
-    protected Map<String, Object> paramsWithOffset(Map<String, Object> originalParameters, Integer offset) {
+    protected Map<String, Object> paramsWithOffset(Map<String, Object> originalParameters, Long offset) {
         Map<String, Object> params = [:]
         originalParameters.each { String k, Object v ->
             params.put(k, v)
@@ -239,26 +239,26 @@ class DefaultJsonViewHelper extends DefaultGrailsViewHelper {
         return params
     }
 
-    protected Integer getPrevOffset(Integer offset, Integer max) {
-        if (offset <= 0) {
+    protected Long getPrevOffset(Long offset, Integer max) {
+        if (offset <= 0L) {
             return null
         }
-        return Math.max(offset - max, 0)
+        return Math.max(offset - max, 0L)
     }
 
-    protected Integer getNextOffset(Integer total, Integer offset, Integer max) {
-        if (offset < 0 || offset + max >= total) {
+    protected Long getNextOffset(Long total, Long offset, Integer max) {
+        if (offset < 0L || offset + max >= total) {
             return null
         }
         return offset + max
     }
 
-    protected Integer getLastOffset(Integer total, Integer max) {
-        if (total <= 0) {
+    protected Long getLastOffset(Long total, Integer max) {
+        if (total <= 0L) {
             return null
         }
-        Integer laststep = ((int) Math.round(Math.ceil((double) total / max))) - 1
-        return Math.max((laststep * max), 0)
+        long laststep = ((long) Math.ceil((double) total / max)) - 1L
+        return Math.max(laststep * max, 0L)
     }
 
     groovy.json.JsonGenerator getGenerator() {

@@ -29,7 +29,9 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
  *
  * @author Graeme Rocher
  * @since 2.3
+ * @deprecated Request propagation is now provided by {@link GrailsWebRequestTaskDecorator} on Boot's application task executor.
  */
+@Deprecated(since = '8.0', forRemoval = true)
 @CompileStatic
 class AsyncWebRequestPromiseDecoratorLookupStrategy implements PromiseDecoratorLookupStrategy {
 

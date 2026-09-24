@@ -18,7 +18,7 @@ under the License.
 ////
 
 == Transactions
-MongoDB doesn't support transactions directly, however GORM for MongoDB does batch up inserts and updates until the session is flushed. This makes it possible to support some rollback options.
+By default GORM for MongoDB does not use server-side transactions, however it does batch up inserts and updates until the session is flushed. This makes it possible to support some rollback options. To run transactions as real MongoDB multi-document transactions, see <<advancedConfig,Multi-Document Transactions>>.
 
 You can use either transactional services or the static `withTransaction` method. To mark a service as using the MongoDB transaction manager, use the static `transactional` property with the value `'mongo'`:
 
@@ -41,3 +41,31 @@ Person.withTransaction { status ->
 For example in this case neither `Person` object will be persisted to the database, because underneath the surface a persistence session is being used to batch up both insert operations into a single insert. When an exception is thrown neither insert is ever executed, hence we allow for some transactional semantics at the GORM-level.
 
 Using the lower level API you can of course also take advantage of Mongo's support for https://docs.mongodb.org/manual/tutorial/isolate-sequence-of-operations[Atomic operations].
+
+[[readOnlyTransactions]]
+=== Read-Only Transactions
+
+A read-only transaction, such as a service method annotated with `@ReadOnly` or `@Transactional(readOnly = true)`, commits without flushing the session. This holds whether or not multi-document transactions are enabled, and is how read-only transactions behave on GORM's other datastores — on Hibernate, for instance, a read-only transaction puts the session into `MANUAL` flush mode.
+
+It matters for a write that is saved without `flush: true` and is still queued when read-only code runs in the same session:
+
+[source,groovy]
+----
+class ReportService {
+    @ReadOnly
+    int countPeople() {
+        Person.count()
+    }
+}
+
+new Person(name: "Fred").save()   // queued, not yet flushed
+reportService.countPeople()       // read-only: commits without flushing
+----
+
+The read-only transaction does not persist `Fred`. The session is left in `COMMIT` flush mode, so later queries in the same session no longer flush ahead of running and do not see the queued insert, and the insert is discarded when the session closes.
+
+In earlier versions, committing a read-only transaction flushed the session, so a write like this was persisted as a side effect of the read. If your code relies on that, flush the write explicitly with `save(flush: true)`, or perform it inside a read-write transaction.
+
+To help find such code, a read-only transaction that commits while its session still holds queued inserts, updates or deletes logs a warning from `org.grails.datastore.mapping.transactions.DatastoreTransactionManager`. The warning names the session and reports that the transaction did not persist the queued operations; it does not say whether a later read-write transaction in the same session will.
+
+NOTE: When GORM and Spring Data MongoDB share a transaction, `readOnly` only governs GORM's flush. See <<springDataInterop,Spring Data MongoDB Interoperability>>.

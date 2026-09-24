@@ -42,6 +42,8 @@ ext {
 dependencies {
     implementation platform(project(':grails-gradle-bom'))
 
+    implementation project(':grails-gradle-common') // XmlParserFeature
+
     // compile grails-gradle-model with the Groovy version provided by Gradle
     // Groovy 4+ uses org.apache.groovy coordinates
     // when used by grails-gradle-plugin

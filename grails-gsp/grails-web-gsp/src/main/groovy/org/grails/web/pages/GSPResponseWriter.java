@@ -217,7 +217,7 @@ public class GSPResponseWriter extends GrailsRoutablePrintWriter implements Enco
             flushResponse();
         } else if (!isTrouble()) {
             GrailsWebRequest webRequest = GrailsWebRequest.lookup();
-            if (webRequest != null && webRequest.getCurrentRequest().getAttribute(WebUtils.SITEMESH2_PAGE_ATTRIBUTE) != null) {
+            if (webRequest != null && webRequest.getRequest().getAttribute(WebUtils.SITEMESH2_PAGE_ATTRIBUTE) != null) {
                 // flush the response if its a layout
                 flushResponse();
             }

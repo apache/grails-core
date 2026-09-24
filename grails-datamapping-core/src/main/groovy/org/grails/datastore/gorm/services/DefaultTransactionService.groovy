@@ -29,7 +29,9 @@ import org.springframework.transaction.TransactionSystemException
 
 import grails.gorm.transactions.GrailsTransactionTemplate
 import grails.gorm.transactions.TransactionService
+import org.grails.datastore.gorm.ConnectionSourceNameResolver
 import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.services.Service
 import org.grails.datastore.mapping.transactions.CustomizableRollbackTransactionAttribute
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
@@ -59,7 +61,7 @@ class DefaultTransactionService implements TransactionService, Service {
     def <T> T withTransaction(
             @ClosureParams(value = SimpleType, options = 'org.springframework.transaction.TransactionStatus') Closure<T> callable) {
         if (datastore instanceof TransactionCapableDatastore) {
-            GrailsTransactionTemplate template = new GrailsTransactionTemplate(((TransactionCapableDatastore) datastore).transactionManager)
+            GrailsTransactionTemplate template = newTemplate(((TransactionCapableDatastore) datastore).transactionManager)
             return template.execute(callable)
         }
         else {
@@ -71,7 +73,7 @@ class DefaultTransactionService implements TransactionService, Service {
     def <T> T withRollback(
             @ClosureParams(value = SimpleType, options = 'org.springframework.transaction.TransactionStatus') Closure<T> callable) {
         if (datastore instanceof TransactionCapableDatastore) {
-            GrailsTransactionTemplate template = new GrailsTransactionTemplate(((TransactionCapableDatastore) datastore).transactionManager)
+            GrailsTransactionTemplate template = newTemplate(((TransactionCapableDatastore) datastore).transactionManager)
             return template.executeAndRollback(callable)
         }
         else {
@@ -85,7 +87,7 @@ class DefaultTransactionService implements TransactionService, Service {
         if (datastore instanceof TransactionCapableDatastore) {
             PlatformTransactionManager transactionManager = ((TransactionCapableDatastore) datastore).transactionManager
             def txDef = new CustomizableRollbackTransactionAttribute(propagationBehavior: TransactionDefinition.PROPAGATION_REQUIRES_NEW)
-            GrailsTransactionTemplate template = new GrailsTransactionTemplate(transactionManager, txDef)
+            GrailsTransactionTemplate template = newTemplate(transactionManager, txDef)
             return template.execute(callable)
         }
         else {
@@ -98,7 +100,7 @@ class DefaultTransactionService implements TransactionService, Service {
                               @ClosureParams(value = SimpleType, options = 'org.springframework.transaction.TransactionStatus') Closure<T> callable) {
         if (datastore instanceof TransactionCapableDatastore) {
             PlatformTransactionManager transactionManager = ((TransactionCapableDatastore) datastore).transactionManager
-            GrailsTransactionTemplate template = new GrailsTransactionTemplate(transactionManager, definition)
+            GrailsTransactionTemplate template = newTemplate(transactionManager, definition)
             return template.execute(callable)
         }
         else {
@@ -112,12 +114,29 @@ class DefaultTransactionService implements TransactionService, Service {
         if (datastore instanceof TransactionCapableDatastore) {
             PlatformTransactionManager transactionManager = ((TransactionCapableDatastore) datastore).transactionManager
             def txDef = newDefinition(definition)
-            GrailsTransactionTemplate template = new GrailsTransactionTemplate(transactionManager, txDef)
+            GrailsTransactionTemplate template = newTemplate(transactionManager, txDef)
             return template.execute(callable)
         }
         else {
             throw new TransactionSystemException("Datastore [$datastore] does not support transactions")
         }
+    }
+
+    /**
+     * A template for the datastore's transaction manager that routes, as the connection's own {@code withTransaction}
+     * does, the calls on the domain classes of the datastore's connection to it. Only for a named connection: the
+     * root datastore's service leaves the routing of an enclosing block alone, as an unqualified
+     * {@code @Transactional} does.
+     */
+    private GrailsTransactionTemplate newTemplate(PlatformTransactionManager transactionManager, TransactionDefinition definition = null) {
+        GrailsTransactionTemplate template = definition == null ?
+                new GrailsTransactionTemplate(transactionManager) :
+                new GrailsTransactionTemplate(transactionManager, definition)
+        String connectionName = ConnectionSourceNameResolver.resolveDefaultConnectionSourceName(datastore)
+        if (ConnectionSource.DEFAULT != connectionName) {
+            template.connectionName = connectionName
+        }
+        return template
     }
 
     @CompileDynamic
@@ -130,7 +149,7 @@ class DefaultTransactionService implements TransactionService, Service {
                            @ClosureParams(value = SimpleType, options = 'org.springframework.transaction.TransactionStatus') Closure<T> callable) {
         if (datastore instanceof TransactionCapableDatastore) {
             PlatformTransactionManager transactionManager = ((TransactionCapableDatastore) datastore).transactionManager
-            GrailsTransactionTemplate template = new GrailsTransactionTemplate(transactionManager, definition)
+            GrailsTransactionTemplate template = newTemplate(transactionManager, definition)
             return template.executeAndRollback(callable)
         }
         else {
@@ -146,7 +165,7 @@ class DefaultTransactionService implements TransactionService, Service {
             PlatformTransactionManager transactionManager = ((TransactionCapableDatastore) datastore).transactionManager
             def txDef = new CustomizableRollbackTransactionAttribute(definition)
             txDef.propagationBehavior = TransactionDefinition.PROPAGATION_REQUIRES_NEW
-            GrailsTransactionTemplate template = new GrailsTransactionTemplate(transactionManager, txDef)
+            GrailsTransactionTemplate template = newTemplate(transactionManager, txDef)
             return template.execute(callable)
         }
         else {

@@ -64,11 +64,13 @@ public class MongoTransaction implements Transaction<ClientSession> {
 
     private final AbstractMongoSession session;
     private final ClientSession clientSession;
+    private final boolean readOnly;
     private boolean active = true;
 
-    public MongoTransaction(AbstractMongoSession session, ClientSession clientSession) {
+    public MongoTransaction(AbstractMongoSession session, ClientSession clientSession, boolean readOnly) {
         this.session = session;
         this.clientSession = clientSession;
+        this.readOnly = readOnly;
     }
 
     @Override
@@ -81,7 +83,12 @@ public class MongoTransaction implements Transaction<ClientSession> {
             // Flush pending GORM operations into the active transaction. When driven by the
             // DatastoreTransactionManager the session was already flushed, so this clears nothing
             // and is a no-op; it covers callers that commit the transaction directly.
-            session.flush();
+            //
+            // A read-only transaction never flushes. It has no pending operations of its own, so the
+            // only thing a flush could write is whatever the surrounding session already had queued.
+            if (!readOnly) {
+                session.flush();
+            }
             commitWithRetry();
             committed = true;
         } finally {

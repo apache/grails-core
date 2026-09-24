@@ -43,6 +43,19 @@ zipCode.auditing.save()
 
 As you can see, you add the `DataSource` to the method call in both the static case and the instance case.
 
+A session or transaction opened through a namespace covers the whole block. Inside `ZipCode.auditing.withTransaction { }` or `ZipCode.auditing.withNewSession { }`, the calls on `ZipCode` itself use the 'auditing' `DataSource`, whose session and transaction are the ones open:
+
+[source,groovy]
+----
+ZipCode.auditing.withTransaction {
+    def zipCode = ZipCode.get(42)    // read from 'auditing'
+    zipCode.code = '99501'
+    zipCode.save()                   // written to 'auditing', in its transaction
+}
+----
+
+Other domain classes are not affected, and an operation inside the block that names a `DataSource`, such as `ZipCode.lookup.count()`, uses the one it names. A method annotated `@Transactional(connection = 'auditing')` routes in the same way, for every domain class mapped to the 'auditing' `DataSource`; a class that is not mapped to it keeps its own, and a multi-tenant class is left to its tenant, since a transaction opened for a `DataSource` does not say which tenant the operations in it belong to.
+
 You can use `Where` queries:
 
 [source,groovy]

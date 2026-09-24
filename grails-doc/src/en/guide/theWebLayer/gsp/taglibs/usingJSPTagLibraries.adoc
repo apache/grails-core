@@ -51,6 +51,8 @@ grails:
         tldScanPattern: 'classpath*:/META-INF/*.tld,/WEB-INF/tld/*.tld'
 ----
 
+Descriptors that declare a `DOCTYPE`, such as the JSP 1.2 descriptors in `jakarta.servlet.jsp.jstl`, are read without retrieving the DTD they reference.
+
 JSTL standard library is no longer added as a dependency by default. In case you are using JSTL, you should also add these dependencies to `build.gradle`:
 [source,groovy]
 .build.gradle

@@ -42,8 +42,9 @@ class Neo4jGormApiFactory extends DefaultGormApiFactory {
 
     @Override
     <D> Neo4jGormStaticApi<D> createStaticApi(Class<D> persistentClass, MappingContext mappingContext, DatastoreResolver resolver, String qualifier, GormRegistry registry) {
-        Neo4jDatastore neo4jDatastore = (Neo4jDatastore) resolver.resolve()
         List<FinderMethod> finders = createDynamicFinders(resolver, mappingContext)
-        return new Neo4jGormStaticApi<D>(persistentClass, neo4jDatastore, finders, neo4jDatastore.getTransactionManager())
+        // The qualifier is kept: an API for a named connection that reported DEFAULT sent the operations it
+        // delegates to the instance API - save and delete among them - to the default connection.
+        return new Neo4jGormStaticApi<D>(persistentClass, mappingContext, finders, resolver, qualifier, registry)
     }
 }

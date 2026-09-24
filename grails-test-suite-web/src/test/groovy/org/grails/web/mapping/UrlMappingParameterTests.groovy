@@ -45,12 +45,12 @@ class UrlMappingParameterTests extends Specification implements UrlMappingsUnitT
     }
 
     void testNotEqual() {
-        when:
+        when: 'a request parameter shadows the name the URI captures'
         webRequest.params.controller = 'foo'
         def info = urlMappingsHolder.match('/showSomething/bad')
 
-        then:'url should not have matched'
-        info.controllerName == 'foo'
+        then: 'the notEqual constraint rejects the blog mapping and the URI falls through to the default mapping, whose controller is the one the URI captured rather than the request parameter'
+        info.controllerName == 'showSomething'
 
         when:
         info = urlMappingsHolder.match('/showSomething/good')

@@ -77,26 +77,6 @@ preflight() {
     missing=1
   fi
 
-  # verify-reproducible.sh recompiles the Grails-Micronaut island under JDK 25,
-  # which must be provided out-of-band via JDK_25_HOME (see release.yml
-  # JAVA_VERSION_MICRONAUT). Validate it here so the run fails before downloading.
-  if [ -z "${JDK_25_HOME:-}" ]; then
-    echo "❌ JDK_25_HOME is not set; the reproducible-build check needs a separate Liberica JDK 25 install."
-    echo "   Install the JDK matching JAVA_VERSION_MICRONAUT in .github/workflows/release.yml"
-    echo "   and export JDK_25_HOME=/path/to/jdk before running this script."
-    missing=1
-  elif [ ! -x "${JDK_25_HOME}/bin/java" ]; then
-    echo "❌ JDK_25_HOME=${JDK_25_HOME} does not contain an executable bin/java."
-    missing=1
-  else
-    local jdk25_version
-    jdk25_version=$("${JDK_25_HOME}/bin/java" -version 2>&1 | head -n1)
-    if ! printf '%s' "${jdk25_version}" | grep -q 'version "25'; then
-      echo "❌ JDK_25_HOME=${JDK_25_HOME} is not a JDK 25 (reports: ${jdk25_version})."
-      missing=1
-    fi
-  fi
-
   if [ "${missing}" -ne 0 ]; then
     echo "❌ Preflight checks failed. Resolve the issues above before running verification."
     exit 1

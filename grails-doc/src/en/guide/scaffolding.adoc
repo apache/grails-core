@@ -188,7 +188,7 @@ All of this is what is known as "dynamic scaffolding" where the CRUD interface i
 
 NOTE: By default, the size of text areas in scaffolded views is defined in the CSS, so adding 'rows' and 'cols' attributes will have no effect.
 
-Also, the standard scaffold views expect model variables of the form `<propertyName>InstanceList` for collections and `<propertyName>Instance` for single instances. It's tempting to use properties like 'books' and 'book', but those won't work.
+Also, the standard scaffold views expect model variables of the form `<propertyName>List` and `<propertyName>Count` for collections, and `<propertyName>` for a single instance. The list view declares the count as `Number`, so it accepts the `Integer` or `Long` a controller supplies.
 
 
 ==== Static Scaffolding

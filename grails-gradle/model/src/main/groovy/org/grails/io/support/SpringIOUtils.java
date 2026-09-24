@@ -47,7 +47,10 @@ import javax.xml.parsers.SAXParserFactory;
 import groovy.xml.FactorySupport;
 import groovy.xml.XmlSlurper;
 
+import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
+
+import org.apache.grails.gradle.common.XmlParserFeature;
 
 /**
  * Simple utility methods for file and stream copying.
@@ -407,54 +410,133 @@ public class SpringIOUtils {
         return out.toString();
     }
 
+    /**
+     * Creates an {@link XmlSlurper} for untrusted documents such as HTTP request bodies.
+     *
+     * <p>The parser refuses a {@code DOCTYPE} declaration outright, on top of the entity and DTD
+     * hardening every parser handed out by this class applies. Readers of trusted descriptors that
+     * declare one use {@link #createXmlSlurper(boolean)} with {@code true} instead.
+     *
+     * @return a namespace-aware, non-validating slurper that rejects {@code DOCTYPE} declarations
+     */
     public static XmlSlurper createXmlSlurper() throws ParserConfigurationException, SAXException {
-        return new XmlSlurper(newSAXParser());
+        return createXmlSlurper(false);
     }
 
+    /**
+     * Creates an {@link XmlSlurper}, optionally tolerating a {@code DOCTYPE} declaration.
+     *
+     * <p>Documents parsed through this class fall into two trust levels, and each level gets its
+     * own parser. Request bodies are untrusted and are refused if they declare a {@code DOCTYPE};
+     * that is the {@code false} form and the default. Descriptors read from the application
+     * classpath, such as JSP tag library descriptors and {@code web.xml}, are trusted and routinely
+     * declare one, so their readers pass {@code true}.
+     *
+     * <p>Tolerating the declaration does not reopen the XXE vector. External general entities,
+     * external parameter entities, DTD grammar loading and external DTD retrieval stay off on both
+     * parsers, so an entity that points at a file on disk contributes nothing and the DTD a
+     * document names is skipped rather than fetched.
+     *
+     * @param allowDocTypeDeclaration {@code true} to parse documents that declare a {@code DOCTYPE}
+     * @return a namespace-aware, non-validating slurper with the hardening described above
+     * @since 8.0.0
+     */
+    public static XmlSlurper createXmlSlurper(boolean allowDocTypeDeclaration) throws ParserConfigurationException, SAXException {
+        return new XmlSlurper(newSAXParser(allowDocTypeDeclaration));
+    }
+
+    /**
+     * Creates a {@link SAXParser} for untrusted documents such as HTTP request bodies.
+     *
+     * <p>The parser refuses a {@code DOCTYPE} declaration outright; see
+     * {@link #createXmlSlurper(boolean)} for the two trust levels.
+     *
+     * @return a namespace-aware, non-validating parser that rejects {@code DOCTYPE} declarations
+     */
     public static SAXParser newSAXParser() throws ParserConfigurationException, SAXException {
-        SAXParserFactory factory = createParserFactory();
-        return factory.newSAXParser();
+        return newSAXParser(false);
     }
 
-    private static SAXParserFactory saxParserFactory = null;
+    /**
+     * Creates a {@link SAXParser}, optionally tolerating a {@code DOCTYPE} declaration.
+     *
+     * <p>Applies the same hardening as {@link #createXmlSlurper(boolean)}.
+     *
+     * @param allowDocTypeDeclaration {@code true} to parse documents that declare a {@code DOCTYPE}
+     * @return a namespace-aware, non-validating parser
+     * @since 8.0.0
+     */
+    public static SAXParser newSAXParser(boolean allowDocTypeDeclaration) throws ParserConfigurationException, SAXException {
+        return parserFactory(allowDocTypeDeclaration).newSAXParser();
+    }
 
-    private static SAXParserFactory createParserFactory() throws ParserConfigurationException {
-        if (saxParserFactory == null) {
-            saxParserFactory = FactorySupport.createSaxParserFactory();
-            saxParserFactory.setNamespaceAware(true);
-            saxParserFactory.setValidating(false);
+    /**
+     * Parser features switched off for every parser this class hands out.
+     *
+     * <p>{@link XmlParserFeature#DISALLOW_DOCTYPE_DECL} is handled separately because it is the
+     * one feature that differs between the two parsers; see {@link #createXmlSlurper(boolean)}.
+     */
+    private static final XmlParserFeature[] DISABLED_PARSER_FEATURES = {
+        XmlParserFeature.EXTERNAL_GENERAL_ENTITIES,
+        XmlParserFeature.EXTERNAL_PARAMETER_ENTITIES,
+        XmlParserFeature.LOAD_DTD_GRAMMAR,
+        XmlParserFeature.LOAD_EXTERNAL_DTD
+    };
 
-            try {
-                saxParserFactory.setFeature("https://apache.org/xml/features/disallow-doctype-decl", false);
-            } catch (Exception pce) {
-                // ignore, parser doesn't support
+    private static volatile SAXParserFactory strictParserFactory;
+
+    private static volatile SAXParserFactory docTypeParserFactory;
+
+    private static SAXParserFactory parserFactory(boolean allowDocTypeDeclaration) throws ParserConfigurationException {
+        if (allowDocTypeDeclaration) {
+            SAXParserFactory factory = docTypeParserFactory;
+            if (factory == null) {
+                factory = buildParserFactory(true);
+                docTypeParserFactory = factory;
             }
-            try {
-                saxParserFactory.setFeature("https://xml.org/sax/features/external-general-entities", false);
-            } catch (Exception pce) {
-                // ignore, parser doesn't support
-            }
-            try {
-                saxParserFactory.setFeature("https://xml.org/sax/features/external-parameter-entities", false);
-            } catch (Exception pce) {
-                // ignore, parser doesn't support
-            }
-            try {
-                saxParserFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-            } catch (Exception e) {
-                // ignore, parser doesn't support
-            }
-            try {
-                saxParserFactory.setFeature("https://apache.org/xml/features/nonvalidating/load-dtd-grammar", false);
-            } catch (Exception e) {
-                // ignore, parser doesn't support
-            }
-            try {
-                saxParserFactory.setFeature("https://apache.org/xml/features/nonvalidating/load-external-dtd", false);
-            } catch (Exception e) {
-                // ignore, parser doesn't support
-            }
+            return factory;
         }
-        return saxParserFactory;
+        SAXParserFactory factory = strictParserFactory;
+        if (factory == null) {
+            factory = buildParserFactory(false);
+            strictParserFactory = factory;
+        }
+        return factory;
+    }
+
+    private static SAXParserFactory buildParserFactory(boolean allowDocTypeDeclaration) throws ParserConfigurationException {
+        SAXParserFactory factory = FactorySupport.createSaxParserFactory();
+        factory.setNamespaceAware(true);
+        factory.setValidating(false);
+        try {
+            factory.setXIncludeAware(false);
+        } catch (UnsupportedOperationException e) {
+            // a parser without XInclude support cannot expand an include either
+        }
+        setFeature(factory, XMLConstants.FEATURE_SECURE_PROCESSING, true);
+        setFeature(factory, XmlParserFeature.DISALLOW_DOCTYPE_DECL.getFeatureName(), !allowDocTypeDeclaration);
+        for (XmlParserFeature feature : DISABLED_PARSER_FEATURES) {
+            setFeature(factory, feature.getFeatureName(), false);
+        }
+        return factory;
+    }
+
+    /**
+     * Sets a feature, tolerating a parser that lacks it.
+     *
+     * <p>The tolerance keeps this class usable with any SAX provider, but it is also how an
+     * unrecognised feature identifier once switched the hardening off without a trace. A parser
+     * that rejects a feature is therefore reported rather than ignored. The logger is looked up
+     * here rather than held in a static field because this class is used before logging is
+     * configured during startup.
+     */
+    private static void setFeature(SAXParserFactory factory, String name, boolean value) {
+        try {
+            factory.setFeature(name, value);
+        } catch (ParserConfigurationException | SAXException e) {
+            LoggerFactory.getLogger(SpringIOUtils.class).warn(
+                    "XML parser factory [{}] does not support feature [{}]: {}",
+                    factory.getClass().getName(), name, e.getMessage());
+        }
     }
 }

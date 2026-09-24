@@ -29,6 +29,10 @@ spring:
     groovy:
         template:
             check-template-location: false
+    servlet:
+        multipart:
+            maxFileSize: 100KB
+            maxRequestSize: 100KB
 
 ---
 grails:

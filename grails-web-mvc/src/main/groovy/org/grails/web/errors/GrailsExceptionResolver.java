@@ -34,13 +34,14 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.context.ServletContextAware;
+import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.View;
 import org.springframework.web.servlet.ViewResolver;
@@ -75,7 +76,11 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
 
     public static final String EXCEPTION_ATTRIBUTE = WebUtils.EXCEPTION_ATTRIBUTE;
 
-    protected static final Log LOG = LogFactory.getLog(GrailsExceptionResolver.class);
+    /** Marks a request that is currently inside a forward to a status-code controller mapping. */
+    private static final String ERROR_HANDLER_FORWARD_IN_PROGRESS_ATTRIBUTE =
+            "org.grails.web.errors.ERROR_HANDLER_FORWARD_IN_PROGRESS";
+
+    protected static final Logger LOG = LoggerFactory.getLogger(GrailsExceptionResolver.class);
     protected static final String LINE_SEPARATOR = System.getProperty("line.separator");
 
     protected ServletContext servletContext;
@@ -98,15 +103,21 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
 
         ex = findWrappedException(ex);
 
-        logFullStackTraceIfEnabled(ex);
-
-        filterStackTrace(ex);
+        if (!(ex instanceof AsyncRequestTimeoutException)) {
+            logFullStackTraceIfEnabled(ex);
+            filterStackTrace(ex);
+        }
 
         ModelAndView mv = super.resolveException(request, response, handler, ex);
 
         setStatus(request, response, mv, ex);
 
-        logStackTrace(ex, request);
+        if (ex instanceof AsyncRequestTimeoutException) {
+            LOG.debug("Async request timed out: {}", request.getRequestURI());
+        }
+        else {
+            logStackTrace(ex, request);
+        }
 
         UrlMappingsHolder urlMappings = lookupUrlMappings();
         if (urlMappings != null) {
@@ -159,9 +170,9 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
     }
 
     protected void setStatus(HttpServletRequest request, HttpServletResponse response, ModelAndView mv, Exception e) {
-        response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        // expose the servlet 2.3 specs status code request attribute as 500
-        request.setAttribute(WebUtils.ERROR_STATUS_CODE_ATTRIBUTE, HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        int status = exceptionStatus(e);
+        response.setStatus(status);
+        request.setAttribute(WebUtils.ERROR_STATUS_CODE_ATTRIBUTE, status);
         final GrailsWrappedRuntimeException gwre = new GrailsWrappedRuntimeException(servletContext, e);
         mv.addObject(WebUtils.ERROR_EXCEPTION_ATTRIBUTE, gwre);
         mv.addObject(WebUtils.EXCEPTION_ATTRIBUTE, gwre);
@@ -211,13 +222,23 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
                 resolveView(request, info, mv);
             }
             else if (info != null && info.getControllerName() != null) {
+                if (isErrorHandlerForwardInProgress(request)) {
+                    LOG.error("The error handler for this request failed as well; not forwarding to it again");
+                    return mv;
+                }
                 String uri = determineUri(request);
                 if (!response.isCommitted()) {
                     if (response instanceof GrailsResponseMutator) {
                         // prevent further mutation of the request since an error page needs rendered instead
                         ((GrailsResponseMutator) response).deactivateResponseMutator();
                     }
-                    forwardRequest(info, request, response, mv, uri);
+                    request.setAttribute(ERROR_HANDLER_FORWARD_IN_PROGRESS_ATTRIBUTE, Boolean.TRUE);
+                    try {
+                        forwardRequest(info, request, response, mv, uri);
+                    }
+                    finally {
+                        request.removeAttribute(ERROR_HANDLER_FORWARD_IN_PROGRESS_ATTRIBUTE);
+                    }
                     // return an empty ModelAndView since the error handler has been processed
                     return new ModelAndView();
                 }
@@ -225,9 +246,29 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
             return mv;
         }
         catch (Exception e) {
-            LOG.error("Unable to render errors view: " + e.getMessage(), e);
+            LOG.error("Unable to render errors view: {}", e.getMessage(), e);
             throw new GrailsRuntimeException(e);
         }
+    }
+
+    /**
+     * Whether a forward to a status-code controller mapping is already running for this request.
+     * <p>
+     * The forward re-enters the {@code DispatcherServlet} and resolves the same status-code mapping again,
+     * since {@link WebUtils#ERROR_STATUS_CODE_ATTRIBUTE} is set. An error handler failing for a reason that
+     * belongs to the request rather than the moment - an unparseable multipart body, a missing collaborator
+     * - therefore fails again inside that forward and resolves back into this method, recursing until
+     * {@code StackOverflowError}.
+     * <p>
+     * So the handler is not forwarded to from inside itself; the exception goes back to the
+     * {@code DispatcherServlet}, which reports it once through the container. The flag is cleared when the
+     * forward returns, leaving a later error on the same request free to use the handler again.
+     *
+     * @param request The request
+     * @return True when this request is inside an error handler forward
+     */
+    protected boolean isErrorHandlerForwardInProgress(HttpServletRequest request) {
+        return request.getAttribute(ERROR_HANDLER_FORWARD_IN_PROGRESS_ATTRIBUTE) != null;
     }
 
     protected void forwardRequest(UrlMappingInfo info, HttpServletRequest request, HttpServletResponse response,
@@ -235,10 +276,8 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
         info.configure(WebUtils.retrieveGrailsWebRequest());
         String forwardUrl = UrlMappingUtils.forwardRequestForUrlMappingInfo(
                 request, response, info, mv.getModel(), true);
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("Matched URI [" + uri + "] to URL mapping [" + info +
-                    "], forwarding to [" + forwardUrl + "] with response [" + response.getClass() + "]");
-        }
+        LOG.debug("Matched URI [{}] to URL mapping [{}], forwarding to [{}] with response [{}]",
+                uri, info, forwardUrl, response.getClass());
     }
 
     protected String determineUri(HttpServletRequest request) {
@@ -258,15 +297,23 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
     }
 
     protected UrlMappingInfo matchStatusCode(Exception ex, UrlMappingsHolder urlMappings) {
-        UrlMappingInfo info = urlMappings.matchStatusCode(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, ex);
+        int status = exceptionStatus(ex);
+        UrlMappingInfo info = urlMappings.matchStatusCode(status, ex);
         if (info == null) {
-            info = urlMappings.matchStatusCode(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+            info = urlMappings.matchStatusCode(status,
                     getRootCause(ex));
         }
         if (info == null) {
-            info = urlMappings.matchStatusCode(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            info = urlMappings.matchStatusCode(status);
         }
         return info;
+    }
+
+    private static int exceptionStatus(Exception ex) {
+        if (ex instanceof AsyncRequestTimeoutException timeout) {
+            return timeout.getStatusCode().value();
+        }
+        return HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
     }
 
     protected void logStackTrace(Exception e, HttpServletRequest request) {
@@ -390,7 +437,9 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
         final boolean shouldLogRequestParameters = config != null ? config.getProperty(Settings.SETTING_LOG_REQUEST_PARAMETERS, Boolean.class, Environment.getCurrent() == Environment.DEVELOPMENT) : false;
 
         if (shouldLogRequestParameters) {
-            Enumeration<String> params = request.getParameterNames();
+            // The exception being logged may be the container refusing to parse a multipart body, in which
+            // case every parameter read on this request fails too - see WebUtils.readParameterNames.
+            Enumeration<String> params = WebUtils.readParameterNames(request);
 
             if (params.hasMoreElements()) {
                 String param;

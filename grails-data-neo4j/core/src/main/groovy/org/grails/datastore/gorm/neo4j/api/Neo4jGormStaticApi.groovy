@@ -34,7 +34,9 @@ import org.springframework.transaction.PlatformTransactionManager
 import grails.gorm.multitenancy.Tenants
 import grails.neo4j.Path
 import grails.neo4j.Relationship
+import org.grails.datastore.gorm.DatastoreResolver
 import org.grails.datastore.gorm.GormEntity
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.gorm.neo4j.CypherBuilder
@@ -51,6 +53,7 @@ import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.SessionCallback
 import org.grails.datastore.mapping.engine.EntityPersister
+import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
@@ -72,6 +75,10 @@ class Neo4jGormStaticApi<D> extends GormStaticApi<D> {
 
     Neo4jGormStaticApi(Class<D> persistentClass, Datastore datastore, List<FinderMethod> finders, PlatformTransactionManager transactionManager) {
         super(persistentClass, datastore, finders, transactionManager)
+    }
+
+    Neo4jGormStaticApi(Class<D> persistentClass, MappingContext mappingContext, List<FinderMethod> finders, DatastoreResolver resolver, String qualifier, GormRegistry registry) {
+        super(persistentClass, mappingContext, finders, resolver, qualifier, registry)
     }
 
     /**

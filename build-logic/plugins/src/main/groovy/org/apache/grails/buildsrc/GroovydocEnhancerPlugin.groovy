@@ -75,11 +75,24 @@ class GroovydocEnhancerPlugin implements Plugin<Project> {
             if (project.configurations.names.contains('documentation')) {
                 it.groovyClasspath = project.configurations.getByName('documentation')
             }
+            // Groovydoc Class.forName's referenced types against this classpath. Compile
+            // classpath is not enough: Hibernate 7 (and similar libraries) publish logging
+            // APIs such as jboss-logging as runtime-only transitives, and loading those
+            // classes without the jar fails with NoClassDefFoundError.
+            def runtimeClasspath = project.configurations.findByName('runtimeClasspath')
+            if (runtimeClasspath != null) {
+                it.classpath = it.classpath ? it.classpath.plus(runtimeClasspath) : runtimeClasspath
+            }
         }
     }
 
     @CompileDynamic
     private static void configureAntBuilderExecution(Project project, GroovydocEnhancerExtension extension) {
+        GroovydocRunner runner = project.objects.newInstance(GroovydocRunner)
+        // Same form as PublishGuideTask uses for guideMaxHeapSize, and the one that survives
+        // the configuration cache if gradle/gradle#15497 is ever closed.
+        Provider<String> maxHeapSizeOverride = project.providers.gradleProperty('groovydocMaxHeapSize')
+
         project.tasks.withType(Groovydoc).configureEach { gdoc ->
             if (!extension.useAntBuilder.get()) {
                 return
@@ -110,16 +123,11 @@ class GroovydocEnhancerPlugin implements Plugin<Project> {
 
                 // Groovydoc resolves references to types outside the documented sources with
                 // Class.forName against its own classloader; anything it cannot load becomes a
-                // link to a page that was never generated. Adding the documented sources'
-                // compile classpath lets those types resolve, at which point the 'links'
-                // below turn them into external javadoc URLs.
+                // link to a page that was never generated. The groovydoc classpath includes
+                // compile and runtime dependencies so types such as Hibernate (which need
+                // runtime-only jars like jboss-logging) can load; the 'links' below then turn
+                // those types into external javadoc URLs.
                 def antClasspath = gdoc.classpath ? classpath.plus(gdoc.classpath) : classpath
-
-                project.ant.taskdef(
-                        name: 'groovydoc',
-                        classname: 'org.codehaus.groovy.ant.Groovydoc',
-                        classpath: antClasspath.asPath
-                )
 
                 def links = resolveLinks(gdoc)
                 def sourcepath = sourceDirs
@@ -145,11 +153,14 @@ class GroovydocEnhancerPlugin implements Plugin<Project> {
                     antArgs.put('javaVersion', extension.javaVersion.get())
                 }
 
-                project.ant.groovydoc(antArgs) {
-                    for (var l in links) {
-                        link(packages: l.packages, href: l.href)
-                    }
-                }
+                runner.run(
+                        antClasspath,
+                        maxHeapSizeOverride.getOrElse(extension.maxHeapSize.get()),
+                        gdoc.temporaryDir,
+                        antArgs,
+                        links,
+                        gdoc.logger.infoEnabled
+                )
             }
         }
     }

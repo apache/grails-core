@@ -24,6 +24,7 @@ plugins {
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.configuration-metadata'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.buildsrc.vulnerability-scan'
@@ -51,7 +52,9 @@ dependencies {
         exclude module: 'grails-web-common'
     }
 
-    compileOnly 'jakarta.servlet:jakarta.servlet-api'
+    // api needed downstream: this module ships a Groovy extension module with servlet types in its
+    // signatures, and the Groovy compiler loads it from any compile classpath it is on
+    compileOnlyApi 'jakarta.servlet:jakarta.servlet-api'
     compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     testImplementation 'jakarta.servlet:jakarta.servlet-api'

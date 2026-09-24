@@ -24,6 +24,7 @@ import grails.gorm.DetachedCriteria
 import groovy.lang.MetaClass
 import groovy.lang.MetaMethod
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria
+import org.grails.datastore.mapping.query.Query
 import org.grails.orm.hibernate.query.HibernateQuery
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
@@ -531,6 +532,50 @@ class CriteriaMethodInvokerSpec extends Specification {
             return query
         }
         1 * builder.isUniqueResult() >> false
+    }
+
+    void "test invokeMethod trims and normalizes the list order direction"() {
+        given:
+        def params = [sort: 'name', order: ' DESC ']
+        def closure = { }
+
+        when:
+        invoker.invokeMethod("list", [params, closure] as Object[])
+
+        then:
+        1 * builder.isPaginationEnabledList() >> true
+        1 * query.order(_) >> { args ->
+            def o = args[0] as Query.Order
+            assert o.property == 'name'
+            assert o.direction == Query.Order.Direction.DESC
+            assert o.ignoreCase
+            return query
+        }
+        1 * builder.isUniqueResult() >> false
+    }
+
+    void "test invokeMethod rejects a list sort key that is not a property path before ordering the query"() {
+        when:
+        invoker.invokeMethod("list", [[sort: 'name, e.id'], { }] as Object[])
+
+        then:
+        1 * builder.isPaginationEnabledList() >> true
+        1 * builder.isUniqueResult() >> false
+        0 * query.order(_)
+        def e = thrown(IllegalArgumentException)
+        e.message == 'Invalid sort property'
+    }
+
+    void "test invokeMethod rejects a list order direction other than asc or desc before ordering the query"() {
+        when:
+        invoker.invokeMethod("list", [[sort: 'name', order: 'sideways'], { }] as Object[])
+
+        then:
+        1 * builder.isPaginationEnabledList() >> true
+        1 * builder.isUniqueResult() >> false
+        0 * query.order(_)
+        def e = thrown(IllegalArgumentException)
+        e.message == 'Invalid sort direction'
     }
 
     void "test invokeMethod calls closeSession if not participating"() {

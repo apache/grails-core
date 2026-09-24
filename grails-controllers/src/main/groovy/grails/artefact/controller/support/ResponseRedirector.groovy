@@ -184,7 +184,7 @@ trait ResponseRedirector implements WebAttributes {
         String url = creator.createURL(controller, action, namespace, plugin, params, 'utf-8')
 
         if (requestDataValueProcessor) {
-            HttpServletRequest request = currentWebRequest.getCurrentRequest()
+            HttpServletRequest request = currentWebRequest.getRequest()
             url = response.encodeRedirectURL(requestDataValueProcessor.processUrl(request, url))
         } else {
             url = response.encodeRedirectURL(url)

@@ -311,6 +311,37 @@ class GspCompileStaticConfigSpec extends Specification {
         ]
     }
 
+    void 'a quote inside an expression in a meta tag does not run the compile out of stack'() {
+        given: 'a page shaped like the one that stopped an application compiling, under strict so that a name ' +
+                'the scan missed would be reported as undeclared'
+        GroovyPagesTemplateEngine engine = engineFor(
+                'grails.views.gsp.compileStatic': true,
+                'grails.views.gsp.compileStaticConfig.strict': true)
+        String source = '''<html><head><meta property="og:title" content="${'Untitled'.replaceAll('"','\\'')}" /></head><body>''' +
+                ('<p class="c" data-x=\'y\'>text with "quotes" and \'more\'</p>\n' * 5000) +
+                '<g:set var="total" value="${1}"/>${total}</body></html>'
+
+        and: 'a thread with a small stack: before the scan was a single pass, the layout preprocessor ' +
+                'turned the meta into a namespaced tag and the page scope pattern recursed through the rest of the page'
+        GroovyPageTemplate template = null
+        Throwable failure = null
+        Thread thread = new Thread(null, {
+            try {
+                template = compile(engine, source)
+            } catch (Throwable t) {
+                failure = t
+            }
+        }, 'small-stack', 256 * 1024)
+
+        when:
+        thread.start()
+        thread.join()
+
+        then: 'it compiles, and the name introduced at the end of the page was still found'
+        failure == null
+        template.metaInfo.compilationException == null
+    }
+
     void 'a page that declares nothing reads what it is rendered with'() {
         given:
         GroovyPagesTemplateEngine engine = engineFor('grails.views.gsp.compileStatic': true)
@@ -561,6 +592,26 @@ class GspCompileStaticConfigSpec extends Specification {
 
         then:
         template.metaInfo.compilationException == null
+    }
+
+    void 'a string literal in a tag attribute does not hide the name the tag introduces'() {
+        given:
+        GroovyPagesTemplateEngine engine = engineFor(
+                'grails.views.gsp.compileStatic': true,
+                'grails.views.gsp.compileStaticConfig.strict': true)
+
+        when: 'the quotes and braces inside the literal belong to the value, and var is read after it'
+        GroovyPageTemplate template = compile(engine, source)
+
+        then:
+        template.metaInfo.compilationException == null
+
+        where:
+        source << [
+                """<g:set value="\${null ?: '''it's fine'''}" var="total"/>\${total}""",
+                """<g:set value="\${null ?: \"\"\"say "hi" now\"\"\"}" var="total"/>\${total}""",
+                """<g:set value="\${'}{'}" var="total"/>\${total}""",
+        ]
     }
 
     void 'every operator on a value of no known type is reported, not only the first'() {

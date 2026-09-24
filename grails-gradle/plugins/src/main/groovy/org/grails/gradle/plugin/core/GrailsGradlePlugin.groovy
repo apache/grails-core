@@ -380,9 +380,24 @@ class GrailsGradlePlugin implements Plugin<Project> {
             // on the property directly tries to convert the file itself into a task, and building a
             // collection from a property with no value fails while dependencies are resolved.
             t.dependsOn({
-                RegularFileProperty configured = project.tasks.named(compileTaskName, GroovyCompile)
-                        .get().groovyOptions.configurationScriptFile
-                configured.present ? [project.files(configured)] : []
+                GroovyCompile compile = project.tasks.named(compileTaskName, GroovyCompile).get()
+                RegularFileProperty configured = compile.groovyOptions.configurationScriptFile
+                if (!configured.present) {
+                    return []
+                }
+                FileCollection scriptFiles = project.files(configured)
+                List<Object> dependencies = [scriptFiles]
+                if (scriptFiles.buildDependencies.getDependencies(t).isEmpty()) {
+                    // A plain file has no producer metadata. Preserve the older file + dependsOn
+                    // wiring by matching only direct compile dependencies that declare this exact
+                    // output. Inheriting unrelated dependencies could introduce a cycle, and
+                    // reading the compile or runtime classpath would restore the original bug.
+                    File scriptFile = configured.asFile.get()
+                    dependencies.addAll(compile.taskDependencies.getDependencies(compile).findAll { Task dependency ->
+                        dependency != t && dependency.outputs.files.contains(scriptFile)
+                    })
+                }
+                dependencies
             } as Callable)
         }
     }
@@ -925,8 +940,20 @@ ${importStatements}
         grailsVersion
     }
 
-    @CompileDynamic
     protected void configureAssetCompilation(Project project) {
+        configureAssetPipelineLayout(project)
+        configureAssetsOnTheClasspath(project)
+    }
+
+    /**
+     * Only the asset pipeline's own extension and task need dynamic dispatch, as the plugin is not
+     * a compile-time dependency. Calls to this plugin's own private methods stay out of here: on a
+     * reused daemon Gradle replaces the meta class of the applied plugin class with one that
+     * dispatches on the runtime class alone, so under Gradle 8 a private method of this class is
+     * not found when the applied plugin is a subclass.
+     */
+    @CompileDynamic
+    private static void configureAssetPipelineLayout(Project project) {
         if (project.extensions.findByName('assets')) {
             project.assets {
                 assetsPath = project.layout.projectDirectory.dir('grails-app/assets')
@@ -935,7 +962,6 @@ ${importStatements}
                 it.destinationDirectory = project.layout.buildDirectory.dir('assetCompile/assets')
             }
         }
-        configureAssetsOnTheClasspath(project)
     }
 
     /**

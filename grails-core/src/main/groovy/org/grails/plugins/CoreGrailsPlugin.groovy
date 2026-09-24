@@ -29,6 +29,7 @@ import org.springframework.beans.factory.support.DefaultListableBeanFactory
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader
 import org.springframework.boot.autoconfigure.AutoConfiguration
 import org.springframework.boot.autoconfigure.AutoConfigureOrder
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.boot.autoconfigure.context.PropertyPlaceholderAutoConfiguration
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ConfigurableApplicationContext
@@ -62,6 +63,7 @@ import org.grails.spring.DefaultRuntimeSpringConfiguration
 import org.grails.spring.RuntimeSpringConfigUtilities
 import org.grails.spring.RuntimeSpringConfiguration
 import org.grails.spring.aop.autoproxy.GroovyAwareAspectJAwareAdvisorAutoProxyCreator
+import org.grails.spring.aop.autoproxy.GroovyAwareAutoProxyCreators
 import org.grails.spring.aop.autoproxy.GroovyAwareInfrastructureAdvisorAutoProxyCreator
 import org.grails.spring.beans.AbstractResourceLocatorPostProcessor
 import org.grails.spring.beans.GrailsApplicationAwareBeanPostProcessor
@@ -80,6 +82,14 @@ import org.grails.spring.context.support.MapBasedSmartPropertyOverrideConfigurer
 @GrailsBeans
 @AutoConfiguration(before = [PropertyPlaceholderAutoConfiguration])
 @AutoConfigureOrder(Ordered.HIGHEST_PRECEDENCE)
+// The beans below are the beans of a Grails application: they read the GrailsApplication, or they
+// configure the context one is loaded into. This configuration is generated from the block below and
+// so is contributed to every Spring Boot application with grails-core on its class path, where only a
+// Grails application has the plugin lifecycle that builds one - and where the rest get the
+// auto-configuration of the library they did ask for. The condition is on the configuration as a
+// whole rather than on the beans that name the application, so that an application either has the
+// core plugin's beans or has none of them.
+@ConditionalOnBean(GrailsApplication)
 class CoreGrailsPlugin extends Plugin {
 
     def version = GrailsUtil.getGrailsVersion()
@@ -189,7 +199,9 @@ class CoreGrailsPlugin extends Plugin {
             }
 
             // replace the AutoProxy advisor with a Groovy aware one; the two variants share
-            // Spring's own internalAutoProxyCreator name, so at most one is registered
+            // Spring's own internalAutoProxyCreator name, so at most one is registered. Spring has to
+            // be taught about them first, or AopAutoConfiguration rejects the registered creator.
+            GroovyAwareAutoProxyCreators.registerWithAopConfigUtils()
             Boolean isProxyTargetClass = config.getProperty(SPRING_PROXY_TARGET_CLASS_CONFIG, Boolean)
             if (ClassUtils.isPresent('org.aspectj.lang.annotation.Around', application.classLoader) &&
                     !config.getProperty(Settings.SPRING_DISABLE_ASPECTJ, Boolean)) {

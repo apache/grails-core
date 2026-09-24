@@ -25,6 +25,7 @@ class UrlMappings {
         "/$controller/$action?/$id?(.$format)?"{}
 
         "/"(view:"/index")
+        "/favicon.ico"(redirect: [uri: '/assets/favicon.ico', permanent: true])
         "500"(view:'/error')
         "404"(view:'/notFound')
     }

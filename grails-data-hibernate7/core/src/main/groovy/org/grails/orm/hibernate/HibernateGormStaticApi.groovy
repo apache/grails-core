@@ -38,9 +38,20 @@ import groovy.util.logging.Slf4j
 
 import org.grails.datastore.mapping.query.Query as GormQuery
 
+import jakarta.persistence.LockModeType
+import jakarta.persistence.TransactionRequiredException
+import jakarta.persistence.criteria.CriteriaBuilder
+import jakarta.persistence.criteria.CriteriaQuery
+import jakarta.persistence.criteria.Expression
+import jakarta.persistence.criteria.Root
+
 import org.hibernate.Session
 import org.hibernate.SessionFactory
+import org.hibernate.engine.spi.EntityKey
+import org.hibernate.engine.spi.PersistenceContext
+import org.hibernate.engine.spi.SessionImplementor
 import org.hibernate.jpa.AvailableHints
+import org.hibernate.persister.entity.EntityPersister
 
 import org.springframework.core.convert.ConversionService
 import org.springframework.transaction.PlatformTransactionManager
@@ -49,6 +60,7 @@ import grails.orm.HibernateCriteriaBuilder
 import grails.gorm.DetachedCriteria
 import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.finders.FinderMethod
+import org.grails.datastore.gorm.internal.RefreshLockArguments
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.proxy.ProxyHandler
 import org.grails.datastore.mapping.model.PersistentProperty
@@ -144,26 +156,119 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     <T> T withNewSession(Closure<T> callable) {
-        if (persistentEntity.isMultiTenant()) {
-            return ((HibernateDatastore) datastore).withNewSession(callable)
+        inConnectionScope {
+            if (persistentEntity.isMultiTenant()) {
+                return ((HibernateDatastore) datastore).withNewSession(callable)
+            }
+            String q = getQualifier()
+            if (q != null && q != ConnectionSource.DEFAULT) {
+                return ((HibernateDatastore) datastore).withNewSession(q, callable)
+            }
+            ((HibernateDatastore) datastore).withNewSession(callable)
         }
-        String q = getQualifier()
-        if (q != null && q != ConnectionSource.DEFAULT) {
-            return ((HibernateDatastore) datastore).withNewSession(q, callable)
-        }
-        ((HibernateDatastore) datastore).withNewSession(callable)
     }
 
     @Override
     <T> T withSession(Closure<T> callable) {
-        if (persistentEntity.isMultiTenant()) {
-            return ((HibernateDatastore) datastore).withSession(callable)
+        inConnectionScope {
+            if (persistentEntity.isMultiTenant()) {
+                return ((HibernateDatastore) datastore).withSession(callable)
+            }
+            String q = getQualifier()
+            if (q != null && q != ConnectionSource.DEFAULT) {
+                return ((HibernateDatastore) datastore).withSession(q, callable)
+            }
+            ((HibernateDatastore) datastore).withSession(callable)
         }
-        String q = getQualifier()
-        if (q != null && q != ConnectionSource.DEFAULT) {
-            return ((HibernateDatastore) datastore).withSession(q, callable)
+    }
+
+    @Override
+    D lock(Serializable id) {
+        if (!persistentEntity.isMultiTenant()) {
+            return super.lock(id)
         }
-        ((HibernateDatastore) datastore).withSession(callable)
+        // Hibernate's tenant filter does not apply to a load by identifier, so a multi-tenant row is loaded
+        // through a query the way get(id) does, rather than handed to whichever tenant asks for the id.
+        Serializable identifier = convertIdentifier(id)
+        if (identifier == null) {
+            return null
+        }
+        (D) hibernateTemplate.execute { Session session ->
+            lockedLoad(session, identifier, LockModeType.PESSIMISTIC_WRITE)
+        }
+    }
+
+    @Override
+    D lock(Map args, Serializable id) {
+        LockModeType lockMode = RefreshLockArguments.lockTypeFrom(args)
+        boolean refresh = RefreshLockArguments.refreshRequested(args)
+        if (!refresh && !RefreshLockArguments.typeRequested(args)) {
+            // Nothing was asked for that lock(id) does not already do, so keep its behaviour exactly,
+            // including what it does without a transaction. A call that names a type does not take this
+            // route even when it names the default one, because it is one of the forms documented to
+            // require a transaction.
+            return lock(id)
+        }
+        (D) hibernateTemplate.execute { Session session ->
+            if (!session.getTransaction().isActive()) {
+                throw new TransactionRequiredException(RefreshLockArguments.TRANSACTION_REQUIRED)
+            }
+            Serializable identifier = convertIdentifier(id)
+            if (identifier == null) {
+                return null
+            }
+            if (!refresh) {
+                return lockedLoad(session, identifier, lockMode)
+            }
+            // Stay on this connection's session: the generic implementation resolves the instance api
+            // through the registry, which yields the default connection for a named-connection static api.
+            Object managed = findManagedInstance(session, identifier)
+            if (managed == null) {
+                // Not loaded yet, so a single locked load is enough.
+                return lockedLoad(session, identifier, lockMode)
+            }
+            instanceApi.refresh((D) managed, [(RefreshLockArguments.LOCK): lockMode])
+        }
+    }
+
+    /**
+     * Loads and locks the row for the given identifier.
+     * <p>
+     * A multi-tenant entity is loaded through a query, as {@code get} does, because Hibernate's tenant filter
+     * does not apply to a load by identifier and would otherwise hand out another tenant's row.
+     */
+    private D lockedLoad(Session session, Serializable identifier, LockModeType lockMode) {
+        if (!persistentEntity.isMultiTenant()) {
+            return session.find(persistentClass, identifier, lockMode)
+        }
+        // One statement fetches and locks the row. Locking it after a separate query would version-check a row
+        // this transaction does not hold yet, so a writer that committed in between would fail the call - the
+        // outcome a locked reload exists to avoid.
+        CriteriaBuilder criteriaBuilder = session.criteriaBuilder
+        CriteriaQuery criteriaQuery = criteriaBuilder.createQuery(persistentEntity.javaClass)
+        Root queryRoot = criteriaQuery.from(persistentEntity.javaClass)
+        criteriaQuery = criteriaQuery.where(
+                criteriaBuilder.equal((Expression<?>) queryRoot.get(persistentEntity.identity.name), identifier)
+        )
+        (D) session.createQuery(criteriaQuery).setLockMode(lockMode).uniqueResult()
+    }
+
+    private Object findManagedInstance(Session session, Serializable id) {
+        SessionImplementor sessionImplementor = session.unwrap(SessionImplementor)
+        EntityPersister persister = sessionImplementor.factory.mappingMetamodel.getEntityDescriptor(persistentClass)
+        EntityKey key = sessionImplementor.generateEntityKey(id, persister)
+        PersistenceContext persistenceContext = sessionImplementor.persistenceContextInternal
+        Object entity = persistenceContext.getEntity(key)
+        if (entity == null) {
+            return null
+        }
+        if (persistenceContext.getEntry(entity)?.status?.isDeletedOrGone()) {
+            // A deleted entity is no longer attached for refresh purposes; fall back to the locked load,
+            // which reports the row as gone the same way lock(id) does.
+            return null
+        }
+        // Return the proxy when the caller holds one, so the result is the instance already in use.
+        persistenceContext.getProxy(key) ?: entity
     }
 
     D get(Serializable id) {
@@ -231,9 +336,9 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     }
 
     @Override
-    Integer count() {
+    Long count() {
         String entity = persistentEntity.name
-        doSingleInternal("select count(*) from $entity" as String, [:], [], [:], false) as Integer
+        doSingleInternal("select count(*) from $entity" as String, [:], [], [:], false) as Long
     }
 
     @Override

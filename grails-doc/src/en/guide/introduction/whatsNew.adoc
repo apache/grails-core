@@ -30,7 +30,11 @@ Notable new features are included below.
 ==== Platform Baseline
 
 Grails {grailsMajorVersion} raises the standard build and runtime baseline to Java 21 and uses Gradle {gradleVersion}.
-The standard Grails BOM remains on Groovy {groovyVersion} and Spock {spockVersion}, while Micronaut-enabled Grails applications use Micronaut-specific BOM variants that align with Micronaut 5 and require JDK 25 or later.
+The standard Grails BOM uses Groovy {groovyVersion} and Spock {spockVersion}.
+
+==== Grails Micronaut Repository
+
+Grails Micronaut is maintained and released from the https://github.com/apache/grails-micronaut[Apache Grails Micronaut repository] and consumes published Grails Core artifacts.
 
 ==== Spring Boot 4.1 and Spring Framework 7
 
@@ -49,7 +53,7 @@ The `create-*` commands also accept a new `-d, --data` option (the previous `-g`
 grails -t forge create-app --data=hibernate7 com.example.demo
 ----
 
-Applications generated for Hibernate 7 consume `grails-hibernate7-bom` — or `grails-hibernate7-micronaut-bom` when combined with the `grails-micronaut` feature — consistently across the application dependencies, the buildscript classpath, and `buildSrc`.
+Applications generated for Hibernate 7 consume `grails-hibernate7-bom` consistently across the application dependencies, the buildscript classpath, and `buildSrc`.
 This avoids the dependency resolution conflicts that occur when an application generated for Hibernate 5 is manually switched to `grails-data-hibernate7` while the default `grails-bom` remains on the build classpath.
 The `database-migration` feature also selects the matching `grails-data-hibernate7-dbmigration` plugin automatically.
 
@@ -265,6 +269,120 @@ written rather than one to switch on over an existing database. See the
 link:{mongodb5Guide}index.html#idGeneration[Identity Generation] section of the GORM for MongoDB guide for
 details.
 
+==== GORM for Hibernate Locking Improvements
+
+GORM for Hibernate 5 and Hibernate 7 gain three related locking capabilities. All of them require an active transaction, hold the lock until that transaction commits or rolls back, and are available on named connections (`Book.secondary.lock(id, refresh: true)`, `book.secondary.refresh(lock: true)`, within a transaction on that connection) and under a bound tenant. Datastores that do not support a capability throw `UnsupportedOperationException` rather than silently falling back to a plain refresh or an ordinary lock. The existing `entity.lock()`, `DomainClass.lock(id)` and `entity.refresh()` methods are unchanged; `entity.mutex` is built on the first of these capabilities and changes behaviour, as described below.
+
+===== Refresh Under a Lock
+
+The instance method link:{domainClassesRef}refresh.html[refresh] accepts a `lock` argument. `lock: true` reloads the entity's database state and version under a pessimistic WRITE lock that is acquired before the state is read, and returns the same instance. It never checks the already-loaded version, which is what `entity.lock()` does and why a concurrent update between `get()` and `lock()` can still cause an optimistic locking failure.
+
+[source,groovy]
+----
+Book.withTransaction {
+    def book = Book.get(1)
+    book.refresh(lock: true)
+    if (book.title == 'Draft') {
+        book.title = 'Ready for review'
+        book.save(failOnError: true)
+    }
+}
+----
+
+`lock` also accepts a `jakarta.persistence.LockModeType`, or its name, to refresh under a different mode, for example `book.refresh(lock: LockModeType.PESSIMISTIC_READ)`. `lock: true` is equivalent to `lock: LockModeType.PESSIMISTIC_WRITE`. `lock: false` and `lock: LockModeType.NONE` request no lock, so `entity.refresh([:])`, `entity.refresh(lock: false)` and `entity.refresh(lock: LockModeType.NONE)` behave exactly like `entity.refresh()`. Any other value throws `IllegalArgumentException`.
+
+The instance must be attached to the current session; a detached instance is rejected with `IllegalArgumentException` on both Hibernate versions rather than being silently re-attached. Re-attach it with `attach()` first.
+
+WARNING: Refreshing discards unflushed entity changes, including changes to associated entities reached by configured refresh cascades; it does not refresh the whole object graph. Call `refresh(lock: ...)` or `lock(id, refresh: true)` *before* making decisions based on the entity's state or applying mutations. The lock applies to the refreshed entity's own row; associated entities reloaded through the cascade are not guaranteed to be locked.
+
+On Hibernate 5, a locked refresh also resets GORM's dirty-checking state on the refreshed entity, its embedded components, and every initialized entity the refresh cascade reloaded, including associations reached through an embedded component, so the discarded edits do not schedule an update or bump a version at the next flush. A plain `refresh()` on Hibernate 5 leaves that state in place. Hibernate 7 resets it itself.
+
+===== Lock by Identifier with Refresh
+
+The static link:{domainClassesRef}lock.html[lock] method accepts `refresh: true`. `Book.lock(id, refresh: true)` behaves like `Book.lock(id)`, but when the entity is already managed in the current session it reloads that instance's state and version under the lock instead of locking the already-loaded state, and returns that same managed instance. When the entity is not in the session it is loaded under the lock. `null` is returned when no row exists for the identifier. `DomainClass.lock(id)` and `DomainClass.lock(id, refresh: false)` continue to lock without refreshing.
+
+[source,groovy]
+----
+Book.withTransaction {
+    def book = Book.lock(1, refresh: true)
+    if (book?.title == 'Draft') {
+        book.title = 'Ready for review'
+        book.save(failOnError: true)
+    }
+}
+----
+
+There is no `entity.lock(refresh: true)`. Groovy resolves that call to the static `lock(Serializable id)` method with the options map as the identifier, so GORM now rejects it with an `IllegalArgumentException` naming the two supported forms instead of reporting a missing identifier.
+
+===== Choosing the Lock Mode
+
+The static `lock` method also accepts `type`, a `jakarta.persistence.LockModeType` or its name, to acquire a lock other than the default `PESSIMISTIC_WRITE`. It applies whether the entity is loaded by the call or is already managed in the session, and it can be combined with `refresh: true` to reload a managed instance under that mode. `NONE` is rejected.
+
+Every lock mode is available to `refresh(lock: ...)` and to the static `type` argument on both Hibernate 5 and Hibernate 7:
+
+[cols="2,2,3",options="header"]
+|===
+| Lock mode | Database lock | Effect
+
+| `PESSIMISTIC_WRITE`
+| Exclusive row lock, typically `SELECT ... FOR UPDATE`
+| The default for `lock: true`, `lock(id)` and `lock(id, refresh: true)`. Other transactions cannot update the row or take a pessimistic lock on it until this transaction ends.
+
+| `PESSIMISTIC_READ`
+| Shared row lock, `SELECT ... FOR SHARE` where the database supports it
+| Other transactions cannot update the row but may take the same shared lock. Databases without shared row locks take an exclusive lock instead.
+
+| `PESSIMISTIC_FORCE_INCREMENT`
+| Exclusive row lock
+| As `PESSIMISTIC_WRITE`, and the version is incremented as part of taking the lock, so a transaction still holding the previous version fails its next update.
+
+| `OPTIMISTIC` (JPA alias `READ`)
+| None
+| The version is re-read when the transaction commits, and the commit fails if another transaction changed it.
+
+| `OPTIMISTIC_FORCE_INCREMENT` (JPA alias `WRITE`)
+| None
+| The version is incremented when the transaction commits, so other transactions holding the previous version fail.
+
+| `NONE`
+| None
+| `refresh(lock: LockModeType.NONE)` is a plain refresh, exactly like `refresh(lock: false)`. `lock(id, type: LockModeType.NONE)` is rejected with `IllegalArgumentException`: a lock call must name a lock.
+|===
+
+[source,groovy]
+----
+Book.withTransaction {
+    def shared = Book.lock(1, type: LockModeType.PESSIMISTIC_READ)
+    def current = Book.lock(2, refresh: true, type: LockModeType.PESSIMISTIC_READ)
+}
+----
+
+Without an active transaction, `refresh` with a lock, `lock(id, refresh: true)` and any `lock(id, ...)` call naming a `type` throw `jakarta.persistence.TransactionRequiredException` before anything is loaded. The database and transaction isolation level determine which state is visible. Locking does not guarantee that every concurrent attempt succeeds: deadlocks, lock timeouts, and transaction serialization failures remain possible. See the Optimistic and Pessimistic Locking section of the GORM for link:{hibernate7Guide}index.html#locking[Hibernate 7] or link:{hibernate5Guide}index.html#locking[Hibernate 5] guide for details.
+
+===== Holding a Lock for a Block of Work
+
+`entity.mutex(Closure)` locks an instance for the scope of a closure. It took an exclusive lock on the state already loaded, and because that lock is version-checked, a transaction that committed to the row after the instance was loaded failed the call with an optimistic locking failure and the closure never ran. Where the datastore supports a locked refresh, it now reloads the row under the lock instead, so it waits for the competing writer and the closure runs on the committed state. The lock is always exclusive; there is no argument to select another mode, because a shared or optimistic lock would not give the closure mutual exclusion.
+
+[source,groovy]
+----
+Airport.withTransaction {
+    def airport = Airport.get(10)
+    airport.mutex {
+        airport.name = 'Heathrow'
+        airport.save(failOnError: true)
+    }
+}
+----
+
+WARNING: Reloading discards unflushed changes to the instance, exactly as `refresh(lock: true)` does, so apply them *inside* the closure rather than before the call. `mutex` now also requires an active transaction and an attached instance. See the upgrade notes for the full list of consequences. Datastores that cannot reload under a lock keep their previous behaviour.
+
+
+==== GORM for Hibernate 7 Persist and Merge Events
+
+GORM for Hibernate 7 now starts tracking changes to an entity when it is persisted or merged, not only once its row has been inserted. Previously an entity whose identifier is generated before the insert, such as one mapped with `id generator: 'increment'` or any member of a `tablePerConcreteClass` hierarchy, was written with an `INSERT` immediately followed by an `UPDATE` of the same row and started at `version` 1. It now starts at `version` 0 with a single statement, as on Hibernate 5.
+
+As part of this change, persistence event listeners on Hibernate 7 receive a `PersistEvent` (`eventType` `Persist`) for every explicit or flush-time cascaded persist and a `MergeEvent` (`eventType` `Merge`) for every merge. Neither event can be cancelled. Hibernate 5 continues to publish `SaveOrUpdateEvent` when an entity is saved, and publishes no event for a merge. A listener that switches over `event.eventType` with a default branch that throws should handle the new values. See the Events and Auto Timestamping section of the GORM for link:{hibernate7Guide}index.html#eventsAutoTimestamping[Hibernate 7] guide.
+
 ==== Test HTTP Client Form Requests
 
 Integration tests that implement `HttpClientSupport` can now use `httpPostForm(...)` to send `application/x-www-form-urlencoded`
@@ -328,6 +446,23 @@ be enabled (`grails.mongodb.transactional = true`). Spring Data repositories are
 session are shared, and the two object-mapping models stay separate. See the
 link:{mongodb5Guide}index.html#springDataInterop[Spring Data MongoDB Interoperability] section of the GORM for MongoDB
 guide for details.
+
+==== Read-Only Transactions Do Not Flush the Session
+
+`@ReadOnly` and `@Transactional(readOnly = true)` now mean the same thing on every GORM datastore: a read-only
+transaction commits without flushing the session. Hibernate, Neo4j and the simple map datastore already behaved this
+way, and GORM for MongoDB was the exception — a read-only commit there flushed whatever the session had queued, so
+read-only code could persist another caller's unflushed writes, and a read-only transaction started while a session was
+flushing (for example from a validator or a `beforeInsert` event) could re-enter validation.
+
+`AbstractSession` now passes the transaction definition to `beginTransactionInternal(TransactionDefinition)` rather than
+discarding it, so a datastore can act on `readOnly` and on anything else the definition carries. `Session` also gained
+`hasPendingOperations()`, and `DatastoreTransactionManager` uses it to log a warning when a read-only transaction commits
+while its session still holds queued inserts, updates or deletes, so a write that a read-only transaction used to persist
+by accident is reported rather than silently dropped. This is a behavior change for MongoDB code that saves without
+`flush: true` and relies on a later read-only transaction to persist the write; see the
+xref:upgrading#upgrading80x[upgrade guide] and the
+link:{mongodb5Guide}index.html#readOnlyTransactions[Read-Only Transactions] section of the GORM for MongoDB guide.
 
 ==== Ahead-of-Time Processing
 

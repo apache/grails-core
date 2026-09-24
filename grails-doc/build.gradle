@@ -66,6 +66,13 @@ dependencies {
 def combinedGroovydoc = tasks.register('aggregateGroovydoc', Groovydoc)
 apply from: rootProject.layout.projectDirectory.file('gradle/docs-dependencies.gradle')
 
+// aggregateGroovydoc documents every module in one run and holds the whole model until the
+// last page is written, so it needs far more than a single module does. It settles around
+// 1.9 GB resident today; the rest is headroom for the modules still to come.
+groovydocEnhancer {
+    maxHeapSize = '3g'
+}
+
 combinedGroovydoc.configure { Groovydoc gdoc ->
     gdoc.windowTitle = "Grails $projectVersion"
     gdoc.docTitle = "Grails $projectVersion"
@@ -171,43 +178,20 @@ String getVersion(String artifact) {
 
 def generateBomDocumentation = tasks.register('generateBomDocumentation')
 generateBomDocumentation.configure { Task it ->
-    // grails-micronaut-bom is gated by -PskipMicronautProjects in settings.gradle (see grails-core#15613).
-    // findProject returns null when the flag is set; the Micronaut BOM pages are then omitted.
-    def grailsMicronautBom = findProject(':grails-micronaut-bom')
-    def grailsHibernate7MicronautBom = findProject(':grails-hibernate7-micronaut-bom')
-
     def extractConstraintsDeps = [':grails-bom:extractConstraints', ':grails-hibernate5-bom:extractConstraints', ':grails-hibernate7-bom:extractConstraints', ':grails-neo4j-bom:extractConstraints']
-    if (grailsMicronautBom != null) {
-        extractConstraintsDeps << ':grails-micronaut-bom:extractConstraints'
-    }
-    if (grailsHibernate7MicronautBom != null) {
-        extractConstraintsDeps << ':grails-hibernate7-micronaut-bom:extractConstraints'
-    }
     it.dependsOn(*extractConstraintsDeps)
 
-    it.description = 'Generates AsciiDoc tables listing Group, Artifact, and Version for all BOM variants (default, hibernate5, hibernate7, neo4j, micronaut, hibernate7-micronaut).'
+    it.description = 'Generates AsciiDoc tables listing Group, Artifact, and Version for all BOM variants (default, hibernate5, hibernate7, neo4j).'
     it.group = 'documentation'
 
     it.inputs.files(project(':grails-bom').layout.projectDirectory.asFileTree)
     it.inputs.files(project(':grails-hibernate5-bom').layout.projectDirectory.asFileTree)
     it.inputs.files(project(':grails-hibernate7-bom').layout.projectDirectory.asFileTree)
     it.inputs.files(project(':grails-neo4j-bom').layout.projectDirectory.asFileTree)
-    if (grailsMicronautBom != null) {
-        it.inputs.files(grailsMicronautBom.layout.projectDirectory.asFileTree)
-    }
-    if (grailsHibernate7MicronautBom != null) {
-        it.inputs.files(grailsHibernate7MicronautBom.layout.projectDirectory.asFileTree)
-    }
     it.outputs.file(project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM.adoc'))
     it.outputs.file(project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Hibernate5.adoc'))
     it.outputs.file(project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Hibernate7.adoc'))
     it.outputs.file(project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Neo4j.adoc'))
-    if (grailsMicronautBom != null) {
-        it.outputs.file(project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Micronaut.adoc'))
-    }
-    if (grailsHibernate7MicronautBom != null) {
-        it.outputs.file(project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Hibernate7 Micronaut.adoc'))
-    }
 
     def versionsDir = project.layout.projectDirectory.dir('src/en/ref/Versions')
     it.doFirst {
@@ -230,22 +214,6 @@ generateBomDocumentation.configure { Task it ->
     def bomNeo4jDocumentFile = project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Neo4j.adoc')
     def grailsBomNeo4jConstraintFile = project(':grails-neo4j-bom').layout.buildDirectory.file('grails-neo4j-bom-constraints.adoc')
 
-    // Micronaut BOM
-    def bomMicronautDocumentFile = grailsMicronautBom != null
-            ? project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Micronaut.adoc')
-            : null
-    def grailsBomMicronautConstraintFile = grailsMicronautBom?.layout?.buildDirectory?.file('grails-micronaut-bom-constraints.adoc')
-
-    // Hibernate 7 Micronaut BOM
-    def bomHibernate7MicronautDocumentFile = grailsHibernate7MicronautBom != null
-            ? project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Hibernate7 Micronaut.adoc')
-            : null
-    def grailsBomHibernate7MicronautConstraintFile = grailsHibernate7MicronautBom?.layout?.buildDirectory?.file('grails-hibernate7-micronaut-bom-constraints.adoc')
-
-    def micronautBomCrossRefSuffix = grailsMicronautBom != null
-            ? ' | link:Grails%20BOM%20Micronaut.html[Grails Micronaut BOM] | link:Grails%20BOM%20Hibernate7%20Micronaut.html[Grails Hibernate 7 Micronaut BOM]'
-            : ''
-
     it.doLast {
         // Generate default BOM page
         bomDocumentFile.asFile.withWriter { writer ->
@@ -253,7 +221,7 @@ generateBomDocumentation.configure { Task it ->
             writer.writeLine ''
             writer.writeLine 'This document provides information about the dependencies defined in the default Grails BOM - also known as `org.apache.grails:grails-bom`. The default BOM uses Hibernate 5 compatible dependency versions.'
             writer.writeLine ''
-            writer.writeLine "NOTE: Variant BOMs are also available: link:Grails%20BOM%20Hibernate5.html[Grails Hibernate 5 BOM] | link:Grails%20BOM%20Hibernate7.html[Grails Hibernate 7 BOM] | link:Grails%20BOM%20Neo4j.html[Grails Neo4j BOM]${micronautBomCrossRefSuffix}"
+            writer.writeLine 'NOTE: Variant BOMs are also available: link:Grails%20BOM%20Hibernate5.html[Grails Hibernate 5 BOM] | link:Grails%20BOM%20Hibernate7.html[Grails Hibernate 7 BOM] | link:Grails%20BOM%20Neo4j.html[Grails Neo4j BOM]'
             writer.writeLine ''
             writer.write(grailsBomConstraintFile.get().asFile.text)
             writer.writeLine ''
@@ -266,7 +234,7 @@ generateBomDocumentation.configure { Task it ->
             writer.writeLine ''
             writer.writeLine 'This document provides information about the dependencies defined in `org.apache.grails:grails-hibernate5-bom`. This BOM inherits from the default `grails-bom` and explicitly enforces Hibernate 5 compatible dependency versions for consumers using `enforcedPlatform`.'
             writer.writeLine ''
-            writer.writeLine "See also: link:Grails%20BOM.html[Default BOM] | link:Grails%20BOM%20Hibernate7.html[Grails Hibernate 7 BOM] | link:Grails%20BOM%20Neo4j.html[Grails Neo4j BOM]'${micronautBomCrossRefSuffix}"
+            writer.writeLine 'See also: link:Grails%20BOM.html[Default BOM] | link:Grails%20BOM%20Hibernate7.html[Grails Hibernate 7 BOM] | link:Grails%20BOM%20Neo4j.html[Grails Neo4j BOM]'
             writer.writeLine ''
             writer.write(grailsBomHibernate5ConstraintFile.get().asFile.text)
             writer.writeLine ''
@@ -279,7 +247,7 @@ generateBomDocumentation.configure { Task it ->
             writer.writeLine ''
             writer.writeLine 'This document provides information about the dependencies defined in `org.apache.grails:grails-hibernate7-bom`. This BOM inherits from the default `grails-bom` and explicitly enforces Hibernate 7 compatible dependency versions for consumers using `enforcedPlatform`.'
             writer.writeLine ''
-            writer.writeLine "See also: link:Grails%20BOM.html[Default BOM] | link:Grails%20BOM%20Hibernate5.html[Grails Hibernate 5 BOM] | link:Grails%20BOM%20Neo4j.html[Grails Neo4j BOM]${micronautBomCrossRefSuffix}"
+            writer.writeLine 'See also: link:Grails%20BOM.html[Default BOM] | link:Grails%20BOM%20Hibernate5.html[Grails Hibernate 5 BOM] | link:Grails%20BOM%20Neo4j.html[Grails Neo4j BOM]'
             writer.writeLine ''
             writer.write(grailsBomHibernate7ConstraintFile.get().asFile.text)
             writer.writeLine ''
@@ -292,42 +260,13 @@ generateBomDocumentation.configure { Task it ->
             writer.writeLine ''
             writer.writeLine 'This document provides information about the dependencies defined in `org.apache.grails:grails-neo4j-bom`. This BOM inherits from the default `grails-bom` and pins a Neo4j driver version compatible with `grails-data-neo4j`, so applications that do not use `grails-data-neo4j` are unaffected.'
             writer.writeLine ''
-            writer.writeLine "See also: link:Grails%20BOM.html[Default BOM] | link:Grails%20BOM%20Hibernate5.html[Grails Hibernate 5 BOM] | link:Grails%20BOM%20Hibernate7.html[Grails Hibernate 7 BOM]${micronautBomCrossRefSuffix}"
+            writer.writeLine 'See also: link:Grails%20BOM.html[Default BOM] | link:Grails%20BOM%20Hibernate5.html[Grails Hibernate 5 BOM] | link:Grails%20BOM%20Hibernate7.html[Grails Hibernate 7 BOM]'
             writer.writeLine ''
             writer.write(grailsBomNeo4jConstraintFile.get().asFile.text)
             writer.writeLine ''
         }
         it.logger.lifecycle "BOM Neo4j Dependency Page generated to: ${bomNeo4jDocumentFile.asFile.absolutePath}"
 
-        if (grailsMicronautBom != null) {
-            // Generate Micronaut BOM page
-            bomMicronautDocumentFile.asFile.withWriter { writer ->
-                writer.writeLine '== Grails Micronaut BOM Dependencies'
-                writer.writeLine ''
-                writer.writeLine 'This document provides information about the dependencies defined in `org.apache.grails:grails-micronaut-bom`. This BOM inherits from the default `grails-bom` and layers Micronaut-specific dependency overrides on top. Consumers integrating with Micronaut should apply this BOM as `enforcedPlatform` so the Micronaut platform cannot override the managed versions.'
-                writer.writeLine ''
-                writer.writeLine 'See also: link:Grails%20BOM.html[Default BOM] | link:Grails%20BOM%20Hibernate5.html[Grails Hibernate 5 BOM] | link:Grails%20BOM%20Hibernate7%20Micronaut.html[Grails Hibernate 7 Micronaut BOM]'
-                writer.writeLine ''
-                writer.write(grailsBomMicronautConstraintFile.get().asFile.text)
-                writer.writeLine ''
-            }
-            it.logger.lifecycle "BOM Micronaut Dependency Page generated to: ${bomMicronautDocumentFile.asFile.absolutePath}"
-        }
-
-        if (grailsHibernate7MicronautBom != null) {
-            // Generate Hibernate 7 Micronaut BOM page
-            bomHibernate7MicronautDocumentFile.asFile.withWriter { writer ->
-                writer.writeLine '== Grails Hibernate 7 Micronaut BOM Dependencies'
-                writer.writeLine ''
-                writer.writeLine 'This document provides information about the dependencies defined in `org.apache.grails:grails-hibernate7-micronaut-bom`. This BOM combines Hibernate 7 dependency management with Micronaut-specific overrides (Groovy 5, Spock 2.4). Consumers integrating with Micronaut and Hibernate 7 should apply this BOM as `enforcedPlatform`.'
-                writer.writeLine ''
-                writer.writeLine 'See also: link:Grails%20BOM.html[Default BOM] | link:Grails%20BOM%20Micronaut.html[Grails Micronaut BOM]'
-                writer.writeLine ''
-                writer.write(grailsBomHibernate7MicronautConstraintFile.get().asFile.text)
-                writer.writeLine ''
-            }
-            it.logger.lifecycle "BOM Hibernate 7 Micronaut Dependency Page generated to: ${bomHibernate7MicronautDocumentFile.asFile.absolutePath}"
-        }
     }
 }
 
@@ -342,7 +281,9 @@ generateConfigReference.configure { Task it ->
             project(':grails-cache').tasks.named('jar'),
             project(':grails-data-hibernate5-dbmigration').tasks.named('jar'),
             project(':grails-data-mongodb').tasks.named('jar'),
-            project(':grails-views-gson').tasks.named('jar')
+            project(':grails-views-gson').tasks.named('jar'),
+            project(':grails-views-markup').tasks.named('jar'),
+            project(':grails-web-url-mappings').tasks.named('jar')
     )
 
     it.description = 'Generates the Application Properties reference from configuration metadata.'
@@ -360,7 +301,9 @@ generateConfigReference.configure { Task it ->
             project(':grails-cache').tasks.named('jar').flatMap { task -> task.archiveFile },
             project(':grails-data-hibernate5-dbmigration').tasks.named('jar').flatMap { task -> task.archiveFile },
             project(':grails-data-mongodb').tasks.named('jar').flatMap { task -> task.archiveFile },
-            project(':grails-views-gson').tasks.named('jar').flatMap { task -> task.archiveFile }
+            project(':grails-views-gson').tasks.named('jar').flatMap { task -> task.archiveFile },
+            project(':grails-views-markup').tasks.named('jar').flatMap { task -> task.archiveFile },
+            project(':grails-web-url-mappings').tasks.named('jar').flatMap { task -> task.archiveFile }
     )
     it.outputs.file(outputFile)
 
@@ -378,7 +321,9 @@ generateConfigReference.configure { Task it ->
                 project(':grails-cache').tasks.named('jar').get().archiveFile.get().asFile,
                 project(':grails-data-hibernate5-dbmigration').tasks.named('jar').get().archiveFile.get().asFile,
                 project(':grails-data-mongodb').tasks.named('jar').get().archiveFile.get().asFile,
-                project(':grails-views-gson').tasks.named('jar').get().archiveFile.get().asFile
+                project(':grails-views-gson').tasks.named('jar').get().archiveFile.get().asFile,
+                project(':grails-views-markup').tasks.named('jar').get().archiveFile.get().asFile,
+                project(':grails-web-url-mappings').tasks.named('jar').get().archiveFile.get().asFile
         ]
 
         Map<String, String> groupDescriptions = new LinkedHashMap<String, String>()
@@ -673,6 +618,7 @@ publishGuideTask.configure { PublishGuideTask publish ->
         def spockVersion = getVersion("spock-core")
         def spockVersionForURL = getVersion("spock-core")?.split("-")[0]
         def hibernate5Guide = '../grails-data/hibernate5/manual/'
+        def hibernate7Guide = '../grails-data/hibernate7/manual/'
         def api = '../api/'
         def gspTagsRef = '../ref/Tags%20-%20GSP/'
         def controllersRef = '../ref/Controllers/'
@@ -699,6 +645,8 @@ publishGuideTask.configure { PublishGuideTask publish ->
                 'gormWebsite'              : '../grails-data/',
                 'hibernate5Guide'          : hibernate5Guide,
                 'hibernate5GuideFromRef'    : '../' + hibernate5Guide,
+                'hibernate7Guide'          : hibernate7Guide,
+                'hibernate7GuideFromRef'    : '../' + hibernate7Guide,
                 'mongodb5Guide'            : '../grails-data/mongodb/manual/',
                 'rxGORMGuide'              : 'https://gorm.grails.org/7.3.4/rx/manual/', // last version released
                 'hibernate5Reference'      : 'https://docs.jboss.org/hibernate/orm/5.6/userguide/html_single/Hibernate_User_Guide.html',

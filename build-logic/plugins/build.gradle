@@ -43,7 +43,7 @@ dependencies {
     implementation "org.yaml:snakeyaml:${gradleProperties.snakeyamlVersion}"
     // GenerateAutoConfigurationImportsTask reads @AutoConfiguration out of class files rather than
     // loading them, so a class it cannot resolve can never be silently dropped from the imports file
-    implementation "org.ow2.asm:asm:${gradleBomDependencyVersions['asm.version']}"
+    implementation gradleBomDependencies['asm']
 
     testImplementation "org.spockframework:spock-core:${gradleBomDependencyVersions['gradle-spock.version']}"
     testImplementation gradleTestKit()
@@ -59,6 +59,9 @@ tasks.named('test') {
     systemProperty 'grails.test.checkstyleVersion', gradleProperties.checkstyleVersion
     systemProperty 'grails.test.pmdVersion', gradleProperties.pmdVersion
     systemProperty 'grails.test.codenarcVersion', gradleProperties.codenarcVersion
+    // ConfigurationMetadataPluginSpec compiles its fixtures against the versions the framework ships with
+    systemProperty('fixture.groovy.version', bomDependencyVersions['groovy.version'])
+    systemProperty('fixture.spring-boot.version', gradleBomDependencyVersions['spring-boot.version'])
 }
 
 gradlePlugin {
@@ -122,6 +125,10 @@ gradlePlugin {
         register('vulnerabilityScanPlugin') {
             id = 'org.apache.grails.buildsrc.vulnerability-scan'
             implementationClass = 'org.apache.grails.buildsrc.VulnerabilityScanPlugin'
+        }
+        register('configurationMetadataPlugin') {
+            id = 'org.apache.grails.buildsrc.configuration-metadata'
+            implementationClass = 'org.apache.grails.buildsrc.ConfigurationMetadataPlugin'
         }
         register('autoConfigurationImportsPlugin') {
             id = 'org.apache.grails.buildsrc.autoconfiguration-imports'

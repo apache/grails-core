@@ -63,6 +63,16 @@ dependencies {
     testImplementation 'org.junit.platform:junit-platform-suite:1.12.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.12.2'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.12.2'
+
+    // Supplied by the Gradle distribution when this code runs as build logic, hence compileOnly
+    // above; tests run on a plain JVM and need them for real.
+    testRuntimeOnly "org.apache.groovy:groovy-ant:${GroovySystem.version}"
+    testRuntimeOnly "org.apache.groovy:groovy-templates:${GroovySystem.version}"
+
+    // DocPublisher looks grails-doc-files.jar up as a resource on its own classpath. The
+    // published jar carries it inside; tests run against class directories, so they need the
+    // directory holding it instead.
+    testRuntimeOnly files(layout.buildDirectory.dir('doc-files')) { builtBy 'docFilesJar' }
 }
 
 sourceSets {
@@ -76,6 +86,9 @@ docFilesJar.configure {Jar it ->
     it.description = 'Package up files used for generating documentation.'
     it.archiveVersion = null
     it.archiveFileName = 'grails-doc-files.jar'
+    // Its own directory, so that directory can go on the test runtime classpath above
+    // without dragging build/libs along with it.
+    it.destinationDirectory = layout.buildDirectory.dir('doc-files')
     it.from 'src/main/template'
 }
 

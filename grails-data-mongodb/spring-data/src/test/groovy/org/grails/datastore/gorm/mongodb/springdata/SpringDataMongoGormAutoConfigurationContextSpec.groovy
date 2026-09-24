@@ -24,6 +24,7 @@ import com.mongodb.MongoClientSettings
 
 import org.springframework.boot.autoconfigure.AutoConfigurations
 import org.springframework.boot.test.context.runner.ApplicationContextRunner
+import org.springframework.data.mongodb.MongoClusterCapable
 import org.springframework.data.mongodb.MongoDatabaseFactory
 import org.springframework.data.mongodb.core.MongoTemplate
 import org.springframework.data.mongodb.core.SimpleMongoClientDatabaseFactory
@@ -58,6 +59,25 @@ class SpringDataMongoGormAutoConfigurationContextSpec extends Specification {
             assert context.getBeanNamesForType(MongoDatabaseFactory).length == 1
             assert context.getBean(MongoTemplate) != null
             assert context.getBean('transactionManager') instanceof GormSharedSessionMongoTransactionManager
+        }
+
+        cleanup:
+        datastore.close()
+    }
+
+    void "test the database factory uses the client the datastore has after a checkpoint and restore"() {
+        given:
+        MongoDatastore datastore = newDatastore()
+
+        expect:
+        runner.withBean(MongoDatastore, { datastore } as Supplier).run { context ->
+            MongoClusterCapable factory = context.getBean(MongoDatabaseFactory) as MongoClusterCapable
+            assert factory.mongoCluster.is(datastore.mongoClient)
+
+            datastore.stop()
+            datastore.start()
+
+            assert factory.mongoCluster.is(datastore.mongoClient)
         }
 
         cleanup:

@@ -33,6 +33,7 @@ import jakarta.persistence.metamodel.Metamodel;
 import org.springframework.beans.BeanUtils;
 
 import grails.gorm.DetachedCriteria;
+import org.grails.datastore.gorm.finders.DynamicFinder;
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
@@ -117,17 +118,19 @@ public class CriteriaMethodInvoker {
                 result = hibernateQuery.singleResult();
             } else if (builder.isPaginationEnabledList()) {
                 Map<?, ?> argMap = (Map<?, ?>) args[0];
+                // the same checks list() and the dynamic finders apply, so sort arguments taken
+                // from request parameters fail the same way on every entry point; the direction
+                // is checked even without a sort key rather than being silently ignored
+                final String direction = DynamicFinder.normalizeDirection(
+                        (String) argMap.get(HibernateQueryArgument.ORDER.value()));
                 final String sortField = (String) argMap.get(HibernateQueryArgument.SORT.value());
                 if (sortField != null) {
                     final boolean ignoreCase =
                             !(argMap.get(HibernateQueryArgument.IGNORE_CASE.value()) instanceof Boolean b) || b;
-                    final String orderParam = (String) argMap.get(HibernateQueryArgument.ORDER.value());
-                    final Query.Order.Direction direction =
-                            Query.Order.Direction.DESC.name().equalsIgnoreCase(orderParam) ?
-                                    Query.Order.Direction.DESC :
-                                    Query.Order.Direction.ASC;
-                    Query.Order order;
-                    order = new Query.Order(sortField, direction);
+                    DynamicFinder.validateSortProperty(hibernateQuery.getEntity(), sortField);
+                    final Query.Order order = DynamicFinder.ORDER_DESC.equals(direction) ?
+                            Query.Order.desc(sortField) :
+                            Query.Order.asc(sortField);
                     if (ignoreCase) {
                         order.ignoreCase();
                     }

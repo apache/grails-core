@@ -27,7 +27,13 @@ import grails.web.mapping.AbstractUrlMappingsSpec
 import org.grails.web.mapping.DefaultUrlMappingData
 import org.grails.web.mapping.DefaultUrlMappingInfo
 import org.grails.web.util.WebUtils
+import org.springframework.ui.ModelMap
 import org.springframework.web.context.request.RequestContextHolder
+import org.springframework.web.context.request.WebRequest
+import org.springframework.web.context.request.WebRequestInterceptor
+import org.springframework.web.context.support.StaticWebApplicationContext
+import org.springframework.web.servlet.HandlerInterceptor
+import org.springframework.web.servlet.handler.WebRequestHandlerInterceptorAdapter
 import org.springframework.web.servlet.view.InternalResourceView
 import spock.lang.Issue
 
@@ -227,6 +233,61 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         result
         result.view instanceof InternalResourceView
         result.view.getUrl() == "/index.html"
+    }
+
+    void "the handler chain keeps WebRequestInterceptors first and appends the Grails interceptors last"() {
+        given: "a handler mapping with both a WebRequestInterceptor and an ordinary HandlerInterceptor"
+        def handlerMapping = handlerMapping()
+        def plainInterceptor = new HandlerInterceptor() {}
+        def webRequestInterceptor = new WebRequestInterceptor() {
+            void preHandle(WebRequest request) {}
+            void postHandle(WebRequest request, ModelMap model) {}
+            void afterCompletion(WebRequest request, Exception ex) {}
+        }
+        handlerMapping.setHandlerInterceptors([plainInterceptor] as HandlerInterceptor[])
+        handlerMapping.setWebRequestInterceptors([webRequestInterceptor] as WebRequestInterceptor[])
+        handlerMapping.setApplicationContext(new StaticWebApplicationContext())
+
+        when:
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        webRequest.request.setRequestURI("/foo/bar")
+        def interceptors = handlerMapping.getHandler(webRequest.request).interceptorList
+
+        then: "the WebRequestInterceptor is adapted and ordered first, ahead of ordinary interceptors"
+        interceptors[0] instanceof WebRequestHandlerInterceptorAdapter
+        interceptors.contains(plainInterceptor)
+
+        and: "the Grails interceptors are appended last, in order"
+        interceptors[-2].class.simpleName == 'ObservationRouteHandler'
+        interceptors[-1].class.simpleName == 'ErrorHandlingHandler'
+    }
+
+    void "the Grails interceptors are shared rather than allocated per request"() {
+        given:
+        def handlerMapping = handlerMapping()
+        handlerMapping.setApplicationContext(new StaticWebApplicationContext())
+
+        when: "two separate requests are handled"
+        def first = GrailsWebMockUtil.bindMockWebRequest()
+        first.request.setRequestURI("/foo/bar")
+        def firstChain = handlerMapping.getHandler(first.request).interceptorList
+        RequestContextHolder.resetRequestAttributes()
+        def second = GrailsWebMockUtil.bindMockWebRequest()
+        second.request.setRequestURI("/foo/bar")
+        def secondChain = handlerMapping.getHandler(second.request).interceptorList
+
+        then: "both chains end with the very same interceptor instances"
+        firstChain[-1].is(secondChain[-1])
+        firstChain[-2].is(secondChain[-2])
+    }
+
+    private UrlMappingsHandlerMapping handlerMapping() {
+        def grailsApplication = new DefaultGrailsApplication(FooController)
+        grailsApplication.initialise()
+        def holder = new GrailsControllerUrlMappings(grailsApplication, getUrlMappingsHolder {
+            "/foo/bar"(controller: "foo", action: "bar")
+        })
+        new UrlMappingsHandlerMapping(holder)
     }
 
     void cleanup() {

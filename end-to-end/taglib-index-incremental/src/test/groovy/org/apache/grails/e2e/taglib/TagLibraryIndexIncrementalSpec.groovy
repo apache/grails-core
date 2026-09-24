@@ -199,12 +199,13 @@ class TagLibraryIndexIncrementalSpec extends Specification {
 
     private void writeSettings() {
         String repo = System.getProperty('grails.e2e.localMavenRepo')
+        String pluginRepositories = System.getProperty('grails.e2e.pluginRepositories')
         new File(projectDir, 'settings.gradle').text = """
             pluginManagement {
+                apply from: file('${pluginRepositories.replace('\\\\', '/')}')
                 repositories {
                     maven { url = uri('${repo.replace('\\\\', '/')}') }
-                    gradlePluginPortal()
-                    mavenCentral()
+                    configurePluginRepositories(delegate)
                 }
             }
             dependencyResolutionManagement {

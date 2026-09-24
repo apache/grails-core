@@ -183,12 +183,17 @@ Also keep `gradlew.bat` LF line endings on this line (PR #15709). Comment at top
 | `org.gradle.daemon` | `true` |
 | `org.gradle.configuration-cache` | **`false`** until #15497 resolved - do not enable casually |
 | `org.gradle.configureondemand` | **commented off** - Gradle issue #9489 |
-| `org.gradle.jvmargs` | `-Xmx5G` (raise only with reason; groovydoc is hungry) |
+| `org.gradle.jvmargs` | `-Xmx3G` (daemon only; groovydoc and the guide run in their own JVMs) |
 | `javaVersion` | `21` (CompilePlugin reads this for `--release`) |
 | `projectVersion` | framework version |
 | `slf4jPreventExclusion` | `true` - Grails Gradle plugin POM behavior |
 
 CI vs local behavior is branched on `System.getenv('CI')` and `SOURCE_DATE_EPOCH` (reproducible builds disable remote cache).
+
+`groovydocMaxHeapSize` and `guideMaxHeapSize` are **not** keys in `gradle.properties` - do not add
+them. Each documentation JVM carries its own default (1g per groovydoc task, raised to 3g/2g by the
+two aggregates; 1500m for the guide), and these exist only as `-P` overrides that beat the build
+script when a documentation run will not fit.
 
 ---
 
@@ -288,7 +293,7 @@ For POM property generation, **map key must be the dependency name prefix**:
 
 ```groovy
 bomDependencyVersions = [
-    'groovy.version': '5.0.7',
+    'groovy.version': '5.1.3',
 ]
 bomDependencies = [
     'groovy': "org.apache.groovy:groovy:${bomDependencyVersions['groovy.version']}",
@@ -554,8 +559,8 @@ DO_NOT_CACHE_TESTS=1 ./gradlew :module:test
 ./gradlew :module:test -PmaxTestParallel=1
 ./gradlew :module:test -PtestBisect
 
-# Memory
-export GRADLE_OPTS='-Xms2G -Xmx5G'
+# Memory - org.gradle.jvmargs sizes the daemon, so a bare -Xmx here is ignored
+export GRADLE_OPTS='-Dorg.gradle.jvmargs=-Xmx4G'
 ```
 
 Work in `grails-gradle` or `grails-forge` only with **that** directory's `./gradlew`.

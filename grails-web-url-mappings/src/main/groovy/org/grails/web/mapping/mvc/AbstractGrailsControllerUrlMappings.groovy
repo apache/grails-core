@@ -216,7 +216,11 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
                 matches.add(info)
                 continue
             }
-            if (webRequest != null) {
+            // Names captured from the URI resolve from the match itself, so the candidate can be
+            // identified without touching the request. Only a mapping that computes a name from
+            // request state needs its parameters built first, and only that mapping pays for it -
+            // the winner's parameters are built once, by UrlMappingsHandlerMapping.
+            if (webRequest != null && info.isNameResolutionRequestDependent()) {
                 webRequest.resetParams()
                 info.configure(webRequest)
             }

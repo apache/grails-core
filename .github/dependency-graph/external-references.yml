@@ -38,7 +38,6 @@ references:
   - purl: pkg:maven/org.apache.grails/grails-interceptors
   - purl: pkg:maven/org.apache.grails/grails-layout
   - purl: pkg:maven/org.apache.grails/grails-logging
-  - purl: pkg:maven/org.apache.grails/grails-micronaut
   - purl: pkg:maven/org.apache.grails/grails-mimetypes
   - purl: pkg:maven/org.apache.grails/grails-profiles-base
   - purl: pkg:maven/org.apache.grails/grails-profiles-plugin

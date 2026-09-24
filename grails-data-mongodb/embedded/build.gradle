@@ -78,7 +78,7 @@ dependencies {
     testImplementation 'org.spockframework:spock-core'
     testImplementation 'org.mongodb:mongodb-driver-sync' // proves each backend answers a real driver
 
-    testRuntimeOnly 'org.slf4j:slf4j-nop'
+    testRuntimeOnly 'org.slf4j:slf4j-simple' // includes initializer diagnostics in the child JVM's log
 }
 
 apply {

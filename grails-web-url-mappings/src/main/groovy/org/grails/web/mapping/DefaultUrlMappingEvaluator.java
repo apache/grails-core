@@ -69,6 +69,7 @@ import org.grails.datastore.gorm.validation.constraints.eval.DefaultConstraintEv
 import org.grails.datastore.gorm.validation.constraints.registry.ConstraintRegistry;
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstraintRegistry;
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext;
+import org.grails.web.util.HiddenHttpMethod;
 
 import static grails.web.mapping.UrlMapping.ACTION;
 import static grails.web.mapping.UrlMapping.CONTROLLER;
@@ -140,6 +141,21 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
 
     private final ConstraintRegistry constraintRegistry;
     private final ConstraintsEvaluator constraintsEvaluator;
+
+    /**
+     * Whether a "resources" mapping should also route a POST to the member URL at the update action.
+     *
+     * RestfulController has permitted POST for update since #9926 — raised because AngularJS $resource, and
+     * the clients modelled on it, POST to the member URL to save an existing object rather than sending a
+     * PUT — but no mapping was ever generated for it, leaving that permission unreachable.
+     *
+     * Generated only while the hidden HTTP method filter is disabled. In that mode the filter chain already
+     * sees a form's PUT as a bare POST to this URL, so the route adds no request shape security had been
+     * able to distinguish; it does add a member URL that answers POST, which the upgrade notes call out.
+     */
+    private boolean isPostUpdateVariantEnabled() {
+        return grailsApplication != null && !HiddenHttpMethod.isServletFilterMode(grailsApplication.getConfig());
+    }
 
     public DefaultUrlMappingEvaluator(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
@@ -975,6 +991,11 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
                 // PUT /$controller/$id -> action:'update'
                 var updateUrlMapping = createUpdateActionResourcesRestfulMapping(controllerName, pluginName, namespace, version, urlData, constrainedList);
                 configureUrlMapping(updateUrlMapping);
+                if (isPostUpdateVariantEnabled()) {
+                    // POST /$controller/$id -> action:'update'
+                    var updatePostUrlMapping = createUpdatePostActionResourcesRestfulMapping(controllerName, pluginName, namespace, version, urlData, constrainedList);
+                    configureUrlMapping(updatePostUrlMapping);
+                }
             }
             if (includes.contains(ACTION_PATCH)) {
                 // PATCH /$controller/$id -> action:'patch'
@@ -992,6 +1013,16 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
             var deleteUrlMappingData = createRelativeUrlDataWithIdAndFormat(urlData);
             var deleteUrlMappingConstraints = createConstraintsWithIdAndFormat(constrainedList);
             return new RegexUrlMapping(deleteUrlMappingData, controllerName, ACTION_DELETE, namespace, pluginName, null, HttpMethod.DELETE.toString(), version, deleteUrlMappingConstraints.toArray(new ConstrainedProperty[0]), grailsApplication);
+        }
+
+        // Shares the update route's URL, so only the request method differs and no new URL is introduced.
+        // Deliberately not generated for a singular "resource" mapping: that has no id segment and POST
+        // /$controller is already the save route, and a client POSTing to save an existing object always has
+        // an id to put in the URL.
+        protected UrlMapping createUpdatePostActionResourcesRestfulMapping(String controllerName, Object pluginName, Object namespace, String version, UrlMappingData urlData, List<ConstrainedProperty> constrainedList) {
+            var updateUrlMappingData = createRelativeUrlDataWithIdAndFormat(urlData);
+            var updateUrlMappingConstraints = createConstraintsWithIdAndFormat(constrainedList);
+            return new RegexUrlMapping(updateUrlMappingData, controllerName, ACTION_UPDATE, namespace, pluginName, null, HttpMethod.POST.toString(), version, updateUrlMappingConstraints.toArray(new ConstrainedProperty[0]), grailsApplication);
         }
 
         protected UrlMapping createUpdateActionResourcesRestfulMapping(String controllerName, Object pluginName, Object namespace, String version, UrlMappingData urlData, List<ConstrainedProperty> constrainedList) {

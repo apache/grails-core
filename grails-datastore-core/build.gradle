@@ -93,9 +93,9 @@ dependencies {
     testImplementation 'org.spockframework:spock-core'
     testImplementation 'net.bytebuddy:byte-buddy'
     testImplementation 'org.objenesis:objenesis'
+    testImplementation 'ch.qos.logback:logback-classic' // DatastoreTransactionManagerSpec captures the read-only commit warning
 
     testRuntimeOnly 'org.apache.groovy:groovy-test-junit5'
-    testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during tests
 }
 
 apply {

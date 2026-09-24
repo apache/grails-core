@@ -262,7 +262,9 @@ class SpecPersistenceListener extends AbstractPersistenceEventListener {
     PreLoadCount,
     PostLoadCount,
     SaveOrUpdateCount,
-    ValidationCount
+    ValidationCount,
+    MergeCount,
+    PersistCount
 
     @Override
     protected void onPersistenceEvent(AbstractPersistenceEvent event) {

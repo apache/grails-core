@@ -382,17 +382,18 @@ class TransactionalTransform extends AbstractDatastoreMethodDecoratingTransforma
         )
 
         // GrailsTransactionTemplate $transactionTemplate
-        //           = new GrailsTransactionTemplate($transactionManager, $transactionAttribute )
+        //           = new GrailsTransactionTemplate($transactionManager, $transactionAttribute[, connection])
+        // Given the connection, the template routes the calls made on its domain classes inside the method to it.
         final ClassNode transactionTemplateClassNode = make(GrailsTransactionTemplate)
         final VariableExpression transactionTemplateVar = varX('$transactionTemplate', transactionTemplateClassNode)
+        Expression transactionTemplateArgs = hasDataSourceProperty ?
+                args(transactionManagerVar, transactionAttributeVar, castX(make(String), connectionName)) :
+                args(transactionManagerVar, transactionAttributeVar)
 
         newMethodBody.addStatement(
             declS(
                 transactionTemplateVar,
-                ctorX(transactionTemplateClassNode, args(
-                    transactionManagerVar,
-                    transactionAttributeVar
-                ))
+                ctorX(transactionTemplateClassNode, transactionTemplateArgs)
             )
         )
 
@@ -482,6 +483,19 @@ class TransactionalTransform extends AbstractDatastoreMethodDecoratingTransforma
     @Override
     protected boolean hasLocalAnnotation(MethodNode amd, AnnotationNode classAnnotation) {
         return findAnnotation(amd, Transactional) != null || findAnnotation(amd, ReadOnly) != null || findAnnotation(amd, Rollback) != null
+    }
+
+    /**
+     * A method annotated with {@link NotTransactional} opts out of the transaction that a class-level
+     * {@link Transactional}, {@link ReadOnly} or {@link Rollback} annotation would otherwise weave
+     * around it, so it must not be decorated.
+     *
+     * @param md The method node
+     * @return True if the method should be left undecorated
+     */
+    @Override
+    protected boolean hasExcludedAnnotation(MethodNode md) {
+        return super.hasExcludedAnnotation(md) || findAnnotation(md, NotTransactional) != null
     }
 
     @Override

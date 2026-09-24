@@ -37,6 +37,7 @@ class UrlMappings {
 
         "500"(view: '/error')
         "404"(controller: 'errors', action: 'notFound')
+        "413"(controller: 'errors', action: 'tooLarge')
     }
 }
 

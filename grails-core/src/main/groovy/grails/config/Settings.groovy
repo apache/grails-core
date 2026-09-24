@@ -210,26 +210,6 @@ interface Settings {
     String CONTROLLERS_DEFAULT_SCOPE = 'grails.controllers.defaultScope'
 
     /**
-     * The upload directory for controllers, defaults to java.tmp.dir
-     */
-    String CONTROLLERS_UPLOAD_LOCATION = 'grails.controllers.upload.location'
-
-    /**
-     * The maximum file size
-     */
-    String CONTROLLERS_UPLOAD_MAX_FILE_SIZE = 'grails.controllers.upload.maxFileSize'
-
-    /**
-     * The maximum request size
-     */
-    String CONTROLLERS_UPLOAD_MAX_REQUEST_SIZE = 'grails.controllers.upload.maxRequestSize'
-
-    /**
-     * The file size threshold
-     */
-    String CONTROLLERS_UPLOAD_FILE_SIZE_THRESHOLD = 'grails.controllers.upload.fileSizeThreshold'
-
-    /**
      * The encoding to use for filters, default to UTF-8
      */
     String FILTER_ENCODING = 'grails.filter.encoding'
@@ -276,6 +256,18 @@ interface Settings {
      * Defaults to true
      */
     String WEB_REMOVE_WELCOME_PAGE_MAPPING = 'grails.web.removeWelcomePageMapping'
+
+    /**
+     * Whether to register Grails' hidden HTTP method filter, which rewrites a {@code POST} carrying a
+     * {@code _method} parameter or an {@code X-HTTP-Method-Override} header before the request reaches the
+     * dispatcher. Defaults to false as of Grails 8: the filter reads a request parameter ahead of the
+     * dispatcher, which forces the servlet container to parse a {@code multipart/form-data} body before the
+     * request has been routed or authenticated. Browser forms are unaffected -- the {@code _method}
+     * parameter is resolved inside the dispatcher instead. Set to true to restore the filter
+     *
+     * @since 8.0
+     */
+    String WEB_HIDDEN_METHOD_FILTER_ENABLED = 'grails.web.hiddenmethod.filter.enabled'
 
     /**
      * The URL of the server

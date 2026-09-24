@@ -56,4 +56,4 @@ jobs:
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "🔎 Validate Actions against the ASF approved list"
         run: ./gradlew validateActions
-        timeout-minutes: 5
+        timeout-minutes: 10

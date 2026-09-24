@@ -35,6 +35,10 @@ class UrlMappings {
         }
 
         "/"(view:"/index")
+@if(applicationType == ApplicationType.WEB) {
+        // Browsers request /favicon.ico for pages that declare no icon of their own
+        "/favicon.ico"(redirect: [uri: '/assets/favicon.ico', permanent: true])
+}
 }
 @if (applicationType == ApplicationType.REST_API) {
         delete "/$controller/$id(.$format)?"(action:"delete")

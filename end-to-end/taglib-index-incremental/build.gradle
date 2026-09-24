@@ -49,6 +49,9 @@ tasks.named('test', Test) {
     systemProperty 'grails.e2e.version', project.findProperty('projectVersion') ?: version
     systemProperty 'grails.e2e.gradlew',
             rootProject.layout.projectDirectory.file('../gradlew').asFile.absolutePath
+    // Use our repo configuration so staged, but not released artifacts are found
+    systemProperty 'grails.e2e.pluginRepositories',
+            rootProject.layout.projectDirectory.file('../gradle/plugin-repositories.gradle').asFile.absolutePath
     // Each case builds an application from scratch, so this is slow by nature. It belongs to a build
     // that is already opt-in and already requires a publish, so it is not gated further.
 }

@@ -23,6 +23,8 @@ import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -30,11 +32,15 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.springframework.context.ApplicationContext;
 import org.springframework.util.Assert;
@@ -44,6 +50,8 @@ import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.WebRequestInterceptor;
 import org.springframework.web.context.support.WebApplicationContextUtils;
+import org.springframework.web.multipart.MultipartException;
+import org.springframework.web.multipart.MultipartHttpServletRequest;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.View;
 import org.springframework.web.servlet.ViewResolver;
@@ -69,6 +77,8 @@ import org.grails.web.servlet.view.CompositeViewResolver;
  */
 public class WebUtils extends org.springframework.web.util.WebUtils {
 
+    private static final Logger LOG = LoggerFactory.getLogger(WebUtils.class);
+
     public static final char SLASH = '/';
     public static final String ENABLE_FILE_EXTENSIONS = "grails.mime.file.extensions";
     public static final String DISPATCH_ACTION_PARAMETER = "_action_";
@@ -81,6 +91,9 @@ public class WebUtils extends org.springframework.web.util.WebUtils {
     public static final String EXCEPTION_ATTRIBUTE = "exception";
     public static final String ASYNC_REQUEST_URI_ATTRIBUTE = "jakarta.servlet.async.request_uri";
     public static final String SITEMESH2_PAGE_ATTRIBUTE = "__sitemesh__page";
+
+    /** Published when a resolved multipart request cannot be reached by unwrapping. */
+    public static final String MULTIPART_HTTP_SERVLET_REQUEST_ATTRIBUTE = MultipartHttpServletRequest.class.getName();
 
     public static final int SC_METHOD_NOT_ALLOWED = HttpServletResponse.SC_METHOD_NOT_ALLOWED;
 
@@ -142,7 +155,7 @@ public class WebUtils extends org.springframework.web.util.WebUtils {
      * @param request The request
      */
     public static String getRequestURIForGrailsDispatchURI(HttpServletRequest request) {
-        UrlPathHelper pathHelper = new UrlPathHelper();
+        UrlPathHelper pathHelper = UrlPathHelper.defaultInstance;
         if (request.getRequestURI().endsWith(GRAILS_DISPATCH_EXTENSION)) {
             String path = pathHelper.getPathWithinApplication(request);
             if (path.startsWith(GRAILS_SERVLET_PATH)) {
@@ -550,6 +563,106 @@ public class WebUtils extends org.springframework.web.util.WebUtils {
      */
     public static boolean isForwardOrInclude(HttpServletRequest request) {
         return isForward(request) || isInclude(request);
+    }
+
+    /**
+     * Locate the resolved multipart request for the given request, if there is one. Normally found by
+     * unwrapping; when the {@code DispatcherServlet} resolved a request Grails had already bound, the
+     * wrapper sits above it instead, so {@link #MULTIPART_HTTP_SERVLET_REQUEST_ATTRIBUTE} is consulted too.
+     *
+     * @param request The request
+     * @return The resolved multipart request, or {@code null} when the request is not multipart
+     */
+    public static MultipartHttpServletRequest resolveMultipartRequest(HttpServletRequest request) {
+        MultipartHttpServletRequest resolved = getNativeRequest(request, MultipartHttpServletRequest.class);
+        if (resolved != null) {
+            return resolved;
+        }
+        Object attribute = request.getAttribute(MULTIPART_HTTP_SERVLET_REQUEST_ATTRIBUTE);
+        return attribute instanceof MultipartHttpServletRequest multipartRequest ? multipartRequest : null;
+    }
+
+    /**
+     * Check whether the given request declares a multipart content type.
+     *
+     * @param request The request
+     * @return True if the content type is {@code multipart/*}
+     */
+    public static boolean isMultipartContentType(HttpServletRequest request) {
+        String contentType = request.getContentType();
+        return contentType != null && contentType.toLowerCase(Locale.ROOT).startsWith("multipart/");
+    }
+
+    /**
+     * Read the servlet parameter map, tolerating a multipart request the container refuses to parse.
+     *
+     * @param request The request
+     * @return The parameter map, or an empty map when the parameters are unreadable
+     * @see #readTolerantly(HttpServletRequest, Supplier, Object)
+     */
+    public static Map<String, String[]> readParameterMap(HttpServletRequest request) {
+        return readTolerantly(request, request::getParameterMap, Collections.emptyMap());
+    }
+
+    /**
+     * Read a single servlet parameter, tolerating a multipart request the container refuses to parse.
+     *
+     * @param request The request
+     * @param name The parameter name
+     * @return The parameter value, or {@code null} when it is absent or unreadable
+     * @see #readTolerantly(HttpServletRequest, Supplier, Object)
+     */
+    public static String readParameter(HttpServletRequest request, String name) {
+        return readTolerantly(request, () -> request.getParameter(name), null);
+    }
+
+    /**
+     * Read the servlet parameter names, tolerating a multipart request the container refuses to parse.
+     *
+     * @param request The request
+     * @return The parameter names, or an empty enumeration when they are unreadable
+     * @see #readTolerantly(HttpServletRequest, Supplier, Object)
+     */
+    public static Enumeration<String> readParameterNames(HttpServletRequest request) {
+        return readTolerantly(request, request::getParameterNames, Collections.emptyEnumeration());
+    }
+
+    /**
+     * Perform a request parameter read that must not fail the request when the container cannot parse a
+     * multipart body.
+     * <p>
+     * A {@code multipart/form-data} request breaching the upload limits fails the container's part parsing,
+     * and every parameter read on it fails from then on. Grails reads parameters before, alongside and after
+     * the handler, so throwing from any of them would replace the failure the application should see with a
+     * secondary one raised where it cannot be handled. The read yields {@code fallback} instead; the request
+     * still cannot reach a controller, because {@code DispatcherServlet.checkMultipart} raises the multipart
+     * failure during dispatch. An unreadable parameter on a non-multipart request still propagates.
+     *
+     * @param request The request
+     * @param read The read to perform
+     * @param fallback The value to use when the parameters are unreadable
+     * @return The read value, or {@code fallback} when the parameters are unreadable
+     */
+    private static <T> T readTolerantly(HttpServletRequest request, Supplier<T> read, T fallback) {
+        try {
+            return read.get();
+        }
+        catch (RuntimeException e) {
+            if (!isMultipartContentType(request)) {
+                throw e;
+            }
+            // A rejected body is the expected case and is left to multipart resolution to report. Anything
+            // else on a multipart request is tolerated for the same reason - the read must not fail the
+            // request here - but is not expected, so it is logged where it will be seen rather than at debug.
+            if (e instanceof MultipartException) {
+                LOG.debug("Multipart request parameters could not be parsed; deferring to multipart resolution", e);
+            }
+            else {
+                LOG.warn("Reading parameters of a multipart request failed for an unexpected reason; " +
+                        "continuing without them. The request is expected to fail during multipart resolution.", e);
+            }
+            return fallback;
+        }
     }
 
 }

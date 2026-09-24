@@ -23,6 +23,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import org.grails.datastore.gorm.finders.DynamicFinder;
+import org.grails.datastore.mapping.reflect.NameUtils;
 import org.grails.orm.hibernate.cfg.HibernateMappingContext;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.SortConfig;
@@ -55,6 +57,7 @@ public class HqlListQueryBuilder {
             Map<String, Object> fetchMap = (Map<String, Object>) fetchObj;
             fetchMap.forEach((prop, type) -> {
                 if (HibernateQueryArgument.JOIN.value().equals(type) || HibernateQueryArgument.EAGER.value().equals(type)) {
+                    requireMappedProperty(prop, HibernateQueryArgument.FETCH.value());
                     hql.append(" join fetch e.").append(prop);
                 }
             });
@@ -75,11 +78,14 @@ public class HqlListQueryBuilder {
     private String buildSortClause() {
         Object sort = params.get(HibernateQueryArgument.SORT.value());
         Object order = params.get(HibernateQueryArgument.ORDER.value());
+        // checked before looking at the sort key, so an invalid direction is rejected even when
+        // there is nothing to sort by rather than being silently ignored
+        String orderDirection = DynamicFinder.normalizeDirection(order instanceof String ? (String) order : null);
         Object ignoreCase = params.get(HibernateQueryArgument.IGNORE_CASE.value());
         boolean isIgnoreCase = ignoreCase == null || (ignoreCase instanceof Boolean && (Boolean) ignoreCase);
 
         if (sort instanceof String) {
-            return buildSortPart((String) sort, order instanceof String ? (String) order : "asc", isIgnoreCase);
+            return buildSortPart((String) sort, orderDirection, isIgnoreCase);
         } else if (sort instanceof Map) {
             List<String> parts = new ArrayList<>();
             ((Map<String, String>) sort).forEach((prop, direction) -> {
@@ -111,13 +117,35 @@ public class HqlListQueryBuilder {
     }
 
     private String buildSortPart(String propertyName, String direction, boolean ignoreCase) {
-        if (propertyName == null) return "";
+        HibernatePersistentProperty prop = requireMappedProperty(propertyName, HibernateQueryArgument.SORT.value());
+        String normalizedDirection = DynamicFinder.normalizeDirection(direction);
         String path = "e." + propertyName;
-        HibernatePersistentProperty prop = entity.getHibernatePropertyByPath(propertyName);
-        if (prop != null && prop.getType() == String.class && ignoreCase) {
-            return "upper(" + path + ") " + (direction != null ? direction : "asc");
+        if (prop.getType() == String.class && ignoreCase) {
+            return "upper(" + path + ") " + normalizedDirection;
         }
-        return path + " " + (direction != null ? direction : "asc");
+        return path + " " + normalizedDirection;
+    }
+
+    /**
+     * Resolves a caller-supplied property path against the mapping before it is interpolated into
+     * HQL. Blank and malformed paths are rejected together with paths that do not resolve to a
+     * mapped property. The message deliberately omits the value, which usually originates from
+     * request parameters.
+     *
+     * @param propertyPath The property path taken from the query arguments
+     * @param argument The name of the query argument the path came from, for the error message
+     * @return The mapped property
+     * @throws IllegalArgumentException if the path is malformed or does not resolve
+     */
+    private HibernatePersistentProperty requireMappedProperty(String propertyPath, String argument) {
+        if (!NameUtils.isValidPropertyPath(propertyPath)) {
+            throw new IllegalArgumentException("Invalid " + argument + " property");
+        }
+        HibernatePersistentProperty prop = entity.getHibernatePropertyByPath(propertyPath);
+        if (prop == null) {
+            throw new IllegalArgumentException("Invalid " + argument + " property");
+        }
+        return prop;
     }
 
     public static boolean isPaged(Map<String, Object> params) {

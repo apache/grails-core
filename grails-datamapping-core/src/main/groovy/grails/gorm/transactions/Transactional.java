@@ -169,7 +169,10 @@ public @interface Transactional {
     Class<? extends ConnectionSourcesProvider>[] datastore() default {};
 
     /**
-     * The connection to use by default
+     * The connection to use by default. For a connection other than the default, the calls made in the method on
+     * the domain classes mapped to that connection, such as {@code Book.list()} or {@code book.save()}, use it too.
+     * A multi-tenant domain class is left to its tenant: a transaction opened for a connection does not say which
+     * tenant the operations in it belong to.
      */
     String connection() default ConnectionSource.DEFAULT;
 

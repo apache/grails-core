@@ -149,6 +149,7 @@ theWebLayer:
       contentBlocks: Content Blocks
     resources: Static Resources
     makingChangesToADeployedApplication: Making Changes to a Deployed Application
+    gspInSpringBoot: GSP in a Spring Boot Application
     taglibs:
       title: Tag Libraries
       taglibVariablesAndScopes: Variables and Scopes

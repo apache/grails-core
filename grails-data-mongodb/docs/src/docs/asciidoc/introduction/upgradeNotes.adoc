@@ -18,6 +18,41 @@ under the License.
 ////
 
 === Upgrade Notes
+==== String id Storage Now Defaults to ObjectId
+
+A domain that declares `String id` without its own `storedAs` mapping now persists `_id` as a BSON `ObjectId`. Before 8.0.0 the default was BSON `String`.
+
+Application code is unaffected: `person.id` is still the 24-char hex `String`, and `get`, `findAllByIdInList`, updates and deletes still accept hex strings. What changes is the BSON type written to and matched in the database.
+
+*This is a data-compatibility change.* An application upgrading from 7.x whose collections already hold String `_id` values has two options:
+
+. Keep the previous behavior by pinning the old default:
++
+[source,yaml]
+----
+grails:
+  mongodb:
+    stringIds:
+      defaultStoredAs: string
+----
++
+. Or migrate the stored `_id` values to `ObjectId`. Because `_id` is immutable, each document must be reinserted under the converted id rather than updated in place.
+
+Domains keyed by a natural string value (slug, email, UUID) should declare the opt-out explicitly, since such values are not valid ObjectId hex:
+
+[source,groovy]
+----
+class UserProfile {
+    String id   // e.g. "jsmith@example.com"
+
+    static mapping = {
+        id generator: 'assigned', storedAs: String
+    }
+}
+----
+
+See <<idGeneration,Identity Generation>> for the full description of `storedAs`.
+
 ==== Dependency Upgrades
 
 GORM 7.1 supports Apache Groovy 3, Java 14, MongoDB Driver 4.3 and Spring 5.3.x.
@@ -48,6 +83,36 @@ abstract class BookService {
 ```
 
 Please note that with autowire by-type as the default, when multiple beans for same type are found the application with throw Exception. Use the Spring `@Qualifier annotation for https://docs.spring.io/spring-framework/docs/5.3.10/reference/html/core.html#beans-autowired-annotation-qualifiers[Fine-tuning Annotation Based Autowiring with Qualifiers].
+
+==== Configuration Is Now Applied to an Externally-Supplied Client
+
+When GORM is handed a `MongoClient` that it did not create — which is what happens whenever a `MongoClient` bean is already present, as with Spring Boot's MongoDB auto-configuration — it built its settings from the defaults and applied only the database name. Everything else configured under `grails.gorm` and `grails.mongodb` was silently ignored on that path. Those settings are now applied, exactly as they always were when GORM creates the client itself.
+
+Nothing in your configuration changes. What changes is that configuration you already have starts taking effect:
+
+* `grails.gorm.failOnError` — an invalid `save()` now throws `ValidationException` instead of returning `null`. An application that has had this set for years while running without it will start throwing on the first invalid save.
+* `grails.gorm.default.mapping` and `grails.gorm.default.constraints` — now applied to every domain class.
+* `grails.gorm.autoFlush`, `grails.gorm.markDirty` and `grails.gorm.flushMode` — now honoured.
+* `grails.gorm.multiTenancy` / `grails.mongodb.multiTenancy` — tenant discrimination and routing now follow the configured mode instead of `NONE`, so review your tenant resolver and your existing data before upgrading.
+
+Multi-tenancy needs one extra step on this path. A `TenantResolver` registered as a Spring bean is injected into the connection source factory, and there is no factory involved when the client is supplied, so the bean is never consulted. Configure the resolver by class instead:
+
+[source,yaml]
+----
+grails:
+    gorm:
+        multiTenancy:
+            mode: DISCRIMINATOR
+            tenantResolverClass: com.example.MyTenantResolver
+----
+
+Without it the mode is active but the resolver is `NoTenantResolver`, which throws `TenantNotFoundException` on every tenant-scoped operation. Settings under `grails.mongodb` continue to take precedence over the `grails.gorm` equivalents.
+
+The connection details are the exception, since the supplied client is already connected: `grails.mongodb.url` is not applied to it. That also matters for a connection declared under `grails.mongodb.connections` without a `url` of its own, which falls back to the `host`, `port`, `username` and `password` settings — `127.0.0.1:27017` unless those are set — rather than to `grails.mongodb.url`. Give each such connection its own `url`.
+
+==== Calls on a Class Inside a Named Connection's Session or Transaction Use That Connection
+
+Inside `Book.moreBooks.withTransaction { }`, `Book.moreBooks.withNewSession { }`, a `withConnection` block or a method annotated `@Transactional(connection = 'moreBooks')` for a class that declares that connection, the calls on `Book` itself, such as `Book.list()` or `book.save()`, now use that connection. Previously they used the default connection, so a document saved there was written to the default database. Code that reached the default connection from inside such a block by calling the class directly should name it, as in ``Book.'default'.list()``.
 
 ==== MongoClient Lifecycle for an Externally-Supplied Client
 

@@ -70,7 +70,7 @@ Supported named options mirror the `JsonSlurper` settings exposed by `JsonUtils.
 ### Custom XML Parsing
 
 Response XML parsing uses a secure default `XmlSlurper` configuration. It is namespace-aware, non-validating,
-allows inline `DOCTYPE` declarations, and disables external entity expansion plus external DTD loading.
+rejects `DOCTYPE` declarations, and disables external entity expansion plus external DTD loading.
 
 When a test needs different XML parsing behavior, override it fluently on the response wrapper:
 
@@ -205,4 +205,3 @@ def payload = XmlUtils.toXml(omitNullAttributes: true, spaceInEmptyElements: fal
 
 httpPost('/products', payload, 'application/xml')
 ```
-

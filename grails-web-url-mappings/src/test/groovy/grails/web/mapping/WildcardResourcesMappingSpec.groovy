@@ -38,7 +38,7 @@ class WildcardResourcesMappingSpec extends Specification {
         WebUtils.clearGrailsWebRequest()
     }
 
-    void "a wildcard resources mapping generates the eight resource mappings once"() {
+    void "a wildcard resources mapping generates the resource mappings once"() {
         given: 'a wildcard resources mapping'
         def holder = getUrlMappingsHolder {
             "/$controller"(resources: '*')
@@ -47,8 +47,8 @@ class WildcardResourcesMappingSpec extends Specification {
         when: 'the generated mappings are inspected'
         def mappings = holder.urlMappings
 
-        then: 'there are exactly eight, independent of how many controllers exist'
-        mappings.size() == 8
+        then: 'the same set whatever controllers exist, plus the POST member route the disabled filter adds'
+        mappings.size() == 9
 
         and: 'they carry the resource conventions'
         mappings.collect { [it.httpMethod, it.actionName, it.urlData.urlPattern] }.toSet() == [
@@ -58,6 +58,7 @@ class WildcardResourcesMappingSpec extends Specification {
                 ['GET', 'edit', '/(*)/(*)/edit'],
                 ['GET', 'show', '/(*)/(*)(.(*))?'],
                 ['PUT', 'update', '/(*)/(*)(.(*))?'],
+                ['POST', 'update', '/(*)/(*)(.(*))?'],
                 ['PATCH', 'patch', '/(*)/(*)(.(*))?'],
                 ['DELETE', 'delete', '/(*)/(*)(.(*))?']
         ].toSet()
@@ -81,7 +82,7 @@ class WildcardResourcesMappingSpec extends Specification {
         holder.matchAll('/books/1', 'PATCH')[0].actionName == 'patch'
         holder.matchAll('/books/1', 'DELETE')[0].actionName == 'delete'
 
-        and: 'a different controller uses the same eight mappings'
+        and: 'a different controller uses the same mappings'
         holder.matchAll('/authors/2', 'GET')[0].parameters.controller == 'authors'
         holder.matchAll('/authors/2', 'GET')[0].actionName == 'show'
     }
@@ -105,8 +106,8 @@ class WildcardResourcesMappingSpec extends Specification {
             "/$controller"(resources: '*', excludes: ['create', 'edit'])
         }
 
-        expect: 'only the six API mappings are generated'
-        holder.urlMappings.size() == 6
+        expect: 'only the API mappings are generated'
+        holder.urlMappings.size() == 7
         holder.urlMappings.every { it.actionName != 'create' && it.actionName != 'edit' }
     }
 
@@ -142,8 +143,8 @@ class WildcardResourcesMappingSpec extends Specification {
             }
         }
 
-        expect: 'the eight mappings are generated below the group prefix'
-        holder.urlMappings.size() == 8
+        expect: 'the mappings are generated below the group prefix'
+        holder.urlMappings.size() == 9
         holder.matchAll('/api/v1/books', 'GET')[0].actionName == 'index'
         holder.matchAll('/api/v1/books', 'GET')[0].parameters.controller == 'books'
         holder.matchAll('/api/v1/books/1', 'DELETE')[0].actionName == 'delete'
@@ -158,8 +159,8 @@ class WildcardResourcesMappingSpec extends Specification {
             "/$namespace/$controller"(resources: '*')
         }
 
-        expect: 'the eight mappings are still generated once'
-        holder.urlMappings.size() == 8
+        expect: 'they are still generated once'
+        holder.urlMappings.size() == 9
 
         and: 'the namespace and controller are both bound from the URL'
         holder.matchAll('/v1/books', 'GET')[0].actionName == 'index'
@@ -177,7 +178,7 @@ class WildcardResourcesMappingSpec extends Specification {
         holder.matchAll('/v1/books/create', 'GET')[0].actionName == 'create'
         holder.matchAll('/v1/books/1/edit', 'GET')[0].actionName == 'edit'
 
-        and: 'a different namespace uses the same eight mappings'
+        and: 'a different namespace uses the same mappings'
         holder.matchAll('/v2/authors/2', 'DELETE')[0].actionName == 'delete'
         holder.matchAll('/v2/authors/2', 'DELETE')[0].parameters.namespace == 'v2'
     }
@@ -189,7 +190,7 @@ class WildcardResourcesMappingSpec extends Specification {
         }
 
         expect: 'it still binds the controller by name'
-        holder.urlMappings.size() == 8
+        holder.urlMappings.size() == 9
         holder.matchAll('/books/1', 'GET')[0].controllerName == 'book'
     }
 

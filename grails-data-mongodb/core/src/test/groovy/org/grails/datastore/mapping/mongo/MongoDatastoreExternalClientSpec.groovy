@@ -23,6 +23,7 @@ import com.mongodb.client.MongoClient
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.connections.DefaultConnectionSource
 import org.grails.datastore.mapping.mongo.config.MongoMappingContext
+import org.grails.datastore.mapping.mongo.connections.MongoConnectionSource
 import spock.lang.Specification
 
 class MongoDatastoreExternalClientSpec extends Specification {
@@ -39,6 +40,9 @@ class MongoDatastoreExternalClientSpec extends Specification {
         defaultConnectionSource instanceof DefaultConnectionSource
         defaultConnectionSource.source.is(mongoClient)
         !((DefaultConnectionSource) defaultConnectionSource).closeable
+
+        and: 'so it is not one GORM would replace after a restore'
+        !(defaultConnectionSource instanceof MongoConnectionSource)
 
         when: 'the datastore is closed'
         datastore.close()
@@ -59,6 +63,9 @@ class MongoDatastoreExternalClientSpec extends Specification {
 
         then: 'GORM owns the client it created and will close it on shutdown'
         ((DefaultConnectionSource) defaultConnectionSource).closeable
+
+        and: 'replaces it after a checkpoint and restore'
+        defaultConnectionSource instanceof MongoConnectionSource
 
         cleanup:
         datastore?.close()

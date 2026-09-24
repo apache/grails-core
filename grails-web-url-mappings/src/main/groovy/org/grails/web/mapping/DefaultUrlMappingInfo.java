@@ -19,22 +19,16 @@
 package org.grails.web.mapping;
 
 import java.util.Collections;
-import java.util.Enumeration;
 import java.util.Map;
 
 import groovy.lang.Closure;
 
-import jakarta.servlet.http.HttpServletRequest;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.springframework.context.ApplicationContext;
 import org.springframework.util.Assert;
 import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.multipart.MultipartHttpServletRequest;
-import org.springframework.web.multipart.MultipartResolver;
-import org.springframework.web.servlet.DispatcherServlet;
 
 import grails.core.GrailsApplication;
 import grails.web.CamelCaseUrlConverter;
@@ -53,8 +47,7 @@ import org.grails.web.servlet.mvc.GrailsWebRequest;
  */
 public class DefaultUrlMappingInfo extends AbstractUrlMappingInfo {
 
-    private static final Log LOG = LogFactory.getLog(DefaultUrlMappingInfo.class);
-    private static final String SETTING_GRAILS_WEB_DISABLE_MULTIPART = "grails.web.disable.multipart";
+    private static final Logger LOG = LoggerFactory.getLogger(DefaultUrlMappingInfo.class);
     private static final String CONTROLLER_PREFIX = "controller:";
     private static final String ACTION_PREFIX = "action:";
     private static final String PLUGIN_PREFIX = "plugin:";
@@ -212,51 +205,31 @@ public class DefaultUrlMappingInfo extends AbstractUrlMappingInfo {
                 namespace instanceof Closure;
     }
 
+    @Override
+    public boolean isNameResolutionRequestDependent() {
+        return isRequestDependent(controllerName) || isRequestDependent(actionName) ||
+                isRequestDependent(namespace) || isRequestDependent(viewName);
+    }
+
+    /**
+     * A name captured from the URI is held by this instance, so resolving it needs nothing from the
+     * request. A name computed by a closure the mapping supplied reads whatever that closure reaches
+     * for, which is typically the parameters of the current request. A name selected by HTTP method
+     * reads the method from the request directly, which configuring it does not affect.
+     *
+     * @param name The controller, action, namespace or view name held by this instance
+     * @return true if resolving the name needs the request to have been configured
+     */
+    private static boolean isRequestDependent(Object name) {
+        return name instanceof Closure && !(name instanceof RuntimeConstraintEvaluator);
+    }
+
     public String getViewName() {
         return evaluateNameForValue(viewName);
     }
 
     public String getId() {
         return evaluateNameForValue(id);
-    }
-
-    private Enumeration<String> tryMultipartParams(HttpServletRequest request, Enumeration<String> originalParams) {
-        Enumeration<String> paramNames = originalParams;
-        boolean disabled = isMultipartDisabled();
-        if (!disabled) {
-            MultipartResolver resolver = getMultipartResolver();
-            if (resolver != null && resolver.isMultipart(request)) {
-                MultipartHttpServletRequest resolvedMultipartRequest = getResolvedRequest(request, resolver);
-                paramNames = resolvedMultipartRequest.getParameterNames();
-            }
-        }
-        return paramNames;
-    }
-
-    private MultipartHttpServletRequest getResolvedRequest(HttpServletRequest request, MultipartResolver resolver) {
-        MultipartHttpServletRequest resolvedMultipartRequest = (MultipartHttpServletRequest) request.getAttribute(MultipartHttpServletRequest.class.getName());
-        if (resolvedMultipartRequest == null) {
-            resolvedMultipartRequest = resolver.resolveMultipart(request);
-            request.setAttribute(MultipartHttpServletRequest.class.getName(), resolvedMultipartRequest);
-        }
-        return resolvedMultipartRequest;
-    }
-
-    private boolean isMultipartDisabled() {
-        if (grailsApplication != null) {
-            return grailsApplication.getConfig().getProperty(SETTING_GRAILS_WEB_DISABLE_MULTIPART, Boolean.class, false);
-        }
-        return false;
-    }
-
-    private MultipartResolver getMultipartResolver() {
-        if (grailsApplication != null) {
-            ApplicationContext ctx = grailsApplication.getMainContext();
-            if (ctx != null) {
-                return (MultipartResolver) ctx.getBean(DispatcherServlet.MULTIPART_RESOLVER_BEAN_NAME);
-            }
-        }
-        return null;
     }
 
     public String getURI() {

@@ -54,7 +54,7 @@ public class WebRequestTemplateVariableBinding extends AbstractTemplateVariableB
         });
         m.put("request", new LazyRequestBasedValue() {
             public Object evaluate(GrailsWebRequest webRequest) {
-                return webRequest.getCurrentRequest();
+                return webRequest.getRequest();
             }
         });
         m.put("response", new LazyRequestBasedValue() {
@@ -123,7 +123,7 @@ public class WebRequestTemplateVariableBinding extends AbstractTemplateVariableB
     public Binding findBindingForVariable(String name) {
         Binding binding = super.findBindingForVariable(name);
         if (binding == null) {
-            if (webRequest.getCurrentRequest().getAttribute(name) != null) {
+            if (webRequest.getRequest().getAttribute(name) != null) {
                 requestAttributeVariables.add(name);
                 binding = this;
             }
@@ -146,7 +146,7 @@ public class WebRequestTemplateVariableBinding extends AbstractTemplateVariableB
     public Object getVariable(String name) {
         Object val = getVariablesMap().get(name);
         if (val == null && !getVariablesMap().containsKey(name) && webRequest != null) {
-            val = webRequest.getCurrentRequest().getAttribute(name);
+            val = webRequest.getRequest().getAttribute(name);
             if (val != null) {
                 requestAttributeVariables.add(name);
             } else {
