@@ -121,7 +121,7 @@ include(
 
 // legacy-g7-command-plugin is deliberately NOT included here. It compiles against published
 // Grails 7 / Groovy 4 artifacts, and an included build would substitute
-// org.apache.grails:grails-core for this repo's Groovy 5 project - which is exactly the
+// org.apache.grails:grails-core for this repo's Groovy 6 project - which is exactly the
 // substitution the fixture exists to avoid. It stays a standalone build, run under its own JDK
 // (legacy-g7-command-plugin/.sdkmanrc), and legacy-commands consumes the jar it produces.
 

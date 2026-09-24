@@ -229,12 +229,30 @@ class GormEntityTransformSpec extends Specification{
 
         expect: 'all GormEntity methods are marked as Generated on implementation class'
         GormEntity.methods.each { Method traitMethod ->
-            assert Book.getMethod(traitMethod.name, traitMethod.parameterTypes).isAnnotationPresent(Generated)
+            assert findGeneratedMethod(Book, traitMethod).isAnnotationPresent(Generated)
         }
 
         and: 'all GormValidateable methods are marked as Generated on implementation class'
         GormValidateable.methods.each { Method traitMethod ->
-            assert Book.getMethod(traitMethod.name, traitMethod.parameterTypes).isAnnotationPresent(Generated)
+            assert findGeneratedMethod(Book, traitMethod).isAnnotationPresent(Generated)
+        }
+    }
+
+    // Groovy 6 (#16157) specializes a generic trait method's type-variable parameters to the
+    // implementing class, so Book.merge(Object) from GormEntity<D> is Book.merge(Book). Look the
+    // specialized signature up when the erased one is missing. Remove if Groovy restores the erased
+    // signature. Test only.
+    private static Method findGeneratedMethod(Class targetClass, Method traitMethod) {
+        try {
+            return targetClass.getMethod(traitMethod.name, traitMethod.parameterTypes)
+        } catch (NoSuchMethodException e) {
+            Class[] specializedParameterTypes = traitMethod.genericParameterTypes.withIndex().collect { type, index ->
+                type instanceof java.lang.reflect.TypeVariable ? targetClass : traitMethod.parameterTypes[index]
+            } as Class[]
+            if (specializedParameterTypes.toList() != traitMethod.parameterTypes.toList()) {
+                return targetClass.getMethod(traitMethod.name, specializedParameterTypes)
+            }
+            throw e
         }
     }
 

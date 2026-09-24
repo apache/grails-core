@@ -99,6 +99,7 @@ import javax.inject.Inject
 @CompileStatic
 class GrailsGradlePlugin implements Plugin<Project> {
 
+    protected static final String SPOCK_DISABLE_GROOVY_VERSION_CHECK = 'spock.iKnowWhatImDoing.disableGroovyVersionCheck'
     private static final String NATIVE_IMAGE_PLUGIN = 'org.graalvm.buildtools.native'
 
     /** The plugin that compiles the pages, which are half of what a native image has to be told about. */
@@ -279,6 +280,13 @@ class GrailsGradlePlugin implements Plugin<Project> {
 
             project.tasks.withType(GroovyCompile).configureEach { GroovyCompile c ->
                 c.groovyOptions.optimizationOptions.indy = indyEnabled
+                // Groovy 6 with Spock 2.4-groovy-5.0 (#16157): Spock's global AST transform checks
+                // the Groovy major version inside the forked compiler too. Same property the Test
+                // tasks get, for the same reason; remove with it. App test build.
+                List<String> forkJvmArgs = c.groovyOptions.forkOptions.jvmArgs ?: []
+                if (!forkJvmArgs.any { String arg -> arg.startsWith("-D${SPOCK_DISABLE_GROOVY_VERSION_CHECK}=") }) {
+                    c.groovyOptions.forkOptions.jvmArgs = forkJvmArgs + ["-D${SPOCK_DISABLE_GROOVY_VERSION_CHECK}=true".toString()]
+                }
 
                 if (preserveParameterNames != null) {
                     project.logger.info('Grails: Configuring Groovy compilation to preserve parameter names: {}', preserveParameterNames)
@@ -1052,6 +1060,15 @@ ${importStatements}
 
         String grailsEnvSystemProperty = System.getProperty(Environment.KEY)
         tasks.withType(Test).configureEach(systemPropertyConfigurer.curry(grailsEnvSystemProperty ?: Environment.TEST.getName()))
+        tasks.withType(Test).configureEach { Test task ->
+            // Groovy 6 with Spock 2.4-groovy-5.0 (#16157): Spock refuses to start on Groovy 6 with
+            // IncompatibleGroovyVersionException unless its major-version check is switched off. An
+            // application that sets the property itself keeps its own value. Remove when the Grails
+            // BOM moves to a Spock build for Groovy 6. App test build.
+            if (!task.systemProperties.containsKey(SPOCK_DISABLE_GROOVY_VERSION_CHECK)) {
+                task.systemProperty(SPOCK_DISABLE_GROOVY_VERSION_CHECK, 'true')
+            }
+        }
         tasks.withType(JavaExec).configureEach(systemPropertyConfigurer.curry(grailsEnvSystemProperty ?: Environment.DEVELOPMENT.getName()))
 
         configureToolchainForForkTasks(project)

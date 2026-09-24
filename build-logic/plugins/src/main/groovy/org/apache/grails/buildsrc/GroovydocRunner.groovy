@@ -83,6 +83,10 @@ abstract class GroovydocRunner {
             spec.classpath = classpath
             spec.mainClass.set('groovy.ui.GroovyMain')
             spec.args = [scriptFile.absolutePath, paramsFile.absolutePath]
+            // Groovy 6 with Spock 2.4-groovy-5.0 (#16157): the documentation classpath can carry
+            // spock-core, whose global AST transform refuses to load on Groovy 6 without this.
+            // Remove when the BOM moves to a Spock build for Groovy 6. Framework only.
+            spec.systemProperty('spock.iKnowWhatImDoing.disableGroovyVersionCheck', 'true')
             spec.maxHeapSize = maxHeapSize
         }
     }

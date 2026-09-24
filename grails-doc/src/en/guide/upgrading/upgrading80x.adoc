@@ -1395,7 +1395,8 @@ grails.gorm.default.constraints = {
 [[groovy5-behavior-changes]]
 ==== 28. Apache Groovy 5 Behavior Changes
 
-Grails 8 upgrades from Apache Groovy 4 to Apache Groovy 5.
+Grails 8 upgrades from Apache Groovy 4 to Apache Groovy 6, so the Groovy 5 changes below apply on the way.
+See <<groovy6,Apache Groovy 6>> for what the move to Groovy 6 adds.
 Most applications need no changes, but a few stricter behaviors can affect application code.
 
 ===== 28.1 Assigning a static field from a static closure requires the class name
@@ -4093,3 +4094,60 @@ them. Name the connection, as in `@Transactional(connection = 'secondary')`, whe
 has to cover its writes.
 
 Applications using a single datasource are unaffected.
+
+[[groovy6]]
+==== 73. Apache Groovy 6
+
+Grails 8 builds on Apache Groovy 6.0. The Groovy 5 changes in <<groovy5-behavior-changes,Apache Groovy 5 Behavior Changes>>
+still apply; https://groovy-lang.org/releasenotes/groovy-6.0.html[the Groovy 6 release notes] list what changed since.
+Groovy 6 needs JDK 17 or later, which Grails 8's JDK 21 baseline already satisfies. Three of its changes touch a
+Grails build:
+
+* **The classic call-site runtime is a separate module.** Groovy 6 moves the non-`invokedynamic` call-site classes out
+  of `groovy` into `org.apache.groovy:groovy-callsite`, and a class compiled with `invokedynamic` off fails with
+  `NoClassDefFoundError: org/codehaus/groovy/runtime/callsite/CallSiteArray` without it, and the Groovy 6 compiler
+  refuses to generate such bytecode unless the module is on the compile classpath. Grails compiles applications that
+  way by default, and `grails-common`, which every application has through `grails-core`, exports the module, so it is
+  on the compile and runtime classpath already. Nothing needs adding, and a plugin or library compiled that way against
+  Groovy 4 or 5 keeps working. Groovy code compiled with `invokedynamic` off outside a Grails module, such as a plain
+  Groovy library in the same build, declares `org.apache.groovy:groovy-callsite` itself.
+* **Spock has no Groovy 6 build yet.** The Grails BOM keeps Spock `2.4-groovy-5.0`, which runs on Groovy 6 once its
+  Groovy major-version check is switched off. The Grails Gradle plugin sets
+  `spock.iKnowWhatImDoing.disableGroovyVersionCheck=true` on every `Test` task it configures; a task that already
+  sets the property keeps its own value. A `Test` task outside a Grails module, for example in a plain Groovy
+  library of a multi-project build that uses the Grails BOM, sets it itself:
+
+[source,groovy]
+----
+tasks.withType(Test).configureEach {
+    systemProperty 'spock.iKnowWhatImDoing.disableGroovyVersionCheck', 'true'
+}
+----
+
+* **JLine 4.** Groovy 6 ships `groovysh` on JLine 4.4.x, and the Grails BOM manages `org.jline:jline` at that version
+  for the Grails CLI and the console. An application that uses the JLine 3 API in its own code should check the
+  https://github.com/jline/jline3/releases[JLine 4 release notes] before upgrading.
+
+Four stricter compiler behaviours in Groovy 6.0.0 came up while moving Grails itself; application code with the same
+shape needs the same one-line change:
+
+* A parameterized type is no longer a class literal: write `config.getProperty(name, List, [])` rather than
+  `config.getProperty(name, List<String>, [])`, and `Mock(Foo)` rather than `Mock(Foo<Bar>)`.
+* `!x instanceof T` is rejected. It always parsed as `(!x) instanceof T`, which is never true, so the intended
+  `!(x instanceof T)` may change behaviour where the old form silently did nothing.
+* `@TupleConstructor` (also through `@Canonical`) with `includes` no longer generates a `LinkedHashMap` constructor
+  just because the first declared property is an untyped or `Object` property left out of `includes`. Groovy 6
+  looks at the included properties only. Under `@CompileStatic` or `@GrailsCompileStatic`, `new Foo(map)` on such a
+  class then fails with `Target constructor for constructor call expression hasn't been set`. Add
+  `@groovy.transform.MapConstructor` to the class.
+* A Java source that refers to a Groovy class implementing a trait with static methods that comes precompiled from a
+  jar or another module, such as `Validateable` or a GORM entity, cannot be joint-compiled: the generated stub
+  declares those methods `static abstract` and javac rejects it
+  (https://issues.apache.org/jira/browse/GROOVY-12427[GROOVY-12427]). Until it is fixed, implement the static methods
+  on the Groovy class explicitly (delegating to `Validateable$Trait$Helper`, for instance), or move the Java source
+  out of the joint compilation.
+* `@Delegate` of a Groovy interface whose methods return a nested class of a Java source in the same joint
+  compilation generates no methods for them, and other classes in that compilation that implement the interface
+  directly then fail with `Can't have an abstract method in a non-abstract class`
+  (https://issues.apache.org/jira/browse/GROOVY-12426[GROOVY-12426]). Until it is fixed,
+  implement the interface and write the forwarding methods explicitly instead of using `@Delegate`.

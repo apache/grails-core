@@ -34,6 +34,7 @@ import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.compile.GroovyCompile
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.javadoc.Javadoc
+import org.gradle.api.tasks.testing.Test
 import org.gradle.external.javadoc.StandardJavadocDocletOptions
 
 import static org.apache.grails.buildsrc.GradleUtils.lookupProperty
@@ -118,11 +119,13 @@ class CompilePlugin implements Plugin<Project> {
                 if (!it.options.compilerArgs.contains('-parameters')) {
                     it.options.compilerArgs.add('-parameters')
                 }
-                // Grails 8 keeps invokedynamic off for published artifacts. Groovy 5's
-                // compiler default is indy=true, which is a large runtime regression for
-                // dynamic Groovy (see #15293). Unpublished build-logic uses Gradle's
-                // default. Grails 9 / Groovy 6 can flip this. CI can still opt in with
-                // -PgrailsIndy=true (same property as grails-extension-gradle-config.gradle).
+                // Grails 8 keeps invokedynamic off for published artifacts. The Groovy
+                // compiler default is indy=true, which was a large runtime regression for
+                // dynamic Groovy on Groovy 5 (see #15293). Unpublished build-logic uses
+                // Gradle's default. On Groovy 6 classes compiled this way need the
+                // groovy-callsite module at runtime, which grails-common carries. CI can
+                // still opt in with -PgrailsIndy=true (same property as
+                // grails-extension-gradle-config.gradle).
                 it.groovyOptions.optimizationOptions.put('indy', lookupProperty(project, 'grailsIndy', false))
                 // encoding needs to be the same since it's different across platforms
                 it.options.encoding = StandardCharsets.UTF_8.name()
@@ -130,6 +133,16 @@ class CompilePlugin implements Plugin<Project> {
                 // always set an isolated build to ensure grails.factories aren't accidentally merged since every project
                 // in this mono repo should be an isolated projected
                 it.options.forkOptions.jvmArgs = ['-Xms128M', '-Xmx2G', '-Dgrails.isolated.build=true']
+                // Groovy 6 with Spock 2.4-groovy-5.0 (#16157): Spock's global AST transform is on
+                // every compile classpath that carries spock-core and checks the Groovy major
+                // version inside the forked compiler, failing with IncompatibleGroovyVersionException.
+                // Remove when the BOM moves to a Spock build for Groovy 6. App test build: an
+                // application's build gets the same flag from the Grails Gradle plugin.
+                List<String> groovyForkJvmArgs = it.groovyOptions.forkOptions.jvmArgs ?: []
+                if (!groovyForkJvmArgs.any { String arg -> arg.startsWith('-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=') }) {
+                    it.groovyOptions.forkOptions.jvmArgs = groovyForkJvmArgs +
+                            ['-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true']
+                }
                 // Publish THIS project's base.dir to the forked Groovy compiler. Gradle reuses a forked
                 // compiler daemon for a task whose requested fork arguments the daemon already satisfies,
                 // so a compile that does NOT request base.dir can be handed a daemon started for another
@@ -149,6 +162,13 @@ class CompilePlugin implements Plugin<Project> {
                 // when both are present.
                 it.groovyOptions.configurationScript =
                         GradleUtils.findRootGrailsCoreDir(project).file('gradle/groovy-compile-configscript.groovy').asFile
+            }
+            project.tasks.withType(Test).configureEach {
+                // Groovy 6 with Spock 2.4-groovy-5.0 (#16157): the same check runs when a Spec
+                // starts, and again whenever a test compiles Groovy at runtime with spock-core on
+                // the classpath. A system property survives a later `jvmArgs = [...]` assignment.
+                // Remove with the compiler flag above.
+                it.systemProperty('spock.iKnowWhatImDoing.disableGroovyVersionCheck', 'true')
             }
             project.tasks.named('compileGroovy', GroovyCompile).configure { GroovyCompile task ->
                 // Resource-only changes do not ordinarily invalidate compilation. This file changes

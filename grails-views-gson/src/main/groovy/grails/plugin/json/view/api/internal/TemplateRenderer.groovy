@@ -19,8 +19,10 @@
 
 package grails.plugin.json.view.api.internal
 
+import groovy.json.StreamingJsonBuilder
 import groovy.transform.CompileStatic
 
+import grails.plugin.json.builder.JsonOutput
 import grails.plugin.json.view.api.GrailsJsonViewHelper
 import grails.util.GrailsNameUtils
 
@@ -31,12 +33,110 @@ import grails.util.GrailsNameUtils
  * @since 1.0
  */
 @CompileStatic
-class TemplateRenderer {
+class TemplateRenderer implements GrailsJsonViewHelper {
 
-    final @Delegate GrailsJsonViewHelper jsonViewHelper
+    // Groovy 6.0.0 (#16157, GROOVY-12426): @Delegate of GrailsJsonViewHelper generates no forwarders
+    // for the render(...) overloads, whose return type is a nested class of the joint-compiled
+    // JsonOutput.java, and once it has processed the interface, DefaultGrailsJsonViewHelper also fails
+    // the abstract-method check ("Can't have an abstract method in a non-abstract class"). The
+    // forwarders below are the ones @Delegate generated on Groovy 5. Return to `final @Delegate
+    // GrailsJsonViewHelper jsonViewHelper` when GROOVY-12426 is fixed. Framework only.
+    final GrailsJsonViewHelper jsonViewHelper
 
     TemplateRenderer(GrailsJsonViewHelper jsonViewHelper) {
         this.jsonViewHelper = jsonViewHelper
+    }
+
+    @Override
+    JsonOutput.JsonWritable render(Map arguments) {
+        jsonViewHelper.render(arguments)
+    }
+
+    @Override
+    JsonOutput.JsonWritable render(Object object, Map arguments,
+                                   @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer) {
+        jsonViewHelper.render(object, arguments, customizer)
+    }
+
+    @Override
+    JsonOutput.JsonWritable render(Object object, Map arguments) {
+        jsonViewHelper.render(object, arguments)
+    }
+
+    @Override
+    JsonOutput.JsonWritable render(Object object) {
+        jsonViewHelper.render(object)
+    }
+
+    @Override
+    JsonOutput.JsonWritable render(Object object, @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer) {
+        jsonViewHelper.render(object, customizer)
+    }
+
+    @Override
+    void inline(Object object, Map arguments, @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer,
+                StreamingJsonBuilder.StreamingJsonDelegate delegate) {
+        jsonViewHelper.inline(object, arguments, customizer, delegate)
+    }
+
+    @Override
+    void inline(Object object, Map arguments, @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer) {
+        jsonViewHelper.inline(object, arguments, customizer)
+    }
+
+    @Override
+    void inline(Object object, Map arguments) {
+        jsonViewHelper.inline(object, arguments)
+    }
+
+    @Override
+    void inline(Object object, @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer) {
+        jsonViewHelper.inline(object, customizer)
+    }
+
+    @Override
+    void inline(Object object) {
+        jsonViewHelper.inline(object)
+    }
+
+    @Override
+    String message(Map arguments) {
+        jsonViewHelper.message(arguments)
+    }
+
+    @Override
+    String resource(Map params) {
+        jsonViewHelper.resource(params)
+    }
+
+    @Override
+    String link(Map params) {
+        jsonViewHelper.link(params)
+    }
+
+    @Override
+    String link(Map params, String encoding) {
+        jsonViewHelper.link(params, encoding)
+    }
+
+    @Override
+    String getDefaultNamespace(String controller, String pluginName) {
+        jsonViewHelper.getDefaultNamespace(controller, pluginName)
+    }
+
+    @Override
+    String resolveNamespace(String controller, String pluginName, Map attrs) {
+        jsonViewHelper.resolveNamespace(controller, pluginName, attrs)
+    }
+
+    @Override
+    String getContextPath() {
+        jsonViewHelper.contextPath
+    }
+
+    @Override
+    String getServerBaseURL() {
+        jsonViewHelper.serverBaseURL
     }
 
     @Override

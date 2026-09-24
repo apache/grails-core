@@ -7,6 +7,17 @@ tasks.register('checkSysProps', JavaExec) {
     mainClass = 'does.not.Matter'
 }
 
+tasks.register('checkTestSysProps', Test) {
+    classpath = files()
+    testClassesDirs = files()
+}
+
+tasks.register('checkTestSysPropsOverridden', Test) {
+    classpath = files()
+    testClassesDirs = files()
+    systemProperty 'spock.iKnowWhatImDoing.disableGroovyVersionCheck', 'false'
+}
+
 tasks.register('inspectSysProps') {
     doLast {
         def task = tasks.named('checkSysProps', JavaExec).get()
@@ -14,5 +25,13 @@ tasks.register('inspectSysProps') {
         println "HAS_ENV=${sysProps.containsKey('grails.env')}"
         println "MIN_HEAP=${task.minHeapSize}"
         println "MAX_HEAP=${task.maxHeapSize}"
+        println "JAVAEXEC_SPOCK_CHECK=${sysProps.get('spock.iKnowWhatImDoing.disableGroovyVersionCheck')}"
+        def testTask = tasks.named('checkTestSysProps', Test).get()
+        println "TEST_HAS_ENV=${testTask.systemProperties.containsKey('grails.env')}"
+        println "TEST_SPOCK_CHECK=${testTask.systemProperties.get('spock.iKnowWhatImDoing.disableGroovyVersionCheck')}"
+        def overridden = tasks.named('checkTestSysPropsOverridden', Test).get()
+        println "TEST_SPOCK_CHECK_OVERRIDDEN=${overridden.systemProperties.get('spock.iKnowWhatImDoing.disableGroovyVersionCheck')}"
+        def compile = tasks.named('compileGroovy', GroovyCompile).get()
+        println "COMPILE_FORK_JVM_ARGS=${compile.groovyOptions.forkOptions.jvmArgs}"
     }
 }

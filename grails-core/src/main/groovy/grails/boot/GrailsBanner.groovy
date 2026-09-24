@@ -511,7 +511,8 @@ class GrailsBanner implements Banner {
 
     /** What an application wrote under the given property, or nothing where it wrote none. */
     private static List<String> readVersionOptions(Environment env, String propertyName) {
-        env.getProperty(propertyName, List<String>, [] as List<String>)
+        // Groovy 6.0.0 (GROOVY-12319, #16157): parameterized types are not class literals. Permanent. App source.
+        env.getProperty(propertyName, List, [] as List<String>) as List<String>
     }
 
     /**

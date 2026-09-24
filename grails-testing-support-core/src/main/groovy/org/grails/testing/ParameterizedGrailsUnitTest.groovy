@@ -49,7 +49,8 @@ trait ParameterizedGrailsUnitTest<T> extends GrailsUnitTest {
                 mockArtefact(cutType)
                 final String beanName = getBeanName(cutType)
                 if (beanName != null && applicationContext.containsBean(beanName)) {
-                    _artefactInstance = applicationContext.getBean(beanName, T)
+                    // Groovy 6.0.0 (GROOVY-12319, #16157): a type parameter is not a class literal. Permanent.
+                    _artefactInstance = applicationContext.getBean(beanName, cutType)
                 } else {
                     _artefactInstance = cutType.newInstance()
                     applicationContext.autowireCapableBeanFactory.autowireBeanProperties(_artefactInstance, AutowireCapableBeanFactory.AUTOWIRE_BY_NAME, false)

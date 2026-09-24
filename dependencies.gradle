@@ -35,7 +35,7 @@ ext {
             'javaparser-core.version'       : '3.28.2',
             // Tracks the JLine version Groovy ships (groovy-groovysh), so the framework and groovysh
             // share one terminal stack - keep in step with groovy.version.
-            'jline.version'                 : '3.30.16',
+            'jline.version'                 : '4.4.5',
             'jna.version'                   : '5.19.1',
             'jquery.version'                : '4.0.0',
             'maven-model.version'           : '3.9.16',
@@ -85,7 +85,7 @@ ext {
             // extended-scalars compatibility. See https://github.com/apache/grails-core/issues/15674
             'graphql-java.version'          : '25.0',
             'graphql-java-extended-scalars.version': '24.0',
-            'groovy.version'                : '5.1.3',
+            'groovy.version'                : '6.0.0',
             'guava.version'                 : '33.7.1-jre',
             // Groovy YAML 5.1.0 requires a minimum of Jackson 2.22.1, and 2.22.2 also overrides the
             // 2.21.5 Spring Boot 4.1 manages: it adds the StreamReadConstraints length limit to
@@ -124,6 +124,11 @@ ext {
             'rxjava2.version'               : '2.2.21',
             'sitemesh.version'              : '2.6.0',
             'scribejava.version'            : '8.3.3',
+            // Groovy 6 (#16157): Spock has no groovy-6.0 build. The groovy-5.0 build runs on Groovy 6
+            // once its Groovy major-version check is switched off with the
+            // spock.iKnowWhatImDoing.disableGroovyVersionCheck system property, which CompilePlugin sets
+            // on every compile and test JVM here and the Grails Gradle plugin sets for applications.
+            // Move to the Groovy 6 build and drop the property when Spock publishes one. App test build.
             'spock.version'                 : '2.4-groovy-5.0',
             'starter-sitemesh.version'      : '3.3.0-RC1',
             'spring-webmvc-sitemesh.version': '3.3.0-RC1',
@@ -160,6 +165,9 @@ ext {
             'groovy'                   : "org.apache.groovy:groovy:${bomDependencyVersions['groovy.version']}",
             'groovy-ant'               : "org.apache.groovy:groovy-ant:${bomDependencyVersions['groovy.version']}",
             'groovy-astbuilder'        : "org.apache.groovy:groovy-astbuilder:${bomDependencyVersions['groovy.version']}",
+            // Groovy 6 (#16157, GROOVY-12185): the classic (non-invokedynamic) call-site runtime is a
+            // separate module. Grails compiles with indy off, so grails-common exports it. Permanent.
+            'groovy-callsite'          : "org.apache.groovy:groovy-callsite:${bomDependencyVersions['groovy.version']}",
             'groovy-cli-commons'       : "org.apache.groovy:groovy-cli-commons:${bomDependencyVersions['groovy.version']}",
             'groovy-cli-picocli'       : "org.apache.groovy:groovy-cli-picocli:${bomDependencyVersions['groovy.version']}",
             'groovy-console'           : "org.apache.groovy:groovy-console:${bomDependencyVersions['groovy.version']}",

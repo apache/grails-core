@@ -138,10 +138,10 @@ Presence-based flags (property **present**, value optional) match `skipFunctiona
 
 Current line: **Gradle 9.7.1** (`distributionUrl` + `gradleToolingApiVersion=9.7.1`). Upstream may already ship a newer 9.7.x patch - this repo rides close to latest **only after** a deliberate multi-location bump PR. Do not "helpfully" jump one wrapper ahead of the rest.
 
-**Two Groovy stacks:** Gradle itself embeds **Groovy 4** for build logic. Application/runtime code on 8.0.x is **Groovy 5**. That is why `dependencies.gradle` keeps separate maps:
+**Two Groovy stacks:** Gradle itself embeds **Groovy 4** for build logic. Application/runtime code on 8.0.x is **Groovy 6**. That is why `dependencies.gradle` keeps separate maps:
 
 - `gradleBomDependencyVersions` / `gradle-groovy.version` / `gradle-spock.version` → build tooling (Groovy 4 / Spock groovy-4)
-- `bomDependencyVersions` / `groovy.version` / `spock.version` → apps and framework modules (Groovy 5 / Spock groovy-5.0)
+- `bomDependencyVersions` / `groovy.version` / `spock.version` → apps and framework modules (Groovy 6 / Spock groovy-5.0, which runs on Groovy 6 with its version check switched off until Spock ships a groovy-6.0 build)
 
 Never unify those casually.
 
@@ -293,7 +293,7 @@ For POM property generation, **map key must be the dependency name prefix**:
 
 ```groovy
 bomDependencyVersions = [
-    'groovy.version': '5.1.3',
+    'groovy.version': '6.0.0',
 ]
 bomDependencies = [
     'groovy': "org.apache.groovy:groovy:${bomDependencyVersions['groovy.version']}",
@@ -596,7 +596,7 @@ Develocity: `https://develocity.apache.org` - build scans publish when authentic
 | `includeBuild` the root into `end-to-end` | Publish to `build/local-maven` via `publishAllPublicationsToTestCaseMavenRepoRepository` |
 | Use `publishAllToMavenLocal` to feed end-to-end | That fills `~/.m2`; end-to-end reads `<repo>/build/local-maven` |
 | Bump `legacy-g7-command-plugin` wrapper to Gradle 9 | Leave it on the Grails 7-pinned Gradle 8.x |
-| Mix Gradle-embedded Groovy 4 pins into app Groovy 5 BOM | Keep `gradleBom*` vs `bom*` maps separate |
+| Mix Gradle-embedded Groovy 4 pins into app Groovy 6 BOM | Keep `gradleBom*` vs `bom*` maps separate |
 
 ---
 

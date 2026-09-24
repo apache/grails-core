@@ -134,6 +134,17 @@ abstract class AbstractGroovyTemplateCompileTask extends AbstractCompile {
                         if (jvmArgs) {
                             javaExecSpec.jvmArgs(jvmArgs)
                         }
+
+                        // Groovy 6 with Spock 2.4-groovy-5.0 (#16157): the view template classpath can
+                        // carry Spock's global AST transform, which aborts compilation with
+                        // IncompatibleGroovyVersionException when the Groovy major is newer than the
+                        // Spock artifact's. This fork gets the same opt-out the Grails Gradle plugin
+                        // gives GroovyCompile and Test tasks, unless the build already passes one
+                        // through the fork options. Remove when the BOM moves to a Spock build for
+                        // Groovy 6. App test build.
+                        if (!jvmArgs?.any { String arg -> arg.startsWith('-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=') }) {
+                            javaExecSpec.systemProperty('spock.iKnowWhatImDoing.disableGroovyVersionCheck', 'true')
+                        }
                         javaExecSpec.maxHeapSize = compileOptions.forkOptions.memoryMaximumSize
                         javaExecSpec.minHeapSize = compileOptions.forkOptions.memoryInitialSize
 

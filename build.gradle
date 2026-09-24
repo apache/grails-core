@@ -31,6 +31,8 @@ import javax.inject.Inject
 
 import org.apache.tools.ant.taskdefs.condition.Os
 
+apply from: layout.projectDirectory.file('dependencies.gradle')
+
 ext {
     isReproducibleBuild = System.getenv("SOURCE_DATE_EPOCH") != null
     buildInstant = java.util.Optional.ofNullable(System.getenv("SOURCE_DATE_EPOCH"))
@@ -137,6 +139,39 @@ subprojects {
 
     if (name.startsWith('grails-profiles')) {
         rootProject.ext['profileProjects'] << name
+    }
+
+    // Groovy 6 (#16157, GROOVY-12185): the classic (non-invokedynamic) call-site runtime is the
+    // separate groovy-callsite module, and the compiler refuses to generate that bytecode without it
+    // on the compile classpath ("Classic call-site bytecode generation requires the optional
+    // org.apache.groovy:groovy-callsite module"). Every module compiles with indy off (CompilePlugin),
+    // and the ones below grails-common, which exports the module for everything above it, have no
+    // other way to get it. Permanent while indy stays off. Framework only: applications get it
+    // through grails-common.
+    plugins.withId('groovy') {
+        String groovyCallsite = "org.apache.groovy:groovy-callsite:${bomDependencyVersions['groovy.version']}"
+        sourceSets.configureEach { sourceSet ->
+            dependencies.add(sourceSet.compileOnlyConfigurationName, groovyCallsite)
+            dependencies.add(sourceSet.runtimeOnlyConfigurationName, groovyCallsite)
+        }
+
+        // Groovy 6 with Spock 2.4-groovy-5.0 (#16157): Spock's global AST transform checks the Groovy
+        // major inside the forked compiler, and Spock checks it again when a Spec starts. CompilePlugin
+        // and the Grails Gradle plugin set the opt-out for the modules that apply them; this covers the
+        // rest, such as test-example helpers that apply only the groovy plugin, without doubling it.
+        // Remove when the BOM moves to a Spock build for Groovy 6.
+        String spockOptOut = '-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true'
+        tasks.withType(GroovyCompile).configureEach { GroovyCompile compile ->
+            List<String> forkJvmArgs = compile.groovyOptions.forkOptions.jvmArgs ?: []
+            if (!forkJvmArgs.any { String arg -> arg.startsWith('-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=') }) {
+                compile.groovyOptions.forkOptions.jvmArgs = forkJvmArgs + [spockOptOut]
+            }
+        }
+        tasks.withType(Test).configureEach { Test testTask ->
+            if (!testTask.systemProperties.containsKey('spock.iKnowWhatImDoing.disableGroovyVersionCheck')) {
+                testTask.systemProperty('spock.iKnowWhatImDoing.disableGroovyVersionCheck', 'true')
+            }
+        }
     }
 
     configurations.configureEach {

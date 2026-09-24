@@ -524,7 +524,9 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         setObjectToReadOnly target
         if (entity) {
             for (Association association in entity.associations) {
-                if (association instanceof ToOne && !association instanceof Embedded) {
+                // Groovy 6.0.0 (#16157) rejects `!x instanceof T` ("Incompatible instanceof types"),
+                // which parsed as `(!x) instanceof T` and was always false. Permanent. App source.
+                if (association instanceof ToOne && !(association instanceof Embedded)) {
                     def bean = new BeanWrapperImpl(target)
                     def propertyValue = bean.getPropertyValue(association.name)
                     if (propertyValue != null) {

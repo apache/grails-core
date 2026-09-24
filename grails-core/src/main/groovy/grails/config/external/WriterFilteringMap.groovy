@@ -26,7 +26,10 @@ class WriteFilteringMap implements Map<String, Object> {
     String keyPrefix
     private Map<String, Object> proxied // source map
 
-    @Delegate
+    // Groovy 6 (#16157): @Delegate now generates the mutators over the tracking overrides below, so
+    // written values were no longer recorded (WriteFilteringMapSpec). Excluded so the overrides stay.
+    // Remove when @Delegate again leaves declared methods alone. App runtime.
+    @Delegate(excludes = ['put', 'putAll', 'remove'])
     private Map<String, Object> overlap  // written values, flattened -- shared
     private Map<String, Object> nestedDestinationMap // written keys at this level
 
