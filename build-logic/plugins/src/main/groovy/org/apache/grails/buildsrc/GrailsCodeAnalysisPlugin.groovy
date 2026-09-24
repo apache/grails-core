@@ -184,10 +184,10 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
             def xmlReport = spotBugsReports.maybeCreate('xml')
             xmlReport.required.set(true)
             xmlReport.outputLocation.set(
-                    project.extensions.getByType(GrailsCodeAnalysisExtension)
-                            .reportsDirectory.get()
-                            .dir('spotbugs')
-                            .file(GradleUtils.reportFileName(project, it.name))
+                project.extensions.getByType(GrailsCodeAnalysisExtension)
+                        .reportsDirectory.get()
+                        .dir('spotbugs')
+                        .file(GradleUtils.reportFileName(project, it.name))
             )
             GradleUtils.configureReportMarker(it, project.rootProject.layout.projectDirectory, xmlReport.outputLocation,
                     GradleUtils.reportMarker(project, 'spotbugs', it.name))

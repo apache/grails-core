@@ -112,7 +112,7 @@ Run `./gradlew validateRepositoryConventions` to write `build/reports/violations
 | Finding | Fix |
 |---------|-----|
 | Skill | Start `SKILL.md` with YAML front matter, supply string `name`, `description`, and `license` values, use a valid directory name that matches `name`, and keep names unique. Every skill path that `AGENTS.md` references must exist, but `AGENTS.md` is not required to index every skill. |
-| GitHub Action | Pin third-party references to one lowercase 40-hex immutable reference for that action across workflows and repository-local `action.yml` or `action.yaml` manifests. A 40-hex value may be a commit or annotated-tag object SHA. `actions/*` and `apache/*` may use version or branch references, and local `./...` uses are permitted. Pin Docker `uses`, Docker action `runs.image`, and workflow job/service container images to literal immutable `name@sha256:<digest>` values. |
+| GitHub Action | Pin third-party references to one lowercase 40-hex immutable reference for that action across workflows and repository-local `action.yml` or `action.yaml` manifests. A 40-hex value may be a commit or annotated-tag object SHA. `actions/*` and `apache/*` must use version or branch references, never a 40-hex SHA, and local `./...` uses are permitted. Pin Docker `uses`, Docker action `runs.image`, and workflow job/service container images to literal immutable `name@sha256:<digest>` values. |
 | Message key | Remove or rename the duplicate logical key in the reported `grails-app/i18n/**/*.properties` file, preserving escaped separators and continuation semantics. |
 
 ---

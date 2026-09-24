@@ -29,40 +29,25 @@ class GrailsCodeAnalysisPluginSpec extends Specification {
     @TempDir
     Path testProjectDir
 
-    def "PMD project allowlist enables only listed projects"() {
+    def "PMD is enabled per project when any opt-in applies (global: #global, projects: '#projects', extension on :selected: #extension)"() {
         given:
-        writeMultiProjectBuild('grails.code-analysis.enabled.pmd.projects=:selected')
+        writeMultiProjectBuild(global, projects, extension)
 
         when:
         def result = run('tasks', '--all', '--configuration-cache')
 
         then:
-        result.output.contains('selected:pmdMain')
-        !result.output.contains('excluded:pmdMain')
-    }
+        result.output.contains('selected:pmdMain') == selectedEnabled
+        result.output.contains('excluded:pmdMain') == excludedEnabled
 
-    def "global PMD opt-in remains compatible with project and extension opt-ins"() {
-        given:
-        writeMultiProjectBuild('grails.code-analysis.enabled.pmd=true')
-
-        when:
-        def result = run('tasks', '--all')
-
-        then:
-        result.output.contains('selected:pmdMain')
-        result.output.contains('excluded:pmdMain')
-    }
-
-    def "extension PMD opt-in enables only the configured project"() {
-        given:
-        writeMultiProjectBuild('')
-
-        when:
-        def result = run('tasks', '--all')
-
-        then:
-        result.output.contains('selected:pmdMain')
-        !result.output.contains('excluded:pmdMain')
+        where:
+        global | projects    | extension || selectedEnabled | excludedEnabled
+        false  | ''          | false     || false           | false
+        true   | ''          | false     || true            | true
+        false  | ':selected' | false     || true            | false
+        false  | ''          | true      || true            | false
+        false  | ':excluded' | true      || true            | true
+        true   | ':selected' | true      || true            | true
     }
 
     def "PMD excludes generated build sources"() {
@@ -125,8 +110,10 @@ class GrailsCodeAnalysisPluginSpec extends Specification {
         """
     }
 
-    private void writeMultiProjectBuild(String property) {
-        testProjectDir.resolve('gradle.properties').toFile().text = "${property}\n"
+    private void writeMultiProjectBuild(boolean global, String projects, boolean extension) {
+        testProjectDir.resolve('gradle.properties').toFile().text = """grails.code-analysis.enabled.pmd=${global}
+${projects ? "grails.code-analysis.enabled.pmd.projects=${projects}" : ''}
+"""
         testProjectDir.resolve('settings.gradle').toFile().text = "include 'selected', 'excluded'"
         testProjectDir.resolve('selected').toFile().mkdirs()
         testProjectDir.resolve('excluded').toFile().mkdirs()
@@ -136,7 +123,7 @@ class GrailsCodeAnalysisPluginSpec extends Specification {
                     id 'java'
                     id 'org.apache.grails.gradle.grails-code-analysis'
                 }
-                ${projectName == 'selected' ? 'grailsCodeAnalysis { pmdEnabled = true }' : ''}
+                ${extension && projectName == 'selected' ? 'grailsCodeAnalysis { pmdEnabled = true }' : ''}
             """
         }
     }

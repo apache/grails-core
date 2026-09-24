@@ -58,7 +58,7 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 12. **Clean violations before commit** - Before every automated commit, run `./gradlew clean aggregateViolations :grails-test-report:check --continue` from the root. Ensure the Checkstyle, CodeNarc, and `REPOSITORY_CONVENTIONS` reports have no issues, and ensure PMD and SpotBugs reports have no issues for their enabled projects. Enable PMD or SpotBugs per project through the `grailsCodeAnalysis` extension in that module's `build.gradle`; the `-Pgrails.code-analysis.enabled.pmd[.projects]` and `-Pgrails.code-analysis.enabled.spotbugs[.projects]` properties are baseline-run overrides. Disabled tools report their disabled status, not a clean result. Also review the test result reports under `grails-test-report/build/reports/tests/` and ensure there are no failures. `--continue` is required: the aggregate Markdown reports are written only by the aggregate lane, so without it a failing analyzer stops the build before the report that explains the failure is produced. Running an analyzer task directly, such as `./gradlew :grails-core:checkstyleMain`, produces only that task's own XML report and deliberately leaves the aggregate Markdown untouched, so a partial run can never overwrite an authoritative full-repository report.
 13. **Mandatory test coverage** - Any class touched in a commit MUST be covered with tests that verify all behavior. You must run ALL tests in the affected module(s) and ensure they pass before committing.
 14. **The BOM must manage the latest version** - `validateDependencyVersions` enforces that the BOM (`dependencies.gradle`) manages a version `>=` every transitively-resolved version. When it fails, **bump the version in `dependencies.gradle`** so the BOM wins — never silence it with `allowedBomOverrides` or an exclusion unless there is an explicit, documented conflict or an agreed-upon workaround. See [Dependency Management](#dependency-management).
-15. **GitHub Actions must use ASF-approved pins** - Every third-party action SHA must appear in the ASF allowlist. See [GitHub Actions](#github-actions).
+15. **GitHub Actions must use ASF-approved references** - Every third-party action SHA must appear in the ASF allowlist; `actions/*` and `apache/*` use version or branch references, never SHAs. See [GitHub Actions](#github-actions).
 
 ## Available Skills
 
@@ -91,11 +91,11 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 
 Run `./gradlew validateRepositoryConventions` to check canonical skill front matter, including string `name`, `description`, and `license` values, directory and name matching, unique names, and dangling skill paths referenced by `AGENTS.md`. It does not require `AGENTS.md` to contain a complete skill index. It also checks external GitHub Action pins in workflows and local composite actions, immutable Docker and container-image digests, and duplicate message keys across `grails-app/i18n/**/*.properties`. The task writes `build/reports/violations/REPOSITORY_CONVENTIONS.md` and is included by `aggregateViolations`. RAT license provenance is checked by the separate `rat` task, which `aggregateViolations` also runs; `validateRepositoryConventions` is only ordered after it and does not pull it in on its own.
 
-Third-party GitHub Actions must use lowercase 40-hex immutable references. The `actions/*` and `apache/*` namespaces may use approved version or branch references instead. A 40-hex reference can identify either a commit or an annotated-tag object, and both are accepted as immutable. Docker `uses`, Docker action `runs.image`, and workflow job or service container images must use literal `name@sha256:<digest>` values; expressions cannot be verified as immutable and are rejected.
+Third-party GitHub Actions must use lowercase 40-hex immutable references. The `actions/*` and `apache/*` namespaces must use version or branch references and are rejected when pinned to a 40-hex SHA. A 40-hex reference can identify either a commit or an annotated-tag object, and both are accepted as immutable. Docker `uses`, Docker action `runs.image`, and workflow job or service container images must use literal `name@sha256:<digest>` values; expressions cannot be verified as immutable and are rejected.
 
 ### Agent and Tooling Worktrees
 
-Use `.worktrees/` as the standard location for agent and tooling Git worktrees. It is gitignored, excluded from RAT, and excluded from the release source ZIP. A worktree nested elsewhere in the checkout is swept by the repository-conventions scans and by the RAT run that `aggregateViolations` triggers locally.
+Use `.worktrees/` as the standard location for agent and tooling Git worktrees. Each worktree is a complete checkout, so `.worktrees/` is gitignored and excluded from the repository-conventions scans, RAT, and the release source ZIP. A worktree nested anywhere else in the checkout is swept by the repository-conventions scans and by the RAT run that `aggregateViolations` triggers locally.
 
 Review-only checklist:
 
@@ -286,10 +286,10 @@ https://github.com/apache/infrastructure-actions/blob/main/approved_patterns.yml
 
 Rules:
 
-- Pin every third-party action to a **full commit SHA** that appears in that file, with a trailing `# version` comment.
-- `actions/*`, `github/*`, and `apache/*` are allowed by namespace. Still SHA-pin them for supply-chain consistency.
-- Do not use a newer SHA, tag, or major version until it is on the allowlist. If you need a new pin, open a PR against `apache/infrastructure-actions` (`actions.yml`, not the generated `approved_patterns.yml`).
-- Before adding or bumping a `uses:` line, search `approved_patterns.yml` for that action and copy an approved SHA.
+- Pin every third-party action, including `github/*`, to a **full commit SHA** that appears in that file, with a trailing `# version` comment.
+- `actions/*` and `apache/*` (including our own `apache/grails-github-actions`) are allowed by namespace. Reference them by version or branch (for example `actions/checkout@v6` or `apache/grails-github-actions/pre-release@asf`), never by SHA; `validateRepositoryConventions` rejects SHA pins for these namespaces.
+- Do not use a newer third-party SHA, tag, or major version until it is on the allowlist. If you need a new pin, open a PR against `apache/infrastructure-actions` (`actions.yml`, not the generated `approved_patterns.yml`).
+- Before adding or bumping a third-party `uses:` line, search `approved_patterns.yml` for that action and copy an approved SHA.
 
 ## Branch Naming (Auto-Labels PRs)
 

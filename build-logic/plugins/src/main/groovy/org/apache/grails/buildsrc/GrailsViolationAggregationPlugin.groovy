@@ -112,6 +112,9 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
                         .relativize(sub.layout.buildDirectory.get().asFile.toPath())
                         .toString().replace(File.separator, '/') + '/**'
             }
+            // .worktrees/ holds complete checkouts created by agents and tooling; scanning it would
+            // validate other copies of the repository
+            List<String> repositoryStateExcludes = ['**/.gradle/**', '**/.git/**', '**/.hg/**', '**/.svn/**', '.worktrees/**']
             task.conventionSources.from(
                     root.file('AGENTS.md'),
                     root.fileTree('.agents/skills') { include '*/SKILL.md' },
@@ -119,12 +122,12 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
                     root.fileTree('.') {
                         include '**/action.yml', '**/action.yaml'
                         exclude(buildOutputExcludes)
-                        exclude '**/.gradle/**', '**/.git/**', '**/.hg/**', '**/.svn/**'
+                        exclude(repositoryStateExcludes)
                     },
                     root.fileTree('.') {
                         include '**/grails-app/i18n/**/*.properties'
                         exclude(buildOutputExcludes)
-                        exclude '**/.gradle/**', '**/.git/**', '**/.hg/**', '**/.svn/**'
+                        exclude(repositoryStateExcludes)
                     }
             )
             task.reportFile.set(violationsDir.map { it.file('REPOSITORY_CONVENTIONS.md') })
@@ -136,7 +139,6 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
     private static TaskProvider<Task> registerStyleAggregation(Project root, Provider<Directory> violationsDir) {
         Directory rootDirectory = root.layout.projectDirectory
         def checkStyleTests = GradleUtils.booleanProvider(root, GrailsCodeStylePlugin.TEST_STYLING_PROPERTY)
-        def ignoreFailures = GradleUtils.booleanProvider(root, GrailsCodeStylePlugin.IGNORE_FAILURES_PROPERTY)
         def codenarcEnabled = GradleUtils.booleanProvider(root, GrailsCodeStylePlugin.CODENARC_ENABLED_PROPERTY, true)
         def checkstyleEnabled = GradleUtils.booleanProvider(root, GrailsCodeStylePlugin.CHECKSTYLE_ENABLED_PROPERTY, true)
         def codenarcMarkers = root.files()

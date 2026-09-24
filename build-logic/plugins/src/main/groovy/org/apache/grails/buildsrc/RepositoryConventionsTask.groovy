@@ -49,8 +49,9 @@ abstract class RepositoryConventionsTask extends DefaultTask {
     private static final Pattern COMMIT_SHA = Pattern.compile(/^[0-9a-f]{40}$/)
     private static final Pattern DOCKER_IMAGE_DIGEST = Pattern.compile(/^docker:\/\/[^@\s]+@sha256:[0-9a-f]{64}$/)
     private static final Pattern CONTAINER_IMAGE_DIGEST = Pattern.compile(/^[^@\s]+@sha256:[0-9a-f]{64}$/)
-    // GitHub-official and first-party ASF actions track upstream ASF approvals and are never pinned.
-    private static final Set<String> EXEMPT_ACTION_OWNERS = ['actions', 'apache'] as Set<String>
+    // GitHub-official and first-party ASF actions track upstream ASF approvals, so they use version or
+    // branch references and are never pinned to a commit SHA.
+    private static final Set<String> VERSION_REFERENCED_ACTION_OWNERS = ['actions', 'apache'] as Set<String>
 
     @Internal
     abstract DirectoryProperty getRepositoryDirectory()
@@ -353,15 +354,20 @@ abstract class RepositoryConventionsTask extends DefaultTask {
             return
         }
         int separator = use.lastIndexOf('@')
-        if (separator <= 0 || separator == use.length() - 1) {
-            violations.add("${path}:${location}: action '${use}' must use a lowercase 40-hex commit SHA".toString())
-            return
-        }
-        String action = use.substring(0, separator)
-        String sha = use.substring(separator + 1)
+        String action = separator > 0 ? use.substring(0, separator) : use
         int ownerSeparator = action.indexOf('/')
         String owner = ownerSeparator > 0 ? action.substring(0, ownerSeparator) : ''
-        if (EXEMPT_ACTION_OWNERS.contains(owner)) {
+        boolean versionReferenced = VERSION_REFERENCED_ACTION_OWNERS.contains(owner)
+        if (separator <= 0 || separator == use.length() - 1) {
+            String requirement = versionReferenced ? 'a version or branch reference' : 'a lowercase 40-hex commit SHA'
+            violations.add("${path}:${location}: action '${use}' must use ${requirement}".toString())
+            return
+        }
+        String sha = use.substring(separator + 1)
+        if (versionReferenced) {
+            if (COMMIT_SHA.matcher(sha).matches()) {
+                violations.add("${path}:${location}: action '${action}' uses commit SHA '${sha}'; ${owner}/* actions must use a version or branch reference".toString())
+            }
             return
         }
         if (!COMMIT_SHA.matcher(sha).matches()) {

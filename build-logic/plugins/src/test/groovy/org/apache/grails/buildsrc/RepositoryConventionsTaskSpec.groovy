@@ -38,7 +38,7 @@ class RepositoryConventionsTaskSpec extends Specification {
         writeBuild(true)
         writeSkill('sample', 'sample')
         writeAgents('.agents/skills/sample/SKILL.md')
-        writeWorkflow('valid.yml', "uses: actions/checkout@${SHA}")
+        writeWorkflow('valid.yml', "uses: someorg/checkout@${SHA}")
         writeProperties('grails-app/i18n/messages.properties', '''escaped\\=key=one
 continued\\
  key=one
@@ -77,7 +77,7 @@ continued\\
         writeSkill('expected-name', 'different-name', false)
         writeSkill('duplicate-name', 'different-name')
         writeAgents('.agents/skills/missing/SKILL.md')
-        writeWorkflow('valid.yml', "uses: actions/checkout@${SHA}")
+        writeWorkflow('valid.yml', "uses: someorg/checkout@${SHA}")
 
         when:
         def result = runAndFail('validateRepositoryConventions')
@@ -96,17 +96,17 @@ continued\\
         writeAgents('.agents/skills/sample/SKILL.md')
         writeWorkflowContent('valid.yml', """jobs:
   reusable:
-    "uses": actions/reusable@${SHA}
+    "uses": someorg/reusable@${SHA}
   build:
     steps:
-      - { "uses": actions/checkout@${SHA} }
+      - { "uses": someorg/checkout@${SHA} }
       - uses: docker://alpine@sha256:${'a' * 64}
       - uses: ./.github/actions/sample
 """)
         writeCompositeAction('sample', """runs:
   using: composite
   steps:
-    - uses: actions/setup-java@${SHA}
+    - uses: someorg/setup-java@${SHA}
 """, 'yaml')
 
         when:
@@ -123,18 +123,18 @@ continued\\
         writeAgents('.agents/skills/sample/SKILL.md')
         writeWorkflowContent('valid.yml', """jobs:
   reusable:
-    uses: actions/reusable@${SHA}
+    uses: someorg/reusable@${SHA}
   build:
     env:
       uses: mutable-value
     steps:
-      - uses: actions/checkout@${SHA}
+      - uses: someorg/checkout@${SHA}
         with:
           uses: mutable-value
         env:
           uses: mutable-value
 steps:
-  - uses: actions/cache@${SHA}
+  - uses: someorg/cache@${SHA}
 """)
         writeCompositeAction('sample', """inputs:
   uses:
@@ -142,7 +142,7 @@ steps:
 runs:
   using: composite
   steps:
-    - uses: actions/setup-java@${SHA}
+    - uses: someorg/setup-java@${SHA}
 """)
 
         when:
@@ -282,7 +282,7 @@ runs:
         !result.output.contains('local-action')
     }
 
-    def "validateRepositoryConventions allows GitHub and ASF action refs without SHA consistency checks"() {
+    def "validateRepositoryConventions allows GitHub and ASF action version and branch refs"() {
         given:
         writeBuild()
         writeSkill('sample', 'sample')
@@ -300,23 +300,27 @@ runs:
         result.task(':validateRepositoryConventions').outcome == TaskOutcome.SUCCESS
     }
 
-    def "validateRepositoryConventions requires refs for exempt actions and SHA pins for third-party actions"() {
+    def "validateRepositoryConventions requires version refs for GitHub and ASF actions and SHA pins for third-party actions"() {
         given:
         writeBuild()
         writeSkill('sample', 'sample')
         writeAgents('.agents/skills/sample/SKILL.md')
-        writeWorkflowContent('invalid.yml', '''steps:
+        writeWorkflowContent('invalid.yml', """steps:
   - uses: actions/checkout@
   - uses: actions/checkout
+  - uses: actions/setup-java@${SHA}
+  - uses: apache/grails-github-actions/pre-release@${SHA}
   - uses: someorg/someaction@v1
-''')
+""")
 
         when:
         def result = runAndFail('validateRepositoryConventions')
 
         then:
-        result.output.contains("action 'actions/checkout@' must use a lowercase 40-hex commit SHA")
-        result.output.contains("action 'actions/checkout' must use a lowercase 40-hex commit SHA")
+        result.output.contains("action 'actions/checkout@' must use a version or branch reference")
+        result.output.contains("action 'actions/checkout' must use a version or branch reference")
+        result.output.contains("action 'actions/setup-java' uses commit SHA '${SHA}'; actions/* actions must use a version or branch reference")
+        result.output.contains("action 'apache/grails-github-actions/pre-release' uses commit SHA '${SHA}'; apache/* actions must use a version or branch reference")
         result.output.contains("action 'someorg/someaction' uses 'v1', not a lowercase 40-hex commit SHA")
     }
 
@@ -340,7 +344,7 @@ runs:
         writeSkill('sample', 'sample')
         writeAgents('.agents/skills/sample/SKILL.md')
         writeWorkflowContent('duplicate.yml', """steps:
-  - uses: actions/checkout@${SHA}
+  - uses: someorg/checkout@${SHA}
     uses: actions/setup-java@v4
 """)
 
@@ -387,7 +391,7 @@ runs:
         """
         writeSkill('sample', 'sample')
         writeAgents('.agents/skills/sample/SKILL.md')
-        writeWorkflow('valid.yml', "uses: actions/checkout@${SHA}")
+        writeWorkflow('valid.yml', "uses: someorg/checkout@${SHA}")
         writeActionManifest('.github/actions/build', '''runs:
   using: composite
   steps:
@@ -406,6 +410,28 @@ runs:
         result.output.contains(".github/actions/build/action.yml:\$.runs.steps[0].uses: action 'someorg/setup-java' uses 'v4'")
         !result.output.contains('generated-output/actions/ignored/action.yml')
         !result.output.contains('someorg/setup-node')
+    }
+
+    def "validateRepositoryConventions ignores checkouts under .worktrees"() {
+        given:
+        writeBuild()
+        writeSkill('sample', 'sample')
+        writeAgents('.agents/skills/sample/SKILL.md')
+        writeWorkflow('valid.yml', 'uses: actions/checkout@v6')
+        writeActionManifest('.worktrees/feature/.github/actions/mutable', '''runs:
+  using: composite
+  steps:
+    - uses: someorg/setup-node@v4
+''')
+        writeProperties('.worktrees/feature/grails-app/i18n/messages.properties', '''message=one
+message=two
+''')
+
+        when:
+        def result = run('validateRepositoryConventions')
+
+        then:
+        result.task(':validateRepositoryConventions').outcome == TaskOutcome.SUCCESS
     }
 
     def "validateRepositoryConventions rejects local action paths outside the repository"() {
@@ -429,6 +455,12 @@ runs:
         writeAgents('.agents/skills/sample/SKILL.md')
         writeWorkflow('caller.yml', 'uses: ./.github/workflows/referenced.yml')
         writeWorkflow('referenced.yml', 'uses: someorg/someaction@v1')
+        // Sweep only the caller, so the referenced workflow can be validated solely by following its local reference
+        testProjectDir.resolve('build.gradle').toFile() << '''
+tasks.named('validateRepositoryConventions') {
+    conventionSources.setFrom(files('AGENTS.md', '.github/workflows/caller.yml'))
+}
+'''
 
         when:
         def result = runAndFail('validateRepositoryConventions')
@@ -442,7 +474,7 @@ runs:
         writeBuild()
         writeSkill('sample', 'sample')
         writeAgents('.agents/skills/sample/SKILL.md')
-        writeWorkflow('valid.yml', "uses: actions/checkout@${SHA}")
+        writeWorkflow('valid.yml', "uses: someorg/checkout@${SHA}")
         writeProperties('grails-app/i18n/messages.properties', '''injected\\r\\n|forged=one
 injected\\r\\n|forged=two
 ''')
@@ -469,7 +501,7 @@ license: Apache-2.0
 ---
 ''')
         writeAgents('.agents/skills/sample/SKILL.md')
-        writeWorkflow('valid.yml', "uses: actions/checkout@${SHA}")
+        writeWorkflow('valid.yml', "uses: someorg/checkout@${SHA}")
 
         when:
         def result = runAndFail('validateRepositoryConventions')
@@ -486,7 +518,7 @@ license: Apache-2.0
         given:
         writeBuild()
         writeSkillContent('sample', '''---
-name: sample
+name: café
 description: Café skill
 license: Apache-2.0
 ---
@@ -519,8 +551,10 @@ tasks.register('verifyDefaultEncoding') {
 
         then:
         result.task(':verifyDefaultEncoding').outcome == TaskOutcome.SUCCESS
+        result.output.contains("skill name 'café' does not match directory 'sample'")
         result.output.contains("duplicate message key 'café'")
         result.output.contains("container image 'mongo:café' must use an immutable sha256 digest")
+        report.contains("skill name 'café' does not match directory 'sample'")
         report.contains("duplicate message key 'café'")
         report.contains("container image 'mongo:café' must use an immutable sha256 digest")
     }
@@ -532,7 +566,7 @@ tasks.register('verifyDefaultEncoding') {
         def skill = testProjectDir.resolve('.agents/skills/sample/SKILL.md').toFile()
         skill.text = "<!-- license header -->\n${skill.text}"
         writeAgents('.agents/skills/sample/SKILL.md')
-        writeWorkflow('valid.yml', "uses: actions/checkout@${SHA}")
+        writeWorkflow('valid.yml', "uses: someorg/checkout@${SHA}")
 
         when:
         def result = runAndFail('validateRepositoryConventions')
@@ -596,7 +630,7 @@ license: 'Apache-2.0'
 ---
 ''')
         writeAgents('.agents/skills/sample/SKILL.md')
-        writeWorkflow('valid.yml', "uses: actions/checkout@${SHA}")
+        writeWorkflow('valid.yml', "uses: someorg/checkout@${SHA}")
 
         when:
         def result = run('validateRepositoryConventions')
@@ -616,7 +650,7 @@ metadata:
 ---
 ''')
         writeAgents('.agents/skills/sample/SKILL.md')
-        writeWorkflow('valid.yml', "uses: actions/checkout@${SHA}")
+        writeWorkflow('valid.yml', "uses: someorg/checkout@${SHA}")
 
         when:
         def result = runAndFail('validateRepositoryConventions')
@@ -642,7 +676,7 @@ license: Apache-2.0
 ---
 ''')
         writeAgents('.agents/skills/malformed/SKILL.md')
-        writeWorkflow('valid.yml', "uses: actions/checkout@${SHA}")
+        writeWorkflow('valid.yml', "uses: someorg/checkout@${SHA}")
 
         when:
         def result = runAndFail('validateRepositoryConventions')
@@ -667,7 +701,7 @@ license: Apache-2.0
 ---
 ''')
         writeAgents('.agents/skills/typed/SKILL.md')
-        writeWorkflow('valid.yml', "uses: actions/checkout@${SHA}")
+        writeWorkflow('valid.yml', "uses: someorg/checkout@${SHA}")
 
         when:
         def result = runAndFail('validateRepositoryConventions')
@@ -695,7 +729,7 @@ license: Apache-2.0
         writeBuild()
         writeSkill('sample', 'sample')
         writeAgents('.agents/skills/sample/SKILL.md')
-        writeWorkflow('valid.yml', "uses: actions/checkout@${SHA}")
+        writeWorkflow('valid.yml', "uses: someorg/checkout@${SHA}")
         writeProperties('grails-app/i18n/messages.properties', '''# message=ignored
 message=one
 message=two
@@ -814,7 +848,7 @@ ${withLicense ? 'license: Apache-2.0' : ''}
     private void writeSkillContent(String directory, String content) {
         def file = testProjectDir.resolve(".agents/skills/${directory}/SKILL.md").toFile()
         file.parentFile.mkdirs()
-        file.text = content
+        file.setText(content, StandardCharsets.UTF_8.name())
     }
 
     private void writeAgents(String path) {
