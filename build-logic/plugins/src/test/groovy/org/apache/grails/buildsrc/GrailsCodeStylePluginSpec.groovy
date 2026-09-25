@@ -84,6 +84,21 @@ class Test{
         fixedContent.count('\n\n') == 3 // ConsecutiveBlankLines
     }
 
+    def "applying code style also registers code analysis"() {
+        given:
+        groovyFile.text = 'class Test {}'
+
+        when:
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('tasks', '--group=verification')
+                .withPluginClasspath()
+                .build()
+
+        then:
+        result.output.contains('codeAnalysis')
+    }
+
     def "test codenarcFix task does not break strings with single quotes"() {
         given: "a file with double quoted strings containing single quotes"
         groovyFile.text = """package org.test

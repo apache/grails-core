@@ -37,8 +37,10 @@ dependencies {
     api 'org.apache.groovy:groovy-jmx' // stop script uses GroovyMBean
 }
 
-TaskProvider<Copy> copyWrapper = tasks.register('copyGrailsWrapperScripts', Copy)
-copyWrapper.configure { Copy copy ->
+TaskProvider<Sync> copyWrapper = tasks.register('copyGrailsWrapperScripts', Sync)
+def wrapperFiles = ['grails-wrapper.jar', 'grailsw', 'grailsw.bat']
+def sourceSkeleton = project.layout.projectDirectory.dir('skeleton').asFile
+copyWrapper.configure { Sync copy ->
     Project wrapperProject = rootProject.project(':grails-wrapper')
     copy.dependsOn(wrapperProject.tasks.named('installDist'))
     copy.from(wrapperProject.layout.buildDirectory.dir('install/apache-grails-wrapper-bin')) {
@@ -46,17 +48,19 @@ copyWrapper.configure { Copy copy ->
         include '**/grailsw.bat'
         include '**/grailsw'
     }
-    copy.into(project.layout.projectDirectory.dir('skeleton'))
+    copy.into(project.layout.buildDirectory.dir('generated/grails-wrapper'))
 }
 
 tasks.named('sourcesJar').configure {
-    it.dependsOn(copyWrapper)
+    it.exclude { details -> details.file.parentFile == sourceSkeleton && wrapperFiles.contains(details.name) }
+    it.from(copyWrapper) { spec ->
+        spec.into('skeleton')
+    }
 }
 
 tasks.named('processProfileResources').configure {
-    it.dependsOn(copyWrapper)
-}
-
-tasks.named('compileProfile').configure {
-    it.dependsOn(copyWrapper)
+    it.exclude { details -> details.file.parentFile == sourceSkeleton && wrapperFiles.contains(details.name) }
+    it.from(copyWrapper) { spec ->
+        spec.into('skeleton')
+    }
 }

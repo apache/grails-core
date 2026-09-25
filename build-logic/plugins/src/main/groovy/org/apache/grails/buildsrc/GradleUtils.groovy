@@ -19,29 +19,105 @@
 
 package org.apache.grails.buildsrc
 
+import java.nio.file.Path
+
 import groovy.transform.CompileStatic
+import org.gradle.api.GradleException
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.file.Directory
+import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
 
 @CompileStatic
 class GradleUtils {
 
+    private static final String PROJECT_PATH_SEPARATOR_KEY = '__'
+
     static Directory findRootGrailsCoreDir(Project project) {
         // .github / .git related directories are purged from source releases, so use the .asf.yaml as an indicator of
-        // the parent directory
-        findAsfRootDir(project.layout.projectDirectory)
+        // the parent directory. The nearest one wins, so a worktree nested inside another checkout resolves to itself.
+        Directory root = findAsfRootDir(project.layout.projectDirectory)
+        if (root == null) {
+            throw new IllegalStateException(
+                    "Cannot locate the Grails repository root: no .asf.yaml found in ${project.projectDir} or any parent " +
+                            'directory. Build from a complete checkout, git worktree, or source release.')
+        }
+        root
+    }
+
+    /**
+     * Whether the project is the root of a Grails repository checkout, as opposed to the root of one of the
+     * independent builds nested inside it (such as grails-gradle, grails-forge, or end-to-end).
+     */
+    static boolean isRootGrailsCoreDir(Project project) {
+        project.layout.projectDirectory.file('.asf.yaml').asFile.isFile()
     }
 
     static Directory findAsfRootDir(Directory currentDirectory) {
         def asfFile = currentDirectory.file('.asf.yaml').asFile
-        asfFile.exists() ? currentDirectory : findAsfRootDir(currentDirectory.dir('../'))
+        if (asfFile.exists()) {
+            return currentDirectory
+        }
+        File parent = currentDirectory.asFile.parentFile
+        parent && parent != currentDirectory.asFile ? findAsfRootDir(currentDirectory.dir('../')) : null
     }
 
     static Provider<Boolean> booleanProvider(Project project, String name, boolean defaultValue = false) {
         project.providers.gradleProperty(name)
                 .map { it.trim().toBoolean() }
                 .orElse(defaultValue)
+    }
+
+    /**
+     * A readable file-name form of the project path, such as {@code __grails-data__core} for
+     * {@code :grails-data:core}. Every module writes its reports into one shared directory, so a path that does not
+     * decode back to itself, which could collide with another project's reports, fails the build.
+     */
+    static String projectPathKey(Project project) {
+        String key = project.path.replace(':', PROJECT_PATH_SEPARATOR_KEY)
+        if (projectPathFromKey(key) != project.path) {
+            throw new GradleException("Project path '${project.path}' cannot be used in an analysis report file name".toString())
+        }
+        key
+    }
+
+    static String projectPathFromKey(String key) {
+        key.replace(PROJECT_PATH_SEPARATOR_KEY, ':')
+    }
+
+    /** The project key and the task name, separated by the last {@code -} in the file name. */
+    static String reportFileName(Project project, String taskName) {
+        if (taskName.contains('-')) {
+            throw new GradleException("Task name '${taskName}' cannot be used in an analysis report file name".toString())
+        }
+        "${projectPathKey(project)}-${taskName}.xml"
+    }
+
+    static Provider<RegularFile> reportMarker(Project project, String tool, String taskName) {
+        // Kept in the analyzed project's own build directory: Gradle only removes the previous outputs of a task that
+        // becomes NO-SOURCE inside build directories it owns, and a stale marker would republish an old report
+        project.layout.buildDirectory.file("reports/aggregation-markers/${tool}/${reportFileName(project, taskName)}.marker")
+    }
+
+    static void configureReportMarker(Task task, Directory rootDirectory, Provider<RegularFile> report,
+            Provider<RegularFile> marker) {
+        Path rootPath = rootDirectory.asFile.toPath().toAbsolutePath().normalize()
+        task.outputs.file(marker)
+        task.doFirst {
+            Path reportPath = report.get().asFile.toPath().toAbsolutePath().normalize()
+            Path relativeReportPath
+            try {
+                relativeReportPath = rootPath.relativize(reportPath)
+            } catch (IllegalArgumentException exception) {
+                throw new IllegalStateException("Cannot create a report marker for '${reportPath}' relative to '${rootPath}'", exception)
+            }
+            File reportFile = reportPath.toFile()
+            reportFile.delete()
+            File markerFile = marker.get().asFile
+            markerFile.parentFile.mkdirs()
+            markerFile.text = relativeReportPath.toString().replace(File.separator, '/')
+        }
     }
 
     static <T> T lookupProperty(Project project, String name, T defaultValue = null) {

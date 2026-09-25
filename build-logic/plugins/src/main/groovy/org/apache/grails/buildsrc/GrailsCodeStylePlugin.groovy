@@ -57,12 +57,16 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
 
     static String TEST_STYLING_PROPERTY = 'grails.code-style.enabled.tests'
 
+    /** Skips every static check: CodeNarc and Checkstyle, and PMD and SpotBugs as well. */
+    static String SKIP_CODE_STYLE_PROPERTY = 'skipCodeStyle'
+
     static String BASE_RESOURCE_PATH = '/META-INF/org.apache.grails.buildsrc.grails-code-style'
 
     @Override
     void apply(Project project) {
         initExtension(project)
         configureCodeStyle(project)
+        project.pluginManager.apply(GrailsCodeAnalysisPlugin)
     }
 
     private static void initExtension(Project project) {
@@ -133,6 +137,7 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
         project.pluginManager.apply(CheckstylePlugin)
 
         def ignoreFailures = GradleUtils.booleanProvider(project, IGNORE_FAILURES_PROPERTY)
+        def skipCodeStyle = project.providers.gradleProperty(SKIP_CODE_STYLE_PROPERTY)
 
         project.extensions.configure(CheckstyleExtension) {
             // Explicit `it` is required in extension configuration
@@ -145,7 +150,7 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
 
         project.tasks.withType(Checkstyle).configureEach { Checkstyle task ->
             task.group = 'verification'
-            task.onlyIf { !project.hasProperty('skipCodeStyle') }
+            task.onlyIf { !skipCodeStyle.present }
             task.ignoreFailures = ignoreFailures.get()
 
             if (task.name.toLowerCase().contains('test')) {
@@ -164,8 +169,10 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
                     project.extensions.getByType(GrailsCodeStyleExtension)
                             .reportsDirectory.get()
                             .dir('checkstyle')
-                            .file("${project.name}-${task.name}.xml")
+                            .file(GradleUtils.reportFileName(project, task.name))
             )
+            GradleUtils.configureReportMarker(task, project.rootProject.layout.projectDirectory, task.reports.xml.outputLocation,
+                    GradleUtils.reportMarker(project, 'checkstyle', task.name))
         }
     }
 
@@ -176,6 +183,7 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
 
         def ignoreFailures = GradleUtils.booleanProvider(project, IGNORE_FAILURES_PROPERTY)
         def codenarcFix = GradleUtils.booleanProvider(project, CODENARC_FIX_PROPERTY)
+        def skipCodeStyle = project.providers.gradleProperty(SKIP_CODE_STYLE_PROPERTY)
 
         project.extensions.configure(CodeNarcExtension) {
             it.configFile = project.extensions.getByType(GrailsCodeStyleExtension)
@@ -186,7 +194,7 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
 
         project.tasks.withType(CodeNarc).configureEach { CodeNarc task ->
             task.group = 'verification'
-            task.onlyIf { !project.hasProperty('skipCodeStyle') }
+            task.onlyIf { !skipCodeStyle.present }
             task.ignoreFailures = ignoreFailures.get()
 
             if (codenarcFix.get()) {
@@ -204,8 +212,10 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
                     project.extensions.getByType(GrailsCodeStyleExtension)
                             .reportsDirectory.get()
                             .dir('codenarc')
-                            .file("${project.name}-${task.name}.xml")
+                            .file(GradleUtils.reportFileName(project, task.name))
             )
+            GradleUtils.configureReportMarker(task, project.rootProject.layout.projectDirectory, task.reports.xml.outputLocation,
+                    GradleUtils.reportMarker(project, 'codenarc', task.name))
         }
     }
 

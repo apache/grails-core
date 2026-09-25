@@ -22,8 +22,11 @@ These tasks can be run like so:
 
 `./gradlew publishGuide`
 
+* `aggregateViolations` - runs every code style and code analysis check and writes Markdown summaries to `build/reports/violations`; pass `--continue` so the summaries are written even when a check fails
+* `cleanViolationReports` - deletes the code style and code analysis reports so the next `aggregateViolations` re-analyzes every module; the root `clean` runs it. Otherwise, checks for unchanged modules stay up to date and their previous results are reused
 * `codeStyle` - runs all code style checks
 * `publishGuide` - generates the user guide in the `grails-doc/build/original-guide`
+* `validateRepositoryConventions` - validates agent skill metadata, GitHub Action references, container image digests, and duplicate i18n message keys, writing `build/reports/violations/REPOSITORY_CONVENTIONS.md`
 
 ## Various properties that control which tasks to run
 
@@ -41,7 +44,8 @@ These can be set on the command line like so:
 * `onlyRedisTests` - runs only redis related tests
 * `onlySpringSecurityTests` - runs only spring security related tests
 * `serializeMongoTests` - if true, only integration tests from one mongo project will run at a time
-* `skipCodeStyle` - does not run code style checks
+* `skipCodeAnalysis` - does not run code analysis checks (PMD and SpotBugs); code style checks still run
+* `skipCodeStyle` - does not run code style checks (CodeNarc and Checkstyle) or code analysis checks (PMD and SpotBugs)
 * `skipCoreTests` - does not run the "core" tests
 * `skipFunctionalTests` - does not run the functional tests
 * `skipHibernate5Tests` - does not run hibernate5 related tests
@@ -51,6 +55,31 @@ These can be set on the command line like so:
 * `skipRedisTests` - does not run redis related tests
 * `skipSpringSecurityTests` - does not run spring security related tests
 * `skipTests` - no tests will run
+
+## Code analysis
+
+PMD and SpotBugs run only in modules that opt in from their own `build.gradle`:
+
+```groovy
+grailsCodeAnalysis {
+    enablePmd()
+    enableSpotbugs()
+}
+```
+
+Each call configures the tool immediately, so the rest of the module's build script can customize its tasks directly, for example `tasks.named('pmdMain') { ... }`.
+
+These properties change that for a single run:
+
+* `grails.code-analysis.enabled.pmd` - `true` or `false` turns PMD on or off for every module. When set, it wins over both the module opt-ins and `grails.code-analysis.enabled.pmd.projects`
+* `grails.code-analysis.enabled.pmd.projects` - comma-separated project paths that also run PMD, for example `:grails-core,:grails-web-core`
+* `grails.code-analysis.enabled.spotbugs` - `true` or `false` turns SpotBugs on or off for every module. When set, it wins over both the module opt-ins and `grails.code-analysis.enabled.spotbugs.projects`
+* `grails.code-analysis.enabled.spotbugs.projects` - comma-separated project paths that also run SpotBugs
+* `grails.code-analysis.ignoreFailures` - collects the reports without failing the build
+
+```bash
+./gradlew aggregateAnalysisViolations --continue -Pgrails.code-analysis.enabled.spotbugs=true -Pgrails.code-analysis.ignoreFailures=true
+```
 
 ## Test slicing
 

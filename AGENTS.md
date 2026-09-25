@@ -35,6 +35,9 @@ limitations under the License.
 # Style check
 ./gradlew codeStyle
 
+# Repository conventions
+./gradlew validateRepositoryConventions
+
 # Out of memory? Raise the daemon heap (a bare -Xmx in GRADLE_OPTS is ignored):
 export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 ```
@@ -52,7 +55,7 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 9. **Test via public APIs** - Tests must exercise behavior through the same APIs an end user calls; never invoke internal implementations, package-private methods, or bypass the public surface directly
 10. **Always review and extend tests** - Review existing unit and functional tests before making changes; every code change must include new or enhanced tests that cover the affected behavior
 11. **Every code touch must update all tests for the changed class** - When a class is modified, find and update every test that covers it — unit, integration, and TCK. Do not leave any existing test out of sync with the new code.
-12. **Clean violations before commit** - Before every automated commit, run `./gradlew clean aggregateViolations :grails-test-report:check --continue` from the root and ensure that `build/reports/violations/CHECKSTYLE_VIOLATIONS.md`, `build/reports/violations/CODENARC_VIOLATIONS.md`, `build/reports/violations/PMD_VIOLATIONS.md`, and `build/reports/violations/SPOTBUGS_VIOLATIONS.md` report no issues. Also review the test result reports under `grails-test-report/build/reports/tests/` and ensure there are no failures. The aggregate reports are wired as test finalizers and will be attempted after failures, but `--continue` is required for comprehensive full-suite reports.
+12. **Clean violations before commit** - Before every automated commit, run `./gradlew clean aggregateViolations :grails-test-report:check --continue` from the root. The root `clean` runs `cleanViolationReports`, which deletes the analyzer reports and aggregate reports so every module is re-analyzed; without it, analyzers for unchanged modules stay UP-TO-DATE and their previous results are aggregated. Ensure the Checkstyle, CodeNarc, and `REPOSITORY_CONVENTIONS` reports have no issues, and ensure PMD and SpotBugs reports have no issues for their enabled projects. Enable PMD or SpotBugs per project through the `grailsCodeAnalysis` extension in that module's `build.gradle`; the `-Pgrails.code-analysis.enabled.pmd[.projects]` and `-Pgrails.code-analysis.enabled.spotbugs[.projects]` properties are baseline-run overrides. Disabled tools report their disabled status, not a clean result. Also review the test result reports under `grails-test-report/build/reports/tests/` and ensure there are no failures. `--continue` is required: the aggregate Markdown reports are written only by the aggregate lane, so without it a failing analyzer stops the build before the report that explains the failure is produced. Running an analyzer task directly, such as `./gradlew :grails-core:checkstyleMain`, produces only that task's own XML report and deliberately leaves the aggregate Markdown untouched, so a partial run can never overwrite an authoritative full-repository report.
 13. **Mandatory test coverage** - Any class touched in a commit MUST be covered with tests that verify all behavior. You must run ALL tests in the affected module(s) and ensure they pass before committing.
 14. **The BOM must manage the latest version** - `validateDependencyVersions` enforces that the BOM (`dependencies.gradle`) manages a version `>=` every transitively-resolved version. When it fails, **bump the version in `dependencies.gradle`** so the BOM wins — never silence it with `allowedBomOverrides` or an exclusion unless there is an explicit, documented conflict or an agreed-upon workaround. See [Dependency Management](#dependency-management).
 15. **GitHub Actions must use ASF-approved references** - Every third-party action SHA must appear in the ASF allowlist; `actions/*` use the full tag of their latest release and `apache/*` use version or branch references, never SHAs. See [GitHub Actions](#github-actions).
@@ -68,6 +71,7 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 > - Writing Hibernate code → Read `.agents/skills/hibernate-developer/SKILL.md`
 > - Fixing style/analysis violations → Read `.agents/skills/violation-fixer/SKILL.md`
 > - Fixing broken test → Read `.agents/skills/test-fixer/SKILL.md`
+> - Integrating a standalone repository -> Read `.agents/skills/mono-repo-integration/SKILL.md`
 >
 > Use your file reading capability to load the skill content before proceeding with any code changes.
 
@@ -82,6 +86,26 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 | **violation-fixer** | `.agents/skills/violation-fixer/SKILL.md` | Fix style/analysis violations (CodeNarc, Checkstyle, PMD, SpotBugs) |
 | **test-fixer** | `.agents/skills/test-fixer/SKILL.md` | Aggregate and fix test failures |
 | **mono-repo-integration** | `.agents/skills/mono-repo-integration/SKILL.md` | Merge a standalone Grails plugin repository into this monorepo |
+
+## Repository Conventions
+
+Run `./gradlew validateRepositoryConventions` to check canonical skill front matter, including string `name`, `description`, and `license` values, directory and name matching, unique names, and dangling skill paths referenced by `AGENTS.md`. It does not require `AGENTS.md` to contain a complete skill index. It also checks external GitHub Action pins in workflows and local composite actions (a `./...` reference must resolve to an `action.yml` or `action.yaml`), immutable Docker and container-image digests, and duplicate message keys across `grails-app/i18n/**/*.properties`. The task writes `build/reports/violations/REPOSITORY_CONVENTIONS.md` and is included by `aggregateViolations`. RAT license provenance is checked by the separate `rat` task, which `aggregateViolations` also runs; `validateRepositoryConventions` is only ordered after it and does not pull it in on its own.
+
+Third-party GitHub Actions must use lowercase 40-hex immutable references. The `actions/*` namespace must use the full tag of a release (`vX.Y.Z`), and the `apache/*` namespace must use a version or branch reference; both are rejected when pinned to a 40-hex SHA. A 40-hex reference can identify either a commit or an annotated-tag object, and both are accepted as immutable. Docker `uses`, Docker action `runs.image`, and workflow job or service container images must use literal `name@sha256:<digest>` values; expressions cannot be verified as immutable and are rejected.
+
+### Agent and Tooling Worktrees
+
+Use `.worktrees/` as the standard location for agent and tooling Git worktrees. Each worktree is a complete checkout, so `.worktrees/` is gitignored and excluded from the repository-conventions scans, RAT, and the release source ZIP. Claude Code's default location, `.claude/worktrees/`, is treated the same way. A worktree nested anywhere else in the checkout is swept by the repository-conventions scans and by the RAT run that `aggregateViolations` triggers locally.
+
+Review-only checklist:
+
+These human-review concerns are intentionally not mechanized; `validateRepositoryConventions` enforces everything that can be checked mechanically.
+
+- **Semantic documentation**: Confirm public-facing behavior and documentation describe the actual change, including any required `grails-doc` updates under Critical Rule 7.
+- **Quote and type preference**: Check Groovy code follows the concrete examples and prohibitions in [Groovy Style](#groovy-style), including string quoting, static compilation, and import choices.
+- **Test sufficiency**: Verify tests exercise public APIs and cover changed behavior as required by Critical Rules 9, 10, and 13.
+- **Compatibility**: Assess compatibility with the versions in [Technology Stack](#technology-stack) and follow the repository's deprecation and upgrade expectations in Available Skills and Common Issues.
+- **Architecture**: Confirm the change preserves established module boundaries, public API intent, and dependency direction rather than merely satisfying a local implementation need.
 
 ## Technology Stack
 
@@ -228,6 +252,16 @@ class MyService { }
 
 ## Build Commands
 
+PMD and SpotBugs are enabled per project. Opt the clean module in from its `build.gradle`:
+
+```groovy
+grailsCodeAnalysis {
+    enablePmd()
+}
+```
+
+Call `enableSpotbugs()` in the same extension to opt that module into SpotBugs. Each call configures the tool immediately, so the rest of the build script can customize its tasks directly, for example `tasks.named('pmdMain') { ... }`. The `-Pgrails.code-analysis.enabled.pmd[.projects]` and `-Pgrails.code-analysis.enabled.spotbugs[.projects]` properties remain available for baseline runs. The `.projects` form also enables the listed project paths. The all-project property, when set to `true` or `false`, wins over both the `.projects` form and every module's opt-in.
+
 | Task | Command |
 |------|---------|
 | Build (no tests) | `./gradlew build -PskipTests` |
@@ -251,7 +285,7 @@ https://github.com/apache/infrastructure-actions/blob/main/approved_patterns.yml
 Rules:
 
 - Pin every third-party action, including `github/*`, to a **full commit SHA** that appears in that file, with a trailing `# version` comment.
-- `actions/*` and `apache/*` (including our own `apache/grails-github-actions`) are allowed by namespace, so every version is approved. Reference `actions/*` by the full tag of the latest release (for example `actions/checkout@v7.0.1`, not `@v7`), and our own actions by branch (for example `apache/grails-github-actions/pre-release@asf`). Never pin either by SHA.
+- `actions/*` and `apache/*` (including our own `apache/grails-github-actions`) are allowed by namespace, so every version is approved. Reference `actions/*` by the full tag of the latest release (for example `actions/checkout@v7.0.1`, not `@v7`), and our own actions by branch (for example `apache/grails-github-actions/pre-release@asf`). Never pin either by SHA; `validateRepositoryConventions` rejects SHA pins for these namespaces and `actions/*` references that are not a full `vX.Y.Z` tag.
 - Do not use a newer third-party SHA, tag, or major version until it is on the allowlist. If you need a new pin, open a PR against `apache/infrastructure-actions` (`actions.yml`, not the generated `approved_patterns.yml`).
 - Before adding or bumping a third-party `uses:` line, search `approved_patterns.yml` for that action and copy an approved SHA.
 
@@ -270,10 +304,10 @@ Rules:
 1. **Fork & branch** from the target release branch (e.g., `7.0.x`)
 2. **Run tests** before submitting: `./gradlew build --rerun-tasks`
 3. **Run code style checks**: `./gradlew codeStyle`
-4. **Clean violations**: Before committing, run `./gradlew clean aggregateViolations` from the root and ensure that `build/reports/violations/CHECKSTYLE_VIOLATIONS.md`, `build/reports/violations/CODENARC_VIOLATIONS.md`, `build/reports/violations/PMD_VIOLATIONS.md`, and `build/reports/violations/SPOTBUGS_VIOLATIONS.md` have no issues.
+4. **Clean violations**: Before committing, run `./gradlew clean aggregateViolations` from the root. Ensure the Checkstyle, CodeNarc, and `REPOSITORY_CONVENTIONS` reports have no issues, and ensure PMD and SpotBugs reports have no issues for their enabled projects. Enable PMD and SpotBugs per project through `grailsCodeAnalysis` in each module's `build.gradle`; the `-Pgrails.code-analysis.enabled.pmd[.projects]` and `-Pgrails.code-analysis.enabled.spotbugs[.projects]` properties are overrides. Disabled tools report their disabled status, not a clean result.
 5. **Verify test coverage**: Ensure any touched class is covered by tests verifying all behavior. You must run ALL tests in the affected module(s) and ensure they pass before submission.
 6. **Squash commits** into a single meaningful commit message
-6. **Reference issues** in PR description (e.g., "Fixes #1234")
+7. **Reference issues** in PR description (e.g., "Fixes #1234")
 
 ### Review Process
 
