@@ -21,60 +21,79 @@ package grails.plugin.geb
 import java.time.LocalDateTime
 
 import org.testcontainers.containers.BrowserWebDriverContainer
-import org.spockframework.runtime.model.IterationInfo
 
-import spock.lang.Shared
 import spock.lang.Specification
+import spock.util.environment.RestoreSystemProperties
 
+import static org.testcontainers.containers.BrowserWebDriverContainer.VncRecordingMode
+
+@RestoreSystemProperties
 class GebRecordingTestListenerSpec extends Specification {
 
-    private static final String GEB_SYSTEM_PROPERTY_PREFIX = 'grails.geb.'
+    WebDriverContainerHolder containerHolder
+    GebRecordingTestListener listener
+    BrowserWebDriverContainer container = Mock()
 
-    // See WebDriverContainerHolderSpec: GrailsGebSettings' constructor parses live
-    // `grails.geb.*` system properties, so clear them for the duration of this spec to
-    // keep the `containerHolder` field initializer below hermetic.
-    @Shared
-    private Map<String, String> savedGebSystemProperties
-
-    def setupSpec() {
-        savedGebSystemProperties = System.getProperties().stringPropertyNames()
-                .findAll { it.startsWith(GEB_SYSTEM_PROPERTY_PREFIX) }
-                .collectEntries { [(it): System.getProperty(it)] }
-        savedGebSystemProperties.keySet().each { System.clearProperty(it) }
-    }
-
-    def cleanupSpec() {
-        savedGebSystemProperties.each { key, value -> System.setProperty(key, value) }
-    }
-
-    WebDriverContainerHolder containerHolder = new WebDriverContainerHolder(new GrailsGebSettings(LocalDateTime.now()))
-    GebRecordingTestListener listener = new GebRecordingTestListener(containerHolder)
-
-    void 'afterIteration() swallows a NullPointerException from a missing VNC recording container when per-test restart is enabled'() {
-        given: 'restarting the recording container before this test failed, leaving no recording container available'
-        containerHolder.settings.restartRecordingContainerPerTest = true
-        def container = Mock(BrowserWebDriverContainer)
-        container.afterTest(_, _) >> { throw new NullPointerException() }
+    def setup() {
+        // See WebDriverContainerHolderSpec: GrailsGebSettings' constructor parses live
+        // `grails.geb.*` system properties, so clear them to keep this spec hermetic.
+        System.properties.stringPropertyNames()
+                .findAll { it.startsWith('grails.geb.') }
+                .each { System.clearProperty(it) }
+        containerHolder = Spy(WebDriverContainerHolder, constructorArgs: [new GrailsGebSettings(LocalDateTime.now())])
         containerHolder.container = container
+        listener = new GebRecordingTestListener(containerHolder)
+    }
+
+    void 'afterIteration() saves the recording when a recording container is available'() {
+        given:
+        containerHolder.settings.recordingMode = VncRecordingMode.RECORD_ALL
+        containerHolder.isRecordingContainerAvailable() >> true
 
         when: 'the iteration completes'
-        listener.afterIteration(Mock(IterationInfo))
+        listener.afterIteration(specificationContext.currentIteration)
 
-        then: 'the failure is swallowed rather than reported as a test error'
+        then: 'the container is told which test passed, so it can name the recording after it'
+        1 * container.afterTest(
+                { it.filesystemFriendlyName.startsWith('GebRecordingTestListenerSpec_afterIteration_saves') },
+                Optional.empty()
+        )
+    }
+
+    void 'afterIteration() skips saving when no recording container is available after a failed restart'() {
+        given: 'restarting the recording container before this test failed'
+        containerHolder.settings.recordingMode = VncRecordingMode.RECORD_ALL
+        containerHolder.isRecordingContainerAvailable() >> false
+
+        when: 'the iteration completes'
+        listener.afterIteration(specificationContext.currentIteration)
+
+        then: 'there is nothing to save a recording from, so the container is not asked to'
+        0 * container.afterTest(_, _)
         noExceptionThrown()
     }
 
-    void 'afterIteration() re-throws a NullPointerException from a missing VNC recording container when per-test restart is disabled'() {
-        given: 'per-test restart is not in play, so a missing recording container is unexpected'
-        containerHolder.settings.restartRecordingContainerPerTest = false
-        def container = Mock(BrowserWebDriverContainer)
-        container.afterTest(_, _) >> { throw new NullPointerException() }
-        containerHolder.container = container
+    void 'afterIteration() still reports to the container when recording is disabled'() {
+        given:
+        containerHolder.settings.recordingMode = VncRecordingMode.SKIP
 
         when: 'the iteration completes'
-        listener.afterIteration(Mock(IterationInfo))
+        listener.afterIteration(specificationContext.currentIteration)
 
-        then: 'the failure propagates so the underlying bug is not hidden'
+        then:
+        1 * container.afterTest(_, _)
+    }
+
+    void 'afterIteration() propagates unexpected failures from saving the recording'() {
+        given:
+        containerHolder.settings.recordingMode = VncRecordingMode.RECORD_ALL
+        containerHolder.isRecordingContainerAvailable() >> true
+        container.afterTest(_, _) >> { throw new NullPointerException() }
+
+        when: 'the iteration completes'
+        listener.afterIteration(specificationContext.currentIteration)
+
+        then: 'the failure is not hidden'
         thrown(NullPointerException)
     }
 }
