@@ -46,7 +46,7 @@ public class ProxyInstanceMetaClass extends DelegatingMetaClass {
     /**
      * Session to fetch from, if we need to.
      */
-    private Session session;
+    private final Session session;
     /**
      * The loaded instance we're proxying, or null if it hasn't been loaded.
      */
@@ -54,7 +54,7 @@ public class ProxyInstanceMetaClass extends DelegatingMetaClass {
     /**
      * The key of the object.
      */
-    private Serializable key;
+    private final Serializable key;
 
     public ProxyInstanceMetaClass(MetaClass delegate, Session session, Serializable key) {
         super(delegate);
@@ -66,6 +66,7 @@ public class ProxyInstanceMetaClass extends DelegatingMetaClass {
      * Load the target from the DB.
      * @return target.
      */
+    @SuppressWarnings("unchecked")
     public Object getProxyTarget() {
         if (proxyTarget == null) {
             proxyTarget = session.retrieve(getTheClass(), getKey());
@@ -82,9 +83,9 @@ public class ProxyInstanceMetaClass extends DelegatingMetaClass {
     /**
      * Handle method calls on our proxy.
      * @param o The proxy.
-     * @param methodName
-     * @param arguments
-     * @return
+     * @param methodName The name of the method being invoked.
+     * @param arguments The arguments passed to the method.
+     * @return The result of invoking the method, resolving the proxy target first if required.
      */
     @Override
     public Object invokeMethod(Object o, String methodName, Object[] arguments) {
@@ -118,44 +119,33 @@ public class ProxyInstanceMetaClass extends DelegatingMetaClass {
 
     @Override
     public Object getProperty(Object object, String property) {
-        if (property.equals("id")) {
-            return getKey();
-        } else if (property.equals("proxy")) {
-            return true;
-        } else if (property.equals("initialized")) {
-            return isProxyInitiated();
-        } else if (property.equals("target")) {
-            return getProxyTarget();
-        } else if (property.equals("metaClass")) {
-            return this;
-        } else if (property.equals("class") || property.equals("domainClass")) {
-            // return correct class only if loaded, otherwise hope for the best
-            return delegate.getProperty(isProxyInitiated() ? proxyTarget : object, property);
-        } else {
-            return delegate.getProperty(getProxyTarget(), property);
-        }
+        return switch (property) {
+            case "id" -> getKey();
+            case "proxy" -> true;
+            case "initialized" -> isProxyInitiated();
+            case "target" -> getProxyTarget();
+            case "metaClass" -> this;
+            case "class", "domainClass" ->
+                // return correct class only if loaded, otherwise hope for the best
+                delegate.getProperty(isProxyInitiated() ? proxyTarget : object, property);
+            default -> delegate.getProperty(getProxyTarget(), property);
+        };
     }
 
     @Override
     public void setProperty(Object object, String property, Object newValue) {
-        boolean resolveTarget = true;
-        if (property.equals("metaClass") && (newValue == null || newValue instanceof MetaClass)) {
-            resolveTarget = false;
-        }
+        boolean resolveTarget = !property.equals("metaClass") || (newValue != null && !(newValue instanceof MetaClass));
         delegate.setProperty(resolveTarget ? getProxyTarget() : object, property, newValue);
     }
 
     @Override
     public Object getAttribute(Object object, String attribute) {
-        if (attribute.equals("id")) {
-            return getKey();
-        } else if (attribute.equals("initialized")) {
-            return isProxyInitiated();
-        } else if (attribute.equals("target")) {
-            return getProxyTarget();
-        } else {
-            return delegate.getAttribute(getProxyTarget(), attribute);
-        }
+        return switch (attribute) {
+            case "id" -> getKey();
+            case "initialized" -> isProxyInitiated();
+            case "target" -> getProxyTarget();
+            default -> delegate.getAttribute(getProxyTarget(), attribute);
+        };
     }
 
     @Override
