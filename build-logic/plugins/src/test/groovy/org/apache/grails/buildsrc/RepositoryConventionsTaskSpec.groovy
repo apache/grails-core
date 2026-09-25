@@ -253,7 +253,7 @@ runs:
     uses: someorg/reusable@v4
   build:
     steps:
-      - { "uses": actions/checkout@v4 }
+      - { "uses": actions/checkout@v7.0.1 }
       - uses: ./local-action
       - uses: docker://alpine:3
       - uses: docker://registry@invalid/alpine@sha256:${'b' * 64}
@@ -268,7 +268,7 @@ runs:
         writeCompositeAction('sample', '''runs:
   using: composite
   steps:
-    - uses: actions/setup-java@v4
+    - uses: actions/setup-java@v6.0.1
 ''', 'yaml')
         writeCompositeAction('legacy', '''runs:
   using: composite
@@ -280,6 +280,8 @@ runs:
         def result = runAndFail('validateRepositoryConventions')
 
         then:
+        result.output.contains(".github/actions/legacy/action.yml:\$.runs.steps[0].uses: action 'actions/setup-node' uses 'v4'; actions/* actions must use the full tag of a release (vX.Y.Z)")
+        !result.output.contains("action 'actions/setup-java'")
         result.output.contains("action 'someorg/reusable' uses 'v4'")
         result.output.contains("action 'someorg/cache' uses '${SHA.toUpperCase()}'")
         result.output.contains("Docker action 'docker://alpine:3' must use an immutable sha256 digest")
@@ -288,15 +290,18 @@ runs:
         !result.output.contains('local-action')
     }
 
-    def "validateRepositoryConventions allows GitHub and ASF action version and branch refs"() {
+    def "validateRepositoryConventions allows GitHub action release tags and ASF action version and branch refs"() {
         given:
         writeBuild()
         writeSkill('sample', 'sample')
         writeAgents('.agents/skills/sample/SKILL.md')
         writeWorkflowContent('official.yml', '''steps:
-  - uses: actions/checkout@v6
+  - uses: actions/checkout@v7.0.1
+  - uses: actions/cache/restore@v6.1.0
+  - uses: actions/setup-java@v10.12.345
   - uses: apache/grails-github-actions/pre-release@asf
   - uses: apache/grails-github-actions/post-release@asf
+  - uses: apache/infrastructure-actions/stash/save@v1
 ''')
 
         when:
@@ -306,7 +311,7 @@ runs:
         result.task(':validateRepositoryConventions').outcome == TaskOutcome.SUCCESS
     }
 
-    def "validateRepositoryConventions requires version refs for GitHub and ASF actions and SHA pins for third-party actions"() {
+    def "validateRepositoryConventions requires release tags for GitHub actions, version refs for ASF actions, and SHA pins for third-party actions"() {
         given:
         writeBuild()
         writeSkill('sample', 'sample')
@@ -315,6 +320,12 @@ runs:
   - uses: actions/checkout@
   - uses: actions/checkout
   - uses: actions/setup-java@${SHA}
+  - uses: actions/cache@v6
+  - uses: actions/cache/save@v6.1
+  - uses: actions/upload-artifact@main
+  - uses: actions/download-artifact@8.0.1
+  - uses: actions/setup-node@v6.0.0-beta
+  - uses: actions/github-script@v8.0.0.1
   - uses: apache/grails-github-actions/pre-release@${SHA}
   - uses: someorg/someaction@v1
 """)
@@ -323,9 +334,15 @@ runs:
         def result = runAndFail('validateRepositoryConventions')
 
         then:
-        result.output.contains("action 'actions/checkout@' must use a version or branch reference")
-        result.output.contains("action 'actions/checkout' must use a version or branch reference")
-        result.output.contains("action 'actions/setup-java' uses commit SHA '${SHA}'; actions/* actions must use a version or branch reference")
+        result.output.contains("action 'actions/checkout@' must use the full tag of a release (vX.Y.Z)")
+        result.output.contains("action 'actions/checkout' must use the full tag of a release (vX.Y.Z)")
+        result.output.contains("action 'actions/setup-java' uses commit SHA '${SHA}'; actions/* actions must use the full tag of a release (vX.Y.Z)")
+        result.output.contains("action 'actions/cache' uses 'v6'; actions/* actions must use the full tag of a release (vX.Y.Z)")
+        result.output.contains("action 'actions/cache/save' uses 'v6.1'; actions/* actions must use the full tag of a release (vX.Y.Z)")
+        result.output.contains("action 'actions/upload-artifact' uses 'main'; actions/* actions must use the full tag of a release (vX.Y.Z)")
+        result.output.contains("action 'actions/download-artifact' uses '8.0.1'; actions/* actions must use the full tag of a release (vX.Y.Z)")
+        result.output.contains("action 'actions/setup-node' uses 'v6.0.0-beta'; actions/* actions must use the full tag of a release (vX.Y.Z)")
+        result.output.contains("action 'actions/github-script' uses 'v8.0.0.1'; actions/* actions must use the full tag of a release (vX.Y.Z)")
         result.output.contains("action 'apache/grails-github-actions/pre-release' uses commit SHA '${SHA}'; apache/* actions must use a version or branch reference")
         result.output.contains("action 'someorg/someaction' uses 'v1', not a lowercase 40-hex commit SHA")
     }
@@ -351,7 +368,7 @@ runs:
         writeAgents('.agents/skills/sample/SKILL.md')
         writeWorkflowContent('duplicate.yml', """steps:
   - uses: someorg/checkout@${SHA}
-    uses: actions/setup-java@v4
+    uses: actions/setup-java@v6.0.1
 """)
 
         when:
@@ -423,7 +440,7 @@ runs:
         writeBuild()
         writeSkill('sample', 'sample')
         writeAgents('.agents/skills/sample/SKILL.md')
-        writeWorkflow('valid.yml', 'uses: actions/checkout@v6')
+        writeWorkflow('valid.yml', 'uses: actions/checkout@v7.0.1')
         writeActionManifest("${worktrees}/feature/.github/actions/mutable", '''runs:
   using: composite
   steps:
@@ -475,7 +492,7 @@ description: Linked skill
         link.toFile().parentFile.mkdirs()
         Files.createSymbolicLink(link, link.parent.relativize(target))
         writeAgents('.agents/skills/linked/SKILL.md')
-        writeWorkflow('valid.yml', 'uses: actions/checkout@v6')
+        writeWorkflow('valid.yml', 'uses: actions/checkout@v7.0.1')
 
         when:
         def result = runAndFail('validateRepositoryConventions')
@@ -489,7 +506,7 @@ description: Linked skill
         writeBuild()
         writeSkill('sample', 'sample')
         writeAgents('.agents/skills/sample/SKILL.md')
-        writeWorkflow('valid.yml', 'uses: actions/checkout@v6')
+        writeWorkflow('valid.yml', 'uses: actions/checkout@v7.0.1')
         writeProperties('grails-app/i18n/messages.properties', 'message=one\n')
 
         when:
@@ -604,7 +621,7 @@ license: Apache-2.0
   build:
     container: mongo:café
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
 """, StandardCharsets.UTF_8.name())
         def build = testProjectDir.resolve('build.gradle').toFile()
         build << '''
@@ -662,7 +679,7 @@ license: Apache-2.0
 ---
 ''')
         writeAgents('.agents/skills/sample/SKILL.md')
-        writeWorkflow('valid.yml', 'uses: actions/checkout@v6')
+        writeWorkflow('valid.yml', 'uses: actions/checkout@v7.0.1')
 
         when:
         def result = run('validateRepositoryConventions')
@@ -680,7 +697,7 @@ description: Test skill
 license: Apache-2.0
 ''')
         writeAgents('.agents/skills/sample/SKILL.md')
-        writeWorkflow('valid.yml', 'uses: actions/checkout@v6')
+        writeWorkflow('valid.yml', 'uses: actions/checkout@v7.0.1')
 
         when:
         def result = runAndFail('validateRepositoryConventions')
@@ -793,7 +810,7 @@ license: Apache-2.0
         given:
         writeBuild()
         writeSkill('bad.name', 'bad.name')
-        writeWorkflow('valid.yml', 'uses: actions/checkout@v6')
+        writeWorkflow('valid.yml', 'uses: actions/checkout@v7.0.1')
 
         when:
         def result = runAndFail('validateRepositoryConventions')
@@ -836,7 +853,7 @@ message=two
         writeBuild()
         writeSkill('sample', 'sample')
         writeAgents('.agents/skills/sample/SKILL.md')
-        writeWorkflow('valid.yml', 'uses: actions/checkout@v6')
+        writeWorkflow('valid.yml', 'uses: actions/checkout@v7.0.1')
         writeProperties('grails-app/i18n/spring-security-core.properties', '''duplicate=one
 duplicate=two
 malformed=\\u12x
@@ -855,7 +872,7 @@ malformed=\\u12x
         writeBuild()
         writeSkill('sample', 'sample')
         writeAgents('.agents/skills/sample/SKILL.md')
-        writeWorkflow('valid.yml', 'uses: actions/checkout@v6')
+        writeWorkflow('valid.yml', 'uses: actions/checkout@v7.0.1')
         writeProperties('grails-app/i18n/messages.properties', '''escaped\\\\=one
 escaped\\\\=two
 ''')
@@ -876,7 +893,7 @@ escaped\\\\=two
   build:
     container: ${{ matrix.mongo-image }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
 ''')
 
         when:

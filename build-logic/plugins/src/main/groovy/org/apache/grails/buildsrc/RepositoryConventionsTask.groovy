@@ -53,6 +53,10 @@ abstract class RepositoryConventionsTask extends DefaultTask {
     // GitHub-official and first-party ASF actions track upstream ASF approvals, so they use version or
     // branch references and are never pinned to a commit SHA.
     private static final Set<String> VERSION_REFERENCED_ACTION_OWNERS = ['actions', 'apache'] as Set<String>
+    // The ASF approves every actions/* release, so those actions name the exact release they run rather
+    // than a floating major tag such as v7.
+    private static final String RELEASE_TAGGED_ACTION_OWNER = 'actions'
+    private static final Pattern RELEASE_TAG = Pattern.compile(/^v\d+\.\d+\.\d+$/)
 
     @Internal
     abstract DirectoryProperty getRepositoryDirectory()
@@ -361,15 +365,17 @@ abstract class RepositoryConventionsTask extends DefaultTask {
         int ownerSeparator = action.indexOf('/')
         String owner = ownerSeparator > 0 ? action.substring(0, ownerSeparator) : ''
         boolean versionReferenced = VERSION_REFERENCED_ACTION_OWNERS.contains(owner)
+        String requirement = actionReferenceRequirement(owner)
         if (separator <= 0 || separator == use.length() - 1) {
-            String requirement = versionReferenced ? 'a version or branch reference' : 'a lowercase 40-hex commit SHA'
             violations.add("${path}:${location}: action '${use}' must use ${requirement}".toString())
             return
         }
         String sha = use.substring(separator + 1)
         if (versionReferenced) {
             if (COMMIT_SHA.matcher(sha).matches()) {
-                violations.add("${path}:${location}: action '${action}' uses commit SHA '${sha}'; ${owner}/* actions must use a version or branch reference".toString())
+                violations.add("${path}:${location}: action '${action}' uses commit SHA '${sha}'; ${owner}/* actions must use ${requirement}".toString())
+            } else if (owner == RELEASE_TAGGED_ACTION_OWNER && !RELEASE_TAG.matcher(sha).matches()) {
+                violations.add("${path}:${location}: action '${action}' uses '${sha}'; ${owner}/* actions must use ${requirement}".toString())
             }
             return
         }
@@ -381,6 +387,13 @@ abstract class RepositoryConventionsTask extends DefaultTask {
             actionShas[action] = sha
             actionFiles[action] = path
         }
+    }
+
+    private static String actionReferenceRequirement(String owner) {
+        if (owner == RELEASE_TAGGED_ACTION_OWNER) {
+            return 'the full tag of a release (vX.Y.Z)'
+        }
+        VERSION_REFERENCED_ACTION_OWNERS.contains(owner) ? 'a version or branch reference' : 'a lowercase 40-hex commit SHA'
     }
 
     private static void validateLocalAction(File root, String use, String location, String path,
