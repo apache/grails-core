@@ -1131,6 +1131,54 @@ pmdVersion=${pmdVersion}
         !pmdReport.text.contains('MissingReport')
     }
 
+    def "report writers requested without their aggregate task leave the previous reports untouched"() {
+        given:
+        File source = writeAnalyzedModule('package com.example;\n\npublic class App {\n\tprivate void unused() {\n    }\n}\n')
+        def aggregateResult = runBuild('aggregateStyleViolations', 'aggregateAnalysisViolations', '--configuration-cache')
+        def violationsDir = testProjectDir.resolve('build/reports/violations')
+        byte[] checkstyleBytes = violationsDir.resolve('CHECKSTYLE_VIOLATIONS.md').toFile().bytes
+        byte[] pmdBytes = violationsDir.resolve('PMD_VIOLATIONS.md').toFile().bytes
+
+        when: "the sources change and only the writers are requested, including from the configuration cache"
+        source.text = 'package com.example;\n\npublic class App {\n}\n'
+        def writerResult = runBuild('writeStyleViolations', 'writeAnalysisViolations', '--configuration-cache')
+        def reusedResult = runBuild('writeStyleViolations', 'writeAnalysisViolations', '--configuration-cache')
+
+        then:
+        aggregateResult.task(':writeStyleViolations').outcome == TaskOutcome.SUCCESS
+        aggregateResult.task(':writeAnalysisViolations').outcome == TaskOutcome.SUCCESS
+        writerResult.task(':writeStyleViolations').outcome == TaskOutcome.SKIPPED
+        writerResult.task(':writeAnalysisViolations').outcome == TaskOutcome.SKIPPED
+        reusedResult.output.contains('Reusing configuration cache')
+        reusedResult.task(':writeStyleViolations').outcome == TaskOutcome.SKIPPED
+        reusedResult.task(':writeAnalysisViolations').outcome == TaskOutcome.SKIPPED
+        violationsDir.resolve('CHECKSTYLE_VIOLATIONS.md').toFile().bytes == checkstyleBytes
+        violationsDir.resolve('PMD_VIOLATIONS.md').toFile().bytes == pmdBytes
+
+        when: "the aggregate tasks run again"
+        def rerunResult = runBuild('aggregateStyleViolations', 'aggregateAnalysisViolations', '--configuration-cache')
+
+        then:
+        rerunResult.task(':writeStyleViolations').outcome == TaskOutcome.SUCCESS
+        rerunResult.task(':writeAnalysisViolations').outcome == TaskOutcome.SUCCESS
+        !checkstyleReport().contains('FileTabCharacter')
+        !violationsDir.resolve('PMD_VIOLATIONS.md').toFile().text.contains('UnusedPrivateMethod')
+    }
+
+    def "report writers are not listed as verification tasks"() {
+        given:
+        writeAnalyzedModule('package com.example;\n\npublic class App {\n}\n')
+
+        when:
+        def result = runBuild('tasks', '--group', 'verification')
+
+        then:
+        result.output.contains('aggregateStyleViolations')
+        result.output.contains('aggregateAnalysisViolations')
+        !result.output.contains('writeStyleViolations')
+        !result.output.contains('writeAnalysisViolations')
+    }
+
     def "#flag writes skipped reports instead of reading markers from an earlier run"() {
         given:
         writeAnalyzedModule('package com.example;\n\npublic class App {\n\tprivate void unused() {\n    }\n}\n')

@@ -30,6 +30,7 @@ import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.execution.TaskExecutionGraph
 import org.gradle.api.file.Directory
 import org.gradle.api.file.FileCollection
 import org.gradle.api.logging.Logger
@@ -37,6 +38,7 @@ import org.gradle.api.logging.Logging
 import org.gradle.api.plugins.quality.Checkstyle
 import org.gradle.api.plugins.quality.CodeNarc
 import org.gradle.api.plugins.quality.Pmd
+import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.TaskProvider
@@ -188,7 +190,6 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
         def checkstyleMarkdown = root.layout.buildDirectory.file('reports/violations/CHECKSTYLE_VIOLATIONS.md')
 
         def writerTask = root.tasks.register('writeStyleViolations') {
-            it.group = 'verification'
             it.description = 'Writes CodeNarc and Checkstyle violation reports into build/reports/violations/'
             it.inputs.files(codenarcMarkers).optional()
             it.inputs.files(checkstyleMarkers).optional()
@@ -211,6 +212,7 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
             it.description = 'Aggregates CodeNarc and Checkstyle violations into build/reports/violations/'
             it.dependsOn(writerTask)
         }
+        writeOnlyWithAggregate(root, writerTask, aggregateTask)
         writerTask.configure { it.mustRunAfter(cleanReportsTask) }
         root.allprojects { Project sub ->
             def codenarcTasks = sub.tasks.withType(CodeNarc)
@@ -269,7 +271,6 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
         def spotbugsMarkdown = root.layout.buildDirectory.file('reports/violations/SPOTBUGS_VIOLATIONS.md')
 
         def writerTask = root.tasks.register('writeAnalysisViolations') {
-            it.group = 'verification'
             it.description = 'Writes PMD and SpotBugs violation reports into build/reports/violations/'
             it.inputs.files(pmdMarkers).optional()
             it.inputs.files(spotbugsMarkers).optional()
@@ -302,6 +303,7 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
             it.description = 'Aggregates PMD and SpotBugs violations into build/reports/violations/'
             it.dependsOn(writerTask)
         }
+        writeOnlyWithAggregate(root, writerTask, aggregateTask)
         writerTask.configure { it.mustRunAfter(cleanReportsTask) }
         root.allprojects { Project sub ->
             def pmdTasks = sub.tasks.withType(Pmd)
@@ -320,6 +322,22 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
             }
         }
         aggregateTask
+    }
+
+    /**
+     * A writer reads the markers its analyzers left behind, so running it without its aggregate task would publish the
+     * previous run's findings as current. It cannot depend on the analyzers instead, because under {@code --continue}
+     * it must still write the report when an analyzer fails, so it only runs when its aggregate task is in the graph.
+     */
+    private static void writeOnlyWithAggregate(Project root, TaskProvider<Task> writerTask, TaskProvider<Task> aggregateTask) {
+        Property<Boolean> aggregateRequested = root.objects.property(Boolean).convention(false)
+        String aggregatePath = root.absoluteProjectPath(aggregateTask.name)
+        root.gradle.taskGraph.whenReady { TaskExecutionGraph graph ->
+            aggregateRequested.set(graph.hasTask(aggregatePath))
+        }
+        writerTask.configure { Task task ->
+            task.onlyIf("${aggregateTask.name} is running".toString()) { aggregateRequested.get() }
+        }
     }
 
     /** The command-line flag that skipped the analyzers, such as {@code -PskipCodeStyle}, or an empty string. */
