@@ -1,0 +1,106 @@
+{
+  "properties": [
+    {
+      "name": "grails.security.headers.enabled",
+      "description": "Whether Grails registers and applies the default servlet HTTP security headers filter.",
+      "type": "java.lang.Boolean",
+      "defaultValue": true
+    },
+    {
+      "name": "grails.security.headers.defaults",
+      "description": "When the built-in default header values are applied. 'always' (default) applies them on every response; 'auto' applies them unless the request is detected as having come through a reverse proxy, for deployments whose proxy already sends these headers; 'never' applies only explicitly configured headers. Explicitly configured headers are always applied.",
+      "type": "org.grails.plugins.web.controllers.GrailsSecurityHeadersProperties$Defaults",
+      "defaultValue": "always"
+    },
+    {
+      "name": "grails.security.headers.content-type-options.enabled",
+      "description": "Whether to send the X-Content-Type-Options response header.",
+      "type": "java.lang.Boolean",
+      "defaultValue": true
+    },
+    {
+      "name": "grails.security.headers.content-type-options.value",
+      "description": "Value for the X-Content-Type-Options response header.",
+      "type": "java.lang.String",
+      "defaultValue": "nosniff"
+    },
+    {
+      "name": "grails.security.headers.frame-options.enabled",
+      "description": "Whether to send the X-Frame-Options response header.",
+      "type": "java.lang.Boolean",
+      "defaultValue": true
+    },
+    {
+      "name": "grails.security.headers.frame-options.value",
+      "description": "Value for the X-Frame-Options response header.",
+      "type": "java.lang.String",
+      "defaultValue": "SAMEORIGIN"
+    },
+    {
+      "name": "grails.security.headers.referrer-policy.enabled",
+      "description": "Whether to send the Referrer-Policy response header.",
+      "type": "java.lang.Boolean",
+      "defaultValue": true
+    },
+    {
+      "name": "grails.security.headers.referrer-policy.value",
+      "description": "Value for the Referrer-Policy response header.",
+      "type": "java.lang.String",
+      "defaultValue": "strict-origin-when-cross-origin"
+    },
+    {
+      "name": "grails.security.headers.xss-protection.enabled",
+      "description": "Whether to send the X-XSS-Protection response header.",
+      "type": "java.lang.Boolean",
+      "defaultValue": true
+    },
+    {
+      "name": "grails.security.headers.xss-protection.value",
+      "description": "Value for the X-XSS-Protection response header.",
+      "type": "java.lang.String",
+      "defaultValue": "0"
+    },
+    {
+      "name": "grails.security.headers.hsts.enabled",
+      "description": "Whether to send Strict-Transport-Security on secure requests.",
+      "type": "java.lang.Boolean",
+      "defaultValue": false
+    },
+    {
+      "name": "grails.security.headers.hsts.value",
+      "description": "Value for the Strict-Transport-Security response header when HSTS is enabled and the request is secure.",
+      "type": "java.lang.String",
+      "defaultValue": "max-age=31536000"
+    },
+    {
+      "name": "grails.security.headers.content-security-policy.enabled",
+      "description": "Whether to send the Content-Security-Policy response header.",
+      "type": "java.lang.Boolean",
+      "defaultValue": false
+    },
+    {
+      "name": "grails.security.headers.content-security-policy.value",
+      "description": "Value for the Content-Security-Policy response header when CSP is enabled. Required: an enabled header with a blank value is not sent and a warning is logged.",
+      "type": "java.lang.String"
+    }
+  ],
+  "hints": [
+    {
+      "name": "grails.security.headers.defaults",
+      "values": [
+        {
+          "value": "always",
+          "description": "Apply the default header values on every response, including behind a reverse proxy."
+        },
+        {
+          "value": "auto",
+          "description": "Apply the default header values unless the request came through a reverse proxy (forwarded request headers, server.forward-headers-strategy, or an active cloud platform). For deployments whose proxy already sends these headers."
+        },
+        {
+          "value": "never",
+          "description": "Never apply the default header values; send only explicitly configured headers."
+        }
+      ]
+    }
+  ]
+}

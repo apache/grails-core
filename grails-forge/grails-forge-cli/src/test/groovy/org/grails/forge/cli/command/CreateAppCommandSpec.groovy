@@ -19,6 +19,7 @@
 
 package org.grails.forge.cli.command
 
+import io.micronaut.configuration.picocli.MicronautFactory
 import io.micronaut.configuration.picocli.PicocliRunner
 import io.micronaut.context.ApplicationContext
 import io.micronaut.context.env.Environment
@@ -28,6 +29,7 @@ import org.grails.forge.cli.CodeGenConfig
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.io.ConsoleOutput
+import picocli.CommandLine
 import spock.lang.AutoCleanup
 import spock.lang.Shared
 
@@ -143,6 +145,19 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
         then:
         noExceptionThrown()
         out.toString().contains("Application created")
+    }
+
+    void "the --features completion candidates are listed in name order"() {
+        when:
+        List<String> candidates = new CommandLine(CreateAppCommand, new MicronautFactory(ctx))
+                .commandSpec
+                .findOption('--features')
+                .completionCandidates()
+                .toList()
+
+        then:
+        candidates
+        candidates == candidates.toSorted()
     }
 
     void "community and preview features are labelled as such"() {

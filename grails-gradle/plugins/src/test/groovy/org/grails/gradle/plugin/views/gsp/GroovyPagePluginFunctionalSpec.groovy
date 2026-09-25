@@ -128,4 +128,94 @@ class GroovyPagePluginFunctionalSpec extends GradleSpecification {
         and: 'so its test task is not put behind compiling pages it does not read'
         result.output.contains('TEST_WAITS_FOR_PAGE_COMPILATION=false')
     }
+
+    def "staged scaffold views preserve namespaces and runtime plugin pages"() {
+        given:
+        def runner = setupTestResourceProject('gsp-compile-classpath')
+        File projectDir = runner.projectDir
+        new File(projectDir, 'build.gradle').append("""
+            dependencies {
+                implementation localGroovy()
+                runtimeOnly files('calendar-plugin')
+            }
+            sourceSets.main.groovy.srcDir('grails-app/controllers')
+        """)
+        // Only the annotation's bytecode is consumed by the task; no application is started.
+        Map<String, String> sources = [
+            'src/main/groovy/grails/plugin/scaffolding/annotation/Scaffold.groovy': '''
+                package grails.plugin.scaffolding.annotation
+                import java.lang.annotation.Retention
+                import java.lang.annotation.RetentionPolicy
+                @Retention(RetentionPolicy.RUNTIME)
+                @interface Scaffold { Class value() }
+            ''',
+            'grails-app/controllers/admin/EventController.groovy': '''
+                package admin
+                import grails.plugin.scaffolding.annotation.Scaffold
+                @Scaffold(String)
+                class EventController { static namespace = 'admin' }
+            ''',
+            'grails-app/controllers/admin/TraitController.groovy': '''
+                package admin
+                import grails.plugin.scaffolding.annotation.Scaffold
+                trait AdminNamespace { static String namespace = 'admin' }
+                @Scaffold(String)
+                class TraitController implements AdminNamespace { }
+            ''',
+            'grails-app/controllers/admin/DashboardController.groovy': '''
+                package admin
+                class DashboardController { static namespace = 'admin' }
+            ''',
+            'grails-app/controllers/PersonController.groovy': '''
+                import grails.plugin.scaffolding.annotation.Scaffold
+                @Scaffold(String)
+                class PersonController { }
+            ''',
+            'grails-app/controllers/BookController.groovy': '''
+                import grails.plugin.scaffolding.annotation.Scaffold
+                @Scaffold(String)
+                class BookController { }
+            ''',
+            'src/main/templates/scaffolding/show.gsp': 'scaffold ${className}',
+            'grails-app/views/person/index.gsp': 'handwritten index',
+            'calendar-plugin/gsp/views.properties': '''
+                /WEB-INF/grails-app/views/event/show.gsp=calendar_event_show
+                /WEB-INF/grails-app/views/person/show.gsp=calendar_person_show
+            '''
+        ]
+        sources.each { String path, String content ->
+            File file = new File(projectDir, path)
+            file.parentFile.mkdirs()
+            file.text = content.stripIndent()
+        }
+
+        when:
+        def result = executeTask('stageGroovyPages')
+        File staged = new File(projectDir, 'build/generated/views')
+
+        then: 'the GSP compiler never receives an application page that would shadow a plugin'
+        assertTaskSuccess('stageGroovyPages', result)
+        !new File(staged, 'event/show.gsp').exists()
+        !new File(staged, 'trait/show.gsp').exists()
+        !new File(staged, 'person/show.gsp').exists()
+        new File(staged, 'book/show.gsp').text == 'scaffold String'
+        new File(staged, 'person/index.gsp').text == 'handwritten index'
+
+        and: 'only skipped scaffold views warn about the native-image requirement'
+        result.output.contains('Not precompiling the views of event:')
+        result.output.contains('Not precompiling the views of trait:')
+        result.output.contains('native images require concrete GSP views')
+        !result.output.contains('Not precompiling the views of dashboard:')
+
+        when: 'a runtime dependency no longer provides a page, invalidating the generation task'
+        new File(projectDir, 'calendar-plugin/gsp/views.properties').text = ''
+        def rebuild = executeTask('stageGroovyPages')
+
+        then:
+        assertTaskSuccess('stageGroovyPages', rebuild)
+        new File(staged, 'person/show.gsp').text == 'scaffold String'
+        !new File(staged, 'event/show.gsp').exists()
+        !new File(staged, 'trait/show.gsp').exists()
+    }
+
 }

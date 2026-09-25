@@ -45,10 +45,16 @@ public class BaseAvailableFeatures implements AvailableFeatures {
                         LinkedHashMap::new));
     }
 
+    /**
+     * Iterates the visible feature names in name order. The injected features are ordered only by
+     * {@link Feature#getOrder()}, and most share the same order, so without sorting the names picocli
+     * lists as completion candidates would vary between runs.
+     */
     @Override
     public Iterator<String> iterator() {
         return getFeatures()
                 .map(Feature::getName)
+                .sorted()
                 .iterator();
     }
 

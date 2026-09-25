@@ -19,6 +19,8 @@
 package grails.web.servlet.mvc;
 
 import java.util.Enumeration;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServletRequest;
@@ -32,8 +34,9 @@ import jakarta.servlet.http.HttpSession;
  */
 public class GrailsHttpSession implements HttpSession {
 
+    private final Lock sessionLock = new ReentrantLock();
     private HttpSession adaptee;
-    private HttpServletRequest request;
+    private final HttpServletRequest request;
 
     public GrailsHttpSession(HttpServletRequest request) {
         this.request = request;
@@ -43,14 +46,18 @@ public class GrailsHttpSession implements HttpSession {
      * @see jakarta.servlet.http.HttpSession#getAttribute(java.lang.String)
      */
     public Object getAttribute(String name) {
-        createSessionIfNecessary();
-        synchronized (this) {
-            return adaptee.getAttribute(name);
+        sessionLock.lock();
+        try {
+            return createSessionIfNecessary().getAttribute(name);
+        }
+        finally {
+            sessionLock.unlock();
         }
     }
 
-    private void createSessionIfNecessary() {
+    private HttpSession createSessionIfNecessary() {
         if (adaptee == null) adaptee = request.getSession(true);
+        return adaptee;
     }
 
     /* (non-Javadoc)
@@ -58,9 +65,12 @@ public class GrailsHttpSession implements HttpSession {
      */
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public Enumeration getAttributeNames() {
-        createSessionIfNecessary();
-        synchronized (this) {
-            return adaptee.getAttributeNames();
+        sessionLock.lock();
+        try {
+            return createSessionIfNecessary().getAttributeNames();
+        }
+        finally {
+            sessionLock.unlock();
         }
     }
 
@@ -68,9 +78,12 @@ public class GrailsHttpSession implements HttpSession {
      * @see jakarta.servlet.http.HttpSession#getCreationTime()
      */
     public long getCreationTime() {
-        createSessionIfNecessary();
-        synchronized (this) {
-            return adaptee.getCreationTime();
+        sessionLock.lock();
+        try {
+            return createSessionIfNecessary().getCreationTime();
+        }
+        finally {
+            sessionLock.unlock();
         }
     }
 
@@ -78,9 +91,12 @@ public class GrailsHttpSession implements HttpSession {
      * @see jakarta.servlet.http.HttpSession#getId()
      */
     public String getId() {
-        createSessionIfNecessary();
-        synchronized (this) {
-            return adaptee.getId();
+        sessionLock.lock();
+        try {
+            return createSessionIfNecessary().getId();
+        }
+        finally {
+            sessionLock.unlock();
         }
     }
 
@@ -88,9 +104,12 @@ public class GrailsHttpSession implements HttpSession {
      * @see jakarta.servlet.http.HttpSession#getLastAccessedTime()
      */
     public long getLastAccessedTime() {
-        createSessionIfNecessary();
-        synchronized (this) {
-            return adaptee.getLastAccessedTime();
+        sessionLock.lock();
+        try {
+            return createSessionIfNecessary().getLastAccessedTime();
+        }
+        finally {
+            sessionLock.unlock();
         }
     }
 
@@ -98,9 +117,12 @@ public class GrailsHttpSession implements HttpSession {
      * @see jakarta.servlet.http.HttpSession#getMaxInactiveInterval()
      */
     public int getMaxInactiveInterval() {
-        createSessionIfNecessary();
-        synchronized (this) {
-            return adaptee.getMaxInactiveInterval();
+        sessionLock.lock();
+        try {
+            return createSessionIfNecessary().getMaxInactiveInterval();
+        }
+        finally {
+            sessionLock.unlock();
         }
     }
 
@@ -108,9 +130,12 @@ public class GrailsHttpSession implements HttpSession {
      * @see jakarta.servlet.http.HttpSession#getServletContext()
      */
     public ServletContext getServletContext() {
-        createSessionIfNecessary();
-        synchronized (this) {
-            return adaptee.getServletContext();
+        sessionLock.lock();
+        try {
+            return createSessionIfNecessary().getServletContext();
+        }
+        finally {
+            sessionLock.unlock();
         }
     }
 
@@ -189,7 +214,8 @@ public class GrailsHttpSession implements HttpSession {
      */
     @Deprecated
     public void invalidate() {
-        synchronized (this) {
+        sessionLock.lock();
+        try {
             HttpSession session = adaptee;
             if (session == null) session = request.getSession(false);
             if (session != null) {
@@ -197,15 +223,21 @@ public class GrailsHttpSession implements HttpSession {
                 session.invalidate();
             }
         }
+        finally {
+            sessionLock.unlock();
+        }
     }
 
     /* (non-Javadoc)
      * @see jakarta.servlet.http.HttpSession#isNew()
      */
     public boolean isNew() {
-        createSessionIfNecessary();
-        synchronized (this) {
-            return adaptee.isNew();
+        sessionLock.lock();
+        try {
+            return createSessionIfNecessary().isNew();
+        }
+        finally {
+            sessionLock.unlock();
         }
     }
 
@@ -213,9 +245,12 @@ public class GrailsHttpSession implements HttpSession {
      * @see jakarta.servlet.http.HttpSession#removeAttribute(java.lang.String)
      */
     public void removeAttribute(String name) {
-        createSessionIfNecessary();
-        synchronized (this) {
-            adaptee.removeAttribute(name);
+        sessionLock.lock();
+        try {
+            createSessionIfNecessary().removeAttribute(name);
+        }
+        finally {
+            sessionLock.unlock();
         }
     }
 
@@ -223,9 +258,12 @@ public class GrailsHttpSession implements HttpSession {
      * @see jakarta.servlet.http.HttpSession#setAttribute(java.lang.String, java.lang.Object)
      */
     public void setAttribute(String name, Object value) {
-        createSessionIfNecessary();
-        synchronized (this) {
-            adaptee.setAttribute(name, value);
+        sessionLock.lock();
+        try {
+            createSessionIfNecessary().setAttribute(name, value);
+        }
+        finally {
+            sessionLock.unlock();
         }
     }
 
@@ -233,26 +271,35 @@ public class GrailsHttpSession implements HttpSession {
      * @see jakarta.servlet.http.HttpSession#setMaxInactiveInterval(int)
      */
     public void setMaxInactiveInterval(int arg0) {
-        createSessionIfNecessary();
-        synchronized (this) {
-            adaptee.setMaxInactiveInterval(arg0);
+        sessionLock.lock();
+        try {
+            createSessionIfNecessary().setMaxInactiveInterval(arg0);
+        }
+        finally {
+            sessionLock.unlock();
         }
     }
 
     @SuppressWarnings("rawtypes")
     @Override
     public String toString() {
-        createSessionIfNecessary();
-        StringBuilder sb = new StringBuilder("Session Content:\n");
-        Enumeration e = adaptee.getAttributeNames();
-        while (e.hasMoreElements()) {
-            String name = (String) e.nextElement();
-            sb.append("  ");
-            sb.append(name);
-            sb.append(" = ");
-            sb.append(adaptee.getAttribute(name));
-            sb.append('\n');
+        sessionLock.lock();
+        try {
+            HttpSession session = createSessionIfNecessary();
+            StringBuilder sb = new StringBuilder("Session Content:\n");
+            Enumeration e = session.getAttributeNames();
+            while (e.hasMoreElements()) {
+                String name = (String) e.nextElement();
+                sb.append("  ");
+                sb.append(name);
+                sb.append(" = ");
+                sb.append(session.getAttribute(name));
+                sb.append('\n');
+            }
+            return sb.toString();
         }
-        return sb.toString();
+        finally {
+            sessionLock.unlock();
+        }
     }
 }

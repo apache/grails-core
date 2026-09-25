@@ -16,35 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+package com
 
-package org.grails.datastore.gorm.jdbc;
+import grails.gorm.annotation.Entity
 
-import org.springframework.core.env.PropertySource;
-
-/**
- * The origin of a property, specifically its source and its name before any prefix was
- * removed.
- *
- * @author Andy Wilkinson
- * @since 1.3.0
- */
-class PropertyOrigin {
-
-    private final PropertySource<?> source;
-
-    private final String name;
-
-    PropertyOrigin(PropertySource<?> source, String name) {
-        this.name = name;
-        this.source = source;
-    }
-
-    public PropertySource<?> getSource() {
-        return this.source;
-    }
-
-    public String getName() {
-        return this.name;
-    }
-
+// Lives directly in the top-level "com" package, one of ClasspathEntityScanner's ignoredPackages.
+@Entity
+class IgnoredPackageEntity {
+    String name
 }

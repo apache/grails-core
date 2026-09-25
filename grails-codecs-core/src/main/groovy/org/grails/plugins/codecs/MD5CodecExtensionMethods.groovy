@@ -18,15 +18,19 @@
  */
 package org.grails.plugins.codecs
 
+import groovy.transform.CompileStatic
+
+@CompileStatic
 class MD5CodecExtensionMethods {
 
     // Returns the byte[] of the digest, taken from UTF-8 of the string representation
     // or the raw data coerced to bytes
-    static encodeAsMD5(theTarget) {
-        theTarget.encodeAsMD5Bytes()?.encodeAsHex()
+    static Object encodeAsMD5(Object theTarget) {
+        byte[] digest = (byte[]) MD5BytesCodecExtensionMethods.encodeAsMD5Bytes(theTarget)
+        return digest == null ? null : HexCodecExtensionMethods.encodeAsHex(digest)
     }
 
-    static decodeMD5(theTarget) {
+    static Object decodeMD5(Object theTarget) {
         throw new UnsupportedOperationException('Cannot decode MD5 hashes')
     }
 }

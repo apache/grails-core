@@ -170,7 +170,6 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
         Configuration grailsCliDetect = configurations.create(GRAILS_CLI_DETECT_CONFIGURATION)
         grailsCliDetect.canBeResolved = true
         grailsCliDetect.canBeConsumed = false
-        grailsCliDetect.visible = false
         grailsCliDetect.description = 'Internal probe used to discover companion -cli artifacts advertised by dependencies.'
         for (String bucket : ['api', 'implementation', 'runtimeOnly']) {
             configurations.matching { Configuration it -> it.name == bucket }.configureEach { Configuration it ->

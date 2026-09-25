@@ -383,6 +383,24 @@ GORM for Hibernate 7 now starts tracking changes to an entity when it is persist
 
 As part of this change, persistence event listeners on Hibernate 7 receive a `PersistEvent` (`eventType` `Persist`) for every explicit or flush-time cascaded persist and a `MergeEvent` (`eventType` `Merge`) for every merge. Neither event can be cancelled. Hibernate 5 continues to publish `SaveOrUpdateEvent` when an entity is saved, and publishes no event for a merge. A listener that switches over `event.eventType` with a default branch that throws should handle the new values. See the Events and Auto Timestamping section of the GORM for link:{hibernate7Guide}index.html#eventsAutoTimestamping[Hibernate 7] guide.
 
+==== Default Security Response Headers
+
+Servlet web applications now send a baseline set of browser hardening headers on every response:
+`X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy: strict-origin-when-cross-origin`
+and `X-XSS-Protection: 0`. HSTS and Content Security Policy can be turned on alongside them but are off by default,
+because their right values depend on the deployment. Behind a TLS-terminating proxy, HSTS honors the scheme the proxy
+forwards in `X-Forwarded-Proto` or `Forwarded`.
+
+The headers are written when the response commits, and only if nothing else has set them, so a controller, an
+interceptor, another filter or Spring Security's own header writers at Spring Boot's default filter order win.
+Redirects, error pages, streamed bodies and responses served by other Grails filters, such as asset-pipeline assets,
+are covered too.
+
+Everything is configurable under `grails.security.headers.*`: the whole filter, each header, and its value. A
+deployment whose reverse proxy already sends these headers can set `grails.security.headers.defaults: auto` to send
+only explicitly configured headers on proxied requests. See the xref:security[Security] section of the user guide and
+the xref:upgrading#upgrading80x[upgrade guide] for details.
+
 ==== Test HTTP Client Form Requests
 
 Integration tests that implement `HttpClientSupport` can now use `httpPostForm(...)` to send `application/x-www-form-urlencoded`

@@ -26,6 +26,7 @@ import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 
 import org.hibernate.FlushMode
+import org.hibernate.Hibernate
 import org.hibernate.LockMode
 import org.grails.orm.hibernate.query.SelectHqlQuery
 
@@ -493,18 +494,45 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
 
     @Rollback
     def "handleValidationError sets association to read-only"() {
-        given:
-        def author = new PersonInstanceApi(name: 'Valid Author', age: 30)
-        def book = new ConstrainedBook(title: '', author: author)
+        given: "a persisted author with an unsaved change"
+        def author = new PersonInstanceApi(name: 'Original', age: 30).save(flush: true)
+        author.name = 'Changed'
 
-        when:
-        def result = ConstrainedBook.withTransaction {
-            book.save(flush: true)
-        }
+        when: "a book referencing the author fails validation"
+        def book = new ConstrainedBook(title: '', author: author)
+        def result = book.save()
 
         then:
         result == null
         book.hasErrors()
+        sessionFactory.currentSession.isReadOnly(author)
+
+        when: "the session is flushed explicitly and the author reloaded"
+        sessionFactory.currentSession.flush()
+        sessionFactory.currentSession.clear()
+
+        then: "the change to the author was not written"
+        PersonInstanceApi.get(author.id).name == 'Original'
+    }
+
+    @Rollback
+    def "handleValidationError leaves an uninitialized association proxy uninitialized"() {
+        given: "a book whose author is loaded as an uninitialized proxy"
+        def authorId = new PersonInstanceApi(name: 'Original', age: 30).save(flush: true).id
+        sessionFactory.currentSession.clear()
+        def author = PersonInstanceApi.load(authorId)
+
+        expect:
+        !Hibernate.isInitialized(author)
+
+        when: "the book fails validation"
+        def book = new ConstrainedBook(title: '', author: author)
+        def result = book.save()
+
+        then: "the proxy was not loaded to mark it read-only"
+        result == null
+        book.hasErrors()
+        !Hibernate.isInitialized(author)
     }
 
     @Rollback

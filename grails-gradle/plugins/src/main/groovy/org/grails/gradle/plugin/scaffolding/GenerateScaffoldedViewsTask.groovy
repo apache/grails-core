@@ -19,11 +19,14 @@ package org.grails.gradle.plugin.scaffolding
 import java.util.jar.JarEntry
 import java.util.jar.JarFile
 
+import grails.util.GrailsNameUtils
 import groovy.text.GStringTemplateEngine
 import groovy.transform.CompileStatic
 import groovyjarjarasm.asm.AnnotationVisitor
 import groovyjarjarasm.asm.ClassReader
 import groovyjarjarasm.asm.ClassVisitor
+import groovyjarjarasm.asm.FieldVisitor
+import groovyjarjarasm.asm.MethodVisitor
 import groovyjarjarasm.asm.Opcodes
 import groovyjarjarasm.asm.Type
 
@@ -31,12 +34,15 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+
+import org.grails.gradle.plugin.views.gsp.GroovyPagePlugin
 
 /**
  * Writes the views a scaffolded controller would otherwise generate on its first request.
@@ -69,6 +75,12 @@ abstract class GenerateScaffoldedViewsTask extends DefaultTask {
     /** Path within an artifact holding the scaffolding templates. */
     private static final String TEMPLATE_PATH = 'META-INF/templates/scaffolding/'
 
+    /**
+     * Where a plugin's compiled-view index is read from, in the order {@code BinaryGrailsPlugin}
+     * tries them: beside the plugin descriptor first, then the location the GSP compiler writes.
+     */
+    private static final List<String> VIEW_INDEXES = ['META-INF/views.properties', 'gsp/views.properties']
+
     /** The views scaffolding knows how to produce. */
     private static final List<String> VIEW_NAMES = ['index', 'create', 'edit', 'show']
 
@@ -81,9 +93,20 @@ abstract class GenerateScaffoldedViewsTask extends DefaultTask {
      * The classpath the scaffolding templates are read from. The application's own
      * {@code src/main/templates/scaffolding} takes precedence, matching the runtime lookup.
      */
-    @InputFiles
-    @PathSensitive(PathSensitivity.RELATIVE)
+    @Classpath
     abstract ConfigurableFileCollection getTemplateClasspath()
+
+    /**
+     * The classpath a controller's superclasses are read from, to find a namespace it inherits.
+     * Kept apart from {@link #getTemplateClasspath()} so that narrowing where templates are read
+     * from cannot quietly stop inherited namespaces being seen.
+     */
+    @Classpath
+    abstract ConfigurableFileCollection getControllerClasspath()
+
+    /** Dependency views, including plugins used only at runtime. */
+    @Classpath
+    abstract ConfigurableFileCollection getViewClasspath()
 
     /** Application template overrides, normally {@code src/main/templates/scaffolding}. */
     @InputFiles
@@ -114,11 +137,12 @@ abstract class GenerateScaffoldedViewsTask extends DefaultTask {
         }
 
         Set<File> declared = applicationViews.files
+        Set<String> pluginViews = findPluginViews()
         int written = 0
         for (Map.Entry<String, String> controller : findScaffoldedControllers()) {
             String fullName = controller.value
             String className = fullName.tokenize('.').last()
-            String propertyName = decapitalize(className)
+            String propertyName = GrailsNameUtils.getPropertyName(className)
             String packageName = fullName.contains('.') ? fullName[0..<fullName.lastIndexOf('.')] : ''
             for (String viewName : VIEW_NAMES) {
                 String template = templates.get(viewName)
@@ -128,7 +152,11 @@ abstract class GenerateScaffoldedViewsTask extends DefaultTask {
                 // a view the application wrote itself already wins at runtime, so leaving it out
                 // keeps build-time and runtime resolution agreeing
                 if (declared.any { it.path.endsWith("views/${controller.key}/${viewName}.gsp".toString()) }) {
-                    logger.info("Skipping ${controller.key}/${viewName}.gsp, the application declares it")
+                    logger.info('Skipping {}/{}.gsp, the application declares it', controller.key, viewName)
+                    continue
+                }
+                if (pluginViews.contains("${GroovyPagePlugin.VIEWS_SERVER_PATH}${controller.key}/${viewName}.gsp".toString())) {
+                    logger.info('Skipping {}/{}.gsp, a plugin declares it', controller.key, viewName)
                     continue
                 }
                 File target = new File(outputDir, "${controller.key}/${viewName}.gsp")
@@ -137,7 +165,7 @@ abstract class GenerateScaffoldedViewsTask extends DefaultTask {
                 written++
             }
         }
-        logger.info("Generated ${written} scaffolded view(s)")
+        logger.info('Generated {} scaffolded view(s)', written)
     }
 
     /**
@@ -190,38 +218,90 @@ abstract class GenerateScaffoldedViewsTask extends DefaultTask {
     }
 
     /**
+     * Compiled plugin pages win over runtime scaffolding, so they must also win at build time. Each
+     * plugin JAR contributes the first index it carries, as the runtime reads only one per plugin.
+     * JARs without a plugin descriptor do not expose views at runtime. Directories are not gated:
+     * project dependencies can put the descriptor and compiled index in separate output directories.
+     */
+    private Set<String> findPluginViews() {
+        Set<String> views = []
+        for (File entry : viewClasspath.files) {
+            Properties index = new Properties()
+            if (entry.isDirectory()) {
+                File resource = VIEW_INDEXES.collect { new File(entry, it) }.find { it.isFile() }
+                resource?.withInputStream { InputStream input -> index.load(input) }
+            }
+            else if (entry.name.endsWith('.jar') && entry.isFile()) {
+                new JarFile(entry).withCloseable { JarFile jar ->
+                    if (jar.getJarEntry('META-INF/grails-plugin.xml') == null) {
+                        return
+                    }
+                    JarEntry resource = VIEW_INDEXES.collect { jar.getJarEntry(it) }.find { it != null }
+                    if (resource != null) {
+                        jar.getInputStream(resource).withCloseable { InputStream input -> index.load(input) }
+                    }
+                }
+            }
+            views.addAll(index.stringPropertyNames())
+        }
+        views
+    }
+
+    /**
      * Maps view directory name to the fully qualified domain class, for every {@code @Scaffold}
      * controller. Qualified rather than simple because a view declaring the type of its model has to
      * name a type that resolves.
      *
-     * <p>A view directory is named for the controller alone - {@code getDeployedViewURI} builds
-     * {@code /WEB-INF/grails-app/views/<controller>/<view>.gsp} and never consults the namespace -
-     * so two controllers of the same simple name in different packages share one directory whatever
-     * their namespaces are. Where they scaffold different domains, no single page can serve both:
-     * whichever was written would declare one domain as its model and be rendered by the controller
-     * of the other. Both are left out rather than one of them guessed at, and the resolver goes on
-     * expanding a template per request for them, which is what it did before any of this and is the
-     * one thing that gets each controller its own domain. Everything else in the project is still
-     * precompiled.</p>
+     * <p>Namespaced controllers are left to the runtime resolver, which can evaluate the namespace
+     * and select namespace-specific templates. Emitting their pages into a shared, unqualified
+     * directory would make them visible to unrelated controllers. The entire shared directory is
+     * left out, including when an unqualified controller also claims it.</p>
+     *
+     * <p>This is deliberately broader than it needs to be for a namespaced controller that has no
+     * namespace-specific template, whose page would come out identical to the plain one. Narrowing
+     * it needs to know whether {@code <namespace>/<view>.gsp} exists, and neither half is available
+     * here: the namespace value is assigned in {@code <clinit>} for the usual Groovy declarations,
+     * so the bytecode carries no constant for it, and the runtime also finds namespace templates in
+     * places this task does not read - the application's own resources beside the controller class,
+     * {@code src/main/templates/scaffolding} in development, and a template-override plugin.
+     * Guessing wrong would precompile a plain page over a namespace-specific one, silently.</p>
+     *
+     * <p>Likewise, controllers sharing a name but scaffolding different domains cannot share a
+     * precompiled page. The runtime resolver expands a template for the appropriate domain.</p>
      */
     private Map<String, String> findScaffoldedControllers() {
         Map<String, String> found = [:]
         Map<String, List<String>> claimants = [:]
-        for (File dir : classesDirs.files) {
-            if (!dir.isDirectory()) {
-                continue
+        Set<String> namespaced = []
+        Map<String, Boolean> ancestors = [:]
+        URL[] classpath = (classesDirs.files + controllerClasspath.files).collect { it.toURI().toURL() } as URL[]
+        new URLClassLoader(classpath, (ClassLoader) null).withCloseable { URLClassLoader resources ->
+            for (File dir : classesDirs.files) {
+                if (!dir.isDirectory()) {
+                    continue
+                }
+                dir.eachFileRecurse { File f ->
+                    if (!f.name.endsWith('Controller.class')) {
+                        return
+                    }
+                    String controllerName = viewDirectory(f.name - '.class')
+                    ClassReader reader = new ClassReader(f.bytes)
+                    if (hasNamespace(reader, resources, ancestors)) {
+                        namespaced.add(controllerName)
+                    }
+                    String domain = readScaffoldDomain(reader)
+                    if (domain == null) {
+                        return
+                    }
+                    claimants.computeIfAbsent(controllerName) { [] }.add(domain)
+                    found.put(controllerName, domain)
+                }
             }
-            dir.eachFileRecurse { File f ->
-                if (!f.name.endsWith('Controller.class')) {
-                    return
-                }
-                String domain = readScaffoldDomain(f)
-                if (domain == null) {
-                    return
-                }
-                String controllerName = decapitalize(f.name - 'Controller.class')
-                claimants.computeIfAbsent(controllerName) { [] }.add(domain)
-                found.put(controllerName, domain)
+        }
+        namespaced.each { String controllerName ->
+            if (found.remove(controllerName) != null) {
+                logger.warn('Not precompiling the views of {}: a controller with this name declares or inherits a namespace. ' +
+                        'These scaffold views are expanded at runtime; native images require concrete GSP views.', controllerName)
             }
         }
         claimants.each { String controllerName, List<String> domains ->
@@ -229,12 +309,78 @@ abstract class GenerateScaffoldedViewsTask extends DefaultTask {
             if (distinct.size() > 1) {
                 found.remove(controllerName)
                 logger.warn("Not precompiling the views of ${controllerName}: " +
-                        "${distinct.size()} controllers named ${capitalize(controllerName)}Controller " +
+                        "${distinct.size()} controllers with the view directory ${controllerName} " +
                         "scaffold different domains (${distinct.join(', ')}) and share the one view " +
-                        'directory. They are expanded per request instead, as they were before.')
+                        'directory. They are expanded per request instead; native images require concrete GSP views.')
             }
         }
         found
+    }
+
+    /**
+     * Read declarations, including inherited ones, without evaluating application code.
+     *
+     * <p>Groovy traits rename their namespace fields but emit a static {@code getNamespace()}
+     * accessor on the implementing class. Checking that accessor covers trait-supplied namespaces
+     * without walking interfaces; only superclass declarations require an ancestor walk.</p>
+     *
+     * <p>A declaration is all this can see, not its value, so {@code static namespace = null}
+     * still counts even though the runtime, which tests the value, gives that controller no
+     * namespace. The value lives in {@code <clinit>} for the usual Groovy forms and code is not
+     * read here, so the difference cannot be recovered; the controller is only expanded at runtime
+     * rather than precompiled.</p>
+     */
+    private boolean hasNamespace(ClassReader reader, ClassLoader resources, Map<String, Boolean> ancestors) {
+        boolean declared = false
+        reader.accept(new ClassVisitor(Opcodes.ASM9) {
+            @Override
+            FieldVisitor visitField(int access, String name, String descriptor, String signature, Object value) {
+                if (name == 'namespace' && (access & Opcodes.ACC_STATIC) != 0) {
+                    declared = true
+                }
+                null
+            }
+
+            @Override
+            MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
+                if (name == 'getNamespace' && descriptor.startsWith('()') && (access & Opcodes.ACC_STATIC) != 0) {
+                    declared = true
+                }
+                null
+            }
+        }, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES)
+        if (declared || reader.superName == null || reader.superName == 'java/lang/Object') {
+            return declared
+        }
+        String superName = reader.superName
+        Boolean known = ancestors.get(superName)
+        if (known != null) {
+            return known
+        }
+        boolean inherited = ancestorHasNamespace(superName, resources, ancestors)
+        ancestors.put(superName, inherited)
+        inherited
+    }
+
+    /**
+     * Superclasses can come from dependencies, whose class files may be newer than the bundled ASM
+     * reads, or whose bytecode may be damaged or unreadable. One that cannot be read is taken to
+     * declare no namespace rather than failing the build.
+     */
+    private boolean ancestorHasNamespace(String internalName, ClassLoader resources, Map<String, Boolean> ancestors) {
+        try {
+            InputStream parent = resources.getResourceAsStream("${internalName}.class")
+            if (parent == null) {
+                return false
+            }
+            ClassReader reader = parent.withCloseable { InputStream input -> new ClassReader(input) }
+            return hasNamespace(reader, resources, ancestors)
+        }
+        catch (IllegalArgumentException | IOException | IndexOutOfBoundsException e) {
+            logger.info('Could not read {} to look for an inherited namespace; treating it as declaring none: {}',
+                    internalName.replace('/', '.'), e.message)
+            return false
+        }
     }
 
     /**
@@ -251,39 +397,37 @@ abstract class GenerateScaffoldedViewsTask extends DefaultTask {
      * controller superclass as the domain. The precedence matters rather than merely tidying,
      * because the two attributes are written in no guaranteed order.</p>
      */
-    private String readScaffoldDomain(File classFile) {
+    private String readScaffoldDomain(ClassReader reader) {
         boolean scaffolded = false
         String fromValue = null
         String fromDomain = null
-        classFile.withInputStream { InputStream input ->
-            new ClassReader(input).accept(new ClassVisitor(Opcodes.ASM9) {
-                @Override
-                AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
-                    if (descriptor != SCAFFOLD_ANNOTATION) {
-                        return null
-                    }
-                    scaffolded = true
-                    return new AnnotationVisitor(Opcodes.ASM9) {
-                        @Override
-                        void visit(String name, Object value) {
-                            if (!(value instanceof Type)) {
-                                return
-                            }
-                            String candidate = ((Type) value).className
-                            if (candidate.tokenize('.').last() == 'Void') {
-                                return
-                            }
-                            if (name == 'domain') {
-                                fromDomain = candidate
-                            }
-                            else if (name == 'value') {
-                                fromValue = candidate
-                            }
+        reader.accept(new ClassVisitor(Opcodes.ASM9) {
+            @Override
+            AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
+                if (descriptor != SCAFFOLD_ANNOTATION) {
+                    return null
+                }
+                scaffolded = true
+                return new AnnotationVisitor(Opcodes.ASM9) {
+                    @Override
+                    void visit(String name, Object value) {
+                        if (!(value instanceof Type)) {
+                            return
+                        }
+                        String candidate = ((Type) value).className
+                        if (candidate.tokenize('.').last() == 'Void') {
+                            return
+                        }
+                        if (name == 'domain') {
+                            fromDomain = candidate
+                        }
+                        else if (name == 'value') {
+                            fromValue = candidate
                         }
                     }
                 }
-            }, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES)
-        }
+            }
+        }, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES)
         scaffolded ? (fromDomain ?: fromValue) : null
     }
 
@@ -291,11 +435,12 @@ abstract class GenerateScaffoldedViewsTask extends DefaultTask {
         fileName.endsWith('.gsp') ? fileName[0..<fileName.length() - 4] : fileName
     }
 
-    private static String decapitalize(String name) {
-        name ? name[0].toLowerCase() + name.substring(1) : name
-    }
-
-    private static String capitalize(String name) {
-        name ? name[0].toUpperCase() + name.substring(1) : name
+    /**
+     * The directory the runtime resolves a controller's views from, derived the way
+     * {@code AbstractGrailsClass} derives it, so {@code APIController} maps to {@code API}.
+     */
+    private static String viewDirectory(String controllerClassName) {
+        String logicalName = GrailsNameUtils.getLogicalName(controllerClassName, 'Controller')
+        GrailsNameUtils.getPropertyNameRepresentation(logicalName ?: controllerClassName)
     }
 }

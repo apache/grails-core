@@ -92,7 +92,7 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 | Spring Boot | 4.1.x |
 | Spring Framework | 7.0.x |
 | Spock | 2.4-groovy-5.0 |
-| Gradle | 9.7.x |
+| Gradle | 9.8.x |
 | Jakarta EE | 10 |
 
 ## Project Structure
