@@ -1,0 +1,79 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+// A Grails application that gets the Grails agent skills the way the user guide's Agent Skills
+// section describes. It applies the SkillsJars Gradle plugin, which adds the skill configuration and
+// the extractSkillsJars task, and declares the skills without a version: the Grails Gradle plugin
+// applies the Grails BOM to the skill configuration as it does to the others. Only the build takes
+// part, so the application has no sources of its own.
+//
+// It lives in the end-to-end build because only published artifacts show what an application gets:
+// the published skill jars, their metadata, and the published BOM.
+plugins {
+    id 'groovy'
+    // Supplies grailsVersion, which an application sets in its gradle.properties
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.gradle.grails-web'
+    id 'com.skillsjars.gradle-plugin' version '0.1.0'
+}
+
+version = '0.1'
+group = 'agentskills'
+
+dependencies {
+    skill 'org.apache.grails.skills:grails-developer'
+    skill 'org.apache.grails.skills:grails-8-upgrade'
+}
+
+// extractSkillsJars replaces everything in this directory. An application at the root of its
+// repository points it at the .agents/skills that agents read; this project's own directory keeps
+// it away from the grails-core repository's .agents/skills.
+skillsjars {
+    outputDir = layout.projectDirectory.dir('.agents/skills')
+}
+
+// Version 0.1.0 also packages a project's skills/ directory into its jar, and fails the build
+// when the project has no skills/ directory
+tasks.named('packageSkillsJars') {
+    enabled = false
+}
+
+// Everything below checks the skills this project and agent-skills-plain-build extract; it is not
+// part of the example.
+dependencies {
+    testImplementation 'org.spockframework:spock-core'
+    testImplementation 'org.apache.groovy:groovy'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
+    // extractSkillsJars declares no outputs; depend on it directly and read what it wrote as inputs
+    dependsOn('extractSkillsJars', ':agent-skills-plain-build:extractSkillsJars')
+    inputs.dir(layout.projectDirectory.dir('.agents/skills'))
+            .withPropertyName('extractedSkills')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.dir(rootProject.layout.projectDirectory.dir('agent-skills-plain-build/.agents/skills'))
+            .withPropertyName('plainBuildExtractedSkills')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+    // What the published jars were packaged from, as agents in this repository read it
+    inputs.dir(rootProject.layout.projectDirectory.dir('../.agents/skills'))
+            .withPropertyName('skillSources')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+}

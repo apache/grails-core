@@ -134,5 +134,9 @@ gradlePlugin {
             id = 'org.apache.grails.buildsrc.test-task-sharding'
             implementationClass = 'org.apache.grails.buildsrc.TestTaskShardingPlugin'
         }
+        register('agentSkillsPlugin') {
+            id = 'org.apache.grails.buildsrc.agent-skills'
+            implementationClass = 'org.apache.grails.buildsrc.AgentSkillsPlugin'
+        }
     }
 }
