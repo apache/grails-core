@@ -28,7 +28,10 @@ import java.util.Map;
 
 import groovy.lang.Closure;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.util.UriUtils;
 
 import grails.util.GrailsStringUtils;
@@ -125,13 +128,24 @@ public abstract class AbstractUrlMappingInfo implements UrlMappingInfo {
             return evaluateCapturedName((RuntimeConstraintEvaluator) value);
         }
         else {
-            org.springframework.web.context.request.RequestAttributes attrs =
-                    RequestContextHolder.getRequestAttributes();
-            GrailsWebRequest webRequest = attrs instanceof GrailsWebRequest ? (GrailsWebRequest) attrs : null;
-            return evaluateNameForValue(value, webRequest);
+            return evaluateNameForValue(value, UrlMappingUtils.lookupWebRequest());
         }
     }
 
+    /**
+     * Resolves a controller, action, namespace, view or id name held by this instance. A closure is called with
+     * the given request as its delegate, and a map of HTTP methods to names is keyed by the method of the request.
+     *
+     * <p>Without a {@code webRequest} but with request attributes bound - a request dispatched by a
+     * {@code DispatcherServlet} other than the Grails one, without {@code GrailsWebRequestFilter} - a closure is
+     * not called and resolves to null, since there is no Grails request state for it to read, and a map is keyed
+     * by the method of the bound request. With no request attributes bound at all, a closure is called without a
+     * delegate.</p>
+     *
+     * @param value The name held by this instance
+     * @param webRequest The current request, or null if there is none
+     * @return The name, or null if it cannot be resolved
+     */
     protected String evaluateNameForValue(Object value, GrailsWebRequest webRequest) {
         if (value == null) {
             return null;
@@ -143,7 +157,7 @@ public abstract class AbstractUrlMappingInfo implements UrlMappingInfo {
 
         String name;
         if (value instanceof Closure) {
-            if (webRequest == null) {
+            if (webRequest == null && RequestContextHolder.getRequestAttributes() != null) {
                 return null;
             }
             Closure callable = (Closure) value;
@@ -154,16 +168,24 @@ public abstract class AbstractUrlMappingInfo implements UrlMappingInfo {
             name = result != null ? result.toString() : null;
         }
         else if (value instanceof Map) {
-            if (webRequest == null) {
+            HttpServletRequest request = webRequest != null ? webRequest.getRequest() : currentRequest();
+            if (request == null) {
                 return null;
             }
             Map httpMethods = (Map) value;
-            name = (String) httpMethods.get(HiddenHttpMethod.effectiveMethod(webRequest.getRequest()));
+            name = (String) httpMethods.get(HiddenHttpMethod.effectiveMethod(request));
         }
         else {
             name = value.toString();
         }
         return name != null ? name.trim() : null;
+    }
+
+    private static HttpServletRequest currentRequest() {
+        if (RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attributes) {
+            return attributes.getRequest();
+        }
+        return null;
     }
 
     /**
