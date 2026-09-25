@@ -54,7 +54,7 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 8. **No internal APIs in docs** - Only document public APIs; never reference internal or package-private classes and methods in user-facing documentation
 9. **Test via public APIs** - Tests must exercise behavior through the same APIs an end user calls; never invoke internal implementations, package-private methods, or bypass the public surface directly
 10. **Always review and extend tests** - Review existing unit and functional tests before making changes; every code change must include new or enhanced tests that cover the affected behavior
-11. **Every code touch must update all tests for the changed class** - When a class is modified, find and update every test that covers it - unit, integration, and TCK. Do not leave any existing test out of sync with the new code.
+11. **Every code touch must update all tests for the changed class** - When a class is modified, find and update every test that covers it — unit, integration, and TCK. Do not leave any existing test out of sync with the new code.
 12. **Clean violations before commit** - Before every automated commit, run `./gradlew clean aggregateViolations :grails-test-report:check --continue` from the root. The root `clean` runs `cleanViolationReports`, which deletes the analyzer reports and aggregate reports so every module is re-analyzed; without it, analyzers for unchanged modules stay UP-TO-DATE and their previous results are aggregated. Ensure the Checkstyle, CodeNarc, and `REPOSITORY_CONVENTIONS` reports have no issues, and ensure PMD and SpotBugs reports have no issues for their enabled projects. Enable PMD or SpotBugs per project through the `grailsCodeAnalysis` extension in that module's `build.gradle`; the `-Pgrails.code-analysis.enabled.pmd[.projects]` and `-Pgrails.code-analysis.enabled.spotbugs[.projects]` properties are baseline-run overrides. Disabled tools report their disabled status, not a clean result. Also review the test result reports under `grails-test-report/build/reports/tests/` and ensure there are no failures. `--continue` is required: the aggregate Markdown reports are written only by the aggregate lane, so without it a failing analyzer stops the build before the report that explains the failure is produced. Running an analyzer task directly, such as `./gradlew :grails-core:checkstyleMain`, produces only that task's own XML report and deliberately leaves the aggregate Markdown untouched, so a partial run can never overwrite an authoritative full-repository report.
 13. **Mandatory test coverage** - Any class touched in a commit MUST be covered with tests that verify all behavior. You must run ALL tests in the affected module(s) and ensure they pass before committing.
 14. **The BOM must manage the latest version** - `validateDependencyVersions` enforces that the BOM (`dependencies.gradle`) manages a version `>=` every transitively-resolved version. When it fails, **bump the version in `dependencies.gradle`** so the BOM wins — never silence it with `allowedBomOverrides` or an exclusion unless there is an explicit, documented conflict or an agreed-upon workaround. See [Dependency Management](#dependency-management).
@@ -135,10 +135,10 @@ Each project has its own `settings.gradle` and independent build. When working o
 
 ## Dependency Management
 
-All managed dependency versions live in `dependencies.gradle` (the single source of truth for the BOM projects). The `validateDependencyVersions` task - run automatically in CI - enforces the rules below.
+All managed dependency versions live in `dependencies.gradle` (the single source of truth for the BOM projects). The `validateDependencyVersions` task — run automatically in CI — enforces the rules below.
 
-- **The BOM must manage the latest (winning) version.** Validation fails when a transitive dependency resolves to a version *newer* than the BOM manages. The fix is to **bump the version in `dependencies.gradle`** so the BOM's version is `>=` everything on the classpath and stays authoritative. This is the *purpose* of the check - keeping the BOM ahead of its transitives.
-- **Do not suppress validation to work around a bump.** `allowedBomOverrides` (per-project ext) and dependency exclusions are reserved for an explicit, documented conflict or an agreed-upon workaround - never as a shortcut to silence a version the BOM should simply manage. Comment the reason when you must use one.
+- **The BOM must manage the latest (winning) version.** Validation fails when a transitive dependency resolves to a version *newer* than the BOM manages. The fix is to **bump the version in `dependencies.gradle`** so the BOM's version is `>=` everything on the classpath and stays authoritative. This is the *purpose* of the check — keeping the BOM ahead of its transitives.
+- **Do not suppress validation to work around a bump.** `allowedBomOverrides` (per-project ext) and dependency exclusions are reserved for an explicit, documented conflict or an agreed-upon workaround — never as a shortcut to silence a version the BOM should simply manage. Comment the reason when you must use one.
 - **A dependency managed in more than one BOM must use the *same* version everywhere.** Versions appear in `gradleBomDependencyVersions` (build tooling / `grails-gradle-bom`), `bomDependencyVersions` (`grails-bom`), and per-BOM `customBomVersions` blocks (e.g. `grails-hibernate7-bom`). `grails-bom` re-declares the gradle-BOM constraints, and the Hibernate BOMs are consumed via `enforcedPlatform`. Declaring one coordinate (e.g. `org.ow2.asm:asm`) at two different versions across these maps produces irreconcilable strict constraints and breaks `enforcedPlatform` resolution. Pin it once, consistently.
 - **Prefer inheriting from the Spring Boot BOM.** Do not re-pin a coordinate that `spring-boot-dependencies` (4.1.x) already manages unless you are intentionally overriding it to a newer version (e.g. a security fix); note the reason inline.
 
@@ -339,8 +339,8 @@ Please see the page of the [ASF Security Team](https://www.apache.org/security/)
 
 Security model: [SECURITY.md](./SECURITY.md) → [THREAT_MODEL.md](./THREAT_MODEL.md). Agents that
 scan this repository should consult `SECURITY.md` and the linked `THREAT_MODEL.md` for the project's
-threat model - in-scope / out-of-scope declarations, the security properties claimed and disclaimed,
-and known non-findings - before reporting issues.
+threat model — in-scope / out-of-scope declarations, the security properties claimed and disclaimed,
+and known non-findings — before reporting issues.
 
 ## Resources
 
