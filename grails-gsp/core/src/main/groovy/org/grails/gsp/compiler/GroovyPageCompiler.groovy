@@ -65,11 +65,26 @@ class GroovyPageCompiler {
 
     List<File> srcFiles = []
     File viewsDir
+    /**
+     * Directories of pages the build generated, compiled with those under {@link #viewsDir} in the
+     * same compilation: a page among {@link #srcFiles} under one of them is compiled, registered and
+     * named by its path under that directory, as though it were under {@code viewsDir}. A page
+     * under {@code viewsDir} at the same path takes precedence, and the generated one is left out.
+     */
+    List<File> generatedViewsDirs = []
     String viewPrefix = '/'
     String packagePrefix = 'default'
     String encoding = 'UTF-8'
     String expressionCodec = OutputEncodingSettings.getDefaultValue(OutputEncodingSettings.EXPRESSION_CODEC_NAME)
     String[] configs = []
+    /**
+     * Pages, by their paths under {@link #viewsDir} or the generated directory holding them, that
+     * may be left out: one of these that does not compile is left out with a warning instead of
+     * failing the compilation.
+     */
+    Set<String> optionalPages = [] as Set<String>
+    /** The optional pages left out because they did not compile, each with the reason. */
+    final Map<String, String> leftOut = Collections.synchronizedMap(new TreeMap<String, String>())
     ConfigMap configMap
     ExecutorService threadPool
 
@@ -125,9 +140,20 @@ class GroovyPageCompiler {
                         def results = [:]
                         for (int gspIndex = 0; gspIndex < gspFiles.size(); gspIndex++) {
                             File gsp = gspFiles[gspIndex]
+                            File root = rootOf(gsp)
+                            if (root != viewsDir && new File(viewsDir, relativePath(root, gsp)).isFile()) {
+                                LOG.info("Leaving out the generated page ${relativePath(root, gsp)}, as a page of the views has its path")
+                                continue
+                            }
                             try {
-                                compileGSP(viewsDir, gsp, viewPrefix, packagePrefix, results)
+                                compileGSP(root, gsp, viewPrefix, packagePrefix, results)
                             } catch (Exception ex) {
+                                String page = relativePath(root, gsp)
+                                if (optionalPages.contains(page)) {
+                                    LOG.warn("Leaving out the optional page ${page}, which does not compile: ${ex.message}")
+                                    leftOut.put(page, String.valueOf(ex.message))
+                                    continue
+                                }
                                 LOG.error("Error Compiling GSP File: ${gsp.name} - ${ex.message}")
                                 throw ex
                             }
@@ -161,6 +187,10 @@ class GroovyPageCompiler {
                 // lets the up-to-date check above decide what to recompile. The merge existed for a caller that
                 // passed only the changed files; one that did would now write a registry naming those alone.
                 File viewregistryFile = new File(targetDir, 'gsp/views.properties')
+                Properties previous = new Properties()
+                if (viewregistryFile.isFile()) {
+                    viewregistryFile.withInputStream { InputStream viewsIn -> previous.load(viewsIn) }
+                }
                 viewregistryFile.parentFile.mkdirs()
                 // Use SortedProperties to ensure a consistent order of entries for reproducible builds
                 Properties views = CollectionFactory.createSortedProperties(false)
@@ -169,12 +199,75 @@ class GroovyPageCompiler {
                     views.store(viewsOut, "Precompiled views for ${packagePrefix}")
                 }
                 PropertyFileUtils.makePropertiesFileReproducible(viewregistryFile)
+                removeStalePages(previous.values().collect { Object c -> String.valueOf(c) } as Set<String>,
+                        compileGSPRegistry.values().collect { Object c -> String.valueOf(c) } as Set<String>)
             } finally {
                 // eventListener?.triggerEvent("StatusUpdate", "Shutting Down ThreadPool")
                 threadPool.shutdown()
             }
         }
         return compileGSPRegistry
+    }
+
+    /**
+     * Removes what an earlier compilation wrote for pages it compiled that this one did not - pages
+     * removed or renamed since, and generated pages whose names change with what they are generated
+     * from. Nothing names them any more, so they are never served, but left in place they would be
+     * packaged with every artifact built until the directory is cleaned. Only the classes the
+     * earlier registry names are removed, with their inner classes and data files, so nothing this
+     * compiler did not write is touched.
+     */
+    private void removeStalePages(Set<String> previous, Set<String> current) {
+        Set<String> stale = previous.findAll { String pageClass -> !current.contains(pageClass) } as Set<String>
+        if (stale.isEmpty()) {
+            return
+        }
+        targetDir.listFiles()?.each { File file ->
+            String owner = file.isFile() ? pageClassOf(file.name, stale, current) : null
+            if (owner != null && stale.contains(owner) && !file.delete()) {
+                LOG.warn("Could not remove ${file}, left from a page that is no longer compiled")
+            }
+        }
+    }
+
+    /**
+     * The page class, of those given, that a file in the target directory belongs to: the class
+     * itself, one of its inner classes, or one of its data files. The longest such class is the
+     * owner, so a page whose own name happens to extend another's is not taken for its inner class.
+     */
+    private static String pageClassOf(String fileName, Set<String> stale, Set<String> current) {
+        String name
+        if (fileName.endsWith(GroovyPageMetaInfo.HTML_DATA_POSTFIX)) {
+            name = fileName.substring(0, fileName.length() - GroovyPageMetaInfo.HTML_DATA_POSTFIX.length())
+        }
+        else if (fileName.endsWith(GroovyPageMetaInfo.LINENUMBERS_DATA_POSTFIX)) {
+            name = fileName.substring(0, fileName.length() - GroovyPageMetaInfo.LINENUMBERS_DATA_POSTFIX.length())
+        }
+        else if (fileName.endsWith('.class')) {
+            name = fileName.substring(0, fileName.length() - '.class'.length())
+            // an inner class is named for its outer class and a $, as many times as it is nested
+            for (int end = name.length(); end > 0; end = name.lastIndexOf('$', end - 1)) {
+                String candidate = name.substring(0, end)
+                if (stale.contains(candidate) || current.contains(candidate)) {
+                    return candidate
+                }
+            }
+            return null
+        }
+        else {
+            return null
+        }
+        stale.contains(name) || current.contains(name) ? name : null
+    }
+
+    /** The directory a page is named under: the generated directory holding it, or else the views. */
+    private File rootOf(File gsp) {
+        for (File dir = gsp.parentFile; dir != null; dir = dir.parentFile) {
+            if (generatedViewsDirs.contains(dir)) {
+                return dir
+            }
+        }
+        viewsDir
     }
 
     /**
@@ -237,6 +330,14 @@ class GroovyPageCompiler {
             StringWriter gsptarget = new StringWriter()
             gpp.generateGsp(gsptarget)
             gsptarget.flush()
+
+            CompilationUnit unit = new CompilationUnit(compilerConfig, null, classLoader)
+            unit.addPhaseOperation(operation, Phases.CANONICALIZATION)
+            unit.addSource(gspgroovyfile.name, gsptarget.toString())
+            unit.compile()
+
+            // the data files and the registry entry follow the class, so a page that does not compile
+            // leaves nothing behind that names it
             // write static html parts to data file (read from classpath at runtime)
             File htmlDataFile = new File(new File(targetDir, packageDir), className + GroovyPageMetaInfo.HTML_DATA_POSTFIX)
             htmlDataFile.parentFile.mkdirs()
@@ -247,11 +348,6 @@ class GroovyPageCompiler {
 
             // register viewuri -> classname mapping
             compileGSPResults[viewuri] = fullClassName
-
-            CompilationUnit unit = new CompilationUnit(compilerConfig, null, classLoader)
-            unit.addPhaseOperation(operation, Phases.CANONICALIZATION)
-            unit.addSource(gspgroovyfile.name, gsptarget.toString())
-            unit.compile()
         } else {
             compileGSPResults[viewuri] = fullClassName
         }

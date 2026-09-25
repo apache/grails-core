@@ -105,7 +105,7 @@ include::ref/Maintenance Scripts/dbm-tag.adoc[]
 include::ref/Maintenance Scripts/dbm-validate.adoc[]
 
 [[ref-rollback-scripts]]
-=== Rollback Scripts
+==== Rollback Scripts
 
 [[ref-rollback-scripts-dbm-future-rollback-sql]]
 include::ref/Rollback Scripts/dbm-future-rollback-sql.adoc[]

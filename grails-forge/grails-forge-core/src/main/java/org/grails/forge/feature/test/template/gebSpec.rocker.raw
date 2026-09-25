@@ -27,21 +27,21 @@ Project project
 package @project.getPackageName()
 }
 
+import geb.spock.GebSpec
+import grails.testing.mixin.integration.Integration
 
-import io.micronaut.runtime.EmbeddedApplication
-import io.micronaut.test.extensions.junit5.annotation.MicronautTest
-import org.junit.jupiter.api.Test
-import jakarta.inject.Inject
+/**
+ * See https://grails.apache.org/docs/latest/guide/testing.html#functionalTesting and https://groovy.apache.org/geb/manual/current/
+ * for more instructions on how to write functional tests with Grails and Geb.
+ */
+@@Integration
+class @project.getClassName()Spec extends GebSpec {
 
-@@MicronautTest
-class @project.getClassName()Test {
+    void 'should display the correct title on the home page'() {
+        when: 'visiting the home page'
+            go('/')
 
-    @@Inject
-    EmbeddedApplication<?> application
-
-    @@Test
-    void testItWorks() {
-        assert application.running == true
+        then: 'the page title is correct'
+            title == 'Welcome to Grails'
     }
-
 }

@@ -24,6 +24,7 @@ under the License.
 :last-update-label!:
 :toc:
 :sectnums:
+:!fragment:
 
 [[introduction]]
 == Introduction

@@ -20,59 +20,43 @@ package org.grails.forge.feature.test;
 
 import io.micronaut.core.annotation.NonNull;
 import jakarta.inject.Singleton;
-import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.Project;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
-import org.grails.forge.build.gradle.GradlePlugin;
-import org.grails.forge.feature.*;
-import org.grails.forge.feature.test.template.webdriverBinariesPlugin;
-import org.grails.forge.options.*;
-import org.grails.forge.template.RockerTemplate;
-import org.grails.forge.template.RockerWritable;
+import org.grails.forge.feature.FeatureContext;
 import org.grails.forge.feature.test.template.gebConfig;
+import org.grails.forge.feature.test.template.gebSpec;
+import org.grails.forge.options.DefaultTestRockerModelProvider;
+import org.grails.forge.options.TestFramework;
+import org.grails.forge.options.TestRockerModelProvider;
+import org.grails.forge.template.RockerTemplate;
 
 import java.util.stream.Stream;
 
 @Singleton
-public class GebWithWebDriverBinaries implements Feature {
+public class GebWithLocalBrowsers implements GebFeature {
 
     private final Spock spock;
 
-    public GebWithWebDriverBinaries(Spock spock) {
+    public GebWithLocalBrowsers(Spock spock) {
         this.spock = spock;
     }
 
     @NonNull
     @Override
     public String getName() {
-        return "geb-with-webdriver-binaries";
+        return "geb-with-local-browsers";
     }
 
     @Override
     public String getTitle() {
-        return "Geb Functional Testing using WebDriver binaries Gradle plugin";
+        return "Geb Functional Testing with locally installed browsers";
     }
 
     @NonNull
     @Override
     public String getDescription() {
-        return "This plugin configures Geb to use the WebDriver binaries Gradle plugin for downloading and caching the WebDriver binary for your platform.";
-    }
-
-    @Override
-    public String getCategory() {
-        return Category.TESTING;
-    }
-
-    @Override
-    public int getOrder() {
-        return FeaturePhase.TEST.getOrder();
-    }
-
-    @Override
-    public boolean supports(ApplicationType applicationType) {
-        return applicationType == ApplicationType.WEB || applicationType == ApplicationType.WEB_PLUGIN;
+        return "Configures Geb to run functional tests against browsers installed on your machine. Selenium Manager downloads the WebDriver binary that matches each browser.";
     }
 
     @Override
@@ -94,18 +78,10 @@ public class GebWithWebDriverBinaries implements Feature {
 
     @Override
     public void apply(GeneratorContext generatorContext) {
-        generatorContext.addBuildPlugin(GradlePlugin.builder()
-                .id("org.ysb33r.webdriver-binaries")
-                .lookupArtifactId("webdriver-binaries")
-                .extension(
-                        new RockerWritable(
-                                webdriverBinariesPlugin.template(
-                                        generatorContext.getProject(),
-                                        generatorContext.getOperatingSystem()
-                                )
-                        )
-                )
-                .build());
+        generatorContext.addDependency(Dependency.builder()
+                .groupId("org.apache.grails")
+                .artifactId("grails-geb")
+                .integrationTestImplementationTestFixtures());
 
         Stream.of("api", "support", "remote-driver")
                 .map(name -> "selenium-" + name)
@@ -130,7 +106,7 @@ public class GebWithWebDriverBinaries implements Feature {
 
         Project project = generatorContext.getProject();
         TestRockerModelProvider provider = new DefaultTestRockerModelProvider(
-                org.grails.forge.feature.test.template.spock.template(project)
+                gebSpec.template(project)
         );
         generatorContext.addTemplate("applicationTest",
                 new RockerTemplate(
