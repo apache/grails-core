@@ -485,6 +485,19 @@ class TransactionalTransform extends AbstractDatastoreMethodDecoratingTransforma
         return findAnnotation(amd, Transactional) != null || findAnnotation(amd, ReadOnly) != null || findAnnotation(amd, Rollback) != null
     }
 
+    /**
+     * A method annotated with {@link NotTransactional} opts out of the transaction that a class-level
+     * {@link Transactional}, {@link ReadOnly} or {@link Rollback} annotation would otherwise weave
+     * around it, so it must not be decorated.
+     *
+     * @param md The method node
+     * @return True if the method should be left undecorated
+     */
+    @Override
+    protected boolean hasExcludedAnnotation(MethodNode md) {
+        return super.hasExcludedAnnotation(md) || findAnnotation(md, NotTransactional) != null
+    }
+
     @Override
     int priority() {
         GroovyTransformOrder.TRANSACTIONAL_ORDER

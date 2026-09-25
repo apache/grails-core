@@ -74,6 +74,7 @@ dependencies {
     testImplementation project(':grails-layout')
     testImplementation project(':grails-web-gsp')
     testImplementation project(':grails-core')
+    testImplementation testFixtures(project(':grails-core'))
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
     testImplementation 'org.springframework:spring-web'
     testImplementation 'net.bytebuddy:byte-buddy'

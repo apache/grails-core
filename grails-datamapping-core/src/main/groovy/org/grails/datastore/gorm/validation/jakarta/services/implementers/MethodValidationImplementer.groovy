@@ -83,8 +83,9 @@ class MethodValidationImplementer implements ServiceEnhancer {
     }
 
     @Override
+    @SuppressWarnings('unused')
     void implement(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, ClassNode targetClassNode) {
-        // no-op
+        // no-op: doesImplement() always returns false, so the framework never invokes this
     }
 
     @Override
@@ -108,7 +109,7 @@ class MethodValidationImplementer implements ServiceEnhancer {
         Statement body = (Statement) newMethodNode.code
 
         // add parameter name data for the service
-        weaveParameterNameData(domainClassNode, newMethodNode, abstractMethodNode)
+        weaveParameterNameData(newMethodNode, abstractMethodNode)
 
         // weave the ValidatedService trait
         AbstractTraitApplyingGormASTTransformation.weaveTraitWithGenerics(
@@ -142,7 +143,9 @@ class MethodValidationImplementer implements ServiceEnhancer {
 
         // add a first line to the method body that validates the method
         ArrayExpression argArray = new ArrayExpression(OBJECT_TYPE, validateArgsList)
-        String validateMethodName = abstractMethodNode.exceptions?.contains(make(ConstraintViolationException)) ? 'jakartaValidate' : 'validate'
+        boolean throwsConstraintViolationException = abstractMethodNode.exceptions != null &&
+                Arrays.asList(abstractMethodNode.exceptions).contains(make(ConstraintViolationException))
+        String validateMethodName = throwsConstraintViolationException ? 'jakartaValidate' : 'validate'
         MethodCallExpression validateCall = callThisD(ValidatedService, validateMethodName, args(varThis(), varX(methodField), argArray))
         if (body instanceof BlockStatement) {
             ((BlockStatement) body).statements.add(0, stmt(validateCall))
@@ -157,7 +160,7 @@ class MethodValidationImplementer implements ServiceEnhancer {
 
     }
 
-    protected void weaveParameterNameData(ClassNode domainClassNode, MethodNode newMethodNode, MethodNode abstractMethodNode) {
+    protected void weaveParameterNameData(MethodNode newMethodNode, MethodNode abstractMethodNode) {
         ClassNode newClass = newMethodNode.declaringClass
         ModuleNode module = abstractMethodNode.declaringClass.module
         String innerClassName = "${newClass.name}\$${ParameterNameProvider.simpleName}"

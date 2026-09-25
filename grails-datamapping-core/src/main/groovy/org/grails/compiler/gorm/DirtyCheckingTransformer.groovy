@@ -19,8 +19,6 @@
 
 package org.grails.compiler.gorm
 
-import java.lang.reflect.Modifier
-
 import groovy.transform.CompilationUnitAware
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.AnnotationNode
@@ -37,11 +35,11 @@ import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.ListExpression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
-import org.codehaus.groovy.ast.tools.GeneralUtils
 import org.codehaus.groovy.classgen.GeneratorContext
 import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.sc.StaticCompilationVisitor
+import org.codehaus.groovy.transform.trait.TraitComposer
 
 import org.springframework.validation.annotation.Validated
 
@@ -50,7 +48,6 @@ import grails.gorm.dirty.checking.DirtyCheckedProperty
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckingSupport
 import org.grails.datastore.mapping.model.config.GormProperties
-import org.grails.datastore.mapping.reflect.AstUtils
 import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.datastore.mapping.reflect.NameUtils
 import org.grails.datastore.mapping.reflect.ReflectionUtils
@@ -109,7 +106,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
         if (ClassUtils.isPresent('jakarta.validation.Constraint')) {
             try {
                 VALIDATION_CONSTRAINT_NODE = ClassHelper.make(Class.forName('jakarta.validation.Constraint'))
-            } catch (Throwable e) {
+            } catch (Throwable ignored) {
                 VALIDATION_CONSTRAINT_NODE = null
             }
         }
@@ -134,7 +131,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
         final MethodNode markDirtyMethodNode = changeTrackableClassNode.getMethod(METHOD_NAME_MARK_DIRTY, new Parameter(ClassHelper.STRING_TYPE, 'propertyName'), new Parameter(ClassHelper.OBJECT_TYPE, 'newValue'))
 
         ClassNode superClass = classNode.getSuperClass()
-        boolean shouldWeave = superClass.equals(OBJECT_CLASS_NODE)
+        boolean shouldWeave = superClass == OBJECT_CLASS_NODE
 
         ClassNode dirtyCheckableTrait = ClassHelper.make(traitToInject).getPlainNodeReference()
         if (traitToInject != DirtyCheckable) {
@@ -146,7 +143,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
                 break
             }
             superClass = superClass.getSuperClass()
-            if (superClass == null || superClass.equals(OBJECT_CLASS_NODE)) {
+            if (superClass == null || superClass == OBJECT_CLASS_NODE) {
                 shouldWeave = true
                 break
             }
@@ -156,7 +153,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
 
             classNode.addInterface(dirtyCheckableTrait)
             if (compilationUnit != null) {
-                org.codehaus.groovy.transform.trait.TraitComposer.doExtendTraits(classNode, source, compilationUnit)
+                TraitComposer.doExtendTraits(classNode, source, compilationUnit)
             }
 
         }
@@ -216,16 +213,16 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
                 }
 
                 if (hasAnnotation(allAnnotationNodes, GormEntityTransformation.JPA_ID_ANNOTATION_NODE)) {
-                    if (!propertyName.equals(GormProperties.IDENTITY)) {
+                    if (propertyName != GormProperties.IDENTITY) {
                         // if the property is a JPA @Id but the property name is not id add a transient getter to retrieve the id called getId
                         if (classNode.getField(GormProperties.IDENTITY) == null && gettersAndSetters[GormProperties.IDENTITY] == null) {
                             def getIdMethod = new MethodNode(
                                     'getId',
-                                    Modifier.PUBLIC,
+                                    PUBLIC,
                                     pn.type.plainNodeReference,
                                     Parameter.EMPTY_ARRAY,
                                     ClassNode.EMPTY_ARRAY,
-                                    GeneralUtils.returnS(GeneralUtils.varX(propertyField))
+                                    returnS(varX(propertyField))
                             )
                             markAsGenerated(classNode, getIdMethod)
                             classNode.addMethod(getIdMethod)
@@ -242,11 +239,11 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
                     if (classNode.getField(GormProperties.VERSION) == null && gettersAndSetters[GormProperties.VERSION] == null) {
                         def getVersionMethod = new MethodNode(
                                 'getVersion',
-                                Modifier.PUBLIC,
+                                PUBLIC,
                                 pn.type.plainNodeReference,
                                 Parameter.EMPTY_ARRAY,
                                 ClassNode.EMPTY_ARRAY,
-                                GeneralUtils.returnS(GeneralUtils.varX(propertyField))
+                                returnS(varX(propertyField))
                         )
                         markAsGenerated(classNode, getVersionMethod)
                         classNode.addMethod(getVersionMethod)
@@ -266,7 +263,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
 
                     // first add the getter
                     ClassNode returnType = resolvePropertyReturnType(pn, classNode)
-                    boolean booleanProperty = ClassHelper.boolean_TYPE.getName().equals(returnType.getName()) || ClassHelper.Boolean_TYPE.getName().equals(returnType.getName())
+                    boolean booleanProperty = ClassHelper.boolean_TYPE.getName() == returnType.getName() || ClassHelper.Boolean_TYPE.getName() == returnType.getName()
                     String fieldName = propertyField.getName()
                     String getterName = NameUtils.getGetterName(propertyName, false)
 
@@ -317,11 +314,11 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
             // if the entity is a JPA and has no version property then add a transient one as a stub, this is more to satisfy Grails
             def getVersionMethod = new MethodNode(
                     'getVersion',
-                    Modifier.PUBLIC,
+                    PUBLIC,
                     ClassHelper.make(Long),
                     Parameter.EMPTY_ARRAY,
                     ClassNode.EMPTY_ARRAY,
-                    GeneralUtils.returnS(GeneralUtils.constX(0))
+                    returnS(constX(0))
             )
             markAsGenerated(classNode, getVersionMethod)
             classNode.addMethod(getVersionMethod)
@@ -343,18 +340,19 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
      * @param transientPropertyNode The property node representing static transients
      * @return If the property is transient
      */
-    private boolean isDefinedInTransientsNode(String propertyName, PropertyNode transientPropertyNode) {
+    private static boolean isDefinedInTransientsNode(String propertyName, PropertyNode transientPropertyNode) {
         if (transientPropertyNode) {
-            transientPropertyNode.isStatic() &&
+            return transientPropertyNode.isStatic() &&
                     transientPropertyNode.initialExpression instanceof ListExpression &&
                     ((ListExpression) transientPropertyNode.initialExpression).expressions.find { it instanceof ConstantExpression && it.value == propertyName }
         }
+        return false
     }
 
-    private ClassNode resolvePropertyReturnType(PropertyNode pn, ClassNode classNode) {
+    private static ClassNode resolvePropertyReturnType(PropertyNode pn, ClassNode classNode) {
         ClassNode originalReturnType = pn.getType()
         ClassNode returnType
-        if (!originalReturnType.getNameWithoutPackage().equals(VOID)) {
+        if (originalReturnType.getNameWithoutPackage() != VOID) {
             if (ClassHelper.isPrimitiveType(originalReturnType.redirect())) {
                 returnType = originalReturnType.getPlainNodeReference()
             } else {
@@ -414,7 +412,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
     }
 
     boolean shouldInject(URL url) {
-        return AstUtils.isDomainClass(url)
+        return isDomainClass(url)
     }
 
     void performInjectionOnAnnotatedEntity(ClassNode classNode) {
@@ -488,11 +486,11 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
         return getterAndSetter
     }
 
-    private boolean isSetter(String methodName, MethodNode declaredMethod) {
+    private static boolean isSetter(String methodName, MethodNode declaredMethod) {
         return declaredMethod.getParameters().length == 1 && ReflectionUtils.isSetter(methodName, OBJECT_CLASS_ARG)
     }
 
-    private boolean isGetter(String methodName, MethodNode declaredMethod) {
+    private static boolean isGetter(String methodName, MethodNode declaredMethod) {
         return declaredMethod.getParameters().length == 0 && ReflectionUtils.isGetter(methodName, EMPTY_JAVA_CLASS_ARRAY)
     }
 

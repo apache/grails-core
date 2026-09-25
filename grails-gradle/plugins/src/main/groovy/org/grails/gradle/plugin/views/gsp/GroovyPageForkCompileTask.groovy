@@ -35,8 +35,8 @@ import org.gradle.api.file.FileTree
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.LocalState
 import org.gradle.api.tasks.Nested
 import org.gradle.api.tasks.Optional
@@ -87,8 +87,13 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
     @PathSensitive(PathSensitivity.RELATIVE)
     final ConfigurableFileCollection grailsConfigurationPaths
 
-    @InputDirectory
-    @PathSensitive(PathSensitivity.RELATIVE)
+    /**
+     * The directory of the pages, which the compiler names them under. Internal rather than an input
+     * directory: its pages are fingerprinted as part of {@link #getSource()}, and it need not exist -
+     * a project whose only pages are generated, a plugin that scaffolds controllers and has no views
+     * of its own, has none, and an input directory that does not exist fails validation.
+     */
+    @Internal
     final DirectoryProperty srcDir
 
     @Nested
@@ -114,6 +119,27 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
     /** Whether the pages this task compiles are held to the names they declare. See {@link #compileStatic}. */
     @Input
     final Property<Boolean> compileStaticStrict
+
+    /**
+     * Files that each name, one per line, pages of the source that are optional, as paths relative
+     * to it. An optional page that does not compile is left out with a warning rather than failing
+     * the build: a page generated from a template a dependency supplies is an optimisation, and
+     * without it the page is produced when it is first rendered.
+     */
+    @InputFiles
+    @Optional
+    @PathSensitive(PathSensitivity.RELATIVE)
+    final ConfigurableFileCollection optionalPages
+
+    /**
+     * Directories of pages the build generated, compiled in the same compilation as the source, each
+     * page named by its path under the directory holding it, as though it were in the source, where a
+     * page at the same path takes precedence. Part of {@link #getSource()}, so a project whose only
+     * pages are generated compiles them. One compilation rather than two, because each would write a
+     * {@code gsp/views.properties} and an archive keeps only the first.
+     */
+    @Internal
+    final ConfigurableFileCollection generatedViews
 
     private ExecOperations execOperations
 
@@ -144,6 +170,8 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
         serverpath = objectFactory.property(String)
         compileStatic = objectFactory.property(Boolean).convention(false)
         compileStaticStrict = objectFactory.property(Boolean).convention(false)
+        optionalPages = objectFactory.fileCollection()
+        generatedViews = objectFactory.fileCollection()
         grailsConfigurationPaths = objectFactory.fileCollection()
         grailsConfigurationPaths.from(
                 project.layout.projectDirectory.file('grails-app/conf/application.yml'),
@@ -155,7 +183,7 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
     @Override
     @PathSensitive(PathSensitivity.RELATIVE)
     FileTree getSource() {
-        return super.getSource()
+        return super.getSource().plus(generatedViews.asFileTree)
     }
 
     @Override
@@ -200,6 +228,14 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
                         javaExecSpec.setMaxHeapSize(compileOptions.forkOptions.memoryMaximumSize)
                         javaExecSpec.setMinHeapSize(compileOptions.forkOptions.memoryInitialSize)
 
+                        if (!generatedViews.isEmpty()) {
+                            javaExecSpec.systemProperty(BuildSettings.GENERATED_GSP_VIEW_DIRECTORIES,
+                                    generatedViews.files*.absolutePath.join(File.pathSeparator))
+                        }
+                        if (!optionalPages.isEmpty()) {
+                            javaExecSpec.systemProperty(BuildSettings.OPTIONAL_GSP_PAGES,
+                                    optionalPages.files*.absolutePath.join(File.pathSeparator))
+                        }
                         if (compileStatic.get()) {
                             javaExecSpec.systemProperty(BuildSettings.COMPILE_STATIC_GSP, 'true')
                             if (compileStaticStrict.get()) {

@@ -276,7 +276,7 @@ class ConfigurationMetadataPluginSpec extends Specification {
         BuildResult deleted = runner('jar').buildAndFail()
 
         then: 'the stale registration fails the build instead of silently dropping the DSL metadata'
-        deleted.output.contains("Groovy DSL configuration source '${dslSource.absolutePath}' does not exist")
+        deleted.output.contains("Groovy DSL configuration source '${dslSource.canonicalPath}' does not exist")
     }
 
     def "merges same-name DSL typed and curated metadata fields by precedence"() {
@@ -1582,6 +1582,9 @@ class ConfigurationMetadataPluginSpec extends Specification {
     }
 
     private static String path(File file) {
-        file.absolutePath.replace('\\', '/')
+        // Canonical, not absolute: Gradle reports the resolved path, and on macOS the temporary
+        // directory these tests run in is reached through the /var -> /private/var symlink, so an
+        // absolute path never matches what the build prints.
+        file.canonicalPath.replace('\\', '/')
     }
 }

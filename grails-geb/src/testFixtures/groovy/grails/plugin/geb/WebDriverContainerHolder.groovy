@@ -88,11 +88,28 @@ class WebDriverContainerHolder {
     }
 
     void stop() {
-        container?.stop()
-        container = null
-        browser = null
-        testManager = null
-        containerConf = null
+        try {
+            try {
+                // Quit the driver while the container backing its RemoteWebDriver session is
+                // still up - reinitialize() disables Geb's own driver caching/quitting
+                // (cacheDriver=false, quitDriverOnBrowserReset=false) on the promise that we
+                // quit it here, so skipping this abandons a RemoteWebDriver and its HTTP
+                // connection pool on every container recycle.
+                browser?.driver?.quit()
+            } catch (Exception e) {
+                log.debug('Failed to quit WebDriver session during stop()', e)
+            }
+            container?.stop()
+        } finally {
+            // Reset state even if stop() throws - otherwise isInitialized() keeps reporting
+            // true for a container that's actually broken, and a later reinitialize() call
+            // would see matchesCurrentContainerConfiguration() as a false positive without
+            // ever attempting to recover.
+            container = null
+            browser = null
+            testManager = null
+            containerConf = null
+        }
     }
 
     boolean matchesCurrentContainerConfiguration(WebDriverContainerConfiguration specConf) {
@@ -440,13 +457,34 @@ class WebDriverContainerHolder {
             if (vncContainer) {
                 // Stop the current VNC recording container
                 vncContainer.stop()
-                // Create and start a new VNC recording container for the next test
+
+                // vncContainer is now stopped - and removed, per testcontainers'
+                // GenericContainer#stop() - so it must not be left in the field: if the
+                // replacement below fails to start, a stale reference here would make the
+                // next saveRecordingToFile() target a container that no longer exists.
+                // Clearing it lets GebRecordingTestListener treat the next recording as
+                // unavailable instead.
+                field.set(container, null)
+
                 def newVncContainer = new VncRecordingContainer(container)
                         .withVncPassword('secret')
                         .withVncPort(5900)
                         .withVideoFormat(settings.recordingFormat)
+                try {
+                    newVncContainer.start()
+                } catch (Exception e) {
+                    // start() may have already created the underlying docker container (e.g.
+                    // the "Connected" wait strategy timing out) - stop it explicitly so it
+                    // isn't left running, attached to the browser container's VNC port, until
+                    // Ryuk reaps it at JVM exit.
+                    try {
+                        newVncContainer.stop()
+                    } catch (Exception stopException) {
+                        e.addSuppressed(stopException)
+                    }
+                    throw e
+                }
                 field.set(container, newVncContainer)
-                newVncContainer.start()
 
                 log.debug('Successfully restarted VNC recording container')
             }

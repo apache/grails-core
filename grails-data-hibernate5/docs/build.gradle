@@ -83,6 +83,10 @@ tasks.named('asciidoctor', AsciidoctorTask) { AsciidoctorTask it ->
             'migrationPluginExamplesDir': project.layout.projectDirectory.dir('src/docs/asciidoc/databaseMigration').asFile.relativePath(rootProject.findProject(':grails-data-hibernate5-dbmigration').layout.projectDirectory.asFile),
             'migrationPluginGroupId'    : rootProject.findProject(':grails-data-hibernate5-dbmigration').group,
             'migrationPluginArtifactId' : rootProject.findProject(':grails-data-hibernate5-dbmigration').name,
+            // Every file under the source directory is also converted on its own, including the ones that only
+            // exist to be included by index.adoc. Their headings start at the depth they are included at, so they
+            // are converted as fragments. The '@' lets index.adoc switch this back off to keep its own checks.
+            'fragment'                  : '@'
     ]
 }
 

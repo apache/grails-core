@@ -36,6 +36,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.util.ReflectionUtils
 import spock.lang.Issue
 import spock.lang.Specification
+import spock.lang.Unroll
 
 import javax.sql.DataSource
 /**
@@ -1081,6 +1082,80 @@ new SomeClass()
 
         then:
         noExceptionThrown()
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/16334')
+    void "test @NotTransactional opts a method out of the transaction woven by a class-level @Transactional"() {
+        given: "a service compiled by the Groovy compiler under a class-level @Transactional"
+        def service = new TransactionalTransformSpecService()
+        def transactionManager = getPlatformTransactionManager()
+        service.transactionManager = transactionManager
+
+        when: "a method annotated @NotTransactional is called"
+        boolean activeInOptedOutMethod = service.isActualTransactionActive()
+
+        then: "it runs outside a transaction and none was started for it"
+        activeInOptedOutMethod == false
+        transactionManager.transactionStarted == false
+
+        when: "a method without the opt-out is called"
+        boolean activeInDecoratedMethod = service.isActive()
+
+        then: "the class-level annotation still applies to it"
+        activeInDecoratedMethod == true
+        transactionManager.transactionStarted == true
+
+        when: "an ordinary method is called"
+        transactionManager.transactionStarted = false
+        TransactionStatus status = service.process()
+
+        then: "it is decorated too"
+        status != null
+        transactionManager.transactionStarted == true
+    }
+
+    @Unroll
+    @Issue('https://github.com/apache/grails-core/issues/16334')
+    void "test @NotTransactional opts a method out of a class-level @#annotationName"() {
+        given: "a service annotated at class level with a @NotTransactional method"
+        def service = new GroovyShell().evaluate("""
+import grails.gorm.transactions.${annotationName}
+import grails.gorm.transactions.NotTransactional
+import org.springframework.transaction.support.TransactionSynchronizationManager
+
+@${annotationName}
+class DemoService {
+
+    boolean decorated() {
+        TransactionSynchronizationManager.isActualTransactionActive()
+    }
+
+    @NotTransactional
+    boolean optedOut() {
+        TransactionSynchronizationManager.isActualTransactionActive()
+    }
+}
+new DemoService()
+""")
+        def transactionManager = getPlatformTransactionManager()
+        service.transactionManager = transactionManager
+
+        when: "the opted-out method is called"
+        boolean activeInOptedOutMethod = service.optedOut()
+
+        then: "no transaction is started around it"
+        activeInOptedOutMethod == false
+        transactionManager.transactionStarted == false
+
+        when: "a sibling method without the opt-out is called"
+        boolean activeInDecoratedMethod = service.decorated()
+
+        then: "that method is still decorated"
+        activeInDecoratedMethod == true
+        transactionManager.transactionStarted == true
+
+        where:
+        annotationName << ['Transactional', 'ReadOnly', 'Rollback']
     }
 }
 

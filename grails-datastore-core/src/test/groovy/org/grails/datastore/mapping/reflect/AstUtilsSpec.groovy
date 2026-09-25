@@ -19,6 +19,8 @@
 
 package org.grails.datastore.mapping.reflect
 
+import java.lang.reflect.Modifier
+
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
@@ -41,6 +43,26 @@ class AstUtilsSpec extends Specification {
         AstUtils.implementsInterface(node, itfc)
         AstUtils.implementsInterface(node, itfc.name)
         !AstUtils.implementsInterface(node, "Another")
+    }
+
+    void "findInterface finds an interface listed after one with super-interfaces of its own"() {
+        given:
+        ClassNode base = anInterface('Base')
+        ClassNode target = anInterface('grails.gorm.rx.RxEntity')
+        ClassNode entity = new ClassNode('Book', Modifier.PUBLIC, ClassHelper.OBJECT_TYPE,
+                [anInterface('WithSuper', base), target] as ClassNode[], null)
+        ClassNode mixed = new ClassNode('Author', Modifier.PUBLIC, ClassHelper.OBJECT_TYPE,
+                [anInterface('Mixed', anInterface('Deep', base), target)] as ClassNode[], null)
+
+        expect:
+        AstUtils.findInterface(entity, target.name).is(target)
+        AstUtils.findInterface(mixed, target.name).is(target)
+        AstUtils.findInterface(entity, 'Another') == null
+    }
+
+    private static ClassNode anInterface(String name, ClassNode... superInterfaces) {
+        new ClassNode(name, Modifier.PUBLIC | Modifier.INTERFACE | Modifier.ABSTRACT, ClassHelper.OBJECT_TYPE,
+                superInterfaces, null)
     }
 
     void "copyAnnotations copies an annotation the target doesn't already carry"() {

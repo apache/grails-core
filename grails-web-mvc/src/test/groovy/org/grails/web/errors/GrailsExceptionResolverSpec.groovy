@@ -111,7 +111,9 @@ class GrailsExceptionResolverSpec extends Specification {
         resolver.logStackTrace(exception, request)
 
         then: "Only the GrailsExceptionResolver logger emits; StackTrace logger is silent"
-        resolverLog.events.any { it.loggerName == GrailsExceptionResolver.name }
+        resolverLog.events.size() == 1
+        resolverLog.events[0].formattedMessage.contains('[GET] /test')
+        resolverLog.events[0].formattedMessage.contains('boom')
         stackLog.events.isEmpty()
 
         cleanup:
@@ -313,7 +315,6 @@ class GrailsExceptionResolverSpec extends Specification {
         config.getProperty('grails.exceptionresolver.logFullStackTraceOnFilter', Boolean, true) >> false
         config.getProperty('grails.exceptionresolver.logAuditor', Boolean, false) >> false
         config.getProperty('grails.exceptionresolver.logRemoteAddr', Boolean, false) >> false
-        config.getProperty('grails.exceptionresolver.logFullStackTraceOnFilter', Boolean, true) >> false
         config.getProperty('grails.exceptionresolver.logRequestParameters', Boolean, _) >> false
         config.getProperty('grails.logging.stackTraceFiltererClass', Class, _) >>
                 DefaultStackTraceFilterer
@@ -339,7 +340,7 @@ class GrailsExceptionResolverSpec extends Specification {
         stackLog.events.size() == 1
         resolverLog.events.size() == 1
         stackLog.events[0].formattedMessage.contains(StackTraceFilterer.FULL_STACK_TRACE_MESSAGE)
-        resolverLog.events[0].loggerName == GrailsExceptionResolver.name
+        resolverLog.events[0].formattedMessage.contains('[GET] /test')
 
         and: "The application frame appears in both the unfiltered and filtered log entries"
         [stackLog.events[0], resolverLog.events[0]].every { event ->

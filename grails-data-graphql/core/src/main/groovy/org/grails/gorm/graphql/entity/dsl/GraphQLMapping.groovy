@@ -19,7 +19,6 @@
 
 package org.grails.gorm.graphql.entity.dsl
 
-import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import org.grails.gorm.graphql.entity.dsl.helpers.Deprecatable
 import org.grails.gorm.graphql.entity.dsl.helpers.Describable
@@ -220,26 +219,22 @@ class GraphQLMapping implements Describable<GraphQLMapping>, Deprecatable<GraphQ
      *
      * @see GraphQLPropertyMapping
      */
-    @CompileDynamic
     Object methodMissing(String name, Object args) {
-        if (args && args.getClass().array) {
-
-            if (args[0] instanceof Closure) {
-                property(name, (Closure) args[0])
+        // Groovy's methodMissing protocol requires this exact (String, Object) signature to be
+        // recognized as the hook - the runtime value is always an Object[], so cast it to index into it.
+        Object[] arguments = (Object[]) args
+        if (arguments.length > 0) {
+            if (arguments[0] instanceof Closure) {
+                return property(name, (Closure) arguments[0])
             }
-            else if (args[0] instanceof GraphQLPropertyMapping) {
-                propertyMappings.put(name, (GraphQLPropertyMapping) args[0])
+            else if (arguments[0] instanceof GraphQLPropertyMapping) {
+                return propertyMappings.put(name, (GraphQLPropertyMapping) arguments[0])
             }
-            else if (args[0] instanceof Map) {
-                property(name, (Map) args[0])
-            }
-            else {
-                throw new MissingMethodException(name, getClass(), args)
+            else if (arguments[0] instanceof Map) {
+                return property(name, (Map) arguments[0])
             }
         }
-        else {
-            throw new MissingMethodException(name, getClass(), args)
-        }
+        throw new MissingMethodException(name, getClass(), arguments)
     }
 
     /**

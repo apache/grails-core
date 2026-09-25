@@ -25,11 +25,16 @@ import org.springframework.aot.hint.RuntimeHints;
 import org.springframework.aot.hint.RuntimeHintsRegistrar;
 
 /**
- * Registers the controller a scaffolded resource is served by.
+ * Registers the controller a scaffolded resource is served by, and the templates its pages are
+ * found by.
  *
  * <p>Its actions are reached through Groovy, including the protected ones it defines for the write
  * operations, so an image that keeps only the members something asked for serves the pages and then
  * fails on the request that saves or removes a record.</p>
+ *
+ * <p>The pages themselves are compiled by the build, but the resolver still reads the template a
+ * page was expanded from, because the page is named for it. An image without the templates finds no
+ * template, and so no page, for any scaffolded view.</p>
  *
  * @since 8.0
  */
@@ -41,6 +46,8 @@ public class ScaffoldingRuntimeHints implements RuntimeHintsRegistrar {
         "grails.plugin.scaffolding.annotation.Scaffold"
     };
 
+    private static final String TEMPLATES = "META-INF/templates/scaffolding/**/*.gsp";
+
     @Override
     public void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
         for (String type : DISPATCHED_TYPES) {
@@ -50,5 +57,6 @@ public class ScaffoldingRuntimeHints implements RuntimeHintsRegistrar {
                     MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
                     MemberCategory.ACCESS_DECLARED_FIELDS);
         }
+        hints.resources().registerPattern(TEMPLATES);
     }
 }
