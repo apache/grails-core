@@ -353,6 +353,73 @@ class GroovyPagePluginFunctionalSpec extends GradleSpecification {
         recorded.optionalPages.tokenize(',').size() == 1
     }
 
+    def "a plugin the project has only at runtime has no pages generated here, since they could not be compiled"() {
+        given: 'a plugin the project depends on, and one that reaches it only at runtime, each with its own domain class'
+        def runner = setupTestResourceProject('gsp-compile-classpath')
+        File projectDir = runner.projectDir
+        new File(projectDir, 'build.gradle').append("""
+            dependencies {
+                implementation files('compiler')
+                implementation files('widget-plugin.jar')
+                runtimeOnly files('generator')
+                runtimeOnly files('gadget-plugin.jar')
+            }
+        """)
+        ['generator': 'org/apache/grails/scaffolding/ScaffoldedPagesGenerator.class',
+         'compiler' : 'org/grails/web/pages/GroovyPageForkedCompiler.class'].each { String dir, String standIn ->
+            File standInClass = new File(projectDir, "${dir}/${standIn}")
+            standInClass.parentFile.mkdirs()
+            standInClass.bytes = getClass().classLoader.getResource(standIn).bytes
+        }
+        for (String name : ['widget', 'gadget']) {
+            String type = "com/${name}/${name.capitalize()}"
+            ClassWriter controller = new ClassWriter(0)
+            controller.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "${type}Controller", null, 'java/lang/Object', null)
+            AnnotationVisitor scaffold = controller.visitAnnotation('Lgrails/plugin/scaffolding/annotation/Scaffold;', true)
+            scaffold.visit('domain', Type.getObjectType(type))
+            scaffold.visitEnd()
+            controller.visitEnd()
+            ClassWriter domain = new ClassWriter(0)
+            domain.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, type, null, 'java/lang/Object', null)
+            domain.visitEnd()
+            new JarOutputStream(new File(projectDir, "${name}-plugin.jar").newOutputStream()).withCloseable { JarOutputStream out ->
+                ['META-INF/grails-plugin.xml': '<plugin/>'.bytes,
+                 ("${type}Controller.class".toString()): controller.toByteArray(),
+                 ("${type}.class".toString()): domain.toByteArray(),
+                 'META-INF/templates/scaffolding/show.gsp': "${name} show \${className}".bytes].each { String entry, byte[] bytes ->
+                    out.putNextEntry(new JarEntry(entry))
+                    out.write(bytes)
+                    out.closeEntry()
+                }
+            }
+        }
+        File scaffolded = new File(projectDir, 'build/generated/scaffolded-views/grails-scaffolded')
+
+        when:
+        def result = executeTask('generateScaffoldedViews', ['--info'])
+
+        then: 'the plugin on the classpath the pages are compiled against has its pages generated, from every copy of the template'
+        assertTaskSuccess('generateScaffoldedViews', result)
+        new File(scaffolded, 'com.widget.Widget').listFiles()*.listFiles().flatten()*.text.sort() ==
+                ['gadget show ${className}', 'widget show ${className}']
+
+        and: 'the one the project has only at runtime has none, and says why only where the build is asked for detail'
+        !new File(scaffolded, 'com.gadget.Gadget').exists()
+        result.output.contains('No page is expanded for gadget-plugin.jar!/com/gadget/GadgetController.class: ' +
+                'the domain class it scaffolds, com.gadget.Gadget, is not on the classpath the pages are compiled against')
+
+        when: 'the pages are compiled'
+        def compilation = executeTask('compileGroovyPages')
+
+        then: 'the compiler is handed no page it cannot compile, so it has none to leave out'
+        assertTaskSuccess('compileGroovyPages', compilation)
+        Map<String, String> recorded = new File(projectDir, 'build/gsp-classes/main/compiler.txt').readLines('UTF-8')
+                .collectEntries { String line -> line.split('=', 2) as List }
+        List<String> optional = recorded.optionalPages.tokenize(',')
+        optional.size() == 2
+        optional.every { String page -> page.startsWith('grails-scaffolded/com.widget.Widget/') }
+    }
+
     def "a project that scaffolds nothing generates nothing"() {
         given:
         def runner = setupTestResourceProject('gsp-compile-classpath')

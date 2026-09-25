@@ -543,9 +543,11 @@ class GenerateScaffoldedViewsTaskSpec extends Specification {
             File plugin = new File(projectDir, 'plugin.jar')
             writeJar(plugin, [(PLUGIN_DESCRIPTOR): '<plugin/>'.bytes,
                               'com/plugin/WidgetController.class': scaffolded('com/plugin/WidgetController', 'com/plugin/Widget'),
+                              'com/plugin/Widget.class': plain('com/plugin/Widget', 'java/lang/Object') { },
                               'META-INF/templates/scaffolding/show.gsp': 'plugin show'.bytes])
             def task = task()
             task.runtimeClasspath.from(plugin)
+            task.pageClasspath.from(plugin)
 
         when:
             task.generate()
@@ -559,7 +561,46 @@ class GenerateScaffoldedViewsTaskSpec extends Specification {
         given:
             File plugin = new File(projectDir, 'plugin-classes')
             writeClass(plugin, 'com/plugin/WidgetController', scaffolded('com/plugin/WidgetController', 'com/plugin/Widget'))
+            writeClass(plugin, 'com/plugin/Widget', plain('com/plugin/Widget', 'java/lang/Object') { })
             new File(plugin, PLUGIN_DESCRIPTOR).with { parentFile.mkdirs(); text = '<plugin/>' }
+            def task = task()
+            task.runtimeClasspath.from(plugin)
+            task.pageClasspath.from(plugin)
+
+        when:
+            task.generate()
+
+        then:
+            handed(task)['com.plugin.Widget/show'] == ['show ${className}']
+    }
+
+    void 'a plugin the pages cannot be compiled against has none expanded for its controllers, and the others still do'() {
+        given: 'one plugin the project depends on, and one that reaches it only at runtime, through another dependency'
+            File compiledAgainst = new File(projectDir, 'widget-plugin.jar')
+            writeJar(compiledAgainst, [(PLUGIN_DESCRIPTOR): '<plugin/>'.bytes,
+                                       'com/widget/WidgetController.class': scaffolded('com/widget/WidgetController', 'com/widget/Widget'),
+                                       'com/widget/Widget.class': plain('com/widget/Widget', 'java/lang/Object') { }])
+            File runtimeOnly = new File(projectDir, 'gadget-plugin.jar')
+            writeJar(runtimeOnly, [(PLUGIN_DESCRIPTOR): '<plugin/>'.bytes,
+                                   'com/gadget/GadgetController.class': scaffolded('com/gadget/GadgetController', 'com/gadget/Gadget'),
+                                   'com/gadget/Gadget.class': plain('com/gadget/Gadget', 'java/lang/Object') { }])
+            writeController('UserController', 'User')
+            def task = task()
+            task.runtimeClasspath.from(compiledAgainst, runtimeOnly)
+            task.pageClasspath.from(compiledAgainst)
+
+        when:
+            task.generate()
+
+        then: 'the application scaffolds its domain classes whatever the classpath, since its controllers were compiled against them'
+            handed(task).keySet()*.tokenize('/')*.first().unique().sort() == ['com.example.User', 'com.widget.Widget']
+    }
+
+    void 'a plugin controller scaffolding a type the platform provides is expanded without it on the page classpath'() {
+        given:
+            File plugin = new File(projectDir, 'plugin.jar')
+            writeJar(plugin, [(PLUGIN_DESCRIPTOR): '<plugin/>'.bytes,
+                              'com/plugin/NumberController.class': scaffolded('com/plugin/NumberController', 'java/lang/Long')])
             def task = task()
             task.runtimeClasspath.from(plugin)
 
@@ -567,7 +608,23 @@ class GenerateScaffoldedViewsTaskSpec extends Specification {
             task.generate()
 
         then:
-            handed(task)['com.plugin.Widget/show'] == ['show ${className}']
+            handed(task)['java.lang.Long/show'] == ['show ${className}']
+    }
+
+    void "a plugin controller scaffolding a domain class of the project's own is expanded"() {
+        given:
+            writeClass(classesDir, 'com/example/Widget', plain('com/example/Widget', 'java/lang/Object') { })
+            File plugin = new File(projectDir, 'plugin.jar')
+            writeJar(plugin, [(PLUGIN_DESCRIPTOR): '<plugin/>'.bytes,
+                              'com/plugin/WidgetController.class': scaffolded('com/plugin/WidgetController', 'com/example/Widget')])
+            def task = task()
+            task.runtimeClasspath.from(plugin)
+
+        when:
+            task.generate()
+
+        then:
+            handed(task)['com.example.Widget/show'] == ['show ${className}']
     }
 
     void 'a scaffolded class in a jar that is not a plugin is not a controller of the application'() {
