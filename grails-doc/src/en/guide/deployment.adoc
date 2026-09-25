@@ -18,3 +18,10 @@ under the License.
 ////
 
 Grails applications can be deployed in a number of ways, each of which has its pros and cons.
+
+This section covers:
+
+* Traditional WAR file deployment for servlet containers
+* Standalone deployment using executable JAR/WAR files
+* Container-based deployment with layered builds for optimized Docker images
+* Deployment configuration tasks including SSL setup
