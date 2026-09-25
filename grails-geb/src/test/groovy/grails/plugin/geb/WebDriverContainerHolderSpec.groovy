@@ -27,35 +27,26 @@ import org.openqa.selenium.WebDriver
 
 import geb.Browser
 import geb.test.GebTestManager
-import spock.lang.Shared
 import spock.lang.Specification
+import spock.util.environment.RestoreSystemProperties
 
 import static org.testcontainers.containers.BrowserWebDriverContainer.VncRecordingMode
 
+@RestoreSystemProperties
 class WebDriverContainerHolderSpec extends Specification {
 
-    private static final String GEB_SYSTEM_PROPERTY_PREFIX = 'grails.geb.'
+    WebDriverContainerHolder holder
 
-    // GrailsGebSettings' constructor parses live `grails.geb.*` system properties (forwarded
-    // from `grails.geb.*` project properties by gradle/test-config.gradle), so an externally
-    // supplied value - e.g. a malformed `grails.geb.recording.mode` in a developer's gradle
-    // properties - could otherwise make the `holder` field initializer below throw before any
-    // feature method runs. Clearing them for the duration of this spec keeps it hermetic.
-    @Shared
-    private Map<String, String> savedGebSystemProperties
-
-    def setupSpec() {
-        savedGebSystemProperties = System.getProperties().stringPropertyNames()
-                .findAll { it.startsWith(GEB_SYSTEM_PROPERTY_PREFIX) }
-                .collectEntries { [(it): System.getProperty(it)] }
-        savedGebSystemProperties.keySet().each { System.clearProperty(it) }
+    def setup() {
+        // GrailsGebSettings' constructor parses live `grails.geb.*` system properties
+        // (forwarded from `grails.geb.*` project properties by gradle/test-config.gradle), so
+        // clear them to keep an externally supplied value from breaking or skewing this spec.
+        // @RestoreSystemProperties puts them back after each feature.
+        System.properties.stringPropertyNames()
+                .findAll { it.startsWith('grails.geb.') }
+                .each { System.clearProperty(it) }
+        holder = Spy(WebDriverContainerHolder, constructorArgs: [new GrailsGebSettings(LocalDateTime.now())])
     }
-
-    def cleanupSpec() {
-        savedGebSystemProperties.each { key, value -> System.setProperty(key, value) }
-    }
-
-    WebDriverContainerHolder holder = new WebDriverContainerHolder(new GrailsGebSettings(LocalDateTime.now()))
 
     void 'stop() resets container, browser and testManager on the happy path'() {
         given: 'a holder with an initialized container'
@@ -165,36 +156,114 @@ class WebDriverContainerHolderSpec extends Specification {
         holder.restartVncRecordingContainer()
     }
 
-    void 'restartVncRecordingContainer() swallows a failure starting the replacement container, and clears the field instead of leaving a stale reference'() {
-        given: 'a container whose active VNC recording container is in place'
-        holder.settings.recordingMode = VncRecordingMode.RECORD_ALL
-        holder.settings.restartRecordingContainerPerTest = true
-        // Left otherwise unconfigured: VncRecordingContainer#start() inspects the browser
-        // container it's attached to (e.g. getNetworkAliases()) before touching Docker, so a
-        // bare mock makes the replacement container fail to start deterministically, without
-        // needing a real Docker daemon.
+    void 'restartVncRecordingContainer() stops the current recording container and starts a replacement'() {
+        given: 'a browser container with an active VNC recording container'
+        enablePerTestRecording()
         def container = Mock(BrowserWebDriverContainer)
         holder.container = container
+        def current = Mock(VncRecordingContainer)
+        setRecordingContainer(container, current)
+        def replacement = Mock(VncRecordingContainer)
+        holder.createVncRecordingContainer() >>> [replacement, Mock(VncRecordingContainer)]
 
-        // No public API sets BrowserWebDriverContainer's private `vncRecordingContainer`
-        // field - production code (restartVncRecordingContainer) resorts to the same
-        // reflection to read it, as a documented workaround for
-        // https://github.com/testcontainers/testcontainers-java/issues/3998.
-        def vncContainer = Mock(VncRecordingContainer)
-        def vncField = BrowserWebDriverContainer.getDeclaredField('vncRecordingContainer')
-        vncField.accessible = true
-        vncField.set(container, vncContainer)
-
-        when: 'restarting the recording container twice'
-        holder.restartVncRecordingContainer()
+        when:
         holder.restartVncRecordingContainer()
 
-        then: 'the failure starting the replacement is logged and swallowed rather than breaking test execution'
+        then: 'the current recording container is stopped first'
+        1 * current.stop()
+
+        then: 'the replacement is started'
+        1 * replacement.start()
+
+        and:
+        holder.recordingContainerAvailable
+
+        when: 'restarting before the following test'
+        holder.restartVncRecordingContainer()
+
+        then: 'it is the replacement that is stopped, so it had taken the place of the original'
+        1 * replacement.stop()
+        0 * current.stop()
+    }
+
+    void 'restartVncRecordingContainer() stops a replacement that fails to start and leaves no recording container behind'() {
+        given: 'a browser container with an active VNC recording container'
+        enablePerTestRecording()
+        def container = Mock(BrowserWebDriverContainer)
+        holder.container = container
+        def current = Mock(VncRecordingContainer)
+        setRecordingContainer(container, current)
+
+        and: 'a replacement that is created, but fails to start'
+        def replacement = Mock(VncRecordingContainer)
+        replacement.start() >> { throw new IllegalStateException('Timed out waiting for log output') }
+        holder.createVncRecordingContainer() >> replacement
+
+        when:
+        holder.restartVncRecordingContainer()
+
+        then: 'the failure is logged and swallowed rather than breaking test execution'
         noExceptionThrown()
 
-        and: 'the old container is stopped only once - observable proof that the field was ' +
-                'cleared on the first (failed) restart rather than left pointing at it, since a ' +
-                'stale reference would have made the second restart stop it again'
-        1 * vncContainer.stop()
+        and: 'the replacement is stopped so it is not left running'
+        1 * current.stop()
+        1 * replacement.stop()
+
+        and: 'neither the stopped nor the failed container is left as the recording container'
+        !holder.recordingContainerAvailable
+    }
+
+    void 'restartVncRecordingContainer() starts a new recording container after a previous restart failed'() {
+        given: 'a browser container with an active VNC recording container'
+        enablePerTestRecording()
+        def container = Mock(BrowserWebDriverContainer)
+        holder.container = container
+        def current = Mock(VncRecordingContainer)
+        setRecordingContainer(container, current)
+
+        and: 'a first replacement that fails to start, and a second one that starts'
+        def failing = Mock(VncRecordingContainer)
+        failing.start() >> { throw new IllegalStateException('Timed out waiting for log output') }
+        def working = Mock(VncRecordingContainer)
+        holder.createVncRecordingContainer() >>> [failing, working]
+
+        when: 'restarting before two consecutive tests'
+        holder.restartVncRecordingContainer()
+        holder.restartVncRecordingContainer()
+
+        then: 'the original recording container is stopped exactly once'
+        1 * current.stop()
+
+        and: 'the second restart starts a new recording container instead of giving up'
+        1 * working.start()
+        holder.recordingContainerAvailable
+    }
+
+    void 'isRecordingContainerAvailable() is false without an initialized container'() {
+        expect:
+        !holder.recordingContainerAvailable
+    }
+
+    void 'isRecordingContainerAvailable() is false when the container has no recording container'() {
+        given: 'a container created with recording disabled'
+        holder.container = Mock(BrowserWebDriverContainer)
+
+        expect:
+        !holder.recordingContainerAvailable
+    }
+
+    private void enablePerTestRecording() {
+        holder.settings.recordingMode = VncRecordingMode.RECORD_ALL
+        holder.settings.restartRecordingContainerPerTest = true
+    }
+
+    // No public API sets BrowserWebDriverContainer's private `vncRecordingContainer` field.
+    // WebDriverContainerHolder resorts to the same reflection as a workaround for
+    // https://github.com/testcontainers/testcontainers-java/issues/3998.
+    private static void setRecordingContainer(BrowserWebDriverContainer container, VncRecordingContainer vncContainer) {
+        BrowserWebDriverContainer.getDeclaredField('vncRecordingContainer').tap {
+            accessible = true
+            set(container, vncContainer)
+        }
     }
 }
