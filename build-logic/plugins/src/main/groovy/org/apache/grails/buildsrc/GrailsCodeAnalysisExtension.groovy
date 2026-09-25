@@ -25,7 +25,6 @@ import groovy.transform.CompileStatic
 import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.model.ObjectFactory
-import org.gradle.api.provider.Property
 
 @CompileStatic
 abstract class GrailsCodeAnalysisExtension {
@@ -42,19 +41,33 @@ abstract class GrailsCodeAnalysisExtension {
      */
     final DirectoryProperty reportsDirectory
 
-    abstract Property<Boolean> getPmdEnabled()
-
-    abstract Property<Boolean> getSpotbugsEnabled()
+    private final Project project
 
     @Inject
     GrailsCodeAnalysisExtension(ObjectFactory objects, Project project) {
+        this.project = project
         pmdDirectory = objects.directoryProperty().convention(
                 project.rootProject.layout.buildDirectory.dir('code-analysis/pmd')
         )
         reportsDirectory = objects.directoryProperty().convention(
                 project.rootProject.layout.buildDirectory.dir('reports/code-analysis')
         )
-        pmdEnabled.convention(false)
-        spotbugsEnabled.convention(false)
+    }
+
+    /**
+     * Opts this project into PMD and configures it immediately, so the build script can customize the
+     * {@code pmd*} tasks directly afterwards. {@code -Pgrails.code-analysis.enabled.pmd=false} keeps PMD off.
+     */
+    void enablePmd() {
+        GrailsCodeAnalysisPlugin.enablePmd(project, this)
+    }
+
+    /**
+     * Opts this project into SpotBugs and configures it immediately, so the build script can customize the
+     * {@code spotbugs*} tasks directly afterwards. {@code -Pgrails.code-analysis.enabled.spotbugs=false} keeps
+     * SpotBugs off.
+     */
+    void enableSpotbugs() {
+        GrailsCodeAnalysisPlugin.enableSpotbugs(project, this)
     }
 }

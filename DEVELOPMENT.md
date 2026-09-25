@@ -62,16 +62,18 @@ PMD and SpotBugs run only in modules that opt in from their own `build.gradle`:
 
 ```groovy
 grailsCodeAnalysis {
-    pmdEnabled = true
-    spotbugsEnabled = true
+    enablePmd()
+    enableSpotbugs()
 }
 ```
 
+Each call configures the tool immediately, so the rest of the module's build script can customize its tasks directly, for example `tasks.named('pmdMain') { ... }`.
+
 These properties change that for a single run:
 
-* `grails.code-analysis.enabled.pmd` - `true` or `false` turns PMD on or off for every module, overriding the module opt-ins
+* `grails.code-analysis.enabled.pmd` - `true` or `false` turns PMD on or off for every module. When set, it wins over both the module opt-ins and `grails.code-analysis.enabled.pmd.projects`
 * `grails.code-analysis.enabled.pmd.projects` - comma-separated project paths that also run PMD, for example `:grails-core,:grails-web-core`
-* `grails.code-analysis.enabled.spotbugs` - `true` or `false` turns SpotBugs on or off for every module, overriding the module opt-ins
+* `grails.code-analysis.enabled.spotbugs` - `true` or `false` turns SpotBugs on or off for every module. When set, it wins over both the module opt-ins and `grails.code-analysis.enabled.spotbugs.projects`
 * `grails.code-analysis.enabled.spotbugs.projects` - comma-separated project paths that also run SpotBugs
 * `grails.code-analysis.ignoreFailures` - collects the reports without failing the build
 

@@ -53,7 +53,7 @@ import org.gradle.testing.jacoco.tasks.JacocoReport
  *
  * Tasks registered:
  *   aggregateStyleViolations    — CodeNarc + Checkstyle only
- *   aggregateAnalysisViolations — PMD + SpotBugs only (requires opt-in properties)
+ *   aggregateAnalysisViolations — PMD + SpotBugs only (modules opt in with enablePmd() or enableSpotbugs())
  *   aggregateViolations         — depends on both of the above
  *   aggregateJacocoCoverage     — JaCoCo CSV → Markdown
  */

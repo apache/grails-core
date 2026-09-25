@@ -492,7 +492,7 @@ public class App {
             }
             repositories { mavenCentral() }
             grailsCodeAnalysis {
-                spotbugsEnabled = true
+                enableSpotbugs()
             }
         """
         def sourceFile = moduleDir.resolve('src/main/java/com/example/App.java').toFile()
@@ -879,13 +879,11 @@ pmdVersion=${pmdVersion}
             }
             repositories { mavenCentral() }
             grailsCodeAnalysis {
-                pmdEnabled = true
+                enablePmd()
                 reportsDirectory.set(layout.buildDirectory.dir('custom-analysis'))
             }
-            afterEvaluate {
-                tasks.named('pmdMain') {
-                    reports.xml.outputLocation.set(layout.buildDirectory.file('custom-analysis/pmd/renamed-pmd.xml'))
-                }
+            tasks.named('pmdMain') {
+                reports.xml.outputLocation.set(layout.buildDirectory.file('custom-analysis/pmd/renamed-pmd.xml'))
             }
         """
         def sourceFile = moduleDir.resolve('src/main/java/com/example/App.java').toFile()

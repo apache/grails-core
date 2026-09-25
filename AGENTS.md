@@ -252,17 +252,15 @@ class MyService { }
 
 ## Build Commands
 
-PMD and SpotBugs are enabled per project. Add the appropriate flag to the clean module's `build.gradle`:
+PMD and SpotBugs are enabled per project. Opt the clean module in from its `build.gradle`:
 
 ```groovy
 grailsCodeAnalysis {
-    pmdEnabled = true
+    enablePmd()
 }
 ```
 
-Set `spotbugsEnabled = true` in the same extension to opt that module into SpotBugs. The `-Pgrails.code-analysis.enabled.pmd[.projects]` and `-Pgrails.code-analysis.enabled.spotbugs[.projects]` properties remain available for baseline runs: an explicit `true` or `false` for the all-project property overrides every module's opt-in, and the `.projects` form additionally enables the listed project paths.
-
-PMD and SpotBugs tasks are registered during `afterEvaluate`. Wrap per-task customization in `afterEvaluate { tasks.named('pmdMain') { ... } }` or `afterEvaluate { tasks.named('spotbugsMain') { ... } }`.
+Call `enableSpotbugs()` in the same extension to opt that module into SpotBugs. Each call configures the tool immediately, so the rest of the build script can customize its tasks directly, for example `tasks.named('pmdMain') { ... }`. The `-Pgrails.code-analysis.enabled.pmd[.projects]` and `-Pgrails.code-analysis.enabled.spotbugs[.projects]` properties remain available for baseline runs. The `.projects` form also enables the listed project paths. The all-project property, when set to `true` or `false`, wins over both the `.projects` form and every module's opt-in.
 
 | Task | Command |
 |------|---------|

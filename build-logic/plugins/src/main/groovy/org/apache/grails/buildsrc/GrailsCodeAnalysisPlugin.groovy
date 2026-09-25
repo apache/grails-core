@@ -30,6 +30,7 @@ import com.github.spotbugs.snom.SpotBugsPlugin
 import com.github.spotbugs.snom.SpotBugsTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.file.Directory
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.FileTreeElement
 import org.gradle.api.logging.Logger
@@ -37,11 +38,11 @@ import org.gradle.api.logging.Logging
 import org.gradle.api.plugins.quality.Pmd
 import org.gradle.api.plugins.quality.PmdExtension
 import org.gradle.api.plugins.quality.PmdPlugin
-import org.gradle.api.provider.Property
 
 /**
  * Convention plugin for Grails byte code analysis (PMD and SpotBugs).
- * Both tools are opt-in; enable via Gradle properties.
+ * Both tools are opt-in: a module calls {@code grailsCodeAnalysis { enablePmd() }} or {@code enableSpotbugs()}, and
+ * Gradle properties can enable or disable them for baseline runs.
  */
 @CompileStatic
 class GrailsCodeAnalysisPlugin implements Plugin<Project> {
@@ -66,10 +67,11 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
 
     @Override
     void apply(Project project) {
-        initExtension(project)
-        project.afterEvaluate {
-            GrailsCodeAnalysisExtension extension = project.extensions.getByType(GrailsCodeAnalysisExtension)
+        GrailsCodeAnalysisExtension extension = initExtension(project)
+        if (isEnabledByProperties(project, PMD_ENABLED_PROPERTY, PMD_ENABLED_PROJECTS_PROPERTY)) {
             configurePmd(project, extension)
+        }
+        if (isEnabledByProperties(project, SPOTBUGS_ENABLED_PROPERTY, SPOTBUGS_ENABLED_PROJECTS_PROPERTY)) {
             configureSpotbugs(project, extension)
         }
 
@@ -83,7 +85,7 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
         }
     }
 
-    private static void initExtension(Project project) {
+    private static GrailsCodeAnalysisExtension initExtension(Project project) {
         def gca = project.extensions.create('grailsCodeAnalysis', GrailsCodeAnalysisExtension)
         def buildDirectory = project.layout.buildDirectory
 
@@ -103,6 +105,7 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
 
             directory
         })
+        gca
     }
 
     private static void createOrLoad(Path expectedPath, String defaultResource, DirectoryProperty buildDirectory) {
@@ -117,22 +120,41 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
         }
     }
 
-    static void configurePmd(Project project, GrailsCodeAnalysisExtension extension) {
-        if (!isToolEnabled(project, PMD_ENABLED_PROPERTY, PMD_ENABLED_PROJECTS_PROPERTY, extension.pmdEnabled)) {
-            return
+    /**
+     * Enables PMD for a project that opts in, unless the all-project property disables it. Enabling it again, or
+     * after the properties already enabled it, does nothing.
+     */
+    static void enablePmd(Project project, GrailsCodeAnalysisExtension extension) {
+        if (!isDisabledByProperty(project, PMD_ENABLED_PROPERTY) && !project.pluginManager.hasPlugin('pmd')) {
+            configurePmd(project, extension)
         }
+    }
 
+    /**
+     * Enables SpotBugs for a project that opts in, unless the all-project property disables it. Enabling it again,
+     * or after the properties already enabled it, does nothing.
+     */
+    static void enableSpotbugs(Project project, GrailsCodeAnalysisExtension extension) {
+        if (!isDisabledByProperty(project, SPOTBUGS_ENABLED_PROPERTY)
+                && !project.pluginManager.hasPlugin('com.github.spotbugs')) {
+            configureSpotbugs(project, extension)
+        }
+    }
+
+    private static void configurePmd(Project project, GrailsCodeAnalysisExtension extension) {
         project.pluginManager.apply(PmdPlugin)
 
         def ignoreFailures = GradleUtils.booleanProvider(project, IGNORE_FAILURES_PROPERTY)
         def testStylingEnabled = GradleUtils.booleanProvider(project, TEST_ANALYSIS_PROPERTY)
         def skipCodeStyle = project.providers.gradleProperty(GrailsCodeStylePlugin.SKIP_CODE_STYLE_PROPERTY)
         def skipCodeAnalysis = project.providers.gradleProperty(SKIP_CODE_ANALYSIS_PROPERTY)
-        // configurePmd runs in afterEvaluate, so the module's build directory is final here
-        Path projectBuildDirectory = project.layout.buildDirectory.get().asFile.toPath().toAbsolutePath().normalize()
+        // Resolved when the task reads its sources, because the build script may still move the build directory
+        def projectBuildDirectory = project.layout.buildDirectory.map { Directory directory ->
+            directory.asFile.toPath().toAbsolutePath().normalize()
+        }
 
         project.extensions.configure(PmdExtension) {
-            it.ruleSetFiles = project.files(project.extensions.getByType(GrailsCodeAnalysisExtension).pmdDirectory.file(PMD_CONFIG_FILE_NAME))
+            it.ruleSetFiles = project.files(extension.pmdDirectory.file(PMD_CONFIG_FILE_NAME))
             it.ruleSets = []
             it.ignoreFailures = ignoreFailures.get()
             it.consoleOutput = true
@@ -149,26 +171,20 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
             }
 
             it.exclude { FileTreeElement element ->
-                element.file.toPath().toAbsolutePath().normalize().startsWith(projectBuildDirectory)
+                element.file.toPath().toAbsolutePath().normalize().startsWith(projectBuildDirectory.get())
             }
 
             it.reports.xml.required.set(true)
-            it.reports.xml.outputLocation.set(
-                    project.extensions.getByType(GrailsCodeAnalysisExtension)
-                            .reportsDirectory.get()
-                            .dir('pmd')
-                            .file(GradleUtils.reportFileName(project, it.name))
-            )
+            String reportFileName = GradleUtils.reportFileName(project, it.name)
+            it.reports.xml.outputLocation.set(extension.reportsDirectory.dir('pmd').map { Directory directory ->
+                directory.file(reportFileName)
+            })
             GradleUtils.configureReportMarker(it, project.rootProject.layout.projectDirectory, it.reports.xml.outputLocation,
                     GradleUtils.reportMarker(project, 'pmd', it.name))
         }
     }
 
-    static void configureSpotbugs(Project project, GrailsCodeAnalysisExtension extension) {
-        if (!isToolEnabled(project, SPOTBUGS_ENABLED_PROPERTY, SPOTBUGS_ENABLED_PROJECTS_PROPERTY, extension.spotbugsEnabled)) {
-            return
-        }
-
+    private static void configureSpotbugs(Project project, GrailsCodeAnalysisExtension extension) {
         project.pluginManager.apply(SpotBugsPlugin)
 
         def ignoreFailures = GradleUtils.booleanProvider(project, IGNORE_FAILURES_PROPERTY)
@@ -189,12 +205,10 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
             htmlReport.required.set(true)
             def xmlReport = spotBugsReports.maybeCreate('xml')
             xmlReport.required.set(true)
-            xmlReport.outputLocation.set(
-                project.extensions.getByType(GrailsCodeAnalysisExtension)
-                        .reportsDirectory.get()
-                        .dir('spotbugs')
-                        .file(GradleUtils.reportFileName(project, it.name))
-            )
+            String reportFileName = GradleUtils.reportFileName(project, it.name)
+            xmlReport.outputLocation.set(extension.reportsDirectory.dir('spotbugs').map { Directory directory ->
+                directory.file(reportFileName)
+            })
             GradleUtils.configureReportMarker(it, project.rootProject.layout.projectDirectory, xmlReport.outputLocation,
                     GradleUtils.reportMarker(project, 'spotbugs', it.name))
             it.onlyIf { !skipCodeStyle.present && !skipCodeAnalysis.present }
@@ -206,18 +220,22 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
     }
 
     /**
-     * An explicit all-project property ({@code -Pgrails.code-analysis.enabled.pmd=true|false}) overrides every
-     * project's own setting. Otherwise a tool runs when the project is listed in the selected-projects property or
-     * opts in through the {@code grailsCodeAnalysis} extension.
+     * Whether the Gradle properties enable a tool before the project's build script runs. When set, the all-project
+     * property ({@code -Pgrails.code-analysis.enabled.pmd=true|false}) decides for every project and wins over both the
+     * selected-projects property and the project's own opt-in. Otherwise the selected-projects property enables the
+     * projects it lists.
      */
-    static boolean isToolEnabled(Project project, String enabledProperty, String enabledProjectsProperty,
-            Property<Boolean> extensionEnabled) {
+    private static boolean isEnabledByProperties(Project project, String enabledProperty, String enabledProjectsProperty) {
         if (project.providers.gradleProperty(enabledProperty).present) {
             return GradleUtils.booleanProvider(project, enabledProperty).get()
         }
         project.providers.gradleProperty(enabledProjectsProperty)
                 .map { it.split(',')*.trim().contains(project.path) }
                 .orElse(false)
-                .get() || extensionEnabled.get()
+                .get()
+    }
+
+    private static boolean isDisabledByProperty(Project project, String enabledProperty) {
+        project.providers.gradleProperty(enabledProperty).present && !GradleUtils.booleanProvider(project, enabledProperty).get()
     }
 }

@@ -163,17 +163,17 @@ Common violations:
 
 ### PMD (Java/Groovy - opt-in)
 
-Enable PMD in each clean module's `build.gradle` with `grailsCodeAnalysis { pmdEnabled = true }`. Use `-Pgrails.code-analysis.enabled.pmd=true` or `=false` to switch PMD on or off for every project regardless of module opt-ins, or `-Pgrails.code-analysis.enabled.pmd.projects=:project-a,:project-b` to also enable selected project paths for a baseline run. PMD excludes sources under each project's configured build directory.
+Enable PMD in each clean module's `build.gradle` with `grailsCodeAnalysis { enablePmd() }`. Use `-Pgrails.code-analysis.enabled.pmd.projects=:project-a,:project-b` to also enable selected project paths for a baseline run. Use `-Pgrails.code-analysis.enabled.pmd=true` or `=false` to switch PMD on or off for every project; when set, it wins over both the module opt-ins and the `.projects` list. PMD excludes sources under each project's configured build directory.
 
-PMD tasks are registered during `afterEvaluate`. Wrap per-task customization in `afterEvaluate { tasks.named('pmdMain') { ... } }`.
+`enablePmd()` configures PMD immediately, so customize the `pmd*` tasks directly after it, for example `tasks.named('pmdMain') { ... }`.
 
 Rule file: `build/code-analysis/pmd/pmd.xml`.
 
 ### SpotBugs (Java bytecode - opt-in)
 
-Enable SpotBugs in each clean module's `build.gradle` with `grailsCodeAnalysis { spotbugsEnabled = true }`. Use `-Pgrails.code-analysis.enabled.spotbugs=true` or `=false` to switch SpotBugs on or off for every project regardless of module opt-ins, or `-Pgrails.code-analysis.enabled.spotbugs.projects=:project-a,:project-b` to also enable selected project paths for a baseline run.
+Enable SpotBugs in each clean module's `build.gradle` with `grailsCodeAnalysis { enableSpotbugs() }`. Use `-Pgrails.code-analysis.enabled.spotbugs.projects=:project-a,:project-b` to also enable selected project paths for a baseline run. Use `-Pgrails.code-analysis.enabled.spotbugs=true` or `=false` to switch SpotBugs on or off for every project; when set, it wins over both the module opt-ins and the `.projects` list.
 
-SpotBugs tasks are registered during `afterEvaluate`. Wrap per-task customization in `afterEvaluate { tasks.named('spotbugsMain') { ... } }`.
+`enableSpotbugs()` configures SpotBugs immediately, so customize the `spotbugs*` tasks directly after it, for example `tasks.named('spotbugsMain') { ... }`.
 
 Runs at `Effort.MAX` / `Confidence.HIGH`. Only high-confidence bugs are reported.
 
@@ -212,8 +212,8 @@ Enable PMD and SpotBugs primarily in each module's `build.gradle`:
 
 ```groovy
 grailsCodeAnalysis {
-    pmdEnabled = true
-    spotbugsEnabled = true
+    enablePmd()
+    enableSpotbugs()
 }
 ```
 
@@ -221,12 +221,10 @@ The Gradle properties below are all-project or selected-project overrides for ba
 
 | Property | Default | Description |
 |----------|---------|-------------|
-| `grailsCodeAnalysis.pmdEnabled` | `false` | Primary per-project PMD opt-in set in the module's `build.gradle` |
-| `grails.code-analysis.enabled.pmd` | unset | When set, `true` or `false` overrides PMD for every project, including module opt-ins |
-| `grails.code-analysis.enabled.pmd.projects` | unset | Also enable PMD for comma-separated project paths |
-| `grailsCodeAnalysis.spotbugsEnabled` | `false` | Primary per-project SpotBugs opt-in set in the module's `build.gradle` |
-| `grails.code-analysis.enabled.spotbugs` | unset | When set, `true` or `false` overrides SpotBugs for every project, including module opt-ins |
-| `grails.code-analysis.enabled.spotbugs.projects` | unset | Also enable SpotBugs for comma-separated project paths |
+| `grails.code-analysis.enabled.pmd` | unset | When set, `true` or `false` overrides PMD for every project, including `enablePmd()` opt-ins and the `.projects` list |
+| `grails.code-analysis.enabled.pmd.projects` | unset | Also enable PMD for comma-separated project paths, unless the all-project property is set |
+| `grails.code-analysis.enabled.spotbugs` | unset | When set, `true` or `false` overrides SpotBugs for every project, including `enableSpotbugs()` opt-ins and the `.projects` list |
+| `grails.code-analysis.enabled.spotbugs.projects` | unset | Also enable SpotBugs for comma-separated project paths, unless the all-project property is set |
 | `grails.code-analysis.enabled.tests` | `false` | Also analyse test source sets |
 | `grails.code-analysis.ignoreFailures` | `false` | Collect ordinary findings without failing the build; missing expected XML always fails |
 | `grails.code-analysis.dir.pmd` | (auto) | Custom path to PMD config dir |

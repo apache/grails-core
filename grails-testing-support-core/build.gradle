@@ -36,7 +36,7 @@ group = 'org.apache.grails.testing'
 
 grailsCodeAnalysis {
     // PMD baseline is clean for this module; keep it blocking.
-    pmdEnabled = true
+    enablePmd()
 }
 
 ext {
