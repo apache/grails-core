@@ -20,14 +20,17 @@ package org.grails.config;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.StringTokenizer;
+import java.util.concurrent.ConcurrentHashMap;
 
 import groovy.util.ConfigObject;
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
@@ -53,8 +56,17 @@ import org.grails.core.exceptions.GrailsConfigurationException;
 @Deprecated
 public abstract class NavigableMapConfig implements Config {
     protected static final Logger LOG = LoggerFactory.getLogger(NavigableMapConfig.class);
+
+    /**
+     * Upper bound on each key-derived cache. Configuration keys come from a small fixed set of source
+     * literals; the bound only guards against a caller synthesising unbounded key strings at runtime.
+     */
+    private static final int MAX_CACHED_KEYS = 2048;
+
     protected ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
     protected ConfigurableConversionService conversionService = new DefaultConversionService();
+    private final ConcurrentHashMap<String, Optional<String>> systemEnvironmentCache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, List<String>> dotNotatedKeyCache = new ConcurrentHashMap<>();
     protected NavigableMap configMap = new NavigableMap() {
         @Override
         protected Object mergeMapEntry(NavigableMap targetMap, String sourceKey, Object newValue) {
@@ -231,8 +243,26 @@ public abstract class NavigableMapConfig implements Config {
     }
 
     private Object findInSystemEnvironment(String key) {
+        if (key == null) {
+            return null;
+        }
+        Optional<String> cached = systemEnvironmentCache.get(key);
+        if (cached != null) {
+            return cached.orElse(null);
+        }
         String propertyName = resolvePropertyName(key);
-        return propertyName != null ? System.getenv(propertyName) : null;
+        String value = propertyName != null ? System.getenv(propertyName) : null;
+        // Resolving a key to its environment value depends only on the key and on the process
+        // environment, which is fixed for the lifetime of this config, so the result is memoized per
+        // instance. Without this, every getProperty() call spends up to eight System.getenv() probes
+        // and six string allocations in resolvePropertyName()/checkPropertyName() re-deriving a
+        // constant answer. The cache is deliberately per-instance rather than static: tests that
+        // install environment variables reflectively build a fresh config afterwards and must observe
+        // the environment as it stands then.
+        if (systemEnvironmentCache.size() < MAX_CACHED_KEYS) {
+            systemEnvironmentCache.put(key, Optional.ofNullable(value));
+        }
+        return value;
     }
 
     private String resolvePropertyName(String name) {
@@ -404,8 +434,17 @@ public abstract class NavigableMapConfig implements Config {
             return null;
         }
 
-        List<String> keys = convertTokensIntoArrayList(new StringTokenizer(key, "."));
-        if (keys.size() == 0) {
+        List<String> keys = dotNotatedKeyCache.get(key);
+        if (keys == null) {
+            keys = convertTokensIntoArrayList(new StringTokenizer(key, "."));
+            // Splitting a dotted key is a pure function of the key, and configuration keys come from a
+            // small fixed set of source literals, so the token list is cached rather than rebuilt (with
+            // a fresh StringTokenizer and ArrayList) on every lookup.
+            if (dotNotatedKeyCache.size() < MAX_CACHED_KEYS) {
+                dotNotatedKeyCache.put(key, keys);
+            }
+        }
+        if (keys.isEmpty()) {
             return null;
         }
 
@@ -421,10 +460,10 @@ public abstract class NavigableMapConfig implements Config {
     }
 
     private List<String> convertTokensIntoArrayList(StringTokenizer st) {
-        List<String> elements = new ArrayList<>();
+        List<String> elements = new ArrayList<>(st.countTokens());
         while (st.hasMoreTokens()) {
             elements.add(st.nextToken());
         }
-        return elements;
+        return Collections.unmodifiableList(elements);
     }
 }
