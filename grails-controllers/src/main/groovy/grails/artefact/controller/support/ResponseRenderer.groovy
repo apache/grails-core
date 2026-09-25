@@ -390,14 +390,12 @@ trait ResponseRenderer extends WebAttributes {
                     if (!hasContentType) {
                         hasContentType = detectContentTypeFromFileName(webRequest, response, argMap, fileName)
                     }
-                    if (fnO) {
-                        response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "$DISPOSITION_HEADER_PREFIX\"$fileName\"")
-                    }
                 }
                 if (!hasContentType) {
                     throw new ControllerExecutionException(
                             'Argument [file] of render method specified without valid [contentType] argument')
                 }
+                applyFileDisposition(response, argMap, fileName)
 
                 InputStream input
                 try {
@@ -536,6 +534,23 @@ trait ResponseRenderer extends WebAttributes {
             return true
         }
         false
+    }
+
+    private void applyFileDisposition(HttpServletResponse response, Map argMap, String fileName) {
+        if (response.getHeader(HttpHeaders.CONTENT_DISPOSITION) != null) {
+            return
+        }
+        if (Boolean.TRUE.equals(argMap.get('inline'))) {
+            return
+        }
+        String disposition = fileName ? "$DISPOSITION_HEADER_PREFIX\"${escapeContentDispositionFilename(fileName)}\"" : 'attachment'
+        response.setHeader(HttpHeaders.CONTENT_DISPOSITION, disposition)
+    }
+
+    private String escapeContentDispositionFilename(String fileName) {
+        fileName.replace('\\', '\\\\')
+                .replace('"', '\\"')
+                .replaceAll('[\\x00-\\x1F\\x7F]', '_')
     }
 
     private void setContentType(HttpServletResponse response, String contentType, String encoding) {

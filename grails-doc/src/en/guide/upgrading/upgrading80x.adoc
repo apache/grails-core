@@ -4136,3 +4136,20 @@ it registered only when a controller source mentioned `@Scaffold` - decided by
 `GroovyPagePlugin.scaffoldsAnyController`. Both are gone: nothing is copied, and every project generates the
 pages its scaffolded controllers need, a plugin's among them. A build that refers to `stageGroovyPages`
 fails with an unknown task; remove the reference.
+
+==== 75. File Renders Default to Attachment Disposition
+
+Grails 8 makes `render(file: ...)` safer by default. File responses now set
+`Content-Disposition: attachment` unless you opt out. If a `fileName` is supplied
+(or derived from a `File`), unsafe characters in that name are escaped before the
+header is written.
+
+Use `inline: true` when the file should stay inline, or set the
+`Content-Disposition` header yourself before calling `render` — Grails leaves an
+existing header alone.
+
+[source,groovy]
+----
+render(file: new File(absolutePath), fileName: 'report.pdf')
+render(file: new File(absolutePath), inline: true)
+----
