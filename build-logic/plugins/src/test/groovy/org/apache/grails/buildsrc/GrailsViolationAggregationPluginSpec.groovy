@@ -518,7 +518,7 @@ public class App {
         result.task(':app-module:spotbugsMain').outcome == TaskOutcome.SUCCESS
         File[] markers = testProjectDir.resolve('app-module/build/reports/aggregation-markers/spotbugs').toFile().listFiles()
         markers.length == 1
-        markers[0].text.trim() == 'build/reports/code-analysis/spotbugs/3a6170702d6d6f64756c65-spotbugsMain.xml'
+        markers[0].text.trim() == 'build/reports/code-analysis/spotbugs/__app-module-spotbugsMain.xml'
         def spotbugsReport = testProjectDir.resolve('build/reports/violations/SPOTBUGS_VIOLATIONS.md').toFile().text
         spotbugsReport.contains('## Module: :app-module')
         spotbugsReport.contains('NP_ALWAYS_NULL')
@@ -560,6 +560,40 @@ checkstyleVersion=${checkstyleVersion}
         def checkstyleReport = testProjectDir.resolve('build/reports/violations/CHECKSTYLE_VIOLATIONS.md').toFile().text
         checkstyleReport.contains('## Module: :app-module')
         checkstyleReport.contains('FileTabCharacter')
+    }
+
+    def "aggregateStyleViolations names reports after the project path and keeps main reports of modules named like tests"() {
+        given:
+        testProjectDir.resolve('gradle.properties').toFile().text = """grails.code-style.ignoreFailures=true
+checkstyleVersion=${checkstyleVersion}
+"""
+        testProjectDir.resolve('settings.gradle').toFile().text = "include 'grails-testing-support:core'"
+        testProjectDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'org.apache.grails.gradle.grails-violation-aggregation'
+            }
+        """
+        def moduleDir = testProjectDir.resolve('grails-testing-support/core')
+        moduleDir.toFile().mkdirs()
+        moduleDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'java'
+                id 'org.apache.grails.gradle.grails-code-style'
+            }
+            repositories { mavenCentral() }
+        """
+        def sourceFile = moduleDir.resolve('src/main/java/com/example/App.java').toFile()
+        sourceFile.parentFile.mkdirs()
+        sourceFile.text = 'package com.example;\n\npublic class App {\n\tpublic void run() {\n    }\n}\n'
+
+        when:
+        def result = runBuild('aggregateStyleViolations')
+
+        then:
+        result.task(':grails-testing-support:core:checkstyleMain').outcome == TaskOutcome.SUCCESS
+        testProjectDir.resolve('build/reports/code-style/checkstyle/__grails-testing-support__core-checkstyleMain.xml').toFile().isFile()
+        checkstyleReport().contains('## Module: :grails-testing-support:core')
+        checkstyleReport().contains('FileTabCharacter')
     }
 
     def "aggregateStyleViolations fails when an executed task removes its XML report"() {

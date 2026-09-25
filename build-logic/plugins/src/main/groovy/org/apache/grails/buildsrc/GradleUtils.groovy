@@ -19,11 +19,10 @@
 
 package org.apache.grails.buildsrc
 
-import java.nio.charset.StandardCharsets
 import java.nio.file.Path
-import java.util.HexFormat
 
 import groovy.transform.CompileStatic
+import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.file.Directory
@@ -32,6 +31,8 @@ import org.gradle.api.provider.Provider
 
 @CompileStatic
 class GradleUtils {
+
+    private static final String PROJECT_PATH_SEPARATOR_KEY = '__'
 
     static Directory findRootGrailsCoreDir(Project project) {
         // .github / .git related directories are purged from source releases, so use the .asf.yaml as an indicator of
@@ -68,15 +69,28 @@ class GradleUtils {
                 .orElse(defaultValue)
     }
 
+    /**
+     * A readable file-name form of the project path, such as {@code __grails-data__core} for
+     * {@code :grails-data:core}. Every module writes its reports into one shared directory, so a path that does not
+     * decode back to itself, which could collide with another project's reports, fails the build.
+     */
     static String projectPathKey(Project project) {
-        HexFormat.of().formatHex(project.path.getBytes(StandardCharsets.UTF_8))
+        String key = project.path.replace(':', PROJECT_PATH_SEPARATOR_KEY)
+        if (projectPathFromKey(key) != project.path) {
+            throw new GradleException("Project path '${project.path}' cannot be used in an analysis report file name".toString())
+        }
+        key
     }
 
     static String projectPathFromKey(String key) {
-        new String(HexFormat.of().parseHex(key), StandardCharsets.UTF_8)
+        key.replace(PROJECT_PATH_SEPARATOR_KEY, ':')
     }
 
+    /** The project key and the task name, separated by the last {@code -} in the file name. */
     static String reportFileName(Project project, String taskName) {
+        if (taskName.contains('-')) {
+            throw new GradleException("Task name '${taskName}' cannot be used in an analysis report file name".toString())
+        }
         "${projectPathKey(project)}-${taskName}.xml"
     }
 

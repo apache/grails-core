@@ -402,12 +402,13 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
     }
 
     private static String resolveModule(String fileName) {
-        int separator = fileName.indexOf('-')
+        int separator = fileName.lastIndexOf('-')
         separator > 0 ? GradleUtils.projectPathFromKey(fileName.substring(0, separator)) : fileName
     }
 
+    /** Judged by the task name alone, so a module such as grails-testing-support-core is not mistaken for a test report. */
     private static boolean isTestFile(String fileName) {
-        fileName.toLowerCase().contains('test') || fileName.toLowerCase().contains('integrationtest')
+        fileName.substring(fileName.lastIndexOf('-') + 1).toLowerCase().contains('test')
     }
 
     @CompileDynamic
