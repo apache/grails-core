@@ -36,12 +36,13 @@ The standard Grails BOM uses Groovy {groovyVersion} and Spock {spockVersion}.
 
 Grails Micronaut is maintained and released from the https://github.com/apache/grails-micronaut[Apache Grails Micronaut repository] and consumes published Grails Core artifacts.
 
-==== Spring Boot 4.1 and Spring Framework 7
+==== Spring Boot 4.2 and Spring Framework 7.1
 
 Grails {grailsMajorVersion} is built on Spring Boot {springBootVersion} and Spring Framework {springVersion}.
-This brings the Spring Boot 4 modular artifact layout, Spring Framework 7 API removals, Jackson 3, Tomcat 11 and Jakarta Servlet 6.1, plus Spring Boot 4.1 dependency management for Spring Security 7.1, Spring Data 2026.0 and Micrometer 1.17.
+This brings the Spring Boot 4 modular artifact layout, Spring Framework 7 API removals, Jackson 3, Tomcat 11 and Jakarta Servlet 6.1, plus Spring Boot 4.2 dependency management for Spring Security 7.2, Spring Data 2026.1 and Micrometer 1.18.
 
 The Grails 8 upgrade guide calls out the major application-impacting changes and links to the Spring Boot 4.0 migration guide, Spring Boot 4.1 release notes and Spring Framework 7.0 release notes.
+For the changes since Spring Boot 4.1, see the https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-4.2-Release-Notes[Spring Boot 4.2 Release Notes] and the https://github.com/spring-projects/spring-framework/wiki/Spring-Framework-7.1-Release-Notes[Spring Framework 7.1 Release Notes].
 
 ==== Hibernate 7 Application Generation
 

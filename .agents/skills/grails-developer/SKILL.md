@@ -31,8 +31,8 @@ Activate this skill when developing with current Grails, including:
 ## Technology Stack
 
 Current Grails is built on:
-- **Spring Boot**: 4.1.x
-- **Spring Framework**: 7.0.x
+- **Spring Boot**: 4.2.x
+- **Spring Framework**: 7.1.x
 - **Groovy**: 5.1.x
 - **Gradle**: 9.6.x
 - **Spock**: 2.4-groovy-5.0

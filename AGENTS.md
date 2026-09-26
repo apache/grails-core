@@ -89,8 +89,8 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 |-----------|---------|
 | JDK | 21+ (baseline 21) |
 | Groovy | 5.1.x |
-| Spring Boot | 4.1.x |
-| Spring Framework | 7.0.x |
+| Spring Boot | 4.2.x |
+| Spring Framework | 7.1.x |
 | Spock | 2.4-groovy-5.0 |
 | Gradle | 9.7.x |
 | Jakarta EE | 10 |
@@ -116,7 +116,7 @@ All managed dependency versions live in `dependencies.gradle` (the single source
 - **The BOM must manage the latest (winning) version.** Validation fails when a transitive dependency resolves to a version *newer* than the BOM manages. The fix is to **bump the version in `dependencies.gradle`** so the BOM's version is `>=` everything on the classpath and stays authoritative. This is the *purpose* of the check — keeping the BOM ahead of its transitives.
 - **Do not suppress validation to work around a bump.** `allowedBomOverrides` (per-project ext) and dependency exclusions are reserved for an explicit, documented conflict or an agreed-upon workaround — never as a shortcut to silence a version the BOM should simply manage. Comment the reason when you must use one.
 - **A dependency managed in more than one BOM must use the *same* version everywhere.** Versions appear in `gradleBomDependencyVersions` (build tooling / `grails-gradle-bom`), `bomDependencyVersions` (`grails-bom`), and per-BOM `customBomVersions` blocks (e.g. `grails-hibernate7-bom`). `grails-bom` re-declares the gradle-BOM constraints, and the Hibernate BOMs are consumed via `enforcedPlatform`. Declaring one coordinate (e.g. `org.ow2.asm:asm`) at two different versions across these maps produces irreconcilable strict constraints and breaks `enforcedPlatform` resolution. Pin it once, consistently.
-- **Prefer inheriting from the Spring Boot BOM.** Do not re-pin a coordinate that `spring-boot-dependencies` (4.1.x) already manages unless you are intentionally overriding it to a newer version (e.g. a security fix); note the reason inline.
+- **Prefer inheriting from the Spring Boot BOM.** Do not re-pin a coordinate that `spring-boot-dependencies` (4.2.x) already manages unless you are intentionally overriding it to a newer version (e.g. a security fix); note the reason inline.
 
 ## Key Modules
 
