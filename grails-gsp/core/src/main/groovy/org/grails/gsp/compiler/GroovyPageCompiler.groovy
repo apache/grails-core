@@ -219,7 +219,20 @@ class GroovyPageCompiler {
                 GroovyPageParser gpp = new GroovyPageParser(viewuri - '.gsp', viewuri, gspfile.absolutePath, gspinput, encoding, expressionCodec, configMap)
                 gpp.packageName = packageName
                 gpp.className = className
-                gpp.lastModified = gspfile.lastModified()
+                // Do not bake the source file's modification time into the generated class.
+                //
+                // GroovyPageParser emits LAST_MODIFIED as a `static final long` constant, which
+                // makes it part of the compiled class's ABI. Because a fresh checkout gives every
+                // .gsp a new modification time, identical sources compiled on two machines produce
+                // different bytes, so every downstream consumer of the resulting jar re-keys and
+                // misses the build cache -- even consumers using COMPILE_CLASSPATH normalization,
+                // which otherwise ignores everything but the ABI.
+                //
+                // The value is not read at runtime: GroovyPageMetaInfo reads the constant into a
+                // field whose only accessor, getLastModified(), has no callers. Precompiled pages
+                // are not reload-checked. Emit a fixed value so precompilation is reproducible.
+                // The field itself must remain, as GroovyPageMetaInfo looks it up reflectively.
+                gpp.lastModified = 0L
                 StringWriter gsptarget = new StringWriter()
                 gpp.generateGsp(gsptarget)
                 gsptarget.flush()

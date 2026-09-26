@@ -477,7 +477,12 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
                     long currentLastmodified = establishLastModified(resource);
                     // granularity is required since lastmodified information is rounded somewhere in copying & war (zip) file information
                     // usually the lastmodified time is 1000L apart in files and in files extracted from the zip (war) file
-                    if (currentLastmodified > 0 && Math.abs(currentLastmodified - lastModified) > LASTMODIFIED_CHECK_GRANULARITY) {
+                    // A lastModified of 0 means the compiled page carries no source timestamp -- see
+                    // GroovyPageCompiler, which emits a fixed LAST_MODIFIED so that precompiled pages are
+                    // byte-reproducible. There is nothing to compare against in that case, so do not treat
+                    // the page as stale; otherwise every check would report a change and defeat precompilation.
+                    if (currentLastmodified > 0 && lastModified > 0 &&
+                            Math.abs(currentLastmodified - lastModified) > LASTMODIFIED_CHECK_GRANULARITY) {
                         return resource;
                     }
                 }
