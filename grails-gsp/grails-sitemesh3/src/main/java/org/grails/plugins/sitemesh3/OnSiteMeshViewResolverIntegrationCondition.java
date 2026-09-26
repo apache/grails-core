@@ -1,0 +1,53 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.grails.plugins.sitemesh3;
+
+import org.sitemesh.autoconfigure.SiteMeshProperties.Integration;
+
+import org.springframework.boot.autoconfigure.condition.ConditionMessage;
+import org.springframework.boot.autoconfigure.condition.ConditionOutcome;
+import org.springframework.boot.autoconfigure.condition.SpringBootCondition;
+import org.springframework.boot.context.properties.bind.Binder;
+import org.springframework.context.annotation.ConditionContext;
+import org.springframework.core.type.AnnotatedTypeMetadata;
+
+/**
+ * Matches when {@code sitemesh.integration} selects SiteMesh's view-resolver integration, which
+ * is also the default when the property is unset.
+ *
+ * <p>The property is bound to SiteMesh's {@link Integration} enum exactly as the SiteMesh
+ * starter binds it, so this plugin's configuration switches on together with the starter's
+ * view-resolver integration for every spelling the starter accepts ({@code view-resolver},
+ * {@code VIEW_RESOLVER}, {@code viewResolver}), and a value the starter rejects fails startup
+ * here as well rather than silently leaving GSP layouts undecorated.</p>
+ */
+class OnSiteMeshViewResolverIntegrationCondition extends SpringBootCondition {
+
+    private static final String PROPERTY = "sitemesh.integration";
+
+    @Override
+    public ConditionOutcome getMatchOutcome(ConditionContext context, AnnotatedTypeMetadata metadata) {
+        Integration integration = Binder.get(context.getEnvironment())
+                .bind(PROPERTY, Integration.class)
+                .orElse(Integration.VIEW_RESOLVER);
+        ConditionMessage message = ConditionMessage.forCondition("SiteMesh integration")
+                .because(PROPERTY + " is " + integration);
+        return new ConditionOutcome(integration == Integration.VIEW_RESOLVER, message);
+    }
+}

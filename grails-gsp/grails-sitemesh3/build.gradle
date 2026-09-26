@@ -58,10 +58,12 @@ dependencies {
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
     testImplementation 'org.spockframework:spock-core'
     testImplementation 'org.springframework:spring-test'
+    testImplementation 'org.springframework.boot:spring-boot-test'
     testImplementation project(':grails-testing-support-web')
 
     testRuntimeOnly 'net.bytebuddy:byte-buddy' // Required by Spock's mocking support
     testRuntimeOnly 'org.objenesis:objenesis' // Required by Spock for mocking classes without default constructor
+    testRuntimeOnly 'org.assertj:assertj-core' // Required by Spring Boot's ApplicationContextRunner
     testRuntimeOnly 'org.slf4j:slf4j-nop'
 }
 
