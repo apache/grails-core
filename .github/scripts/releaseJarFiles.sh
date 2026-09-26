@@ -30,8 +30,10 @@ fi
 
 STAGING_DESCRIPTION="$1"
 NEXUS_USER="$2"
-read -r -s -p "Password: " NEXUS_PASS
-echo
+if [[ -z "${NEXUS_PASS:-}" ]]; then
+  read -r -s -p "Password: " NEXUS_PASS
+  echo
+fi
 
 if [[ -z "${STAGING_DESCRIPTION}" ]]; then
   echo "ERROR: Staging Description must not be empty." >&2
