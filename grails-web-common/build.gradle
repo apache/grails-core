@@ -50,6 +50,7 @@ dependencies {
     }
 
     api 'org.apache.groovy:groovy'
+    api 'org.apache.groovy:groovy-json'
     api 'org.apache.groovy:groovy-templates'
 
     api 'org.springframework:spring-webmvc'

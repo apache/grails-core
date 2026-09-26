@@ -17,6 +17,7 @@ import java.util.regex.Pattern;
  * @author JSON.org
  * @version 2
  */
+@Deprecated(since = "8.1", forRemoval = true)
 public class JSONTokener {
 
     /**
