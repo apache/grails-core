@@ -22,6 +22,7 @@ import groovy.xml.XmlSlurper
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.classgen.GeneratorContext
 import org.codehaus.groovy.control.CompilationFailedException
 import org.codehaus.groovy.control.CompilationUnit
@@ -413,6 +414,121 @@ class GlobalGrailsClassInjectorTransformationSpec extends Specification {
         and: "only the sibling generated for a plugin descriptor is registered, and there is none here"
             !new File(targetDir,
                     'META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports').exists()
+    }
+
+    void "the implicit beans convention compiles a unit test's beans closure onto a nested configuration class"() {
+        given: "a Spock spec implementing the testing support's trait, stood in for here, in a test source directory"
+            def testSources = new File(tempDir, 'src/test/groovy')
+            def trait = new File(testSources, 'org/grails/testing/GrailsUnitTest.groovy')
+            trait.parentFile.mkdirs()
+            trait.text = 'package org.grails.testing\ninterface GrailsUnitTest { }\n'
+            def spec = new File(testSources, 'ReportServiceSpec.groovy')
+            spec.text = '''
+                class ReportServiceSpec extends spock.lang.Specification implements org.grails.testing.GrailsUnitTest {
+                    def beans = {
+                        bean('greeting', String) { 'hello' }
+                    }
+                }
+            '''
+            def targetDir = new File(tempDir, 'build/classes/groovy/test')
+
+        when:
+            def cu = new CompilationUnit(new CompilerConfiguration(targetDirectory: targetDir))
+            cu.addSource(trait)
+            cu.addSource(spec)
+            cu.compile(Phases.CANONICALIZATION)
+            ClassNode test = cu.AST.getClass('ReportServiceSpec')
+            ClassNode configuration = cu.AST.getClass('ReportServiceSpec$BeansConfiguration')
+
+        then: "the property is consumed with no @GrailsBeans written"
+            test.getProperty('beans') == null
+
+        and: "the beans are on the nested class the testing support registers"
+            configuration != null
+            configuration.getMethod('greeting', [] as Parameter[]) != null
+
+        and: "nothing is registered as an auto-configuration"
+            !new File(targetDir,
+                    'META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports').exists()
+    }
+
+    void "the implicit beans convention reports a unit test's @Shared beans block rather than dropping it"() {
+        given: "Spock renames a shared field and removes its property before this transform runs"
+            def testSources = new File(tempDir, 'src/test/groovy')
+            def trait = new File(testSources, 'org/grails/testing/GrailsUnitTest.groovy')
+            trait.parentFile.mkdirs()
+            trait.text = 'package org.grails.testing\ninterface GrailsUnitTest { }\n'
+            def spec = new File(testSources, 'SharedBeansSpec.groovy')
+            spec.text = '''
+                class SharedBeansSpec extends spock.lang.Specification implements org.grails.testing.GrailsUnitTest {
+                    @spock.lang.Shared
+                    def beans = {
+                        bean('greeting', String) { 'hello' }
+                    }
+                }
+            '''
+
+        when:
+            def cu = new CompilationUnit(new CompilerConfiguration(targetDirectory: new File(tempDir, 'build/classes/groovy/test')))
+            cu.addSource(trait)
+            cu.addSource(spec)
+            cu.compile(Phases.CANONICALIZATION)
+
+        then:
+            MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+            e.message.contains("A unit test's 'beans' block cannot be @Shared")
+    }
+
+    void "a unit test's unrelated @Shared beans field is left alone"() {
+        given: "a shared beans field that is not the DSL"
+            def testSources = new File(tempDir, 'src/test/groovy')
+            def spec = new File(testSources, 'SharedMapSpec.groovy')
+            spec.parentFile.mkdirs()
+            spec.text = '''
+                class SharedMapSpec extends spock.lang.Specification implements org.grails.testing.GrailsUnitTest {
+                    @spock.lang.Shared
+                    def beans = [someKey: 'someValue']
+                }
+            '''
+
+        when: "it compiles"
+            def cu = unitTestCompilation(spec)
+            cu.compile(Phases.CANONICALIZATION)
+
+        then: "nothing is reported or generated"
+            cu.AST.getClass('SharedMapSpec$BeansConfiguration') == null
+    }
+
+    void "a unit test's unrelated beans closure stays where Spock put it"() {
+        given: "a beans closure that declares nothing, which Spock moves into its initializer method"
+            def testSources = new File(tempDir, 'src/test/groovy')
+            def spec = new File(testSources, 'UnrelatedClosureSpec.groovy')
+            spec.parentFile.mkdirs()
+            spec.text = '''
+                class UnrelatedClosureSpec extends spock.lang.Specification implements org.grails.testing.GrailsUnitTest {
+                    def beans = { 'not the DSL' }
+                }
+            '''
+
+        when:
+            def cu = unitTestCompilation(spec)
+            cu.compile(Phases.CANONICALIZATION)
+            ClassNode unrelatedSpec = cu.AST.getClass('UnrelatedClosureSpec')
+
+        then: "it is not moved back onto the field, and nothing is generated"
+            unrelatedSpec.getProperty('beans').field.initialExpression == null
+            cu.AST.getClass('UnrelatedClosureSpec$BeansConfiguration') == null
+    }
+
+    /** A compilation of a test source alongside a stand-in for the testing support's trait. */
+    private CompilationUnit unitTestCompilation(File spec) {
+        def trait = new File(tempDir, 'src/test/groovy/org/grails/testing/GrailsUnitTest.groovy')
+        trait.parentFile.mkdirs()
+        trait.text = 'package org.grails.testing\ninterface GrailsUnitTest { }\n'
+        def cu = new CompilationUnit(new CompilerConfiguration(targetDirectory: new File(tempDir, 'build/classes/groovy/test')))
+        cu.addSource(trait)
+        cu.addSource(spec)
+        cu
     }
 
     void "a generated class missing from a hand-authored imports file is reported"() {

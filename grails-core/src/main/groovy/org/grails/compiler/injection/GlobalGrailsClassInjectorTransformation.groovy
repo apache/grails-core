@@ -163,6 +163,10 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
             if (GrailsASTUtils.isSubclassOfOrImplementsInterface(classNode, GRAILS_AUTO_CONFIGURATION_CLASS_NAME)) {
                 compileBeansDsl(classNode, source)
             }
+            // A unit test's beans compile onto a nested configuration class the testing support registers
+            if (GrailsBeansASTTransformation.isUnitTest(classNode)) {
+                compileBeansDsl(classNode, source)
+            }
             if (updateGrailsFactoriesWithTypes(classNode, [ARTEFACT_HANDLER_CLASS, TRAIT_INJECTOR_CLASS], compilationTargetDirectory)) {
                 continue
             }
@@ -360,10 +364,10 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
     }
 
     /**
-     * Compiles a plugin descriptor's or application class's {@code beans} closure into {@code @Bean}
-     * factory methods, so {@code @GrailsBeans} does not have to be written out - the {@code beans}
-     * property is a convention here in the same way {@code doWithSpring} and {@code watchedResources}
-     * already are.
+     * Compiles a plugin descriptor's, application class's or unit test's {@code beans} closure
+     * into {@code @Bean} factory methods, so {@code @GrailsBeans} does not have to be written out -
+     * the {@code beans} property is a convention here in the same way {@code doWithSpring} and
+     * {@code watchedResources} already are.
      *
      * <p>The transformation is invoked directly rather than by adding the annotation: annotation-driven
      * transformations are collected during semantic analysis, so an annotation added at
@@ -384,10 +388,14 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
      */
     private void compileBeansDsl(ClassNode classNode, SourceUnit source) {
         PropertyNode beansProperty = classNode.getProperty(BEANS_PROPERTY)
-        if (beansProperty == null || !classNode.getAnnotations(GRAILS_BEANS_ANNOTATION).isEmpty()) {
+        if (!classNode.getAnnotations(GRAILS_BEANS_ANNOTATION).isEmpty()) {
             return
         }
-        List<Statement> statements = beansDslStatements(beansProperty)
+        if (beansProperty == null) {
+            GrailsBeansASTTransformation.reportSharedBeans(classNode, source)
+            return
+        }
+        List<Statement> statements = beansDslStatements(classNode, beansProperty)
         if (statements == null) {
             return
         }
@@ -396,6 +404,9 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
             reportStrayBeansStatement(statements, stray, source)
             return
         }
+        // Claimed: a Spock specification's closure is moved back onto the field only now, so an
+        // unrelated beans property is left exactly as Spock compiled it
+        GrailsBeansASTTransformation.reclaimMovedInitializer(classNode, beansProperty)
 
         // Referenced directly, as the registering below already does. grails-core declares
         // grails-beans-dsl api (see grails-core/build.gradle), so it reaches every project that has
@@ -412,8 +423,10 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
      * an empty list rather than null: it is a no-op either way, and claiming it keeps the implicit
      * and explicit spellings agreeing.
      */
-    private static List<Statement> beansDslStatements(PropertyNode beansProperty) {
-        Expression initial = beansProperty.field?.initialExpression
+    private static List<Statement> beansDslStatements(ClassNode classNode, PropertyNode beansProperty) {
+        // A Spock specification's field initializer has been moved into a method by now
+        Expression initial = beansProperty.field?.initialExpression ?:
+                GrailsBeansASTTransformation.movedInitializer(classNode, beansProperty.field)
         if (!(initial instanceof ClosureExpression)) {
             return null
         }

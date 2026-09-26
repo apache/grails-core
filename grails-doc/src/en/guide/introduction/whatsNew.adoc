@@ -98,6 +98,9 @@ class MyGrailsPlugin extends Plugin {
 The DSL continues to work for now, but you are strongly urged to migrate.
 See the xref:upgrading#upgrading80x[upgrade guide] for details.
 
+Unit tests get the same hooks: a test declares its beans in a `beans` block, as an application or plugin does, or overrides `beanRegistrar()`, or declares a static nested `@Configuration` class — and `doWithSpring()` on the testing traits is deprecated to match.
+See <<unitTesting,Unit Testing>>.
+
 ==== CLI Commands Move to Companion `-cli` Artifacts
 
 Grails commands (`ApplicationCommand` implementations such as the `dbm-*` database-migration

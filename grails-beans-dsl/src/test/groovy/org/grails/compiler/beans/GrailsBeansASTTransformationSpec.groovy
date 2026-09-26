@@ -2616,6 +2616,215 @@ class GrailsBeansASTTransformationSpec extends Specification {
         fixtureBeans.getDeclaredMethod('URLHelper') != null
     }
 
+    private static final String UNIT_TEST_TRAIT_STUB = '''
+        package org.grails.testing
+
+        interface GrailsUnitTest { }
+    '''
+
+    def "a unit test's beans compile onto a nested BeansConfiguration class, not the test"() {
+        given: "a class implementing the testing support's trait, stood in for here"
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(UNIT_TEST_TRAIT_STUB)
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+
+            @GrailsBeans
+            class ReportFixtureSpec implements org.grails.testing.GrailsUnitTest {
+                def beans = {
+                    bean('greeting', String) {
+                        'hello'
+                    }
+
+                    bean(ReportFixtureHelper)
+
+                    bean('consumer', ReportFixtureConsumer) { ReportFixtureHelper helper ->
+                    }
+                }
+            }
+
+            class ReportFixtureHelper { }
+
+            class ReportFixtureConsumer {
+                final ReportFixtureHelper helper
+
+                ReportFixtureConsumer(ReportFixtureHelper helper) {
+                    this.helper = helper
+                }
+            }
+        '''
+
+        when:
+        Class<?> test = loader.parseClass(source)
+        Class<?> configuration = loader.loadClass('ReportFixtureSpec$BeansConfiguration')
+        def context = new AnnotationConfigApplicationContext()
+        context.classLoader = loader
+        context.register(configuration)
+        context.refresh()
+
+        then: "the test is left without the block and without bean methods"
+        !test.declaredFields*.name.contains('beans')
+        !test.declaredMethods.any { it.isAnnotationPresent(Bean) }
+
+        and: "they are on a static nested configuration class Spring need not proxy"
+        configuration.enclosingClass == test
+        Modifier.isStatic(configuration.modifiers)
+        !configuration.getAnnotation(Configuration).proxyBeanMethods()
+
+        and: "which is an ordinary configuration source"
+        context.getBean('greeting') == 'hello'
+        context.getBean('consumer').helper.is(context.getBean('reportFixtureHelper'))
+
+        cleanup:
+        context?.close()
+    }
+
+    def "a test inheriting the unit test trait from a base class counts as a unit test"() {
+        given:
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(UNIT_TEST_TRAIT_STUB)
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+
+            abstract class BaseFixtureSpec implements org.grails.testing.GrailsUnitTest { }
+
+            @GrailsBeans
+            class InheritingFixtureSpec extends BaseFixtureSpec {
+                def beans = {
+                    bean('greeting', String) {
+                        'hello'
+                    }
+                }
+            }
+        '''
+
+        when:
+        loader.parseClass(source)
+
+        then:
+        loader.loadClass('InheritingFixtureSpec$BeansConfiguration').getDeclaredMethod('greeting') != null
+    }
+
+    def "a Spock specification's beans closure is taken back from the method Spock moved it into"() {
+        given: "Spock compiles a spec's field initializers into a method before this transformation runs"
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(UNIT_TEST_TRAIT_STUB)
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+
+            @GrailsBeans
+            class SpockFixtureSpec extends spock.lang.Specification implements org.grails.testing.GrailsUnitTest {
+                String other = 'kept'
+
+                def beans = {
+                    bean('greeting', String) {
+                        'hello'
+                    }
+                }
+            }
+        '''
+
+        when:
+        Class<?> spec = loader.parseClass(source)
+        Class<?> configuration = loader.loadClass('SpockFixtureSpec$BeansConfiguration')
+        def instance = spec.getDeclaredConstructor().newInstance()
+        instance.invokeMethod('$spock_initializeFields', null)
+
+        then: "the beans were compiled"
+        configuration.getDeclaredMethod('greeting').getAnnotation(Bean).value() == ['greeting'] as String[]
+
+        and: "the field is gone, and the rest of Spock's initializer method still runs"
+        !spec.declaredFields*.name.contains('beans')
+        instance.other == 'kept'
+    }
+
+    def "a Spock specification's @Shared beans block is reported, not dropped"() {
+        given: "Spock renames a shared field and removes its property before this transformation runs"
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(UNIT_TEST_TRAIT_STUB)
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+            import spock.lang.Shared
+
+            @GrailsBeans
+            class SharedFixtureSpec extends spock.lang.Specification implements org.grails.testing.GrailsUnitTest {
+                @Shared
+                def beans = {
+                    bean('greeting', String) {
+                        'hello'
+                    }
+                }
+            }
+        '''
+
+        when:
+        loader.parseClass(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains("A unit test's 'beans' block cannot be @Shared")
+        !e.message.contains("requires a 'beans' property")
+    }
+
+    def "a unit test that already declares a BeansConfiguration class is reported"() {
+        given:
+        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        loader.parseClass(UNIT_TEST_TRAIT_STUB)
+        String source = '''
+            import grails.compiler.beans.GrailsBeans
+
+            @GrailsBeans
+            class CollidingFixtureSpec implements org.grails.testing.GrailsUnitTest {
+                static class BeansConfiguration { }
+
+                def beans = {
+                    bean('greeting', String) {
+                        'hello'
+                    }
+                }
+            }
+        '''
+
+        when:
+        loader.parseClass(source)
+
+        then:
+        MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('CollidingFixtureSpec already declares a nested class named BeansConfiguration')
+    }
+
+    def "bean(Type) of a nested type derives the name from its simple name, as Class.getSimpleName() gives it"() {
+        given:
+        String source = '''
+            import java.util.concurrent.ThreadPoolExecutor
+
+            import grails.compiler.beans.GrailsBeans
+            import org.springframework.boot.autoconfigure.AutoConfiguration
+
+            @GrailsBeans
+            @AutoConfiguration
+            class NestedTypeFixtureBeans {
+                def beans = {
+                    bean(NestedTypeOuter.Helper)
+                    bean(ThreadPoolExecutor.AbortPolicy)
+                }
+            }
+
+            class NestedTypeOuter {
+                static class Helper { }
+            }
+        '''
+
+        when:
+        Class<?> fixtureBeans = compile(source)
+
+        then: 'a nested type compiled with it is named helper, not nestedTypeOuter$Helper'
+        fixtureBeans.getDeclaredMethod('helper').getAnnotation(Bean).value() == ['helper'] as String[]
+
+        and: "so is a nested type from a class already compiled"
+        fixtureBeans.getDeclaredMethod('abortPolicy').getAnnotation(Bean).value() == ['abortPolicy'] as String[]
+    }
+
     def "bean(Type) with no factory closure compiles to a method that constructs the declared type"() {
         given:
         String source = '''
