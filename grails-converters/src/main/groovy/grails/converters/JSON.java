@@ -37,6 +37,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import tools.jackson.core.JsonGenerator;
 
 import grails.io.IOUtils;
 import grails.util.GrailsWebUtil;
@@ -49,16 +50,16 @@ import org.grails.web.converters.configuration.ConverterConfiguration;
 import org.grails.web.converters.configuration.ConvertersConfigurationHolder;
 import org.grails.web.converters.configuration.DefaultConverterConfiguration;
 import org.grails.web.converters.exceptions.ConverterException;
+import org.grails.web.converters.jackson.JacksonJSONWriter;
+import org.grails.web.converters.jackson.JsonMapperSupport;
 import org.grails.web.converters.marshaller.ClosureObjectMarshaller;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
-import org.grails.web.json.JSONArray;
 import org.grails.web.json.JSONElement;
 import org.grails.web.json.JSONException;
 import org.grails.web.json.JSONObject;
 import org.grails.web.json.JSONTokener;
 import org.grails.web.json.JSONWriter;
 import org.grails.web.json.PathCapturingJSONWriterWrapper;
-import org.grails.web.json.PrettyPrintJSONWriter;
 
 /**
  * A converter that converts domain classes, Maps, Lists, Arrays, POJOs and POGOs to JSON.
@@ -77,6 +78,8 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
     protected boolean prettyPrint;
     protected JSONWriter writer;
     protected Stack<Object> referenceStack;
+    protected JsonMapperSupport jsonMapper;
+    private JsonGenerator generator;
 
     protected ConverterConfiguration<JSON> initConfig() {
         return ConvertersConfigurationHolder.getConverterConfiguration(JSON.class);
@@ -108,7 +111,9 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
     }
 
     private void prepareRender(Writer out) {
-        writer = prettyPrint ? new PrettyPrintJSONWriter(out) : new JSONWriter(out);
+        jsonMapper = ConvertersConfigurationHolder.getJsonMapper();
+        generator = jsonMapper.createGenerator(out, prettyPrint);
+        writer = new JacksonJSONWriter(generator, jsonMapper);
         if (circularReferenceBehaviour == CircularReferenceBehaviour.PATH) {
             if (log.isInfoEnabled()) {
                 log.info(String.format("Using experimental CircularReferenceBehaviour.PATH for %s", getClass().getName()));
@@ -120,6 +125,7 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
 
     private void finalizeRender(Writer out) {
         try {
+            generator.flush();
             out.flush();
             out.close();
         }
@@ -219,6 +225,26 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         }
     }
 
+    /**
+     * @return the JsonMapper this converter writes with
+     * @since 9.0
+     */
+    public JsonMapperSupport getJsonMapper() {
+        return jsonMapper != null ? jsonMapper : ConvertersConfigurationHolder.getJsonMapper();
+    }
+
+    /**
+     * The JSON object key for a map key, as the JsonMapper writes it: a {@code String} key as it is, and a
+     * {@code Date} key, for example, in the mapper's date format.
+     *
+     * @param key a non-null map key
+     * @return the JSON object key
+     * @since 9.0
+     */
+    public String formatKey(Object key) {
+        return getJsonMapper().formatKey(key);
+    }
+
     public ObjectMarshaller<JSON> lookupObjectMarshaller(Object target) {
         return config.getMarshaller(target);
     }
@@ -240,17 +266,14 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
      * @throws JSONException
      */
     public String toString(boolean prettyPrint) throws JSONException {
-        String json = super.toString();
-        if (prettyPrint) {
-            Object jsonObject = new JSONTokener(json).nextValue();
-            if (jsonObject instanceof JSONObject) {
-                return ((JSONObject) jsonObject).toString(3);
-            }
-            if (jsonObject instanceof JSONArray) {
-                return ((JSONArray) jsonObject).toString(3);
-            }
+        boolean configuredPrettyPrint = this.prettyPrint;
+        this.prettyPrint = prettyPrint;
+        try {
+            return super.toString();
         }
-        return json;
+        finally {
+            this.prettyPrint = configuredPrettyPrint;
+        }
     }
 
     /**
@@ -546,7 +569,8 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
                 writer.object();
                 for (Object o : valueMap.entrySet()) {
                     Map.Entry element = (Map.Entry) o;
-                    writer.key(String.valueOf(element.getKey())); //.value(element.getValue());
+                    Object elementKey = element.getKey();
+                    writer.key(elementKey == null ? "null" : json.formatKey(elementKey));
                     json.convertAnother(element.getValue());
                 }
                 writer.endObject();

@@ -238,7 +238,7 @@ public class DomainClassMarshaller extends IncludeExcludePropertyMarshaller<JSON
                             else if (referenceObject instanceof Map) {
                                 Map<Object, Object> map = (Map<Object, Object>) referenceObject;
                                 for (Map.Entry<Object, Object> entry : map.entrySet()) {
-                                    String key = String.valueOf(entry.getKey());
+                                    String key = entry.getKey() == null ? "null" : json.formatKey(entry.getKey());
                                     Object o = entry.getValue();
                                     writer.object();
                                     writer.key(key);

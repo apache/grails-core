@@ -40,6 +40,7 @@ dependencies {
     implementation 'io.micrometer:micrometer-observation'
     api project(':grails-web-common')
     api 'org.apache.groovy:groovy'
+    api 'tools.jackson.core:jackson-databind' // grails.converters.JSON writes through Spring Boot's JsonMapper
 
     // api needed downstream: ConvertersExtension is a Groovy extension module with HttpServletRequest
     // in its signatures, and the Groovy compiler loads it from any compile classpath it is on

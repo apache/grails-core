@@ -1,0 +1,127 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+=== Upgrade Instructions for Grails and Related Dependencies
+
+This guide outlines the changes to review when you upgrade a Grails project from Grails 8 to Grails 9.
+
+==== 1. `grails.converters.JSON` Writes JSON With Spring Boot's JsonMapper
+
+`render ... as JSON`, `respond` for a JSON request and every other use of `grails.converters.JSON` now write JSON through
+the application's Jackson `JsonMapper`, the one Spring Boot auto-configures. The mapper writes the JSON text (numbers and
+pretty printing), and writes every single value that it has a dedicated serializer for: dates and times, `Month`,
+`UUID`, `Locale`, `byte[]`, types with a `@JsonValue`, and the types of any Jackson module registered with the
+application. Those values render as Spring Boot renders them, and `spring.jackson.*` properties apply to them. For
+example, `spring.jackson.time-zone` writes `Date` and `Calendar` values in that time zone, and converts `OffsetDateTime`
+and `ZonedDateTime` values to it. When the application context has no `JsonMapper`, or has several and none is primary,
+as in a unit test, a default `JsonMapper` is used.
+
+Grails marshallers still render domain classes, beans, enums, collections, maps and arrays, and now records (as an
+object of their components) and `Optional` (as its value), so the values they contain are rendered as any other value
+is. A marshaller that an application registers, with `JSON.registerObjectMarshaller(...)` or an
+`ObjectMarshallerRegisterer`, still takes precedence over the mapper for the types it supports.
+
+Two things deliberately differ from Spring Boot, as they did in Grails 8:
+
+* Enums render by `name()`, where Jackson 3 writes `toString()`, so that the JSON binds back to the enum.
+* Strings are escaped for an HTML `<script>` element: `</` is written as `<\u002f`, and U+2028 and U+2029 as `\u2028`
+and `\u2029`. The parsed values are the same as Spring Boot's.
+
+The following values render differently than in Grails 8:
+
+[cols="2,2,3", options="header"]
+|===
+| Value
+| Grails 8
+| Grails 9
+
+| A `Date`, `Calendar`, `java.sql.Date` or `java.sql.Timestamp` on a whole second
+| `"2026-09-25T03:00:00Z"`
+| `"2026-09-25T03:00:00.000Z"`, always with millisecond precision
+
+| A `java.sql.Timestamp` with sub-millisecond nanoseconds
+| `"2025-10-08T07:48:46.407254Z"`
+| `"2025-10-08T07:48:46.407Z"`
+
+| `java.sql.Date`, `java.sql.Time`
+| a failure to render it
+| `"2025-10-08T07:48:46.407Z"`, the UTC instant, and `"01:48:46"`, from `Time#toString()`
+
+| `LocalTime`, `OffsetTime`, `YearMonth`, `MonthDay`, `Duration`, `Period`, `ZoneId`, `ZoneOffset`, `TimeZone`,
+`XMLGregorianCalendar`, `javax.xml.datatype.Duration`
+| an object of their properties, or a failure to render them
+| their ISO-8601 or ID strings, such as `"01:48:46.407254"`, `"PT1H30M"` or `"America/Sao_Paulo"`
+
+| `Year`, `Month`
+| an object of its properties, and `"SEPTEMBER"`
+| `2026` and `9`, JSON numbers. A `Month` binds back from its number.
+
+| A `Date`, `Calendar` or `ZonedDateTime` map key
+| the key's `toString()`, such as `"Wed Oct 08 01:48:46 MDT 2025"`
+| the key as the mapper writes it, such as `"2025-10-08T07:48:46.407Z"`
+
+| `java.util.Locale`
+| `"zh_TW_#Hant"`, from `Locale#toString()`
+| `"zh-Hant-TW"`, its language tag
+
+| `char`, `Character`
+| `{}`
+| `"c"`
+
+| `byte[]`
+| `[1,2,3]`
+| `"AQID"`, Base64
+
+| `UUID`, `URI`, a type with a `@JsonValue`
+| an object of its bean properties
+| its value, such as `"123e4567-e89b-12d3-a456-426614174000"`
+
+| A record
+| `{}`
+| an object of its components, such as `{"x":1,"y":2}`
+
+| `Optional`
+| `{"empty":false,"present":true}`
+| its value, or `null` when it is empty
+
+| A `NaN` or infinite `double`
+| `NaN`, which is not valid JSON
+| `"NaN"`
+
+| Pretty printed JSON (`grails.converters.json.pretty.print`, `JSON#toString(true)`)
+| `"a": 1`, with arrays on their own lines
+| `"a" : 1`, the layout of the mapper's default pretty printer
+
+| A single value, such as `render Role.HEAD as JSON`
+| a `ConverterException`
+| the JSON value, `"HEAD"`
+|===
+
+The JSON marshallers that rendered values by default are no longer registered: `DateMarshaller`, `CalendarMarshaller`,
+`ToStringBeanMarshaller` and `ByteArrayMarshaller` remain, for an application to register. `InstantMarshaller`,
+`LocalDateMarshaller`, `LocalDateTimeMarshaller`, `OffsetDateTimeMarshaller` and `ZonedDateTimeMarshaller` are removed.
+The default JSON marshallers have implicit priorities that follow their order (-1, -2, and so on), and that order has
+changed, so a marshaller registered with an explicit negative priority may now come before or after different
+defaults.
+
+With the `PATH` circular reference behaviour (`grails.converters.json.circular.reference.behaviour`), an object with a
+`null` property, or a single value, now renders instead of failing, and a reference that follows a number property now
+has the right path.
+
+JSON views, the XML converter and the HAL renderer are not changed.

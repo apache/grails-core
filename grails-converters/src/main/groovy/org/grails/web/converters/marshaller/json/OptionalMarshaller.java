@@ -18,32 +18,25 @@
  */
 package org.grails.web.converters.marshaller.json;
 
-import java.time.Instant;
-import java.time.format.DateTimeFormatter;
+import java.util.Optional;
 
 import grails.converters.JSON;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
-import org.grails.web.json.JSONException;
 
 /**
- * JSON ObjectMarshaller which converts an Instant to ISO-8601 format with Z suffix.
+ * JSON ObjectMarshaller which renders an {@link Optional} as its value, or {@code null} when it is empty, as Spring
+ * Boot's JsonMapper does. The value is rendered by the converter, as any other value is.
  *
- * @since 7.0
+ * @since 9.0
  */
-public class InstantMarshaller implements ObjectMarshaller<JSON> {
+public class OptionalMarshaller implements ObjectMarshaller<JSON> {
 
     public boolean supports(Object object) {
-        return object instanceof Instant;
+        return object instanceof Optional;
     }
 
     public void marshalObject(Object object, JSON converter) throws ConverterException {
-        try {
-            Instant instant = (Instant) object;
-            converter.getWriter().value(DateTimeFormatter.ISO_INSTANT.format(instant));
-        }
-        catch (JSONException e) {
-            throw new ConverterException(e);
-        }
+        converter.convertAnother(((Optional<?>) object).orElse(null));
     }
 }

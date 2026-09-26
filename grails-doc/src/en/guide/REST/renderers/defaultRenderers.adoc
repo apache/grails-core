@@ -70,4 +70,36 @@ render book as XML
 // or render book as JSON
 ----
 
-Why the separation between converters and renderers? Well a renderer has more flexibility to use whatever rendering technology you chose. When implementing a custom renderer you could use https://github.com/FasterXML/jackson/[Jackson], https://github.com/google/gson[Google Gson] or any Java library to implement the renderer. Converters on the other hand are very much tied to Grails' own marshalling implementation.
+Why the separation between converters and renderers? Well a renderer has more flexibility to use whatever rendering technology you chose. When implementing a custom renderer you could use https://github.com/FasterXML/jackson/[Jackson], https://github.com/google/gson[Google Gson] or any Java library to implement the renderer. Converters on the other hand use Grails' object marshallers, and write JSON through the application's Jackson `JsonMapper`, as described below.
+
+
+==== JSON Rendering With Spring Boot's JsonMapper
+
+
+The JSON converter writes JSON through the application's Jackson `JsonMapper`, the one Spring Boot auto-configures, so a
+Grails application and a Spring Boot application return the same JSON for the same values. The mapper writes every
+single value it has a dedicated serializer for, such as dates and times, `Month`, `UUID`, `Locale`, `byte[]`, types with
+a `@JsonValue` and the types of Jackson modules registered with the application, and it formats and pretty prints the
+JSON text. `spring.jackson.*` properties therefore configure `render ... as JSON` as well:
+
+[source,yaml]
+----
+spring:
+    jackson:
+        time-zone: America/New_York
+----
+
+Domain classes, beans, enums, records, `Optional`, collections and maps are rendered by Grails marshallers, and the
+values they contain as any other value is. Enums render by `name()`, so that the JSON binds back to them, and strings are
+escaped for an HTML `<script>` element (`</` is written as `<\u002f`). To render a type differently, register an object
+marshaller for it, which takes precedence over the mapper, for example in `BootStrap.init`:
+
+[source,groovy]
+----
+JSON.registerObjectMarshaller(Date) { Date date ->
+    date.time
+}
+----
+
+Setting `grails.converters.json.date` to `javascript` renders `java.util.Date` values as JavaScript `new Date(...)`
+constructors instead.

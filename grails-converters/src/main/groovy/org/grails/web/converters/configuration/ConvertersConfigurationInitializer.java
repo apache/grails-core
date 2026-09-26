@@ -25,6 +25,7 @@ import java.util.List;
 import io.micrometer.observation.ObservationRegistry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import tools.jackson.databind.json.JsonMapper;
 
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationContext;
@@ -82,6 +83,8 @@ public class ConvertersConfigurationInitializer implements ApplicationContextAwa
         if (applicationContext != null) {
             ConvertersConfigurationHolder.setObservationRegistry(
                     applicationContext.getBeanProvider(ObservationRegistry.class).getIfAvailable(() -> ObservationRegistry.NOOP));
+            // the application's JsonMapper, or a default one when there is none, or more than one and none is primary
+            ConvertersConfigurationHolder.setJsonMapper(applicationContext.getBeanProvider(JsonMapper.class).getIfUnique());
         }
         initJSONConfiguration();
         initXMLConfiguration();
@@ -96,15 +99,8 @@ public class ConvertersConfigurationInitializer implements ApplicationContextAwa
 
         List<ObjectMarshaller<JSON>> marshallers = new ArrayList<>();
         marshallers.addAll(getPreviouslyConfiguredMarshallers(JSON.class));
-        marshallers.add(new org.grails.web.converters.marshaller.json.ArrayMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.json.ByteArrayMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.json.CollectionMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.json.MapMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.json.SimpleEnumMarshaller());
 
         Config grailsConfig = getGrailsConfig();
-
-        marshallers.add(new org.grails.web.converters.marshaller.ProxyUnwrappingMarshaller<>());
 
         if ("javascript".equals(grailsConfig.getProperty(SETTING_CONVERTERS_JSON_DATE, String.class, "default", Arrays.asList("javascript", "default")))) {
             if (LOG.isDebugEnabled()) {
@@ -112,19 +108,16 @@ public class ConvertersConfigurationInitializer implements ApplicationContextAwa
             }
             marshallers.add(new org.grails.web.converters.marshaller.json.JavascriptDateMarshaller());
         }
-        else {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Using default JSON Date Marshaller");
-            }
-            marshallers.add(new org.grails.web.converters.marshaller.json.DateMarshaller());
-        }
-        marshallers.add(new org.grails.web.converters.marshaller.json.CalendarMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.json.InstantMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.json.LocalDateMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.json.LocalDateTimeMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.json.OffsetDateTimeMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.json.ZonedDateTimeMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.json.ToStringBeanMarshaller());
+        // dates and times and the other single values the application's JsonMapper has a serializer for are written
+        // by the mapper, as Spring Boot writes them
+        marshallers.add(new org.grails.web.converters.jackson.JsonMapperValueMarshaller());
+        marshallers.add(new org.grails.web.converters.marshaller.json.SimpleEnumMarshaller());
+        marshallers.add(new org.grails.web.converters.marshaller.json.RecordMarshaller());
+        marshallers.add(new org.grails.web.converters.marshaller.json.OptionalMarshaller());
+        marshallers.add(new org.grails.web.converters.marshaller.json.ArrayMarshaller());
+        marshallers.add(new org.grails.web.converters.marshaller.json.CollectionMarshaller());
+        marshallers.add(new org.grails.web.converters.marshaller.json.MapMarshaller());
+        marshallers.add(new org.grails.web.converters.marshaller.ProxyUnwrappingMarshaller<>());
 
         boolean includeDomainVersion = includeDomainVersionProperty(grailsConfig, "json");
         boolean includeDomainClassName = includeDomainClassProperty(grailsConfig, "json");

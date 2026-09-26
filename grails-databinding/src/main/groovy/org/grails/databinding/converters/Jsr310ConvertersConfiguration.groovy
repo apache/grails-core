@@ -23,6 +23,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.Month
 import java.time.OffsetDateTime
 import java.time.OffsetTime
 import java.time.Period
@@ -345,6 +346,31 @@ class Jsr310ConvertersConfiguration {
             @Override
             Class<?> getTargetType() {
                 Period
+            }
+        }
+    }
+
+    /**
+     * Binds a {@link Month} from its number, 1 for January through 12 for December, which is how
+     * {@code grails.converters.JSON}, JSON views and Spring Boot render a Month. Without it a number would bind
+     * through Spring's conversion service by ordinal, one month late. A month name still binds as any enum does.
+     */
+    @Bean
+    ValueConverter monthValueConverter() {
+        new ValueConverter() {
+            @Override
+            boolean canConvert(Object value) {
+                value instanceof Number || (value instanceof CharSequence && value.toString().trim().isInteger())
+            }
+
+            @Override
+            Object convert(Object value) {
+                Month.of(value instanceof Number ? ((Number) value).intValue() : value.toString().trim().toInteger())
+            }
+
+            @Override
+            Class<?> getTargetType() {
+                Month
             }
         }
     }

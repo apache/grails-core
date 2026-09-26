@@ -16,31 +16,35 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.converters.marshaller.json;
-
-import java.time.OffsetDateTime;
-import java.time.format.DateTimeFormatter;
+package org.grails.web.converters.jackson;
 
 import grails.converters.JSON;
+import org.grails.web.converters.configuration.ConvertersConfigurationHolder;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
 import org.grails.web.json.JSONException;
 
 /**
- * JSON ObjectMarshaller which converts an OffsetDateTime to ISO-8601 format with timezone offset.
+ * Renders a value with the {@link JsonMapperSupport JsonMapper} that {@link JSON} writes through, as Spring Boot
+ * renders it, when the mapper has a dedicated serializer for a single value of its type: dates and times,
+ * {@code Month}, {@code UUID}, {@code Locale}, {@code byte[]}, types with a {@code @JsonValue} and the types that
+ * Jackson modules registered with the application serialize (see {@link JsonMapperSupport#rendersValue(Class)}).
  *
- * @since 7.0
+ * <p>It is registered ahead of the enum, record, {@code Optional}, collection, map, domain class and bean marshallers,
+ * so those never see such a value, and behind any marshaller an application registers, which takes precedence for the
+ * types it supports.
+ *
+ * @since 9.0
  */
-public class OffsetDateTimeMarshaller implements ObjectMarshaller<JSON> {
+public class JsonMapperValueMarshaller implements ObjectMarshaller<JSON> {
 
     public boolean supports(Object object) {
-        return object instanceof OffsetDateTime;
+        return ConvertersConfigurationHolder.getJsonMapper().rendersValue(object.getClass());
     }
 
     public void marshalObject(Object object, JSON converter) throws ConverterException {
         try {
-            OffsetDateTime offsetDateTime = (OffsetDateTime) object;
-            converter.getWriter().value(DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(offsetDateTime));
+            converter.getWriter().value(new JsonMapperValue(object, converter.getJsonMapper()));
         }
         catch (JSONException e) {
             throw new ConverterException(e);

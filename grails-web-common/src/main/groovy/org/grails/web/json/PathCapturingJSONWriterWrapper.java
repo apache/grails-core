@@ -175,7 +175,7 @@ public class PathCapturingJSONWriterWrapper extends JSONWriter {
         if (delegate.mode == Mode.ARRAY) {
             pushNextIndex();
         }
-        else {
+        else if (!pathStack.isEmpty()) {
             pathStack.pop();
         }
         delegate.value(b);
@@ -191,7 +191,7 @@ public class PathCapturingJSONWriterWrapper extends JSONWriter {
         if (delegate.mode == Mode.ARRAY) {
             pushNextIndex();
         }
-        else {
+        else if (!pathStack.isEmpty()) {
             pathStack.pop();
         }
         delegate.value(d);
@@ -207,10 +207,42 @@ public class PathCapturingJSONWriterWrapper extends JSONWriter {
         if (delegate.mode == Mode.ARRAY) {
             pushNextIndex();
         }
-        else {
+        else if (!pathStack.isEmpty()) {
             pathStack.pop();
         }
         delegate.value(l);
+        return this;
+    }
+
+    @Override
+    public JSONWriter value(Number number) {
+        if (log.isDebugEnabled()) {
+            if (debugCurrentStack) log.debug("{} > >> {}", delegate.mode.name(), getCurrentStrackReference());
+            log.debug("{} > value(Number {})", delegate.mode.name(), number);
+        }
+        if (delegate.mode == Mode.ARRAY) {
+            pushNextIndex();
+        }
+        else if (!pathStack.isEmpty()) {
+            pathStack.pop();
+        }
+        delegate.value(number);
+        return this;
+    }
+
+    @Override
+    public JSONWriter valueNull() {
+        if (log.isDebugEnabled()) {
+            if (debugCurrentStack) log.debug("{} > >> {}", delegate.mode.name(), getCurrentStrackReference());
+            log.debug("{} > valueNull()", delegate.mode.name());
+        }
+        if (delegate.mode == Mode.ARRAY) {
+            pushNextIndex();
+        }
+        else if (!pathStack.isEmpty()) {
+            pathStack.pop();
+        }
+        delegate.valueNull();
         return this;
     }
 
@@ -224,7 +256,7 @@ public class PathCapturingJSONWriterWrapper extends JSONWriter {
         if (delegate.mode == Mode.ARRAY) {
             pushNextIndex();
         }
-        else {
+        else if (!pathStack.isEmpty()) {
             pathStack.pop();
         }
         delegate.value(o);
