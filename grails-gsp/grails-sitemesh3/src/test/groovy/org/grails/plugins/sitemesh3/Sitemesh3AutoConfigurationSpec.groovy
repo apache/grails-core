@@ -19,9 +19,12 @@
 package org.grails.plugins.sitemesh3
 
 import org.sitemesh.SiteMeshContext
+import org.sitemesh.autoconfigure.SiteMeshViewResolverAutoConfiguration
 import org.sitemesh.content.Content
 
 import org.springframework.beans.factory.ObjectProvider
+import org.springframework.boot.autoconfigure.AutoConfigurations
+import org.springframework.boot.test.context.runner.WebApplicationContextRunner
 
 import grails.config.Config
 import grails.core.GrailsApplication
@@ -169,5 +172,56 @@ class Sitemesh3AutoConfigurationSpec extends Specification {
 
         then:
         paths == ['/layouts/grailsLayout'] as String[]
+    }
+
+    void "the view-resolver configuration is active when sitemesh.integration is #value"() {
+        expect: 'every spelling the SiteMesh starter binds to its view-resolver integration'
+        runner(value).run { context ->
+            assert context.startupFailure == null
+            assert context.getBeanNamesForType(GrailsSiteMeshViewResolverBeanPostProcessor).length == 1
+        }
+
+        where:
+        value << [null, 'view-resolver', 'VIEW_RESOLVER', 'viewResolver', 'View-Resolver']
+    }
+
+    void "the view-resolver configuration backs off when sitemesh.integration is #value"() {
+        expect: 'the filter integration is selected, in any spelling the starter accepts'
+        runner(value).run { context ->
+            assert context.startupFailure == null
+            assert context.getBeanNamesForType(GrailsSiteMeshViewResolverBeanPostProcessor).length == 0
+        }
+
+        where:
+        value << ['filter', 'FILTER']
+    }
+
+    void "an unknown sitemesh.integration fails startup"() {
+        expect: 'as it does in the SiteMesh starter, rather than silently leaving layouts undecorated'
+        runner('filters').run { context ->
+            assert context.startupFailure != null
+        }
+    }
+
+    void "the view-resolver configuration switches on together with the starter's for #value"() {
+        expect: 'both see the same integration, and the Grails post processor keeps priority'
+        new WebApplicationContextRunner()
+                .withPropertyValues("sitemesh.integration=${value}")
+                .withConfiguration(AutoConfigurations.of(Sitemesh3AutoConfiguration, SiteMeshViewResolverAutoConfiguration))
+                .run { context ->
+                    assert context.startupFailure == null
+                    assert context.getBeanNamesForType(Sitemesh3AutoConfiguration).length == 1
+                    assert context.getBeanNamesForType(SiteMeshViewResolverAutoConfiguration).length == 1
+                    assert context.getBeanNamesForType(GrailsSiteMeshViewResolverBeanPostProcessor).length == 1
+                }
+
+        where:
+        value << ['view-resolver', 'VIEW_RESOLVER']
+    }
+
+    private static WebApplicationContextRunner runner(String integration) {
+        WebApplicationContextRunner runner = new WebApplicationContextRunner()
+                .withConfiguration(AutoConfigurations.of(Sitemesh3AutoConfiguration))
+        integration == null ? runner : runner.withPropertyValues("sitemesh.integration=${integration}")
     }
 }

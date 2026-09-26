@@ -20,6 +20,8 @@ package org.grails.plugins.sitemesh3
 
 import groovy.transform.CompileStatic
 
+import org.sitemesh.autoconfigure.ConditionalOnSiteMeshIntegration
+import org.sitemesh.autoconfigure.SiteMeshProperties.Integration
 import org.sitemesh.webmvc.SiteMeshViewResolverBeanPostProcessor
 import org.sitemesh.webmvc.SiteMeshViewResolverPostProcessor
 
@@ -30,7 +32,6 @@ import org.springframework.boot.autoconfigure.AutoConfigureBefore
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingClass
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.web.servlet.DispatcherServlet
 
 import grails.config.Config
@@ -100,7 +101,7 @@ import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator
 @AutoConfigureAfter(name = 'org.springframework.boot.webmvc.autoconfigure.DispatcherServletAutoConfiguration')
 @AutoConfigureBefore(name = 'org.sitemesh.autoconfigure.SiteMeshViewResolverAutoConfiguration')
 @ConditionalOnClass(SiteMeshViewResolverBeanPostProcessor)
-@ConditionalOnProperty(name = 'sitemesh.integration', havingValue = 'view-resolver', matchIfMissing = true)
+@ConditionalOnSiteMeshIntegration(Integration.VIEW_RESOLVER)
 class Sitemesh3GrailsPlugin extends Plugin {
 
     def grailsVersion = '7.0.0-SNAPSHOT > *'
