@@ -28,7 +28,6 @@ import org.slf4j.LoggerFactory;
 
 import org.springframework.context.ApplicationContext;
 import org.springframework.util.Assert;
-import org.springframework.web.context.request.RequestContextHolder;
 
 import grails.core.GrailsApplication;
 import grails.web.CamelCaseUrlConverter;
@@ -37,7 +36,6 @@ import grails.web.mapping.UrlMapping;
 import grails.web.mapping.UrlMappingData;
 import grails.web.mapping.UrlMappingInfo;
 import grails.web.mapping.exceptions.UrlMappingException;
-import org.grails.web.servlet.mvc.GrailsWebRequest;
 
 /**
  * Holds information established from a matched URL.
@@ -193,10 +191,7 @@ public class DefaultUrlMappingInfo extends AbstractUrlMappingInfo {
     }
 
     public String getActionName() {
-        org.springframework.web.context.request.RequestAttributes attrs =
-                RequestContextHolder.getRequestAttributes();
-        GrailsWebRequest webRequest = attrs instanceof GrailsWebRequest ? (GrailsWebRequest) attrs : null;
-        String name = evaluateNameForValue(actionName, webRequest);
+        String name = evaluateNameForValue(actionName);
         return urlConverter.toUrlElement(name);
     }
 

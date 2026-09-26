@@ -85,4 +85,6 @@ class ErrorsController {
 }
 ----
 
+NOTE: A problem reaching the error handler does not replace the exception being handled. If the mapping for a status code cannot be resolved for a request, or an error-handling controller cannot be forwarded to because the request did not pass through the Grails filters - a Spring `MockMvc` test that leaves out the application's filters, for example - the problem is logged and the `/error` view renders the original exception instead.
+
 WARNING: If your error-handling controller action throws an exception as well, you'll end up with a `StackOverflowException`.
