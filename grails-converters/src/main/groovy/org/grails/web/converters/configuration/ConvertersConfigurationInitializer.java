@@ -100,6 +100,8 @@ public class ConvertersConfigurationInitializer implements ApplicationContextAwa
         marshallers.add(new org.grails.web.converters.marshaller.json.ByteArrayMarshaller());
         marshallers.add(new org.grails.web.converters.marshaller.json.CollectionMarshaller());
         marshallers.add(new org.grails.web.converters.marshaller.json.MapMarshaller());
+        // ahead of SimpleEnumMarshaller, which also supports java.time.Month
+        marshallers.add(new org.grails.web.converters.marshaller.json.MonthMarshaller());
         marshallers.add(new org.grails.web.converters.marshaller.json.SimpleEnumMarshaller());
 
         Config grailsConfig = getGrailsConfig();
@@ -116,14 +118,27 @@ public class ConvertersConfigurationInitializer implements ApplicationContextAwa
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Using default JSON Date Marshaller");
             }
+            // ahead of DateMarshaller, which also supports java.sql.Time
+            marshallers.add(new org.grails.web.converters.marshaller.json.SqlTimeMarshaller());
             marshallers.add(new org.grails.web.converters.marshaller.json.DateMarshaller());
         }
         marshallers.add(new org.grails.web.converters.marshaller.json.CalendarMarshaller());
+        marshallers.add(new org.grails.web.converters.marshaller.json.XMLGregorianCalendarMarshaller());
         marshallers.add(new org.grails.web.converters.marshaller.json.InstantMarshaller());
         marshallers.add(new org.grails.web.converters.marshaller.json.LocalDateMarshaller());
         marshallers.add(new org.grails.web.converters.marshaller.json.LocalDateTimeMarshaller());
+        marshallers.add(new org.grails.web.converters.marshaller.json.LocalTimeMarshaller());
         marshallers.add(new org.grails.web.converters.marshaller.json.OffsetDateTimeMarshaller());
+        marshallers.add(new org.grails.web.converters.marshaller.json.OffsetTimeMarshaller());
         marshallers.add(new org.grails.web.converters.marshaller.json.ZonedDateTimeMarshaller());
+        marshallers.add(new org.grails.web.converters.marshaller.json.YearMarshaller());
+        marshallers.add(new org.grails.web.converters.marshaller.json.YearMonthMarshaller());
+        marshallers.add(new org.grails.web.converters.marshaller.json.MonthDayMarshaller());
+        marshallers.add(new org.grails.web.converters.marshaller.json.DurationMarshaller());
+        marshallers.add(new org.grails.web.converters.marshaller.json.PeriodMarshaller());
+        marshallers.add(new org.grails.web.converters.marshaller.json.ZoneIdMarshaller());
+        marshallers.add(new org.grails.web.converters.marshaller.json.TimeZoneMarshaller());
+        marshallers.add(new org.grails.web.converters.marshaller.json.XmlDurationMarshaller());
         marshallers.add(new org.grails.web.converters.marshaller.json.ToStringBeanMarshaller());
 
         boolean includeDomainVersion = includeDomainVersionProperty(grailsConfig, "json");

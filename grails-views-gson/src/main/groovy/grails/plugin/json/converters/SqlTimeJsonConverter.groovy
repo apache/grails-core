@@ -19,23 +19,24 @@
 
 package grails.plugin.json.converters
 
-import java.time.OffsetTime
+import java.sql.Time
 
 import groovy.json.JsonGenerator
 import groovy.transform.CompileStatic
 
 /**
- * A class to render a {@link OffsetTime} as json: its ISO-8601 {@link OffsetTime#toString()} form
- * (e.g. {@code 03:00-03:00}), the same as Spring Boot's default Jackson rendering.
+ * A class to render a {@link Time} as json: its wall-clock time in the JVM default time zone
+ * ({@code HH:mm:ss}), the same as Spring Boot's default Jackson rendering, instead of the full
+ * date and time the generator's date format would produce.
  *
- * @author James Kleeh
+ * @since 8.0
  */
 @CompileStatic
-class OffsetTimeJsonConverter implements JsonGenerator.Converter {
+class SqlTimeJsonConverter implements JsonGenerator.Converter {
 
     @Override
     boolean handles(Class<?> type) {
-        OffsetTime == type
+        Time.isAssignableFrom(type)
     }
 
     @Override

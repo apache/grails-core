@@ -18,36 +18,34 @@
  */
 package org.grails.web.converters.marshaller.json;
 
-import java.util.Map;
+import javax.xml.datatype.XMLGregorianCalendar;
 
 import grails.converters.JSON;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
-import org.grails.web.json.JSONWriter;
+import org.grails.web.json.JSONException;
 import org.grails.web.json.JsonDateFormat;
 
 /**
- * @author Siegfried Puchbauer
- * @since 1.1
+ * JSON ObjectMarshaller which converts an XMLGregorianCalendar to an RFC 3339 / ISO 8601 UTC instant
+ * string with millisecond precision, as {@link CalendarMarshaller} does for a Calendar, the same as
+ * Spring Boot's default Jackson rendering. See {@link JsonDateFormat}.
+ *
+ * @since 8.0
  */
-@SuppressWarnings("unchecked")
-public class MapMarshaller implements ObjectMarshaller<JSON> {
+public class XMLGregorianCalendarMarshaller implements ObjectMarshaller<JSON> {
 
     public boolean supports(Object object) {
-        return object instanceof Map;
+        return object instanceof XMLGregorianCalendar;
     }
 
-    public void marshalObject(Object o, JSON converter) throws ConverterException {
-        JSONWriter writer = converter.getWriter();
-        writer.object();
-        Map<Object, Object> map = (Map<Object, Object>) o;
-        for (Map.Entry<Object, Object> entry : map.entrySet()) {
-            Object key = entry.getKey();
-            if (key != null) {
-                writer.key(JsonDateFormat.formatKey(key));
-                converter.convertAnother(entry.getValue());
-            }
+    public void marshalObject(Object object, JSON converter) throws ConverterException {
+        try {
+            long epochMillis = ((XMLGregorianCalendar) object).toGregorianCalendar().getTimeInMillis();
+            converter.getWriter().value(JsonDateFormat.format(epochMillis));
         }
-        writer.endObject();
+        catch (JSONException e) {
+            throw new ConverterException(e);
+        }
     }
 }

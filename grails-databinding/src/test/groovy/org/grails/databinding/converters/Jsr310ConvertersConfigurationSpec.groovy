@@ -272,4 +272,17 @@ class Jsr310ConvertersConfigurationSpec extends Specification {
         !converter.canConvert("23")
         converter.convert(1) instanceof Instant
     }
+
+    void "monthValueConverter binds a month number, as grails.converters.JSON and JSON views render a Month"() {
+        def converter = config.monthValueConverter()
+
+        expect:
+        converter.targetType == Month
+        converter.canConvert(9)
+        converter.canConvert('9')
+        !converter.canConvert('SEPTEMBER')
+        converter.convert(1) == Month.JANUARY
+        converter.convert(9) == Month.SEPTEMBER
+        converter.convert(' 12 ') == Month.DECEMBER
+    }
 }

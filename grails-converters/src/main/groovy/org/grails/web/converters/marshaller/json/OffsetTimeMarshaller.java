@@ -16,30 +16,33 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+package org.grails.web.converters.marshaller.json;
 
-package grails.plugin.json.converters
+import java.time.OffsetTime;
 
-import java.time.OffsetTime
-
-import groovy.json.JsonGenerator
-import groovy.transform.CompileStatic
+import grails.converters.JSON;
+import org.grails.web.converters.exceptions.ConverterException;
+import org.grails.web.converters.marshaller.ObjectMarshaller;
+import org.grails.web.json.JSONException;
 
 /**
- * A class to render a {@link OffsetTime} as json: its ISO-8601 {@link OffsetTime#toString()} form
+ * JSON ObjectMarshaller which converts an OffsetTime to its ISO-8601 {@link OffsetTime#toString()} form
  * (e.g. {@code 03:00-03:00}), the same as Spring Boot's default Jackson rendering.
  *
- * @author James Kleeh
+ * @since 8.0
  */
-@CompileStatic
-class OffsetTimeJsonConverter implements JsonGenerator.Converter {
+public class OffsetTimeMarshaller implements ObjectMarshaller<JSON> {
 
-    @Override
-    boolean handles(Class<?> type) {
-        OffsetTime == type
+    public boolean supports(Object object) {
+        return object instanceof OffsetTime;
     }
 
-    @Override
-    Object convert(Object value, String key) {
-        value.toString()
+    public void marshalObject(Object object, JSON converter) throws ConverterException {
+        try {
+            converter.getWriter().value(object.toString());
+        }
+        catch (JSONException e) {
+            throw new ConverterException(e);
+        }
     }
 }

@@ -19,23 +19,23 @@
 
 package grails.plugin.json.converters
 
-import java.time.OffsetTime
+import java.time.MonthDay
 
 import groovy.json.JsonGenerator
 import groovy.transform.CompileStatic
 
 /**
- * A class to render a {@link OffsetTime} as json: its ISO-8601 {@link OffsetTime#toString()} form
- * (e.g. {@code 03:00-03:00}), the same as Spring Boot's default Jackson rendering.
+ * A class to render a {@link MonthDay} as json: its ISO-8601 {@link MonthDay#toString()} form
+ * (e.g. {@code --09-25}), the same as Spring Boot's default Jackson rendering.
  *
- * @author James Kleeh
+ * @since 8.0
  */
 @CompileStatic
-class OffsetTimeJsonConverter implements JsonGenerator.Converter {
+class MonthDayJsonConverter implements JsonGenerator.Converter {
 
     @Override
     boolean handles(Class<?> type) {
-        OffsetTime == type
+        MonthDay == type
     }
 
     @Override

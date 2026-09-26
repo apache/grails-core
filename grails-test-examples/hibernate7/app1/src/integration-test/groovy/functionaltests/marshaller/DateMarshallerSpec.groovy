@@ -31,18 +31,20 @@ import org.apache.grails.testing.http.client.HttpClientSupport
 
 /**
  * Functional tests verifying that Date and Calendar objects are marshalled
- * through the Grails JSON and XML converters using the JDK's ISO formatters.
+ * through the Grails JSON and XML converters as ISO 8601 strings.
  *
- * - JSON marshallers use {@link DateTimeFormatter#ISO_INSTANT} (UTC, "Z" suffix).
+ * - JSON marshallers render a UTC instant with millisecond precision and a "Z" suffix,
+ *   the same as Spring Boot's default Jackson rendering.
  * - XML marshaller uses {@link DateTimeFormatter#ISO_OFFSET_DATE_TIME} in the
  *   system default zone (numeric offset, e.g. "+00:00", "-04:00").
  */
 @Integration
 @Tag('http-client')
 @Narrative('''
-Grails converters marshal Date and Calendar objects using the JDK's standard
-ISO formatters. JSON output is RFC 3339 / ISO 8601 in UTC. XML output is
-ISO 8601 offset date-time in the system default zone.
+Grails converters marshal Date and Calendar objects as ISO 8601 strings.
+JSON output is RFC 3339 / ISO 8601 in UTC with millisecond precision, as
+Spring Boot renders it. XML output is ISO 8601 offset date-time in the
+system default zone.
 ''')
 class DateMarshallerSpec extends Specification implements HttpClientSupport {
 
@@ -51,12 +53,12 @@ class DateMarshallerSpec extends Specification implements HttpClientSupport {
 
     // ========== JSON Date Marshalling ==========
 
-    def "Date at epoch is marshalled to ISO_INSTANT in JSON"() {
+    def "Date at epoch is marshalled to a UTC instant with millisecond precision in JSON"() {
         when:
         def response = http(ACCEPT_JSON, '/dateMarshaller/date')
 
-        then: "ISO_INSTANT drops the fraction on whole-second instants"
-        response.assertJson(200, [dateField: '1970-01-01T00:00:00Z'])
+        then: "whole-second instants keep the .000 fraction"
+        response.assertJson(200, [dateField: '1970-01-01T00:00:00.000Z'])
     }
 
     def "Date with milliseconds renders fraction to .SSS in JSON"() {
@@ -69,12 +71,12 @@ class DateMarshallerSpec extends Specification implements HttpClientSupport {
 
     // ========== JSON Calendar Marshalling ==========
 
-    def "Calendar at epoch is marshalled to ISO_INSTANT in JSON"() {
+    def "Calendar at epoch is marshalled to a UTC instant with millisecond precision in JSON"() {
         when:
         def response = http(ACCEPT_JSON, '/dateMarshaller/calendar')
 
         then:
-        response.assertJson(200, [calField: '1970-01-01T00:00:00Z'])
+        response.assertJson(200, [calField: '1970-01-01T00:00:00.000Z'])
     }
 
     // ========== XML Date Marshalling ==========
@@ -108,7 +110,7 @@ class DateMarshallerSpec extends Specification implements HttpClientSupport {
         def response = http('/dateMarshaller/date.json')
 
         then:
-        response.assertJson(200, [dateField: '1970-01-01T00:00:00Z'])
+        response.assertJson(200, [dateField: '1970-01-01T00:00:00.000Z'])
     }
 
     def "Date XML via .xml URL extension"() {

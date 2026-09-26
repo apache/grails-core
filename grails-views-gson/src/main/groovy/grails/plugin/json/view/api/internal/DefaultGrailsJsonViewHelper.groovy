@@ -309,20 +309,21 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
 
                 out.append(JsonOutput.OPEN_BRACE)
                 for (entry in map.entrySet()) {
-                    if (!simpleIncludeExcludeSupport.shouldInclude(incs, excs, entry.key.toString())) {
+                    String key = formatMapKey(entry.key)
+                    if (!simpleIncludeExcludeSupport.shouldInclude(incs, excs, key)) {
                         continue
                     }
 
                     if (entryRendered) {
                         out.append(JsonOutput.COMMA)
                     }
-                    out.append(JsonOutput.toJson(entry.key.toString()))
+                    out.append(JsonOutput.toJson(key))
                     out.append(JsonOutput.COLON)
                     def value = entry.value
                     if (value instanceof Iterable) {
-                        getIterableWritable(value, arguments, customizer, processedObjects, entry.key.toString() + '.').writeTo(out)
+                        getIterableWritable(value, arguments, customizer, processedObjects, key + '.').writeTo(out)
                     } else {
-                        handleValue(value, out, arguments, customizer, processedObjects, entry.key.toString() + '.')
+                        handleValue(value, out, arguments, customizer, processedObjects, key + '.')
                     }
                     entryRendered = true
                 }
@@ -431,7 +432,7 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
                                             out.append(o.toString())
                                         }
                                         else if (isSimpleType(o.class, o)) {
-                                            out.append(JsonOutput.toJson((Object) o))
+                                            out.append(getGenerator().toJson((Object) o))
                                         }
                                         else {
                                             out.append(JsonOutput.OPEN_BRACE)
@@ -487,10 +488,10 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
         JsonView jsonView = (JsonView) view
         MappingFactory mappingFactory = jsonView.mappingContext?.mappingFactory
         if (mappingFactory != null) {
-            return mappingFactory.isSimpleType(propertyType) || (value instanceof Enum) || (value instanceof Map)
+            return mappingFactory.isSimpleType(propertyType) || (value instanceof Enum) || (value instanceof Map) || hasConverter(propertyType)
         }
         else {
-            return MappingFactory.isSimpleType(propertyType.getName()) || (value instanceof Enum) || (value instanceof Map)
+            return MappingFactory.isSimpleType(propertyType.getName()) || (value instanceof Enum) || (value instanceof Map) || hasConverter(propertyType)
         }
 
     }
@@ -692,7 +693,7 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
 
         if (isStringType(prop.type)) {
             jsonDelegate.call(propertyName, value.toString())
-        } else if (prop.type.isEnum()) {
+        } else if (prop.type.isEnum() && !hasConverter(value.getClass())) {
             jsonDelegate.call(propertyName, ((Enum) value).name())
         } else if (value instanceof TimeZone) {
             jsonDelegate.call(propertyName, value.getID())

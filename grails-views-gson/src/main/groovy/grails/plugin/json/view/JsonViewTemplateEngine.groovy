@@ -28,13 +28,23 @@ import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.core.OrderComparator
 
+import grails.plugin.json.converters.DurationJsonConverter
 import grails.plugin.json.converters.InstantJsonConverter
 import grails.plugin.json.converters.LocalDateJsonConverter
 import grails.plugin.json.converters.LocalDateTimeJsonConverter
 import grails.plugin.json.converters.LocalTimeJsonConverter
+import grails.plugin.json.converters.MonthDayJsonConverter
+import grails.plugin.json.converters.MonthJsonConverter
 import grails.plugin.json.converters.OffsetDateTimeJsonConverter
 import grails.plugin.json.converters.OffsetTimeJsonConverter
 import grails.plugin.json.converters.PeriodJsonConverter
+import grails.plugin.json.converters.SqlTimeJsonConverter
+import grails.plugin.json.converters.TimeZoneJsonConverter
+import grails.plugin.json.converters.XMLGregorianCalendarJsonConverter
+import grails.plugin.json.converters.XmlDurationJsonConverter
+import grails.plugin.json.converters.YearJsonConverter
+import grails.plugin.json.converters.YearMonthJsonConverter
+import grails.plugin.json.converters.ZoneIdJsonConverter
 import grails.plugin.json.converters.ZonedDateTimeJsonConverter
 import grails.plugin.json.view.api.jsonapi.JsonApiIdRenderStrategy
 import grails.plugin.json.view.internal.JsonTemplateTypeCheckingExtension
@@ -99,7 +109,9 @@ class JsonViewTemplateEngine extends ResolvableGroovyTemplateEngine {
             locale = new Locale(localeData[0])
         }
 
-        options.dateFormat(config.dateFormat, locale)
+        if (config.dateFormat) {
+            options.dateFormat(config.dateFormat, locale)
+        }
         options.timezone(config.timeZone)
 
         Map<String, JsonGenerator.Converter> convertersByClass = new LinkedHashMap<>()
@@ -112,13 +124,23 @@ class JsonViewTemplateEngine extends ResolvableGroovyTemplateEngine {
         converters.add(new OffsetDateTimeJsonConverter())
         converters.add(new OffsetTimeJsonConverter())
         converters.add(new PeriodJsonConverter())
+        converters.add(new SqlTimeJsonConverter())
         converters.add(new ZonedDateTimeJsonConverter())
+        converters.add(new YearJsonConverter())
+        converters.add(new YearMonthJsonConverter())
+        converters.add(new MonthDayJsonConverter())
+        converters.add(new MonthJsonConverter())
+        converters.add(new DurationJsonConverter())
+        converters.add(new ZoneIdJsonConverter())
+        converters.add(new TimeZoneJsonConverter())
+        converters.add(new XMLGregorianCalendarJsonConverter())
+        converters.add(new XmlDurationJsonConverter())
         OrderComparator.sort(converters)
         converters.each {
             options.addConverter(it)
         }
 
-        this.generator = options.build()
+        this.generator = new JsonViewGenerator(options, !config.dateFormat)
     }
 
     private static void registerConverters(Iterable<? extends JsonGenerator.Converter> source,

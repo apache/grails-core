@@ -18,36 +18,31 @@
  */
 package org.grails.web.converters.marshaller.json;
 
-import java.util.Map;
+import java.time.Duration;
 
 import grails.converters.JSON;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
-import org.grails.web.json.JSONWriter;
-import org.grails.web.json.JsonDateFormat;
+import org.grails.web.json.JSONException;
 
 /**
- * @author Siegfried Puchbauer
- * @since 1.1
+ * JSON ObjectMarshaller which converts a Duration to its ISO-8601 {@link Duration#toString()} form
+ * (e.g. {@code PT1H30M}), the same as Spring Boot's default Jackson rendering.
+ *
+ * @since 8.0
  */
-@SuppressWarnings("unchecked")
-public class MapMarshaller implements ObjectMarshaller<JSON> {
+public class DurationMarshaller implements ObjectMarshaller<JSON> {
 
     public boolean supports(Object object) {
-        return object instanceof Map;
+        return object instanceof Duration;
     }
 
-    public void marshalObject(Object o, JSON converter) throws ConverterException {
-        JSONWriter writer = converter.getWriter();
-        writer.object();
-        Map<Object, Object> map = (Map<Object, Object>) o;
-        for (Map.Entry<Object, Object> entry : map.entrySet()) {
-            Object key = entry.getKey();
-            if (key != null) {
-                writer.key(JsonDateFormat.formatKey(key));
-                converter.convertAnother(entry.getValue());
-            }
+    public void marshalObject(Object object, JSON converter) throws ConverterException {
+        try {
+            converter.getWriter().value(object.toString());
         }
-        writer.endObject();
+        catch (JSONException e) {
+            throw new ConverterException(e);
+        }
     }
 }

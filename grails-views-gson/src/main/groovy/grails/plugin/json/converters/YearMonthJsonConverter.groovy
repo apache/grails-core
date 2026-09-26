@@ -19,23 +19,23 @@
 
 package grails.plugin.json.converters
 
-import java.time.OffsetTime
+import java.time.YearMonth
 
 import groovy.json.JsonGenerator
 import groovy.transform.CompileStatic
 
 /**
- * A class to render a {@link OffsetTime} as json: its ISO-8601 {@link OffsetTime#toString()} form
- * (e.g. {@code 03:00-03:00}), the same as Spring Boot's default Jackson rendering.
+ * A class to render a {@link YearMonth} as json: its ISO-8601 {@link YearMonth#toString()} form
+ * (e.g. {@code 2026-09}), the same as Spring Boot's default Jackson rendering.
  *
- * @author James Kleeh
+ * @since 8.0
  */
 @CompileStatic
-class OffsetTimeJsonConverter implements JsonGenerator.Converter {
+class YearMonthJsonConverter implements JsonGenerator.Converter {
 
     @Override
     boolean handles(Class<?> type) {
-        OffsetTime == type
+        YearMonth == type
     }
 
     @Override

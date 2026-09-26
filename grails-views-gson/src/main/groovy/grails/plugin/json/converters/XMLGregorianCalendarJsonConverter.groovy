@@ -19,27 +19,27 @@
 
 package grails.plugin.json.converters
 
-import java.time.OffsetTime
+import javax.xml.datatype.XMLGregorianCalendar
 
 import groovy.json.JsonGenerator
 import groovy.transform.CompileStatic
 
 /**
- * A class to render a {@link OffsetTime} as json: its ISO-8601 {@link OffsetTime#toString()} form
- * (e.g. {@code 03:00-03:00}), the same as Spring Boot's default Jackson rendering.
+ * A class to render an {@link XMLGregorianCalendar} as json: it is converted to a {@link GregorianCalendar},
+ * which is written as any other {@link Calendar} is, the same as Spring Boot's default Jackson rendering.
  *
- * @author James Kleeh
+ * @since 8.0
  */
 @CompileStatic
-class OffsetTimeJsonConverter implements JsonGenerator.Converter {
+class XMLGregorianCalendarJsonConverter implements JsonGenerator.Converter {
 
     @Override
     boolean handles(Class<?> type) {
-        OffsetTime == type
+        XMLGregorianCalendar.isAssignableFrom(type)
     }
 
     @Override
     Object convert(Object value, String key) {
-        value.toString()
+        ((XMLGregorianCalendar) value).toGregorianCalendar()
     }
 }

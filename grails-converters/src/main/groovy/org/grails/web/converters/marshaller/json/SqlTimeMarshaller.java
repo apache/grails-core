@@ -18,36 +18,33 @@
  */
 package org.grails.web.converters.marshaller.json;
 
-import java.util.Map;
+import java.sql.Time;
 
 import grails.converters.JSON;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
-import org.grails.web.json.JSONWriter;
-import org.grails.web.json.JsonDateFormat;
+import org.grails.web.json.JSONException;
 
 /**
- * @author Siegfried Puchbauer
- * @since 1.1
+ * JSON ObjectMarshaller which converts a {@link java.sql.Time} to its wall-clock time in the
+ * JVM default time zone ({@code HH:mm:ss}, from {@link Time#toString()}), the same as Spring Boot's
+ * default Jackson rendering. It is registered ahead of {@link DateMarshaller}, which would
+ * otherwise render the {@code Time} as a full date and time.
+ *
+ * @since 8.0
  */
-@SuppressWarnings("unchecked")
-public class MapMarshaller implements ObjectMarshaller<JSON> {
+public class SqlTimeMarshaller implements ObjectMarshaller<JSON> {
 
     public boolean supports(Object object) {
-        return object instanceof Map;
+        return object instanceof Time;
     }
 
-    public void marshalObject(Object o, JSON converter) throws ConverterException {
-        JSONWriter writer = converter.getWriter();
-        writer.object();
-        Map<Object, Object> map = (Map<Object, Object>) o;
-        for (Map.Entry<Object, Object> entry : map.entrySet()) {
-            Object key = entry.getKey();
-            if (key != null) {
-                writer.key(JsonDateFormat.formatKey(key));
-                converter.convertAnother(entry.getValue());
-            }
+    public void marshalObject(Object object, JSON converter) throws ConverterException {
+        try {
+            converter.getWriter().value(object.toString());
         }
-        writer.endObject();
+        catch (JSONException e) {
+            throw new ConverterException(e);
+        }
     }
 }

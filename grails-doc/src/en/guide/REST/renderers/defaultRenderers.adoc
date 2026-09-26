@@ -71,3 +71,54 @@ render book as XML
 ----
 
 Why the separation between converters and renderers? Well a renderer has more flexibility to use whatever rendering technology you chose. When implementing a custom renderer you could use https://github.com/FasterXML/jackson/[Jackson], https://github.com/google/gson[Google Gson] or any Java library to implement the renderer. Converters on the other hand are very much tied to Grails' own marshalling implementation.
+
+
+==== Date and Time Rendering
+
+
+The JSON converter renders date and time values the same way as Spring Boot's default Jackson `JsonMapper`, so a Grails
+application and a Spring Boot application return the same JSON for the same values:
+
+[cols="2,3", options="header"]
+|===
+| Type
+| Rendered as
+
+| `java.util.Date`, `java.sql.Date`, `java.sql.Timestamp`, `Calendar`, `XMLGregorianCalendar`
+| a UTC instant with millisecond precision, such as `"2025-10-08T07:48:46.407Z"`
+
+| `java.sql.Time`
+| its wall-clock time in the JVM default time zone, such as `"01:48:46"`
+
+| `Instant`
+| ISO-8601, such as `"2025-10-08T07:48:46.407254Z"`
+
+| `LocalDate`, `LocalTime`, `LocalDateTime`
+| ISO-8601 without a time zone, such as `"2025-10-08"`, `"01:48:46.407254"`, `"2025-10-08T01:48:46.407254"`
+
+| `OffsetDateTime`, `ZonedDateTime`, `OffsetTime`
+| ISO-8601 with the offset and without a zone ID, such as `"2025-10-08T01:48:46.407254-06:00"`, `"03:00-03:00"`
+
+| `YearMonth`, `MonthDay`, `Duration`, `Period`, `javax.xml.datatype.Duration`
+| ISO-8601, such as `"2026-09"`, `"--09-25"`, `"PT1H30M"`, `"P1Y2M3D"`, `"P1DT2H"`
+
+| `Year`, `Month`
+| a number, such as `2026`, or `9` for September
+
+| `ZoneId`, `ZoneOffset`, `TimeZone`
+| the ID, such as `"America/Sao_Paulo"` or `"-03:00"`
+|===
+
+A map keyed by `Date`, `Calendar` or `ZonedDateTime` values renders its keys the same way as those values; other map
+keys render with their `toString()`. JSON views render dates and times the same way, and data binding binds a `Month`
+back from its number.
+
+Setting `grails.converters.json.date` to `javascript` renders `java.util.Date` values as JavaScript `new Date(...)`
+constructors instead. To render a type differently, register an object marshaller for it, for example in `BootStrap.init`:
+
+[source,groovy]
+----
+JSON.registerObjectMarshaller(Month) { Month month ->
+    month.name()
+}
+----

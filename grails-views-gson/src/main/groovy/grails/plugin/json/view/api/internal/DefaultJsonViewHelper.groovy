@@ -30,6 +30,7 @@ import org.springframework.http.HttpMethod
 import org.springframework.util.ReflectionUtils
 
 import grails.plugin.json.builder.JsonOutput
+import grails.plugin.json.view.JsonViewGenerator
 import grails.plugin.json.view.api.JsonView
 import grails.rest.Link
 import grails.util.TypeConvertingMap
@@ -132,7 +133,29 @@ class DefaultJsonViewHelper extends DefaultGrailsViewHelper {
     }
 
     boolean isSimpleType(Class propertyType, value) {
-        MappingFactory.isSimpleType(propertyType.name) || (value instanceof Enum) || (value instanceof Map)
+        MappingFactory.isSimpleType(propertyType.name) || (value instanceof Enum) || (value instanceof Map) ||
+                hasConverter(value != null ? value.getClass() : propertyType)
+    }
+
+    /**
+     * Whether the JSON generator of the view has a converter for values of the type, such as the date and time
+     * converters of JSON views, so that the generator rather than a template writes them.
+     *
+     * @param type a value type
+     * @return whether values of the type are written by a converter
+     */
+    protected boolean hasConverter(Class type) {
+        groovy.json.JsonGenerator generator = getGenerator()
+        generator instanceof JsonViewGenerator && ((JsonViewGenerator) generator).hasConverter(type)
+    }
+
+    /**
+     * @param key a non-null map key
+     * @return the JSON object key the generator of the view writes for the map key
+     */
+    protected String formatMapKey(Object key) {
+        groovy.json.JsonGenerator generator = getGenerator()
+        generator instanceof JsonViewGenerator ? ((JsonViewGenerator) generator).formatMapKey(key) : key.toString()
     }
 
     protected List<Object> getJsonStackTrace(Throwable e) {

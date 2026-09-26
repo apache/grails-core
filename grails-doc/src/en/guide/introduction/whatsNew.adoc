@@ -43,6 +43,16 @@ This brings the Spring Boot 4 modular artifact layout, Spring Framework 7 API re
 
 The Grails 8 upgrade guide calls out the major application-impacting changes and links to the Spring Boot 4.0 migration guide, Spring Boot 4.1 release notes and Spring Framework 7.0 release notes.
 
+==== JSON Dates and Times Render as Spring Boot Renders Them
+
+`render ... as JSON`, `respond` and JSON views now write `Date`, `Calendar`, `TimeZone`, the `java.sql` date types,
+the `java.time` date, time, duration and zone types and `XMLGregorianCalendar` the same way as Spring Boot's default
+Jackson `JsonMapper`, so a Grails application and a Spring Boot application return the same JSON for the same values:
+`java.sql.Time` as `"01:48:46"`, `LocalTime` as `"01:48:46.407254"`, `Duration` as `"PT1H30M"`, `Year` and `Month` as
+numbers, `ZoneId` and `TimeZone` as their IDs, and `Date`, `Calendar` and `ZonedDateTime` map keys as their values
+render. See the Date and Time Rendering sections of the REST and JSON Views guides, and the upgrade guide for the
+types that render differently than in Grails 7.
+
 ==== Hibernate 7 Application Generation
 
 Grails Forge can now generate applications configured for Grails Data with Hibernate 7.

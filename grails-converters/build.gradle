@@ -59,6 +59,7 @@ dependencies {
 
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
     testImplementation 'org.springframework:spring-test'
+    testImplementation 'tools.jackson.core:jackson-databind' // JSON rendering is compared against Spring Boot's Jackson JsonMapper
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
