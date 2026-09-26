@@ -241,6 +241,27 @@ class Jsr310ConvertersConfigurationSpec extends Specification {
         date.second == 0
     }
 
+    void "value converters read #value as ISO 8601 writes a #type.simpleName, as Grails renders it"() {
+        expect:
+        converter.call(config).convert(value) == type.parse(value)
+
+        where:
+        type           | value                               | converter
+        OffsetDateTime | '2024-05-01T10:00:00Z'              | { it.offsetDateTimeValueConverter() }
+        OffsetDateTime | '2024-05-01T10:00:00+02:00'         | { it.offsetDateTimeValueConverter() }
+        ZonedDateTime  | '2024-05-01T10:00:00+02:00'         | { it.zonedDateTimeValueConverter() }
+        LocalDateTime  | '2024-05-01T10:00:00.250'           | { it.localDateTimeValueConverter() }
+        OffsetTime     | '10:00:00+02:00'                    | { it.offsetTimeValueConverter() }
+        LocalTime      | '10:00:00.5'                        | { it.localTimeValueConverter() }
+        LocalDate      | '2024-05-01'                        | { it.localDateValueConverter() }
+    }
+
+    void "value converters still read the configured date formats"() {
+        expect: 'a form ISO 8601 does not write, which a configured format reads'
+        config.offsetDateTimeValueConverter().convert('1941-01-05T08:00:00+0000') ==
+                OffsetDateTime.parse('1941-01-05T08:00:00Z')
+    }
+
     void "periodValueConverter"() {
         def converter = config.periodValueConverter()
 

@@ -97,6 +97,7 @@ include(
         'grails-interceptors',
         'grails-logging',
         'grails-mimetypes',
+        'grails-openapi',
         'grails-rest-transforms',
         'grails-scaffolding',
         'grails-services',
@@ -570,6 +571,8 @@ include(
         'grails-test-examples-jetty',
         'grails-test-examples-latency',
         'grails-test-examples-namespaces',
+        'grails-test-examples-openapi',
+        'grails-test-examples-openapi-rest-api',
         'grails-test-examples-plugins-exploded',
         'grails-test-examples-plugins-issue11005',
         'grails-test-examples-plugins-loadafter',
@@ -631,6 +634,8 @@ project(':grails-test-examples-test-phases').projectDir = file('grails-test-exam
 project(':grails-test-examples-jetty').projectDir = file('grails-test-examples/jetty')
 project(':grails-test-examples-undertow').projectDir = file('grails-test-examples/undertow')
 project(':grails-test-examples-latency').projectDir = file('grails-test-examples/latency')
+project(':grails-test-examples-openapi').projectDir = file('grails-test-examples/openapi')
+project(':grails-test-examples-openapi-rest-api').projectDir = file('grails-test-examples/openapi-rest-api')
 
 includeBuild('./grails-gradle') {
     name = 'grails-gradle'

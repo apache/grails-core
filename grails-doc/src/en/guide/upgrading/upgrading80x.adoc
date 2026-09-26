@@ -4136,3 +4136,66 @@ it registered only when a controller source mentioned `@Scaffold` - decided by
 `GroovyPagePlugin.scaffoldsAnyController`. Both are gone: nothing is copied, and every project generates the
 pages its scaffolded controllers need, a plugin's among them. A build that refers to `stageGroovyPages`
 fails with an unknown task; remove the reference.
+
+==== 75. A List of Objects in Configuration Binds to Its Declared Type
+
+A list of objects in `application.yml` or `application.groovy`, such as:
+
+[source,yaml]
+.application.yml
+----
+springdoc:
+    group-configs:
+        - group: sales
+          paths-to-match: /api/v1/**
+----
+
+is now presented to Spring element by element, under the indexed names Spring Boot binds a list from,
+such as `springdoc.group-configs[0].group`, the way Spring Boot's own YAML loader presents it. A
+`@ConfigurationProperties` class declaring a `List` of objects is bound with instances of that type.
+Previously the whole list was also presented under its own name, so Spring Boot bound it as a list of
+maps, and code reading the declared type failed with a `ClassCastException`. springdoc failed that
+way on `springdoc.group-configs` before the application could start.
+
+`Environment.getProperty('springdoc.group-configs')` now returns `null` and
+`Environment.containsProperty` returns `false`, as they do in a Spring Boot application, so a
+`@Value('${springdoc.group-configs}')` without a default fails to resolve, as does a `${...}`
+placeholder naming the list anywhere else. Read such a list through `grailsApplication.config`,
+which is unchanged, or bind it. The same applies to a list holding lists of objects, such as
+`rows: [[{a: 1}], [{b: 2}]]`, whose objects are presented under names such as `rows[0][0].a`, and to
+a list mixing plain values and objects, such as `mixed: [a, {b: 1}]`, presented as `mixed[0]` and
+`mixed[1].b`. Within such a list, an empty object, an empty list or a `null` value is presented as an
+empty string under its own name, such as `empty[0]` for `empty: [{}]`, as Spring Boot presents it. A
+list of plain values only, such as `names: [a, b]`, is presented as before.
+
+What reads the names the configuration presents sees the change too:
+
+* The `config-report` command lists such a list as a row for each value, such as
+  `springdoc.group-configs[0].group`, rather than one row for the list.
+* GORM used outside a Grails application, given a `ConfigurableEnvironment` it copies the property
+  names of, no longer finds the list under its own name. In a Grails application a datastore is
+  given `grailsApplication.config`, and sees the list as before.
+
+==== 76. A Date With an Offset Is Bound to the Instant It Names
+
+Data binding reads a date and time written as ISO 8601 and RFC 3339 write it, which is how Grails
+renders a date in JSON, before the formats `grails.databinding.dateFormats` lists. Previously:
+
+* `2024-05-01T10:00:00Z`, which 8.0.0-RC1 renders for a `Date` or a `Calendar` whose milliseconds are
+  zero, and which a client may send for any date, was read by the `yyyy-MM-dd'T'HH:mm:ss'Z'` format
+  as a time in the zone of the server, so it was bound off by the offset of that zone.
+* `2024-05-01T10:00:00+02:00` was read by `yyyy-MM-dd'T'HH:mm:ss`, which left the offset unread,
+  and was bound as a time in the zone of the server.
+* A fraction of a second of fewer than three digits, such as the `.5` of `10:00:00.5Z`, was read as
+  milliseconds, so as 5 rather than 500.
+* An `OffsetDateTime` or a `ZonedDateTime` could not be bound from `2024-05-01T10:00:00Z` or
+  `2024-05-01T10:00:00+02:00`, which is how Grails renders them, and a `LocalDateTime` or a
+  `LocalTime` could not be bound from a value with a fraction of a second.
+
+Each is now bound to what it names. A server running in UTC saw the first two bound correctly
+before, and sees no change.
+
+A format in `grails.databinding.dateFormats` now binds a value only where it reads all of it. A
+value that a format read only the start of, such as `2024-05-01 10:00`, which `yyyy-MM-dd` read as
+midnight, losing the time, is now a binding error for the property. Add a format that reads the
+whole value, such as `yyyy-MM-dd HH:mm`, where such values are expected.

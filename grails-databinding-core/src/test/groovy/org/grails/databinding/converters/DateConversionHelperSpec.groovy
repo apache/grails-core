@@ -21,6 +21,8 @@ package org.grails.databinding.converters
 import spock.lang.Issue
 
 import java.text.ParseException
+import java.text.SimpleDateFormat
+import java.time.Instant
 
 import spock.lang.Specification
 
@@ -45,8 +47,9 @@ class DateConversionHelperSpec extends Specification {
         26 == calendar.get(MINUTE)
         31 == calendar.get(SECOND)
 
-        when:
+        when: 'a time in UTC, read in UTC'
         date = helper.convert '2011-03-12T09:24:22Z'
+        calendar = getInstance(TimeZone.getTimeZone("UTC"))
         calendar.setTime(date)
 
         then:
@@ -133,6 +136,57 @@ class DateConversionHelperSpec extends Specification {
 
         then:
         date == null
+    }
+
+    void 'converts #value to the instant it names, whatever the zone of the server'() {
+        given: 'a server outside UTC, and the formats Grails configures by default'
+        TimeZone serverZone = TimeZone.default
+        TimeZone.default = TimeZone.getTimeZone('America/Denver')
+        DateConversionHelper helper = new DateConversionHelper(formatStrings: ['yyyy-MM-dd HH:mm:ss.S', "yyyy-MM-dd'T'HH:mm:ss'Z'",
+                'yyyy-MM-dd HH:mm:ss.S z', "yyyy-MM-dd'T'HH:mm:ss.SSSX", "yyyy-MM-dd'T'HH:mm:ss"])
+
+        expect:
+        ((Date) helper.convert(value)).toInstant() == Instant.parse(named)
+
+        cleanup:
+        TimeZone.default = serverZone
+
+        where:
+        value                                       | named
+        '2024-05-01T10:00:00Z'                      | '2024-05-01T10:00:00Z'
+        '2024-05-01T10:00:00+02:00'                 | '2024-05-01T08:00:00Z'
+        '2024-05-01T10:00:00.5Z'                    | '2024-05-01T10:00:00.500Z'
+        '2024-05-01T10:00:00.000+02:00'             | '2024-05-01T08:00:00Z'
+        '2024-05-01T10:00:00+02:00[Europe/Paris]'   | '2024-05-01T08:00:00Z'
+    }
+
+    void 'converts #value in the calendar a Date is written in, which is Julian before 1582'() {
+        given:
+        DateConversionHelper helper = new DateConversionHelper(formatStrings: [])
+        SimpleDateFormat written = new SimpleDateFormat("G yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
+        written.timeZone = TimeZone.getTimeZone('UTC')
+
+        expect:
+        written.format((Date) helper.convert(value)) == readAs
+
+        where:
+        value                        | readAs
+        '1500-01-01T00:00:00.000Z'   | 'AD 1500-01-01T00:00:00.000Z'
+        '0044-03-15T12:00:00.000Z'   | 'AD 0044-03-15T12:00:00.000Z'
+        '-0043-03-15T00:00:00.000Z'  | 'BC 0044-03-15T00:00:00.000Z'
+        '1600-01-01T10:00:00+02:00'  | 'AD 1600-01-01T08:00:00.000Z'
+    }
+
+    void 'does not convert a value that a format reads only the start of'() {
+        given:
+        DateConversionHelper helper = new DateConversionHelper(formatStrings: ['yyyy-MM-dd'])
+
+        when: 'the format would read the date and lose the time'
+        helper.convert '2024-05-01 10:00'
+
+        then:
+        ParseException e = thrown()
+        e.message == 'Unparseable date: "2024-05-01 10:00"'
     }
 
     @Issue("https://github.com/apache/grails-core/issues/10387")

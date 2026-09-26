@@ -125,6 +125,13 @@ ext {
             'sitemesh.version'              : '2.6.0',
             'scribejava.version'            : '8.3.3',
             'spock.version'                 : '2.4-groovy-5.0',
+            // Not managed by spring-boot-dependencies. springdoc 3.x is the Spring Boot 4 /
+            // Spring Framework 7 line; the grails-openapi module compiles against its
+            // OpenApiCustomizer SPI and apps add the webmvc-ui starter for Swagger UI.
+            'springdoc-openapi.version'     : '3.1.0',
+            // Not managed by spring-boot-dependencies. Kept at the version springdoc-openapi
+            // resolves, which grails-openapi compiles against without requiring springdoc.
+            'swagger.version'               : '2.2.52',
             'starter-sitemesh.version'      : '3.3.0-RC1',
             'spring-webmvc-sitemesh.version': '3.3.0-RC1',
             // Spring Boot 4 no longer manages spring-retry; pin it here so the
@@ -225,6 +232,14 @@ ext {
             'spock-core'               : "org.spockframework:spock-core:${bomDependencyVersions['spock.version']}",
             'spock-spring'             : "org.spockframework:spock-spring:${bomDependencyVersions['spock.version']}",
             'spring-retry'             : "org.springframework.retry:spring-retry:${bomDependencyVersions['spring-retry.version']}",
+            // Not managed by spring-boot-dependencies - see springdoc-openapi.version
+            'springdoc-openapi-starter-common': "org.springdoc:springdoc-openapi-starter-common:${bomDependencyVersions['springdoc-openapi.version']}",
+            'springdoc-openapi-starter-webmvc-api': "org.springdoc:springdoc-openapi-starter-webmvc-api:${bomDependencyVersions['springdoc-openapi.version']}",
+            'springdoc-openapi-starter-webmvc-ui': "org.springdoc:springdoc-openapi-starter-webmvc-ui:${bomDependencyVersions['springdoc-openapi.version']}",
+            // Not managed by spring-boot-dependencies - see swagger.version
+            'swagger-annotations-jakarta': "io.swagger.core.v3:swagger-annotations-jakarta:${bomDependencyVersions['swagger.version']}",
+            'swagger-core-jakarta'     : "io.swagger.core.v3:swagger-core-jakarta:${bomDependencyVersions['swagger.version']}",
+            'swagger-models-jakarta'   : "io.swagger.core.v3:swagger-models-jakarta:${bomDependencyVersions['swagger.version']}",
             'starter-sitemesh'         : "org.sitemesh:spring-boot-starter-sitemesh:${bomDependencyVersions['starter-sitemesh.version']}",
             'spring-webmvc-sitemesh'   : "org.sitemesh:spring-webmvc-sitemesh:${bomDependencyVersions['spring-webmvc-sitemesh.version']}",
             // Not managed by spring-boot-dependencies - see undertow.version

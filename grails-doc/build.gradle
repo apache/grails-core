@@ -283,7 +283,8 @@ generateConfigReference.configure { Task it ->
             project(':grails-data-mongodb').tasks.named('jar'),
             project(':grails-views-gson').tasks.named('jar'),
             project(':grails-views-markup').tasks.named('jar'),
-            project(':grails-web-url-mappings').tasks.named('jar')
+            project(':grails-web-url-mappings').tasks.named('jar'),
+            project(':grails-openapi').tasks.named('jar')
     )
 
     it.description = 'Generates the Application Properties reference from configuration metadata.'
@@ -303,7 +304,8 @@ generateConfigReference.configure { Task it ->
             project(':grails-data-mongodb').tasks.named('jar').flatMap { task -> task.archiveFile },
             project(':grails-views-gson').tasks.named('jar').flatMap { task -> task.archiveFile },
             project(':grails-views-markup').tasks.named('jar').flatMap { task -> task.archiveFile },
-            project(':grails-web-url-mappings').tasks.named('jar').flatMap { task -> task.archiveFile }
+            project(':grails-web-url-mappings').tasks.named('jar').flatMap { task -> task.archiveFile },
+            project(':grails-openapi').tasks.named('jar').flatMap { task -> task.archiveFile }
     )
     it.outputs.file(outputFile)
 
@@ -323,7 +325,8 @@ generateConfigReference.configure { Task it ->
                 project(':grails-data-mongodb').tasks.named('jar').get().archiveFile.get().asFile,
                 project(':grails-views-gson').tasks.named('jar').get().archiveFile.get().asFile,
                 project(':grails-views-markup').tasks.named('jar').get().archiveFile.get().asFile,
-                project(':grails-web-url-mappings').tasks.named('jar').get().archiveFile.get().asFile
+                project(':grails-web-url-mappings').tasks.named('jar').get().archiveFile.get().asFile,
+                project(':grails-openapi').tasks.named('jar').get().archiveFile.get().asFile
         ]
 
         Map<String, String> groupDescriptions = new LinkedHashMap<String, String>()

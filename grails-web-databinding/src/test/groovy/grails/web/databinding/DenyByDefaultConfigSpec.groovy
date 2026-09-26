@@ -23,6 +23,8 @@ import grails.config.Settings
 import grails.databinding.SimpleMapDataBindingSource
 import grails.util.Holders
 import org.grails.config.PropertySourcesConfig
+import org.grails.web.databinding.BindingIncludeLists
+
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -72,6 +74,20 @@ class DenyByDefaultConfigSpec extends Specification {
         ' false '       || 'compatibility'
         true            || null
         'true'          || null
+    }
+
+    @Unroll
+    void 'the include list of a type follows deny-by-default configuration value #configuredValue'() {
+        given:
+        Holders.setConfig(new PropertySourcesConfig([(Settings.DATABINDING_DENY_BY_DEFAULT): configuredValue]))
+
+        expect:
+        BindingIncludeLists.propertyNames(DenyByDefaultTarget) == expected
+
+        where:
+        configuredValue || expected
+        false           || ['allowed', 'compatibilityProperty']
+        true            || ['allowed']
     }
 
     @Unroll
