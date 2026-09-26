@@ -34,7 +34,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import org.springframework.web.context.WebApplicationContext;
+import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.context.support.WebApplicationContextUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -64,6 +66,25 @@ import org.grails.web.util.WebUtils;
  */
 public class UrlMappingUtils {
     private UrlMappingUtils() {
+    }
+
+    /**
+     * Finds the {@link GrailsWebRequest} of the current request. A {@code DispatcherServlet} other than the
+     * Grails one - the one MockMvc runs, for example - binds a plain {@link ServletRequestAttributes} over
+     * the {@code GrailsWebRequest} that {@code GrailsWebRequestFilter} bound, so when the bound attributes
+     * are not a {@code GrailsWebRequest}, the one the filter stored on the request is used.
+     *
+     * @return The GrailsWebRequest, or null if the current request has none
+     */
+    static GrailsWebRequest lookupWebRequest() {
+        RequestAttributes attributes = RequestContextHolder.getRequestAttributes();
+        if (attributes instanceof GrailsWebRequest webRequest) {
+            return webRequest;
+        }
+        if (attributes instanceof ServletRequestAttributes servletAttributes) {
+            return GrailsWebRequest.lookup(servletAttributes.getRequest());
+        }
+        return null;
     }
 
     /**

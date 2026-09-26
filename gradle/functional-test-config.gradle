@@ -186,6 +186,10 @@ tasks.withType(Test).configureEach { Test task ->
         task.jvmArgs += debugArguments
     }
 
+    // Forces Geb to use the 'test' environment block in GebConfig.groovy instead of a
+    // remote/chrome container block. Must be set on the forked test JVM, not the root project.
+    systemProperty('geb.env', 'test')
+
     // Waiting at-checks keep Geb tests resilient when a page is still loading after navigation.
     systemProperty('grails.geb.atCheckWaiting.enabled', 'true')
     systemProperty('grails.geb.timeouts.timeout', '30')
