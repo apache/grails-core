@@ -24,9 +24,11 @@ import grails.web.mapping.UrlMappingInfo
 import grails.web.mapping.UrlMappingsHolder
 import grails.web.mapping.exceptions.UrlMappingException
 import org.apache.grails.core.testing.support.LogCapture
+import org.codehaus.groovy.runtime.InvokerInvocationException
 import org.grails.exceptions.reporting.DefaultStackTraceFilterer
 import org.apache.grails.core.GrailsBootstrapRegistryInitializer
 import org.grails.exceptions.reporting.StackTraceFilterer
+import org.grails.web.servlet.mvc.exceptions.ControllerExecutionException
 import org.springframework.beans.factory.BeanNotOfRequiredTypeException
 import org.springframework.beans.factory.NoSuchBeanDefinitionException
 import org.springframework.context.ApplicationContext
@@ -587,5 +589,408 @@ class GrailsExceptionResolverSpec extends Specification {
 
         cleanup:
         RequestContextHolder.resetRequestAttributes()
+    }
+
+    void "getRequestLogMessage(Throwable, HttpServletRequest) derives exception name and message from root cause"() {
+        given:
+        def resolver = new GrailsExceptionResolver()
+        def request = new MockHttpServletRequest('GET', '/test')
+        def cause = new IllegalArgumentException('bad argument')
+        def wrapper = new RuntimeException('wrapper', cause)
+
+        when:
+        def msg = resolver.getRequestLogMessage(wrapper, request)
+
+        then:
+        msg.contains('IllegalArgumentException')
+        msg.contains('bad argument')
+        msg.contains('[GET] /test')
+    }
+
+    void "getRequestLogMessage(HttpServletRequest) uses 'Exception' as name and omits message"() {
+        given:
+        def resolver = new GrailsExceptionResolver()
+        def request = new MockHttpServletRequest('POST', '/submit')
+
+        when:
+        def msg = resolver.getRequestLogMessage(request)
+
+        then:
+        msg.contains('Exception occurred when processing request:')
+        msg.contains('[POST] /submit')
+        msg.endsWith('Stacktrace follows:')
+    }
+
+    void "getRequestLogMessage uses FORWARD_REQUEST_URI_ATTRIBUTE when set instead of requestURI"() {
+        given:
+        def resolver = new GrailsExceptionResolver()
+        def request = new MockHttpServletRequest('GET', '/original')
+        request.setAttribute(org.grails.web.util.WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, '/forwarded')
+
+        when:
+        def msg = resolver.getRequestLogMessage('RuntimeException', request, null)
+
+        then:
+        msg.contains('/forwarded')
+        !msg.contains('/original')
+    }
+
+    void "getRequestLogMessage omits parameters section when request has no parameters"() {
+        given:
+        def config = Mock(Config)
+        config.getProperty('grails.exceptionresolver.logRequestParameters', Boolean, _) >> true
+        config.getProperty('grails.exceptionresolver.logAuditor', Boolean, false) >> false
+        config.getProperty('grails.exceptionresolver.logRemoteAddr', Boolean, false) >> false
+        config.getProperty('grails.exceptionresolver.logFullStackTraceOnFilter', Boolean, true) >> false
+        config.getProperty('grails.exceptionresolver.logFullStackTrace', Boolean, false) >> false
+        def grailsApp = Mock(GrailsApplication)
+        grailsApp.getConfig() >> config
+        def resolver = new GrailsExceptionResolver()
+        resolver.grailsApplication = grailsApp
+        def request = new MockHttpServletRequest('GET', '/empty')
+
+        when:
+        def msg = resolver.getRequestLogMessage('RuntimeException', request, 'boom')
+
+        then:
+        !msg.contains('parameters:')
+        msg.contains('boom')
+        msg.endsWith('Stacktrace follows:')
+    }
+
+    void "getRequestLogMessage handles null blackList from config by treating it as empty"() {
+        given:
+        def config = Mock(Config)
+        config.getProperty('grails.exceptionresolver.logRequestParameters', Boolean, _) >> true
+        config.getProperty('grails.exceptionresolver.params.exclude', List, _) >> null
+        config.getProperty('grails.exceptionresolver.logAuditor', Boolean, false) >> false
+        config.getProperty('grails.exceptionresolver.logRemoteAddr', Boolean, false) >> false
+        config.getProperty('grails.exceptionresolver.logFullStackTraceOnFilter', Boolean, true) >> false
+        config.getProperty('grails.exceptionresolver.logFullStackTrace', Boolean, false) >> false
+        def grailsApp = Mock(GrailsApplication)
+        grailsApp.getConfig() >> config
+        def resolver = new GrailsExceptionResolver()
+        resolver.grailsApplication = grailsApp
+        def request = new MockHttpServletRequest('POST', '/login')
+        request.addParameter('username', 'alice')
+
+        when:
+        def msg = resolver.getRequestLogMessage('RuntimeException', request, 'boom')
+
+        then:
+        noExceptionThrown()
+        msg.contains('username: alice')
+    }
+
+    void "findWrappedException unwraps InvokerInvocationException to its root cause when root cause is an Exception"() {
+        given:
+        def resolver = new GrailsExceptionResolver()
+        def rootCause = new IllegalStateException('root')
+        def wrapper = new InvokerInvocationException(rootCause)
+
+        when:
+        def result = resolver.findWrappedException(wrapper)
+
+        then:
+        result.is(rootCause)
+    }
+
+    void "findWrappedException unwraps GrailsMVCException to its root cause when root cause is an Exception"() {
+        given:
+        def resolver = new GrailsExceptionResolver()
+        def rootCause = new IllegalStateException('root')
+        def wrapper = new ControllerExecutionException('mvc error', rootCause)
+
+        when:
+        def result = resolver.findWrappedException(wrapper)
+
+        then:
+        result.is(rootCause)
+    }
+
+    void "findWrappedException returns the original exception unchanged when root cause is not an Exception"() {
+        given:
+        def resolver = new GrailsExceptionResolver()
+        def rootCause = new Error('fatal')
+        def wrapper = new InvokerInvocationException(rootCause)
+
+        when:
+        def result = resolver.findWrappedException(wrapper)
+
+        then:
+        result.is(wrapper)
+    }
+
+    void "findWrappedException returns a plain exception unchanged"() {
+        given:
+        def resolver = new GrailsExceptionResolver()
+        def plain = new RuntimeException('plain')
+
+        when:
+        def result = resolver.findWrappedException(plain)
+
+        then:
+        result.is(plain)
+    }
+
+    void "determineUri returns FORWARD_REQUEST_URI_ATTRIBUTE when set"() {
+        given:
+        def resolver = new GrailsExceptionResolver()
+        def request = new MockHttpServletRequest('GET', '/actual')
+        request.setAttribute(org.grails.web.util.WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, '/forwarded-uri')
+
+        when:
+        def uri = resolver.determineUri(request)
+
+        then:
+        uri == '/forwarded-uri'
+    }
+
+    void "determineUri falls back to requestURI when FORWARD_REQUEST_URI_ATTRIBUTE is absent"() {
+        given:
+        def resolver = new GrailsExceptionResolver()
+        def request = new MockHttpServletRequest('GET', '/actual')
+
+        when:
+        def uri = resolver.determineUri(request)
+
+        then:
+        uri == '/actual'
+    }
+
+    void "appendRequestContext emits nothing when remoteAddr is empty and auditor is disabled"() {
+        given:
+        def config = Mock(Config)
+        config.getProperty('grails.exceptionresolver.logRemoteAddr', Boolean, false) >> true
+        config.getProperty('grails.exceptionresolver.logAuditor', Boolean, false) >> false
+        config.getProperty('grails.exceptionresolver.logFullStackTrace', Boolean, false) >> false
+        config.getProperty('grails.exceptionresolver.logFullStackTraceOnFilter', Boolean, true) >> false
+        config.getProperty('grails.exceptionresolver.logRequestParameters', Boolean, _) >> false
+        def grailsApp = Mock(GrailsApplication)
+        grailsApp.getConfig() >> config
+        def resolver = new GrailsExceptionResolver() {
+
+            @Override
+            protected String resolveRemoteAddr(HttpServletRequest req) { '' }
+        }
+        resolver.grailsApplication = grailsApp
+        def request = new MockHttpServletRequest('GET', '/test')
+
+        when:
+        def msg = resolver.getRequestLogMessage('RuntimeException', request, null)
+
+        then:
+        !msg.contains('(')
+        !msg.contains('ip:')
+    }
+
+    void "appendRequestContext emits nothing when resolveRemoteAddr returns null"() {
+        given:
+        def config = Mock(Config)
+        config.getProperty('grails.exceptionresolver.logRemoteAddr', Boolean, false) >> true
+        config.getProperty('grails.exceptionresolver.logAuditor', Boolean, false) >> false
+        config.getProperty('grails.exceptionresolver.logFullStackTrace', Boolean, false) >> false
+        config.getProperty('grails.exceptionresolver.logFullStackTraceOnFilter', Boolean, true) >> false
+        config.getProperty('grails.exceptionresolver.logRequestParameters', Boolean, _) >> false
+        def grailsApp = Mock(GrailsApplication)
+        grailsApp.getConfig() >> config
+        def resolver = new GrailsExceptionResolver() {
+
+            @Override
+            protected String resolveRemoteAddr(HttpServletRequest req) { null }
+        }
+        resolver.grailsApplication = grailsApp
+        def request = new MockHttpServletRequest('GET', '/test')
+
+        when:
+        def msg = resolver.getRequestLogMessage('RuntimeException', request, null)
+
+        then:
+        !msg.contains('(')
+        !msg.contains('ip:')
+    }
+
+    void "resolveLogFlags reads false for all flags when grailsApplication is null"() {
+        given:
+        def resolver = new GrailsExceptionResolver()
+
+        expect: 'all shouldLog* predicates return false when no grailsApplication is wired'
+        !resolver.shouldLogFullStackTrace()
+        !resolver.shouldLogAuditor()
+        !resolver.shouldLogRemoteAddr()
+    }
+
+    void "resolveLogFlags is idempotent — config is consulted only once across multiple calls"() {
+        given:
+        def config = Mock(Config)
+        config.getProperty('grails.exceptionresolver.logFullStackTrace', Boolean, false) >> false
+        config.getProperty('grails.exceptionresolver.logAuditor', Boolean, false) >> false
+        config.getProperty('grails.exceptionresolver.logRemoteAddr', Boolean, false) >> false
+        config.getProperty('grails.exceptionresolver.logFullStackTraceOnFilter', Boolean, true) >> false
+        def grailsApp = Mock(GrailsApplication)
+        grailsApp.getConfig() >> config
+        def resolver = new GrailsExceptionResolver()
+        resolver.grailsApplication = grailsApp
+
+        when: 'shouldLog* is called multiple times'
+        resolver.shouldLogFullStackTrace()
+        resolver.shouldLogAuditor()
+        resolver.shouldLogRemoteAddr()
+        resolver.shouldLogFullStackTrace()
+
+        then: 'config.getProperty for the three flags is called exactly once each'
+        1 * config.getProperty('grails.exceptionresolver.logFullStackTrace', Boolean, false) >> false
+        1 * config.getProperty('grails.exceptionresolver.logAuditor', Boolean, false) >> false
+        1 * config.getProperty('grails.exceptionresolver.logRemoteAddr', Boolean, false) >> false
+    }
+
+    void "applyLogFullStackTraceOnFilter defaults to true when grailsApplication is null"() {
+        given:
+        def filterer = new DefaultStackTraceFilterer()
+        filterer.setLogFullStackTraceOnFilter(false)
+        def resolver = new GrailsExceptionResolver()
+        resolver.stackFilterer = filterer
+
+        when:
+        resolver.applyLogFullStackTraceOnFilter()
+
+        then: 'the null-config branch defaults to true'
+        filterer.logFullStackTraceOnFilter
+    }
+
+    void "applyLogFullStackTraceOnFilter is a no-op when stackFilterer is not a DefaultStackTraceFilterer"() {
+        given:
+        def customFilterer = Mock(StackTraceFilterer)
+        def resolver = new GrailsExceptionResolver()
+        resolver.stackFilterer = customFilterer
+
+        when:
+        resolver.applyLogFullStackTraceOnFilter()
+
+        then: 'no interaction with the custom filterer'
+        0 * customFilterer._
+    }
+
+    void "createStackFilterer falls back to DefaultStackTraceFilterer when instantiation throws"() {
+        given: 'a config that returns a class that cannot be instantiated as a StackTraceFilterer'
+        def config = Mock(Config)
+        config.getProperty('grails.logging.stackTraceFiltererClass', Class, DefaultStackTraceFilterer) >> String
+        config.getProperty('grails.exceptionresolver.logFullStackTraceOnFilter', Boolean, true) >> true
+        def mainContext = Mock(ApplicationContext)
+        mainContext.getBean(GrailsBootstrapRegistryInitializer.STACK_TRACE_FILTERER_BEAN_NAME, StackTraceFilterer) >> {
+            throw new NoSuchBeanDefinitionException(GrailsBootstrapRegistryInitializer.STACK_TRACE_FILTERER_BEAN_NAME)
+        }
+        def grailsApp = Mock(GrailsApplication)
+        grailsApp.getMainContext() >> mainContext
+        grailsApp.getConfig() >> config
+        def resolver = new GrailsExceptionResolver()
+        resolver.grailsApplication = grailsApp
+
+        when:
+        resolver.createStackFilterer()
+
+        then: 'the Throwable catch branch falls back to DefaultStackTraceFilterer'
+        noExceptionThrown()
+        resolver.stackFilterer instanceof DefaultStackTraceFilterer
+    }
+
+    void "resolveViewOrForward skips forward when response is already committed"() {
+        given:
+        def info = Mock(UrlMappingInfo)
+        info.getViewName() >> null
+        info.getControllerName() >> 'errors'
+        def urlMappings = Mock(UrlMappingsHolder)
+        urlMappings.match(_ as String) >> null
+        urlMappings.matchStatusCode(500, _ as Throwable) >> null
+        urlMappings.matchStatusCode(500) >> info
+
+        def forwards = []
+        def resolver = new GrailsExceptionResolver() {
+
+            @Override
+            protected void forwardRequest(UrlMappingInfo forwarded, HttpServletRequest req,
+                    HttpServletResponse res, ModelAndView mv, String uri) {
+                forwards << uri
+            }
+        }
+        def request = new MockHttpServletRequest('GET', '/test')
+        def response = new MockHttpServletResponse()
+        response.committed = true
+
+        when:
+        def result = resolver.resolveViewOrForward(new RuntimeException('boom'), urlMappings, request, response,
+                new ModelAndView())
+
+        then: 'no forward is attempted when the response is already committed'
+        forwards.isEmpty()
+        result != null
+    }
+
+    void "resolveViewOrForward wraps unexpected exceptions in GrailsRuntimeException"() {
+        given: 'a mapping that resolves to a view name, but resolveView throws unexpectedly'
+        def info = Mock(UrlMappingInfo)
+        info.getViewName() >> '/error'
+        def urlMappings = Mock(UrlMappingsHolder)
+        urlMappings.match(_ as String) >> null
+        urlMappings.matchStatusCode(500, _ as Throwable) >> null
+        urlMappings.matchStatusCode(500) >> info
+
+        def resolver = new GrailsExceptionResolver() {
+
+            @Override
+            protected void resolveView(HttpServletRequest req, UrlMappingInfo i, ModelAndView mv) throws Exception {
+                throw new RuntimeException('unexpected failure in resolveView')
+            }
+        }
+        def request = new MockHttpServletRequest('GET', '/test')
+        def response = new MockHttpServletResponse()
+
+        when:
+        resolver.resolveViewOrForward(new RuntimeException('original'), urlMappings, request, response,
+                new ModelAndView())
+
+        then:
+        def ex = thrown(org.grails.core.exceptions.GrailsRuntimeException)
+        ex.cause.message == 'unexpected failure in resolveView'
+    }
+
+    void "isExcludedRequestParameter returns false when parameterName is null"() {
+        given:
+        def resolver = new GrailsExceptionResolver()
+
+        expect:
+        !resolver.isExcludedRequestParameter(null, ['password'])
+    }
+
+    void "isExcludedRequestParameter returns false when excludedParameterNames is null"() {
+        given:
+        def resolver = new GrailsExceptionResolver()
+
+        expect:
+        !resolver.isExcludedRequestParameter('password', null)
+    }
+
+    void "isExcludedRequestParameter returns false when the parameter is not in the exclusion list"() {
+        given:
+        def resolver = new GrailsExceptionResolver()
+
+        expect:
+        !resolver.isExcludedRequestParameter('username', ['password', 'token'])
+    }
+
+    void "isExcludedRequestParameter returns true for a case-insensitive match"() {
+        given:
+        def resolver = new GrailsExceptionResolver()
+
+        expect:
+        resolver.isExcludedRequestParameter('PASSWORD', ['password'])
+    }
+
+    void "isExcludedRequestParameter skips null entries in the exclusion list"() {
+        given:
+        def resolver = new GrailsExceptionResolver()
+
+        expect:
+        !resolver.isExcludedRequestParameter('username', [null, null])
     }
 }
