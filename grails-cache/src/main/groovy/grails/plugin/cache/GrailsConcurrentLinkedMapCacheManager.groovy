@@ -28,7 +28,7 @@ import org.springframework.cache.Cache
 import org.grails.plugin.cache.GrailsCacheManager
 
 /**
- * Based on com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap.
+ * Creates bounded Grails cache instances.
  *
  * @author Jakob Drangmeister
  */
