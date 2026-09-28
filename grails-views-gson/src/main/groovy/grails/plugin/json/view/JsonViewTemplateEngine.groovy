@@ -19,6 +19,23 @@
 
 package grails.plugin.json.view
 
+import java.time.Duration
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.MonthDay
+import java.time.OffsetDateTime
+import java.time.Period
+import java.time.Year
+import java.time.YearMonth
+import java.time.ZoneId
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.util.function.Function
+
+import javax.xml.datatype.XMLGregorianCalendar
+
 import groovy.json.JsonGenerator
 import groovy.text.Template
 import groovy.transform.CompileStatic
@@ -28,24 +45,10 @@ import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.core.OrderComparator
 
-import grails.plugin.json.converters.DurationJsonConverter
-import grails.plugin.json.converters.InstantJsonConverter
-import grails.plugin.json.converters.LocalDateJsonConverter
-import grails.plugin.json.converters.LocalDateTimeJsonConverter
-import grails.plugin.json.converters.LocalTimeJsonConverter
-import grails.plugin.json.converters.MonthDayJsonConverter
 import grails.plugin.json.converters.MonthJsonConverter
-import grails.plugin.json.converters.OffsetDateTimeJsonConverter
 import grails.plugin.json.converters.OffsetTimeJsonConverter
-import grails.plugin.json.converters.PeriodJsonConverter
+import grails.plugin.json.converters.SimpleTypeJsonConverter
 import grails.plugin.json.converters.SqlTimeJsonConverter
-import grails.plugin.json.converters.TimeZoneJsonConverter
-import grails.plugin.json.converters.XMLGregorianCalendarJsonConverter
-import grails.plugin.json.converters.XmlDurationJsonConverter
-import grails.plugin.json.converters.YearJsonConverter
-import grails.plugin.json.converters.YearMonthJsonConverter
-import grails.plugin.json.converters.ZoneIdJsonConverter
-import grails.plugin.json.converters.ZonedDateTimeJsonConverter
 import grails.plugin.json.view.api.jsonapi.JsonApiIdRenderStrategy
 import grails.plugin.json.view.internal.JsonTemplateTypeCheckingExtension
 import grails.plugin.json.view.internal.JsonViewsTransform
@@ -117,24 +120,24 @@ class JsonViewTemplateEngine extends ResolvableGroovyTemplateEngine {
         Map<String, JsonGenerator.Converter> convertersByClass = new LinkedHashMap<>()
         registerConverters(ServiceLoader.load(JsonGenerator.Converter, classLoader), convertersByClass)
         List<JsonGenerator.Converter> converters = new ArrayList<>(convertersByClass.values())
-        converters.add(new InstantJsonConverter())
-        converters.add(new LocalDateJsonConverter())
-        converters.add(new LocalDateTimeJsonConverter())
-        converters.add(new LocalTimeJsonConverter())
-        converters.add(new OffsetDateTimeJsonConverter())
+        converters.add(new SimpleTypeJsonConverter(Instant, { DateTimeFormatter.ISO_INSTANT.format((Instant) it) } as Function))
+        converters.add(new SimpleTypeJsonConverter(LocalDate, { DateTimeFormatter.ISO_LOCAL_DATE.format((LocalDate) it) } as Function))
+        converters.add(new SimpleTypeJsonConverter(LocalDateTime, { DateTimeFormatter.ISO_LOCAL_DATE_TIME.format((LocalDateTime) it) } as Function))
+        converters.add(new SimpleTypeJsonConverter(LocalTime, { DateTimeFormatter.ISO_LOCAL_TIME.format((LocalTime) it) } as Function))
+        converters.add(new SimpleTypeJsonConverter(OffsetDateTime, { DateTimeFormatter.ISO_OFFSET_DATE_TIME.format((OffsetDateTime) it) } as Function))
         converters.add(new OffsetTimeJsonConverter())
-        converters.add(new PeriodJsonConverter())
+        converters.add(new SimpleTypeJsonConverter(Period, { it.toString() } as Function))
         converters.add(new SqlTimeJsonConverter())
-        converters.add(new ZonedDateTimeJsonConverter())
-        converters.add(new YearJsonConverter())
-        converters.add(new YearMonthJsonConverter())
-        converters.add(new MonthDayJsonConverter())
+        converters.add(new SimpleTypeJsonConverter(ZonedDateTime, { DateTimeFormatter.ISO_OFFSET_DATE_TIME.format((ZonedDateTime) it) } as Function))
+        converters.add(new SimpleTypeJsonConverter(Year, { ((Year) it).value } as Function))
+        converters.add(new SimpleTypeJsonConverter(YearMonth, { it.toString() } as Function))
+        converters.add(new SimpleTypeJsonConverter(MonthDay, { it.toString() } as Function))
         converters.add(new MonthJsonConverter())
-        converters.add(new DurationJsonConverter())
-        converters.add(new ZoneIdJsonConverter())
-        converters.add(new TimeZoneJsonConverter())
-        converters.add(new XMLGregorianCalendarJsonConverter())
-        converters.add(new XmlDurationJsonConverter())
+        converters.add(new SimpleTypeJsonConverter(Duration, { it.toString() } as Function))
+        converters.add(new SimpleTypeJsonConverter(ZoneId, { ((ZoneId) it).id } as Function))
+        converters.add(new SimpleTypeJsonConverter(TimeZone, { ((TimeZone) it).ID } as Function))
+        converters.add(new SimpleTypeJsonConverter(XMLGregorianCalendar, { ((XMLGregorianCalendar) it).toGregorianCalendar() } as Function))
+        converters.add(new SimpleTypeJsonConverter(javax.xml.datatype.Duration, { it.toString() } as Function))
         OrderComparator.sort(converters)
         converters.each {
             options.addConverter(it)

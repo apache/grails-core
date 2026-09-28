@@ -19,27 +19,41 @@
 
 package grails.plugin.json.converters
 
-import java.time.Instant
-import java.time.format.DateTimeFormatter
+import java.util.function.Function
 
 import groovy.json.JsonGenerator
 import groovy.transform.CompileStatic
 
 /**
- * A class to render a {@link java.time.Instant} as json
+ * A {@link JsonGenerator.Converter} for a type whose JSON representation is a single value computed
+ * directly from the object, such as {@code toString()} or a single accessor. Registered once per type
+ * in {@code JsonViewTemplateEngine} in place of a dedicated converter class.
  *
- * @author James Kleeh
+ * @since 8.0
  */
 @CompileStatic
-class InstantJsonConverter implements JsonGenerator.Converter {
+class SimpleTypeJsonConverter implements JsonGenerator.Converter {
+
+    private final Class<?> type
+    private final Function<Object, Object> valueExtractor
+
+    /**
+     * @param type the type this converter handles, including its subtypes
+     * @param valueExtractor computes the JSON value from an instance of {@code type}
+     */
+    SimpleTypeJsonConverter(Class<?> type, Function<Object, Object> valueExtractor) {
+        this.type = type
+        this.valueExtractor = valueExtractor
+    }
 
     @Override
     boolean handles(Class<?> type) {
-        Instant == type
+        this.type.isAssignableFrom(type)
     }
 
     @Override
     Object convert(Object value, String key) {
-        DateTimeFormatter.ISO_INSTANT.format((Instant) value)
+        valueExtractor.apply(value)
     }
+
 }

@@ -18,8 +18,7 @@
  */
 package org.grails.web.converters.marshaller.json;
 
-import java.time.Instant;
-import java.time.format.DateTimeFormatter;
+import java.util.function.Function;
 
 import grails.converters.JSON;
 import org.grails.web.converters.exceptions.ConverterException;
@@ -27,23 +26,41 @@ import org.grails.web.converters.marshaller.ObjectMarshaller;
 import org.grails.web.json.JSONException;
 
 /**
- * JSON ObjectMarshaller which converts an Instant to ISO-8601 format with Z suffix.
+ * A JSON {@link ObjectMarshaller} for a type whose JSON representation is a single {@link String} or
+ * {@link Number} value computed directly from the object, such as {@code toString()} or a single
+ * accessor. Registered once per type in {@code ConvertersConfigurationInitializer} in place of a
+ * dedicated marshaller class.
  *
- * @since 7.0
+ * @param <T> the supported type
+ * @since 8.0
  */
-public class InstantMarshaller implements ObjectMarshaller<JSON> {
+public final class SimpleTypeMarshaller<T> implements ObjectMarshaller<JSON> {
+
+    private final Class<T> type;
+
+    private final Function<T, Object> valueExtractor;
+
+    /**
+     * @param type the type this marshaller supports
+     * @param valueExtractor computes the JSON value (a {@link String} or a {@link Number}) from an
+     *        instance of {@code type}
+     */
+    public SimpleTypeMarshaller(Class<T> type, Function<T, Object> valueExtractor) {
+        this.type = type;
+        this.valueExtractor = valueExtractor;
+    }
 
     public boolean supports(Object object) {
-        return object instanceof Instant;
+        return type.isInstance(object);
     }
 
     public void marshalObject(Object object, JSON converter) throws ConverterException {
         try {
-            Instant instant = (Instant) object;
-            converter.getWriter().value(DateTimeFormatter.ISO_INSTANT.format(instant));
+            converter.getWriter().value(valueExtractor.apply(type.cast(object)));
         }
         catch (JSONException e) {
             throw new ConverterException(e);
         }
     }
+
 }

@@ -18,9 +18,26 @@
  */
 package org.grails.web.converters.configuration;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.MonthDay;
+import java.time.OffsetDateTime;
+import java.time.OffsetTime;
+import java.time.Period;
+import java.time.Year;
+import java.time.YearMonth;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.TimeZone;
+
+import javax.xml.datatype.XMLGregorianCalendar;
 
 import io.micrometer.observation.ObservationRegistry;
 import org.apache.commons.logging.Log;
@@ -41,6 +58,7 @@ import org.grails.config.PropertySourcesConfig;
 import org.grails.web.converters.Converter;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
 import org.grails.web.converters.marshaller.ProxyUnwrappingMarshaller;
+import org.grails.web.json.JsonDateFormat;
 
 /**
  * @author Siegfried Puchbauer
@@ -123,22 +141,24 @@ public class ConvertersConfigurationInitializer implements ApplicationContextAwa
             marshallers.add(new org.grails.web.converters.marshaller.json.DateMarshaller());
         }
         marshallers.add(new org.grails.web.converters.marshaller.json.CalendarMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.json.XMLGregorianCalendarMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.json.InstantMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.json.LocalDateMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.json.LocalDateTimeMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.json.LocalTimeMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.json.OffsetDateTimeMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.json.OffsetTimeMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.json.ZonedDateTimeMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.json.YearMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.json.YearMonthMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.json.MonthDayMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.json.DurationMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.json.PeriodMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.json.ZoneIdMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.json.TimeZoneMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.json.XmlDurationMarshaller());
+        marshallers.add(new org.grails.web.converters.marshaller.json.SimpleTypeMarshaller<>(XMLGregorianCalendar.class,
+                calendar -> JsonDateFormat.format(calendar.toGregorianCalendar().getTimeInMillis())));
+        marshallers.add(new org.grails.web.converters.marshaller.json.SimpleTypeMarshaller<>(Instant.class, DateTimeFormatter.ISO_INSTANT::format));
+        marshallers.add(new org.grails.web.converters.marshaller.json.SimpleTypeMarshaller<>(LocalDate.class, DateTimeFormatter.ISO_LOCAL_DATE::format));
+        marshallers.add(new org.grails.web.converters.marshaller.json.SimpleTypeMarshaller<>(LocalDateTime.class, DateTimeFormatter.ISO_LOCAL_DATE_TIME::format));
+        marshallers.add(new org.grails.web.converters.marshaller.json.SimpleTypeMarshaller<>(LocalTime.class, DateTimeFormatter.ISO_LOCAL_TIME::format));
+        marshallers.add(new org.grails.web.converters.marshaller.json.SimpleTypeMarshaller<>(OffsetDateTime.class, DateTimeFormatter.ISO_OFFSET_DATE_TIME::format));
+        marshallers.add(new org.grails.web.converters.marshaller.json.SimpleTypeMarshaller<>(OffsetTime.class, OffsetTime::toString));
+        marshallers.add(new org.grails.web.converters.marshaller.json.SimpleTypeMarshaller<>(ZonedDateTime.class, DateTimeFormatter.ISO_OFFSET_DATE_TIME::format));
+        marshallers.add(new org.grails.web.converters.marshaller.json.SimpleTypeMarshaller<>(Year.class, Year::getValue));
+        marshallers.add(new org.grails.web.converters.marshaller.json.SimpleTypeMarshaller<>(YearMonth.class, YearMonth::toString));
+        marshallers.add(new org.grails.web.converters.marshaller.json.SimpleTypeMarshaller<>(MonthDay.class, MonthDay::toString));
+        marshallers.add(new org.grails.web.converters.marshaller.json.SimpleTypeMarshaller<>(Duration.class, Duration::toString));
+        marshallers.add(new org.grails.web.converters.marshaller.json.SimpleTypeMarshaller<>(Period.class, Period::toString));
+        marshallers.add(new org.grails.web.converters.marshaller.json.SimpleTypeMarshaller<>(ZoneId.class, ZoneId::getId));
+        marshallers.add(new org.grails.web.converters.marshaller.json.SimpleTypeMarshaller<>(TimeZone.class, TimeZone::getID));
+        marshallers.add(new org.grails.web.converters.marshaller.json.SimpleTypeMarshaller<>(javax.xml.datatype.Duration.class,
+                javax.xml.datatype.Duration::toString));
         marshallers.add(new org.grails.web.converters.marshaller.json.ToStringBeanMarshaller());
 
         boolean includeDomainVersion = includeDomainVersionProperty(grailsConfig, "json");
