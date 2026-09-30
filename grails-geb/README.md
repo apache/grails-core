@@ -56,7 +56,7 @@ There are two ways to use this plugin. Either extend your test classes with the 
 
 ### PlaywrightGebSpec
 
-`PlaywrightGebSpec` runs Geb against a local headless Playwright Chromium browser, without a Testcontainers browser or a container runtime. Add `geb-direct` alongside the Grails Geb test fixtures, install Chromium with `npx playwright install chromium`, and annotate the integration specification with `@Integration`:
+`PlaywrightGebSpec` runs Geb against a local headless Playwright Chromium browser, without a Testcontainers browser or a container runtime. Add the experimental `geb-playwright` module alongside the Grails Geb test fixtures, install Chromium with `npx playwright install chromium`, and annotate the integration specification with `@Integration`:
 
 ```groovy
 import grails.plugin.geb.PlaywrightGebSpec

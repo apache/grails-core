@@ -19,7 +19,7 @@
 
 package org.demo.spock
 
-import geb.direct.PlaywrightWebDriver
+import geb.playwright.PlaywrightWebDriver
 import org.demo.spock.pages.HomePage
 
 import grails.plugin.geb.PlaywrightGebSpec

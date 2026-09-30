@@ -24,7 +24,7 @@ import groovy.transform.CompileStatic
 
 import geb.Browser
 import geb.ConfigurationLoader
-import geb.direct.PlaywrightDriver
+import geb.playwright.PlaywrightDriver
 import geb.spock.SpockGebTestManagerBuilder
 import geb.test.GebTestManager
 import org.spockframework.runtime.extension.IMethodInvocation

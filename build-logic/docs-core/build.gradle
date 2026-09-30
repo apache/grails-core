@@ -55,6 +55,9 @@ dependencies {
         transitive = false
     }
 
+    // PropertyNameCalculator references Gradle API types, so this spec needs them on the test classpath.
+    testImplementation gradleApi()
+
     testImplementation "org.apache.groovy:groovy-test-junit5:${GroovySystem.version}"
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.12.2'
     testImplementation 'org.junit.platform:junit-platform-suite:1.12.2'

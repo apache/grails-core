@@ -19,7 +19,7 @@
 
 import geb.report.ReportState
 import geb.report.Reporter
-import geb.direct.PlaywrightDriver
+import geb.playwright.PlaywrightDriver
 import geb.report.ReportingListener
 
 driver = PlaywrightDriver.config {
