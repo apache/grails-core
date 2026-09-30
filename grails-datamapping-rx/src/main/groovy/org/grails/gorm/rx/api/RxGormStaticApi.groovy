@@ -360,7 +360,7 @@ class RxGormStaticApi<D> implements RxGormAllOperations<D> {
      * @return The DetachedCriteria instance
      */
     DetachedCriteria<D> where(Closure callable) {
-        new DetachedCriteria<D>(persistentClass).build(callable)
+        new DetachedCriteria<D>(persistentClass).build((Closure) callable)
     }
 
     /**
@@ -371,7 +371,7 @@ class RxGormStaticApi<D> implements RxGormAllOperations<D> {
      */
     Observable<D> findAll(Closure callable) {
         new DetachedCriteria<D>(persistentClass)
-                .build(callable)
+                .build((Closure) callable)
                 .findAll()
     }
 
@@ -383,7 +383,7 @@ class RxGormStaticApi<D> implements RxGormAllOperations<D> {
      */
     Observable<D> find(Closure callable) {
         new DetachedCriteria<D>(persistentClass)
-                .build(callable)
+                .build((Closure) callable)
                 .find()
     }
 
@@ -393,7 +393,7 @@ class RxGormStaticApi<D> implements RxGormAllOperations<D> {
      * @return The DetachedCriteria instance that is lazily initialized
      */
     DetachedCriteria<D> whereLazy(Closure callable) {
-        new DetachedCriteria<D>(persistentClass).buildLazy(callable)
+        new DetachedCriteria<D>(persistentClass).buildLazy((Closure) callable)
     }
     /**
      *
@@ -401,7 +401,7 @@ class RxGormStaticApi<D> implements RxGormAllOperations<D> {
      * @return The DetachedCriteria instance
      */
     DetachedCriteria<D> whereAny(Closure callable) {
-        (DetachedCriteria<D>)new DetachedCriteria<D>(persistentClass).or(callable)
+        (DetachedCriteria<D>)new DetachedCriteria<D>(persistentClass).or((Closure) callable)
     }
 
     /**

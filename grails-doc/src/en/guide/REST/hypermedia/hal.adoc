@@ -95,7 +95,7 @@ Or by updating the `responseFormats` in the controller:
 
 [source,groovy]
 ----
-class BookController extends RestfulController {
+class BookController extends RestfulController<Book> {
     static responseFormats = ['json', 'xml', 'hal']
 
     // ...

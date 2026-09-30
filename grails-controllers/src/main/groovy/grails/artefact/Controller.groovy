@@ -42,6 +42,8 @@ import org.springframework.web.servlet.ModelAndView
 import grails.artefact.controller.support.RequestForwarder
 import grails.artefact.controller.support.ResponseRedirector
 import grails.artefact.controller.support.ResponseRenderer
+import grails.core.GrailsApplication
+import grails.core.GrailsClass
 import grails.core.GrailsControllerClass
 import grails.databinding.DataBindingSource
 import grails.databinding.SimpleMapDataBindingSource
@@ -52,6 +54,7 @@ import grails.web.api.WebAttributes
 import grails.web.databinding.DataBinder
 import grails.web.databinding.DataBindingUtils
 import org.grails.compiler.web.ControllerActionTransformer
+import org.grails.core.artefact.ControllerArtefactHandler
 import org.grails.core.artefact.DomainClassArtefactHandler
 import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.plugins.web.api.MimeTypesApiSupport
@@ -62,6 +65,7 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.servlet.mvc.SynchronizerTokensHolder
 import org.grails.web.servlet.mvc.TokenResponseHandler
 import org.grails.web.util.GrailsApplicationAttributes
+import org.grails.web.util.HiddenHttpMethod
 
 /**
  * Classes that implement the {@link Controller} trait are automatically treated as web controllers in a Grails application
@@ -231,6 +235,8 @@ trait Controller implements ResponseRenderer, ResponseRedirector, RequestForward
         }
 
         GrailsWebRequest webRequest = (GrailsWebRequest) RequestContextHolder.currentRequestAttributes()
+        boolean resolveFromIssuingNamespace = false
+        String issuingNamespace = null
 
         if (this instanceof GroovyObject) {
             GroovyObject controller = (GroovyObject) this
@@ -249,14 +255,55 @@ trait Controller implements ResponseRenderer, ResponseRedirector, RequestForward
                 argMap.put(GrailsControllerClass.ACTION, action.toString())
             }
             if (!argMap.containsKey(GrailsControllerClass.NAMESPACE_PROPERTY)) {
-                // this could be made more efficient if we had a reference to the GrailsControllerClass object, which
-                // has the namespace property accessible without needing reflection
-                argMap.put(GrailsControllerClass.NAMESPACE_PROPERTY, GrailsClassUtils.getStaticFieldValue(controller.getClass(), GrailsControllerClass.NAMESPACE_PROPERTY))
+                resolveFromIssuingNamespace = true
+                issuingNamespace = resolveNamespace(controller.getClass())
             }
         }
 
-        super.redirect(argMap)
+        if (!resolveFromIssuingNamespace) {
+            super.redirect(argMap)
+            return
+        }
+        // Resolve the target the way a link is resolved, from the redirecting controller's namespace rather
+        // than forcing the link into it: the controller itself, a target that namespace defines, and one the
+        // application does not define all stay in it, as before, and a target defined only elsewhere is
+        // found there. The namespace is set on the request only while the redirect is issued.
+        HttpServletRequest request = webRequest.currentRequest
+        Object previousNamespace = request.getAttribute(GrailsApplicationAttributes.CONTROLLER_NAMESPACE_ATTRIBUTE)
+        request.setAttribute(GrailsApplicationAttributes.CONTROLLER_NAMESPACE_ATTRIBUTE, issuingNamespace)
+        try {
+            super.redirect(argMap)
+        }
+        finally {
+            request.setAttribute(GrailsApplicationAttributes.CONTROLLER_NAMESPACE_ATTRIBUTE, previousNamespace)
+        }
     }
+
+    /**
+     * Resolves the namespace declared by the given controller class. {@link GrailsControllerClass} already reads the
+     * static <code>namespace</code> property from the class when the artefact is created, so the value is taken from
+     * the artefact registry rather than read from the class again.
+     *
+     * <p>The class passed in is the class of the controller <em>issuing</em> the redirect, which is not necessarily
+     * the controller currently executing - one controller may redirect on behalf of another - so the registry is
+     * looked up by that class and never by the executing controller.</p>
+     *
+     * @param controllerClass The class of the controller issuing the redirect
+     * @return The declared namespace, or null if the class declares none
+     */
+    private String resolveNamespace(Class<?> controllerClass) {
+        GrailsApplication application = getGrailsApplication()
+        if (application != null) {
+            GrailsClass controllerArtefact = application.getArtefact(ControllerArtefactHandler.TYPE, controllerClass.getName())
+            if (controllerArtefact instanceof GrailsControllerClass) {
+                return ((GrailsControllerClass) controllerArtefact).getNamespace()
+            }
+        }
+        // A controller that was never registered as an artefact - one constructed directly, as a unit test may do -
+        // has no GrailsControllerClass to read, so fall back to the class itself, whose field may hold a GString.
+        GrailsClassUtils.getStaticFieldValue(controllerClass, GrailsControllerClass.NAMESPACE_PROPERTY)?.toString()
+    }
+
     /**
      * Used the synchronizer token pattern to avoid duplicate form submissions
      *
@@ -303,7 +350,7 @@ trait Controller implements ResponseRenderer, ResponseRedirector, RequestForward
      * @param request The servlet request
      */
     private boolean consumeToken(GrailsWebRequest webRequest) {
-        final request = webRequest.getCurrentRequest()
+        final request = webRequest.getRequest()
         SynchronizerTokensHolder tokensHolderInSession = (SynchronizerTokensHolder) request.getSession(false)?.getAttribute(SynchronizerTokensHolder.HOLDER)
         if (!tokensHolderInSession) return false
 
@@ -385,7 +432,7 @@ trait Controller implements ResponseRenderer, ResponseRedirector, RequestForward
                 }
             }
 
-            final HttpMethod requestMethod = HttpMethod.valueOf(request.getMethod())
+            final HttpMethod requestMethod = HttpMethod.valueOf(HiddenHttpMethod.effectiveMethod(request))
 
             if (entityIdentifierValue != null) {
                 try {

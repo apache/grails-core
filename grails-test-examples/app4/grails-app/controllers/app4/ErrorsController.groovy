@@ -29,5 +29,10 @@ class ErrorsController {
     def notFound() {
         render(status: 404, text: ([error: 'Not Found'] as JSON).toString(), contentType: 'application/json')
     }
+
+    def tooLarge() {
+        render(status: 413, text: ([error: 'Content Too Large', handledBy: 'errors.tooLarge'] as JSON).toString(),
+                contentType: 'application/json')
+    }
 }
 

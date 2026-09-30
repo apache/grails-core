@@ -1,4 +1,5 @@
 <%@ page import="grails.util.Environment"%>
+<%@ page import="grails.web.mime.MimeType"%>
 <%@ page import="org.springframework.boot.SpringBootVersion"%>
 <%@ page import="org.springframework.core.SpringVersion"%>
 <%@ page import="org.springframework.util.ClassUtils"%>
@@ -8,7 +9,7 @@
        value="${pluginManager.allPlugins.toList()
                .withIndex()
                .collect { p, i -> [plugin: p, order: ((int) i) + 1] }
-               .sort { a, b -> a.plugin.name.toLowerCase() <=> b.plugin.name.toLowerCase() }}"
+               .sort { Map row -> ((grails.plugins.GrailsPlugin) row.plugin).name.toLowerCase() }}"
 />
 <g:def type="int" var="numControllers" value="${grailsApplication.controllerClasses.size()}"/>
 <g:def type="int" var="numDomains" value="${grailsApplication.domainClasses.size()}"/>
@@ -455,11 +456,11 @@
                         <g:set var="domainsByPlugin"
                                value="${grailsApplication.domainClasses.toList()
                                        .groupBy { dc ->
-                                           def plugin = null
-                                           try { plugin = pluginManager.getPluginForClass(dc.clazz) } catch (Throwable ignored) { }
-                                           plugin?.name ?: ''
+                                           String pluginName = ''
+                                           try { pluginName = pluginManager.getPluginForClass(dc.clazz)?.name ?: '' } catch (Throwable ignored) { }
+                                           pluginName
                                        }
-                                       .sort { a, b -> a.key.toLowerCase() <=> b.key.toLowerCase() }}"/>
+                                       .sort { it.key.toLowerCase() }}"/>
                         <div id="domains-list">
                             <g:each var="pEntry" in="${domainsByPlugin}" status="pIndex">
                                 <div class="${pIndex > 0 ? 'mt-4' : ''}" data-filter-group>
@@ -566,7 +567,7 @@
                                .collect { l -> [name: (l.getClass().simpleName ?: l.getClass().name.tokenize('.').last()),
                                                 packageName: (l.getClass().package?.name ?: ''),
                                                 detail: l.toString()] }
-                               .sort { a, b -> (a.name.toLowerCase() <=> b.name.toLowerCase()) ?: (a.detail <=> b.detail) }}"/>
+                               .sort { Map<String, String> a, Map<String, String> b -> (a.name.toLowerCase() <=> b.name.toLowerCase()) ?: (a.detail <=> b.detail) }}"/>
                 <g:set var="bindingGroups"
                        value="${[[code: 'welcome.binding.value', beans: applicationContext.getBeansOfType(grails.databinding.converters.ValueConverter)],
                                  [code: 'welcome.binding.formatted', beans: applicationContext.getBeansOfType(grails.databinding.converters.FormattedValueConverter)],
@@ -1341,7 +1342,7 @@
                 <g:set var="mimeTypes"
                        value="${applicationContext.containsBean('mimeTypes') ?
                                applicationContext.getBean('mimeTypes').toList()
-                                       .sort { a, b -> ((a.extension ?: '').toLowerCase() <=> (b.extension ?: '').toLowerCase()) ?: (a.name <=> b.name) } : []}"/>
+                                       .sort { MimeType a, MimeType b -> ((a.extension ?: '').toLowerCase() <=> (b.extension ?: '').toLowerCase()) ?: (a.name <=> b.name) } : []}"/>
                 <div class="card border-1 shadow-sm mt-4">
                     <div class="card-body">
                         <div class="d-flex align-items-center justify-content-between mb-3">

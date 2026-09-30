@@ -29,7 +29,7 @@ import groovy.transform.CompileStatic
 
 /**
  * App-level HTTP microbench helper that emits JMH-compatible JSON so results can be compared
- * with {@code :grails-benchmarks:jmhCompare} using the same methodology as the framework JMH suite.
+ * with {@code :grails-test-examples-benchmarks:jmhCompare} using the same methodology as the framework JMH suite.
  *
  * <p>This type lives in test fixtures, not the published main API of grails-testing-support-http-client.
  *

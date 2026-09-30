@@ -30,14 +30,14 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: "📥 Checkout repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@v6.0.1
         with:
           distribution: liberica
           java-version: 21
       - name: "🗄️ Restore dependency jar cache"
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@v6.1.0
         with:
           # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
           # Keyed by branch version so each release branch maintains its own warm cache.
@@ -68,6 +68,44 @@ jobs:
           ./gradlew validateDependencyVersions
           --continue
           --stacktrace
+  validateBomProperties:
+    name: 'Validate BOM Properties'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v7.0.1
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v6.0.1
+        with:
+          distribution: liberica
+          java-version: 21
+      - name: "🗄️ Restore dependency jar cache"
+        uses: actions/cache@v6.1.0
+        with:
+          # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
+          # Keyed by branch version so each release branch maintains its own warm cache.
+          path: |
+            ~/.gradle/caches/modules-2
+            ~/.gradle/wrapper
+          key: gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-${{ hashFiles('**/dependencies.gradle', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
+      - name: "🔍 Validate grails-core BOM properties"
+        run: >
+          ./gradlew validateBomProperties
+          --continue
+          --stacktrace
+      - name: "🔍 Validate grails-gradle BOM properties"
+        working-directory: 'grails-gradle'
+        run: >
+          ./gradlew validateBomProperties
+          --continue
+          --stacktrace
   buildGradle:
     name: 'Build Gradle Plugins'
     strategy:
@@ -79,14 +117,14 @@ jobs:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@v6.0.1
         with:
           distribution: liberica
           java-version: ${{ matrix.java }}
       - name: "🗄️ Restore dependency jar cache"
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@v6.1.0
         with:
           # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
           # Keyed by branch version so each release branch maintains its own warm cache.
@@ -142,6 +180,15 @@ jobs:
             java: 21
             job_name: macOS JDK 21
             gradle_task: 'build :grails-shell-cli:installDist groovydoc'
+            # The macOS runner has ~7 GB of RAM and 3 CPUs, against ~16 GB and 4 CPUs on the
+            # Linux and Windows runners, so it has the least room for concurrent JVMs.
+            # Capping only maxTestParallel would not help: that is a per-Test-task limit, and
+            # with org.gradle.parallel=true several projects' test tasks run at once, so the
+            # number of live forks is bounded by Gradle's global worker pool - which defaults
+            # to the 3 CPUs here. --max-workers is therefore the setting that actually limits
+            # concurrent test, compiler and groovydoc JVMs; maxTestParallel is kept alongside
+            # it so no single task exceeds that cap either.
+            runner_arguments: '--max-workers=2 -PmaxTestParallel=2'
             cache_writer: true
           - os: windows-latest
             java: 25
@@ -166,15 +213,15 @@ jobs:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@v6.0.1
         with:
           distribution: liberica
           java-version: ${{ matrix.java }}
       - name: "🗄️ Restore dependency jar cache"
         id: dependency-cache
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache/restore@v6.1.0
         with:
           # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
           # Keyed by branch version so each release branch maintains its own warm cache.
@@ -192,11 +239,6 @@ jobs:
       - name: "🔍 Setup TestLens"
         uses: testlens-app/setup-testlens@3f82d2dc6cd5c03f02ce5f7885a21195d85f8d14 # v1.9.3
       - name: "🔨 Build project"
-        # The Grails-Micronaut "island" (grails-micronaut, grails-micronaut-bom, the
-        # micronaut-tied test-examples) is auto-managed by settings.gradle based on the
-        # build JDK: it is pruned on a sub-25 JDK (Micronaut 5 GA targets JVM 25 bytecode)
-        # and included automatically on JDK 25+. So the Java 21 entries build everything
-        # except the island and the Java 25 entries build the full graph - no flag needed.
         run: >
           ./gradlew ${{ matrix.gradle_task }}
           --continue
@@ -204,9 +246,10 @@ jobs:
           -PonlyCoreTests
           -PskipCodeStyle
           ${{ matrix.shard_arguments }}
+          ${{ matrix.runner_arguments }}
       - name: "🗄️ Save dependency jar cache"
         if: ${{ success() && matrix.cache_writer && steps.dependency-cache.outputs.cache-hit != 'true' }}
-        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache/save@v6.1.0
         with:
           path: |
             ~/.gradle/caches/modules-2
@@ -248,15 +291,15 @@ jobs:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@v6.0.1
         with:
           distribution: liberica
           java-version: ${{ matrix.java }}
       - name: "🗄️ Restore dependency jar cache"
         id: dependency-cache
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache/restore@v6.1.0
         with:
           # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
           # Keyed by branch version so each release branch maintains its own warm cache.
@@ -274,8 +317,6 @@ jobs:
       - name: "🔍 Setup TestLens"
         uses: testlens-app/setup-testlens@3f82d2dc6cd5c03f02ce5f7885a21195d85f8d14 # v1.9.3
       - name: "🔨 Build project"
-        # This job only runs on Java 21, where settings.gradle auto-prunes the Micronaut
-        # island (Micronaut 5 GA targets JVM 25 bytecode). See comment on `build`.
         run: >
           ./gradlew ${{ matrix.gradle_task }}
           --continue
@@ -286,7 +327,7 @@ jobs:
           ${{ matrix.extra_arguments }}
       - name: "🗄️ Save dependency jar cache"
         if: ${{ success() && matrix.cache_writer && steps.dependency-cache.outputs.cache-hit != 'true' }}
-        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache/save@v6.1.0
         with:
           path: |
             ~/.gradle/caches/modules-2
@@ -307,14 +348,14 @@ jobs:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@v6.0.1
         with:
           distribution: 'liberica'
           java-version: ${{ matrix.java }}
       - name: "🗄️ Restore dependency jar cache"
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@v6.1.0
         with:
           # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
           # Keyed by branch version so each release branch maintains its own warm cache.
@@ -334,10 +375,6 @@ jobs:
       - name: "🔨 Build project without tests"
         if: ${{ contains(github.event.head_commit.message, '[skip tests]') }}
         working-directory: 'grails-forge'
-        # The Forge composite build includes the root grails-core via
-        # `includeBuild('..')` in grails-forge/settings.gradle. On Java 21 that
-        # included build auto-prunes the Micronaut island (settings.gradle), so the
-        # Forge build never tries to compile the JVM-25 island; Java 25 includes it.
         run: >
           ./gradlew build
           --continue
@@ -348,7 +385,6 @@ jobs:
       - name: "🔨 Build project with tests"
         if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
         working-directory: 'grails-forge'
-        # See comment above on the auto-managed Micronaut island.
         run: >
           ./gradlew build
           --continue
@@ -366,12 +402,15 @@ jobs:
           ./tmp1/cli/bin/grails-forge-cli --version
       - name: "📤 Upload CLI Zip to Workflow Summary Page"
         if: ${{ matrix.java == '21' && matrix.indy == false }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: 'apache-grails-SNAPSHOT-bin.zip'
           include-hidden-files: true
           path: grails-forge/tmp1/cli/**/*
           if-no-files-found: 'error'
+  # Every test job from here through neo4jFunctional sets timeout-minutes to twice the slowest run that
+  # finished on its own, passed or failed, over the 160 CI runs of 2026-09-03 to 2026-09-13, rounded up to
+  # the half hour. Without a limit, a test JVM that never exits holds its job for GitHub's six-hour default.
   functional:
     name: "Functional Tests (${{ matrix.job_name }})"
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
@@ -431,15 +470,15 @@ jobs:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@v6.0.1
         with:
           distribution: liberica
           java-version: ${{ matrix.java }}
       - name: "🗄️ Restore dependency jar cache"
         id: dependency-cache
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache/restore@v6.1.0
         with:
           # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
           # Keyed by branch version so each release branch maintains its own warm cache.
@@ -457,8 +496,6 @@ jobs:
       - name: "🔍 Setup TestLens"
         uses: testlens-app/setup-testlens@3f82d2dc6cd5c03f02ce5f7885a21195d85f8d14 # v1.9.3
       - name: "🏃 Run Functional Tests"
-        # The Micronaut island is auto-pruned on a sub-25 JDK (settings.gradle), so the
-        # Java 21 entries skip it and the Java 25 entries include it (see comment on `build`).
         # The known hanging cell finishes tests, prints the wrapper:test /
         # aggregate-report tail, then hangs before buildFinished. Timeout plus
         # that end-of-walk log and green XML is treated as success.
@@ -514,7 +551,7 @@ jobs:
           exit "$code"
       - name: "🗄️ Save dependency jar cache"
         if: ${{ success() && matrix.cache_writer && steps.dependency-cache.outputs.cache-hit != 'true' }}
-        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache/save@v6.1.0
         with:
           path: |
             ~/.gradle/caches/modules-2
@@ -522,7 +559,7 @@ jobs:
           key: gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-${{ hashFiles('**/dependencies.gradle', '**/gradle-wrapper.properties') }}
       - name: "📤 Upload Geb Reports"
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: geb-reports-functional-${{ matrix.artifact_suffix }}
           path: '**/build/geb-reports/'
@@ -530,6 +567,7 @@ jobs:
   security:
     name: "Spring Security Tests (${{ matrix.job_name }})"
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
+    timeout-minutes: 150 # slowest run: 71 min
     strategy:
       fail-fast: false
       matrix:
@@ -550,9 +588,9 @@ jobs:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@v6.0.1
         with:
           distribution: liberica
           java-version: ${{ matrix.java }}
@@ -575,6 +613,7 @@ jobs:
   securityConfig:
     name: "Spring Security Config Functional Tests"
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
+    timeout-minutes: 90 # slowest run: 39 min
     strategy:
       fail-fast: false
       matrix:
@@ -589,9 +628,9 @@ jobs:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@v6.0.1
         with:
           distribution: liberica
           java-version: 21
@@ -614,6 +653,7 @@ jobs:
   casSecurityConfig:
     name: "Spring Security CAS Functional Tests"
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
+    timeout-minutes: 90 # slowest run: 35 min
     strategy:
       fail-fast: false
       matrix:
@@ -630,9 +670,9 @@ jobs:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@v6.0.1
         with:
           distribution: liberica
           java-version: 21
@@ -655,6 +695,7 @@ jobs:
   redis:
     name: "Redis Tests"
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
+    timeout-minutes: 180 # slowest run: 86 min
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -665,9 +706,9 @@ jobs:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@v6.0.1
         with:
           distribution: liberica
           java-version: ${{ matrix.java }}
@@ -690,6 +731,7 @@ jobs:
   mongodbFunctional:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: "Mongodb Functional Tests (Java ${{ matrix.java }}, MongoDB ${{ matrix.mongodb-version }}, indy=${{ matrix.indy }})"
+    timeout-minutes: 150 # slowest run: 70 min
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -705,14 +747,14 @@ jobs:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout the repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@v6.0.1
         with:
           distribution: liberica
           java-version: ${{ matrix.java }}
       - name: "🗄️ Restore dependency jar cache"
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@v6.1.0
         with:
           # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
           # Keyed by branch version so each release branch maintains its own warm cache.
@@ -723,7 +765,7 @@ jobs:
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
       - name: "🗄️ Cache the mongod the embedded server runs"
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@v6.1.0
         with:
           # Kept apart from the dependency jars: this holds an immutable download from
           # fastdl.mongodb.org - the archive and the binary extracted out of it - and no database,
@@ -741,8 +783,6 @@ jobs:
       - name: "🏃 Run Functional Tests"
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-        # The Micronaut island is auto-pruned on a sub-25 JDK (settings.gradle), so the
-        # Java 21 entries skip it and the Java 25 entries include it (see comment on `build`).
         run: >
           ./gradlew bootJar check
           --continue
@@ -755,6 +795,7 @@ jobs:
   hibernate5Functional:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: "Hibernate5 Functional Tests (Java ${{ matrix.java }}, indy=${{ matrix.indy }})"
+    timeout-minutes: 120 # slowest run: 58 min
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -768,14 +809,14 @@ jobs:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout the repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@v6.0.1
         with:
           distribution: liberica
           java-version: ${{ matrix.java }}
       - name: "🗄️ Restore dependency jar cache"
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@v6.1.0
         with:
           # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
           # Keyed by branch version so each release branch maintains its own warm cache.
@@ -793,8 +834,6 @@ jobs:
       - name: "🏃 Run Functional Tests"
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-        # The Micronaut island is auto-pruned on a sub-25 JDK (settings.gradle), so the
-        # Java 21 entries skip it and the Java 25 entries include it (see comment on `build`).
         run: >
           ./gradlew bootJar check
           --continue
@@ -806,6 +845,7 @@ jobs:
   hibernate7Functional:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: "Hibernate7 Functional Tests (${{ matrix.job_name }})"
+    timeout-minutes: 210 # slowest run: 104 min, which failed; the slowest that passed took 86
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -850,9 +890,9 @@ jobs:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout the repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@v6.0.1
         with:
           distribution: liberica
           java-version: ${{ matrix.java }}
@@ -876,6 +916,7 @@ jobs:
   neo4jFunctional:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: "Neo4j Functional Tests (Java ${{ matrix.java }}, indy=${{ matrix.indy }})"
+    timeout-minutes: 180 # slowest run: 90 min
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -889,9 +930,9 @@ jobs:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout the repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@v6.0.1
         with:
           distribution: liberica
           java-version: ${{ matrix.java }}
@@ -903,14 +944,9 @@ jobs:
       - name: "🏃 Run Functional Tests"
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-        run: >
-          ./gradlew bootJar check
-          --continue
-          --rerun-tasks
-          --stacktrace
-          -PgrailsIndy=${{ matrix.indy }}
-          -PonlyNeo4jTests
-          -PskipCodeStyle
+        run: |
+          python3 .github/tests/test_ci_run_neo4j.py
+          bash .github/ci-run-neo4j-tests.sh -PgrailsIndy=${{ matrix.indy }}
   publishGradle:
     if: github.repository_owner == 'apache' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     needs: [ buildGradle ]
@@ -919,14 +955,14 @@ jobs:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@v6.0.1
         with:
           distribution: liberica
           java-version: 21
       - name: "🗄️ Restore dependency jar cache"
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@v6.1.0
         with:
           # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
           # Keyed by branch version so each release branch maintains its own warm cache.
@@ -955,12 +991,12 @@ jobs:
           --no-build-cache
           --rerun-tasks
       - name: "📤 Upload grails-gradle checksums"
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: grails-gradle-checksums
           path: grails-gradle/build/grails-gradle-checksums.txt
       - name: "📤 Upload grails-gradle published artifacts"
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: grails-gradle-artifacts.txt
           path: grails-gradle/build/grails-gradle-artifacts.txt
@@ -986,14 +1022,14 @@ jobs:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@v6.0.1
         with:
           distribution: liberica
           java-version: 21
       - name: "🗄️ Restore dependency jar cache"
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@v6.1.0
         with:
           # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
           # Keyed by branch version so each release branch maintains its own warm cache.
@@ -1011,10 +1047,6 @@ jobs:
       - name: "🔍 Setup TestLens"
         uses: testlens-app/setup-testlens@3f82d2dc6cd5c03f02ce5f7885a21195d85f8d14 # v1.9.3
       - name: "📤 Publish Grails-Core Snapshot Artifacts"
-        # This Java 21 publish excludes the Micronaut 5 / JVM 25 island automatically -
-        # settings.gradle prunes it on a sub-25 JDK. The island artifacts (grails-micronaut,
-        # grails-micronaut-bom) are published by the parallel publishMicronaut job below,
-        # which runs on JDK 25.
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
         env:
           GRAILS_PUBLISH_RELEASE: 'false'
@@ -1027,12 +1059,12 @@ jobs:
           retry_wait_seconds: 180
           command: ./gradlew publish aggregateChecksums aggregatePublishedArtifacts --no-build-cache --rerun-tasks
       - name: "📤 Upload grails-core checksums"
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: grails-core-checksums.txt
           path: build/grails-core-checksums.txt
       - name: "📤 Upload grails-core published artifacts"
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: grails-core-artifacts.txt
           path: build/grails-core-artifacts.txt
@@ -1044,58 +1076,10 @@ jobs:
           unzip wrapper -d tmp
           mv tmp/apache-grails-wrapper-* tmp/wrapper
       - name: "📤 Upload Wrapper Zip to Workflow Summary Page"
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: apache-grails-wrapper-SNAPSHOT-bin
           path: build/tmp/wrapper
-  publishMicronaut:
-    # Micronaut 5.0.0 publishes JARs targeting JVM 25 bytecode, so the Micronaut
-    # "island" (grails-micronaut, grails-micronaut-bom) must publish from a JDK 25
-    # runner. The sibling `publish` job runs on JDK 21, where settings.gradle
-    # auto-prunes the island, so it publishes everything else; this job publishes
-    # the two Micronaut artifacts. The two test-example projects in the island are
-    # not published.
-    needs: [ publishGradle, build, functional, hibernate5Functional, mongodbFunctional ]
-    if: >-
-      ${{ always() &&
-          github.repository_owner == 'apache' &&
-          (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
-          needs.publishGradle.result == 'success' &&
-          (needs.build.result == 'success' || needs.build.result == 'skipped') &&
-          (needs.functional.result == 'success' || needs.functional.result == 'skipped') &&
-          (needs.hibernate5Functional.result == 'success' || needs.hibernate5Functional.result == 'skipped') &&
-          (needs.mongodbFunctional.result == 'success' || needs.mongodbFunctional.result == 'skipped')
-      }}
-    runs-on: ubuntu-24.04
-    steps:
-      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
-        run: curl -s https://api.ipify.org
-      - name: "📥 Checkout repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
-        with:
-          distribution: liberica
-          java-version: 25
-      - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
-        with:
-          cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
-          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
-      - name: "🔍 Setup TestLens"
-        uses: testlens-app/setup-testlens@3f82d2dc6cd5c03f02ce5f7885a21195d85f8d14 # v1.9.3
-      - name: "📤 Publish Grails-Micronaut Snapshot Artifacts"
-        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
-        env:
-          GRAILS_PUBLISH_RELEASE: 'false'
-          MAVEN_PUBLISH_URL: ${{ secrets.GRAILS_NEXUS_PUBLISH_SNAPSHOT_URL }}
-          MAVEN_PUBLISH_USERNAME: ${{ secrets.NEXUS_USER }}
-          MAVEN_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PW  }}
-        with:
-          timeout_seconds: 1800 # headroom for slow Nexus uploads so a single attempt is not killed mid-publish (see `publish` job)
-          max_attempts: 3
-          retry_wait_seconds: 180
-          command: ./gradlew :grails-micronaut:publish :grails-micronaut-bom:publish --no-build-cache --rerun-tasks
   publishForge:
     if: github.repository_owner == 'apache' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     needs: [ buildForge, publishGradle, publish ]
@@ -1104,14 +1088,14 @@ jobs:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@v6.0.1
         with:
           distribution: liberica
           java-version: 21
       - name: "🗄️ Restore dependency jar cache"
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@v6.1.0
         with:
           # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
           # Keyed by branch version so each release branch maintains its own warm cache.
@@ -1140,12 +1124,12 @@ jobs:
           --no-build-cache
           --rerun-tasks
       - name: "📤 Upload grails-forge checksums"
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: grails-forge-checksums
           path: grails-forge/build/grails-forge-checksums.txt
       - name: "📤 Upload grails-gradle published artifacts"
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: grails-forge-artifacts.txt
           path: grails-forge/build/grails-forge-artifacts.txt
@@ -1160,14 +1144,14 @@ jobs:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@v6.0.1
         with:
           distribution: liberica
           java-version: 21
       - name: "📥 Download Wrapper"
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@v8.0.1
         with:
           name: apache-grails-wrapper-SNAPSHOT-bin
           path: wrapper
@@ -1203,7 +1187,7 @@ jobs:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout the repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
         with:
           fetch-tags: true
       - name: "🔀 Store current branch name"
@@ -1217,12 +1201,12 @@ jobs:
           echo "NOW=${NOW}" >> $GITHUB_ENV
           echo "Current date: ${NOW}"
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@v6.0.1
         with:
           distribution: liberica
           java-version: 21
       - name: "🗄️ Restore dependency jar cache"
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@v6.1.0
         with:
           # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
           # Keyed by branch version so each release branch maintains its own warm cache.
@@ -1242,7 +1226,7 @@ jobs:
           ./gradlew grails-doc:build
           -PgithubBranch=${{ env.TARGET_BRANCH }}
       - name: "📤 Upload Generated Docs to Workflow Result Page"
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: grails-docs-${{ env.NOW }}.zip
           path: ./build/distributions/*.zip

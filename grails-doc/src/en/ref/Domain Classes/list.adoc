@@ -60,10 +60,12 @@ Parameters:
 * `max` - The maximum number to list
 * `offset` - The offset from the first result to list from
 * `order` - How to order the list, either `"desc"` or `"asc"`
-* `sort` - The property name to sort by
+* `sort` - The property name to sort by, which may be a path through an association or embedded component such as `"author.name"`, or a `Map` of property names to directions such as `[title: "asc", "author.name": "desc"]`
 * `ignoreCase` - Whether to ignore the case when sorting. Default is `true`.
 * `fetch` - The fetch policy for the object's associations as a `Map`
 * `readOnly` - true if returned objects should not be automatically dirty-checked (simlar to `read()`)
 * `fetchSize` - number of rows fetched by the underlying JDBC driver per round trip
 * `flushMode` - Hibernate `FlushMode` override, defaults to `FlushMode.AUTO`
 * `timeout` - query timeout in seconds
+
+The `sort`, `order` and `fetch` arguments are validated before the query is built. A `sort` key must be a property path made up of identifiers separated by dots that resolves through the domain class mapping, `order` must be `"asc"` or `"desc"` (case-insensitive, surrounding whitespace ignored), and a `fetch` key must name a persistent property. Any other value, for example one carrying a second expression or a function call, is rejected with an `IllegalArgumentException`, so request parameters can be passed to `list()` without further checks.

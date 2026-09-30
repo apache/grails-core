@@ -26,6 +26,7 @@ import java.lang.reflect.Modifier;
 import org.springframework.beans.BeanUtils;
 
 import grails.converters.XML;
+import org.apache.grails.common.reflect.ReflectionUtils;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
 
@@ -41,12 +42,14 @@ public class GenericJavaBeanMarshaller implements ObjectMarshaller<XML> {
 
     public void marshalObject(Object o, XML xml) throws ConverterException {
         try {
+            ReflectionUtils.warnOnNonPublicClass(o.getClass());
             for (PropertyDescriptor property : BeanUtils.getPropertyDescriptors(o.getClass())) {
                 String name = property.getName();
                 Method readMethod = property.getReadMethod();
                 if (readMethod != null) {
                     if (Modifier.isStatic(readMethod.getModifiers())) continue;
-                    Object value = readMethod.invoke(o, (Object[]) null);
+                    Method invokable = ReflectionUtils.resolveInvokableReadMethod(readMethod, o.getClass(), o);
+                    Object value = invokable.invoke(o, (Object[]) null);
                     xml.startNode(name);
                     xml.convertAnother(value);
                     xml.end();
@@ -54,8 +57,10 @@ public class GenericJavaBeanMarshaller implements ObjectMarshaller<XML> {
             }
             for (Field field : o.getClass().getDeclaredFields()) {
                 int modifiers = field.getModifiers();
-                if (field.canAccess(o) && Modifier.isPublic(modifiers) &&
-                        !(Modifier.isStatic(modifiers) || Modifier.isTransient(modifiers))) {
+                if (Modifier.isPublic(modifiers) &&
+                        !(Modifier.isStatic(modifiers) || Modifier.isTransient(modifiers)) &&
+                        !field.isSynthetic()) {
+                    if (!ReflectionUtils.tryMakeReadable(field, o)) continue;
                     xml.startNode(field.getName());
                     xml.convertAnother(field.get(o));
                     xml.end();

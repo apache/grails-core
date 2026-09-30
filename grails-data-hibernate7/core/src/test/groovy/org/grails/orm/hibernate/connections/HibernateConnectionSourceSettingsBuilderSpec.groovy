@@ -107,4 +107,18 @@ class HibernateConnectionSourceSettingsBuilderSpec extends Specification {
         props.getProperty('org.hibernate.show_sql') == 'true'
         props.getProperty('org.hibernate.format_sql') == 'false'
     }
+
+    def "build binds a nested settings bean Spring cannot convert a Map into"() {
+        given: "config for a nested settings type the conversion service has no converter for"
+        def config = [
+            'hibernate.hibernateEventListeners': [listenerMap: ['pre-load': 'someListener']]
+        ]
+        def builder = new HibernateConnectionSourceSettingsBuilder(DatastoreUtils.createPropertyResolver(config))
+
+        when:
+        HibernateConnectionSourceSettings settings = builder.build()
+
+        then: "the bean is populated rather than left at its default"
+        settings.getHibernate().getHibernateEventListeners().getListenerMap() == ['pre-load': 'someListener']
+    }
 }

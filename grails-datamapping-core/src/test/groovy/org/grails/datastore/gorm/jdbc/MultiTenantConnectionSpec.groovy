@@ -78,4 +78,38 @@ class MultiTenantConnectionSpec extends Specification {
         thrown(RuntimeException)
         1 * target.close()
     }
+
+    void "Connection methods other than close are delegated to the target connection"() {
+        given:
+        Connection target = Mock(Connection)
+        SchemaHandler schemaHandler = Mock(SchemaHandler)
+        MultiTenantConnection connection = new MultiTenantConnection(target, schemaHandler)
+
+        when:
+        boolean readOnly = connection.isReadOnly()
+
+        then:
+        1 * target.isReadOnly() >> true
+        readOnly
+
+        when:
+        boolean autoCommit = connection.getAutoCommit()
+
+        then:
+        1 * target.getAutoCommit() >> false
+        !autoCommit
+    }
+
+    void "the target connection and schema handler are exposed"() {
+        given:
+        Connection target = Mock(Connection)
+        SchemaHandler schemaHandler = Mock(SchemaHandler)
+
+        when:
+        MultiTenantConnection connection = new MultiTenantConnection(target, schemaHandler)
+
+        then:
+        connection.target.is(target)
+        connection.schemaHandler.is(schemaHandler)
+    }
 }

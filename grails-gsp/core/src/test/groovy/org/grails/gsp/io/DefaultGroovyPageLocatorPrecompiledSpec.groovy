@@ -89,6 +89,26 @@ class DefaultGroovyPageLocatorPrecompiledSpec extends Specification {
             !(source instanceof GroovyPageCompiledScriptSource)
     }
 
+    void 'compiled pages are reported in use where a page is looked up among them'() {
+        expect:
+            withAot(false) { assert locator.precompiledAvailable }
+            withAot(true) { assert developmentLocator().precompiledAvailable }
+    }
+
+    void 'compiled pages are reported not in use during development or when there are none'() {
+        given:
+            def none = new DefaultGroovyPageLocator()
+            def empty = new DefaultGroovyPageLocator()
+            empty.setPrecompiledGspMap([:])
+
+        expect:
+            withAot(false) {
+                assert !developmentLocator().precompiledAvailable
+                assert !none.precompiledAvailable
+                assert !empty.precompiledAvailable
+            }
+    }
+
     /**
      * Stands in for a page the build compiled. The constants are the ones the compiler emits and the
      * page's metadata is read from, so the locator can treat this like any other compiled page.

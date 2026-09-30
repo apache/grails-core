@@ -24,27 +24,174 @@ import org.springframework.transaction.TransactionStatus
 import org.springframework.transaction.TransactionSystemException
 
 import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.transactions.CustomizableRollbackTransactionAttribute
+import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 import spock.lang.Specification
 
-/**
- * The diff only adds the explicit {@code datastore}/{@code getDatastore()}/{@code setDatastore()}
- * {@code Service} contract (previously implicit/inherited) - the rest of this class (the
- * {@code withTransaction}/{@code withRollback}/{@code withNewTransaction} overloads) predates this
- * PR and is already exercised via real {@code TransactionService} usage in the separate
- * {@code grails-datamapping-core-test} module (which doesn't count toward this module's own
- * coverage - see item 14's cross-module attribution note), so out of scope here.
- */
 class DefaultTransactionServiceSpec extends Specification {
 
-    void "getDatastore/setDatastore round-trip"() {
+    DefaultTransactionService transactionService = new DefaultTransactionService()
+
+    PlatformTransactionManager transactionManager = Mock(PlatformTransactionManager) {
+        getTransaction(_) >> Mock(TransactionStatus)
+    }
+
+    TransactionCapableDatastore transactionCapableDatastore = Mock(TransactionCapableDatastore) {
+        getTransactionManager() >> transactionManager
+    }
+
+    void 'getDatastore/setDatastore round-trip'() {
         given:
-        def service = new DefaultTransactionService()
-        def datastore = Mock(Datastore)
+        Datastore datastore = Mock(Datastore)
 
         when:
-        service.setDatastore(datastore)
+        transactionService.setDatastore(datastore)
 
         then:
-        service.getDatastore().is(datastore)
+        transactionService.getDatastore().is(datastore)
+    }
+
+    void 'withTransaction(Closure) executes the callable within a transaction'() {
+        given:
+        transactionService.datastore = transactionCapableDatastore
+
+        when:
+        String result = transactionService.withTransaction { status -> 'done' }
+
+        then:
+        result == 'done'
+        1 * transactionManager.commit(_)
+    }
+
+    void 'withTransaction(Closure) throws when the datastore does not support transactions'() {
+        given:
+        transactionService.datastore = Mock(Datastore)
+
+        when:
+        transactionService.withTransaction { status -> 'done' }
+
+        then:
+        TransactionSystemException e = thrown(TransactionSystemException)
+        e.message.contains('does not support transactions')
+    }
+
+    void 'withRollback(Closure) executes the callable and rolls back'() {
+        given:
+        transactionService.datastore = transactionCapableDatastore
+
+        expect:
+        transactionService.withRollback { status -> 'done' } == 'done'
+    }
+
+    void 'withRollback(Closure) throws when the datastore does not support transactions'() {
+        given:
+        transactionService.datastore = Mock(Datastore)
+
+        when:
+        transactionService.withRollback { status -> 'done' }
+
+        then:
+        thrown(TransactionSystemException)
+    }
+
+    void 'withNewTransaction(Closure) executes the callable with PROPAGATION_REQUIRES_NEW'() {
+        given:
+        transactionService.datastore = transactionCapableDatastore
+
+        expect:
+        transactionService.withNewTransaction { status -> 'done' } == 'done'
+    }
+
+    void 'withNewTransaction(Closure) throws when the datastore does not support transactions'() {
+        given:
+        transactionService.datastore = Mock(Datastore)
+
+        when:
+        transactionService.withNewTransaction { status -> 'done' }
+
+        then:
+        thrown(TransactionSystemException)
+    }
+
+    void 'withTransaction(TransactionDefinition, Closure) executes the callable with the given definition'() {
+        given:
+        transactionService.datastore = transactionCapableDatastore
+        TransactionDefinition definition = new CustomizableRollbackTransactionAttribute()
+
+        expect:
+        transactionService.withTransaction(definition) { status -> 'done' } == 'done'
+    }
+
+    void 'withTransaction(TransactionDefinition, Closure) throws when the datastore does not support transactions'() {
+        given:
+        transactionService.datastore = Mock(Datastore)
+        TransactionDefinition definition = new CustomizableRollbackTransactionAttribute()
+
+        when:
+        transactionService.withTransaction(definition) { status -> 'done' }
+
+        then:
+        thrown(TransactionSystemException)
+    }
+
+    void 'withTransaction(Map, Closure) builds a transaction definition from the map'() {
+        given:
+        transactionService.datastore = transactionCapableDatastore
+
+        expect:
+        transactionService.withTransaction([readOnly: true]) { status -> 'done' } == 'done'
+    }
+
+    void 'withTransaction(Map, Closure) throws when the datastore does not support transactions'() {
+        given:
+        transactionService.datastore = Mock(Datastore)
+
+        when:
+        transactionService.withTransaction([readOnly: true]) { status -> 'done' }
+
+        then:
+        thrown(TransactionSystemException)
+    }
+
+    void 'withRollback(TransactionDefinition, Closure) executes the callable and rolls back'() {
+        given:
+        transactionService.datastore = transactionCapableDatastore
+        TransactionDefinition definition = new CustomizableRollbackTransactionAttribute()
+
+        expect:
+        transactionService.withRollback(definition) { status -> 'done' } == 'done'
+    }
+
+    void 'withRollback(TransactionDefinition, Closure) throws when the datastore does not support transactions'() {
+        given:
+        transactionService.datastore = Mock(Datastore)
+        TransactionDefinition definition = new CustomizableRollbackTransactionAttribute()
+
+        when:
+        transactionService.withRollback(definition) { status -> 'done' }
+
+        then:
+        thrown(TransactionSystemException)
+    }
+
+    void 'withNewTransaction(TransactionDefinition, Closure) forces PROPAGATION_REQUIRES_NEW'() {
+        given:
+        transactionService.datastore = transactionCapableDatastore
+        TransactionDefinition definition = new CustomizableRollbackTransactionAttribute()
+
+        expect:
+        transactionService.withNewTransaction(definition) { status -> 'done' } == 'done'
+    }
+
+    void 'withNewTransaction(TransactionDefinition, Closure) throws when the datastore does not support transactions'() {
+        given:
+        transactionService.datastore = Mock(Datastore)
+        TransactionDefinition definition = new CustomizableRollbackTransactionAttribute()
+
+        when:
+        transactionService.withNewTransaction(definition) { status -> 'done' }
+
+        then:
+        thrown(TransactionSystemException)
     }
 }

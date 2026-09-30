@@ -122,11 +122,11 @@ tasks.withType(GroovyCompile).configureEach {
 tasks.withType(Test).configureEach {
     useJUnitPlatform()
     systemProperty 'spock.iKnowWhatImDoing.disableGroovyVersionCheck', 'true'
-    @if (features.contains("geb")) {
-    systemProperty "geb.env", System.getProperty('geb.env')
-    systemProperty "geb.build.reportsDir", reporting.file("geb/integrationTest")
-    systemProperty 'webdriver.chrome.driver', "${System.getenv('CHROMEWEBDRIVER')}/chromedriver"
-    systemProperty 'webdriver.gecko.driver', "${System.getenv('GECKOWEBDRIVER')}/geckodriver"
+    @if (features.contains("geb-with-local-browsers")) {
+    def gebEnv = providers.systemProperty('geb.env')
+    if (gebEnv.present) {
+        systemProperty('geb.env', gebEnv.get())
+    }
     }
 }
 }

@@ -21,6 +21,8 @@ package org.grails.datastore.gorm
 import groovy.transform.CompileDynamic
 import groovy.util.logging.Slf4j
 
+import jakarta.persistence.LockModeType
+
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.support.DefaultTransactionDefinition
@@ -30,9 +32,11 @@ import grails.gorm.DetachedCriteria
 import grails.gorm.api.GormAllOperations
 import grails.gorm.api.GormInstanceOperations
 import grails.gorm.api.GormStaticOperations
+import grails.gorm.multitenancy.CurrentTenantHolder
 import grails.gorm.multitenancy.Tenants
 import grails.gorm.transactions.GrailsTransactionTemplate
 import org.grails.datastore.gorm.finders.FinderMethod
+import org.grails.datastore.gorm.internal.RefreshLockArguments
 import org.grails.datastore.gorm.transactions.DefaultTransactionTemplateFactory
 import org.grails.datastore.gorm.transactions.TransactionTemplateFactory
 import org.grails.datastore.mapping.core.Datastore
@@ -226,92 +230,97 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     // GormInstanceOperations delegation
     @Override
     def propertyMissing(D instance, String name) {
-        registry.findInstanceApi(persistentClass, null).propertyMissing(instance, name)
+        registry.findInstanceApi(persistentClass, qualifier).propertyMissing(instance, name)
     }
 
     @Override
     boolean instanceOf(D instance, Class cls) {
-        registry.findInstanceApi(persistentClass, null).instanceOf(instance, cls)
+        registry.findInstanceApi(persistentClass, qualifier).instanceOf(instance, cls)
     }
 
     @Override
     D lock(D instance) {
-        registry.findInstanceApi(persistentClass, null).lock(instance)
+        registry.findInstanceApi(persistentClass, qualifier).lock(instance)
     }
 
     @Override
     def <T1> T1 mutex(D instance, Closure<T1> callable) {
-        registry.findInstanceApi(persistentClass, null).mutex(instance, callable)
+        registry.findInstanceApi(persistentClass, qualifier).mutex(instance, callable)
     }
 
     @Override
     D refresh(D instance) {
-        registry.findInstanceApi(persistentClass, null).refresh(instance)
+        registry.findInstanceApi(persistentClass, qualifier).refresh(instance)
+    }
+
+    @Override
+    D refresh(D instance, Map args) {
+        registry.findInstanceApi(persistentClass, qualifier).refresh(instance, args)
     }
 
     @Override
     D save(D instance) {
-        registry.findInstanceApi(persistentClass, null).save(instance)
+        registry.findInstanceApi(persistentClass, qualifier).save(instance)
     }
 
     @Override
     D insert(D instance) {
-        registry.findInstanceApi(persistentClass, null).insert(instance)
+        registry.findInstanceApi(persistentClass, qualifier).insert(instance)
     }
 
     @Override
     D insert(D instance, Map params) {
-        registry.findInstanceApi(persistentClass, null).insert(instance, params)
+        registry.findInstanceApi(persistentClass, qualifier).insert(instance, params)
     }
 
     @Override
     D merge(D instance) {
-        registry.findInstanceApi(persistentClass, null).merge(instance)
+        registry.findInstanceApi(persistentClass, qualifier).merge(instance)
     }
 
     @Override
     D merge(D instance, Map params) {
-        registry.findInstanceApi(persistentClass, null).merge(instance, params)
+        registry.findInstanceApi(persistentClass, qualifier).merge(instance, params)
     }
 
     @Override
     D save(D instance, boolean validate) {
-        registry.findInstanceApi(persistentClass, null).save(instance, validate)
+        registry.findInstanceApi(persistentClass, qualifier).save(instance, validate)
     }
 
     @Override
     D save(D instance, Map params) {
-        registry.findInstanceApi(persistentClass, null).save(instance, params)
+        registry.findInstanceApi(persistentClass, qualifier).save(instance, params)
     }
 
     @Override
     Serializable ident(D instance) {
-        registry.findInstanceApi(persistentClass, null).ident(instance)
+        registry.findInstanceApi(persistentClass, qualifier).ident(instance)
     }
 
     @Override
     D attach(D instance) {
-        registry.findInstanceApi(persistentClass, null).attach(instance)
+        registry.findInstanceApi(persistentClass, qualifier).attach(instance)
     }
 
     @Override
     boolean isAttached(D instance) {
-        registry.findInstanceApi(persistentClass, null).isAttached(instance)
+        registry.findInstanceApi(persistentClass, qualifier).isAttached(instance)
     }
 
     @Override
     void discard(D instance) {
-        registry.findInstanceApi(persistentClass, null).discard(instance)
+        registry.findInstanceApi(persistentClass, qualifier).discard(instance)
     }
 
     @Override
     void delete(D instance) {
-        registry.findInstanceApi(persistentClass, null).delete(instance)
+        registry.findInstanceApi(persistentClass, qualifier).delete(instance)
     }
 
     @Override
     void delete(D instance, Map params) {
-        registry.findInstanceApi(persistentClass, null).delete(instance, params)
+        registry.findInstanceApi(persistentClass, qualifier).delete(instance, params)
     }
 
     // GormStaticOperations
@@ -376,21 +385,26 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     }
 
     @Override
-    Integer count() {
-        log.debug('GormStaticApi.count() called for {}', persistentClass.name)
-        Integer result = execute({ Session session ->
+    Long count() {
+        // Capture the @Slf4j logger before entering the SessionCallback. With
+        // invokedynamic off (Grails 8 default), log.debug(...) inside that
+        // closure is dispatched through methodMissing as a dynamic finder on
+        // the persistent class (MissingMethodException: debug).
+        def logger = log
+        logger.debug('GormStaticApi.count() called for {}', persistentClass.name)
+        Long result = execute({ Session session ->
             def query = session.createQuery(persistentClass)
             query.projections().count()
             def res = query.singleResult()
-            log.debug('Query singleResult returned {}', res)
-            res instanceof Number ? ((Number)res).intValue() : 0
-        } as SessionCallback<Integer>)
-        log.debug('count() result is {}', result)
+            logger.debug('Query singleResult returned {}', res)
+            res instanceof Number ? ((Number)res).longValue() : 0L
+        } as SessionCallback<Long>)
+        logger.debug('count() result is {}', result)
         return result
     }
 
     @Override
-    Integer getCount() {
+    Long getCount() {
         count()
     }
 
@@ -485,6 +499,35 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
         execute({ Session session ->
             session.lock(persistentClass, id)
         } as SessionCallback<D>)
+    }
+
+    @Override
+    D lock(Map args, Serializable id) {
+        if (RefreshLockArguments.lockTypeFrom(args) != LockModeType.PESSIMISTIC_WRITE) {
+            throw new UnsupportedOperationException(RefreshLockArguments.UNSUPPORTED_TYPE)
+        }
+        if (!RefreshLockArguments.refreshRequested(args)) {
+            return lock(id)
+        }
+        GormInstanceApi<D> instanceApi = registry.findInstanceApi(persistentClass, qualifier)
+        // Reject an unsupported request before reading anything, as the type check above does. A datastore
+        // that cannot reload under a lock cannot do so for any identifier, so the identifier is irrelevant
+        // to the outcome.
+        if (!instanceApi.supportsLockedRefresh()) {
+            throw new UnsupportedOperationException(RefreshLockArguments.UNSUPPORTED)
+        }
+        // Resolve the managed instance first (no query when it is already in the session), then let the
+        // instance api reload state and version under the lock instead of checking the loaded version.
+        D instance = get(id)
+        if (instance == null) {
+            return null
+        }
+        instanceApi.refresh(instance, [(RefreshLockArguments.LOCK): true])
+    }
+
+    @Override
+    boolean supportsLockedRefresh() {
+        registry.findInstanceApi(persistentClass, qualifier).supportsLockedRefresh()
     }
 
     @Override
@@ -680,11 +723,35 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
         return instance
     }
 
+    /**
+     * Runs the callable with the entity's unqualified operations routed to this API's connection, when this API
+     * belongs to a named connection, as {@code Book.moreBooks} does. Inside
+     * {@code Book.moreBooks.withTransaction { }} a {@code book.save()} or a {@code Book.list()} then reaches
+     * {@code moreBooks}, whose session and transaction are the ones open, rather than the default connection.
+     * The default connection's API undoes an enclosing block for another connection in the same way. A qualifier
+     * that names no connection, such as a DISCRIMINATOR tenant id, is left alone.
+     *
+     * @param callable What to run
+     * @return What the callable returns
+     */
+    protected <T1> T1 inConnectionScope(Closure<T1> callable) {
+        String currentQualifier = getQualifier()
+        if (currentQualifier == null || ConnectionSource.DEFAULT == currentQualifier) {
+            return GormRegistry.withConnectionScope(persistentClass, ConnectionSource.DEFAULT, callable)
+        }
+        if (!ConnectionSourceNameResolver.isConnectionSourceName(getDatastore(), currentQualifier)) {
+            return callable.call()
+        }
+        return GormRegistry.withConnectionScope(persistentClass, currentQualifier, callable)
+    }
+
     @Override
     def <T1> T1 withSession(Closure<T1> callable) {
-        execute({ Session session ->
-            callable.call(session)
-        } as SessionCallback<T1>)
+        inConnectionScope {
+            execute({ Session session ->
+                callable.call(session)
+            } as SessionCallback<T1>)
+        }
     }
 
     @Override
@@ -700,7 +767,9 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     def <T1> T1 withTransaction(Closure<T1> callable) {
-        createTransactionTemplate().execute(callable)
+        inConnectionScope {
+            createTransactionTemplate().execute(callable)
+        }
     }
 
     @Override
@@ -745,7 +814,9 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     def <T1> T1 withTransaction(org.springframework.transaction.TransactionDefinition definition, Closure<T1> callable) {
-        createTransactionTemplate(definition).execute(callable)
+        inConnectionScope {
+            createTransactionTemplate(definition).execute(callable)
+        }
     }
 
     protected GrailsTransactionTemplate createTransactionTemplate() {
@@ -763,9 +834,11 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     @Override
     def <T1> T1 withNewSession(Closure<T1> callable) {
         Datastore ds = getDatastore()
-        DatastoreUtils.executeWithNewSession(ds, { Session session ->
-            callable.call(session)
-        } as SessionCallback<T1>)
+        inConnectionScope {
+            DatastoreUtils.executeWithNewSession(ds, { Session session ->
+                callable.call(session)
+            } as SessionCallback<T1>)
+        }
     }
 
     @Override
@@ -774,7 +847,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
         if (ds instanceof StatelessDatastore) {
             Session session = DatastoreUtils.bindNewSession(ds.connectStateless())
             try {
-                return callable.call(session)
+                return inConnectionScope { callable.call(session) }
             }
             finally {
                 DatastoreUtils.unbindSession(session)
@@ -964,13 +1037,30 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
         withId(ConnectionSource.DEFAULT, callable)
     }
 
+    /**
+     * Runs the callable in a new session for the tenant, with the tenant bound, so that the calls it makes on the
+     * class reach the tenant named here rather than the one that resolving would find.
+     *
+     * @param tenantId The tenant
+     * @param callable What to run
+     * @return What the callable returns
+     */
     def <T1> T1 withNewSession(Serializable tenantId, Closure<T1> callable) {
         DatastoreResolver resolver = new DatastoreResolver() {
             @Override Datastore resolve() { registry.apiResolver.findDatastore(persistentClass, tenantId.toString()) }
         }
         Datastore tenantDatastore = resolver.resolve()
-        DatastoreUtils.executeWithNewSession(tenantDatastore, { Session session ->
-            return (T1) callable.call(session)
-        } as SessionCallback<T1>)
+        Closure<T1> inNewSession = { Serializable boundTenantId ->
+            DatastoreUtils.executeWithNewSession(tenantDatastore, { Session session ->
+                return (T1) callable.call(session)
+            } as SessionCallback<T1>)
+        }
+        Datastore defaultDatastore = registry.getDatastore(persistentClass.name, ConnectionSource.DEFAULT)
+        if (defaultDatastore instanceof MultiTenantCapableDatastore) {
+            // Bound rather than entered through Tenants.withId, which would open a session of its own for the
+            // tenant in the modes that give it a connection, leaving the one opened here unused.
+            return (T1) CurrentTenantHolder.withTenant(defaultDatastore, tenantId, inNewSession)
+        }
+        return inNewSession.call(tenantId)
     }
 }

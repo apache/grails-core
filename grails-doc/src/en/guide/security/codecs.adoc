@@ -135,6 +135,8 @@ Performs Base64 encode/decode functions. Example of usage:
 Your registration code is: ${user.registrationCode.encodeAsBase64()}
 ----
 
+String values can be encoded with a specific source character set by passing a `java.nio.charset.Charset` to `encodeAsBase64`. The Base64 text itself is returned as UTF-8/ASCII-compatible text. `decodeBase64` takes no character set, because Base64 text is always ASCII; it returns the decoded bytes for the caller to interpret.
+
 *JavaScriptCodec*
 
 Escapes Strings so they can be used as valid JavaScript strings. For example:
@@ -153,6 +155,8 @@ Encodes byte arrays or lists of integers to lowercase hexadecimal strings, and c
 ----
 Selected colour: #${[255,127,255].encodeAsHex()}
 ----
+
+`decodeHex` decodes an empty string to an empty byte array. For any other value that is false by Groovy truth, such as `null`, `0` or an empty collection, it returns `null`.
 
 *MD5Codec*
 
@@ -207,6 +211,8 @@ Uses the SHA256 algorithm to digest byte arrays or lists of integers, or the byt
 ----
 byte[] passwordHash = params.password.encodeAsSHA256Bytes()
 ----
+
+The hexadecimal digest codecs (`encodeAsMD5`, `encodeAsSHA1` and `encodeAsSHA256`) compute their byte digest directly rather than calling the matching `Bytes` codec through the metaclass. Replacing `encodeAsMD5Bytes`, `encodeAsSHA1Bytes` or `encodeAsSHA256Bytes` at runtime therefore no longer changes what the hexadecimal codecs return.
 
 
 ==== Custom Codecs

@@ -38,11 +38,43 @@ Boot the application once; the migrator logs warnings for every deprecated prope
 Remove the dependency once your configuration is clean.
 ====
 
+[TIP]
+====
+**Let your coding agent work through this guide.**
+Grails publishes the `grails-8-upgrade` agent skill, which turns this guide into a migration checklist for an AI coding agent.
+Extract it with the SkillsJars Gradle plugin, as xref:gettingStarted#agentSkills[Agent Skills] describes.
+While the application is still on Grails 7, declare the skill with its version, since the Grails 7 BOM does not manage it:
+
+[source,groovy,subs="attributes"]
+.build.gradle
+----
+skill 'org.apache.grails.skills:grails-8-upgrade:{version}'
+----
+====
+
 ==== 1. Java 21 Minimum Requirement
 
 Grails 8 requires a minimum of Java 21 to both build and run Grails applications.
 This is an increase from Grails 7, which required Java 17.
 Update your project's toolchain, CI pipelines, and deployment environments to use JDK 21 or later.
+
+===== 1.1 Gradle 9.7 Minimum Requirement
+
+The Grails 8 Gradle plugins require Gradle 9.7 or later.
+Grails 7 applications were generated with a Gradle 8.14.x wrapper, and a wrapper carried over from Grails 7 does not work with Grails 8.
+The Groovy compiler configuration that the Grails Gradle plugin sets up relies on the `groovyOptions.configurationScriptFile` property, which only exists from Gradle 9.7 on.
+On an older Gradle version `compileGroovy` fails with a `NoSuchMethodError` for `GroovyCompileOptions.getConfigurationScriptFile()`.
+
+Update the Gradle wrapper of your project as part of the upgrade:
+
+[,console,subs="attributes"]
+----
+./gradlew wrapper --gradle-version {gradleVersion}
+----
+
+Afterwards, check that the `distributionUrl` in `gradle/wrapper/gradle-wrapper.properties` points to the new version.
+Gradle 9 has breaking changes of its own that may affect your build scripts and other Gradle plugins you use; consult the https://docs.gradle.org/{gradleVersion}/userguide/upgrading_major_version_9.html[Gradle 9 upgrade guide].
+See also <<groovy-compiler-config-scripts,Generated Groovy Compiler Configuration Scripts>> if your build assigns a Groovy compiler configuration script itself.
 
 ==== 2. Spring Boot 4.1.x
 
@@ -109,7 +141,9 @@ org.springframework.boot.env.EnvironmentPostProcessor=com.example.MyPostProcesso
 org.springframework.boot.EnvironmentPostProcessor=com.example.MyPostProcessor
 ----
 
-==== 4. MongoDB Configuration Property Changes
+==== 4. Spring Boot Configuration Property Changes
+
+===== 4.1 MongoDB Configuration
 
 Spring Boot 4 renamed the MongoDB configuration property namespace for Spring Boot's own auto-configuration.
 If your `application.yml` or `application.groovy` uses `spring.data.mongodb.*` properties for Spring Boot auto-configuration, you must rename them to `spring.mongodb.*`.
@@ -135,6 +169,39 @@ spring:
         port: 27017
         database: mydb
 ----
+
+[[multipart-upload-configuration]]
+===== 4.2 Multipart Upload Configuration
+
+The `grails.controllers.upload.\*` configuration properties are no longer supported.
+Applications that still define any property under `grails.controllers.upload` fail at startup with migration instructions.
+This startup check is a migration aid for Grails 8 only and will be removed in Grails 9, after which leftover `grails.controllers.upload` properties are silently ignored.
+Move those settings to Spring Boot's `spring.servlet.multipart.*` namespace:
+
+[source,yaml]
+.application.yml - Before (Grails 7)
+----
+grails:
+    controllers:
+        upload:
+            maxFileSize: 200000
+            maxRequestSize: 200000
+----
+
+[source,yaml]
+.application.yml - After (Grails 8)
+----
+spring:
+    servlet:
+        multipart:
+            maxFileSize: 200MB
+            maxRequestSize: 200MB
+----
+
+Spring Boot also provides `spring.servlet.multipart.location`, `spring.servlet.multipart.fileSizeThreshold`, `spring.servlet.multipart.enabled`, `spring.servlet.multipart.resolveLazily`, and `spring.servlet.multipart.strictServletCompliance` as replacements for the corresponding legacy settings. See the {springBootReference}../appendix/application-properties/index.html[Spring Boot multipart application properties] reference for the complete list.
+
+Unlike the Grails 7 default, the multipart location is not set to `System.getProperty("java.io.tmpdir")`; when `spring.servlet.multipart.location` is not configured, the resulting `MultipartConfigElement` has an empty location and uploads use the servlet container's temporary directory. This can matter when the container's temporary storage is constrained or when an application expects uploaded files in `java.io.tmpdir`.
+When no upload limits are configured, Spring Boot's defaults apply: 1MB per file and 10MB per request. Set `spring.servlet.multipart.maxFileSize` and `spring.servlet.multipart.maxRequestSize` explicitly if your application requires different limits.
 
 ==== 5. Hibernate ORM Package Relocations
 
@@ -230,114 +297,11 @@ import org.springframework.http.HttpStatus
 response.status = HttpStatus.FOUND.value()
 ----
 
-==== 7. Micronaut Integration Changes
+[[micronaut-integration]]
+==== 7. Micronaut Integration
 
-===== 7.1 CLASSIC Boot Loader Removed
-
-Spring Boot 4 removed the `CLASSIC` loader implementation (`LoaderImplementation.CLASSIC`).
-In Grails 7, the Grails Gradle Plugin automatically configured `bootJar` and `bootWar` tasks to use the `CLASSIC` loader when the `grails-micronaut` plugin was detected.
-This was required for `java -jar` execution to work correctly with the Micronaut-Spring integration.
-
-In Grails 8, this automatic configuration has been removed since the `CLASSIC` loader no longer exists in Spring Boot 4.
-
-**Action required:**
-
-* If you have explicitly set `loaderImplementation` in your `build.gradle`, remove it:
-
-[source,groovy]
-.build.gradle - remove this block
-----
-// This is no longer valid in Spring Boot 4 - remove it
-tasks.withType(BootArchive).configureEach {
-    loaderImplementation = org.springframework.boot.loader.tools.LoaderImplementation.CLASSIC
-}
-----
-
-* The `grails-micronaut` plugin continues to work with Spring Boot 4's default loader.
-If you experience issues running your Micronaut-enabled Grails application via `java -jar`, please report them to the https://github.com/apache/grails-core/issues[Grails issue tracker].
-
-===== 7.2 enforcedPlatform Required for Micronaut BOMs
-
-When using Micronaut, select a Micronaut-compatible Grails BOM and apply it as `enforcedPlatform` instead of `platform`.
-The default choice is `grails-micronaut-bom`; Hibernate-specific variants are covered in section 7.4.
-The Micronaut 5 platform declares its own managed dependency versions that conflict with those managed by the `grails-bom`.
-Without `enforcedPlatform`, Gradle's default conflict resolution (highest version wins) allows the Micronaut platform to silently override `grails-bom` versions, leading to binary incompatibilities at runtime.
-
-For example, without `enforcedPlatform`:
-
-* **Groovy** is upgraded from 4.0.x to 5.0.x -- Groovy 5 has breaking API changes (e.g. `ArrayGroovyMethods` moved) that cause `NoClassDefFoundError` at runtime
-* **Spock** is upgraded from 2.3-groovy-4.0 to 2.4-groovy-5.0 -- compiled against Groovy 5, incompatible with Groovy 4 classes
-* **Kotlin**, **Mockito**, **Byte Buddy** are upgraded to versions not tested with the Grails stack
-
-Using `enforcedPlatform` makes the selected Micronaut BOM constraints strictly versioned so they cannot be overridden by any transitive dependency.
-
-The Grails Gradle Plugin will error at configuration time if `grails-micronaut` is detected and no Micronaut-compatible Grails BOM is applied as `enforcedPlatform`.
-
-[source,groovy]
-.build.gradle
-----
-dependencies {
-    // enforcedPlatform is required when using grails-micronaut
-    implementation enforcedPlatform("org.apache.grails:grails-micronaut-bom:$grailsVersion")
-
-    implementation 'org.apache.grails:grails-micronaut'
-}
-----
-
-NOTE: Applications generated by the Grails Forge automatically use the appropriate Micronaut BOM as `enforcedPlatform` when the Micronaut feature is selected.
-
-===== 7.3 Micronaut Features Require JDK 25
-
-While the Grails 8 baseline remains JDK 21, any Grails application that uses the Micronaut integration **must** run on JDK 25 or later.
-
-Micronaut Core's internal `io.micronaut.core.propagation.ScopedValues` class references `java.lang.ScopedValue.CallableOp`, which only exists in JDK 25.
-`ScopedValue` was a preview API in JDK 21–24 and was finalized by https://openjdk.org/jeps/506[JEP 506] in JDK 25, at which point its inner type was renamed from `Callable` to `CallableOp`.
-Running Micronaut on JDK 21–24 therefore fails at runtime with:
-
-[source]
-----
-java.lang.NoClassDefFoundError: java/lang/ScopedValue$CallableOp
-    at io.micronaut.core.propagation.ScopedValues.propagate(ScopedValues.java:45)
-    ...
-----
-
-This affects any code path that goes through Micronaut's HTTP client, filters, or context propagation -- including the declarative `@Client` interfaces and `micronaut-http-client-jdk`.
-
-**Action required:**
-
-* If your Grails 8 application uses `grails-micronaut`, `micronaut-http-client`, or any other Micronaut feature, upgrade your build, CI, and deployment JDK to **JDK 25 or later**.
-* Grails applications that do **not** use any Micronaut integration are unaffected and continue to run on JDK 21.
-
-NOTE: The Grails Forge generator enforces this requirement: selecting any Micronaut feature with a JDK version below 25 will fail with `IllegalArgumentException` at generation time.
-
-===== 7.4 Hibernate-Specific Micronaut BOMs
-
-Grails 8 introduces new BOMs for projects that combine Micronaut integration with a specific Hibernate version:
-
-* `org.apache.grails:grails-hibernate5-micronaut-bom` -- For Micronaut projects using Hibernate 5. This is the default Micronaut BOM for Hibernate 5 users (analogous to how `grails-micronaut-bom` is the default). Use this when your Micronaut-enabled Grails application targets Hibernate 5.
-* `org.apache.grails:grails-hibernate7-micronaut-bom` -- For Micronaut projects using Hibernate 7. Use this when your Micronaut-enabled Grails application targets Hibernate 7.
-
-This BOM extends `grails-base-bom` and the Micronaut platform directly, and includes the appropriate Hibernate dependency versions alongside the Micronaut-specific overrides (Groovy 5, Spock 2.4, etc.). This ensures no version conflicts when consumed via `enforcedPlatform`.
-
-[source,groovy]
-.build.gradle - Hibernate 5 with Micronaut (default)
-----
-dependencies {
-    implementation enforcedPlatform("org.apache.grails:grails-hibernate5-micronaut-bom:$grailsVersion")
-    implementation 'org.apache.grails:grails-micronaut'
-}
-----
-
-[source,groovy]
-.build.gradle - Hibernate 7 with Micronaut
-----
-dependencies {
-    implementation enforcedPlatform("org.apache.grails:grails-hibernate7-micronaut-bom:$grailsVersion")
-    implementation 'org.apache.grails:grails-micronaut'
-}
-----
-
-The existing `grails-micronaut-bom` remains available and is equivalent to `grails-hibernate5-micronaut-bom` for backward compatibility. If the framework changes its default Hibernate version in the future, `grails-micronaut-bom` will track the new default while the Hibernate-specific BOMs remain pinned to their versions.
+The Grails Micronaut plugin and its BOMs are now maintained and released from the https://github.com/apache/grails-micronaut[Apache Grails Micronaut repository].
+Applications using Grails Micronaut should follow that project's upgrade and dependency-management documentation.
 
 ==== 8. Enum Serialization Default Changed
 
@@ -551,7 +515,10 @@ Longer term, consider migrating to the fluent `HttpSecurity` API for filter chai
 ==== 14. Spring Dependency Management Plugin Replaced by Gradle Platforms
 
 Grails 8 standardizes on Gradle's native `platform()` dependency management and **no longer applies the `io.spring.dependency-management` plugin**.
-The Grails Gradle Plugin now adds `grails-bom` as a Gradle `platform()` on every declarable project configuration, and a new bundled plugin (`org.apache.grails.gradle.bom-property-overrides`, applied automatically by the Grails Gradle Plugin) preserves the property-based version-override workflow that Spring DM provided.
+The Grails Gradle Plugin now contributes `grails-bom` as a Gradle `platform()` to eligible declarable project configurations, and a new bundled plugin (`org.apache.grails.gradle.bom-property-overrides`, applied automatically by the Grails Gradle Plugin) preserves the property-based version-override workflow that Spring DM provided.
+The platform is contributed lazily, when a configuration's dependencies are observed (through resolution, publication, or `incoming.dependencies`), so configurations populated on demand through `defaultDependencies`, such as the Grails `profile` configuration, keep their defaults.
+Dedicated tool and annotation-processor classpaths, including the `jacoco` plugin's `jacocoAgent` and `jacocoAnt` configurations, are excluded from automatic platform application so the application BOM does not change their transitive dependency versions.
+Until dependencies are observed, the auto-applied platform is not visible in a configuration's declared `dependencies` or `allDependencies`; build logic that looks for it should inspect `incoming.dependencies` or the resolution result instead.
 
 **No action is required for most applications.**
 The standard `gradle.properties` and `ext['…']` override forms continue to work exactly as before:
@@ -595,22 +562,31 @@ If you require Spring DM's "BOM wins always" behaviour for the default managed v
 An *explicit* property override (`ext['…']` or `gradle.properties`) is applied as a strict constraint and always wins - including when it downgrades a version - so overrides behave as they did under Spring DM.
 Overriding a property that selects an imported BOM's version (for example `spring-boot.version`) re-imports that BOM at the overridden version and applies its updated managed set.
 
-NOTE: Projects that apply the `grails-micronaut` plugin already require `enforcedPlatform` for unrelated reasons (see section 7.2); those projects retain Spring DM's strict-version semantics automatically.
+**Grails BOMs now follow the upstream BOM property names.**
+Where a Grails BOM overrides a version that an upstream BOM also manages - `spring-boot-dependencies`, or a BOM Spring Boot imports - it declares the override under the upstream BOM's own property name.
+One property therefore sets the version in both BOMs, and the property names in the Spring Boot documentation work unchanged in a Grails build.
+For a module Spring Boot manages through an imported BOM, that is the property Spring Boot imports the BOM with: `jackson-bom.version` moves every Jackson 3 module, whether `grails-bom` pins it or not.
+
+An override under a property name no BOM declares is silently ignored, so rename any Grails-specific property your build sets in `gradle.properties` or `ext['…']`, along with a Jackson 2 version set under Spring Boot 3's property name:
+
+[cols="1,2", options="header"]
+|===
+| Grails 7 property
+| Grails 8 property
+
+| `jackson.version`
+| `jackson-2-bom.version` for Jackson 2 (`com.fasterxml.jackson.*`). Jackson 3 (`tools.jackson.*`), the new default, is set by `jackson-bom.version`.
+
+| `jackson-bom.version` (Spring Boot 3's name for Jackson 2)
+| `jackson-2-bom.version`. In Grails 8, `jackson-bom.version` sets Jackson 3, so a Jackson 2 version there makes dependency resolution fail.
+|===
+
+Builds that adopted a Grails 8 milestone or release candidate should rename `jackson2.version` to `jackson-2-bom.version`, `jackson3.version` to `jackson-bom.version`, and, with `grails-neo4j-bom`, `neo4j-driver.version` to `neo4j-java-driver.version`.
 
 **Selecting or opting out of the auto-applied BOM.**
 The Grails Gradle plugin applies a single Grails BOM automatically, selected by the `grails.bom` property. Its value is the BOM artifact name within the `org.apache.grails` group, which the plugin resolves as `org.apache.grails:$bom:$grailsVersion`.
 It defaults to `grails-bom`, which preserves the Grails 7 behaviour and is the right choice for the vast majority of applications.
-Exactly one Grails BOM is ever applied; the BOMs are split by integration (default / hibernate5 / micronaut), so the plugin never layers two of them.
-
-Select a different curated variant when your application needs it - for example the Micronaut variant, which the plugin applies as an `enforcedPlatform`:
-
-[source,groovy]
-.build.gradle
-----
-grails {
-    bom = 'grails-micronaut-bom'
-}
-----
+Exactly one Grails BOM is ever applied; the BOMs are split by integration, so the plugin never layers two of them.
 
 Set it to `null` to suppress the automatic BOM application entirely - for example when you intentionally want to manage Grails dependency versions yourself (consuming Grails modules from a different curated platform):
 
@@ -748,7 +724,7 @@ If your test infrastructure registers it explicitly, remove the registration; Sp
 Update the import.
 A new `RestTestClient` and corresponding `@AutoConfigureRestTestClient` annotation are also available as a fluent alternative.
 
-==== 17.1 Test Helpers Moved to Test Fixtures
+===== 17.1 Test Helpers Moved to Test Fixtures
 
 Several legacy Grails test helpers are no longer included in the production classpath.
 They are published as Gradle test fixtures instead, so applications and plugins that use them directly must request the fixture variant explicitly.
@@ -853,10 +829,41 @@ Spring Framework 7 deprecated `org.springframework.lang.Nullable` and `org.sprin
 The Spring annotations still work, so this is non-blocking, but new code should prefer the JSpecify equivalents.
 
 * **Namespaced link generation is namespace-aware.**
-When a link, form action, pagination link, sortable column link, redirect, chain, or include targets a controller without an explicit `namespace`, Grails now resolves the namespace automatically. In the normal case, where only one controller has the target name, `controller` and `action` generate the correct namespaced or non-namespaced URL. Ambiguity only occurs when multiple controllers share the same name. In that case, specify `namespace` to choose the target explicitly. Pass `namespace: null` from Groovy code or `namespace=""` in a GSP tag to target the non-namespaced controller explicitly.
+When a link, form action, pagination link, sortable column link, redirect, chain, or include targets a controller without an explicit `namespace`, Grails now resolves the namespace automatically. The name is resolved nearest scope first: the current request's namespace if it defines a controller with that name, then the non-namespaced controller, then the namespace of the only controller with that name. `controller` and `action` therefore generate the correct namespaced or non-namespaced URL, and a link rendered from a namespace stays in it when that namespace defines the target. A name defined only in namespaces other than the default and the current one is ambiguous: Grails logs a warning and the link must specify `namespace` to choose the target explicitly. A name no registered controller has stays in the namespace the link is made from, where a link previously dropped the namespace; a redirect to such a name has always stayed in it. A page rendered by a controller in the `admin` namespace that links with `controller: 'other', action: 'list'` now generates `/admin/other/list` when no `OtherController` is registered, and so does a unit test that sets `webRequest.controllerNamespace` itself; a `ControllerUnitTest`, which leaves the request namespace unset, still generates `/other/list`. Pass `namespace` to target another namespace. A redirect naming no namespace is resolved exactly as a link is, from the namespace of the controller issuing it; previously it was forced into that namespace, so a redirect to a controller defined only in another namespace produced a URL for a controller that does not exist. Pass `namespace: null` from Groovy code or `namespace=""` in a GSP tag to target the non-namespaced controller explicitly.
+
+* **A resource link targets the most specific controller serving its domain class.**
+A link, form or redirect built from a domain instance, such as `<g:link resource="${book}">`, `redirect book`, or the `self` link of a HAL, Atom or JSON:API response, previously always targeted the controller named after the domain class, even when that controller did not exist. It now targets the nearest controller serving the domain class, a controller serving it when it is named after it or extends `RestfulController` parameterised on it, such as `PeopleController extends RestfulController<Person>` or a controller scaffolded with `@Scaffold(Person)`, and defines the action the link targets: the controller handling the request when it serves it, then the one serving it in the request's namespace, then in the default namespace, then in any namespace, the one named after the domain class settling a tie within a namespace. An application with one controller per domain class is unaffected. Where two controllers serve the same domain class, a link to it rendered by one of them now stays in that controller rather than moving to the one named after the domain class. Pass the `controller` attribute where a link should leave the current controller. See link:theWebLayer.html#restfulMappings[Mapping to REST resources]. Controllers generated by `generate-controller` and `generate-async-controller` now redirect a form save or update with `redirect action: "show", id: book.id` rather than `redirect book`, so a generated controller that is renamed still redirects to itself; a controller generated earlier and since renamed can be changed the same way.
+
+* **A read-only transaction no longer flushes the session.**
+A read-only transaction (`@ReadOnly`, `@Transactional(readOnly = true)`) commits without flushing the session on every GORM datastore. Hibernate, Neo4j and the simple map datastore already behaved this way; GORM for MongoDB flushed the session when a read-only transaction committed, and no longer does.
++
+So on MongoDB, a write saved without `flush: true` before read-only code ran in the same session used to be persisted as a side effect of the read. It is now left queued: the read-only transaction does not write it, and it is written by whatever flushes the session next (a read-write commit, `save(flush: true)`, the flush at the end of the request), or discarded when the session closes if nothing does. Flush such writes explicitly with `save(flush: true)`, or perform them in a read-write transaction. To make this discoverable, a read-only transaction that commits while its session holds pending inserts, updates or deletes now logs a warning from `org.grails.datastore.mapping.transactions.DatastoreTransactionManager` naming the session. See link:{mongodb5Guide}index.html#readOnlyTransactions[Read-Only Transactions] in the GORM for MongoDB guide.
++
+A GORM datastore implementation outside the Grails repository inherits this if it uses `SessionOnlyTransaction`; one that supplies its own `Transaction` can honour `readOnly` by overriding the new `AbstractSession.beginTransactionInternal(TransactionDefinition)`, which now receives the transaction definition instead of discarding it.
+
+* **A transaction started inside another joins it.**
+On GORM for MongoDB, a transactional service method called from another, or `withTransaction` inside `withTransaction`, began a second transaction on the same session instead of joining the first. The inner one committed on its own and the outer one's commit then did nothing: without a session bound for the request, the outer transaction's writes after the call were never saved, and with one they were saved when the request ended, outside any transaction (not at all if a read-only call had left the session in `COMMIT` flush mode). With multi-document transactions enabled, beginning the inner transaction also discarded the writes the outer one had flushed before the call. Now the inner transaction joins the outer one, everything commits once when the outer one does, and a joined transaction that fails rolls the whole transaction back. Hibernate and Neo4j already joined. On Neo4j, though, a joined transaction that failed rolled the transaction back on the spot, so writes the outer code made after catching the failure ran outside any transaction and were committed as they ran; the transaction is now only marked rollback-only, and those writes roll back with it. The simple map datastore, which `DataTest` unit tests run on, joins now too, so a nested transaction's writes are flushed at the outer commit instead of when it returns. Its sessions also share one identifier count now: an insert in one session could take the identifier of an insert another session had not yet flushed, or of an entry still present after a delete, and overwrite it. A write in `withNewSession` inside a transaction was lost that way.
++
+These follow from the surrounding transaction now being recognized, on MongoDB and the simple map datastore:
++
+** `PROPAGATION_REQUIRES_NEW` suspends the surrounding transaction and runs in a session of its own (on Neo4j too), where it used to begin on the surrounding transaction's session. The new session starts empty: an entity loaded in the surrounding transaction belongs to that session and should be loaded again inside, and settings made on the surrounding session, such as the database or collection chosen with `withDatabase` or `withCollection`, do not carry over.
+** `PROPAGATION_NOT_SUPPORTED` suspends the surrounding transaction, `PROPAGATION_MANDATORY` inside a transaction works where it always threw, and `PROPAGATION_NEVER` and `PROPAGATION_NESTED` inside a transaction throw.
+** A read-write transaction started inside a read-only one joins it and is read-only, as on Hibernate, where it used to commit on its own. A write it leaves queued is not saved by the read-only commit, which logs a warning naming the session. Call such a method from read-write code, or give it `PROPAGATION_REQUIRES_NEW`. A write it flushes explicitly with `save(flush: true)` is saved, but outside any transaction, so a later failure cannot roll it back.
+** Transactional code run from a transaction's `afterCommit` or `afterCompletion` callbacks, such as an `@TransactionalEventListener`, begins a transaction of its own.
+** A read-only transaction puts the session's flush mode back when it completes (on Neo4j too). It used to leave the session in `COMMIT` mode, so a session bound for the whole request was not flushed when the request ended.
+** Committing a transaction that is no longer active throws `IllegalTransactionStateException`, where the commit used to be skipped without a word.
++
+Without multi-document transactions, GORM for MongoDB does not flush before a query while a transaction is in progress, so a write a joined transaction leaves queued is not visible to a query later in the same transaction. It used to be, because the inner transaction flushed it when it returned. Use `save(flush: true)` where a later query in the transaction must see the write. This includes integration tests annotated with `@Rollback`, whose service calls now join the test's transaction. With multi-document transactions enabled, GORM for MongoDB flushes before a query inside the server-side transaction, as Hibernate does, so the query sees the write, and a rollback still takes it back.
++
+With multi-document transactions enabled on MongoDB, a read-only transaction no longer starts a server-side transaction, and beginning a transaction on a session whose server-side transaction is still active throws `IllegalTransactionStateException` instead of discarding it. See link:{mongodb5Guide}index.html#nestedTransactions[Nested Transactions] in the GORM for MongoDB guide.
++
+A GORM datastore implementation outside the Grails repository whose transaction manager replaces `doBegin` must handle a transaction object that holds no session: a `PROPAGATION_REQUIRES_NEW` transaction arrives that way once the surrounding one is suspended, and needs a session of its own.
 
 * **`bindData` can clear omitted included fields.**
 `bindData(target, source, [include: [...], clearMissing: true])` now clears included properties that are absent from the binding source. The behavior is opt-in, requires an `include` list, and does not apply globally. Existing `bindData` calls without `clearMissing: true` keep omitted fields unchanged.
+
+* **GORM for MongoDB rejects Map criterion values that contain `$` keys.**
+`findWhere`, `findAllWhere`, criteria queries, the `where` DSL and dynamic finders now throw `InvalidDataAccessResourceUsageException` when a `Map` passed as a criterion value contains a key starting with `$` at any level, on any property type including enums. MongoDB interprets such a value document as an operator expression rather than as a value. Maps without such keys are still sent as literal subdocument comparisons, so exact matches on `Map` properties, dotted paths and array elements are unchanged, and geospatial criteria are exempt. Code that deliberately passed an operator document through a criteria value should use the native `find(Bson)` API instead.
 
 ==== 21. Tag Library Test Cleanup Changes
 
@@ -1517,7 +1524,8 @@ Two methods changed as a result:
 |===
 
 The same change applies to the `attrs` map passed to a GSP tag, whose internal implementation renames `isGspTagSyntaxCall()` to `gspTagSyntaxCall()`.
-Its setter is retained, so assigning `attrs.gspTagSyntaxCall` still invokes that setter rather than storing an attribute - as in Grails 7. Store an attribute of that name with `attrs.put('gspTagSyntaxCall', value)`.
+Its setter is retained, so assigning `attrs.gspTagSyntaxCall` still invokes that setter rather than storing an attribute - as in Grails 7.
+Subscript assignment, `attrs['gspTagSyntaxCall'] = value`, now stores an attribute of that name, as `attrs.put('gspTagSyntaxCall', value)` does; in Grails 7 it invoked the setter.
 
 NOTE: When adding a class that extends `grails.util.TypeConvertingMap`, do not declare a no-argument `getX()` or `isX()` method on it, or the entry `x` becomes unreachable for the same reason. Statically compiled callers bind directly to the accessor, so the collision cannot be corrected at runtime.
 
@@ -1683,6 +1691,7 @@ Now the framework bean simply backs off.
 
 NOTE: The clean back-off applies to beans that are registered before auto-configuration conditions are evaluated: `@Bean` methods in application configuration classes, and — as of the retimed plugin lifecycle (see _Plugin Beans Now Register Before Spring Boot Auto-Configuration_ below) — beans contributed through a plugin's `doWithSpring` or `beanRegistrar()`.
 Beans contributed through the application's `resources.groovy` or `resources.xml` register later and continue to take effect through bean-definition overriding, exactly as in previous releases.
+The one exception is a `@Configuration` class registered there, which is no longer processed — see <<resources-groovy-configuration-classes,`@Configuration` classes registered in `resources.groovy`>> below.
 
 [[plugin-beans-before-autoconfiguration]]
 ==== 33. Plugin Beans Now Register Before Spring Boot Auto-Configuration
@@ -1747,7 +1756,43 @@ class MyGrailsPlugin extends Plugin {
 
 Both hooks may be used on the same plugin during migration; when a registrar and the DSL register a bean under the same name, the registrar's definition wins.
 
+**Unit tests follow.** `doWithSpring()` on the `GrailsUnitTest` trait — and so on every testing trait — is deprecated too. A test now declares its beans in a `beans` block with the `beans` DSL, as an application or plugin does; overrides `beanRegistrar()`, applied where an application's is; or declares a static nested `@Configuration` class, which its context registers ahead of the framework's auto-configurations. A `beans` block compiles into one such class, named `BeansConfiguration`, so a test that already declares a nested class of that name must rename it. A test that includes a plugin through `getIncludePlugins()` also gets the beans the plugin's `beans` block declares, which `defineBeans(plugin)` cannot apply. See <<unitTesting,Unit Testing>>.
+
+A unit test now registers an included plugin's `doWithSpring` and `beanRegistrar` beans before its configuration is read, as an application's early phase does. So a `@ConditionalOnMissingBean` bean, including one in the framework's own auto-configurations, backs off from them in a test as it does in an application. A test's `doWithSpring` bean now replaces an included plugin's bean of the same name, where the plugin's used to win. What a test's `doWithConfig` sets now also reaches the Spring `Environment` before the context's configuration is read, so a property condition, the framework's `@ConditionalOnProperty` included, sees it; it used to reach only `grailsApplication.config` and `${}` placeholders.
+
+A test that already has a static nested `@Configuration` class meant for something other than its own context — one built for an `ApplicationContextRunner`, say — now has it registered there as well; override `getConfigurationClasses()` to leave it out.
+
+**A `beans` block names a nested type's bean by its simple name.** In 8.0.0-M6 and 8.0.0-RC1, `bean(Outer.Helper)` with no name given registered a bean named `outer$Helper`. It is now `helper`, the type's decapitalized simple name, as documented. Name it explicitly, `bean('outer$Helper', Outer.Helper)`, if anything looks it up by the old name.
+
 **Bean-definition overriding edge case.** Grails defaults `spring.main.allow-bean-definition-overriding` to `true`, and under that default nothing changes: an application bean (from the application class, `resources.groovy` or `resources.xml`) that uses the same name as a plugin bean still replaces the plugin's bean. However, because plugin beans now register earlier and application beans register in a separate, later step, an application that explicitly sets `spring.main.allow-bean-definition-overriding` to `false` will see a `BeanDefinitionOverrideException` for an application bean that shadows a plugin bean — in previous releases the two definitions were merged before a single registry write, so the shadowing was silent even with overriding disabled.
+
+[[resources-groovy-configuration-classes]]
+**`@Configuration` classes registered in `resources.groovy` are no longer processed.** In Grails 7 and earlier, a class annotated with `@Configuration` could be registered as a bean in the application's `resources.groovy` or `resources.xml`, or in the `doWithSpring` of the `Application` class, and its `@Bean` methods, `@Import` and `@Enable...` annotations were still honored. This is a breaking change in Grails 8: those bean definitions register after Spring has finished parsing configuration classes, so such a class is now created as a plain bean and none of the beans it declares are registered. No error or warning is reported — the beans are simply missing. The same applies to the application's `beanRegistrar()`.
+
+`@Configuration` classes contributed by a plugin's `doWithSpring` or `beanRegistrar()` are not affected, because plugin beans now register before configuration classes are parsed.
+
+`resources.groovy` and `resources.xml` are for defining beans. Register a configuration class with Spring directly instead, either by importing it from the `Application` class:
+
+[source,groovy]
+----
+import org.springframework.context.annotation.Import
+
+import grails.boot.GrailsApp
+import grails.boot.config.GrailsAutoConfiguration
+
+@Import(MyConfiguration)
+class Application extends GrailsAutoConfiguration {
+
+    static void main(String[] args) {
+        GrailsApp.run(Application, args)
+    }
+}
+----
+
+or by annotating the `Application` class with `@ComponentScan` so that configuration classes in the application's packages are discovered.
+Alternatively, declare the beans themselves — in `resources.groovy`, or in a `beans` block on the `Application` class (see link:spring.html#springdslAdditional[Configuring Additional Beans]).
+
+Plugin authors who previously told users to replace a plugin-provided `@Configuration` class through `resources.groovy` should ship that class as a Spring Boot auto-configuration and let users customize it through `@ConditionalOnMissingBean`-guarded beans or configuration properties instead.
 
 
 ==== 34. Compile-Time GORM Query Safety Check
@@ -2046,7 +2091,7 @@ The renamed framework command packages are:
 |`org.apache.grails.security.cli.*` (grails-spring-security-cli)
 |===
 
-===== 35.1 Backwards Compatibility for Existing Command Plugins
+===== 37.1 Backwards Compatibility for Existing Command Plugins
 
 Grails 8 provides a deprecated, execution-only compatibility layer for already-published Grails 7 command
 plugins. Application commands created with `create-command` that implement
@@ -2816,7 +2861,123 @@ A GSP precompiled by Grails 7 and shipped inside a binary plugin carries no chec
 normally; it is simply never reload-checked, which was already the case for views resolved out of a plugin
 jar.
 
-==== 50. Tag Libraries Are Described When Compiled
+==== 50. The Hidden HTTP Method Filter Is Disabled by Default
+
+Grails has always registered a servlet filter that rewrites a `POST` into a `PUT`, `PATCH` or `DELETE` when the
+request carries a `_method` parameter or an `X-HTTP-Method-Override` header. It runs ahead of the dispatcher --
+and ahead of the Spring Security filter chain. **As of Grails 8 it is no longer registered by default.**
+
+Browser forms keep working. The `_method` parameter is still honoured; it is resolved inside the dispatcher
+instead, after multipart handling and after the filter chain. `<g:form method="DELETE">`, the scaffolded views
+and existing GSP templates need no changes.
+
+===== 50.1 Why the default changed
+
+The filter reads a request parameter before the dispatcher runs. Because a `MultipartConfigElement` is attached
+to the dispatcher servlet registration, the servlet container resolves it at filter time, so reading `_method`
+on a `multipart/form-data` POST forces the container to parse the entire body -- writing its temporary files --
+**before the request has been routed or authenticated**. An unauthenticated request can therefore cause uploads
+to be written to disk.
+
+Spring Boot disabled its equivalent filter by default in 2.2 for the same reason: it "causes early consumption
+of a request body if the body may contain parameters".
+
+The filter is also wider than Spring's. Spring's `HiddenHttpMethodFilter` reads only the `_method` parameter and
+honours only `PUT`, `PATCH` and `DELETE`. The Grails filter additionally trusts the `X-HTTP-Method-Override`
+header -- which any client can set -- and applies **any** method name it is given, including `GET`. The
+in-dispatcher resolution that replaces it accepts the parameter only, and only those three methods.
+
+===== 50.2 What changes for an application
+
+* **`POST` to a member URL now reaches `update`.** A `resources` mapping generates `POST /books/$id` alongside
+`PUT /books/$id`. `RestfulController` has permitted `POST` for `update` since Grails 3 (issue #9926, raised
+because AngularJS `$resource` and the clients modelled on it POST to save an existing object) but no mapping
+was ever generated for it. That is now fixed, and it is what lets a client submit without a `_method` parameter.
++
+This is a route that did not exist before, so a `POST` an application previously rejected at the member URL now
+reaches `update`. An authorization rule written to permit `POST` to the collection -- `POST /books` to create --
+will permit `POST /books/1` too wherever it is expressed as a prefix. **Review any rule that grants `POST` on a
+`resources` path before upgrading**, or keep the route out entirely by enabling the filter as described below.
+* **`<g:form>` is unchanged.** A form asking for `PUT`, `PATCH` or `DELETE` still submits a `POST` carrying a
+`_method` field, and the dispatcher resolves it. The route above is a fallback for a request that arrives
+without the parameter — an AngularJS-style client, or a hand-written form — rather than a replacement for it:
+it reaches `update` alone, so it answers for neither a `PATCH` nor a `DELETE` form, it is not generated for a
+singular `resource` mapping, and it says nothing about a URL an application has mapped to `PUT` itself.
+* **Servlet filters see the real request method.** This is the one consequence that fails silently. A `POST`
+carrying `_method=DELETE` now reaches Spring Security and every servlet filter as a `POST`, because the rewrite
+happens inside the dispatcher. A security rule matching `DELETE /books/**` **will no longer fire for a browser
+form submit**, and since the URL is unchanged, `update` and `delete` cannot be told apart by path either.
+**Review any authorization rule keyed on the HTTP method before upgrading.**
+* **`X-HTTP-Method-Override` is no longer honoured**, and a `_method` value other than `PUT`, `PATCH` or
+`DELETE` is ignored rather than applied. This one fails silently for a non-browser client: a proxy or SDK
+that rewrites `DELETE` into `POST` plus the header now has its `POST /books/1` answered by `update` with a
+`200`, while the caller believes it issued a `DELETE`. **Enable the filter for an application any such client
+talks to**, which restores both the header and the unrestricted method names.
+
+* **A filter registered by the application does not by itself select filter mode.** The mode is read from
+`grails.web.hiddenmethod.filter.enabled` and `spring.mvc.hiddenmethod.filter.enabled` only. An application
+that registers its own `HiddenHttpMethodFilter` bean without setting either property gets that filter *and*
+the dispatcher-mode behaviour described here, including the generated `POST` member route. Set the property
+alongside the bean.
+
+* **A controller's `request.method` reports `POST`.** The servlet request reports the method the request
+arrived as -- the one Spring Security saw and the access log recorded. That is deliberate: with the rewrite
+moved out of the filter chain, a request object that reported anything else would put back the divergence
+between what an application sees and what the infrastructure saw.
++
+Everything Grails resolves *from* the request answers with the overridden method instead, so that an
+application behaves the same whichever mode is in force:
++
+[cols="1,1"]
+|===
+|Reports the overridden method |Reports the method on the wire
+
+|URL mapping resolution, including a method-keyed `controller`/`action` name
+|`request.method`, and the servlet request generally
+
+|`allowedMethods`
+|Spring Security and every other servlet filter
+
+|Link generation, when no `method` attribute is given
+|The container's access log
+
+|`RenderContext.getHttpMethod()`
+|
+
+|Command object initialization, and whether a request body is bound
+|
+|===
++
+Anything branching on `request.method` itself for a `PUT`, `PATCH` or `DELETE` form submit needs
+`allowedMethods`, separate actions, or its own read of the parameter. Enabling the filter restores the old
+reading, as described below.
+
+===== 50.3 Restoring the previous behaviour
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    web:
+        hiddenmethod:
+            filter:
+                enabled: true
+----
+
+That restores the filter exactly as it behaved in Grails 7, including the header and the unrestricted method
+names, and suppresses the `POST` member route so the mappings a `resources` block generates are unchanged.
+
+Spring Boot's `spring.mvc.hiddenmethod.filter.enabled` selects the same mode, registering Spring's filter
+rather than the Grails one. Either property is enough: whichever is set, a filter is on the chain, the
+dispatcher stops resolving `_method` itself, and the `POST` member route is not generated.
+
+NOTE: Spring's filter is contributed by `WebMvcAutoConfiguration`, which backs off entirely for an application
+declaring `@EnableWebMvc`. Grails contributes its own filter in that case, so asking for Boot's still leaves a
+filter on the chain rather than silently leaving none. Previously the two definitions could also collide on the
+shared `hiddenHttpMethodFilter` bean name and fail application startup; they no longer can.
+
+
+==== 51. Tag Libraries Are Described When Compiled
 
 Tag calls are resolved against a description each tag library contributes as it is compiled, and a
 resolved call is compiled into a direct invocation. The tag itself is still selected by name when the
@@ -2971,12 +3132,12 @@ class ReportController {
 A tag called *with* its namespace, and any tag called from a GSP, already captured, so only an
 unqualified call from a controller to a method-declared tag changes.
 
-==== 51. Quartz Job Scheduling Behavior Changes
+==== 52. Quartz Job Scheduling Behavior Changes
 
 Three behaviors of the Quartz plugin changed in this release. All three concern what happens when
 something about a schedule is wrong; none of them require a change to a job class.
 
-===== 51.1 A trigger that can never fire no longer stops startup
+===== 52.1 A trigger that can never fire no longer stops startup
 
 A job whose trigger has no possible fire time — a cron expression whose last occurrence is in the past,
 or an end time that has already passed — used to make the application fail to start, because the
@@ -2999,7 +3160,7 @@ quartz:
     failOnNeverFiringTriggers: true
 ----
 
-===== 51.2 An application only removes the jobs it registered itself
+===== 52.2 An application only removes the jobs it registered itself
 
 When an application starts, the plugin removes the jobs in the job store which are no longer enabled job
 artefacts of the application. It used to consider *every* job in the store, which with a persistent job
@@ -3019,7 +3180,7 @@ with `quartz.jdbcStore` enabled the plugin warns about that at startup.
 removed automatically. A job class you deleted while running an older version leaves a row behind; remove
 it with `jobManagerService.removeJob(group, name)` or from the Quartz tables.
 
-===== 51.3 Scheduling methods report what is wrong instead of failing with a null pointer
+===== 52.3 Scheduling methods report what is wrong instead of failing with a null pointer
 
 The static scheduling methods every job class gets — `schedule`, `reschedule`, `unschedule`,
 `triggerNow`, `removeJob` — used to fail with a `NullPointerException` when called with a null argument,
@@ -3034,7 +3195,244 @@ job is disabled with `jobEnabled = false`, or the class is not a job artefact of
 An application that caught `NullPointerException` around these calls has to catch those instead. See
 <<quartzDynamicScheduling,Dynamic Job Scheduling>>.
 
-==== 52. Coordinate Changes
+==== 53. `request` Is No Longer a `MultipartHttpServletRequest`
+
+The `request` object Grails exposes to controllers, tag libraries and GSPs is now always the outermost
+servlet request. Previously, for a file upload, Grails replaced it with the resolved
+`MultipartHttpServletRequest`, which discarded the request wrappers contributed by other filters — the
+hidden HTTP method filter, Spring Security, and any application filter.
+
+All file upload methods work exactly as before:
+
+[source,groovy]
+----
+def upload() {
+    def file = request.getFile('myFile')
+    if (file.empty) {
+        flash.message = 'file cannot be empty'
+        render(view: 'uploadForm')
+        return
+    }
+    file.transferTo(new File('/some/local/dir/myfile.txt'))
+}
+----
+
+`request.getFiles(name)`, `request.getFileNames()`, `request.getFileMap()`, `request.getMultiFileMap()`
+and `request.getMultipartContentType(name)` are likewise unchanged, as is binding a file through
+`params`:
+
+[source,groovy]
+----
+def img = new Image(params)
+----
+
+What no longer works is treating `request` as a `MultipartHttpServletRequest` by type:
+
+[source,groovy]
+----
+// Before
+if (request instanceof MultipartHttpServletRequest) {
+    def file = ((MultipartHttpServletRequest) request).getFile('myFile')
+}
+
+// After
+def file = request.getFile('myFile')
+----
+
+Calling one of the file methods on a request that is not a file upload throws `IllegalStateException`
+with a diagnostic message, the same way it previously failed with `MissingMethodException`.
+
+===== 53.1 Oversized uploads now reach the application's error handling
+
+An upload larger than `spring.servlet.multipart.maxFileSize` or `spring.servlet.multipart.maxRequestSize`
+(1MB per file and 10MB per request by default, see <<multipart-upload-configuration,Multipart Upload
+Configuration>>) fails when the servlet container parses the request parts, and every parameter read on
+that request fails with it from then on. Because Grails reads request parameters on paths that run
+before, alongside and after the handler — to resolve the `_method` override, whenever a filter such as
+Spring Security builds `params`, in the locale-change interceptor, and in the exception resolver's
+request log — that failure used to abort the request inside the filter chain, where no exception
+handler could see it. The application was left with the container's own error page.
+
+Those reads now tolerate a multipart request the container refuses to parse, so the failure surfaces
+where Spring raises it, as a
+`org.springframework.web.multipart.MultipartException`/`MaxUploadSizeExceededException` during
+dispatch. The exception is available to `HandlerExceptionResolver` beans, and the response is a `413`
+rendered through the application's error dispatch instead of the container's own error page.
+
+A `"413"` response code URL mapping handles it, the same way a `"404"` or `"500"` mapping handles those
+statuses:
+
+[source,groovy]
+----
+"413"(controller: 'errors', action: 'tooLarge')
+----
+
+The mapped action runs on the container's error dispatch, so `request.dispatcherType` is `ERROR` and
+`params` is empty — the container never parsed the request. `request.getFile(..)` is unavailable there
+for the same reason. The upload itself is gone by then; the action's job is to render the response.
+
+The parameters of such a request are empty everywhere, not just in the error handler. The request
+cannot reach the originally requested controller either way — `DispatcherServlet` rejects it before
+handler resolution — so outside the error handler this is only observable in a filter that inspects
+`params` ahead of the dispatch.
+
+====== Servlet container differences
+
+Tomcat and Jetty both surface the failure to the application as described above. Undertow applies the
+limit while it reads the request entity and refuses the request at the HTTP layer, so no application
+code runs at all: the response is a bare `413` with an empty body, and a `"413"` mapping is not
+consulted. Raising `spring.servlet.multipart.maxRequestSize` raises the point at which Undertow
+refuses, but there is no way to render a body for a request the container never dispatches.
+
+===== 53.2 An error handler that fails is no longer forwarded to from inside itself
+
+A `"500"` (or exception-specific) URL mapping that names a controller is reached by forwarding to it.
+That forward re-enters the `DispatcherServlet`, and the forwarded dispatch resolves the same status
+code mapping again. An error handler that failed for a reason belonging to the request rather than to
+the moment — an unparseable multipart body, a missing collaborator — therefore failed again inside its
+own forward, and that failure forwarded to it once more, until the dispatch stack overflowed.
+
+The error handler is no longer forwarded to while a forward to it is already running. The repeat
+failure is logged and the exception is returned to the `DispatcherServlet`, which reports it through
+the container, so the response is a single container-level error rather than a dispatch that never
+terminates. Once the forward returns, a later error on the same request — from an enclosing request
+whose include failed, for instance — is forwarded to the error handler as before.
+
+==== 54. Request Processing Behaviour Changes
+
+Four changes fall out of Grails 8 delegating more of the request path to Spring.
+
+===== 54.1 API versioning headers are now emitted for Grails-mapped requests
+
+`UrlMappingsHandlerMapping` previously assembled its own handler execution chain rather than using
+Spring's. As a result, Grails-mapped requests skipped the interceptor Spring adds for API versioning,
+so the `Deprecation`, `Sunset` and `Link` headers configured through `spring.mvc.apiversion.*` were
+never sent. The chain is now assembled by Spring, and those headers are emitted as configured.
+
+If an application relied on those headers being absent, unset the corresponding
+`spring.mvc.apiversion.*` configuration.
+
+===== 54.2 The `LocaleContext` is restored rather than cleared
+
+At the end of a request Grails previously called `LocaleContextHolder.setLocale(null)`, which discarded
+any `LocaleContext` established earlier in the filter chain by non-Grails code. Grails now saves and
+restores the previous `LocaleContext`, matching Spring's own `RequestContextFilter`.
+
+===== 54.3 The application attributes object is shared per servlet context
+
+`GrailsApplicationAttributes` was constructed once per request. It is now created once per servlet
+context and reused, so the beans it caches are resolved once rather than on every request. It is
+rebuilt automatically if the `ApplicationContext` is replaced.
+
+Applications that implemented `GrailsApplicationAttributes` themselves must ensure their
+implementation holds no request-scoped state and is safe to use from multiple request threads.
+
+===== 54.4 `GrailsWebRequest.setMultipartRequest(..)` is deprecated
+
+`setMultipartRequest(HttpServletRequest)` installed the resolved multipart request on the web request. With
+the substitution gone the resolver publishes it as a request attribute instead, and Grails finds it there or
+by unwrapping. The method still works -- it publishes its argument and discards the cached params -- but a
+caller that has one should move to letting the resolver publish it, or set the attribute directly:
+
+[source,groovy]
+----
+// Before
+webRequest.setMultipartRequest(resolved)
+
+// After
+request.setAttribute(WebUtils.MULTIPART_HTTP_SERVLET_REQUEST_ATTRIBUTE, resolved)
+webRequest.multipartRequestResolved()
+----
+
+===== 54.5 `GrailsWebRequest.getCurrentRequest()` returns what `getRequest()` returns
+
+`getCurrentRequest()` existed to hand back the resolved multipart request in place of the request Grails was
+bound to. That substitution is gone (see _53. `request` Is No Longer a `MultipartHttpServletRequest`_), so
+the two accessors now answer with the same object. The method stays, and calling it is fine; there is simply
+nothing left that distinguishes the two.
+
+Code that reaches for the uploaded files of a multipart request should use the `request.getFile(..)` methods
+described in section 53.
+
+Tests that mock a `GrailsWebRequest` and stub `getCurrentRequest()` need updating. `getRequest()` is
+`final` on Spring's `ServletRequestAttributes`, so `getCurrentRequest()` was the only stubbable request
+accessor, and framework code now calls `getRequest()` directly. Drive a real `GrailsWebRequest` over a
+`MockHttpServletRequest` rather than stubbing the accessor:
+
+[source,groovy]
+----
+// Before
+def webRequest = Mock(GrailsWebRequest)
+webRequest.getCurrentRequest() >> request
+
+// After
+def webRequest = new GrailsWebRequest(request, response, servletContext)
+----
+
+
+==== 55. URL Mapping Names Come From the URI, Not From Request Parameters
+
+A mapping that captures its controller, action or namespace from the URL — `"/$controller/$action?/$id?"`,
+the default mapping every application starts with — used to resolve those names by reading the request's
+parameters during dispatch. The values were normally the ones the URI supplied, because the match wrote its
+captures over the request parameters first. But a token the URI did *not* supply left whatever the request
+carried under that name in place, and the request's own value decided the route.
+
+A request for `/article?action=gallery` therefore reached `ArticleController.gallery()` instead of the
+controller's default action: the optional `$action` token captured nothing, and the query string filled the
+gap. The same held for `controller` and `namespace`, and for a form body as well as a query string.
+
+Captured names now come from the match itself. A token the URI does not supply is simply absent, and a
+request parameter of the same name has no say in routing:
+
+[source,groovy]
+.grails-app/controllers/UrlMappings.groovy
+----
+static mappings = {
+    "/$controller/$action?/$id?"()
+}
+----
+
+[cols="1,1,1", options="header"]
+|===
+| Request
+| Grails 7
+| Grails 8
+
+| `/article/gallery`
+| `ArticleController.gallery()`
+| `ArticleController.gallery()`
+
+| `/article?action=gallery`
+| `ArticleController.gallery()`
+| the default action of `ArticleController`
+|===
+
+`params.action` still holds `gallery` in both versions — only the routing decision changed.
+
+Choosing an action from a request parameter is still supported, by asking for it explicitly with a closure:
+
+[source,groovy]
+.grails-app/controllers/UrlMappings.groovy
+----
+static mappings = {
+    "/$controller" {
+        action = { params.goHere }
+    }
+}
+----
+
+A closure supplied by the mapping keeps reading request state, exactly as before, and mappings that use one
+are unaffected by this change.
+
+Two consequences beyond the routing fix. Request parameters are now built once per request rather than once
+per candidate mapping, since candidates no longer have to be configured onto the request to be identified.
+And `grails.web.mapping.UrlMappingInfo` gains a
+`isNameResolutionRequestDependent()` method for callers that resolve names themselves; it is a default
+method that reports `true`, so an implementation outside the framework keeps its current behaviour without
+changes.
+
+==== 56. Coordinate Changes
 
 `grails-datamapping-async` provides the asynchronous programming model for Grails Data — the
 `AsyncEntity` trait and the `async` namespace — and is meant to be depended on directly by
@@ -3059,7 +3457,7 @@ Grails 7 (`org.apache.grails.data:grails-datamapping-async`) coordinates in a pr
 ./rename_gradle_artifacts.sh -l my/project/location
 ----
 
-==== 53. `importJavaTime` Removed
+==== 57. `importJavaTime` Removed
 
 The `org.apache.grails.gradle.grails-app` plugin no longer accepts `importJavaTime`.
 
@@ -3097,3 +3495,1066 @@ grails {
 imported whether or not they are present — a star import of an absent package contributes no classes and is
 not an error in Groovy, so the probe changed nothing it could observe. An application that relied on the
 import being *omitted* when the package was absent sees no difference in compiled output.
+
+==== 58. Non-Public Bean Classes Are Marshalled, and Reported Once
+
+Groovy 4 stamped `ACC_PUBLIC` on anonymous inner classes; Groovy 5, which Grails 8 builds on, does not.
+Reflection cannot invoke a method on a class that is not `public` from another package, even when the method
+itself is public, so code that marshalled an anonymous class perfectly well under Grails 7 started failing on
+Grails 8 with `ConverterException` wrapping `IllegalAccessException`. Nothing in the application changed —
+only the class modifier the compiler emits.
+
+A second failure in the same code path is fixed alongside it: converting any `Serializable` bean threw
+`IllegalArgumentException`, because the marshaller asked whether a `private static final long
+serialVersionUID` field was accessible before checking that it was static, which the JDK rejects. Practically
+every serializable bean declares that field, so this affected a large share of objects passed to `as JSON`.
+
+Grails 8 adds compatibility handling for the non-public case, and reports each such class once so that the
+code can be corrected — see 58.2 below. The shape that hits it is an anonymous implementation of a public
+interface:
+
+[source,groovy]
+----
+def show() {
+    def user = new UserDetails() {
+        @Override Collection<? extends GrantedAuthority> getAuthorities() { [new SimpleGrantedAuthority('ROLE_ADMIN')] }
+        @Override String getPassword() { null }
+        @Override String getUsername() { 'user' }
+    }
+    render([user: user] as JSON)
+}
+----
+
+NOTE: Ordinary Groovy code is unaffected. Property access and method calls through the metaclass still work
+on such an object from any package, as does the JDK's `Introspector`; only raw reflection against the method
+as the non-public class declares it fails. That is what bean marshalling was doing.
+
+===== 58.1 Public Fields of Non-Public Classes Are Now Included
+
+Java and Groovy beans are now treated alike. A `public` instance field declared on a class that is not
+public was silently omitted from the JSON or XML body when the bean was a plain Java object; it is now
+included, as it always was for a Groovy bean. If a field was being dropped by accident and should stay out
+of the payload, exclude it explicitly or register an `ObjectMarshaller` for the class:
+
+[source,groovy]
+----
+def json = someObject as JSON
+json.excludes = ['nickname']
+render json
+----
+
+A `public` *field* that cannot be read at all — because its class is in a named module that does not open
+its package — is skipped, and the rest of the object still converts. A *getter* in that same situation is
+not skipped: the conversion fails, as it did before Grails 8.
+
+===== 58.2 The Warning
+
+Reading a bean whose class is not public is compatibility handling rather than a supported contract, so each
+such class is reported once:
+
+[source,text]
+----
+Class [com.example.DemoController$1] is not public. Grails reads its properties through compatibility
+handling that may be withdrawn in a future major release. Declare it as a named public class so that it
+reads as a standard JavaBean, or register an ObjectMarshaller for it if the class is not yours. To silence
+this, set the log level of [org.apache.grails.common.reflect.ReflectionUtils] above WARN. (warned once per class)
+----
+
+The fix is to declare the class `public` — as a named class where it is currently anonymous — or, for a class
+you do not own, to register an `ObjectMarshaller` for it. Classes from the JDK, Groovy, and Spring are never
+reported, since an application cannot declare those public.
+
+To silence the warning instead:
+
+[source,yaml]
+.application.yml
+----
+logging:
+    level:
+        org.apache.grails.common.reflect.ReflectionUtils: ERROR
+----
+
+==== 59. Interceptor URI Matching Uses the Dispatched Path
+
+Interceptors that match on `uri`, with `match(uri: ...)` or `excludes(uri: ...)`, now match the same path that URL
+mappings route on: percent escapes are decoded, matrix parameters (`;name=value`) are removed and the context path is
+stripped before the pattern is applied. Previously the raw request URI was matched, so an encoded (`/%61dmin/users`)
+or matrix-parameter (`/admin;x=1/users`) request could reach a controller without triggering an interceptor declared
+for `/admin/**`. Interceptors matched by controller, action or namespace are unaffected.
+
+Review interceptors that use `uri` matching for the following changes:
+
+* **Interceptors combining `match(uri:)` with an `excludes(...)` now run under a context path.**
+In earlier versions a matcher that paired a `uri` pattern with any exclusion (`excludes(uri:)`, `excludes(controller:)`,
+`excludes(action:)` or a closure) never matched when the application was deployed under a non-root context path (for
+example `server.servlet.context-path=/app`), because the exclusion check required the pattern to match both the
+context-prefixed and the context-relative request URI, which a pattern such as `/api/**` cannot do. Only that shape was
+affected: `matchAll()` with exclusions, `match(controller:)` and other name-based matchers, `match(uri:)` without an
+exclusion, and `uri` patterns that match both forms such as `/**` all ran as expected. The affected shape now behaves
+as configured, so an interceptor written that way starts executing under a context path.
+
+* **Patterns are matched against the path within the application only.**
+A pattern is no longer also compared with the context-prefixed request URI, so `+match(uri: '/*/*')+` no longer matches
+`/app/save` under the context path `/app`. Patterns that begin with the context path, such as
+`match(uri: '/app/admin/**')`, are still accepted for backwards compatibility.
+
+* **Includes are matched against the included path.**
+During a `<g:include>` or `RequestDispatcher` include, `uri` matchers see the included path rather than the URI of the
+outer request. This is consistent with the controller selected for the include and with `match(controller:)`
+matchers, which already matched the included controller.
+
+* **Custom `grails.interceptors.Matcher` implementations receive the canonical path.**
+The `uri` argument passed to `doesMatch` is now the decoded, application-relative path without matrix parameters. A new
+`doesMatch(String uri, UrlMappingInfo info, String method, String contextPath)` default method also supplies the
+context path; override it when a matcher needs the context-prefixed form.
+
+The Spring Security plugin applies the same canonicalization when matching `ipRestrictions` patterns and when the
+`AntPathRequestMatcher` compatibility class selects a filter chain, so an encoded or matrix-parameter variant of a
+restricted path is subject to the same restriction as the plain path.
+
+The canonical form follows the URI and Servlet specifications, with two deliberate exceptions. Path parameters are
+removed from each segment before percent-decoding, as Jakarta Servlet 6.0 section 3.5.2 requires of containers, so an
+encoded semicolon (`%3B`) is a literal character and not a parameter delimiter (RFC 3986 section 2.2). Percent-encoded
+unreserved characters such as `%61` are decoded (RFC 3986 section 2.3), and the path is decoded exactly once
+(RFC 3986 section 2.4). The exceptions are inherited from Spring's `UrlPathHelper`, which Grails URL mapping dispatch
+has used since Grails 3: the context path is compared case-insensitively although RFC 3986 section 6.2.2.1 and
+RFC 9110 section 4.2.3 define paths as case-sensitive, and during a `RequestDispatcher` include the included path is
+matched. Interceptors and the Spring Security matchers follow dispatch on both points because a matcher that
+disagrees with dispatch lets a request reach a controller without its interceptors or restrictions.
+
+==== 60. Sort and Order Query Arguments Are Validated
+
+Grails 8 checks the `sort` and `order` arguments of `list()`, dynamic finders, where queries, criteria queries and `listOrderBy*` before the query is built, on both Hibernate 5 and Hibernate 7. A client-supplied sort value used to be interpolated into the query, and the entry points did not agree on how a bad value was handled. They now fail the same way everywhere, with an `IllegalArgumentException` whose message deliberately does not echo the value.
+
+A `sort` key must be a property path made up of identifiers separated by dots, such as `"title"` or `"author.name"`, that resolves through the domain class mapping. A dotted key whose first segment is an alias created with `createAlias` or declared in a where query is still left to the query to resolve. Anything else is rejected with the message `Invalid sort property`:
+
+* A value carrying a second expression, a direction or a function call, for example `"title, id"`, `"title desc"` or `"upper(title)"`.
+* A bare name that is not a property of the domain class. Previously this reached Hibernate and failed with a Hibernate exception or a `NullPointerException`.
+* A path into an unknown property of an association, or into a property that is not an association, for example `"author.unknown"` or `"title.length"`.
+
+An `order` value must be `"asc"` or `"desc"`, compared case-insensitively with surrounding whitespace ignored. Any other value is rejected with the message `Invalid sort direction`. Previously most entry points treated anything other than `desc` as ascending, so a typo such as `order: "descending"` silently sorted ascending. The value is checked even when no `sort` argument is given.
+
+With Hibernate 7, `list()` additionally requires each `fetch` key to name a persistent property, and rejects anything else with the message `Invalid fetch property`.
+
+Applications that pass request parameters straight through to these methods no longer need their own checks. Code that relied on an invalid value being ignored must now pass `asc` or `desc` and a real property name. To return a different response for a bad value, catch `IllegalArgumentException` where the query is issued:
+
+[source,groovy]
+----
+def index(Integer max) {
+    try {
+        respond Book.list(max: max, sort: params.sort, order: params.order)
+    } catch (IllegalArgumentException ignored) {
+        render status: 400
+    }
+}
+----
+
+==== 61. XML Request Bodies That Declare a DOCTYPE Are Refused
+
+XML that Grails parses on an application's behalf is now read with external entity expansion, external DTD retrieval and
+DTD grammar loading disabled. Earlier releases set these parser features under identifiers the parser did not recognise,
+so the parser's own defaults applied instead.
+
+An `application/xml`, `text/xml` or `application/hal+xml` request body, or a string passed to `XML.parse`, that declares
+a `DOCTYPE` is additionally refused rather than bound, whether or not the declaration references anything external.
+Binding such a body fails with the `invalidRequestBody` error code. There is no setting that relaxes this; a client that
+sends a declaration needs to omit it.
+
+Descriptors that Grails reads from the classpath, such as JSP tag library descriptors and `web.xml`, and the
+`response.xml` accessor in controller unit tests are not affected. They may declare a `DOCTYPE`, though the DTD it names
+is never retrieved. The plugin descriptor `grails-plugin.xml` is not among them: Grails generates it and never writes a
+declaration, so it is read strictly at compile time and at runtime alike.
+
+See <<upgrading>> for the full description of the XML parsing defaults.
+
+[[groovy-compiler-config-scripts]]
+==== 62. Generated Groovy Compiler Configuration Scripts
+
+On Gradle 9.7+, configure `groovyOptions.configurationScriptFile` before task execution. Assigning
+`groovyOptions.configurationScript` from `compileGroovy.doFirst { ... }` fails because Gradle has
+already finalized the compiler options. Grails prepares the combined compiler script before compilation.
+
+If another task generates your compiler script, prefer passing that task's output provider to
+`configurationScriptFile`. The provider carries both the file location and its producing task, so
+Grails can prepare the combined script after your script is generated.
+
+Declare the generated script as an output and connect it through its provider:
+
+[source,groovy]
+.build.gradle
+----
+import org.gradle.api.DefaultTask
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.compile.GroovyCompile
+import org.gradle.work.DisableCachingByDefault
+
+@DisableCachingByDefault(because = 'Writing a short compiler script is inexpensive')
+abstract class GenerateCompilerScript extends DefaultTask {
+    @OutputFile
+    abstract RegularFileProperty getOutputFile()
+
+    @TaskAction
+    void generate() {
+        def script = outputFile.get().asFile
+        script.parentFile.mkdirs()
+        script.text = "withConfig(configuration) { imports { star 'java.nio.file' } }"
+    }
+}
+
+def generateUserConfigScript = tasks.register('generateUserConfigScript', GenerateCompilerScript) {
+    outputFile.set(layout.buildDirectory.file('user-config.groovy'))
+}
+
+tasks.named('compileGroovy', GroovyCompile) {
+    groovyOptions.configurationScriptFile.set(generateUserConfigScript.flatMap { it.outputFile })
+}
+----
+
+No separate `dependsOn` is needed for this producer. If the script's content depends on task properties
+or other files, declare those as task inputs so changes regenerate the script.
+
+Existing builds can also keep the plain file assignment with an explicit compile dependency:
+
+[source,groovy]
+.build.gradle (alternative wiring for the producer above)
+----
+tasks.named('compileGroovy', GroovyCompile) {
+    dependsOn generateUserConfigScript
+    groovyOptions.configurationScript = file('build/user-config.groovy')
+}
+----
+
+Grails matches the configured file against the declared outputs of the compile task's direct
+dependencies and orders script preparation after the matching producer. This preserves the Grails 7
+pattern when the producer declares the exact script file as an output, whether through an `@OutputFile`
+property as `GenerateCompilerScript` does above or through `outputs.file(...)` on an ad-hoc task. A
+dependency that declares only a containing output directory, writes the file without declaring it as an
+output, or is reachable only through another task's `dependsOn` cannot be identified this way. Such a
+build fails from a clean checkout before compilation starts, with a validation error on the
+`generateCompileGroovyGrailsCompilerConfig` task that Grails registers:
+
+[source,text]
+----
+A problem was found with the configuration of task ':generateCompileGroovyGrailsCompilerConfig' (type 'GrailsCompilerConfigScriptTask').
+Input file does not exist
+  ... property 'configurationScript' specifies file '.../build/user-config.groovy' which doesn't exist
+----
+
+If you see this error, expose the script as an output file and use the provider wiring instead.
+
+An existing, checked-in compiler script can still use a plain file assignment without a producer.
+Tasks that only generate source or classpath entries do not need additional ordering against
+compiler-script preparation: Grails does not read the compile or runtime classpath to prepare its script.
+
+==== 63. `count()` Returns `Long`
+
+`count()` and the `count` property return `Long` instead of `Integer`:
+
+[source,groovy]
+----
+// Grails 7
+Integer total = Book.count()
+
+// Grails 8
+Long total = Book.count()
+----
+
+How wide the underlying value is depends on the datastore. Hibernate counts with SQL `COUNT(*)` and Neo4j
+with Cypher `count(*)`, both 64-bit. MongoDB aggregates with `{$sum: 1}`, which returns Int32 and promotes
+to Int64 once the total exceeds it, so the width depends on how many documents the collection holds. Only
+the in-memory datastore is fixed at 32 bits, and it returns a list size. `GormStaticApi.count()` narrowed the datastore
+result with `intValue()`, which truncates silently, so
+a table with more than `Integer.MAX_VALUE` rows reported a wrong and possibly negative count with no
+error. `Long` is the only type that holds every value a datastore can produce here, so it is what the API
+now declares.
+
+The change affects `GormStaticOperations.count()` and `getCount()`, the `count()` and `count` members
+generated on every domain class, and `RestfulController.countResources()`. Dynamic Groovy is unaffected:
+`Book.count() == 5`, `int n = Book.count()` and arithmetic on the result all continue to work, because
+Groovy converts between numeric types on assignment and compares them by value.
+
+Code that is statically compiled, or that overrides one of these methods, needs updating:
+
+[source,groovy]
+----
+@CompileStatic
+class ReportService {
+    // Grails 7
+    // Integer bookCount() { Book.count() }
+
+    // Grails 8
+    Long bookCount() { Book.count() }
+}
+
+class BookController extends RestfulController<Book> {
+    // Grails 7
+    // protected Integer countResources() { ... }
+
+    // Grails 8
+    protected Long countResources() { ... }
+}
+----
+
+Java callers assigning the result to an `Integer` or `int` need an explicit conversion, since `Long` does
+not unbox to `int`:
+
+[source,java]
+----
+long total = Book.count();            // auto-unboxes, no change needed
+int  small = Book.count().intValue();  // only when the count is known to be small
+----
+
+A GSP that declares the count in a typed model directive should declare it as `Number`, which accepts
+whatever a controller supplies:
+
+[source,html]
+----
+@{ model="List<Book> bookList; Number bookCount" }
+----
+
+JSON views declare their model the same way, and bind it the same way, so a `model` block naming the count
+with a concrete numeric type needs the same treatment:
+
+[source,groovy]
+.grails-app/views/book/index.gson
+----
+model {
+    Iterable<Book> bookList
+    // Grails 7
+    // Integer bookCount
+    Long bookCount     // or Number, to accept either width
+}
+----
+
+`HalViewHelper.paginate()` and `links()` now declare `total` as `Long`, and `paginate()` declares `offset`
+as `Long` with it. Callers are unaffected, because Groovy widens an `Integer` argument to `Long` in both
+dynamic and statically compiled code, but anyone implementing `HalViewHelper` has to update their
+signatures.
+
+The GraphQL count field changes type with it. `graphql-java` maps `Long` to
+`ExtendedScalars.GraphQLLong`, so a schema that exposed
+
+[source,graphql]
+----
+type Query {
+  personCount: Int
+}
+----
+
+now exposes
+
+[source,graphql]
+----
+type Query {
+  personCount: Long
+}
+----
+
+Queries that select the field are unchanged and the JSON value is unchanged, but generated clients and
+schema snapshots need regenerating. The count fetcher previously narrowed the datastore result to fit
+`Int`, so counts above `Integer.MAX_VALUE` were truncated there too.
+
+Paginated list responses already type `totalCount` as `Long` through the same type manager, in
+`DefaultGraphQLPaginationResponseHandler`, so this aligns the count field with a scalar the schema
+already used rather than introducing a new one.
+
+==== 64. Grails Plugins Run for a Grails Application Only
+
+In earlier Grails 8 milestones, the Grails plugin lifecycle ran for any Spring Boot application that had
+`grails-core` on its class path, whether or not it was a Grails application. An application that depended on
+a Grails library — GSP for its views, say — had Grails plugin beans registered alongside the library's own
+auto-configuration. This could prevent the context from starting because of duplicate beans or circular
+references. Grails 7 did not run the plugin lifecycle for a context that omitted the Grails application class.
+
+The lifecycle now runs only for a Grails application: one that `GrailsApp` launched, or one where a source of
+the context is a Grails application class, which is what `grails-app/init/Application.groovy` is. A Grails
+application is unaffected either way. A Spring Boot application using a Grails library gets that library's
+auto-configuration and nothing else.
+
+This matters if you deliberately put a Grails plugin on the class path of an application that is not a Grails
+application and relied on its `doWithSpring` or `beanRegistrar` beans being contributed. Those beans are no
+longer registered. A plugin that also publishes an auto-configuration — as the Grails modules do, and as
+`@GrailsBeans` generates for a plugin's `beans` block — continues to contribute through Spring Boot's own
+auto-configuration, which needs no lifecycle.
+
+Inside a Grails application, `@SpringBootTest(classes = SomeConfig)` uses the explicitly named configuration
+classes. If those sources do not include the Grails application class, the plugin lifecycle does not run.
+This matches Grails 7. Earlier Grails 8 milestones attempted to register plugin beans in this context; with
+Hibernate, that could fail during startup because a plain Spring Boot application disallows circular references.
+
+A bare `@SpringBootTest` can discover the application's `Application` class automatically, so it does not
+need an explicit `classes` attribute to select the Grails lifecycle. When specifying custom configuration
+classes, include `Application` only if the test needs the Grails plugin runtime:
+
+[source,groovy]
+----
+// A context using only this configuration, without the Grails plugin lifecycle
+@SpringBootTest(classes = SomeConfig)
+class ConfigurationSpec extends Specification { }
+
+// Include the application and start through its main method to apply GrailsApp's defaults
+@SpringBootTest(classes = [Application, SomeConfig], useMainMethod = SpringBootTest.UseMainMethod.ALWAYS)
+class ApplicationSpec extends Specification { }
+----
+
+Selecting the application class and applying the startup defaults from `GrailsApp` are separate concerns.
+By default, `@SpringBootTest` does not invoke the application's main method. In a Grails application with
+Hibernate, it can therefore fail on bean overriding or circular references even when the application class
+is selected. Use `useMainMethod = SpringBootTest.UseMainMethod.ALWAYS`, as above, or set both
+`spring.main.allow-bean-definition-overriding=true` and `spring.main.allow-circular-references=true` on the
+test. This startup limitation also existed before the lifecycle change.
+
+`@Integration` tests are unaffected: they name the application class and invoke its main method. So are
+tests using the `grails-testing-support` unit test mixins, which build their context without the lifecycle
+either way.
+
+==== 65. `sitemesh.decorator.default` Is Consulted for the Default Layout
+
+The SiteMesh 3 integration resolved the default layout from `grails.sitemesh.default.layout`, falling back to
+the legacy `grails.views.layout.default`. With neither set it used the implicit `application` layout.
+
+SiteMesh's own `sitemesh.decorator.default` is now consulted as a last fallback, after both Grails keys. It is
+the property a Spring Boot application rendering views with GSP configures, and a Grails application has it
+set from the Grails keys already, so it decides only where neither Grails key is set.
+
+This changes behaviour for a Grails application that set `sitemesh.decorator.default` and neither Grails key:
+it was decorated with the implicit `application` layout and is now decorated with the layout that property
+names. Set `grails.sitemesh.default.layout` to be explicit, or remove `sitemesh.decorator.default` to keep the
+implicit `application` layout. An application that sets either Grails key is unaffected — those still win.
+
+==== 66. Promise Execution and Async Request Migration
+
+The default `PromiseFactory` now uses JDK `CompletableFuture`; it is no longer an `ExecutorPromiseFactory` or an `ExecutorService`. Inject `PromiseFactory` for promise operations rather than casting it to the legacy executor implementation. Explicit GPars and RxJava providers remain available.
+
+In applications, promises and the default event bus share Boot's named `applicationTaskExecutor`. This changes the usual execution policy from an expanding cached pool to Boot's configured executor (normally eight core threads with an unbounded queue). Review blocking workloads and configure `spring.task.execution.pool` and shutdown settings accordingly, or enable `spring.threads.virtual.enabled` on Java 21+. Avoid waiting synchronously for nested tasks in the same saturated pool. If Boot does not provide the named executor, Grails supplies an eight-core-thread managed fallback. Standalone promise factories retain a cached pool.
+
+The FutureTask-based promise implementations, `PromiseFactoryBean`, `AsyncController.startAsync()`, and the Grails-specific Servlet async wrappers are deprecated for removal. Replace custom legacy factory wiring with the async plugin and Boot executor configuration; replace manual Servlet dispatch/completion with a returned `Promise`. Existing Groovy `task`, `tasks`, `then`, and `onError` entry points remain supported.
+
+Both eager web promises and returned promises now honor `spring.mvc.async.request-timeout`; the Servlet container default applies when unset (normally 30 seconds on Tomcat), rather than an infinite timeout for eager web promises. Timeouts return HTTP 503 and can use a `503` URL mapping. Set a timeout explicitly if your application requires long-running responses. With the default and virtual-thread factories, single and aggregate error callbacks receive the original failure, while both direct and chained `get()` methods use the `Future` contract's `ExecutionException` wrapper.
+
+The `grails.async.promiseFactory=virtual-thread` opt-in now uses the same CompletableFuture implementation with its own decorated executor; it no longer relies on the deprecated FutureTask classes. Its default event bus remains asynchronous and its web tasks propagate request context. Its aggregate `onComplete` resolves to the callback's result, and aggregate `onError` observes the original failure while leaving the returned promise failed, rather than recovering to an empty list.
+
+==== 67. GORM for Hibernate 7 Tracks Changes From Persist, Not From Insert
+
+GORM for Hibernate 7 now activates its dirty-check tracking when an entity is persisted or merged rather
+than after its row has been inserted. Two observable behaviours change for existing applications on
+Hibernate 7. Applications on Hibernate 5 are unaffected.
+
+===== 67.1 A New Entity Starts at Version 0
+
+An entity whose identifier is generated before the insert, for example one mapped with
+`id generator: 'increment'` or `'assigned'`, or any member of a `tablePerConcreteClass` hierarchy, was
+written with an `INSERT` immediately followed by an `UPDATE` of the same row, so it started at `version` 1.
+It now starts at `version` 0 and costs a single statement, as on Hibernate 5 and as entities using the
+default `identity` generator always did.
+
+Code that compared such a version against 1, or that counted statements or update events for a new entity,
+needs to expect the value it would have had on Hibernate 5:
+
+[source,groovy]
+----
+def book = new Book(title: 'Grails').save(flush: true)   // id generator: 'increment'
+assert book.version == 0                                  // was 1 before Grails 8.0
+----
+
+===== 67.2 Persistence Listeners Receive Persist and Merge Events
+
+An `AbstractPersistenceEventListener` on Hibernate 7 now receives a `PersistEvent` (`eventType` `Persist`)
+for every explicit or flush-time cascaded persist, and a `MergeEvent` (`eventType` `Merge`) for every
+merge. Neither can be cancelled. Hibernate 5 publishes `SaveOrUpdateEvent` when an entity is saved and
+publishes no event for a merge.
+
+A listener that switches over `event.eventType` and throws in its default branch must handle the new
+values:
+
+[source,groovy]
+----
+@Override
+protected void onPersistenceEvent(AbstractPersistenceEvent event) {
+    switch (event.eventType) {
+        case Persist:                      // new on Hibernate 7
+        case Merge:                        // new on Hibernate 7
+        case PreInsert:
+            // ...
+            break
+        default:
+            throw new IllegalStateException("Unhandled ${event.eventType}")
+    }
+}
+----
+
+==== 68. `lock(id)` Applies the Multi-Tenancy Filter
+
+`DomainClass.lock(id)` loaded the row by identifier, and Hibernate's tenant filter does not apply to a load
+by identifier. A `MultiTenant` entity could therefore be locked, and returned, by a tenant that does not own
+it, even though `get(id)` correctly returned `null` for the same identifier.
+
+The lock now loads a multi-tenant entity through a query, as `get(id)` does, so it resolves within the bound
+tenant and returns `null` for a row that belongs to another one. Entities that are not multi-tenant are
+unaffected, and so is the statement issued for them.
+
+Code that relied on `lock(id)` reaching across tenants has to bind the owning tenant explicitly:
+
+[source,groovy]
+----
+Tenants.withId('tenant1') {
+    Book.lock(id)
+}
+----
+
+==== 69. Instance Operations on a Named-Connection Static API Use That Connection
+
+Reaching an instance operation through a named-connection static API - `Book.secondary.save(book)`,
+`Book.secondary.delete(book)` and so on - resolved the instance API for the *default* connection rather than
+for `secondary`. With only the named connection's session open, which is the normal arrangement, the call
+failed with `No Session found for current thread`:
+
+[source,groovy]
+----
+Book.secondary.withNewSession {
+    Book.secondary.withTransaction {
+        Book.secondary.save(book)     // threw: resolved the default connection
+    }
+}
+----
+
+Every such operation now resolves the connection the handle was obtained for: `save`, `insert`, `merge`,
+`delete`, `attach`, `isAttached`, `discard`, `ident`, `lock`, `mutex`, `refresh` and `instanceOf`. The example
+above now saves to `secondary`.
+
+GORM for Hibernate 5 needed a second fix for this to take effect. Its static API discarded the connection
+qualifier it was created with and reported `DEFAULT` for every connection, so a named-connection handle could
+not resolve anything but the default one. It now records its own qualifier, as GORM for Hibernate 7 already
+did. Anything that reads the qualifier of a Hibernate 5 named-connection static API therefore sees the real
+connection name where it previously saw `default`.
+
+Applications using a single datasource are unaffected, and so is the instance form `book.secondary.save()`,
+which already resolved the named connection.
+
+==== 70. `mutex` Reloads the Instance Under the Lock
+
+`entity.mutex { }` took an exclusive lock on the instance's already-loaded state and ran the closure. Because
+that lock is version-checked, a transaction that committed to the row between the load and the `mutex` call
+made it fail with an optimistic locking failure - the closure never ran.
+
+Where the datastore supports it, GORM for Hibernate 5 and 7 included, `mutex` now acquires the lock without a
+version check and reloads the row under it, so it waits for a competing writer and the closure runs on the
+committed state. The lock stays exclusive; there is no argument to weaken it, since a shared or optimistic
+lock would not give the closure mutual exclusion.
+
+Three consequences for existing code:
+
+* **Unflushed changes to the instance are discarded**, as they are for `refresh`. Apply changes inside the
+closure, not before the `mutex` call:
++
+[source,groovy]
+----
+book.title = 'new title'
+book.mutex { book.save() }        // the pending title is discarded by the reload
+
+book.mutex {                      // apply the change inside instead
+    book.title = 'new title'
+    book.save()
+}
+----
+* **An active transaction is required.** Without one the call now throws
+`jakarta.persistence.TransactionRequiredException`.
+* **The instance must be attached** to the current session; a detached one throws `IllegalArgumentException`.
+Re-attach it with `attach()` first.
+
+Code that relied on `mutex` failing fast on a stale version should check the version itself, or use
+`entity.lock()`, which is unchanged.
+
+Datastores that cannot reload under a lock keep their previous behaviour.
+
+==== 71. `id generator: 'sequence'` Derives Its Name From the Table on Hibernate 7
+
+On GORM for Hibernate 7, mapping an identifier with `id generator: 'sequence'` and no `params: [sequence:
+'...']` failed at session factory bootstrap:
+
+[source,groovy]
+----
+static mapping = {
+    id generator: 'sequence'   // threw: Unable to determine implicit sequence name for target table 'null'
+}
+----
+
+Hibernate's own generator-creation path supplies the target table so it can derive an implicit sequence name
+when none is given; the Grails-specific path that constructs the generator directly did not. The table name
+is now supplied the same way, so the mapping above starts the application.
+
+The derived name is not the one Grails 7 used. Hibernate 7 names the sequence after the entity's table with
+its own `_SEQ` suffix, where Grails 7 on Hibernate 5 gave every such mapping the same `hibernate_sequence`:
+
+[cols="2,2",options="header"]
+|===
+| `id generator: 'sequence'` on table `book` | Sequence
+
+| Grails 7, on Hibernate 5
+| `hibernate_sequence`
+
+| Grails 8, on Hibernate 7
+| `book_SEQ`
+|===
+
+An application whose schema is created at startup is unaffected. One that upgrades against an existing
+database has to either add the new sequences to that schema or keep the old name explicitly:
+
+[source,groovy]
+----
+static mapping = {
+    id generator: 'sequence', params: [sequence: 'hibernate_sequence']
+}
+----
+
+Mappings that already name a sequence are unaffected, and so is GORM for Hibernate 5.
+
+==== 72. Calls on a Class Inside a Named Connection's Session or Transaction Use That Connection
+
+Inside a session or transaction opened through a named connection - `Book.secondary.withTransaction { }`,
+`Book.secondary.withNewSession { }` and the like - the calls on `Book` itself, such as `Book.get(id)` or
+`book.save()`, used the *default* connection. With only the named connection's session open, a save failed
+with `No Session found for current thread`, and a read went to the default database:
+
+[source,groovy]
+----
+Book.secondary.withTransaction {
+    def book = Book.get(42)     // read from the default database
+    book.save()                 // threw: No Session found for current thread
+}
+----
+
+Whether the save threw depended on what else was open. With a default-connection session open further out,
+as the open-session-in-view interceptor or an outer `@Transactional` provides, it succeeded and wrote the
+instance to the default database, silently.
+
+They now use the connection whose session or transaction the block opened, as they do inside
+`withConnection`, and the example above reads and saves through `secondary`. Other domain classes are not
+affected, and an operation that names a connection keeps it. The same holds inside a method annotated
+`@Transactional(connection = 'secondary')`, for every domain class mapped to `secondary`; a class that is not
+mapped to it keeps its own connection, and a multi-tenant class is left to its tenant, as it was before. Code that relied on the old routing changes
+behaviour without failing, so look for it: a copy between connections written as
+
+[source,groovy]
+----
+Book.legacy.withTransaction {
+    Book.legacy.list().each { new Book(name: it.name).save() }    // meant for the default database
+}
+----
+
+used to write the copies to the default database, and now writes them back into `legacy`. Code that reached
+the default connection from inside such a block by calling the class directly has to name it now:
+
+[source,groovy]
+----
+Book.secondary.withTransaction {
+    Book.'default'.withSession { Book.count() }    // counts the default database
+}
+----
+
+A method annotated `@Transactional` without a connection, called from inside such a block, does not reset the
+routing. Its transaction is the default connection's, but the calls it makes on a class the block routes still
+reach the block's connection, so those writes join the transaction the block opened rather than the one the
+method began - including under `propagation = REQUIRES_NEW`, whose separate transaction then covers none of
+them. Name the connection, as in `@Transactional(connection = 'secondary')`, where the method's own transaction
+has to cover its writes.
+
+Applications using a single datasource are unaffected.
+
+==== 73. Default Security Response Headers
+
+Grails 8 registers a servlet filter that sends default browser hardening headers (`X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy: strict-origin-when-cross-origin`, `X-XSS-Protection: 0`) on the responses of every servlet web application, so an upgraded application sends these headers without any change on your part.
+The filter is registered at `GrailsFilters.FIRST`, ahead of the other Grails filters, and writes its headers when the response commits, only if nothing else has set them by then, so values set by your controllers, interceptors, custom filters, or Spring Security header writers at Spring Boot's default `spring.security.filter.order` are preserved.
+If you order the Spring Security chain ahead of `GrailsFilters.FIRST`, its header writers (other than the `X-Frame-Options` writer) find the Grails value already present and leave it; disable the corresponding `grails.security.headers.<header>` in that case.
+Filters ordered ahead of `GrailsFilters.FIRST`, such as Spring Boot's forwarded-header filter and, in a WAR deployment, its `ErrorPageFilter`, run outside the Grails filter, so a response one of them serves itself receives no default headers.
+If a reverse proxy in front of the application already sends these headers (for example through nginx's `add_header`), set `grails.security.headers.defaults: auto` so requests that arrive through the proxy (detected from forwarded request headers, `server.forward-headers-strategy`, or an active cloud platform) receive only the headers you configure explicitly, or strip the application's copies at the proxy.
+To disable or customize the Grails defaults, configure `grails.security.headers.*`; see the Security guide's HTTP Security Headers section for the full list and the reverse-proxy guidance.
+
+==== 74. Scaffolded Views Are Compiled With the Application
+
+In Grails 7 a scaffolded view was expanded from its template and compiled on the first request that asked
+for it. In Grails 8, the pages of every controller annotated `@Scaffold`, the application's or a plugin's, are
+expanded at build time by the `generateScaffoldedViews` task, into `build/generated/scaffolded-views`, and
+compiled by `compileGroovyPages` in the same compilation as `grails-app/views`, under a `grails-scaffolded`
+directory that no controller's views resolve from. The resolver still chooses the
+template for a request exactly as before, and serves the page compiled from that template when there is one,
+so a request gets the same page it did. Which pages are compiled, and what happens to the others, is
+described in the link:scaffolding.html[Scaffolding] guide.
+
+`compileGroovyPages` takes the pages as its `generatedViews`, beside its `source`, so a build that sets the
+`source` itself still compiles them. In a project that scaffolds nothing, `generateScaffoldedViews` writes
+nothing.
+
+A scaffolding template of the application's own, in `src/main/templates/scaffolding` or packaged under
+`META-INF/templates/scaffolding`, is now compiled at build time, so one that cannot be expanded, or whose page
+does not compile, fails the build as a view that does not compile does - where in Grails 7 it failed on the
+first request for the view. A page expanded from a template a dependency supplies that cannot be compiled
+does not fail the build: it is left out, the build output names it, and it is expanded when it is first
+rendered, as in Grails 7.
+
+The `generateScaffoldedViews` task of 8.0.0-RC1 wrote pages into the controllers' view directories and had
+`templateClasspath` and `applicationViews` properties. Both are gone: the templates are read from the
+`runtimeClasspath` the pages are expanded on, and a view the application declares needs no exclusion, since
+it takes precedence over any scaffolded page when a request is resolved. A build that configures either
+property fails with an unknown property; remove the setting.
+
+8.0.0-RC1 also compiled a scaffolding project's views from a copy made by a `stageGroovyPages` task, which
+it registered only when a controller source mentioned `@Scaffold` - decided by
+`GroovyPagePlugin.scaffoldsAnyController`. Both are gone: nothing is copied, and every project generates the
+pages its scaffolded controllers need, a plugin's among them. A build that refers to `stageGroovyPages`
+fails with an unknown task; remove the reference.
+
+==== 75. File Renders Default to Attachment Disposition
+
+Grails 8 makes `render(file: ...)` safer by default. File responses now set
+`Content-Disposition: attachment` unless you opt out. If a `fileName` is supplied
+(or derived from a `File`), unsafe characters in that name are escaped before the
+header is written.
+
+Use `inline: true` when the file should stay inline, or set the
+`Content-Disposition` header yourself before calling `render` — Grails leaves an
+existing header alone.
+
+[source,groovy]
+----
+render(file: new File(absolutePath), fileName: 'report.pdf')
+render(file: new File(absolutePath), inline: true)
+----
+
+==== 76. A List of Objects in Configuration Binds to Its Declared Type
+
+A list of objects in `application.yml` or `application.groovy`, such as:
+
+[source,yaml]
+.application.yml
+----
+springdoc:
+    group-configs:
+        - group: sales
+          paths-to-match: /api/v1/**
+----
+
+is now presented to Spring element by element, under the indexed names Spring Boot binds a list from,
+such as `springdoc.group-configs[0].group`, the way Spring Boot's own YAML loader presents it. A
+`@ConfigurationProperties` class declaring a `List` of objects is bound with instances of that type.
+Previously the whole list was also presented under its own name, so Spring Boot bound it as a list of
+maps, and code reading the declared type failed with a `ClassCastException`. springdoc failed that
+way on `springdoc.group-configs` before the application could start.
+
+`Environment.getProperty('springdoc.group-configs')` now returns `null` and
+`Environment.containsProperty` returns `false`, as they do in a Spring Boot application, so a
+`@Value('${springdoc.group-configs}')` without a default fails to resolve, as does a `${...}`
+placeholder naming the list anywhere else. Read such a list through `grailsApplication.config`,
+which is unchanged, or bind it. The same applies to a list holding lists of objects, such as
+`rows: [[{a: 1}], [{b: 2}]]`, whose objects are presented under names such as `rows[0][0].a`, and to
+a list mixing plain values and objects, such as `mixed: [a, {b: 1}]`, presented as `mixed[0]` and
+`mixed[1].b`. Within such a list, an empty object, an empty list or a `null` value is presented as an
+empty string under its own name, such as `empty[0]` for `empty: [{}]`, as Spring Boot presents it. A
+list of plain values only, such as `names: [a, b]`, is presented as before.
+
+What reads the names the configuration presents sees the change too:
+
+* The `config-report` command lists such a list as a row for each value, such as
+  `springdoc.group-configs[0].group`, rather than one row for the list.
+* GORM used outside a Grails application, given a `ConfigurableEnvironment` it copies the property
+  names of, no longer finds the list under its own name. In a Grails application a datastore is
+  given `grailsApplication.config`, and sees the list as before.
+
+==== 77. JSON Rendering of Dates and Times Matches Spring Boot
+
+JSON rendered by `grails.converters.JSON` (`render ... as JSON`, and `respond` for a JSON request) and by JSON views,
+including `g.render`, writes date and time values the same way as Spring Boot's default Jackson `JsonMapper`. The
+exceptions are listed in the notes at the end of this section.
+
+===== 77.1 What 8.0.0 Restores From Grails 7
+
+8.0.0-RC1 changed how `grails.converters.JSON` and `grails.converters.XML` render some dates. 8.0.0 renders them as
+Grails 7 did, so an application upgrading from Grails 7 needs no change for these:
+
+[cols="2,2,2", options="header"]
+|===
+| Value
+| 8.0.0-RC1
+| Grails 7 and 8.0.0
+
+| A `Date`, `Calendar` or `java.sql.Timestamp` whose milliseconds are zero
+| `"2026-09-25T03:00:00Z"`
+| `"2026-09-25T03:00:00.000Z"`
+
+| A `java.sql.Timestamp` with nanoseconds
+| `"2025-10-08T07:48:46.407254Z"`
+| `"2025-10-08T07:48:46.407Z"`
+
+| A `java.sql.Date` with `grails.converters.JSON` or `grails.converters.XML`, and a `java.sql.Time` with
+`grails.converters.XML`
+| a failure to render it
+| rendered as a `Date` is
+|===
+
+See https://github.com/apache/grails-core/issues/16406[#16406].
+
+===== 77.2 Values That Render Differently Than in Grails 7
+
+Review these where an application or its clients read them:
+
+[cols="2,2,2", options="header"]
+|===
+| Value
+| Grails 7
+| Grails 8
+
+| `java.sql.Time`
+| `"2025-10-08T07:48:46.407Z"`, the UTC instant, which does not bind back to a `java.sql.Time`
+| `"01:48:46"`, from `Time#toString()` in the JVM default time zone, which binds back to the same time of day, to the
+second, as with Spring Boot
+
+| A `Date`, `Calendar`, `java.sql` date type or `ZonedDateTime` map key
+| the key's `toString()`, such as `"Wed Oct 08 01:48:46 MDT 2025"`
+| a `Date` (a `java.sql.Time` too) or `Calendar` key as a `Date` value is written, such as
+`"2025-10-08T07:48:46.407Z"`; a `ZonedDateTime` key as `"2026-09-25T00:00:00-03:00"`
+
+| A `Date` or `Calendar` before 1 AD or after 9999 (`grails.converters.JSON`)
+| `"12345-01-01T00:00:00.000Z"`, `"0044-03-15T00:00:00.000Z"` (44 BC)
+| `"+12345-01-01T00:00:00.000Z"`, `"-0043-03-15T00:00:00.000Z"`, ISO 8601 expanded years
+
+| A `Date` inside a collection that `g.render` writes element by element, such as a `List<Object>`
+| `"2025-10-08T07:48:46+0000"`
+| `"2025-10-08T07:48:46.407Z"`, as any other `Date` value
+
+| A `Date` or `Calendar` in JSON views with a configured `grails.views.json.generator.timeZone` other than `GMT`
+| the offset in hours only, such as `"2025-10-08T03:48:46.407-04"`, and `"2025-10-08T13:18:46.407+05"` for
+`Asia/Kolkata`, which names an instant 30 minutes off
+| the offset in hours and minutes, such as `"2025-10-08T03:48:46.407-04:00"` and `"2025-10-08T13:18:46.407+05:30"`, as
+Spring Boot writes them; the default date format is now `yyyy-MM-dd'T'HH:mm:ss.SSSXXX`
+
+| A `Date` rendered by `grails.converters.XML`
+| `2025-10-08 01:48:46.407 MDT`
+| `2025-10-08T01:48:46.407-06:00`, an ISO-8601 date and time with the offset of the JVM default time zone
+|===
+
+Data binding binds a `Month` from its number as well as its name, as Spring Boot reads it: `9`, `"9"` and `"SEPTEMBER"`
+bind to `SEPTEMBER`. Grails 7 bound a number through Spring's conversion service by ordinal, so `9` bound to `OCTOBER`.
+
+JSON views write `Date` and `Calendar` map keys with `grails.views.json.generator.dateFormat`, in the configured
+`timeZone` and `locale`, as they write those values. As with Spring Boot's `spring.jackson.date-format`, the date format
+no longer applies to `java.sql.Time` values, which are written as `"01:48:46"`.
+
+===== 77.3 Values Grails 7 Did Not Render as Values
+
+These rendered as an object of their properties, as `{}`, or not at all, and now render as values:
+
+[cols="2,2,2", options="header"]
+|===
+| Type
+| Grails 7
+| Grails 8
+
+| `java.time.LocalTime` (`grails.converters.JSON`)
+| `{"hour":1,"minute":48,"nano":407254000,"second":46}`
+| `"01:48:46.407254"`, as JSON views already rendered it
+
+| `java.time.OffsetTime` (`grails.converters.JSON`)
+| an object of its properties
+| `"03:00:00-03:00"`, as JSON views already rendered it
+
+| `java.time.Period` (`grails.converters.JSON`)
+| an object of its properties
+| `"P1Y2M3D"`, as JSON views already rendered it
+
+| `java.time.Year`
+| an object of its properties, or `{}`
+| `2026`, a JSON number
+
+| `java.time.YearMonth`, `java.time.MonthDay`
+| an object of their properties, or `{}`
+| `"2026-09"`, `"--09-25"`
+
+| `java.time.Duration`
+| an object of its properties, or `{}`
+| `"PT1H30M"`, from `Duration#toString()`
+
+| `java.time.ZoneId`, `java.time.ZoneOffset`
+| an object of their properties, including the zone rules, or `{}`
+| `"America/Sao_Paulo"`, `"-03:00"`
+
+| `java.util.TimeZone`
+| an object of its properties, or a failure to render it
+| `"America/Sao_Paulo"`, its ID
+
+| `javax.xml.datatype.XMLGregorianCalendar`
+| an object of its properties
+| as a `Calendar` is, such as `"2025-10-08T07:48:46.407Z"`
+
+| `javax.xml.datatype.Duration`
+| a failure to render it
+| `"P1DT2H"`, from `Duration#toString()`
+|===
+
+===== 77.4 Keeping the Grails 7 Rendering
+
+To keep the Grails 7 rendering of a type, register an object marshaller for it with `grails.converters.JSON`, for
+example in `BootStrap.init`, and a `groovy.json.JsonGenerator.Converter` for it in JSON views, as described in
+section 24, Custom JSON View Converters:
+
+[source,groovy]
+----
+DateTimeFormatter utc = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC)
+JSON.registerObjectMarshaller(java.sql.Time) { java.sql.Time time ->
+    utc.format(Instant.ofEpochMilli(time.time))
+}
+----
+
+A JSON views converter that returns `new Date(time.time)` for a `java.sql.Time` writes it with the configured
+`dateFormat`, as Grails 7 did. Map keys are not rendered by marshallers or converters: to keep the `toString()` of a date
+key, convert the keys to strings before rendering the map, for example with
+`map.collectEntries { key, value -> [(key.toString()): value] }`.
+
+The default JSON marshallers have implicit priorities that follow their order (-1, -2, and so on), and the marshallers
+added in 8.0 shift those, so a marshaller registered with an explicit negative priority may now come before or after
+different defaults. Marshallers registered with the default priority of 0, or higher, still take precedence over all
+of the defaults. A marshaller registered for `Date` or `Calendar`, like `grails.converters.json.date` set to
+`javascript`, changes how those values render with `grails.converters.JSON`, but not map keys of those types, which
+keep the form in the table above. JSON views format date map keys with `dateFormat`, as described above.
+
+NOTE: Enums render by `name()`, as described in section 8, Enum Serialization Default Changed, while Jackson 3 writes an
+enum's `toString()`, and a `java.time.Month` as its number. The two differ for `Month` (`"SEPTEMBER"` in Grails, `9` in
+Spring Boot) and for enums that override `toString()`, such as `java.time.temporal.ChronoUnit` (`"SECONDS"` in Grails,
+`"Seconds"` in Spring Boot). To render a `Month` as its number, register
+`JSON.registerObjectMarshaller(Month) { Month month -> month.value }` and a JSON views converter that returns
+`month.value`.
+
+NOTE: An `OffsetTime` keeps its seconds and writes a fraction of a second with only the digits it needs, such as
+`"03:00:00-03:00"`, as JSON views have written it since Grails 7, where Spring Boot writes `"03:00-03:00"`. JSON views
+write a year before 1 AD or after 9999 as Grails 7 did.
+
+NOTE: The HAL renderer, `grails.rest.render.hal.HalJsonRenderer` for `application/hal+json`, writes values with Groovy's
+default JSON generator and is not changed.
+
+==== 78. A Date With an Offset Is Bound to the Instant It Names
+
+When controllers, command objects and `bindData` bind a request, a date and time in its ISO 8601
+form, with a `T` between the date and the time, which is how Grails renders a date in JSON, is now
+read first, before the formats that `grails.databinding.dateFormats` lists are tried. Previously:
+
+* `2024-05-01T10:00:00Z`, which 8.0.0-RC1 renders for a `Date` or a `Calendar` whose milliseconds are
+  zero, and which a client may send for any date, was read by the `yyyy-MM-dd'T'HH:mm:ss'Z'` format
+  as a time in the zone of the server, so it was bound off by the offset of that zone.
+* `2024-05-01T10:00:00+02:00` was read by `yyyy-MM-dd'T'HH:mm:ss`, which left the offset unread,
+  and was bound as a time in the zone of the server.
+* A fraction of a second of fewer than three digits, such as the `.5` of `10:00:00.5Z`, was read as
+  milliseconds, so as 5 rather than 500.
+* An `OffsetDateTime` or a `ZonedDateTime` could not be bound from `2024-05-01T10:00:00Z` or
+  `2024-05-01T10:00:00+02:00`, which is how Grails renders them, and a `LocalDateTime` or a
+  `LocalTime` could not be bound from a value with a fraction of a second.
+
+Each is now bound to what it names. A server running in UTC saw the first two bound correctly
+before, and sees no change.
+
+The formats in `grails.databinding.dateFormats` are then tried in order, and a format that reads all
+of the value is now used before an earlier one that reads only the start of it. A value that no format
+reads all of is bound as before, by the first format that reads the start of it: `2024-05-01 10:00`
+is still bound as midnight by `yyyy-MM-dd`, losing the time. Add a format that reads the whole value,
+such as `yyyy-MM-dd HH:mm`, to keep the time.
+
+The date scalars of GraphQL, which read `grails.databinding.dateFormats` too, are not changed.
+
+==== 79. Asset Pipeline Wildcards Stand for One Directory
+
+Grails 8 uses asset-pipeline 5.2, which resolves a `%` or `*` component of an asset path, in a `require`
+directive, an `<asset:...>` tag or a Sass import, the same way wherever the asset is found: as exactly one
+directory.
+
+In Grails 7, which used asset-pipeline 5.0, a `%` could stand for any number of directories when the asset
+was in a jar, as the files of every webjar are, and in the manifest that a packaged application serves its
+assets from. `webjars/%/dist/jquery.js` found `webjars/jquery/3.7.1/dist/jquery.js`, and now finds nothing,
+since one `%` cannot stand for both `jquery` and `3.7.1`.
+
+Write a `%` in place of each directory, as applications generated by `create-app` do for the version
+directory of each webjar, or use the new `%%` (or `**`), which stands for zero or more directories:
+
+[source,javascript]
+.grails-app/assets/javascripts/application.js
+----
+//= require webjars/jquery/%/dist/jquery.js
+//= require webjars/%%/dist/js/bootstrap.bundle.js
+----
+
+In a CSS `require` block, write `%` and `%%` rather than `+*+` and `+**+`, because `*/` ends the comment the
+block is written in. A path with one `%` for each directory, including every path `create-app` has
+generated, resolves as before, unless more than one directory matches (see below).
+
+When several directories match, the highest version is used: `5.1.2` over `4.3.0`, `10.0.0` over `9.0.0`,
+and a release over its own pre-releases. Before, the first match found was used, in the order of the file
+system, the jars on the classpath or the manifest. Where `%%` can match at more than one depth, the match with
+the fewest directories wins, so a copy of a library that another webjar bundles further down is not picked
+up. Hidden directories, whose names start with `.`, are never matched, and a wildcard inside a file name,
+such as `jquery-%.js`, no longer resolves in a packaged application, as it never resolved in development.
+
+A path that no longer resolves does not fail the build: `assetCompile` logs `Unable to Locate Asset: <path>`
+and leaves the file out, and an `<asset:...>` tag renders the path unchanged, which the browser then fails to
+load. Check the `assetCompile` output for that warning after upgrading.
+
+NOTE: The `includes` and `excludes` patterns of the `assets` block in `build.gradle`, which select the files
+`assetCompile` processes, are not changed.
+
+==== 80. Stricter Closure Typing for GORM Criteria Closures
+
+GORM's criteria closure methods (`where`, `whereLazy`, `build`, `buildLazy`, `projections`,
+`and`, `or`, `not`, `find`, `get`, `list`, `count`, `asBoolean` and the closure subquery forms
+of `in`, `inList`, `notIn`, `eqAll`, `gtAll`, `ltAll`, `geAll`, `leAll`, `gtSome`, `geSome`,
+`ltSome` and `leSome`) now declare
+`strategy = Closure.DELEGATE_FIRST` in their `@DelegatesTo` annotations. This matches the
+resolve strategy GORM already applies at runtime and fixes a `@CompileStatic` bug where the
+restrictions of a criteria closure nested inside another criteria closure were added to the
+enclosing criteria instead of the new one. Projection blocks resolved against the enclosing
+criteria for the same reason, silently dropping their projections. See
+https://github.com/apache/grails-core/issues/16425[Issue #16425].
+
+Statically compiled applications can be affected in two ways.
+
+**Forwarding a `Closure` parameter to one of these methods no longer compiles.** A method
+`Closure` parameter with the default `OWNER_FIRST` strategy cannot be passed to a
+`DELEGATE_FIRST` parameter:
+
+[source,groovy]
+----
+@CompileStatic
+static DetachedCriteria<Book> withExtra(Closure extra) {
+    new DetachedCriteria<Book>(Book).where(extra)
+    // [Static type checking] - Closure parameter with resolve strategy OWNER_FIRST
+    // passed to method with resolve strategy DELEGATE_FIRST
+}
+----
+
+Declare the same strategy on your parameter, or cast the argument:
+
+[source,groovy]
+----
+static DetachedCriteria<Book> withExtra(
+        @DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure extra) {
+    new DetachedCriteria<Book>(Book).where(extra)
+}
+
+// or
+new DetachedCriteria<Book>(Book).where((Closure) extra)
+----
+
+**Name resolution inside a criteria closure now prefers the criteria delegate**, which is
+what dynamic code already did. A property or method that exists both on the enclosing class
+and on the criteria now resolves to the criteria:
+
+[source,groovy]
+----
+@CompileStatic
+class BookQueries {
+    List<Order> getOrders() { ... }
+
+    DetachedCriteria<Book> query() {
+        new DetachedCriteria<Book>(Book).where {
+            inList 'name', orders    // now reads the criteria's orders, not getOrders()
+        }
+    }
+}
+----

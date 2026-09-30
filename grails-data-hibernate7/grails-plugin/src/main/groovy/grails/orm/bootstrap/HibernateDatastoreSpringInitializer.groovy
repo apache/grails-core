@@ -48,16 +48,13 @@ import org.grails.orm.hibernate.support.HibernateDatastoreConnectionSourcesRegis
  */
 class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
 
-    public static final String SESSION_FACTORY_BEAN_NAME = 'sessionFactory'
     public static final String DEFAULT_DATA_SOURCE_NAME = Settings.SETTING_DATASOURCE
     public static final String DATA_SOURCES = Settings.SETTING_DATASOURCES
     public static final String TEST_DB_URL = 'jdbc:h2:mem:grailsDb;LOCK_TIMEOUT=10000;DB_CLOSE_DELAY=-1'
 
     String defaultDataSourceBeanName = ConnectionSource.DEFAULT
-    String defaultSessionFactoryBeanName = SESSION_FACTORY_BEAN_NAME
     Set<String> dataSources = [defaultDataSourceBeanName] as Set<String>
     boolean enableReload = false
-    boolean grailsPlugin = false
     Closure beanDefinitions
     protected ApplicationContext applicationContext
 
@@ -102,7 +99,7 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
             }
             Map dataSource = (Map) config.getProperty(DEFAULT_DATA_SOURCE_NAME, Map, Collections.emptyMap())
             if (dataSource != null && !dataSource.isEmpty()) {
-                dataSourceNames.add(ConnectionSource.DEFAULT)
+                dataSourceNames.add(defaultDataSourceBeanName)
             }
         }
         this.dataSources = dataSourceNames
@@ -136,10 +133,6 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
         if (!beanDefinitionRegistry.containsBeanDefinition('hibernateDatastore')) {
             throw new IllegalStateException('Failed to register hibernateDatastore bean!')
         }
-    }
-
-    protected String getTestDbUrl() {
-        TEST_DB_URL
     }
 
     @CompileStatic
@@ -192,7 +185,7 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
             getBeanDefinition('transactionManager').beanClass = PlatformTransactionManager
 
             for (String dataSourceName in dataSources) {
-                if (dataSourceName == ConnectionSource.DEFAULT) continue
+                if (dataSourceName == defaultDataSourceBeanName) continue
 
                 "dataSource_$dataSourceName"(hibernateDatastore: 'getDataSource', dataSourceName)
                 "sessionFactory_$dataSourceName"(hibernateDatastore: 'getSessionFactory', dataSourceName)

@@ -29,6 +29,7 @@ import org.springframework.beans.BeanUtils;
 import grails.converters.JSON;
 import grails.persistence.PersistenceMethod;
 import grails.web.controllers.ControllerMethod;
+import org.apache.grails.common.reflect.ReflectionUtils;
 import org.grails.core.util.IncludeExcludeSupport;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.IncludeExcludePropertyMarshaller;
@@ -51,6 +52,7 @@ public class GenericJavaBeanMarshaller extends IncludeExcludePropertyMarshaller<
         List<String> excludes = json.getExcludes(clazz);
         List<String> includes = json.getIncludes(clazz);
         IncludeExcludeSupport<String> includeExcludeSupport = new IncludeExcludeSupport<>();
+        ReflectionUtils.warnOnNonPublicClass(clazz);
 
         try {
             writer.object();
@@ -64,16 +66,19 @@ public class GenericJavaBeanMarshaller extends IncludeExcludePropertyMarshaller<
                     if (Modifier.isStatic(readMethod.getModifiers())) continue;
                     if (readMethod.getAnnotation(PersistenceMethod.class) != null) continue;
                     if (readMethod.getAnnotation(ControllerMethod.class) != null) continue;
-                    Object value = readMethod.invoke(o, (Object[]) null);
+                    Method invokable = ReflectionUtils.resolveInvokableReadMethod(readMethod, clazz, o);
+                    Object value = invokable.invoke(o, (Object[]) null);
                     writer.key(name);
                     json.convertAnother(value);
                 }
             }
             for (Field field : o.getClass().getDeclaredFields()) {
                 int modifiers = field.getModifiers();
-                if (field.canAccess(o) && Modifier.isPublic(modifiers) && !(Modifier.isStatic(modifiers) || Modifier.isTransient(modifiers))) {
+                if (Modifier.isPublic(modifiers) && !(Modifier.isStatic(modifiers) || Modifier.isTransient(modifiers)) &&
+                        !field.isSynthetic()) {
                     String name = field.getName();
                     if (!shouldInclude(includeExcludeSupport, includes, excludes, o, name)) continue;
+                    if (!ReflectionUtils.tryMakeReadable(field, o)) continue;
                     writer.key(field.getName());
                     json.convertAnother(field.get(o));
                 }

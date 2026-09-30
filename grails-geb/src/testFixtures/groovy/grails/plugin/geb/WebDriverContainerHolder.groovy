@@ -18,6 +18,7 @@
  */
 package grails.plugin.geb
 
+import java.lang.reflect.Field
 import java.time.Duration
 import java.time.temporal.ChronoUnit
 import java.util.function.Supplier
@@ -88,11 +89,28 @@ class WebDriverContainerHolder {
     }
 
     void stop() {
-        container?.stop()
-        container = null
-        browser = null
-        testManager = null
-        containerConf = null
+        try {
+            try {
+                // Quit the driver while the container backing its RemoteWebDriver session is
+                // still up - reinitialize() disables Geb's own driver caching/quitting
+                // (cacheDriver=false, quitDriverOnBrowserReset=false) on the promise that we
+                // quit it here, so skipping this abandons a RemoteWebDriver and its HTTP
+                // connection pool on every container recycle.
+                browser?.driver?.quit()
+            } catch (Exception e) {
+                log.debug('Failed to quit WebDriver session during stop()', e)
+            }
+            container?.stop()
+        } finally {
+            // Reset state even if stop() throws - otherwise isInitialized() keeps reporting
+            // true for a container that's actually broken, and a later reinitialize() call
+            // would see matchesCurrentContainerConfiguration() as a false positive without
+            // ever attempting to recover.
+            container = null
+            browser = null
+            testManager = null
+            containerConf = null
+        }
     }
 
     boolean matchesCurrentContainerConfiguration(WebDriverContainerConfiguration specConf) {
@@ -425,34 +443,88 @@ class WebDriverContainerHolder {
      * Restarts the VNC recording container to enable separate recording files for each
      * test method. This method uses reflection to access the VNC recording container
      * field in BrowserWebDriverContainer. Should be called BEFORE each test starts.
+     * <p>
+     * If a previous restart failed to start its replacement, there is no recording container
+     * left to stop, and a new one is started instead, so a single failure does not disable
+     * recording for every remaining test that runs against the same browser container.
      */
     void restartVncRecordingContainer() {
-        if (!settings.recordingEnabled || !settings.restartRecordingContainerPerTest || !container) {
+        if (!shouldRestartVncRecordingContainer) {
             return
         }
         try {
-            // Use reflection to access the VNC recording container field
-            def field = BrowserWebDriverContainer.getDeclaredField('vncRecordingContainer').tap {
-                accessible = true
-            }
-
-            def vncContainer = field.get(container) as VncRecordingContainer
+            def vncContainer = vncRecordingContainerField.get(container) as VncRecordingContainer
             if (vncContainer) {
-                // Stop the current VNC recording container
                 vncContainer.stop()
-                // Create and start a new VNC recording container for the next test
-                def newVncContainer = new VncRecordingContainer(container)
-                        .withVncPassword('secret')
-                        .withVncPort(5900)
-                        .withVideoFormat(settings.recordingFormat)
-                field.set(container, newVncContainer)
-                newVncContainer.start()
 
-                log.debug('Successfully restarted VNC recording container')
+                // vncContainer is now stopped - and removed, per testcontainers'
+                // GenericContainer#stop() - so it must not be left in the field: if the
+                // replacement below fails to start, a stale reference here would make the
+                // next saveRecordingToFile() target a container that no longer exists.
+                vncRecordingContainerField.set(container, null)
             }
+
+            def newVncContainer = createVncRecordingContainer()
+            try {
+                newVncContainer.start()
+            } catch (Exception e) {
+                // start() may have already created the underlying docker container (e.g.
+                // the "Connected" wait strategy timing out) - stop it explicitly so it
+                // isn't left running, attached to the browser container's VNC port, until
+                // Ryuk reaps it at JVM exit.
+                try {
+                    newVncContainer.stop()
+                } catch (Exception stopException) {
+                    e.addSuppressed(stopException)
+                }
+                throw e
+            }
+            vncRecordingContainerField.set(container, newVncContainer)
+
+            log.debug('Successfully restarted VNC recording container')
         } catch (Exception e) {
-            log.warn("Failed to restart VNC recording container: $e.message", e)
+            log.warn(
+                    'Failed to restart VNC recording container, the upcoming test will not be recorded: {}',
+                    e.message,
+                    e
+            )
             // Don't throw the exception to avoid breaking the test execution
+        }
+    }
+
+    /**
+     * Recording is enabled, with a separate recording per test, and there is a browser
+     * container to record.
+     */
+    private boolean getShouldRestartVncRecordingContainer() {
+        settings.recordingEnabled &&
+                settings.restartRecordingContainerPerTest &&
+                container != null
+    }
+
+    /**
+     * Whether the browser container currently has a VNC recording container to save
+     * recordings from. This is {@code false} when recording is disabled, and after
+     * {@link #restartVncRecordingContainer()} failed to start a replacement.
+     */
+    boolean isRecordingContainerAvailable() {
+        container != null && vncRecordingContainerField.get(container) != null
+    }
+
+    /**
+     * Creates the VNC recording container that {@link #restartVncRecordingContainer()} starts
+     * for the next test.
+     */
+    protected VncRecordingContainer createVncRecordingContainer() {
+        new VncRecordingContainer(container)
+                .withVncPassword('secret')
+                .withVncPort(5900)
+                .withVideoFormat(settings.recordingFormat)
+    }
+
+    private static Field getVncRecordingContainerField() {
+        BrowserWebDriverContainer.getDeclaredField('vncRecordingContainer').tap {
+            accessible = true
         }
     }
 
@@ -465,7 +537,7 @@ class WebDriverContainerHolder {
          */
         static Closure withSystemProperty(Closure target, String key, Object value) {
             Closure wrapped = { Object... args ->
-                SysPropScope.withProperty(key, value.toString()) {
+                ThreadLocalPropertyScope.withProperty(key, value.toString()) {
                     InvokerHelper.invokeClosure(target, args)
                 }
             }
@@ -476,46 +548,5 @@ class WebDriverContainerHolder {
             }
         }
 
-        @CompileStatic
-        private static class SysPropScope {
-
-            private static final ThreadLocal<Map<String,String>> OVERRIDDEN_SYSTEM_PROPERTIES =
-                    ThreadLocal.withInitial { [:] as Map<String,String> }
-
-            @Lazy // Thread-safe wrapping of system properties
-            private static Properties propertiesWrappedOnFirstAccess = {
-                new InterceptingProperties().tap {
-                    putAll(System.getProperties())
-                    System.setProperties(it)
-                }
-            }()
-
-            // Helper method for Groovy 5 static type checking compatibility
-            private static Map<String, String> getOverriddenProperties() {
-                OVERRIDDEN_SYSTEM_PROPERTIES.get()
-            }
-
-            static <T> T withProperty(String key, String value, Closure<T> body) {
-                propertiesWrappedOnFirstAccess // Access property to trigger property wrapping
-                def map = OVERRIDDEN_SYSTEM_PROPERTIES.get()
-                def prev = map.put(key, value)
-                try {
-                    return body.call()
-                } finally {
-                    if (prev == null) map.remove(key) else map[key] = prev
-                    if (map.isEmpty()) OVERRIDDEN_SYSTEM_PROPERTIES.remove()
-                }
-            }
-
-            @CompileStatic
-            private static class InterceptingProperties extends Properties {
-                @Override
-                String getProperty(String key) {
-                    Map<String, String> overrides = getOverriddenProperties()
-                    def v = overrides.get(key)
-                    v != null ? v : super.getProperty(key)
-                }
-            }
-        }
     }
 }

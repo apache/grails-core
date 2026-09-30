@@ -29,6 +29,7 @@ import jakarta.servlet.http.HttpServletResponse
 
 import org.springframework.core.Ordered
 import org.springframework.web.servlet.ModelAndView
+import org.springframework.web.util.UrlPathHelper
 
 import grails.artefact.controller.support.RequestForwarder
 import grails.artefact.controller.support.ResponseRedirector
@@ -77,6 +78,23 @@ trait Interceptor implements ResponseRenderer, ResponseRedirector, RequestForwar
         doesMatch(request)
     }
     /**
+     * Whether this interceptor matches the given request.
+     *
+     * <p>URI matchers see the same path that URL mappings route on, resolved with the same {@link UrlPathHelper}
+     * call: path parameters ({@code ;name=value}) are removed per segment before percent-decoding, as Jakarta
+     * Servlet 6.0 section 3.5.2 requires of containers, so an encoded semicolon ({@code %3B}) stays a literal
+     * character (RFC 3986 section 2.2); the path is decoded exactly once (RFC 3986 section 2.4); and the context
+     * path is stripped. Two points follow Spring, and therefore dispatch, rather than the URI specification: the
+     * context path is compared case-insensitively although RFC 3986 section 6.2.2.1 defines paths as case-sensitive,
+     * and during a {@code RequestDispatcher} include the included path is matched, which is also the path the
+     * include is dispatched on. A matcher that disagreed with dispatch on either point would let a request reach a
+     * controller without its interceptors, so dispatch wins.
+     *
+     * <p>The path is canonicalized once per call and passed to every {@link Matcher}. A request whose URI contains
+     * an illegal percent escape, which a Servlet 6.0 container rejects with 400 before dispatch, is matched
+     * undecoded rather than failing.
+     *
+     * @param request The request to match
      * @return Whether the current interceptor does match
      */
     @Generated
@@ -89,25 +107,21 @@ trait Interceptor implements ResponseRenderer, ResponseRedirector, RequestForwar
             allMatchers << matcher
         }
 
-        HttpServletRequest req = request
-        String ctxPath = req.contextPath
-        String uri = req.requestURI
-        String noCtxUri = uri - ctxPath
-        boolean checkNoCtxUri = ctxPath && uri.startsWith(ctxPath)
-
-        def matchedInfo = request.getAttribute(UrlMappingsHandlerMapping.MATCHED_REQUEST)
-
-        UrlMappingInfo grailsMappingInfo = (UrlMappingInfo) matchedInfo
+        String uri
+        try {
+            uri = UrlPathHelper.defaultInstance.getPathWithinApplication(request)
+        } catch (IllegalArgumentException ignored) {
+            // illegal percent escape: match the undecoded path rather than fail
+            UrlPathHelper rawPathHelper = new UrlPathHelper()
+            rawPathHelper.urlDecode = false
+            uri = rawPathHelper.getPathWithinApplication(request)
+        }
+        String contextPath = request.contextPath
+        String method = request.method
+        UrlMappingInfo grailsMappingInfo = (UrlMappingInfo) request.getAttribute(UrlMappingsHandlerMapping.MATCHED_REQUEST)
 
         for (Matcher matcher in allMatchers) {
-            boolean matchUri = matcher.doesMatch(uri, grailsMappingInfo, req.method)
-            boolean matchNoCtxUri = matcher.doesMatch(noCtxUri, grailsMappingInfo, req.method)
-
-            if (matcher.isExclude() && matchUri && matchNoCtxUri) {
-                // Exclude interceptors are special because with only one of the conditions being false the interceptor
-                // won't be applied to the request
-                return true
-            } else if (!matcher.isExclude() && (matchUri || (checkNoCtxUri && matchNoCtxUri))) {
+            if (matcher.doesMatch(uri, grailsMappingInfo, method, contextPath)) {
                 return true
             }
         }

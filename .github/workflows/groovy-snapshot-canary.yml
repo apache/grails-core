@@ -37,7 +37,7 @@ jobs:
       groovyVersion: ${{ steps.groovy-version.outputs.value }}
     steps:
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@v6.0.1
         with:
           java-version: 21
           distribution: liberica
@@ -50,7 +50,7 @@ jobs:
         #     the canary build reuses our Develocity / build-cache settings.
         # Both paths must be listed here; otherwise the init-script step fails
         # with "The specified initialization script ... does not exist."
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
         with:
           sparse-checkout-cone-mode: false
           sparse-checkout: |
@@ -59,24 +59,15 @@ jobs:
       - name: "📝 Derive matching Apache Groovy branch from dependencies.gradle"
         id: groovy-branch
         run: |
-          # Extract the major and minor version of `groovy.version` declared in this
-          # branch's dependencies.gradle (e.g. '5.0.5' -> '5_0', '4.0.31' -> '4_0')
-          # and use it to pick the matching Apache Groovy development branch
-          # (GROOVY_<major>_<minor>_X), or master for the current Groovy development
-          # line before a maintenance branch exists.
-          # This keeps `7.0.x` PRs validating against Groovy 4 and `8.0.x` PRs
-          # validating against Groovy 5 without hard-coding the branch here.
-          GROOVY_MAJOR_MINOR=$(sed -nE "s/.*'groovy\.version'.*'([0-9]+)\.([0-9]+)\.[0-9]+'.*/\1_\2/p" dependencies.gradle | head -n 1)
+          # Extract the main BOM's Groovy release line, ignoring prerelease suffixes
+          # (e.g. '6.0.0-RC-2' -> '6_0'), and build its matching maintenance branch.
+          # Groovy master has moved to 7.x; Grails 9 still validates Groovy 6 here.
+          GROOVY_MAJOR_MINOR=$(sed -nE "s/^[[:space:]]*'groovy\.version'[[:space:]]*:[[:space:]]*'([0-9]+)\.([0-9]+)\.[0-9]+.*/\1_\2/p" dependencies.gradle | head -n 1)
           if [ -z "$GROOVY_MAJOR_MINOR" ]; then
             echo "::error::Could not determine Apache Groovy major/minor version from dependencies.gradle"
             exit 1
           fi
-          GROOVY_MAJOR=${GROOVY_MAJOR_MINOR%%_*}
-          if [ "$GROOVY_MAJOR" = "6" ]; then
-            GROOVY_BRANCH="master"
-          else
-            GROOVY_BRANCH="GROOVY_${GROOVY_MAJOR_MINOR}_X"
-          fi
+          GROOVY_BRANCH="GROOVY_${GROOVY_MAJOR_MINOR}_X"
           echo "Validating against Apache Groovy branch: $GROOVY_BRANCH"
           echo "value=$GROOVY_BRANCH" >> $GITHUB_OUTPUT
           rm dependencies.gradle
@@ -102,7 +93,7 @@ jobs:
           ./gradlew pTML -x groovydoc -x javadoc -x javadocAll -x groovydocAll -x asciidoc -x docGDK \
             --init-script $GITHUB_WORKSPACE/.github/scripts/groovy-snapshot-canary-build.init.gradle
       - name: "📤 Share locally built Groovy artifacts with the build_grails job"
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: local-groovy-maven-repo
           path: ~/.m2/repository/org/apache/groovy/
@@ -136,15 +127,15 @@ jobs:
 
           df -h
       - name: "📥 Checkout project"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@v6.0.1
         with:
           java-version: 21
           distribution: liberica
       - name: "🗄️ Restore dependency jar cache"
         id: dependency-cache
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache/restore@v6.1.0
         with:
           # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
           # Keyed by branch version so each release branch maintains its own warm cache.
@@ -155,7 +146,7 @@ jobs:
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
       - name: "🗄️ Cache the mongod the embedded server runs"
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@v6.1.0
         with:
           # Separate from the dependency jars, for the reasons given on the same step in
           # gradle.yml. The version is the one -PmongodbContainerVersion asks for below.
@@ -169,7 +160,7 @@ jobs:
       - name: "🔍 Setup TestLens"
         uses: testlens-app/setup-testlens@3f82d2dc6cd5c03f02ce5f7885a21195d85f8d14 # v1.9.3
       - name: "📥 Fetch the locally built Groovy artifacts"
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@v8.0.1
         with:
           name: local-groovy-maven-repo
           path: ~/.m2/repository/org/apache/groovy
@@ -177,12 +168,6 @@ jobs:
         run: |
           sed -i "/['\"]groovy\.version['\"][[:space:]]*:/c\'groovy.version':'${{ needs.build_groovy.outputs.groovyVersion }}'," dependencies.gradle
       - name: "🔨 Build and test Grails using the locally built Groovy snapshot"
-        # -PskipMicronautProjects excludes the Grails-Micronaut "island" (grails-micronaut,
-        # grails-micronaut-bom, and the micronaut-tied test-examples) from the build graph.
-        # That island intentionally pins Groovy 5 / Spock 2.4-groovy-5.0 via grails-micronaut-bom,
-        # which is incompatible with the Groovy 4.x snapshot this job swaps in above.
-        # See https://github.com/apache/grails-core/issues/15613.
-        #
         # -PmongodbContainerVersion names the MongoDB the specifications bring themselves: a
         # container for most of them, an embedded server for the ones that need a replica set. It
         # keeps those two on the same release. This workflow validates Grails against a Groovy
@@ -191,9 +176,7 @@ jobs:
           ./gradlew ${{ matrix.gradle_task }}
           --continue
           --stacktrace
-          -x groovydoc
           -PskipCodeStyle
-          -PskipMicronautProjects
           -PmaxTestParallel=3
           -PtestShardCount=3
           -PtestShardIndex=${{ matrix.shard_index }}
@@ -202,7 +185,7 @@ jobs:
           GRAILS_INCLUDE_MAVEN_LOCAL: true
       - name: "🗄️ Save dependency jar cache"
         if: ${{ success() && matrix.shard_index == 0 && steps.dependency-cache.outputs.cache-hit != 'true' }}
-        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache/save@v6.1.0
         with:
           path: |
             ~/.gradle/caches/modules-2

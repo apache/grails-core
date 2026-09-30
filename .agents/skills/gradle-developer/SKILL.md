@@ -11,7 +11,7 @@ Licensed to the Apache Software Foundation (ASF) under one or more contributor l
 
 ## What I Do
 
-- Write and change Gradle build scripts the way **this repository** already does them on `8.0.x` (Gradle **9.7.x**).
+- Write and change Gradle build scripts the way **this repository** already does them on `8.0.x` (Gradle **9.8.x**).
 - Keep agents off generic Gradle "best practice" when it conflicts with established monorepo patterns.
 - Cover composite builds (`build-logic`, `grails-gradle`, `grails-forge`, `end-to-end`), convention plugins, BOM/`platform()` dependency management, test wiring, publishing hooks, and Gradle 9 task-configuration traps learned from recent PRs.
 - Make Gradle changes boring, copy-paste consistent, and correct on the first try.
@@ -136,7 +136,7 @@ Presence-based flags (property **present**, value optional) match `skipFunctiona
 
 ## Gradle Version Sync (Hard Rule)
 
-Current line: **Gradle 9.7.1** (`distributionUrl` + `gradleToolingApiVersion=9.7.1`). Upstream may already ship a newer 9.7.x patch - this repo rides close to latest **only after** a deliberate multi-location bump PR. Do not "helpfully" jump one wrapper ahead of the rest.
+Current line: **Gradle 9.8.0** (`distributionUrl` + `gradleToolingApiVersion=9.8.0`). Upstream may already ship a newer 9.8.x patch - this repo rides close to latest **only after** a deliberate multi-location bump PR. Do not "helpfully" jump one wrapper ahead of the rest.
 
 **Two Groovy stacks:** Gradle itself embeds **Groovy 4** for build logic. Application/runtime code on 8.0.x is **Groovy 5**. That is why `dependencies.gradle` keeps separate maps:
 
@@ -183,12 +183,17 @@ Also keep `gradlew.bat` LF line endings on this line (PR #15709). Comment at top
 | `org.gradle.daemon` | `true` |
 | `org.gradle.configuration-cache` | **`false`** until #15497 resolved - do not enable casually |
 | `org.gradle.configureondemand` | **commented off** - Gradle issue #9489 |
-| `org.gradle.jvmargs` | `-Xmx5G` (raise only with reason; groovydoc is hungry) |
+| `org.gradle.jvmargs` | `-Xmx3G` (daemon only; groovydoc and the guide run in their own JVMs) |
 | `javaVersion` | `21` (CompilePlugin reads this for `--release`) |
 | `projectVersion` | framework version |
 | `slf4jPreventExclusion` | `true` - Grails Gradle plugin POM behavior |
 
 CI vs local behavior is branched on `System.getenv('CI')` and `SOURCE_DATE_EPOCH` (reproducible builds disable remote cache).
+
+`groovydocMaxHeapSize` and `guideMaxHeapSize` are **not** keys in `gradle.properties` - do not add
+them. Each documentation JVM carries its own default (1g per groovydoc task, raised to 3g/2g by the
+two aggregates; 1500m for the guide), and these exist only as `-P` overrides that beat the build
+script when a documentation run will not fit.
 
 ---
 
@@ -288,7 +293,7 @@ For POM property generation, **map key must be the dependency name prefix**:
 
 ```groovy
 bomDependencyVersions = [
-    'groovy.version': '5.0.7',
+    'groovy.version': '5.1.3',
 ]
 bomDependencies = [
     'groovy': "org.apache.groovy:groovy:${bomDependencyVersions['groovy.version']}",
@@ -337,9 +342,22 @@ Also:
 - Same coordinate managed in multiple BOM maps must use the **same** version everywhere or `enforcedPlatform` resolution explodes.
 - Do **not** silence validation with exclusions as a shortcut to avoid a BOM bump.
 
+### `validateBomProperties` (parent BOM property rules)
+
+Registered by its own plugin, `org.apache.grails.buildsrc.bom-property-validator`, which every BOM applies (on `java-platform` projects only). Like `validateDependencyVersions` it is not attached to `check` or `build`; CI runs it by name in its own `Validate BOM Properties` job (root BOMs and `grails-gradle-bom`). It has its own opt-out, `skipBomPropertyValidation`, which works like `skipDependencyValidation` (`-PskipBomPropertyValidation`, `-PskipBomPropertyValidation=true`, or `ext.skipBomPropertyValidation = true`); each property skips only its own task. It reads the POM a BOM publishes (`generatePomFileForMavenPublication`). Every version property the BOM owns (`ext.bomVersionProperties`: `gradleBomDependencyVersions` for `grails-gradle-bom`, `bomDependencyVersions` for `grails-base-bom`, `customBomVersions` for each variant) must be used by some published entry. It also compares the POM with the parent BOMs named by `ext.parentBoms` (`spring-boot-dependencies`, set in `dependencies.gradle`), including the BOMs they import, and for every module both manage it fails when:
+
+| Rule | Example failure | Fix |
+|------|-----------------|-----|
+| (any owned property) No published entry uses the version key | `liquibase-hibernate5.version = 4.27.0` | Delete the key, or add the dependency that should use it |
+| The pin uses a different property than the parent controls the module with | `${jackson3.version} should be ${jackson-bom.version}` | Rename the version key, and the dependency keys that prefix it (map naming contract) |
+| The pin overrides a version the parent writes literally (all of Spring Boot's own `org.springframework.boot:*` entries) | `${foo.version}, where only ${spring-boot.version} moves the parent's version` | Drop the pin, or add a documented exemption - renaming it to the parent's import property would only repeat the parent's version |
+| The pin repeats the parent's version | `graphql-java.version = 25.0` | Drop the pin and inherit the parent's version |
+
+A module the parent manages through an imported BOM belongs to the property the parent imports that BOM with (`jackson-bom.version` for all of `tools.jackson:jackson-bom`), because that is the property a consumer sets to move the family. Coordinates and versions are resolved from each parent POM's properties, its own parents' and the Maven built-ins (`${project.groupId}`, as the Kotlin and Brave BOMs write their group, `${project.version}`, `${project.parent.version}`); an entry that cannot be resolved fails the task with `Cannot resolve <entry>, managed by <bom>` instead of going unchecked, so teach `PomVersions.properties` the missing built-in. Deliberate exceptions go in `bomUnusedVersionExemptions` / `bomPropertyNameExemptions` / `bomRedundantVersionExemptions` in `dependencies.gradle`, each with its reason.
+
 ### Adding or bumping a dependency
 
-1. Decide if Spring Boot already manages it - if same version, omit pin.
+1. Decide if Spring Boot already manages it - if same version, omit pin; if a different version, name the version key after Spring Boot's property (`validateBomProperties` enforces both).
 2. If Grails must manage it, add/bump in the correct map in `dependencies.gradle`.
 3. Use the unversioned coordinate in module `dependencies {}`.
 4. Run `./gradlew :that-module:validateDependencyVersions` (and affected consumers).
@@ -369,12 +387,14 @@ Plugin IDs (implementation under `build-logic/plugins/…/buildsrc/`):
 | `org.apache.grails.buildsrc.properties` | Load root/`local.properties` into `ext` |
 | `org.apache.grails.buildsrc.compile` | Java 21 `--release`, UTF-8, fork memory, parameters, sources/javadoc jars, reproducible archives, Groovy config script, isolated build, per-project `base.dir` |
 | `org.apache.grails.buildsrc.dependency-validator` | `validateDependencyVersions` |
+| `org.apache.grails.buildsrc.bom-property-validator` | `validateBomProperties` (BOM projects only) |
 | `org.apache.grails.buildsrc.publish` | Publishing conventions (grails-publish integration) |
 | `org.apache.grails.buildsrc.sbom` | CycloneDX / SBOM reproducibility |
 | `org.apache.grails.buildsrc.vulnerability-scan` | OSS Index style scanning hooks |
 | `org.apache.grails.buildsrc.groovydoc` | Groovydoc |
 | `org.apache.grails.buildsrc.groovydoc-enhancer` | Groovydoc enhancer |
 | `org.apache.grails.buildsrc.repo` | Settings plugin: Apache snapshot/staging repo content filters |
+| `org.apache.grails.buildsrc.agent-skills` | Packages `skills/<skill>/` into the jar at `META-INF/skills/apache/grails-core/<skill>/` (SkillsJars layout); validates each skill's frontmatter `name` |
 | `org.apache.grails.gradle.grails-code-style` | Checkstyle + CodeNarc |
 | `org.apache.grails.gradle.grails-code-analysis` | PMD + SpotBugs (opt-in props) |
 | `org.apache.grails.gradle.grails-jacoco` | JaCoCo per project |
@@ -554,8 +574,8 @@ DO_NOT_CACHE_TESTS=1 ./gradlew :module:test
 ./gradlew :module:test -PmaxTestParallel=1
 ./gradlew :module:test -PtestBisect
 
-# Memory
-export GRADLE_OPTS='-Xms2G -Xmx5G'
+# Memory - org.gradle.jvmargs sizes the daemon, so a bare -Xmx here is ignored
+export GRADLE_OPTS='-Dorg.gradle.jvmargs=-Xmx4G'
 ```
 
 Work in `grails-gradle` or `grails-forge` only with **that** directory's `./gradlew`.
@@ -599,16 +619,16 @@ Develocity: `https://develocity.apache.org` - build scans publish when authentic
 
 Use official docs for API signatures and deprecations (pin URLs to the version you are bumping toward):
 
-- [Gradle 9.7 release notes](https://docs.gradle.org/9.7.1/release-notes.html)
-- [Upgrading major version 9](https://docs.gradle.org/9.7.1/userguide/upgrading_major_version_9.html)
-- [Upgrading within Gradle 9.x](https://docs.gradle.org/9.7.1/userguide/upgrading_version_9.html)
-- [Java Library plugin](https://docs.gradle.org/9.7.1/userguide/java_library_plugin.html)
-- [Java Platform / BOM](https://docs.gradle.org/9.7.1/userguide/java_platform_plugin.html)
-- [Platforms](https://docs.gradle.org/9.7.1/userguide/platforms.html)
-- [Sharing build logic via included builds](https://docs.gradle.org/9.7.1/userguide/sharing_build_logic_between_subprojects.html)
-- [Task configuration avoidance](https://docs.gradle.org/9.7.1/userguide/task_configuration_avoidance.html)
-- [Configuration cache](https://docs.gradle.org/9.7.1/userguide/configuration_cache.html) (read for compatibility - still **off** here)
-- [Version catalogs](https://docs.gradle.org/9.7.1/userguide/version_catalogs.html) (docs like them - **this repo does not**)
+- [Gradle 9.8 release notes](https://docs.gradle.org/9.8.0/release-notes.html)
+- [Upgrading major version 9](https://docs.gradle.org/9.8.0/userguide/upgrading_major_version_9.html)
+- [Upgrading within Gradle 9.x](https://docs.gradle.org/9.8.0/userguide/upgrading_version_9.html)
+- [Java Library plugin](https://docs.gradle.org/9.8.0/userguide/java_library_plugin.html)
+- [Java Platform / BOM](https://docs.gradle.org/9.8.0/userguide/java_platform_plugin.html)
+- [Platforms](https://docs.gradle.org/9.8.0/userguide/platforms.html)
+- [Sharing build logic via included builds](https://docs.gradle.org/9.8.0/userguide/sharing_build_logic_between_subprojects.html)
+- [Task configuration avoidance](https://docs.gradle.org/9.8.0/userguide/task_configuration_avoidance.html)
+- [Configuration cache](https://docs.gradle.org/9.8.0/userguide/configuration_cache.html) (read for compatibility - still **off** here)
+- [Version catalogs](https://docs.gradle.org/9.8.0/userguide/version_catalogs.html) (docs like them - **this repo does not**)
 
 ### Docs say X - we do Y
 

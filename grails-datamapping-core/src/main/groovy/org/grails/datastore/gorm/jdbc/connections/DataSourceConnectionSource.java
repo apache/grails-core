@@ -55,6 +55,9 @@ public class DataSourceConnectionSource extends DefaultConnectionSource<DataSour
 
             while (closeMethod == null && source instanceof DelegatingDataSource) {
                 source = ((DelegatingDataSource) source).getTargetDataSource();
+                if (source == null) {
+                    break;
+                }
                 closeMethod = ReflectionUtils.findMethod(source.getClass(), "close");
             }
 

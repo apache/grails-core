@@ -40,8 +40,8 @@ import org.gradle.api.provider.Provider
  * <p>The plugin auto-detects which BOM is in use by scanning the project's
  * dependency declarations. Projects without a BOM are silently skipped.</p>
  *
- * <p>Usage: Apply via {@link CompilePlugin} (automatic) or directly, then run
- * {@code ./gradlew validateDependencyVersions}.</p>
+ * <p>Usage: apply {@code org.apache.grails.buildsrc.dependency-validator} in the project's
+ * {@code plugins} block, then run {@code ./gradlew validateDependencyVersions}.</p>
  */
 @CompileStatic
 class GrailsDependencyValidatorPlugin implements Plugin<Project> {
@@ -64,7 +64,10 @@ class GrailsDependencyValidatorPlugin implements Plugin<Project> {
      */
     static final String ALLOWED_OVERRIDES_EXT = 'allowedBomOverrides'
 
-    private static final Set<String> BOM_PROJECT_NAMES = ['grails-bom', 'grails-gradle-bom', 'grails-base-bom', 'grails-hibernate5-bom', 'grails-hibernate7-bom', 'grails-neo4j-bom', 'grails-micronaut-bom', 'grails-hibernate5-micronaut-bom', 'grails-hibernate7-micronaut-bom'].toSet()
+    /** Opts a project out of {@link #VALIDATE_TASK_NAME}; see {@link GradleUtils#isOptedOut}. */
+    static final String SKIP_PROPERTY = 'skipDependencyValidation'
+
+    private static final Set<String> BOM_PROJECT_NAMES = ['grails-bom', 'grails-gradle-bom', 'grails-base-bom', 'grails-hibernate5-bom', 'grails-hibernate7-bom', 'grails-neo4j-bom'].toSet()
 
     /**
      * Configuration names that pull in a Grails BOM purely as build tooling rather than as part
@@ -72,7 +75,7 @@ class GrailsDependencyValidatorPlugin implements Plugin<Project> {
      * project's single Grails BOM. The shared {@code gradle/docs-dependencies.gradle} script adds
      * {@code platform(grails-bom)} to the {@code documentation} configuration only to resolve the
      * groovydoc tooling versions; a project that selects a non-default BOM variant (e.g.
-     * {@code grails-micronaut-bom} or {@code grails-hibernate7-bom}) for its real configurations
+     * {@code grails-hibernate7-bom}) for its real configurations
      * still receives {@code grails-bom} here, which must not be misreported as a second,
      * conflicting BOM.
      */
@@ -98,7 +101,7 @@ class GrailsDependencyValidatorPlugin implements Plugin<Project> {
      */
     private static void registerDependencyVersionValidation(Project project) {
         Provider<String> bomPath = project.provider {
-            if (shouldSkip(project)) {
+            if (GradleUtils.isOptedOut(project, SKIP_PROPERTY)) {
                 return ''
             }
             String detected = detectBomPath(project)
@@ -134,7 +137,7 @@ class GrailsDependencyValidatorPlugin implements Plugin<Project> {
                 task.bomPath.set(bomPath)
                 task.bomVersions.set(bomVersions)
                 task.resolvedVersions.set(resolvedVersions)
-                task.allowedOverrides.set(project.provider { resolveAllowedOverrides(project) })
+                task.allowedOverrides.set(project.provider { GradleUtils.extStrings(project, ALLOWED_OVERRIDES_EXT) })
         }
     }
 
@@ -174,59 +177,14 @@ class GrailsDependencyValidatorPlugin implements Plugin<Project> {
     }
 
     /**
-     * Returns true when the project should skip dependency validation. Honors a
-     * {@code skipDependencyValidation} project property (any non-null, non-false value)
-     * and an {@code ext.skipDependencyValidation} extra property. This lets specific
-     * projects opt out via {@code ext.skipDependencyValidation = true} when they have
-     * unresolvable BOM conflicts (e.g. Micronaut platform overrides).
-     */
-    private static boolean shouldSkip(Project project) {
-        if (!project.hasProperty('skipDependencyValidation')) {
-            return false
-        }
-        Object value = project.findProperty('skipDependencyValidation')
-        if (value == null) {
-            // -PskipDependencyValidation with no value is treated as truthy
-            return true
-        }
-        return Boolean.parseBoolean(value.toString())
-    }
-
-    /**
-     * Resolves the set of {@code "group:name"} coordinates the project has marked as
-     * intentional version overrides, via the {@link #ALLOWED_OVERRIDES_EXT} ext property.
-     * Accepts a {@link Collection} or a single {@link CharSequence}. Unknown types are
-     * silently ignored.
-     */
-    private static Set<String> resolveAllowedOverrides(Project project) {
-        if (!project.extensions.extraProperties.has(ALLOWED_OVERRIDES_EXT)) {
-            return Collections.emptySet()
-        }
-        Object raw = project.extensions.extraProperties.get(ALLOWED_OVERRIDES_EXT)
-        if (raw instanceof CharSequence) {
-            return Collections.singleton(raw.toString())
-        }
-        if (raw instanceof Collection) {
-            Set<String> result = new LinkedHashSet<>()
-            for (Object item : (Collection<?>) raw) {
-                if (item != null) {
-                    result.add(item.toString())
-                }
-            }
-            return result
-        }
-        return Collections.emptySet()
-    }
-
-    /**
      * Scans the project's configurations to find which BOM project is in use.
      *
      * <p>Exactly one Grails BOM is expected on a project: the BOMs are split by
-     * integration (default / hibernate5 / micronaut), so a project selects a single
+     * integration, so a project selects a single
      * variant. This method returns the path of the one declared Grails BOM, {@code null}
      * when none is declared, and fails the build when more than one distinct Grails BOM
      * is found (which indicates a misconfiguration - e.g. layering grails-bom and
-     * grails-micronaut-bom on the same project).</p>
+     * grails-hibernate7-bom on the same project).</p>
      *
      * <p>Build-tooling configurations that pull in a BOM purely to resolve their own tool
      * versions (see {@link #BOM_DETECTION_EXCLUDED_CONFIGURATIONS}) are skipped, so the shared
@@ -258,8 +216,8 @@ class GrailsDependencyValidatorPlugin implements Plugin<Project> {
         if (bomPaths.size() > 1) {
             throw new GradleException(
                     "Project '${project.name}' declares more than one Grails BOM (${bomPaths.join(', ')}). " +
-                            'Exactly one Grails BOM may be applied; the BOMs are split by integration ' +
-                            '(default / hibernate5 / micronaut), so a project must select a single variant.'
+                            'Exactly one Grails BOM may be applied; the BOMs are split by integration, ' +
+                            'so a project must select a single variant.'
             )
         }
 

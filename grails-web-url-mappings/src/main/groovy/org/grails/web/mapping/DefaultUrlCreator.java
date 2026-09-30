@@ -26,8 +26,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import org.springframework.web.context.request.RequestContextHolder;
-
 import grails.core.GrailsControllerClass;
 import grails.util.GrailsStringUtils;
 import grails.util.GrailsWebUtil;
@@ -61,7 +59,7 @@ public class DefaultUrlCreator implements UrlCreator {
 
     public String createURL(Map parameterValues, String encoding) {
         if (parameterValues == null) parameterValues = Collections.emptyMap();
-        GrailsWebRequest webRequest = (GrailsWebRequest) RequestContextHolder.getRequestAttributes();
+        GrailsWebRequest webRequest = UrlMappingUtils.lookupWebRequest();
         return createURLWithWebRequest(parameterValues, webRequest, true);
     }
 
@@ -86,8 +84,9 @@ public class DefaultUrlCreator implements UrlCreator {
         }
 
         FastStringWriter actualUriBuf = new FastStringWriter();
-        if (includeContextPath) {
-            actualUriBuf.append(requestStateLookupStrategy.getContextPath());
+        String contextPath = includeContextPath ? requestStateLookupStrategy.getContextPath() : null;
+        if (contextPath != null) {
+            actualUriBuf.append(contextPath);
         }
         if (actionName != null) {
             if (actionName.indexOf(SLASH) > -1) {
@@ -127,7 +126,7 @@ public class DefaultUrlCreator implements UrlCreator {
     }
 
     private String createURLInternal(String controller, String action, Map<String, String> parameterValues, boolean includeContextPath) {
-        GrailsWebRequest webRequest = (GrailsWebRequest) RequestContextHolder.getRequestAttributes();
+        GrailsWebRequest webRequest = UrlMappingUtils.lookupWebRequest();
 
         if (parameterValues == null) parameterValues = new HashMap<>();
         boolean blankController = GrailsStringUtils.isBlank(controller);

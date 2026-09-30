@@ -39,7 +39,7 @@ class PageContextFactory {
     static GroovyPagesPageContext getCurrent() {
         GrailsWebRequest webRequest = RequestContextHolder.currentRequestAttributes()
 
-        def request = webRequest.getCurrentRequest()
+        def request = webRequest.getRequest()
 
         def pageContext = request.getAttribute(PC.PAGECONTEXT)
         if (pageContext instanceof GroovyPagesPageContext) return pageContext

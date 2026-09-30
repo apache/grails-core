@@ -265,4 +265,12 @@ class TransactionPropagationSpec extends Specification {
         then: "method executes normally"
         result == "No transaction here"
     }
+
+    void "test @NotTransactional method opts out of the class-level transaction"() {
+        expect: "the opted-out method observes no active transaction"
+        !transactionTestService.transactionActiveWithoutTransaction()
+
+        and: "a method without the opt-out is still decorated by the class-level annotation"
+        transactionTestService.transactionActiveWithTransaction()
+    }
 }

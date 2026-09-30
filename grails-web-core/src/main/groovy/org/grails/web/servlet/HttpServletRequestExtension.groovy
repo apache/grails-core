@@ -22,6 +22,9 @@ import groovy.transform.CompileStatic
 
 import org.apache.grails.core.internal.util.TypeConverters
 import org.springframework.util.ClassUtils
+import org.springframework.util.MultiValueMap
+import org.springframework.web.multipart.MultipartFile
+import org.springframework.web.multipart.MultipartHttpServletRequest
 
 import jakarta.servlet.http.HttpServletRequest
 
@@ -41,6 +44,47 @@ class HttpServletRequestExtension {
 
     static String getForwardURI(HttpServletRequest request) {
         WebUtils.getForwardURI(request)
+    }
+
+    /**
+     * File upload accessors, delegating to the resolved multipart request found in this request's wrapper
+     * chain. Each throws {@link IllegalStateException} when the request is not a resolved multipart request,
+     * matching how these methods previously failed when the request was not a {@code MultipartHttpServletRequest}.
+     */
+    static MultipartFile getFile(HttpServletRequest request, String name) {
+        multipartRequest(request).getFile(name)
+    }
+
+    static List<MultipartFile> getFiles(HttpServletRequest request, String name) {
+        multipartRequest(request).getFiles(name)
+    }
+
+    static Iterator<String> getFileNames(HttpServletRequest request) {
+        multipartRequest(request).fileNames
+    }
+
+    static Map<String, MultipartFile> getFileMap(HttpServletRequest request) {
+        multipartRequest(request).fileMap
+    }
+
+    static MultiValueMap<String, MultipartFile> getMultiFileMap(HttpServletRequest request) {
+        multipartRequest(request).multiFileMap
+    }
+
+    static String getMultipartContentType(HttpServletRequest request, String name) {
+        multipartRequest(request).getMultipartContentType(name)
+    }
+
+    private static MultipartHttpServletRequest multipartRequest(HttpServletRequest request) {
+        MultipartHttpServletRequest multipartRequest = WebUtils.resolveMultipartRequest(request)
+        if (multipartRequest == null) {
+            throw new IllegalStateException(
+                    "Not a resolved multipart request. Content-Type is [${request.contentType}]. " +
+                    'If this is a file upload, check that multipart support is enabled ' +
+                    '(spring.servlet.multipart.enabled) and that any application-supplied MultipartFilter ' +
+                    'is ordered before the Grails request filter.')
+        }
+        multipartRequest
     }
 
     static getProperty(HttpServletRequest request, String name) {

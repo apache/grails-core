@@ -70,6 +70,8 @@ Because that query includes pagination parameters (max and offset), this will re
 println "Rendering ${results.size()} Accounts of ${results.totalCount}"
 ----
 
+The `sort` and `order` arguments accepted alongside the pagination values are checked the same way as for link:list.html[list()]: `sort` must be a property path made up of identifiers separated by dots that resolves through the domain class mapping, and `order` must be `"asc"` or `"desc"` (case-insensitive, surrounding whitespace ignored). Any other value is rejected with an `IllegalArgumentException` before the query is built, so request parameters can be passed through without further checks. A dotted `sort` key whose first segment is an alias created with `createAlias` is left for the query to resolve; a bare name must be a property of the domain class.
+
 
 === Description
 

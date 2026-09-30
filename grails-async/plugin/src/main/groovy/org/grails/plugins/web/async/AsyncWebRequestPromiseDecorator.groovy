@@ -42,7 +42,9 @@ import org.grails.web.util.WebUtils
  *
  * @author Graeme Rocher
  * @since 2.3
+ * @deprecated Request propagation is now provided by {@link GrailsWebRequestTaskDecorator} on Boot's application task executor.
  */
+@Deprecated(since = '8.0', forRemoval = true)
 @CompileStatic
 class AsyncWebRequestPromiseDecorator implements PromiseDecorator {
 
@@ -59,7 +61,7 @@ class AsyncWebRequestPromiseDecorator implements PromiseDecorator {
 
     AsyncWebRequestPromiseDecorator(GrailsWebRequest webRequest) {
         this.webRequest = webRequest
-        HttpServletRequest currentServletRequest = webRequest.currentRequest
+        HttpServletRequest currentServletRequest = webRequest.request
         WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(currentServletRequest)
         AsyncGrailsWebRequest newWebRequest = AsyncGrailsWebRequest.lookup(currentServletRequest)
         boolean startedHere = false

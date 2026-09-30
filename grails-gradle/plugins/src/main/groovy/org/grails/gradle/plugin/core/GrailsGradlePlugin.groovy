@@ -40,6 +40,7 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.DependencyResolveDetails
 import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.artifacts.ModuleDependency
+import org.gradle.api.artifacts.dsl.DependencyHandler
 import org.gradle.api.attributes.AttributeMatchingStrategy
 import org.gradle.api.attributes.Category
 import org.gradle.api.execution.TaskExecutionGraph
@@ -69,6 +70,7 @@ import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.process.JavaForkOptions
 import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
+import org.grails.gradle.plugin.bom.BomPropertyOverridesExtension
 import org.grails.gradle.plugin.bom.BomPropertyOverridesPlugin
 import org.grails.gradle.plugin.commands.GrailsCliGradlePlugin
 import org.grails.gradle.plugin.exploded.ExplodedCompatibilityRule
@@ -380,9 +382,24 @@ class GrailsGradlePlugin implements Plugin<Project> {
             // on the property directly tries to convert the file itself into a task, and building a
             // collection from a property with no value fails while dependencies are resolved.
             t.dependsOn({
-                RegularFileProperty configured = project.tasks.named(compileTaskName, GroovyCompile)
-                        .get().groovyOptions.configurationScriptFile
-                configured.present ? [project.files(configured)] : []
+                GroovyCompile compile = project.tasks.named(compileTaskName, GroovyCompile).get()
+                RegularFileProperty configured = compile.groovyOptions.configurationScriptFile
+                if (!configured.present) {
+                    return []
+                }
+                FileCollection scriptFiles = project.files(configured)
+                List<Object> dependencies = [scriptFiles]
+                if (scriptFiles.buildDependencies.getDependencies(t).isEmpty()) {
+                    // A plain file has no producer metadata. Preserve the older file + dependsOn
+                    // wiring by matching only direct compile dependencies that declare this exact
+                    // output. Inheriting unrelated dependencies could introduce a cycle, and
+                    // reading the compile or runtime classpath would restore the original bug.
+                    File scriptFile = configured.asFile.get()
+                    dependencies.addAll(compile.taskDependencies.getDependencies(compile).findAll { Task dependency ->
+                        dependency != t && dependency.outputs.files.contains(scriptFile)
+                    })
+                }
+                dependencies
             } as Callable)
         }
     }
@@ -487,12 +504,18 @@ ${importStatements}
      * orthogonal pieces:</p>
      * <ol>
      *   <li><strong>BOM import</strong>: the BOM selected by {@code grails.bom}
-     *       (default {@code grails-bom}) is added as a Gradle {@code platform()}
+     *       (default {@code grails-bom}) is contributed as a Gradle {@code platform()}
      *       dependency - or an {@code enforcedPlatform()} for the Micronaut variants -
-     *       on every declarable configuration, mirroring the global behaviour Spring
+     *       to every eligible declarable configuration, mirroring the global behaviour Spring
      *       DM provided via {@code configurations.all() + resolutionStrategy.eachDependency()}.
+     *       The platform is contributed lazily, through {@link Configuration#withDependencies},
+     *       when a configuration's dependencies are first observed. It therefore never counts
+     *       against the {@link Configuration#defaultDependencies} that other plugins use to
+     *       populate an otherwise empty configuration on demand (such as this plugin's
+     *       {@code profile} configuration). Dedicated tool and annotation-processor
+     *       classpaths, including {@code jacocoAgent} and {@code jacocoAnt}, are excluded.
      *       Exactly one Grails BOM is ever applied; the BOMs are split by integration
-     *       (default / hibernate5 / micronaut), so the plugin never layers two of them.</li>
+     *       (default / hibernate / micronaut), so the plugin never layers two of them.</li>
      *   <li><strong>Property overrides</strong>: the BOM-agnostic
      *       {@link BomPropertyOverridesPlugin} reads the BOM's
      *       {@code <properties>} block and applies any project-level
@@ -527,14 +550,11 @@ ${importStatements}
 
         // The BOM selection `grails { bom = ... }` is set in the user's build.gradle,
         // which runs AFTER plugin apply. We therefore wait until afterEvaluate to read
-        // it and apply the BOM accordingly. By that point all declarable configurations
-        // exist (java-base creates them during apply), so iterating them eagerly via
-        // .each is sufficient - any plugin that adds a configuration later is responsible
-        // for declaring its own BOM coordination if it needs it.
+        // it, together with any Grails BOM the build declares by hand, and decide which
+        // single BOM to apply.
         project.afterEvaluate {
-            def grailsExtension = project.extensions.findByType(GrailsExtension)
-            def bomName = grailsExtension == null ? GrailsExtension.DEFAULT_BOM : grailsExtension.bom.getOrNull()
-            if (!bomName) {
+            String effectiveBom = effectiveGrailsBom(project)
+            if (!effectiveBom) {
                 project.logger.info(
                     'grails.bom is null; skipping automatic application of the Grails platform BOM and bom-property-overrides plugin for project {}',
                     project.path
@@ -542,34 +562,17 @@ ${importStatements}
                 return
             }
 
-            // Exactly one Grails BOM may be applied. The BOMs are split by integration
-            // (default / hibernate / micronaut), so a project must select a single variant.
-            // If the build declares a Grails BOM by hand - for example a Micronaut application
-            // declaring enforcedPlatform(grails-micronaut-bom), or an application generated by
-            // Grails Forge / a profile that declares platform(grails-bom) directly - honor that
-            // selection instead of the configured default, and fail fast if more than one distinct
-            // Grails BOM is declared.
-            def declaredBoms = declaredGrailsBoms(project)
-            if (declaredBoms.size() > 1) {
-                throw new GradleException(
-                    "Project '${project.name}' declares more than one Grails BOM (${declaredBoms.join(', ')}). " +
-                        'Exactly one Grails BOM may be applied; the BOMs are split by integration ' +
-                        '(default / hibernate / micronaut), so a project must select a single variant.'
-                )
-            }
-            def effectiveBom = declaredBoms.isEmpty() ? bomName : declaredBoms.first()
-
-            def grailsVersion = (project.findProperty('grailsVersion') ?: BuildSettings.grailsVersion) as String
-            def bomCoordinates = "org.apache.grails:${effectiveBom}:${grailsVersion}" as String
+            String grailsVersion = (project.findProperty('grailsVersion') ?: BuildSettings.grailsVersion) as String
+            String bomCoordinates = "org.apache.grails:${effectiveBom}:${grailsVersion}" as String
 
             // The Micronaut BOM variants must be applied as an enforcedPlatform: they layer
             // Micronaut-specific overrides (javaparser-core, etc.) on top of grails-base-bom,
             // and Micronaut's own platform would otherwise win those versions via conflict
             // resolution. All other Grails BOMs are applied as a regular platform.
-            boolean enforced = effectiveBom in ENFORCED_PLATFORM_BOMS
+            boolean enforced = ENFORCED_PLATFORM_BOMS.contains(effectiveBom)
 
-            // Apply the single BOM to every declarable project configuration that does not already
-            // declare a Grails BOM by hand, matching the behavior of the Spring Dependency
+            // Contribute the single BOM to every declarable project configuration that does not
+            // already declare a Grails BOM by hand, matching the behavior of the Spring Dependency
             // Management plugin which applied version constraints globally via configurations.all()
             // + resolutionStrategy.eachDependency(). Configurations that already declare the BOM
             // (e.g. 'implementation' in a generated app) are left untouched so a second BOM is
@@ -583,21 +586,48 @@ ${importStatements}
             // resolution to upgrade transitives and break the tools/processors - unlike
             // resolutionStrategy hooks, platform() constraints participate in version conflict
             // resolution.
-            project.configurations.each {
-                if (it.canBeDeclared && !isExcludedFromBomPlatform(it.name) && !configurationHasGrailsBom(it)) {
-                    def platformDependency = enforced ?
-                            project.dependencies.enforcedPlatform(bomCoordinates) :
-                            project.dependencies.platform(bomCoordinates)
-                    project.dependencies.add(it.name, platformDependency)
+            //
+            // The platform is contributed through withDependencies rather than added eagerly here.
+            // Gradle runs a configuration's dependency actions once, when its dependencies are
+            // first observed (resolution, publication, incoming.dependencies): the
+            // defaultDependencies actions first - and only while the configuration holds no
+            // dependencies at all - then the withDependencies actions. A platform added eagerly
+            // counts as a declared dependency and silently disables the defaults other plugins
+            // rely on, such as this plugin's own profile configuration (#16335).
+            // Registering through configureEach also covers configurations that plugins create
+            // after this callback has run.
+            DependencyHandler dependencyHandler = project.dependencies
+            project.configurations.configureEach { Configuration configuration ->
+                if (!configuration.canBeDeclared || isExcludedFromBomPlatform(configuration.name)) {
+                    return
                 }
+                configuration.withDependencies { DependencySet dependencies ->
+                    // A create() configuration can change role after configureEach runs.
+                    if (!configuration.canBeDeclared || declaresGrailsBom(dependencies)) {
+                        return
+                    }
+                    dependencies.add(enforced ?
+                            dependencyHandler.enforcedPlatform(bomCoordinates) :
+                            dependencyHandler.platform(bomCoordinates))
+                }
+            }
+
+            // bom-property-overrides auto-detects BOMs by scanning the dependencies declared on the
+            // configurations when its own afterEvaluate callback runs (registered below, so after
+            // this one). The platform contributed lazily above is not declared yet at that point,
+            // so register the applied BOM with the plugin explicitly. autoDetect = false is
+            // honoured: the auto-applied BOM is part of what a build opts out of when it disables
+            // detection and lists the BOMs to process by hand.
+            BomPropertyOverridesExtension overrides = project.extensions.getByType(BomPropertyOverridesExtension)
+            if (overrides.autoDetect.get()) {
+                overrides.bom(bomCoordinates)
             }
         }
 
         // Delegate property-based version overrides to the bundled plugin. Auto-detect picks up
-        // the platform()/enforcedPlatform() declaration (whether injected above or declared by
-        // hand), plus any additional platform()/enforcedPlatform() the user declares. Users can
-        // extend the override surface by declaring their own platforms - no extra configuration
-        // is required here.
+        // any platform()/enforcedPlatform() declared by hand, and the afterEvaluate above registers
+        // the auto-applied BOM explicitly, so users can extend the override surface simply by
+        // declaring their own platforms - no extra configuration is required here.
         //
         // Applied unconditionally, as its own top-level statement here - NOT nested inside the
         // afterEvaluate{} above, and NOT gated on grails.bom being set. Two things depend on that:
@@ -657,6 +687,38 @@ ${importStatements}
     ] as Set<String>
 
     /**
+     * Returns the artifact name of the single Grails BOM the plugin applies to the project: the
+     * BOM the build declares by hand as a {@code platform()} / {@code enforcedPlatform()} when
+     * there is one, otherwise the {@code grails.bom} selection. Returns {@code null} when
+     * {@code grails.bom} is {@code null}, i.e. the build opted out of automatic BOM application.
+     * Fails the build when more than one distinct Grails BOM is declared by hand.
+     */
+    private static String effectiveGrailsBom(Project project) {
+        GrailsExtension grailsExtension = project.extensions.findByType(GrailsExtension)
+        String bomName = grailsExtension == null ? GrailsExtension.DEFAULT_BOM : grailsExtension.bom.getOrNull()
+        if (!bomName) {
+            return null
+        }
+
+        // Exactly one Grails BOM may be applied. The BOMs are split by integration
+        // (default / hibernate / micronaut), so a project must select a single variant.
+        // If the build declares a Grails BOM by hand - for example a Micronaut application
+        // declaring enforcedPlatform(grails-micronaut-bom), or an application generated by
+        // Grails Forge / a profile that declares platform(grails-bom) directly - honor that
+        // selection instead of the configured default, and fail fast if more than one distinct
+        // Grails BOM is declared.
+        Set<String> declaredBoms = declaredGrailsBoms(project)
+        if (declaredBoms.size() > 1) {
+            throw new GradleException(
+                "Project '${project.name}' declares more than one Grails BOM (${declaredBoms.join(', ')}). " +
+                    'Exactly one Grails BOM may be applied; the BOMs are split by integration ' +
+                    '(default / hibernate / micronaut), so a project must select a single variant.'
+            )
+        }
+        declaredBoms.isEmpty() ? bomName : declaredBoms.first()
+    }
+
+    /**
      * Returns the distinct known Grails BOM artifact names declared by hand as a {@code platform()}
      * or {@code enforcedPlatform()} on the project's declarable configurations.
      */
@@ -676,12 +738,12 @@ ${importStatements}
     }
 
     /**
-     * Returns whether the given configuration already declares a known Grails BOM as a
-     * {@code platform()} / {@code enforcedPlatform()} by hand, so the plugin can avoid layering a
+     * Returns whether the given declared dependencies already contain a known Grails BOM declared
+     * as a {@code platform()} / {@code enforcedPlatform()}, so the plugin can avoid layering a
      * second BOM on top of it.
      */
-    private static boolean configurationHasGrailsBom(Configuration configuration) {
-        for (Dependency dependency : configuration.dependencies) {
+    private static boolean declaresGrailsBom(DependencySet dependencies) {
+        for (Dependency dependency : dependencies) {
             if (isGrailsBomPlatform(dependency)) {
                 return true
             }
@@ -709,6 +771,7 @@ ${importStatements}
     private static boolean isExcludedFromBomPlatform(String name) {
         name == 'checkstyle' || name == 'codenarc' || name == 'pmd' ||
                 name == 'spotbugs' || name == 'spotbugsPlugins' ||
+                name == 'jacocoAgent' || name == 'jacocoAnt' ||
                 name == 'annotationProcessor' || name.endsWith('AnnotationProcessor')
     }
 
@@ -803,28 +866,28 @@ ${importStatements}
 
         // Exactly one Grails BOM is ever applied (the BOMs are split by integration:
         // default / hibernate / micronaut). A Micronaut project selects the Micronaut
-        // variant either by setting grails { bom = 'grails-micronaut-bom' } (auto-applied
+        // variant either by setting grails { bom = 'grails-micronaut-bom' } (contributed
         // as an enforcedPlatform by applyGrailsBom) or by opting out via grails { bom = null }
         // and declaring enforcedPlatform(grails-micronaut-bom) by hand. Either way the
         // Micronaut BOM must be an enforcedPlatform so the Micronaut platform cannot override
-        // its versions via conflict resolution. We scan the Micronaut BOM declarations on the
-        // 'implementation' configuration and accept it as valid when at least one is an
-        // enforcedPlatform.
-        Set<String> validMicronautBoms = [
-                'grails-micronaut-bom',
-                'grails-hibernate5-micronaut-bom',
-                'grails-hibernate7-micronaut-bom',
-        ] as Set<String>
-
+        // its versions via conflict resolution. A hand-declared BOM is visible on the
+        // 'implementation' configuration right away: accept it when at least one Micronaut
+        // BOM declared there is an enforcedPlatform.
         for (Dependency dep : implConfig.dependencies) {
-            if (dep.name in validMicronautBoms && dep instanceof ModuleDependency) {
-                Object categoryAttr = ((ModuleDependency) dep).attributes.getAttribute(
-                        org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
-                )
-                if (categoryAttr != null && categoryAttr.toString() == org.gradle.api.attributes.Category.ENFORCED_PLATFORM) {
+            if (ENFORCED_PLATFORM_BOMS.contains(dep.name) && dep instanceof ModuleDependency) {
+                Category category = ((ModuleDependency) dep).attributes.getAttribute(Category.CATEGORY_ATTRIBUTE)
+                if (category != null && category.name == Category.ENFORCED_PLATFORM) {
                     return // correctly configured
                 }
             }
+        }
+
+        // The auto-applied BOM is contributed lazily (see applyGrailsBom), so it is not declared
+        // yet when this afterEvaluate callback runs. When 'implementation' declares no Grails BOM
+        // by hand, the BOM applyGrailsBom selected is the one that will land on it - and the
+        // Micronaut variants are always contributed as an enforcedPlatform.
+        if (!declaresGrailsBom(implConfig.dependencies) && ENFORCED_PLATFORM_BOMS.contains(effectiveGrailsBom(project))) {
+            return
         }
 
         throw new GradleException(
@@ -925,8 +988,20 @@ ${importStatements}
         grailsVersion
     }
 
-    @CompileDynamic
     protected void configureAssetCompilation(Project project) {
+        configureAssetPipelineLayout(project)
+        configureAssetsOnTheClasspath(project)
+    }
+
+    /**
+     * Only the asset pipeline's own extension and task need dynamic dispatch, as the plugin is not
+     * a compile-time dependency. Calls to this plugin's own private methods stay out of here: on a
+     * reused daemon Gradle replaces the meta class of the applied plugin class with one that
+     * dispatches on the runtime class alone, so under Gradle 8 a private method of this class is
+     * not found when the applied plugin is a subclass.
+     */
+    @CompileDynamic
+    private static void configureAssetPipelineLayout(Project project) {
         if (project.extensions.findByName('assets')) {
             project.assets {
                 assetsPath = project.layout.projectDirectory.dir('grails-app/assets')
@@ -935,7 +1010,6 @@ ${importStatements}
                 it.destinationDirectory = project.layout.buildDirectory.dir('assetCompile/assets')
             }
         }
-        configureAssetsOnTheClasspath(project)
     }
 
     /**

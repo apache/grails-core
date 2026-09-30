@@ -39,6 +39,7 @@ import org.grails.gorm.graphql.fetcher.interceptor.InterceptingDataFetcher
 import org.grails.gorm.graphql.fetcher.interceptor.InterceptorInvoker
 import org.grails.gorm.graphql.types.GraphQLTypeManager
 
+import static graphql.schema.FieldCoordinates.coordinates
 import static graphql.schema.GraphQLArgument.newArgument
 import static graphql.schema.GraphQLFieldDefinition.newFieldDefinition
 
@@ -113,12 +114,16 @@ abstract class CustomOperation<T> implements Named<T>, Describable<T>, Deprecata
      * @param interceptorManager The interceptor manager to be used for executing
      * interceptors with the custom data fetcher
      * @param mappingContext The mapping context
+     * @param listArguments The default list arguments to prepend, keyed by argument name
+     * @param parentTypeName The name of the Query or Mutation type this field is added to,
+     * used to register the data fetcher in the code registry
      * @return The custom field
      */
     GraphQLFieldDefinition.Builder createField(PersistentEntity entity,
                                                GraphQLServiceManager serviceManager,
                                                MappingContext mappingContext,
-                                               Map<String, GraphQLInputType> listArguments) {
+                                               Map<String, GraphQLInputType> listArguments,
+                                               String parentTypeName) {
 
         validate()
 
@@ -131,7 +136,10 @@ abstract class CustomOperation<T> implements Named<T>, Describable<T>, Deprecata
                 .type(outputType)
                 .description(description)
                 .deprecate(deprecationReason)
-                .dataFetcher(buildDataFetcher(entity, serviceManager))
+
+        typeManager.codeRegistry.dataFetcher(
+                coordinates(parentTypeName, name),
+                buildDataFetcher(entity, serviceManager))
 
         if (defaultListArguments) {
             for (Map.Entry<String, GraphQLInputType> argument: listArguments) {

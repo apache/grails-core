@@ -82,14 +82,15 @@ public class ListOrderByFinder extends AbstractFinder {
 
                 // Resolve the sort direction BEFORE applying any order. Applying asc first and then
                 // trying to clear/replace it leaves the eagerly-applied asc order in the underlying
-                // criteria, so an explicit order:'desc' argument was silently ignored.
+                // criteria, so an explicit order:'desc' argument was silently ignored. The direction
+                // goes through the same normalization as every other entry point, so a value other
+                // than asc or desc is rejected here too instead of quietly sorting ascending.
                 boolean ascending = true;
                 if (arguments.length > 0 && (arguments[0] instanceof Map)) {
                     Map args = new LinkedHashMap((Map) arguments[0]);
-                    final Object order = args.remove("order");
-                    if (order != null && order.toString().equalsIgnoreCase("desc")) {
-                        ascending = false;
-                    }
+                    final Object order = args.remove(DynamicFinder.ARGUMENT_ORDER);
+                    final String direction = DynamicFinder.normalizeDirection(order != null ? order.toString() : null);
+                    ascending = !DynamicFinder.ORDER_DESC.equals(direction);
                     DynamicFinder.populateArgumentsForCriteria(clazz, q, args);
                 }
 

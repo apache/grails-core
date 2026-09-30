@@ -27,6 +27,7 @@ import graphql.schema.GraphQLFieldDefinition
 import graphql.schema.GraphQLNonNull
 import graphql.schema.GraphQLObjectType
 import org.grails.datastore.gorm.GormValidateable
+import org.grails.gorm.graphql.fetcher.context.LocaleAwareContext
 import org.grails.gorm.graphql.testing.GraphQLSchemaSpec
 import org.grails.gorm.graphql.testing.MockDataFetchingEnvironment
 import org.grails.gorm.graphql.types.GraphQLTypeManager
@@ -107,6 +108,55 @@ class DefaultGraphQLErrorsResponseHandlerSpec extends Specification implements G
         then:
         fieldFetcher.get(mockFieldEnv) == 'book'
         messageFetcher.get(mockFieldEnv) == 'hello'
+    }
+
+    void "test getLocale uses the locale from a LocaleAwareContext when no map locale is present"() {
+        given:
+        Locale contextLocale = Locale.CANADA_FRENCH
+        FieldError fieldError = Mock(FieldError)
+        1 * messageSource.getMessage(fieldError, contextLocale) >> 'bonjour'
+        DataFetchingEnvironment mockFieldEnv = new MockDataFetchingEnvironment(
+                source: fieldError,
+                root: new LocaleAwareContext() {
+                    @Override
+                    Locale getLocale() {
+                        contextLocale
+                    }
+                })
+
+        expect:
+        messageFetcher().get(mockFieldEnv) == 'bonjour'
+    }
+
+    void "test getLocale uses the locale from a root Map"() {
+        given:
+        Locale mapLocale = Locale.CANADA_FRENCH
+        FieldError fieldError = Mock(FieldError)
+        1 * messageSource.getMessage(fieldError, mapLocale) >> 'bonjour'
+        DataFetchingEnvironment mockFieldEnv = new MockDataFetchingEnvironment(
+                source: fieldError,
+                root: [locale: mapLocale])
+
+        expect:
+        messageFetcher().get(mockFieldEnv) == 'bonjour'
+    }
+
+    void "test getLocale falls back to the default locale when the root Map has no locale entry"() {
+        given:
+        FieldError fieldError = Mock(FieldError)
+        1 * messageSource.getMessage(fieldError, Locale.default) >> 'hello'
+        DataFetchingEnvironment mockFieldEnv = new MockDataFetchingEnvironment(
+                source: fieldError,
+                root: [:])
+
+        expect:
+        messageFetcher().get(mockFieldEnv) == 'hello'
+    }
+
+    private DataFetcher messageFetcher() {
+        GraphQLFieldDefinition field = handler.getFieldDefinition(typeManager, 'MockValidateable')
+        GraphQLObjectType type = (GraphQLObjectType) unwrap([], field.type)
+        codeRegistry.getDataFetcher(coordinates('Error', 'message'), type.getFieldDefinition('message'))
     }
 
     class MockValidateable implements GormValidateable {

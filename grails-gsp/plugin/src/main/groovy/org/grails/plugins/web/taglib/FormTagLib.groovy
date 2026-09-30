@@ -510,6 +510,10 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
             hiddenFieldImpl(writer, [name: 'execution', value: request['flowExecutionKey']])
         }
 
+        // A browser submits only GET or POST, so any other method travels as this parameter - read by the
+        // servlet filter in one mode and by the dispatcher in the other. The POST route on a resources
+        // member URL is a fallback for clients that cannot send it, not a replacement: it reaches update
+        // alone, and covers neither a singular resource nor a URL an application mapped to PUT itself.
         if (notGet && httpMethod != HttpMethod.POST) {
             hiddenFieldImpl(writer, [name: '_method', value: httpMethod.toString()])
         }

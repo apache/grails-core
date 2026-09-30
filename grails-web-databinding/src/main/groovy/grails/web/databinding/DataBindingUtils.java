@@ -18,17 +18,11 @@
  */
 package grails.web.databinding;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Modifier;
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -47,7 +41,6 @@ import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
 
-import grails.config.Settings;
 import grails.core.GrailsApplication;
 import grails.databinding.CollectionDataBindingSource;
 import grails.databinding.DataBinder;
@@ -58,11 +51,11 @@ import grails.validation.ValidationErrors;
 import grails.web.mime.MimeType;
 import grails.web.mime.MimeTypeResolver;
 import grails.web.mime.MimeTypeUtils;
-import org.grails.config.NavigableMap;
 import org.grails.core.exceptions.GrailsConfigurationException;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.OneToOne;
+import org.grails.web.databinding.BindingIncludeLists;
 import org.grails.web.databinding.DefaultASTDatabindingHelper;
 import org.grails.web.databinding.bindingsource.DataBindingSourceRegistry;
 import org.grails.web.databinding.bindingsource.DefaultDataBindingSourceRegistry;
@@ -80,13 +73,18 @@ public class DataBindingUtils {
     private static final Logger LOG = LoggerFactory.getLogger(DataBindingUtils.class);
     public static final String DATA_BINDER_BEAN_NAME = "grailsWebDataBinder";
     private static final String BLANK = "";
-    private static final List NO_BINDING_INCLUDE_LIST = new NoBindingIncludeList();
-    private static final Map<Class, List> CLASS_TO_BINDING_INCLUDE_LIST = new ConcurrentHashMap<>();
-    private static final Map<Class, List> CLASS_TO_LEGACY_BINDING_INCLUDE_LIST = new ConcurrentHashMap<>();
     private static final Map<Class, List> CLASS_TO_UNBINDABLE_PROPERTY_NAMES = new ConcurrentHashMap<>();
 
-    private static final class NoBindingIncludeList extends ArrayList {
-    }
+    /**
+     * The beans used by data binding for the most recently seen {@link ApplicationContext}, so that a bind does not
+     * repeat the same lookups for singletons which never change for the life of a context.
+     * <p>
+     * One entry on purpose: an application has one main context, while a map keyed by context would retain every
+     * context ever seen and leak bean factories wherever contexts are replaced, as in tests and development. A
+     * different context replaces the entry, leaving the previous one collectable. Volatile so that a thread seeing
+     * an entry sees it fully constructed; a race merely resolves the same singletons twice.
+     */
+    private static volatile ContextBoundBeans contextBoundBeans;
 
     /**
      * Associations both sides of any bidirectional relationships found in the object and source map to bind
@@ -136,119 +134,15 @@ public class DataBindingUtils {
     }
 
     protected static List getBindingIncludeList(final Object object) {
-        final boolean denyByDefaultEnabled = isDenyByDefaultEnabled();
-        final Map<Class, List> includeListCache = denyByDefaultEnabled ?
-                CLASS_TO_BINDING_INCLUDE_LIST : CLASS_TO_LEGACY_BINDING_INCLUDE_LIST;
-        List includeList = null;
-        try {
-            final Class<? extends Object> objectClass = object.getClass();
-            if (includeListCache.containsKey(objectClass)) {
-                includeList = includeListCache.get(objectClass);
-                if (includeList == NO_BINDING_INCLUDE_LIST) {
-                    includeList = null;
-                }
-            } else {
-                // Resolve the runtime-derived bindable names only on a cache miss - this walks the
-                // target's constraints/metaclass and would otherwise run on every bind of a cached class.
-                final List runtimeBindableNames = denyByDefaultEnabled ? getBindablePropertyNames(object) : null;
-                includeList = runtimeBindableNames;
-                final Field legacyWhiteListField = getField(objectClass, DefaultASTDatabindingHelper.LEGACY_DATABINDING_WHITELIST);
-                final Field defaultWhiteListField = denyByDefaultEnabled ?
-                        getPairedField(objectClass, DefaultASTDatabindingHelper.DEFAULT_DATABINDING_WHITELIST,
-                                DefaultASTDatabindingHelper.LEGACY_DATABINDING_WHITELIST) :
-                        getField(objectClass, DefaultASTDatabindingHelper.DEFAULT_DATABINDING_WHITELIST);
-                if (!denyByDefaultEnabled) {
-                    includeList = getStaticListFieldValue(legacyWhiteListField);
-                    if (includeList == null) {
-                        includeList = getStaticListFieldValue(defaultWhiteListField);
-                    }
-                } else if (defaultWhiteListField != null) {
-                    final List generatedIncludeList = getStaticListFieldValue(defaultWhiteListField);
-                    final Collection combinedIncludeList = new LinkedHashSet();
-                    if (generatedIncludeList != null) {
-                        combinedIncludeList.addAll(generatedIncludeList);
-                    }
-                    if (runtimeBindableNames != null) {
-                        combinedIncludeList.addAll(runtimeBindableNames);
-                    }
-                    includeList = new ArrayList(combinedIncludeList);
-                }
-                if (denyByDefaultEnabled) {
-                    includeList = asGeneratedBindingIncludeList(includeList);
-                }
-                if (!Environment.getCurrent().isReloadEnabled()) {
-                    includeListCache.put(objectClass, includeList == null ? NO_BINDING_INCLUDE_LIST : includeList);
-                }
-            }
-        } catch (Exception e) {
-        }
-        if (denyByDefaultEnabled) {
-            includeList = asGeneratedBindingIncludeList(includeList);
-        }
-        return includeList;
+        return BindingIncludeLists.forType(object.getClass(), isDenyByDefaultEnabled());
     }
 
     static List asGeneratedBindingIncludeList(final List includeList) {
-        if (includeList instanceof GeneratedBindingIncludeList) {
-            return includeList;
-        }
-        final Collection values = includeList == null || includeList.isEmpty() ?
-                Collections.singletonList(DefaultASTDatabindingHelper.NO_BINDABLE_PROPERTIES) : includeList;
-        return new GeneratedBindingIncludeList(values);
+        return BindingIncludeLists.asGenerated(includeList);
     }
 
     static boolean isGeneratedBindingIncludeList(final List includeList) {
-        return includeList instanceof GeneratedBindingIncludeList;
-    }
-
-    private static final class GeneratedBindingIncludeList extends ArrayList {
-        private GeneratedBindingIncludeList(final Collection values) {
-            super(values);
-        }
-    }
-
-    private static Field getField(final Class objectClass, final String fieldName) {
-        Class currentClass = objectClass;
-        while (currentClass != null) {
-            final Field field = getPublicDeclaredField(currentClass, fieldName);
-            if (field != null) {
-                return field;
-            }
-            currentClass = currentClass.getSuperclass();
-        }
-        return null;
-    }
-
-    private static Field getPairedField(final Class objectClass, final String fieldName, final String pairedFieldName) {
-        Class currentClass = objectClass;
-        while (currentClass != null) {
-            final Field field = getPublicDeclaredField(currentClass, fieldName);
-            final Field pairedField = getPublicDeclaredField(currentClass, pairedFieldName);
-            if (field != null && pairedField != null) {
-                return field;
-            }
-            currentClass = currentClass.getSuperclass();
-        }
-        return null;
-    }
-
-    private static Field getPublicDeclaredField(final Class objectClass, final String fieldName) {
-        try {
-            final Field field = objectClass.getDeclaredField(fieldName);
-            return Modifier.isPublic(field.getModifiers()) ? field : null;
-        } catch (NoSuchFieldException ignored) {
-            return null;
-        }
-    }
-
-    private static List getStaticListFieldValue(final Field field) throws IllegalAccessException {
-        if (field != null && (field.getModifiers() & Modifier.STATIC) != 0) {
-            final Object value = field.get(null);
-            if (value instanceof List) {
-                return (List) value;
-            }
-        }
-        return null;
+        return BindingIncludeLists.isGenerated(includeList);
     }
 
     static List getBindablePropertyNames(final Object object) {
@@ -274,40 +168,7 @@ public class DataBindingUtils {
     }
 
     private static List getPropertyNamesWithBindableValue(final Map constrainedProperties, final Boolean bindableValue) {
-        if (constrainedProperties == null || constrainedProperties.isEmpty()) {
-            return Collections.emptyList();
-        }
-        final List propertyNames = new ArrayList();
-        for (Object entryObject : constrainedProperties.entrySet()) {
-            Map.Entry entry = (Map.Entry) entryObject;
-            if (bindableValue.equals(getBindableConstraintValue(entry.getValue()))) {
-                String propertyName = String.valueOf(entry.getKey());
-                propertyNames.add(propertyName);
-                if (Boolean.TRUE.equals(bindableValue) && !isSimpleType(getConstrainedPropertyType(entry.getValue()))) {
-                    propertyNames.add(propertyName + "_*");
-                    propertyNames.add(propertyName + ".*");
-                }
-            }
-        }
-        return propertyNames;
-    }
-
-    private static Class getConstrainedPropertyType(final Object constrainedProperty) {
-        MetaClass metaClass = GroovySystem.getMetaClassRegistry().getMetaClass(constrainedProperty.getClass());
-        try {
-            Object propertyType = metaClass.invokeMethod(constrainedProperty, "getPropertyType", new Object[0]);
-            if (propertyType instanceof Class) {
-                return (Class) propertyType;
-            }
-        } catch (Exception ignored) {
-        }
-        return null;
-    }
-
-    private static boolean isSimpleType(final Class propertyType) {
-        return propertyType != null && (propertyType.isPrimitive() || String.class.equals(propertyType) ||
-                Boolean.class.equals(propertyType) || Character.class.equals(propertyType) || Number.class.isAssignableFrom(propertyType) ||
-                BigInteger.class.equals(propertyType) || BigDecimal.class.equals(propertyType) || URL.class.equals(propertyType));
+        return BindingIncludeLists.propertyNamesWithBindableValue(constrainedProperties, bindableValue);
     }
 
     static Map getConstrainedProperties(final Object object) {
@@ -344,41 +205,11 @@ public class DataBindingUtils {
     }
 
     private static Map evaluateConstrainedProperties(final Class objectClass) {
-        try {
-            Class<?> validationSupport = Class.forName("org.grails.web.plugins.support.ValidationSupport");
-            Object constrainedProperties = validationSupport.getMethod("getConstrainedPropertiesForClass", Class.class, boolean.class).invoke(null, objectClass, false);
-            if (constrainedProperties instanceof Map) {
-                return (Map) constrainedProperties;
-            }
-        } catch (Exception ignored) {
-        }
-        return Collections.emptyMap();
+        return BindingIncludeLists.evaluateConstrainedProperties(objectClass);
     }
 
     static Object getBindableConstraintValue(final Object constrainedProperty) {
-        MetaClass metaClass = GroovySystem.getMetaClassRegistry().getMetaClass(constrainedProperty.getClass());
-        try {
-            Object value = metaClass.invokeMethod(constrainedProperty, "getMetaConstraintValue", new Object[] { DefaultASTDatabindingHelper.BINDABLE_CONSTRAINT_NAME });
-            if (value != null) {
-                return value;
-            }
-        } catch (Exception ignored) {
-        }
-        try {
-            Object metaConstraints = metaClass.getProperty(constrainedProperty, "metaConstraints");
-            if (metaConstraints instanceof Map) {
-                return ((Map) metaConstraints).get(DefaultASTDatabindingHelper.BINDABLE_CONSTRAINT_NAME);
-            }
-        } catch (Exception ignored) {
-        }
-        try {
-            Object delegate = metaClass.getProperty(constrainedProperty, "property");
-            if (delegate != null && delegate != constrainedProperty) {
-                return getBindableConstraintValue(delegate);
-            }
-        } catch (Exception ignored) {
-        }
-        return null;
+        return BindingIncludeLists.bindableConstraintValue(constrainedProperty);
     }
 
     static List addUnbindablePropertyNames(final Object object, final List exclude) {
@@ -395,53 +226,18 @@ public class DataBindingUtils {
     }
 
     static boolean isDenyByDefaultEnabled() {
-        GrailsApplication application = Holders.findApplication();
-        if (application != null) {
-            return resolveDenyByDefault(
-                    application.getConfig().getProperty(Settings.DATABINDING_DENY_BY_DEFAULT, Object.class, null));
-        }
-        return resolveDenyByDefault(Holders.getFlatConfig().get(Settings.DATABINDING_DENY_BY_DEFAULT));
+        return BindingIncludeLists.isDenyByDefaultEnabled();
     }
 
     /**
-     * Resolves the configured value of {@code grails.databinding.denyByDefault} against the permissive default.
-     * <p>
-     * The raw value must be resolved here rather than through a typed {@code Boolean} config lookup:
-     * a config value that converts to {@code Boolean.FALSE} is discarded in favour of the supplied
-     * default, which would silently ignore an explicit value from
-     * any string-valued source such as a properties file, a system property or an environment variable.
-     * <p>
-     * A navigable config answers an absent key with a placeholder object rather than {@code null}, so
-     * only a genuinely absent key may fall back to the permissive default. Any other unrecognised value
-     * fails closed, because this switch governs mass-assignment protection.
-     *
-     * @param value the raw configured value, which may be {@code null} or an absent-key placeholder
-     * @return true when secure deny-by-default binding applies
+     * @see BindingIncludeLists#resolveDenyByDefault(Object)
      */
     static boolean resolveDenyByDefault(final Object value) {
-        if (value == null || value instanceof NavigableMap.NullSafeNavigator) {
-            return false;
-        }
-        if (value instanceof Boolean) {
-            return (Boolean) value;
-        }
-        if (value instanceof CharSequence) {
-            final String configuredValue = value.toString().trim();
-            if ("true".equalsIgnoreCase(configuredValue)) {
-                return true;
-            }
-            if ("false".equalsIgnoreCase(configuredValue)) {
-                return false;
-            }
-        }
-        LOG.warn("Unrecognised value [{}] for configuration property [{}]; secure data binding will be enabled.",
-                value, Settings.DATABINDING_DENY_BY_DEFAULT);
-        return true;
+        return BindingIncludeLists.resolveDenyByDefault(value);
     }
 
     static void clearBindingCaches() {
-        CLASS_TO_BINDING_INCLUDE_LIST.clear();
-        CLASS_TO_LEGACY_BINDING_INCLUDE_LIST.clear();
+        BindingIncludeLists.clearCaches();
         CLASS_TO_UNBINDABLE_PROPERTY_NAMES.clear();
     }
 
@@ -471,15 +267,12 @@ public class DataBindingUtils {
      * @since 2.3
      */
     public static <T> void bindToCollection(final Class<T> targetType, final Collection<T> collectionToPopulate, final CollectionDataBindingSource collectionBindingSource) throws InstantiationException, IllegalAccessException {
-        final GrailsApplication application = Holders.findApplication();
-        PersistentEntity entity = null;
-        if (application != null) {
-            try {
-                entity = application.getMappingContext().getPersistentEntity(targetType.getName());
-            } catch (GrailsConfigurationException e) {
-                //no-op
-            }
-        }
+        bindToCollection(targetType, collectionToPopulate, collectionBindingSource, Holders.findApplication());
+    }
+
+    private static <T> void bindToCollection(final Class<T> targetType, final Collection<T> collectionToPopulate,
+            final CollectionDataBindingSource collectionBindingSource, final GrailsApplication application) throws InstantiationException, IllegalAccessException {
+        final PersistentEntity entity = findPersistentEntity(application, targetType.getName());
         final List<DataBindingSource> dataBindingSources = collectionBindingSource.getDataBindingSources();
         for (final DataBindingSource dataBindingSource : dataBindingSources) {
             final T newObject;
@@ -491,7 +284,7 @@ public class DataBindingUtils {
                 );
             }
 
-            bindObjectToDomainInstance(entity, newObject, dataBindingSource, getBindingIncludeList(newObject), Collections.emptyList(), null);
+            bindObjectToDomainInstance(entity, newObject, dataBindingSource, getBindingIncludeList(newObject), Collections.emptyList(), null, false, application);
             collectionToPopulate.add(newObject);
         }
     }
@@ -499,7 +292,18 @@ public class DataBindingUtils {
     public static <T> void bindToCollection(final Class<T> targetType, final Collection<T> collectionToPopulate, final ServletRequest request) throws InstantiationException, IllegalAccessException {
         final GrailsApplication grailsApplication = Holders.findApplication();
         final CollectionDataBindingSource collectionDataBindingSource = createCollectionDataBindingSource(grailsApplication, targetType, request);
-        bindToCollection(targetType, collectionToPopulate, collectionDataBindingSource);
+        bindToCollection(targetType, collectionToPopulate, collectionDataBindingSource, grailsApplication);
+    }
+
+    private static PersistentEntity findPersistentEntity(final GrailsApplication application, final String className) {
+        if (application != null) {
+            try {
+                return application.getMappingContext().getPersistentEntity(className);
+            } catch (GrailsConfigurationException e) {
+                //no-op
+            }
+        }
+        return null;
     }
 
     /**
@@ -543,16 +347,10 @@ public class DataBindingUtils {
         else if (include.isEmpty() && !GrailsWebDataBinder.isBindAllIncludeList(include)) {
             include = Collections.singletonList(DefaultASTDatabindingHelper.NO_BINDABLE_PROPERTIES);
         }
-        GrailsApplication application = Holders.findApplication();
-        PersistentEntity entity = null;
-        if (application != null) {
-            try {
-                entity = application.getMappingContext().getPersistentEntity(object.getClass().getName());
-            } catch (GrailsConfigurationException e) {
-                //no-op
-            }
-        }
-        return bindObjectToDomainInstance(entity, object, source, include, exclude, filter, clearMissing && explicitInclude);
+        final GrailsApplication application = Holders.findApplication();
+        final PersistentEntity entity = findPersistentEntity(application, object.getClass().getName());
+        return bindObjectToDomainInstance(entity, object, source, include, exclude, filter,
+                clearMissing && explicitInclude, application);
     }
 
     /**
@@ -599,9 +397,19 @@ public class DataBindingUtils {
      *         binding errors already stored on the target and null-clearing failures, or null when no such errors occur.
      *         Clearing runs after normal binder listeners have completed and does not emit listener callbacks.
      */
-    @SuppressWarnings("unchecked")
     public static BindingResult bindObjectToDomainInstance(PersistentEntity entity, Object object,
                                                            Object source, List include, List exclude, String filter, boolean clearMissing) {
+        return bindObjectToDomainInstance(entity, object, source, include, exclude, filter, clearMissing, Holders.findApplication());
+    }
+
+    /**
+     * Binds using an already resolved {@link GrailsApplication}. Resolving the application is not a simple field
+     * read, it walks the registered discovery strategies and ends in a bean lookup, so callers which have already
+     * resolved it pass it down instead of resolving it again for the same bind.
+     */
+    @SuppressWarnings("unchecked")
+    private static BindingResult bindObjectToDomainInstance(PersistentEntity entity, Object object,
+            Object source, List include, List exclude, String filter, boolean clearMissing, GrailsApplication grailsApplication) {
         boolean explicitInclude = include != null;
         if (include == null) {
             if (exclude == null || isDenyByDefaultEnabled()) {
@@ -614,7 +422,6 @@ public class DataBindingUtils {
             include = Collections.singletonList(DefaultASTDatabindingHelper.NO_BINDABLE_PROPERTIES);
         }
         BindingResult bindingResult = null;
-        GrailsApplication grailsApplication = Holders.findApplication();
 
         try {
             final DataBindingSource bindingSource = createDataBindingSource(grailsApplication, object.getClass(), source);
@@ -691,15 +498,8 @@ public class DataBindingUtils {
     }
 
     public static DataBindingSourceRegistry getDataBindingSourceRegistry(GrailsApplication grailsApplication) {
-        DataBindingSourceRegistry registry = null;
-        if (grailsApplication != null) {
-            ApplicationContext context = grailsApplication.getMainContext();
-            if (context != null) {
-                if (context.containsBean(DataBindingSourceRegistry.BEAN_NAME)) {
-                    registry = context.getBean(DataBindingSourceRegistry.BEAN_NAME, DataBindingSourceRegistry.class);
-                }
-            }
-        }
+        final ContextBoundBeans beans = getContextBoundBeans(grailsApplication);
+        DataBindingSourceRegistry registry = beans == null ? null : beans.getDataBindingSourceRegistry();
         if (registry == null) {
             registry = new DefaultDataBindingSourceRegistry();
         }
@@ -727,16 +527,8 @@ public class DataBindingUtils {
 
     public static MimeTypeResolver getMimeTypeResolver(
             GrailsApplication grailsApplication) {
-        MimeTypeResolver mimeTypeResolver = null;
-        if (grailsApplication != null) {
-            ApplicationContext context = grailsApplication.getMainContext();
-            if (context != null) {
-                if (context.containsBean(MimeTypeResolver.BEAN_NAME)) {
-                    mimeTypeResolver = context.getBean(MimeTypeResolver.BEAN_NAME, MimeTypeResolver.class);
-                }
-            }
-        }
-        return mimeTypeResolver;
+        final ContextBoundBeans beans = getContextBoundBeans(grailsApplication);
+        return beans == null ? null : beans.getMimeTypeResolver();
     }
 
     public static MimeType resolveMimeType(Object bindingSource, MimeTypeResolver mimeTypeResolver) {
@@ -744,19 +536,34 @@ public class DataBindingUtils {
     }
 
     private static DataBinder getGrailsWebDataBinder(final GrailsApplication grailsApplication) {
-        DataBinder dataBinder = null;
-        if (grailsApplication != null) {
-            final ApplicationContext mainContext = grailsApplication.getMainContext();
-            if (mainContext != null && mainContext.containsBean(DATA_BINDER_BEAN_NAME)) {
-                dataBinder = mainContext.getBean(DATA_BINDER_BEAN_NAME, DataBinder.class);
-            }
-        }
+        final ContextBoundBeans beans = getContextBoundBeans(grailsApplication);
+        DataBinder dataBinder = beans == null ? null : beans.getDataBinder();
         if (dataBinder == null) {
             // this should really never happen in the running app as the binder
             // should always be found in the context
             dataBinder = new GrailsWebDataBinder(grailsApplication);
         }
         return dataBinder;
+    }
+
+    /**
+     * @param grailsApplication the application to resolve the main context from, may be null
+     * @return the cached beans of the application's main context or null if there is no context to look beans up in
+     */
+    private static ContextBoundBeans getContextBoundBeans(final GrailsApplication grailsApplication) {
+        if (grailsApplication == null) {
+            return null;
+        }
+        final ApplicationContext context = grailsApplication.getMainContext();
+        if (context == null) {
+            return null;
+        }
+        ContextBoundBeans beans = contextBoundBeans;
+        if (beans == null || beans.applicationContext != context) {
+            beans = new ContextBoundBeans(context);
+            contextBoundBeans = beans;
+        }
+        return beans;
     }
 
     @SuppressWarnings("unchecked")
@@ -773,5 +580,66 @@ public class DataBindingUtils {
             return value.toString();
         }
         return value;
+    }
+
+    /**
+     * The data binding beans of a single {@link ApplicationContext}, resolved on first use and kept for as long as
+     * that context is the one being bound against.
+     */
+    private static final class ContextBoundBeans {
+
+        private final ApplicationContext applicationContext;
+        private final CachedBean<DataBindingSourceRegistry> dataBindingSourceRegistry =
+                new CachedBean<>(DataBindingSourceRegistry.BEAN_NAME, DataBindingSourceRegistry.class);
+        private final CachedBean<MimeTypeResolver> mimeTypeResolver =
+                new CachedBean<>(MimeTypeResolver.BEAN_NAME, MimeTypeResolver.class);
+        private final CachedBean<DataBinder> dataBinder =
+                new CachedBean<>(DATA_BINDER_BEAN_NAME, DataBinder.class);
+
+        private ContextBoundBeans(ApplicationContext applicationContext) {
+            this.applicationContext = applicationContext;
+        }
+
+        private DataBindingSourceRegistry getDataBindingSourceRegistry() {
+            return dataBindingSourceRegistry.get(applicationContext);
+        }
+
+        private MimeTypeResolver getMimeTypeResolver() {
+            return mimeTypeResolver.get(applicationContext);
+        }
+
+        private DataBinder getDataBinder() {
+            return dataBinder.get(applicationContext);
+        }
+    }
+
+    /**
+     * A singleton bean looked up at most once per {@link ApplicationContext} once it is found, resolved lazily so
+     * that asking for one bean never triggers the creation of another.
+     * <p>
+     * A miss is not remembered: the lookup repeats until the bean is found, so one registered after the first
+     * attempt - into a context still being populated - is still picked up, and costs nothing once it is there.
+     *
+     * @param <T> the type of the bean
+     */
+    private static final class CachedBean<T> {
+
+        private final String beanName;
+        private final Class<T> beanType;
+        private volatile T bean;
+
+        private CachedBean(String beanName, Class<T> beanType) {
+            this.beanName = beanName;
+            this.beanType = beanType;
+        }
+
+        private T get(ApplicationContext applicationContext) {
+            T resolved = bean;
+            if (resolved == null && applicationContext.containsBean(beanName)) {
+                resolved = applicationContext.getBean(beanName, beanType);
+                bean = resolved;
+            }
+            return resolved;
+        }
     }
 }

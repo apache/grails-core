@@ -59,6 +59,11 @@ import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 class GormRegistry {
 
     private static final GormRegistry instance = new GormRegistry()
+
+    /**
+     * The {@link #withConnectionScope} blocks running on this thread, innermost first; {@code null} outside every one.
+     */
+    private static final ThreadLocal<Deque<ConnectionScope>> CONNECTION_SCOPES = new ThreadLocal<>()
     private final GormApiFactory defaultApiFactory = new DefaultGormApiFactory()
     final GormApiResolver apiResolver = new GormApiResolver(this)
     final GormStaticApiRegistry staticApiRegistry = new GormStaticApiRegistry(this)
@@ -492,13 +497,136 @@ class GormRegistry {
         return validationApiRegistry.get(normalizeEntityKey(entityClass), normalizeQualifier(qualifier))
     }
 
+    /**
+     * Runs the callable with the unqualified operations on the entity routed to the named connection: an explicit
+     * static call such as {@code Book.list()}, an instance call such as {@code book.save()}, and a query built by
+     * either. This is what a {@code withConnection} block promises; the closure's delegate only covers the calls
+     * that do not name the class. Such a lookup resolves exactly as if it had named the connection, so for a
+     * multi-tenant entity the block's connection takes precedence over the current tenant, as an explicitly
+     * named connection does. An operation that names its own connection, and every other entity, is unaffected.
+     * The scope belongs to the calling thread. Blocks nest, and the previous connection applies again when an
+     * inner one ends. A block for the default connection undoes any enclosing one for its duration, and outside
+     * every block it costs nothing.
+     *
+     * @param entity The entity whose operations follow the connection
+     * @param connectionName The connection
+     * @param callable What to run
+     * @return What the callable returns
+     */
+    static <T> T withConnectionScope(Class entity, String connectionName, Closure<T> callable) {
+        return runInScope(instance.normalizeEntityKey(entity), instance.normalizeQualifier(connectionName), callable)
+    }
+
+    /**
+     * Runs the callable with the unqualified operations on every entity mapped to the named connection routed to
+     * it, as {@link #withConnectionScope(Class, String, Closure)} does for one entity. An entity that is not mapped
+     * to the connection keeps its own. This is what a transaction opened for a connection, as a method annotated
+     * {@code @Transactional(connection = 'books')} opens one, promises for the calls made inside it.
+     *
+     * @param connectionName The connection
+     * @param callable What to run
+     * @return What the callable returns
+     */
+    static <T> T withConnectionScope(String connectionName, Closure<T> callable) {
+        return runInScope(null, instance.normalizeQualifier(connectionName), callable)
+    }
+
+    private static <T> T runInScope(String entityKey, String qualifier, Closure<T> callable) {
+        Deque<ConnectionScope> scopes = CONNECTION_SCOPES.get()
+        if (ConnectionSource.DEFAULT == qualifier && scopes == null) {
+            // Nothing to undo: outside every block the operations are on their default connections already.
+            return callable.call()
+        }
+        if (scopes == null) {
+            scopes = new ArrayDeque<ConnectionScope>()
+            CONNECTION_SCOPES.set(scopes)
+        }
+        scopes.push(new ConnectionScope(entityKey, qualifier))
+        try {
+            return callable.call()
+        }
+        finally {
+            scopes.pop()
+            if (scopes.isEmpty()) {
+                CONNECTION_SCOPES.remove()
+            }
+        }
+    }
+
+    /**
+     * @return whether a {@link #withConnectionScope} block is running on this thread, for any entity
+     */
+    static boolean insideConnectionScope() {
+        Deque<ConnectionScope> scopes = CONNECTION_SCOPES.get()
+        return scopes != null && !scopes.isEmpty()
+    }
+
+    /**
+     * @return the connection that the innermost {@link #withConnectionScope} block applying to the entity routes
+     * its unqualified operations to, or {@code null} when none is running for it on this thread
+     */
+    private static String scopedConnection(String normalizedClassName) {
+        Deque<ConnectionScope> scopes = CONNECTION_SCOPES.get()
+        if (scopes == null) {
+            return null
+        }
+        for (ConnectionScope scope : scopes) {
+            boolean applies = scope.entityKey == null ?
+                    instance.isMappedToConnection(normalizedClassName, scope.qualifier) :
+                    scope.entityKey == normalizedClassName
+            if (applies) {
+                return scope.qualifier
+            }
+        }
+        return null
+    }
+
+    /**
+     * Whether a block for every entity on the connection covers this one. A block for the default connection undoes
+     * an enclosing one for every entity; any other covers only the entities mapped to its connection, so that none
+     * is sent to a connection it has no mapping for.
+     *
+     * <p>A multi-tenant entity is never covered: which tenant its operations belong to is what the tenant context
+     * says, and a transaction opened for a connection, or for a tenant's own schema or database, does not answer
+     * that. Naming the connection on the entity still routes it, as it always did.
+     */
+    private boolean isMappedToConnection(String normalizedClassName, String qualifier) {
+        if (ConnectionSource.DEFAULT == qualifier) {
+            return true
+        }
+        Map<String, Datastore> mapped = entityDatastores.get(normalizedClassName)
+        if (mapped == null || !mapped.containsKey(qualifier)) {
+            return false
+        }
+        Datastore defaultDatastore = getDatastoreByString(normalizedClassName, ConnectionSource.DEFAULT)
+        PersistentEntity entity = defaultDatastore?.mappingContext?.getPersistentEntity(normalizedClassName)
+        return entity == null || !entity.isMultiTenant()
+    }
+
+    /**
+     * One {@link #withConnectionScope} block: the entity it routes, by normalized name, or {@code null} for every
+     * entity mapped to its connection.
+     */
+    private static final class ConnectionScope {
+
+        final String entityKey
+
+        final String qualifier
+
+        ConnectionScope(String entityKey, String qualifier) {
+            this.entityKey = entityKey
+            this.qualifier = qualifier
+        }
+    }
+
     GormStaticApi resolveStaticApi(Class entityClass) {
         return resolveStaticApi(entityClass, (String) null)
     }
 
     GormStaticApi resolveStaticApi(Class entityClass, String qualifier) {
         String normalizedClassName = normalizeEntityKey(entityClass)
-        String normalizedQualifier = normalizeQualifier(qualifier)
+        // A lookup that names no connection follows the scope exactly as if it had named that connection.
+        String normalizedQualifier = normalizeQualifier(qualifier != null ? qualifier : scopedConnection(normalizedClassName))
 
         if (MultiTenant.isAssignableFrom(entityClass)) {
             // Priority 1: Explicit qualifier that doesn't match default is likely a tenant ID
@@ -545,7 +673,7 @@ class GormRegistry {
 
     GormInstanceApi resolveInstanceApi(Class entityClass, String qualifier) {
         String normalizedClassName = normalizeEntityKey(entityClass)
-        String normalizedQualifier = normalizeQualifier(qualifier)
+        String normalizedQualifier = normalizeQualifier(qualifier != null ? qualifier : scopedConnection(normalizedClassName))
 
         if (MultiTenant.isAssignableFrom(entityClass)) {
             if (!ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
@@ -596,7 +724,7 @@ class GormRegistry {
      */
     GormValidationApi resolveValidationApi(Class entityClass, String qualifier) {
         String normalizedClassName = normalizeEntityKey(entityClass)
-        String normalizedQualifier = normalizeQualifier(qualifier)
+        String normalizedQualifier = normalizeQualifier(qualifier != null ? qualifier : scopedConnection(normalizedClassName))
 
         if (MultiTenant.isAssignableFrom(entityClass)) {
             if (!ConnectionSource.DEFAULT.equals(normalizedQualifier)) {

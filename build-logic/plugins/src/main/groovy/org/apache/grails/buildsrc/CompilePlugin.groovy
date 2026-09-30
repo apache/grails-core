@@ -114,6 +114,17 @@ class CompilePlugin implements Plugin<Project> {
                 it.groovyOptions.encoding = StandardCharsets.UTF_8.name()
                 // Preserve method parameter names in Groovy/Java classes for IDE parameter hints & bean reflection metadata.
                 it.groovyOptions.parameters = true
+                // groovyOptions only covers Groovy sources; joint-compiled Java sources take their javac flags from here
+                if (!it.options.compilerArgs.contains('-parameters')) {
+                    it.options.compilerArgs.add('-parameters')
+                }
+                // Grails 9 compiles with invokedynamic on. Groovy 6 moved classic call-site
+                // bytecode into the optional groovy-callsite module (GROOVY-11158), which the
+                // framework's library modules do not carry, so they never opt out. -PgrailsIndy
+                // (see grails-extension-gradle-config.gradle) still governs the Grails plugin
+                // modules, which get groovy-callsite through grails-common, and applications
+                // opt out with grails { indy = false }.
+                it.groovyOptions.optimizationOptions.put('indy', true)
                 // encoding needs to be the same since it's different across platforms
                 it.options.encoding = StandardCharsets.UTF_8.name()
                 it.options.fork = true

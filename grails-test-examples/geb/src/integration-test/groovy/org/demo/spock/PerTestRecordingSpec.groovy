@@ -85,11 +85,32 @@ class PerTestRecordingSpec extends ContainerGebSpec {
         names.contains('setup_running_a_test_to_create_a_recording')
         names.contains('setup_running_a_second_test_to_create_another')
 
-        and: 'the recording files should have different content'
+        when: 'finding the recording of each test method'
+        // The recordings are complete by now: GebRecordingTestListener saves each one
+        // synchronously when its iteration ends, and this spec is @Stepwise.
         def firstRecording = recordingFiles.find { it.name.contains('setup_running_a_test_to_create_a_recording') }
         def secondRecording = recordingFiles.find { it.name.contains('setup_running_a_second_test_to_create_another') }
+
+        then: 'each recording captured meaningful content, not just a near-blank connection handshake'
+        // A VNC recording container that was only just restarted (see
+        // WebDriverContainerHolder#restartVncRecordingContainer) is guaranteed to have
+        // connected, but not to have captured more than a frame or two by the time a fast
+        // iteration finishes. Two such near-blank captures can encode to identical bytes,
+        // which would fail the difference check below without saying why.
+        firstRecording.length() > MIN_MEANINGFUL_RECORDING_BYTES
+        secondRecording.length() > MIN_MEANINGFUL_RECORDING_BYTES
+
+        and: 'the recording files should have different content'
+        // Kept alongside the size check above rather than dropped in favor of it: the size
+        // check only rules out near-blank captures, it says nothing about two recordings
+        // accidentally being the *same* file (e.g. a future regression in how recording
+        // files are named or matched). The two checks guard against different failure modes.
         Files.mismatch(firstRecording.toPath(), secondRecording.toPath()) != -1
     }
+
+    // Genuine recordings of the tests above are tens of kilobytes or more, so this floor
+    // leaves an order of magnitude of headroom.
+    private static final long MIN_MEANINGFUL_RECORDING_BYTES = 5_000L
 
     private static final DateTimeFormatter RECORDING_DIR_FORMAT = DateTimeFormatter.ofPattern('yyyyMMdd_HHmmss')
 

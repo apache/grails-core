@@ -18,7 +18,10 @@
  */
 package org.grails.web.converters.marshaller.xml
 
+import java.sql.Time
+import java.sql.Timestamp
 import java.text.SimpleDateFormat
+import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -77,6 +80,36 @@ class DateMarshallerSpec extends Specification {
 
         then: "matches yyyy-MM-ddTHH:mm:ss(.fraction)?(Z|+HH:MM)"
         1 * xml.chars({ String s -> s ==~ /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})/ })
+    }
+
+    void "default formatter renders a #date.class.simpleName, whose toInstant() is unsupported"() {
+        given:
+        def marshaller = new DateMarshaller()
+        def xml = Mock(XML)
+
+        when:
+        marshaller.marshalObject(date, xml)
+
+        then:
+        1 * xml.chars(DateTimeFormatter.ISO_OFFSET_DATE_TIME
+                .withZone(ZoneId.systemDefault())
+                .format(Instant.ofEpochMilli(1790305200000L)))
+
+        where:
+        date << [new java.sql.Date(1790305200000L), new Time(1790305200000L)]
+    }
+
+    void "default formatter keeps Timestamp nanos"() {
+        given:
+        def marshaller = new DateMarshaller()
+        def instant = Instant.parse('2025-10-08T07:48:46.407254Z')
+        def xml = Mock(XML)
+
+        when:
+        marshaller.marshalObject(Timestamp.from(instant), xml)
+
+        then:
+        1 * xml.chars(DateTimeFormatter.ISO_OFFSET_DATE_TIME.withZone(ZoneId.systemDefault()).format(instant))
     }
 
     void "legacy formatter is used when provided"() {

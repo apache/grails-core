@@ -49,7 +49,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: "📥 Checkout repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
       - name: "☕️ Determine JDKs from .sdkmanrc"
         # Read both pins out of the files that already declare them. Only the major is kept:
         # `sdk env` gives a developer the exact Liberica patch, but the fixture and the suite are
@@ -68,14 +68,14 @@ jobs:
         # Both, in one step. The last version listed becomes the default JAVA_HOME (the Grails 8
         # side); the fixture step below switches to the matching JAVA_HOME_<major>_X64 for its
         # single invocation.
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@v6.0.1
         with:
           distribution: liberica
           java-version: |
             ${{ steps.jdks.outputs.fixture-java }}
             ${{ steps.jdks.outputs.build-java }}
       - name: "🗄️ Restore dependency jar cache"
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@v6.1.0
         with:
           # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
           # Keyed by branch version so each release branch maintains its own warm cache.
@@ -143,7 +143,7 @@ jobs:
         run: ./gradlew check --continue --stacktrace
       - name: "📤 Upload test reports"
         if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: end-to-end-test-reports
           path: end-to-end/**/build/reports/tests/**

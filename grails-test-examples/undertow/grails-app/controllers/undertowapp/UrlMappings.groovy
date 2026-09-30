@@ -29,6 +29,7 @@ class UrlMappings {
 
         "/"(view: "/index")
         "500"(view: '/error')
+        "413"(controller: 'upload', action: 'tooLarge')
         "404"(view: '/notFound')
     }
 }

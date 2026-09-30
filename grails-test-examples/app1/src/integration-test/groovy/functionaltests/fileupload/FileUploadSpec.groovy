@@ -285,6 +285,37 @@ class FileUploadSpec extends Specification implements HttpClientSupport {
         ])
     }
 
+    def "upload over the configured multipart max file size is rejected"() {
+        given:
+        def content = 'X' * (2 * 1024 + 1)
+        def body = MultipartBody.builder()
+                .addPart('file', 'over-size-limit.txt', 'text/plain', content.bytes)
+                .build()
+
+        when:
+        def response = httpPostMultipart('/fileUploadTest/uploadSingle', body)
+
+        then:
+        response.assertStatus(413)
+    }
+
+    def "upload within the configured multipart max file size succeeds"() {
+        given:
+        def content = 'X' * 1536
+        def body = MultipartBody.builder()
+                .addPart('file', 'within-size-limit.txt', 'text/plain', content.bytes)
+                .build()
+
+        when:
+        def response = httpPostMultipart('/fileUploadTest/uploadSingle', body)
+
+        then:
+        response.assertJsonContains(200, [
+                success: true,
+                size   : content.bytes.length
+        ])
+    }
+
     def "upload json file with content"() {
         given:
         def jsonContent = '{"users":[{"name":"Alice","age":30},{"name":"Bob","age":25}]}'
@@ -301,6 +332,56 @@ class FileUploadSpec extends Specification implements HttpClientSupport {
                 filename: 'users.json',
                 content : jsonContent
         ])
+    }
+
+    def "upload exceeding the configured limit is reported through the application error pipeline"() {
+        given: 'a payload larger than the configured spring.servlet.multipart.maxRequestSize of 3KB'
+        def body = MultipartBody.builder()
+                .addPart('file', 'huge.txt', 'text/plain', ('X' * 200000).bytes)
+                .build()
+
+        when:
+        def response = httpPostMultipart('/fileUploadTest/uploadSingle', body)
+
+        then: 'the error dispatch renders it, rather than the container serving its own error page'
+        response.assertStatus(413)
+        with(response.json()) {
+            status == 413
+            path == '/fileUploadTest/uploadSingle'
+        }
+    }
+
+    def "method override still applies to a multipart upload"() {
+        given: 'the form g:uploadForm(method: "PUT") produces - multipart plus _method'
+        def body = MultipartBody.builder()
+                .addPart('_method', 'PUT')
+                .addPart('file', 'override.txt', 'text/plain', 'content'.bytes)
+                .build()
+
+        when:
+        def response = httpPostMultipart('/fileUploadTest/uploadWithMethodOverride', body)
+
+        then: 'the action is declared allowedMethods PUT, so reaching it at all is the override doing its work'
+        response.assertJsonContains(200, [
+                success : true,
+                filename: 'override.txt'
+        ])
+
+        and: 'while the request reports the method it actually arrived as'
+        response.json().method == 'POST'
+    }
+
+    def "without the override the same POST is refused"() {
+        given: 'the same upload, with nothing asking for a different method'
+        def body = MultipartBody.builder()
+                .addPart('file', 'override.txt', 'text/plain', 'content'.bytes)
+                .build()
+
+        when:
+        def response = httpPostMultipart('/fileUploadTest/uploadWithMethodOverride', body)
+
+        then: 'allowedMethods rejects it, which is what makes the test above meaningful'
+        response.assertStatus(405)
     }
 
     def "upload xml file with content"() {

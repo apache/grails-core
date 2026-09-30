@@ -1,0 +1,164 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+GSP can render the views of a Spring Boot application that is not a Grails application. Such an application routes
+and binds with Spring MVC and has no `grails-app` directory, no plugins and no `UrlMappings`; it gets GSP as a view
+technology and nothing else of the Grails runtime.
+
+Add the dependency and the Gradle plugin that compiles the pages:
+
+[source,groovy,subs="attributes+"]
+.build.gradle
+----
+plugins {
+    id 'org.springframework.boot'
+    id 'org.apache.grails.gradle.grails-gsp' version '{version}'  // <1>
+}
+
+dependencies {
+    implementation platform('org.apache.grails:grails-bom:{version}')
+    implementation 'org.apache.grails.views:grails-gsp-spring-boot'  // <2>
+}
+----
+<1> compiles the templates at build time. It provides no dependency management.
+<2> auto-configures the template engine, the view resolver, the tag libraries and SiteMesh.
+
+Templates live under `src/main/resources/templates` by default, and a view name returned by a controller resolves
+to a template of that name — `return "form"` renders `templates/form.gsp`. Use `spring.gsp.templateRoots` to put
+them somewhere else.
+
+==== Pages Compiled at Build Time
+
+The `compileGroovyPages` task compiles every template into a class and writes a registry naming them, which the
+application reads from the class path at startup. Tell the task where the templates are and what path to register
+them under:
+
+[source,groovy]
+.build.gradle
+----
+compileGroovyPages {
+    source = project.file("${project.projectDir}/src/main/resources/templates")
+    serverpath = '/'  // <1>
+}
+----
+<1> the path a view is registered under. It has to match how the application asks for one: a Spring Boot
+application asks for `/form.gsp`, so the registered path must have no prefix of its own.
+
+The compiled pages are added to the test runtime class path as well, so a test renders the same pages the
+application ships. A Grails application gets none of this — it renders the views under `grails-app/views`.
+
+A template root on the file system — `spring.gsp.templateRoots=file:./src/main/resources/templates` — means the
+templates themselves are there to be rendered, so the compiled pages are left unused and an edit to a template
+takes effect without a restart. Where every root is on the class path, as it is once the application is packaged,
+the compiled pages answer.
+
+==== Using a Tag Library
+
+The tag libraries GSP contributes are available to every page. A tag library of your own is a class annotated
+`@grails.gsp.TagLib`; declare it as a bean and its tags become usable in a page:
+
+[source,groovy]
+.GreetingTagLib.groovy
+----
+@TagLib
+class GreetingTagLib {
+
+    static String namespace = 'greet'
+
+    def hello(Map attrs) {
+        out << "Hello, ${attrs.name}"
+    }
+}
+----
+
+[source,java]
+----
+@Bean
+public GreetingTagLib greetingTagLib() {
+    return new GreetingTagLib();
+}
+----
+
+A page then calls it as `<greet:hello name="World"/>`.
+
+Both kinds are found: a class annotated `@grails.gsp.TagLib`, and one annotated `@Artefact("TagLib")` as a plugin's
+tag library is. A tag library written for a plugin may expect collaborators the plugin would have contributed, and
+an application without the plugin has to declare those as beans too.
+
+The asset pipeline does that for its own tags. Add its Spring Boot module, which serves what the pipeline compiled,
+and `asset-pipeline-gsp`, which makes the `<asset:...>` tag libraries beans of the context:
+
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    implementation 'cloud.wondrify:asset-pipeline-spring-boot'
+    implementation 'cloud.wondrify:asset-pipeline-gsp'
+}
+----
+
+A page or layout then names each asset, and the tag writes the URL of the file the pipeline compiled for it:
+
+[source,xml]
+----
+<asset:stylesheet src="application.css"/>
+<asset:javascript src="application.js"/>
+----
+
+The asset pipeline builds those URLs with a Grails link generator, so keep `grails-web-url-mappings` on the class
+path when excluding the parts of the Grails web tier an application does not use.
+
+==== Generating Links
+
+A library that builds URLs with a Grails link generator works here, with one limitation: a link to a controller and
+action is generated from URL mappings, and an application routing with Spring MVC has none. A link to a resource or
+to a path is unaffected, which is what the asset pipeline's tags use. Declare a `grailsUrlMappingsHolder` bean of
+your own if you want a link to a controller to resolve.
+
+==== Configuration
+
+|===
+|Property |Default |Description
+
+|`spring.gsp.templateRoots`
+|`classpath:/templates`, or `./src/main/resources/templates` when it exists
+|Where templates are loaded from. A `file:` root renders the templates themselves.
+
+|`spring.gsp.reloadingEnabled`
+|`true`
+|Whether a changed template is picked up without a restart.
+
+|`spring.gsp.jspEnabled`
+|`true`
+|Whether a view with no template of its name falls back to a JSP of that name. Only a JSP that exists in the
+servlet context answers, so a name nothing renders - `error`, for Spring Boot's error page - is left to the view
+resolvers after this one.
+
+|`spring.gsp.replaceViewResolverBean`
+|`true`
+|Whether the GSP view resolver becomes the application's `viewResolver`.
+
+|`sitemesh.decorator.default`
+|`application`
+|The layout a page is decorated with when it names none.
+|===
+
+TIP: An application rendering precompiled views with SiteMesh layouts, linking the stylesheets and scripts the asset
+pipeline compiled through its `<asset:...>` tags, and rendering a JSP alongside GSP is in
+`grails-test-examples/gsp-spring-boot` in the Grails source tree.

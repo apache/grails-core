@@ -22,6 +22,7 @@ import org.grails.plugins.testing.GrailsMockHttpServletResponse
 import org.junit.jupiter.api.Test
 
 import static org.junit.jupiter.api.Assertions.assertEquals
+import static org.junit.jupiter.api.Assertions.assertFalse
 
 /**
  * Test case for {@link org.grails.plugins.testing.GrailsMockHttpServletResponse}.
@@ -41,5 +42,37 @@ class GrailsMockHttpServletResponseTests {
 
         testResponse << "\nand another line"
         assertEquals "Some string or other\nand another line", testResponse.contentAsString
+    }
+
+    /**
+     * The body is the controller's own output, so a DOCTYPE it renders is accepted. The DTD the
+     * declaration names is never retrieved.
+     */
+    @Test
+    void testXmlAcceptsDoctypeInRenderedOutput() {
+        def testResponse = new GrailsMockHttpServletResponse()
+        testResponse << '''<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html><body><p>hello</p></body></html>'''
+
+        assertEquals 'hello', testResponse.xml.body.p.text()
+    }
+
+    @Test
+    void testXmlDoesNotResolveExternalEntities() {
+        File secret = File.createTempFile('mock-response-secret', '.txt')
+        try {
+            secret.text = 'top-secret-token'
+            def testResponse = new GrailsMockHttpServletResponse()
+            testResponse << """<!DOCTYPE root [
+<!ENTITY ext SYSTEM '${secret.toURI().toASCIIString()}'>
+]>
+<root>&ext;</root>"""
+
+            assertFalse testResponse.xml.text().contains('top-secret-token')
+        }
+        finally {
+            secret.delete()
+        }
     }
 }

@@ -74,6 +74,7 @@ def publishedProjects = [
         'grails-logging',
         'grails-mail',
         'grails-mimetypes',
+        'grails-openapi',
         'grails-quartz',
         'grails-redis',
         'grails-rest-transforms',
@@ -177,18 +178,8 @@ def publishedProjects = [
         'grails-profiles-web-plugin',
 ]
 
-def skipMicronautProjects = providers.gradleProperty('skipMicronautProjects').isPresent()
-if (!skipMicronautProjects) {
-    publishedProjects.addAll([
-            'grails-hibernate5-micronaut-bom',
-            'grails-hibernate7-micronaut-bom',
-            'grails-micronaut',
-            'grails-micronaut-bom',
-    ])
-}
-
 subprojects {
-    if (name in publishedProjects) {
+    if (name in publishedProjects || name in skillProjects) {
         // This has to be applied here in the root project due to the nexus plugin requirements
         if (name.startsWith('grails-profiles')) {
             apply plugin: 'org.apache.grails.gradle.grails-publish-profile'

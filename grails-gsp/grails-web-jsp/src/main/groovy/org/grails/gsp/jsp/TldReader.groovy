@@ -46,7 +46,8 @@ class TldReader {
 
     @CompileStatic(TypeCheckingMode.SKIP)
     private init(InputStream inputStream) {
-        def rootNode = SpringIOUtils.createXmlSlurper().parse(inputStream)
+        // a descriptor on the classpath is trusted input and may declare a DOCTYPE
+        def rootNode = SpringIOUtils.createXmlSlurper(true).parse(inputStream)
         uri = rootNode.uri.text()
         rootNode.tag.each { tag ->
             String tagName = tag.name.text()

@@ -8,8 +8,10 @@ grails {
 
 tasks.register('inspectBomSetup') {
     doLast {
-        def implDeps = configurations.implementation.allDependencies
-        def hasPlatform = implDeps.any { dep ->
+        // Observing compileClasspath runs the dependency actions of its whole hierarchy, so a
+        // platform the plugin contributes lazily to 'implementation' would be declared by now.
+        def compileDeps = configurations.compileClasspath.incoming.dependencies
+        def hasPlatform = compileDeps.any { dep ->
             dep.group == 'org.apache.grails' && dep.name == 'grails-bom'
         }
         println "HAS_PLATFORM_BOM=${hasPlatform}"

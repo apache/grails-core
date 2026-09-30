@@ -138,6 +138,8 @@ public final class PluginUtils {
 
         try {
             Enumeration<URL> resources = classLoader.getResources(PLUGIN_XML_PATTERN);
+            // Grails generates this descriptor and never writes a DOCTYPE, so it is read with the
+            // strict parser, matching the compile-time transform that generates and rewrites it
             SAXParser saxParser = SpringIOUtils.newSAXParser();
 
             while (resources.hasMoreElements()) {

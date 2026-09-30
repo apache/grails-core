@@ -160,4 +160,40 @@ public class NameUtils {
     public static String capitalize(String name) {
         return BeanUtils.capitalize(name);
     }
+
+    /**
+     * Whether the given value is shaped like a property path: one or more Java identifiers
+     * separated by single dots, for example {@code name} or {@code author.name}. Identifier
+     * segments follow {@link Character#isJavaIdentifierStart(int)} and
+     * {@link Character#isJavaIdentifierPart(int)}, so {@code $} and non-ASCII letters are
+     * accepted while ignorable control characters, whitespace, punctuation and operators are not.
+     * Useful for checking a caller-supplied property name before it is interpolated into a query.
+     *
+     * @param path The candidate property path
+     * @return {@code true} if the value is a well-formed property path
+     */
+    public static boolean isValidPropertyPath(String path) {
+        if (path == null || path.isEmpty()) {
+            return false;
+        }
+        boolean expectSegmentStart = true;
+        int i = 0;
+        while (i < path.length()) {
+            int codePoint = path.codePointAt(i);
+            if (expectSegmentStart) {
+                if (!Character.isJavaIdentifierStart(codePoint)) {
+                    return false;
+                }
+                expectSegmentStart = false;
+            }
+            else if (codePoint == '.') {
+                expectSegmentStart = true;
+            }
+            else if (!Character.isJavaIdentifierPart(codePoint) || Character.isIdentifierIgnorable(codePoint)) {
+                return false;
+            }
+            i += Character.charCount(codePoint);
+        }
+        return !expectSegmentStart;
+    }
 }

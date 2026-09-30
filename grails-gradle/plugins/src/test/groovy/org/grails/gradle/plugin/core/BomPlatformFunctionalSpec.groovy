@@ -39,8 +39,15 @@ class BomPlatformFunctionalSpec extends GradleSpecification {
         when:
         def result = executeTask('inspectBomSetup')
 
-        then:
+        then: 'the platform is contributed lazily: a configuration nothing has observed yet declares no BOM'
+        result.output.contains('DECLARED_EAGERLY=false')
+
+        and: 'it is declared on the declarable configurations once their dependencies are observed'
         result.output.contains('HAS_PLATFORM_BOM=true')
+        result.output.contains('IMPLEMENTATION_HAS_PLATFORM_BOM=true')
+        result.output.contains('TEST_IMPLEMENTATION_HAS_PLATFORM_BOM=true')
+
+        and:
         result.output.contains('HAS_BOM_PROPERTY_OVERRIDES=true')
         result.output.contains('HAS_SPRING_DM=false')
     }
@@ -66,36 +73,89 @@ class BomPlatformFunctionalSpec extends GradleSpecification {
         result.output.contains('HAS_BOM_PROPERTY_OVERRIDES=true')
     }
 
-    def "plugin applies configured Hibernate 7 Micronaut BOM as enforced platform"() {
+    def "the lazily contributed platform does not pre-empt the defaultDependencies of other configurations"() {
+        given: 'a project whose configurations are populated on demand, the way the jacoco plugin populates jacocoAgent'
+        setupTestResourceProject('bom-platform-default-dependencies')
+
+        when:
+        def result = executeTask('inspectDefaultDependencies')
+
+        then: "the jacoco plugin's defaults resolve without the application platform on its tool classpaths (#16335)"
+        result.output.contains('JACOCO_AGENT_RESOLVED=[org.jacoco:org.jacoco.agent:0.0.1-test]')
+        result.output.contains('JACOCO_ANT_RESOLVED=[org.jacoco:org.jacoco.ant:0.0.1-test]')
+        result.output.contains('JACOCO_AGENT_HAS_BOM=false')
+        result.output.contains('JACOCO_ANT_HAS_BOM=false')
+
+        and: 'so do the defaults of any other configuration populated through defaultDependencies'
+        result.output.contains('LAZY_TOOL_RESOLVED=[org.apache.grails:lazy-bom:1.0-lazy, org.example:lazy-tool:1.0.0]')
+        result.output.contains('LAZY_TOOL_HAS_BOM=true')
+
+        and: "the plugin's own profile configuration keeps its default profile"
+        result.output.contains('PROFILE_DEFAULT_DECLARED=true')
+        result.output.contains('PROFILE_HAS_BOM=true')
+
+        and: 'the platform still manages versions on configurations declared by the build'
+        result.output.contains('MANAGED_RESOLVED=[org.apache.grails:lazy-bom:1.0-lazy, org.example:managed-lib:1.0.0]')
+    }
+
+    def "late-created configurations receive the platform only if their final role allows dependencies"() {
         given:
-        setupTestResourceProject('bom-platform-hibernate7-micronaut-auto')
+        setupTestResourceProject('bom-platform-default-dependencies')
+
+        when:
+        def result = executeTask('inspectLateConfigurations', ['--warning-mode=fail'])
+
+        then: 'a configuration made non-declarable in its create closure resolves without an injected dependency'
+        result.output.contains('LATE_RESOLVABLE_RESOLVED=[]')
+        result.output.contains('LATE_RESOLVABLE_HAS_BOM=false')
+
+        and: 'a late-created declarable configuration still gets its defaults and the platform'
+        result.output.contains('LATE_DECLARABLE_RESOLVED=[org.apache.grails:lazy-bom:1.0-lazy, org.example:lazy-tool:1.0.0]')
+    }
+
+    def "auto-applied BOM property overrides respect autoDetect=#autoDetect and explicit registration=#explicitBom"() {
+        given:
+        setupTestResourceProject('bom-platform-default-dependencies')
+
+        when:
+        def result = executeTask('inspectDefaultDependencies', [
+                "-PautoDetect=$autoDetect" as String, "-PexplicitBom=$explicitBom" as String, '-Pmanaged-lib.version=2.0.0'
+        ])
+
+        then: 'the platform always applies, but property overrides require automatic detection or explicit registration'
+        result.output.contains("MANAGED_RESOLVED=[org.apache.grails:lazy-bom:1.0-lazy, org.example:managed-lib:$expectedVersion]")
+
+        where:
+        autoDetect | explicitBom | expectedVersion
+        true       | false       | '2.0.0'
+        false      | false       | '1.0.0'
+        false      | true        | '2.0.0'
+    }
+
+    def "an auto-applied Micronaut BOM variant satisfies the enforcedPlatform validation"() {
+        given: 'a Micronaut project that selects the Micronaut BOM variant via grails.bom'
+        setupTestResourceProject('bom-platform-micronaut')
 
         when:
         def result = executeTask('inspectBomSetup')
 
-        then:
-        result.output.contains('HAS_MICRONAUT_LIBRARY=true')
-        result.output.contains('HAS_H7_MICRONAUT_BOM=true')
-        result.output.contains('H7_MICRONAUT_BOM_ENFORCED=true')
-        result.output.contains('HAS_GRAILS_BOM=false')
-        result.output.contains('HAS_BOM_PROPERTY_OVERRIDES=true')
+        then: 'the validation accepts the BOM the plugin contributes lazily'
+        result.output.contains('BUILD SUCCESSFUL')
+
+        and: 'that BOM is contributed as an enforcedPlatform'
+        result.output.contains('HAS_MICRONAUT_BOM=true')
+        result.output.contains('MICRONAUT_BOM_CATEGORY=enforced-platform')
     }
 
-    def "plugin recognizes manually declared Hibernate 7 Micronaut BOM as the single Grails BOM"() {
-        given:
-        setupTestResourceProject('bom-platform-hibernate7-micronaut-manual')
+    def "opting out of the automatic BOM without declaring a Micronaut BOM by hand still fails the validation"() {
+        given: 'a Micronaut project that opts out of automatic BOM application'
+        def runner = setupTestResourceProject('bom-platform-micronaut')
 
         when:
-        def result = executeTask('inspectBomSetup')
+        def result = runner.withArguments('help', '--stacktrace', '-PbomOptOut').buildAndFail()
 
         then:
-        result.output.contains('HAS_GRAILS_BOM=false')
-        result.output.contains('HAS_MICRONAUT_LIBRARY=true')
-        result.output.contains('HAS_H7_MICRONAUT_BOM=true')
-        result.output.contains('H7_MICRONAUT_BOM_ENFORCED=true')
-        result.output.contains('SIBLING_HAS_H7_MICRONAUT_BOM=true')
-        result.output.contains('SIBLING_H7_MICRONAUT_BOM_ENFORCED=true')
-        result.output.contains('SIBLING_HAS_GRAILS_BOM=false')
-        result.output.contains('HAS_BOM_PROPERTY_OVERRIDES=true')
+        result.output.contains('uses Micronaut but does not apply a Micronaut BOM as an enforcedPlatform')
     }
+
 }

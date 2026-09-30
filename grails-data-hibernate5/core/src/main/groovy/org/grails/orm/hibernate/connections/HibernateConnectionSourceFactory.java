@@ -139,11 +139,14 @@ public class HibernateConnectionSourceFactory extends AbstractHibernateConnectio
             configuration.getProperties().put("jakarta.persistence.validation.factory", registry);
         }
 
-        if (applicationContext != null && applicationContext.containsBean(dataSourceConnectionSource.getName())) {
-            configuration.setApplicationContext(this.applicationContext);
-        }
-        else {
-            configuration.setDataSourceConnectionSource(dataSourceConnectionSource);
+        configuration.setDataSourceName(name);
+        // The connection source is the DataSource of record: the datastore's connection source
+        // and transaction manager use it, so Hibernate must open sessions against the same instance.
+        configuration.setDataSourceConnectionSource(dataSourceConnectionSource);
+        if (applicationContext != null) {
+            // Resolves resources and class loading through the context, whose loader is the one
+            // the application classes were loaded with, also under a DevTools restart.
+            configuration.setApplicationContext(applicationContext);
         }
 
         Resource[] configLocations = hibernateSettings.getConfigLocations();

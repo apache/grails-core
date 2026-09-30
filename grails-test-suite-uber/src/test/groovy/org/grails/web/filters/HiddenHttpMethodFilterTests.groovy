@@ -22,10 +22,12 @@ import org.grails.web.filters.HiddenHttpMethodFilter
 import org.junit.jupiter.api.Test
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
+import org.springframework.mock.web.MockMultipartHttpServletRequest
 
 import jakarta.servlet.FilterChain
 
 import static org.junit.jupiter.api.Assertions.assertEquals
+import static org.junit.jupiter.api.Assertions.assertThrows
 
 /**
  * @author Graeme Rocher
@@ -56,6 +58,59 @@ class HiddenHttpMethodFilterTests {
         filter.doFilter(req, res, { req2, res2 -> method = req2.method } as FilterChain)
 
         assertEquals "DELETE", method
+    }
+
+    @Test
+    void testMultipartRequestWithUnreadableParametersIsPassedOn() {
+        // An upload breaching the container's limits fails part parsing, so reading _method throws.
+        // The filter must not abort the request here - DispatcherServlet.checkMultipart raises the
+        // failure during dispatch, where the application's error handling can see it.
+        def filter = new HiddenHttpMethodFilter()
+        def req = unreadableParameterRequest('multipart/form-data; boundary=test')
+        def res = new MockHttpServletResponse()
+        String method
+        filter.doFilter(req, res, { req2, res2 -> method = req2.method } as FilterChain)
+
+        assertEquals "POST", method
+    }
+
+    @Test
+    void testMultipartRequestStillHonoursTheMethodParameter() {
+        def filter = new HiddenHttpMethodFilter()
+        def req = new MockMultipartHttpServletRequest()
+        req.contentType = 'multipart/form-data; boundary=test'
+        req.addParameter("_method", "PUT")
+        req.setMethod("POST")
+        def res = new MockHttpServletResponse()
+        String method
+        filter.doFilter(req, res, { req2, res2 -> method = req2.method } as FilterChain)
+
+        assertEquals "PUT", method
+    }
+
+    @Test
+    void testUnreadableParametersStillThrowForANonMultipartRequest() {
+        def filter = new HiddenHttpMethodFilter()
+        def req = unreadableParameterRequest('application/x-www-form-urlencoded')
+        def res = new MockHttpServletResponse()
+
+        def e = assertThrows(IllegalStateException) {
+            filter.doFilter(req, res, { req2, res2 -> } as FilterChain)
+        }
+
+        assertEquals 'parameters are unreadable', e.message
+    }
+
+    private static MockHttpServletRequest unreadableParameterRequest(String contentType) {
+        def request = new MockHttpServletRequest() {
+            @Override
+            String getParameter(String name) {
+                throw new IllegalStateException('parameters are unreadable')
+            }
+        }
+        request.contentType = contentType
+        request.setMethod("POST")
+        request
     }
 
     @Test

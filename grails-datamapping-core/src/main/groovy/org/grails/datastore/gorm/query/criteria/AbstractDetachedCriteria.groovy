@@ -116,7 +116,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      */
     Criteria createAlias(String associationPath, String alias) {
         initialiseIfNecessary(targetClass)
-        PersistentProperty prop
+        PersistentProperty prop = null
         if (associationPath.contains('.')) {
             def tokens = associationPath.split(/\./)
             def entity = this.persistentEntity
@@ -203,7 +203,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
         try {
             dynamicFinders = targetClass.gormDynamicFinders
             persistentEntity = targetClass.gormPersistentEntity
-        } catch (MissingPropertyException mpe) {
+        } catch (MissingPropertyException ignored) {
             throw new IllegalArgumentException("Class [$targetClass.name] is not a domain class")
         }
     }
@@ -235,8 +235,9 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      * @param callable The callable
      * @return  The projection list
      */
-    Criteria projections(@DelegatesTo(ProjectionList) Closure callable) {
+    Criteria projections(@DelegatesTo(value = ProjectionList, strategy = Closure.DELEGATE_FIRST) Closure callable) {
         callable.delegate = projectionList
+        callable.resolveStrategy = Closure.DELEGATE_FIRST
         callable.call()
         return this
     }
@@ -246,9 +247,9 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      * @param callable Callable closure
      * @return This criterion
      */
-    Criteria and(@DelegatesTo(AbstractDetachedCriteria) Closure callable) {
+    Criteria and(@DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure callable) {
         junctions << new Query.Conjunction()
-        handleJunction(callable)
+        handleJunction((Closure) callable)
         return this
     }
 
@@ -257,9 +258,9 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      * @param callable Callable closure
      * @return This criterion
      */
-    Criteria or(@DelegatesTo(AbstractDetachedCriteria) Closure callable) {
+    Criteria or(@DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure callable) {
         junctions << new Query.Disjunction()
-        handleJunction(callable)
+        handleJunction((Closure) callable)
         return this
     }
 
@@ -268,9 +269,9 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      * @param callable Callable closure
      * @return This criterion
      */
-    Criteria not(@DelegatesTo(AbstractDetachedCriteria) Closure callable) {
+    Criteria not(@DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure callable) {
         junctions << new Query.Negation()
-        handleJunction(callable)
+        handleJunction((Closure) callable)
         return this
     }
 
@@ -295,13 +296,13 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     }
 
     @Override
-    Criteria 'in'(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> subquery) {
-        inList(propertyName, buildQueryableCriteria(subquery))
+    Criteria 'in'(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> subquery) {
+        inList(propertyName, buildQueryableCriteria((Closure) subquery))
     }
 
     @Override
-    Criteria inList(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> subquery) {
-        inList(propertyName, buildQueryableCriteria(subquery))
+    Criteria inList(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> subquery) {
+        inList(propertyName, buildQueryableCriteria((Closure) subquery))
     }
 
     /**
@@ -318,8 +319,8 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     }
 
     @Override
-    Criteria notIn(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> subquery) {
-        notIn(propertyName, buildQueryableCriteria(subquery))
+    Criteria notIn(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> subquery) {
+        notIn(propertyName, buildQueryableCriteria((Closure) subquery))
     }
 
     /**
@@ -639,24 +640,24 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
         return this
     }
 
-    Criteria eqAll(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> propertyValue) {
-        eqAll(propertyName, buildQueryableCriteria(propertyValue))
+    Criteria eqAll(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
+        eqAll(propertyName, buildQueryableCriteria((Closure) propertyValue))
     }
 
-    Criteria gtAll(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> propertyValue) {
-        gtAll(propertyName, buildQueryableCriteria(propertyValue))
+    Criteria gtAll(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
+        gtAll(propertyName, buildQueryableCriteria((Closure) propertyValue))
     }
 
-    Criteria ltAll(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> propertyValue) {
-        ltAll(propertyName, buildQueryableCriteria(propertyValue))
+    Criteria ltAll(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
+        ltAll(propertyName, buildQueryableCriteria((Closure) propertyValue))
     }
 
-    Criteria geAll(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> propertyValue) {
-        geAll(propertyName, buildQueryableCriteria(propertyValue))
+    Criteria geAll(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
+        geAll(propertyName, buildQueryableCriteria((Closure) propertyValue))
     }
 
-    Criteria leAll(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> propertyValue) {
-        leAll(propertyName, buildQueryableCriteria(propertyValue))
+    Criteria leAll(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
+        leAll(propertyName, buildQueryableCriteria((Closure) propertyValue))
     }
 
     @Override
@@ -678,8 +679,8 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     }
 
     @Override
-    Criteria gtSome(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> propertyValue) {
-        gtSome(propertyName, buildQueryableCriteria(propertyValue))
+    Criteria gtSome(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
+        gtSome(propertyName, buildQueryableCriteria((Closure) propertyValue))
     }
 
     @Override
@@ -689,8 +690,8 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     }
 
     @Override
-    Criteria geSome(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> propertyValue) {
-        geSome(propertyName, buildQueryableCriteria(propertyValue))
+    Criteria geSome(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
+        geSome(propertyName, buildQueryableCriteria((Closure) propertyValue))
     }
 
     @Override
@@ -700,8 +701,8 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     }
 
     @Override
-    Criteria ltSome(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> propertyValue) {
-        ltSome(propertyName, buildQueryableCriteria(propertyValue))
+    Criteria ltSome(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
+        ltSome(propertyName, buildQueryableCriteria((Closure) propertyValue))
     }
 
     @Override
@@ -711,8 +712,8 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     }
 
     @Override
-    Criteria leSome(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> propertyValue) {
-        leSome(propertyName, buildQueryableCriteria(propertyValue))
+    Criteria leSome(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
+        leSome(propertyName, buildQueryableCriteria((Closure) propertyValue))
     }
 
     @Override
@@ -809,7 +810,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      * @param additionalQuery The additional query
      * @return A new query
      */
-    AbstractDetachedCriteria<T> where(@DelegatesTo(AbstractDetachedCriteria) Closure additionalQuery) {
+    AbstractDetachedCriteria<T> where(@DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure additionalQuery) {
         AbstractDetachedCriteria<T> newQuery = clone()
         return newQuery.build(additionalQuery)
     }
@@ -820,7 +821,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      * @param additionalQuery The additional query
      * @return A new query
      */
-    AbstractDetachedCriteria<T> whereLazy(@DelegatesTo(AbstractDetachedCriteria) Closure additionalQuery) {
+    AbstractDetachedCriteria<T> whereLazy(@DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure additionalQuery) {
         AbstractDetachedCriteria<T> newQuery = clone()
         return newQuery.build(additionalQuery)
     }
@@ -832,7 +833,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      * @return A new criteria instance
      */
 
-    AbstractDetachedCriteria<T> build(@DelegatesTo(AbstractDetachedCriteria) Closure callable) {
+    AbstractDetachedCriteria<T> build(@DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure callable) {
         AbstractDetachedCriteria newCriteria = this.clone()
         final Closure clonedClosure = (Closure) callable.clone()
         clonedClosure.setResolveStrategy(Closure.DELEGATE_FIRST)
@@ -847,7 +848,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      * @return A new criteria instance
      */
 
-    AbstractDetachedCriteria<T> buildLazy(@DelegatesTo(AbstractDetachedCriteria) Closure callable) {
+    AbstractDetachedCriteria<T> buildLazy(@DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure callable) {
         AbstractDetachedCriteria newCriteria = this.clone()
         newCriteria.lazyQuery = callable
         return newCriteria
@@ -871,21 +872,21 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     @Override
     @CompileStatic
     AbstractDetachedCriteria<T> clone() {
-        AbstractDetachedCriteria criteria = newInstance()
-        criteria.@criteria = new ArrayList(this.criteria)
+        AbstractDetachedCriteria cloned = newInstance()
+        cloned.@criteria = new ArrayList(this.criteria)
         final projections = new ArrayList(this.projections)
-        criteria.@projections = projections
-        criteria.projectionList = new DetachedProjections(projections)
-        criteria.@orders = new ArrayList(this.orders)
-        criteria.defaultMax = defaultMax
-        criteria.defaultOffset = defaultOffset
-        criteria.@fetchStrategies = new HashMap<>(this.fetchStrategies)
-        criteria.@joinTypes = new HashMap<>(this.joinTypes)
-        criteria.@junctions = new ArrayList(this.junctions)
-        criteria.@connectionName = this.connectionName
-        criteria.@lazyQuery = this.lazyQuery
-        criteria.@associationCriteriaMap = new LinkedHashMap<>(this.associationCriteriaMap)
-        return criteria
+        cloned.@projections = projections
+        cloned.projectionList = new DetachedProjections(projections)
+        cloned.@orders = new ArrayList(this.orders)
+        cloned.defaultMax = defaultMax
+        cloned.defaultOffset = defaultOffset
+        cloned.@fetchStrategies = new HashMap<>(this.fetchStrategies)
+        cloned.@joinTypes = new HashMap<>(this.joinTypes)
+        cloned.@junctions = new ArrayList(this.junctions)
+        cloned.@connectionName = this.connectionName
+        cloned.@lazyQuery = this.lazyQuery
+        cloned.@associationCriteriaMap = new LinkedHashMap<>(this.associationCriteriaMap)
+        return cloned
     }
 
     protected abstract AbstractDetachedCriteria newInstance()
@@ -1057,7 +1058,8 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
             throw new MissingMethodException(methodName, AbstractDetachedCriteria, args)
         }
 
-        def alias = args[0] instanceof CharSequence ? args[0].toString() : null
+        Object[] argsArray = (Object[]) args
+        def alias = argsArray[0] instanceof CharSequence ? argsArray[0].toString() : null
 
         // Explicit null checks: Groovy truth on a DetachedCriteria invokes asBoolean(),
         // which executes the criteria as a query - a spurious query for a repeated
@@ -1073,7 +1075,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
         associationCriteriaMap[methodName] = associationCriteria
         add(associationCriteria)
 
-        def lastArg = args[-1]
+        def lastArg = argsArray[-1]
         if (lastArg instanceof Closure) {
             Closure callable = lastArg
             callable.resolveStrategy = Closure.DELEGATE_FIRST
@@ -1097,6 +1099,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     protected void handleJunction(Closure callable) {
         try {
             callable.delegate = this
+            callable.resolveStrategy = Closure.DELEGATE_FIRST
             callable.call()
         }
         finally {

@@ -84,10 +84,17 @@ class PropertyNameCalculator {
     }
 
     ExtractedDependencyConstraint calculate(String groupId, String artifactId, String version, boolean isPlatform) {
+        // a derived BOM re-declares the platforms it imports as plain constraints, which must carry
+        // the same property as the import so that overriding it moves both
+        String coordinates = "$groupId:$artifactId:$version"
+        if (!isPlatform && !definitions.containsKey(coordinates) && platformDefinitions.containsKey(coordinates)) {
+            return calculate(groupId, artifactId, version, true)
+        }
+
         Map<String, ExtractedDependencyConstraint> toSearch = isPlatform ? platformDefinitions : definitions as Map<String, ExtractedDependencyConstraint>
         Map<String, String> coordinateMapping = isPlatform ? keysToPlatformCoordinates : keysToCoordinates
 
-        ExtractedDependencyConstraint found = toSearch.get("$groupId:$artifactId:$version" as String)
+        ExtractedDependencyConstraint found = toSearch.get(coordinates)
         if (!found) {
             return null
         }

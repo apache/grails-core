@@ -37,7 +37,7 @@ class StringIdSettings {
     /**
      * Global default storage type for {@code String id} fields that don't declare an
      * explicit {@code id storedAs: ...} in their mapping. Accepted values are
-     * {@code 'string'} (default, current behavior) or {@code 'objectid'}.
+     * {@code 'objectid'} (the default since 8.0.0) or {@code 'string'}.
      *
      * <p>Corresponds to the property path
      * {@code grails.mongodb.stringIds.defaultStoredAs}.
