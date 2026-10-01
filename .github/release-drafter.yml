@@ -25,72 +25,72 @@ autolabeler:
     branch:
       - '/fix\/.+/'
     title:
-      - '/fix/i'
+      - '/^fix(\(.+\))?!?:/i'
   - label: 'improvement'
     branch:
       - '/improv\/.+/'
     title:
-      - '/improv/i'
+      - '/^improv(e|ement)?(\(.+\))?!?:/i'
   - label: 'feature'
     branch:
       - '/feature\/.+/'
     title:
-      - '/feat/i'
+      - '/^feat(ure)?(\(.+\))?!?:/i'
   - label: 'documentation'
     branch:
       - '/docs\/.+/'
     title:
-      - '/docs/i'
+      - '/^docs?(\(.+\))?!?:/i'
   - label: 'maintenance'
     branch:
       - '/(chore|refactor|style|test|ci|perf|build)\/.+/'
     title:
-      - '/(chore|refactor|style|test|ci|perf|build)/i'
+      - '/^(chore|refactor|style|test|ci|perf|build)(\(.+\))?!?:/i'
   - label: 'chore'
     branch:
       - '/chore\/.+/'
     title:
-      - '/chore/i'
+      - '/^chore(\(.+\))?!?:/i'
   - label: 'refactor'
     branch:
       - '/refactor\/.+/'
     title:
-      - '/refactor/i'
+      - '/^refactor(\(.+\))?!?:/i'
   - label: 'style'
     branch:
       - '/style\/.+/'
     title:
-      - '/style/i'
+      - '/^style(\(.+\))?!?:/i'
   - label: 'test'
     branch:
       - '/test\/.+/'
     title:
-      - '/test/i'
+      - '/^test(\(.+\))?!?:/i'
   - label: 'ci'
     branch:
       - '/ci\/.+/'
     title:
-      - '/ci/i'
+      - '/^ci(\(.+\))?!?:/i'
   - label: 'perf'
     branch:
       - '/perf\/.+/'
     title:
-      - '/perf/i'
+      - '/^perf(\(.+\))?!?:/i'
   - label: 'build'
     branch:
       - '/build\/.+/'
     title:
-      - '/build/i'
+      - '/^build(\(.+\))?!?:/i'
   - label: 'deps'
     branch:
       - '/deps\/.+/'
     title:
-      - '/deps/i'
+      - '/^deps(\(.+\))?!?:/i'
   - label: 'revert'
     branch:
       - '/revert\/.+/'
     title:
-      - '/revert/i'
+      - '/^revert(\(.+\))?!?:/i'
 categories:
   - title: '🚀 Features'
     labels:

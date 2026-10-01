@@ -1,0 +1,101 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Labels pull requests from their branch name and title, using the
+# `autolabeler` section of .github/release-drafter.yml. The labels feed the
+# categories in the release notes that .github/workflows/release-notes.yml
+# drafts, so a pull request without one lands uncategorised.
+#
+# This used to be done by the drafter workflow itself. release-drafter 7 moved
+# labelling into a second action, `release-drafter/release-drafter/autolabeler`,
+# and the drafter action no longer labels anything, so this is a workflow of
+# its own. It only labels: it never writes a draft, so it cannot touch a
+# release and needs none of the drafter's release-pipeline hold-off.
+#
+# Companion config: .github/release-drafter.yml (`autolabeler:`)
+name: "Pull Request - Labeler"
+on:
+  # `pull_request`, not `pull_request_target`: the ASF restricts the latter.
+  # The cost is pull requests from forks, about a third of them: on a fork's
+  # `pull_request` event the token is read only and cannot add labels. Those
+  # run in the action's dry-run mode instead, so the check stays green and the
+  # run reports the labels a maintainer then adds by hand.
+  #
+  # `labeled` is deliberately not listed - the run would re-trigger itself.
+  # `edited` re-evaluates a retitled pull request.
+  pull_request:
+    types: [opened, reopened, synchronize, edited]
+
+# One run per pull request; a newer event for the same pull request supersedes
+# an older one. Keyed on the number so pull requests never share a group.
+concurrency:
+  group: pr-labeler-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  label:
+    name: "Label Pull Request"
+    permissions:
+      # Required to read .github/release-drafter.yml through the API
+      contents: read
+      # Required to add labels. GitHub downgrades the token to read only on a
+      # pull request from a fork regardless of what is asked for here.
+      pull-requests: write
+    runs-on: ubuntu-latest
+    env:
+      # True when the head branch lives in another repository, i.e. a fork.
+      FORK: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
+    steps:
+      # The autolabeler entrypoint of the same action the drafter uses, pinned
+      # to the same SHA; bump both together. Resolve the commit SHA via:
+      #   gh api repos/release-drafter/release-drafter/git/tags/<tag-sha> \
+      #     --jq '.object.sha'
+      - name: "🏷️ Apply labels"
+        id: labeler
+        uses: release-drafter/release-drafter/autolabeler@34d80673e067bdc0c24568d3af899c216adcfaa9 # v7.7.0
+        with:
+          # Fork pull requests: compute and report, do not write (see above).
+          dry-run: ${{ env.FORK }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # The action exposes the labels it chose as an output. For a fork pull
+      # request nothing was written, so say what a maintainer needs to add.
+      - name: "📋 Report labels for a fork pull request"
+        if: env.FORK == 'true'
+        env:
+          LABELS: ${{ steps.labeler.outputs.labels }}
+          NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## Pull Request Labeler"
+            echo ""
+            echo "This pull request comes from a fork, so the token is read only and no labels were written."
+            if [[ -n "${LABELS:-}" ]]; then
+              echo ""
+              echo "A maintainer should add: \`${LABELS}\`"
+              echo ""
+              echo '```'
+              echo "gh pr edit ${NUMBER} --add-label '${LABELS}'"
+              echo '```'
+            else
+              echo ""
+              echo "No label matched the branch name or title."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice title=Labels not written (fork)::${LABELS:-none matched}; a maintainer needs to add them."
