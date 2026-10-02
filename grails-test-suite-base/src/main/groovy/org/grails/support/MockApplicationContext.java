@@ -281,6 +281,12 @@ public class MockApplicationContext extends GroovyObjectSupport implements WebAp
         return (T) beans.get(name);
     }
 
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T> T getBean(String name, org.springframework.core.ParameterizedTypeReference<T> requiredType) throws BeansException {
+        return (T) getBean(name, ResolvableType.forType(requiredType.getType()).toClass());
+    }
+
     public <T> T getBean(Class<T> tClass) throws BeansException {
         final Map<String, T> map = getBeansOfType(tClass);
         if (map.isEmpty()) {
