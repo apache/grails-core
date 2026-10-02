@@ -1,0 +1,102 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
+    id 'org.apache.grails.gradle.grails-web'
+    id 'org.graalvm.buildtools.native' version "$graalvmBuildtoolsVersion" apply false
+}
+
+version = '0.1'
+group = 'nativei18n'
+
+grails {
+    // The Grails Gradle plugin already sets this as a convention for any application that applies
+    // GraalVM's plugin, so the native half would get it anyway. It is set here so the JVM half is
+    // compiled the same way as the image, rather than being a second dialect of the same fixture.
+    indy = true
+}
+
+dependencies {
+    implementation platform("org.apache.grails:grails-bom:$projectVersion")
+    implementation project(':native-i18n-plugin')
+    implementation 'org.apache.grails:grails-dependencies-starter-web'
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('../gradle/grails-extension-gradle-config.gradle')
+}
+
+// Runs on any JDK, and proves only that the fixture and its assertions are self-consistent - on a
+// JVM every bundle is readable whether it was registered or not. Cheap enough to keep in `check` so
+// the assertions cannot drift from the bundles while the native job is not being run.
+tasks.register('i18nCheckOnJvm', JavaExec) {
+    group = 'verification'
+    description = 'Resolves every message bundle from the packaged application on a JVM'
+    dependsOn tasks.named('bootJar')
+    classpath = files(tasks.named('bootJar').flatMap { it.archiveFile })
+    mainClass = 'org.springframework.boot.loader.launch.JarLauncher'
+    args = ['--i18n-check', '--server.port=0', '--spring.main.banner-mode=off']
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('i18nCheckOnJvm')
+}
+
+// The native half is opt-in: it needs a GraalVM toolchain and several minutes of CPU, which is too
+// much to ask of every run of this build. Enable with -PnativeTests.
+if (project.hasProperty('nativeTests')) {
+    pluginManager.apply('org.graalvm.buildtools.native')
+
+    graalvmNative {
+        binaries {
+            main {
+                imageName = 'native-i18n'
+                mainClass = 'nativei18n.Application'
+                // Measured on a 32GB machine with GraalVM CE 25.2.4: the default 16 threads
+                // exhausted the heap, 4 built in about six minutes.
+                buildArgs.add('--parallelism=4')
+            }
+        }
+        // Build the image with GRAALVM_HOME/JAVA_HOME rather than letting Gradle select a toolchain.
+        // The framework is published on the JDK the repository pins and the image is built on a
+        // GraalVM, so there is no one toolchain that could be detected for both.
+        toolchainDetection = false
+    }
+
+    tasks.register('i18nCheckOnNative', Exec) {
+        group = 'verification'
+        description = 'Resolves every message bundle from a compiled GraalVM binary'
+        // The path comes from the task that produces the binary, so the location and the dependency
+        // on its producer stay in one place rather than repeating the layout convention here.
+        Provider<RegularFile> binary = tasks.named('nativeCompile').flatMap { it.outputFile }
+        inputs.file(binary)
+        doFirst {
+            commandLine binary.get().asFile.absolutePath,
+                    '--i18n-check', '--server.port=0', '--spring.main.banner-mode=off'
+        }
+    }
+
+    tasks.named('check') {
+        dependsOn tasks.named('i18nCheckOnNative')
+    }
+}
