@@ -1,0 +1,158 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Experimental Apache Trusted Releases (ATR) announce step.
+# Sends ONE announcement through ATR. The first successful announce promotes
+# the candidate from preview to released, so this workflow must not be rerun
+# for additional mailing lists. The recipient is restricted to announce@apache.org.
+# ATR documentation and the official workflow example:
+# https://tooling.apache.org/
+# https://github.com/apache/tooling-asf-example/blob/main/.github/workflows/announce-release-on-atr.yaml
+# After it succeeds, send the remaining lists by hand from your @apache.org
+# address: dev@grails.apache.org, users@grails.apache.org, and
+# dev@groovy.apache.org.
+#
+# Prerequisites (see RELEASE.md "Experimental: Apache Trusted Releases"):
+#   * This workflow listed under the project's ATR finish workflow paths
+#   * Vote already resolved as passed on ATR
+name: "Release - ATR Announce (experimental)"
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version without the v prefix (e.g. 7.0.0 or 8.0.0-M1)'
+        required: true
+        type: string
+      previous_version:
+        description: 'Previous released version without the v prefix, used in the compare URL'
+        required: true
+        type: string
+      announce_revision:
+        description: 'ATR revision number being announced (the voted-on revision)'
+        required: true
+        type: string
+      announce_email_to:
+        description: 'Must be announce@apache.org. Do not rerun this workflow for other lists.'
+        required: true
+        type: string
+        default: announce@apache.org
+      announce_path_suffix:
+        description: 'Compatibility-only action input. Vote start selects the Alpha publication path.'
+        required: false
+        type: string
+        default: ''
+      announce_body:
+        description: 'Optional fully-rendered announcement body. Leave empty to render .github/vote_templates/announce.txt'
+        required: false
+        type: string
+        default: ''
+      atr_host:
+        description: 'ATR host (Alpha default is release-test.apache.org)'
+        required: true
+        type: string
+        default: release-test.apache.org
+permissions: { }
+env:
+  PROJECT_DESC: >
+    Grails is a powerful Groovy-based web application framework for the JVM,
+    built on top of Spring Boot, and supported by a rich ecosystem of plugins
+    that extend its functionality.
+  PROJECT_NAME: Apache Grails
+  REPO_SLUG: ${{ github.repository }}
+  VERSION: ${{ inputs.version }}
+jobs:
+  announce:
+    name: "Announce release on ATR"
+    environment: release
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write # required for GitHub OIDC → ATR
+      contents: read
+    steps:
+      - name: "📝 Establish tag, recipient, and compatibility path suffix"
+        env:
+          ANNOUNCE_EMAIL_TO_INPUT: ${{ inputs.announce_email_to }}
+          PATH_SUFFIX_INPUT: ${{ inputs.announce_path_suffix }}
+        run: |
+          set -euo pipefail
+          if [ "${ANNOUNCE_EMAIL_TO_INPUT}" != "announce@apache.org" ]; then
+            echo "::error::ATR announcements must be sent to announce@apache.org. Send project-list follow-ups manually."
+            exit 1
+          fi
+          echo "TAG=v${VERSION}" >> "$GITHUB_ENV"
+          echo "ANNOUNCE_EMAIL_TO=${ANNOUNCE_EMAIL_TO_INPUT}" >> "$GITHUB_ENV"
+          if [ -n "${PATH_SUFFIX_INPUT}" ]; then
+            echo "ANNOUNCE_PATH_SUFFIX=${PATH_SUFFIX_INPUT}" >> "$GITHUB_ENV"
+          else
+            echo "ANNOUNCE_PATH_SUFFIX=core/${VERSION}" >> "$GITHUB_ENV"
+          fi
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: v${{ inputs.version }}
+          persist-credentials: false
+      - name: "🛠️ Install envsubst"
+        run: sudo apt-get update -y && sudo apt-get install -y gettext-base
+      - name: "📝 Build announcement body"
+        id: body
+        env:
+          ANNOUNCE_BODY_OVERRIDE: ${{ inputs.announce_body }}
+          PREVIOUS_VERSION: ${{ inputs.previous_version }}
+        run: |
+          set -euo pipefail
+          if [ -n "${ANNOUNCE_BODY_OVERRIDE}" ]; then
+            body="${ANNOUNCE_BODY_OVERRIDE}"
+          else
+            body="$(cat .github/vote_templates/announce.txt | envsubst)"
+            if [[ "${VERSION}" == *M* || "${VERSION}" == *RC* ]]; then
+              body="$(printf '%s\n' "${body}" | sed '/<IF MILESTONE>/d; /<\/IF MILESTONE>/d')"
+            else
+              body="$(printf '%s\n' "${body}" | sed '/<IF MILESTONE>/,/<\/IF MILESTONE>/d')"
+            fi
+            body="${body//<PREVIOUS_VERSION>/${PREVIOUS_VERSION}}"
+          fi
+          if grep -q -e '<IF MILESTONE>' -e '</IF MILESTONE>' -e '<PREVIOUS_VERSION>' <<<"${body}"; then
+            echo "::error::Announcement body still contains template placeholders. Pass a fully rendered announce_body or a previous_version."
+            exit 1
+          fi
+          delimiter="ATRBODY_$(openssl rand -hex 8)"
+          {
+            echo "value<<${delimiter}"
+            printf '%s\n' "${body}"
+            echo "${delimiter}"
+          } >> "$GITHUB_OUTPUT"
+      - name: "📢 Announce release on ATR"
+        # Keep announce-path-suffix for the pinned action contract only. The current
+        # Alpha announce endpoint ignores it; the vote-start suffix selected the path.
+        # Pin to a full SHA; apache/tooling-actions does not publish tags.
+        # SHA is apache/tooling-actions@e8594ee9cc5ef5fbb48c367a9ab87042c0ccbbc5 (2026-08-24)
+        uses: apache/tooling-actions/release-on-atr@e8594ee9cc5ef5fbb48c367a9ab87042c0ccbbc5
+        with:
+          version: ${{ inputs.version }}
+          atr-host: ${{ inputs.atr_host }}
+          announce: 'true'
+          announce-revision: ${{ inputs.announce_revision }}
+          announce-email-to: ${{ env.ANNOUNCE_EMAIL_TO }}
+          announce-body: ${{ steps.body.outputs.value }}
+          announce-path-suffix: ${{ env.ANNOUNCE_PATH_SUFFIX }}
+      - name: "📧 Remaining announcement lists"
+        run: |
+          echo "::group::Manual follow-up announcements"
+          echo "ATR accepted the announcement to ${ANNOUNCE_EMAIL_TO}."
+          echo "Do not rerun this workflow. Send the same body from your @apache.org address to:"
+          echo "  dev@grails.apache.org"
+          echo "  users@grails.apache.org"
+          echo "  dev@groovy.apache.org"
+          echo "::endgroup::"
