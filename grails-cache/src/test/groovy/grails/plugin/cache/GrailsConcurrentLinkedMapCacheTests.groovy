@@ -18,107 +18,138 @@
  */
 package grails.plugin.cache
 
+import java.util.concurrent.ConcurrentMap
+
 import org.springframework.cache.support.SimpleValueWrapper
-import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap
-import org.junit.Test
+import spock.lang.Specification
 
 /**
  * @author Jakob Drangmeister
  */
-class GrailsConcurrentLinkedMapCacheTests {
+class GrailsConcurrentLinkedMapCacheTests extends Specification {
 
-    @Test
-   void testCreateCache() {
-      GrailsConcurrentLinkedMapCache smallCache = new GrailsConcurrentLinkedMapCache("smallCache", 1000)
+   void 'creates caches with configured capacity and null value policy'() {
+      when:
+      GrailsConcurrentLinkedMapCache smallCache = new GrailsConcurrentLinkedMapCache('smallCache', 1000)
 
-      assert smallCache.getName() == "smallCache"
-      assert smallCache.getNativeCache() instanceof ConcurrentLinkedHashMap
-      assert smallCache.getCapacity() == 1000
-      assert smallCache.isAllowNullValues() == true
+      then:
+      smallCache.name == 'smallCache'
+      smallCache.nativeCache instanceof ConcurrentMap
+      smallCache.capacity == 1000
+      smallCache.allowNullValues
 
-      GrailsConcurrentLinkedMapCache bigCache = new GrailsConcurrentLinkedMapCache("bigCache", 5000000, false)
+      when:
+      GrailsConcurrentLinkedMapCache bigCache = new GrailsConcurrentLinkedMapCache('bigCache', 5000000, false)
 
-      assert bigCache.getName() == "bigCache"
-      assert bigCache.getNativeCache() instanceof ConcurrentLinkedHashMap
-      assert bigCache.getCapacity() == 5000000
-      assert bigCache.isAllowNullValues() == false
+      then:
+      bigCache.name == 'bigCache'
+      bigCache.nativeCache instanceof ConcurrentMap
+      bigCache.capacity == 5000000
+      !bigCache.allowNullValues
    }
 
-   @Test
-   void testPutAndGet() {
-      GrailsConcurrentLinkedMapCache cache = new GrailsConcurrentLinkedMapCache("cache", 1000, true)
+   void 'exposes Caffeine native cache as concurrent map'() {
+      given:
+      GrailsConcurrentLinkedMapCache cache = new GrailsConcurrentLinkedMapCache('cache', 10, true)
 
-      cache.put("key", "value");
-
-      assert cache.getSize() == 1
-      GrailsValueWrapper value = cache.get("key")
-      assert value.get().equals("value")
-   }
-
-   @Test
-   void testPutIfAbsent() {
-      GrailsConcurrentLinkedMapCache cache = new GrailsConcurrentLinkedMapCache("cache", 1000, true)
+      when:
       cache.put("key", "value")
-      cache.putIfAbsent("key", "value") instanceof SimpleValueWrapper
-      assert cache.getSize() == 1
+
+      then:
+      cache.nativeCache.get('key') == 'value'
+      cache.nativeCache.getClass().name.startsWith('com.github.benmanes.caffeine.cache.')
    }
 
-   @Test
-   void testEvict() {
-      GrailsConcurrentLinkedMapCache cache = new GrailsConcurrentLinkedMapCache("cache", 10, true)
-      cache.put("key", "value");
-      assert cache.getSize() == 1
+   void 'puts and gets cache entries'() {
+      given:
+      GrailsConcurrentLinkedMapCache cache = new GrailsConcurrentLinkedMapCache('cache', 1000, true)
 
-      cache.evict("key")
-      assert cache.getSize() == 0
+      when:
+      cache.put('key', 'value')
 
+      then:
+      cache.size == 1
+      GrailsValueWrapper value = cache.get("key")
+      value.get() == 'value'
    }
 
-   @Test
-   void testCacheCapacity() {
-      GrailsConcurrentLinkedMapCache cache = new GrailsConcurrentLinkedMapCache("cache", 1000, true)
-      assert cache.getCapacity() == 1000
+   void 'putIfAbsent keeps existing cache value'() {
+      given:
+      GrailsConcurrentLinkedMapCache cache = new GrailsConcurrentLinkedMapCache('cache', 1000, true)
+      cache.put('key', 'value')
 
-      for(int i = 0; i < 2000; i++) {
+      expect:
+      cache.putIfAbsent('key', 'value') instanceof SimpleValueWrapper
+      cache.size == 1
+   }
+
+   void 'evicts cache entries'() {
+      given:
+      GrailsConcurrentLinkedMapCache cache = new GrailsConcurrentLinkedMapCache('cache', 10, true)
+      cache.put('key', 'value')
+
+      expect:
+      cache.size == 1
+
+      when:
+      cache.evict('key')
+
+      then:
+      cache.size == 0
+   }
+
+   void 'limits cache size to configured capacity'() {
+      given:
+      GrailsConcurrentLinkedMapCache cache = new GrailsConcurrentLinkedMapCache('cache', 1000, true)
+
+      when:
+      for (int i = 0; i < 2000; i++) {
+          cache.put(i, i)
+      }
+
+      then:
+      cache.capacity == 1000
+      cache.size == 1000
+   }
+
+   void 'returns hottest keys from cache eviction policy'() {
+      given:
+      GrailsConcurrentLinkedMapCache cache = new GrailsConcurrentLinkedMapCache('cache', 10, true)
+
+      for (int i = 0; i < 10; i++) {
          cache.put(i, i)
       }
 
-      assert cache.getSize() == 1000
-   }
-
-   @Test
-   void testCacheGetHottestKeys() {
-      GrailsConcurrentLinkedMapCache cache = new GrailsConcurrentLinkedMapCache("cache", 10, true)
-
-      for(int i = 0; i < 10; i++) {
-         cache.put(i, i);
-      }
-
+      when:
       cache.get(1)
       cache.get(2)
 
-      assert cache.getHottestKeys()[0] == 2
-      assert cache.getHottestKeys()[1] == 1
+      then:
+      cache.hottestKeys.containsAll([1, 2])
 
-      for(int i = 10; i < 19; i++) {
-         cache.put(i, i);
+      when:
+      for (int i = 10; i < 19; i++) {
+         cache.put(i, i)
       }
 
-      assert cache.getHottestKeys()[cache.getSize()-1] == 2
-
+      then:
+      cache.hottestKeys.contains(2)
    }
 
-   @Test
-   void testClear() {
-      GrailsConcurrentLinkedMapCache cache = new GrailsConcurrentLinkedMapCache("cache", 1000, true)
-      assert cache.getCapacity() == 1000
+   void 'clears all cache entries'() {
+      given:
+      GrailsConcurrentLinkedMapCache cache = new GrailsConcurrentLinkedMapCache('cache', 1000, true)
+      cache.put('key', 'value')
 
-      cache.put("key", "value")
-      assert cache.getSize() == 1
+      expect:
+      cache.capacity == 1000
+      cache.size == 1
 
+      when:
       cache.clear()
 
-      assert cache.getSize() == 0
+      then:
+      cache.size == 0
    }
 
 }
