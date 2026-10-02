@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -67,6 +68,8 @@ public class ConvertersConfigurationHolder {
     private final ConcurrentMap<Class<? extends Converter>, Map<String, ConverterConfiguration>> namedConfigurations =
             new ConcurrentHashMap<>();
 
+    private final Set<Class<? extends Converter>> customizedDefaultConfigurations = ConcurrentHashMap.newKeySet();
+
     private ThreadLocal<Map<Class<? extends Converter>, ConverterConfiguration>> threadLocalConfiguration = createThreadLocalConfiguration();
 
     protected static ThreadLocal<Map<Class<? extends Converter>, ConverterConfiguration>> createThreadLocalConfiguration() {
@@ -81,6 +84,7 @@ public class ConvertersConfigurationHolder {
         final ConvertersConfigurationHolder configurationHolder = getInstance();
         configurationHolder.defaultConfiguration.clear();
         configurationHolder.namedConfigurations.clear();
+        configurationHolder.customizedDefaultConfigurations.clear();
         configurationHolder.threadLocalConfiguration = createThreadLocalConfiguration();
         observationRegistry = ObservationRegistry.NOOP;
     }
@@ -131,6 +135,28 @@ public class ConvertersConfigurationHolder {
 
     public static <C extends Converter> void setDefaultConfiguration(Class<C> c, List<ObjectMarshaller<C>> om) {
         getInstance().defaultConfiguration.put(c, new DefaultConverterConfiguration<>(om));
+    }
+
+    /**
+     * Records that the application, a plugin or a renderer customized the default configuration of a
+     * converter, for example by registering an object marshaller.
+     *
+     * @param converterClass the converter whose default configuration was customized
+     * @since 9.0
+     */
+    public static void markDefaultConfigurationCustomized(Class<? extends Converter> converterClass) {
+        getInstance().customizedDefaultConfigurations.add(converterClass);
+    }
+
+    /**
+     * Whether the default configuration of a converter carries customizations beyond the framework defaults.
+     *
+     * @param converterClass the converter to check
+     * @return {@code true} once {@link #markDefaultConfigurationCustomized(Class)} was called for the converter
+     * @since 9.0
+     */
+    public static boolean isDefaultConfigurationCustomized(Class<? extends Converter> converterClass) {
+        return getInstance().customizedDefaultConfigurations.contains(converterClass);
     }
 
     private static ConvertersConfigurationHolder getInstance() throws ConverterException {

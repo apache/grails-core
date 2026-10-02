@@ -20,3 +20,9 @@ under the License.
 Unit testing are tests at the "unit" level. In other words you are testing individual methods or blocks of code without consideration for surrounding infrastructure or interactions with other classes. Unit tests are typically run without the presence of physical resources that involve I/O such as databases, socket connections or files. This is to ensure they run as quick as possible since quick feedback is important.
 
 The Grails Unit Testing Support provides support for writing concise expressive units tests for Grails artifacts with simple, easy to use traits and supporting classes. The use of Traits makes functionality woven into the unit test class at compile time, which allows developers to explicitly view and explore the code. In addition, the Grails Unit Testing Support makes testing more IDE-friendly so developers can take advantage of auto-completion and click through navigation.
+
+Web test traits such as `ControllerUnitTest` and `TagLibUnitTest` automatically include
+`restResponder`, including when a spec overrides `getIncludePlugins()`. They provide JSON conversion
+beans and Boot's Jackson configuration, and contribute XML beans when `grails-xml` is present.
+This does not automatically load the controllers, URL mappings or i18n plugins. Non-web traits such
+as `ServiceUnitTest` retain their own plugin selection.

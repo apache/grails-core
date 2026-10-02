@@ -25,6 +25,7 @@ import io.micrometer.observation.ObservationRegistry
 import grails.core.support.proxy.DefaultProxyHandler
 import org.grails.web.converters.configuration.ConvertersConfigurationHolder
 import org.grails.web.converters.configuration.ConvertersConfigurationInitializer
+import org.grails.web.converters.configuration.XmlConvertersConfigurationInitializer
 import org.grails.web.converters.exceptions.ConverterException
 import org.springframework.context.support.StaticApplicationContext
 import org.springframework.mock.web.MockHttpServletResponse
@@ -135,5 +136,6 @@ class ConverterObservationSpec extends Specification {
             refresh()
         }
         new ConvertersConfigurationInitializer(applicationContext: applicationContext).initialize()
+        new XmlConvertersConfigurationInitializer(applicationContext: applicationContext).initialize()
     }
 }

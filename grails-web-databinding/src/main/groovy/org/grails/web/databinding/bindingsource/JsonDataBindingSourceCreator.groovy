@@ -20,10 +20,14 @@ package org.grails.web.databinding.bindingsource
 
 import java.util.regex.Pattern
 
-import groovy.json.JsonException
-import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 
+import tools.jackson.core.JacksonException
+import tools.jackson.databind.DeserializationFeature
+import tools.jackson.databind.ObjectReader
+import tools.jackson.databind.json.JsonMapper
+
+import org.springframework.beans.factory.ObjectProvider
 import org.springframework.beans.factory.annotation.Autowired
 
 import grails.databinding.CollectionDataBindingSource
@@ -48,8 +52,35 @@ class JsonDataBindingSourceCreator extends AbstractRequestBodyDataBindingSourceC
 
     private static final Pattern INDEX_PATTERN = ~/^(\S+)\[(\d+)\]$/
 
+    // Resolved when a request body is first parsed rather than injected. Injecting it pulls
+    // Jackson's auto-configuration into this bean's graph, and MimeTypesConfiguration depends on
+    // this creator, so Boot's mapper would be built before GORM has initialized.
     @Autowired(required = false)
-    JsonSlurper jsonSlurper = new JsonSlurper()
+    ObjectProvider<JsonMapper> jsonMapperProvider
+
+    private volatile JsonMapper resolvedJsonMapper
+
+    JsonMapper getJsonMapper() {
+        JsonMapper mapper = this.resolvedJsonMapper
+        if (mapper == null) {
+            mapper = jsonMapperProvider?.getIfAvailable() ?: JsonMapper.builder().build()
+            this.resolvedJsonMapper = mapper
+        }
+        return mapper
+    }
+
+    void setJsonMapper(JsonMapper jsonMapper) {
+        this.resolvedJsonMapper = jsonMapper
+    }
+
+    /**
+     * Reads untyped JSON values. Decimals are read as {@link BigDecimal} so that binding a
+     * fractional value to a BigDecimal property keeps the digits the request sent; reading them
+     * as doubles first would round them before the binder ever saw them.
+     */
+    protected ObjectReader untypedReader() {
+        return getJsonMapper().reader().forType(Object).with(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
+    }
 
     @Override
     MimeType[] getMimeTypes() {
@@ -72,7 +103,7 @@ class JsonDataBindingSourceCreator extends AbstractRequestBodyDataBindingSourceC
     @Override
     protected CollectionDataBindingSource createCollectionBindingSource(Reader reader) {
 
-        Object jsonElement = jsonSlurper.parse(reader)
+        Object jsonElement = untypedReader().readValue(reader)
         def dataBindingSources = jsonElement.collect { element ->
             if (element instanceof Map) {
                 new SimpleMapDataBindingSource(createJsonMap(element))
@@ -90,7 +121,7 @@ class JsonDataBindingSourceCreator extends AbstractRequestBodyDataBindingSourceC
 
     @Override
     protected DataBindingSource createBindingSource(Reader reader) {
-        final jsonElement = jsonSlurper.parse(reader)
+        final Object jsonElement = untypedReader().readValue(reader)
 
         if (jsonElement instanceof Map) {
             return new SimpleMapDataBindingSource(createJsonMap(jsonElement))
@@ -107,7 +138,7 @@ class JsonDataBindingSourceCreator extends AbstractRequestBodyDataBindingSourceC
 
     @Override
     protected DataBindingSourceCreationException createBindingSourceCreationException(Exception e) {
-        if (e instanceof JsonException) {
+        if (e instanceof JacksonException) {
             return new InvalidRequestBodyException(e)
         }
         return super.createBindingSourceCreationException(e)

@@ -34,6 +34,8 @@ import grails.web.mime.MimeTypeResolver
 import grails.web.mime.MimeUtility
 import org.grails.web.mime.DefaultMimeTypeResolver
 import org.grails.web.mime.DefaultMimeUtility
+import org.grails.web.mime.GrailsContentNegotiationStrategy
+import org.grails.web.mime.GrailsMimeTypesWebMvcConfigurer
 
 /**
  * Configuration for Codecs
@@ -120,6 +122,13 @@ class MimeTypesConfiguration {
     @Primary
     protected MimeTypeResolver mimeTypeResolver() {
         return new DefaultMimeTypeResolver()
+    }
+
+    @Bean
+    GrailsMimeTypesWebMvcConfigurer grailsMimeTypesWebMvcConfigurer(
+            MimeTypesHolder mimeTypesHolder) {
+        return new GrailsMimeTypesWebMvcConfigurer(
+                new GrailsContentNegotiationStrategy(mimeTypesHolder.mimeTypes, grailsApplication.config))
     }
 
     @CompileStatic(TypeCheckingMode.SKIP)
