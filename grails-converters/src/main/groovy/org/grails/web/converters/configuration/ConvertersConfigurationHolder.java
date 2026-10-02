@@ -27,11 +27,13 @@ import java.util.concurrent.ConcurrentMap;
 
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationRegistry;
+import tools.jackson.databind.json.JsonMapper;
 
 import org.grails.core.lifecycle.ShutdownOperations;
 import org.grails.web.converters.Converter;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
+import org.grails.web.json.JsonMapperSupport;
 
 /**
  * Singleton which holds all default and named configurations for the Converter classes.
@@ -45,6 +47,8 @@ public class ConvertersConfigurationHolder {
     public static final String CONVERTERS_DEFAULT_ENCODING = "UTF-8";
 
     private static volatile ObservationRegistry observationRegistry = ObservationRegistry.NOOP;
+
+    private static volatile JsonMapperSupport jsonMapper = JsonMapperSupport.DEFAULT;
 
     @FunctionalInterface
     public interface ConverterAction {
@@ -83,6 +87,26 @@ public class ConvertersConfigurationHolder {
         configurationHolder.namedConfigurations.clear();
         configurationHolder.threadLocalConfiguration = createThreadLocalConfiguration();
         observationRegistry = ObservationRegistry.NOOP;
+        jsonMapper = JsonMapperSupport.DEFAULT;
+    }
+
+    /**
+     * Sets the Jackson mapper that {@link grails.converters.JSON} writes through, normally Spring Boot's
+     * auto-configured {@code JsonMapper}.
+     *
+     * @param mapper the mapper, or null for a default mapper
+     * @since 9.0
+     */
+    public static void setJsonMapper(JsonMapper mapper) {
+        jsonMapper = mapper != null ? new JsonMapperSupport(mapper) : JsonMapperSupport.DEFAULT;
+    }
+
+    /**
+     * @return the Jackson mapper that {@link grails.converters.JSON} writes through
+     * @since 9.0
+     */
+    public static JsonMapperSupport getJsonMapper() {
+        return jsonMapper;
     }
 
     /**

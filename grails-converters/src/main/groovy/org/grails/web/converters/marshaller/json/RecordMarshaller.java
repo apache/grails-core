@@ -18,32 +18,40 @@
  */
 package org.grails.web.converters.marshaller.json;
 
-import java.time.Instant;
-import java.time.format.DateTimeFormatter;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.RecordComponent;
 
 import grails.converters.JSON;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
 import org.grails.web.json.JSONException;
+import org.grails.web.json.JSONWriter;
 
 /**
- * JSON ObjectMarshaller which converts an Instant to ISO-8601 format with Z suffix.
+ * JSON ObjectMarshaller which renders a record as an object of its components, in declaration order, as Spring Boot's
+ * JsonMapper does. Each component value is rendered by the converter, as any other value is.
  *
- * @since 7.0
+ * @since 9.0
  */
-public class InstantMarshaller implements ObjectMarshaller<JSON> {
+public class RecordMarshaller implements ObjectMarshaller<JSON> {
 
     public boolean supports(Object object) {
-        return object instanceof Instant;
+        return object.getClass().isRecord();
     }
 
     public void marshalObject(Object object, JSON converter) throws ConverterException {
+        JSONWriter writer = converter.getWriter();
         try {
-            Instant instant = (Instant) object;
-            converter.getWriter().value(DateTimeFormatter.ISO_INSTANT.format(instant));
+            writer.object();
+            for (RecordComponent component : object.getClass().getRecordComponents()) {
+                component.getAccessor().setAccessible(true);
+                writer.key(component.getName());
+                converter.convertAnother(component.getAccessor().invoke(object));
+            }
+            writer.endObject();
         }
-        catch (JSONException e) {
-            throw new ConverterException(e);
+        catch (IllegalAccessException | InvocationTargetException | JSONException e) {
+            throw new ConverterException("Error converting record " + object.getClass().getName(), e);
         }
     }
 }

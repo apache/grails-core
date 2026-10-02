@@ -51,15 +51,13 @@ import org.grails.web.converters.configuration.DefaultConverterConfiguration;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ClosureObjectMarshaller;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
-import org.grails.web.json.JSONArray;
 import org.grails.web.json.JSONElement;
 import org.grails.web.json.JSONException;
 import org.grails.web.json.JSONObject;
 import org.grails.web.json.JSONTokener;
 import org.grails.web.json.JSONWriter;
-import org.grails.web.json.JsonDateFormat;
+import org.grails.web.json.JsonMapperSupport;
 import org.grails.web.json.PathCapturingJSONWriterWrapper;
-import org.grails.web.json.PrettyPrintJSONWriter;
 
 /**
  * A converter that converts domain classes, Maps, Lists, Arrays, POJOs and POGOs to JSON.
@@ -78,6 +76,8 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
     protected boolean prettyPrint;
     protected JSONWriter writer;
     protected Stack<Object> referenceStack;
+    protected JsonMapperSupport jsonMapper;
+    private JSONWriter jsonWriter;
 
     protected ConverterConfiguration<JSON> initConfig() {
         return ConvertersConfigurationHolder.getConverterConfiguration(JSON.class);
@@ -109,7 +109,9 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
     }
 
     private void prepareRender(Writer out) {
-        writer = prettyPrint ? new PrettyPrintJSONWriter(out) : new JSONWriter(out);
+        jsonMapper = ConvertersConfigurationHolder.getJsonMapper();
+        jsonWriter = new JSONWriter(out, jsonMapper, prettyPrint);
+        writer = jsonWriter;
         if (circularReferenceBehaviour == CircularReferenceBehaviour.PATH) {
             if (log.isInfoEnabled()) {
                 log.info(String.format("Using experimental CircularReferenceBehaviour.PATH for %s", getClass().getName()));
@@ -121,6 +123,7 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
 
     private void finalizeRender(Writer out) {
         try {
+            jsonWriter.flush();
             out.flush();
             out.close();
         }
@@ -220,6 +223,26 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         }
     }
 
+    /**
+     * @return the JsonMapper this converter writes with
+     * @since 9.0
+     */
+    public JsonMapperSupport getJsonMapper() {
+        return jsonMapper != null ? jsonMapper : ConvertersConfigurationHolder.getJsonMapper();
+    }
+
+    /**
+     * The JSON object key for a map key, as the JsonMapper writes it: a {@code String} key as it is, and a
+     * {@code Date} key, for example, in the mapper's date format.
+     *
+     * @param key a non-null map key
+     * @return the JSON object key
+     * @since 9.0
+     */
+    public String formatKey(Object key) {
+        return getJsonMapper().formatKey(key);
+    }
+
     public ObjectMarshaller<JSON> lookupObjectMarshaller(Object target) {
         return config.getMarshaller(target);
     }
@@ -241,17 +264,14 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
      * @throws JSONException
      */
     public String toString(boolean prettyPrint) throws JSONException {
-        String json = super.toString();
-        if (prettyPrint) {
-            Object jsonObject = new JSONTokener(json).nextValue();
-            if (jsonObject instanceof JSONObject) {
-                return ((JSONObject) jsonObject).toString(3);
-            }
-            if (jsonObject instanceof JSONArray) {
-                return ((JSONArray) jsonObject).toString(3);
-            }
+        boolean configuredPrettyPrint = this.prettyPrint;
+        this.prettyPrint = prettyPrint;
+        try {
+            return super.toString();
         }
-        return json;
+        finally {
+            this.prettyPrint = configuredPrettyPrint;
+        }
     }
 
     /**
@@ -548,7 +568,7 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
                 for (Object o : valueMap.entrySet()) {
                     Map.Entry element = (Map.Entry) o;
                     Object elementKey = element.getKey();
-                    writer.key(elementKey == null ? "null" : JsonDateFormat.formatKey(elementKey));
+                    writer.key(elementKey == null ? "null" : json.formatKey(elementKey));
                     json.convertAnother(element.getValue());
                 }
                 writer.endObject();

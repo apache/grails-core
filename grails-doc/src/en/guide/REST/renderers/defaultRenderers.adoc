@@ -70,14 +70,89 @@ render book as XML
 // or render book as JSON
 ----
 
-Why the separation between converters and renderers? Well a renderer has more flexibility to use whatever rendering technology you chose. When implementing a custom renderer you could use https://github.com/FasterXML/jackson/[Jackson], https://github.com/google/gson[Google Gson] or any Java library to implement the renderer. Converters on the other hand are very much tied to Grails' own marshalling implementation.
+Why the separation between converters and renderers? Well a renderer has more flexibility to use whatever rendering technology you chose. When implementing a custom renderer you could use https://github.com/FasterXML/jackson/[Jackson], https://github.com/google/gson[Google Gson] or any Java library to implement the renderer. Converters on the other hand use Grails' object marshallers, and write JSON through the application's Jackson `JsonMapper`, as described below.
+
+
+==== JSON Rendering With Spring Boot's JsonMapper
+
+
+The JSON converter writes JSON through the application's Jackson `JsonMapper`, the one Spring Boot auto-configures, so a
+Grails application and a Spring Boot application return the same JSON for the same values. The mapper writes every
+single value it has a dedicated serializer for, such as dates and times, `Month`, `UUID`, `Locale`, `byte[]`, types with
+a `@JsonValue` and the types of Jackson modules registered with the application, and it formats and pretty prints the
+JSON text. `spring.jackson.*` properties therefore configure `render ... as JSON` as well:
+
+[source,yaml]
+----
+spring:
+    jackson:
+        time-zone: America/New_York
+----
+
+Domain classes are rendered by a Jackson serializer that Grails provides, as described below. Beans, enums, records,
+`Optional`, collections and maps are rendered by Grails marshallers, and the values they contain as any other value is. Enums render by `name()`, so that the JSON binds back to them, and strings are
+escaped for an HTML `<script>` element (`</` is written as `<\u002f`). To render a type differently, register an object
+marshaller for it, which takes precedence over the mapper, for example in `BootStrap.init`:
+
+[source,groovy]
+----
+JSON.registerObjectMarshaller(Date) { Date date ->
+    date.time
+}
+----
+
+A serializer that a Jackson module provides, such as a `@JacksonComponent`, renders its type. The values that it writes,
+such as the properties of its type, are rendered as any other value is, so object marshallers apply to them, and an
+object marshaller registered for the type itself takes precedence over the serializer.
+
+Setting `grails.converters.json.date` to `javascript` renders `java.util.Date` values as JavaScript `new Date(...)`
+constructors instead.
+
+
+==== Domain Classes and the JsonMapper
+
+
+Grails registers a Jackson module for domain classes with the application's `JsonMapper`, so the JSON converter and the
+mapper render a domain class instance the same way, including when a Spring MVC controller returns one or when you call
+`jsonMapper.writeValueAsString(book)`:
+
+[source,json]
+----
+{"id":1,"title":"Grails","publisher":{"id":3},"authors":[{"id":1},{"id":2}]}
+----
+
+* An associated domain class instance is written as a reference of its id, or in full when
+`grails.converters.json.default.deep` is `true` (or within `JSON.use('deep') { }` for the converter). Rendering deep with
+the mapper, an instance that is already being written further up is written as a reference.
+* The version and the class name are written when `grails.converters.json.domain.include.version` and
+`grails.converters.json.domain.include.class` are `true`.
+* A proxy is written as the instance it proxies, and a reference to a proxy is written from its identifier, without
+loading it.
+* A property annotated with `@JsonIgnore`, or with `@JsonProperty(access = WRITE_ONLY)`, is not written. The mapper also
+leaves out the properties that `@JsonIgnoreProperties` names, as Jackson does; GORM adds that annotation to every domain
+class, naming properties such as `errors` and `tenantId`. The converter renders those with its includes and excludes, as
+before.
+* A domain class with its own `@JsonSerialize` serializer keeps it.
+
+The property values are written as the mapper writes any other value, and the JSON converter renders them with its
+marshallers. To leave the mapper's rendering of domain classes to Jackson's bean serialization, set:
+
+[source,yaml]
+----
+grails:
+    converters:
+        json:
+            domain:
+                jackson:
+                    enabled: false
+----
+
+The module is the `domainClassJacksonModule` bean, which you can also add to a `JsonMapper` you build yourself.
 
 
 ==== Date and Time Rendering
 
-
-The JSON converter renders date and time values the same way as Spring Boot's default Jackson `JsonMapper`, so a Grails
-application and a Spring Boot application return the same JSON for the same values:
+With the default mapper configuration, dates and times render as follows:
 
 [cols="2,3", options="header"]
 |===
@@ -97,34 +172,20 @@ application and a Spring Boot application return the same JSON for the same valu
 | ISO-8601 without a time zone, such as `"2025-10-08"`, `"01:48:46.407254"`, `"2025-10-08T01:48:46.407254"`
 
 | `OffsetDateTime`, `ZonedDateTime`, `OffsetTime`
-| ISO-8601 with the offset and without a zone ID, such as `"2025-10-08T01:48:46.407254-06:00"`, `"03:00:00-03:00"`
+| ISO-8601 with the offset and without a zone ID, such as `"2025-10-08T01:48:46.407254-06:00"`, `"03:00-03:00"`
 
 | `YearMonth`, `MonthDay`, `Duration`, `Period`, `javax.xml.datatype.Duration`
 | ISO-8601, such as `"2026-09"`, `"--09-25"`, `"PT1H30M"`, `"P1Y2M3D"`, `"P1DT2H"`
 
-| `Year`
-| a number, such as `2026`
+| `Year`, `Month`
+| a number, such as `2026` or `9`
 
 | `ZoneId`, `ZoneOffset`, `TimeZone`
 | the ID, such as `"America/Sao_Paulo"` or `"-03:00"`
 |===
 
-An `OffsetTime` keeps its seconds and writes a fraction of a second with only the digits it needs, as JSON views render
-it, where Spring Boot writes `"03:00-03:00"`. A map keyed by `Date`, `Calendar` or `ZonedDateTime` values renders its
-keys as those values render by default, such as
-`"2025-10-08T07:48:46.407Z"`, also where `grails.converters.json.date` or a registered marshaller changes how the values
-render; other map keys render with their `toString()`. JSON views render dates and times the same way.
+An `OffsetTime` uses its `toString()` form, which omits zero seconds and writes fractional seconds in groups of three
+digits. A `Month` renders as its number; data binding accepts both the number and the enum name. JSON views keep their
+existing formats, including the enum name for `Month` and ISO-8601 formatting for `OffsetTime`.
 
-A `Month` renders by its name, such as `"SEPTEMBER"`, as every enum does, where Spring Boot writes its number. Data binding
-binds a `Month` from either.
-
-Setting `grails.converters.json.date` to `javascript` renders `java.util.Date` values as JavaScript `new Date(...)`
-constructors instead. To render a type differently, register an object marshaller for it, for example in `BootStrap.init`.
-This one renders a `Month` as its number, as Spring Boot does:
-
-[source,groovy]
-----
-JSON.registerObjectMarshaller(Month) { Month month ->
-    month.value
-}
-----
+Map keys use the mapper's key serializers, so its date format and time zone settings apply to date keys as well.

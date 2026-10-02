@@ -18,20 +18,27 @@
  */
 package org.grails.plugins.converters
 
+import java.util.function.Supplier
+
 import groovy.transform.CompileStatic
 
 import org.springframework.beans.factory.BeanRegistrar
 import org.springframework.beans.factory.BeanRegistry
+import org.springframework.beans.factory.ObjectProvider
 import org.springframework.core.env.Environment
 
 import grails.converters.JSON
 import grails.converters.XML
+import grails.core.GrailsApplication
+import grails.core.support.proxy.ProxyHandler
 import grails.plugins.Plugin
 import grails.util.GrailsUtil
 import org.grails.plugins.codecs.JSONCodec
 import org.grails.plugins.codecs.XMLCodec
 import org.grails.web.converters.configuration.ConvertersConfigurationInitializer
 import org.grails.web.converters.configuration.ObjectMarshallerRegisterer
+import org.grails.web.converters.jackson.DomainClassJacksonModule
+import org.grails.web.converters.jackson.DomainClassRendering
 import org.grails.web.converters.marshaller.json.ValidationErrorsMarshaller as JsonErrorsMarshaller
 import org.grails.web.converters.marshaller.xml.ValidationErrorsMarshaller as XmlErrorsMarshaller
 
@@ -69,6 +76,19 @@ class ConvertersGrailsPlugin extends Plugin {
                             marshaller: it.bean('xmlErrorsMarshaller', XmlErrorsMarshaller),
                             converterClass: XML
                     )
+                }
+            }
+
+            // Spring Boot registers every JacksonModule bean with the application's JsonMapper
+            if (environment.getProperty(ConvertersConfigurationInitializer.SETTING_CONVERTERS_JSON_DOMAIN_JACKSON_ENABLED, Boolean, true)) {
+                registry.registerBean('domainClassJacksonModule', DomainClassJacksonModule) {
+                    it.supplier {
+                        ObjectProvider<GrailsApplication> grailsApplication = it.beanProvider(GrailsApplication)
+                        ObjectProvider<ProxyHandler> proxyHandler = it.beanProvider(ProxyHandler)
+                        new DomainClassJacksonModule({ ->
+                            ConvertersConfigurationInitializer.jsonDomainClassRendering(grailsApplication.getIfUnique(), proxyHandler.getIfUnique())
+                        } as Supplier<DomainClassRendering>)
+                    }
                 }
             }
 

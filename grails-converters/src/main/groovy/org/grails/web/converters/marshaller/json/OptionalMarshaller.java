@@ -18,22 +18,25 @@
  */
 package org.grails.web.converters.marshaller.json;
 
+import java.util.Optional;
+
 import grails.converters.JSON;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
 
 /**
- * @author Siegfried Puchbauer
- * @since 1.1
+ * JSON ObjectMarshaller which renders an {@link Optional} as its value, or {@code null} when it is empty, as Spring
+ * Boot's JsonMapper does. The value is rendered by the converter, as any other value is.
+ *
+ * @since 9.0
  */
-public class ByteArrayMarshaller implements ObjectMarshaller<JSON> {
+public class OptionalMarshaller implements ObjectMarshaller<JSON> {
 
     public boolean supports(Object object) {
-        return object instanceof byte[];
+        return object instanceof Optional;
     }
 
     public void marshalObject(Object object, JSON converter) throws ConverterException {
-        byte[] bytes = (byte[]) object;
-        converter.convertAnother(String.format("%d Bytes", bytes.length));
+        converter.convertAnother(((Optional<?>) object).orElse(null));
     }
 }

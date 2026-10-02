@@ -1,0 +1,159 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+=== Upgrade Instructions for Grails and Related Dependencies
+
+This guide outlines the changes to review when you upgrade a Grails project from Grails 8 to Grails 9.
+
+==== 1. `grails.converters.JSON` Writes JSON With Spring Boot's JsonMapper
+
+`render ... as JSON`, `respond` for a JSON request and every other use of `grails.converters.JSON` now write JSON through
+the application's Jackson `JsonMapper`, the one Spring Boot auto-configures. The mapper writes the JSON text (numbers and
+pretty printing), and writes every single value that it has a dedicated serializer for: dates and times, `Month`,
+`UUID`, `Locale`, `byte[]`, types with a `@JsonValue`, and the types of any Jackson module registered with the
+application. Those values render as Spring Boot renders them, and `spring.jackson.*` properties apply to them. For
+example, `spring.jackson.time-zone` writes `Date` and `Calendar` values in that time zone, and converts `OffsetDateTime`
+and `ZonedDateTime` values to it. When the application context has no `JsonMapper`, or has several and none is primary,
+as in a unit test, a default `JsonMapper` is used.
+
+Grails marshallers still render domain classes, beans, enums, collections, maps and arrays, and now records (as an
+object of their components) and `Optional` (as its value), so the values they contain are rendered as any other value
+is. A marshaller that an application registers, with `JSON.registerObjectMarshaller(...)` or an
+`ObjectMarshallerRegisterer`, still takes precedence over the mapper for the types it supports.
+
+A Jackson module registered with the application, such as a `JacksonModule` bean or a `@JacksonComponent` serializer,
+now applies to `grails.converters.JSON`, where Grails 8 ignored it. When a module provides a serializer for a type that
+Grails 8 rendered as a bean, the serializer renders it instead. The values that the serializer writes, such as a property
+it writes with `JsonGenerator#writePOJO`, are rendered by the converter as any other value is, so registered marshallers,
+enum names and the circular reference behaviour apply to them. A marshaller registered for the type itself takes
+precedence over the module's serializer.
+
+Two things deliberately differ from Spring Boot, as they did in Grails 8:
+
+* Enums render by `name()`, where Jackson 3 writes `toString()`, so that the JSON binds back to the enum.
+* Strings are escaped for an HTML `<script>` element: `</` is written as `<\u002f`, and U+2028 and U+2029 as `\u2028`
+and `\u2029`. The parsed values are the same as Spring Boot's.
+
+The following values render differently than in Grails 8:
+
+[cols="2,2,3", options="header"]
+|===
+| Value
+| Grails 8
+| Grails 9
+
+| `OffsetTime`
+| `"03:00:00-03:00"`, `"03:00:00.5+05:30"`
+| `"03:00-03:00"`, `"03:00:00.500+05:30"`, from `OffsetTime#toString()`
+
+| `Month`
+| `"SEPTEMBER"`
+| `9`, a JSON number. A `Month` binds back from its number.
+
+| `java.util.Locale`
+| `"zh_TW_#Hant"`, from `Locale#toString()`
+| `"zh-Hant-TW"`, its language tag
+
+| `char`, `Character`
+| `{}`
+| `"c"`
+
+| `byte[]`
+| `[1,2,3]`
+| `"AQID"`, Base64
+
+| `UUID`, `URI`, a type with a `@JsonValue`
+| an object of its bean properties
+| its value, such as `"123e4567-e89b-12d3-a456-426614174000"`
+
+| A record
+| `{}`
+| an object of its components, such as `{"x":1,"y":2}`
+
+| `Optional`
+| `{"empty":false,"present":true}`
+| its value, or `null` when it is empty
+
+| A `NaN` or infinite `double`
+| `NaN`, which is not valid JSON
+| `"NaN"`
+
+| Pretty printed JSON (`grails.converters.json.pretty.print`, `JSON#toString(true)`)
+| `"a": 1`, with arrays on their own lines
+| `"a" : 1`, the layout of the mapper's default pretty printer
+
+| A single value, such as `render Role.HEAD as JSON`
+| a `ConverterException`
+| the JSON value, `"HEAD"`
+|===
+
+The other default date and time formats are unchanged from Grails 8.0.0, which already renders `Date`, `Calendar`,
+`java.sql.Date` and `java.sql.Timestamp` with millisecond precision and supports the additional date and time types.
+Map keys now use the mapper's key serializers, including its configured date format and time zone, instead of Grails'
+fixed date formats or the key's `toString()`.
+
+The JSON marshallers that rendered these values are removed, from the `org.grails.web.converters.marshaller.json`
+package: `DateMarshaller`, `CalendarMarshaller`, `ToStringBeanMarshaller`, `ByteArrayMarshaller`, `InstantMarshaller`,
+`LocalDateMarshaller`, `LocalDateTimeMarshaller`, `OffsetDateTimeMarshaller` and `ZonedDateTimeMarshaller`. To render one
+of these types differently, register a marshaller for it, or configure the `JsonMapper`. The XML marshallers of the same
+names are not changed. The default JSON marshallers have implicit priorities that follow their order (-1, -2, and so on),
+and that order has changed, so a marshaller registered with an explicit negative priority may now come before or after
+different defaults.
+
+`org.grails.web.json.JSONWriter`, which the converter and its marshallers write to, now writes through a Jackson
+`JsonGenerator`, and `new JSONWriter(writer)` writes with a default `JsonMapper`:
+
+* It keeps its public methods, rejects the same misplaced calls, and writes the same JSON, except as listed above. It
+also accepts a single value outside any object or array, where it threw a `JSONException`.
+* The generator buffers the text. It reaches the `Writer` as the buffer fills, once the JSON text is complete, and when
+`flush()` is called, rather than as each value is written. The `Writer` itself is not flushed or closed.
+* `array()`, `object()`, `key()` and the `value` methods no longer go through the protected `append` and `comma`
+methods. A subclass that overrides those to change the output, or writes to the `writer` field directly, must use the
+public methods instead.
+* `PrettyPrintJSONWriter` is removed. Use `new JSONWriter(writer, new JsonMapperSupport(jsonMapper), true)`, which
+indents with the mapper's default pretty printer.
+
+The unused JavaCC JSON parser in `org.grails.web.json.parser` (`JSONParser` and its generated classes) is removed.
+`JSON.parse`, `request.JSON` and `new JSONObject(String)` parse with `JSONTokener`, as before.
+
+With the `PATH` circular reference behaviour (`grails.converters.json.circular.reference.behaviour`), an object with a
+`null` property, or a single value, now renders instead of failing, and a reference that follows a number property now
+has the right path.
+
+JSON views, the XML converter and the HAL renderer are not changed.
+
+==== 2. Domain Classes Render Through Jackson
+
+The JSON converter renders domain classes with a Jackson serializer, and Grails registers it, as a Jackson module, with
+the application's `JsonMapper`. Writing a domain class instance with the application's `JsonMapper`, including returning
+one from a Spring MVC controller, now renders it as `render ... as JSON` does: associated instances as references of their
+id, such as `{"id":3}`, rather than in full, and proxies as the instances they proxy. Properties that Jackson annotations
+leave out, including the ones GORM names in the `@JsonIgnoreProperties` it adds to every domain class, are still left
+out. To keep Jackson's bean serialization for domain classes, set `grails.converters.json.domain.jackson.enabled` to
+`false`.
+
+The JSON converter renders domain classes as before, with these changes:
+
+* A property annotated with `@JsonIgnore`, or with `@JsonProperty(access = WRITE_ONLY)`, is no longer rendered.
+* A to-many association whose value is a `Map` renders as an object of references, such as `{"a":{"id":1}}`, where it
+failed before.
+* `DomainClassMarshaller` and `DeepDomainClassMarshaller` render through the serializer. Their constructors and
+protected methods (`includesProperty`, `excludesProperty`, `extractValue`, `asShortObject` and
+`isRenderDomainClassRelations`) are unchanged, and a subclass that overrides them still renders as it did. They are
+consulted before the mapper's value serializers, as `ProxyUnwrappingMarshaller` is.

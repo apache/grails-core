@@ -33,8 +33,8 @@ import org.apache.grails.testing.http.client.HttpClientSupport
  * Functional tests verifying that Date and Calendar objects are marshalled
  * through the Grails JSON and XML converters as ISO 8601 strings.
  *
- * - JSON marshallers render a UTC instant with millisecond precision and a "Z" suffix,
- *   the same as Spring Boot's default Jackson rendering.
+ * - JSON is written by Spring Boot's JsonMapper: a UTC instant with millisecond
+ *   precision and a "Z" suffix.
  * - XML marshaller uses {@link DateTimeFormatter#ISO_OFFSET_DATE_TIME} in the
  *   system default zone (numeric offset, e.g. "+00:00", "-04:00").
  */
@@ -42,8 +42,8 @@ import org.apache.grails.testing.http.client.HttpClientSupport
 @Tag('http-client')
 @Narrative('''
 Grails converters marshal Date and Calendar objects as ISO 8601 strings.
-JSON output is RFC 3339 / ISO 8601 in UTC with millisecond precision, as
-Spring Boot renders it. XML output is ISO 8601 offset date-time in the
+JSON output is written by Spring Boot's JsonMapper: RFC 3339 / ISO 8601 in UTC
+with millisecond precision. XML output is ISO 8601 offset date-time in the
 system default zone.
 ''')
 class DateMarshallerSpec extends Specification implements HttpClientSupport {

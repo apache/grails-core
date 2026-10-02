@@ -18,26 +18,14 @@
  */
 package org.grails.web.converters.configuration;
 
-import java.sql.Time;
-import java.time.Duration;
-import java.time.LocalTime;
-import java.time.MonthDay;
-import java.time.OffsetTime;
-import java.time.Period;
-import java.time.Year;
-import java.time.YearMonth;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.TimeZone;
-
-import javax.xml.datatype.XMLGregorianCalendar;
 
 import io.micrometer.observation.ObservationRegistry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import tools.jackson.databind.json.JsonMapper;
 
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationContext;
@@ -50,12 +38,11 @@ import grails.core.GrailsApplication;
 import grails.core.support.GrailsApplicationAware;
 import grails.core.support.proxy.DefaultProxyHandler;
 import grails.core.support.proxy.ProxyHandler;
-import org.apache.grails.converters.internal.json.SimpleTypeMarshaller;
 import org.grails.config.PropertySourcesConfig;
 import org.grails.web.converters.Converter;
+import org.grails.web.converters.jackson.DomainClassRendering;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
 import org.grails.web.converters.marshaller.ProxyUnwrappingMarshaller;
-import org.grails.web.json.JsonDateFormat;
 
 /**
  * @author Siegfried Puchbauer
@@ -65,6 +52,13 @@ public class ConvertersConfigurationInitializer implements ApplicationContextAwa
 
     public static final String SETTING_CONVERTERS_JSON_DATE = "grails.converters.json.date";
     public static final String SETTING_CONVERTERS_JSON_DEFAULT_DEEP = "grails.converters.json.default.deep";
+    /**
+     * Whether domain classes are registered with the application's {@code JsonMapper}, so that it renders them as the
+     * JSON converter does. Defaults to {@code true}.
+     *
+     * @since 9.0
+     */
+    public static final String SETTING_CONVERTERS_JSON_DOMAIN_JACKSON_ENABLED = "grails.converters.json.domain.jackson.enabled";
     public static final String SETTING_CONVERTERS_ENCODING = "grails.converters.encoding";
     public static final String SETTING_CONVERTERS_CIRCULAR_REFERENCE_BEHAVIOUR = "grails.converters.default.circular.reference.behaviour";
     public static final String SETTING_CONVERTERS_JSON_CIRCULAR_REFERENCE_BEHAVIOUR = "grails.converters.json.circular.reference.behaviour";
@@ -97,6 +91,8 @@ public class ConvertersConfigurationInitializer implements ApplicationContextAwa
         if (applicationContext != null) {
             ConvertersConfigurationHolder.setObservationRegistry(
                     applicationContext.getBeanProvider(ObservationRegistry.class).getIfAvailable(() -> ObservationRegistry.NOOP));
+            // the application's JsonMapper, or a default one when there is none, or more than one and none is primary
+            ConvertersConfigurationHolder.setJsonMapper(applicationContext.getBeanProvider(JsonMapper.class).getIfUnique());
         }
         initJSONConfiguration();
         initXMLConfiguration();
@@ -111,15 +107,8 @@ public class ConvertersConfigurationInitializer implements ApplicationContextAwa
 
         List<ObjectMarshaller<JSON>> marshallers = new ArrayList<>();
         marshallers.addAll(getPreviouslyConfiguredMarshallers(JSON.class));
-        marshallers.add(new org.grails.web.converters.marshaller.json.ArrayMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.json.ByteArrayMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.json.CollectionMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.json.MapMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.json.SimpleEnumMarshaller());
 
         Config grailsConfig = getGrailsConfig();
-
-        marshallers.add(new org.grails.web.converters.marshaller.ProxyUnwrappingMarshaller<>());
 
         if ("javascript".equals(grailsConfig.getProperty(SETTING_CONVERTERS_JSON_DATE, String.class, "default", Arrays.asList("javascript", "default")))) {
             if (LOG.isDebugEnabled()) {
@@ -127,34 +116,9 @@ public class ConvertersConfigurationInitializer implements ApplicationContextAwa
             }
             marshallers.add(new org.grails.web.converters.marshaller.json.JavascriptDateMarshaller());
         }
-        else {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Using default JSON Date Marshaller");
-            }
-            // ahead of DateMarshaller, which also supports java.sql.Time
-            marshallers.add(new SimpleTypeMarshaller<>(Time.class, Time::toString));
-            marshallers.add(new org.grails.web.converters.marshaller.json.DateMarshaller());
-        }
-        marshallers.add(new org.grails.web.converters.marshaller.json.CalendarMarshaller());
-        marshallers.add(new SimpleTypeMarshaller<>(XMLGregorianCalendar.class,
-                calendar -> JsonDateFormat.format(calendar.toGregorianCalendar().getTimeInMillis())));
-        marshallers.add(new org.grails.web.converters.marshaller.json.InstantMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.json.LocalDateMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.json.LocalDateTimeMarshaller());
-        marshallers.add(new SimpleTypeMarshaller<>(LocalTime.class, DateTimeFormatter.ISO_LOCAL_TIME::format));
-        marshallers.add(new org.grails.web.converters.marshaller.json.OffsetDateTimeMarshaller());
-        marshallers.add(new SimpleTypeMarshaller<>(OffsetTime.class, DateTimeFormatter.ISO_OFFSET_TIME::format));
-        marshallers.add(new org.grails.web.converters.marshaller.json.ZonedDateTimeMarshaller());
-        marshallers.add(new SimpleTypeMarshaller<>(Year.class, Year::getValue));
-        marshallers.add(new SimpleTypeMarshaller<>(YearMonth.class, YearMonth::toString));
-        marshallers.add(new SimpleTypeMarshaller<>(MonthDay.class, MonthDay::toString));
-        marshallers.add(new SimpleTypeMarshaller<>(Duration.class, Duration::toString));
-        marshallers.add(new SimpleTypeMarshaller<>(Period.class, Period::toString));
-        marshallers.add(new SimpleTypeMarshaller<>(ZoneId.class, ZoneId::getId));
-        marshallers.add(new SimpleTypeMarshaller<>(TimeZone.class, TimeZone::getID));
-        marshallers.add(new SimpleTypeMarshaller<>(javax.xml.datatype.Duration.class, javax.xml.datatype.Duration::toString));
-        marshallers.add(new org.grails.web.converters.marshaller.json.ToStringBeanMarshaller());
-
+        // domain classes, and proxies of them, are claimed first: the application's JsonMapper may have a serializer for
+        // them, and they are rendered with the converter's includes, excludes and deep setting
+        marshallers.add(new org.grails.web.converters.marshaller.ProxyUnwrappingMarshaller<>());
         boolean includeDomainVersion = includeDomainVersionProperty(grailsConfig, "json");
         boolean includeDomainClassName = includeDomainClassProperty(grailsConfig, "json");
         ProxyHandler proxyHandler = getProxyHandler();
@@ -165,6 +129,15 @@ public class ConvertersConfigurationInitializer implements ApplicationContextAwa
         else {
             marshallers.add(new org.grails.web.converters.marshaller.json.DomainClassMarshaller(includeDomainVersion, includeDomainClassName, proxyHandler, grailsApplication));
         }
+        // dates and times and the other single values the application's JsonMapper has a serializer for are written
+        // by the mapper, as Spring Boot writes them
+        marshallers.add(new org.grails.web.converters.marshaller.json.JsonMapperValueMarshaller());
+        marshallers.add(new org.grails.web.converters.marshaller.json.SimpleEnumMarshaller());
+        marshallers.add(new org.grails.web.converters.marshaller.json.RecordMarshaller());
+        marshallers.add(new org.grails.web.converters.marshaller.json.OptionalMarshaller());
+        marshallers.add(new org.grails.web.converters.marshaller.json.ArrayMarshaller());
+        marshallers.add(new org.grails.web.converters.marshaller.json.CollectionMarshaller());
+        marshallers.add(new org.grails.web.converters.marshaller.json.MapMarshaller());
         marshallers.add(new org.grails.web.converters.marshaller.json.GroovyBeanMarshaller());
         marshallers.add(new org.grails.web.converters.marshaller.json.GenericJavaBeanMarshaller());
 
@@ -263,11 +236,27 @@ public class ConvertersConfigurationInitializer implements ApplicationContextAwa
         ConvertersConfigurationHolder.setNamedConverterConfiguration(XML.class, "deep", deepConfig);
     }
 
-    private boolean includeDomainVersionProperty(Config grailsConfig, String converterType) {
+    /**
+     * How the application's {@code JsonMapper} renders domain classes: as the JSON converter renders them by default,
+     * with {@code grails.converters.json.domain.include.version}, {@code grails.converters.json.domain.include.class}
+     * and {@code grails.converters.json.default.deep}.
+     *
+     * @param grailsApplication the application
+     * @param proxyHandler unwraps proxied domain class instances
+     * @return the rendering
+     * @since 9.0
+     */
+    public static DomainClassRendering jsonDomainClassRendering(GrailsApplication grailsApplication, ProxyHandler proxyHandler) {
+        Config config = grailsApplication != null ? grailsApplication.getConfig() : new PropertySourcesConfig();
+        return new DomainClassRendering(grailsApplication, proxyHandler, includeDomainVersionProperty(config, "json"),
+                includeDomainClassProperty(config, "json"), config.getProperty(SETTING_CONVERTERS_JSON_DEFAULT_DEEP, Boolean.class, false));
+    }
+
+    private static boolean includeDomainVersionProperty(Config grailsConfig, String converterType) {
         return grailsConfig.getProperty(String.format("grails.converters.%s.domain.include.version", converterType), Boolean.class, grailsConfig.getProperty("grails.converters.domain.include.version", Boolean.class, false));
     }
 
-    private boolean includeDomainClassProperty(Config grailsConfig, String converterType) {
+    private static boolean includeDomainClassProperty(Config grailsConfig, String converterType) {
         return grailsConfig.getProperty(String.format("grails.converters.%s.domain.include.class", converterType), Boolean.class, grailsConfig.getProperty("grails.converters.domain.include.class", Boolean.class, false));
     }
 
