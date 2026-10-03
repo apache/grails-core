@@ -486,6 +486,12 @@ class HibernateQuery extends Query {
                 offset, max, lockResult, queryCache, fetchSize, timeout, flushMode, readOnly, proxyHandler)
     }
 
+    /** An executor that never pages, because max and offset do not apply to a count. */
+    private HibernateQueryExecutor getCountQueryExecutor() {
+        return new HibernateQueryExecutor(
+                null, null, lockResult, queryCache, fetchSize, timeout, flushMode, readOnly, proxyHandler)
+    }
+
     JpaCriteriaQuery<?> getJpaCriteriaQuery() {
         ConversionService conversionService = session.mappingContext.conversionService
         return new JpaCriteriaQueryCreator(
@@ -524,7 +530,7 @@ class HibernateQuery extends Query {
         Number result
         if (projections.projectionList.isEmpty()) {
             projections().count()
-            result = (Number) executeSingleResult()
+            result = (Number) countQueryExecutor.singleResult(currentSession, jpaCriteriaQuery)
         } else {
             HibernateCriteriaBuilder cb = criteriaBuilder
 
@@ -536,7 +542,7 @@ class HibernateQuery extends Query {
 
             countQuery.from(innerSubquery)
             countQuery.select(cb.count(cb.literal(1)))
-            result = (Number) hibernateQueryExecutor.singleResult(currentSession, countQuery)
+            result = (Number) countQueryExecutor.singleResult(currentSession, countQuery)
         }
 
         return (Number) firePostQueryEvent(result)
