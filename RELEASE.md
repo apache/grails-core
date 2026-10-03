@@ -46,13 +46,17 @@ During the staging step, we must create a source distribution & stage any binary
    * checkout the project
    * setup gradle
    * extract the version # from the tag
-   * run the pre-release workflow (updates gradle.properties to be the version specified by the user)
+   * run the pre-release workflow (updates gradle.properties to be the version specified by the user, and records the
+     release's target branch as `githubBranch` so the documentation's source links come from the source distribution)
    * extract signing secrets from github action variables 
    * build the project, sign the jar files, and stage them to the necessary locations
    * add the grails wrapper to the `grails-core` release
    * add the grails binary distribution (grails, grails-shell-cli, and grails-forge-cli) to the `grails-core` release
+   * add the grails documentation distribution to the `grails-core` release
    * close the staging repository so the `grails-core` artifacts can be accessed
    * generate project checksums & artifact lists to make verification easier
+   * record the git tags the documentation was built with, so the documentation's version list can be rebuilt from the
+     source distribution
 4. (no approval required) The `source` job will: 
      * download the tagged grails source
      * generate a source distribution meeting the ASF requirements
@@ -60,10 +64,11 @@ During the staging step, we must create a source distribution & stage any binary
    * remove any temporary artifacts needed for the source distribution creation
 5. (no approval required) The `upload` job will:
      * Download the source distribution
-     * Download the binary distributions (wrapper & grails clis)
+     * Download the binary distributions (wrapper & grails clis) and the documentation distribution
      * upload the source distribution to https://dist.apache.org/repos/dist/dev/grails/core/VERSION/sources
      * upload the grails-wrapper binary distribution to https://dist.apache.org/repos/dist/dev/grails/core/VERSION/distribution
      * upload the grails binary distribution to https://dist.apache.org/repos/dist/dev/grails/core/VERSION/distribution (note: this is the sdkman artifact)
+     * upload the grails documentation distribution to https://dist.apache.org/repos/dist/dev/grails/core/VERSION/distribution
    * upload a file containing the SVN revision for the uploaded artifacts
    * generate vote email template for the Grails PMC
 
@@ -97,7 +102,7 @@ verify the one inside of the source distribution.
 
 ### Manual Verification: Download the Staged Artifacts
 
-Use `etc/bin/download-release-artifacts.sh` to download the staged artifacts. This script will download the source distribution, wrapper binary distribution, and sdkman binary distribution. The distribution should come from [https://dist.apache.org/repos/dist/dev/grails/core/version](https://dist.apache.org/repos/dist/dev/grails/core).
+Use `etc/bin/download-release-artifacts.sh` to download the staged artifacts. This script will download the source distribution, wrapper binary distribution, sdkman binary distribution, and documentation distribution. The distribution should come from [https://dist.apache.org/repos/dist/dev/grails/core/version](https://dist.apache.org/repos/dist/dev/grails/core).
 
 ### Manual Verification: Source Distribution Verification
 
@@ -123,6 +128,7 @@ Extracts the zip file and verifies the contents:
    * Ensure `README.md` & `CONTRIBUTING.md` are present to ensure project build & usage instructions are present.
    * Ensure the `PUBLISHED_ARTIFACTS` file is present so we know how to pull the various jar files.
    * Ensure the `CHECKSUMS` file is present so we can ensure those checksums match the staged artifacts.
+   * Ensure the `GIT_TAGS` file is present so the documentation's version list can be rebuilt without git history.
 
 ### Manual Verification: Jar file Signature Verification (Nexus Staging Repositories)
 
@@ -149,6 +155,13 @@ If there are any jar file differences, confirm they are relevant by following th
 Please note that Grails is officially built on Linux so if there are differences they may be due to the OS platform.
 There is a dockerfile checked into to assist building in an environment like GitHub actions. Please see the section
 `Appendix: Verification from a Container` for more information.
+
+### Manual Verification: Reproducible Documentation
+The documentation distribution must also be rebuilt from the source distribution. Run the
+`verify-docs-reproducible.sh` shell script after the source distribution is extracted and Gradle is bootstrapped. It
+builds the documentation with `./gradlew :grails-doc:dist`, using the `BUILD_DATE` and `GIT_TAGS` files from the source
+distribution, and compares the result with the staged `apache-grails-<version>-docs.zip`. If the archives differ, the
+script extracts both under `etc/bin/results/docs` and lists the differing files in `etc/bin/results/docs/diff.txt`.
 
 ### Manual Verification: Running RAT
 
@@ -222,6 +235,34 @@ Generates applications using the CLIs and verifies all dependencies resolve:
 * Creates a shell app via `grails-shell-cli` and a forge app via `grails-forge-cli` against the staging repository.
 * Runs `./gradlew dependencies` in each generated app to confirm all dependencies resolve successfully. The build will fail if any dependency is marked as `FAILED`.
 
+### Manual Verification: Documentation Distribution Verification
+
+The documentation is staged as a distribution, so it is part of the vote and is published to the website exactly as
+voted. The following are the documentation distribution artifacts:
+* `apache-grails-<version>-docs.zip` - the documentation distribution: the guide, the reference, the API docs, and the GORM documentation
+* `apache-grails-<version>-docs.zip.asc` - the generated signature of the documentation distribution
+* `apache-grails-<version>-docs.zip.sha512` - the checksum to verify the documentation distribution
+
+Use `etc/bin/verify-docs-distribution.sh` to verify the documentation distribution. This script performs the following:
+
+Verifies the documentation distribution checksum via the command:
+   ```bash
+   shasum -a 512 -c apache-grails-<version>-docs.zip.sha512
+   ```
+
+Verifies the documentation distribution signature via the command:
+   ```bash
+    gpg --verify apache-grails-<version>-docs.zip.asc apache-grails-<version>-docs.zip
+   ```
+
+Extracts the zip file and verifies the contents:
+* Ensure the `LICENSE` & `NOTICE` files are present to ensure license compliance, along with every license file that `LICENSE` references under `licenses/`.
+* Ensure the documentation entry points are present under `html/`: `index.html`, `guide/single.html`, `api/index.html`, and `grails-data/index.html`.
+
+The documentation bundles third-party stylesheets and fonts. `LICENSE` lists each one with its license. When the
+documentation starts bundling a new third-party file, add it to `grails-doc/distribution-artifacts/LICENSE` and add its
+license text under `grails-doc/distribution-artifacts/licenses/`.
+
 ## 3. Verifying the CLIs are Functional
 
 The CLI distribution consists of various CLI's: `grailsw` (wrapper), `grails` (delegating), `grails-forge-cli`, and
@@ -292,7 +333,7 @@ files by one of 2 ways:
 
 ### Move the distributions from `dev` to `release`
 
-On dist.apache.org, the staged source distribution & binary distributions must be moved from `https://dist.apache.org/repos/dist/dev/grails/` to `https://dist.apache.org/repos/dist/release/grails/`. Per ASF
+On dist.apache.org, the staged source distribution, binary distributions & documentation distribution must be moved from `https://dist.apache.org/repos/dist/dev/grails/` to `https://dist.apache.org/repos/dist/release/grails/`. Per ASF
 infrastructure, this must be performed manually, and we are not allowed to automate it via a gated approval workflow.
 Either move them via your SVN client or use the checked in script to perform these actions as your user.
 
@@ -339,8 +380,17 @@ The bundle is `grails-forge-web-netty/build/distributions/grails-forge-web-netty
 
 ### Publish `grails-core` documentation
 
-Open the release workflow in `grails-core` and approve the `Publish Documentation` step. Wait until finished, and a
-workflow should eventually kick off in `grails-doc` to publish to https://github.com/apache/grails-website/tree/asf-site-production/docs and https://grails.apache.org/docs/.
+Open the release workflow in `grails-core` and approve the `Publish Documentation` step. The step does not rebuild the
+documentation. It downloads the voted `apache-grails-<version>-docs.zip` from dist.apache.org, verifies its checksum and
+signature, and publishes the extracted `html` folder to https://github.com/apache/grails-website/tree/asf-site-production/docs,
+which serves https://grails.apache.org/docs/. It takes the zip from the `release` area once the distributions have been
+moved, and from the `dev` area until then.
+
+To correct the documentation of a version that is already released, create a branch from that version's release tag
+(for example `v8.0.0`), commit the fix to it, and run the `Release - Publish Documentation` workflow from that branch
+with the same version. That workflow rebuilds the documentation from the branch instead of publishing the voted zip. It
+fails unless the branch's `projectVersion` equals the requested version, so it cannot publish documentation built from a
+maintenance branch, which has moved on to the next `-SNAPSHOT` version.
 
 ### Advertise the release via SDKMAN
 

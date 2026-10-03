@@ -40,7 +40,6 @@ version = projectVersion
 ext {
     grailsCheckOutDir = project.layout.buildDirectory.dir('grails-core/checkout').get().asFile.absolutePath
     grailsTestsCheckOutDir = project.layout.buildDirectory.dir('grails-functional-tests/checkout').get().asFile.absolutePath
-    outputDir = layout.buildDirectory.file('docs').get().asFile.absolutePath
     githubBranch = project.findProperty('githubBranch')
     guidePage = '/docs/guide/single.html'
     indexPage = '/docs/index.html'
@@ -723,9 +722,16 @@ createReleaseDropdownTask.configure { CreateReleaseDropDownTask it ->
     it.modifiedPagesDirectory = project.layout.buildDirectory.dir('modified-guide')
 }
 
+// A source distribution has no git history, so the release workflow ships the tags the
+// release documentation was built with as GIT_TAGS, which keeps the version dropdown reproducible
+def releaseTagsFile = rootProject.layout.projectDirectory.file('GIT_TAGS')
 def fetchTagsTask = project.tasks.register('fetchTags', FetchTagsTask)
-createReleaseDropdownTask.configure {
-    dependsOn(fetchTagsTask)
+createReleaseDropdownTask.configure { CreateReleaseDropDownTask it ->
+    if (releaseTagsFile.asFile.exists()) {
+        it.gitTags = releaseTagsFile
+    } else {
+        it.dependsOn(fetchTagsTask)
+    }
 }
 
 def docsTask = tasks.register('docs', Sync)
@@ -757,8 +763,21 @@ docsTask.configure { Sync it ->
 }
 
 tasks.register('dist', Zip).configure { Zip it ->
-    it.dependsOn(docsTask)
-    it.from(outputDir)
+    it.archiveBaseName = 'apache-grails'
+    it.archiveClassifier = 'docs'
+    // expand() values are not task inputs, so declare the year or a new build year leaves dist UP-TO-DATE
+    def noticeYear = rootProject.ext.buildDate.year
+    it.inputs.property('noticeYear', noticeYear)
+    it.into("apache-grails-${project.version}-docs") { CopySpec distribution ->
+        distribution.from(project.layout.projectDirectory.dir('distribution-artifacts')) { CopySpec legal ->
+            legal.filesMatching('NOTICE') { FileCopyDetails notice ->
+                notice.expand(year: noticeYear)
+            }
+        }
+        distribution.from(docsTask) { CopySpec html ->
+            html.into('html')
+        }
+    }
 }
 
 // Make dist a direct dependency of assemble instead of using deprecated archives configuration

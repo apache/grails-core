@@ -55,6 +55,15 @@ jobs:
           filter: tree:0 # limit size, keeping tags for docs release dropdown
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ github.ref }}
+      - name: "🔍 Verify the branch builds the requested version"
+        # VERSION only picks the website folder. The documentation is built with the branch's projectVersion,
+        # so a branch on another version would publish that version's documentation under VERSION.
+        run: |
+          projectVersion=$(sed -n 's/^projectVersion=//p' gradle.properties)
+          if [[ "${projectVersion}" != "${VERSION#v}" ]]; then
+            echo "❌ ${GITHUB_REF_NAME} builds ${projectVersion:-an unknown version}, not ${VERSION#v}. Run this workflow from a branch created from the v${VERSION#v} tag." >&2
+            exit 1
+          fi
       - name: "📅 Ensure Common Build Date" # to ensure a reproducible build
         run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "☕️ Setup JDK"

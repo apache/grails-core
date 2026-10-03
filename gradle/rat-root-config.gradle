@@ -33,7 +33,9 @@ tasks.named('rat') {
             'BUILD_DATE', // build artifact for storing the build date / verifying
             'CHECKSUMS', // build artifact for storing checksums for easy verification
             'PUBLISHED_ARTIFACTS', // build artifact for storing published artifacts coordinates & paths
+            'GIT_TAGS', // build artifact for storing the git tags the release documentation was built with
             'licenses/**', // licenses directory excluded
+            'grails-doc/distribution-artifacts/licenses/**', // third-party license texts bundled in the documentation distribution
             '.git-blame-ignore-revs', // git configuration isn't code
             'grails-web-common/src/main/groovy/org/grails/web/json/JSONObject.java',
             'grails-web-common/src/main/groovy/org/grails/web/json/JSONArray.java',
