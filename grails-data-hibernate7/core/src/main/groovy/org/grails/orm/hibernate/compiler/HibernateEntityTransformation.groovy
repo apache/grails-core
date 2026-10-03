@@ -124,7 +124,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
         def mapWith = AstUtils.getPropertyFromHierarchy(classNode, GormProperties.MAPPING_STRATEGY)
         String mapWithValue = mapWith?.initialExpression?.text
 
-        if (mapWithValue != null && (mapWithValue != ('hibernate') || mapWithValue != GormProperties.DEFAULT_MAPPING_STRATEGY)) {
+        if (mapWithValue != null && (mapWithValue != ('hibernate') && mapWithValue != GormProperties.DEFAULT_MAPPING_STRATEGY)) {
             return
         }
 
