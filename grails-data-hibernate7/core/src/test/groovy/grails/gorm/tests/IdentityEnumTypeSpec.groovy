@@ -21,13 +21,18 @@ package grails.gorm.tests
 import grails.gorm.annotation.Entity
 import grails.gorm.transactions.Rollback
 import org.grails.orm.hibernate.HibernateDatastore
+import org.grails.orm.hibernate.cfg.IdentityEnumType
+import org.hibernate.HibernateException
+import org.hibernate.engine.spi.SharedSessionContractImplementor
 import org.springframework.transaction.PlatformTransactionManager
 import spock.lang.AutoCleanup
 import spock.lang.Shared
 import spock.lang.Specification
 
 import javax.sql.DataSource
+import java.sql.PreparedStatement
 import java.sql.ResultSet
+import java.sql.Types
 
 /**
  * Created by graemerocher on 16/11/16.
@@ -61,6 +66,170 @@ class IdentityEnumTypeSpec extends Specification {
         resultSet.next()
         resultSet.getInt(1) == 100
         FooWithEnum.first().mySuperValue == XEnum.X__TWO
+    }
+
+    def "setParameterValues initializes enumClass"() {
+        given:
+        def type = new IdentityEnumType()
+        def props = new Properties()
+        props.setProperty(IdentityEnumType.PARAM_ENUM_CLASS, IdentityStatusEnum.name)
+
+        when:
+        type.setParameterValues(props)
+
+        then:
+        type.returnedClass() == IdentityStatusEnum
+        type.sqlType == Types.VARCHAR
+    }
+
+    def "setParameterValues maps an integer id to an integer sql type"() {
+        given:
+        def type = new IdentityEnumType()
+        def props = new Properties()
+        props.setProperty(IdentityEnumType.PARAM_ENUM_CLASS, XEnum.name)
+
+        when:
+        type.setParameterValues(props)
+
+        then:
+        type.returnedClass() == XEnum
+        type.sqlType == Types.INTEGER
+    }
+
+    def "setParameterValues throws for an enum without a getId method"() {
+        given:
+        def type = new IdentityEnumType()
+        def props = new Properties()
+        props.setProperty(IdentityEnumType.PARAM_ENUM_CLASS, PlainEnum.name)
+
+        when:
+        type.setParameterValues(props)
+
+        then:
+        thrown(HibernateException)
+    }
+
+    def "equals uses identity comparison"() {
+        given:
+        def type = new IdentityEnumType()
+
+        expect:
+        type.equals(IdentityStatusEnum.ACTIVE, IdentityStatusEnum.ACTIVE)
+        !type.equals(IdentityStatusEnum.ACTIVE, IdentityStatusEnum.INACTIVE)
+        !type.equals(null, IdentityStatusEnum.ACTIVE)
+    }
+
+    def "hashCode delegates to the object"() {
+        given:
+        def type = new IdentityEnumType()
+        def val = IdentityStatusEnum.ACTIVE
+
+        expect:
+        type.hashCode(val) == val.hashCode()
+        type.hashCode(null) == 0
+    }
+
+    def "deepCopy returns the same object reference"() {
+        given:
+        def type = new IdentityEnumType()
+        def val = IdentityStatusEnum.ACTIVE
+
+        expect:
+        type.deepCopy(val).is(val)
+    }
+
+    def "isMutable returns false"() {
+        expect:
+        !new IdentityEnumType().isMutable()
+    }
+
+    def "disassemble returns the value as Serializable"() {
+        given:
+        def type = new IdentityEnumType()
+        def val = IdentityStatusEnum.ACTIVE
+
+        expect:
+        type.disassemble(val).is(val)
+    }
+
+    def "assemble returns the cached value unchanged"() {
+        given:
+        def type = new IdentityEnumType()
+        def val = IdentityStatusEnum.ACTIVE
+
+        expect:
+        type.assemble(val, null).is(val)
+    }
+
+    def "replace returns the original value"() {
+        given:
+        def type = new IdentityEnumType()
+
+        expect:
+        type.replace(IdentityStatusEnum.ACTIVE, IdentityStatusEnum.INACTIVE, null).is(IdentityStatusEnum.ACTIVE)
+    }
+
+    def "nullSafeGet returns null for a null column"() {
+        given:
+        def type = parameterizedType(IdentityStatusEnum)
+        def rs = Mock(ResultSet)
+        def session = Mock(SharedSessionContractImplementor)
+
+        when:
+        def res = type.nullSafeGet(rs, 1, session, null)
+
+        then:
+        1 * rs.getString(1) >> null
+        res == null
+    }
+
+    def "nullSafeGet converts id to enum"() {
+        given:
+        def type = parameterizedType(IdentityStatusEnum)
+        def rs = Mock(ResultSet)
+        def session = Mock(SharedSessionContractImplementor)
+
+        when:
+        def res = type.nullSafeGet(rs, 1, session, null)
+
+        then:
+        1 * rs.getString(1) >> 'A'
+        _ * rs.wasNull() >> false
+        res == IdentityStatusEnum.ACTIVE
+    }
+
+    def "nullSafeSet handles null value"() {
+        given:
+        def type = parameterizedType(IdentityStatusEnum)
+        def st = Mock(PreparedStatement)
+        def session = Mock(SharedSessionContractImplementor)
+
+        when:
+        type.nullSafeSet(st, null, 1, session)
+
+        then:
+        1 * st.setNull(1, Types.VARCHAR)
+    }
+
+    def "nullSafeSet converts enum to id"() {
+        given:
+        def type = parameterizedType(IdentityStatusEnum)
+        def st = Mock(PreparedStatement)
+        def session = Mock(SharedSessionContractImplementor)
+
+        when:
+        type.nullSafeSet(st, IdentityStatusEnum.INACTIVE, 1, session)
+
+        then:
+        1 * st.setString(1, 'I')
+    }
+
+    private static IdentityEnumType parameterizedType(Class<? extends Enum> enumClass) {
+        def type = new IdentityEnumType()
+        def props = new Properties()
+        props.setProperty(IdentityEnumType.PARAM_ENUM_CLASS, enumClass.name)
+        type.setParameterValues(props)
+        type
     }
 }
 
@@ -107,4 +276,20 @@ enum XEnum {
     String toString() {
         name
     }
+}
+
+/** Enum with a String id, used for direct IdentityEnumType tests. */
+enum IdentityStatusEnum {
+    ACTIVE('A'), INACTIVE('I')
+
+    final String id
+
+    IdentityStatusEnum(String id) {
+        this.id = id
+    }
+}
+
+/** Plain enum with no getId, which IdentityEnumType must reject. */
+enum PlainEnum {
+    ONE, TWO
 }
