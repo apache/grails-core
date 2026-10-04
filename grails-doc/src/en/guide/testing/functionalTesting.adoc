@@ -52,6 +52,23 @@ class HomeSpec extends GebSpec {
 
 When the test is run the application container will be loaded up in the background and you can send requests to the running application using the Geb API.
 
+Web applications generated with Grails Forge include the `geb-with-testcontainers` feature by default. Its functional spec extends `ContainerGebSpec`, which runs the browser in a container and therefore needs Docker or a compatible container runtime. See the https://github.com/apache/grails-core/tree/7.0.x/grails-geb#readme[Grails Geb plugin README] for details.
+
+To run functional tests against browsers installed on your machine instead, select the `geb-with-local-browsers` feature. Before Grails 7.0.18 this feature was named `geb-with-webdriver-binaries`. It replaces `geb-with-testcontainers`, and the two features cannot be selected together. The generated project then contains:
+
+* a functional spec that extends `GebSpec`
+* a `src/integration-test/resources/GebConfig.groovy` with one Geb environment per browser, such as `chrome`, `chromeHeadless`, `firefox` and `firefoxHeadless`
+* a `build.gradle` that passes the `geb.env` system property to the test JVM
+
+Select a browser by passing the Geb environment to Gradle:
+
+[source,console]
+----
+$ ./gradlew integrationTest -Dgeb.env=firefoxHeadless
+----
+
+Selenium Manager, which is part of Selenium, downloads the WebDriver binary that matches the installed browser version.
+
 Note that the application is only loaded once for the entire test run, so functional tests share the state of the application across the whole suite.
 
 In addition the application is loaded in the JVM as the test, this means that the test has full access to the application state and can interact directly with data services such as GORM to setup and cleanup test data.

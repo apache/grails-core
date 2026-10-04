@@ -33,6 +33,10 @@ class NamespacedController {
         redirect controller: 'namespaced', action: 'demo', namespace: 'secondary'
     }
 
+    def redirectToAnotherNamespaced() {
+        // redirects to anotherNamespaced without naming a namespace
+        redirect controller: 'anotherNamespaced', action: 'demo'
+    }
     def demo() {
         render 'Rendered by the primary Namespaced Controller'
     }

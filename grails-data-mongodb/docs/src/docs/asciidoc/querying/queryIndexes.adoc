@@ -139,8 +139,163 @@ class Person {
 
 WARNING: Dropping and recreating an index rebuilds it from scratch, during which queries that rely on the index are not served by it. Enable `recreateOnConflict` deliberately, and prefer applying it during a maintenance window for large collections.
 
+A declared index whose `name` is already held by an index on different keys is the same kind of conflict, reported by MongoDB as an `IndexKeySpecsConflict`, and `recreateOnConflict` resolves it the same way:
+
+[source,groovy]
+----
+class Person {
+    String name
+    static mapping = {
+        name index:true, indexAttributes: [name:'byName', recreateOnConflict:true]
+    }
+}
+----
+
+Without it, GORM says which name is taken, leaves the index that holds it alone, and counts the declaration as failed.
+
 A change to a TTL index's `expireAfterSeconds` is handled automatically and does not require `recreateOnConflict`, because GORM updates the expiry in place rather than rebuilding the index.
 
+
+==== Disabling Index Creation on Startup
+
+
+By default GORM creates and reconciles every index declared in a mapping block when the datastore starts. Set `buildIndexes` to `false` in `grails-app/conf/application.yml` to switch that off:
+
+[source,yaml]
+----
+grails:
+    mongodb:
+        buildIndexes: false
+----
+
+or, in `application.groovy`:
+
+[source,groovy]
+----
+grails {
+    mongodb {
+        buildIndexes = false
+    }
+}
+----
+
+With this setting GORM issues no `createIndex` or `collMod` command by itself, for any domain class, and the indexes already present on the server are left exactly as they are until the application builds them (see <<buildIndexesOnDemand,Building Indexes on Demand>> below). Queries are unaffected and continue to use whichever indexes exist. This is useful when deploying against live data whose indexes are managed separately — by a DBA or a migration step — so that a deployment does not build an index against a large production collection, and so an application running against an older index set does not have those indexes reconciled underneath it.
+
+It also suppresses index creation for domain classes registered after startup. Declared at the top level the setting applies to every connection, and each connection can override it:
+
+[source,yaml]
+----
+grails:
+    mongodb:
+        buildIndexes: false
+        connections:
+            reporting:
+                url: mongodb://localhost/reporting
+                buildIndexes: true
+----
+
+NOTE: Because nothing is created at startup, a collection that has never been built with `buildIndexes` enabled, or by an explicit build, has no declared indexes at all. Turn the setting off only where the indexes are already in place or are applied by other means. The setting governs only the indexes GORM derives from the mapping blocks; an explicit `createIndex` call made by application code against a collection is unaffected.
+
+[[buildIndexesOnDemand]]
+===== Building Indexes on Demand
+
+Turning `buildIndexes` off stops GORM building indexes by itself. It does not stop the application building them when it chooses: once a deployment has been verified, from an administrative action, or on a schedule. Call `buildIndex()` on the `MongoDatastore` bean:
+
+[source,groovy]
+----
+import org.grails.datastore.mapping.mongo.MongoDatastore
+
+class IndexMaintenanceService {
+
+    MongoDatastore mongoDatastore
+
+    void buildIndexes() {
+        mongoDatastore.buildIndex()
+    }
+}
+----
+
+This creates and reconciles the declared indexes exactly as the startup build would, and logs the same summary. It blocks the calling thread until MongoDB has built every index, unless `buildIndexesAsync` is enabled, in which case it returns at once and the build runs on the background thread. Each named connection builds its own domain classes, so build those through that connection's datastore:
+
+[source,groovy]
+----
+mongoDatastore.getDatastoreForConnection('reporting').buildIndex()
+----
+
+A build requested after the datastore has been closed is not started, and one requested while it is stopped for a checkpoint runs when it is restarted.
+
+==== Building Indexes in the Background
+
+
+MongoDB answers a `createIndex` command only once the index has been built, so by default the thread that creates the datastore — in an application, the startup thread — waits for every declared index before the application finishes starting. On an empty collection that is instant; on a large existing collection an index build can take minutes, and a deployment waits for all of them in turn.
+
+Set `buildIndexesAsync` to have index builds run on a background thread instead, both the one GORM runs at startup and any the application starts with `buildIndex()`:
+
+[source,yaml]
+----
+grails:
+    mongodb:
+        buildIndexesAsync: true
+----
+
+Startup then continues without waiting. The indexes are still built one at a time per connection, on a daemon thread named after its connection, such as `gorm-mongo-index-build-default-1`. Different connections can build indexes concurrently, including when they use the same MongoDB server. The thread is released after the build finishes and it has been idle for one second.
+
+Two consequences are worth planning for:
+
+* A query issued before its index has been built is served without it — correctly, but with the performance of an unindexed query. The same applies to a `unique` index: it constrains nothing until the build finishes.
+* Because startup no longer waits, a failure to build an index can no longer fail startup. It is logged at error level, and the application runs without that index. With the default synchronous build the exception propagates and the application does not start.
+
+The setting also applies with `buildIndexes` set to `false`, to the builds the application starts with `buildIndex()`. A domain class registered after startup is indexed on the thread registering it.
+
+NOTE: If the application shuts down while a background build is still running, GORM stops waiting for it, but the server carries on building the index it was asked for. A datastore stopped for a checkpoint and restored (with CRaC) runs a build it cut short again once it is restarted, on every connection, and logs that it is resuming it.
+
+==== What the Index Build Reports
+
+
+An index build that finishes without error logs one summary line at `INFO`:
+
+----
+Index build for database [myDb] finished in 412ms: 2 created, 5 already present, from 3 domain class(es)
+----
+
+The domain class count includes every class considered for indexing, including classes that declare no indexes. The created and already-present counts describe index declarations; declaring the same keys twice can report one created and one already present.
+
+The elapsed time is what the caller actually spent waiting — startup, or whoever called `buildIndex()`, with the default settings, or the background thread when `buildIndexesAsync` is enabled, where this line is also the only signal that the build has finished.
+
+The split between created and already present is what makes that time interpretable. MongoDB answers a `createIndex` for an index it already has immediately and without building anything, so a restart that changed no mappings reports everything as already present and costs milliseconds; a line reporting indexes created is the one that accounts for a slow start. An index that `recreateOnConflict` dropped and built again costs as much as a new one, and is counted apart as recreated:
+
+----
+Index build for database [myDb] finished in 9315ms: 0 created, 1 recreated, 6 already present, from 3 domain class(es)
+----
+
+If any declaration failed, the summary is logged at `WARN` instead and reports how many; the failures themselves are logged individually as they happen. A build that stops partway — a lost connection or a timeout — reports how far it got before stopping, also at `WARN`:
+
+----
+Index build for database [myDb] did not finish, stopping after 812ms at 1 of 3 domain class(es): 1 created, 0 already present
+----
+
+Telling a created index from one that was already there takes one `listIndexes` command per collection that declares indexes. It is only issued when the summary will be logged, that is when `INFO` is enabled for `org.grails.datastore.mapping.mongo`.
+
+A collection whose indexes cannot be listed still has its declarations applied; only the split between created and already present is missing for it. The summary counts those declarations separately, and the other collections keep their split:
+
+----
+Index build for database [myDb] finished in 412ms: 2 created, 5 already present, 3 applied without a listing, from 3 domain class(es)
+----
+
+When nothing could be classified — the logger is at `WARN`, so the build skips `listIndexes` and a summary is logged only for a build that failed or did not finish, or no collection's indexes could be listed — the summary reports how many declarations were applied instead:
+
+----
+Index build for database [myDb] finished in 412ms: 10 index declaration(s) applied, 1 failed, from 3 domain class(es)
+----
+
+To find which index is the slow one, enable `DEBUG` logging for `org.grails.datastore.mapping.mongo`, which adds a line per index with its own elapsed time:
+
+[source,yaml]
+----
+logging:
+    level:
+        org.grails.datastore.mapping.mongo: DEBUG
+----
 
 ==== Indexing using the 'index' method
 

@@ -23,6 +23,9 @@ import java.sql.Timestamp
 import java.util.concurrent.ConcurrentHashMap
 
 import groovy.transform.CompileStatic
+
+import org.jspecify.annotations.NonNull
+
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory
 import org.springframework.context.ApplicationEvent
 import org.springframework.context.ConfigurableApplicationContext
@@ -32,9 +35,9 @@ import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import org.grails.datastore.mapping.engine.EntityAccess
+import org.grails.datastore.mapping.engine.event.EventType
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEventListener
-import org.grails.datastore.mapping.engine.event.EventType
 import org.grails.datastore.mapping.engine.event.PostDeleteEvent
 import org.grails.datastore.mapping.engine.event.PostInsertEvent
 import org.grails.datastore.mapping.engine.event.PostLoadEvent
@@ -56,10 +59,15 @@ import org.grails.datastore.mapping.model.config.GormProperties
 @CompileStatic
 class DomainEventListener extends AbstractPersistenceEventListener implements MappingContext.Listener {
 
-    private Map<PersistentEntity, Map<String, Method>> entityEvents = new ConcurrentHashMap<>()
+    private final Map<PersistentEntity, Map<String, Method>> entityEvents = new ConcurrentHashMap<>()
 
+    /**
+     * @deprecated no longer used by this listener; kept so that existing references keep linking.
+     */
+    @Deprecated(since = '8.1', forRemoval = true)
     @SuppressWarnings('rawtypes')
     public static final Class[] ZERO_PARAMS = [] as Class[]
+
     public static final String EVENT_BEFORE_INSERT = 'beforeInsert'
     private static final String EVENT_BEFORE_UPDATE = 'beforeUpdate'
     private static final String EVENT_BEFORE_DELETE = 'beforeDelete'
@@ -100,7 +108,13 @@ class DomainEventListener extends AbstractPersistenceEventListener implements Ma
         mappingContext.addMappingContextListener(this)
     }
 
+    /**
+     * Dispatches through the deprecated three-argument overloads on purpose: until they are removed,
+     * a subclass may have overridden either arity, and each three-argument overload forwards to its
+     * two-argument counterpart, so both kinds of override keep intercepting events.
+     */
     @Override
+    @SuppressWarnings('deprecation')
     protected void onPersistenceEvent(final AbstractPersistenceEvent event) {
         switch (event.getEventType()) {
             case EventType.PreInsert:
@@ -133,37 +147,34 @@ class DomainEventListener extends AbstractPersistenceEventListener implements Ma
             case EventType.PostLoad:
                 afterLoad(event.getEntity(), event.getEntityAccess(), (PostLoadEvent) event)
                 break
-            case EventType.SaveOrUpdate:
-                break
-            case EventType.Validation:
-                break
             default:
                 break
         }
     }
 
-    /**
-     * @deprecated Use {@link #beforeInsert(org.grails.datastore.mapping.model.PersistentEntity, org.grails.datastore.mapping.engine.EntityAccess, org.grails.datastore.mapping.engine.event.PreInsertEvent)} instead
-     */
-    @Deprecated
     boolean beforeInsert(final PersistentEntity entity, final EntityAccess ea) {
-        return beforeInsert(entity, ea, null)
-    }
-
-    boolean beforeInsert(final PersistentEntity entity, final EntityAccess ea, PreInsertEvent event) {
         if (entity.isVersioned()) {
             try {
                 setVersion(ea)
             }
             catch (RuntimeException ignored) {
+                // TODO
             }
         }
 
-        return invokeEvent(EVENT_BEFORE_INSERT, entity, ea, event)
+        return invokeEvent(EVENT_BEFORE_INSERT, entity, ea)
+    }
+
+    /**
+     * @deprecated the {@code event} parameter is unused; use {@link #beforeInsert(PersistentEntity, EntityAccess)} instead.
+     */
+    @Deprecated(since = '8.1', forRemoval = true)
+    boolean beforeInsert(final PersistentEntity entity, final EntityAccess ea, @SuppressWarnings('unused') PreInsertEvent event) {
+        return beforeInsert(entity, ea)
     }
 
     protected void setVersion(final EntityAccess ea) {
-        final Class versionType = ea.getPersistentEntity().getVersion().getType()
+        final Class<?> versionType = ea.getPersistentEntity().getVersion().getType()
         if (Number.isAssignableFrom(versionType)) {
             ea.setProperty(GormProperties.VERSION, 0)
         }
@@ -176,44 +187,64 @@ class DomainEventListener extends AbstractPersistenceEventListener implements Ma
     }
 
     boolean beforeUpdate(final PersistentEntity entity, final EntityAccess ea) {
-        return invokeEvent(EVENT_BEFORE_UPDATE, entity, ea, null)
+        return invokeEvent(EVENT_BEFORE_UPDATE, entity, ea)
     }
 
-    boolean beforeUpdate(final PersistentEntity entity, final EntityAccess ea, PreUpdateEvent event) {
-        return invokeEvent(EVENT_BEFORE_UPDATE, entity, ea, event)
+    /**
+     * @deprecated the {@code event} parameter is unused; use {@link #beforeUpdate(PersistentEntity, EntityAccess)} instead.
+     */
+    @Deprecated(since = '8.1', forRemoval = true)
+    boolean beforeUpdate(final PersistentEntity entity, final EntityAccess ea, @SuppressWarnings('unused') PreUpdateEvent event) {
+        return beforeUpdate(entity, ea)
     }
 
     boolean beforeDelete(final PersistentEntity entity, final EntityAccess ea) {
-        return invokeEvent(EVENT_BEFORE_DELETE, entity, ea, null)
+        return invokeEvent(EVENT_BEFORE_DELETE, entity, ea)
     }
 
-    boolean beforeDelete(final PersistentEntity entity, final EntityAccess ea, PreDeleteEvent event) {
-        return invokeEvent(EVENT_BEFORE_DELETE, entity, ea, event)
+    /**
+     * @deprecated the {@code event} parameter is unused; use {@link #beforeDelete(PersistentEntity, EntityAccess)} instead.
+     */
+    @Deprecated(since = '8.1', forRemoval = true)
+    boolean beforeDelete(final PersistentEntity entity, final EntityAccess ea, @SuppressWarnings('unused') PreDeleteEvent event) {
+        return beforeDelete(entity, ea)
     }
 
     void beforeLoad(final PersistentEntity entity, final EntityAccess ea) {
-        beforeLoad(entity, ea, null)
+        invokeEvent(EVENT_BEFORE_LOAD, entity, ea)
     }
 
-    void beforeLoad(final PersistentEntity entity, final EntityAccess ea, PreLoadEvent event) {
-        invokeEvent(EVENT_BEFORE_LOAD, entity, ea, event)
+    /**
+     * @deprecated the {@code event} parameter is unused; use {@link #beforeLoad(PersistentEntity, EntityAccess)} instead.
+     */
+    @Deprecated(since = '8.1', forRemoval = true)
+    void beforeLoad(final PersistentEntity entity, final EntityAccess ea, @SuppressWarnings('unused') PreLoadEvent event) {
+        beforeLoad(entity, ea)
     }
 
     void afterDelete(final PersistentEntity entity, final EntityAccess ea) {
-        afterDelete(entity, ea, null)
+        invokeEvent(EVENT_AFTER_DELETE, entity, ea)
     }
 
-    void afterDelete(final PersistentEntity entity, final EntityAccess ea, PostDeleteEvent event) {
-        invokeEvent(EVENT_AFTER_DELETE, entity, ea, event)
+    /**
+     * @deprecated the {@code event} parameter is unused; use {@link #afterDelete(PersistentEntity, EntityAccess)} instead.
+     */
+    @Deprecated(since = '8.1', forRemoval = true)
+    void afterDelete(final PersistentEntity entity, final EntityAccess ea, @SuppressWarnings('unused') PostDeleteEvent event) {
+        afterDelete(entity, ea)
     }
 
     void afterInsert(final PersistentEntity entity, final EntityAccess ea) {
-        afterInsert(entity, ea, null)
+        activateDirtyChecking(ea)
+        invokeEvent(EVENT_AFTER_INSERT, entity, ea)
     }
 
-    void afterInsert(final PersistentEntity entity, final EntityAccess ea, PostInsertEvent event) {
-        activateDirtyChecking(ea)
-        invokeEvent(EVENT_AFTER_INSERT, entity, ea, event)
+    /**
+     * @deprecated the {@code event} parameter is unused; use {@link #afterInsert(PersistentEntity, EntityAccess)} instead.
+     */
+    @Deprecated(since = '8.1', forRemoval = true)
+    void afterInsert(final PersistentEntity entity, final EntityAccess ea, @SuppressWarnings('unused') PostInsertEvent event) {
+        afterInsert(entity, ea)
     }
 
     private void activateDirtyChecking(EntityAccess ea) {
@@ -224,24 +255,32 @@ class DomainEventListener extends AbstractPersistenceEventListener implements Ma
     }
 
     void afterUpdate(final PersistentEntity entity, final EntityAccess ea) {
-        afterUpdate(entity, ea, null)
+        activateDirtyChecking(ea) // reset dirty checking
+        invokeEvent(EVENT_AFTER_UPDATE, entity, ea)
     }
 
-    void afterUpdate(final PersistentEntity entity, final EntityAccess ea, PostUpdateEvent event) {
-        activateDirtyChecking(ea) // reset dirty checking
-        invokeEvent(EVENT_AFTER_UPDATE, entity, ea, event)
+    /**
+     * @deprecated the {@code event} parameter is unused; use {@link #afterUpdate(PersistentEntity, EntityAccess)} instead.
+     */
+    @Deprecated(since = '8.1', forRemoval = true)
+    void afterUpdate(final PersistentEntity entity, final EntityAccess ea, @SuppressWarnings('unused') PostUpdateEvent event) {
+        afterUpdate(entity, ea)
     }
 
     void afterLoad(final PersistentEntity entity, final EntityAccess ea) {
-        afterLoad(entity, ea, null)
-    }
-
-    void afterLoad(final PersistentEntity entity, final EntityAccess ea, PostLoadEvent event) {
         activateDirtyChecking(ea)
         if (autowireEntities || (entity != null && entity.getMapping().getMappedForm().isAutowire())) {
             autowireBeanProperties(ea.getEntity())
         }
-        invokeEvent(EVENT_AFTER_LOAD, entity, ea, event)
+        invokeEvent(EVENT_AFTER_LOAD, entity, ea)
+    }
+
+    /**
+     * @deprecated the {@code event} parameter is unused; use {@link #afterLoad(PersistentEntity, EntityAccess)} instead.
+     */
+    @Deprecated(since = '8.1', forRemoval = true)
+    void afterLoad(final PersistentEntity entity, final EntityAccess ea, @SuppressWarnings('unused') PostLoadEvent event) {
+        afterLoad(entity, ea)
     }
 
     protected void autowireBeanProperties(final Object entity) {
@@ -266,11 +305,11 @@ class DomainEventListener extends AbstractPersistenceEventListener implements Ma
      * @see org.springframework.context.event.SmartApplicationListener#supportsEventType(
      *     java.lang.Class)
      */
-    boolean supportsEventType(Class<? extends ApplicationEvent> eventType) {
+    boolean supportsEventType(@NonNull Class<? extends ApplicationEvent> eventType) {
         return AbstractPersistenceEvent.isAssignableFrom(eventType)
     }
 
-    private boolean invokeEvent(String eventName, PersistentEntity entity, EntityAccess ea, ApplicationEvent event) {
+    private boolean invokeEvent(String eventName, PersistentEntity entity, EntityAccess ea) {
         final Map<String, Method> events = entityEvents.get(entity)
         if (events == null) {
             return true
@@ -283,21 +322,14 @@ class DomainEventListener extends AbstractPersistenceEventListener implements Ma
 
         final Object result
         if (ea != null) {
-            final Object o = ea.getEntity()
-
-            if (eventMethod.getParameterTypes().length == 1) {
-                result = ReflectionUtils.invokeMethod(eventMethod, o, event)
-            }
-            else {
-                result = ReflectionUtils.invokeMethod(eventMethod, o)
-            }
+            result = ReflectionUtils.invokeMethod(eventMethod, ea.getEntity())
         }
         else {
             result = null
         }
 
         boolean booleanResult = (result instanceof Boolean) ? (Boolean) result : true
-        if (booleanResult && REFRESH_EVENTS.contains(eventName)) {
+        if (ea != null && booleanResult && REFRESH_EVENTS.contains(eventName)) {
             ea.refresh()
         }
         return booleanResult

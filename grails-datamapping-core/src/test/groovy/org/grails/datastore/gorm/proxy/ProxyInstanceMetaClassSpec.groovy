@@ -18,162 +18,458 @@
  */
 package org.grails.datastore.gorm.proxy
 
-import org.codehaus.groovy.runtime.InvokerHelper
+import org.grails.datastore.mapping.core.Session
 import org.springframework.dao.DataIntegrityViolationException
-
-import grails.gorm.annotation.Entity
-import org.grails.datastore.mapping.simple.SimpleMapDatastore
-import spock.lang.AutoCleanup
 import spock.lang.Specification
 
-/**
- * Exercises {@link ProxyInstanceMetaClass} - the per-instance metaclass installed by
- * {@link GroovyProxyFactory} on lazily-loaded GORM proxies - through the public
- * {@code proxy()}/property/method GORM API, plus a couple of direct calls covering the
- * field-access ({@code getAttribute}/{@code setAttribute}) hooks that ordinary property
- * syntax does not exercise.
- */
 class ProxyInstanceMetaClassSpec extends Specification {
 
-    @AutoCleanup
-    SimpleMapDatastore datastore = new SimpleMapDatastore(ProxyInstanceMetaClassSpecBook)
+    Session session = Mock(Session)
+    MetaClass delegate = Mock(MetaClass)
+    ProxyInstanceTestTarget target = new ProxyInstanceTestTarget()
+    Object proxy = new Object()
 
     void setup() {
-        datastore.mappingContext.proxyFactory = new GroovyProxyFactory()
+        delegate.getTheClass() >> ProxyInstanceTestTarget
     }
 
-    void "id, initialized and metaClass can be read on a proxy without resolving it"() {
+    ProxyInstanceMetaClass newMetaClass() {
+        new ProxyInstanceMetaClass(delegate, session, 11L)
+    }
+
+    void "getKey returns the identifier without resolving the target"() {
+        given:
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+
         when:
-        def book = ProxyInstanceMetaClassSpecBook.proxy(999L)
+        Serializable key = metaClass.getKey()
+        boolean initiated = metaClass.isProxyInitiated()
 
         then:
-        book.id == 999L
-        !book.isInitialized()
-        !book.initialized
-        book.metaClass instanceof ProxyInstanceMetaClass
+        key == 11L
+        !initiated
+        0 * session.retrieve(_, _)
     }
 
-    void "accessing a real property on a proxy for a non-existent instance throws DataIntegrityViolationException"() {
+    void "getProxyTarget lazily loads and caches the target from the session"() {
         given:
-        def book = ProxyInstanceMetaClassSpecBook.proxy(999L)
+        ProxyInstanceMetaClass metaClass = newMetaClass()
 
         when:
-        book.title
+        Object first = metaClass.getProxyTarget()
+        Object second = metaClass.getProxyTarget()
+
+        then:
+        1 * session.retrieve(ProxyInstanceTestTarget, 11L) >> target
+        first.is(target)
+        second.is(target)
+        metaClass.isProxyInitiated()
+    }
+
+    void "getProxyTarget throws DataIntegrityViolationException when the associated instance no longer exists"() {
+        given:
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+        session.retrieve(ProxyInstanceTestTarget, 11L) >> null
+
+        when:
+        metaClass.getProxyTarget()
 
         then:
         thrown(DataIntegrityViolationException)
     }
 
-    void "accessing a real property resolves and initializes the proxy exactly once"() {
+    void "invokeMethod handles proxy-aware methods without resolving the target"() {
         given:
-        def id = new ProxyInstanceMetaClassSpecBook(title: 'Groovy in Action').save(flush: true).id
-        def book = ProxyInstanceMetaClassSpecBook.proxy(id)
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+
+        when:
+        Object isProxyResult = metaClass.invokeMethod(proxy, 'isProxy', [] as Object[])
+        Object getIdResult = metaClass.invokeMethod(proxy, 'getId', [] as Object[])
+        Object isInitializedResult = metaClass.invokeMethod(proxy, 'isInitialized', [] as Object[])
+        Object getMetaClassResult = metaClass.invokeMethod(proxy, 'getMetaClass', [] as Object[])
+
+        then:
+        isProxyResult == true
+        getIdResult == 11L
+        isInitializedResult == false
+        getMetaClassResult.is(metaClass)
+        0 * session.retrieve(_, _)
+    }
+
+    void "invokeMethod returns the resolved target for getTarget/initialize without delegating"() {
+        given:
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+
+        when:
+        Object result = metaClass.invokeMethod(proxy, methodName, [] as Object[])
+
+        then:
+        1 * session.retrieve(ProxyInstanceTestTarget, 11L) >> target
+        0 * delegate.invokeMethod(_, _, _)
+        result.is(target)
+        metaClass.isProxyInitiated()
+
+        where:
+        methodName << ['getTarget', 'initialize']
+    }
+
+    void "invokeMethod delegates other calls against the resolved target"() {
+        given:
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+        session.retrieve(ProxyInstanceTestTarget, 11L) >> target
+        delegate.invokeMethod(target, 'toString', [] as Object[]) >> 'resolved'
 
         expect:
-        !book.isInitialized()
-
-        when:
-        def title = book.title
-
-        then:
-        title == 'Groovy in Action'
-        book.isInitialized()
-        book.initialized
-        book.target != null
-        book.getTarget() != null
+        metaClass.invokeMethod(proxy, 'toString', [] as Object[]) == 'resolved'
     }
 
-    void "calling a domain method on a proxy resolves the target before delegating the call"() {
+    void "invokeMethod for getClass/getDomainClass only resolves once the proxy is already initiated"() {
         given:
-        def id = new ProxyInstanceMetaClassSpecBook(title: 'Grails in Action').save(flush: true).id
-        def book = ProxyInstanceMetaClassSpecBook.proxy(id)
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+        delegate.invokeMethod(proxy, methodName, [] as Object[]) >> ProxyInstanceTestTarget
+
+        when: 'not yet initiated, so the delegate is called against the uninitialized proxy'
+        Object result = metaClass.invokeMethod(proxy, methodName, [] as Object[])
+
+        then:
+        result == ProxyInstanceTestTarget
+        0 * session.retrieve(_, _)
+
+        where:
+        methodName << ['getClass', 'getDomainClass']
+    }
+
+    void "invokeMethod for getClass/getDomainClass resolves the target once already initiated"() {
+        given:
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+        session.retrieve(ProxyInstanceTestTarget, 11L) >> target
+        metaClass.getProxyTarget()
+        delegate.invokeMethod(target, 'getClass', [] as Object[]) >> ProxyInstanceTestTarget
 
         expect:
-        !book.isInitialized()
-
-        when:
-        def description = book.describe()
-
-        then:
-        description == 'Book: Grails in Action'
-        book.isInitialized()
+        metaClass.invokeMethod(proxy, 'getClass', [] as Object[]) == ProxyInstanceTestTarget
     }
 
-    void "setting the metaClass property to null does not resolve a proxy for a non-existent instance"() {
+    void "invokeMethod does not resolve the target for setMetaClass with a MetaClass argument"() {
         given:
-        def book = ProxyInstanceMetaClassSpecBook.proxy(999L)
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+        MetaClass newMetaClassArg = Mock(MetaClass)
+        delegate.invokeMethod(proxy, 'setMetaClass', [newMetaClassArg] as Object[]) >> null
 
         when:
-        book.metaClass = null
+        metaClass.invokeMethod(proxy, 'setMetaClass', [newMetaClassArg] as Object[])
 
         then:
-        noExceptionThrown()
-        book.metaClass != null
+        0 * session.retrieve(_, _)
     }
 
-    void "calling setMetaClass(null) directly on a proxy for a non-existent instance does not resolve it"() {
+    void "invokeMethod resolves the target for setMetaClass calls with a non-MetaClass argument"() {
         given:
-        def book = ProxyInstanceMetaClassSpecBook.proxy(999L)
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+        delegate.invokeMethod(target, 'setMetaClass', ['not-a-metaclass'] as Object[]) >> null
 
         when:
-        book.setMetaClass(null)
+        metaClass.invokeMethod(proxy, 'setMetaClass', ['not-a-metaclass'] as Object[])
 
         then:
-        noExceptionThrown()
-        book.metaClass != null
+        1 * session.retrieve(ProxyInstanceTestTarget, 11L) >> target
     }
 
-    void "getAttribute answers id/initialized/target without needing the shell object, resolving only for target"() {
-        given: 'a real persisted instance and a metaclass built the same way GroovyProxyFactory builds one'
-        def session = datastore.connect()
-        def book = new ProxyInstanceMetaClassSpecBook(title: 'Real Book')
-        session.persist(book)
-        session.flush()
-        def id = book.id
-        session.clear()
-        def delegate = InvokerHelper.getMetaClass(ProxyInstanceMetaClassSpecBook)
-        def proxyMetaClass = new ProxyInstanceMetaClass(delegate, session, id)
+    void "invokeMethod resolves the target for setMetaClass calls with an unexpected argument count"() {
+        given:
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+        delegate.invokeMethod(target, 'setMetaClass', [] as Object[]) >> null
+
+        when:
+        metaClass.invokeMethod(proxy, 'setMetaClass', [] as Object[])
+
+        then:
+        1 * session.retrieve(ProxyInstanceTestTarget, 11L) >> target
+    }
+
+    void "invokeMethod does not resolve the target for setMetaClass with a null argument"() {
+        given:
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+        delegate.invokeMethod(proxy, 'setMetaClass', [null] as Object[]) >> null
+
+        when:
+        metaClass.invokeMethod(proxy, 'setMetaClass', [null] as Object[])
+
+        then:
+        0 * session.retrieve(_, _)
+    }
+
+    void "getProperty exposes proxy metadata without resolving the target"() {
+        given:
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+
+        when:
+        Object idResult = metaClass.getProperty(proxy, 'id')
+        Object proxyResult = metaClass.getProperty(proxy, 'proxy')
+        Object initializedResult = metaClass.getProperty(proxy, 'initialized')
+        Object metaClassResult = metaClass.getProperty(proxy, 'metaClass')
+
+        then:
+        idResult == 11L
+        proxyResult == true
+        initializedResult == false
+        metaClassResult.is(metaClass)
+        0 * session.retrieve(_, _)
+    }
+
+    void "getProperty for class/domainClass only resolves once the proxy is already initiated"() {
+        given:
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+        delegate.getProperty(proxy, propertyName) >> ProxyInstanceTestTarget
+
+        when:
+        Object result = metaClass.getProperty(proxy, propertyName)
+
+        then:
+        result == ProxyInstanceTestTarget
+        0 * session.retrieve(_, _)
+
+        where:
+        propertyName << ['class', 'domainClass']
+    }
+
+    void "getProperty resolves the target for the target property"() {
+        given:
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+        session.retrieve(ProxyInstanceTestTarget, 11L) >> target
 
         expect:
-        proxyMetaClass.getAttribute(null, 'id') == id
-        !proxyMetaClass.isProxyInitiated()
-
-        and:
-        proxyMetaClass.getAttribute(null, 'initialized') == false
-        !proxyMetaClass.isProxyInitiated()
-
-        when:
-        def target = proxyMetaClass.getAttribute(null, 'target')
-
-        then:
-        target != null
-        proxyMetaClass.isProxyInitiated()
+        metaClass.getProperty(proxy, 'target').is(target)
     }
 
-    void "setAttribute writes the field on the resolved target"() {
+    void "getProperty for class/domainClass resolves the target once already initiated"() {
         given:
-        def session = datastore.connect()
-        def book = new ProxyInstanceMetaClassSpecBook(title: 'Original Title')
-        session.persist(book)
-        session.flush()
-        def id = book.id
-        session.clear()
-        def delegate = InvokerHelper.getMetaClass(ProxyInstanceMetaClassSpecBook)
-        def proxyMetaClass = new ProxyInstanceMetaClass(delegate, session, id)
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+        session.retrieve(ProxyInstanceTestTarget, 11L) >> target
+        metaClass.getProxyTarget()
+        delegate.getProperty(target, 'class') >> ProxyInstanceTestTarget
+
+        expect:
+        metaClass.getProperty(proxy, 'class') == ProxyInstanceTestTarget
+    }
+
+    void "getProperty resolves the target for regular properties"() {
+        given:
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+        session.retrieve(ProxyInstanceTestTarget, 11L) >> target
+        delegate.getProperty(target, 'name') >> 'resolved-name'
+
+        expect:
+        metaClass.getProperty(proxy, 'name') == 'resolved-name'
+    }
+
+    void "setProperty does not resolve the target when replacing the metaClass"() {
+        given:
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+        MetaClass newMetaClassArg = Mock(MetaClass)
 
         when:
-        proxyMetaClass.setAttribute(null, 'title', 'Updated Title')
+        metaClass.setProperty(proxy, 'metaClass', newMetaClassArg)
 
         then:
-        proxyMetaClass.getProxyTarget().title == 'Updated Title'
+        1 * delegate.setProperty(proxy, 'metaClass', newMetaClassArg)
+        0 * session.retrieve(_, _)
+    }
+
+    void "setProperty does not resolve the target when clearing the metaClass"() {
+        given:
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+
+        when:
+        metaClass.setProperty(proxy, 'metaClass', null)
+
+        then:
+        1 * delegate.setProperty(proxy, 'metaClass', null)
+        0 * session.retrieve(_, _)
+    }
+
+    void "setProperty resolves the target when setting metaClass to a non-MetaClass value"() {
+        given:
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+
+        when:
+        metaClass.setProperty(proxy, 'metaClass', 'not-a-metaclass')
+
+        then:
+        1 * session.retrieve(ProxyInstanceTestTarget, 11L) >> target
+        1 * delegate.setProperty(target, 'metaClass', 'not-a-metaclass')
+    }
+
+    void "setProperty resolves the target for regular properties"() {
+        given:
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+        session.retrieve(ProxyInstanceTestTarget, 11L) >> target
+
+        when:
+        metaClass.setProperty(proxy, 'name', 'new-name')
+
+        then:
+        1 * delegate.setProperty(target, 'name', 'new-name')
+    }
+
+    void "getAttribute exposes proxy metadata without resolving the target"() {
+        given:
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+
+        when:
+        Object idResult = metaClass.getAttribute(proxy, 'id')
+        Object initializedResult = metaClass.getAttribute(proxy, 'initialized')
+
+        then:
+        idResult == 11L
+        initializedResult == false
+        0 * session.retrieve(_, _)
+    }
+
+    void "getAttribute resolves the target for the target attribute"() {
+        given:
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+        session.retrieve(ProxyInstanceTestTarget, 11L) >> target
+
+        expect:
+        metaClass.getAttribute(proxy, 'target').is(target)
+    }
+
+    void "getAttribute resolves the target for other attributes"() {
+        given:
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+        session.retrieve(ProxyInstanceTestTarget, 11L) >> target
+        delegate.getAttribute(target, 'name') >> 'resolved-name'
+
+        expect:
+        metaClass.getAttribute(proxy, 'name') == 'resolved-name'
+    }
+
+    void "sender-aware invokeMethod applies the proxy rules before delegating"() {
+        given:
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+
+        when:
+        Object id = metaClass.invokeMethod(ProxyInstanceMetaClassSpec, proxy, 'getId', [] as Object[], false, false)
+
+        then:
+        id == 11L
+        0 * session.retrieve(_, _)
+        0 * delegate.invokeMethod(*_)
+
+        when:
+        Object result = metaClass.invokeMethod(ProxyInstanceMetaClassSpec, proxy, 'toString', [] as Object[], false, false)
+
+        then:
+        1 * session.retrieve(ProxyInstanceTestTarget, 11L) >> target
+        1 * delegate.invokeMethod(ProxyInstanceMetaClassSpec, target, 'toString', [] as Object[], false, false) >> 'resolved'
+        result == 'resolved'
+    }
+
+    void "sender-aware invokeMethod keeps setMetaClass with a MetaClass argument on the proxy"() {
+        given:
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+        MetaClass newMetaClassArg = Mock(MetaClass)
+
+        when:
+        metaClass.invokeMethod(ProxyInstanceMetaClassSpec, proxy, 'setMetaClass', [newMetaClassArg] as Object[], false, false)
+
+        then:
+        1 * delegate.invokeMethod(ProxyInstanceMetaClassSpec, proxy, 'setMetaClass', [newMetaClassArg] as Object[], false, false)
+        0 * session.retrieve(_, _)
+    }
+
+    void "sender-aware getProperty applies the proxy rules before delegating"() {
+        given:
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+
+        when:
+        Object id = metaClass.getProperty(ProxyInstanceMetaClassSpec, proxy, 'id', false, false)
+        Object clazz = metaClass.getProperty(ProxyInstanceMetaClassSpec, proxy, 'class', false, false)
+
+        then:
+        id == 11L
+        clazz == ProxyInstanceTestTarget
+        1 * delegate.getProperty(ProxyInstanceMetaClassSpec, proxy, 'class', false, false) >> ProxyInstanceTestTarget
+        0 * session.retrieve(_, _)
+
+        when:
+        Object name = metaClass.getProperty(ProxyInstanceMetaClassSpec, proxy, 'name', false, false)
+
+        then:
+        1 * session.retrieve(ProxyInstanceTestTarget, 11L) >> target
+        1 * delegate.getProperty(ProxyInstanceMetaClassSpec, target, 'name', false, false) >> 'resolved-name'
+        name == 'resolved-name'
+    }
+
+    void "sender-aware setProperty writes regular properties to the target and metaClass to the proxy"() {
+        given:
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+        MetaClass newMetaClassArg = Mock(MetaClass)
+
+        when:
+        metaClass.setProperty(ProxyInstanceMetaClassSpec, proxy, 'metaClass', newMetaClassArg, false, false)
+
+        then:
+        1 * delegate.setProperty(ProxyInstanceMetaClassSpec, proxy, 'metaClass', newMetaClassArg, false, false)
+        0 * session.retrieve(_, _)
+
+        when:
+        metaClass.setProperty(ProxyInstanceMetaClassSpec, proxy, 'name', 'new-name', false, false)
+
+        then:
+        1 * session.retrieve(ProxyInstanceTestTarget, 11L) >> target
+        1 * delegate.setProperty(ProxyInstanceMetaClassSpec, target, 'name', 'new-name', false, false)
+    }
+
+    void "sender-aware getAttribute applies the proxy rules before delegating"() {
+        given:
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+
+        when:
+        Object id = metaClass.getAttribute(ProxyInstanceMetaClassSpec, proxy, 'id', false)
+        Object initialized = metaClass.getAttribute(ProxyInstanceMetaClassSpec, proxy, 'initialized', false)
+
+        then:
+        id == 11L
+        initialized == false
+        0 * session.retrieve(_, _)
+
+        when:
+        Object name = metaClass.getAttribute(ProxyInstanceMetaClassSpec, proxy, 'name', false)
+
+        then:
+        1 * session.retrieve(ProxyInstanceTestTarget, 11L) >> target
+        1 * delegate.getAttribute(ProxyInstanceMetaClassSpec, target, 'name', false) >> 'resolved-name'
+        name == 'resolved-name'
+    }
+
+    void "sender-aware setAttribute always resolves and delegates to the target"() {
+        given:
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+
+        when:
+        metaClass.setAttribute(ProxyInstanceMetaClassSpec, proxy, 'name', 'new-name', false, false)
+
+        then:
+        1 * session.retrieve(ProxyInstanceTestTarget, 11L) >> target
+        1 * delegate.setAttribute(ProxyInstanceMetaClassSpec, target, 'name', 'new-name', false, false)
+    }
+
+    void "setAttribute always resolves and delegates to the target"() {
+        given:
+        ProxyInstanceMetaClass metaClass = newMetaClass()
+        session.retrieve(ProxyInstanceTestTarget, 11L) >> target
+
+        when:
+        metaClass.setAttribute(proxy, 'name', 'new-name')
+
+        then:
+        1 * delegate.setAttribute(target, 'name', 'new-name')
     }
 }
 
-@Entity
-class ProxyInstanceMetaClassSpecBook {
-    String title
-
-    String describe() {
-        "Book: ${title}"
-    }
+class ProxyInstanceTestTarget {
+    Long id
+    String name
 }

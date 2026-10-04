@@ -18,46 +18,63 @@
  */
 package org.grails.datastore.gorm.utils
 
+import groovy.transform.PackageScope
 import spock.lang.Specification
 
 class ReflectionUtilsSpec extends Specification {
 
-    void "test isMethodOverriddenFromParent returns true when the superclass declares the same method"() {
-        given:
-        def method = Child.getMethod('greet')
+    void "test a method overridden from a public parent method is detected as overridden"() {
+        given: "a method overridden from a public superclass"
+        def method = ReflectionUtilsChild.getDeclaredMethod('greet')
 
-        expect:
+        expect: "the method is reported as overridden"
         ReflectionUtils.isMethodOverriddenFromParent(method)
     }
 
-    void "test isMethodOverriddenFromParent returns false when the superclass does not declare the method"() {
-        given:
-        def method = Child.getMethod('onlyOnChild')
+    void "test a method unique to the subclass is not detected as overridden"() {
+        given: "a method that is only declared on the subclass"
+        def method = ReflectionUtilsChild.getDeclaredMethod('onlyOnChild')
 
-        expect:
+        expect: "the method is not reported as overridden"
         !ReflectionUtils.isMethodOverriddenFromParent(method)
     }
 
-    void "test isMethodOverriddenFromParent returns false when there is no superclass"() {
-        given:
-        def method = Root.getMethod('rootOnly')
+    void "test a method whose declaring class has no superclass is not detected as overridden"() {
+        given: "a method declared on a class with no superclass"
+        def method = Object.getMethod('toString')
 
-        expect:
+        expect: "the method is not reported as overridden"
         !ReflectionUtils.isMethodOverriddenFromParent(method)
     }
 
-    static class Parent {
-        String greet() { 'parent' }
+    void "test a method that only shadows a non-public parent method is not detected as overridden"() {
+        given: "a package-private method also declared on the superclass"
+        def method = ReflectionUtilsChild.getDeclaredMethod('hidden')
+
+        expect: "the method is not reported as overridden because the superclass method is not public"
+        !ReflectionUtils.isMethodOverriddenFromParent(method)
+    }
+}
+
+class ReflectionUtilsParent {
+    void greet() {
     }
 
-    static class Child extends Parent {
-        @Override
-        String greet() { 'child' }
+    @PackageScope
+    void hidden() {
+    }
+}
 
-        String onlyOnChild() { 'child only' }
+class ReflectionUtilsChild extends ReflectionUtilsParent {
+    @Override
+    void greet() {
     }
 
-    static class Root {
-        String rootOnly() { 'root' }
+    void onlyOnChild() {
+    }
+
+    @PackageScope
+    @Override
+    void hidden() {
     }
 }

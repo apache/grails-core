@@ -220,8 +220,7 @@ class TransactionSupportSpec extends Specification {
         !txObject.rollbackOnly
 
         when:
-        holder.setRollbackOnly()
-        txObject.setTransaction(transaction)
+        holder.setRollbackOnly(session)
         txObject.flush()
         Transaction tx = txObject.transaction
 

@@ -32,14 +32,48 @@ This will effectively cause all calls to `sendMail()` to be a non-operation, wit
 
 ==== Using an Override Address
 
-You can _override_ any and all recipient email addresses in `sendMail()` calls to force messages to be delivered to a certain mailbox:
+You can _override_ recipient and/or sender email addresses in `sendMail()` calls to force messages to be delivered to a certain mailbox or sent from a fixed address.
 
-[source,groovy]
+===== Overriding All Addresses
+
+`grails.mail.overrideAddress` redirects both the sender and all recipients to a single address:
+
+[source,yaml]
+.application-test.yml
 ----
-grails.mail.overrideAddress = 'test@myorg.com'
+grails:
+    mail:
+        overrideAddress: test@myorg.com
 ----
 
-All `to`, `cc` and `bcc` addresses will be replaced by this value if set. The advantage of this mechanism is that it allows you to test using a real SMTP server. The disadvantage is that it requires a real SMTP server and makes it difficult to test address determination logic.
+All `to`, `cc`, and `bcc` addresses are replaced by this value, and the `from` address is also replaced.
+
+===== Overriding Recipients and Sender Independently
+
+Two properties give fine-grained control over address overriding:
+
+* `grails.mail.overrideToAddress` replaces every `to`, `cc` and `bcc` address. It's also used as the `to` address when the `sendMail` closure doesn't set one.
+* `grails.mail.overrideFromAddress` replaces the sender, including a `from` set in the `sendMail` closure. It's also used as the `from` address when the closure doesn't set one.
+
+See <<mailConfiguration,Mail Configuration>> for how the three properties interact.
+
+[source,yaml]
+.application-test.yml
+----
+grails:
+    mail:
+        overrideToAddress: test-inbox@myorg.com    # redirect recipients only
+----
+
+[source,yaml]
+.application-test.yml
+----
+grails:
+    mail:
+        overrideFromAddress: noreply@myorg.com     # fix the sender only
+----
+
+The advantage of this mechanism is that it allows you to test using a real SMTP server. The disadvantage is that it requires a real SMTP server and makes it difficult to test address determination logic.
 
 ==== Using an in-memory SMTP server
 

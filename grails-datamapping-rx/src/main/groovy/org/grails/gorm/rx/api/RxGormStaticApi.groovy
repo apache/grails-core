@@ -40,13 +40,9 @@ import org.grails.datastore.mapping.validation.ValidationException
 import org.grails.datastore.rx.RxDatastoreClient
 import org.grails.datastore.rx.query.RxQuery
 import org.grails.gorm.rx.api.multitenancy.TenantDelegatingRxGormOperations
-import org.grails.gorm.rx.finders.CountByFinder
-import org.grails.gorm.rx.finders.FindAllByBooleanFinder
-import org.grails.gorm.rx.finders.FindAllByFinder
-import org.grails.gorm.rx.finders.FindByBooleanFinder
-import org.grails.gorm.rx.finders.FindByFinder
-import org.grails.gorm.rx.finders.FindOrCreateByFinder
-import org.grails.gorm.rx.finders.FindOrSaveByFinder
+import org.grails.gorm.rx.finders.RxCountFinder
+import org.grails.gorm.rx.finders.RxListResultFinder
+import org.grails.gorm.rx.finders.RxSingleResultFinder
 import org.springframework.beans.PropertyAccessorFactory
 import rx.Observable
 import rx.Subscriber
@@ -360,7 +356,7 @@ class RxGormStaticApi<D> implements RxGormAllOperations<D> {
      * @return The DetachedCriteria instance
      */
     DetachedCriteria<D> where(Closure callable) {
-        new DetachedCriteria<D>(persistentClass).build(callable)
+        new DetachedCriteria<D>(persistentClass).build((Closure) callable)
     }
 
     /**
@@ -371,7 +367,7 @@ class RxGormStaticApi<D> implements RxGormAllOperations<D> {
      */
     Observable<D> findAll(Closure callable) {
         new DetachedCriteria<D>(persistentClass)
-                .build(callable)
+                .build((Closure) callable)
                 .findAll()
     }
 
@@ -383,7 +379,7 @@ class RxGormStaticApi<D> implements RxGormAllOperations<D> {
      */
     Observable<D> find(Closure callable) {
         new DetachedCriteria<D>(persistentClass)
-                .build(callable)
+                .build((Closure) callable)
                 .find()
     }
 
@@ -393,7 +389,7 @@ class RxGormStaticApi<D> implements RxGormAllOperations<D> {
      * @return The DetachedCriteria instance that is lazily initialized
      */
     DetachedCriteria<D> whereLazy(Closure callable) {
-        new DetachedCriteria<D>(persistentClass).buildLazy(callable)
+        new DetachedCriteria<D>(persistentClass).buildLazy((Closure) callable)
     }
     /**
      *
@@ -401,7 +397,7 @@ class RxGormStaticApi<D> implements RxGormAllOperations<D> {
      * @return The DetachedCriteria instance
      */
     DetachedCriteria<D> whereAny(Closure callable) {
-        (DetachedCriteria<D>)new DetachedCriteria<D>(persistentClass).or(callable)
+        (DetachedCriteria<D>)new DetachedCriteria<D>(persistentClass).or((Closure) callable)
     }
 
     /**
@@ -499,13 +495,13 @@ class RxGormStaticApi<D> implements RxGormAllOperations<D> {
     }
 
     protected List<FinderMethod> createDynamicFinders() {
-        [new FindOrCreateByFinder(datastoreClient),
-         new FindOrSaveByFinder(datastoreClient),
-         new FindByFinder(datastoreClient),
-         new FindAllByFinder(datastoreClient),
-         new CountByFinder(datastoreClient),
-         new FindByBooleanFinder(datastoreClient),
-         new FindAllByBooleanFinder(datastoreClient)] as List<FinderMethod>
+        [RxSingleResultFinder.findOrCreateBy(datastoreClient),
+         RxSingleResultFinder.findOrSaveBy(datastoreClient),
+         RxSingleResultFinder.findBy(datastoreClient),
+         RxListResultFinder.findAllBy(datastoreClient),
+         RxCountFinder.countBy(datastoreClient),
+         RxSingleResultFinder.findByBoolean(datastoreClient),
+         RxListResultFinder.findAllByBoolean(datastoreClient)] as List<FinderMethod>
     }
 
     @Override

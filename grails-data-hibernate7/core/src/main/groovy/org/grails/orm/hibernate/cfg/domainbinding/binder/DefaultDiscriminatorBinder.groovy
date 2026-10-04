@@ -22,7 +22,7 @@ import groovy.transform.CompileStatic
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.SimpleValue
 
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.JPA_DEFAULT_DISCRIMINATOR_TYPE
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.DEFAULT_DISCRIMINATOR_COLUMN_NAME
 
 @CompileStatic
 class DefaultDiscriminatorBinder {
@@ -46,7 +46,7 @@ class DefaultDiscriminatorBinder {
         entity.discriminatorValue = entity.className
 
         // Bind with default column configuration
-        simpleValueColumnBinder.bindSimpleValue(discriminator, STRING_TYPE, JPA_DEFAULT_DISCRIMINATOR_TYPE, false)
+        simpleValueColumnBinder.bindSimpleValue(discriminator, STRING_TYPE, DEFAULT_DISCRIMINATOR_COLUMN_NAME, false)
     }
 
 }

@@ -53,8 +53,15 @@ import org.grails.datastore.mapping.query.Query
  *
  * @author Graeme Rocher
  * @since 5.0
+ *
+ * @deprecated The non-codec ("mapping") persistence engine is deprecated and will be removed
+ * in a future release. Use the default codec engine, which is what
+ * {@code grails.mongodb.engine} selects when unset. This engine reaches MongoDB through a
+ * separate persister hierarchy that has to be kept in step with the codec one for every
+ * storage-layer change, and it carries no feature the codec engine lacks.
  */
 @CompileStatic
+@Deprecated
 abstract class AbstractMongoObectEntityPersister<T> extends NativeEntryEntityPersister<T, Object> {
 
     public static final String INSTANCE_PREFIX = 'instance:'
@@ -190,10 +197,13 @@ abstract class AbstractMongoObectEntityPersister<T> extends NativeEntryEntityPer
         List dbRefs = new ArrayList()
         boolean reference = isReference(association)
         for (Object foreignKey : keys) {
+            // Same as formulateDatabaseReference: the embedded collection's references must
+            // carry the target's stored _id type.
+            Object coerced = MongoIdCoercion.coerceIdToStoredType(foreignKey, association.getAssociatedEntity())
             if (reference) {
-                dbRefs.add(new DBRef(getCollectionName(association.getAssociatedEntity()), foreignKey))
+                dbRefs.add(new DBRef(getCollectionName(association.getAssociatedEntity()), coerced))
             } else {
-                dbRefs.add(foreignKey)
+                dbRefs.add(coerced)
             }
         }
         getValueRetrievalStrategy().setValue(embeddedEntry, association.getName(), dbRefs)
@@ -314,10 +324,15 @@ abstract class AbstractMongoObectEntityPersister<T> extends NativeEntryEntityPer
     @Override
     protected Object formulateDatabaseReference(PersistentEntity persistentEntity, Association association, Serializable associationId) {
         boolean isReference = isReference(association)
+        // Write the reference in the type the TARGET's _id is stored as, so it matches the
+        // document it points at. The codec engine does this in ToOneEncoder; without it here
+        // a String-id target stored as ObjectId is pointed at by a BSON String, which no
+        // $lookup, raw driver query or coerced association criterion can match.
+        Object coerced = MongoIdCoercion.coerceIdToStoredType(associationId, association.getAssociatedEntity())
         if (isReference) {
-            return new DBRef(getCollectionName(association.getAssociatedEntity()), associationId)
+            return new DBRef(getCollectionName(association.getAssociatedEntity()), coerced)
         }
-        return associationId
+        return coerced
     }
 
     @Override
@@ -373,7 +388,10 @@ abstract class AbstractMongoObectEntityPersister<T> extends NativeEntryEntityPer
                     PersistentEntity childPersistentEntity =
                             getMappingContext().getPersistentEntity(o.getClass().getName())
                     EntityAccess entityAccess = createEntityAccess(childPersistentEntity, o)
-                    ids.add(entityAccess.getIdentifier())
+                    // Stored in the target's _id type for the same reason as every other
+                    // association reference.
+                    ids.add(MongoIdCoercion.coerceIdToStoredType(
+                            entityAccess.getIdentifier(), childPersistentEntity))
                 }
             }
         }
@@ -426,10 +444,14 @@ abstract class AbstractMongoObectEntityPersister<T> extends NativeEntryEntityPer
             if (!association.isBidirectional()) {
                 List dbRefs = new ArrayList()
                 for (Object foreignKey : foreignKeys) {
+                    // Same as formulateDatabaseReference: the stored reference must carry the
+                    // target's _id type, or raw joins and DBRef consumers cannot match it.
+                    Object coerced = MongoIdCoercion.coerceIdToStoredType(
+                            foreignKey, association.getAssociatedEntity())
                     if (reference) {
-                        dbRefs.add(new DBRef(getCollectionName(association.getAssociatedEntity()), foreignKey))
+                        dbRefs.add(new DBRef(getCollectionName(association.getAssociatedEntity()), coerced))
                     } else {
-                        dbRefs.add(foreignKey)
+                        dbRefs.add(coerced)
                     }
                 }
                 // update the native entry directly.

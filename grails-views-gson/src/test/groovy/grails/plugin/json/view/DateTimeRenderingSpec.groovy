@@ -19,8 +19,14 @@
 package grails.plugin.json.view
 
 import grails.plugin.json.view.test.JsonViewTest
+import spock.lang.Shared
 import spock.lang.Specification
+import tools.jackson.databind.json.JsonMapper
 
+import org.grails.web.json.DateTimeValues
+
+import java.sql.Time
+import java.sql.Timestamp
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -29,6 +35,9 @@ import java.time.ZonedDateTime
 import java.time.ZoneOffset
 
 class DateTimeRenderingSpec extends Specification implements JsonViewTest {
+
+    @Shared
+    JsonMapper jackson = JsonMapper.builder().build()
 
     void "Test Date and Instant render with Z, LocalDateTime without"() {
         given: "A view that renders date/time types"
@@ -226,5 +235,158 @@ json {
         and: "Calendar renders with millisecond precision"
         result.json.calendar == "2025-10-08T07:48:46.407Z"
         result.json.calendar instanceof String
+    }
+
+    void "Test java.sql Date, Time and Timestamp render the same as Spring Boot"() {
+        given: "A view that renders the java.sql date types"
+        String source = '''
+import java.sql.Time
+import java.sql.Timestamp
+
+model {
+    java.sql.Date sqlDate
+    Time time
+    Timestamp timestamp
+}
+
+json {
+    sqlDate sqlDate
+    time time
+    timestamp timestamp
+}
+'''
+
+        when: "The view is rendered"
+        def result = render(source, [
+            sqlDate: new java.sql.Date(1759909726407L),
+            time: Time.valueOf('01:48:46'),
+            timestamp: Timestamp.from(Instant.parse('2025-10-08T07:48:46.407254Z'))
+        ])
+
+        then: "java.sql.Date and Timestamp render as UTC instants with millisecond precision"
+        result.json.sqlDate == '2025-10-08T07:48:46.407Z'
+        result.json.timestamp == '2025-10-08T07:48:46.407Z'
+
+        and: "java.sql.Time renders as its wall-clock time (Time#toString)"
+        result.json.time == '01:48:46'
+    }
+
+    void "a #description renders the same as Spring Boot's Jackson JsonMapper"() {
+        given: "A view that renders any value"
+        String source = '''
+model {
+    Object value
+}
+
+json {
+    value value
+}
+'''
+
+        when: "The view is rendered"
+        def result = render(source, [value: value])
+
+        then:
+        result.jsonText == jackson.writeValueAsString([value: value])
+
+        where:
+        value << DateTimeValues.all().findAll { !DateTimeValues.differsFromSpringBoot(it) && !outsideFourDigitYears(it) }
+        description = value instanceof Map ? "${value.keySet().first().class.simpleName} map key" : value.class.simpleName
+    }
+
+    void "Test OffsetTime renders in its ISO_OFFSET_TIME form, as in Grails 7"() {
+        given: "A view that renders an OffsetTime"
+        String source = '''
+import java.time.OffsetTime
+
+model {
+    OffsetTime time
+}
+
+json {
+    time time
+}
+'''
+
+        expect: "the seconds are kept, and the fraction has only the digits it needs"
+        render(source, [time: OffsetTime.parse(value)]).json.time == rendered
+
+        where:
+        value                    | rendered
+        '03:00-03:00'            | '03:00:00-03:00'
+        '03:00:00.5+05:30'       | '03:00:00.5+05:30'
+        '01:48:46.407254-06:00'  | '01:48:46.407254-06:00'
+    }
+
+    void "Test a Date before 1 AD or after 9999 renders with the date format, as in Grails 7"() {
+        given: "A view that renders a Date"
+        String source = '''
+model {
+    Date date
+}
+
+json {
+    date date
+}
+'''
+        def bc = new GregorianCalendar(TimeZone.getTimeZone('UTC')).tap {
+            clear()
+            set(Calendar.ERA, GregorianCalendar.BC)
+            set(44, Calendar.MARCH, 15)
+        }.time
+
+        expect:
+        render(source, [date: Date.from(Instant.parse('+12345-01-01T00:00:00Z'))]).json.date == '12345-01-01T00:00:00.000Z'
+        render(source, [date: bc]).json.date == '0044-03-15T00:00:00.000Z'
+    }
+
+    void "Test Date, Calendar and ZonedDateTime map keys render like their values"() {
+        given: "A view that renders a map keyed by dates"
+        String source = '''
+model {
+    Map dates
+}
+
+json {
+    dates dates
+}
+'''
+        def instant = Instant.parse('2025-10-08T07:48:46.407254Z')
+        def wholeSecond = Instant.parse('2026-09-25T03:00:00Z')
+
+        when: "The view is rendered"
+        def result = render(source, [dates: [
+            (Date.from(instant)): 'date',
+            (GregorianCalendar.from(wholeSecond.atZone(ZoneOffset.ofHours(9)))): 'calendar',
+            (instant.atZone(ZoneOffset.ofHours(-3))): 'zonedDateTime',
+            name: 'string'
+        ]])
+
+        then: "Date and Calendar keys use the date format and ZonedDateTime keys ISO_OFFSET_DATE_TIME, as Spring Boot does"
+        result.jsonText == '{"dates":{' +
+                '"2025-10-08T07:48:46.407Z":"date",' +
+                '"2026-09-25T03:00:00.000Z":"calendar",' +
+                '"2025-10-08T04:48:46.407254-03:00":"zonedDateTime",' +
+                '"name":"string"}}'
+    }
+
+    void "Test a configured dateFormat applies to Date values and map keys"() {
+        given: "A generator configured with a date format"
+        def configuration = new JsonViewConfiguration(generator: new JsonViewGeneratorConfiguration(dateFormat: 'yyyy-MM-dd HH:mm', timeZone: 'UTC'))
+        def generator = new JsonViewTemplateEngine(configuration, getClass().classLoader).generator
+        def date = new Date(1759909726407L)
+
+        expect: "Dates use the configured pattern and time zone"
+        generator.toJson([date: date, keyed: [(date): 'value']]) == '{"date":"2025-10-08 07:48","keyed":{"2025-10-08 07:48":"value"}}'
+    }
+
+    private static boolean outsideFourDigitYears(Object value) {
+        Object date = value instanceof Map ? ((Map) value).keySet().first() : value
+        if (!(date instanceof Date || date instanceof Calendar)) {
+            return false
+        }
+        def calendar = new GregorianCalendar(TimeZone.getTimeZone('UTC'))
+        calendar.time = date instanceof Calendar ? ((Calendar) date).time : (Date) date
+        calendar.get(Calendar.ERA) == GregorianCalendar.BC || calendar.get(Calendar.YEAR) > 9999
     }
 }

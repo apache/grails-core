@@ -21,6 +21,7 @@ package org.grails.datastore.gorm.jdbc.connections
 import javax.sql.DataSource
 
 import groovy.transform.CompileStatic
+import org.jspecify.annotations.NonNull
 import org.springframework.beans.BeansException
 import org.springframework.beans.factory.NoSuchBeanDefinitionException
 import org.springframework.context.ApplicationContext
@@ -41,7 +42,7 @@ class SpringDataSourceConnectionSourceFactory extends DataSourceConnectionSource
     private ApplicationContext applicationContext
 
     @Override
-    void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+    void setApplicationContext(@NonNull ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext
     }
 

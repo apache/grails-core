@@ -25,6 +25,7 @@ import io.micrometer.observation.ObservationHandler
 import io.micrometer.observation.ObservationRegistry
 import org.grails.plugins.web.interceptors.GrailsInterceptorHandlerInterceptorAdapter
 import org.grails.web.servlet.mvc.GrailsWebRequest
+import org.grails.web.util.WebUtils
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.servlet.ModelAndView
 import spock.lang.Issue
@@ -150,6 +151,92 @@ class GrailsInterceptorHandlerInterceptorAdapterSpec extends Specification{
 
         then:
         webRequest.request.getAttribute(Matcher.THROWABLE) instanceof Exception
+    }
+
+    void 'afterView receives the original request #description'() {
+        given:
+        def interceptor = new CompletionRecordingInterceptor()
+        def adapter = new GrailsInterceptorHandlerInterceptorAdapter()
+        adapter.setInterceptors([interceptor] as Interceptor[])
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        webRequest.request.setAttribute(WebUtils.EXCEPTION_ATTRIBUTE, failure)
+        adapter.preHandle(webRequest.request, webRequest.response, this)
+
+        when:
+        adapter.afterCompletion(webRequest.request, webRequest.response, this, null)
+
+        then:
+        interceptor.completions == 1
+        interceptor.observedThrowable.is(failure)
+        webRequest.request.getAttribute(Matcher.THROWABLE).is(failure)
+
+        where:
+        description            | failure
+        'checked exception'    | new Exception('checked')
+        'runtime exception'    | new IllegalStateException('runtime')
+        'initialization error' | new ExceptionInInitializerError(new IllegalStateException('initializer'))
+        'assertion error'      | new AssertionError('assertion')
+        'throwable'            | new Throwable('failure')
+        'without a failure'    | null
+    }
+
+    void 'afterView ignores a request exception attribute holding #description'() {
+        given: 'a value that is not a Throwable stored under the exception request attribute'
+        def interceptor = new CompletionRecordingInterceptor()
+        def adapter = new GrailsInterceptorHandlerInterceptorAdapter()
+        adapter.setInterceptors([interceptor] as Interceptor[])
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        webRequest.request.setAttribute(WebUtils.EXCEPTION_ATTRIBUTE, value)
+        adapter.preHandle(webRequest.request, webRequest.response, this)
+
+        when:
+        adapter.afterCompletion(webRequest.request, webRequest.response, this, null)
+
+        then: 'afterView still runs and sees no throwable'
+        interceptor.completions == 1
+        interceptor.observedThrowable == null
+        webRequest.request.getAttribute(Matcher.THROWABLE) == null
+
+        where:
+        description   | value
+        'a String'    | 'Something went wrong'
+        'a Map'       | [message: 'Something went wrong']
+    }
+
+    void 'every matched interceptor receives a request error in afterView'() {
+        given:
+        def first = new CompletionRecordingInterceptor()
+        def second = new CompletionRecordingInterceptor()
+        def adapter = new GrailsInterceptorHandlerInterceptorAdapter()
+        adapter.setInterceptors([first, second] as Interceptor[])
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        def failure = new ExceptionInInitializerError(new IllegalStateException('initializer'))
+        webRequest.request.setAttribute(WebUtils.EXCEPTION_ATTRIBUTE, failure)
+        adapter.preHandle(webRequest.request, webRequest.response, this)
+
+        when:
+        adapter.afterCompletion(webRequest.request, webRequest.response, this, null)
+
+        then:
+        [first, second].every { it.completions == 1 && it.observedThrowable.is(failure) }
+    }
+
+    void 'an explicit completion exception takes precedence over a request error'() {
+        given:
+        def interceptor = new CompletionRecordingInterceptor()
+        def adapter = new GrailsInterceptorHandlerInterceptorAdapter()
+        adapter.setInterceptors([interceptor] as Interceptor[])
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        webRequest.request.setAttribute(WebUtils.EXCEPTION_ATTRIBUTE, new AssertionError('request error'))
+        def failure = new IllegalStateException('completion exception')
+        adapter.preHandle(webRequest.request, webRequest.response, this)
+
+        when:
+        adapter.afterCompletion(webRequest.request, webRequest.response, this, failure)
+
+        then:
+        interceptor.completions == 1
+        interceptor.observedThrowable.is(failure)
     }
 
     void "Test observation is disabled by default and the registry is left untouched"() {
@@ -451,6 +538,23 @@ class ExplodingInterceptor implements Interceptor {
         throw failure
     }
 }
+
+class CompletionRecordingInterceptor implements Interceptor {
+
+    Throwable observedThrowable
+    int completions
+
+    CompletionRecordingInterceptor() {
+        matchAll()
+    }
+
+    @Override
+    void afterView() {
+        observedThrowable = throwable
+        completions++
+    }
+}
+
 class MyInterceptor implements Interceptor {
 
     MyInterceptor() {

@@ -27,6 +27,7 @@ import org.springframework.web.servlet.View
 import spock.lang.Specification
 
 import grails.util.GrailsWebMockUtil
+import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.servlet.mvc.ParameterCreationListener
 import org.grails.web.servlet.view.CompositeViewResolver
 import org.grails.web.util.GrailsApplicationAttributes
@@ -90,6 +91,80 @@ class ResponseRendererSpec extends Specification {
         1 * viewResolver.resolveView('/otherTemplateRendering/_second', _) >> view
         2 * view.render(_, _, _)
     }
+
+    void 'file renders are attachments by default without a file name'() {
+        given:
+        bindRequest()
+        def response = GrailsWebRequest.lookup().currentResponse
+        def renderer = new FileRenderingController()
+
+        when:
+        renderer.render(file: '<svg/>'.bytes, contentType: 'image/svg+xml')
+
+        then:
+        response.getHeader('Content-Disposition') == 'attachment'
+        response.contentAsByteArray == '<svg/>'.bytes
+    }
+
+    void 'file renders use the resolved file name for attachment disposition'() {
+        given:
+        bindRequest()
+        def response = GrailsWebRequest.lookup().currentResponse
+        File file = File.createTempFile('grails-render-', '.txt')
+        file.text = 'download body'
+        def renderer = new FileRenderingController()
+
+        when:
+        renderer.render(file: file, contentType: 'text/plain')
+
+        then:
+        response.getHeader('Content-Disposition') == "attachment;filename=\"${file.name}\""
+        response.contentAsString == 'download body'
+
+        cleanup:
+        file.delete()
+    }
+
+    void 'file renders escape unsafe attachment file names'() {
+        given:
+        bindRequest()
+        def response = GrailsWebRequest.lookup().currentResponse
+        def renderer = new FileRenderingController()
+
+        when:
+        renderer.render(file: 'download body'.bytes, contentType: 'text/plain', fileName: 'a"b\\c\r\n.txt')
+
+        then:
+        response.getHeader('Content-Disposition') == 'attachment;filename="a\\"b\\\\c__.txt"'
+        response.contentAsString == 'download body'
+    }
+
+    void 'file renders may explicitly opt into inline disposition'() {
+        given:
+        bindRequest()
+        def response = GrailsWebRequest.lookup().currentResponse
+        def renderer = new FileRenderingController()
+
+        when:
+        renderer.render(file: '<svg/>'.bytes, contentType: 'image/svg+xml', inline: true)
+
+        then:
+        response.getHeader('Content-Disposition') == null
+    }
+
+    void 'file renders preserve an existing content disposition header'() {
+        given:
+        bindRequest()
+        def response = GrailsWebRequest.lookup().currentResponse
+        response.setHeader('Content-Disposition', 'inline')
+        def renderer = new FileRenderingController()
+
+        when:
+        renderer.render(file: '<svg/>'.bytes, contentType: 'image/svg+xml')
+
+        then:
+        response.getHeader('Content-Disposition') == 'inline'
+    }
 }
 
 class TemplateRenderingController implements ResponseRenderer {
@@ -104,4 +179,7 @@ class OtherTemplateRenderingController implements ResponseRenderer {
     void renderTemplate(String templateName) {
         render(template: templateName)
     }
+}
+
+class FileRenderingController implements ResponseRenderer {
 }

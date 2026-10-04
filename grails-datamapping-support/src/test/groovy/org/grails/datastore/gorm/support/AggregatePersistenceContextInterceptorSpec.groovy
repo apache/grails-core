@@ -18,89 +18,179 @@
  */
 package org.grails.datastore.gorm.support
 
-import spock.lang.Specification
-
 import grails.persistence.support.PersistenceContextInterceptor
+import spock.lang.Specification
 
 class AggregatePersistenceContextInterceptorSpec extends Specification {
 
-    PersistenceContextInterceptor first = Mock(PersistenceContextInterceptor)
-    PersistenceContextInterceptor second = Mock(PersistenceContextInterceptor)
-    AggregatePersistenceContextInterceptor aggregate = new AggregatePersistenceContextInterceptor([first, second])
+    void "isOpen returns false when there are no interceptors"() {
+        given:
+        def interceptor = new AggregatePersistenceContextInterceptor([])
 
-    void "the aggregate is open when any interceptor is open"() {
-        when:
-        boolean open = aggregate.open
-
-        then:
-        1 * first.isOpen() >> false
-        1 * second.isOpen() >> true
-        open
-
-        when:
-        open = aggregate.open
-
-        then:
-        1 * first.isOpen() >> true
-        0 * second.isOpen()
-        open
-
-        when:
-        open = aggregate.open
-
-        then:
-        1 * first.isOpen() >> false
-        1 * second.isOpen() >> false
-        !open
-        !new AggregatePersistenceContextInterceptor([]).open
+        expect:
+        !interceptor.isOpen()
     }
 
-    void "lifecycle calls fan out to every interceptor"() {
+    void "isOpen returns true if at least one interceptor is open"() {
+        given:
+        def closed = Mock(PersistenceContextInterceptor) {
+            isOpen() >> false
+        }
+        def open = Mock(PersistenceContextInterceptor) {
+            isOpen() >> true
+        }
+        def interceptor = new AggregatePersistenceContextInterceptor([closed, open])
+
+        expect:
+        interceptor.isOpen()
+    }
+
+    void "isOpen returns false when every interceptor is closed"() {
+        given:
+        def first = Mock(PersistenceContextInterceptor) {
+            isOpen() >> false
+        }
+        def second = Mock(PersistenceContextInterceptor) {
+            isOpen() >> false
+        }
+        def interceptor = new AggregatePersistenceContextInterceptor([first, second])
+
+        expect:
+        !interceptor.isOpen()
+    }
+
+    void "destroy only destroys interceptors that are open"() {
+        given:
+        def open = Mock(PersistenceContextInterceptor) {
+            isOpen() >> true
+        }
+        def closed = Mock(PersistenceContextInterceptor) {
+            isOpen() >> false
+        }
+        def interceptor = new AggregatePersistenceContextInterceptor([open, closed])
+
         when:
-        aggregate.init()
-        aggregate.reconnect()
-        aggregate.disconnect()
-        aggregate.flush()
-        aggregate.clear()
-        aggregate.setReadOnly()
-        aggregate.setReadWrite()
+        interceptor.destroy()
+
+        then:
+        1 * open.destroy()
+        0 * closed.destroy()
+    }
+
+    void "destroy swallows an exception from one interceptor and still destroys the rest"() {
+        given:
+        def failing = Mock(PersistenceContextInterceptor) {
+            isOpen() >> true
+            destroy() >> { throw new RuntimeException("boom") }
+        }
+        def healthy = Mock(PersistenceContextInterceptor) {
+            isOpen() >> true
+        }
+        def interceptor = new AggregatePersistenceContextInterceptor([failing, healthy])
+
+        when:
+        interceptor.destroy()
+
+        then:
+        noExceptionThrown()
+        1 * healthy.destroy()
+    }
+
+    void "reconnect delegates to every interceptor"() {
+        given:
+        def first = Mock(PersistenceContextInterceptor)
+        def second = Mock(PersistenceContextInterceptor)
+        def interceptor = new AggregatePersistenceContextInterceptor([first, second])
+
+        when:
+        interceptor.reconnect()
+
+        then:
+        1 * first.reconnect()
+        1 * second.reconnect()
+    }
+
+    void "clear delegates to every interceptor"() {
+        given:
+        def first = Mock(PersistenceContextInterceptor)
+        def second = Mock(PersistenceContextInterceptor)
+        def interceptor = new AggregatePersistenceContextInterceptor([first, second])
+
+        when:
+        interceptor.clear()
+
+        then:
+        1 * first.clear()
+        1 * second.clear()
+    }
+
+    void "disconnect delegates to every interceptor"() {
+        given:
+        def first = Mock(PersistenceContextInterceptor)
+        def second = Mock(PersistenceContextInterceptor)
+        def interceptor = new AggregatePersistenceContextInterceptor([first, second])
+
+        when:
+        interceptor.disconnect()
+
+        then:
+        1 * first.disconnect()
+        1 * second.disconnect()
+    }
+
+    void "flush delegates to every interceptor"() {
+        given:
+        def first = Mock(PersistenceContextInterceptor)
+        def second = Mock(PersistenceContextInterceptor)
+        def interceptor = new AggregatePersistenceContextInterceptor([first, second])
+
+        when:
+        interceptor.flush()
+
+        then:
+        1 * first.flush()
+        1 * second.flush()
+    }
+
+    void "init delegates to every interceptor"() {
+        given:
+        def first = Mock(PersistenceContextInterceptor)
+        def second = Mock(PersistenceContextInterceptor)
+        def interceptor = new AggregatePersistenceContextInterceptor([first, second])
+
+        when:
+        interceptor.init()
 
         then:
         1 * first.init()
         1 * second.init()
-        1 * first.reconnect()
-        1 * second.reconnect()
-        1 * first.disconnect()
-        1 * second.disconnect()
-        1 * first.flush()
-        1 * second.flush()
-        1 * first.clear()
-        1 * second.clear()
+    }
+
+    void "setReadOnly delegates to every interceptor"() {
+        given:
+        def first = Mock(PersistenceContextInterceptor)
+        def second = Mock(PersistenceContextInterceptor)
+        def interceptor = new AggregatePersistenceContextInterceptor([first, second])
+
+        when:
+        interceptor.setReadOnly()
+
+        then:
         1 * first.setReadOnly()
         1 * second.setReadOnly()
+    }
+
+    void "setReadWrite delegates to every interceptor"() {
+        given:
+        def first = Mock(PersistenceContextInterceptor)
+        def second = Mock(PersistenceContextInterceptor)
+        def interceptor = new AggregatePersistenceContextInterceptor([first, second])
+
+        when:
+        interceptor.setReadWrite()
+
+        then:
         1 * first.setReadWrite()
         1 * second.setReadWrite()
     }
-
-    void "destroy only destroys open interceptors and ignores failures"() {
-        when:
-        aggregate.destroy()
-
-        then:
-        1 * first.isOpen() >> true
-        1 * first.destroy() >> { throw new IllegalStateException('boom') }
-        1 * second.isOpen() >> false
-        0 * second.destroy()
-        noExceptionThrown()
-
-        when:
-        aggregate.destroy()
-
-        then:
-        1 * first.isOpen() >> { throw new IllegalStateException('cannot check') }
-        1 * second.isOpen() >> true
-        1 * second.destroy()
-        noExceptionThrown()
-    }
-
 }

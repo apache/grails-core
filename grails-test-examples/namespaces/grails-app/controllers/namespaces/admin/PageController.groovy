@@ -19,9 +19,14 @@
 
 package namespaces.admin
 
+import namespaces.Gadget
+import namespaces.LinkFixtureService
+
 class PageController {
 
     static namespace = "admin"
+
+    LinkFixtureService linkFixtureService
 
     def index() {
         render view: "/page/index", model: [pageTitle: "Admin Page"]
@@ -45,5 +50,21 @@ class PageController {
 
     def redirectToRootReport() {
         redirect controller: "report", action: "index", namespace: null
+    }
+
+    def resourceLinks() {
+        render view: "/links/resourceLinks", model: linkFixtureService.model(params)
+    }
+
+    def redirectToHome() {
+        redirect controller: "home", action: "index"
+    }
+
+    def redirectToAuthor() {
+        redirect controller: "author", action: "index"
+    }
+
+    def redirectToGadget(Long id) {
+        redirect Gadget.get(id)
     }
 }

@@ -20,6 +20,7 @@ package org.grails.plugins.datasource
 
 import javax.sql.DataSource
 
+import groovy.json.JsonSlurper
 import groovy.sql.Sql
 
 import org.springframework.beans.factory.support.BeanRegistryAdapter
@@ -34,6 +35,7 @@ import org.grails.config.PropertySourcesConfig
 import org.grails.transaction.ChainedTransactionManagerPostProcessor
 
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  * Created by graemerocher on 19/01/2017.
@@ -94,6 +96,43 @@ class DataSourceGrailsPluginSpec extends Specification {
         and: 'the embedded database shutdown hook follows the h2 driver presence'
         ctx.containsBeanDefinition('embeddedDatabaseShutdownHook') ==
                 ClassUtils.isPresent('org.h2.Driver', DataSourceGrailsPlugin.classLoader)
+    }
+
+    @Unroll
+    void "the Tomcat JDBC pool MBean exporter is registered only when dataSource.jmxExport is true (#jmxExport)"() {
+        given:
+        def ctx = new GenericApplicationContext()
+        if (jmxExport != null) {
+            ctx.environment.propertySources.addFirst(new MapPropertySource('test', ['dataSource.jmxExport': jmxExport]))
+        }
+
+        when:
+        applyRegistrar(ctx, false)
+
+        then:
+        ctx.containsBeanDefinition('tomcatJDBCPoolMBeanExporter') == registered
+
+        where:
+        jmxExport | registered
+        null      | false
+        'false'   | false
+        'true'    | true
+    }
+
+    void "the published configuration metadata states the dataSource.jmxExport default the plugin applies"() {
+        given:
+        def ctx = new GenericApplicationContext()
+        applyRegistrar(ctx, false)
+        boolean exportedWhenUnset = ctx.containsBeanDefinition('tomcatJDBCPoolMBeanExporter')
+
+        when:
+        Map jmxExport = getClass().classLoader.getResources('META-INF/spring-configuration-metadata.json').toList()
+                .collectMany { URL resource -> (List<Map>) ((Map) new JsonSlurper().parse(resource)).get('properties') ?: [] }
+                .find { Map property -> property.get('name') == 'dataSource.jmxExport' }
+
+        then:
+        jmxExport
+        jmxExport.get('defaultValue') == exportedWhenUnset
     }
 
     private void applyRegistrar(GenericApplicationContext ctx, boolean hibernatePresent, Map config = [:]) {

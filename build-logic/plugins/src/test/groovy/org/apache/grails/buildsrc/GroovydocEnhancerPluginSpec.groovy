@@ -31,6 +31,42 @@ class GroovydocEnhancerPluginSpec extends Specification {
     @TempDir
     File projectDir
 
+    private String getGroovyVersion() {
+        System.getProperty('fixture.groovy.version')
+    }
+
+    private void writeGroovydocProject() {
+        new File(projectDir, 'settings.gradle').text = ''
+        new File(projectDir, 'build.gradle').text = """
+            plugins {
+                id 'groovy'
+                id 'org.apache.grails.buildsrc.groovydoc-enhancer'
+            }
+            repositories {
+                mavenCentral()
+            }
+            ext.javaVersion = 21
+            dependencies {
+                implementation 'org.apache.groovy:groovy:${groovyVersion}'
+                documentation 'org.apache.groovy:groovy:${groovyVersion}'
+                documentation 'org.apache.groovy:groovy-ant:${groovyVersion}'
+                documentation 'org.apache.groovy:groovy-groovydoc:${groovyVersion}'
+                documentation 'org.apache.groovy:groovy-templates:${groovyVersion}'
+            }
+        """
+        File source = new File(projectDir, 'src/main/groovy/com/example/Documented.groovy')
+        source.parentFile.mkdirs()
+        source.text = '''
+            package com.example
+
+            /** A documented class. */
+            class Documented {
+                /** A documented method. */
+                void hello() {}
+            }
+        '''.stripIndent()
+    }
+
     void 'groovydoc classpath includes runtime-only jars that Class.forName needs'() {
         given: 'a groovy project whose runtime-only jar is not on the compile classpath'
         Project project = ProjectBuilder.builder().withProjectDir(projectDir).build()
@@ -54,56 +90,74 @@ class GroovydocEnhancerPluginSpec extends Specification {
         groovydocFiles.any { it.name == compileOnlyJar.name }
     }
 
-    void 'generates documentation with links and markup in a separate JVM'() {
-        given: 'a source file and documentation options containing XML-sensitive characters'
-        new File(projectDir, 'settings.gradle').text = "rootProject.name = 'docs-fixture'"
-        File source = new File(projectDir, 'src/main/groovy/example/Sample.groovy')
-        source.parentFile.mkdirs()
-        source.text = '''package example
-            /** A documented class. */
-            class Sample {
-                /** Returns a string. */
-                String text() { 'example' }
-            }
-        '''
-        new File(projectDir, 'build.gradle').text = '''
-            plugins {
-                id 'groovy'
-                id 'org.apache.grails.buildsrc.groovydoc-enhancer'
-            }
-            ext.javaVersion = 21
-            repositories { mavenCentral() }
-            dependencies {
-                implementation 'org.apache.groovy:groovy:6.0.0-RC-2'
-                runtimeOnly 'org.spockframework:spock-core:2.4-groovy-5.0'
-                documentation 'org.apache.groovy:groovy-groovydoc:6.0.0-RC-2'
-                documentation 'org.apache.groovy:groovy-ant:6.0.0-RC-2'
-                documentation 'org.apache.groovy:groovy-templates:6.0.0-RC-2'
-                documentation 'com.github.javaparser:javaparser-core:3.28.2'
-            }
-            groovydocEnhancer.footer = '<strong>Docs &amp; examples</strong>'
-            tasks.named('groovydoc') {
-                windowTitle = 'API & examples'
-                ext.groovydocLinks = [[packages: 'java.', href: 'https://example.org/java/']]
-                maxMemory = '256m'
-            }
-        '''
+    void 'groovydoc documents the sources with the groovy the project builds against'() {
+        given: 'a project whose documentation classpath pins its own groovy'
+        writeGroovydocProject()
 
-        when: 'the public documentation task runs'
+        when: 'groovydoc runs'
         def result = GradleRunner.create()
                 .withProjectDir(projectDir)
+                .withArguments('groovydoc')
                 .withPluginClasspath()
-                .withArguments('groovydoc', '--info', '--max-workers=1',
-                        '-Dorg.gradle.jvmargs=-Xmx512m', '--stacktrace')
                 .build()
 
-        then: 'the isolated Ant invocation generates the configured HTML and external links'
+        then: 'the task succeeds and documents the source'
         result.task(':groovydoc').outcome == TaskOutcome.SUCCESS
-        result.output.contains('org.apache.tools.ant.Main -f')
-        String html = new File(projectDir, 'build/docs/groovydoc/example/Sample.html').text
-        html.contains('<strong>Docs &amp; examples</strong>')
-        html.contains('https://example.org/java/java/lang/String.html')
-        html.contains('A documented class.')
+        File documented = new File(projectDir, 'build/docs/groovydoc/com/example/Documented.html')
+        documented.exists()
+
+        and: "the project's groovy generated it, not the older one Gradle runs build logic on"
+        documented.text.contains("Generated by groovydoc (${groovyVersion})")
+    }
+
+    void 'the groovydoc heap is the forked jvm heap, not the daemon heap'() {
+        given: 'a project that would document happily on the daemon heap'
+        writeGroovydocProject()
+
+        when: 'groovydoc is given a heap no JVM can start with'
+        def result = GradleRunner.create()
+                .withProjectDir(projectDir)
+                .withArguments('groovydoc', '-PgroovydocMaxHeapSize=1m')
+                .withPluginClasspath()
+                .buildAndFail()
+
+        then: 'a separate process was launched with it and died, which the daemon reports'
+        result.task(':groovydoc').outcome == TaskOutcome.FAILED
+        result.output.contains('finished with non-zero exit value')
+
+        and: 'the build itself carries on running, so that heap was not the daemon heap'
+        result.output.contains("Process 'command")
+    }
+
+    void 'the groovydoc heap project property beats what the build script set'() {
+        given: 'a build script that asks for a heap any JVM can start with'
+        writeGroovydocProject()
+        new File(projectDir, 'build.gradle') << '''
+            groovydocEnhancer {
+                maxHeapSize = '512m'
+            }
+        '''
+
+        when: 'the build script value is used'
+        def configured = GradleRunner.create()
+                .withProjectDir(projectDir)
+                .withArguments('groovydoc')
+                .withPluginClasspath()
+                .build()
+
+        then: 'groovydoc runs on it'
+        configured.task(':groovydoc').outcome == TaskOutcome.SUCCESS
+
+        when: 'the project property asks for one no JVM can start with'
+        def overridden = GradleRunner.create()
+                .withProjectDir(projectDir)
+                .withArguments('groovydoc', '--rerun-tasks', '-PgroovydocMaxHeapSize=1m')
+                .withPluginClasspath()
+                .buildAndFail()
+
+        then: 'the property won, so the aggregates can be raised from the command line too'
+        overridden.task(':groovydoc').outcome == TaskOutcome.FAILED
+        overridden.output.contains('finished with non-zero exit value')
     }
 
     void 'Groovydoc tasks in different projects do not overlap in a parallel build'() {

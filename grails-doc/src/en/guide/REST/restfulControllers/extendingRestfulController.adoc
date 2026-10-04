@@ -60,7 +60,7 @@ You could implement the nested controller as follows:
 
 [source,groovy]
 ----
-class BookController extends RestfulController {
+class BookController extends RestfulController<Book> {
     static responseFormats = ['json', 'xml']
     BookController() {
         super(Book)

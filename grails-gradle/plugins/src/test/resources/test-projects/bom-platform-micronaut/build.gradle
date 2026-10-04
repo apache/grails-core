@@ -1,0 +1,26 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+// Declaring grails-micronaut turns on the Micronaut BOM validation, which requires a Micronaut
+// BOM variant to be applied as an enforcedPlatform on 'implementation'. Nothing is resolved here.
+// By default the Micronaut variant is selected for automatic application; -PbomOptOut opts out of
+// automatic BOM application without declaring one by hand, which must fail that validation.
+grails {
+    bom = project.hasProperty('bomOptOut') ? null : 'grails-micronaut-bom'
+}
+
+dependencies {
+    implementation 'org.apache.grails:grails-micronaut'
+}
+
+tasks.register('inspectBomSetup') {
+    doLast {
+        // Observing compileClasspath runs the dependency actions of its hierarchy, which is when
+        // the auto-applied platform lands on 'implementation'.
+        def compileDeps = configurations.compileClasspath.incoming.dependencies
+        def micronautBom = compileDeps.find { it.group == 'org.apache.grails' && it.name == 'grails-micronaut-bom' }
+        println "HAS_MICRONAUT_BOM=${micronautBom != null}"
+        println "MICRONAUT_BOM_CATEGORY=${micronautBom?.attributes?.getAttribute(Category.CATEGORY_ATTRIBUTE)}"
+    }
+}

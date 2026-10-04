@@ -19,8 +19,11 @@
 
 package org.grails.gorm.graphql.types.scalars.coercing
 
+import graphql.GraphQLContext
+import graphql.execution.CoercedVariables
 import graphql.language.IntValue
 import graphql.language.StringValue
+import graphql.language.Value
 import graphql.schema.Coercing
 import graphql.schema.CoercingParseValueException
 import graphql.schema.CoercingSerializeException
@@ -50,21 +53,21 @@ class TimestampCoercion implements Coercing<Timestamp, Timestamp> {
     }
 
     @Override
-    Timestamp serialize(Object input) {
+    Timestamp serialize(Object input, GraphQLContext graphQLContext, Locale locale) {
         convert(input).orElseThrow {
             throw new CoercingSerializeException("Could not convert ${input.class.name} to a java.sql.Timestamp")
         }
     }
 
     @Override
-    Timestamp parseValue(Object input) {
+    Timestamp parseValue(Object input, GraphQLContext graphQLContext, Locale locale) {
         convert(input).orElseThrow {
             throw new CoercingParseValueException("Could not convert ${input.class.name} to a java.sql.Timestamp")
         }
     }
 
     @Override
-    Timestamp parseLiteral(Object input) {
+    Timestamp parseLiteral(Value<?> input, CoercedVariables variables, GraphQLContext graphQLContext, Locale locale) {
         if (input instanceof IntValue) {
             new Timestamp(((IntValue) input).value.longValue())
         }

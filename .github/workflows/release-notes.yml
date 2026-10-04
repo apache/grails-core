@@ -38,14 +38,19 @@ on:
   push:
     branches:
       - '[0-9]+.[0-9]+.x'
-  # Runs on PRs whose BASE branch is a release branch so the autolabeler can
-  # apply labels (bug/feature/docs/...) and the draft picks up new PRs as soon
-  # as they are opened. Feature-to-feature PRs (e.g. fix/foo -> feat/bar)
-  # are intentionally excluded - they cannot affect any release.
-  pull_request:
-    types: [opened, reopened, synchronize, labeled]
-    branches:
-      - '[0-9]+.[0-9]+.x'
+  # There is deliberately no `pull_request` trigger. It was here so the autolabeler could
+  # label pull requests, and the action pinned below cannot do that: release-drafter 7 split
+  # labelling into a second entrypoint, `release-drafter/release-drafter/autolabeler`, and the
+  # entrypoint used here contains no labelling at all. A pull request run therefore applied no
+  # labels, and on a pull request from a fork it could not write a draft either - the token is
+  # read only, so it failed with "Resource not accessible by integration" and was hidden by
+  # `continue-on-error` below. Runs that could only fail also collided with each other: every
+  # pull request against a release branch computed the same concurrency group, so one cancelled
+  # another's check twelve seconds in.
+  #
+  # Restoring labels means adding the autolabeler entrypoint, which is a separate action and is
+  # not on the ASF approved list - `approved_patterns.yml` carries only
+  # `release-drafter/release-drafter@*` - so it needs an INFRA request first.
   # Manual recovery: rerun against any branch (e.g. to recreate a draft after
   # one was accidentally deleted, or to seed an initial draft on a new branch).
   workflow_dispatch:
@@ -59,16 +64,20 @@ on:
 # branch queued behind those waiting runs - producing drafter runs of
 # 1400-2000+ minutes that ultimately got cancelled, leaving drafts stale.
 #
-# Drafter and release.yml never touch the same release object: the drafter
-# maintains a DRAFT for the *next* version (e.g. v7.0.12), while release.yml
-# uploads assets to the *current published* tag (e.g. v7.0.11). Splitting the
-# concurrency groups is therefore safe.
+# The two workflows CAN touch the same release object, though. The drafter
+# updates whichever draft targets this branch, and the release being released
+# is briefly a draft again while `pre-release` moves its tag: a drafter run in
+# that window rewrites the release's tag, name and body. Rather than share a
+# group, the first step below holds the drafter off - it skips, it does not
+# queue - while any run of the release pipeline for this branch is still going.
 #
 # `cancel-in-progress: true`: if multiple pushes land on the same branch in
 # quick succession, only the latest matters - the latest run sees every PR
-# the older one would have seen, so cancelling pending runs is correct.
+# the older one would have seen, so cancelling pending runs is correct. With no
+# pull request trigger, a branch is the only subject there is, so nothing shares
+# this group with anything unrelated.
 concurrency:
-  group: release-drafter-${{ github.event.pull_request.base.ref || github.ref_name }}
+  group: release-drafter-${{ github.ref_name }}
   cancel-in-progress: true
 
 jobs:
@@ -77,10 +86,79 @@ jobs:
     permissions:
       # Required to create or update the draft GitHub Release
       contents: write
-      # Required for the autolabeler to add labels to PRs
-      pull-requests: write
+      # Read, not write: nothing here labels anything any more. The draft is built from merged
+      # pull requests - the action's find-recent-merged-pull-requests asks for them - and a
+      # permissions block is restrictive, so the scope has to be named even to read.
+      pull-requests: read
+      # Required by the hold-off step to list release pipeline runs.
+      actions: read
     runs-on: ubuntu-latest
     steps:
+      # Do nothing while a release of this branch is in progress. The release
+      # pipeline runs from `release: published` through the vote gates to the
+      # close, and the release it is releasing must not change under it. Nor is
+      # the next version known until the close has merged back, so there is
+      # nothing useful to draft: the draft is left exactly as it was and the
+      # first push after the pipeline completes brings it up to date.
+      #
+      # This skips rather than queues on purpose. Sharing a concurrency group
+      # with the pipeline was tried and queued drafter runs for days behind the
+      # approval gates (see the concurrency comment above).
+      #
+      # release.yml runs on the `release` event, so its head ref is the tag
+      # (v8.0.0-RC2); the branch that tag was cut from is MAJOR.MINOR.x by this
+      # repository's branch convention. release-close.yml is dispatched on the
+      # branch itself, so its head ref is used as is. Any run that is not
+      # `completed` counts, including one waiting at an approval gate.
+      #
+      # Fail safe: if the runs cannot be listed, hold off and warn. A stale draft
+      # costs nothing; a rewritten release costs a restage.
+      #
+      # Not covered: a drafter run that is already between listing releases and
+      # writing (a few seconds inside the action) when the draft is published.
+      # Publish after the last merge's drafter run has completed.
+      - name: "🚧 Hold off while a release of this branch is in progress"
+        id: release_guard
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          skip=false
+          reason=""
+          for workflow in release.yml release-close.yml; do
+            if ! runs="$(gh run list --repo "${GITHUB_REPOSITORY}" --workflow "${workflow}" --limit 50 \
+                --json headBranch,status,url \
+                --jq '.[] | select(.status != "completed") | "\(.headBranch) \(.status) \(.url)"')"; then
+              skip=true
+              reason="could not list ${workflow} runs"
+              echo "::warning title=Release draft held::Could not list ${workflow} runs for ${BRANCH}; leaving the draft untouched."
+              break
+            fi
+            while read -r ref status url; do
+              if [[ -z "${ref}" ]]; then
+                continue
+              fi
+              if [[ "${ref}" =~ ^v([0-9]+)\.([0-9]+)\. ]]; then
+                ref="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.x"
+              fi
+              if [[ "${ref}" == "${BRANCH}" ]]; then
+                skip=true
+                reason="${workflow} run is ${status}: ${url}"
+                echo "::notice title=Release draft held::A release of ${BRANCH} is in progress; leaving the draft untouched. ${reason}"
+                break
+              fi
+            done <<< "${runs}"
+            if [[ "${skip}" == "true" ]]; then
+              break
+            fi
+          done
+          if [[ "${skip}" != "true" ]]; then
+            echo "No release of ${BRANCH} in progress; drafting."
+          fi
+          echo "skip=${skip}" >> "$GITHUB_OUTPUT"
+          echo "reason=${reason}" >> "$GITHUB_OUTPUT"
+
       # Seed an initial version for release branches that have no published
       # release yet (e.g. 7.2.x before its first tag). release-drafter falls
       # back to its default 0.1.0 when it finds no "last release", which on
@@ -96,11 +174,12 @@ jobs:
       # behaviour. Best-effort: any lookup failure also yields an empty seed.
       - name: "🔢 Seed initial version for release-less branches"
         id: seed
+        if: steps.release_guard.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -uo pipefail
-          BRANCH="${{ github.event.pull_request.base.ref || github.ref_name }}"
+          BRANCH="${{ github.ref_name }}"
           if [[ ! "$BRANCH" =~ ^([0-9]+)\.([0-9]+)\.x$ ]]; then
             echo "Branch $BRANCH is not a release branch; no version seed."
             echo "version=" >> "$GITHUB_OUTPUT"
@@ -147,19 +226,19 @@ jobs:
       #     --jq '.object.sha'
       - name: "📝 Update Release Draft"
         id: drafter
-        uses: release-drafter/release-drafter@693d20e7c1ce1a81d3a41962f85914253b518449 # v7.3.1
+        uses: release-drafter/release-drafter@34d80673e067bdc0c24568d3af899c216adcfaa9 # v7.7.0
         # Drafting release notes is a best-effort, non-critical task - a
         # transient GitHub API hiccup must not turn every PR check red. The
         # explicit verification step below catches the case where the action
         # silently produced no draft (e.g. rate-limit exhaustion).
         continue-on-error: true
+        if: steps.release_guard.outputs.skip != 'true'
         with:
-          # Explicit `commitish` is critical on `pull_request` events: without
-          # it, release-drafter would default to `refs/pull/N/merge` (a
-          # virtual ref) which the GitHub API rejects when creating a release,
-          # producing the "Validation Failed: target_commitish invalid" error
-          # historically seen on PRs (see INFRA-27602).
-          commitish: ${{ github.event.pull_request.base.ref || github.ref_name }}
+          # Explicit `commitish`, kept from when this also ran on pull requests: it
+          # defaulted to `refs/pull/N/merge`, a virtual ref the GitHub API rejects
+          # when creating a release ("Validation Failed: target_commitish invalid",
+          # see INFRA-27602). Naming the branch is right for a push in any case.
+          commitish: ${{ github.ref_name }}
           # Empty for branches that already have a release (release-drafter
           # treats an empty version as "no override" and resolves the next
           # version itself). On a release-less branch this is MAJOR.MINOR.0 so
@@ -178,14 +257,30 @@ jobs:
       - name: "🔎 Verify draft was created or updated"
         if: always()
         env:
+          GUARD_SKIP: ${{ steps.release_guard.outputs.skip }}
+          GUARD_REASON: ${{ steps.release_guard.outputs.reason }}
           DRAFT_ID: ${{ steps.drafter.outputs.id }}
           DRAFT_TAG: ${{ steps.drafter.outputs.tag_name }}
           DRAFT_NAME: ${{ steps.drafter.outputs.name }}
           DRAFT_URL: ${{ steps.drafter.outputs.html_url }}
           DRAFT_OUTCOME: ${{ steps.drafter.outcome }}
-          BRANCH: ${{ github.event.pull_request.base.ref || github.ref_name }}
+          BRANCH: ${{ github.ref_name }}
         run: |
           set -euo pipefail
+          if [[ "${GUARD_SKIP:-}" == "true" ]]; then
+            {
+              echo "## Release Drafter Result"
+              echo ""
+              echo "- Branch: \`${BRANCH}\`"
+              echo "- Status: ⏸️ **Held - a release of this branch is in progress**"
+              echo "- ${GUARD_REASON}"
+              echo ""
+              echo "The draft was left as it was. The first push after the release"
+              echo "pipeline completes brings it up to date."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "Draft for ${BRANCH} left untouched: ${GUARD_REASON}"
+            exit 0
+          fi
           {
             echo "## Release Drafter Result"
             echo ""

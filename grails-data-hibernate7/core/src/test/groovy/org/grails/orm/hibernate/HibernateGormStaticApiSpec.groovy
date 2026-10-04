@@ -24,6 +24,7 @@ import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.annotation.Entity
 import grails.gorm.tests.entities.Club
 import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.hibernate.Hibernate
 import org.hibernate.jpa.AvailableHints
 
 class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
@@ -53,8 +54,11 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         then:
         same != null
         same.id == entityId
-        // Note: In Hibernate 7, proxy initialization behavior differs from Hibernate 5/6
-        // The proxy may be initialized during retrieval, so we don't assert !isInitialized
+        !Hibernate.isInitialized(same)
+
+        and: "the proxy is loaded on first access"
+        same.name == 'test'
+        Hibernate.isInitialized(same)
     }
 
     void "Test that get returns the correct instance"() {

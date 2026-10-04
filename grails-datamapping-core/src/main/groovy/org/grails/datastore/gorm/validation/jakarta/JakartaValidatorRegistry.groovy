@@ -73,7 +73,7 @@ class JakartaValidatorRegistry extends DefaultValidatorRegistry implements Valid
      *
      * @return The configuration
      */
-    protected Configuration<?> buildConfiguration() {
+    protected Configuration buildConfiguration() {
         MappingContext context = this.mappingContext
         MessageSource ms = messageSource
         return buildConfigurationFor(context, ms)
@@ -86,7 +86,7 @@ class JakartaValidatorRegistry extends DefaultValidatorRegistry implements Valid
      * @return The configuration
      */
     static Configuration buildConfigurationFor(MappingContext context, MessageSource messageSource) {
-        Configuration<? extends Configuration> validatorConfiguration = Validation.byDefaultProvider()
+        Configuration validatorConfiguration = Validation.byDefaultProvider()
                 .configure()
         validatorConfiguration = validatorConfiguration.ignoreXmlConfiguration()
         validatorConfiguration = validatorConfiguration.traversableResolver(new MappingContextTraversableResolver(context))
@@ -164,7 +164,7 @@ class JakartaValidatorRegistry extends DefaultValidatorRegistry implements Valid
     }
 
     @Override
-    def <T> T unwrap(Class<T> aClass) {
+    <T> T unwrap(Class<T> aClass) {
         return validatorFactory.unwrap(aClass)
     }
 

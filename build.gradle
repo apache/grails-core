@@ -22,6 +22,7 @@ plugins {
     id 'org.apache.grails.buildsrc.test-task-sharding'
 }
 
+import java.lang.management.ManagementFactory
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -29,6 +30,7 @@ import java.time.format.DateTimeFormatter
 
 import javax.inject.Inject
 
+import com.sun.management.OperatingSystemMXBean
 import org.apache.tools.ant.taskdefs.condition.Os
 
 ext {
@@ -55,6 +57,12 @@ ext {
     // this does not reduce CI fork counts - though CI forks do see fewer processors, below.
     configuredTestParallel = findProperty('maxTestParallel') as Integer ?:
             (isCiBuild ? 4 : Math.max(1, (Runtime.runtime.availableProcessors() / 2) as int))
+    testForkHeapMb = findProperty('testForkHeapMb') as Integer ?:
+            (isCiBuild ? 768 : localTestForkHeapMb(gradle.startParameter.maxWorkerCount))
+    if (testForkHeapMb < 768) {
+        throw new GradleException("-PtestForkHeapMb must be at least 768 (got ${testForkHeapMb}): Grails Test " +
+                'tasks start with -Xms768m. Lower -PmaxTestParallel or --max-workers to use less memory.')
+    }
     excludeUnusedTransDeps = findProperty('excludeUnusedTransDeps')
 
     testProjectsStartWith = [
@@ -65,6 +73,22 @@ ext {
     docProjects = [ /* Will be populated by subprojects loop below */]
     cliProjects = [ /* Will be populated by subprojects loop below */]
     profileProjects = [ /* Will be populated by subprojects loop below */]
+    skillProjects = [ /* Will be populated by subprojects loop below */]
+}
+
+/**
+ * Sizes the heap of each local test fork, which org.gradle.jvmargs does not bound: half the RAM
+ * left after the daemon heap, split across the build-wide worker pool (which, not maxParallelForks,
+ * bounds concurrent forks) and clamped to 768m-1024m. 768m is the CI value and the minHeapSize
+ * GrailsGradlePlugin gives Grails Test tasks.
+ */
+static int localTestForkHeapMb(int maxWorkerCount) {
+    def os = ManagementFactory.operatingSystemMXBean
+    if (!(os instanceof OperatingSystemMXBean)) {
+        return 1024
+    }
+    long spareMb = Math.max(0L, (os.totalMemorySize - Runtime.runtime.maxMemory()) >> 20)
+    Math.min(1024, Math.max(768, spareMb.intdiv(2L * Math.max(1, maxWorkerCount)) as int))
 }
 
 /**
@@ -137,6 +161,10 @@ subprojects {
 
     if (name.startsWith('grails-profiles')) {
         rootProject.ext['profileProjects'] << name
+    }
+
+    if (name.startsWith('grails-skills')) {
+        rootProject.ext['skillProjects'] << name
     }
 
     configurations.configureEach {

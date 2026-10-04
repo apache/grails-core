@@ -28,26 +28,26 @@ import org.grails.encoder.impl.HTMLEncoder
 
 class HTMLCodecConfigurationSpec extends Specification {
 
-    void 'a codec with no grails application or config is left at its legacy default'() {
+    void 'a codec with no grails application or config is left at the xml default'() {
         given:
         HTMLCodec codec = new HTMLCodec()
 
         expect:
-        codec.encoder instanceof HTML4Encoder
+        codec.encoder instanceof HTMLEncoder
         codec.decoder != null
 
         when:
         codec.afterPropertiesSet()
 
         then:
-        codec.encoder instanceof HTML4Encoder
+        codec.encoder instanceof HTMLEncoder
 
         when:
         codec.setGrailsApplication(Stub(GrailsApplication) { getConfig() >> null })
         codec.afterPropertiesSet()
 
         then:
-        codec.encoder instanceof HTML4Encoder
+        codec.encoder instanceof HTMLEncoder
     }
 
     @Unroll
@@ -67,10 +67,11 @@ class HTMLCodecConfigurationSpec extends Specification {
         setting << ['xml', 'XML', 'xhtml', 'XHTML']
     }
 
-    void 'a non-xml setting keeps the legacy encoder'() {
+    @Unroll
+    void 'a #setting htmlcodec setting selects the legacy encoder'() {
         given:
         HTMLCodec codec = new HTMLCodec()
-        Config config = Stub(Config) { getProperty(HTMLCodec.CONFIG_PROPERTY_GSP_HTMLCODEC) >> 'html4' }
+        Config config = Stub(Config) { getProperty(HTMLCodec.CONFIG_PROPERTY_GSP_HTMLCODEC) >> setting }
         codec.setGrailsApplication(Stub(GrailsApplication) { getConfig() >> config })
 
         when:
@@ -78,6 +79,9 @@ class HTMLCodecConfigurationSpec extends Specification {
 
         then:
         codec.encoder instanceof HTML4Encoder
+
+        where:
+        setting << ['html4', 'HTML4', 'html', 'HTML']
     }
 
     void 'setUseLegacyEncoder toggles between the shared static encoder instances'() {

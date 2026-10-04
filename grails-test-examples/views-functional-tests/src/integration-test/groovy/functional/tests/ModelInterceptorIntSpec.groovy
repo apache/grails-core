@@ -18,6 +18,7 @@
  */
 package functional.tests
 
+import spock.lang.Issue
 import spock.lang.Specification
 import spock.lang.Tag
 import spock.lang.Unroll
@@ -49,5 +50,29 @@ class ModelInterceptorIntSpec extends Specification implements HttpClientSupport
                 'respond',
                 'return'
         ]
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/12081')
+    void "interceptor after() can read model set by render(template:..., model:...) via TEMPLATE_MODEL fallback"() {
+        given: "a controller that calls render(template: 'snippet', model: [title: 'x'])"
+        def response = http('/renderTemplate')
+
+        expect: "the HTTP response succeeds"
+        response.assertStatus(200)
+
+        and: "the interceptor's after() received the exact model passed to render(template:..., model:...)"
+        modelInterceptor.latestModel == [title: 'x']
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/12081')
+    void "interceptor after() reads only the model argument when render(template:...) also passes a bean"() {
+        given: "a controller that calls render(template: 'snippet', bean: 'b', model: [title: 'x'])"
+        def response = http('/renderTemplate/bean')
+
+        expect: "the HTTP response succeeds"
+        response.assertStatus(200)
+
+        and: "the interceptor's after() received the model argument without the bean"
+        modelInterceptor.latestModel == [title: 'x']
     }
 }

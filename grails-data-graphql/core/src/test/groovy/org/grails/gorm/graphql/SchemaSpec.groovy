@@ -19,6 +19,7 @@
 
 package org.grails.gorm.graphql
 
+import graphql.scalars.ExtendedScalars
 import graphql.schema.*
 import org.grails.datastore.mapping.config.Settings
 import org.grails.datastore.mapping.core.DatastoreUtils
@@ -65,6 +66,15 @@ class SchemaSpec extends Specification implements GraphQLSchemaSpec {
 
     private String normalizeType(String prefix, GraphQLPropertyType type) {
         prefix + normalizeType(type)
+    }
+
+    void "count query fields use the 64-bit Long scalar"() {
+        given:
+        List<GraphQLFieldDefinition> countFields = queryType.fieldDefinitions.findAll { it.name.endsWith('Count') }
+
+        expect: 'the schema matches what count() returns, and the Long totalCount already in paged results'
+        !countFields.isEmpty()
+        countFields.every { it.type == ExtendedScalars.GraphQLLong }
     }
 
     void "test ComplexOperation"() {

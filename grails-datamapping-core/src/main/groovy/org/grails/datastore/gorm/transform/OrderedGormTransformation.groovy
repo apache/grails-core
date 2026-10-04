@@ -18,6 +18,8 @@
  */
 package org.grails.datastore.gorm.transform
 
+import java.lang.reflect.InvocationTargetException
+
 import groovy.transform.CompilationUnitAware
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.ASTNode
@@ -83,7 +85,7 @@ class OrderedGormTransformation extends AbstractASTTransformation implements Com
             String transformName = findTransformName(ann)
             if (transformName) {
                 try {
-                    def newTransform = ClassUtils.forName(transformName).newInstance()
+                    def newTransform = ClassUtils.forName(transformName).getDeclaredConstructor().newInstance()
                     if (newTransform instanceof ASTTransformation) {
                         if (newTransform instanceof CompilationUnitAware) {
                             ((CompilationUnitAware) newTransform).setCompilationUnit(compilationUnit)
@@ -91,7 +93,9 @@ class OrderedGormTransformation extends AbstractASTTransformation implements Com
                         transforms.add(new TransformationInvocation(ann, newTransform))
                     }
                 } catch (Throwable e) {
-                    addError("Could not load GORM transform for name [$transformName]: $e.message", annotatedNode)
+                    // getDeclaredConstructor().newInstance() wraps anything the constructor throws; report that cause
+                    Throwable cause = e instanceof InvocationTargetException && e.cause != null ? e.cause : e
+                    addError("Could not load GORM transform for name [$transformName]: $cause.message", annotatedNode)
                 }
             }
         }

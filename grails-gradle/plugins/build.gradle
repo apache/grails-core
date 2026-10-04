@@ -80,6 +80,9 @@ dependencies {
     testImplementation('org.spockframework:spock-core') { transitive = false }
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+    // The asset pipeline plugin the Grails BOM manages, so the layout this plugin gives it is tested
+    // against the real one
+    testRuntimeOnly 'cloud.wondrify:asset-pipeline-gradle'
 }
 
 configurations {

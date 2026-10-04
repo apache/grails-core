@@ -414,8 +414,10 @@ class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoaderAware
      * the directory it was built in -- but it cannot compile a page at run time, because it cannot
      * define a class at all. Reading the sources there renders nothing, so the compiled pages are
      * used whatever the surroundings suggest.</p>
+     *
+     * @return whether a page is looked up among the pages compiled at build time
      */
-    private boolean isPrecompiledAvailable() {
+    boolean isPrecompiledAvailable() {
         if (precompiledGspMap == null || precompiledGspMap.isEmpty()) {
             return false
         }

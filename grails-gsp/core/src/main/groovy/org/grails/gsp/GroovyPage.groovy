@@ -24,6 +24,7 @@ import groovy.transform.CompileStatic
 import org.apache.commons.logging.Log
 import org.apache.commons.logging.LogFactory
 import org.codehaus.groovy.runtime.InvokerHelper
+import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
 
 import grails.core.GrailsApplication
 import grails.util.CollectionUtils
@@ -170,15 +171,51 @@ abstract class GroovyPage extends Script {
 
     private void applyModelFieldsFromBinding(Iterable<Field> modelFields) {
         for (Field field in modelFields) {
+            Object value = getProperty(field.getName())
+            if (value == null) {
+                continue
+            }
+            Object converted
             try {
-                Object value = getProperty(field.getName())
-                if (value != null) {
-                    field.set(this, value)
-                }
+                converted = DefaultTypeTransformation.castToType(value, field.getType())
+            } catch (RuntimeException e) {
+                throw new GroovyPagesException("Model field '${field.getName()}' is declared as " +
+                        "${field.getType().getName()} but the model supplied an instance of " +
+                        "${value.getClass().getName()}, which cannot be converted to it.", e, -1, getGroovyPageFileName())
+            }
+            if (value instanceof Number && converted instanceof Number && !sameNumericValue((Number) value, (Number) converted)) {
+                throw new GroovyPagesException("Model field '${field.getName()}' is declared as " +
+                        "${field.getType().getName()}, which cannot hold the ${value.getClass().getName()} " +
+                        "${value} the model supplied without changing it.", null, -1, getGroovyPageFileName())
+            }
+            try {
+                field.set(this, converted)
             } catch (IllegalAccessException e) {
                 throw new GroovyPagesException("Error setting model field '" + field.getName() + "'", e, -1, getGroovyPageFileName())
             }
         }
+    }
+
+    private static boolean sameNumericValue(Number original, Number converted) {
+        if (isFloatingPoint(original) && isFloatingPoint(converted)) {
+            // Every float is exactly representable as a double, including NaN and infinities.
+            return Double.compare(original.doubleValue(), converted.doubleValue()) == 0
+        }
+        // A floating-point value prints as the shortest decimal that reads back to it, which is
+        // also the decimal Groovy converts it to, so comparing the decimal forms accepts exactly
+        // the conversions that convert back to the original: 19.99G for a Double, 19.99d for a
+        // BigDecimal. A decimal with more digits than the type can carry prints differently
+        // once converted and is rejected.
+        try {
+            return new BigDecimal(original.toString()).compareTo(new BigDecimal(converted.toString())) == 0
+        } catch (NumberFormatException ignored) {
+            // A non-finite floating-point value cannot equal a finite decimal or integer.
+            return false
+        }
+    }
+
+    private static boolean isFloatingPoint(Number number) {
+        return number instanceof Float || number instanceof Double
     }
 
     Object raw(Object value) {
@@ -457,7 +494,7 @@ abstract class GroovyPage extends Script {
                     staticOut.append('/>')
                 } else {
                     staticOut.append('>')
-                    Object bodyOutput = body.call()
+                    Object bodyOutput = ((Closure<Object>) body).call()
                     if (bodyOutput != null) staticOut.print(bodyOutput)
                     staticOut.append('</').append(tagNamespace).append(':').append(tagName).append('>')
                 }

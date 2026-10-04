@@ -163,11 +163,11 @@ class HibernateCriteriaBuilder extends GroovyObjectSupport implements BuildableC
         return (Objects.nonNull(alias) ? alias + ALIAS_SEPARATOR : '') + propertyName
     }
 
-    org.grails.datastore.mapping.query.api.Criteria exists(Closure subquery) {
+    org.grails.datastore.mapping.query.api.Criteria exists(@DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure subquery) {
         return exists(new grails.gorm.DetachedCriteria(targetClass).build(subquery))
     }
 
-    org.grails.datastore.mapping.query.api.Criteria notExists(Closure subquery) {
+    org.grails.datastore.mapping.query.api.Criteria notExists(@DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure subquery) {
         return notExists(new grails.gorm.DetachedCriteria(targetClass).build(subquery))
     }
 
@@ -571,7 +571,7 @@ class HibernateCriteriaBuilder extends GroovyObjectSupport implements BuildableC
      */
     @Override
     @SuppressWarnings(['unchecked', 'rawtypes'])
-    Criteria eqAll(String propertyName, Closure<?> propertyValue) {
+    Criteria eqAll(String propertyName, @DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
         return eqAll(propertyName, new grails.gorm.DetachedCriteria(targetClass).build(propertyValue))
     }
 
@@ -585,7 +585,7 @@ class HibernateCriteriaBuilder extends GroovyObjectSupport implements BuildableC
      */
     @Override
     @SuppressWarnings(['unchecked', 'rawtypes'])
-    Criteria gtAll(String propertyName, Closure<?> propertyValue) {
+    Criteria gtAll(String propertyName, @DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
         return gtAll(propertyName, new grails.gorm.DetachedCriteria(targetClass).build(propertyValue))
     }
 
@@ -599,7 +599,7 @@ class HibernateCriteriaBuilder extends GroovyObjectSupport implements BuildableC
      */
     @Override
     @SuppressWarnings(['unchecked', 'rawtypes'])
-    Criteria ltAll(String propertyName, Closure<?> propertyValue) {
+    Criteria ltAll(String propertyName, @DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
         return ltAll(propertyName, new grails.gorm.DetachedCriteria(targetClass).build(propertyValue))
     }
 
@@ -613,7 +613,7 @@ class HibernateCriteriaBuilder extends GroovyObjectSupport implements BuildableC
      */
     @Override
     @SuppressWarnings(['unchecked', 'rawtypes'])
-    Criteria geAll(String propertyName, Closure<?> propertyValue) {
+    Criteria geAll(String propertyName, @DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
         return geAll(propertyName, new grails.gorm.DetachedCriteria(targetClass).build(propertyValue))
     }
 
@@ -627,7 +627,7 @@ class HibernateCriteriaBuilder extends GroovyObjectSupport implements BuildableC
      */
     @Override
     @SuppressWarnings(['unchecked', 'rawtypes'])
-    Criteria leAll(String propertyName, Closure<?> propertyValue) {
+    Criteria leAll(String propertyName, @DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
         return leAll(propertyName, new grails.gorm.DetachedCriteria(targetClass).build(propertyValue))
     }
 
@@ -666,7 +666,7 @@ class HibernateCriteriaBuilder extends GroovyObjectSupport implements BuildableC
     }
 
     @Override
-    Criteria gtSome(String propertyName, Closure<?> propertyValue) {
+    Criteria gtSome(String propertyName, @DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
         return gtSome(propertyName, new DetachedCriteria<>(targetClass).build(propertyValue))
     }
 
@@ -677,7 +677,7 @@ class HibernateCriteriaBuilder extends GroovyObjectSupport implements BuildableC
     }
 
     @Override
-    Criteria geSome(String propertyName, Closure<?> propertyValue) {
+    Criteria geSome(String propertyName, @DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
         return geSome(propertyName, new DetachedCriteria<>(targetClass).build(propertyValue))
     }
 
@@ -688,7 +688,7 @@ class HibernateCriteriaBuilder extends GroovyObjectSupport implements BuildableC
     }
 
     @Override
-    Criteria ltSome(String propertyName, Closure<?> propertyValue) {
+    Criteria ltSome(String propertyName, @DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
         return ltSome(propertyName, new DetachedCriteria<>(targetClass).build(propertyValue))
     }
 
@@ -699,7 +699,7 @@ class HibernateCriteriaBuilder extends GroovyObjectSupport implements BuildableC
     }
 
     @Override
-    Criteria leSome(String propertyName, Closure<?> propertyValue) {
+    Criteria leSome(String propertyName, @DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
         return leSome(propertyName, new DetachedCriteria<>(targetClass).build(propertyValue))
     }
 
@@ -715,12 +715,12 @@ class HibernateCriteriaBuilder extends GroovyObjectSupport implements BuildableC
     }
 
     @Override
-    Criteria in(String propertyName, Closure<?> subquery) {
+    Criteria in(String propertyName, @DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> subquery) {
         return inList(propertyName, new DetachedCriteria<>(targetClass).build(subquery))
     }
 
     @Override
-    Criteria inList(String propertyName, Closure<?> subquery) {
+    Criteria inList(String propertyName, @DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> subquery) {
         return inList(propertyName, new DetachedCriteria<>(targetClass).build(subquery))
     }
 
@@ -731,7 +731,7 @@ class HibernateCriteriaBuilder extends GroovyObjectSupport implements BuildableC
     }
 
     @Override
-    Criteria notIn(String propertyName, Closure<?> subquery) {
+    Criteria notIn(String propertyName, @DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> subquery) {
         return notIn(propertyName, new DetachedCriteria<>(targetClass).build(subquery))
     }
 
@@ -876,19 +876,19 @@ class HibernateCriteriaBuilder extends GroovyObjectSupport implements BuildableC
     }
 
     @Override
-    Criteria and(Closure<?> callable) {
+    Criteria and(@DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> callable) {
         hibernateQuery.and(callable)
         return this
     }
 
     @Override
-    Criteria or(Closure<?> callable) {
+    Criteria or(@DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> callable) {
         hibernateQuery.or(callable)
         return this
     }
 
     @Override
-    Criteria not(Closure<?> callable) {
+    Criteria not(@DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> callable) {
         hibernateQuery.not(callable)
         return this
     }

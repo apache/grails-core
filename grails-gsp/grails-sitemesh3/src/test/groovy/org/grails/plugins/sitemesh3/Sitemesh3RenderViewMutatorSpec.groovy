@@ -23,7 +23,6 @@ import java.util.Locale
 import jakarta.servlet.ServletContext
 
 import org.sitemesh.DecoratorSelector
-import org.sitemesh.SiteMeshContext
 import org.sitemesh.content.ContentProcessor
 
 import org.springframework.web.servlet.View
@@ -37,9 +36,8 @@ class Sitemesh3RenderViewMutatorSpec extends Specification {
     View innerView = Mock(View)
 
     GrailsSiteMeshView siteMeshView() {
-        DecoratorSelector<SiteMeshContext> decoratorSelector = Mock()
         new GrailsSiteMeshView(innerView, Mock(ContentProcessor),
-                decoratorSelector, Mock(ServletContext), Mock(ViewResolver))
+                Mock(DecoratorSelector), Mock(ServletContext), Mock(ViewResolver))
     }
 
     void 'unwraps the SiteMesh view for partial renders without an explicit layout'() {

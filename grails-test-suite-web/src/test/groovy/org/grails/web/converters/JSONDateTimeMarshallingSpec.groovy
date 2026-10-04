@@ -55,11 +55,11 @@ class JSONDateTimeMarshallingSpec extends Specification implements GrailsWebUnit
             createdInstant: instant
         ] as JSON).toString()
 
-        then: "Date, Calendar, and Instant render with Z suffix; ISO_INSTANT drops the fraction on whole seconds"
-        json.contains('"createdDate":"2025-10-07T21:14:31Z"')
-        json.contains('"createdCalendar":"2025-10-07T21:14:31Z"')
+        then: "Date and Calendar render with Z suffix and millisecond precision, as Spring Boot does"
+        json.contains('"createdDate":"2025-10-07T21:14:31.000Z"')
+        json.contains('"createdCalendar":"2025-10-07T21:14:31.000Z"')
 
-        and: "Instant renders with Z suffix"
+        and: "Instant renders as ISO_INSTANT, which drops the fraction on whole seconds, as Spring Boot does"
         json.contains('"createdInstant":"2025-10-07T21:14:31Z"')
 
         and: "LocalDateTime renders without timezone (ISO_LOCAL_DATE_TIME)"
@@ -100,8 +100,8 @@ class JSONDateTimeMarshallingSpec extends Specification implements GrailsWebUnit
         when: "The Calendar is converted to JSON"
         def json = ([timestamp: calendar] as JSON).toString()
 
-        then: "Calendar renders as ISO_INSTANT — whole-second values drop the fraction"
-        json == '{"timestamp":"2025-10-07T21:14:31Z"}'
+        then: "Calendar renders with millisecond precision — whole-second values keep .000"
+        json == '{"timestamp":"2025-10-07T21:14:31.000Z"}'
     }
 
     void "test Calendar with non-zero milliseconds renders fraction"() {
@@ -114,7 +114,7 @@ class JSONDateTimeMarshallingSpec extends Specification implements GrailsWebUnit
         when: "The Calendar is converted to JSON"
         def json = ([timestamp: calendar] as JSON).toString()
 
-        then: "Calendar renders as ISO_INSTANT with 3-digit fraction"
+        then: "Calendar renders with 3-digit fraction"
         json == '{"timestamp":"2025-10-07T21:14:31.123Z"}'
     }
 

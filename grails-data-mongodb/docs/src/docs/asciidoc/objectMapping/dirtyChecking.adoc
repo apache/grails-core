@@ -36,8 +36,34 @@ This method is defined by the `org.grails.datastore.mapping.dirty.checking.Dirty
 In the case of collections and association types GORM for MongoDB will wrap each collection in a dirty checking aware
 collection type.
 
-One of the implications of this is if you override the collection with a non-dirty checking aware type it can disable
-dirty checking and prevent the property from being updated.
+Assigning a new collection over a tracked one keeps dirty checking active: the generated setter wraps the
+replacement in the same dirty checking aware type, so a pattern such as re-initialising an empty collection
+(`if (!book.authors) book.authors = []`) followed by in-place mutation is tracked and persisted. This holds
+for basic collections and maps, embedded collections, and one-to-many and many-to-many associations alike. The wrappers
+also track iterator-based mutation — Groovy's `removeAll(Closure)` / `retainAll(Closure)`, `removeIf`,
+`ListIterator` operations, `sort` / `replaceAll`, `addFirst` / `addLast` on a `List` property,
+`removeFirst` / `removeLast` on a `List` or `SortedSet` property, and the `subList`, `reversed`,
+`headSet`, `tailSet` and `subSet` views — and for `Map` properties the default
+methods (`putIfAbsent`, `merge`, `compute*`, `replace*`) and removals through the `entrySet()` / `keySet()` /
+`values()` views.
+
+Assigning a collection that belongs to *another* entity re-binds it to the entity being assigned to, so
+`bookA.tags = bookB.tags` followed by `bookA.tags.add('classic')` marks `bookA` dirty rather than `bookB`.
+The two properties go on sharing the same underlying collection afterwards, exactly as a plain Groovy
+assignment would. This applies to the properties GORM wraps in a dirty checking aware collection — basic
+collections and maps, and embedded collections. When *borrowed from another entity* a one-to-many or
+many-to-many behaves differently: it is held in a `PersistentCollection`, which is stored as-is and left to
+the store, as with the store-specific types below. Re-initialising such a property on its own entity is
+still tracked, as described above.
+
+A few paths remain outside automatic dirty checking and still require an explicit `markDirty(propertyName)`:
+
+* a hand-written setter (one you define yourself rather than the generated one) stores the value it is given
+  without re-wrapping, so a collection assigned through it loses tracking until the next load;
+* mutating an entry's value directly during map iteration (`Map.Entry.setValue`);
+* replacing a collection wrapped by a store-specific type (for example the Neo4j collection wrappers) is
+  deliberately left to that store's persister, which re-wraps the raw replacement on save — that store's
+  behaviour is unchanged.
 
 If any of your updates are not updating the properties that you anticipate you can force an update using the link:../api/org/grails/datastore/mapping/dirty/checking/DirtyCheckable.html#markDirty(java.lang.String)[markDirty()] method:
 

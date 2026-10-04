@@ -381,7 +381,7 @@ class DefaultInputRenderingPersistentSpec extends AbstractFormFieldsTagLibSpec i
 		DebugConstraint | Integer | [min: 0, max: 10] | /min="0"/
 		DebugConstraint | Integer | [min: 0, max: 10] | /max="10"/
 		Object | String  | [maxSize: 32]     | /maxlength="32"/
-		Object | String  | [matches: /\d+/]  | /pattern="\\d\+"/
+		Object | String  | [matches: /\d+/]  | /pattern="&#92;d\+"/
 		Object | String  | [editable: false] | /readonly=""/
 	}
 

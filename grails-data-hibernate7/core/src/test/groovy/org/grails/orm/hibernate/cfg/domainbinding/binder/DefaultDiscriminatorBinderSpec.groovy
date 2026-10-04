@@ -60,6 +60,6 @@ class DefaultDiscriminatorBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         rootClass.getDiscriminatorValue() == "com.example.MyEntity"
-        1 * simpleValueColumnBinder.bindSimpleValue(discriminator, _, _, false)
+        1 * simpleValueColumnBinder.bindSimpleValue(discriminator, "string", "class", false)
     }
 }

@@ -23,6 +23,8 @@ import com.mongodb.client.MongoClient
 import org.springframework.beans.factory.support.BeanDefinitionRegistry
 import org.springframework.context.ApplicationContext
 import org.springframework.context.support.GenericApplicationContext
+import org.springframework.core.env.ConfigurableEnvironment
+import org.springframework.core.env.MapPropertySource
 import org.springframework.util.ClassUtils
 
 import grails.mongodb.MongoEntity
@@ -32,6 +34,7 @@ import org.grails.datastore.gorm.support.AbstractDatastorePersistenceContextInte
 import org.grails.datastore.gorm.support.DatastorePersistenceContextInterceptor
 import org.grails.datastore.mapping.config.DatastoreServiceMethodInvokingFactoryBean
 import org.grails.datastore.mapping.mongo.MongoDatastore
+import org.grails.datastore.mapping.mongo.config.MongoSettings
 import org.grails.datastore.mapping.mongo.connections.MongoConnectionSourceFactory
 
 /**
@@ -79,8 +82,30 @@ class MongoDbDataStoreSpringInitializer extends AbstractDatastoreInitializer {
         return applicationContext
     }
 
+    /**
+     * Applies {@link #databaseName} as a {@code grails.mongodb.databaseName} fallback on
+     * {@link #configuration} when it was customized via {@link #setDatabaseName(String)} and the
+     * configuration does not already specify a database name explicitly. A null or blank name is
+     * treated as not customized so that it can never displace the configured default.
+     */
+    protected void applyDatabaseNameFallback() {
+        if (!databaseName?.trim() || databaseName == DEFAULT_DATABASE_NAME ||
+                configuration.containsProperty(MongoSettings.SETTING_DATABASE_NAME)) {
+            return
+        }
+        if (configuration instanceof ConfigurableEnvironment) {
+            ((ConfigurableEnvironment) configuration).propertySources.addFirst(
+                    new MapPropertySource('mongoDbDataStoreSpringInitializer.databaseName', [(MongoSettings.SETTING_DATABASE_NAME): databaseName])
+            )
+        }
+        else if (configuration instanceof Map) {
+            ((Map) configuration).put(MongoSettings.SETTING_DATABASE_NAME, databaseName)
+        }
+    }
+
     @Override
     Closure getBeanDefinitions(BeanDefinitionRegistry beanDefinitionRegistry) {
+        applyDatabaseNameFallback()
         return {
             def callable = getCommonConfiguration(beanDefinitionRegistry, 'mongo')
             callable.delegate = delegate
@@ -101,7 +126,7 @@ class MongoDbDataStoreSpringInitializer extends AbstractDatastoreInitializer {
                     bean.autowire = true
                 }
                 mongoDatastore(MongoDatastore, configurationReference, ref('mongoConnectionSourceFactory'), ref('grailsDatastoreEventPublisher'), mappedClasses(DATASTORE_TYPE))
-                mongo(mongoDatastore: 'getMongoClient')
+                "$mongoBeanName"(mongoDatastore: 'getMongoClient')
             }
             else {
                 mongoDatastore(MongoDatastore, mongo, configurationReference, ref('grailsDatastoreEventPublisher'), mappedClasses(DATASTORE_TYPE))

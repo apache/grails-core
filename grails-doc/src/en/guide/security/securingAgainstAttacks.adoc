@@ -74,20 +74,28 @@ def vulnerable() {
 <1> Groovy coerces the `GString` to a plain `String` right here, because `query` is declared as `String`.
 <2> By the time `executeQuery` receives it, it is an ordinary `String` with no trace of ever having been a `GString` — the interpolated value is now raw, unescaped text, and this call is genuinely vulnerable to HQL injection.
 
-This is dangerous precisely because it can't be caught at runtime: once a `GString` is flattened to a `String`, there is nothing left to distinguish it from HQL text that was always safe. Grails detects this pattern at *compile time* instead, and fails the build with an error identifying the call site. To fix it, keep the value as a `GString` (recommended) or pass named/positional parameters explicitly, as shown above.
+This is dangerous precisely because it can't be caught at runtime: once a `GString` is flattened to a `String`, there is nothing left to distinguish it from HQL text that was always safe. Grails detects this pattern at *compile time* instead, and fails the build with an error identifying the call site. To fix it, keep the value as a `GString` (recommended) or pass named/positional parameters explicitly, as shown above. Both fixes apply when the interpolated expressions are *values*; query text assembled from HQL fragments is a different case, covered in <<queryTextFragments,Building query text from fragments>> below.
 
-If a flagged call site has been reviewed and is genuinely safe, suppress the check on the enclosing method:
+If a flagged call site has been reviewed and is genuinely safe, suppress the check on the declaration of the variable that holds the query text, or on the enclosing method:
 
 [source,groovy]
 ----
-@SuppressWarnings("GormUnsafeQueryString")
 def reviewedAndSafe() {
+    @SuppressWarnings("GormUnsafeQueryString")
+    String query = "from Book as b where b.title = ${params.title}"  // <1>
+    def books = Book.executeQuery(query)
+}
+
+@SuppressWarnings("GormUnsafeQueryString")                            // <2>
+def reviewedAndSafeToo() {
     String query = "from Book as b where b.title = ${params.title}"
     def books = Book.executeQuery(query)
 }
 ----
+<1> The declaration-level form marks this one variable (or, on a field declaration, that field) as reviewed for the rest of the method, whatever it is later assigned, and leaves every other variable checked. Prefer it.
+<2> The method-level form silences the check for every query in the method, including those in closures and anonymous inner classes inside it.
 
-This check runs automatically against every Grails application that has `grails-datamapping-core` on its compile classpath — no configuration is required, and it covers every GORM implementation whose query methods follow this convention (Hibernate and Neo4j today).
+This check runs automatically against every Grails application that has `grails-datamapping-core` on its compile classpath — no configuration is required, and it covers every GORM implementation whose query methods follow this convention (Hibernate and Neo4j today). It checks query methods called on a domain class, and those called on `this`, or with no receiver, anywhere inside a domain class, including the classes nested in it, since Groovy passes those calls on to the domain class.
 
 Because the check is intraprocedural, it cannot follow every possible way query text can be assembled. If a build hits a false positive with no reasonable per-call-site fix, disable the check for the whole compilation unit by setting the `protectSqlInjectionAttacks` system property to `false` (it defaults to `true`), for example via `gradle.properties`:
 
@@ -96,7 +104,62 @@ Because the check is intraprocedural, it cannot follow every possible way query 
 systemProp.protectSqlInjectionAttacks=false
 ----
 
-This is a global kill switch of last resort, not a substitute for `@SuppressWarnings("GormUnsafeQueryString")` on the specific method that needs it.
+This is a global kill switch of last resort, not a substitute for `@SuppressWarnings("GormUnsafeQueryString")` on the specific declaration or method that needs it.
+
+[[queryTextFragments]]
+===== Building query text from fragments
+
+A `GString` is the right tool for *values*, not for query text. GORM turns every interpolation into a bound parameter, so interpolating an HQL fragment into a `GString` that is passed directly to a query method produces a broken query rather than an unsafe one:
+
+[source,groovy]
+----
+String restriction = " and b.title = :title"
+Book.executeQuery("from Book b where 1 = 1 ${restriction}", [title: params.title])
+// runs as:  from Book b where 1 = 1 :p0   -- the fragment is bound as a value
+----
+
+The check tells query text and values apart. An interpolation that is *constant text* cannot carry user input, so it is not flagged even when the `GString` is coerced to a `String`. Constant text is a string literal, a `static final` field initialized from constant text, a ternary, Elvis or `switch` expression choosing between constant text, a `+` concatenation or `GString` made only of constant text, and a local variable that only ever held constant text on every path leading to the query, whichever `if`/`else`, `switch`, `try`/`catch` or loop those paths run through. A closure, or a method of an anonymous inner class, can run at any point after it is defined, and an assignment inside another expression — a ternary or Elvis branch, an `&&` or `||` operand, a method argument or a loop condition — or a multiple assignment may or may not run. So a local declared outside a closure or an anonymous inner class that its code reads or assigns, and a local assigned in one of those ways, is judged by every assignment to it in the method: it counts as constant text only if every assignment is constant text, and as a flattened query if any assignment flattens a `GString` into it. This is what lets restrictions be chosen at runtime while the values stay bound:
+
+[source,groovy]
+----
+def search() {
+    Map queryParams = [:]
+    String restriction = ""
+    if (params.title) {
+        restriction = " and b.title = :title"                // <1>
+        queryParams.title = params.title                     // <2>
+    }
+    String query = "from Book b where 1 = 1 ${restriction}"  // <3>
+    Book.executeQuery(query, queryParams)
+}
+----
+<1> Constant text chosen at runtime. Assigning `restriction` from a request parameter, a method call, or any other non-constant expression on *any* path would make the interpolation a build error again.
+<2> The value is bound through the parameter map, never interpolated.
+<3> Allowed: every interpolation is constant text.
+
+Appending with `+=` is tracked the same way, so the more common idiom compiles without errors or warnings too:
+
+[source,groovy]
+----
+String query = "from Book b where 1 = 1"
+if (params.title) {
+    query += " and b.title = :title"
+    queryParams.title = params.title
+}
+Book.executeQuery(query, queryParams)
+----
+
+The check cannot follow query text assembled in other ways — fragments collected in a `List` and joined, built with a `StringBuilder`, or returned from a helper method — so it treats that text as data. Interpolated into a `GString` that is coerced to a `String`, it is the build-breaking error; concatenated with `+`, it is the lower-confidence warning described below. Assigned on its own and passed straight to a query method, it is not reported at all, so review such code by hand. After review, suppress a reported call site on the declaration of the variable that holds the trusted text rather than on the whole method. The annotation may go on the assembled query or on the fragment it is built from; an annotated variable is treated as constant text wherever it is interpolated or concatenated:
+
+[source,groovy]
+----
+def search() {
+    @SuppressWarnings("GormUnsafeQueryString")
+    String restriction = restrictionsFor(params)                 // reviewed: trusted query text
+    String query = "from Book b where 1 = 1 ${restriction}"      // no longer flagged
+    Book.executeQuery(query, queryParams)
+}
+----
 
 ===== Compile-time warnings for lower-confidence patterns
 
@@ -120,9 +183,9 @@ class Book {
 ----
 <1> A field initialized from an interpolated `GString` — unlike a local variable, a field can be reassigned from a constructor, another method, or a subclass that this check never sees, so this is flagged rather than failed.
 <2> Reading that field later through `this.cachedQuery` in a query call.
-<3> Query text built with `+` from a non-constant value and no `GString` involved at all. This is a real injection shape, but string concatenation is common enough for benign, non-query purposes that a hard build failure would be too blunt an instrument.
+<3> Query text built with `+` from a non-constant value and no `GString` involved at all. This is a real injection shape, but string concatenation is common enough for benign, non-query purposes that a hard build failure would be too blunt an instrument. Concatenating only constant text, as defined above, is not flagged at all.
 
-Both warnings identify the call site and suppress the same way as the error above, with `@SuppressWarnings("GormUnsafeQueryString")` on the enclosing method. Concatenating a `GString` with additional text (e.g. `"...${title}..." + " order by title"`) is *not* one of these warnings — Groovy's `GString.plus` returns a plain `String`, so this flattens the interpolation immediately and is reported as the build-breaking error instead.
+Both warnings identify the call site and suppress the same way as the error above, with `@SuppressWarnings("GormUnsafeQueryString")` on the declaration or on the enclosing method. Concatenating a `GString` with additional text (e.g. `"...${title}..." + " order by title"`), or appending to a `GString` or to an already-flattened `String` with `+` or `+=`, is *not* one of these warnings — Groovy's `GString.plus` returns a plain `String`, so this flattens the interpolation immediately and is reported as the build-breaking error instead.
 
 
 ==== Phishing

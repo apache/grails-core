@@ -86,15 +86,17 @@ class RootBinder {
         }
 
         // bind the sub classes
-        children.stream().flatMap(sub -> getSubclassStream(sub, root)).forEach(subClass -> addSubclass(subClass, root))
+        children.stream().flatMap(sub -> getSubclassStream(sub, root)).forEach(subClass -> addSubclass(subClass))
 
         multiTenantFilterBinder.bind(entity, root)
 
         mappings.addEntityBinding(root)
     }
 
-    private void addSubclass(Subclass subClass, RootClass root) {
-        root.addSubclass(subClass)
+    private void addSubclass(Subclass subClass) {
+        // Hibernate resolves a class's subclasses through its direct superclass, so a nested subclass
+        // must be added to its own parent rather than to the root of the hierarchy
+        subClass.superclass.addSubclass(subClass)
         mappings.addEntityBinding(subClass)
     }
 

@@ -24,7 +24,8 @@ import java.lang.annotation.RetentionPolicy
 import java.lang.annotation.Target
 
 /**
- * U
+ * Marker meta-annotation that points a GORM annotation (e.g. {@code @Transactional}, {@code @Rollback},
+ * {@code @Tenant}) at the {@link org.codehaus.groovy.transform.ASTTransformation} class that implements it.
  *
  * @author Graeme Rocher
  * @since 6.1

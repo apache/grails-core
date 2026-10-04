@@ -70,7 +70,7 @@ class ConfiguredDiscriminatorBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         rootClass.getDiscriminatorValue() == "CUSTOM_VALUE"
-        discriminator.getColumns().iterator().next().getName() == GrailsDomainBinder.JPA_DEFAULT_DISCRIMINATOR_TYPE
+        discriminator.getColumns().iterator().next().getName() == "class"
     }
 
     def "test bindConfiguredDiscriminator with custom string type"() {
@@ -143,6 +143,33 @@ class ConfiguredDiscriminatorBinderSpec extends HibernateGormDatastoreSpec {
         then:
         rootClass.getDiscriminatorValue() == "TEST"
         discriminator.getColumns().iterator().next().getName() == "MY_DISCRIMINATOR"
+    }
+
+    def "test bindConfiguredDiscriminator with column only uses the class name as the value"() {
+        given:
+        def rootClass = createRootClass()
+        def discriminator = createDiscriminator(rootClass)
+        def config = new DiscriminatorConfig(column: new ColumnConfig(name: "class"))
+
+        when:
+        binder.bindConfiguredDiscriminator(rootClass, discriminator, config)
+
+        then:
+        rootClass.getDiscriminatorValue() == ConfiguredDiscriminatorBinderSpecEntity.name
+        discriminator.getColumns().iterator().next().getName() == "class"
+    }
+
+    def "test bindConfiguredDiscriminator with formula only uses the class name as the value"() {
+        given:
+        def rootClass = createRootClass()
+        def discriminator = createDiscriminator(rootClass)
+        def config = new DiscriminatorConfig(formula: "case when type=1 then 'A' else 'B' end")
+
+        when:
+        binder.bindConfiguredDiscriminator(rootClass, discriminator, config)
+
+        then:
+        rootClass.getDiscriminatorValue() == ConfiguredDiscriminatorBinderSpecEntity.name
     }
 
     def "test resolveTypeName with null returns string"() {
