@@ -62,6 +62,7 @@ class BuildIndexesRecreateSummarySpec extends AutoStartedMongoSpec {
 
         log = new CapturedLog('org.grails.datastore.mapping', Level.INFO)
         datastore = new MongoDatastore(['grails.mongodb.url': url] as Map, RecreatedThing)
+        datastore.start()
     }
 
     void cleanupSpec() {

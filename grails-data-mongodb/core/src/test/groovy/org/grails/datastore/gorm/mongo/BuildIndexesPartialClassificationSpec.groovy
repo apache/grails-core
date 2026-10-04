@@ -82,6 +82,7 @@ class BuildIndexesPartialClassificationSpec extends AutoStartedMongoSpec {
         datastore = new MongoDatastore(partlyUnlistable,
                 DatastoreUtils.createPropertyResolver(['grails.mongodb.databaseName': DATABASE]),
                 ListedThing, UnlistedThing, RelistedThing)
+        datastore.start()
         summary = log.events*.formattedMessage.find { it.contains("database [$DATABASE]") }
         log.close()
     }

@@ -19,6 +19,8 @@
 
 package org.grails.datastore.mapping.mongo.connections
 
+import java.util.function.Supplier
+
 import groovy.transform.CompileStatic
 
 import com.mongodb.MongoClientSettings
@@ -97,10 +99,15 @@ class MongoConnectionSourceFactory extends AbstractConnectionSourceFactory<Mongo
     }
 
     /**
-     * Creates the connection and its client. A subclass that builds the client itself should return a
-     * {@link MongoConnectionSource}, whose client a datastore can replace: it closes the clients when it is stopped
-     * for a CRaC checkpoint, and puts the ones it builds for the restore where the closed ones were, so that
-     * whatever reads a client from the connection source gets the one in use.
+     * Creates the connection and its client, a {@link RestartableMongoClient} that connects the first time it is
+     * used or its datastore is started, rather than now. The settings are built and checked here, so a connection
+     * string that cannot be parsed is still reported as the datastore is created.
+     *
+     * <p>A subclass that builds the client itself should wrap it the same way, so that it opens no socket before
+     * the datastore starts and can be stopped for a CRaC checkpoint and started again after the restore. A client
+     * that is not one is closed for the checkpoint instead, and a replacement is built for the restore: return a
+     * {@link MongoConnectionSource} for it, so that whatever reads the client from the connection source gets the
+     * replacement.
      */
     @Override
     ConnectionSource<MongoClient, MongoConnectionSourceSettings> create(String name, MongoConnectionSourceSettings settings) {
@@ -115,7 +122,8 @@ class MongoConnectionSourceFactory extends AbstractConnectionSourceFactory<Mongo
         for (MongoClientSettingsBuilderCustomizer customizer : clientSettingsCustomizers) {
             customizer.customize(builder)
         }
-        MongoClient client = MongoClients.create(builder.build())
+        MongoClientSettings clientSettings = builder.build()
+        MongoClient client = new RestartableMongoClient(name, { MongoClients.create(clientSettings) } as Supplier<MongoClient>)
         return new MongoConnectionSource(name, client, settings)
     }
 

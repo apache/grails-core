@@ -75,6 +75,7 @@ class BuildIndexesUnreadableIndexListSpec extends AutoStartedMongoSpec {
         datastore = new MongoDatastore(cannotList,
                 DatastoreUtils.createPropertyResolver(['grails.mongodb.databaseName': DATABASE]),
                 UnlistableIndexThing, UnlistableConflictThing)
+        datastore.start()
     }
 
     void cleanupSpec() {

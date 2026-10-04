@@ -69,6 +69,7 @@ class BuildIndexesNameConflictSpec extends AutoStartedMongoSpec {
         def datastore = new MongoDatastore(
                 ['grails.mongodb.url': dbContainer.getReplicaSetUrl('nameConflictRecreateDb')] as Map,
                 NameConflictRecreateThing)
+        datastore.start()
 
         then: "the name now belongs to the declared index"
         def indexes = indexesOf('nameConflictRecreateDb', 'nameConflictRecreateThing')
@@ -88,6 +89,7 @@ class BuildIndexesNameConflictSpec extends AutoStartedMongoSpec {
         def datastore = new MongoDatastore(
                 ['grails.mongodb.url': dbContainer.getReplicaSetUrl('nameConflictReportDb')] as Map,
                 NameConflictReportThing)
+        datastore.start()
 
         then: "the index that holds the name is left alone, and the build says why it could not be created"
         indexesOf('nameConflictReportDb', 'nameConflictReportThing').find { it.name == 'byName' }.key == [code: 1]

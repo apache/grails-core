@@ -29,13 +29,13 @@ import org.apache.grails.testing.mongo.EmbeddedReplicaSetSpec
 import org.grails.datastore.mapping.mongo.MongoDatastore
 
 /**
- * A datastore stopped for a CRaC checkpoint closes its client and builds a replacement when it is started again.
- * The Spring Data beans wired on top of it have to follow it to the replacement rather than keep using the client
- * the checkpoint closed.
+ * A datastore stopped for a CRaC checkpoint closes the driver client behind its {@code MongoClient} and builds a new
+ * one when it is started again. The Spring Data beans wired on top of it have to reach MongoDB through the new one
+ * rather than through the driver client the checkpoint closed.
  */
 class SpringDataMongoGormRestoreSpec extends EmbeddedReplicaSetSpec {
 
-    void "test the auto-configured MongoTemplate writes through the replacement client after a restore"() {
+    void "test the auto-configured MongoTemplate writes through the restarted client after a restore"() {
         given:
         MongoDatastore datastore = new MongoDatastore(['grails.mongodb.url': mongoUrl])
 

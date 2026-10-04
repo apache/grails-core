@@ -227,7 +227,7 @@ A build requested after the datastore has been closed is not started, and one re
 ==== Building Indexes in the Background
 
 
-MongoDB answers a `createIndex` command only once the index has been built, so by default the thread that creates the datastore — in an application, the startup thread — waits for every declared index before the application finishes starting. On an empty collection that is instant; on a large existing collection an index build can take minutes, and a deployment waits for all of them in turn.
+MongoDB answers a `createIndex` command only once the index has been built, so by default the thread that starts the datastore — in an application, the thread starting the application context — waits for every declared index before the application finishes starting. On an empty collection that is instant; on a large existing collection an index build can take minutes, and a deployment waits for all of them in turn.
 
 Set `buildIndexesAsync` to have index builds run on a background thread instead, both the one GORM runs at startup and any the application starts with `buildIndex()`:
 
@@ -245,7 +245,7 @@ Two consequences are worth planning for:
 * A query issued before its index has been built is served without it — correctly, but with the performance of an unindexed query. The same applies to a `unique` index: it constrains nothing until the build finishes.
 * Because startup no longer waits, a failure to build an index can no longer fail startup. It is logged at error level, and the application runs without that index. With the default synchronous build the exception propagates and the application does not start.
 
-The setting also applies with `buildIndexes` set to `false`, to the builds the application starts with `buildIndex()`. A domain class registered after startup is indexed on the thread registering it.
+The setting also applies with `buildIndexes` set to `false`, to the builds the application starts with `buildIndex()`. A domain class registered after startup is indexed on the thread registering it, or, if the datastore is stopped for a checkpoint at the time, when it is started again.
 
 NOTE: If the application shuts down while a background build is still running, GORM stops waiting for it, but the server carries on building the index it was asked for. A datastore stopped for a checkpoint and restored (with CRaC) runs a build it cut short again once it is restarted, on every connection, and logs that it is resuming it.
 

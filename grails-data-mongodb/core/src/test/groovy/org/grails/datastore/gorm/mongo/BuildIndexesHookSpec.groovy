@@ -74,6 +74,7 @@ class BuildIndexesHookSpec extends AutoStartedMongoSpec {
         when: "an override throws a checked exception it does not declare, as Groovy allows"
         new InterruptedHookDatastore(client,
                 DatastoreUtils.createPropertyResolver(['grails.mongodb.databaseName': 'hookFailureDb']), HookFailureThing)
+                .start()
 
         then: "the caller gets that exception, not a wrapper around it"
         def e = thrown(InterruptedException)

@@ -39,9 +39,10 @@ import org.grails.datastore.mapping.mongo.config.MongoSettings
 
 /**
  * MongoDB answers a {@code createIndexes} command only once the index has been built, so by default
- * whoever creates the datastore - in an application, the startup thread - waits for every declared index.
- * This specification pins both halves of that: the default build runs on the calling thread, and with
- * {@code grails.mongodb.buildIndexesAsync = true} it runs on a background thread instead.
+ * whoever starts the datastore - in an application, the thread refreshing the context, as Spring starts
+ * its lifecycle beans - waits for every declared index. This specification pins both halves of that: the
+ * default build runs on the calling thread, and with {@code grails.mongodb.buildIndexesAsync = true} it runs
+ * on a background thread instead.
  *
  * <p>Which thread issued the command is observed through a driver {@link CommandListener}, which the
  * synchronous driver invokes on the thread making the call.
@@ -69,7 +70,7 @@ class BuildIndexesAsyncSpec extends AutoStartedMongoSpec {
     CreateIndexThreadRecorder asyncRecorder = new CreateIndexThreadRecorder()
 
     @Shared
-    String creatingThread
+    String startingThread
 
     @Override
     boolean shouldInitializeDatastore() {
@@ -84,7 +85,7 @@ class BuildIndexesAsyncSpec extends AutoStartedMongoSpec {
     }
 
     void setupSpec() {
-        creatingThread = Thread.currentThread().name
+        startingThread = Thread.currentThread().name
 
         blockingClient = clientFor('blockingIndexDb', blockingRecorder)
         blockingDatastore = new MongoDatastore(blockingClient,
@@ -98,6 +99,9 @@ class BuildIndexesAsyncSpec extends AutoStartedMongoSpec {
                         (MongoSettings.SETTING_BUILD_INDEXES_ASYNC): true
                 ]),
                 AsyncIndexThing)
+
+        blockingDatastore.start()
+        asyncDatastore.start()
     }
 
     void cleanupSpec() {
@@ -105,15 +109,15 @@ class BuildIndexesAsyncSpec extends AutoStartedMongoSpec {
         asyncClient?.close()
     }
 
-    void "test the index build blocks the thread creating the datastore by default"() {
+    void "test the index build blocks the thread starting the datastore by default"() {
         expect: "the setting is off"
         !blockingDatastore.isBuildIndexesAsync()
 
-        and: "the index already exists by the time the constructor has returned"
+        and: "the index already exists by the time start() has returned"
         [name: 1] in BlockingIndexThing.collection.listIndexes()*.key
 
-        and: "it was built by the thread that created the datastore, which therefore waited for it"
-        blockingRecorder.threads == [creatingThread]
+        and: "it was built by the thread that started the datastore, which therefore waited for it"
+        blockingRecorder.threads == [startingThread]
     }
 
     void "test the index build runs on a background thread when enabled"() {
@@ -132,8 +136,8 @@ class BuildIndexesAsyncSpec extends AutoStartedMongoSpec {
         asyncRecorder.threads.size() == 1
         asyncRecorder.threads.first().startsWith('gorm-mongo-index-build-default-')
 
-        and: "not by the thread that created the datastore, which did not wait for it"
-        asyncRecorder.threads.first() != creatingThread
+        and: "not by the thread that started the datastore, which did not wait for it"
+        asyncRecorder.threads.first() != startingThread
 
         when: "the startup worker has no more work"
         Thread startupWorker = asyncRecorder.workers.first()
@@ -173,6 +177,7 @@ class BuildIndexesAsyncSpec extends AutoStartedMongoSpec {
         def datastore = new MongoDatastore(['grails.mongodb.url'                       : dbContainer.getReplicaSetUrl('announcedIndexDb'),
                                             (MongoSettings.SETTING_BUILD_INDEXES_ASYNC): true] as Map,
                 AnnouncedIndexThing)
+        datastore.start()
         conditions.eventually {
             assert log.events.any(isSummary)
         }

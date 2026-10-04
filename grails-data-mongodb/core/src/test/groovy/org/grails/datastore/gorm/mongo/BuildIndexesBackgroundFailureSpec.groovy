@@ -66,7 +66,7 @@ class BuildIndexesBackgroundFailureSpec extends AutoStartedMongoSpec {
         new MongoDatastore(client, DatastoreUtils.createPropertyResolver([
                 'grails.mongodb.databaseName'              : database,
                 (MongoSettings.SETTING_BUILD_INDEXES_ASYNC): true
-        ]), classes)
+        ]), classes).tap { start() }
     }
 
     void "test a background build that fails reports the failure instead of losing it"() {

@@ -101,9 +101,31 @@ abstract class BookService {
 
 Please note that with autowire by-type as the default, when multiple beans for same type are found the application with throw Exception. Use the Spring `@Qualifier annotation for https://docs.spring.io/spring-framework/docs/5.3.10/reference/html/core.html#beans-autowired-annotation-qualifiers[Fine-tuning Annotation Based Autowiring with Qualifiers].
 
+==== Indexes Are Built When the Datastore Starts, Not When It Is Created
+
+Creating a `MongoDatastore` no longer connects to MongoDB or builds the indexes the domain classes declare, whichever constructor creates it, including one handed a `MongoClient` the application created itself. The datastore connects and builds them when it is started. In an application, Spring starts it with the other lifecycle beans, after every bean has been created and before `BootStrap` runs or the web server accepts a request, so the indexes are in place where they were before.
+
+Code that creates a `MongoDatastore` itself and relies on the indexes existing once the constructor returns has to start it first:
+
+[source,groovy]
+----
+MongoDatastore datastore = new MongoDatastore(configuration, Person)
+datastore.start()      // connects, and builds the indexes Person declares
+----
+
+A datastore that nothing has started starts itself the first time a session is opened on it, which any GORM query, save or `withTransaction` does, so code that goes through GORM finds the indexes as before. What needs the explicit `start()` is code that inspects the indexes, or reaches MongoDB through the `MongoClient` directly, straight after creating the datastore. A datastore stopped with `stop()` is started again only by `start()`; using it in between is refused.
+
+Code that queries MongoDB while the application's beans are still being created, rather than in `BootStrap` or later, starts the datastore early. It still works, but the process can then no longer be checkpointed with CRaC as its context refreshes; see <<advancedConfig,Checkpoint and Restore>>.
+
+==== GORM Declares the MongoClient in a Spring Boot Application
+
+In a Spring Boot application, `grails-data-mongodb-spring-boot` now declares the `MongoClient` bean itself, ahead of Spring Boot's MongoDB auto-configuration, which then declares none. GORM builds it the way Spring Boot builds its own, from the `spring.mongodb.*` properties, Spring Boot's `MongoClientSettings` and every Spring Boot `MongoClientSettingsBuilderCustomizer` bean, so it connects to the same server with the same options. Spring Data, health checks, metrics and anything else that injects a `MongoClient` are given GORM's. GORM owns that client: it connects it when the datastore starts, closes it when the application shuts down, and stops and starts it around a CRaC checkpoint. Before, GORM's auto-configuration ran after Spring Boot's and was handed Spring Boot's client, which GORM then left alone, so it was not stopped for a checkpoint.
+
+An application that declares a `MongoClient` bean of its own keeps it, and GORM uses it as before.
+
 ==== Configuration Is Now Applied to an Externally-Supplied Client
 
-When GORM is handed a `MongoClient` that it did not create — which is what happens whenever a `MongoClient` bean is already present, as with Spring Boot's MongoDB auto-configuration — it built its settings from the defaults and applied only the database name. Everything else configured under `grails.gorm` and `grails.mongodb` was silently ignored on that path. Those settings are now applied, exactly as they always were when GORM creates the client itself.
+When GORM is handed a `MongoClient` that it did not create — which is what happens whenever the application declares a `MongoClient` bean of its own — it built its settings from the defaults and applied only the database name. Everything else configured under `grails.gorm` and `grails.mongodb` was silently ignored on that path. Those settings are now applied, exactly as they always were when GORM creates the client itself.
 
 Nothing in your configuration changes. What changes is that configuration you already have starts taking effect:
 

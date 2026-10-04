@@ -87,6 +87,7 @@ class BuildIndexesUnfinishedSummarySpec extends AutoStartedMongoSpec {
                 'grails.mongodb.databaseName'              : 'unfinishedAsyncDb',
                 (MongoSettings.SETTING_BUILD_INDEXES_ASYNC): true
         ]), FirstUnfinishedThing, SecondUnfinishedThing)
+        datastore.start()
 
         then: "the failure is reported, and so is what had been applied before it"
         conditions.eventually {
@@ -107,7 +108,7 @@ class BuildIndexesUnfinishedSummarySpec extends AutoStartedMongoSpec {
         when:
         new MongoDatastore(connectionLostOnSecondIndex(), DatastoreUtils.createPropertyResolver([
                 'grails.mongodb.databaseName': 'unfinishedSyncDb'
-        ]), FirstUnfinishedThing, SecondUnfinishedThing)
+        ]), FirstUnfinishedThing, SecondUnfinishedThing).start()
 
         then: "the exception still fails startup, as it always has"
         thrown(MongoSocketReadException)

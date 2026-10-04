@@ -29,7 +29,7 @@ implementation "org.apache.grails:grails-data-mongodb-spring-data:{version}"
 
 When the module and Spring Data MongoDB are on the classpath of a Spring Boot application that already has a GORM `MongoDatastore`, it auto-configures, over GORM's existing connection:
 
-* a `MongoDatabaseFactory` bound to GORM's `MongoClient` and default database (GORM keeps ownership of the client; the factory will not close it, and uses the replacement GORM builds after a <<advancedConfig,CRaC restore>>),
+* a `MongoDatabaseFactory` bound to GORM's `MongoClient` and default database (GORM keeps ownership of the client; the factory will not close it, and it goes on working across a <<advancedConfig,CRaC checkpoint and restore>>),
 * a `MongoTemplate` (named `mongoTemplate`) and its `MappingMongoConverter`, sharing the driver-level codec registry,
 * a primary `transactionManager` that lets GORM and Spring Data participate in a single MongoDB transaction.
 

@@ -91,6 +91,7 @@ class BuildIndexesStaleSnapshotSpec extends AutoStartedMongoSpec {
         log = new CapturedLog('org.grails.datastore.mapping', Level.INFO)
         datastore = new MongoDatastore(staleFirstListing,
                 DatastoreUtils.createPropertyResolver(['grails.mongodb.databaseName': DATABASE]), StaleSnapshotThing)
+        datastore.start()
     }
 
     void cleanupSpec() {
