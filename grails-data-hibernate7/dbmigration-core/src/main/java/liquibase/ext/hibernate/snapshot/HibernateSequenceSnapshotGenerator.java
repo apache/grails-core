@@ -2,7 +2,6 @@ package liquibase.ext.hibernate.snapshot;
 
 import java.math.BigInteger;
 import java.util.HashSet;
-import java.util.Locale;
 import java.util.Set;
 
 import liquibase.Scope;
@@ -48,18 +47,16 @@ public class HibernateSequenceSnapshotGenerator extends HibernateSnapshotGenerat
 
         if (foundObject instanceof Schema schema) {
             HibernateDatabase database = (HibernateDatabase) snapshot.getDatabase();
-            Set<String> addedSequences = new HashSet<>();
+            Set<IdentifierGeneratorSupport.SequenceKey> addedSequences = new HashSet<>();
 
             for (org.hibernate.boot.model.relational.Namespace namespace :
                     database.getMetadata().getDatabase().getNamespaces()) {
                 for (org.hibernate.boot.model.relational.Sequence sequence : namespace.getSequences()) {
-                    String name = sequence.getName().getSequenceName().getText();
-                    schema.addDatabaseObject(new Sequence()
-                            .setName(name)
-                            .setSchema(schema)
-                            .setStartValue(BigInteger.valueOf(sequence.getInitialValue()))
-                            .setIncrementBy(BigInteger.valueOf(sequence.getIncrementSize())));
-                    addedSequences.add(name.toLowerCase(Locale.ROOT));
+                    if (!addedSequences.add(IdentifierGeneratorSupport.sequenceKey(sequence.getName()))) {
+                        continue;
+                    }
+                    addSequence(schema, sequence.getName().getSequenceName().getText(),
+                            sequence.getInitialValue(), sequence.getIncrementSize());
                 }
             }
 
@@ -67,7 +64,8 @@ public class HibernateSequenceSnapshotGenerator extends HibernateSnapshotGenerat
         }
     }
 
-    private void addGeneratorSequences(HibernateDatabase database, Schema schema, Set<String> addedSequences) {
+    private void addGeneratorSequences(HibernateDatabase database, Schema schema,
+            Set<IdentifierGeneratorSupport.SequenceKey> addedSequences) {
         MetadataImplementor metadata = (MetadataImplementor) database.getMetadata();
         var dialect = database.getDialect();
 
@@ -97,14 +95,11 @@ public class HibernateSequenceSnapshotGenerator extends HibernateSnapshotGenerat
 
                 if (seqGen != null) {
                     var structure = seqGen.getDatabaseStructure();
-                    if (structure != null && structure.getPhysicalName() != null) {
-                        String name = structure.getPhysicalName().render();
-                        if (addedSequences.add(name.toLowerCase(Locale.ROOT))) {
-                            schema.addDatabaseObject(new Sequence()
-                                    .setName(name)
-                                    .setSchema(schema)
-                                    .setStartValue(BigInteger.valueOf(structure.getInitialValue()))
-                                    .setIncrementBy(BigInteger.valueOf(structure.getIncrementSize())));
+                    if (structure != null && structure.isPhysicalSequence() && structure.getPhysicalName() != null) {
+                        var physicalName = structure.getPhysicalName();
+                        if (addedSequences.add(IdentifierGeneratorSupport.sequenceKey(physicalName))) {
+                            addSequence(schema, physicalName.getObjectName().getText(),
+                                    structure.getInitialValue(), structure.getIncrementSize());
                         }
                     }
                 }
@@ -113,6 +108,14 @@ public class HibernateSequenceSnapshotGenerator extends HibernateSnapshotGenerat
                         .fine("Could not resolve generator for " + rootClass.getEntityName(), e);
             }
         }
+    }
+
+    private void addSequence(Schema snapshotSchema, String bareName, int initialValue, int incrementSize) {
+        snapshotSchema.addDatabaseObject(new Sequence()
+                .setName(bareName)
+                .setSchema(snapshotSchema)
+                .setStartValue(BigInteger.valueOf(initialValue))
+                .setIncrementBy(BigInteger.valueOf(incrementSize)));
     }
 
     @Override

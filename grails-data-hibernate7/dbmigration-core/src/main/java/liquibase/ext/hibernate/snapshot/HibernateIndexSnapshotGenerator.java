@@ -17,7 +17,6 @@ public class HibernateIndexSnapshotGenerator extends HibernateSnapshotGenerator 
 
     private static final String HIBERNATE_ORDER_ASC = "asc";
     private static final String HIBERNATE_ORDER_DESC = "desc";
-    private static final int SINGLE_COLUMN = 1;
 
     public HibernateIndexSnapshotGenerator() {
         super(Index.class, Table.class, ForeignKey.class, UniqueConstraint.class);
@@ -84,23 +83,7 @@ public class HibernateIndexSnapshotGenerator extends HibernateSnapshotGenerator 
     }
 
     private Boolean isUniqueIndex(org.hibernate.mapping.Index hibernateIndex) {
-        /*
-        This seems to be necessary to explicitly tell liquibase that there's no
-        actual diff in certain non-unique indexes
-        */
-        if (hibernateIndex.getColumnSpan() == SINGLE_COLUMN) {
-            var col = ((org.hibernate.mapping.Column)
-                    hibernateIndex.getSelectables().get(0));
-            return col.isUnique();
-        } else {
-            /*
-            It seems that because Hibernate does not implement the unique property of the Jpa composite index,
-            the diff command appears 'difference', because the unique property of the entity index is 'null',
-            and the value read from the database is 'false', resulting in the generated changeSet after the Drop and
-            Recreate Index.
-            */
-            return Boolean.FALSE;
-        }
+        return hibernateIndex.isUnique();
     }
 
     @Override

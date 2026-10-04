@@ -275,12 +275,16 @@ public class HibernateColumnSnapshotGenerator extends HibernateSnapshotGenerator
             Column column,
             org.hibernate.mapping.Table hibernateTable,
             org.hibernate.mapping.Column hibernateColumn) {
+        var structure = seqGen.getDatabaseStructure();
+        if (structure == null || !structure.isPhysicalSequence()) {
+            return false;
+        }
         if (PostgreSQLDialect.class.isAssignableFrom(dialect.getClass())) {
             String sequenceName = resolveSequenceName(seqGen, hibernateTable, hibernateColumn);
             column.setDefaultValue(new DatabaseFunction("nextval('" + sequenceName + "'::regclass)"));
             return false;
         }
-        return database.supportsAutoIncrement();
+        return false;
     }
 
     private boolean handleNativeGenerator(
@@ -297,7 +301,7 @@ public class HibernateColumnSnapshotGenerator extends HibernateSnapshotGenerator
                 if (delegate instanceof org.hibernate.id.enhanced.SequenceStyleGenerator seqGen) {
                     yield handleSequenceGenerator(seqGen, dialect, database, column, hibernateTable, hibernateColumn);
                 }
-                yield database.supportsAutoIncrement();
+                yield false;
             }
             default -> false;
         };
@@ -316,6 +320,9 @@ public class HibernateColumnSnapshotGenerator extends HibernateSnapshotGenerator
             org.hibernate.mapping.Table hibernateTable,
             org.hibernate.mapping.Column hibernateColumn) {
         var structure = seqGen.getDatabaseStructure();
+        if (structure == null) {
+            return null;
+        }
         if (structure.getPhysicalName() != null) {
             return structure.getPhysicalName().render();
         }

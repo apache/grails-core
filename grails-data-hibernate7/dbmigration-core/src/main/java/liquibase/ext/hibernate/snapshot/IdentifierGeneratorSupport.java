@@ -1,6 +1,8 @@
 package liquibase.ext.hibernate.snapshot;
 
 import liquibase.Scope;
+import org.hibernate.boot.model.naming.Identifier;
+import org.hibernate.boot.model.relational.QualifiedName;
 import org.hibernate.boot.model.relational.SqlStringGenerationContext;
 import org.hibernate.boot.model.relational.internal.SqlStringGenerationContextImpl;
 import org.hibernate.generator.Generator;
@@ -17,14 +19,29 @@ final class IdentifierGeneratorSupport {
     }
 
     /**
-     * For annotation-based entities an identifier without {@code @GeneratedValue} is application-assigned, so no
-     * generator applies. XML-mapped entities have no member details and declare their generator in the hbm.xml
-     * mapping, so they always count as having generation intent.
+     * Uses the configured creator when available, otherwise checks explicit annotation or mapping intent.
      */
     static boolean hasGenerationIntent(SimpleValue simpleValue) {
+        var creator = simpleValue.getCustomIdGeneratorCreator();
+        if (creator != null) {
+            return !creator.isAssigned();
+        }
         var memberDetails = simpleValue.getMemberDetails();
         return memberDetails == null ||
-                memberDetails.hasDirectAnnotationUsage(jakarta.persistence.GeneratedValue.class);
+                memberDetails.hasDirectAnnotationUsage(jakarta.persistence.GeneratedValue.class) ||
+                memberDetails.hasDirectAnnotationUsage(org.hibernate.annotations.NativeGenerator.class);
+    }
+
+    static SequenceKey sequenceKey(QualifiedName name) {
+        return new SequenceKey(canonicalName(name.getCatalogName()), canonicalName(name.getSchemaName()),
+                canonicalName(name.getObjectName()));
+    }
+
+    private static String canonicalName(Identifier identifier) {
+        return identifier == null ? null : identifier.getCanonicalName();
+    }
+
+    record SequenceKey(String catalog, String schema, String name) {
     }
 
     /**

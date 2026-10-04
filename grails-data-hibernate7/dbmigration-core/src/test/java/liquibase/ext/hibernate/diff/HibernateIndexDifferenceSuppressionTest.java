@@ -40,8 +40,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Hibernate does not populate the {@code unique} and {@code using} attributes of indexes, primary keys and unique
- * constraints, so a diff against a PostgreSQL database must not turn them into drop and recreate changes.
+ * Unknown Hibernate index attributes must not cause changes, but concrete uniqueness mismatches must.
  */
 public class HibernateIndexDifferenceSuppressionTest {
 
@@ -56,6 +55,25 @@ public class HibernateIndexDifferenceSuppressionTest {
         Change[] changes = fixChanged(index, differences);
 
         assertNull("Liquibase reports a fully suppressed difference as no changes", changes);
+    }
+
+    @Test
+    public void concreteBooleanUniqueDifferenceIsPreserved() {
+        ObjectDifferences differences = differences("using");
+        differences.addDifference("unique", Boolean.FALSE, Boolean.TRUE);
+
+        Change[] changes = fixChanged(index().setUnique(false), differences);
+
+        assertNotNull("A concrete uniqueness mismatch must produce changes", changes);
+        assertTrue("A concrete uniqueness mismatch must produce changes", changes.length > 0);
+    }
+
+    @Test
+    public void unknownUniqueAndUsingDifferencesAreSuppressed() {
+        ObjectDifferences differences = differences("using");
+        differences.addDifference("unique", null, Boolean.TRUE);
+
+        assertNull("Unknown uniqueness must not produce changes", fixChanged(index(), differences));
     }
 
     @Test

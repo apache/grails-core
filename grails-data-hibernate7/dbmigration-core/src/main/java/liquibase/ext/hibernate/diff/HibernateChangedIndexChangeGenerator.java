@@ -10,8 +10,7 @@ import liquibase.structure.DatabaseObject;
 import liquibase.structure.core.Index;
 
 /**
- * Hibernate does not know every index attribute ({@code unique}, {@code using}), so those differences are
- * suppressed to prevent needless drop and recreate changes on every diff.
+ * Suppresses unknown Hibernate index attributes while preserving concrete uniqueness changes.
  */
 public class HibernateChangedIndexChangeGenerator
         extends liquibase.diff.output.changelog.core.ChangedIndexChangeGenerator {
@@ -30,7 +29,12 @@ public class HibernateChangedIndexChangeGenerator
             Database comparisonDatabase,
             ChangeGeneratorChain chain) {
         if (referenceDatabase instanceof HibernateDatabase || comparisonDatabase instanceof HibernateDatabase) {
-            differences.removeDifference("unique");
+            var unique = differences.getDifference("unique");
+            if (unique == null || !(unique.getReferenceValue() instanceof Boolean) ||
+                    !(unique.getComparedValue() instanceof Boolean) ||
+                    unique.getReferenceValue().equals(unique.getComparedValue())) {
+                differences.removeDifference("unique");
+            }
             differences.removeDifference("using");
             if (!differences.hasDifferences()) {
                 return new Change[0];

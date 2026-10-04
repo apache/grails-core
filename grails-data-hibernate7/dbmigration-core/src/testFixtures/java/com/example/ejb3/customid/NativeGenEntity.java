@@ -2,8 +2,6 @@ package com.example.ejb3.customid;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
@@ -28,7 +26,6 @@ public class NativeGenEntity {
             allocationSize = 22,
             initialValue = 3
     ))
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "native_gen_seq")
     private Long id;
 
     @Column(name = "name", nullable = false, length = 100)
