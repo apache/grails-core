@@ -22,11 +22,13 @@ package grails.gorm.tests
 
 import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.orm.hibernate.HibernateSession
 import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.HibernateMappingContext
 import org.grails.orm.hibernate.query.HibernateQuery
 
@@ -180,7 +182,9 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate7T
     protected void hibernateFirstPass() {
         def gdb = getGrailsDomainBinder()
         def collector = gdb.getMetadataBuildingContext().getMetadataCollector()
-        gdb.contribute(collector)
+        List<HibernatePersistentEntity> entities = getMappingContext().getHibernatePersistentEntities()
+        entities.each { it.setDataSourceName(ConnectionSource.DEFAULT) }
+        gdb.contribute(collector, entities)
     }
 
     /**

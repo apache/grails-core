@@ -22,7 +22,6 @@ import java.util.function.BiFunction
 
 import groovy.transform.CompileStatic
 import org.hibernate.boot.ResourceStreamLocator
-import org.hibernate.boot.internal.MetadataBuildingContextRootImpl
 import org.hibernate.boot.model.TypeContributions
 import org.hibernate.boot.model.TypeContributor
 import org.hibernate.boot.spi.AdditionalMappingContributions
@@ -36,8 +35,6 @@ import org.hibernate.service.ServiceRegistry
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-import org.grails.datastore.mapping.core.connections.ConnectionSource
-import org.grails.orm.hibernate.cfg.HibernateMappingContext
 import org.grails.orm.hibernate.cfg.MappingCacheHolder
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder
@@ -76,37 +73,29 @@ class GrailsDomainBinder implements AdditionalMappingContributor, TypeContributo
 
     private final String sessionFactoryName
     private final String dataSourceName
-    private final HibernateMappingContext hibernateMappingContext
+    private final List<HibernatePersistentEntity> persistentEntities
     private final NamingStrategyProvider namingStrategyProvider
     private final MappingCacheHolder mappingCacheHolder
     private PersistentEntityNamingStrategy namingStrategy
     private MetadataBuildingContext metadataBuildingContext
 
-    GrailsDomainBinder(
-            String dataSourceName, String sessionFactoryName, HibernateMappingContext hibernateMappingContext) {
-        this(
-                dataSourceName,
-                sessionFactoryName,
-                hibernateMappingContext,
-                new NamingStrategyProvider(),
-                new MappingCacheHolder())
-    }
-
+    /**
+     * @param persistentEntities the entities to bind; each must already carry the name of {@code dataSourceName}
+     */
     GrailsDomainBinder(
             String dataSourceName,
             String sessionFactoryName,
-            HibernateMappingContext hibernateMappingContext,
+            List<HibernatePersistentEntity> persistentEntities,
             NamingStrategyProvider namingStrategyProvider,
             MappingCacheHolder mappingCacheHolder) {
         this.sessionFactoryName = sessionFactoryName
         this.dataSourceName = dataSourceName
-        this.hibernateMappingContext = hibernateMappingContext
+        this.persistentEntities = persistentEntities
         this.namingStrategyProvider = namingStrategyProvider
         this.mappingCacheHolder = mappingCacheHolder
 
         // pre-build mappings
-        for (HibernatePersistentEntity persistentEntity :
-                hibernateMappingContext.getHibernatePersistentEntities(dataSourceName)) {
+        for (HibernatePersistentEntity persistentEntity : persistentEntities) {
             mappingCacheHolder.cacheMapping(persistentEntity)
         }
     }
@@ -116,18 +105,20 @@ class GrailsDomainBinder implements AdditionalMappingContributor, TypeContributo
     }
 
     @Override
-    @SuppressWarnings('PMD.DataflowAnomalyAnalysis')
     void contribute(
             AdditionalMappingContributions contributions,
             InFlightMetadataCollector metadataCollector,
             ResourceStreamLocator resourceStreamLocator,
             MetadataBuildingContext buildingContext) {
-        this.metadataBuildingContext = new MetadataBuildingContextRootImpl(
-                ConnectionSource.DEFAULT,
-                metadataCollector.bootstrapContext,
-                metadataCollector.metadataBuildingOptions,
-                metadataCollector,
-                null)
+        bind(metadataCollector, buildingContext, persistentEntities)
+    }
+
+    @SuppressWarnings('PMD.DataflowAnomalyAnalysis')
+    private void bind(
+            InFlightMetadataCollector metadataCollector,
+            MetadataBuildingContext buildingContext,
+            List<HibernatePersistentEntity> entities) {
+        this.metadataBuildingContext = buildingContext
         CollectionHolder collectionHolder = new CollectionHolder(metadataBuildingContext)
         BackticksRemover backticksRemover = new BackticksRemover()
         PersistentEntityNamingStrategy namingStrategy = getNamingStrategy()
@@ -245,8 +236,7 @@ class GrailsDomainBinder implements AdditionalMappingContributor, TypeContributo
                 metadataCollector,
                 mappingCacheHolder)
 
-        for (HibernatePersistentEntity persistentEntity :
-                hibernateMappingContext.getHibernatePersistentEntities(dataSourceName)) {
+        for (HibernatePersistentEntity persistentEntity : entities) {
             if (persistentEntity.forGrailsDomainMapping(dataSourceName)) {
                 rootBinder.bindRoot(persistentEntity)
             }
@@ -293,11 +283,11 @@ class GrailsDomainBinder implements AdditionalMappingContributor, TypeContributo
     }
 
     /**
-     * Manually triggers the contribution process. Useful for unit testing
-     * where the full Hibernate bootstrap is not invoked.
+     * Manually re-runs the contribution process for the given entities with the building context of the last
+     * bootstrap. Useful for unit testing where entities are registered after the session factory was built.
      */
-    void contribute(InFlightMetadataCollector metadataCollector) {
-        contribute(null, metadataCollector, null, metadataBuildingContext)
+    void contribute(InFlightMetadataCollector metadataCollector, List<HibernatePersistentEntity> entities) {
+        bind(metadataCollector, metadataBuildingContext, entities)
     }
 
 }

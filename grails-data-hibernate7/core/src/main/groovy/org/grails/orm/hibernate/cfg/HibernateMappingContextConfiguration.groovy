@@ -66,6 +66,7 @@ import org.grails.orm.hibernate.GrailsSessionContext
 import org.grails.orm.hibernate.HibernateEventListeners
 import org.grails.orm.hibernate.MetadataIntegrator
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyProvider
 import org.grails.orm.hibernate.proxy.GrailsBytecodeProvider
 
@@ -281,13 +282,6 @@ class HibernateMappingContextConfiguration extends Configuration
 
         ConfigurationHelper.resolvePlaceHolders(properties)
 
-        final GrailsDomainBinder domainBinder = new GrailsDomainBinder(
-                dataSourceName,
-                sessionFactoryBeanName,
-                hibernateMappingContext,
-                namingStrategyProvider,
-                hibernateMappingContext.mappingCacheHolder)
-
         List<Class> annotatedClasses = new ArrayList<>()
         for (PersistentEntity persistentEntity : hibernateMappingContext.persistentEntities) {
             Class<?> javaClass = persistentEntity.javaClass
@@ -303,6 +297,18 @@ class HibernateMappingContextConfiguration extends Configuration
                 }
             }
         }
+
+        List<HibernatePersistentEntity> persistentEntities = hibernateMappingContext.hibernatePersistentEntities
+        for (HibernatePersistentEntity persistentEntity : persistentEntities) {
+            persistentEntity.setDataSourceName(dataSourceName)
+        }
+
+        final GrailsDomainBinder domainBinder = new GrailsDomainBinder(
+                dataSourceName,
+                sessionFactoryBeanName,
+                persistentEntities,
+                namingStrategyProvider,
+                hibernateMappingContext.mappingCacheHolder)
 
         addAnnotatedClasses(annotatedClasses.toArray(new Class[0]))
 
