@@ -75,4 +75,44 @@ class ModelInterceptorIntSpec extends Specification implements HttpClientSupport
         and: "the interceptor's after() received the model argument without the bean"
         modelInterceptor.latestModel == [title: 'x']
     }
+
+    @Issue('https://github.com/apache/grails-core/issues/12081')
+    void "TEMPLATE_MODEL does not leak into the interceptor of a forwarded action"() {
+        given: "observations are reset so a prior test cannot satisfy the assertion"
+        modelInterceptor.latestModel = 'sentinel'
+        modelInterceptor.modelByAction.clear()
+
+        when: "a controller that renders a template (setting TEMPLATE_MODEL) then forwards to another action"
+        def response = http('/renderTemplate/forwardAfterTemplate')
+
+        then: "the HTTP response succeeds"
+        response.assertStatus(200)
+
+        and: "the forwarded action's interceptor ran (the key is present)"
+        modelInterceptor.modelByAction.containsKey('forwardTarget')
+
+        and: "the interceptor's after() for the forwarded action (forwardTarget) sees no model"
+        modelInterceptor.modelByAction['forwardTarget'] == null
+
+        and: "the response body is the forwarded action's own output"
+        response.body() == 'ok'
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/12081')
+    void "TEMPLATE_MODEL does not leak into the interceptor of an included action"() {
+        given: "observations are reset so a prior test cannot satisfy the assertion"
+        modelInterceptor.modelByAction.clear()
+
+        when: "a controller that renders a template (setting TEMPLATE_MODEL) then includes another action"
+        def response = http('/renderTemplate/includeAfterTemplate')
+
+        then: "the HTTP response succeeds"
+        response.assertStatus(200)
+
+        and: "the included action's interceptor ran (the key is present)"
+        modelInterceptor.modelByAction.containsKey('includeTarget')
+
+        and: "the interceptor's after() for the included action (includeTarget) sees no model"
+        modelInterceptor.modelByAction['includeTarget'] == null
+    }
 }

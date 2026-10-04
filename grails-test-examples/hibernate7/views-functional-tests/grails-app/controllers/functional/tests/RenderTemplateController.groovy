@@ -32,4 +32,36 @@ class RenderTemplateController {
     def bean() {
         render(template: 'snippet', bean: 'b', model: [title: 'x'])
     }
+
+    /**
+     * Renders a template (setting TEMPLATE_MODEL) then forwards to {@code forwardTarget}.
+     * The interceptor on {@code forwardTarget} must not see the TEMPLATE_MODEL from this action.
+     */
+    def forwardAfterTemplate() {
+        render(template: 'snippet', model: [title: 'leaked'])
+        forward(action: 'forwardTarget')
+    }
+
+    /**
+     * Target of the forward from {@code forwardAfterTemplate}. Has no model of its own.
+     */
+    def forwardTarget() {
+        render text: 'ok', contentType: 'text/plain'
+    }
+
+    /**
+     * Renders a template (setting TEMPLATE_MODEL) then uses g:include to include {@code includeTarget}.
+     * The interceptor on {@code includeTarget} must not see the TEMPLATE_MODEL from this action.
+     */
+    def includeAfterTemplate() {
+        render(template: 'snippet', model: [title: 'leaked'])
+        render text: g.include(controller: 'renderTemplate', action: 'includeTarget'), contentType: 'text/plain'
+    }
+
+    /**
+     * Target of the include from {@code includeAfterTemplate}. Has no model of its own.
+     */
+    def includeTarget() {
+        render text: 'included', contentType: 'text/plain'
+    }
 }
