@@ -20,7 +20,7 @@
 import org.asciidoctor.gradle.jvm.AsciidoctorTask
 
 plugins {
-    id 'org.asciidoctor.jvm.convert'
+    id 'org.asciidoctor.jvm.convert.classic'
 }
 
 version = projectVersion

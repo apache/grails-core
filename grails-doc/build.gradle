@@ -27,7 +27,7 @@ import java.util.zip.ZipFile
 
 plugins {
     id 'base'
-    id 'org.asciidoctor.jvm.convert'
+    id 'org.asciidoctor.jvm.convert.classic'
     id 'groovy'
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'

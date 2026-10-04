@@ -41,11 +41,6 @@ plugins {
 
 apply from: file('gradle/dependency-analysis.settings.gradle')
 
-// NOTE: Known Gradle deprecation warnings (scheduled for removal in Gradle 10):
-// 1. StartParameter.isConfigurationCacheRequested - from org.asciidoctor.jvm.convert plugin (4.0.5)
-//    Fix available in asciidoctor-gradle-plugin 5.0.0+ (currently alpha)
-//    Tracking: https://github.com/asciidoctor/asciidoctor-gradle-plugin/issues/756
-
 def isCI = System.getenv().containsKey('CI')
 def isLocal = !isCI
 def isReproducibleBuild = System.getenv('SOURCE_DATE_EPOCH') != null

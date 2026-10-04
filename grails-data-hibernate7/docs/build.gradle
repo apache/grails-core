@@ -22,7 +22,7 @@ import org.asciidoctor.gradle.jvm.AsciidoctorTask
 plugins {
     id 'groovy'
     id 'org.apache.grails.buildsrc.dependency-validator'
-    id 'org.asciidoctor.jvm.convert'
+    id 'org.asciidoctor.jvm.convert.classic'
 }
 
 version = projectVersion

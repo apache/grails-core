@@ -57,13 +57,13 @@ public class Asciidoctor implements Feature {
     @Override
     public void apply(GeneratorContext generatorContext) {
         final String asciidoctorjVersion = coordinateResolver.resolve("asciidoctorj")
-                .map(Coordinate::getVersion).orElse("3.0.0");
+                .map(Coordinate::getVersion).orElse("3.0.1");
         final String asciidoctorjDiagramVersion = coordinateResolver.resolve("asciidoctorj-diagram")
                 .map(Coordinate::getVersion).orElse("2.3.1");
         generatorContext.addTemplate("asciidocGradle", new RockerTemplate("gradle/asciidoc.gradle", asciidocGradle.template(asciidoctorjVersion, asciidoctorjDiagramVersion)));
 
         generatorContext.addBuildPlugin(GradlePlugin.builder()
-                .id("org.asciidoctor.jvm.convert")
+                .id("org.asciidoctor.jvm.convert.classic")
                 .lookupArtifactId("asciidoctor-gradle-jvm")
                 .build());
 
