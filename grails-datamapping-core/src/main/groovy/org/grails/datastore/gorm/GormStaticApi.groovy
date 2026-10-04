@@ -25,6 +25,8 @@ import org.codehaus.groovy.runtime.InvokerHelper
 
 import org.springframework.beans.PropertyAccessorFactory
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory
+import org.springframework.core.convert.ConversionFailedException
+import org.springframework.core.convert.ConversionService
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.support.DefaultTransactionDefinition
@@ -50,10 +52,12 @@ import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.core.connections.ConnectionSources
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
+import org.grails.datastore.mapping.engine.AssociationQueryExecutor
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode
+import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.query.api.BuildableCriteria
 import org.grails.datastore.mapping.query.api.Criteria
@@ -341,6 +345,9 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
      * Retrieves an object from the datastore. eg. Book.get(1)
      */
     D get(Serializable id) {
+        if (id != null && isRetrievedByQuery()) {
+            return retrieveAllByQuery([id])[0]
+        }
         (D) execute({ Session session ->
             session.retrieve((Class)persistentClass, id)
         } as SessionCallback)
@@ -353,15 +360,16 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
      * just delegates to {@link #get(Serializable)}
      */
     D read(Serializable id) {
-        (D) execute({ Session session ->
-            session.retrieve((Class)persistentClass, id)
-        } as SessionCallback)
+        get(id)
     }
 
     /**
      * Retrieves an object from the datastore as a proxy. eg. Book.load(1)
      */
     D load(Serializable id) {
+        if (id != null && isRetrievedByQuery()) {
+            return proxyByQuery(id)
+        }
         (D) execute({ Session session ->
             session.proxy((Class)persistentClass, id)
         } as SessionCallback)
@@ -389,9 +397,100 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
      * @return A list of identifiers
      */
     List<D> getAll(Serializable... ids) {
+        if (isRetrievedByQuery()) {
+            return retrieveAllByQuery((Collection<Serializable>) ids.flatten())
+        }
         (List<D>) execute({ Session session ->
             session.retrieveAll(persistentClass, ids.flatten())
         } as SessionCallback)
+    }
+
+    /**
+     * Whether instances are retrieved by id through a query. In {@link MultiTenancyMode#DISCRIMINATOR} mode the
+     * multi-tenant event listener restricts a query to the current tenant, but a lookup by key bypasses it, so the
+     * instances of a multi-tenant entity are retrieved through a query instead. Inside
+     * {@link Tenants#withoutId(groovy.lang.Closure)}, where the current id is the default connection source, a lookup
+     * by id is not restricted to a tenant and stays a lookup by key.
+     *
+     * @return Whether instances are retrieved by id through a query
+     * @throws org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException if there is no current tenant
+     */
+    private boolean isRetrievedByQuery() {
+        if (multiTenancyMode != MultiTenancyMode.DISCRIMINATOR
+                || persistentEntity?.isMultiTenant() != true
+                || persistentEntity.identity == null) {
+            return false
+        }
+        Serializable currentId = datastore instanceof MultiTenantCapableDatastore
+                ? Tenants.currentId((MultiTenantCapableDatastore) datastore)
+                : Tenants.currentId(datastore.getClass())
+        return !ConnectionSource.DEFAULT.equals(currentId)
+    }
+
+    /**
+     * Retrieves the instances for the given identifiers through a query, which the multi-tenant event listener
+     * restricts to the current tenant.
+     *
+     * @param ids The identifiers
+     * @return The instances in the order of the identifiers, with {@code null} for an identifier no instance was found for
+     */
+    private List<D> retrieveAllByQuery(Collection<Serializable> ids) {
+        (List<D>) execute({ Session session ->
+            List<Serializable> keys = ids.collect { Serializable id -> convertIdentifier(session, id) }
+            List<Serializable> present = keys.findAll { Serializable key -> key != null }
+            Map<Object, Object> found = [:]
+            if (present) {
+                Query query = session.createQuery(persistentClass)
+                if (present.size() == 1) {
+                    query.idEq(present[0])
+                }
+                else {
+                    query.in(persistentEntity.identity.name, present)
+                }
+                for (Object instance in query.list()) {
+                    found.put(persistentEntity.reflector.getIdentifier(instance), instance)
+                }
+            }
+            keys.collect { Serializable key -> key == null ? null : found.get(key) }
+        } as SessionCallback)
+    }
+
+    /**
+     * Creates a proxy that is initialized through a query by id, which the multi-tenant event listener restricts to
+     * the tenant that is current when the proxy is initialized. A proxy for an instance of another tenant then fails
+     * to initialize, as a proxy for an instance that does not exist does.
+     *
+     * @param id The identifier
+     * @return The proxy
+     */
+    private D proxyByQuery(Serializable id) {
+        (D) execute({ Session session ->
+            Serializable key = convertIdentifier(session, id)
+            try {
+                return session.mappingContext.proxyFactory.createProxy(session, new IdQueryExecutor(session, persistentEntity), key)
+            }
+            catch (UnsupportedOperationException ignored) {
+                // a proxy factory that cannot initialize a proxy through a query gets the instance itself
+                return retrieveAllByQuery([key])[0]
+            }
+        } as SessionCallback)
+    }
+
+    private Serializable convertIdentifier(Session session, Serializable id) {
+        Class identityType = persistentEntity.identity.type
+        if (id == null || identityType.isInstance(id)) {
+            return id
+        }
+        ConversionService conversionService = session.mappingContext.conversionService
+        if (conversionService.canConvert(id.getClass(), identityType)) {
+            try {
+                return (Serializable) conversionService.convert(id, identityType)
+            }
+            catch (ConversionFailedException ignored) {
+                // the lookup by key ignores an identifier it cannot convert as well
+            }
+        }
+        return id
     }
 
     /**
@@ -1210,5 +1309,36 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
             }
         }
         result
+    }
+
+    /**
+     * Queries an instance by id for a proxy created by {@link GormStaticApi#load(Serializable)}.
+     */
+    private static class IdQueryExecutor implements AssociationQueryExecutor<Serializable, Object> {
+
+        private final Session session
+        private final PersistentEntity entity
+
+        IdQueryExecutor(Session session, PersistentEntity entity) {
+            this.session = session
+            this.entity = entity
+        }
+
+        @Override
+        List<Object> query(Serializable id) {
+            Query query = session.createQuery(entity.javaClass)
+            query.idEq(id)
+            query.list()
+        }
+
+        @Override
+        PersistentEntity getIndexedEntity() {
+            entity
+        }
+
+        @Override
+        boolean doesReturnKeys() {
+            false
+        }
     }
 }

@@ -107,6 +107,16 @@ import static com.mongodb.client.model.Filters.*;
 Book.find(eq("title", "The Stand")).first()
 ----
 
+Lookups by id are restricted to the current tenant as well. `get`, `read`, `exists` and `getAll` find no document of another tenant, and the proxy returned by `load` fails to initialize for one, as it does for an id that does not exist:
+
+[source,groovy]
+----
+// null if the book belongs to another tenant
+Book.get(id)
+----
+
+Without a current tenant a lookup by id throws `TenantNotFoundException`, as a query does. Inside `Tenants.withoutId { }` a lookup by id is not restricted to a tenant.
+
 But this logic bypasses any built into tenant id interception and inclusion:
 
 [source,groovy]
