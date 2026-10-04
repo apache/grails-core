@@ -24,7 +24,6 @@ import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.HibernateEntity
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
-import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.engine.types.AbstractMappingAwareCustomTypeMarshaller
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
@@ -152,19 +151,24 @@ class HibernateMappingContextSpec extends HibernateGormDatastoreSpec {
 
     void "getHibernatePersistentEntities returns GrailsHibernatePersistentEntity instances"() {
         when:
-        def entities = mappingContext.getHibernatePersistentEntities(ConnectionSource.DEFAULT)
+        def entities = mappingContext.getHibernatePersistentEntities()
 
         then:
+        !entities.isEmpty()
         entities.every { it instanceof GrailsHibernatePersistentEntity }
-        entities.every { it.dataSourceName == ConnectionSource.DEFAULT }
     }
 
-    void "getHibernatePersistentEntities sets the dataSourceName on each entity"() {
+    void "getHibernatePersistentEntities does not change the dataSourceName of any entity"() {
+        given:
+        Map<String, String> before = mappingContext.getHibernatePersistentEntities().collectEntries {
+            [(it.name): it.dataSourceName]
+        }
+
         when:
-        def entities = mappingContext.getHibernatePersistentEntities("myDs")
+        mappingContext.getHibernatePersistentEntities()
 
         then:
-        entities.every { it.dataSourceName == "myDs" }
+        mappingContext.getHibernatePersistentEntities().collectEntries { [(it.name): it.dataSourceName] } == before
     }
 
     void "embedded entity is created correctly"() {
