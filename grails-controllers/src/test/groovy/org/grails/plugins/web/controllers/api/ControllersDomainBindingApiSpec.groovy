@@ -132,6 +132,25 @@ class ControllersDomainBindingApiSpec extends Specification {
         widget.name == 'spanner'
         0 * beanFactory.autowireBeanProperties(_, _, _)
     }
+
+    void 'the no argument initializer does not throw and leaves the instance untouched when no application has been bound yet'() {
+        given:
+        Holders.clear()
+        def gadget = new Gadget()
+
+        when:
+        ControllersDomainBindingApi.initialize(gadget)
+
+        then:
+        noExceptionThrown()
+        gadget.name == null
+    }
+
+    void 'AUTOWIRE_DOMAIN_METHOD constant is stable'() {
+        expect:
+        ControllersDomainBindingApi.AUTOWIRE_DOMAIN_METHOD == 'autowireDomain'
+    }
+
 }
 
 class Widget {

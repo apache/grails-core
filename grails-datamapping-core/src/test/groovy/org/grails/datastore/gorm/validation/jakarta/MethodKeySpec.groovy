@@ -55,4 +55,13 @@ class MethodKeySpec extends Specification {
         expect:
         key == key
     }
+
+    void "a key can be used as a map key"() {
+        given:
+        Map<MethodKey, String> map = [:]
+        map[new MethodKey('save', [String] as Class[])] = 'first'
+
+        expect:
+        map[new MethodKey('save', [String] as Class[])] == 'first'
+    }
 }
