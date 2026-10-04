@@ -19,7 +19,10 @@
 
 package org.grails.gorm.graphql.types.scalars.coercing.jsr310
 
+import graphql.GraphQLContext
+import graphql.execution.CoercedVariables
 import graphql.language.StringValue
+import graphql.language.Value
 import graphql.schema.Coercing
 import graphql.schema.CoercingParseValueException
 import graphql.schema.CoercingSerializeException
@@ -44,21 +47,21 @@ abstract class Jsr310Coercion<T> implements Coercing<T, T> {
     }
 
     @Override
-    T serialize(Object input) {
+    T serialize(Object input, GraphQLContext graphQLContext, Locale locale) {
         convertValue(input).orElseThrow {
             throw new CoercingSerializeException("Could not convert ${input.class.name} to the required date type")
         }
     }
 
     @Override
-    T parseValue(Object input) {
+    T parseValue(Object input, GraphQLContext graphQLContext, Locale locale) {
         convertValue(input).orElseThrow {
             throw new CoercingParseValueException("Could not convert ${input.class.name} to the required date type")
         }
     }
 
     @Override
-    T parseLiteral(Object input) {
+    T parseLiteral(Value<?> input, CoercedVariables variables, GraphQLContext graphQLContext, Locale locale) {
         if (input instanceof StringValue) {
             convert(((StringValue) input).value).orElse(null)
         }

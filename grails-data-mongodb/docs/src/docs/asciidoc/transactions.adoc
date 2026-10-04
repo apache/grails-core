@@ -18,7 +18,7 @@ under the License.
 ////
 
 == Transactions
-MongoDB doesn't support transactions directly, however GORM for MongoDB does batch up inserts and updates until the session is flushed. This makes it possible to support some rollback options.
+By default GORM for MongoDB does not use server-side transactions, however it does batch up inserts and updates until the session is flushed. This makes it possible to support some rollback options. To run transactions as real MongoDB multi-document transactions, see <<advancedConfig,Multi-Document Transactions>>.
 
 You can use either transactional services or the static `withTransaction` method. To mark a service as using the MongoDB transaction manager, use the static `transactional` property with the value `'mongo'`:
 
@@ -41,3 +41,78 @@ Person.withTransaction { status ->
 For example in this case neither `Person` object will be persisted to the database, because underneath the surface a persistence session is being used to batch up both insert operations into a single insert. When an exception is thrown neither insert is ever executed, hence we allow for some transactional semantics at the GORM-level.
 
 Using the lower level API you can of course also take advantage of Mongo's support for https://docs.mongodb.org/manual/tutorial/isolate-sequence-of-operations[Atomic operations].
+
+[[nestedTransactions]]
+=== Nested Transactions
+
+A transaction started while another is in progress joins it. This is the default propagation, `PROPAGATION_REQUIRED`, and it covers a transactional service method called from another, `withTransaction` inside `withTransaction`, and a `@ReadOnly` method called from a read-write one:
+
+[source,groovy]
+----
+class OrderService {
+    InventoryService inventoryService
+
+    @Transactional
+    void placeOrder(Order order) {
+        order.save()
+        inventoryService.reserve(order)   // @Transactional: joins placeOrder's transaction
+        new AuditEntry(order: order).save()
+    }
+}
+----
+
+All three writes are committed together when `placeOrder` returns, and with <<advancedConfig,multi-document transactions>> enabled they run in one server-side transaction. A joined transaction that fails rolls back the whole transaction, including writes made before it: when the exception propagates out of `placeOrder`, and also when `placeOrder` catches it, because GORM marks the surrounding transaction rollback-only. Spring's `TransactionTemplate`, used directly, reports that case by throwing `UnexpectedRollbackException` from the outer commit. Without multi-document transactions, "rolls back" means that writes still queued in the session are discarded; a write already flushed stays written.
+
+Without multi-document transactions, GORM for MongoDB does not flush the session before running a query within a transaction, so that a rollback can still discard what is queued. A write the transaction has queued, including one a joined transaction made, is therefore not visible to its later queries until it is flushed. Save with `flush: true` where a later query in the same transaction must see the write.
+
+With <<advancedConfig,multi-document transactions>> enabled, a flushed write is rolled back with the server-side transaction, so GORM flushes the session before a query, as it does outside a transaction and as Hibernate does. A query sees the writes the transaction has queued, including those of a joined transaction. A read-only transaction has no server-side transaction and keeps the session in `COMMIT` flush mode, so its queries still do not flush.
+
+A session opened with `withNewSession` inside a transaction is separate from it: a transaction begun in that session is its own, and commits when it returns. Transactional code run from a transaction's `afterCommit` or `afterCompletion` callbacks, such as an `@TransactionalEventListener` method, likewise begins a transaction of its own, since the one that triggered it can no longer commit.
+
+`PROPAGATION_REQUIRES_NEW` suspends the surrounding transaction and runs in a session of its own, and, with multi-document transactions enabled, in a server-side transaction of its own. It commits or rolls back independently, and the surrounding transaction resumes afterwards:
+
+[source,groovy]
+----
+@Transactional(propagation = Propagation.REQUIRES_NEW)
+void recordAttempt(Order order) {
+    new Attempt(order: order).save()   // committed even if the caller's transaction rolls back
+}
+----
+
+The new session starts empty. An entity loaded in the surrounding transaction belongs to that transaction's session, so load it again inside the `REQUIRES_NEW` transaction rather than saving the instance you were given, and settings made on the surrounding session, such as the database or collection chosen with `withDatabase` or `withCollection`, do not carry over.
+
+TIP: With multi-document transactions enabled, a `REQUIRES_NEW` transaction is open beside its suspended caller, and MongoDB refuses a write that conflicts with another open transaction (`WriteConflict`): a document the caller has already written in its transaction, or a collection both create by writing to it. Create such collections up front, and keep the two transactions to different documents.
+
+A read-write transaction started inside a read-only one joins it and is read-only, as it is on Hibernate: the read-only commit does not flush, so a write it left queued is not saved, and the commit logs the warning described under <<readOnlyTransactions,Read-Only Transactions>>. Call such a method from read-write code, or give it `PROPAGATION_REQUIRES_NEW` so it commits in a transaction of its own. A write it flushes explicitly with `save(flush: true)` is saved, but it is not part of any transaction: a read-only transaction has no server-side transaction, even with multi-document transactions enabled, so a later failure in the read-only code cannot roll it back. `PROPAGATION_NESTED` is not supported.
+
+In earlier versions a transaction started inside another began a second transaction on the same session instead of joining the first. It committed on its own when it returned, and the surrounding transaction's commit then did nothing, so writes the surrounding transaction made after the call were never saved; with multi-document transactions enabled, beginning the second transaction also discarded the writes made before the call.
+
+[[readOnlyTransactions]]
+=== Read-Only Transactions
+
+A read-only transaction, such as a service method annotated with `@ReadOnly` or `@Transactional(readOnly = true)`, commits without flushing the session. This holds whether or not multi-document transactions are enabled, and is how read-only transactions behave on GORM's other datastores — on Hibernate, for instance, a read-only transaction puts the session into `MANUAL` flush mode.
+
+It matters for a write that is saved without `flush: true` and is still queued when read-only code runs in the same session:
+
+[source,groovy]
+----
+class ReportService {
+    @ReadOnly
+    int countPeople() {
+        Person.count()
+    }
+}
+
+new Person(name: "Fred").save()   // queued, not yet flushed
+reportService.countPeople()       // read-only: commits without flushing
+----
+
+The read-only transaction does not persist `Fred`. While it runs the session is in `COMMIT` flush mode, so its queries do not flush the queued insert either. Once it completes the session's flush mode is put back, and `Fred` stays queued until something flushes the session: a read-write transaction's commit, `save(flush: true)`, or the flush at the end of the request. If nothing does, the insert is discarded when the session closes.
+
+In earlier versions, committing a read-only transaction flushed the session, so a write like this was persisted as a side effect of the read. If your code relies on that, flush the write explicitly with `save(flush: true)`, or perform it inside a read-write transaction.
+
+To help find such code, a read-only transaction that commits while its session still holds queued inserts, updates or deletes logs a warning from `org.grails.datastore.mapping.transactions.DatastoreTransactionManager`. The warning names the session and reports that the transaction did not persist the queued operations; it does not say whether a later read-write transaction in the same session will.
+
+With <<advancedConfig,multi-document transactions>> enabled, a read-only transaction reads without a server-side transaction. Its reads are not held to the server's `transactionLifetimeLimitSeconds`, they honour the client's read preference (inside a transaction the driver refuses any preference but `primary`), and they are not taken from one snapshot. A read-only transaction that joins a read-write one reads within that transaction.
+
+NOTE: When GORM and Spring Data MongoDB share a transaction, `readOnly` only governs GORM's flush. See <<springDataInterop,Spring Data MongoDB Interoperability>>.

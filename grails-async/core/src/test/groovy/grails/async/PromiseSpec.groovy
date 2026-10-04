@@ -164,7 +164,8 @@ class PromiseSpec extends Specification {
             def result = promise.get()
 
         then: 'the chain is executed'
-            thrown RuntimeException
+            def failure = thrown(java.util.concurrent.ExecutionException)
+            failure.cause.message == 'bad'
             result == null
     }
 }

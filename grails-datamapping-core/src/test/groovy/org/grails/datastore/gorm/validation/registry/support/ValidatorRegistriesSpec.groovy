@@ -18,47 +18,50 @@
  */
 package org.grails.datastore.gorm.validation.registry.support
 
-import org.springframework.context.support.StaticMessageSource
-
-import org.grails.datastore.gorm.validation.constraints.registry.DefaultValidatorRegistry
+import grails.gorm.annotation.Entity
 import org.grails.datastore.gorm.validation.jakarta.JakartaValidatorRegistry
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
+import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
 import org.grails.datastore.mapping.model.MappingContext
-import org.grails.datastore.mapping.reflect.ClassUtils
-import org.grails.datastore.mapping.simple.SimpleMapDatastore
 import org.grails.datastore.mapping.validation.ValidatorRegistry
+import org.springframework.context.support.StaticMessageSource
 import spock.lang.Specification
 
 class ValidatorRegistriesSpec extends Specification {
 
-    MappingContext mappingContext = new SimpleMapDatastore().mappingContext
-    ConnectionSourceSettings settings = new ConnectionSourceSettings()
+    MappingContext mappingContext = new KeyValueMappingContext("test")
 
-    void "test isJakartaValidationAvailable reflects whether jakarta.validation.Validation is on the classpath"() {
-        expect:
-        ValidatorRegistries.isJakartaValidationAvailable() == ClassUtils.isPresent('jakarta.validation.Validation')
+    void setup() {
+        mappingContext.addPersistentEntities(RegistryBook)
+        mappingContext.initialize()
     }
 
-    void "test createValidatorRegistry with a default message source picks the registry matching classpath availability"() {
+    void "reports that jakarta.validation is available on the classpath"() {
+        expect:
+        ValidatorRegistries.isJakartaValidationAvailable()
+    }
+
+    void "creates a Jakarta backed registry with a default static message source"() {
         when:
-        ValidatorRegistry registry = ValidatorRegistries.createValidatorRegistry(mappingContext, settings)
+        ValidatorRegistry registry = ValidatorRegistries.createValidatorRegistry(mappingContext, new ConnectionSourceSettings())
 
         then:
-        ValidatorRegistries.isJakartaValidationAvailable() ?
-                registry instanceof JakartaValidatorRegistry :
-                registry instanceof DefaultValidatorRegistry
+        registry instanceof JakartaValidatorRegistry
     }
 
-    void "test createValidatorRegistry with an explicit message source picks the registry matching classpath availability"() {
+    void "creates a registry using the supplied message source"() {
         given:
         def messageSource = new StaticMessageSource()
 
         when:
-        ValidatorRegistry registry = ValidatorRegistries.createValidatorRegistry(mappingContext, settings, messageSource)
+        def registry = (JakartaValidatorRegistry) ValidatorRegistries.createValidatorRegistry(mappingContext, new ConnectionSourceSettings(), messageSource)
 
         then:
-        ValidatorRegistries.isJakartaValidationAvailable() ?
-                registry instanceof JakartaValidatorRegistry :
-                registry instanceof DefaultValidatorRegistry
+        registry.messageSource.is(messageSource)
     }
+}
+
+@Entity
+class RegistryBook {
+    String title
 }

@@ -23,9 +23,7 @@ import groovy.transform.CompileStatic
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.plugins.BasePlugin
-import org.gradle.api.tasks.Sync
 import org.gradle.api.tasks.util.PatternFilterable
-import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.CopySpec
 import groovy.transform.CompileDynamic
 import org.gradle.api.tasks.compile.GroovyCompile
@@ -35,9 +33,6 @@ import org.gradle.api.file.FileCollection
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.provider.Provider
-import org.gradle.api.provider.ValueSource
-import org.gradle.api.provider.ValueSourceParameters
-import org.gradle.api.provider.ValueSourceSpec
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.SourceSetOutput
@@ -61,6 +56,13 @@ import org.grails.gradle.plugin.util.SourceSets
  */
 @CompileStatic
 class GroovyPagePlugin implements Plugin<Project> {
+
+    /**
+     * The server path application views are compiled under, and so the prefix of every key in a
+     * compiled-view index. Scaffolded pages are compiled under it too, where the scaffolding
+     * resolver looks for them.
+     */
+    public static final String VIEWS_SERVER_PATH = '/WEB-INF/grails-app/views/'
 
     /**
      * The test source sets a Grails project may define, each of which renders pages.
@@ -206,7 +208,6 @@ class GroovyPagePlugin implements Plugin<Project> {
         FileCollection classesDirs = resolveClassesDirs(output, project)
         Provider<Directory> destDir = project.layout.buildDirectory.dir('gsp-classes/main')
         Provider<Directory> webappDestDir = project.layout.buildDirectory.dir('gsp-classes/webapp')
-        output?.dir('gsp-classes')
 
         // The Java the rest of the project is built with, so that pages are built with it too.
         // Absent a toolchain this resolves to the JVM running Gradle, which is what compiling
@@ -330,51 +331,49 @@ class GroovyPagePlugin implements Plugin<Project> {
             archive.from(packagedTagLibIndex)
         }
 
-        // A scaffolded controller has no views of its own, so they are expanded from their
-        // templates and compiled with the rest. They are staged together rather than compiled
-        // separately, because a second compilation writes a second gsp/views.properties and the
-        // archive tasks discard duplicates, losing the views one of them lists.
+        // A scaffolded controller has no views of its own, so its pages are expanded from their
+        // templates into a directory of their own, which no controller's views resolve from, and
+        // compiled in the same compilation as the application's views. One compilation writes one
+        // gsp/views.properties; two would each write one, and the archive tasks keep only the first.
         //
-        // Only a project that scaffolds pays for this. Staging copies the views, and pointing the
-        // compilation at the copy would change what every other project compiles for no reason.
-        Directory appViews = project.layout.projectDirectory.dir('grails-app/views')
-        boolean scaffolds = scaffoldsAnyController(project).get()
-
-        Directory viewsToCompile = appViews
-        if (scaffolds) {
-            Provider<Directory> stagedViews = project.layout.buildDirectory.dir('generated/views')
-            def generateScaffoldedViews = tasks.register(
-                    'generateScaffoldedViews', GenerateScaffoldedViewsTask) { GenerateScaffoldedViewsTask it ->
-                it.group = BasePlugin.BUILD_GROUP
-                it.description = 'Expands the views of scaffolded controllers so they can be precompiled'
-                // the classes directory is written by more than one task, so the dependency is stated
-                // against the compilation rather than inferred from the directory
-                it.dependsOn(tasks.named('compileJava'))
-                ['compileGroovy', 'copyAstClasses'].each { String name ->
-                    if (project.tasks.findByName(name)) {
-                        it.dependsOn(tasks.named(name))
-                    }
+        // In every project: which controllers are scaffolded - a plugin's among them - is known only
+        // once the classes are compiled and the runtime classpath resolved, not while the build is
+        // configured, and in a project that scaffolds nothing the task writes nothing.
+        def generateScaffoldedViews = tasks.register(
+                'generateScaffoldedViews', GenerateScaffoldedViewsTask) { GenerateScaffoldedViewsTask it ->
+            it.group = BasePlugin.BUILD_GROUP
+            it.description = 'Expands the pages of scaffolded controllers so they can be precompiled'
+            // the classes directory is written by more than one task, so the dependency is stated
+            // against the compilation rather than inferred from the directory
+            ['compileJava', 'compileGroovy', 'copyAstClasses'].each { String name ->
+                if (project.tasks.findByName(name)) {
+                    it.dependsOn(tasks.named(name))
                 }
-                it.classesDirs.from(classesDirs)
-                it.templateClasspath.from(project.configurations.named('compileClasspath'))
-                it.templateOverrides.from(
-                        project.fileTree(project.layout.projectDirectory.dir('src/main/templates/scaffolding'))
-                                .matching { PatternFilterable p -> p.include('*.gsp') })
-                it.applicationViews.from(
-                        project.fileTree(appViews)
-                                .matching { PatternFilterable p -> p.include('**/*.gsp') })
-                it.outputDirectory.set(project.layout.buildDirectory.dir('generated/scaffolded-views'))
             }
-
-            tasks.register('stageGroovyPages', Sync) { Sync it ->
-                it.description = 'Collects the application and scaffolded views for GSP compilation'
-                it.into(stagedViews)
-                it.from(appViews)
-                it.from(generateScaffoldedViews)
-                // the application's own page wins, matching how the view resolvers are ordered
-                it.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+            it.classesDirs.from(classesDirs)
+            // the templates are read from the classpath the application runs with, and expanded
+            // by its own scaffolding library and Groovy, as the resolver expands them, so a
+            // page's name agrees with the one the resolver looks for
+            it.runtimeClasspath.from(project.configurations.named('runtimeClasspath'))
+            // and are compiled against compileGroovyPages' classpath, which a plugin the project has
+            // only at runtime is not on, so its controllers are left to its own build. Read from the
+            // task, not assembled again, so a build that adds to that classpath is followed.
+            it.pageClasspath.from(project.files {
+                tasks.named('compileGroovyPages', GroovyPageForkCompileTask).get().classpath
+            })
+            it.javaLauncher.convention(launcher)
+            // the application's own templates, which its runtime classpath does not carry: as
+            // they are edited, and as the resources that are packaged beside its controllers.
+            // The resources rather than the whole source set output, which view compilers add
+            // directories to without naming themselves as their producers.
+            it.templateOverrides.from(
+                    project.fileTree(project.layout.projectDirectory.dir('src/main/templates/scaffolding'))
+                            .matching { PatternFilterable p -> p.include('**/*.gsp') })
+            if (mainSourceSet != null) {
+                it.packagedTemplates.from(project.files(tasks.named(mainSourceSet.processResourcesTaskName)).asFileTree
+                        .matching { PatternFilterable p -> p.include('META-INF/templates/scaffolding/**/*.gsp') })
             }
-            viewsToCompile = stagedViews.get()
+            it.outputDirectory.set(project.layout.buildDirectory.dir('generated/scaffolded-views'))
         }
 
         def compileGroovyPages = tasks.register('compileGroovyPages', GroovyPageForkCompileTask) {
@@ -382,15 +381,22 @@ class GroovyPagePlugin implements Plugin<Project> {
             it.tmpDirPath = getTmpDirPath(project)
             // the setter takes a directory rather than a provider: it has to set both srcDir
             // and the SourceTask inputs, and setting srcDir alone compiles nothing
-            it.source = viewsToCompile
-            it.serverpath.set('/WEB-INF/grails-app/views/')
+            it.source = project.layout.projectDirectory.dir('grails-app/views')
+            it.serverpath.set(VIEWS_SERVER_PATH)
             it.classpath = allClasspath
             it.javaLauncher.convention(launcher)
             it.compileStatic.set(false)
             it.compileStaticStrict.set(false)
-            if (scaffolds) {
-                it.dependsOn(tasks.named('stageGroovyPages'))
-            }
+            it.generatedViews.from(generateScaffoldedViews.flatMap { GenerateScaffoldedViewsTask generate -> generate.outputDirectory })
+            // a scaffolded page expanded from a dependency's template that does not compile is left
+            // to be produced when it is rendered, as it was before any was compiled, rather than
+            // failing the build; one from a template of the application's own has to compile
+            it.optionalPages.from(generateScaffoldedViews.flatMap { GenerateScaffoldedViewsTask generate -> generate.optionalPages })
+        }
+
+        // scaffolded pages are written in the encoding they are compiled with
+        tasks.withType(GenerateScaffoldedViewsTask).configureEach { GenerateScaffoldedViewsTask generate ->
+            generate.pageEncoding.convention(compileGroovyPages.flatMap { GroovyPageForkCompileTask compile -> compile.compileOptions.encoding })
         }
 
         def compileWebappGroovyPages = tasks.register('compileWebappGroovyPages', GroovyPageForkCompileTask) {
@@ -437,6 +443,38 @@ class GroovyPagePlugin implements Plugin<Project> {
             }
         }
 
+        // The archives below take the compiled pages by copy. A test of a Spring Boot application
+        // needs them on its class path as well, so it loads the same pages the application ships -
+        // the view registry among them. They cannot be registered as source set output: that output
+        // is what `classes` builds, and compileGroovyPages runs after `classes`, so it would cycle.
+        //
+        // Nothing is contributed to a Grails build. A Grails application renders the views under
+        // grails-app/views, which its tests already find as they are, and putting the compiled pages
+        // on the test class path would put every such project's `test` task behind
+        // compileGroovyPages for pages it does not read.
+        //
+        // The main runtime class path is deliberately left alone in either build. A boot archive
+        // packages every directory of it into its own classes directory, and the pages are copied
+        // there already, so each page would arrive twice - and an application run from the build
+        // renders its templates as they are edited, which is what a page compiled ahead of the edit
+        // would stand in the way of.
+        //
+        // Whether this is a Grails build is answered through a provider rather than by asking the
+        // project here: this plugin is applied on its own as well as alongside the Grails plugin,
+        // with no ordering between them, so the answer is only settled once the build is configured.
+        boolean grailsBuild = false
+        project.plugins.withType(GrailsGradlePlugin) {
+            grailsBuild = true
+        }
+        FileCollection compiledPages = project.files(project.provider {
+            grailsBuild ? [] : [project.files(destDir, webappDestDir)
+                    .builtBy(compileGroovyPages, compileWebappGroovyPages)]
+        })
+        SourceSet testSourceSet = SourceSets.findSourceSet(project, SourceSet.TEST_SOURCE_SET_NAME)
+        if (testSourceSet != null) {
+            testSourceSet.runtimeClasspath = testSourceSet.runtimeClasspath + compiledPages
+        }
+
         tasks.withType(Jar).configureEach { Jar jar ->
             jar.dependsOn(compileGroovyPages)
             jar.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
@@ -454,46 +492,6 @@ class GroovyPagePlugin implements Plugin<Project> {
                 }
             }
         }
-    }
-
-    /**
-     * Whether any controller in this project is scaffolded, which decides whether the views are
-     * staged before they are compiled. The answer is needed while the build is being configured,
-     * before anything has been compiled, so it is read from the sources.
-     *
-     * <p>Read through a {@link ValueSource} rather than by opening the files here. Gradle re-runs a
-     * value source on every build and invalidates the configuration cache when its answer changes,
-     * so a controller that becomes scaffolded rebuilds the graph that generates its views. Read
-     * directly, the answer would be an undeclared input: settled once, cached, and wrong from then
-     * on.</p>
-     *
-     * <p>The match is deliberately loose. {@link GenerateScaffoldedViewsTask} reads the real
-     * annotation from the compiled class, so a false positive here costs a staging copy and a
-     * generation task that writes nothing -- while a false negative costs a view that is missing
-     * from the artifact, found by whoever opens that page.</p>
-     */
-    protected Provider<Boolean> scaffoldsAnyController(Project project) {
-        project.providers.of(ScaffoldedControllers) { ValueSourceSpec<ScaffoldedControllers.Parameters> spec ->
-            spec.parameters.controllers.from(
-                    project.fileTree(project.layout.projectDirectory.dir('grails-app/controllers'))
-                            .matching { PatternFilterable p -> p.include('**/*.groovy') })
-        }
-    }
-
-    /** Reads the controller sources for the mark of a scaffolded one, as a tracked build input. */
-    abstract static class ScaffoldedControllers implements ValueSource<Boolean, ScaffoldedControllers.Parameters> {
-
-        interface Parameters extends ValueSourceParameters {
-
-            ConfigurableFileCollection getControllers()
-
-        }
-
-        @Override
-        Boolean obtain() {
-            parameters.controllers.files.any { File controller -> controller.text.contains('@Scaffold') }
-        }
-
     }
 
     protected FileCollection resolveClassesDirs(SourceSetOutput output, Project project) {

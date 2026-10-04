@@ -28,7 +28,6 @@ import org.slf4j.LoggerFactory
 import org.springframework.util.Assert
 import org.springframework.validation.Errors
 import org.springframework.validation.MapBindingResult
-import org.springframework.web.context.request.RequestContextHolder
 
 import grails.core.GrailsApplication
 import grails.core.GrailsControllerClass
@@ -366,7 +365,7 @@ class RegexUrlMapping extends AbstractUrlMapping {
 
         String contextPath = ''
         if (includeContextPath) {
-            GrailsWebRequest webRequest = (GrailsWebRequest) RequestContextHolder.getRequestAttributes()
+            GrailsWebRequest webRequest = UrlMappingUtils.lookupWebRequest()
             if (webRequest != null) {
                 contextPath = webRequest.getContextPath()
             }

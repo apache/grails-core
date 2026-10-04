@@ -24,6 +24,7 @@ import jakarta.servlet.Filter
 import jakarta.servlet.MultipartConfigElement
 
 import groovy.transform.CompileStatic
+import org.springframework.beans.factory.ObjectProvider
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.AutoConfiguration
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
@@ -74,18 +75,6 @@ class ControllersAutoConfiguration {
 
     @Value('\${' + Settings.RESOURCES_PATTERN + ':' + Settings.DEFAULT_RESOURCE_PATTERN + '}')
     private String resourcesPattern
-
-    @Value('\${' + Settings.CONTROLLERS_UPLOAD_LOCATION + ':#{null}}')
-    private String uploadTmpDir
-
-    @Value('\${' + Settings.CONTROLLERS_UPLOAD_MAX_FILE_SIZE + ':128000}')
-    private long maxFileSize
-
-    @Value('\${' + Settings.CONTROLLERS_UPLOAD_MAX_REQUEST_SIZE + ':128000}')
-    private long maxRequestSize
-
-    @Value('\${' + Settings.CONTROLLERS_UPLOAD_FILE_SIZE_THRESHOLD + ':0}')
-    private int fileSizeThreshold
 
     @Value('\${' + Settings.WEB_SERVLET_PATH + ':#{null}}')
     String grailsServletPath
@@ -141,14 +130,6 @@ class ControllersAutoConfiguration {
     }
 
     @Bean
-    MultipartConfigElement multipartConfigElement() {
-        if (uploadTmpDir == null) {
-            uploadTmpDir = System.getProperty('java.io.tmpdir')
-        }
-        return new MultipartConfigElement(uploadTmpDir, maxFileSize, maxRequestSize, fileSizeThreshold)
-    }
-
-    @Bean
     DispatcherServlet dispatcherServlet(Environment environment) {
         GrailsDispatcherServlet dispatcherServlet = new GrailsDispatcherServlet()
         // Without a servlet filter doing the rewrite, the override is resolved here instead: after multipart
@@ -158,7 +139,7 @@ class ControllersAutoConfiguration {
     }
 
     @Bean
-    DispatcherServletRegistrationBean dispatcherServletRegistration(GrailsApplication application, DispatcherServlet dispatcherServlet, MultipartConfigElement multipartConfigElement) {
+    DispatcherServletRegistrationBean dispatcherServletRegistration(GrailsApplication application, DispatcherServlet dispatcherServlet, ObjectProvider<MultipartConfigElement> multipartConfigElement) {
         if (grailsServletPath == null) {
             boolean isTomcat = ClassUtils.isPresent('org.apache.catalina.startup.Tomcat', application.getClassLoader())
             grailsServletPath = isTomcat ? Settings.DEFAULT_TOMCAT_SERVLET_PATH : Settings.DEFAULT_WEB_SERVLET_PATH
@@ -166,7 +147,7 @@ class ControllersAutoConfiguration {
         DispatcherServletRegistrationBean dispatcherServletRegistration = new DispatcherServletRegistrationBean(dispatcherServlet, grailsServletPath)
         dispatcherServletRegistration.setLoadOnStartup(2)
         dispatcherServletRegistration.setAsyncSupported(true)
-        dispatcherServletRegistration.setMultipartConfig(multipartConfigElement)
+        multipartConfigElement.ifAvailable({ MultipartConfigElement element -> dispatcherServletRegistration.setMultipartConfig(element) })
         return dispatcherServletRegistration
     }
 

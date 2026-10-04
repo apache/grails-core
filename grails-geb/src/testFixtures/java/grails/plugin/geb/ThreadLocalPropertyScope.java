@@ -25,8 +25,11 @@ import java.util.function.Supplier;
 
 /**
  * Overrides a system property for a custom browser factory on its calling thread.
- * Property lookup must stay in Java: Groovy call-site initialization itself reads
- * system properties and would recursively enter a Groovy-backed property lookup.
+ * <p>
+ * Property lookup stays in Java: Groovy 6 reads a system property while dispatching a
+ * method call, so a lookup backed by a Groovy closure, such as
+ * {@code ThreadLocal.withInitial { [:] }}, re-enters itself until a
+ * {@code StackOverflowError} kills the Gradle test worker.
  */
 final class ThreadLocalPropertyScope {
 

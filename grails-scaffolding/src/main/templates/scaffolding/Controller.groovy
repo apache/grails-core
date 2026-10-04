@@ -38,7 +38,7 @@ class ${className}Controller {
         request.withFormat {
             form multipartForm {
                 flash.message = message(code: 'default.created.message', args: [message(code: '${propertyName}.label', default: '${className}'), ${propertyName}.id])
-                redirect ${propertyName}
+                redirect action: "show", id: ${propertyName}.id, method: "GET"
             }
             '*' { respond ${propertyName}, [status: CREATED] }
         }
@@ -64,7 +64,7 @@ class ${className}Controller {
         request.withFormat {
             form multipartForm {
                 flash.message = message(code: 'default.updated.message', args: [message(code: '${propertyName}.label', default: '${className}'), ${propertyName}.id])
-                redirect ${propertyName}
+                redirect action: "show", id: ${propertyName}.id, method: "GET"
             }
             '*'{ respond ${propertyName}, [status: OK] }
         }

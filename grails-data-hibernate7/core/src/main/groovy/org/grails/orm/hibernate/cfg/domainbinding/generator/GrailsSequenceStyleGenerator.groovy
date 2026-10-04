@@ -23,6 +23,7 @@ import org.hibernate.boot.model.relational.SqlStringGenerationContext
 import org.hibernate.boot.model.relational.internal.SqlStringGenerationContextImpl
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import org.hibernate.generator.GeneratorCreationContext
+import org.hibernate.id.PersistentIdentifierGenerator
 import org.hibernate.id.enhanced.SequenceStyleGenerator
 
 import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
@@ -39,6 +40,16 @@ class GrailsSequenceStyleGenerator extends SequenceStyleGenerator {
 
         generatorProps.putIfAbsent(INCREMENT_PARAM, '50')
         generatorProps.putIfAbsent(OPT_PARAM, 'pooled-lo')
+        // Without an explicit 'sequence' mapping param, Hibernate's own naming strategy falls back to
+        // deriving an implicit sequence name from the target table - but only if it is told what that
+        // table is. Hibernate's standard generator-creation path supplies this itself; the Grails-specific
+        // path that constructs this generator directly does not, so without it every implicit sequence
+        // mapping fails session factory bootstrap with "Unable to determine implicit sequence name for
+        // target table 'null'". Only resolved when actually needed, since getRootClass() is not always
+        // available (e.g. a component/embedded identifier's generator).
+        if (!hasExplicitSequenceName(generatorProps) && context.rootClass != null) {
+            generatorProps.putIfAbsent(PersistentIdentifierGenerator.TABLE, context.rootClass.table.name)
+        }
 
         this.configure(context, generatorProps)
 
@@ -59,6 +70,19 @@ class GrailsSequenceStyleGenerator extends SequenceStyleGenerator {
                 this.initialize(sqlContext)
             }
         }
+    }
+
+    /**
+     * Whether the mapping named the sequence itself, resolved the way {@link SequenceStyleGenerator} resolves
+     * it: {@code sequence_name} when present, otherwise {@code sequence}, and a blank name counts as no name
+     * at all. Anything the generator would treat as unnamed still needs the target table to derive one.
+     */
+    private static boolean hasExplicitSequenceName(Properties generatorProps) {
+        Object sequenceName = generatorProps.get(SEQUENCE_PARAM)
+        if (sequenceName == null) {
+            sequenceName = generatorProps.get(ALT_SEQUENCE_PARAM)
+        }
+        return sequenceName != null && !sequenceName.toString().isEmpty()
     }
 
 }

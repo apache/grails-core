@@ -233,7 +233,7 @@ class GrailsBootstrapRegistryInitializerSpec extends Specification {
         GrailsUtil.deepSanitize(exceptionWithApplicationFrame())
 
         then: "no 'Full Stack Trace:' entry is emitted"
-        logCapture.events.every { !it.formattedMessage.contains(StackTraceFilterer.FULL_STACK_TRACE_MESSAGE) }
+        logCapture.events.count { it.formattedMessage.contains(StackTraceFilterer.FULL_STACK_TRACE_MESSAGE) } == 0
 
         cleanup:
         logCapture.close()

@@ -28,7 +28,10 @@ pluginManagement {
 plugins {
 	id 'com.gradle.develocity' version '4.3.2'
 	id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.4.0'
+	id 'com.autonomousapps.build-health' version '3.19.2' apply false
 }
+
+apply from: file('../gradle/dependency-analysis.settings.gradle')
 
 def isCI = System.getenv().containsKey('CI')
 def isLocal = !isCI
@@ -89,6 +92,9 @@ rootProject.name = 'build-logic-root'
 
 include 'build-logic'
 project(':build-logic').projectDir = file('plugins')
+
+include 'vulnerability-scan'
+project(':vulnerability-scan').projectDir = file('vulnerability-scan')
 
 include 'grails-docs-core'
 project(':grails-docs-core').projectDir = file('docs-core')

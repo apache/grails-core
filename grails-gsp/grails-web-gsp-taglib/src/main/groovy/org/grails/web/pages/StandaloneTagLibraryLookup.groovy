@@ -20,11 +20,15 @@
 package org.grails.web.pages
 
 import groovy.transform.CompileStatic
+import org.springframework.beans.factory.SmartInitializingSingleton
 import org.springframework.context.ApplicationListener
 import org.springframework.context.event.ContextRefreshedEvent
+import org.springframework.core.annotation.AnnotationUtils
 
+import grails.artefact.Artefact
 import grails.core.gsp.GrailsTagLibClass
 import grails.gsp.TagLib
+import org.grails.core.artefact.gsp.TagLibArtefactHandler
 import org.grails.core.gsp.DefaultGrailsTagLibClass
 import org.grails.taglib.TagLibraryLookup
 
@@ -35,7 +39,8 @@ import org.grails.taglib.TagLibraryLookup
  * @since 2.4.0
  */
 @CompileStatic
-class StandaloneTagLibraryLookup extends TagLibraryLookup implements ApplicationListener<ContextRefreshedEvent> {
+class StandaloneTagLibraryLookup extends TagLibraryLookup
+        implements SmartInitializingSingleton, ApplicationListener<ContextRefreshedEvent> {
 
     Set<Object> tagLibInstancesSet
 
@@ -71,6 +76,16 @@ class StandaloneTagLibraryLookup extends TagLibraryLookup implements Application
         tagLibInstancesSet.addAll(tagLibInstances)
     }
 
+    /**
+     * Registers the tag library beans of the context once they all exist, which is before the web
+     * server starts accepting requests. A context refreshed event would arrive after it already had,
+     * leaving the first render of a page racing the tag libraries it uses.
+     */
+    @Override
+    void afterSingletonsInstantiated() {
+        detectAndRegisterTabLibBeans()
+    }
+
     @Override
     void onApplicationEvent(ContextRefreshedEvent event) {
         detectAndRegisterTabLibBeans()
@@ -80,7 +95,28 @@ class StandaloneTagLibraryLookup extends TagLibraryLookup implements Application
         if (tagLibInstancesSet == null) {
             tagLibInstancesSet = new LinkedHashSet<>()
         }
-        Collection<Object> detectedInstances = applicationContext.getBeansWithAnnotation(TagLib).values()
+        register(applicationContext.getBeansWithAnnotation(TagLib).values())
+        register(tagLibraryArtefacts())
+    }
+
+    /**
+     * The tag libraries of a Grails plugin, which are marked {@code @Artefact("TagLib")} rather than
+     * {@code @TagLib} - the asset pipeline's {@code <asset:...>} library among them. An application
+     * that declares one as a bean of its context can use it here as it would in a Grails
+     * application, where the same class is found by scanning artefacts instead.
+     */
+    private Collection<Object> tagLibraryArtefacts() {
+        Collection<Object> artefacts = new LinkedHashSet<>()
+        for (Object bean in applicationContext.getBeansWithAnnotation(Artefact).values()) {
+            Artefact artefact = AnnotationUtils.findAnnotation(bean.getClass(), Artefact)
+            if (artefact != null && TagLibArtefactHandler.TYPE == artefact.value()) {
+                artefacts.add(bean)
+            }
+        }
+        return artefacts
+    }
+
+    private void register(Collection<Object> detectedInstances) {
         for (Object instance in detectedInstances) {
             if (!tagLibInstancesSet.contains(instance)) {
                 tagLibInstancesSet.add(instance)

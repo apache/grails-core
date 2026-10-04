@@ -256,7 +256,7 @@ class HibernateQuery extends Query {
         return this
     }
 
-    Query and(Closure closure) {
+    Query and(@DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure closure) {
         detachedCriteria.and(closure)
         return this
     }
@@ -276,7 +276,7 @@ class HibernateQuery extends Query {
         return this
     }
 
-    Query or(Closure closure) {
+    Query or(@DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure closure) {
         detachedCriteria.or(closure)
         return this
     }
@@ -297,7 +297,7 @@ class HibernateQuery extends Query {
         return this
     }
 
-    Query not(Closure closure) {
+    Query not(@DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure closure) {
         detachedCriteria.not(closure)
         return this
     }

@@ -22,6 +22,7 @@ import java.util.regex.Matcher
 import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
+import org.jspecify.annotations.NonNull
 import org.springframework.util.StringUtils
 
 /**
@@ -53,7 +54,7 @@ final class RelaxedNames implements Iterable<String> {
     }
 
     @Override
-    Iterator<String> iterator() {
+    @NonNull Iterator<String> iterator() {
         return this.values.iterator()
     }
 
@@ -184,7 +185,7 @@ final class RelaxedNames implements Iterable<String> {
             for (String field : SEPARATED_TO_CAMEL_CASE_PATTERN.split(value)) {
                 field = (caseInsensitive ? field.toLowerCase() : field)
                 builder.append(
-                        builder.length() == 0 ? field : StringUtils.capitalize(field))
+                    builder.isEmpty() ? field : StringUtils.capitalize(field))
             }
             for (String suffix : ['_', '-', '.'] as String[]) {
                 if (value.endsWith(suffix)) {

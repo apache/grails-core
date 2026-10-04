@@ -95,7 +95,7 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
     private static final String GRAILS_AUTO_CONFIGURATION_CLASS_NAME = 'grails.boot.config.GrailsAutoConfiguration'
     private static final String BEANS_PROPERTY = 'beans'
     private static final ClassNode GRAILS_BEANS_ANNOTATION = ClassHelper.make('grails.compiler.beans.GrailsBeans')
-    private static final Set<String> BEANS_DSL_ROOT_CALLS = ['bean', 'field', 'method'].toSet()
+    private static final Set<String> BEANS_DSL_ROOT_CALLS = ['bean', 'field', 'method', 'group'].toSet()
 
     private static final AntPathMatcher ANT_PATH_MATCHER = new AntPathMatcher()
 
@@ -161,6 +161,10 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
                 continue
             }
             if (GrailsASTUtils.isSubclassOfOrImplementsInterface(classNode, GRAILS_AUTO_CONFIGURATION_CLASS_NAME)) {
+                compileBeansDsl(classNode, source)
+            }
+            // A unit test's beans compile onto a nested configuration class the testing support registers
+            if (GrailsBeansASTTransformation.isUnitTest(classNode)) {
                 compileBeansDsl(classNode, source)
             }
             if (updateGrailsFactoriesWithTypes(classNode, [ARTEFACT_HANDLER_CLASS, TRAIT_INJECTOR_CLASS], compilationTargetDirectory)) {
@@ -360,10 +364,10 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
     }
 
     /**
-     * Compiles a plugin descriptor's or application class's {@code beans} closure into {@code @Bean}
-     * factory methods, so {@code @GrailsBeans} does not have to be written out - the {@code beans}
-     * property is a convention here in the same way {@code doWithSpring} and {@code watchedResources}
-     * already are.
+     * Compiles a plugin descriptor's, application class's or unit test's {@code beans} closure
+     * into {@code @Bean} factory methods, so {@code @GrailsBeans} does not have to be written out -
+     * the {@code beans} property is a convention here in the same way {@code doWithSpring} and
+     * {@code watchedResources} already are.
      *
      * <p>The transformation is invoked directly rather than by adding the annotation: annotation-driven
      * transformations are collected during semantic analysis, so an annotation added at
@@ -378,15 +382,31 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
      * Only a closure whose every top-level statement is a {@code bean}/{@code field}/{@code method}
      * call is taken; anything else is left alone. Writing {@code @GrailsBeans} explicitly opts back
      * in to the strict errors, which is the right behaviour when the author has said what they mean.</p>
+     *
+     * <p>A block that is <i>partly</i> DSL-shaped is neither, and is reported rather than dropped -
+     * see {@link #reportStrayBeansStatement}.</p>
      */
     private void compileBeansDsl(ClassNode classNode, SourceUnit source) {
         PropertyNode beansProperty = classNode.getProperty(BEANS_PROPERTY)
-        if (beansProperty == null || !classNode.getAnnotations(GRAILS_BEANS_ANNOTATION).isEmpty()) {
+        if (!classNode.getAnnotations(GRAILS_BEANS_ANNOTATION).isEmpty()) {
             return
         }
-        if (!looksLikeBeansDsl(beansProperty)) {
+        if (beansProperty == null) {
+            GrailsBeansASTTransformation.reportSharedBeans(classNode, source)
             return
         }
+        List<Statement> statements = beansDslStatements(classNode, beansProperty)
+        if (statements == null) {
+            return
+        }
+        Statement stray = statements.find { Statement statement -> !isBeansDslStatement(statement) }
+        if (stray != null) {
+            reportStrayBeansStatement(statements, stray, source)
+            return
+        }
+        // Claimed: a Spock specification's closure is moved back onto the field only now, so an
+        // unrelated beans property is left exactly as Spock compiled it
+        GrailsBeansASTTransformation.reclaimMovedInitializer(classNode, beansProperty)
 
         // Referenced directly, as the registering below already does. grails-core declares
         // grails-beans-dsl api (see grails-core/build.gradle), so it reaches every project that has
@@ -397,34 +417,76 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
         transformation.visit([new AnnotationNode(GRAILS_BEANS_ANNOTATION), classNode] as ASTNode[], source)
     }
 
-    private static boolean looksLikeBeansDsl(PropertyNode beansProperty) {
-        Expression initial = beansProperty.field?.initialExpression
+    /**
+     * The top-level statements of a {@code beans} closure, or {@code null} when the property could
+     * never be the DSL - a Map, a String, a closure whose body is not a block. An empty block yields
+     * an empty list rather than null: it is a no-op either way, and claiming it keeps the implicit
+     * and explicit spellings agreeing.
+     */
+    private static List<Statement> beansDslStatements(ClassNode classNode, PropertyNode beansProperty) {
+        // A Spock specification's field initializer has been moved into a method by now
+        Expression initial = beansProperty.field?.initialExpression ?:
+                GrailsBeansASTTransformation.movedInitializer(classNode, beansProperty.field)
         if (!(initial instanceof ClosureExpression)) {
-            return false
+            return null
         }
         Statement code = ((ClosureExpression) initial).code
-        if (!(code instanceof BlockStatement)) {
+        code instanceof BlockStatement ? ((BlockStatement) code).statements : null
+    }
+
+    /**
+     * Whether one top-level statement is a {@code bean}/{@code field}/{@code method} declaration,
+     * looking through any chained qualifiers to the call at the root of the chain.
+     */
+    private static boolean isBeansDslStatement(Statement statement) {
+        if (!(statement instanceof ExpressionStatement)) {
             return false
         }
-        List<Statement> statements = ((BlockStatement) code).statements
-        if (statements.isEmpty()) {
-            // an empty block is a no-op either way, and claiming it keeps the two spellings agreeing
-            return true
-        }
-        statements.every { Statement statement ->
-            if (!(statement instanceof ExpressionStatement)) {
-                return false
+        Expression expression = ((ExpressionStatement) statement).expression
+        while (expression instanceof MethodCallExpression) {
+            MethodCallExpression call = (MethodCallExpression) expression
+            if (call.methodAsString in BEANS_DSL_ROOT_CALLS) {
+                return true
             }
-            Expression expression = ((ExpressionStatement) statement).expression
-            while (expression instanceof MethodCallExpression) {
-                MethodCallExpression call = (MethodCallExpression) expression
-                if (call.methodAsString in BEANS_DSL_ROOT_CALLS) {
-                    return true
-                }
-                expression = call.objectExpression
-            }
-            false
+            expression = call.objectExpression
         }
+        false
+    }
+
+    /**
+     * Fails a top-level statement that is not a {@code bean}/{@code field}/{@code method} declaration
+     * when others in the same block are.
+     *
+     * <p>Silence is the wrong answer here. The all-or-nothing claim above exists to leave an
+     * unrelated {@code beans} property alone, and a block with no declarations in it at all is
+     * exactly that - so it stays silent. But one stray statement among real declarations is not an
+     * unrelated property by any reading: it is the DSL with a mistake in it, most often a typo in a
+     * call name or an {@code if} wrapped around beans that belong under a {@code @Conditional*}
+     * qualifier instead. Dropping the whole block for that registers <i>nothing</i>, and the failure
+     * surfaces far away, as beans that are simply absent at runtime.</p>
+     *
+     * <p>The rule is the same wherever the block is written: a {@code beans} closure containing any
+     * top-level {@code bean}/{@code field}/{@code method} call is the DSL and must be entirely the
+     * DSL; one containing none is not the DSL and is left alone. A plugin descriptor is not treated
+     * more leniently than an application class, for two reasons. No Grails version has ever read a
+     * {@code beans} <i>property</i> off a descriptor - the properties plugin loading reads are
+     * {@code doWithSpring}, {@code watchedResources}, {@code onChange} and friends - so the
+     * pre-8.0 descriptor this would protect has to be dead code that also happens to contain a
+     * top-level {@code bean(...)} call. And a descriptor is compiled by the plugin's author but its
+     * beans are missed by every downstream application, whose developers never see the plugin's
+     * build output - so loudness matters more there, not less. The way out for a {@code beans}
+     * property that genuinely is not the DSL is to rename it, which the message says.</p>
+     */
+    private static void reportStrayBeansStatement(List<Statement> statements, Statement stray, SourceUnit source) {
+        if (!statements.any { Statement statement -> isBeansDslStatement(statement) }) {
+            return
+        }
+        GrailsASTUtils.error(source, stray, 'this statement is not a bean(...), field(...) or method(...) ' +
+                "declaration, and every top-level statement in a 'beans' block must be one of those three. " +
+                'To declare a bean conditionally, put the condition on the bean itself - ' +
+                '.annotate(ConditionalOnProperty, ...) or .conditionalOnMissingBean() - rather than wrapping ' +
+                'it in an if; for state or logic shared between beans, use field(...) or method(...). ' +
+                "If this 'beans' property is not the beans DSL at all, rename it.")
     }
 
     /**

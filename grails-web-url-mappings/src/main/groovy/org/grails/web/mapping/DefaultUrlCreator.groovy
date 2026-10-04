@@ -19,7 +19,6 @@
 package org.grails.web.mapping
 
 import groovy.transform.CompileStatic
-import org.springframework.web.context.request.RequestContextHolder
 
 import grails.core.GrailsControllerClass
 import grails.util.GrailsStringUtils
@@ -55,7 +54,7 @@ class DefaultUrlCreator implements UrlCreator {
 
     String createURL(Map parameterValues, String encoding) {
         if (parameterValues == null) parameterValues = Collections.emptyMap()
-        GrailsWebRequest webRequest = (GrailsWebRequest) RequestContextHolder.getRequestAttributes()
+        GrailsWebRequest webRequest = UrlMappingUtils.lookupWebRequest()
         return createURLWithWebRequest(parameterValues, webRequest, true)
     }
 
@@ -80,8 +79,9 @@ class DefaultUrlCreator implements UrlCreator {
         }
 
         FastStringWriter actualUriBuf = new FastStringWriter()
-        if (includeContextPath) {
-            actualUriBuf.append(requestStateLookupStrategy.getContextPath())
+        String contextPath = includeContextPath ? requestStateLookupStrategy.getContextPath() : null
+        if (contextPath != null) {
+            actualUriBuf.append(contextPath)
         }
         if (actionName != null) {
             if (actionName.indexOf((int) SLASH) > -1) {
@@ -121,7 +121,7 @@ class DefaultUrlCreator implements UrlCreator {
     }
 
     private String createURLInternal(String controller, String action, Map<String, String> parameterValues, boolean includeContextPath) {
-        GrailsWebRequest webRequest = (GrailsWebRequest) RequestContextHolder.getRequestAttributes()
+        GrailsWebRequest webRequest = UrlMappingUtils.lookupWebRequest()
 
         if (parameterValues == null) parameterValues = new HashMap<>()
         boolean blankController = GrailsStringUtils.isBlank(controller)

@@ -19,6 +19,7 @@
 package org.grails.web.converters.marshaller.xml
 
 import java.text.Format
+import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -69,7 +70,7 @@ class DateMarshaller implements ObjectMarshaller<XML> {
             Date date = (Date) object
             String formatted = legacyFormatter != null ?
                     legacyFormatter.format(date) :
-                    DEFAULT_FORMATTER.format(date.toInstant())
+                    DEFAULT_FORMATTER.format(toInstant(date))
             xml.chars(formatted)
         }
         catch (Exception e) {
@@ -77,4 +78,10 @@ class DateMarshaller implements ObjectMarshaller<XML> {
         }
     }
 
+    // java.sql.Date and java.sql.Time throw UnsupportedOperationException from toInstant()
+    private static Instant toInstant(Date date) {
+        return date instanceof java.sql.Date || date instanceof java.sql.Time ?
+                Instant.ofEpochMilli(date.getTime()) :
+                date.toInstant()
+    }
 }

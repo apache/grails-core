@@ -148,13 +148,12 @@ class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
     def <T> T createProxy(Session session, Class<T> type, Serializable key) {
         if (session.getNativeInterface() instanceof GrailsHibernateTemplate) {
             GrailsHibernateTemplate ght = (GrailsHibernateTemplate) session.getNativeInterface()
-            org.hibernate.SessionFactory sessionFactory = ght.getSessionFactory()
-            if (sessionFactory != null) {
-                return Hibernate.createDetachedProxy(sessionFactory, type, key)
-            }
+            // Obtain the proxy from the current Hibernate session (Session#getReference),
+            // so that it is attached to it and can be initialized on first access
+            return ght.load(type, key)
         }
         throw new IllegalStateException(
-                'Could not obtain native Hibernate SessionFactory from Session#getNativeInterface()')
+                'Could not obtain GrailsHibernateTemplate from Session#getNativeInterface()')
     }
 
     @Override

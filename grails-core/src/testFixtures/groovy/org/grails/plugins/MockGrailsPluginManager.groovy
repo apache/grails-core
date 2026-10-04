@@ -71,7 +71,7 @@ class MockGrailsPluginManager extends AbstractGrailsPluginManager {
     }
 
     void loadPlugins() throws PluginException {
-        if (initialised) {
+        if (this.@initialised) {
             return
         }
 
@@ -88,7 +88,7 @@ class MockGrailsPluginManager extends AbstractGrailsPluginManager {
             plugins.put(plugin.getName(), plugin)
         })
 
-        initialised = true
+        this.@initialised = true
     }
 
     @Override

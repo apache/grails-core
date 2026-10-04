@@ -29,6 +29,7 @@ import org.springframework.beans.InvalidPropertyException
 import grails.gorm.validation.ConstrainedProperty
 import grails.gorm.validation.Constraint
 import grails.gorm.validation.DefaultConstrainedProperty
+import org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator
 import org.grails.datastore.gorm.validation.constraints.eval.DefaultConstraintEvaluator
 import org.grails.datastore.gorm.validation.constraints.registry.ConstraintRegistry
 import org.grails.datastore.mapping.model.MappingContext
@@ -57,16 +58,27 @@ class ConstrainedPropertyBuilder extends BuilderSupport {
     private final ConstraintRegistry constraintRegistry
     private final MappingContext mappingContext
     private final Map<String, Object> defaultConstraints
+    private final ConstraintsEvaluator importFromEvaluator
     private boolean allowDynamic = false
     private boolean defaultNullable = false
 
     ConstrainedPropertyBuilder(MappingContext mappingContext, ConstraintRegistry constraintRegistry, Class targetClass, Map<String, Object> defaultConstraints) {
+        this(mappingContext, constraintRegistry, targetClass, defaultConstraints, null)
+    }
+
+    /**
+     * @param importFromEvaluator The evaluator that evaluates the classes named by {@code importFrom}, so they get
+     *                            the same defaults as the class being built. When {@code null}, a new
+     *                            {@link DefaultConstraintEvaluator} with the framework defaults is used.
+     */
+    ConstrainedPropertyBuilder(MappingContext mappingContext, ConstraintRegistry constraintRegistry, Class targetClass, Map<String, Object> defaultConstraints, ConstraintsEvaluator importFromEvaluator) {
         this.targetClass = targetClass
         this.mappingContext = mappingContext
         classPropertyFetcher = ClassPropertyFetcher.forClass(targetClass)
         targetMetaClass = GroovySystem.getMetaClassRegistry().getMetaClass(targetClass)
         this.constraintRegistry = constraintRegistry
         this.defaultConstraints = defaultConstraints
+        this.importFromEvaluator = importFromEvaluator
     }
 
     String getSharedConstraint(String propertyName) {
@@ -200,8 +212,9 @@ class ConstrainedPropertyBuilder extends BuilderSupport {
     @SuppressWarnings(['unchecked', 'rawtypes'])
     private Object handleImportFrom(Map attributes, Class importFromClazz) {
 
-        Map importFromConstrainedProperties = new DefaultConstraintEvaluator(constraintRegistry, mappingContext, defaultConstraints)
-                                                        .evaluate(importFromClazz, defaultNullable)
+        ConstraintsEvaluator evaluator = importFromEvaluator != null ? importFromEvaluator :
+                new DefaultConstraintEvaluator(constraintRegistry, mappingContext, defaultConstraints)
+        Map importFromConstrainedProperties = evaluator.evaluate(importFromClazz, defaultNullable)
 
         List<MetaProperty> metaProperties = classPropertyFetcher.getMetaProperties()
 

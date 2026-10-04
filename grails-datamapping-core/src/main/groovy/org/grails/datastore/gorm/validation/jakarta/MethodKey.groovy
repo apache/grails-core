@@ -30,9 +30,9 @@ import groovy.transform.CompileStatic
 class MethodKey {
 
     private final String name
-    private final Class[] parameterTypes
+    private final Class<?>[] parameterTypes
 
-    MethodKey(String name, Class[] parameterTypes) {
+    MethodKey(String name, Class<?>[] parameterTypes) {
         this.name = name
         this.parameterTypes = parameterTypes
     }
@@ -48,10 +48,9 @@ class MethodKey {
 
         MethodKey methodKey = (MethodKey) o
 
-        if (name != null ? !name.equals(methodKey.name) : methodKey.name != null) {
+        if (!Objects.equals(name, methodKey.name)) {
             return false
         }
-        // Probably incorrect - comparing Object[] arrays with Arrays.equals
         return Arrays.equals(parameterTypes, methodKey.parameterTypes)
     }
 

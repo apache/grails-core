@@ -31,3 +31,124 @@ Grails has a few built in safety mechanisms by default.
 * The default link:scaffolding.html[scaffolding] templates HTML escape all data fields when displayed
 * Grails link creating tags (link:{gspTagsRef}link.html[link], link:{gspTagsRef}form.html[form], link:{gspTagsRef}createLink.html[createLink], link:{gspTagsRef}createLinkTo.html[createLinkTo] and others) all use appropriate escaping mechanisms to prevent code injection
 * Grails provides <<codecs,codecs>> to let you trivially escape data when rendered as HTML, JavaScript and URLs to prevent injection attacks here.
+
+==== HTTP Security Headers
+
+Grails servlet web applications send a small set of browser hardening headers by default:
+
+[cols="1,1", options="header"]
+|===
+| Header
+| Default value
+
+| `X-Content-Type-Options`
+| `nosniff`
+
+| `X-Frame-Options`
+| `SAMEORIGIN`
+
+| `Referrer-Policy`
+| `strict-origin-when-cross-origin`
+
+| `X-XSS-Protection`
+| `0`
+|===
+
+HSTS and Content Security Policy are not enabled by default because their correct values depend on deployment topology and application assets.
+
+The headers are written immediately before the response is committed, and only when nothing else has already set them.
+A controller, an interceptor, another servlet filter, or Spring Security's own header writers can therefore set any of these headers and that value is what the browser receives; Grails only fills in the headers that are still missing.
+This also applies to responses committed by a redirect, an error page, a streamed body, or a body large enough to fill the container's response buffer.
+If a response is `reset()` after the headers were written, for example by an error handler that starts over, the replacement response receives them again.
+
+The filter is registered at `GrailsFilters.FIRST`, ahead of every other Grails-registered filter, so it also covers responses that those filters serve themselves without continuing the chain, such as the static assets the asset-pipeline plugin streams.
+Filters ordered ahead of `GrailsFilters.FIRST` run outside it: Spring Boot's forwarded-header filter (registered when `server.forward-headers-strategy` is `framework`), Spring Boot's `ErrorPageFilter` in a WAR deployment, and any application filter you order below that value.
+The character-encoding filter Grails registers runs inside the Grails filter.
+A response a filter outside it serves itself, without continuing the chain, does not pass through the Grails filter and receives no default headers.
+
+===== Ordering relative to Spring Security
+
+At Spring Boot's default `spring.security.filter.order` the Spring Security filter chain runs inside the Grails filter, and its header writers run first at commit time, so whatever Spring Security is configured to send is what the browser receives.
+If you order the Spring Security chain ahead of `GrailsFilters.FIRST`, the Grails defaults are written before Spring Security's writers run.
+All of Spring Security's header writers except the `X-Frame-Options` writer leave a header alone once it is present, so in that arrangement they find the Grails value already in place and do not replace it.
+Disable the corresponding `grails.security.headers.<header>` to let Spring Security own that header, or leave the Spring Security chain at its default order.
+
+The same can happen at the default order for a large body written through the response writer in a multi-byte character encoding such as UTF-8.
+Grails measures the body in bytes, as the container's response buffer is sized, while Spring Security measures writer output in characters, so once such a body fills the buffer Grails can write its defaults before Spring Security's writers run.
+Disable the corresponding `grails.security.headers.<header>` if Spring Security must own a header on such responses.
+
+===== HSTS behind a reverse proxy
+
+When HSTS is enabled, Grails sends `Strict-Transport-Security` only for requests the client made over HTTPS.
+Behind a TLS-terminating reverse proxy (the typical nginx or HAProxy topology) the connection between the proxy and the application is plain HTTP, so Grails also honors the scheme the proxy forwards in `X-Forwarded-Proto` or the RFC 7239 `Forwarded` header.
+If your proxy sets neither, configure the Spring Boot `server.forward-headers-strategy` property (`framework` or `native`) so the container itself sees the original scheme, or set HSTS at the proxy where TLS actually terminates.
+
+===== Reverse proxies that already send these headers
+
+The application cannot see headers a reverse proxy adds to the response on its way to the client.
+If your edge proxy already sends one of these headers (for example nginx's `add_header`, which _appends_ to upstream headers rather than replacing them), the client receives the header twice.
+For the four default headers that is harmless or, at worst, stricter: `nosniff` twice is still `nosniff`, conflicting `X-Frame-Options` values make the browser block framing, `Referrer-Policy` resolves to the last valid token (the proxy's, since it is appended after the application's), and no current browser implements `X-XSS-Protection`.
+Duplicate `Content-Security-Policy` headers do matter, because browsers enforce the intersection of all the policies they receive, but CSP is never sent unless you configure it.
+
+If you would rather the application not send its defaults through a proxy that owns these headers, set `grails.security.headers.defaults` to `auto`.
+Grails then detects requests that arrived through a reverse proxy and, for those requests, sends only the headers you configured explicitly under `grails.security.headers.*`; the built-in default values are not applied.
+A request is treated as proxied when any of the following holds:
+
+* it carries a `Forwarded`, `X-Forwarded-For`, `X-Forwarded-Proto`, `X-Forwarded-Host`, `Via`, or `X-Real-IP` request header;
+* `server.forward-headers-strategy` is set to `framework` or `native` (the forwarding filter or valve strips the forwarded request headers before Grails could see them, so the configuration itself is taken as the signal);
+* Spring Boot detects that the application is running on a cloud platform such as Kubernetes or Cloud Foundry, where traffic normally enters through an ingress proxy.
+
+The first time a proxied request is seen in `auto` mode, Grails logs a message at `INFO` level explaining that the defaults are being withheld.
+Setting either the `enabled` or the `value` key of a header marks it as explicitly configured, and `defaults` does not apply to explicitly configured headers.
+An explicitly configured header that is enabled and has a value is sent whether or not a proxy is detected, so setting `enabled: true` on its own sends the built-in value through a proxy as well; one set to `enabled: false` is never sent.
+`Content-Security-Policy` and `Strict-Transport-Security` are disabled by default, so setting their `value` alone sends nothing: set `enabled: true` as well.
+
+Note that most load balancers, ingress controllers and platform routers add `X-Forwarded-For` to every request without adding any security headers of their own, and every Kubernetes pod is detected as a cloud platform.
+In `auto` mode such deployments send none of the defaults, which is why `always` is the default; choose `auto` only when the proxy really does own these headers.
+
+The `grails.security.headers.defaults` setting accepts these values:
+
+[cols="1,3", options="header"]
+|===
+| Value
+| Behavior
+
+| `always` (default)
+| Apply the default values on every response, including behind a reverse proxy.
+
+| `auto`
+| Apply the default values unless the request came through a reverse proxy. Use this when the proxy already sends these headers.
+
+| `never`
+| Never apply the default values; send only the headers you configured explicitly. Use this when the proxy owns the headers but detection cannot see it, for example because the proxy strips its own forwarding headers.
+|===
+
+In `auto` mode a client can add a forwarding header to its own direct request and thereby suppress the defaults for that one response.
+This does not weaken the protection these headers provide, because an attacker does not control the request headers a victim's browser sends.
+
+You can disable the whole filter, disable individual headers, or override values from `application.yml`:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    security:
+        headers:
+            enabled: true
+            defaults: always
+            frame-options:
+                value: DENY
+            referrer-policy:
+                value: no-referrer-when-downgrade
+            hsts:
+                enabled: true
+                value: max-age=31536000; includeSubDomains
+            content-security-policy:
+                enabled: true
+                value: default-src 'self'
+----
+
+Set `grails.security.headers.<header>.enabled` to `false` to omit a single header.
+For example, `grails.security.headers.xss-protection.enabled: false` omits `X-XSS-Protection`.
+A header that is enabled but has a blank `value` is not sent; Grails logs a warning naming the property the first time that happens, since it usually means `content-security-policy.enabled` was set without a policy.
+If an application, another filter, or Spring Security has already set one of these headers on the response by the time it commits, Grails leaves that value unchanged.

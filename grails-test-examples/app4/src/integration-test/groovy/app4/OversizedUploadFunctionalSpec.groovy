@@ -33,7 +33,7 @@ import spock.lang.Specification
 class OversizedUploadFunctionalSpec extends Specification implements HttpClientSupport {
 
     def 'an upload past the configured limit is handled by the "413" status code mapping'() {
-        given: 'a payload larger than the default grails.controllers.upload.maxRequestSize of 128000 bytes'
+        given: 'a payload larger than the configured spring.servlet.multipart.maxRequestSize of 100KB'
         def body = MultipartBody.builder()
                 .addPart('file', 'huge.txt', 'text/plain', ('X' * 200000).bytes)
                 .build()

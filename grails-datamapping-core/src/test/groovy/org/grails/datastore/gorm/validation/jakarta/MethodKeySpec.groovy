@@ -22,7 +22,7 @@ import spock.lang.Specification
 
 class MethodKeySpec extends Specification {
 
-    void "test equals and hashCode for keys with the same name and parameter types"() {
+    void "keys with the same name and parameter types are equal and share a hash code"() {
         given:
         def a = new MethodKey('save', [String, Integer] as Class[])
         def b = new MethodKey('save', [String, Integer] as Class[])
@@ -32,34 +32,31 @@ class MethodKeySpec extends Specification {
         a.hashCode() == b.hashCode()
     }
 
-    void "test equals returns false for a different method name"() {
-        given:
-        def a = new MethodKey('save', [String] as Class[])
-        def b = new MethodKey('delete', [String] as Class[])
-
+    void "keys with different names are not equal"() {
         expect:
-        a != b
+        new MethodKey('save', [String] as Class[]) != new MethodKey('delete', [String] as Class[])
     }
 
-    void "test equals returns false for different parameter types"() {
-        given:
-        def a = new MethodKey('save', [String] as Class[])
-        def b = new MethodKey('save', [Integer] as Class[])
-
+    void "keys with different parameter types are not equal"() {
         expect:
-        a != b
+        new MethodKey('save', [String] as Class[]) != new MethodKey('save', [Integer] as Class[])
     }
 
-    void "test equals returns false when compared to a different type or null"() {
+    void "a key is not equal to null or an unrelated type"() {
+        expect:
+        new MethodKey('save', [String] as Class[]) != null
+        new MethodKey('save', [String] as Class[]) != 'save'
+    }
+
+    void "a key is equal to itself"() {
         given:
         def key = new MethodKey('save', [String] as Class[])
 
         expect:
-        key != 'save'
-        key != null
+        key == key
     }
 
-    void "test a key can be used as a map key"() {
+    void "a key can be used as a map key"() {
         given:
         Map<MethodKey, String> map = [:]
         map[new MethodKey('save', [String] as Class[])] = 'first'

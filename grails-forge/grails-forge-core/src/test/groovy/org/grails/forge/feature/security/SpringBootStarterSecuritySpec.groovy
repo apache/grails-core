@@ -80,10 +80,14 @@ class SpringBootStarterSecuritySpec extends ApplicationContextSpec implements Co
         !application.contains('@Import(SecurityConfig)')
 
         and: 'the home page and static assets are public, the user admin is ROLE_ADMIN, the rest requires login'
-        application.contains("it.requestMatchers('/', '/index', '/index.gsp', '/error', '/assets/**').permitAll()")
+        application.contains("it.requestMatchers('/', '/index', '/index.gsp', '/error', '/favicon.ico', '/assets/**').permitAll()")
         application.contains(".requestMatchers('/user/**').hasRole('ADMIN')")
         application.contains('.anyRequest().authenticated()')
         !application.contains('anyRequest().permitAll()')
+
+        and: "the browser's own favicon fetch is served from the assets instead of being bounced through the login page"
+        output['grails-app/controllers/example/grails/UrlMappings.groovy']
+                .contains('"/favicon.ico"(redirect: [uri: \'/assets/favicon.ico\', permanent: true])')
 
         and: 'BootStrap seeds an admin user with a generated password'
         def bootStrap = output['grails-app/init/example/grails/BootStrap.groovy']

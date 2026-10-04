@@ -35,21 +35,22 @@ import org.grails.datastore.mapping.model.MappingContext
 class StandaloneGrailsApplication extends AbstractGrailsApplication {
 
     Config getConfig() {
-        if (config == null) {
+        if (this.@config == null) {
+            Config created
             if (parentContext != null) {
                 org.springframework.core.env.Environment environment = parentContext.getEnvironment()
                 if (environment instanceof ConfigurableEnvironment) {
                     MutablePropertySources propertySources = ((ConfigurableEnvironment) environment).getPropertySources()
-                    this.config = new PropertySourcesConfig(propertySources)
+                    created = new PropertySourcesConfig(propertySources)
                 } else {
-                    this.config = new PropertySourcesConfig()
+                    created = new PropertySourcesConfig()
                 }
             } else {
-                this.config = new PropertySourcesConfig()
+                created = new PropertySourcesConfig()
             }
-            setConfig(this.config)
+            setConfig(created)
         }
-        return config
+        return this.@config
     }
 
     @Override

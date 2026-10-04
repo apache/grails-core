@@ -51,10 +51,12 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
     Map indices
     def lastKey
     String family
+    private final SimpleMapDatastore simpleMapDatastore
 
     SimpleMapEntityPersister(MappingContext context, PersistentEntity entity, Session session,
                              SimpleMapDatastore datastore, ApplicationEventPublisher publisher) {
         super(context, entity, session, publisher)
+        this.simpleMapDatastore = datastore
         this.datastore = datastore.backingMap
         this.indices = datastore.indices
         family = getFamily(entity, entity.getMapping())
@@ -267,16 +269,17 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
         final isRoot = persistentEntity.root
         final type = isRoot ? persistentEntity.identity.type : persistentEntity.rootEntity.identity.type
         if ((String.isAssignableFrom(type)) || (Number.isAssignableFrom(type))) {
-            def key
-            if (isRoot) {
-                key = ++lastKey
+            SimpleMapEntityPersister rootPersister = isRoot ? this :
+                    (SimpleMapEntityPersister) session.getPersister(persistentEntity.rootEntity)
+            long key = rootPersister.nextKey()
+            if (type == String) {
+                return Long.toString(key)
             }
-            else {
-                def root = persistentEntity.rootEntity
-                session.getPersister(root).lastKey++
-                key = session.getPersister(root).lastKey
+            // Stored under the identifier's own type, or get(1) would not find an Integer key
+            if (type == Integer) {
+                return Integer.valueOf((int) key)
             }
-            return type == String ? key.toString() : key
+            return Long.valueOf(key)
         }
         else if (UUID.isAssignableFrom(type)) {
             return UUID.randomUUID()
@@ -288,6 +291,22 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
                 throw new IdentityGenerationException("Cannot generator identity for entity $persistentEntity with type $type")
             }
         }
+    }
+
+    /**
+     * The next identifier for this persister's family, from the count the datastore shares between its
+     * sessions: counted per session, two sessions open at once gave their inserts the same identifier,
+     * and the one flushed last overwrote the other.
+     */
+    private long nextKey() {
+        long key = simpleMapDatastore.nextIdentifier(family)
+        if (lastKey instanceof Integer) {
+            lastKey = Integer.valueOf((int) key)
+        }
+        else {
+            lastKey = Long.valueOf(key)
+        }
+        return key
     }
 
     protected storeEntry(PersistentEntity persistentEntity, EntityAccess entityAccess, storeId, Map nativeEntry) {

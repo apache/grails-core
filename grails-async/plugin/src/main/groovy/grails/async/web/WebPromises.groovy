@@ -20,14 +20,24 @@
 package grails.async.web
 
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.Executor
+import java.util.function.UnaryOperator
 
 import groovy.transform.CompileStatic
+
+import org.springframework.web.context.request.async.StandardServletAsyncWebRequest
+import org.springframework.web.context.request.async.WebAsyncManager
+import org.springframework.web.context.request.async.WebAsyncUtils
 
 import grails.async.Promise
 import grails.async.PromiseFactory
 import grails.async.decorator.PromiseDecorator
 import org.grails.async.factory.PromiseFactoryBuilder
-import org.grails.plugins.web.async.AsyncWebRequestPromiseDecoratorLookupStrategy
+import org.grails.async.factory.future.CompletableFuturePromiseFactory
+import org.grails.plugins.web.async.GrailsWebRequestTaskDecorator
+import org.grails.plugins.web.async.AsyncRequestSupport
+import org.grails.web.servlet.mvc.GrailsWebRequest
+import org.grails.web.util.GrailsApplicationAttributes
 
 /**
  * A specific promises factory class designed for use in controllers and other web contexts
@@ -38,24 +48,48 @@ import org.grails.plugins.web.async.AsyncWebRequestPromiseDecoratorLookupStrateg
 @CompileStatic
 class WebPromises {
 
-    private static final AsyncWebRequestPromiseDecoratorLookupStrategy DECORATOR_LOOKUP = new AsyncWebRequestPromiseDecoratorLookupStrategy()
-
     static PromiseFactory promiseFactory
 
     static PromiseFactory getPromiseFactory() {
         if (promiseFactory == null) {
-            promiseFactory = new PromiseFactoryBuilder().build()
-            promiseFactory.addPromiseDecoratorLookupStrategy(DECORATOR_LOOKUP)
+            GrailsWebRequestTaskDecorator decorator = new GrailsWebRequestTaskDecorator()
+            UnaryOperator<Executor> decorateExecutor = (Executor executor) -> {
+                Executor decorated = (Runnable task) -> executor.execute(decorator.decorate(task))
+                return decorated
+            }
+            setPromiseFactory(PromiseFactoryBuilder.build(null, decorateExecutor))
         }
         return promiseFactory
     }
 
     static void setPromiseFactory(PromiseFactory promiseFactory) {
-        promiseFactory.addPromiseDecoratorLookupStrategy(DECORATOR_LOOKUP)
+        if (promiseFactory != null && !(promiseFactory instanceof CompletableFuturePromiseFactory)) {
+            promiseFactory.addPromiseDecoratorLookupStrategy {
+                [new WebRequestPromiseDecorator()] as List<PromiseDecorator>
+            }
+        }
         WebPromises.@promiseFactory = promiseFactory
     }
 
     private WebPromises() {}
+
+    private static class WebRequestPromiseDecorator implements PromiseDecorator {
+
+        @Override
+        <D> Closure<D> decorate(Closure<D> work) {
+            GrailsWebRequest captured = GrailsWebRequest.lookup()
+            return { Object... args ->
+                Object[] result = new Object[1]
+                Runnable decorated = new GrailsWebRequestTaskDecorator().decorate(() -> { result[0] = invokeWork(work, args) }, captured)
+                decorated.run()
+                return (D) result[0]
+            }
+        }
+
+        private static <D> D invokeWork(Closure<D> work, Object[] args) {
+            return work.call(*args)
+        }
+    }
 
     /**
      * @see grails.async.PromiseFactory#waitAll(grails.async.Promise[])
@@ -94,13 +128,15 @@ class WebPromises {
      * @see grails.async.PromiseFactory#createPromise(java.util.Map)
      */
     static<K,V> Promise<Map<K,V>> createPromise(Map<K, V> map) {
-        return getPromiseFactory().createPromise(map, DECORATOR_LOOKUP.findDecorators())
+        prepareAsyncRequest()
+        return getPromiseFactory().createPromise(map)
     }
     /**
      * @see grails.async.PromiseFactory#createPromise(groovy.lang.Closure[])
      */
     static<T> Promise<List<T>> createPromise(Closure<T>... c) {
-        return getPromiseFactory().createPromise(Arrays.asList(c), DECORATOR_LOOKUP.findDecorators())
+        prepareAsyncRequest()
+        return getPromiseFactory().createPromise(Arrays.asList(c))
     }
 
     /**
@@ -113,7 +149,8 @@ class WebPromises {
      * @see grails.async.PromiseFactory#createPromise(groovy.lang.Closure[])
      */
     static<T> Promise<T> task(Closure<T> c) {
-        return getPromiseFactory().createPromise(c, DECORATOR_LOOKUP.findDecorators())
+        prepareAsyncRequest()
+        return getPromiseFactory().createPromise(c)
     }
     /**
      * @see grails.async.PromiseFactory#createPromise(groovy.lang.Closure[])
@@ -125,7 +162,8 @@ class WebPromises {
      * @see grails.async.PromiseFactory#createPromise(groovy.lang.Closure[])
      */
     static<T> Promise<List<T>> tasks(List<Closure<T>> closures) {
-        return getPromiseFactory().createPromise(closures, DECORATOR_LOOKUP.findDecorators())
+        prepareAsyncRequest()
+        return getPromiseFactory().createPromise(closures)
     }
 
     /**
@@ -146,13 +184,15 @@ class WebPromises {
      * @see grails.async.PromiseFactory#createPromise(groovy.lang.Closure, java.util.List)
      */
     static<T> Promise<T> createPromise(Closure<T> c, List<PromiseDecorator> decorators) {
-        return getPromiseFactory().createPromise(c, DECORATOR_LOOKUP.findDecorators())
+        prepareAsyncRequest()
+        return getPromiseFactory().createPromise(c, decorators)
     }
     /**
      * @see grails.async.PromiseFactory#createPromise(java.util.List, java.util.List)
      */
     static<T> Promise<List<T>> createPromise(List<Closure<T>> closures, List<PromiseDecorator> decorators) {
-        return getPromiseFactory().createPromise(closures, DECORATOR_LOOKUP.findDecorators())
+        prepareAsyncRequest()
+        return getPromiseFactory().createPromise(closures, decorators)
     }
     /**
      * @see grails.async.PromiseFactory#createPromise(grails.async.Promise[])
@@ -166,5 +206,25 @@ class WebPromises {
      */
     static<T> Promise<T> createBoundPromise(T value) {
         return getPromiseFactory().createBoundPromise(value)
+    }
+
+    private static void prepareAsyncRequest() {
+        GrailsWebRequest webRequest = GrailsWebRequest.lookup()
+        if (webRequest == null) {
+            return
+        }
+
+        WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(webRequest.currentRequest)
+        if (AsyncRequestSupport.isComplete(webRequest) || asyncManager.asyncWebRequest?.isAsyncComplete()) {
+            throw new IllegalStateException('Cannot start a task once asynchronous request processing has completed')
+        }
+        if (asyncManager.isConcurrentHandlingStarted()) {
+            return
+        }
+
+        StandardServletAsyncWebRequest asyncWebRequest = AsyncRequestSupport.create(webRequest)
+        asyncManager.asyncWebRequest = asyncWebRequest
+        asyncWebRequest.startAsync()
+        webRequest.currentRequest.setAttribute(GrailsApplicationAttributes.ASYNC_STARTED, true)
     }
 }

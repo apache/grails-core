@@ -821,10 +821,12 @@ class AstUtils {
                 return anInterface
             }
             ClassNode[] childInterfaces = anInterface.getInterfaces()
-            if (childInterfaces != null && childInterfaces.length > 0) {
-                return implementsInterfaceInternal(childInterfaces, interfaceName)
+            if (childInterfaces != null) {
+                ClassNode found = implementsInterfaceInternal(childInterfaces, interfaceName)
+                if (found != null) {
+                    return found
+                }
             }
-
         }
         return null
     }

@@ -207,4 +207,15 @@ class CliAutoDiscoverySpec extends GradleSpecification {
         result.output.contains('TEST_RUNTIME_HAS_GRAILSCLILEGACY=true')
         result.output.contains('INTEGRATION_TEST_RUNTIME_HAS_GRAILSCLILEGACY=true')
     }
+
+    def "configuring the cli wiring emits no Gradle deprecation warnings"() {
+        given: 'a web application, which applies the cli plugin'
+        setupTestResourceProject('cli-deprecation-free')
+
+        when: 'every task is configured with deprecation warnings treated as failures'
+        def result = executeTask('tasks', ['--all', '--warning-mode=fail'])
+
+        then: 'the build succeeds without a deprecation warning'
+        !result.output.contains('has been deprecated')
+    }
 }

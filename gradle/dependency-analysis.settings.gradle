@@ -1,0 +1,99 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+import org.gradle.api.services.BuildService
+import org.gradle.api.services.BuildServiceParameters
+
+// The dependency-analysis plugin registers about eighty tasks per project and resolves every source
+// set's compile and runtime classpath, which costs configuration time and daemon heap on every
+// invocation. Only its own tasks need any of that, so each build declares the plugin with
+// `apply false` and this script applies it when one of those tasks is requested, by full name
+// (an abbreviation such as `bH` is not recognised). The root build's request is checked so that
+// `:build-logic-root:buildHealth` run from the root also applies it to the included build.
+Set<String> dependencyAnalysisTasks = [
+        'buildHealth', 'projectHealth', 'reason',
+        'computeDuplicateDependencies', 'printDuplicateDependencies',
+        'computeDominatorTree', 'printDominatorTree',
+] as Set
+Gradle rootGradle = gradle
+while (rootGradle.parent != null) {
+    rootGradle = rootGradle.parent
+}
+boolean dependencyAnalysisRequested = rootGradle.startParameter.taskNames.any { String requested ->
+    dependencyAnalysisTasks.contains(requested.substring(requested.lastIndexOf(':') + 1))
+}
+if (!dependencyAnalysisRequested) {
+    return
+}
+
+apply plugin: 'com.autonomousapps.build-health'
+
+dependencyAnalysis {
+    issues {
+        all {
+            // Two dependencies providing the same fully qualified class name make compile and runtime
+            // behavior depend on classpath order, and are the signal of a "Maven hijack" style attack.
+            // This is the guard the plugin is applied for, so it is the only category that fails the build.
+            // The plugin only reports a duplicate when the analyzed module itself references the class.
+            //
+            // Exclusions are matched against class names, not dependency coordinates. Each entry below is
+            // a library that deliberately ships a copy of another library's classes, so both artifacts on a
+            // classpath is the documented shape of the dependency rather than a hijack.
+            onDuplicateClassWarnings {
+                severity 'fail'
+                excludeRegex(
+                        // tomcat-embed-core ships the Servlet API classes that jakarta.servlet-api also provides.
+                        '^jakarta\\.servlet\\..*',
+                        // spring-jcl and jcl-over-slf4j are both implementations of the Commons Logging API.
+                        '^org\\.apache\\.commons\\.logging\\..*',
+                        // org.eclipse.angus:jakarta.mail ships the API classes that jakarta.mail-api also provides.
+                        '^jakarta\\.mail\\..*',
+                        // jline 2 ships a copy of the Jansi classes.
+                        '^org\\.fusesource\\.jansi\\..*'
+                )
+            }
+            // Every other category (unused dependencies, transitive dependencies used directly, wrong
+            // configuration, and so on) is reported as advice only.
+            onAny {
+                severity 'warn'
+            }
+        }
+    }
+}
+
+// The analysis runs inside the Gradle daemon: ExplodeJarTask and AbiAnalysisTask use class-loader
+// isolated workers and the rest no-isolation workers, so every analysis in flight holds its exploded
+// classpath in the daemon heap at the same time, and Gradle starts as many as it has workers. On a
+// 16-core machine that is enough to push the 3G daemon into GC thrash; measured on 8.0.x, each
+// extra concurrent analysis costs roughly 40 MB. The service below is only a lock: tasks that use it
+// run at most maxParallelUsages at a time, matching the four workers of a CI runner, while the rest
+// of the build keeps its full parallelism.
+abstract class DependencyAnalysisThrottle implements BuildService<BuildServiceParameters.None> {}
+
+Provider<DependencyAnalysisThrottle> dependencyAnalysisThrottle = gradle.sharedServices.registerIfAbsent(
+        'dependencyAnalysisThrottle', DependencyAnalysisThrottle) { spec ->
+    spec.maxParallelUsages.set(4)
+}
+
+gradle.allprojects { Project project ->
+    project.tasks.configureEach { Task task ->
+        if (task.class.name.startsWith('com.autonomousapps.tasks.')) {
+            task.usesService(dependencyAnalysisThrottle)
+        }
+    }
+}

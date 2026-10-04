@@ -49,6 +49,15 @@ class GebRecordingTestListener extends AbstractRunListener {
 
     @Override
     void afterIteration(IterationInfo iteration) {
+        if (recordingContainerFailedToRestart) {
+            log.debug(
+                    'No VNC recording container available for test [{}] - the recording ' +
+                    'container failed to restart before this test ran',
+                    iteration.displayName
+            )
+            errorInfo = null
+            return
+        }
         try {
             containerHolder.container.afterTest(
                     new ContainerGebTestDescription(iteration),
@@ -74,5 +83,16 @@ class GebRecordingTestListener extends AbstractRunListener {
     @Override
     void error(ErrorInfo error) {
         errorInfo = error
+    }
+
+    /**
+     * Recording is enabled, but WebDriverContainerHolder#restartVncRecordingContainer failed to
+     * start a replacement VNC recording container before this test ran, so there is nothing to
+     * save a recording from.
+     */
+    private boolean getRecordingContainerFailedToRestart() {
+        containerHolder.initialized &&
+                containerHolder.settings.recordingEnabled &&
+                !containerHolder.recordingContainerAvailable
     }
 }

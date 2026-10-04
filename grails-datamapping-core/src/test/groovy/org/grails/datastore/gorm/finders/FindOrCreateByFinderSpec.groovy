@@ -19,7 +19,6 @@
 package org.grails.datastore.gorm.finders
 
 import grails.gorm.annotation.Entity
-import org.grails.datastore.gorm.DatastoreResolver
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException
 import org.grails.datastore.mapping.simple.SimpleMapDatastore
 import spock.lang.AutoCleanup
@@ -66,24 +65,6 @@ class FindOrCreateByFinderSpec extends Specification {
 
         then:
         thrown(MissingMethodException)
-    }
-
-    void "the (String, Datastore) constructor is usable directly"() {
-        expect:
-        new FindOrCreateByFinder(FindOrCreateByFinder.METHOD_PATTERN, datastore) != null
-    }
-
-    void "the (String, DatastoreResolver, MappingContext) constructor is usable directly"() {
-        given:
-        def resolver = { datastore } as DatastoreResolver
-
-        expect:
-        new FindOrCreateByFinder(FindOrCreateByFinder.METHOD_PATTERN, resolver, datastore.mappingContext) != null
-    }
-
-    void "the (MappingContext) constructor is usable directly"() {
-        expect:
-        new FindOrCreateByFinder(datastore.mappingContext) != null
     }
 }
 

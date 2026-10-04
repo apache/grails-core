@@ -30,6 +30,13 @@ import org.grails.datastore.mapping.query.Restrictions
 
 /**
  *  Method expression used to evaluate a dynamic finder.
+ *
+ * <p>Every concrete subclass below provides both a {@code (Class, String)} and a {@code (String)}
+ * constructor. Neither shape is ever called as a literal {@code new Xxx(...)} expression for every
+ * subclass - {@link DynamicFinder}'s registry invokes the {@code (Class, String)} constructor
+ * reflectively via {@code Constructor.newInstance}, and {@code MethodExpressionSpec} exercises both
+ * shapes reflectively via {@code Class.getConstructor(...).newInstance(...)} - so static usage
+ * analysis can't see either call site even though both are genuinely exercised.
  */
 abstract class MethodExpression {
 
@@ -44,7 +51,7 @@ abstract class MethodExpression {
 
     abstract Query.Criterion createCriterion()
 
-    protected MethodExpression(Class<?> targetClass, String propertyName) {
+    protected MethodExpression(@SuppressWarnings('unused') Class<?> targetClass, String propertyName) {
         this.propertyName = propertyName
     }
 
@@ -59,13 +66,7 @@ abstract class MethodExpression {
     void convertArguments(PersistentEntity persistentEntity) {
         ConversionService conversionService = persistentEntity
                 .getMappingContext().getConversionService()
-        PersistentProperty<?> prop = persistentEntity
-                .getPropertyByName(propertyName)
-        if (prop == null) {
-            if (propertyName.equals(persistentEntity.getIdentity().getName())) {
-                prop = persistentEntity.getIdentity()
-            }
-        }
+        PersistentProperty<?> prop = resolveProperty(persistentEntity, propertyName)
         if (prop != null && arguments != null && argumentsRequired > 0) {
             Class<?> type = prop.getType()
             for (int i = 0; i < argumentsRequired; i++) {
@@ -180,10 +181,12 @@ abstract class MethodExpression {
     }
 
     static class Ilike extends MethodExpression {
+        @SuppressWarnings('unused')
         Ilike(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName)
         }
 
+        @SuppressWarnings('unused')
         Ilike(String propertyName) {
             super(propertyName)
         }
@@ -195,10 +198,12 @@ abstract class MethodExpression {
     }
 
     static class Rlike extends MethodExpression {
+        @SuppressWarnings('unused')
         Rlike(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName)
         }
 
+        @SuppressWarnings('unused')
         Rlike(String propertyName) {
             super(propertyName)
         }
@@ -210,6 +215,7 @@ abstract class MethodExpression {
     }
 
     static class NotInList extends MethodExpression {
+        @SuppressWarnings('unused')
         NotInList(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName)
         }
@@ -240,16 +246,14 @@ abstract class MethodExpression {
         void convertArguments(PersistentEntity persistentEntity) {
             ConversionService conversionService = persistentEntity
                     .getMappingContext().getConversionService()
-            String propertyName = this.propertyName
-            PersistentProperty<?> prop = persistentEntity
-                    .getPropertyByName(propertyName)
-            Object[] arguments = this.arguments
-            convertArgumentsForProp(persistentEntity, prop, propertyName, arguments, conversionService)
+            PersistentProperty<?> prop = resolveProperty(persistentEntity, propertyName)
+            convertArgumentsForProp(prop, this.@arguments, conversionService)
         }
     }
 
     static class InList extends MethodExpression {
 
+        @SuppressWarnings('unused')
         InList(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName)
         }
@@ -278,9 +282,8 @@ abstract class MethodExpression {
         void convertArguments(PersistentEntity persistentEntity) {
             ConversionService conversionService = persistentEntity
                     .getMappingContext().getConversionService()
-            PersistentProperty<?> prop = persistentEntity
-                    .getPropertyByName(propertyName)
-            convertArgumentsForProp(persistentEntity, prop, propertyName, arguments, conversionService)
+            PersistentProperty<?> prop = resolveProperty(persistentEntity, propertyName)
+            convertArgumentsForProp(prop, this.@arguments, conversionService)
         }
 
     }
@@ -315,6 +318,7 @@ abstract class MethodExpression {
 
     static class InRange extends MethodExpression {
 
+        @SuppressWarnings('unused')
         InRange(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName)
             argumentsRequired = 1
@@ -349,11 +353,13 @@ abstract class MethodExpression {
 
     static class IsNull extends MethodExpression {
 
+        @SuppressWarnings('unused')
         IsNull(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName)
             argumentsRequired = 0
         }
 
+        @SuppressWarnings('unused')
         IsNull(String propertyName) {
             super(propertyName)
             argumentsRequired = 0
@@ -368,11 +374,13 @@ abstract class MethodExpression {
 
     static class IsNotNull extends MethodExpression {
 
+        @SuppressWarnings('unused')
         IsNotNull(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName)
             argumentsRequired = 0
         }
 
+        @SuppressWarnings('unused')
         IsNotNull(String propertyName) {
             super(propertyName)
             argumentsRequired = 0
@@ -387,11 +395,13 @@ abstract class MethodExpression {
 
     static class IsEmpty extends MethodExpression {
 
+        @SuppressWarnings('unused')
         IsEmpty(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName)
             argumentsRequired = 0
         }
 
+        @SuppressWarnings('unused')
         IsEmpty(String propertyName) {
             super(propertyName)
             argumentsRequired = 0
@@ -406,11 +416,13 @@ abstract class MethodExpression {
 
     static class IsNotEmpty extends MethodExpression {
 
+        @SuppressWarnings('unused')
         IsNotEmpty(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName)
             argumentsRequired = 0
         }
 
+        @SuppressWarnings('unused')
         IsNotEmpty(String propertyName) {
             super(propertyName)
             argumentsRequired = 0
@@ -447,6 +459,7 @@ abstract class MethodExpression {
 
     static class NotEqual extends MethodExpression {
 
+        @SuppressWarnings('unused')
         NotEqual(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName)
         }
@@ -467,12 +480,21 @@ abstract class MethodExpression {
 
     }
 
-    private static void convertArgumentsForProp(PersistentEntity persistentEntity, PersistentProperty<?> prop, String propertyName, Object[] arguments, ConversionService conversionService) {
-        if (prop == null) {
-            if (propertyName.equals(persistentEntity.getIdentity().getName())) {
-                prop = persistentEntity.getIdentity()
-            }
+    /**
+     * Resolves the given property name against the entity, falling back to the identity property
+     * when there is no regular property by that name (e.g. {@code findByIdInList}). Shared by the
+     * base {@link #convertArguments} and {@link #convertArgumentsForProp} so the fallback exists in
+     * exactly one place.
+     */
+    private static PersistentProperty<?> resolveProperty(PersistentEntity persistentEntity, String propertyName) {
+        PersistentProperty<?> prop = persistentEntity.getPropertyByName(propertyName)
+        if (prop == null && propertyName.equals(persistentEntity.getIdentity().getName())) {
+            return persistentEntity.getIdentity()
         }
+        return prop
+    }
+
+    private static void convertArgumentsForProp(PersistentProperty<?> prop, Object[] arguments, ConversionService conversionService) {
         if (prop != null) {
             Class<?> type = prop.getType()
             Collection<?> collection = (Collection<?>) arguments[0]

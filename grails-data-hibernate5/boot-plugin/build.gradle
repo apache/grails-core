@@ -51,14 +51,12 @@ dependencies {
         exclude group:'org.apache.groovy', module:'groovy'
     }
     compileOnly "org.springframework.boot:spring-boot-jdbc"
-    compileOnly "org.springframework.boot:spring-boot-hibernate"
 
     testImplementation project(':grails-shell-cli'), {
         exclude group:'org.apache.groovy', module:'groovy'
     }
     testImplementation "org.spockframework:spock-core"
     testImplementation "org.springframework.boot:spring-boot-jdbc"
-    testImplementation "org.springframework.boot:spring-boot-hibernate"
 
     testRuntimeOnly "org.apache.tomcat:tomcat-jdbc"
     testRuntimeOnly "com.h2database:h2"

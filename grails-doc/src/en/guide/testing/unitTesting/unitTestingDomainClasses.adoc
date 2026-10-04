@@ -63,3 +63,8 @@ trait in order to mock the related domain classes.
 ----
 include::{functionalSourceDir}/demo33/src/test/groovy/demo/PersonControllerSpec.groovy[tags=basic_declaration,indent=0]
 ----
+
+NOTE: A domain class may be mocked whatever its identifier generator is, including a generator class
+name such as `id generator: 'com.example.CustomIdGenerator'`. The mocked datastore generates identifiers
+itself and never runs or validates that generator, so a misspelled generator name still passes a unit
+test. Verify the generator itself with an integration test against the real datastore.

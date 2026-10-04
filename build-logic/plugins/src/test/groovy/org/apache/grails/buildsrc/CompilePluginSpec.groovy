@@ -81,6 +81,8 @@ class CompilePluginSpec extends Specification {
                 doLast {
                     println "MAIN_INDY=\${compileTask.get().groovyOptions.optimizationOptions.indy}"
                     println "TEST_INDY=\${testCompileTask.get().groovyOptions.optimizationOptions.indy}"
+                    println "MAIN_JOINT_JAVAC_ARGS=\${compileTask.get().options.compilerArgs}"
+                    println "MAIN_GROOVY_PARAMETERS=\${compileTask.get().groovyOptions.parameters}"
                 }
             }
         """
@@ -94,6 +96,15 @@ class CompilePluginSpec extends Specification {
         result.task(':printIndy').outcome == TaskOutcome.SUCCESS
         result.output.contains('MAIN_INDY=true')
         result.output.contains('TEST_INDY=true')
+    }
+
+    def "preserves parameter names for Groovy and joint-compiled Java sources"() {
+        when:
+        def result = runPrintIndy()
+
+        then:
+        result.output.contains('MAIN_GROOVY_PARAMETERS=true')
+        result.output.contains('MAIN_JOINT_JAVAC_ARGS=[-parameters]')
     }
 
     def "keeps invokedynamic on when grailsIndy is false"() {

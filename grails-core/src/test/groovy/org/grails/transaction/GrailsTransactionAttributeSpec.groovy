@@ -16,23 +16,262 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+
 package org.grails.transaction
 
+import groovy.transform.CompileStatic
+
+import org.springframework.transaction.TransactionDefinition
+import org.springframework.transaction.interceptor.DefaultTransactionAttribute
 import org.springframework.transaction.interceptor.NoRollbackRuleAttribute
 import org.springframework.transaction.interceptor.RollbackRuleAttribute
+import org.springframework.transaction.interceptor.RuleBasedTransactionAttribute
 import org.springframework.transaction.interceptor.TransactionAttribute
+import org.springframework.transaction.support.DefaultTransactionDefinition
 import spock.lang.Specification
 
 class GrailsTransactionAttributeSpec extends Specification {
 
-    void 'rolls back on any exception when no rollback rules are configured'() {
+    void "copy constructor deep-copies the rollback rule list instead of aliasing it"() {
         given:
-        GrailsTransactionAttribute attribute = new GrailsTransactionAttribute()
+        def sourceRules = [new RollbackRuleAttribute(IllegalStateException)]
+        def source = new GrailsTransactionAttribute()
+        source.setRollbackRules(sourceRules)
 
-        expect:
+        when:
+        def copy = new GrailsTransactionAttribute(source)
+        copy.getRollbackRules().add(new NoRollbackRuleAttribute(IllegalArgumentException))
+
+        then: "mutating the copy's rule list does not affect the source's list"
+        source.getRollbackRules().size() == 1
+        copy.getRollbackRules().size() == 2
+
+        when: "the source's rule list is mutated"
+        source.getRollbackRules().add(new RollbackRuleAttribute(UnsupportedOperationException))
+
+        then: "the copy's rule list is unaffected"
+        source.getRollbackRules().size() == 2
+        copy.getRollbackRules().size() == 2
+
+        and: "copying did not replace the source's internal rule list"
+        source.getRollbackRules().is(sourceRules)
+    }
+
+    void "copy constructor deep-copies the labels collection instead of aliasing it"() {
+        given:
+        def sourceLabels = ['audited']
+        def source = new GrailsTransactionAttribute()
+        source.setLabels(sourceLabels)
+
+        when:
+        def copy = new GrailsTransactionAttribute(source)
+        copy.getLabels().add('copy-only')
+
+        then: "mutating the copy's labels does not affect the source's labels"
+        source.getLabels() as List == ['audited']
+        copy.getLabels() as List == ['audited', 'copy-only']
+
+        when: "the source's labels are mutated"
+        sourceLabels.add('source-only')
+
+        then: "the copy's labels are unaffected"
+        source.getLabels() as List == ['audited', 'source-only']
+        copy.getLabels() as List == ['audited', 'copy-only']
+
+        and: "copying did not replace the source's internal labels collection"
+        source.getLabels().is(sourceLabels)
+    }
+
+    void "copy constructor preserves qualifier, labels and inheritRollbackOnly metadata"() {
+        given:
+        def source = new GrailsTransactionAttribute()
+        source.setQualifier('secondary')
+        source.setLabels(['audited'])
+        source.setInheritRollbackOnly(false)
+
+        when:
+        def copy = new GrailsTransactionAttribute(source)
+
+        then:
+        copy.getQualifier() == 'secondary'
+        copy.getLabels() as Set == ['audited'] as Set
+        !copy.isInheritRollbackOnly()
+    }
+
+    void "copy constructor preserves all definition-level properties"() {
+        given:
+        def source = new GrailsTransactionAttribute()
+        source.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW)
+        source.setIsolationLevel(TransactionDefinition.ISOLATION_SERIALIZABLE)
+        source.setTimeout(42)
+        source.setReadOnly(true)
+        source.setName('sourceTx')
+
+        when:
+        def copy = new GrailsTransactionAttribute(source)
+
+        then:
+        copy.getPropagationBehavior() == TransactionDefinition.PROPAGATION_REQUIRES_NEW
+        copy.getIsolationLevel() == TransactionDefinition.ISOLATION_SERIALIZABLE
+        copy.getTimeout() == 42
+        copy.isReadOnly()
+        copy.getName() == 'sourceTx'
+    }
+
+    void "copy constructor preserves descriptor and timeoutString"() {
+        given:
+        def source = new GrailsTransactionAttribute()
+        source.setDescriptor('BookService.save')
+        source.setTimeoutString('${tx.timeout}')
+
+        when:
+        def copy = new GrailsTransactionAttribute(source)
+
+        then:
+        copy.getDescriptor() == 'BookService.save'
+        copy.getTimeoutString() == '${tx.timeout}'
+    }
+
+    void "copy constructor from a plain RuleBasedTransactionAttribute copies its rollback rules defensively"() {
+        given:
+        def source = new RuleBasedTransactionAttribute()
+        source.setRollbackRules([new RollbackRuleAttribute(RuntimeException)])
+        source.setQualifier('books')
+        source.setLabels(['audited'])
+
+        when:
+        def copy = new GrailsTransactionAttribute(source)
+
+        then:
+        copy.getRollbackRules().size() == 1
+        !copy.getRollbackRules().is(source.getRollbackRules())
+        copy.getQualifier() == 'books'
+        copy.getLabels() as List == ['audited']
+        !copy.getLabels().is(source.getLabels())
+        copy.isInheritRollbackOnly()
+    }
+
+    void "a NoRollbackRuleAttribute on the source is honored by the copy's rollbackOn"() {
+        given:
+        def source = new RuleBasedTransactionAttribute()
+        source.setRollbackRules([new NoRollbackRuleAttribute(TestBusinessException)])
+
+        when:
+        def copy = new GrailsTransactionAttribute(source)
+
+        then: "a matching exception does not trigger rollback"
+        !copy.rollbackOn(new TestBusinessException())
+
+        and: "a non-matching exception still triggers the default rollback-everything behavior"
+        copy.rollbackOn(new IllegalStateException())
+        copy.rollbackOn(new Exception())
+    }
+
+    void "rollbackOn applies the deepest matching rule"() {
+        given:
+        def attribute = new GrailsTransactionAttribute()
+        attribute.setRollbackRules([
+                new NoRollbackRuleAttribute(RuntimeException),
+                new RollbackRuleAttribute(TestBusinessException)
+        ])
+
+        expect: "the rule closest to the thrown exception type wins"
+        attribute.rollbackOn(new TestBusinessException())
+        !attribute.rollbackOn(new IllegalStateException())
+    }
+
+    void "rollbackOn rolls back on any exception when no rules are configured"() {
+        given:
+        def attribute = new GrailsTransactionAttribute()
+
+        expect: "unchecked and checked exceptions both roll back, unlike Spring's default"
         attribute.rollbackOn(new RuntimeException())
         attribute.rollbackOn(new Exception())
         attribute.rollbackOn(new Error())
+    }
+
+    void "statically dispatched TransactionDefinition copy still propagates rules and Grails state from the dynamic type"() {
+        given: "a GrailsTransactionAttribute passed around as a plain TransactionDefinition"
+        def rules = [new NoRollbackRuleAttribute(TestBusinessException)]
+        def source = new GrailsTransactionAttribute()
+        source.setRollbackRules(rules)
+        source.setInheritRollbackOnly(false)
+        source.setQualifier('books')
+        source.setLabels(['audited'])
+
+        when: "copied through the statically chosen TransactionDefinition constructor"
+        def copy = copyAsTransactionDefinition(source)
+
+        then:
+        !copy.rollbackOn(new TestBusinessException())
+        !copy.isInheritRollbackOnly()
+        copy.getQualifier() == 'books'
+        copy.getLabels() as List == ['audited']
+
+        and: "the copy's rule list is independent of the source's"
+        !copy.getRollbackRules().is(source.getRollbackRules())
+
+        and: "the source's internal rule list was not replaced"
+        source.getRollbackRules().is(rules)
+    }
+
+    void "statically dispatched TransactionAttribute copy still propagates rules from the dynamic type"() {
+        given: "a RuleBasedTransactionAttribute passed around as a plain TransactionAttribute"
+        def source = new RuleBasedTransactionAttribute()
+        source.setRollbackRules([new NoRollbackRuleAttribute(TestBusinessException)])
+
+        when: "copied through the statically chosen TransactionAttribute constructor"
+        def copy = copyAsTransactionAttribute(source)
+
+        then:
+        !copy.rollbackOn(new TestBusinessException())
+        !copy.getRollbackRules().is(source.getRollbackRules())
+    }
+
+    void "copy constructor from a non-rule-based DefaultTransactionAttribute copies qualifier and labels defensively"() {
+        given:
+        def sourceLabels = ['audited']
+        def source = new DefaultTransactionAttribute()
+        source.setQualifier('books')
+        source.setLabels(sourceLabels)
+        source.setTimeout(21)
+
+        when:
+        def copy = new GrailsTransactionAttribute((TransactionAttribute) source)
+        copy.getLabels().add('copy-only')
+
+        then:
+        copy.getQualifier() == 'books'
+        copy.getTimeout() == 21
+        source.getLabels() as List == ['audited']
+        source.getLabels().is(sourceLabels)
+    }
+
+    void "copy constructor from a plain TransactionDefinition copies only definition-level properties"() {
+        given: "a source that is neither a TransactionAttribute nor a RuleBasedTransactionAttribute"
+        TransactionDefinition source = new DefaultTransactionDefinition().tap {
+            propagationBehavior = TransactionDefinition.PROPAGATION_REQUIRES_NEW
+            isolationLevel = TransactionDefinition.ISOLATION_SERIALIZABLE
+            timeout = 42
+            readOnly = true
+            name = 'plainDefinition'
+        }
+
+        when:
+        def copy = new GrailsTransactionAttribute(source)
+
+        then: "the base TransactionDefinition properties are copied"
+        copy.getPropagationBehavior() == TransactionDefinition.PROPAGATION_REQUIRES_NEW
+        copy.getIsolationLevel() == TransactionDefinition.ISOLATION_SERIALIZABLE
+        copy.getTimeout() == 42
+        copy.isReadOnly()
+        copy.getName() == 'plainDefinition'
+
+        and: "attribute-only metadata that TransactionDefinition doesn't expose is left at its default"
+        copy.getQualifier() == null
+        !copy.getLabels()
+        !copy.getRollbackRules()
+        copy.isInheritRollbackOnly()
     }
 
     void 'rolls back when the closest matching rule is a RollbackRuleAttribute'() {
@@ -53,50 +292,21 @@ class GrailsTransactionAttributeSpec extends Specification {
         !attribute.rollbackOn(new IllegalStateException())
     }
 
-    void 'the most specific (deepest) matching rule wins when rules conflict'() {
-        given:
-        GrailsTransactionAttribute attribute = new GrailsTransactionAttribute()
-        attribute.rollbackRules = [
-                new NoRollbackRuleAttribute(RuntimeException),
-                new RollbackRuleAttribute(IllegalStateException)
-        ]
-
-        expect:
-        attribute.rollbackOn(new IllegalStateException())
-    }
-
-    void 'copy constructor from a TransactionDefinition carries over propagation, isolation, timeout, readOnly and name'() {
-        given:
-        GrailsTransactionAttribute source = new GrailsTransactionAttribute()
-        source.propagationBehavior = org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW
-        source.timeout = 42
-        source.readOnly = true
-        source.name = 'someTx'
-
-        when:
-        GrailsTransactionAttribute copy = new GrailsTransactionAttribute((TransactionAttribute) source)
-
-        then:
-        copy.propagationBehavior == source.propagationBehavior
-        copy.timeout == source.timeout
-        copy.readOnly == source.readOnly
-        copy.name == source.name
-    }
-
-    void 'inheritRollbackOnly is copied when constructing from another GrailsTransactionAttribute'() {
-        given:
-        GrailsTransactionAttribute source = new GrailsTransactionAttribute()
-        source.inheritRollbackOnly = false
-
-        when:
-        GrailsTransactionAttribute copy = new GrailsTransactionAttribute(source)
-
-        then:
-        !copy.inheritRollbackOnly
-    }
-
     void 'inheritRollbackOnly defaults to true'() {
         expect:
         new GrailsTransactionAttribute().inheritRollbackOnly
+    }
+
+    @CompileStatic
+    private static GrailsTransactionAttribute copyAsTransactionDefinition(TransactionDefinition source) {
+        return new GrailsTransactionAttribute(source)
+    }
+
+    @CompileStatic
+    private static GrailsTransactionAttribute copyAsTransactionAttribute(TransactionAttribute source) {
+        return new GrailsTransactionAttribute(source)
+    }
+
+    static class TestBusinessException extends RuntimeException {
     }
 }

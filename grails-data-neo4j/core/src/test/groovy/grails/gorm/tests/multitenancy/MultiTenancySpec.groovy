@@ -43,11 +43,12 @@ class MultiTenancySpec extends Specification {
     void setupSpec() {
         def tempDir = File.createTempDir()
         tempDir.deleteOnExit()
+        // No explicit URL: the embedded server then binds a random free port, so this spec cannot
+        // collide with the embedded server of another spec running in a parallel test fork.
         Map config = [
                 "grails.gorm.multiTenancy.mode"               :"DISCRIMINATOR",
                 "grails.gorm.multiTenancy.tenantResolverClass": MyResolver,
                 "grails.neo4j.options.encryptionLevel"        :"NONE",
-                (Settings.SETTING_NEO4J_URL)                  : "bolt://localhost:7687",
                 (Settings.SETTING_NEO4J_TYPE)                 : "embedded",
                 (Settings.SETTING_NEO4J_LOCATION)             : tempDir
         ]
