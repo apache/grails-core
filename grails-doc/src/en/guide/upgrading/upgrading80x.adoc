@@ -870,6 +870,12 @@ A GORM datastore implementation outside the Grails repository whose transaction 
 * **GORM for MongoDB rejects Map criterion values that contain `$` keys.**
 `findWhere`, `findAllWhere`, criteria queries, the `where` DSL and dynamic finders now throw `InvalidDataAccessResourceUsageException` when a `Map` passed as a criterion value contains a key starting with `$` at any level, on any property type including enums. MongoDB interprets such a value document as an operator expression rather than as a value. Maps without such keys are still sent as literal subdocument comparisons, so exact matches on `Map` properties, dotted paths and array elements are unchanged, and geospatial criteria are exempt. Code that deliberately passed an operator document through a criteria value should use the native `find(Bson)` API instead.
 
+* **GORM for MongoDB no longer ends the index build on a `unique` index over duplicate values.**
+A declared `unique` index that could not be built because documents already shared a value ended the index build with a `DuplicateKeyException`: the indexes declared after it were not built, and with the default synchronous build the application did not start. It is now counted as a failed declaration like any other index the server refuses, logged at `ERROR`, and the build goes on; the application starts without that index. Remove the duplicates and build the index again to create it. See link:{mongodb5Guide}index.html#upgradeNotes[Upgrade Notes] in the GORM for MongoDB guide.
+
+* **GORM for MongoDB builds only the indexes of the domain classes mapped to each connection.**
+The index build of a named connection also created the indexes of classes mapped only to another connection, in its own database. Each connection now builds the indexes of the classes mapped to it, including those mapped to `ConnectionSource.ALL`. Indexes already created elsewhere are left in place. See link:{mongodb5Guide}index.html#upgradeNotes[Upgrade Notes] in the GORM for MongoDB guide.
+
 ==== 21. Tag Library Test Cleanup Changes
 
 Grails 8 removes the `purgeTagLibMetaClass` test hook used by some web and TagLib unit tests.

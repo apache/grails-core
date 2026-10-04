@@ -177,6 +177,10 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         pc != null
         !pc.is(global)                  // cloned, not the same instance
         pc.firstColumnIsColumnCopy      // single-column clone sets the flag
+
+        and: 'kept, so what the caller configures on it is not lost'
+        mapping.columns['someField'].is(pc)
+        mapping.getOrInitializePropertyConfig('someField').is(pc)
     }
 
     // --- cloneGlobalConstraint (protected, same-package access) ---

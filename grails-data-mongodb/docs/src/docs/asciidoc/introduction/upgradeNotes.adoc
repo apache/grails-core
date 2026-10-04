@@ -150,3 +150,12 @@ mongoClient.close()  // close the client you created
 
 No change is required when GORM creates the client itself — for example `new MongoDatastore(Person)`, or configuration-driven setups where GORM builds the client from `grails.mongodb.*` settings — because GORM continues to own and close those clients. A `MongoClient` registered as a Spring bean likewise continues to be closed by the `ApplicationContext`.
 
+==== A Unique Index Over Duplicate Values No Longer Stops the Index Build
+
+A declared `unique` index that cannot be built because documents in the collection already share a value used to end the index build with a `DuplicateKeyException`: the indexes declared after it were not built, and with the default synchronous build the application did not start. It is now handled like any other index the server refuses: logged at `ERROR` with the domain class and the duplicate key, counted as a failure in the build summary, which is logged at `WARN`, and the build goes on with the remaining declarations. The application starts without that index.
+
+Remove the duplicates and build the index again, with `buildIndex()` or by restarting, to have it created. To keep refusing to run without it, check the result of `buildIndexAsync()` (see <<buildIndexesOnDemand,Building Indexes on Demand>>) and stop when `failures()` is not zero.
+
+==== A Connection Builds Only the Indexes of the Classes Mapped to It
+
+The index build of each connection created the indexes declared by every domain class, including classes mapped only to another connection, so a class mapped to the default connection also had its collection and indexes created in the database of every named connection. Each connection now builds the indexes of the classes mapped to it: those that name it with `connection` or `connections`, those mapped to `ConnectionSource.ALL`, and, on the default connection, those that name none. The indexes already created elsewhere stay where they are; `findUndeclaredIndexes()` on that connection does not report them, since no class is mapped to their collection there.

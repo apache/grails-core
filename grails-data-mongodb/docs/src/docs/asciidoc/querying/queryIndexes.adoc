@@ -120,6 +120,7 @@ class Product {
 The `type` attribute sets the index type for that field, so it can equally be used to declare other special index types such as `'2d'` or `'2dsphere'`. Note that MongoDB allows at most one text index per collection. See <<textSearch>> for how to query a text index once it has been created.
 
 
+[[reconcilingIndexOptions]]
 ==== Reconciling Index Option Changes
 
 
@@ -137,7 +138,7 @@ class Person {
 }
 ----
 
-WARNING: Dropping and recreating an index rebuilds it from scratch, during which queries that rely on the index are not served by it. Enable `recreateOnConflict` deliberately, and prefer applying it during a maintenance window for large collections.
+WARNING: Dropping and recreating an index rebuilds it from scratch, during which queries that rely on the index are not served by it. Enable `recreateOnConflict` deliberately, and prefer applying it during a maintenance window for large collections. The existing index is dropped first, so if the new one cannot be built — a `unique` index over documents that already share a value, say — the collection is left with no index on those keys. GORM logs that it dropped the index and could not build it again, and counts the declaration as failed.
 
 A declared index whose `name` is already held by an index on different keys is the same kind of conflict, reported by MongoDB as an `IndexKeySpecsConflict`, and `recreateOnConflict` resolves it the same way:
 
@@ -224,6 +225,40 @@ mongoDatastore.getDatastoreForConnection('reporting').buildIndex()
 
 A build requested after the datastore has been closed is not started, and one requested while it is stopped for a checkpoint runs when it is restarted.
 
+To build in the background and still learn how the build went, call `buildIndexAsync()`. It runs the same build on the connection's index build thread whatever `buildIndexesAsync` says, returns at once, and hands back a `CompletableFuture<IndexBuildResult>`:
+
+[source,groovy]
+----
+import org.grails.datastore.mapping.mongo.IndexBuildResult
+
+IndexBuildResult result = mongoDatastore.buildIndexAsync().get()
+println "${result.created()} created, ${result.alreadyPresent()} already present, ${result.failures()} failed"
+----
+
+The result carries the counts the summary line reports, and created and already-present indexes are always told apart, whatever the log level. A declaration that cannot be applied is counted in `failures()` and logged as it fails, and the future still completes; an exception that stops the build partway, such as a lost connection or a write concern the server could not satisfy, completes the future exceptionally instead. Builds on a connection run one at a time, so a build requested while another is running waits for it, whether either runs in the background or on the thread that called `buildIndex()`, and cancelling the future does not stop the build. If the datastore is stopped or closed, the future fails at once; a build that stopping the datastore cuts short fails its future and runs again, without one, when the datastore is restarted.
+
+A declaration that fails does not fail startup, whatever the settings. To refuse to start without every declared index, wait for the build in `BootStrap` and stop on any failure. `BootStrap` runs before the application reports itself ready for traffic, and an exception thrown from it stops the application:
+
+[source,groovy]
+----
+import org.grails.datastore.mapping.mongo.IndexBuildResult
+import org.grails.datastore.mapping.mongo.MongoDatastore
+
+class BootStrap {
+
+    MongoDatastore mongoDatastore
+
+    def init = { servletContext ->
+        IndexBuildResult result = mongoDatastore.buildIndexAsync().get()
+        if (result.failures()) {
+            throw new IllegalStateException("${result.failures()} declared index(es) could not be built")
+        }
+    }
+}
+----
+
+`get()` throws as well when an error stops the build. With `buildIndexes` left on, the startup build has already run by then, and this one confirms what it created and fails on the same declarations; set it to `false` to build only here.
+
 ==== Building Indexes in the Background
 
 
@@ -243,9 +278,9 @@ Startup then continues without waiting. The indexes are still built one at a tim
 Two consequences are worth planning for:
 
 * A query issued before its index has been built is served without it — correctly, but with the performance of an unindexed query. The same applies to a `unique` index: it constrains nothing until the build finishes.
-* Because startup no longer waits, a failure to build an index can no longer fail startup. It is logged at error level, and the application runs without that index. With the default synchronous build the exception propagates and the application does not start.
+* Because startup no longer waits, an error that stops the build, such as a lost connection, can no longer fail startup. It is logged at error level, and the application runs without the indexes the build had not reached. With the default synchronous build that error propagates and the application does not start. A declaration the server refuses, such as a `unique` index over duplicate values, fails startup with neither setting: it is logged and counted, and the build goes on. To refuse to start without it, see <<buildIndexesOnDemand,Building Indexes on Demand>>.
 
-The setting also applies with `buildIndexes` set to `false`, to the builds the application starts with `buildIndex()`. A domain class registered after startup is indexed on the thread registering it.
+The setting also applies with `buildIndexes` set to `false`, to the builds the application starts with `buildIndex()`. A domain class registered after startup is indexed on the thread registering it, once any build running on the connection has finished, and only when it is mapped to the default connection.
 
 NOTE: If the application shuts down while a background build is still running, GORM stops waiting for it, but the server carries on building the index it was asked for. A datastore stopped for a checkpoint and restored (with CRaC) runs a build it cut short again once it is restarted, on every connection, and logs that it is resuming it.
 
@@ -267,6 +302,8 @@ The split between created and already present is what makes that time interpreta
 ----
 Index build for database [myDb] finished in 9315ms: 0 created, 1 recreated, 6 already present, from 3 domain class(es)
 ----
+
+A declaration the server refuses does not end the build: an option conflict GORM is not authorised to resolve, an invalid specification, or a `unique` index over documents that already share a value is logged at `ERROR` as it fails and counted, and the build goes on with the remaining declarations. Only an error that stops the build itself ends it early: a lost connection, or a write concern the server could not satisfy, which leaves unknown whether the index was built. With the default synchronous build that fails startup.
 
 If any declaration failed, the summary is logged at `WARN` instead and reports how many; the failures themselves are logged individually as they happen. A build that stops partway — a lost connection or a timeout — reports how far it got before stopping, also at `WARN`:
 
@@ -296,6 +333,64 @@ logging:
     level:
         org.grails.datastore.mapping.mongo: DEBUG
 ----
+
+[[missingIndexes]]
+==== Finding Missing Indexes
+
+
+With `buildIndexes` off, a declared index exists only once something builds it, and nothing reports one that has not been built yet. `findMissingIndexes()` on the `MongoDatastore` bean lists the indexes the domain classes declare that their collections do not have, without changing anything. Logged at startup, it shows when a build has been forgotten:
+
+[source,groovy]
+----
+def missing = mongoDatastore.findMissingIndexes()
+if (missing) {
+    log.warn "Declared indexes not built: ${missing.collect { "${it.collection()} ${it.key().toJson()}" }}"
+}
+----
+
+Each `MissingIndex` gives the database, the collection, the domain class declaring the index, its key pattern and the options declared with it. A declared index is present when its collection has an index on the same key pattern, the same fields in the same order, whatever its name and options: an option that differs is for the build to reconcile (see <<reconcilingIndexOptions,Reconciling Index Option Changes>>). A text index is present when one indexes the same text fields, in any order, with the same keys before and after them, whatever its weights. Keys that several classes mapped to one collection declare are reported once. `buildIndex()` or `buildIndexAsync()` creates what is missing. Each named connection covers its own domain classes, so call it through that connection's datastore for those.
+
+[[undeclaredIndexes]]
+==== Finding and Dropping Undeclared Indexes
+
+
+GORM never drops an index. One that a mapping stops declaring, or declares again with its keys in another order, stays on the server, still maintained on every write. `findUndeclaredIndexes()` on the `MongoDatastore` bean lists them without changing anything:
+
+[source,groovy]
+----
+import org.grails.datastore.mapping.mongo.MongoDatastore
+import org.grails.datastore.mapping.mongo.UndeclaredIndex
+
+class IndexMaintenanceService {
+
+    MongoDatastore mongoDatastore
+
+    List<UndeclaredIndex> undeclaredIndexes() {
+        mongoDatastore.findUndeclaredIndexes()
+    }
+}
+----
+
+Each `UndeclaredIndex` gives the database, collection, name and key pattern of the index, and the whole description `listIndexes` returned for it, options included.
+
+An index counts as declared when a domain class mapped to its collection declares the same key pattern, the same fields in the same order, through `compoundIndex`, `index` or a property's `index: true`. Its name and options do not matter: those differences are what the build reconciles (see <<reconcilingIndexOptions,Reconciling Index Option Changes>>). A text index counts as declared when a class declares text on the same fields, in any order, with the same keys before and after them, whatever its weights. The declarations of every class mapped to a collection count, so a subclass's index on its root's collection is declared. The `_id` index is never reported, and nor is any index on a collection that no domain class maps.
+
+`dropUndeclaredIndexes()` drops everything `findUndeclaredIndexes()` reports, logging each index at `INFO`, and returns what it dropped. To drop only some, pass the reviewed list to `dropUndeclaredIndexes(List)`. Each index is checked again before it is dropped, since the server can have changed since the list was made: an index or collection that has gone is skipped, and so, with a `WARN`, is an index whose name now belongs to an index on other keys, one whose keys a domain class now declares, and one on a collection that no class is mapped to on that connection:
+
+[source,groovy]
+----
+def undeclared = mongoDatastore.findUndeclaredIndexes()
+mongoDatastore.dropUndeclaredIndexes(undeclared.findAll { it.collection() != 'auditLog' })
+----
+
+Like the index build, each named connection covers its own domain classes, so call these through that connection's datastore:
+
+[source,groovy]
+----
+mongoDatastore.getDatastoreForConnection('reporting').findUndeclaredIndexes()
+----
+
+WARNING: Drop indexes deliberately, once every instance of the application runs the release whose mappings declare the indexes to keep, and never automatically at startup. An instance still on an earlier release does not declare an index that a later release adds, or one created by hand ahead of a deployment, so to that instance those indexes are undeclared. An index that application code creates outside the mappings, by calling `createIndex` itself, is not a declaration either, and is reported and dropped like any other.
 
 ==== Indexing using the 'index' method
 
