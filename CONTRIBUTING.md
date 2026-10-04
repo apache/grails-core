@@ -167,9 +167,11 @@ To build the code, without tests, simply run:
 
     ./gradlew build -PskipTests
 
-If you encounter out of memory errors when trying to run the build, try adjusting Gradle build settings. For example:
+If you encounter out of memory errors when trying to run the build, raise the daemon heap.
+`org.gradle.jvmargs` in `gradle.properties` is what sizes it, so a bare `-Xmx` in `GRADLE_OPTS`
+is ignored - override the property itself:
 
-    export GRADLE_OPTS="-Xms2G -Xmx5G"
+    export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 
 Please note that a valid container runtime is required to run Grails Tests. The example above omits the tests so the
 build will pass.

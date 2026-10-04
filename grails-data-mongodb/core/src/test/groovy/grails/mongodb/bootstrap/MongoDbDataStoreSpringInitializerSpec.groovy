@@ -19,6 +19,7 @@
 package grails.mongodb.bootstrap
 
 import com.mongodb.client.MongoClient
+import com.mongodb.client.MongoClients
 import grails.mongodb.MongoEntity
 import grails.mongodb.geo.Point
 import grails.persistence.Entity
@@ -26,6 +27,7 @@ import org.apache.grails.testing.mongo.AutoStartedMongoSpec
 import org.bson.Document
 import org.grails.datastore.gorm.mongo.Birthday
 import org.grails.datastore.gorm.mongo.BirthdayCodec
+import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.engine.types.AbstractMappingAwareCustomTypeMarshaller
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentProperty
@@ -59,6 +61,45 @@ class MongoDbDataStoreSpringInitializerSpec extends AutoStartedMongoSpec {
         mongoDatastore.destroy()
     }
 
+    void "Test setDatabaseName is honored as a fallback when no explicit grails.mongodb.databaseName is configured"() {
+        given: "an initializer with a customized database name and no explicit database name config"
+        def initializer = makeInitializer([
+                (MongoSettings.SETTING_HOST): mongoHost,
+                (MongoSettings.SETTING_PORT): mongoPort,
+        ], Person)
+        initializer.setDatabaseName('fallbackDb')
+
+        when: "the initializer is configured"
+        def applicationContext = initializer.configure()
+        def mongoDatastore = applicationContext.getBean(MongoDatastore)
+
+        then: "the fallback database name is used"
+        mongoDatastore.getDefaultDatabase() == 'fallbackDb'
+
+        cleanup:
+        mongoDatastore.destroy()
+    }
+
+    void "Test setDatabaseName is ignored when grails.mongodb.databaseName is explicitly configured"() {
+        given: "an initializer with both a customized database name and an explicit database name config"
+        def initializer = makeInitializer([
+                (MongoSettings.SETTING_DATABASE_NAME): 'explicit',
+                (MongoSettings.SETTING_HOST)         : mongoHost,
+                (MongoSettings.SETTING_PORT)         : mongoPort,
+        ], Person)
+        initializer.setDatabaseName('fallbackDb')
+
+        when: "the initializer is configured"
+        def applicationContext = initializer.configure()
+        def mongoDatastore = applicationContext.getBean(MongoDatastore)
+
+        then: "the explicit configuration wins over the fallback"
+        mongoDatastore.getDefaultDatabase() == 'explicit'
+
+        cleanup:
+        mongoDatastore.destroy()
+    }
+
     void "Test that MongoDbDatastoreSpringInitializer can setup GORM for MongoDB from scratch"() {
         when: "the initializer used to setup GORM for MongoDB"
         def initializer = makeInitializer([
@@ -71,6 +112,26 @@ class MongoDbDataStoreSpringInitializerSpec extends AutoStartedMongoSpec {
 
         then: "GORM for MongoDB is initialized correctly"
         Person.count() == 0
+    }
+
+    void "Test setMongoBeanName is honored when building a new MongoClient from scratch"() {
+        given: "an initializer with a customized mongo bean name"
+        def initializer = makeInitializer([
+                (MongoSettings.SETTING_HOST): mongoHost,
+                (MongoSettings.SETTING_PORT): mongoPort,
+        ], Person)
+        initializer.setMongoBeanName('customMongo')
+
+        when: "the initializer is configured"
+        def applicationContext = initializer.configure()
+        def mongoDatastore = applicationContext.getBean(MongoDatastore)
+
+        then: "the client is registered under the customized bean name and not the default"
+        applicationContext.getBean('customMongo', MongoClient) == mongoDatastore.getMongoClient()
+        !applicationContext.containsBean('mongo')
+
+        cleanup:
+        mongoDatastore.destroy()
     }
 
     void "Test the alias is created when it is the primary datastore"() {
@@ -103,6 +164,50 @@ class MongoDbDataStoreSpringInitializerSpec extends AutoStartedMongoSpec {
 
         then:
         !applicationContext.containsBean("grailsDomainClassMappingContext")
+
+        cleanup:
+        mongoDatastore.destroy()
+    }
+
+    void "Test configure reuses a pre-existing MongoClient instead of creating a new one"() {
+        given: "a MongoClient created ahead of time"
+        def mongoClient = MongoClients.create("mongodb://${mongoHost}:${mongoPort}".toString())
+        def initializer = makeInitializer([
+                (MongoSettings.SETTING_DATABASE_NAME): 'foo',
+        ], Person)
+        initializer.setMongoClient(mongoClient)
+
+        when: "the initializer is configured"
+        def applicationContext = initializer.configure()
+
+        then: "the pre-existing client is registered and reused rather than a new one being built"
+        applicationContext.getBean('mongo', MongoClient).is(mongoClient)
+        applicationContext.getBean(MongoDatastore).getMongoClient().is(mongoClient)
+
+        cleanup:
+        applicationContext.getBean(MongoDatastore).destroy()
+        mongoClient.close()
+    }
+
+    void "Test the package-scanning constructor discovers entities via classpath scan"() {
+        given: "an initializer configured with a package name rather than explicit classes"
+        def resolver = DatastoreUtils.createPropertyResolver([
+                (MongoSettings.SETTING_HOST): mongoHost,
+                (MongoSettings.SETTING_PORT): mongoPort,
+        ])
+        def initializer = new MongoDbDataStoreSpringInitializer(resolver, Person.package.name) {
+            @Override
+            protected Map<String, Class<?>> loadDataServices(String secondaryDatastore = null) {
+                [:]
+            }
+        }
+
+        when: "the application is configured"
+        def applicationContext = initializer.configure()
+        def mongoDatastore = applicationContext.getBean(MongoDatastore)
+
+        then: "the Person entity declared in the scanned package was discovered and mapped"
+        mongoDatastore.mappingContext.getPersistentEntity(Person.name) != null
 
         cleanup:
         mongoDatastore.destroy()

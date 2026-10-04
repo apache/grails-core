@@ -16,6 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+
 package org.grails.datastore.gorm.events
 
 import java.sql.Timestamp
@@ -23,10 +24,21 @@ import java.sql.Timestamp
 import spock.lang.Specification
 import spock.lang.Unroll
 
+import org.springframework.beans.factory.config.AutowireCapableBeanFactory
+import org.springframework.context.ApplicationEvent
+import org.springframework.context.ConfigurableApplicationContext
+import org.springframework.context.PayloadApplicationEvent
+
 import org.grails.datastore.mapping.config.Entity
 import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
+import org.grails.datastore.mapping.core.connections.ConnectionSources
+import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import org.grails.datastore.mapping.engine.EntityAccess
+import org.grails.datastore.mapping.engine.event.MergeEvent
+import org.grails.datastore.mapping.engine.event.PersistEvent
 import org.grails.datastore.mapping.engine.event.PostDeleteEvent
 import org.grails.datastore.mapping.engine.event.PostInsertEvent
 import org.grails.datastore.mapping.engine.event.PostLoadEvent
@@ -35,426 +47,779 @@ import org.grails.datastore.mapping.engine.event.PreDeleteEvent
 import org.grails.datastore.mapping.engine.event.PreInsertEvent
 import org.grails.datastore.mapping.engine.event.PreLoadEvent
 import org.grails.datastore.mapping.engine.event.PreUpdateEvent
+import org.grails.datastore.mapping.engine.event.SaveOrUpdateEvent
+import org.grails.datastore.mapping.engine.event.ValidationEvent
 import org.grails.datastore.mapping.model.ClassMapping
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
-import org.springframework.context.ApplicationEvent
+import org.grails.datastore.mapping.model.config.GormProperties
 
+/**
+ * Note on coverage gaps left deliberately untested:
+ * - {@code invokeEvent}'s {@code ea != null} branch is always true through every public before-
+ *   and after-hook method, which never passes a null {@code EntityAccess}; the {@code ea == null}
+ *   path is unreachable via the public API.
+ * - The protected {@code DomainEventListener(ConnectionSourcesProvider, MappingContext)}
+ *   constructor exists solely for subclassing (e.g. {@code grails.gorm.rx.events.DomainEventListener}),
+ *   which is covered by its own module's spec; exercising it here would duplicate that coverage.
+ *
+ * {@code invokeEvent} previously also branched on {@code eventMethod.getParameterTypes().length == 1}
+ * to invoke a hook with the triggering event as an argument. That branch was confirmed dead (via
+ * decompiling spring-core's {@code ReflectionUtils.findMethod(Class, String)}, which only ever
+ * matches zero-argument methods) and removed.
+ */
 class DomainEventListenerSpec extends Specification {
 
-    Datastore datastore = Stub(Datastore) {
-        getMappingContext() >> Stub(MappingContext) {
-            getPersistentEntities() >> []
+    void "registers itself as a mapping context listener and creates event caches for entities present at construction time"() {
+        given:
+        RecordingDomain domain = new RecordingDomain()
+        PersistentEntity entity = entityFor(RecordingDomain)
+        MappingContext mappingContext = Mock(MappingContext) {
+            getPersistentEntities() >> [entity]
         }
+        Datastore datastore = plainDatastore(mappingContext)
+
+        when:
+        DomainEventListener listener = new DomainEventListener(datastore)
+
+        then:
+        1 * mappingContext.addMappingContextListener(_)
+
+        when: 'the pre-existing entity\'s hook is invoked'
+        EntityAccess ea = Stub(EntityAccess) { getEntity() >> domain }
+        listener.beforeInsert(entity, ea)
+
+        then: 'it fires immediately, proving the cache was created eagerly at construction time'
+        domain.invoked == ['beforeInsert']
     }
 
-    DomainEventListener listener = new DomainEventListener(datastore)
+    void "persistentEntityAdded creates event caches for a newly discovered entity"() {
+        given:
+        RecordingDomain domain = new RecordingDomain()
+        PersistentEntity entity = entityFor(RecordingDomain)
+        Datastore datastore = plainDatastore(Stub(MappingContext) { getPersistentEntities() >> [] })
+        DomainEventListener listener = new DomainEventListener(datastore)
+        EntityAccess ea = Stub(EntityAccess) { getEntity() >> domain }
 
-    void "supportsEventType returns true for persistence events and false otherwise"() {
+        expect: 'the hook is not yet wired up before the entity is added'
+        listener.beforeInsert(entity, ea)
+        domain.invoked.isEmpty()
+
+        when:
+        listener.persistentEntityAdded(entity)
+        listener.beforeInsert(entity, ea)
+
+        then:
+        domain.invoked == ['beforeInsert']
+    }
+
+    void "supportsEventType accepts AbstractPersistenceEvent subtypes and rejects unrelated ApplicationEvents"() {
+        given:
+        DomainEventListener listener = new DomainEventListener(plainDatastore(Stub(MappingContext) { getPersistentEntities() >> [] }))
+
         expect:
         listener.supportsEventType(PreInsertEvent)
-        listener.supportsEventType(PostLoadEvent)
-        !listener.supportsEventType(ApplicationEvent)
+        !listener.supportsEventType(PayloadApplicationEvent)
     }
 
-    void "beforeInsert with no cached hook does nothing and returns true"() {
+    void "supportsEventType throws on a null event type, per its @NonNull contract"() {
         given:
-        def entity = entityFor(PlainThing)
-        def ea = accessFor(new PlainThing(), entity)
-
-        expect:
-        listener.beforeInsert(entity, ea)
-        !ea.isRefreshed()
-    }
-
-    void "beforeInsert invokes the domain hook and refreshes the entity access when it returns true"() {
-        given:
-        def entity = entityFor(HookedThing)
-        listener.persistentEntityAdded(entity)
-        def thing = new HookedThing()
-        def ea = accessFor(thing, entity)
+        DomainEventListener listener = new DomainEventListener(plainDatastore(Stub(MappingContext) { getPersistentEntities() >> [] }))
 
         when:
-        def result = listener.beforeInsert(entity, ea)
+        listener.supportsEventType(null)
 
         then:
-        result
-        thing.beforeInsertCalled
-        ea.isRefreshed()
+        thrown(NullPointerException)
     }
 
-    void "beforeInsert returns false and does not refresh when the domain hook returns false"() {
+    void "beforeInsert sets an initial numeric version to 0 when the entity is versioned"() {
         given:
-        def entity = entityFor(CancellingThing)
-        listener.persistentEntityAdded(entity)
-        def thing = new CancellingThing()
-        def ea = accessFor(thing, entity)
-
-        when:
-        def result = listener.beforeInsert(entity, ea)
-
-        then:
-        !result
-        !ea.isRefreshed()
-    }
-
-    void "beforeInsert sets the initial version to 0 for a numeric version type"() {
-        given:
-        def entity = entityFor(PlainThing, true, Long)
-        def ea = accessFor(new PlainThing(), entity)
+        PersistentEntity entity = entityFor(NoHooksDomain, true, Long)
+        DomainEventListener listener = new DomainEventListener(plainDatastore(Stub(MappingContext) { getPersistentEntities() >> [] }))
+        EntityAccess ea = Mock(EntityAccess) {
+            getEntity() >> new NoHooksDomain()
+            getPersistentEntity() >> entity
+        }
 
         when:
         listener.beforeInsert(entity, ea)
 
         then:
-        ea.getProperties()['version'] == 0
-    }
-
-    @Unroll
-    void "beforeInsert sets an initial version of type #versionType.simpleName on a versioned entity"() {
-        given:
-        def entity = entityFor(PlainThing, true, versionType)
-        def ea = accessFor(new PlainThing(), entity)
-
-        when:
-        listener.beforeInsert(entity, ea)
-
-        then:
-        versionType.isInstance(ea.getProperties()['version'])
-
-        where:
-        versionType << [Timestamp, Date]
+        1 * ea.setProperty(GormProperties.VERSION, 0)
     }
 
     void "beforeInsert swallows an exception raised while setting the initial version"() {
         given:
-        def entity = entityFor(PlainThing, true, Long)
-        def ea = accessFor(new PlainThing(), entity)
-        ea.setFailOnSetProperty(true)
+        PersistentEntity entity = entityFor(NoHooksDomain, true, Long)
+        DomainEventListener listener = new DomainEventListener(plainDatastore(Stub(MappingContext) { getPersistentEntities() >> [] }))
+        EntityAccess ea = Mock(EntityAccess) {
+            getEntity() >> new NoHooksDomain()
+            getPersistentEntity() >> entity
+        }
+
+        when:
+        boolean result = listener.beforeInsert(entity, ea)
+
+        then:
+        1 * ea.setProperty(GormProperties.VERSION, 0) >> { throw new IllegalStateException('cannot set version') }
+        noExceptionThrown()
+        result
+    }
+
+    void "beforeInsert sets an initial java.sql.Timestamp version when the version type is a Timestamp"() {
+        given:
+        PersistentEntity entity = entityFor(NoHooksDomain, true, Timestamp)
+        DomainEventListener listener = new DomainEventListener(plainDatastore(Stub(MappingContext) { getPersistentEntities() >> [] }))
+        EntityAccess ea = Mock(EntityAccess) {
+            getEntity() >> new NoHooksDomain()
+            getPersistentEntity() >> entity
+        }
 
         when:
         listener.beforeInsert(entity, ea)
 
         then:
-        noExceptionThrown()
+        1 * ea.setProperty(GormProperties.VERSION, { it instanceof Timestamp })
     }
 
-    void "beforeUpdate invokes the domain hook and refreshes the entity access when it returns true"() {
+    void "beforeInsert sets an initial java.util.Date version when the version type is a plain Date"() {
         given:
-        def entity = entityFor(HookedThing)
-        listener.persistentEntityAdded(entity)
-        def thing = new HookedThing()
-        def ea = accessFor(thing, entity)
+        PersistentEntity entity = entityFor(NoHooksDomain, true, Date)
+        DomainEventListener listener = new DomainEventListener(plainDatastore(Stub(MappingContext) { getPersistentEntities() >> [] }))
+        EntityAccess ea = Mock(EntityAccess) {
+            getEntity() >> new NoHooksDomain()
+            getPersistentEntity() >> entity
+        }
 
         when:
-        def result = listener.beforeUpdate(entity, ea)
+        listener.beforeInsert(entity, ea)
 
         then:
-        result
-        thing.beforeUpdateCalled
-        ea.isRefreshed()
+        1 * ea.setProperty(GormProperties.VERSION, { it.class == Date })
     }
 
-    void "beforeDelete invokes the domain hook and refreshes the entity access when it returns true"() {
+    void "beforeInsert does not set a version when the version type is neither Number, Timestamp, nor Date"() {
         given:
-        def entity = entityFor(HookedThing)
-        listener.persistentEntityAdded(entity)
-        def thing = new HookedThing()
-        def ea = accessFor(thing, entity)
+        PersistentEntity entity = entityFor(NoHooksDomain, true, String)
+        DomainEventListener listener = new DomainEventListener(plainDatastore(Stub(MappingContext) { getPersistentEntities() >> [] }))
+        EntityAccess ea = Mock(EntityAccess) {
+            getEntity() >> new NoHooksDomain()
+            getPersistentEntity() >> entity
+        }
 
         when:
-        def result = listener.beforeDelete(entity, ea)
+        listener.beforeInsert(entity, ea)
 
         then:
-        result
-        thing.beforeDeleteCalled
-        ea.isRefreshed()
+        0 * ea.setProperty(*_)
     }
 
-    void "beforeLoad invokes the domain hook and does not refresh the entity access"() {
+    void "beforeInsert does not set a version when the entity is not versioned"() {
         given:
-        def entity = entityFor(HookedThing)
-        listener.persistentEntityAdded(entity)
-        def thing = new HookedThing()
-        def ea = accessFor(thing, entity)
+        PersistentEntity entity = entityFor(NoHooksDomain, false)
+        DomainEventListener listener = new DomainEventListener(plainDatastore(Stub(MappingContext) { getPersistentEntities() >> [] }))
+        EntityAccess ea = Mock(EntityAccess) { getEntity() >> new NoHooksDomain() }
 
         when:
-        listener.beforeLoad(entity, ea)
+        listener.beforeInsert(entity, ea)
 
         then:
-        thing.beforeLoadCalled
-        !ea.isRefreshed()
+        0 * ea.setProperty(*_)
     }
 
-    void "afterInsert activates dirty checking and invokes the domain hook"() {
+    void "beforeInsert returns true without error when the entity was never registered with the listener"() {
         given:
-        def entity = entityFor(HookedTrackable)
+        PersistentEntity entity = entityFor(NoHooksDomain)
+        DomainEventListener listener = new DomainEventListener(plainDatastore(Stub(MappingContext) { getPersistentEntities() >> [] }))
+        EntityAccess ea = Stub(EntityAccess) { getEntity() >> new NoHooksDomain() }
+
+        expect:
+        listener.beforeInsert(entity, ea)
+    }
+
+    void "beforeInsert returns true without error when the domain class defines no beforeInsert hook"() {
+        given:
+        PersistentEntity entity = entityFor(NoHooksDomain)
+        DomainEventListener listener = new DomainEventListener(plainDatastore(Stub(MappingContext) { getPersistentEntities() >> [] }))
         listener.persistentEntityAdded(entity)
-        def thing = new HookedTrackable()
-        def ea = accessFor(thing, entity)
+        EntityAccess ea = Stub(EntityAccess) { getEntity() >> new NoHooksDomain() }
+
+        expect:
+        listener.beforeInsert(entity, ea)
+    }
+
+    @Unroll
+    void "the 2-arg #methodName(entity, ea) convenience overload dispatches to the corresponding hook"() {
+        given:
+        RecordingDomain domain = new RecordingDomain()
+        PersistentEntity entity = entityFor(RecordingDomain)
+        DomainEventListener listener = new DomainEventListener(plainDatastore(Stub(MappingContext) { getPersistentEntities() >> [] }))
+        listener.persistentEntityAdded(entity)
+        EntityAccess ea = Stub(EntityAccess) { getEntity() >> domain }
+
+        when:
+        listener."$methodName"(entity, ea)
+
+        then:
+        domain.invoked == [hookName]
+
+        where:
+        methodName     | hookName
+        'beforeInsert'  | 'beforeInsert'
+        'beforeUpdate'  | 'beforeUpdate'
+        'beforeDelete'  | 'beforeDelete'
+        'beforeLoad'    | 'beforeLoad'
+        'afterInsert'   | 'afterInsert'
+        'afterUpdate'   | 'afterUpdate'
+        'afterDelete'   | 'afterDelete'
+        'afterLoad'     | 'afterLoad'
+    }
+
+    @Unroll
+    @SuppressWarnings('deprecation')
+    void "the deprecated 3-arg #methodName(entity, ea, event) overload delegates to the 2-arg overload, ignoring the event argument"() {
+        given:
+        RecordingDomain domain = new RecordingDomain()
+        PersistentEntity entity = entityFor(RecordingDomain)
+        DomainEventListener listener = new DomainEventListener(plainDatastore(Stub(MappingContext) { getPersistentEntities() >> [] }))
+        listener.persistentEntityAdded(entity)
+        EntityAccess ea = Stub(EntityAccess) { getEntity() >> domain }
+
+        when:
+        listener."$methodName"(entity, ea, null)
+
+        then:
+        domain.invoked == [hookName]
+
+        where:
+        methodName     | hookName
+        'beforeInsert'  | 'beforeInsert'
+        'beforeUpdate'  | 'beforeUpdate'
+        'beforeDelete'  | 'beforeDelete'
+        'beforeLoad'    | 'beforeLoad'
+        'afterInsert'   | 'afterInsert'
+        'afterUpdate'   | 'afterUpdate'
+        'afterDelete'   | 'afterDelete'
+        'afterLoad'     | 'afterLoad'
+    }
+
+    void "afterInsert activates dirty checking on entities that implement DirtyCheckable"() {
+        given:
+        DirtyCheckableDomain domain = Spy(DirtyCheckableDomain)
+        PersistentEntity entity = entityFor(DirtyCheckableDomain)
+        DomainEventListener listener = new DomainEventListener(plainDatastore(Stub(MappingContext) { getPersistentEntities() >> [] }))
+        EntityAccess ea = Stub(EntityAccess) { getEntity() >> domain }
 
         when:
         listener.afterInsert(entity, ea)
 
         then:
-        thing.afterInsertCalled
-        thing.trackChangesCalled
-        !ea.isRefreshed()
+        1 * domain.trackChanges()
     }
 
-    void "afterUpdate activates dirty checking and invokes the domain hook"() {
+    void "afterUpdate re-activates dirty checking on entities that implement DirtyCheckable"() {
         given:
-        def entity = entityFor(HookedTrackable)
-        listener.persistentEntityAdded(entity)
-        def thing = new HookedTrackable()
-        def ea = accessFor(thing, entity)
+        DirtyCheckableDomain domain = Spy(DirtyCheckableDomain)
+        PersistentEntity entity = entityFor(DirtyCheckableDomain)
+        DomainEventListener listener = new DomainEventListener(plainDatastore(Stub(MappingContext) { getPersistentEntities() >> [] }))
+        EntityAccess ea = Stub(EntityAccess) { getEntity() >> domain }
 
         when:
         listener.afterUpdate(entity, ea)
 
         then:
-        thing.afterUpdateCalled
-        thing.trackChangesCalled
+        1 * domain.trackChanges()
     }
 
-    void "afterDelete invokes the domain hook"() {
+    void "afterLoad activates dirty checking on entities that implement DirtyCheckable"() {
         given:
-        def entity = entityFor(HookedThing)
-        listener.persistentEntityAdded(entity)
-        def thing = new HookedThing()
-        def ea = accessFor(thing, entity)
-
-        when:
-        listener.afterDelete(entity, ea)
-
-        then:
-        thing.afterDeleteCalled
-    }
-
-    void "afterLoad activates dirty checking and invokes the domain hook"() {
-        given:
-        def entity = entityFor(HookedTrackable)
-        listener.persistentEntityAdded(entity)
-        def thing = new HookedTrackable()
-        def ea = accessFor(thing, entity)
+        DirtyCheckableDomain domain = Spy(DirtyCheckableDomain)
+        PersistentEntity entity = entityFor(DirtyCheckableDomain)
+        DomainEventListener listener = new DomainEventListener(plainDatastore(Stub(MappingContext) { getPersistentEntities() >> [] }))
+        EntityAccess ea = Stub(EntityAccess) { getEntity() >> domain }
 
         when:
         listener.afterLoad(entity, ea)
 
         then:
-        thing.afterLoadCalled
-        thing.trackChangesCalled
+        1 * domain.trackChanges()
     }
 
-    void "onPersistenceEvent cancels a PreInsertEvent when the domain hook returns false"() {
+    void "afterDelete does not activate dirty checking since the entity is no longer trackable"() {
         given:
-        def entity = entityFor(CancellingThing)
-        listener.persistentEntityAdded(entity)
-        def ea = accessFor(new CancellingThing(), entity)
-        def event = new PreInsertEvent(datastore, entity, ea)
+        DirtyCheckableDomain domain = Spy(DirtyCheckableDomain)
+        PersistentEntity entity = entityFor(DirtyCheckableDomain)
+        DomainEventListener listener = new DomainEventListener(plainDatastore(Stub(MappingContext) { getPersistentEntities() >> [] }))
+        EntityAccess ea = Stub(EntityAccess) { getEntity() >> domain }
 
         when:
-        listener.onPersistenceEvent(event)
+        listener.afterDelete(entity, ea)
 
         then:
-        event.isCancelled()
+        0 * domain.trackChanges()
     }
 
-    void "onPersistenceEvent does not cancel a PreInsertEvent when the domain hook returns true"() {
+    void "afterLoad autowires the entity when the datastore's default connection source is configured to autowire"() {
         given:
-        def entity = entityFor(HookedThing)
-        listener.persistentEntityAdded(entity)
-        def ea = accessFor(new HookedThing(), entity)
-        def event = new PreInsertEvent(datastore, entity, ea)
-
-        when:
-        listener.onPersistenceEvent(event)
-
-        then:
-        !event.isCancelled()
-    }
-
-    void "onPersistenceEvent dispatches PostInsertEvent to afterInsert"() {
-        given:
-        def entity = entityFor(HookedThing)
-        listener.persistentEntityAdded(entity)
-        def thing = new HookedThing()
-        def ea = accessFor(thing, entity)
-        def event = new PostInsertEvent(datastore, entity, ea)
-
-        when:
-        listener.onPersistenceEvent(event)
-
-        then:
-        thing.afterInsertCalled
-    }
-
-    void "onPersistenceEvent dispatches PreUpdateEvent and PostUpdateEvent to the update hooks"() {
-        given:
-        def entity = entityFor(HookedThing)
-        listener.persistentEntityAdded(entity)
-        def thing = new HookedThing()
-        def ea = accessFor(thing, entity)
-
-        when:
-        listener.onPersistenceEvent(new PreUpdateEvent(datastore, entity, ea))
-        listener.onPersistenceEvent(new PostUpdateEvent(datastore, entity, ea))
-
-        then:
-        thing.beforeUpdateCalled
-        thing.afterUpdateCalled
-    }
-
-    void "onPersistenceEvent dispatches PreDeleteEvent and PostDeleteEvent to the delete hooks"() {
-        given:
-        def entity = entityFor(HookedThing)
-        listener.persistentEntityAdded(entity)
-        def thing = new HookedThing()
-        def ea = accessFor(thing, entity)
-
-        when:
-        listener.onPersistenceEvent(new PreDeleteEvent(datastore, entity, ea))
-        listener.onPersistenceEvent(new PostDeleteEvent(datastore, entity, ea))
-
-        then:
-        thing.beforeDeleteCalled
-        thing.afterDeleteCalled
-    }
-
-    void "onPersistenceEvent dispatches PreLoadEvent and PostLoadEvent to the load hooks"() {
-        given:
-        def entity = entityFor(HookedThing)
-        listener.persistentEntityAdded(entity)
-        def thing = new HookedThing()
-        def ea = accessFor(thing, entity)
-
-        when:
-        listener.onPersistenceEvent(new PreLoadEvent(datastore, entity, ea))
-        listener.onPersistenceEvent(new PostLoadEvent(datastore, entity, ea))
-
-        then:
-        thing.beforeLoadCalled
-        thing.afterLoadCalled
-    }
-
-    private static PersistentEntity entityFor(Class clazz, boolean versioned = false, Class versionType = null) {
-        PersistentProperty versionProperty = versionType == null ? null : [getType: { -> versionType }] as PersistentProperty
-        ClassMapping mapping = [getMappedForm: { -> new Entity() }] as ClassMapping
-        [
-                getJavaClass: { -> clazz },
-                isVersioned : { -> versioned },
-                getVersion  : { -> versionProperty },
-                getMapping  : { -> mapping }
-        ] as PersistentEntity
-    }
-
-    private static RecordingEntityAccess accessFor(Object entity, PersistentEntity persistentEntity = null) {
-        new RecordingEntityAccess(entity, persistentEntity)
-    }
-
-    static class RecordingEntityAccess implements EntityAccess {
-
-        final Object entity
-        final PersistentEntity persistentEntity
-        final Map<String, Object> properties = [:]
-        boolean refreshed = false
-        boolean failOnSetProperty = false
-
-        RecordingEntityAccess(Object entity, PersistentEntity persistentEntity) {
-            this.entity = entity
-            this.persistentEntity = persistentEntity
+        NoHooksDomain domain = new NoHooksDomain()
+        PersistentEntity entity = entityFor(NoHooksDomain, false, null, false)
+        AutowireCapableBeanFactory beanFactory = Mock(AutowireCapableBeanFactory)
+        ConfigurableApplicationContext appContext = Stub(ConfigurableApplicationContext) {
+            getAutowireCapableBeanFactory() >> beanFactory
         }
+        Datastore datastore = connectionAwareDatastore(Stub(MappingContext) { getPersistentEntities() >> [] }, true, appContext)
+        DomainEventListener listener = new DomainEventListener(datastore)
+        EntityAccess ea = Stub(EntityAccess) { getEntity() >> domain }
 
-        @Override
-        Object getEntity() { entity }
+        when:
+        listener.afterLoad(entity, ea)
 
-        @Override
-        Object getProperty(String name) { properties[name] }
+        then:
+        1 * beanFactory.autowireBeanProperties(domain, AutowireCapableBeanFactory.AUTOWIRE_BY_NAME, false)
+    }
 
-        @Override
-        Object getPropertyValue(String name) { properties[name] }
-
-        @Override
-        Class getPropertyType(String name) { properties[name]?.class }
-
-        @Override
-        void setProperty(String name, Object value) {
-            if (failOnSetProperty) {
-                throw new IllegalStateException('boom')
-            }
-            properties[name] = value
+    void "afterLoad autowires the entity when the entity's own mapping requests autowire even though the datastore default does not"() {
+        given:
+        NoHooksDomain domain = new NoHooksDomain()
+        PersistentEntity entity = entityFor(NoHooksDomain, false, null, true)
+        AutowireCapableBeanFactory beanFactory = Mock(AutowireCapableBeanFactory)
+        ConfigurableApplicationContext appContext = Stub(ConfigurableApplicationContext) {
+            getAutowireCapableBeanFactory() >> beanFactory
         }
+        Datastore datastore = plainDatastore(Stub(MappingContext) { getPersistentEntities() >> [] }, appContext)
+        DomainEventListener listener = new DomainEventListener(datastore)
+        EntityAccess ea = Stub(EntityAccess) { getEntity() >> domain }
 
-        @Override
-        Object getIdentifier() { null }
+        when:
+        listener.afterLoad(entity, ea)
 
-        @Override
-        void setIdentifier(Object id) { }
-
-        @Override
-        void setIdentifierNoConversion(Object id) { }
-
-        @Override
-        String getIdentifierName() { 'id' }
-
-        @Override
-        PersistentEntity getPersistentEntity() { persistentEntity }
-
-        @Override
-        void refresh() { refreshed = true }
-
-        @Override
-        void setPropertyNoConversion(String name, Object value) { properties[name] = value }
+        then:
+        1 * beanFactory.autowireBeanProperties(domain, AutowireCapableBeanFactory.AUTOWIRE_BY_NAME, false)
     }
 
-    static class PlainThing {
+    void "afterLoad does not autowire the entity when neither the datastore default nor the entity's mapping request it"() {
+        given:
+        NoHooksDomain domain = new NoHooksDomain()
+        PersistentEntity entity = entityFor(NoHooksDomain, false, null, false)
+        AutowireCapableBeanFactory beanFactory = Mock(AutowireCapableBeanFactory)
+        ConfigurableApplicationContext appContext = Stub(ConfigurableApplicationContext) {
+            getAutowireCapableBeanFactory() >> beanFactory
+        }
+        Datastore datastore = plainDatastore(Stub(MappingContext) { getPersistentEntities() >> [] }, appContext)
+        DomainEventListener listener = new DomainEventListener(datastore)
+        EntityAccess ea = Stub(EntityAccess) { getEntity() >> domain }
+
+        when:
+        listener.afterLoad(entity, ea)
+
+        then:
+        0 * beanFactory.autowireBeanProperties(*_)
     }
 
-    static class HookedThing {
-        boolean beforeInsertCalled
-        boolean afterInsertCalled
-        boolean beforeUpdateCalled
-        boolean afterUpdateCalled
-        boolean beforeDeleteCalled
-        boolean afterDeleteCalled
-        boolean beforeLoadCalled
-        boolean afterLoadCalled
+    void "afterLoad requests autowiring without error when the datastore has no ApplicationContext to autowire through"() {
+        given:
+        NoHooksDomain domain = new NoHooksDomain()
+        PersistentEntity entity = entityFor(NoHooksDomain, false, null, false)
+        Datastore datastore = connectionAwareDatastore(Stub(MappingContext) { getPersistentEntities() >> [] }, true, null)
+        DomainEventListener listener = new DomainEventListener(datastore)
+        EntityAccess ea = Stub(EntityAccess) { getEntity() >> domain }
 
-        boolean beforeInsert() { beforeInsertCalled = true; true }
+        when:
+        listener.afterLoad(entity, ea)
 
-        void afterInsert() { afterInsertCalled = true }
-
-        boolean beforeUpdate() { beforeUpdateCalled = true; true }
-
-        void afterUpdate() { afterUpdateCalled = true }
-
-        boolean beforeDelete() { beforeDeleteCalled = true; true }
-
-        void afterDelete() { afterDeleteCalled = true }
-
-        void beforeLoad() { beforeLoadCalled = true }
-
-        void afterLoad() { afterLoadCalled = true }
+        then:
+        notThrown(NullPointerException)
     }
 
-    static class CancellingThing {
-        boolean beforeInsert() { false }
+    @Unroll
+    void "onApplicationEvent dispatches a #eventType.simpleName to the #hookName hook"() {
+        given:
+        RecordingDomain domain = new RecordingDomain()
+        PersistentEntity entity = entityFor(RecordingDomain)
+        Datastore datastore = plainDatastore(Stub(MappingContext) { getPersistentEntities() >> [] })
+        DomainEventListener listener = new DomainEventListener(datastore)
+        listener.persistentEntityAdded(entity)
+        EntityAccess ea = Stub(EntityAccess) { getEntity() >> domain }
+        ApplicationEvent event = eventType.newInstance(datastore, entity, ea)
+
+        when:
+        listener.onApplicationEvent(event)
+
+        then:
+        domain.invoked == [hookName]
+
+        where:
+        eventType        | hookName
+        PreInsertEvent    | 'beforeInsert'
+        PostInsertEvent   | 'afterInsert'
+        PreUpdateEvent    | 'beforeUpdate'
+        PostUpdateEvent   | 'afterUpdate'
+        PreDeleteEvent    | 'beforeDelete'
+        PostDeleteEvent   | 'afterDelete'
+        PreLoadEvent      | 'beforeLoad'
+        PostLoadEvent     | 'afterLoad'
     }
 
-    static class HookedTrackable implements DirtyCheckable {
-        boolean afterInsertCalled
-        boolean afterUpdateCalled
-        boolean afterLoadCalled
-        boolean trackChangesCalled
+    @Unroll
+    void "onApplicationEvent silently ignores a #eventType.simpleName since domain events define no hook for it"() {
+        given:
+        RecordingDomain domain = new RecordingDomain()
+        PersistentEntity entity = entityFor(RecordingDomain)
+        Datastore datastore = plainDatastore(Stub(MappingContext) { getPersistentEntities() >> [] })
+        DomainEventListener listener = new DomainEventListener(datastore)
+        listener.persistentEntityAdded(entity)
+        EntityAccess ea = Stub(EntityAccess) { getEntity() >> domain }
 
-        void afterInsert() { afterInsertCalled = true }
+        when:
+        listener.onApplicationEvent(eventType.newInstance(datastore, entity, ea))
 
-        void afterUpdate() { afterUpdateCalled = true }
+        then:
+        noExceptionThrown()
+        domain.invoked.isEmpty()
 
-        void afterLoad() { afterLoadCalled = true }
+        where:
+        eventType << [SaveOrUpdateEvent, ValidationEvent, MergeEvent, PersistEvent]
+    }
 
-        @Override
-        void trackChanges() { trackChangesCalled = true }
+    @Unroll
+    void "onApplicationEvent cancels a #eventType.simpleName when its before-hook returns false"() {
+        given:
+        CancellingDomain domain = new CancellingDomain()
+        PersistentEntity entity = entityFor(CancellingDomain)
+        Datastore datastore = plainDatastore(Stub(MappingContext) { getPersistentEntities() >> [] })
+        DomainEventListener listener = new DomainEventListener(datastore)
+        listener.persistentEntityAdded(entity)
+        EntityAccess ea = Mock(EntityAccess) { getEntity() >> domain }
+        ApplicationEvent event = eventType.newInstance(datastore, entity, ea)
+
+        when:
+        listener.onApplicationEvent(event)
+
+        then:
+        event.cancelled
+        0 * ea.refresh()
+
+        where:
+        eventType << [PreInsertEvent, PreUpdateEvent, PreDeleteEvent]
+    }
+
+    void "onApplicationEvent refreshes the entity access after a successful beforeInsert hook since beforeInsert is a refresh event"() {
+        given:
+        RecordingDomain domain = new RecordingDomain()
+        PersistentEntity entity = entityFor(RecordingDomain)
+        Datastore datastore = plainDatastore(Stub(MappingContext) { getPersistentEntities() >> [] })
+        DomainEventListener listener = new DomainEventListener(datastore)
+        listener.persistentEntityAdded(entity)
+        EntityAccess ea = Mock(EntityAccess) { getEntity() >> domain }
+
+        when:
+        listener.onApplicationEvent(new PreInsertEvent(datastore, entity, ea))
+
+        then:
+        1 * ea.refresh()
+    }
+
+    void "onApplicationEvent does not refresh the entity access after a successful beforeLoad hook since beforeLoad is not a refresh event"() {
+        given:
+        RecordingDomain domain = new RecordingDomain()
+        PersistentEntity entity = entityFor(RecordingDomain)
+        Datastore datastore = plainDatastore(Stub(MappingContext) { getPersistentEntities() >> [] })
+        DomainEventListener listener = new DomainEventListener(datastore)
+        listener.persistentEntityAdded(entity)
+        EntityAccess ea = Mock(EntityAccess) { getEntity() >> domain }
+
+        when:
+        listener.onApplicationEvent(new PreLoadEvent(datastore, entity, ea))
+
+        then:
+        0 * ea.refresh()
+    }
+
+    @Unroll
+    void "onApplicationEvent still reaches a subclass that overrides the deprecated 3-arg #methodName overload, passing it the #eventType.simpleName"() {
+        given:
+        RecordingDomain domain = new RecordingDomain()
+        PersistentEntity entity = entityFor(RecordingDomain)
+        Datastore datastore = plainDatastore(Stub(MappingContext) { getPersistentEntities() >> [] })
+        ThreeArgOverridingListener listener = new ThreeArgOverridingListener(datastore)
+        listener.persistentEntityAdded(entity)
+        EntityAccess ea = Stub(EntityAccess) { getEntity() >> domain }
+        ApplicationEvent event = eventType.newInstance(datastore, entity, ea)
+
+        when:
+        listener.onApplicationEvent(event)
+
+        then: 'the override saw the call and the event that triggered it'
+        listener.intercepted == [methodName]
+        listener.events == [event]
+
+        and: 'the override\'s super call still ran the domain hook'
+        domain.invoked == [methodName]
+
+        where:
+        eventType        | methodName
+        PreInsertEvent    | 'beforeInsert'
+        PostInsertEvent   | 'afterInsert'
+        PreUpdateEvent    | 'beforeUpdate'
+        PostUpdateEvent   | 'afterUpdate'
+        PreDeleteEvent    | 'beforeDelete'
+        PostDeleteEvent   | 'afterDelete'
+        PreLoadEvent      | 'beforeLoad'
+        PostLoadEvent     | 'afterLoad'
+    }
+
+    @Unroll
+    void "onApplicationEvent still reaches a subclass that overrides the 2-arg #methodName overload"() {
+        given:
+        RecordingDomain domain = new RecordingDomain()
+        PersistentEntity entity = entityFor(RecordingDomain)
+        Datastore datastore = plainDatastore(Stub(MappingContext) { getPersistentEntities() >> [] })
+        TwoArgOverridingListener listener = new TwoArgOverridingListener(datastore)
+        listener.persistentEntityAdded(entity)
+        EntityAccess ea = Stub(EntityAccess) { getEntity() >> domain }
+
+        when:
+        listener.onApplicationEvent(eventType.newInstance(datastore, entity, ea))
+
+        then:
+        listener.intercepted == [methodName]
+        domain.invoked == [methodName]
+
+        where:
+        eventType        | methodName
+        PreInsertEvent    | 'beforeInsert'
+        PostInsertEvent   | 'afterInsert'
+        PreUpdateEvent    | 'beforeUpdate'
+        PostUpdateEvent   | 'afterUpdate'
+        PreDeleteEvent    | 'beforeDelete'
+        PostDeleteEvent   | 'afterDelete'
+        PreLoadEvent      | 'beforeLoad'
+        PostLoadEvent     | 'afterLoad'
+    }
+
+    @Unroll
+    void "a subclass vetoing from its deprecated 3-arg before-hook override still cancels the #eventType.simpleName"() {
+        given:
+        RecordingDomain domain = new RecordingDomain()
+        PersistentEntity entity = entityFor(RecordingDomain)
+        Datastore datastore = plainDatastore(Stub(MappingContext) { getPersistentEntities() >> [] })
+        ThreeArgOverridingListener listener = new ThreeArgOverridingListener(datastore, false)
+        listener.persistentEntityAdded(entity)
+        EntityAccess ea = Stub(EntityAccess) { getEntity() >> domain }
+        ApplicationEvent event = eventType.newInstance(datastore, entity, ea)
+
+        when:
+        listener.onApplicationEvent(event)
+
+        then:
+        event.cancelled
+
+        where:
+        eventType << [PreInsertEvent, PreUpdateEvent, PreDeleteEvent]
+    }
+
+    private PersistentEntity entityFor(Class<?> javaClass, boolean versioned = false, Class<?> versionType = null,
+                                        boolean mappedAutowire = false) {
+        PersistentProperty version = versioned ? Stub(PersistentProperty) { getType() >> versionType } : null
+        ClassMapping mapping = Stub(ClassMapping) {
+            getMappedForm() >> new Entity(autowire: mappedAutowire)
+        }
+        Stub(PersistentEntity) {
+            getJavaClass() >> javaClass
+            isVersioned() >> versioned
+            getVersion() >> version
+            getMapping() >> mapping
+        }
+    }
+
+    private Datastore plainDatastore(MappingContext mappingContext, ConfigurableApplicationContext appContext = null) {
+        Stub(Datastore) {
+            getMappingContext() >> mappingContext
+            getApplicationContext() >> appContext
+        }
+    }
+
+    private Datastore connectionAwareDatastore(MappingContext mappingContext, boolean autowire,
+                                                ConfigurableApplicationContext appContext = null) {
+        ConnectionSource connectionSource = Stub(ConnectionSource) {
+            getSettings() >> new ConnectionSourceSettings(autowire: autowire)
+        }
+        ConnectionSources connectionSources = Stub(ConnectionSources) {
+            getDefaultConnectionSource() >> connectionSource
+        }
+        Stub(Datastore, additionalInterfaces: [ConnectionSourcesProvider]) {
+            getMappingContext() >> mappingContext
+            getApplicationContext() >> appContext
+            getConnectionSources() >> connectionSources
+        }
+    }
+}
+
+class RecordingDomain {
+
+    List<String> invoked = []
+
+    void beforeInsert() { invoked << 'beforeInsert' }
+
+    void beforeUpdate() { invoked << 'beforeUpdate' }
+
+    void beforeDelete() { invoked << 'beforeDelete' }
+
+    void beforeLoad() { invoked << 'beforeLoad' }
+
+    void afterInsert() { invoked << 'afterInsert' }
+
+    void afterUpdate() { invoked << 'afterUpdate' }
+
+    void afterDelete() { invoked << 'afterDelete' }
+
+    void afterLoad() { invoked << 'afterLoad' }
+}
+
+class CancellingDomain {
+
+    boolean beforeInsert() { false }
+
+    boolean beforeUpdate() { false }
+
+    boolean beforeDelete() { false }
+}
+
+class NoHooksDomain {
+
+}
+
+class DirtyCheckableDomain implements DirtyCheckable {
+
+}
+
+/**
+ * Overrides the deprecated three-argument hooks, the way a subclass written against 8.0 would.
+ */
+@SuppressWarnings('deprecation')
+class ThreeArgOverridingListener extends DomainEventListener {
+
+    final List<String> intercepted = []
+    final List<ApplicationEvent> events = []
+    private final boolean allow
+
+    ThreeArgOverridingListener(Datastore datastore, boolean allow = true) {
+        super(datastore)
+        this.allow = allow
+    }
+
+    @Override
+    boolean beforeInsert(PersistentEntity entity, EntityAccess ea, PreInsertEvent event) {
+        record('beforeInsert', event)
+        super.beforeInsert(entity, ea, event) && allow
+    }
+
+    @Override
+    boolean beforeUpdate(PersistentEntity entity, EntityAccess ea, PreUpdateEvent event) {
+        record('beforeUpdate', event)
+        super.beforeUpdate(entity, ea, event) && allow
+    }
+
+    @Override
+    boolean beforeDelete(PersistentEntity entity, EntityAccess ea, PreDeleteEvent event) {
+        record('beforeDelete', event)
+        super.beforeDelete(entity, ea, event) && allow
+    }
+
+    @Override
+    void beforeLoad(PersistentEntity entity, EntityAccess ea, PreLoadEvent event) {
+        record('beforeLoad', event)
+        super.beforeLoad(entity, ea, event)
+    }
+
+    @Override
+    void afterInsert(PersistentEntity entity, EntityAccess ea, PostInsertEvent event) {
+        record('afterInsert', event)
+        super.afterInsert(entity, ea, event)
+    }
+
+    @Override
+    void afterUpdate(PersistentEntity entity, EntityAccess ea, PostUpdateEvent event) {
+        record('afterUpdate', event)
+        super.afterUpdate(entity, ea, event)
+    }
+
+    @Override
+    void afterDelete(PersistentEntity entity, EntityAccess ea, PostDeleteEvent event) {
+        record('afterDelete', event)
+        super.afterDelete(entity, ea, event)
+    }
+
+    @Override
+    void afterLoad(PersistentEntity entity, EntityAccess ea, PostLoadEvent event) {
+        record('afterLoad', event)
+        super.afterLoad(entity, ea, event)
+    }
+
+    private void record(String hook, ApplicationEvent event) {
+        intercepted << hook
+        events << event
+    }
+}
+
+/**
+ * Overrides the two-argument hooks that are now canonical.
+ */
+class TwoArgOverridingListener extends DomainEventListener {
+
+    final List<String> intercepted = []
+
+    TwoArgOverridingListener(Datastore datastore) {
+        super(datastore)
+    }
+
+    @Override
+    boolean beforeInsert(PersistentEntity entity, EntityAccess ea) {
+        intercepted << 'beforeInsert'
+        super.beforeInsert(entity, ea)
+    }
+
+    @Override
+    boolean beforeUpdate(PersistentEntity entity, EntityAccess ea) {
+        intercepted << 'beforeUpdate'
+        super.beforeUpdate(entity, ea)
+    }
+
+    @Override
+    boolean beforeDelete(PersistentEntity entity, EntityAccess ea) {
+        intercepted << 'beforeDelete'
+        super.beforeDelete(entity, ea)
+    }
+
+    @Override
+    void beforeLoad(PersistentEntity entity, EntityAccess ea) {
+        intercepted << 'beforeLoad'
+        super.beforeLoad(entity, ea)
+    }
+
+    @Override
+    void afterInsert(PersistentEntity entity, EntityAccess ea) {
+        intercepted << 'afterInsert'
+        super.afterInsert(entity, ea)
+    }
+
+    @Override
+    void afterUpdate(PersistentEntity entity, EntityAccess ea) {
+        intercepted << 'afterUpdate'
+        super.afterUpdate(entity, ea)
+    }
+
+    @Override
+    void afterDelete(PersistentEntity entity, EntityAccess ea) {
+        intercepted << 'afterDelete'
+        super.afterDelete(entity, ea)
+    }
+
+    @Override
+    void afterLoad(PersistentEntity entity, EntityAccess ea) {
+        intercepted << 'afterLoad'
+        super.afterLoad(entity, ea)
     }
 }

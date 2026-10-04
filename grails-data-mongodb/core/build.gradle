@@ -128,6 +128,9 @@ dependencies {
         // comp: RemovalCause, this should perhaps be api in data-mapping as it is needed for compilation downstream
     }
 
+    testImplementation 'com.github.docker-java:docker-java-api', {
+        // test: Ulimit, version follows org.testcontainers:testcontainers
+    }
     testImplementation 'jakarta.validation:jakarta.validation-api'
     testImplementation 'junit:junit' // JUnit 4
     testImplementation 'org.apache.grails.testing:grails-testing-support-core'
@@ -149,7 +152,10 @@ dependencies {
         // test: GenericWebApplicationContext requires ServletContext on the classpath
     }
 
-    testImplementation 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation and tests
+    // test: a real SLF4J binding, so that the log a test asserts on is actually emitted.
+    // Quietened to WARN by src/test/resources/logback-test.xml; a test raises the level of the
+    // one logger it is interested in.
+    testImplementation 'ch.qos.logback:logback-classic'
     testImplementation 'org.testcontainers:testcontainers'
     testImplementation 'org.testcontainers:testcontainers-mongodb'
     testImplementation 'org.testcontainers:testcontainers-spock'

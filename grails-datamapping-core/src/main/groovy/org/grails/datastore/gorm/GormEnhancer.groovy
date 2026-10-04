@@ -28,15 +28,11 @@ import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.util.ClassUtils
 
 import grails.gorm.MultiTenant
-import org.grails.datastore.gorm.finders.CountByFinder
-import org.grails.datastore.gorm.finders.FindAllByBooleanFinder
-import org.grails.datastore.gorm.finders.FindAllByFinder
-import org.grails.datastore.gorm.finders.FindByBooleanFinder
-import org.grails.datastore.gorm.finders.FindByFinder
+import org.grails.datastore.gorm.finders.CountFinder
 import org.grails.datastore.gorm.finders.FinderMethod
-import org.grails.datastore.gorm.finders.FindOrCreateByFinder
-import org.grails.datastore.gorm.finders.FindOrSaveByFinder
 import org.grails.datastore.gorm.finders.ListOrderByFinder
+import org.grails.datastore.gorm.finders.ListResultFinder
+import org.grails.datastore.gorm.finders.SingleResultFinder
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
@@ -423,13 +419,13 @@ class GormEnhancer implements Closeable {
     @Deprecated
     @CompileStatic
     protected List<FinderMethod> createDynamicFinders(Datastore targetDatastore) {
-        [new FindOrCreateByFinder(targetDatastore),
-         new FindOrSaveByFinder(targetDatastore),
-         new FindByFinder(targetDatastore),
-         new FindAllByFinder(targetDatastore),
-         new FindAllByBooleanFinder(targetDatastore),
-         new FindByBooleanFinder(targetDatastore),
-         new CountByFinder(targetDatastore),
+        [SingleResultFinder.findOrCreateBy(targetDatastore),
+         SingleResultFinder.findOrSaveBy(targetDatastore),
+         SingleResultFinder.findBy(targetDatastore),
+         ListResultFinder.findAllBy(targetDatastore),
+         ListResultFinder.findAllByBoolean(targetDatastore),
+         SingleResultFinder.findByBoolean(targetDatastore),
+         CountFinder.countBy(targetDatastore),
          new ListOrderByFinder(targetDatastore)] as List<FinderMethod>
     }
 

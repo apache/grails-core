@@ -22,6 +22,9 @@ import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstrai
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
 import org.springframework.context.support.StaticMessageSource
 import spock.lang.Specification
+import spock.lang.Unroll
+
+import jakarta.persistence.Entity
 
 class DefaultConstraintEvaluatorSpec extends Specification {
 
@@ -51,6 +54,24 @@ class DefaultConstraintEvaluatorSpec extends Specification {
         !constraints.name.isBlank()
     }
 
+    @Unroll
+    void 'importFrom evaluates an entity with the evaluator nullable default (nullable = #defaultNullable)'() {
+        given:
+        var mappingContext = new KeyValueMappingContext('test')
+        mappingContext.addPersistentEntity(ImportedEntity)
+        var evaluator = new DefaultConstraintEvaluator(new DefaultConstraintRegistry(new StaticMessageSource()), mappingContext, Collections.emptyMap(), true, defaultNullable)
+
+        when:
+        var constraints = evaluator.evaluate(ImportingEntityConstraints, false)
+
+        then:
+        constraints.name.nullable == defaultNullable
+        !constraints.name.blank
+
+        where:
+        defaultNullable << [false, true]
+    }
+
     class Constraints {
         String name
         static constraints = {
@@ -63,5 +84,24 @@ class DefaultConstraintEvaluatorSpec extends Specification {
         static constraints = {
             importFrom Constraints
         }
+    }
+}
+
+@Entity
+class ImportedEntity {
+
+    String name
+
+    static constraints = {
+        name(blank: false)
+    }
+}
+
+class ImportingEntityConstraints {
+
+    String name
+
+    static constraints = {
+        importFrom(ImportedEntity)
     }
 }

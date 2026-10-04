@@ -60,7 +60,7 @@ final class HTMLCodec implements CodecFactory, GrailsApplicationAware, Initializ
     }
 
     HTMLCodec() {
-        setUseLegacyEncoder(true)
+        setUseLegacyEncoder(false)
     }
 
     Encoder getEncoder() {
@@ -85,10 +85,8 @@ final class HTMLCodec implements CodecFactory, GrailsApplicationAware, Initializ
             return
         }
 
-        String htmlCodecSettingStr = htmlCodecSetting.toLowerCase()
-        if (htmlCodecSettingStr.startsWith('xml') || 'xhtml'.equalsIgnoreCase(htmlCodecSettingStr)) {
-            setUseLegacyEncoder(false)
-        }
+        String htmlCodecSettingStr = htmlCodecSetting.toLowerCase(Locale.ROOT)
+        setUseLegacyEncoder('html4' == htmlCodecSettingStr || 'html' == htmlCodecSettingStr)
     }
 
     void setUseLegacyEncoder(boolean useLegacyEncoder) {

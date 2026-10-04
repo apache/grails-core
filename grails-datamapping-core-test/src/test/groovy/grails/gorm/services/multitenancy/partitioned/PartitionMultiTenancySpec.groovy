@@ -50,6 +50,28 @@ class PartitionMultiTenancySpec extends Specification {
     @Shared
     IBookService bookDataService = datastore.getService(IBookService)
 
+    void 'test a block for a tenant id, which names no connection, leaves the routing alone'() {
+        given: 'two books for one tenant and one for another'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, '900')
+        Book.withTransaction {
+            new Book(title: 'First').save(flush: true)
+            new Book(title: 'Second').save(flush: true)
+        }
+        Book.withTenant('901') {
+            Book.withTransaction { new Book(title: 'Another tenant').save(flush: true) }
+        }
+
+        expect: 'a session or transaction opened for a tenant leaves the calls on the class to the current tenant'
+        Book.withTenant('901').withTransaction { Book.count() } == 2
+        Book.withTenant('901').withNewSession { Book.count() } == 2
+
+        and: 'while the call that names the tenant reaches it'
+        Book.withTenant('901').count() == 1
+
+        cleanup:
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, '')
+    }
+
     void 'Test partitioned multi-tenancy with GORM services'() {
         setup:
         BookService bookService = new BookService()

@@ -17,4 +17,29 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Grails applications can be deployed in a number of ways, each of which has its pros and cons.
+Grails applications can run as executable archives, in an external servlet container, or in an OCI container image.
+Choose the packaging that fits your deployment platform:
+
+[cols="1,2,2",options="header"]
+|===
+|Deployment |Build artifact |When to use it
+|<<deploymentStandalone,Standalone>>
+|Executable JAR (`bootJar`) or WAR (`bootWar`)
+|A VM or host where a service manager runs Java and supervises the application.
+|<<deploymentContainer,External servlet container>>
+|Deployable WAR (`bootWar`)
+|An existing Jakarta Servlet container, such as Tomcat, manages the application lifecycle.
+|<<deploymentLayeredBuilds,OCI container image>>
+|An image built with Docker, Buildah, or Spring Boot's `bootBuildImage`
+|A container runtime or orchestrator manages application instances. The embedded servlet container runs inside the image.
+|===
+
+The examples in this chapter target Grails 8, Spring Boot 4.1, and Java 21 or later.
+Use the Gradle Wrapper and dependency versions supplied by your Grails application. The Java runtime must support the bytecode produced by your build and all its dependencies; test with the Java major version used in production.
+Applications using Micronaut require Java 25 or later.
+Run the commands from your application's root directory, not the Grails Framework source repository.
+
+Build and test a release artifact once, then promote that same artifact or image digest through your environments.
+Supply environment-specific configuration at runtime, and retain the previous artifact for rollback.
+The <<deploymentTasks,production configuration>> section covers external configuration, secrets, graceful shutdown, health probes, and HTTPS for these deployment options.
+For startup optimizations, see <<deploymentAot,ahead-of-time processing>> and <<deploymentAotCache,ahead-of-time caching>>.

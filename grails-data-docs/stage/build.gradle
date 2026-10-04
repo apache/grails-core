@@ -22,6 +22,12 @@ apply plugin: 'groovy'
 // grails-data-mapping api
 def combinedGroovydoc = tasks.register('aggregateDataMappingGroovydoc', Groovydoc)
 apply from: rootProject.layout.projectDirectory.file('gradle/docs-dependencies.gradle')
+// aggregateDataMappingGroovydoc documents the whole data-mapping stack in one run, so it
+// needs more than a single module does.
+groovydocEnhancer {
+    maxHeapSize = '2g'
+}
+
 combinedGroovydoc.configure { Groovydoc task ->
     task.windowTitle = "Grails Data Mapping API - ${projectVersion}"
     task.docTitle = "Grails Data Mapping API - ${projectVersion}"

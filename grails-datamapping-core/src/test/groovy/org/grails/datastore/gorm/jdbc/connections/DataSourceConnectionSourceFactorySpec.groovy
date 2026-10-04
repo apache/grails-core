@@ -35,6 +35,47 @@ import org.grails.datastore.mapping.core.connections.ConnectionSource
 
 class DataSourceConnectionSourceFactorySpec extends Specification {
 
+    void "test create resolves settings for the default data source from the 'dataSource' prefix"() {
+        given:
+        def factory = new DataSourceConnectionSourceFactory()
+        def config = DatastoreUtils.createPropertyResolver([
+                'dataSource.url'             : 'jdbc:h2:mem:factoryDefaultTest;DB_CLOSE_DELAY=-1',
+                'dataSource.lazy'            : 'false',
+                'dataSource.transactionAware': 'false'
+        ])
+
+        when:
+        def connectionSource = factory.create(ConnectionSource.DEFAULT, config)
+
+        then:
+        connectionSource.name == ConnectionSource.DEFAULT
+        connectionSource.settings.url == 'jdbc:h2:mem:factoryDefaultTest;DB_CLOSE_DELAY=-1'
+        connectionSource.source != null
+
+        cleanup:
+        connectionSource?.close()
+    }
+
+    void "test create resolves settings for a named data source from the 'dataSources.<name>' prefix"() {
+        given:
+        def factory = new DataSourceConnectionSourceFactory()
+        def config = DatastoreUtils.createPropertyResolver([
+                'dataSources.secondary.url'             : 'jdbc:h2:mem:factoryNamedTest;DB_CLOSE_DELAY=-1',
+                'dataSources.secondary.lazy'            : 'false',
+                'dataSources.secondary.transactionAware': 'false'
+        ])
+
+        when:
+        def connectionSource = factory.create('secondary', config)
+
+        then:
+        connectionSource.name == 'secondary'
+        connectionSource.settings.url == 'jdbc:h2:mem:factoryNamedTest;DB_CLOSE_DELAY=-1'
+
+        cleanup:
+        connectionSource?.close()
+    }
+
     void "test getConnectionSourcesConfigurationKey returns the dataSources config key"() {
         expect:
         new DataSourceConnectionSourceFactory().connectionSourcesConfigurationKey == Settings.SETTING_DATASOURCES
@@ -115,6 +156,17 @@ class DataSourceConnectionSourceFactorySpec extends Specification {
         given:
         def dataSource = new ThrowingCloseDataSource(new HikariDataSource())
         def connectionSource = new DataSourceConnectionSource('default', dataSource, new DataSourceSettings())
+
+        when:
+        connectionSource.close()
+
+        then:
+        noExceptionThrown()
+    }
+
+    void "test DataSourceConnectionSource#close tolerates a DelegatingDataSource that has no target"() {
+        given:
+        def connectionSource = new DataSourceConnectionSource('default', new DelegatingDataSource(), new DataSourceSettings())
 
         when:
         connectionSource.close()

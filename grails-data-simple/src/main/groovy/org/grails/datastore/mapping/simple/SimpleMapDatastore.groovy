@@ -19,6 +19,8 @@
 package org.grails.datastore.mapping.simple
 
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
+import java.util.function.LongUnaryOperator
 
 import groovy.transform.CompileStatic
 import org.springframework.context.ApplicationEventPublisher
@@ -80,6 +82,7 @@ class SimpleMapDatastore extends AbstractDatastore implements Closeable, Transac
     protected final GormEnhancer gormEnhancer
     private final ConfigurableApplicationEventPublisher eventPublisher
     private Map indices = new ConcurrentHashMap()
+    private final Map<String, AtomicLong> lastIdentifiers = new ConcurrentHashMap<String, AtomicLong>()
     private final PlatformTransactionManager transactionManager
     private final ConnectionSources<Map<String, Map>, ConnectionSourceSettings> connectionSources
     private final MultiTenancySettings.MultiTenancyMode multiTenancyMode
@@ -303,6 +306,24 @@ class SimpleMapDatastore extends AbstractDatastore implements Closeable, Transac
     void clearData() {
         inmemoryData.clear()
         indices.clear()
+        lastIdentifiers.clear()
+    }
+
+    /**
+     * Hands out the next generated identifier for the given family. The count is shared by every
+     * session of this datastore, so an identifier is not handed out twice by sessions open at the
+     * same time, whose inserts are not yet written, or reused after a delete. It continues from the
+     * family's size when that is higher, as when entries are put in the backing map directly, and
+     * starts again once {@link #clearData()} empties the datastore.
+     *
+     * @param family the family of the root entity the identifier is for
+     * @return the identifier
+     */
+    long nextIdentifier(String family) {
+        Map entries = inmemoryData.get(family)
+        long size = entries != null ? entries.size() : 0
+        return lastIdentifiers.computeIfAbsent(family, { String f -> new AtomicLong() })
+                .updateAndGet({ long last -> Math.max(last, size) + 1 } as LongUnaryOperator)
     }
 
     @Override

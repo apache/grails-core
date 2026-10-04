@@ -240,6 +240,26 @@ class MyEntity {
         cls.getMethod('$$_hibernate_setUseTracker', boolean).isAnnotationPresent(Generated)
     }
 
+    void 'a new instance is not yet associated with a persistence context'() {
+        given:
+        def cls = new GroovyClassLoader().parseClass('''
+import grails.gorm.hibernate.annotation.ManagedEntity
+@ManagedEntity
+class UnassociatedEntity {
+    String name
+}
+''')
+
+        when:
+        def entity = (ManagedEntity) cls.getDeclaredConstructor().newInstance()
+
+        then: 'the instance id matches the value Hibernate expects before the entity is added to a persistence context'
+        entity.$$_hibernate_getInstanceId() == 0
+        entity.$$_hibernate_getEntityEntry() == null
+        entity.$$_hibernate_getPreviousManagedEntity() == null
+        entity.$$_hibernate_getNextManagedEntity() == null
+    }
+
     void "test skip non-hibernate mapping strategy"() {
         when:
         Class cls = new GroovyClassLoader().parseClass('''

@@ -37,75 +37,86 @@ import org.grails.datastore.mapping.reflect.NameUtils
  * Book.listOrderByTitle(max:10)
  * Book.listOrderByTitleAndAuthor(max:10)
  *
+ * <p>Never shared {@link DynamicFinder}'s grammar (no operator-suffix parsing - just trailing
+ * property names joined by {@code And}), so it stays its own standalone implementation, composing
+ * nothing beyond {@link FinderSupport} for session execution.
+ *
  * @author Graeme Rocher
  */
-class ListOrderByFinder extends AbstractFinder {
+class ListOrderByFinder implements FinderMethod {
 
     private static final Pattern METHOD_PATTERN = Pattern.compile('(listOrderBy)(\\w+)')
+    private static final String PROPERTY_SEPARATOR = 'And'
+    private final DatastoreResolver datastoreResolver
     private Pattern pattern = METHOD_PATTERN
 
-    ListOrderByFinder(final Datastore datastore) {
-        super(datastore)
+    ListOrderByFinder(Datastore datastore) {
+        this(FinderSupport.resolverFor(datastore), null)
     }
 
-    ListOrderByFinder(DatastoreResolver datastoreResolver, MappingContext mappingContext) {
-        super(datastoreResolver)
+    /**
+     * @param datastoreResolver Resolves the datastore at invocation time
+     * @param mappingContext Unused - kept so this finder is registered the same way as the
+     * grammar-based finders, which need the mapping context to convert arguments
+     */
+    ListOrderByFinder(DatastoreResolver datastoreResolver, @SuppressWarnings('unused') MappingContext mappingContext) {
+        this.datastoreResolver = datastoreResolver
     }
 
+    @Override
     void setPattern(String pattern) {
         this.pattern = Pattern.compile(pattern)
     }
 
-    boolean isMethodMatch(String methodName) {
-        return pattern.matcher(methodName).find()
-    }
-
     @Override
+    @SuppressWarnings('rawtypes')
     Object invoke(final Class clazz, final String methodName, final Object[] arguments) {
         return invoke(clazz, methodName, null, arguments)
     }
 
     @Override
+    @SuppressWarnings({'rawtypes', 'unchecked', 'ResultOfMethodCallIgnored'})
     Object invoke(final Class clazz, final String methodName, final Closure additionalCriteria, final Object[] arguments) {
-        return execute(new SessionCallback<Object>() {
-            @Override
-            Object doInSession(final Session session) {
-                final Matcher matcher = pattern.matcher(methodName)
-                matcher.find()
-                String parts = matcher.group(2)
 
-                final Query q = session.createQuery(clazz)
-                String[] propertyNames = parts.split('And')
+        Matcher match = pattern.matcher(methodName)
+        match.find()
 
-                // Resolve the sort direction BEFORE applying any order. Applying asc first and then
-                // trying to clear/replace it leaves the eagerly-applied asc order in the underlying
-                // criteria, so an explicit order:'desc' argument was silently ignored. The direction
-                // goes through the same normalization as every other entry point, so a value other
-                // than asc or desc is rejected here too instead of quietly sorting ascending.
-                boolean ascending = true
-                if (arguments.length > 0 && (arguments[0] instanceof Map)) {
-                    Map args = new LinkedHashMap((Map) arguments[0])
-                    final Object order = args.remove(DynamicFinder.ARGUMENT_ORDER)
-                    final String direction = DynamicFinder.normalizeDirection(order != null ? order.toString() : null)
-                    ascending = !DynamicFinder.ORDER_DESC.equals(direction)
-                    DynamicFinder.populateArgumentsForCriteria(clazz, q, args)
-                }
+        final String[] propertyNames = match.group(2).split(PROPERTY_SEPARATOR)
 
-                for (String propertyName : propertyNames) {
-                    // Lower-case only the first character: a GORM property's name is the method-name
-                    // segment with its first letter de-capitalised. JavaBeans-style decapitalize()
-                    // leaves a name whose first two letters are upper-case unchanged (e.g. "ISize"),
-                    // which would not match a Hungarian-notation property such as "iSize".
-                    String property = NameUtils.decapitalizeFirstChar(propertyName)
-                    q.order(ascending ? Query.Order.asc(property) : Query.Order.desc(property))
-                }
+        return FinderSupport.execute(datastoreResolver, { Session session ->
+            Query q = session.createQuery(clazz)
 
-                if (additionalCriteria != null) {
-                    applyAdditionalCriteria(q, additionalCriteria)
-                }
-
-                return q.list()
+            // Resolve the sort direction BEFORE applying any order. Applying asc first and then
+            // trying to clear/replace it leaves the eagerly-applied asc order in the underlying
+            // criteria, so an explicit order:'desc' argument was silently ignored. The direction
+            // goes through the same normalization as every other entry point, so a value other
+            // than asc or desc is rejected here too instead of quietly sorting ascending.
+            boolean ascending = true
+            if (arguments.length > 0 && (arguments[0] instanceof Map)) {
+                final Map args = new LinkedHashMap((Map) arguments[0])
+                final Object order = args.remove(DynamicFinder.ARGUMENT_ORDER)
+                final String direction = DynamicFinder.normalizeDirection(order != null ? order.toString() : null)
+                ascending = !DynamicFinder.ORDER_DESC.equals(direction)
+                DynamicFinder.populateArgumentsForCriteria(clazz, q, args)
             }
-        })
+
+            for (String propertyName in propertyNames) {
+                // Lower-case only the first character: a GORM property's name is the method-name
+                // segment with its first letter de-capitalised. JavaBeans-style decapitalize()
+                // leaves a name whose first two letters are upper-case unchanged (e.g. "ISize"),
+                // which would not match a Hungarian-notation property such as "iSize".
+                String property = NameUtils.decapitalizeFirstChar(propertyName)
+                q.order(ascending ? Query.Order.asc(property) : Query.Order.desc(property))
+            }
+
+            DynamicFinder.applyAdditionalCriteria(q, additionalCriteria)
+
+            return q.list()
+        } as SessionCallback<Object>)
+    }
+
+    @Override
+    boolean isMethodMatch(String methodName) {
+        return pattern.matcher(methodName).find()
     }
 }

@@ -245,31 +245,7 @@ public class HibernateMappingContext extends AbstractMappingContext {
         public IdentityMapping createIdentityMapping(final ClassMapping classMapping) {
             final Mapping mappedForm = createMappedForm(classMapping.getEntity());
             final Object identity = mappedForm.getIdentity();
-            final ValueGenerator generator;
-            if (identity instanceof Identity) {
-                Identity id = (Identity) identity;
-                String generatorName = id.getGenerator();
-                if (generatorName != null) {
-                    ValueGenerator resolvedGenerator;
-                    try {
-                        resolvedGenerator = ValueGenerator.valueOf(generatorName.toUpperCase(java.util.Locale.ENGLISH));
-                    } catch (IllegalArgumentException e) {
-                        if (ClassUtils.isPresent(generatorName)) {
-                            resolvedGenerator = ValueGenerator.CUSTOM;
-                        }
-                        else {
-                            throw new DatastoreConfigurationException("Invalid id generation strategy for entity [" + classMapping.getEntity().getName() + "]: " + generatorName);
-                        }
-                    }
-                    generator = resolvedGenerator;
-                }
-                else {
-                    generator = ValueGenerator.AUTO;
-                }
-            }
-            else {
-                generator = ValueGenerator.AUTO;
-            }
+            final ValueGenerator generator = identity instanceof Identity id ? resolveGenerator(classMapping, id.getGenerator()) : ValueGenerator.AUTO;
             return new IdentityMapping() {
                 @Override
                 public String[] getIdentifierName() {
@@ -303,6 +279,14 @@ public class HibernateMappingContext extends AbstractMappingContext {
                     return (Property) identity;
                 }
             };
+        }
+
+        @Override
+        protected ValueGenerator resolveCustomGenerator(ClassMapping classMapping, String generatorName) {
+            if (ClassUtils.isPresent(generatorName)) {
+                return ValueGenerator.CUSTOM;
+            }
+            throw new DatastoreConfigurationException("Invalid id generation strategy for entity [" + classMapping.getEntity().getName() + "]: " + generatorName);
         }
 
         @Override

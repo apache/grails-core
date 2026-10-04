@@ -24,6 +24,8 @@ class MailConfigurationProperties {
 
     boolean disabled
     String overrideAddress
+    String overrideToAddress
+    String overrideFromAddress
     Defaults defaults = new Defaults()
 
     Integer poolSize

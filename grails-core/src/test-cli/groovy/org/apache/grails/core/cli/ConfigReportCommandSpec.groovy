@@ -384,6 +384,119 @@ class ConfigReportCommandSpec extends Specification {
         metadataResult.groupDescriptions.get('grails') == 'Core Properties'
     }
 
+    def "loadPropertyMetadata includes the properties of Grails plugins outside the Grails namespaces"() {
+        given: "a Grails plugin and a library that both publish metadata outside the Grails namespaces"
+        File plugin = classpathRoot('plugin', [
+                'META-INF/grails-plugin.xml': '<plugin name="acme"/>',
+                'META-INF/spring-configuration-metadata.json': '''{
+                    "groups": [{"name": "acme", "description": "Acme"}],
+                    "properties": [{"name": "acme.enabled", "type": "java.lang.Boolean", "description": "Whether Acme is enabled.", "defaultValue": true}]
+                }'''
+        ])
+        File library = classpathRoot('library', [
+                'META-INF/spring-configuration-metadata.json': '''{
+                    "properties": [
+                        {"name": "server.port", "type": "java.lang.Integer", "description": "Server HTTP port."},
+                        {"name": "grails.library.enabled", "type": "java.lang.Boolean", "description": "Whether the library is enabled."}
+                    ]
+                }'''
+        ])
+        URLClassLoader classLoader = new URLClassLoader([plugin.toURI().toURL(), library.toURI().toURL()] as URL[], (ClassLoader) null)
+
+        when:
+        ConfigReportCommand.MetadataResult metadataResult = command.loadPropertyMetadata(classLoader)
+        List<String> names = metadataResult.properties*.name
+
+        then: "the plugin property is included with its group"
+        names.contains('acme.enabled')
+        metadataResult.properties.find { it.name == 'acme.enabled' }.group == 'acme'
+        metadataResult.groupDescriptions.get('acme') == 'Acme'
+
+        and: "the library is still limited to the Grails namespaces"
+        names.contains('grails.library.enabled')
+        !names.contains('server.port')
+
+        cleanup:
+        classLoader?.close()
+    }
+
+    def "loadPropertyMetadata includes the resources of a plugin on the classpath as Gradle output directories"() {
+        given: "a plugin whose descriptor is in the compiled classes and its metadata in the processed resources"
+        File pluginClasses = classpathRoot('plugin/build/classes/groovy/main', [
+                'META-INF/grails-plugin.xml': '<plugin name="acme"/>'
+        ])
+        File pluginResources = classpathRoot('plugin/build/resources/main', [
+                'META-INF/spring-configuration-metadata.json': '''{
+                    "groups": [{"name": "acme", "description": "Acme"}],
+                    "properties": [{"name": "acme.enabled", "type": "java.lang.Boolean", "description": "Whether Acme is enabled.", "defaultValue": true}]
+                }'''
+        ])
+
+        and: "an application with the same layout that is not a plugin"
+        File applicationClasses = classpathRoot('app/build/classes/groovy/main', [:])
+        File applicationResources = classpathRoot('app/build/resources/main', [
+                'META-INF/spring-configuration-metadata.json': '''{
+                    "properties": [{"name": "app.greeting", "type": "java.lang.String", "description": "The greeting."}]
+                }'''
+        ])
+        URL[] urls = [pluginClasses, pluginResources, applicationClasses, applicationResources].collect { it.toURI().toURL() } as URL[]
+        URLClassLoader classLoader = new URLClassLoader(urls, (ClassLoader) null)
+
+        when:
+        ConfigReportCommand.MetadataResult metadataResult = command.loadPropertyMetadata(classLoader)
+        List<String> names = metadataResult.properties*.name
+
+        then: "the plugin property is included with its group"
+        names.contains('acme.enabled')
+        metadataResult.properties.find { it.name == 'acme.enabled' }.group == 'acme'
+
+        and: "the application property is still left out"
+        !names.contains('app.greeting')
+
+        cleanup:
+        classLoader?.close()
+    }
+
+    def "writeReport documents plugin properties in their own section"() {
+        given: "the metadata of a plugin outside the Grails namespaces"
+        File plugin = classpathRoot('plugin', [
+                'META-INF/grails-plugin.xml': '<plugin name="acme"/>',
+                'META-INF/spring-configuration-metadata.json': '''{
+                    "groups": [{"name": "acme", "description": "Acme"}],
+                    "properties": [{"name": "acme.enabled", "type": "java.lang.Boolean", "description": "Whether Acme is enabled.", "defaultValue": true}]
+                }'''
+        ])
+        URLClassLoader classLoader = new URLClassLoader([plugin.toURI().toURL()] as URL[], (ClassLoader) null)
+        ConfigReportCommand.MetadataResult pluginMetadata = command.loadPropertyMetadata(classLoader)
+        ConfigReportCommand pluginAwareCommand = Spy(ConfigReportCommand) {
+            loadPropertyMetadata() >> pluginMetadata
+        }
+        File reportFile = new File(tempDir, 'config-report.adoc')
+
+        when: "the application sets the plugin property"
+        pluginAwareCommand.writeReport(['acme.enabled': 'false'], reportFile)
+        String report = reportFile.text
+
+        then: "the property is documented in the section of its group, not under Other Properties"
+        report.contains('== Acme')
+        report.contains('| `acme.enabled`')
+        report.contains('| Whether Acme is enabled.')
+        !report.contains('== Other Properties')
+
+        cleanup:
+        classLoader?.close()
+    }
+
+    private File classpathRoot(String name, Map<String, String> files) {
+        File root = new File(tempDir, name)
+        files.each { String path, String content ->
+            File file = new File(root, path)
+            file.parentFile.mkdirs()
+            file.text = content
+        }
+        root
+    }
+
     def "escapeAsciidoc handles null and empty strings"() {
         expect:
         ConfigReportCommand.escapeAsciidoc(null) == null

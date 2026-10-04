@@ -51,7 +51,7 @@ For those using a different token storage system, the following artifacts are al
 * `org.grails.plugins:spring-security-rest-memcached`.
 * `org.grails.plugins:spring-security-rest-redis`.
 
-The version is the same in all modules. For more details, check the <<configuration>> section.
+The version is the same in all modules. For more details, check the <<rest-configuration,configuration>> section.
 
 As a consequence, configuration properties like `grails.plugin.springsecurity.rest.token.storage.useMemcached` are no
 longer used.

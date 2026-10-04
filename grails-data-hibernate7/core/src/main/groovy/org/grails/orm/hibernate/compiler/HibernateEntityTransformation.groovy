@@ -184,7 +184,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
         nextManagedEntityField
                 .addAnnotation(transientAnnotationNode)
 
-        FieldNode instanceIdField = classNode.addField(instanceIdFieldName, Modifier.PRIVATE | Modifier.TRANSIENT, ClassHelper.int_TYPE, constX(-1))
+        FieldNode instanceIdField = classNode.addField(instanceIdFieldName, Modifier.PRIVATE | Modifier.TRANSIENT, ClassHelper.int_TYPE, null)
         instanceIdField
                 .addAnnotation(transientAnnotationNode)
 

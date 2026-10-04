@@ -24,7 +24,7 @@ class ModelInterceptor {
     Object latestModel
 
     ModelInterceptor() {
-        match(controller: 'modelAndView|respond|return')
+        match(controller: 'modelAndView|respond|return|renderTemplate')
     }
 
     boolean before() {

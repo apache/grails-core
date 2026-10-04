@@ -29,9 +29,21 @@ class JsonViewGeneratorConfiguration {
 
     Boolean escapeUnicode = false
 
-    String dateFormat = /yyyy-MM-dd'T'HH:mm:ss.SSSX/
+    /**
+     * The {@link java.text.SimpleDateFormat} pattern for {@link Date} and {@link Calendar} values and map keys. As
+     * Spring Boot does, it writes a UTC instant with millisecond precision in the default {@link #timeZone}, such as
+     * {@code 2024-06-15T14:30:45.123Z}, and in another zone the date and time there with the zone's offset, such as
+     * {@code 2024-06-15T10:30:45.123-04:00}.
+     */
+    String dateFormat = /yyyy-MM-dd'T'HH:mm:ss.SSSXXX/
 
+    /**
+     * The time zone that {@link #dateFormat} writes {@link Date} and {@link Calendar} values in.
+     */
     String timeZone = 'GMT'
 
+    /**
+     * The locale for {@link #dateFormat}.
+     */
     String locale = 'en/US'
 }

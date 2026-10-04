@@ -52,6 +52,12 @@ import org.grails.scaffolding.model.property.Constrained
 @Canonical
 @MapConstructor
 @TupleConstructor(includes = ['beanType', 'propertyName', 'propertyType'])
+// The map constructor is declared rather than left to @TupleConstructor. Groovy 5 adds a
+// LinkedHashMap constructor only because the first declared property, rootBean, is an Object
+// that `includes` leaves out; Groovy 6 decides from the included properties and adds none, so
+// new BeanPropertyAccessorImpl(params) in BeanPropertyAccessorFactory would no longer compile.
+// With @MapConstructor both versions generate the same BeanPropertyAccessorImpl(Map).
+@MapConstructor
 class BeanPropertyAccessorImpl implements BeanPropertyAccessor {
 
     Object rootBean

@@ -96,4 +96,102 @@ class JpaQueryContextSpec extends Specification {
         context.getFrom("nicknames") == join
         context.getFullyQualifiedExpression("nicknames") == join
     }
+
+    def "test aliases-only and parent-only constructor overloads"() {
+        given:
+        def root = Mock(From)
+        def alias = new HibernateAlias("face", "f", JoinType.INNER)
+
+        when: "constructed with aliases and root but no parent"
+        def aliasesContext = new JpaQueryContext([alias], root)
+
+        then:
+        aliasesContext.hasAlias("f")
+        aliasesContext.getRoot() == root
+
+        when: "constructed with a parent and root but no aliases"
+        def parentContext = new JpaQueryContext(root)
+        def childRoot = Mock(From)
+        def childContext = new JpaQueryContext(parentContext, childRoot)
+
+        then:
+        childContext.getRoot() == childRoot
+        childContext.getFullyQualifiedExpression("{alias}") == root
+    }
+
+    def "test forRoot with aliases static factory"() {
+        given:
+        def root = Mock(From)
+        def alias = new HibernateAlias("face", "f", JoinType.INNER)
+
+        when:
+        def context = JpaQueryContext.forRoot([alias], root)
+
+        then:
+        context.hasAlias("f")
+        context.getRoot() == root
+    }
+
+    def "test setParent reparents an existing context"() {
+        given:
+        def parentRoot = Mock(From)
+        def parentContext = new JpaQueryContext(parentRoot)
+        def faceJoin = Mock(Join)
+        parentContext.registerAlias("f", faceJoin)
+        def orphanContext = new JpaQueryContext(Mock(From))
+
+        expect:
+        !orphanContext.hasAlias("f")
+
+        when:
+        orphanContext.setParent(parentContext)
+
+        then:
+        orphanContext.hasAlias("f")
+    }
+
+    def "test getAliasedExpression delegates to the parent when not realized locally"() {
+        given:
+        def parentRoot = Mock(From)
+        def parentContext = new JpaQueryContext(parentRoot)
+        def faceJoin = Mock(Join)
+        parentContext.registerAlias("f", faceJoin)
+        def subContext = JpaQueryContext.forSubquery(parentContext, Mock(From))
+
+        expect:
+        subContext.getAliasedExpression("f") == faceJoin
+    }
+
+    def "test alias-token resolution delegates to the parent root and path"() {
+        given:
+        def parentRoot = Mock(From)
+        def parentContext = new JpaQueryContext(parentRoot)
+        def subRoot = Mock(From)
+        def subContext = JpaQueryContext.forSubquery(parentContext, subRoot)
+        def namePath = Mock(Path)
+
+        expect:
+        subContext.getFullyQualifiedExpression("{alias}") == parentRoot
+        subContext.getFullyQualifiedPath("{alias}") == parentRoot
+
+        when:
+        def resolved = subContext.getFullyQualifiedPath("{alias}.name")
+
+        then:
+        1 * parentRoot.get("name") >> namePath
+        resolved == namePath
+    }
+
+    def "test clone produces a distinct context instance"() {
+        given:
+        def root = Mock(From)
+        def context = new JpaQueryContext(root)
+
+        when:
+        def cloned = context.clone()
+
+        then:
+        !cloned.is(context)
+        cloned.getRoot() == root
+    }
 }

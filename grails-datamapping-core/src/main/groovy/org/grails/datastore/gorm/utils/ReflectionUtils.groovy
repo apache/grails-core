@@ -45,12 +45,11 @@ class ReflectionUtils {
 
         if (superClass != null) {
             try {
-                final Method superMethod = superClass.getMethod(method.getName(), method.getParameterTypes())
-                if (superMethod != null) {
-                    return true
-                }
+                superClass.getMethod(method.getName(), method.getParameterTypes())
+                return true
             }
             catch (NoSuchMethodException ignored) {
+                // ignore
             }
         }
 

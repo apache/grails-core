@@ -37,6 +37,18 @@ class UrlMappings {
             namespace = "frontend"
         }
 
+        "/manage/$controller/$action?/$id?(.$format)?"{
+            namespace = "manage"
+        }
+
+        "/archive/$controller/$action?/$id?(.$format)?"{
+            namespace = "archive"
+        }
+
+        "/home-submit"(controller: "home", action: "target", method: "POST")
+        "/home-list/$page"(controller: "home", action: "list")
+        "/home-by/$category"(controller: "home", action: "list", method: "GET")
+
         "/"(view:"/index")
         "500"(view:'/error')
     }

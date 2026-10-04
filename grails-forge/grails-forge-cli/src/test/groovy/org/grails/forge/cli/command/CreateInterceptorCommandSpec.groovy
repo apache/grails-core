@@ -107,7 +107,7 @@ class TestInterceptorSpec extends Specification implements InterceptorUnitTest<T
     
     void "test controller execution with interceptors"() {
         given:
-        def controller = (TestController)mockController(TestController)
+        def controller = mockController(TestController)
     
         when:
         withInterceptors([controller: "test"]) {

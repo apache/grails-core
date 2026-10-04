@@ -349,8 +349,12 @@ class DocPublisher {
             chapterVars.sectionNumber = (i + 1).toString()
             writeChapter(chapter, template, sectionTemplate, guideSrcDir, refGuideDir.path, fullContents, chapterVars)
         }
+        Map<String, String> chapterById = linkAcrossChapters(chapters.collect { new File(refGuideDir, "${it.name}.html") })
+        List<File> subSectionPages = chapters.collectMany { subSectionsOf(it) }.collect { new File(refPagesDir, "${it.name}.html") }
+        linkToChapters(subSectionPages, '../', chapterById)
 
         files = new File("${src}/ref").listFiles()?.toList()?.sort() ?: []
+        List<File> referencePages = []
         def reference = [:]
         template = templateEngine.createTemplate(new File("${docResources}/style/referenceItem.html").newReader(encoding))
 
@@ -377,9 +381,11 @@ class DocPublisher {
                     output.warn("Rendering document file $usageFile.name")
                     vars.content = engine.render(data, context)
                     vars.sourcePath = "ref/$usageFile.name"
-                    new File("${refDocsDir}/ref/${section}/Usage.html").withWriter(encoding) { out ->
+                    File usagePage = new File("${refDocsDir}/ref/${section}/Usage.html")
+                    usagePage.withWriter(encoding) { out ->
                         template.make(vars).writeTo(out)
                     }
+                    referencePages << usagePage
                 }
                 for (txt in textiles) {
                     def name = txt.name[0..-6]
@@ -390,12 +396,15 @@ class DocPublisher {
                     output.warn("Rendering document file $txt.name")
                     vars.content = engine.render(data, context)
                     vars.sourcePath = "ref/${section}/$txt.name"
-                    new File("${refDocsDir}/ref/${section}/${name}.html").withWriter(encoding) { out ->
+                    File referencePage = new File("${refDocsDir}/ref/${section}/${name}.html")
+                    referencePage.withWriter(encoding) { out ->
                         template.make(vars).writeTo(out)
                     }
+                    referencePages << referencePage
                 }
             }
         }
+        linkToChapters(referencePages, "${pathToRoot}/guide/", chapterById)
 
         vars.remove('section')
         vars.content = fullContents.toString()
@@ -489,29 +498,96 @@ class DocPublisher {
         // Reset the section number in the template vars.
         varsCopy.sectionNumber = sectionNumber
 
-        // TODO PAL - I don't see why these pages are necessary, plus there seems
-        // to be no way to get embedded images to display properly (since the path
-        // passed to the Wiki rendering engine is wrong for pages written to a
-        // 'pages' subdirectory). Keeping them in case someone, somewhere depends
-        // on them.
+        // TODO PAL - I don't see why these pages are necessary. Keeping them in
+        // case someone, somewhere depends on them.
         //
         // Create the HTML page for this section, which includes the content
         // from all the sub-sections too.
+        String content = accumulatedContent.toString()
+        String pageContent = content
         if (subDir) {
             if (subDir.endsWith('/')) subDir = subDir[0..-2]
             targetDir = "$targetDir/$subDir"
 
             varsCopy.path = "../${path}"
+            varsCopy.resourcesPath = calculatePathToResources(varsCopy.path)
             varsCopy.logo = injectPath(logo, varsCopy.path)
             varsCopy.sponsorLogo = injectPath(sponsorLogo, varsCopy.path)
+
+            // The content is rendered for the chapter pages, so its relative links start
+            // from the guide directory, one level above this page.
+            pageContent = prefixRelativeLinks(content, '../')
         }
 
         new File("${targetDir}/${section.name}.html").withWriter(encoding) { writer ->
-            varsCopy.content = accumulatedContent.toString()
+            varsCopy.content = pageContent
             layoutTemplate.make(varsCopy).writeTo(writer)
         }
 
-        return varsCopy.content
+        return content
+    }
+
+    /**
+     * Puts {@code prefix} in front of each relative link and source URL in the given HTML. Fragment
+     * links, absolute paths and URLs with a scheme are left alone.
+     */
+    private static String prefixRelativeLinks(String html, String prefix) {
+        html.replaceAll(/(?<![\w-])(href|src)="(?![#\/]|[A-Za-z][\w+.-]*:)([^"]+)"/) { String link, String attribute, String url ->
+            "${attribute}=\"${prefix}${url}\""
+        }
+    }
+
+    /**
+     * Points each fragment link on a chapter page whose target is on another chapter page at
+     * that page. A cross reference such as {@code <<unitTesting>>} is rendered as
+     * {@code href="#unitTesting"}, which only works in the single-page guide. When more than
+     * one chapter defines the target, the first one wins, as it does in the single-page guide.
+     *
+     * @return the name of the chapter page that holds each ID, for {@link #linkToChapters}
+     */
+    protected Map<String, String> linkAcrossChapters(List<File> chapterPages) {
+        Map<File, String> htmlByPage = chapterPages.collectEntries { [(it): it.getText(encoding)] }
+        Map<String, String> chapterById = [:]
+        htmlByPage.each { File page, String html ->
+            idsIn(html).each { chapterById.putIfAbsent(it, page.name) }
+        }
+        htmlByPage.each { File page, String html ->
+            linkPage(page, html, '', chapterById)
+        }
+        chapterById
+    }
+
+    /**
+     * Points each fragment link on the given pages whose target is not on the page itself at
+     * the chapter page that holds it. The sub-section pages and the reference pages are written
+     * outside the guide's chapter pages but have the same kind of cross references.
+     *
+     * @param pathToGuide the path from the pages to the directory holding the chapter pages
+     * @param chapterById the name of the chapter page that holds each ID
+     */
+    protected void linkToChapters(List<File> pages, String pathToGuide, Map<String, String> chapterById) {
+        for (page in pages) {
+            linkPage(page, page.getText(encoding), pathToGuide, chapterById)
+        }
+    }
+
+    private void linkPage(File page, String html, String pathToGuide, Map<String, String> chapterById) {
+        Set<String> ids = idsIn(html)
+        String linked = html.replaceAll(/href="#([^"]+)"/) { String link, String id ->
+            String chapter = ids.contains(id) ? null : chapterById[id]
+            chapter ? "href=\"${pathToGuide}${chapter}#${id}\"" : link
+        }
+        if (linked != html) {
+            page.setText(linked, encoding)
+        }
+    }
+
+    private static Set<String> idsIn(String html) {
+        (html =~ /(?<![\w-])id="([^"]+)"/).collect { it[1] } as Set<String>
+    }
+
+    private static List<UserGuideNode> subSectionsOf(UserGuideNode section) {
+        section.children.collectMany { UserGuideNode child -> [child] + subSectionsOf(child) }
     }
 
     protected void initialize() {

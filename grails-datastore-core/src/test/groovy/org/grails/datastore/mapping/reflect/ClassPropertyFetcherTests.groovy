@@ -51,6 +51,21 @@ class ClassPropertyFetcherTests  {
         assert tsc.getStaticPropertyValuesFromInheritanceHierarchy(GormProperties.TRANSIENT, Collection) == [[], ["transientProperty"], ["bar"]]
     }
 
+    @Test
+    void testGetStaticPropertyInheritanceSkipsInterfaces() {
+        def cpf = ClassPropertyFetcher.forClass(TransientsNextToInterfaceConstant)
+
+        assert cpf.getStaticPropertyValuesFromInheritanceHierarchy(GormProperties.TRANSIENT, Collection) == [['own']]
+        assert ClassPropertyFetcher.getStaticPropertyValuesFromInheritanceHierarchy(TransientsNextToInterfaceConstant, GormProperties.TRANSIENT, Collection) == [['own']]
+    }
+
+    @Test
+    void testGetStaticPropertyInheritanceReadsATraitStaticPropertyFromTheImplementingClass() {
+        def cpf = ClassPropertyFetcher.forClass(TransientsFromTrait)
+
+        assert cpf.getStaticPropertyValuesFromInheritanceHierarchy(GormProperties.TRANSIENT, Collection) == [['fromTrait']]
+    }
+
 
     @Test
     void testClassPropertyFetcherWithTraitProperty() {
@@ -148,6 +163,26 @@ class TransientSubChild extends TransientChild {
     String bar
 
     static transients = ["bar"]
+}
+
+interface TransientsConstant {
+
+    List transients = ['fromInterface']
+}
+
+class TransientsNextToInterfaceConstant implements TransientsConstant {
+
+    static transients = ['own']
+}
+
+trait TransientsTrait {
+
+    static List transients = ['fromTrait']
+}
+
+class TransientsFromTrait implements TransientsTrait {
+
+    String name
 }
 
 class DomainWithMultipleSetter {

@@ -62,7 +62,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
      * @return A new query
      */
     @Override
-    DetachedCriteria<T> where(@DelegatesTo(DetachedCriteria) Closure additionalQuery) {
+    DetachedCriteria<T> where(@DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure additionalQuery) {
         DetachedCriteria<T> newQuery = clone()
         return newQuery.build(additionalQuery)
     }
@@ -78,7 +78,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
      * @return A new query
      */
     @Override
-    DetachedCriteria<T> whereLazy(@DelegatesTo(DetachedCriteria) Closure additionalQuery) {
+    DetachedCriteria<T> whereLazy(@DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure additionalQuery) {
         DetachedCriteria<T> newQuery = clone()
         return newQuery.build(additionalQuery)
     }
@@ -86,7 +86,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
     /**
      * Synonym for #get
      */
-    T find(Map args = Collections.emptyMap(), @DelegatesTo(DetachedCriteria) Closure additionalCriteria = null) {
+    T find(Map args = Collections.emptyMap(), @DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure additionalCriteria = null) {
         get(args, additionalCriteria)
     }
 
@@ -96,7 +96,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
      * @param callable The callable
      * @return This detached criteria
      */
-    DetachedCriteria<T> projections(@DelegatesTo(ProjectionList) Closure callable) {
+    DetachedCriteria<T> projections(@DelegatesTo(value = ProjectionList, strategy = Closure.DELEGATE_FIRST) Closure callable) {
         callable.delegate = projectionList
         callable.resolveStrategy = Closure.DELEGATE_FIRST
         callable.call()
@@ -106,7 +106,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
     /**
      * Synonym for #get
      */
-    T find(@DelegatesTo(DetachedCriteria) Closure additionalCriteria) {
+    T find(@DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure additionalCriteria) {
         get(Collections.emptyMap(), additionalCriteria)
     }
 
@@ -115,8 +115,8 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
      *
      * @return A single entity
      */
-    T get(Map args = Collections.emptyMap(), @DelegatesTo(DetachedCriteria) Closure additionalCriteria = null) {
-        (T) withPopulatedQuery(args, additionalCriteria) { Query query ->
+    T get(Map args = Collections.emptyMap(), @DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure additionalCriteria = null) {
+        (T) withPopulatedQuery(args, (Closure) additionalCriteria) { Query query ->
             query.singleResult()
         }
     }
@@ -126,7 +126,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
      *
      * @return A single entity
      */
-    T get(@DelegatesTo(DetachedCriteria) Closure additionalCriteria) {
+    T get(@DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure additionalCriteria) {
         get(Collections.emptyMap(), additionalCriteria)
     }
 
@@ -135,8 +135,8 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
      *
      * @return A list of matching instances
      */
-    List<T> list(Map args = Collections.emptyMap(), @DelegatesTo(DetachedCriteria) Closure additionalCriteria = null) {
-        (List)withPopulatedQuery(args, additionalCriteria) { Query query ->
+    List<T> list(Map args = Collections.emptyMap(), @DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure additionalCriteria = null) {
+        (List)withPopulatedQuery(args, (Closure) additionalCriteria) { Query query ->
             if (args?.max) {
                 return new PagedResultList<T>(query)
             }
@@ -149,7 +149,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
      *
      * @return A list of matching instances
      */
-    List<T> list(@DelegatesTo(DetachedCriteria) Closure additionalCriteria) {
+    List<T> list(@DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure additionalCriteria) {
         list(Collections.emptyMap(), additionalCriteria)
     }
 
@@ -174,17 +174,17 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
     }
 
     @Override
-    DetachedCriteria<T> and(@DelegatesTo(AbstractDetachedCriteria) Closure callable) {
+    DetachedCriteria<T> and(@DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure callable) {
         return (DetachedCriteria<T>) super.and(callable)
     }
 
     @Override
-    DetachedCriteria<T> or(@DelegatesTo(AbstractDetachedCriteria) Closure callable) {
+    DetachedCriteria<T> or(@DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure callable) {
         return (DetachedCriteria<T>) super.or(callable)
     }
 
     @Override
-    DetachedCriteria<T> not(@DelegatesTo(AbstractDetachedCriteria) Closure callable) {
+    DetachedCriteria<T> not(@DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure callable) {
         return (DetachedCriteria<T>) super.not(callable)
     }
 
@@ -204,12 +204,12 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
     }
 
     @Override
-    DetachedCriteria<T> "in"(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> subquery) {
+    DetachedCriteria<T> "in"(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> subquery) {
         return (DetachedCriteria<T>) super.in(propertyName, subquery)
     }
 
     @Override
-    DetachedCriteria<T> inList(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> subquery) {
+    DetachedCriteria<T> inList(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> subquery) {
         return (DetachedCriteria<T>) super.inList(propertyName, subquery)
     }
 
@@ -224,7 +224,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
     }
 
     @Override
-    DetachedCriteria<T> notIn(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> subquery) {
+    DetachedCriteria<T> notIn(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> subquery) {
         return (DetachedCriteria<T>) super.notIn(propertyName, subquery)
     }
 
@@ -419,27 +419,27 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
     }
 
     @Override
-    DetachedCriteria<T> eqAll(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> propertyValue) {
+    DetachedCriteria<T> eqAll(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
         return (DetachedCriteria<T>) super.eqAll(propertyName, propertyValue)
     }
 
     @Override
-    DetachedCriteria<T> gtAll(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> propertyValue) {
+    DetachedCriteria<T> gtAll(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
         return (DetachedCriteria<T>) super.gtAll(propertyName, propertyValue)
     }
 
     @Override
-    DetachedCriteria<T> ltAll(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> propertyValue) {
+    DetachedCriteria<T> ltAll(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
         return (DetachedCriteria<T>) super.ltAll(propertyName, propertyValue)
     }
 
     @Override
-    DetachedCriteria<T> geAll(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> propertyValue) {
+    DetachedCriteria<T> geAll(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
         return (DetachedCriteria<T>) super.geAll(propertyName, propertyValue)
     }
 
     @Override
-    DetachedCriteria<T> leAll(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> propertyValue) {
+    DetachedCriteria<T> leAll(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
         return (DetachedCriteria<T>) super.leAll(propertyName, propertyValue)
     }
 
@@ -459,7 +459,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
     }
 
     @Override
-    DetachedCriteria<T> gtSome(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> propertyValue) {
+    DetachedCriteria<T> gtSome(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
         return (DetachedCriteria<T>) super.gtSome(propertyName, propertyValue)
     }
 
@@ -469,7 +469,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
     }
 
     @Override
-    DetachedCriteria<T> geSome(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> propertyValue) {
+    DetachedCriteria<T> geSome(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
         return (DetachedCriteria<T>) super.geSome(propertyName, propertyValue)
     }
 
@@ -479,7 +479,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
     }
 
     @Override
-    DetachedCriteria<T> ltSome(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> propertyValue) {
+    DetachedCriteria<T> ltSome(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
         return (DetachedCriteria<T>) super.ltSome(propertyName, propertyValue)
     }
 
@@ -489,7 +489,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
     }
 
     @Override
-    DetachedCriteria<T> leSome(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> propertyValue) {
+    DetachedCriteria<T> leSome(String propertyName, @DelegatesTo(value = AbstractDetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure<?> propertyValue) {
         return (DetachedCriteria<T>) super.leSome(propertyName, propertyValue)
     }
 
@@ -513,8 +513,8 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
      * @param args The arguments
      * @return The count
      */
-    Number count(Map args = Collections.emptyMap(), @DelegatesTo(DetachedCriteria) Closure additionalCriteria = null) {
-        (Number) withPopulatedQuery(args, additionalCriteria) { Query query ->
+    Number count(Map args = Collections.emptyMap(), @DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure additionalCriteria = null) {
+        (Number) withPopulatedQuery(args, (Closure) additionalCriteria) { Query query ->
             query.countResults()
         }
     }
@@ -525,7 +525,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
      * @param args The arguments
      * @return The count
      */
-    Number count(@DelegatesTo(DetachedCriteria) Closure additionalCriteria) {
+    Number count(@DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure additionalCriteria) {
         count(Collections.emptyMap(), additionalCriteria)
     }
 
@@ -543,8 +543,8 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
      * @return The count
      */
 
-    boolean asBoolean(@DelegatesTo(DetachedCriteria) Closure additionalCriteria = null) {
-        (Boolean) withPopulatedQuery(Collections.emptyMap(), additionalCriteria) { Query query ->
+    boolean asBoolean(@DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure additionalCriteria = null) {
+        (Boolean) withPopulatedQuery(Collections.emptyMap(), (Closure) additionalCriteria) { Query query ->
             query.projections().count()
             ((Number)query.singleResult()) > 0
         }
@@ -581,7 +581,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
      * @return A new criteria instance
      */
     @Override
-    DetachedCriteria<T> build(@DelegatesTo(DetachedCriteria) Closure callable) {
+    DetachedCriteria<T> build(@DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure callable) {
         (DetachedCriteria<T>) super.build(callable)
     }
 
@@ -592,7 +592,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
      * @return A new criteria instance
      */
     @Override
-    DetachedCriteria<T> buildLazy(@DelegatesTo(DetachedCriteria) Closure callable) {
+    DetachedCriteria<T> buildLazy(@DelegatesTo(value = DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure callable) {
         (DetachedCriteria<T>) super.buildLazy(callable)
     }
 
@@ -732,7 +732,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
     }
 
     protected QueryableCriteria buildQueryableCriteria(Closure queryClosure) {
-        return new DetachedCriteria(targetClass).build(queryClosure)
+        return new DetachedCriteria(targetClass).build((Closure) queryClosure)
     }
 
     private withPopulatedQuery(Map args, Closure additionalCriteria, Closure callable)  {
@@ -761,7 +761,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
             }
 
             if (additionalCriteria != null) {
-                def additionalDetached = new DetachedCriteria(targetClass).build(additionalCriteria)
+                def additionalDetached = new DetachedCriteria(targetClass).build((Closure) additionalCriteria)
                 DynamicFinder.applyDetachedCriteria(query, additionalDetached)
             }
 

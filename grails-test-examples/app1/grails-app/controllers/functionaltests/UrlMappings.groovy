@@ -19,6 +19,8 @@
 
 package functionaltests
 
+import functionaltests.interceptors.StaticInitFailure
+
 class UrlMappings {
 
     static mappings = {
@@ -133,5 +135,6 @@ class UrlMappings {
         "500"(view:'/error')
         "404"(controller:"errors", action:"notFound")
         "500"(controller:"errors", action:'customErrorHandler', exception:CustomException)
+        "500"(controller:"errorPage", action:'handle', exception:StaticInitFailure)
     }
 }

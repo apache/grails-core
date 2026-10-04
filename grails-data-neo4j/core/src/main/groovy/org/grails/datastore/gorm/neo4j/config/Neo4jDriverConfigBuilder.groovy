@@ -41,6 +41,8 @@ import org.grails.datastore.mapping.config.ConfigurationBuilder
 @Slf4j
 class Neo4jDriverConfigBuilder extends ConfigurationBuilder<Config.ConfigBuilder, Config> {
 
+    private static final Config DRIVER_DEFAULTS = Config.defaultConfig()
+
     Neo4jDriverConfigBuilder(PropertyResolver propertyResolver) {
         super(propertyResolver, Settings.SETTING_NEO4J_DRIVER_PROPERTIES, 'with')
     }
@@ -63,13 +65,22 @@ class Neo4jDriverConfigBuilder extends ConfigurationBuilder<Config.ConfigBuilder
         return builder.build()
     }
 
+    /**
+     * A connection's options fall back to the default connection's built {@link Config}, but only where that one was
+     * customized: a value still equal to the driver's own default is not passed on. Some of those defaults are
+     * sentinels that the builder's setter rejects, such as {@code eventLoopThreads()}, which is {@code 0} until set,
+     * so passing them on made every connection declared under {@code grails.neo4j.connections} fail to start.
+     */
     @Override
     protected Object getFallBackValue(Object fallBackConfig, String methodName) {
         if (fallBackConfig != null) {
             Method fallBackMethod = ReflectionUtils.findMethod(fallBackConfig.getClass(), methodName)
             if (fallBackMethod != null && Modifier.isPublic(fallBackMethod.getModifiers())) {
-                return fallBackMethod.invoke(fallBackConfig)
-
+                Object value = fallBackMethod.invoke(fallBackConfig)
+                if (fallBackConfig instanceof Config && value == fallBackMethod.invoke(DRIVER_DEFAULTS)) {
+                    return null
+                }
+                return value
             } else {
                 return super.getFallBackValue(fallBackConfig, methodName)
             }

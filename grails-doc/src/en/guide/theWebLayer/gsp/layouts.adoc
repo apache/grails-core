@@ -144,7 +144,7 @@ grails:
 
 With that property in place, the application default layout will be `grails-app/views/layouts/myLayoutName.gsp`.
 
-NOTE: In Grails 7.2+ the canonical property for the default layout is `grails.sitemesh.default.layout`. The older `grails.views.layout.default` key is no longer consulted by the SiteMesh 3 integration.
+NOTE: In Grails 7.2+ the canonical property for the default layout is `grails.sitemesh.default.layout`. The SiteMesh 3 integration falls back to the older `grails.views.layout.default` key, and then to SiteMesh's own `sitemesh.decorator.default` — the property a plain Spring Boot application rendering views with GSP configures — so the canonical key wins wherever more than one is set.
 
 
 ==== Inline Layouts

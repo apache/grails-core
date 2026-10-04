@@ -23,19 +23,21 @@ import graphql.language.Field
 import graphql.language.FragmentSpread
 import graphql.language.SelectionSet
 import graphql.schema.DataFetchingEnvironment
-import spock.lang.Specification
 
 import grails.gorm.annotation.Entity
-import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.types.Association
+import org.grails.datastore.mapping.model.types.ToMany
+import org.grails.gorm.graphql.HibernateSpec
+import org.grails.gorm.graphql.domain.general.toone.BelongsToHasOne
+import org.grails.gorm.graphql.domain.general.toone.CircularOne
+import org.grails.gorm.graphql.domain.general.toone.HasOne
+import org.grails.gorm.graphql.domain.general.toone.One
+import org.grails.gorm.graphql.domain.general.toone.ToOne
 
-class EntityFetchOptionsSpec extends Specification {
+class EntityFetchOptionsSpec extends HibernateSpec {
 
-    KeyValueMappingContext context = new KeyValueMappingContext('test')
-
-    void setup() {
-        context.addPersistentEntities(EfoAuthor, EfoBook, EfoPublisher)
-    }
+    List<Class> getDomainClasses() { [One, ToOne, CircularOne, HasOne, BelongsToHasOne, EfoAuthor, EfoBook, EfoPublisher] }
 
     private static Field field(String name, Field... children) {
         Field.Builder builder = Field.newField(name)
@@ -56,7 +58,7 @@ class EntityFetchOptionsSpec extends Specification {
 
     void 'the associations of the entity are exposed by name'() {
         given:
-        EntityFetchOptions options = new EntityFetchOptions(context.getPersistentEntity(EfoBook.name))
+        EntityFetchOptions options = new EntityFetchOptions(mappingContext.getPersistentEntity(EfoBook.name))
 
         expect:
         options.associations.keySet() == ['author', 'publisher'] as Set
@@ -65,7 +67,7 @@ class EntityFetchOptionsSpec extends Specification {
 
     void 'only associations whose selections need more than the identifier are joined'() {
         given:
-        EntityFetchOptions options = new EntityFetchOptions(context.getPersistentEntity(EfoBook.name))
+        EntityFetchOptions options = new EntityFetchOptions(mappingContext.getPersistentEntity(EfoBook.name))
 
         expect:
         options.getJoinProperties([field('title')]) == [] as Set
@@ -81,7 +83,7 @@ class EntityFetchOptionsSpec extends Specification {
 
     void 'collections are always joined unless they are skipped'() {
         given:
-        EntityFetchOptions options = new EntityFetchOptions(context.getPersistentEntity(EfoAuthor.name))
+        EntityFetchOptions options = new EntityFetchOptions(mappingContext.getPersistentEntity(EfoAuthor.name))
 
         expect:
         options.getJoinProperties([field('books', field('id'))]) == ['books'] as Set
@@ -92,7 +94,7 @@ class EntityFetchOptionsSpec extends Specification {
 
     void 'a projection name prefixes the joined properties'() {
         given:
-        EntityFetchOptions options = new EntityFetchOptions(context.getPersistentEntity(EfoBook.name), 'book')
+        EntityFetchOptions options = new EntityFetchOptions(mappingContext.getPersistentEntity(EfoBook.name), 'book')
 
         expect:
         options.getJoinProperties([field('author', field('name'))]) == ['book.author'] as Set
@@ -100,7 +102,7 @@ class EntityFetchOptionsSpec extends Specification {
 
     void 'the fetch argument maps every joined property to join'() {
         given:
-        EntityFetchOptions options = new EntityFetchOptions(context.getPersistentEntity(EfoBook.name))
+        EntityFetchOptions options = new EntityFetchOptions(mappingContext.getPersistentEntity(EfoBook.name))
 
         expect:
         options.getFetchArgument([] as Set) == [:]
@@ -109,7 +111,7 @@ class EntityFetchOptionsSpec extends Specification {
 
     void 'the environment selections are inspected through the merged field'() {
         given:
-        EntityFetchOptions options = new EntityFetchOptions(context.getPersistentEntity(EfoAuthor.name))
+        EntityFetchOptions options = new EntityFetchOptions(mappingContext.getPersistentEntity(EfoAuthor.name))
         Field withSelections = field('author', field('name'), field('books', field('title')))
         Field withoutSelections = field('author')
         Field withFragment = Field.newField('author').selectionSet(SelectionSet.newSelectionSet().selection(FragmentSpread.newFragmentSpread('frag').build()).build()).build()
@@ -126,6 +128,69 @@ class EntityFetchOptionsSpec extends Specification {
         options.getFetchArgument(environment) == [fetch: [books: 'join']]
         options.getFetchArgument(environment, true) == [:]
         options.getJoinProperties(empty) == [] as Set
+    }
+
+
+    void "test constructing from a class delegates to the persistent entity constructor"() {
+        when:
+        EntityFetchOptions options = new EntityFetchOptions(ToOne)
+
+        then:
+        options.getAssociations().keySet().containsAll(['one', 'circularOne'])
+    }
+
+    void "test getAssociations returns the entity's associations keyed by property name"() {
+        given:
+        EntityFetchOptions options = new EntityFetchOptions(mappingContext.getPersistentEntity(ToOne.name))
+
+        expect:
+        options.getAssociations().keySet().containsAll(['one', 'circularOne'])
+        !options.getAssociations().containsKey('string')
+    }
+
+    void "test getFetchArgument with no properties returns an empty map"() {
+        given:
+        EntityFetchOptions options = new EntityFetchOptions(mappingContext.getPersistentEntity(ToOne.name))
+
+        expect:
+        options.getFetchArgument([] as Set<String>) == [:]
+    }
+
+    void "test getFetchArgument with properties builds a fetch join map"() {
+        given:
+        EntityFetchOptions options = new EntityFetchOptions(mappingContext.getPersistentEntity(ToOne.name))
+
+        expect:
+        options.getFetchArgument(['one', 'circularOne'] as Set<String>) == [
+                fetch: [one: 'join', circularOne: 'join']
+        ]
+    }
+
+    void "test isForeignKeyInChild is true for a ToMany association"() {
+        given:
+        EntityFetchOptions options = new EntityFetchOptions(mappingContext.getPersistentEntity(HasOne.name))
+        Association toMany = Stub(ToMany)
+
+        expect:
+        options.isForeignKeyInChild(toMany)
+    }
+
+    void "test isForeignKeyInChild is true for a hasOne association where the child owns the foreign key"() {
+        given:
+        EntityFetchOptions options = new EntityFetchOptions(mappingContext.getPersistentEntity(HasOne.name))
+        Association association = options.getAssociations().get('one')
+
+        expect:
+        options.isForeignKeyInChild(association)
+    }
+
+    void "test isForeignKeyInChild is false for a plain toOne association"() {
+        given:
+        EntityFetchOptions options = new EntityFetchOptions(mappingContext.getPersistentEntity(ToOne.name))
+        Association association = options.getAssociations().get('one')
+
+        expect:
+        !options.isForeignKeyInChild(association)
     }
 
 }

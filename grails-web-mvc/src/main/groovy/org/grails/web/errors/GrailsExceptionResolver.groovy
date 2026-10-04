@@ -32,6 +32,7 @@ import org.springframework.beans.BeanUtils
 import org.springframework.beans.BeansException
 import org.springframework.context.ApplicationContext
 import org.springframework.web.context.ServletContextAware
+import org.springframework.web.context.request.async.AsyncRequestTimeoutException
 import org.springframework.web.servlet.ModelAndView
 import org.springframework.web.servlet.View
 import org.springframework.web.servlet.ViewResolver
@@ -53,6 +54,7 @@ import org.grails.exceptions.reporting.DefaultStackTraceFilterer
 import org.grails.exceptions.reporting.StackTraceFilterer
 import org.grails.web.mapping.DefaultUrlMappingInfo
 import org.grails.web.mapping.UrlMappingUtils
+import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.servlet.mvc.exceptions.GrailsMVCException
 import org.grails.web.util.GrailsApplicationAttributes
 import org.grails.web.util.WebUtils
@@ -94,15 +96,21 @@ class GrailsExceptionResolver extends SimpleMappingExceptionResolver implements 
 
         ex = findWrappedException(ex)
 
-        logFullStackTraceIfEnabled(ex)
-
-        filterStackTrace(ex)
+        if (!(ex instanceof AsyncRequestTimeoutException)) {
+            logFullStackTraceIfEnabled(ex)
+            filterStackTrace(ex)
+        }
 
         ModelAndView mv = super.resolveException(request, response, handler, ex)
 
         setStatus(request, response, mv, ex)
 
-        logStackTrace(ex, request)
+        if (ex instanceof AsyncRequestTimeoutException) {
+            LOG.debug('Async request timed out: {}', request.getRequestURI())
+        }
+        else {
+            logStackTrace(ex, request)
+        }
 
         UrlMappingsHolder urlMappings = lookupUrlMappings()
         if (urlMappings != null) {
@@ -155,9 +163,9 @@ class GrailsExceptionResolver extends SimpleMappingExceptionResolver implements 
     }
 
     protected void setStatus(HttpServletRequest request, HttpServletResponse response, ModelAndView mv, Exception e) {
-        response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR)
-        // expose the servlet 2.3 specs status code request attribute as 500
-        request.setAttribute(WebUtils.ERROR_STATUS_CODE_ATTRIBUTE, HttpServletResponse.SC_INTERNAL_SERVER_ERROR)
+        int status = exceptionStatus(e)
+        response.setStatus(status)
+        request.setAttribute(WebUtils.ERROR_STATUS_CODE_ATTRIBUTE, status)
         final GrailsWrappedRuntimeException gwre = new GrailsWrappedRuntimeException(servletContext, e)
         mv.addObject(WebUtils.ERROR_EXCEPTION_ATTRIBUTE, gwre)
         mv.addObject(WebUtils.EXCEPTION_ATTRIBUTE, gwre)
@@ -189,29 +197,47 @@ class GrailsExceptionResolver extends SimpleMappingExceptionResolver implements 
     protected ModelAndView resolveViewOrForward(Exception ex, UrlMappingsHolder urlMappings, HttpServletRequest request,
             HttpServletResponse response, ModelAndView mv) {
 
-        UrlMappingInfo info = matchStatusCode(ex, urlMappings)
-
-        if (info != null) {
-            Map params = extractRequestParamsWithUrlMappingHolder(urlMappings, request)
-            if (params != null && !params.isEmpty()) {
-                Map infoParams = info.getParameters()
-                if (infoParams != null) {
-                    params.putAll(info.getParameters())
+        UrlMappingInfo info
+        boolean mapsToView
+        boolean mapsToController
+        try {
+            info = matchStatusCode(ex, urlMappings)
+            if (info != null) {
+                Map params = extractRequestParamsWithUrlMappingHolder(urlMappings, request)
+                if (params != null && !params.isEmpty()) {
+                    Map infoParams = info.getParameters()
+                    if (infoParams != null) {
+                        params.putAll(info.getParameters())
+                    }
+                    info = new DefaultUrlMappingInfo(info, params, grailsApplication)
                 }
-                info = new DefaultUrlMappingInfo(info, params, grailsApplication)
             }
+            mapsToView = info != null && info.getViewName() != null
+            mapsToController = !mapsToView && info != null && info.getControllerName() != null
+        }
+        catch (RuntimeException e) {
+            // An error handler that cannot be resolved for this request - a mapping that computes its controller
+            // from request state Grails did not set up, for example - must not replace the exception being
+            // resolved, so the default error view renders that exception instead
+            LOG.error('Unable to resolve the error handler mapped for [{}]: {}', request.getRequestURI(), e.getMessage(), e)
+            return mv
         }
 
         try {
-            if (info != null && info.getViewName() != null) {
+            if (mapsToView) {
                 resolveView(request, info, mv)
             }
-            else if (info != null && info.getControllerName() != null) {
+            else if (mapsToController) {
                 if (isErrorHandlerForwardInProgress(request)) {
                     LOG.error('The error handler for this request failed as well; not forwarding to it again')
                     return mv
                 }
                 String uri = determineUri(request)
+                if (GrailsWebRequest.lookup(request) == null) {
+                    LOG.warn('Not forwarding [{}] to the error handler it maps to, because the request has no ' +
+                            'GrailsWebRequest to dispatch it with; rendering the default error view instead', uri)
+                    return mv
+                }
                 if (!response.isCommitted()) {
                     if (response instanceof GrailsResponseMutator) {
                         // prevent further mutation of the request since an error page needs rendered instead
@@ -258,7 +284,7 @@ class GrailsExceptionResolver extends SimpleMappingExceptionResolver implements 
 
     protected void forwardRequest(UrlMappingInfo info, HttpServletRequest request, HttpServletResponse response,
             ModelAndView mv, String uri) throws ServletException, IOException {
-        info.configure(WebUtils.retrieveGrailsWebRequest())
+        info.configure(GrailsWebRequest.lookup(request))
         String forwardUrl = UrlMappingUtils.forwardRequestForUrlMappingInfo(
                 request, response, info, mv.getModel(), true)
         LOG.debug('Matched URI [{}] to URL mapping [{}], forwarding to [{}] with response [{}]',
@@ -282,15 +308,23 @@ class GrailsExceptionResolver extends SimpleMappingExceptionResolver implements 
     }
 
     protected UrlMappingInfo matchStatusCode(Exception ex, UrlMappingsHolder urlMappings) {
-        UrlMappingInfo info = urlMappings.matchStatusCode(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, ex)
+        int status = exceptionStatus(ex)
+        UrlMappingInfo info = urlMappings.matchStatusCode(status, ex)
         if (info == null) {
-            info = urlMappings.matchStatusCode(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+            info = urlMappings.matchStatusCode(status,
                     getRootCause(ex))
         }
         if (info == null) {
-            info = urlMappings.matchStatusCode(HttpServletResponse.SC_INTERNAL_SERVER_ERROR)
+            info = urlMappings.matchStatusCode(status)
         }
         return info
+    }
+
+    private static int exceptionStatus(Exception ex) {
+        if (ex instanceof AsyncRequestTimeoutException timeout) {
+            return timeout.getStatusCode().value()
+        }
+        return HttpServletResponse.SC_INTERNAL_SERVER_ERROR
     }
 
     protected void logStackTrace(Exception e, HttpServletRequest request) {

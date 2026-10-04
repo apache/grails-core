@@ -102,6 +102,25 @@ class FindByMethodSpec extends GrailsDataTckSpec {
         3 == cnt
     }
 
+    @Unroll
+    void 'Test countBy ignores the pagination and sort arguments #arguments'() {
+        given:
+        5.times { int i -> new Person(firstName: 'Bart', lastName: 'Simpson', age: i).save() }
+        new Person(firstName: 'Lisa', lastName: 'Simpson', age: 8).save(flush: true)
+
+        expect:
+        Person.countByFirstName('Bart', arguments) == 5
+        Person.countByFirstNameOrLastName('Bart', 'Flanders', arguments) == 5
+
+        where:
+        arguments << [
+                [max: 2, offset: 3],
+                [sort: 'age', order: 'desc'],
+                [max: 2, offset: 1, sort: 'age', order: 'asc'],
+                [sort: 'nope']
+        ]
+    }
+
     void testBooleanPropertyQuery() {
         given:
         new Highway(bypassed: true, name: 'Bypassed Highway').save()

@@ -28,13 +28,13 @@ import org.springframework.beans.factory.support.BeanDefinitionRegistry
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor
 import org.springframework.beans.factory.support.BeanRegistryAdapter
 import org.springframework.beans.factory.support.DefaultSingletonBeanRegistry
+import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationListener
 import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.context.event.ContextRefreshedEvent
 import org.springframework.core.convert.support.ConfigurableConversionService
 import org.springframework.core.env.AbstractEnvironment
 import org.springframework.core.env.ConfigurableEnvironment
-import org.springframework.core.io.Resource
 import org.springframework.util.ClassUtils
 
 import grails.core.DefaultGrailsApplication
@@ -46,7 +46,6 @@ import grails.plugins.GrailsPluginManager
 import grails.util.Environment
 import grails.util.Holders
 import org.apache.grails.core.plugins.PluginDiscovery
-import org.grails.config.NavigableMap
 import org.grails.config.PropertySourcesConfig
 import org.grails.spring.DefaultRuntimeSpringConfiguration
 import org.grails.spring.RuntimeSpringConfiguration
@@ -57,6 +56,13 @@ import org.grails.spring.RuntimeSpringConfiguration
  * are already present in the registry when Boot evaluates its {@code @ConditionalOnMissingBean}
  * guards — auto-configured defaults then back off in favour of the plugin beans, without any
  * override or removal afterwards.
+ *
+ * <p>It runs for a Grails application only: {@link GrailsPluginLifecycleInitializer} is registered for
+ * every Spring Boot application that has grails-core on its class path, and this phase stands down
+ * unless {@link grails.boot.GrailsApp} launched the application or one of the context's sources is a
+ * {@link GrailsApplicationClass}. A Spring Boot application
+ * using a Grails library - GSP for its views, say - gets that library's auto-configuration and nothing
+ * else: no plugin manager, no {@link GrailsApplication}, and no beans from plugins it never asked for.
  *
  * <p>It is added to the context programmatically (see {@link GrailsPluginLifecycleInitializer}), so its
  * {@code postProcessBeanDefinitionRegistry} runs ahead of Boot's {@code ConfigurationClassPostProcessor}
@@ -72,13 +78,20 @@ import org.grails.spring.RuntimeSpringConfiguration
  * (controllers, services, interceptors) iterate {@code grailsApplication} artefacts inside their
  * {@code doWithSpring} closures. Application classes are resolved from the source classes stashed by
  * {@link grails.boot.GrailsApp} (see {@link #APPLICATION_SOURCE_CLASSES_BEAN_NAME}) and scanned with the
- * same logic {@link GrailsAutoConfiguration#classes()} uses; when the application was not started
- * through {@code GrailsApp} the phase proceeds without application classes.
+ * same logic {@link GrailsAutoConfiguration#classes()} uses; an application {@code GrailsApp} did not
+ * start has its sources read from the context instead.
  *
  * <p>Once complete, the {@code grailsApplication} and {@code pluginManager} singletons are promoted to
  * the bean factory together with the {@link #EARLY_REGISTRATION_COMPLETE_BEAN_NAME} marker, so
  * {@link GrailsApplicationPostProcessor} reuses them instead of rebuilding and skips the already-drained
  * plugin runtime configuration.
+ *
+ * <p>In a parent/child context hierarchy, such as {@link grails.boot.GrailsAppBuilder} builds, exactly one
+ * context is the Grails application. The lifecycle keeps state that is JVM-wide — {@link Holders}, the
+ * {@link Environment#isInitializing() initializing} flag, the shutdown operations — which a second
+ * application in the same hierarchy would overwrite and then clear when it closed, so a context whose
+ * parent chain already holds a {@code grailsApplication} refuses to start as another one. The other
+ * contexts of the hierarchy are plain Spring contexts and reach the Grails beans through their parent.
  *
  * @since 8.0
  */
@@ -117,6 +130,26 @@ class GrailsEarlyPluginRegistrationPostProcessor
             return
         }
 
+        // Two things make a context a Grails application: GrailsApp launched it, which it records by
+        // stashing the sources it was given, or one of its sources is a Grails application class.
+        // This initializer is registered for every Spring Boot application with grails-core on its
+        // class path, and the plugin lifecycle is not something the rest of them asked for: it would
+        // contribute a GrailsApplication, a plugin manager and the beans of every plugin found, over
+        // the top of whatever the libraries they did ask for auto-configure for themselves.
+        boolean launchedByGrails =
+                applicationContext.getBeanFactory().getSingleton(APPLICATION_SOURCE_CLASSES_BEAN_NAME) != null
+        Class<?>[] applicationSources = resolveApplicationSourceClasses(registry)
+        if (!launchedByGrails && !containsApplicationClass(applicationSources)) {
+            LOG.debug('Not a Grails application — the plugin lifecycle does not run for this context')
+            return
+        }
+        ApplicationContext parent = applicationContext.getParent()
+        if (parent != null && parent.containsBean(GrailsApplication.APPLICATION_ID)) {
+            throw new IllegalStateException('A Grails application already exists in the parent hierarchy of this context. ' +
+                    'Only one context in a hierarchy can be the Grails application; the other contexts share its beans ' +
+                    'through their parent, so leave the Grails application class out of their sources.')
+        }
+
         // The initializing flag is a system property, so a leak on failure poisons every subsequent
         // context in the same JVM (test forks especially). Reset it if anything below throws; the
         // success path leaves it set and resets on refresh via the listener added at the end.
@@ -136,7 +169,7 @@ class GrailsEarlyPluginRegistrationPostProcessor
             // register plugin provided classes first, this gives the opportunity
             // for application classes to override those provided by a plugin
             pluginManager.registerProvidedArtefacts(grailsApplication)
-            registerApplicationArtefacts(grailsApplication, registry)
+            registerApplicationArtefacts(grailsApplication, applicationSources)
             // the source-classes stash has been consumed; drop it so it does not linger as an
             // autowire-by-type candidate for the life of the context
             if (applicationContext.getBeanFactory() instanceof DefaultSingletonBeanRegistry singletonRegistry) {
@@ -186,8 +219,16 @@ class GrailsEarlyPluginRegistrationPostProcessor
         }
     }
 
-    private void registerApplicationArtefacts(DefaultGrailsApplication grailsApplication, BeanDefinitionRegistry registry) {
-        Class<?>[] sources = resolveApplicationSourceClasses(registry)
+    private static boolean containsApplicationClass(Class<?>[] sources) {
+        for (Class<?> source in sources) {
+            if (GrailsApplicationClass.isAssignableFrom(source)) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private void registerApplicationArtefacts(DefaultGrailsApplication grailsApplication, Class<?>[] sources) {
         if (sources.length == 0) {
             LOG.debug('No application source classes available — proceeding without early application artefact discovery')
             return
@@ -267,20 +308,18 @@ class GrailsEarlyPluginRegistrationPostProcessor
 
     /**
      * Builds the {@link PropertySourcesConfig} that backs {@code grailsApplication.config} in this
-     * phase, registering the same conversion-service converters that
-     * {@code GrailsApplicationPostProcessor.loadApplicationConfig} registers for the main lifecycle.
+     * phase, registering the same conversion-service converters ({@link GrailsConversionServiceConverters})
+     * that {@code GrailsApplicationPostProcessor.loadApplicationConfig} registers for the main lifecycle.
      * This gives {@code doWithSpring} closures parity when reading config — null-safe navigation of
-     * missing paths and {@code String -> Resource} coercion — not just scalar
-     * {@code getProperty(...)} access.
+     * missing paths and {@code String -> Resource} and pattern-expanding {@code Resource[]} coercion —
+     * not just scalar {@code getProperty(...)} access.
      */
     private PropertySourcesConfig buildConfig() {
         ConfigurableEnvironment environment = applicationContext.getEnvironment()
         ConfigurableConversionService conversionService = null
         if (environment instanceof AbstractEnvironment) {
             conversionService = ((AbstractEnvironment) environment).getConversionService()
-            conversionService.addConverter(String, Resource, applicationContext::getResource)
-            conversionService.addConverter(NavigableMap.NullSafeNavigator, String, source -> null)
-            conversionService.addConverter(NavigableMap.NullSafeNavigator, Object, source -> null)
+            GrailsConversionServiceConverters.register(conversionService, applicationContext)
         }
         PropertySourcesConfig config = new PropertySourcesConfig(environment.getPropertySources())
         if (conversionService != null) {

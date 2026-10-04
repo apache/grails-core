@@ -44,11 +44,6 @@
             <version>7.0.0</version>
         </dependency>
         <dependency>
-            <groupId>org.apache.grails</groupId>
-            <artifactId>grails-quartz</artifactId>
-            <version>4.0.0</version>
-        </dependency>
-        <dependency>
             <!-- Last released Feb 24, 2021 -->
             <groupId>org.grails.plugins</groupId>
             <artifactId>cache-ehcache</artifactId>
@@ -63,11 +58,6 @@
             <groupId>com.gradleup.shadow</groupId>
             <artifactId>shadow-gradle-plugin</artifactId>
             <version>9.2.2</version>
-        </dependency>
-        <dependency>
-            <groupId>org.ysb33r</groupId>
-            <artifactId>webdriver-binaries</artifactId>
-            <version>4.0.0</version>
         </dependency>
         <dependency>
             <groupId>org.zeroturnaround</groupId>

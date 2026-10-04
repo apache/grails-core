@@ -61,11 +61,17 @@ class Neo4jTransaction implements Transaction<org.neo4j.driver.Transaction>, Clo
     }
 
     void commit() {
-        if (isActive() && !rollbackOnly) {
-            log.debug('TX COMMIT: Neo4J commit()')
-            transaction.commit()
-            close()
+        if (!isActive()) {
+            return
         }
+        if (rollbackOnly) {
+            // Left open, the native transaction would hold its writes until the session closed
+            rollback()
+            return
+        }
+        log.debug('TX COMMIT: Neo4J commit()')
+        transaction.commit()
+        close()
     }
 
     void rollback() {
@@ -76,12 +82,16 @@ class Neo4jTransaction implements Transaction<org.neo4j.driver.Transaction>, Clo
         }
     }
 
+    /**
+     * Marks the transaction rollback-only, as a transaction that joined it and failed does. It stays
+     * open, so the surrounding code's later writes run in it and are rolled back with it. Rolled back
+     * here, the session would have no transaction left, and would run those writes on its own
+     * connection, which commits each as it runs.
+     */
     void rollbackOnly() {
         if (active) {
+            log.debug('TX ROLLBACK ONLY: Neo4J transaction marked rollback-only')
             rollbackOnly = true
-            log.debug('TX ROLLBACK ONLY: Neo4J rollback()')
-            transaction.rollback()
-            close()
         }
     }
 

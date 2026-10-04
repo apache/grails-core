@@ -19,7 +19,10 @@
 
 package org.grails.gorm.graphql.types.scalars.coercing
 
+import graphql.GraphQLContext
+import graphql.execution.CoercedVariables
 import graphql.language.StringValue
+import graphql.language.Value
 import graphql.schema.Coercing
 import graphql.schema.CoercingParseValueException
 import graphql.schema.CoercingSerializeException
@@ -47,21 +50,21 @@ class URLCoercion implements Coercing<URL, URL> {
     }
 
     @Override
-    URL serialize(Object input) {
+    URL serialize(Object input, GraphQLContext graphQLContext, Locale locale) {
         convert(input).orElseThrow {
             throw new CoercingSerializeException("Could not convert ${input.class.name} to a java.net.URL")
         }
     }
 
     @Override
-    URL parseValue(Object input) {
+    URL parseValue(Object input, GraphQLContext graphQLContext, Locale locale) {
         convert(input).orElseThrow {
             throw new CoercingParseValueException("Could not convert ${input.class.name} to a java.net.URL")
         }
     }
 
     @Override
-    URL parseLiteral(Object input) {
+    URL parseLiteral(Value<?> input, CoercedVariables variables, GraphQLContext graphQLContext, Locale locale) {
         if (input instanceof StringValue) {
             parseURL(((StringValue)input).value).orElse(null)
         }

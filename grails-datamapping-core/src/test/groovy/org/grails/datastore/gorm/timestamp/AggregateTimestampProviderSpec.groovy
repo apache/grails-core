@@ -22,70 +22,105 @@ import spock.lang.Specification
 
 class AggregateTimestampProviderSpec extends Specification {
 
-    void "test supportsCreating returns false when no delegate providers are configured"() {
-        given:
-        def provider = new AggregateTimestampProvider()
+    AggregateTimestampProvider aggregateTimestampProvider = new AggregateTimestampProvider()
 
+    void "getTimestampProviders defaults to an empty list"() {
         expect:
-        !provider.supportsCreating(Date)
+        aggregateTimestampProvider.timestampProviders == []
     }
 
-    void "test supportsCreating returns true when any delegate provider supports the type"() {
+    void "setTimestampProviders stores the given providers"() {
         given:
-        def provider = new AggregateTimestampProvider()
-        provider.timestampProviders = [stubProvider(false), stubProvider(true)]
-
-        expect:
-        provider.supportsCreating(Date)
-    }
-
-    void "test createTimestamp delegates to the sole provider when only one is configured"() {
-        given:
-        def provider = new AggregateTimestampProvider()
-        def sole = new DefaultTimestampProvider()
-        provider.timestampProviders = [sole]
-
-        expect:
-        provider.createTimestamp(Date) instanceof Date
-    }
-
-    void "test createTimestamp delegates to the first provider that supports the type when several are configured"() {
-        given:
-        def provider = new AggregateTimestampProvider()
-        provider.timestampProviders = [stubProvider(false), new DefaultTimestampProvider()]
-
-        expect:
-        provider.createTimestamp(Date) instanceof Date
-    }
-
-    void "test createTimestamp throws when no configured provider supports the type"() {
-        given:
-        def provider = new AggregateTimestampProvider()
-        provider.timestampProviders = [stubProvider(false), stubProvider(false)]
+        TimestampProvider dateProvider = Stub(TimestampProvider)
+        TimestampProvider stringProvider = Stub(TimestampProvider)
 
         when:
-        provider.createTimestamp(Date)
+        aggregateTimestampProvider.timestampProviders = [dateProvider, stringProvider]
+
+        then:
+        aggregateTimestampProvider.timestampProviders == [dateProvider, stringProvider]
+    }
+
+    void "supportsCreating returns true when any delegate provider supports the class"() {
+        given:
+        TimestampProvider dateProvider = Stub(TimestampProvider) {
+            supportsCreating(Date) >> false
+        }
+        TimestampProvider stringProvider = Stub(TimestampProvider) {
+            supportsCreating(Date) >> true
+        }
+        aggregateTimestampProvider.timestampProviders = [dateProvider, stringProvider]
+
+        expect:
+        aggregateTimestampProvider.supportsCreating(Date)
+    }
+
+    void "supportsCreating returns false when no delegate provider supports the class"() {
+        given:
+        TimestampProvider dateProvider = Stub(TimestampProvider) {
+            supportsCreating(_) >> false
+        }
+        aggregateTimestampProvider.timestampProviders = [dateProvider]
+
+        expect:
+        !aggregateTimestampProvider.supportsCreating(Date)
+    }
+
+    void "supportsCreating returns false when there are no delegate providers"() {
+        expect:
+        !aggregateTimestampProvider.supportsCreating(Date)
+    }
+
+    void "createTimestamp delegates directly to the single registered provider"() {
+        given:
+        Date timestamp = new Date()
+        TimestampProvider onlyProvider = Stub(TimestampProvider) {
+            createTimestamp(Date) >> timestamp
+        }
+        aggregateTimestampProvider.timestampProviders = [onlyProvider]
+
+        expect:
+        aggregateTimestampProvider.createTimestamp(Date) == timestamp
+    }
+
+    void "createTimestamp with multiple providers delegates to the first provider that supports the class"() {
+        given:
+        Date timestamp = new Date()
+        TimestampProvider unsupportingProvider = Stub(TimestampProvider) {
+            supportsCreating(Date) >> false
+        }
+        TimestampProvider supportingProvider = Stub(TimestampProvider) {
+            supportsCreating(Date) >> true
+            createTimestamp(Date) >> timestamp
+        }
+        aggregateTimestampProvider.timestampProviders = [unsupportingProvider, supportingProvider]
+
+        expect:
+        aggregateTimestampProvider.createTimestamp(Date) == timestamp
+    }
+
+    void "createTimestamp with multiple providers throws when none support the class"() {
+        given:
+        TimestampProvider firstProvider = Stub(TimestampProvider) {
+            supportsCreating(Date) >> false
+        }
+        TimestampProvider secondProvider = Stub(TimestampProvider) {
+            supportsCreating(Date) >> false
+        }
+        aggregateTimestampProvider.timestampProviders = [firstProvider, secondProvider]
+
+        when:
+        aggregateTimestampProvider.createTimestamp(Date)
 
         then:
         thrown(IllegalArgumentException)
     }
 
-    void "test getTimestampProviders returns an empty list by default"() {
-        expect:
-        new AggregateTimestampProvider().timestampProviders == []
-    }
+    void "createTimestamp with no registered providers throws"() {
+        when:
+        aggregateTimestampProvider.createTimestamp(Date)
 
-    private static TimestampProvider stubProvider(boolean supports) {
-        new TimestampProvider() {
-            @Override
-            boolean supportsCreating(Class<?> dateTimeClass) {
-                return supports
-            }
-
-            @Override
-            def <T> T createTimestamp(Class<T> dateTimeClass) {
-                throw new UnsupportedOperationException()
-            }
-        }
+        then:
+        thrown(NoSuchElementException)
     }
 }

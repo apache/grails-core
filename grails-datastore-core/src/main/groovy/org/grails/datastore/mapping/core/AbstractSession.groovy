@@ -354,7 +354,7 @@ abstract class AbstractSession<N> extends AbstractAttributeStoringSession implem
 
             flushActive = true
 
-            hasInserts = hasUpdates()
+            hasInserts = hasPendingOperations()
             if (hasInserts) {
                 flushPendingInserts(pendingInserts)
                 flushPendingUpdates(pendingUpdates)
@@ -457,7 +457,8 @@ abstract class AbstractSession<N> extends AbstractAttributeStoringSession implem
         }
     }
 
-    private boolean hasUpdates() {
+    @Override
+    boolean hasPendingOperations() {
         return !pendingInserts.isEmpty() || !pendingUpdates.isEmpty() || !pendingDeletes.isEmpty() || !postFlushOperations.isEmpty()
     }
 
@@ -902,11 +903,24 @@ abstract class AbstractSession<N> extends AbstractAttributeStoringSession implem
 
     @Override
     Transaction beginTransaction(TransactionDefinition definition) {
-        transaction = beginTransactionInternal()
+        transaction = beginTransactionInternal(definition)
         return transaction
     }
 
     protected abstract Transaction beginTransactionInternal()
+
+    /**
+     * Begins a transaction for the given definition. The default implementation ignores the
+     * definition and delegates to {@link #beginTransactionInternal()}, which is the behaviour
+     * datastores had before the definition was passed down at all. Datastores that can honour
+     * definition attributes such as {@link TransactionDefinition#isReadOnly()} override this.
+     *
+     * @param definition the definition the transaction is being started for
+     * @return the started transaction
+     */
+    protected Transaction beginTransactionInternal(TransactionDefinition definition) {
+        return beginTransactionInternal()
+    }
 
     Transaction getTransaction() {
         if (transaction == null) {

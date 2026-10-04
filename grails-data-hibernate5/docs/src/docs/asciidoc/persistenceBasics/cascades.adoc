@@ -61,6 +61,7 @@ airport.delete()
 
 The above examples are called transitive persistence and are controlled via the `belongsTo` and the cascade policy. If I were to remove `belongsTo` then the above cascading deletion code *would not work*.
 
+[discrete]
 ===== Unidirectional Many-To-One without belongsTo
 
 For example, consider the following domain model:
@@ -137,6 +138,7 @@ class Author {
 
 The above example will configure the cascade policy to cascade saves and updates, but not deletes.
 
+[discrete]
 ===== Bidirectional one-to-many with belongsTo
 
 
@@ -155,6 +157,7 @@ In the case of a bidirectional one-to-many where the many side defines a `belong
 What this means is that whenever an instance of `A` is saved or updated. So will any instances of `B`. And, critically, whenever any instance of `A` is *deleted* so will all the associated instances of `B`!
 
 
+[discrete]
 ===== Unidirectional One-to-Many
 
 
@@ -174,6 +177,7 @@ Since the `belongsTo` is not defined, this means that saves and updates will be 
 
 Only when you define `belongsTo` in `B` or alter the cascading strategy of `A` will deletes be cascaded.
 
+[discrete]
 ===== Bidirectional One-to-Many, no belongsTo
 
 
@@ -202,6 +206,7 @@ class A {
 }
 ----
 
+[discrete]
 ===== Unidirectional Many-to-One with belongsTo
 
 

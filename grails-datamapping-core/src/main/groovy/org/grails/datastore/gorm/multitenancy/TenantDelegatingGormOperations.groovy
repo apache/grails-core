@@ -105,6 +105,18 @@ class TenantDelegatingGormOperations<D> implements GormAllOperations<D> {
     }
 
     @Override
+    boolean supportsLockedRefresh() {
+        allOperations.supportsLockedRefresh()
+    }
+
+    @Override
+    D refresh(D instance, Map args) {
+        Tenants.withId(requireMultiTenantCapableDatastore(), tenantId) {
+            allOperations.refresh(instance, args)
+        }
+    }
+
+    @Override
     D save(D instance) {
         Tenants.withId(requireMultiTenantCapableDatastore(), tenantId) {
             allOperations.save(instance)
@@ -379,6 +391,13 @@ class TenantDelegatingGormOperations<D> implements GormAllOperations<D> {
     }
 
     @Override
+    D lock(Map args, Serializable id) {
+        Tenants.withId(requireMultiTenantCapableDatastore(), tenantId) {
+            allOperations.lock(args, id)
+        }
+    }
+
+    @Override
     D merge(D d) {
         Tenants.withId(requireMultiTenantCapableDatastore(), tenantId) {
             allOperations.merge(d)
@@ -386,14 +405,14 @@ class TenantDelegatingGormOperations<D> implements GormAllOperations<D> {
     }
 
     @Override
-    Integer count() {
+    Long count() {
         Tenants.withId(requireMultiTenantCapableDatastore(), tenantId) {
             allOperations.count()
         }
     }
 
     @Override
-    Integer getCount() {
+    Long getCount() {
         Tenants.withId(requireMultiTenantCapableDatastore(), tenantId) {
             allOperations.getCount()
         }

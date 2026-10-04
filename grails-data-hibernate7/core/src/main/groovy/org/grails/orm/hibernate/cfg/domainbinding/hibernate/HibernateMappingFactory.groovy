@@ -193,31 +193,19 @@ class HibernateMappingFactory extends AbstractGormMappingFactory<Mapping, Proper
     IdentityMapping createIdentityMapping(ClassMapping classMapping) {
         Mapping mappedForm = (Mapping) createMappedForm(classMapping.entity)
         HibernatePropertyIdentity identity = mappedForm.identity
-        ValueGenerator generator
-
-        if (identity instanceof HibernateSimpleIdentity) {
-            HibernateSimpleIdentity id = (HibernateSimpleIdentity) identity
-            String generatorName = id.generator
-            if (generatorName != null) {
-                ValueGenerator resolvedGenerator
-                try {
-                    resolvedGenerator = ValueGenerator.valueOf(generatorName.toUpperCase(Locale.ENGLISH))
-                } catch (IllegalArgumentException ignored) {
-                    if (generatorName.equalsIgnoreCase('table') || ClassUtils.isPresent(generatorName)) {
-                        resolvedGenerator = ValueGenerator.CUSTOM
-                    } else {
-                        throw new DatastoreConfigurationException(
-                                "Invalid id generation strategy for entity [${classMapping.entity.name}]: $generatorName")
-                    }
-                }
-                generator = resolvedGenerator
-            } else {
-                generator = ValueGenerator.AUTO
-            }
-        } else {
-            generator = ValueGenerator.AUTO
-        }
+        ValueGenerator generator = identity instanceof HibernateSimpleIdentity
+                ? resolveGenerator(classMapping, ((HibernateSimpleIdentity) identity).generator)
+                : ValueGenerator.AUTO
         new HibernateIdentityMapping(identity, generator, classMapping)
+    }
+
+    @Override
+    protected ValueGenerator resolveCustomGenerator(ClassMapping classMapping, String generatorName) {
+        if (generatorName.equalsIgnoreCase('table') || ClassUtils.isPresent(generatorName)) {
+            return ValueGenerator.CUSTOM
+        }
+        throw new DatastoreConfigurationException(
+                "Invalid id generation strategy for entity [${classMapping.entity.name}]: $generatorName")
     }
 
     @Override
