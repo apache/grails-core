@@ -941,8 +941,8 @@ class GrailsDomainGenerator {
      */
     private String toManyProblem(HibernateToManyEntityProperty property) {
         PropertyConfig mapped = property.hibernateMappedForm
-        if (Map.isAssignableFrom(property.type)) {
-            return 'a map of entities, which the generator does not support yet'
+        if (Map.isAssignableFrom(property.type) && property instanceof HibernateManyToManyProperty) {
+            return 'a map on a many-to-many, which the generator does not support yet'
         }
         CollectionKind kind = CollectionKind.of(property.type)
         if (kind == null) {
@@ -1004,9 +1004,12 @@ class GrailsDomainGenerator {
         if (kind == CollectionKind.LIST && property.getIndexColumnType('integer') != 'integer') {
             return "the index column type [${property.getIndexColumnType('integer')}] is not integer"
         }
+        if (kind == CollectionKind.MAP && property.getIndexColumnType('string') != 'string') {
+            return "the map key type [${property.getIndexColumnType('string')}] is not string"
+        }
         if (property.hasSort()) {
-            if (kind == CollectionKind.LIST) {
-                return 'a list with a default sort: an indexed list is ordered by its index column'
+            if (kind.indexed) {
+                return 'a list or a map with a default sort: it is ordered by its index or key column'
             }
             HibernatePersistentProperty sortBy = target.getHibernatePropertyByName(property.sort)
             if (!(sortBy instanceof HibernateSimpleProperty) && !(sortBy instanceof HibernateEnumProperty) || isDerived(sortBy)) {
@@ -1068,9 +1071,17 @@ class GrailsDomainGenerator {
             schema = joinTable?.schema != null ? joinTable.schema : entityFacets(property.hibernateOwner).schema()
             catalog = joinTable?.catalog
             key = collectionKeyFacets(property)
-            element = new ColumnFacets(
-                    property.resolveJoinTableForeignKeyColumnName(namingStrategy), true, false, true, true, null, null, null,
-                    null, null, null, null, null)
+            if (property.bidirectional) {
+                // BidirectionalMapElementBinder binds the element like the many-to-one of the other side (its column name rules)
+                ColumnFacets inverseColumn = toOneColumnFacets((HibernateToOneProperty) property.hibernateInverseSide)
+                element = new ColumnFacets(
+                        inverseColumn.name(), inverseColumn.nullable(), inverseColumn.unique(), true, true, null, null, null,
+                        inverseColumn.sqlType(), null, null, null, null)
+            } else {
+                element = new ColumnFacets(
+                        property.resolveJoinTableForeignKeyColumnName(namingStrategy), true, false, true, true, null, null, null,
+                        null, null, null, null, null)
+            }
         }
         String condition = property instanceof HibernateOneToManyProperty && target.isMultiTenant() ?
                 target.getMultiTenantFilterCondition(defaultColumnNames) : null
@@ -1673,6 +1684,8 @@ class GrailsDomainGenerator {
                     .define('name', facets.index().name())
                     .define('nullable', facets.index().nullable())
                     .build()
+        } else if (facets.kind() == CollectionKind.MAP) {
+            annotations << mapKeyColumnAnnotation(facets.index())
         }
         if (facets.kind() == CollectionKind.SORTED_SET) {
             // the binder marks the collection sorted and names no comparator: the elements' natural order
@@ -1705,9 +1718,11 @@ class GrailsDomainGenerator {
         for (Annotation constraint : validationAnnotations(property)) {
             annotations << AnnotationDescription.ForLoadedAnnotation.of(constraint)
         }
+        List<TypeDescription> arguments = facets.kind() == CollectionKind.MAP ?
+                [TypeDescription.ForLoadedType.of(String), generatedType(property.hibernateAssociatedEntity)] :
+                [generatedType(property.hibernateAssociatedEntity)]
         TypeDescription.Generic fieldType = TypeDescription.Generic.Builder.parameterizedType(
-                TypeDescription.ForLoadedType.of(facets.kind().javaType),
-                [generatedType(property.hibernateAssociatedEntity)] as List<TypeDescription>).build()
+                TypeDescription.ForLoadedType.of(facets.kind().javaType), arguments).build()
         return builder.defineField(property.name, fieldType, Visibility.PRIVATE)
                 .annotateField(annotations as AnnotationDescription[])
     }

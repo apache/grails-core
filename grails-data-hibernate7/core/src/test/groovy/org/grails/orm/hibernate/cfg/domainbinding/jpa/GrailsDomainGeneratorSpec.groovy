@@ -149,7 +149,7 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
                 GenFleetVehicle, GenFleetCar, GenFleetSportsCar, GenFleetSedan, GenUnionBase, GenUnionLeaf, GenUnionMiddle, GenUnionBottom,
                 GenEmbedOwner, GenEmbedOther, GenEmbedBase, GenEmbedChild, GenEmbedBadHolder, GenEmbedFormulaOwner, GenCollSingle, GenCollKinds, GenCollLazy,
                 GenFkTarget, GenFkOwned, GenFkOwner, GenFkCascades, GenFkNodeA, GenFkNodeB, GenFkHasOneOwner, GenFkHasOneDetail, GenOneFace, GenOneNose, GenFkManyOne, GenFkOneSide, GenFkSub, GenFkSubRoot,
-                GenOmParent, GenOmChild, GenOmListed, GenOmOrdered, GenOmOrphan, GenOmFetched, GenOmTag, GenOmStep, GenOmKept, GenOmSortedOwner,
+                GenOmParent, GenOmChild, GenOmListed, GenOmOrdered, GenOmOrphan, GenOmFetched, GenOmTag, GenOmStep, GenOmKept, GenOmSortedOwner, GenOmMapOwner, GenMapBidiOwner, GenMapBidiChild,
                 GenMmStudent, GenMmCourse, GenMmPerson, GenMmNoOwnerA, GenMmNoOwnerB)
     }
 
@@ -1583,7 +1583,7 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         tags.isAnnotationPresent(ManyToMany)
     }
 
-    void "a map of entities and an extra-lazy collection are rejected by name"() {
+    void "an extra-lazy collection is rejected by name"() {
         given:
         GrailsHibernatePersistentEntity entity = unbound(domain)
         HibernatePersistentProperty property = entity.getHibernatePropertyByName(name)
@@ -1594,7 +1594,6 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
 
         where:
         domain          | name     | reason
-        GenOmMapOwner   | 'byName' | 'a map of entities'
         GenOmLazyOwner  | 'tags'   | 'extra-lazy'
     }
 
@@ -1694,6 +1693,25 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         owning.collectionTable.name == 'gen_mm_student_courses'
         owning.key.selectables*.text == inverse.element.selectables*.text
         owning.element.selectables*.text == inverse.key.selectables*.text
+    }
+
+    void "a map of entities is a @ManyToMany join table with a @MapKeyColumn, whatever its direction"() {
+        given:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenOmMapOwner, GenOmTag, GenMapBidiOwner, GenMapBidiChild)
+        Field field = classes[entity(owner)].getDeclaredField(property)
+
+        expect:
+        field.genericType.typeName == "java.util.Map<java.lang.String, ${classes[entity(target)].name}>"
+        field.isAnnotationPresent(ManyToMany)
+        field.getAnnotation(JoinTable).name() == table
+        field.getAnnotation(JoinTable).joinColumns()*.name() == [key]
+        field.getAnnotation(JoinTable).inverseJoinColumns()*.name() == [element]
+        field.getAnnotation(jakarta.persistence.MapKeyColumn).name() == index
+
+        where:
+        owner           | property | target          | table                     | key                      | element                | index
+        GenOmMapOwner   | 'byName' | GenOmTag        | 'gen_om_map_owner_by_name' | 'gen_om_map_owner_by_name_id' | 'gen_om_tag_id' | 'by_name_idx'
+        GenMapBidiOwner | 'kids'   | GenMapBidiChild | 'gen_map_bidi_owner_kids' | 'kids_id' | 'owner_id'              | 'kids_idx'
     }
 
     private Map<GrailsHibernatePersistentEntity, Class<?>> generateOmGroup() {
@@ -2860,4 +2878,18 @@ class GenMmSelf {
     static hasMany = [followers: GenMmSelf, following: GenMmSelf]
     static mappedBy = [followers: 'following', following: 'followers']
     static belongsTo = [GenMmSelf]
+}
+
+@Entity
+class GenMapBidiOwner {
+
+    Map<String, GenMapBidiChild> kids
+
+    static hasMany = [kids: GenMapBidiChild]
+}
+
+@Entity
+class GenMapBidiChild {
+
+    GenMapBidiOwner owner
 }
