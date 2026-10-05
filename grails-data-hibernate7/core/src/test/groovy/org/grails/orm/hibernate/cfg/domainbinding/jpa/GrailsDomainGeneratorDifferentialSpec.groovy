@@ -1360,6 +1360,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 cascade       : [cascadeActions(boundProperty.cascade), cascadeActions(annotatedProperty.cascade)],
                 insertable    : [boundProperty.insertable, annotatedProperty.insertable],
                 updatable     : [boundProperty.updateable, annotatedProperty.updateable],
+                propertyLazy  : [boundProperty.lazy, annotatedProperty.lazy],
         ]
         if (bound instanceof OneToOne) {
             pairs.referencedProperty = [bound.referencedPropertyName, annotated.referencedPropertyName]
@@ -1641,6 +1642,9 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             return ["${where} columns: generator=${annotatedSelectables}${annotatedNullable} binder=${boundSelectables}${boundNullable}".toString()]
         }
         List<String> found = []
+        if (bound.lazy != annotated.lazy) {
+            found << "${where} propertyLazy: generator=${annotated.lazy} binder=${bound.lazy}".toString()
+        }
         for (int i = 0; i < boundColumns.size(); i++) {
             Column boundColumn = boundColumns[i]
             Column annotatedColumn = annotatedColumns[i]

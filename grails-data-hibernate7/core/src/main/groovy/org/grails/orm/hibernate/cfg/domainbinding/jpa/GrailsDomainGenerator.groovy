@@ -27,6 +27,7 @@ import jakarta.persistence.AssociationOverride
 import jakarta.persistence.AssociationOverrides
 import jakarta.persistence.AttributeOverride
 import jakarta.persistence.AttributeOverrides
+import jakarta.persistence.Basic
 import jakarta.persistence.Cacheable
 import jakarta.persistence.CascadeType
 import jakarta.persistence.CollectionTable
@@ -1608,6 +1609,10 @@ class GrailsDomainGenerator {
         if (!type.isRoot()) {
             return "the embedded type [${type.name}] extends another persistent class"
         }
+        if (property.isLazy()) {
+            return 'the property is mapped lazy: true, which the binder marks on the component as a lazy attribute and which ' +
+                    'annotations cannot state on an @Embedded'
+        }
         if (visiting.contains(type.javaClass)) {
             return "the embedded type [${type.name}] contains itself"
         }
@@ -1860,6 +1865,10 @@ class GrailsDomainGenerator {
         Boolean naturalMutable = naturalIdMutable(property)
         if (naturalMutable != null) {
             annotations << AnnotationDescription.Builder.ofType(HibernateNaturalId).define('mutable', naturalMutable).build()
+        }
+        if (!(property instanceof HibernateSimpleIdentityProperty) && property.isLazy()) {
+            // PropertyBinder marks the property lazy when the mapping says lazy: true (the version never is)
+            annotations << AnnotationDescription.Builder.ofType(Basic).define('fetch', FetchType.LAZY).build()
         }
         // an identifier's type is decided with its generator, which the generator does not describe yet
         TypeFacets type = property instanceof HibernateSimpleIdentityProperty ? null : typeFacets(property)
