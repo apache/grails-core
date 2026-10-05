@@ -27,6 +27,7 @@ import jakarta.persistence.AssociationOverride
 import jakarta.persistence.AssociationOverrides
 import jakarta.persistence.AttributeOverride
 import jakarta.persistence.AttributeOverrides
+import jakarta.persistence.Cacheable
 import jakarta.persistence.CascadeType
 import jakarta.persistence.CollectionTable
 import jakarta.persistence.Column as JpaColumn
@@ -84,6 +85,7 @@ import org.hibernate.annotations.Filter
 import org.hibernate.annotations.FilterDef
 import org.hibernate.annotations.FetchMode as AnnotationFetchMode
 import org.hibernate.annotations.Formula
+import org.hibernate.annotations.Immutable
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.annotations.NaturalId as HibernateNaturalId
 import org.hibernate.annotations.NotFound
@@ -103,6 +105,7 @@ import org.hibernate.usertype.UserType
 
 import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.model.types.Association
+import org.grails.orm.hibernate.cfg.CacheConfig
 import org.grails.orm.hibernate.cfg.ColumnConfig
 import org.grails.orm.hibernate.cfg.DiscriminatorConfig
 import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
@@ -353,6 +356,11 @@ class GrailsDomainGenerator {
         if (naturalIdProblem != null) {
             return naturalIdProblem
         }
+        CacheFacets cache = cacheFacets(entity)
+        if (cache != null && CacheConcurrencyStrategy.parse(cache.usage()) == null) {
+            return "Entity [${entity.name}] states the cache usage [${cache.usage()}], which is none of read-only, read-write, " +
+                    'nonstrict-read-write and transactional, the strategies @Cache can state'
+        }
         for (HibernatePersistentProperty property : entity.persistentPropertiesToBind) {
             if (!supports(property)) {
                 return unsupportedReason(entity, property)
@@ -490,6 +498,23 @@ class GrailsDomainGenerator {
                 mapping != null && mapping.dynamicUpdate,
                 mapping?.batchSize != null ? mapping.batchSize : 0,
                 sharesTable ? null : entity.comment)
+    }
+
+    /**
+     * Decides the second-level cache of a root entity as {@code RootPersistentClassCommonValuesBinder} configures it: only a
+     * cache that the mapping enables, only on the root (the cache of a subclass is not read, and Hibernate refuses
+     * {@code @Cache} on one), with the usage of the mapping, lazy properties included unless the mapping says {@code non-lazy},
+     * and the class immutable for the {@code read-only} usage.
+     *
+     * @return the facets, or {@code null} when the entity is not a root or its mapping enables no cache
+     */
+    CacheFacets cacheFacets(GrailsHibernatePersistentEntity entity) {
+        CacheConfig cache = entity.isRoot() ? entity.hibernateMappedForm?.cache : null
+        if (cache == null || !cache.enabled) {
+            return null
+        }
+        String usage = cache.usage.toString()
+        return new CacheFacets(usage, !'non-lazy'.equalsIgnoreCase(cache.include.toString()), !'read-only'.equalsIgnoreCase(usage))
     }
 
     /**
@@ -1739,6 +1764,17 @@ class GrailsDomainGenerator {
         }
         if (facets.comment()) {
             annotations << AnnotationDescription.Builder.ofType(Comment).define('value', facets.comment()).build()
+        }
+        CacheFacets cache = cacheFacets(entity)
+        if (cache != null) {
+            annotations << AnnotationDescription.Builder.ofType(Cacheable).build()
+            annotations << AnnotationDescription.Builder.ofType(Cache)
+                    .define('usage', CacheConcurrencyStrategy.parse(cache.usage()))
+                    .define('includeLazy', cache.includeLazy())
+                    .build()
+            if (!cache.mutable()) {
+                annotations << AnnotationDescription.Builder.ofType(Immutable).build()
+            }
         }
         TenantFacets tenant = tenantFacets(entity)
         if (tenant != null) {

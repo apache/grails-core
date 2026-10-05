@@ -137,6 +137,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         Map<String, Integer> associations = [:].withDefault { 0 }
         Map<String, Integer> constraints = [:].withDefault { 0 }
         Map<String, Integer> naturals = [:].withDefault { 0 }
+        Map<String, Integer> caches = [:].withDefault { 0 }
 
         when:
         for (List<Class<?>> group : groups) {
@@ -168,6 +169,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                         }
                         if (generator.generationProblem(entity) == null) {
                             mismatches.addAll(compareNaturalId(entity, generator.naturalIdFacets(entity), naturals))
+                            mismatches.addAll(compareCache(entity, generator.cacheFacets(entity), caches))
                         }
                     }
                     mismatches.addAll(compareTenantFilter(entity, generator, (SessionFactoryImplementor) datastore.sessionFactory, skipped, tenants))
@@ -300,6 +302,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         report << "tenant filters compared: ${tenants}\n"
         report << "table constraints compared: ${constraints}\n"
         report << "natural ids compared: ${naturals}\n"
+        report << "entity caches compared: ${caches}\n"
         report << "id generators compared by strategy: ${strategies}\n"
         report << "entities compared by hierarchy role: ${hierarchies}\n"
         report << "hierarchies read back through Hibernate's annotation binder: ${annotationRead}\n"
@@ -398,6 +401,51 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             found << "${where} uniqueKeys: generator=${generatedKeys} binder=${boundKeys}".toString()
         }
         return found
+    }
+
+    /**
+     * The second-level cache of the root: the concurrency strategy, whether the class is cached and mutable, and whether lazy
+     * properties are cached, or none of it when the generator states no cache.
+     */
+    private List<String> compareCache(GrailsHibernatePersistentEntity entity, CacheFacets facets, Map<String, Integer> caches) {
+        if (!(entity.persistentClass instanceof RootClass)) {
+            return facets == null ? [] : ["${entity.name} cache: generator=${facets} binder=not a root".toString()]
+        }
+        RootClass root = (RootClass) entity.persistentClass
+        String where = "${entity.name} cache"
+        if (facets == null) {
+            return root.cacheConcurrencyStrategy == null && root.mutable ? [] :
+                    ["${where}: generator=none binder=${root.cacheConcurrencyStrategy} mutable=${root.mutable}".toString()]
+        }
+        caches[facets.usage()]++
+        Map<String, List> pairs = [
+                usage      : [facets.usage(), root.cacheConcurrencyStrategy],
+                cached     : [true, root.cached],
+                mutable    : [facets.mutable(), root.mutable],
+                includeLazy: [facets.includeLazy(), root.lazyPropertiesCacheable],
+        ]
+        return pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
+            "${where} ${facet}: generator=${values[0]} binder=${values[1]}".toString()
+        }
+    }
+
+    /**
+     * The cache Hibernate's annotation binder reads from {@code @Cacheable}, {@code @Cache} and {@code @Immutable}: the same
+     * strategy, the same mutability and the same treatment of lazy properties as the binder bound.
+     */
+    private static List<String> compareAnnotatedCache(String where, RootClass bound, RootClass annotated) {
+        // an annotated class has a default strategy and lazy-property setting that mean nothing while it is not cached
+        Map<String, List> pairs = [
+                cached : [bound.cached, annotated.cached],
+                mutable: [bound.mutable, annotated.mutable],
+        ]
+        if (bound.cached) {
+            pairs.usage = [bound.cacheConcurrencyStrategy, annotated.cacheConcurrencyStrategy]
+            pairs.includeLazy = [bound.lazyPropertiesCacheable, annotated.lazyPropertiesCacheable]
+        }
+        return pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
+            "${where} cache ${facet}: generator=${values[1]} binder=${values[0]}".toString()
+        }
     }
 
     /**
@@ -1095,6 +1143,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         if (bound instanceof RootClass) {
             found.addAll(compareAnnotatedDiscriminator(where, (RootClass) bound, (RootClass) annotated))
             found.addAll(compareAnnotatedNaturalId(where, bound, annotated, known))
+            found.addAll(compareAnnotatedCache(where, (RootClass) bound, (RootClass) annotated))
         }
         if (pairs.ownsTable[0]) {
             found.addAll(compareAnnotatedConstraints(where, bound, annotated))
