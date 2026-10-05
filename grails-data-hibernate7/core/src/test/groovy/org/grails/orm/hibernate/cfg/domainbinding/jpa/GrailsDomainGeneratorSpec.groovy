@@ -26,10 +26,14 @@ import java.lang.reflect.Field
 
 import grails.gorm.annotation.Entity
 import grails.gorm.tests.HibernateGormDatastoreSpec
+import jakarta.persistence.AttributeOverride
+import jakarta.persistence.AttributeOverrides
 import jakarta.persistence.Column
 import jakarta.persistence.DiscriminatorColumn
 import jakarta.persistence.DiscriminatorType
 import jakarta.persistence.DiscriminatorValue
+import jakarta.persistence.Embeddable
+import jakarta.persistence.Embedded
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.Id
@@ -72,6 +76,8 @@ import org.hibernate.boot.registry.StandardServiceRegistry
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder
 import org.hibernate.dialect.H2Dialect
 import org.hibernate.mapping.BasicValue
+import org.hibernate.mapping.Component
+import org.hibernate.mapping.Property
 import org.hibernate.type.CustomType
 import org.hibernate.type.descriptor.WrapperOptions
 import org.hibernate.usertype.ParameterizedType
@@ -83,6 +89,8 @@ import java.sql.Types
 
 import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
 import org.grails.orm.hibernate.cfg.IdentityEnumType
+import org.grails.orm.hibernate.cfg.PropertyConfig
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIdentityGenerator
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIncrementGenerator
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsNativeGenerator
@@ -112,7 +120,8 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
                 GenIdIncrement, GenIdIdentity, GenIdNative, GenAnimal, GenDog, GenPuppy, GenCat, GenToy, GenPlushToy, GenGadget,
                 GenGizmo, GenCoded, GenCodedChild, GenFormulaRoot, GenFormulaChild, GenAbstractBase, GenConcreteChild, GenNoted, GenNotedChild,
                 GenJoinedVehicle, GenJoinedCar, GenJoinedSportsCar, GenJoinedSedan, GenJoinedKeyed, GenJoinedKeyedChild,
-                GenFleetVehicle, GenFleetCar, GenFleetSportsCar, GenFleetSedan, GenUnionBase, GenUnionLeaf, GenUnionMiddle, GenUnionBottom)
+                GenFleetVehicle, GenFleetCar, GenFleetSportsCar, GenFleetSedan, GenUnionBase, GenUnionLeaf, GenUnionMiddle, GenUnionBottom,
+                GenEmbedOwner, GenEmbedOther, GenEmbedBase, GenEmbedChild, GenEmbedBadHolder, GenEmbedFormulaOwner)
     }
 
     List<StandardServiceRegistry> registries = []
@@ -783,6 +792,175 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         getPersistentEntity(GenAnimal).persistentClass.discriminator.selectables*.text == ['class']
     }
 
+    void "an embedded property is an @Embedded field whose type is a generated @Embeddable of the embedded type"() {
+        given:
+        Class<?> owner = generate(GenEmbedOwner)
+        Class<?> address = owner.getDeclaredField('home').type
+
+        expect:
+        owner.getDeclaredField('home').isAnnotationPresent(Embedded)
+        address.isAnnotationPresent(Embeddable)
+        !address.isAnnotationPresent(jakarta.persistence.Entity)
+        address.name == 'org.grails.orm.hibernate.generated.org_grails_orm_hibernate_cfg_domainbinding_jpa_GenEmbedAddress_Embeddable'
+        address.declaredFields*.name.toSet() == ['street', 'city', 'kind', 'label', 'zip'].toSet()
+        address.getDeclaredField('city').getAnnotation(Column).length() == 40
+        address.getDeclaredField('zip').isAnnotationPresent(Embedded)
+        address.getDeclaredField('zip').type.declaredFields*.name.toSet() == ['code', 'plus'].toSet()
+        address.getDeclaredField('kind').getAnnotation(Enumerated).value() == EnumType.STRING
+    }
+
+    void "owners that embed the same type share one embeddable class"() {
+        when:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateHierarchy(GenEmbedOwner, GenEmbedOther)
+        Class<?> owner = classes[entity(GenEmbedOwner)]
+        Class<?> other = classes[entity(GenEmbedOther)]
+
+        then:
+        owner.getDeclaredField('home').type.is(owner.getDeclaredField('work').type)
+        owner.getDeclaredField('home').type.is(other.getDeclaredField('office').type)
+        owner.getDeclaredField('home').type.classLoader.is(owner.classLoader)
+    }
+
+    void "the owner states every column of an embedded property with an attribute override named by the property path"() {
+        given:
+        Class<?> owner = generate(GenEmbedOwner)
+
+        when:
+        Map<String, Column> home = overrides(owner, 'home')
+        Map<String, Column> work = overrides(owner, 'work')
+
+        then: "a column is named from the path of the embedded property"
+        home.keySet() == ['street', 'city', 'kind', 'label', 'zip.code', 'zip.plus'].toSet()
+        home.street.name() == 'home_street'
+        home.city.name() == 'home_city'
+        home.kind.name() == 'home_kind'
+        home['zip.code'].name() == 'home_zip_code'
+        home['zip.plus'].name() == 'home_zip_plus'
+        work.city.name() == 'work_city'
+        work.street.name() == 'work_street'
+
+        and: "constraints reach the override, a column is only NOT NULL when the property and its embedded property say so"
+        home.city.length() == 40
+        !home.city.nullable()
+        work.city.nullable()
+        home.kind.nullable()
+        home['zip.code'].nullable()
+    }
+
+    void "a column the mapping names keeps that name, whatever the path of the embedded property"() {
+        when:
+        Map<String, Column> contact = overrides(generate(GenEmbedOther), 'contact')
+
+        then:
+        contact.phone.name() == 'phone_no'
+    }
+
+    void "an embedded property states the same overrides as the columns the binder bound"() {
+        given:
+        Class<?> owner = generate(GenEmbedOwner)
+        Component bound = (Component) getPersistentEntity(GenEmbedOwner).persistentClass.getProperty(embedded).value
+        Map<String, Column> overrides = overrides(owner, embedded)
+
+        expect:
+        bound.properties.collectMany { Property p ->
+            p.value instanceof Component ? ((Component) p.value).properties.collect { Property q -> [p.name + '.' + q.name, q] } : [[p.name, p]]
+        }.findAll { List entry -> !((Property) entry[1]).selectables.any { it.formula } }.every { List entry ->
+            org.hibernate.mapping.Column column = (org.hibernate.mapping.Column) ((Property) entry[1]).selectables[0]
+            Column override = overrides[(String) entry[0]]
+            override.name() == column.name && override.nullable() == column.nullable
+        }
+
+        where:
+        embedded << ['home', 'work']
+    }
+
+    void "an embedded property of a table-per-hierarchy subclass is always nullable"() {
+        when:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateHierarchy(GenEmbedBase, GenEmbedChild)
+        Map<String, Column> place = overrides(classes[entity(GenEmbedChild)], 'place')
+
+        then:
+        place.keySet() == ['code', 'plus'].toSet()
+        place.values().every { it.nullable() }
+        place.code.name() == 'place_code'
+    }
+
+    void "Hibernate's annotation binder reads the embedded columns as the binder builds them"() {
+        given:
+        Class<?> owner = generate(GenEmbedOwner)
+        Class<?> child = generateHierarchy(GenEmbedBase, GenEmbedChild).get(entity(GenEmbedChild))
+
+        when:
+        Metadata metadata = annotationMetadata([owner])
+        Component home = (Component) metadata.getEntityBinding(owner.name).getProperty('home').value
+        Component work = (Component) metadata.getEntityBinding(owner.name).getProperty('work').value
+        Component zip = (Component) home.getProperty('zip').value
+        Component boundHome = (Component) getPersistentEntity(GenEmbedOwner).persistentClass.getProperty('home').value
+
+        then:
+        home.properties*.name.toSet() == ['street', 'city', 'kind', 'label', 'zip'].toSet()
+        home.getProperty('street').selectables*.text == ['home_street']
+        home.getProperty('city').selectables*.text == ['home_city']
+        home.getProperty('city').columns*.nullable == [false]
+        home.getProperty('city').columns*.length == [40L]
+        zip.getProperty('code').selectables*.text == ['home_zip_code']
+        work.getProperty('city').selectables*.text == ['work_city']
+        work.getProperty('city').columns*.nullable == [true]
+        home.getProperty('label').selectables*.text == ['home_label']
+
+        and: "the binder bound the same columns"
+        boundHome.getProperty('city').selectables*.text == ['home_city']
+        ((Component) boundHome.getProperty('zip').value).getProperty('code').selectables*.text == ['home_zip_code']
+    }
+
+    void "a formula inside an embedded type is ignored by the binder, so the generator states a column for it"() {
+        given:
+        Class<?> embeddable = generate(GenEmbedFormulaOwner).getDeclaredField('described').type
+        Component bound = (Component) getPersistentEntity(GenEmbedFormulaOwner).persistentClass.getProperty('described').value
+
+        expect: "ConfigureDerivedPropertiesConsumer only runs for root and subclass entities, never for an embedded type"
+        embeddable.getDeclaredField('full').isAnnotationPresent(Column)
+        !embeddable.getDeclaredField('full').isAnnotationPresent(Formula)
+        bound.getProperty('full').selectables*.formula == [false]
+    }
+
+    void "a derived property of an embedded type is a formula with no column and no override"() {
+        given: "the binder never flags a property of an embedded type as derived, so the flag is set by hand"
+        GrailsHibernatePersistentEntity type = (GrailsHibernatePersistentEntity) entity(GenEmbedFormulaOwner).getHibernatePropertyByName('described').associatedEntity
+        PropertyConfig config = type.getHibernatePropertyByName('full').hibernateMappedForm
+        config.derived = true
+
+        when:
+        Class<?> owner = generate(GenEmbedFormulaOwner)
+        Class<?> embeddable = owner.getDeclaredField('described').type
+
+        then:
+        embeddable.getDeclaredField('full').getAnnotation(Formula).value() == "CONCAT(first, ' ', last)"
+        !embeddable.getDeclaredField('full').isAnnotationPresent(Column)
+        overrides(owner, 'described').keySet() == ['first', 'last'].toSet()
+        newGenerator().embeddedLeaves(entity(GenEmbedFormulaOwner).getHibernatePropertyByName('described') as HibernateEmbeddedProperty)
+                .find { it.path() == 'full' }.column() == null
+
+        cleanup:
+        config.derived = false
+    }
+
+    void "an embedded type with a property the generator does not support is rejected by name"() {
+        when:
+        generate(GenEmbedBadHolder)
+
+        then:
+        UnsupportedOperationException e = thrown()
+        e.message.contains('Embedded property [bad] of [' + GenEmbedBadHolder.name + ']')
+        e.message.contains('ref')
+        !newGenerator().supports(entity(GenEmbedBadHolder).getHibernatePropertyByName('bad'))
+    }
+
+    private Map<String, Column> overrides(Class<?> owner, String embedded) {
+        AttributeOverrides overrides = owner.getDeclaredField(embedded).getAnnotation(AttributeOverrides)
+        return overrides.value().collectEntries { AttributeOverride override -> [(override.name()): override.column()] }
+    }
+
     private Metadata annotationMetadata(Collection<Class<?>> classes) {
         BootstrapServiceRegistry bootstrap = new BootstrapServiceRegistryBuilder()
                 .applyClassLoader(classes.first().classLoader)
@@ -862,6 +1040,111 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
 
     private Field field(String name) {
         return generated.getDeclaredField(name)
+    }
+}
+
+@Entity
+class GenEmbedOwner {
+
+    String name
+    GenEmbedAddress home
+    GenEmbedAddress work
+
+    static embedded = ['home', 'work']
+
+    static constraints = {
+        home nullable: false
+    }
+}
+
+@Entity
+class GenEmbedOther {
+
+    GenEmbedAddress office
+    GenEmbedContact contact
+
+    static embedded = ['office', 'contact']
+}
+
+class GenEmbedAddress {
+
+    String street
+    String city
+    GenKind kind
+    String label
+    GenEmbedZip zip
+
+    static embedded = ['zip']
+
+    static constraints = {
+        city nullable: false, maxSize: 40
+    }
+
+}
+
+class GenEmbedContact {
+
+    String phone
+
+    static mapping = {
+        phone column: 'phone_no'
+    }
+}
+
+class GenEmbedZip {
+
+    String code
+    String plus
+}
+
+@Entity
+class GenEmbedBase {
+
+    String name
+}
+
+@Entity
+class GenEmbedChild extends GenEmbedBase {
+
+    GenEmbedZip place
+
+    static embedded = ['place']
+
+    static constraints = {
+        place nullable: false
+    }
+}
+
+@Entity
+class GenEmbedBadHolder {
+
+    GenEmbedBad bad
+
+    static embedded = ['bad']
+}
+
+class GenEmbedBad {
+
+    String text
+    GenBasic ref
+}
+
+@Entity
+class GenEmbedFormulaOwner {
+
+    GenEmbedFormulaType described
+
+    static embedded = ['described']
+}
+
+class GenEmbedFormulaType {
+
+    String first
+    String last
+    String full
+
+    static mapping = {
+        full formula: "CONCAT(first, ' ', last)"
     }
 }
 

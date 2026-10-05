@@ -22,10 +22,14 @@ import java.lang.annotation.Annotation
 import java.lang.reflect.Method
 
 import groovy.transform.CompileStatic
+import jakarta.persistence.AttributeOverride
+import jakarta.persistence.AttributeOverrides
 import jakarta.persistence.Column as JpaColumn
 import jakarta.persistence.DiscriminatorColumn
 import jakarta.persistence.DiscriminatorType
 import jakarta.persistence.DiscriminatorValue
+import jakarta.persistence.Embeddable
+import jakarta.persistence.Embedded
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
@@ -82,6 +86,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGenera
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceStyleGenerator
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsTableGenerator
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleIdentityProperty
@@ -148,6 +153,10 @@ class GrailsDomainGenerator {
      * derives the hierarchy from {@code extends}, so the class generated for a subclass extends the class
      * generated for its direct superclass.
      *
+     * <p>A GORM embedded property becomes an {@code @Embedded} field whose type is a generated {@code @Embeddable}
+     * class. Owners that embed the same type with the same properties share one embeddable class, and each owner
+     * states its own column names and nullability with {@code @AttributeOverride}s.</p>
+     *
      * <p>All the classes of one call are loaded together into a single new class loader whose parent is
      * {@code parent}: a subclass resolves its superclass by plain delegation inside that loader, and a Hibernate
      * registry that must load the classes by name needs only that one loader
@@ -172,13 +181,17 @@ class GrailsDomainGenerator {
         ordered.sort { GrailsHibernatePersistentEntity a, GrailsHibernatePersistentEntity b -> depth(a) <=> depth(b) }
 
         Map<GrailsHibernatePersistentEntity, DynamicType.Unloaded<?>> made = [:]
+        Map<String, DynamicType.Unloaded<?>> embeddables = [:]
         Map<TypeDescription, byte[]> types = [:]
         for (GrailsHibernatePersistentEntity entity : ordered) {
             TypeDescription superType = entity.isRoot() ?
                     TypeDescription.ForLoadedType.of(Object) : made.get(superEntity(entity, given)).typeDescription
-            DynamicType.Unloaded<?> unloaded = make(entity, superType)
+            DynamicType.Unloaded<?> unloaded = make(entity, superType, embeddables)
             made.put(entity, unloaded)
             types.putAll(unloaded.allTypes)
+        }
+        for (DynamicType.Unloaded<?> embeddable : embeddables.values()) {
+            types.putAll(embeddable.allTypes)
         }
         Map<TypeDescription, Class<?>> loaded = ClassLoadingStrategy.Default.WRAPPER.load(parent, types)
         Map<GrailsHibernatePersistentEntity, Class<?>> result = [:]
@@ -216,7 +229,8 @@ class GrailsDomainGenerator {
         return depth
     }
 
-    private DynamicType.Unloaded<?> make(GrailsHibernatePersistentEntity entity, TypeDescription superType) {
+    private DynamicType.Unloaded<?> make(
+            GrailsHibernatePersistentEntity entity, TypeDescription superType, Map<String, DynamicType.Unloaded<?>> embeddables) {
         HierarchyFacets hierarchy = hierarchyFacets(entity)
         DynamicType.Builder<Object> builder = (DynamicType.Builder<Object>) new ByteBuddy()
                 .subclass(superType)
@@ -226,19 +240,20 @@ class GrailsDomainGenerator {
             builder = builder.modifiers(Visibility.PUBLIC, TypeManifestation.ABSTRACT)
         }
         if (entity.isRoot()) {
-            builder = defineIdentityAndVersion(builder, entity)
+            builder = defineIdentityAndVersion(builder, entity, embeddables)
         }
         for (HibernatePersistentProperty property : entity.persistentPropertiesToBind) {
             if (!supports(property)) {
                 throw new UnsupportedOperationException(unsupportedReason(entity, property))
             }
-            builder = defineField(builder, property, [])
+            builder = defineField(builder, property, [], embeddables)
         }
         return builder.make()
     }
 
     private DynamicType.Builder<Object> defineIdentityAndVersion(
-            DynamicType.Builder<Object> builder, GrailsHibernatePersistentEntity entity) {
+            DynamicType.Builder<Object> builder, GrailsHibernatePersistentEntity entity,
+            Map<String, DynamicType.Unloaded<?>> embeddables) {
         HibernatePersistentProperty identity = (HibernatePersistentProperty) entity.identity
         if (!(identity instanceof HibernateSimpleIdentityProperty)) {
             throw new UnsupportedOperationException(
@@ -247,15 +262,24 @@ class GrailsDomainGenerator {
         }
         List<AnnotationDescription> idAnnotations = [AnnotationDescription.Builder.ofType(Id).build()]
         idAnnotations.addAll(idGeneratorAnnotations(idFacets(entity)))
-        DynamicType.Builder<Object> result = defineField(builder, identity, idAnnotations)
+        DynamicType.Builder<Object> result = defineField(builder, identity, idAnnotations, embeddables)
         HibernatePersistentProperty version = entity.version
         if (version != null) {
-            result = defineField(result, version, [AnnotationDescription.Builder.ofType(Version).build()])
+            result = defineField(result, version, [AnnotationDescription.Builder.ofType(Version).build()], embeddables)
         }
         return result
     }
 
-    private String unsupportedReason(GrailsHibernatePersistentEntity entity, HibernatePersistentProperty property) {
+    /**
+     * @return why {@link #generate} rejects the property, as the {@link UnsupportedOperationException} message names it
+     */
+    String unsupportedReason(GrailsHibernatePersistentEntity entity, HibernatePersistentProperty property) {
+        if (property instanceof HibernateEmbeddedProperty) {
+            String problem = embeddedProblem((HibernateEmbeddedProperty) property, [])
+            if (problem != null) {
+                return "Embedded property [${property.name}] of [${entity.name}]: ${problem}"
+            }
+        }
         if (property instanceof HibernateSimpleProperty && !decideType(property).supported) {
             return typeNotSupported(property, decideType(property).name)
         }
@@ -270,6 +294,11 @@ class GrailsDomainGenerator {
 
     static String generatedClassName(GrailsHibernatePersistentEntity entity) {
         return GENERATED_PACKAGE + '.' + entity.javaClass.name.replace('.', '_')
+    }
+
+    /** The name of the {@code @Embeddable} generated for an embedded type; distinct from an entity's generated name. */
+    static String generatedEmbeddableName(GrailsHibernatePersistentEntity type) {
+        return generatedClassName(type) + '_Embeddable'
     }
 
     /**
@@ -391,12 +420,16 @@ class GrailsDomainGenerator {
 
     /**
      * @return whether the generator can describe the property today: a plain single-column basic property, a
-     *     derived (formula) property, the version, an enum, or the simple identifier. Custom types,
-     *     multi-column properties and every association are not supported yet.
+     *     derived (formula) property, the version, an enum, an embedded object whose own properties are all
+     *     supported, or the simple identifier. Custom types, multi-column properties and every association are not
+     *     supported yet.
      */
     boolean supports(HibernatePersistentProperty property) {
         if (property instanceof HibernateSimpleIdentityProperty) {
             return property.hibernateOwner.isRoot()
+        }
+        if (property instanceof HibernateEmbeddedProperty) {
+            return embeddedProblem((HibernateEmbeddedProperty) property, []) == null
         }
         if (!(property instanceof HibernateSimpleProperty)) {
             return false
@@ -549,9 +582,97 @@ class GrailsDomainGenerator {
      */
     ColumnFacets columnFacets(HibernatePersistentProperty property) {
         if (property instanceof HibernateEnumProperty) {
-            return enumColumnFacets((HibernateEnumProperty) property)
+            return enumColumnFacets((HibernateEnumProperty) property, null)
         }
-        return basicColumnFacets(property)
+        return basicColumnFacets(property, null, null)
+    }
+
+    /**
+     * Decides the columns of an embedded property for the owner that declares it, the way {@code ComponentBinder}
+     * binds them: one leaf for every property of the embedded type, nested embedded types included, each named from
+     * the property path and nullable when the binder makes it so. A derived (formula) leaf has no column facets.
+     *
+     * @return the leaves in the order the binder binds them, each with its path relative to the embedded property
+     *     ({@code street}, or {@code zip.code} for a nested embedded type)
+     */
+    List<EmbeddedLeaf> embeddedLeaves(HibernateEmbeddedProperty property) {
+        List<EmbeddedLeaf> leaves = []
+        collectLeaves(property, '', '', [], leaves)
+        return leaves
+    }
+
+    private void collectLeaves(
+            HibernateEmbeddedProperty embedded, String binderPath, String relative,
+            List<HibernateEmbeddedProperty> chain, List<EmbeddedLeaf> leaves) {
+        String currentPath = binderPath.isEmpty() ? embedded.name : "${binderPath}.${embedded.name}".toString()
+        List<HibernateEmbeddedProperty> enclosing = new ArrayList<HibernateEmbeddedProperty>(chain)
+        enclosing << embedded
+        for (HibernatePersistentProperty peer : embeddedPeers(embedded)) {
+            String path = relative.isEmpty() ? peer.name : "${relative}.${peer.name}".toString()
+            if (peer instanceof HibernateEmbeddedProperty) {
+                collectLeaves((HibernateEmbeddedProperty) peer, currentPath, path, enclosing, leaves)
+            } else if (isDerived(peer)) {
+                leaves << new EmbeddedLeaf(path, peer, null)
+            } else {
+                leaves << new EmbeddedLeaf(path, peer, componentColumnFacets(peer, embedded, currentPath, enclosing))
+            }
+        }
+    }
+
+    /**
+     * The facets of one column of a component: the binder's own column rules with the component path in the name and
+     * the parent property's nullability, then {@code ComponentUpdater}'s rule that makes the columns of every
+     * enclosing component nullable when that component is.
+     */
+    private ColumnFacets componentColumnFacets(
+            HibernatePersistentProperty peer, HibernateEmbeddedProperty parent, String path,
+            List<HibernateEmbeddedProperty> enclosing) {
+        ColumnFacets facets = peer instanceof HibernateEnumProperty ?
+                enumColumnFacets((HibernateEnumProperty) peer, path) : basicColumnFacets(peer, path, parent)
+        boolean nullable = facets.nullable() || enclosing.any { HibernateEmbeddedProperty e ->
+            e.hibernateOwner.isComponentPropertyNullable(e)
+        }
+        return new ColumnFacets(
+                facets.name(), nullable, facets.unique(), facets.insertable(), facets.updatable(), facets.length(),
+                facets.precision(), facets.scale(), facets.sqlType(), facets.defaultValue(), facets.read(),
+                facets.write(), facets.comment())
+    }
+
+    /** The properties {@code ComponentBinder} binds for an embedded property: the embedded type's, minus the owner's. */
+    private static List<HibernatePersistentProperty> embeddedPeers(HibernateEmbeddedProperty property) {
+        GrailsHibernatePersistentEntity type = (GrailsHibernatePersistentEntity) property.associatedEntity
+        return type.getHibernatePersistentProperties(property.owner.javaClass)
+    }
+
+    /**
+     * @return why the generator cannot describe the embedded property, or {@code null} when it can: every property of
+     *     the embedded type, nested embedded types included, must be supported, the embedded type must not extend
+     *     another persistent class, and embedded types must not contain each other
+     */
+    private String embeddedProblem(HibernateEmbeddedProperty property, List<Class<?>> visiting) {
+        GrailsHibernatePersistentEntity type = (GrailsHibernatePersistentEntity) property.associatedEntity
+        if (type == null) {
+            return 'the embedded type is unknown'
+        }
+        if (!type.isRoot()) {
+            return "the embedded type [${type.name}] extends another persistent class"
+        }
+        if (visiting.contains(type.javaClass)) {
+            return "the embedded type [${type.name}] contains itself"
+        }
+        List<Class<?>> path = new ArrayList<Class<?>>(visiting)
+        path << type.javaClass
+        for (HibernatePersistentProperty peer : embeddedPeers(property)) {
+            if (peer instanceof HibernateEmbeddedProperty) {
+                String problem = embeddedProblem((HibernateEmbeddedProperty) peer, path)
+                if (problem != null) {
+                    return problem
+                }
+            } else if (!supports(peer)) {
+                return unsupportedReason(type, peer)
+            }
+        }
+        return null
     }
 
     /**
@@ -569,7 +690,7 @@ class GrailsDomainGenerator {
         }
     }
 
-    private ColumnFacets basicColumnFacets(HibernatePersistentProperty property) {
+    private ColumnFacets basicColumnFacets(HibernatePersistentProperty property, String path, HibernatePersistentProperty parent) {
         PropertyConfig mappedForm = property.hibernateMappedForm
         ColumnConfig columnConfig = firstColumnConfig(mappedForm)
 
@@ -581,26 +702,26 @@ class GrailsDomainGenerator {
             column.customRead = columnConfig.read
             column.customWrite = columnConfig.write
         }
-        String name = columnNames.getColumnNameForPropertyAndPath(property, null, columnConfig)
+        String name = columnNames.getColumnNameForPropertyAndPath(property, path, columnConfig)
         Class<?> type = property.type
         if (type != null && (String.isAssignableFrom(type) || byte[].isAssignableFrom(type))) {
             stringConstraints.bindStringColumnConstraints(column, mappedForm, property.typeName)
         } else if (type != null && Number.isAssignableFrom(type)) {
             numericConstraints.bindNumericColumnConstraints(column, columnConfig, mappedForm, type)
         }
-        return facets(property, column, name, isNullable(property),
+        return facets(property, column, name, isNullable(property, parent),
                 mappedForm.isUnique() && !mappedForm.isUniqueWithinGroup(), true)
     }
 
     /** Mirrors {@code EnumTypeBinder}: only the column config rules apply, and the column config's own uniqueness. */
-    private ColumnFacets enumColumnFacets(HibernateEnumProperty property) {
+    private ColumnFacets enumColumnFacets(HibernateEnumProperty property, String path) {
         PropertyConfig mappedForm = property.hibernateMappedForm
         Column column = new Column()
         ColumnConfig columnConfig = firstColumnConfig(mappedForm)
         if (columnConfig != null) {
             columnConfigBinder.bindColumnConfigToColumn(column, columnConfig, mappedForm)
         }
-        String name = property.resolveEnumColumnName(namingStrategy, columnNames, null)
+        String name = property.resolveEnumColumnName(namingStrategy, columnNames, path)
         return facets(property, column, name, property.isEnumColumnNullable(), column.unique, false)
     }
 
@@ -701,7 +822,11 @@ class GrailsDomainGenerator {
     }
 
     private DynamicType.Builder<Object> defineField(
-            DynamicType.Builder<Object> builder, HibernatePersistentProperty property, List<AnnotationDescription> extra) {
+            DynamicType.Builder<Object> builder, HibernatePersistentProperty property, List<AnnotationDescription> extra,
+            Map<String, DynamicType.Unloaded<?>> embeddables) {
+        if (property instanceof HibernateEmbeddedProperty) {
+            return defineEmbeddedField(builder, (HibernateEmbeddedProperty) property, embeddables, true)
+        }
         List<AnnotationDescription> annotations = new ArrayList<>(extra)
         if (isDerived(property)) {
             annotations << AnnotationDescription.Builder.ofType(Formula).define('value', property.hibernateMappedForm.formula).build()
@@ -721,6 +846,70 @@ class GrailsDomainGenerator {
         }
         return builder.defineField(property.name, property.type, Visibility.PRIVATE)
                 .annotateField(annotations as AnnotationDescription[])
+    }
+
+    /**
+     * An embedded property is an {@code @Embedded} field of the generated embeddable type. The owner states every
+     * column of the embedded type with {@code @AttributeOverride}, because the names and the nullability depend on the
+     * owner (path prefix, parent property, table-per-hierarchy subclass); a nested embedded field inside the
+     * embeddable states none, the owner's overrides reach it by their dotted path.
+     */
+    private DynamicType.Builder<Object> defineEmbeddedField(
+            DynamicType.Builder<Object> builder, HibernateEmbeddedProperty property,
+            Map<String, DynamicType.Unloaded<?>> embeddables, boolean withOverrides) {
+        TypeDescription embeddable = embeddable(property, embeddables)
+        List<AnnotationDescription> annotations = [AnnotationDescription.Builder.ofType(Embedded).build()]
+        if (withOverrides) {
+            List<AnnotationDescription> overrides = embeddedLeaves(property)
+                    .findAll { EmbeddedLeaf leaf -> leaf.column() != null }
+                    .collect { EmbeddedLeaf leaf ->
+                        AnnotationDescription.Builder.ofType(AttributeOverride)
+                                .define('name', leaf.path())
+                                .define('column', columnAnnotation(leaf.column()))
+                                .build()
+                    }
+            if (!overrides.isEmpty()) {
+                annotations << AnnotationDescription.Builder.ofType(AttributeOverrides)
+                        .defineAnnotationArray('value', TypeDescription.ForLoadedType.of(AttributeOverride),
+                                overrides as AnnotationDescription[])
+                        .build()
+            }
+        }
+        return builder.defineField(property.name, embeddable, Visibility.PRIVATE)
+                .annotateField(annotations as AnnotationDescription[])
+    }
+
+    /**
+     * The generated {@code @Embeddable} for an embedded property, shared by every owner that embeds the same type with
+     * the same properties. Its fields carry the properties' own facets (no path, no parent); the owners' overrides
+     * replace the columns.
+     */
+    private TypeDescription embeddable(HibernateEmbeddedProperty property, Map<String, DynamicType.Unloaded<?>> embeddables) {
+        GrailsHibernatePersistentEntity type = (GrailsHibernatePersistentEntity) property.associatedEntity
+        List<HibernatePersistentProperty> peers = embeddedPeers(property)
+        String key = [type.javaClass.name, peers*.name.join(',')].join('|')
+        DynamicType.Unloaded<?> existing = embeddables.get(key)
+        if (existing != null) {
+            return existing.typeDescription
+        }
+        String base = generatedEmbeddableName(type)
+        String name = base
+        int variant = 1
+        while (embeddables.values().any { DynamicType.Unloaded<?> other -> other.typeDescription.name == name }) {
+            name = base + '_' + (++variant)
+        }
+        DynamicType.Builder<Object> builder = (DynamicType.Builder<Object>) new ByteBuddy()
+                .subclass(Object)
+                .name(name)
+                .annotateType(AnnotationDescription.Builder.ofType(Embeddable).build())
+        for (HibernatePersistentProperty peer : peers) {
+            builder = peer instanceof HibernateEmbeddedProperty ?
+                    defineEmbeddedField(builder, (HibernateEmbeddedProperty) peer, embeddables, false) :
+                    defineField(builder, peer, [], embeddables)
+        }
+        DynamicType.Unloaded<?> unloaded = builder.make()
+        embeddables.put(key, unloaded)
+        return unloaded.typeDescription
     }
 
     /**
@@ -775,7 +964,10 @@ class GrailsDomainGenerator {
     }
 
     private AnnotationDescription columnAnnotation(HibernatePersistentProperty property) {
-        ColumnFacets facets = columnFacets(property)
+        return columnAnnotation(columnFacets(property))
+    }
+
+    private static AnnotationDescription columnAnnotation(ColumnFacets facets) {
         AnnotationDescription.Builder annotation = AnnotationDescription.Builder.ofType(JpaColumn)
                 .define('name', facets.name())
                 .define('nullable', facets.nullable())
@@ -851,7 +1043,7 @@ class GrailsDomainGenerator {
         return property.hibernateMappedForm.derived && !(property instanceof HibernateEnumProperty)
     }
 
-    private static boolean isNullable(HibernatePersistentProperty property) {
+    private static boolean isNullable(HibernatePersistentProperty property, HibernatePersistentProperty parent) {
         if (property instanceof HibernateSimpleIdentityProperty) {
             return false
         }
@@ -859,6 +1051,6 @@ class GrailsDomainGenerator {
             Mapping mapping = property.hibernateOwner.hibernateMappedForm
             return mapping != null && mapping.tablePerHierarchy ? true : property.nullable
         }
-        return property.nullable
+        return property.nullable || (parent != null && parent.nullable)
     }
 }
