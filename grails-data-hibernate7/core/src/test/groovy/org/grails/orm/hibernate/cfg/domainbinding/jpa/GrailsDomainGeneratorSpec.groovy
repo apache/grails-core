@@ -43,7 +43,11 @@ import jakarta.persistence.Id
 import jakarta.persistence.Inheritance
 import jakarta.persistence.InheritanceType
 import jakarta.persistence.JoinColumn
+import jakarta.persistence.ManyToMany
 import jakarta.persistence.ManyToOne
+import jakarta.persistence.OneToMany
+import jakarta.persistence.OrderBy
+import jakarta.persistence.JoinTable
 import jakarta.persistence.MapKeyColumn
 import jakarta.persistence.OrderColumn
 import jakarta.persistence.PrimaryKeyJoinColumn
@@ -144,7 +148,8 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
                 GenJoinedVehicle, GenJoinedCar, GenJoinedSportsCar, GenJoinedSedan, GenJoinedKeyed, GenJoinedKeyedChild,
                 GenFleetVehicle, GenFleetCar, GenFleetSportsCar, GenFleetSedan, GenUnionBase, GenUnionLeaf, GenUnionMiddle, GenUnionBottom,
                 GenEmbedOwner, GenEmbedOther, GenEmbedBase, GenEmbedChild, GenEmbedBadHolder, GenEmbedFormulaOwner, GenCollSingle, GenCollKinds, GenCollLazy,
-                GenFkTarget, GenFkOwned, GenFkOwner, GenFkCascades, GenFkNodeA, GenFkNodeB, GenFkHasOneOwner, GenFkHasOneDetail, GenOneFace, GenOneNose, GenFkManyOne, GenFkOneSide, GenFkSub, GenFkSubRoot)
+                GenFkTarget, GenFkOwned, GenFkOwner, GenFkCascades, GenFkNodeA, GenFkNodeB, GenFkHasOneOwner, GenFkHasOneDetail, GenOneFace, GenOneNose, GenFkManyOne, GenFkOneSide, GenFkSub, GenFkSubRoot,
+                GenOmParent, GenOmChild, GenOmListed, GenOmOrdered, GenOmOrphan, GenOmFetched, GenOmTag, GenOmStep, GenOmKept, GenOmSortedOwner)
     }
 
     List<StandardServiceRegistry> registries = []
@@ -1449,6 +1454,204 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         !owner.getProperty('plain').columns[0].unique
     }
 
+    void "a bidirectional collection is the inverse @OneToMany of the foreign key on the other side, with the binder's cascade"() {
+        given:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateOmGroup()
+        Field children = classes[entity(GenOmParent)].getDeclaredField('children')
+
+        expect:
+        children.genericType.typeName == "java.util.Set<${classes[entity(GenOmChild)].name}>"
+        children.getAnnotation(OneToMany).mappedBy() == 'parent'
+        children.getAnnotation(OneToMany).fetch() == FetchType.LAZY
+        children.getAnnotation(OneToMany).cascade().toList() == [jakarta.persistence.CascadeType.ALL]
+        !children.getAnnotation(OneToMany).orphanRemoval()
+        children.getAnnotation(Fetch).value() == FetchMode.SELECT
+        !children.isAnnotationPresent(JoinColumn)
+        !children.isAnnotationPresent(JoinTable)
+        !children.isAnnotationPresent(OrderColumn)
+        !children.isAnnotationPresent(OrderBy)
+    }
+
+    void "the many-to-one on the other side of a bidirectional collection is generated with the foreign key the collection is mapped by"() {
+        given:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateOmGroup()
+        Field parent = classes[entity(GenOmChild)].getDeclaredField('parent')
+
+        expect:
+        parent.type == classes[entity(GenOmParent)]
+        parent.getAnnotation(JoinColumn).name() == 'parent_id'
+    }
+
+    void "a bidirectional list is owned by the collection: the foreign key is its join column and the index a column of the target table"() {
+        given:
+        Field listed = generateOmGroup()[entity(GenOmParent)].getDeclaredField('listed')
+
+        expect:
+        listed.getAnnotation(OneToMany).mappedBy() == ''
+        listed.getAnnotation(JoinColumn).name() == 'parent_id'
+        listed.getAnnotation(JoinColumn).nullable()
+        listed.getAnnotation(OrderColumn).name() == 'listed_idx'
+        listed.getAnnotation(OrderColumn).nullable()
+        listed.genericType.typeName.startsWith('java.util.List<')
+    }
+
+    void "a unidirectional collection is a @ManyToMany with the join table the binder names"() {
+        given:
+        Field tags = generateOmGroup()[entity(GenOmParent)].getDeclaredField('tags')
+
+        expect:
+        tags.isAnnotationPresent(ManyToMany)
+        !tags.isAnnotationPresent(OneToMany)
+        tags.getAnnotation(JoinTable).name() == 'gen_om_parent_gen_om_tag'
+        tags.getAnnotation(JoinTable).joinColumns()*.name() == ['gen_om_parent_tags_id']
+        tags.getAnnotation(JoinTable).inverseJoinColumns()*.name() == ['gen_om_tag_id']
+        tags.getAnnotation(ManyToMany).fetch() == FetchType.LAZY
+        tags.getAnnotation(ManyToMany).cascade().toList() ==
+                [jakarta.persistence.CascadeType.PERSIST, jakarta.persistence.CascadeType.MERGE]
+    }
+
+    void "a join table mapping names the table, the key column and the element column"() {
+        given:
+        Field labels = generateOmGroup()[entity(GenOmParent)].getDeclaredField('labels')
+
+        expect:
+        labels.getAnnotation(JoinTable).name() == 'gen_om_label'
+        labels.getAnnotation(JoinTable).joinColumns()*.name() == ['owner_ref']
+        labels.getAnnotation(JoinTable).inverseJoinColumns()*.name() == ['tag_ref']
+    }
+
+    void "a unidirectional list has an order column in the join table"() {
+        given:
+        Field steps = generateOmGroup()[entity(GenOmParent)].getDeclaredField('steps')
+
+        expect:
+        steps.isAnnotationPresent(ManyToMany)
+        steps.getAnnotation(OrderColumn).name() == 'position'
+        steps.genericType.typeName.startsWith('java.util.List<')
+    }
+
+    void "the sort and order of a collection are an @OrderBy"() {
+        given:
+        Field ordered = generateOmGroup()[entity(GenOmParent)].getDeclaredField('ordered')
+
+        expect:
+        ordered.getAnnotation(OrderBy).value() == 'name desc'
+    }
+
+    void "the fetch, batch size and cache of a collection of entities are the mapping's"() {
+        given:
+        Field fetched = generateOmGroup()[entity(GenOmParent)].getDeclaredField('fetched')
+
+        expect:
+        fetched.getAnnotation(OneToMany).fetch() == FetchType.EAGER
+        fetched.getAnnotation(Fetch).value() == FetchMode.JOIN
+        fetched.getAnnotation(BatchSize).size() == 5
+        fetched.getAnnotation(Cache).usage() == CacheConcurrencyStrategy.READ_WRITE
+    }
+
+    void "orphan removal is stated on a @OneToMany and as Hibernate's orphan cascade on a @ManyToMany"() {
+        given:
+        Class<?> parent = generateOmGroup()[entity(GenOmParent)]
+
+        expect:
+        parent.getDeclaredField('orphans').getAnnotation(OneToMany).orphanRemoval()
+        parent.getDeclaredField('orphans').getAnnotation(OneToMany).cascade().toList() == [jakarta.persistence.CascadeType.ALL]
+        !parent.getDeclaredField('kept').isAnnotationPresent(OneToMany)
+        parent.getDeclaredField('kept').getAnnotation(Cascade).value().toList() == [org.hibernate.annotations.CascadeType.DELETE_ORPHAN]
+        parent.getDeclaredField('kept').getAnnotation(ManyToMany).cascade().toList() == [jakarta.persistence.CascadeType.ALL]
+    }
+
+    void "a collection of entities is rejected by name when its target is not part of the call"() {
+        when:
+        newGenerator().generateAll([entity(GenOmParent)], getClass().classLoader)
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message.contains('[' + GenOmParent.name + ']')
+        e.message.contains('generateAll')
+    }
+
+    void "a sorted set of entities is a @SortNatural field of the exact declared type"() {
+        given:
+        Class<?> owner = generateGroup(GenOmSortedOwner, GenOmTag)[entity(GenOmSortedOwner)]
+        Field tags = owner.getDeclaredField('tags')
+
+        expect:
+        tags.genericType.typeName.startsWith('java.util.SortedSet<')
+        tags.isAnnotationPresent(org.hibernate.annotations.SortNatural)
+        tags.isAnnotationPresent(ManyToMany)
+    }
+
+    void "a map of entities and an extra-lazy collection are rejected by name"() {
+        given:
+        GrailsHibernatePersistentEntity entity = unbound(domain)
+        HibernatePersistentProperty property = entity.getHibernatePropertyByName(name)
+
+        expect:
+        !newGenerator().supports(property)
+        newGenerator().unsupportedReason(entity, property).contains(reason)
+
+        where:
+        domain          | name     | reason
+        GenOmMapOwner   | 'byName' | 'a map of entities'
+        GenOmLazyOwner  | 'tags'   | 'extra-lazy'
+    }
+
+    void "Hibernate's own annotation binder reads a bidirectional collection as an inverse one-to-many on the generated target"() {
+        given:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateOmGroup()
+        PersistentClass parent = annotationMetadata(classes.values()).getEntityBinding(classes[entity(GenOmParent)].name)
+        org.hibernate.mapping.Collection value = (org.hibernate.mapping.Collection) parent.getProperty(property).value
+
+        expect:
+        value.inverse == inverse
+        value.oneToMany
+        ((org.hibernate.mapping.OneToMany) value.element).referencedEntityName == classes[entity(target)].name
+        value.key.selectables*.text == ['parent_id']
+
+        where:
+        property   | target       | inverse
+        'children' | GenOmChild   | true
+        'ordered'  | GenOmOrdered | true
+        'orphans'  | GenOmOrphan  | true
+        'listed'   | GenOmListed  | false
+    }
+
+    void "Hibernate's own annotation binder reads a list owned through the foreign key with its index in the target table"() {
+        given:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateOmGroup()
+        PersistentClass parent = annotationMetadata(classes.values()).getEntityBinding(classes[entity(GenOmParent)].name)
+        org.hibernate.mapping.List value = (org.hibernate.mapping.List) parent.getProperty('listed').value
+
+        expect:
+        value.index.selectables*.text == ['listed_idx']
+        value.collectionTable.name == 'gen_om_listed'
+    }
+
+    void "Hibernate's own annotation binder reads a unidirectional collection as a join table of the binder's names"() {
+        given:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateOmGroup()
+        PersistentClass parent = annotationMetadata(classes.values()).getEntityBinding(classes[entity(GenOmParent)].name)
+        org.hibernate.mapping.Collection value = (org.hibernate.mapping.Collection) parent.getProperty(property).value
+
+        expect:
+        !value.oneToMany
+        !value.inverse
+        value.collectionTable.name == table
+        value.key.selectables*.text == [key]
+        value.element.selectables*.text == [element]
+        ((org.hibernate.mapping.ToOne) value.element).referencedEntityName == classes[entity(GenOmTag)].name
+
+        where:
+        property | table                       | key                      | element
+        'tags'   | 'gen_om_parent_gen_om_tag'  | 'gen_om_parent_tags_id'  | 'gen_om_tag_id'
+        'labels' | 'gen_om_label'              | 'owner_ref'              | 'tag_ref'
+    }
+
+    private Map<GrailsHibernatePersistentEntity, Class<?>> generateOmGroup() {
+        return generateGroup(GenOmParent, GenOmChild, GenOmListed, GenOmOrdered, GenOmOrphan, GenOmFetched, GenOmTag, GenOmStep, GenOmKept)
+    }
+
     private Map<GrailsHibernatePersistentEntity, Class<?>> generateGroup(Class<?>... domainClasses) {
         return newGenerator().generateAll(domainClasses.collect { entity(it) }, getClass().classLoader)
     }
@@ -2443,4 +2646,114 @@ class GenFkComposite implements Serializable {
 class GenFkCompositeRef {
 
     GenFkComposite target
+}
+
+@Entity
+class GenOmParent {
+
+    String name
+    Set<GenOmChild> children
+    List<GenOmListed> listed
+    Set<GenOmOrdered> ordered
+    Set<GenOmOrphan> orphans
+    Set<GenOmFetched> fetched
+    Set<GenOmTag> tags
+    Set<GenOmTag> labels
+    List<GenOmStep> steps
+    Set<GenOmKept> kept
+
+    static hasMany = [children: GenOmChild, listed: GenOmListed, ordered: GenOmOrdered, orphans: GenOmOrphan, fetched: GenOmFetched,
+                      tags: GenOmTag, labels: GenOmTag, steps: GenOmStep, kept: GenOmKept]
+
+    static mapping = {
+        ordered sort: 'name', order: 'desc'
+        orphans cascade: 'all-delete-orphan'
+        fetched fetch: 'join', batchSize: 5, cache: 'read-write'
+        labels joinTable: [name: 'gen_om_label', key: 'owner_ref', column: 'tag_ref']
+        steps indexColumn: [name: 'position']
+        kept cascade: 'all-delete-orphan'
+    }
+}
+
+@Entity
+class GenOmChild {
+
+    String name
+    GenOmParent parent
+
+    static belongsTo = [parent: GenOmParent]
+}
+
+@Entity
+class GenOmListed {
+
+    String name
+    GenOmParent parent
+}
+
+@Entity
+class GenOmOrdered {
+
+    String name
+    GenOmParent parent
+}
+
+@Entity
+class GenOmOrphan {
+
+    String name
+    GenOmParent parent
+}
+
+@Entity
+class GenOmFetched {
+
+    String name
+    GenOmParent parent
+}
+
+@Entity
+class GenOmTag {
+
+    String label
+}
+
+@Entity
+class GenOmStep {
+
+    String label
+}
+
+@Entity
+class GenOmKept {
+
+    String label
+}
+
+@Entity
+class GenOmMapOwner {
+
+    Map<String, GenOmTag> byName
+
+    static hasMany = [byName: GenOmTag]
+}
+
+@Entity
+class GenOmLazyOwner {
+
+    Set<GenOmTag> tags
+
+    static hasMany = [tags: GenOmTag]
+
+    static mapping = {
+        tags lazy: true
+    }
+}
+
+@Entity
+class GenOmSortedOwner {
+
+    SortedSet<GenOmTag> tags
+
+    static hasMany = [tags: GenOmTag]
 }

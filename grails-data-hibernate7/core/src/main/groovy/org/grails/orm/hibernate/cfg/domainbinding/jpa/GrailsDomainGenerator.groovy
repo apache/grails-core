@@ -42,9 +42,13 @@ import jakarta.persistence.Id
 import jakarta.persistence.Inheritance
 import jakarta.persistence.InheritanceType
 import jakarta.persistence.JoinColumn
+import jakarta.persistence.JoinTable as JpaJoinTable
+import jakarta.persistence.ManyToMany
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.MapKeyColumn
+import jakarta.persistence.OneToMany
 import jakarta.persistence.OneToOne
+import jakarta.persistence.OrderBy
 import jakarta.persistence.OrderColumn
 import jakarta.persistence.PrimaryKeyJoinColumn
 import jakarta.persistence.Table
@@ -81,6 +85,7 @@ import org.hibernate.annotations.NotFound
 import org.hibernate.annotations.NotFoundAction
 import org.hibernate.annotations.ParamDef
 import org.hibernate.annotations.Parameter
+import org.hibernate.annotations.SortNatural
 import org.hibernate.annotations.Type
 import org.hibernate.annotations.UuidGenerator
 import org.hibernate.id.uuid.UuidGenerator as HibernateUuidGenerator
@@ -118,11 +123,13 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedCol
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleIdentityProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateTenantIdProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyEntityProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToOneProperty
 import org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior
@@ -293,8 +300,8 @@ class GrailsDomainGenerator {
     static List<GrailsHibernatePersistentEntity> referencedEntities(GrailsHibernatePersistentEntity entity) {
         List<GrailsHibernatePersistentEntity> found = []
         for (HibernatePersistentProperty property : entity.persistentPropertiesToBind) {
-            if (property instanceof HibernateToOneProperty) {
-                GrailsHibernatePersistentEntity target = ((HibernateToOneProperty) property).hibernateAssociatedEntity
+            if (property instanceof HibernateToOneProperty || property instanceof HibernateToManyEntityProperty) {
+                GrailsHibernatePersistentEntity target = ((HibernateAssociation) property).hibernateAssociatedEntity
                 if (target != null && !found.any { GrailsHibernatePersistentEntity other -> other.javaClass == target.javaClass }) {
                     found << target
                 }
@@ -398,6 +405,12 @@ class GrailsDomainGenerator {
         }
         if (property instanceof HibernateToOneProperty) {
             String problem = toOneProblem((HibernateToOneProperty) property)
+            if (problem != null) {
+                return "Association property [${property.name}] of [${entity.name}]: ${problem}"
+            }
+        }
+        if (property instanceof HibernateOneToManyProperty) {
+            String problem = toManyProblem((HibernateOneToManyProperty) property)
             if (problem != null) {
                 return "Association property [${property.name}] of [${entity.name}]: ${problem}"
             }
@@ -558,6 +571,9 @@ class GrailsDomainGenerator {
         }
         if (property instanceof HibernateToOneProperty) {
             return toOneProblem((HibernateToOneProperty) property) == null
+        }
+        if (property instanceof HibernateOneToManyProperty) {
+            return toManyProblem((HibernateOneToManyProperty) property) == null
         }
         if (!(property instanceof HibernateSimpleProperty) && !(property instanceof HibernateTenantIdProperty)) {
             return false
@@ -829,7 +845,7 @@ class GrailsDomainGenerator {
      * collections (probed: two collections on one owner saved and reloaded empty, one collection persists). Hibernate's
      * annotation binder cannot state it either, a join column must be insertable and updatable alike.</p>
      */
-    private ColumnFacets collectionKeyFacets(HibernateBasicProperty property) {
+    private ColumnFacets collectionKeyFacets(HibernateToManyProperty property) {
         PropertyConfig mapped = property.hibernateMappedForm
         boolean updatable = true
         if (mapped.hasJoinKeyMapping()) {
@@ -889,7 +905,7 @@ class GrailsDomainGenerator {
      * Mirrors {@code ListSecondPassBinder} (a nullable index column named by {@code getIndexColumnName}) and
      * {@code MapSecondPassBinder} (the same name, plus the index column config's facets); {@code null} for a set or a bag.
      */
-    private ColumnFacets collectionIndexFacets(HibernateBasicProperty property, CollectionKind kind) {
+    private ColumnFacets collectionIndexFacets(HibernateToManyProperty property, CollectionKind kind) {
         if (!kind.indexed) {
             return null
         }
@@ -902,6 +918,128 @@ class GrailsDomainGenerator {
         return new ColumnFacets(
                 name, true, column.unique, true, true, column.length?.intValue(), column.precision?.intValue(),
                 column.scale?.intValue(), column.sqlType, null, null, null, null)
+    }
+
+    /**
+     * @return why the generator cannot describe the collection of entities, or {@code null} when it can
+     */
+    private String toManyProblem(HibernateOneToManyProperty property) {
+        PropertyConfig mapped = property.hibernateMappedForm
+        if (Map.isAssignableFrom(property.type)) {
+            return 'a map of entities, which the generator does not support yet'
+        }
+        CollectionKind kind = CollectionKind.of(property.type)
+        if (kind == null) {
+            return "the declared type [${property.type?.name}] is not one of Set, SortedSet, List or Collection, " +
+                    'the only ones the binder creates a collection for'
+        }
+        GrailsHibernatePersistentEntity target = property.hibernateAssociatedEntity
+        if (target == null) {
+            return 'the associated entity is unknown'
+        }
+        if (compositeIdentifier(target) || compositeIdentifier(property.hibernateOwner)) {
+            return 'the owner or the associated entity has a composite identifier: the key and element columns have one column for ' +
+                    'each identifier property, named and ordered from the identifier'
+        }
+        if (mapped.type != null) {
+            return 'a type is mapped on the collection property itself, which the binder applies to the collection and its element alike'
+        }
+        if (mapped.lazy == Boolean.TRUE) {
+            return 'an explicit lazy: true makes the binder bind an extra-lazy collection, which Hibernate 7 annotations cannot state'
+        }
+        if (property.bidirectional) {
+            if (!(property.hibernateInverseSide instanceof HibernateManyToOneProperty)) {
+                return "the other side [${property.hibernateInverseSide?.name}] is not a many-to-one"
+            }
+        } else {
+            if (mapped.joinTable.keys != null && mapped.joinTable.keys.size() > 1) {
+                return 'the join table has a composite key'
+            }
+            ColumnFacets key = collectionKeyFacets(property)
+            if (key.length() != null || key.precision() != null || key.scale() != null || key.defaultValue() != null ||
+                    key.read() != null || key.write() != null || key.comment() != null) {
+                return 'the column config of the collection property sets a length, a precision, a scale, a default, a read or ' +
+                        'write expression or a comment, which a join column cannot state'
+            }
+        }
+        if (kind == CollectionKind.LIST && property.getIndexColumnType('integer') != 'integer') {
+            return "the index column type [${property.getIndexColumnType('integer')}] is not integer"
+        }
+        if (property.hasSort()) {
+            if (kind == CollectionKind.LIST) {
+                return 'a list with a default sort: an indexed list is ordered by its index column'
+            }
+            HibernatePersistentProperty sortBy = target.getHibernatePropertyByName(property.sort)
+            if (!(sortBy instanceof HibernateSimpleProperty) && !(sortBy instanceof HibernateEnumProperty) || isDerived(sortBy)) {
+                return "the sort property [${property.sort}] of [${target.name}] is not a plain column"
+            }
+        }
+        return null
+    }
+
+    private static boolean compositeIdentifier(GrailsHibernatePersistentEntity entity) {
+        GrailsHibernatePersistentEntity root = entity.hibernateRootEntity
+        return root.hibernateCompositeIdentity.isPresent() || (root.compositeIdentity?.length ?: 0) > 1
+    }
+
+    /**
+     * Decides how the binder binds a collection of entities. A bidirectional collection is mapped by the foreign key of the
+     * other side ({@code CollectionKeyBinder} copies that column into the key) and is inverse, except an indexed list, which
+     * the binder keeps owned (its index is a column of the target's table that only the collection writes). A
+     * unidirectional collection is a join table whose element is a many-to-one: the binder binds it as one whatever the
+     * name says, so it is a {@code @ManyToMany}. Using {@code @OneToMany} with a join table would add a unique constraint on the
+     * element column, which the binder does not.
+     *
+     * @throws UnsupportedOperationException when something about the collection cannot be stated yet
+     */
+    ToManyFacets toManyFacets(HibernateOneToManyProperty property) {
+        if (toManyProblem(property) != null) {
+            throw new UnsupportedOperationException(unsupportedReason(property.hibernateOwner, property))
+        }
+        PropertyConfig mapped = property.hibernateMappedForm
+        CollectionKind kind = CollectionKind.of(property.type)
+        GrailsHibernatePersistentEntity target = property.hibernateAssociatedEntity
+        String mappedBy = null
+        String table = null
+        String schema = null
+        String catalog = null
+        ColumnFacets key
+        ColumnFacets element = null
+        if (property.shouldBindWithForeignKey()) {
+            HibernateToOneProperty inverse = (HibernateToOneProperty) property.hibernateInverseSide
+            // CollectionKeyBinder copies the other side's foreign key column into the key; the key updater makes it nullable
+            key = new ColumnFacets(
+                    toOneColumnFacets(inverse).name(), true, false, true, true, null, null, null, null, null, null, null, null)
+            mappedBy = kind == CollectionKind.LIST ? null : inverse.name
+        } else {
+            JoinTable joinTable = mapped.joinTable
+            table = tableForMany.getTableName(property)
+            schema = joinTable?.schema != null ? joinTable.schema : entityFacets(property.hibernateOwner).schema()
+            catalog = joinTable?.catalog
+            key = collectionKeyFacets(property)
+            element = new ColumnFacets(
+                    property.resolveJoinTableForeignKeyColumnName(namingStrategy), true, false, true, true, null, null, null,
+                    null, null, null, null, null)
+        }
+        String condition = target.isMultiTenant() ? target.getMultiTenantFilterCondition(defaultColumnNames) : null
+        return new ToManyFacets(
+                kind,
+                target.name,
+                mappedBy,
+                table,
+                schema,
+                catalog,
+                key,
+                element,
+                collectionIndexFacets(property, kind),
+                property.isLazy(),
+                FetchMode.JOIN == mapped.fetchMode ? FetchMode.JOIN : FetchMode.SELECT,
+                Math.max(property.batchSize, 0),
+                property.cacheUsage,
+                cascadeFacets(property),
+                property.hasSort() ? property.sort : null,
+                property.hasSort() ? (property.order != null ? property.order : 'asc') : null,
+                condition)
     }
 
     /**
@@ -1071,6 +1209,10 @@ class GrailsDomainGenerator {
         if (property instanceof HibernateBasicProperty) {
             throw new IllegalArgumentException(
                     "Property [${property.name}] is a collection: it has a key, an element and perhaps an index column, see collectionFacets")
+        }
+        if (property instanceof HibernateToManyEntityProperty) {
+            throw new IllegalArgumentException(
+                    "Property [${property.name}] is a collection of entities: it has a key, an element and perhaps an index column, see toManyFacets")
         }
         if (property instanceof HibernateToOneProperty) {
             if (boundAsOneToOne((HibernateToOneProperty) property)) {
@@ -1353,6 +1495,9 @@ class GrailsDomainGenerator {
         if (property instanceof HibernateToOneProperty) {
             return defineToOneField(builder, (HibernateToOneProperty) property)
         }
+        if (property instanceof HibernateOneToManyProperty) {
+            return defineToManyField(builder, (HibernateOneToManyProperty) property)
+        }
         List<AnnotationDescription> annotations = new ArrayList<>(extra)
         if (isDerived(property)) {
             annotations << AnnotationDescription.Builder.ofType(Formula).define('value', property.hibernateMappedForm.formula).build()
@@ -1419,6 +1564,93 @@ class GrailsDomainGenerator {
             annotations << AnnotationDescription.ForLoadedAnnotation.of(constraint)
         }
         return builder.defineField(property.name, generatedType(property.hibernateAssociatedEntity), Visibility.PRIVATE)
+                .annotateField(annotations as AnnotationDescription[])
+    }
+
+    /**
+     * A collection of entities is a field whose generic signature names the generated class of its target. It is
+     * {@code @OneToMany(mappedBy)} when the other side holds the foreign key, {@code @OneToMany} with a {@code @JoinColumn}
+     * (and no {@code mappedBy}) for the indexed list the owner manages, and {@code @ManyToMany} with a {@code @JoinTable}
+     * for a unidirectional collection.
+     */
+    private DynamicType.Builder<Object> defineToManyField(DynamicType.Builder<Object> builder, HibernateOneToManyProperty property) {
+        ToManyFacets facets = toManyFacets(property)
+        List<AnnotationDescription> annotations = []
+        FetchType fetchType = facets.lazy() ? FetchType.LAZY : FetchType.EAGER
+        List<org.hibernate.annotations.CascadeType> hibernateCascade = new ArrayList<org.hibernate.annotations.CascadeType>(facets.cascade().hibernate())
+        if (facets.tableName() != null) {
+            annotations << AnnotationDescription.Builder.ofType(ManyToMany)
+                    .define('fetch', fetchType)
+                    .defineEnumerationArray('cascade', CascadeType, facets.cascade().jpa() as CascadeType[])
+                    .build()
+            AnnotationDescription.Builder joinTable = AnnotationDescription.Builder.ofType(JpaJoinTable)
+                    .define('name', facets.tableName())
+                    .defineAnnotationArray('joinColumns', TypeDescription.ForLoadedType.of(JoinColumn), joinColumnAnnotation(facets.key()))
+                    .defineAnnotationArray('inverseJoinColumns', TypeDescription.ForLoadedType.of(JoinColumn), joinColumnAnnotation(facets.element()))
+            if (facets.schema()) {
+                joinTable = joinTable.define('schema', facets.schema())
+            }
+            if (facets.catalog()) {
+                joinTable = joinTable.define('catalog', facets.catalog())
+            }
+            annotations << joinTable.build()
+            if (facets.cascade().orphanRemoval()) {
+                // @ManyToMany has no orphanRemoval attribute
+                hibernateCascade << org.hibernate.annotations.CascadeType.DELETE_ORPHAN
+            }
+        } else {
+            AnnotationDescription.Builder oneToMany = AnnotationDescription.Builder.ofType(OneToMany)
+                    .define('fetch', fetchType)
+                    .define('orphanRemoval', facets.cascade().orphanRemoval())
+                    .defineEnumerationArray('cascade', CascadeType, facets.cascade().jpa() as CascadeType[])
+            if (facets.mappedBy() != null) {
+                oneToMany = oneToMany.define('mappedBy', facets.mappedBy())
+            } else {
+                annotations << joinColumnAnnotation(facets.key())
+            }
+            annotations << oneToMany.build()
+        }
+        if (facets.kind() == CollectionKind.LIST) {
+            annotations << AnnotationDescription.Builder.ofType(OrderColumn)
+                    .define('name', facets.index().name())
+                    .define('nullable', facets.index().nullable())
+                    .build()
+        }
+        if (facets.kind() == CollectionKind.SORTED_SET) {
+            // the binder marks the collection sorted and names no comparator: the elements' natural order
+            annotations << AnnotationDescription.Builder.ofType(SortNatural).build()
+        }
+        if (facets.orderProperty() != null) {
+            annotations << AnnotationDescription.Builder.ofType(OrderBy).define('value', "${facets.orderProperty()} ${facets.orderDirection()}".toString()).build()
+        }
+        if (!hibernateCascade.isEmpty()) {
+            annotations << AnnotationDescription.Builder.ofType(Cascade)
+                    .defineEnumerationArray('value', org.hibernate.annotations.CascadeType,
+                            hibernateCascade as org.hibernate.annotations.CascadeType[])
+                    .build()
+        }
+        annotations << AnnotationDescription.Builder.ofType(Fetch)
+                .define('value', facets.fetchMode() == FetchMode.JOIN ? AnnotationFetchMode.JOIN : AnnotationFetchMode.SELECT).build()
+        if (facets.batchSize() > 0) {
+            annotations << AnnotationDescription.Builder.ofType(BatchSize).define('size', facets.batchSize()).build()
+        }
+        if (facets.cacheUsage() != null) {
+            annotations << AnnotationDescription.Builder.ofType(Cache)
+                    .define('usage', CacheConcurrencyStrategy.parse(facets.cacheUsage())).build()
+        }
+        if (facets.tenantCondition() != null) {
+            annotations << AnnotationDescription.Builder.ofType(Filter)
+                    .define('name', GormProperties.TENANT_IDENTITY)
+                    .define('condition', facets.tenantCondition())
+                    .build()
+        }
+        for (Annotation constraint : validationAnnotations(property)) {
+            annotations << AnnotationDescription.ForLoadedAnnotation.of(constraint)
+        }
+        TypeDescription.Generic fieldType = TypeDescription.Generic.Builder.parameterizedType(
+                TypeDescription.ForLoadedType.of(facets.kind().javaType),
+                [generatedType(property.hibernateAssociatedEntity)] as List<TypeDescription>).build()
+        return builder.defineField(property.name, fieldType, Visibility.PRIVATE)
                 .annotateField(annotations as AnnotationDescription[])
     }
 

@@ -48,6 +48,7 @@ import org.hibernate.mapping.JoinedSubclass
 import org.hibernate.mapping.List as HibernateList
 import org.hibernate.mapping.Map as HibernateMap
 import org.hibernate.mapping.ManyToOne
+import org.hibernate.mapping.OneToMany
 import org.hibernate.mapping.OneToOne
 import org.hibernate.mapping.ToOne
 import org.hibernate.mapping.Backref
@@ -83,6 +84,8 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumPropert
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleIdentityProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyEntityProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToOneProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
@@ -180,7 +183,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                                     "${property.getClass().simpleName} (type ${property.getTypeName()})".toString() :
                                     property instanceof HibernateEmbeddedProperty ?
                                             "embedded: ${generator.unsupportedReason(entity, property).replaceAll(/\[[^\]]*\]/, '[..]')}".toString() :
-                                            property instanceof HibernateBasicProperty || property instanceof HibernateToOneProperty ?
+                                            property instanceof HibernateBasicProperty || property instanceof HibernateToOneProperty || property instanceof HibernateToManyEntityProperty ?
                                                     "${property.getClass().simpleName}: ${generator.unsupportedReason(entity, property).replaceAll(/\[[^\]]*\]/, '[..]')}".toString() :
                                                     property.getClass().simpleName]++
                             continue
@@ -201,6 +204,17 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                                 embeddedProperties++
                                 embeddedLeaves += leaves.size()
                                 mismatches.addAll(compareEmbedded(entity, embedded, leaves, generator, bound, explicitTypes))
+                            }
+                            continue
+                        }
+                        if (property instanceof HibernateOneToManyProperty) {
+                            if (bound == null || !(bound.value instanceof HibernateCollection)) {
+                                skipped['collection property with no bound collection']++
+                            } else {
+                                ToManyFacets facets = generator.toManyFacets((HibernateOneToManyProperty) property)
+                                associations["one-to-many (${facets.mappedBy() != null ? 'inverse' : facets.tableName() != null ? 'join table' : 'owned foreign key'}, ${facets.kind()})".toString()]++
+                                mismatches.addAll(compareToMany(
+                                        "${entity.name}.${property.name}".toString(), facets, bound, known))
                             }
                             continue
                         }
@@ -549,7 +563,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             return CollectionKind.MAP
         }
         if (collection instanceof HibernateSet) {
-            return CollectionKind.SET
+            return collection.sorted ? CollectionKind.SORTED_SET : CollectionKind.SET
         }
         return collection instanceof Bag ? CollectionKind.BAG : null
     }
@@ -937,6 +951,16 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             if (other == null) {
                 continue
             }
+            if (property.value instanceof HibernateCollection &&
+                    entity.persistentPropertiesToBind.find { it.name == property.name } instanceof HibernateOneToManyProperty) {
+                HibernateOneToManyProperty toMany = (HibernateOneToManyProperty) entity.persistentPropertiesToBind.find { it.name == property.name }
+                if (generator.validationAnnotations(toMany).isEmpty()) {
+                    annotationRead['entity collections']++
+                    found.addAll(compareAnnotatedToMany(
+                            "${where} property ${property.name}".toString(), generator.toManyFacets(toMany), entity, property, other, byName, known))
+                }
+                continue
+            }
             if (property.value instanceof HibernateCollection) {
                 HibernateBasicProperty collectionProperty = (HibernateBasicProperty) entity.persistentPropertiesToBind.find { it.name == property.name }
                 if (!generator.validationAnnotations(collectionProperty).isEmpty()) {
@@ -1138,6 +1162,144 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         return found
     }
 
+    private static String orderByOf(HibernateOneToManyProperty property, ToManyFacets facets) {
+        if (facets.orderProperty() == null) {
+            return null
+        }
+        org.hibernate.mapping.Property sortBy = property.hibernateAssociatedEntity.persistentClass.getProperty(facets.orderProperty())
+        return sortBy.selectables.collect { "${it.text} ${facets.orderDirection()}".toString() }.join(', ')
+    }
+
+    private static String normalizedOrderBy(String orderBy) {
+        return orderBy?.toLowerCase()?.replaceAll(/\s+/, ' ')?.trim()
+    }
+
+    private static String roleProperty(HibernateCollection collection) {
+        return collection.role.substring(collection.role.lastIndexOf('.') + 1)
+    }
+
+    /**
+     * A collection of entities as {@code CollectionBinder} and its second passes bound it: kind, ownership, join table, key,
+     * element and index columns, fetching, cascade, ordering and tenant filter.
+     */
+    private List<String> compareToMany(String where, ToManyFacets facets, Property boundProperty, Map<String, Integer> known) {
+        HibernateCollection collection = (HibernateCollection) boundProperty.value
+        Map<String, List> pairs = [
+                kind       : [facets.kind(), kindOf(collection)],
+                lazy       : [facets.lazy(), collection.lazy],
+                extraLazy  : [false, collection.extraLazy],
+                fetchMode  : [facets.fetchMode(), collection.fetchMode == FetchMode.JOIN ? FetchMode.JOIN : FetchMode.SELECT],
+                batchSize  : [facets.batchSize(), Math.max(collection.batchSize, 0)],
+                cache      : [facets.cacheUsage(), collection.cacheConcurrencyStrategy],
+                inverse    : [facets.mappedBy() != null, collection.inverse],
+                orphanDelete: [facets.cascade().orphanRemoval(), collection.hasOrphanDelete()],
+                cascade    : [cascadeActions(facets.cascade()), cascadeActions(boundProperty.cascade)],
+                oneToMany  : [facets.tableName() == null, collection.oneToMany],
+                element    : [facets.target(), collection.element instanceof OneToMany ? ((OneToMany) collection.element).referencedEntityName :
+                        ((ToOne) collection.element).referencedEntityName],
+        ]
+        List<String> found = pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
+            "${where} ${facet}: generator=${values[0]} binder=${values[1]}".toString()
+        }
+        if (facets.tableName() != null) {
+            Map<String, List> table = [
+                    table  : [facets.tableName().replace('`', ''), collection.collectionTable.name],
+                    schema : [facets.schema(), collection.collectionTable.schema],
+                    catalog: [facets.catalog(), collection.collectionTable.catalog],
+            ]
+            found.addAll(table.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
+                "${where} ${facet}: generator=${values[0]} binder=${values[1]}".toString()
+            })
+            // Hibernate copies the size of the referenced identifier onto the element column after binding
+            found.addAll(compareValueColumn("${where} element".toString(), facets.element(), collection.element, collection.collectionTable, true))
+        }
+        found.addAll(compareValueColumn("${where} key".toString(), facets.key(), collection.key, collection.collectionTable, true))
+        if (!((DependantValue) collection.key).updateable) {
+            known['the binder makes the key of an entity collection not updatable when its owner has several unidirectional to-many properties; Hibernate then writes no join table rows, and annotations cannot state it']++
+        }
+        if (facets.index() != null) {
+            if (collection instanceof IndexedCollection) {
+                found.addAll(compareValueColumn(
+                        "${where} index".toString(), facets.index(), ((IndexedCollection) collection).index, collection.collectionTable, false))
+            } else {
+                found << "${where} index: generator=${facets.index().name()} binder=none".toString()
+            }
+        } else if (collection instanceof IndexedCollection) {
+            found << "${where} index: generator=none binder=${((IndexedCollection) collection).index.selectables*.text}".toString()
+        }
+        return found
+    }
+
+    /**
+     * A collection of entities against the one Hibernate's annotation binder built from the generated field: the same kind,
+     * ownership, join table, key, element and index columns, fetching, cascade, ordering and filters.
+     */
+    private static List<String> compareAnnotatedToMany(
+            String where, ToManyFacets facets, GrailsHibernatePersistentEntity entity, Property boundProperty,
+            Property annotatedProperty, Map<String, GrailsHibernatePersistentEntity> byName, Map<String, Integer> known) {
+        if (!(annotatedProperty.value instanceof HibernateCollection)) {
+            return ["${where} kind: generator=${annotatedProperty.value.getClass().simpleName} binder=${boundProperty.value.getClass().simpleName}".toString()]
+        }
+        HibernateCollection bound = (HibernateCollection) boundProperty.value
+        HibernateCollection annotated = (HibernateCollection) annotatedProperty.value
+        HibernateOneToManyProperty source = (HibernateOneToManyProperty) entity.persistentPropertiesToBind.find { it.name == boundProperty.name }
+        Map<String, List> pairs = [
+                kind        : [kindOf(bound), kindOf(annotated)],
+                role        : [roleProperty(bound), roleProperty(annotated)],
+                lazy        : [bound.lazy, annotated.lazy],
+                extraLazy   : [bound.extraLazy, annotated.extraLazy],
+                fetchMode   : [bound.fetchMode == FetchMode.JOIN ? FetchMode.JOIN : FetchMode.SELECT,
+                               annotated.fetchMode == FetchMode.JOIN ? FetchMode.JOIN : FetchMode.SELECT],
+                batchSize   : [Math.max(bound.batchSize, 0), Math.max(annotated.batchSize, 0)],
+                cache       : [bound.cacheConcurrencyStrategy, annotated.cacheConcurrencyStrategy],
+                inverse     : [bound.inverse, annotated.inverse],
+                orphanDelete: [bound.hasOrphanDelete(), annotated.hasOrphanDelete()],
+                oneToMany   : [bound.oneToMany, annotated.oneToMany],
+                cascade     : [cascadeActions(boundProperty.cascade), cascadeActions(annotatedProperty.cascade)],
+                orderBy     : [normalizedOrderBy(bound.orderBy), normalizedOrderBy(annotated.orderBy)],
+                element     : [GrailsDomainGenerator.generatedClassName(byName[facets.target()]),
+                               annotated.element instanceof OneToMany ? ((OneToMany) annotated.element).referencedEntityName :
+                                       ((ToOne) annotated.element).referencedEntityName],
+                filters     : [bound.filters*.condition.toSet(), annotated.filters*.condition.toSet()],
+                manyToManyFilters: [bound.manyToManyFilters*.condition.toSet(), annotated.manyToManyFilters*.condition.toSet()],
+        ]
+        if (bound.collectionTable.name != annotated.collectionTable.name) {
+            pairs.table = [bound.collectionTable.name, annotated.collectionTable.name]
+        }
+        List<String> found = pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
+            "${where} ${facet}: generator=${values[1]} binder=${values[0]}".toString()
+        }
+        if (bound.where != null && annotated.where == null) {
+            known['the binder states a discriminator where on a collection of a table-per-hierarchy subclass; Hibernate applies the discriminator of the subclass itself']++
+        } else if (bound.where != annotated.where) {
+            found << "${where} where: generator=${annotated.where} binder=${bound.where}".toString()
+        }
+        if (facets.element() != null && bound.element.columns*.nullable != annotated.element.columns*.nullable) {
+            known['Hibernate makes the element column of a join table NOT NULL; the binder leaves it nullable']++
+        }
+        if (bound.key.nullable != annotated.key.nullable) {
+            known['the nullability of the key column of an entity collection differs between the binder and Hibernate (a join table key is NOT NULL for Hibernate, a copied foreign key keeps its own)']++
+        }
+        if (bound.key.updateable != annotated.key.updateable) {
+            known['the binder makes the key of an entity collection not updatable when its owner has several unidirectional to-many properties; annotations cannot state it']++
+        }
+        Map<String, List> values = [key: [bound.key, annotated.key, facets.key()]]
+        if (facets.element() != null) {
+            values.element = [bound.element, annotated.element, facets.element()]
+        }
+        if (bound instanceof IndexedCollection && annotated instanceof IndexedCollection) {
+            values.index = [((IndexedCollection) bound).index, ((IndexedCollection) annotated).index, facets.index()]
+        }
+        values.each { String part, List triple ->
+            Property b = new Property()
+            b.value = (org.hibernate.mapping.Value) triple[0]
+            Property a = new Property()
+            a.value = (org.hibernate.mapping.Value) triple[1]
+            found.addAll(compareAnnotatedLeaf("${where} ${part}".toString(), b, a, ((ColumnFacets) triple[2]).sqlType(), part != 'index'))
+        }
+        return found
+    }
+
     /**
      * A collection of the binder's entity against the one Hibernate's annotation binder built: the same kind, table, key,
      * element and index columns, and the same fetching and caching.
@@ -1270,6 +1432,8 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                     ]
                 }
             } else if (property instanceof HibernateBasicProperty) {
+                found[property.name] = [sqlType: null, validated: !generator.validationAnnotations(property).isEmpty()]
+            } else if (property instanceof HibernateToManyEntityProperty) {
                 found[property.name] = [sqlType: null, validated: !generator.validationAnnotations(property).isEmpty()]
             } else if (property instanceof HibernateToOneProperty) {
                 found[property.name] = [
