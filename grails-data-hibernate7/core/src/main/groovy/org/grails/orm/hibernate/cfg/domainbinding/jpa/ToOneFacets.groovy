@@ -27,10 +27,16 @@ import org.hibernate.FetchMode
  * foreign key column. {@link GrailsDomainGenerator} writes them into {@code @ManyToOne}, {@code @JoinColumn},
  * {@code @Fetch}, {@code @NotFound} and {@code @Cascade}.
  *
+ * <p>The same record describes the inverse side of a bidirectional one-to-one, which the binder binds as a Hibernate
+ * {@code OneToOne} with no column of its own: {@code mappedBy} names the property of the other side that holds the foreign
+ * key, {@code joinColumn} is {@code null} and {@code referencedEntity} is the entity name the binder gives the value (the
+ * entity that declares the other side, which is the target or one of its superclasses). For a foreign key association both
+ * are {@code null}.</p>
+ *
  * <p>{@code target} is the GORM entity name of the associated entity; the generated field is typed with the class
  * generated for it. {@code fetchMode} is {@code JOIN} or {@code SELECT}: the binder's {@code DEFAULT} is a select.
  * {@code optional} is what the annotation states: Hibernate makes the join column NOT NULL for a non-optional
- * association, so it is {@code true} exactly when the join column is nullable.</p>
+ * association, so it is {@code true} exactly when the join column is nullable (and for the inverse side of a one-to-one, which has no column).</p>
  *
  * @since 9.0
  */
@@ -42,5 +48,7 @@ record ToOneFacets(
     boolean optional,
     boolean ignoreNotFound,
     CascadeFacets cascade,
-    ColumnFacets joinColumn) {
+    ColumnFacets joinColumn,
+    String mappedBy,
+    String referencedEntity) {
 }

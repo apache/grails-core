@@ -48,6 +48,7 @@ import org.hibernate.mapping.JoinedSubclass
 import org.hibernate.mapping.List as HibernateList
 import org.hibernate.mapping.Map as HibernateMap
 import org.hibernate.mapping.ManyToOne
+import org.hibernate.mapping.OneToOne
 import org.hibernate.mapping.ToOne
 import org.hibernate.mapping.Backref
 import org.hibernate.mapping.IndexBackref
@@ -218,13 +219,18 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                             continue
                         }
                         if (property instanceof HibernateToOneProperty) {
-                            if (bound == null || !(bound.value instanceof ToOne) || bound.columns.size() != 1) {
+                            if (bound == null || !(bound.value instanceof ToOne) ||
+                                    (!(bound.value instanceof OneToOne) && bound.columns.size() != 1)) {
                                 skipped['association with no single bound column']++
                                 continue
                             }
                             compared++
                             String where = "${entity.name}.${property.name}".toString()
-                            associations[toOneKind(property)]++
+                            associations[toOneKind(property, bound)]++
+                            if (bound.value instanceof OneToOne) {
+                                mismatches.addAll(compareOneToOne(where, generator.toOneFacets((HibernateToOneProperty) property), bound, known))
+                                continue
+                            }
                             // Hibernate copies the length, precision and scale of the referenced identifier onto a foreign key column after binding
                             mismatches.addAll(compare(where, generator.columnFacets(property), bound, ['length', 'precision', 'scale']))
                             mismatches.addAll(compareToOne(where, generator.toOneFacets((HibernateToOneProperty) property), bound, known))
@@ -951,6 +957,10 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                             property, other, byName, known))
                 }
             }
+            if (property.value instanceof OneToOne) {
+                // the inverse side of a one-to-one has no column of its own
+                continue
+            }
             Map<String, Property> boundLeaves = terminalProperties(property)
             Map<String, Property> annotatedLeaves = terminalProperties(other)
             if (boundLeaves.keySet() != annotatedLeaves.keySet()) {
@@ -976,8 +986,36 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         return persistentClass.declaredProperties.findAll { !(it instanceof Backref) && !(it instanceof IndexBackref) }*.name.toSet()
     }
 
-    private static String toOneKind(HibernatePersistentProperty property) {
-        return property instanceof HibernateManyToOneProperty ? 'many-to-one' : 'one-to-one'
+    private static String toOneKind(HibernatePersistentProperty property, Property bound) {
+        if (bound.value instanceof OneToOne) {
+            return 'one-to-one (inverse side)'
+        }
+        return property instanceof HibernateManyToOneProperty ? 'many-to-one' : 'one-to-one (foreign key)'
+    }
+
+    /**
+     * The inverse side of a one-to-one as {@code OneToOneBinder} bound it: no column, the property of the other side that
+     * holds the foreign key, the entity that declares it, the foreign key direction and the fetching.
+     */
+    private static List<String> compareOneToOne(String where, ToOneFacets facets, Property bound, Map<String, Integer> known) {
+        OneToOne value = (OneToOne) bound.value
+        Map<String, List> pairs = [
+                referencedEntity    : [facets.referencedEntity(), value.referencedEntityName],
+                referencedProperty  : [facets.mappedBy(), value.referencedPropertyName],
+                constrained         : [false, value.constrained],
+                foreignKeyDirection : ['TO_PARENT', value.foreignKeyType?.name()],
+                lazy                : [facets.lazy(), value.lazy],
+                fetchMode           : [facets.fetchMode() == FetchMode.JOIN ? 'JOIN' : 'SELECT', fetchModeOf(value)],
+                cascade             : [cascadeActions(facets.cascade()), cascadeActions(bound.cascade)],
+                hasNoColumns        : [true, value.selectables.every { !(it instanceof Column) } || value.columns.isEmpty()],
+        ]
+        List<String> found = pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
+            "${where} ${facet}: generator=${values[0]} binder=${values[1]}".toString()
+        }
+        if (facets.optional() != bound.optional) {
+            known['the binder makes a to-one association optional or not independently of its foreign key column being nullable; annotations state both together, so the generated field follows the column']++
+        }
+        return found
     }
 
     private static String fetchModeOf(ToOne value) {
@@ -1054,8 +1092,13 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         }
         ToOne bound = (ToOne) boundProperty.value
         ToOne annotated = (ToOne) annotatedProperty.value
+        if ((bound instanceof OneToOne) != (annotated instanceof OneToOne)) {
+            return ["${where} kind: generator=${annotated.getClass().simpleName} binder=${bound.getClass().simpleName}".toString()]
+        }
+        // the binder names the entity that declares the other side of a one-to-one, which can be a superclass of the field's type
+        String targetName = GrailsDomainGenerator.generatedClassName(byName[facets.target()])
         Map<String, List> pairs = [
-                target        : [GrailsDomainGenerator.generatedClassName(byName[bound.referencedEntityName]), annotated.referencedEntityName],
+                target        : [targetName, annotated.referencedEntityName],
                 fetchMode     : [fetchModeOf(bound), fetchModeOf(annotated)],
                 ignoreNotFound: [bound instanceof ManyToOne && ((ManyToOne) bound).ignoreNotFound,
                                  annotated instanceof ManyToOne && ((ManyToOne) annotated).ignoreNotFound],
@@ -1063,18 +1106,30 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 insertable    : [boundProperty.insertable, annotatedProperty.insertable],
                 updatable     : [boundProperty.updateable, annotatedProperty.updateable],
         ]
+        if (bound instanceof OneToOne) {
+            pairs.referencedProperty = [bound.referencedPropertyName, annotated.referencedPropertyName]
+            pairs.constrained = [((OneToOne) bound).constrained, ((OneToOne) annotated).constrained]
+            pairs.foreignKeyDirection = [((OneToOne) bound).foreignKeyType, ((OneToOne) annotated).foreignKeyType]
+        }
         List<String> found = pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
             "${where} ${facet}: generator=${values[1]} binder=${values[0]}".toString()
         }
+        if (bound.referencedEntityName != facets.target()) {
+            if (bound instanceof OneToOne && bound.referencedEntityName == facets.referencedEntity()) {
+                known['the binder names the declaring superclass of the other side as the referenced entity of a one-to-one; the generated field is typed with the target itself']++
+            } else {
+                found << "${where} referencedEntity: generator=${facets.target()} binder=${bound.referencedEntityName}".toString()
+            }
+        }
         if (bound.lazy != annotated.lazy) {
-            if (bound.lazy && !annotated.lazy && facets.ignoreNotFound()) {
-                known['Hibernate binds a @NotFound association as eager (lazy false), the binder keeps it lazy']++
+            if (bound.lazy && !annotated.lazy && (facets.ignoreNotFound() || fetchModeOf(bound) == 'JOIN')) {
+                known['Hibernate binds a @NotFound or fetch-join association as eager (lazy false), the binder keeps the value lazy']++
             } else {
                 found << "${where} lazy: generator=${annotated.lazy} binder=${bound.lazy}".toString()
             }
         }
         if (boundProperty.optional != annotatedProperty.optional) {
-            if (annotatedProperty.optional == facets.joinColumn().nullable()) {
+            if (annotatedProperty.optional == facets.optional()) {
                 known['the binder makes a to-one association optional or not independently of its foreign key column being nullable; annotations state both together, so the generated field follows the column']++
             } else {
                 found << "${where} optional: generator=${annotatedProperty.optional} binder=${boundProperty.optional}".toString()
@@ -1216,6 +1271,11 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 }
             } else if (property instanceof HibernateBasicProperty) {
                 found[property.name] = [sqlType: null, validated: !generator.validationAnnotations(property).isEmpty()]
+            } else if (property instanceof HibernateToOneProperty) {
+                found[property.name] = [
+                        sqlType  : generator.toOneFacets((HibernateToOneProperty) property).joinColumn()?.sqlType(),
+                        validated: !generator.validationAnnotations(property).isEmpty(),
+                ]
             } else {
                 found[property.name] = [
                         sqlType  : generator.isDerived(property) ? null : generator.columnFacets(property).sqlType(),

@@ -144,7 +144,7 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
                 GenJoinedVehicle, GenJoinedCar, GenJoinedSportsCar, GenJoinedSedan, GenJoinedKeyed, GenJoinedKeyedChild,
                 GenFleetVehicle, GenFleetCar, GenFleetSportsCar, GenFleetSedan, GenUnionBase, GenUnionLeaf, GenUnionMiddle, GenUnionBottom,
                 GenEmbedOwner, GenEmbedOther, GenEmbedBase, GenEmbedChild, GenEmbedBadHolder, GenEmbedFormulaOwner, GenCollSingle, GenCollKinds, GenCollLazy,
-                GenFkTarget, GenFkOwned, GenFkOwner, GenFkCascades, GenFkNodeA, GenFkNodeB, GenFkHasOneOwner, GenFkHasOneDetail, GenFkManyOne, GenFkOneSide, GenFkSub, GenFkSubRoot)
+                GenFkTarget, GenFkOwned, GenFkOwner, GenFkCascades, GenFkNodeA, GenFkNodeB, GenFkHasOneOwner, GenFkHasOneDetail, GenOneFace, GenOneNose, GenFkManyOne, GenFkOneSide, GenFkSub, GenFkSubRoot)
     }
 
     List<StandardServiceRegistry> registries = []
@@ -1322,14 +1322,85 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         facets.optional()
     }
 
-    void "a one-to-one the binder binds as a Hibernate OneToOne is rejected by name until it is supported"() {
+    void "the inverse side of a hasOne is a @OneToOne(mappedBy) with no column, and the other side keeps the foreign key"() {
         given:
-        GrailsHibernatePersistentEntity entity = entity(GenFkHasOneOwner)
-        HibernatePersistentProperty property = entity.getHibernatePropertyByName('detail')
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenFkHasOneOwner, GenFkHasOneDetail)
+        Field detail = classes[entity(GenFkHasOneOwner)].getDeclaredField('detail')
+        Field owner = classes[entity(GenFkHasOneDetail)].getDeclaredField('owner')
 
         expect:
-        !newGenerator().supports(property)
-        newGenerator().unsupportedReason(entity, property).contains('Hibernate OneToOne')
+        detail.type == classes[entity(GenFkHasOneDetail)]
+        detail.getAnnotation(jakarta.persistence.OneToOne).mappedBy() == 'owner'
+        detail.getAnnotation(jakarta.persistence.OneToOne).optional()
+        detail.getAnnotation(jakarta.persistence.OneToOne).cascade().toList() == [jakarta.persistence.CascadeType.ALL]
+        !detail.getAnnotation(jakarta.persistence.OneToOne).orphanRemoval()
+        detail.getAnnotation(Fetch).value() == FetchMode.SELECT
+        !detail.isAnnotationPresent(JoinColumn)
+        !detail.isAnnotationPresent(ManyToOne)
+        owner.type == classes[entity(GenFkHasOneOwner)]
+        owner.isAnnotationPresent(ManyToOne)
+        owner.getAnnotation(JoinColumn).name() == 'owner_id'
+        !owner.getAnnotation(JoinColumn).nullable()
+        !owner.getAnnotation(ManyToOne).optional()
+    }
+
+    void "a one-to-one owned through belongsTo is a foreign key on the owner and a mappedBy @OneToOne on the owned side"() {
+        given:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenOneFace, GenOneNose)
+        Field nose = classes[entity(GenOneFace)].getDeclaredField('nose')
+        Field face = classes[entity(GenOneNose)].getDeclaredField('face')
+
+        expect:
+        nose.isAnnotationPresent(ManyToOne)
+        nose.getAnnotation(JoinColumn).name() == 'nose_id'
+        nose.getAnnotation(ManyToOne).cascade().toList() == [jakarta.persistence.CascadeType.ALL]
+        face.getAnnotation(jakarta.persistence.OneToOne).mappedBy() == 'nose'
+        face.getAnnotation(jakarta.persistence.OneToOne).cascade().toList() ==
+                [jakarta.persistence.CascadeType.PERSIST, jakarta.persistence.CascadeType.MERGE]
+        !face.isAnnotationPresent(JoinColumn)
+    }
+
+    void "an inverse one-to-one has no column, so it has no column facets"() {
+        when:
+        newGenerator().columnFacets(entity(GenFkHasOneOwner).getHibernatePropertyByName('detail'))
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message.contains('toOneFacets')
+    }
+
+    void "the facets of an inverse one-to-one name the property that holds the key and the entity the binder references"() {
+        given:
+        ToOneFacets facets = newGenerator().toOneFacets(
+                (HibernateToOneProperty) entity(GenFkHasOneOwner).getHibernatePropertyByName('detail'))
+
+        expect:
+        facets.mappedBy() == 'owner'
+        facets.target() == GenFkHasOneDetail.name
+        facets.referencedEntity() == GenFkHasOneDetail.name
+        facets.joinColumn() == null
+        facets.optional()
+        !facets.ignoreNotFound()
+    }
+
+    void "Hibernate's own annotation binder reads an inverse one-to-one as a OneToOne that the other side's foreign key owns"() {
+        given:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenFkHasOneOwner, GenFkHasOneDetail)
+        Metadata metadata = annotationMetadata(classes.values())
+        PersistentClass ownerClass = metadata.getEntityBinding(classes[entity(GenFkHasOneOwner)].name)
+        PersistentClass detailClass = metadata.getEntityBinding(classes[entity(GenFkHasOneDetail)].name)
+        Property inverse = ownerClass.getProperty('detail')
+        org.hibernate.mapping.OneToOne value = (org.hibernate.mapping.OneToOne) inverse.value
+        org.hibernate.mapping.ManyToOne key = (org.hibernate.mapping.ManyToOne) detailClass.getProperty('owner').value
+
+        expect:
+        value.referencedEntityName == classes[entity(GenFkHasOneDetail)].name
+        value.referencedPropertyName == 'owner'
+        !value.constrained
+        value.foreignKeyType == org.hibernate.type.ForeignKeyDirection.TO_PARENT
+        inverse.cascade == 'all'
+        key.selectables*.text == ['owner_id']
+        !key.columns[0].nullable
     }
 
     void "an association to an entity with a composite identifier is rejected by name"() {
@@ -2319,6 +2390,18 @@ class GenFkHasOneOwner {
 class GenFkHasOneDetail {
 
     GenFkHasOneOwner owner
+}
+
+@Entity
+class GenOneFace {
+
+    GenOneNose nose
+}
+
+@Entity
+class GenOneNose {
+
+    static belongsTo = [face: GenOneFace]
 }
 
 @Entity

@@ -44,6 +44,7 @@ import jakarta.persistence.InheritanceType
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.MapKeyColumn
+import jakarta.persistence.OneToOne
 import jakarta.persistence.OrderColumn
 import jakarta.persistence.PrimaryKeyJoinColumn
 import jakarta.persistence.Table
@@ -907,8 +908,9 @@ class GrailsDomainGenerator {
      * @return why the generator cannot describe the to-one association, or {@code null} when it can
      */
     private String toOneProblem(HibernateToOneProperty property) {
-        if (!boundAsManyToOne(property)) {
-            return 'the binder binds this one-to-one as a Hibernate OneToOne (an inverse side, a hasOne or a shared primary key), ' +
+        boolean inverseOneToOne = boundAsOneToOne(property)
+        if (inverseOneToOne && ((HibernateOneToOneProperty) property).needsSimpleValueBinding()) {
+            return 'the binder binds this one-to-one as a Hibernate OneToOne with a column of its own (constrained), ' +
                     'which the generator does not support yet'
         }
         GrailsHibernatePersistentEntity target = property.hibernateAssociatedEntity
@@ -921,6 +923,9 @@ class GrailsDomainGenerator {
                     'identifier property, named and ordered from the identifier'
         }
         PropertyConfig mapped = property.hibernateMappedForm
+        if (inverseOneToOne) {
+            return null
+        }
         if (mapped.columns != null && mapped.columns.size() > 1) {
             return 'the mapping states several columns, which the binder binds as a composite foreign key'
         }
@@ -947,6 +952,15 @@ class GrailsDomainGenerator {
     }
 
     /**
+     * The binder binds a valid one-to-one ({@code OneToOneBinder}) as a Hibernate {@code OneToOne}. Its foreign key lives on
+     * the other side (which is bound as a many-to-one above), so this side has no column and only names the property that
+     * holds the key.
+     */
+    private static boolean boundAsOneToOne(HibernateToOneProperty property) {
+        return property instanceof HibernateOneToOneProperty && ((HibernateOneToOneProperty) property).isValidHibernateOneToOne()
+    }
+
+    /**
      * Decides how the binder binds a to-one association whose foreign key is a column of the owner's table: the associated
      * entity, whether it is lazy, how it is fetched, whether the foreign key may be null, what happens when the row it
      * points at is missing, the cascade and the join column.
@@ -964,6 +978,20 @@ class GrailsDomainGenerator {
             throw new UnsupportedOperationException(unsupportedReason(property.hibernateOwner, property))
         }
         PropertyConfig mapped = property.hibernateMappedForm
+        if (boundAsOneToOne(property)) {
+            HibernateOneToOneProperty oneToOne = (HibernateOneToOneProperty) property
+            // OneToOneBinder never sets the value's lazy flag (it stays true) nor an ignore-not-found, and constrained is false
+            return new ToOneFacets(
+                    property.hibernateAssociatedEntity.name,
+                    true,
+                    FetchMode.JOIN == oneToOne.hibernateFetchMode ? FetchMode.JOIN : FetchMode.SELECT,
+                    true,
+                    false,
+                    cascadeFacets(property),
+                    null,
+                    oneToOne.hibernateReferencedPropertyName,
+                    oneToOne.hibernateReferencedEntityName)
+        }
         ColumnFacets column = toOneColumnFacets(property)
         return new ToOneFacets(
                 property.hibernateAssociatedEntity.name,
@@ -972,7 +1000,9 @@ class GrailsDomainGenerator {
                 column.nullable(),
                 mapped.ignoreNotFound,
                 cascadeFacets(property),
-                column)
+                column,
+                null,
+                null)
     }
 
     private ColumnFacets toOneColumnFacets(HibernateToOneProperty property) {
@@ -1043,6 +1073,10 @@ class GrailsDomainGenerator {
                     "Property [${property.name}] is a collection: it has a key, an element and perhaps an index column, see collectionFacets")
         }
         if (property instanceof HibernateToOneProperty) {
+            if (boundAsOneToOne((HibernateToOneProperty) property)) {
+                throw new IllegalArgumentException(
+                        "Property [${property.name}] is the inverse side of a one-to-one: it has no column, see toOneFacets")
+            }
             return toOneColumnFacets((HibernateToOneProperty) property)
         }
         if (property instanceof HibernateEnumProperty) {
@@ -1349,19 +1383,29 @@ class GrailsDomainGenerator {
     private DynamicType.Builder<Object> defineToOneField(DynamicType.Builder<Object> builder, HibernateToOneProperty property) {
         ToOneFacets facets = toOneFacets(property)
         List<AnnotationDescription> annotations = []
-        annotations << AnnotationDescription.Builder.ofType(ManyToOne)
-                .define('fetch', facets.lazy() ? FetchType.LAZY : FetchType.EAGER)
-                .define('optional', facets.optional())
-                .defineEnumerationArray('cascade', CascadeType, facets.cascade().jpa() as CascadeType[])
-                .build()
-        annotations << joinColumnAnnotation(facets.joinColumn())
+        if (facets.mappedBy() != null) {
+            annotations << AnnotationDescription.Builder.ofType(OneToOne)
+                    .define('mappedBy', facets.mappedBy())
+                    .define('fetch', facets.lazy() ? FetchType.LAZY : FetchType.EAGER)
+                    .define('optional', facets.optional())
+                    .define('orphanRemoval', facets.cascade().orphanRemoval())
+                    .defineEnumerationArray('cascade', CascadeType, facets.cascade().jpa() as CascadeType[])
+                    .build()
+        } else {
+            annotations << AnnotationDescription.Builder.ofType(ManyToOne)
+                    .define('fetch', facets.lazy() ? FetchType.LAZY : FetchType.EAGER)
+                    .define('optional', facets.optional())
+                    .defineEnumerationArray('cascade', CascadeType, facets.cascade().jpa() as CascadeType[])
+                    .build()
+            annotations << joinColumnAnnotation(facets.joinColumn())
+        }
         annotations << AnnotationDescription.Builder.ofType(Fetch)
                 .define('value', facets.fetchMode() == FetchMode.JOIN ? AnnotationFetchMode.JOIN : AnnotationFetchMode.SELECT).build()
         if (facets.ignoreNotFound()) {
             annotations << AnnotationDescription.Builder.ofType(NotFound).define('action', NotFoundAction.IGNORE).build()
         }
         List<org.hibernate.annotations.CascadeType> hibernateCascade = new ArrayList<org.hibernate.annotations.CascadeType>(facets.cascade().hibernate())
-        if (facets.cascade().orphanRemoval()) {
+        if (facets.cascade().orphanRemoval() && facets.mappedBy() == null) {
             // @ManyToOne has no orphanRemoval attribute
             hibernateCascade << org.hibernate.annotations.CascadeType.DELETE_ORPHAN
         }
