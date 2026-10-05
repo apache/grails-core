@@ -21,6 +21,7 @@ package grails.gorm.tests.generated
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.persistence.Entity
 import org.hibernate.Hibernate
+import spock.lang.PendingFeature
 import org.hibernate.proxy.HibernateProxy
 import org.hibernate.persister.entity.EntityPersister
 
@@ -74,6 +75,26 @@ class GeneratedDomainClassesSpec extends HibernateGormDatastoreSpec {
         loaded.title == 'Dune'
         loaded.pages == 500
         !loaded.is(saved)
+    }
+
+    def "statistics are kept for the entity under the generated entity name"() {
+        given:
+        sessionFactory.statistics.statisticsEnabled = true
+        GdcBook book = savedBook()
+        String entityName = sessionFactory.mappingMetamodel.getEntityDescriptor(GdcBook).entityName
+
+        expect:
+        sessionFactory.statistics.getEntityStatistics(entityName).insertCount == 1
+    }
+
+    @PendingFeature(reason = 'Hibernate keys statistics, second-level cache regions and entity graphs by entity name, which is the name of the generated class, not the domain class name')
+    def "statistics are available under the domain class name"() {
+        given:
+        sessionFactory.statistics.statisticsEnabled = true
+        savedBook()
+
+        expect:
+        sessionFactory.statistics.getEntityStatistics(GdcBook.name).insertCount == 1
     }
 
     def "the id is generated and the instance is attached to the session it was saved in"() {
