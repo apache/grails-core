@@ -31,6 +31,8 @@ import org.hibernate.mapping.Column
 import org.hibernate.mapping.Formula
 import org.hibernate.mapping.PersistentClass
 import org.hibernate.mapping.Property
+import org.hibernate.mapping.RootClass
+import org.hibernate.mapping.SingleTableSubclass
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
 import java.lang.reflect.ParameterizedType
@@ -87,6 +89,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         int derived = 0
         Map<String, Integer> explicitTypes = [:].withDefault { 0 }
         Map<String, Integer> strategies = [:].withDefault { 0 }
+        Map<String, Integer> hierarchies = [:].withDefault { 0 }
 
         when:
         for (List<Class<?>> group : groups) {
@@ -102,8 +105,18 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                         .findAll { group.contains(it.javaClass) && it.persistentClass != null && it.persistentClass.entityName == it.name }) {
                     entities++
                     List<HibernatePersistentProperty> properties = []
+                    HierarchyFacets hierarchy = null
+                    try {
+                        hierarchy = generator.hierarchyFacets(entity)
+                    } catch (UnsupportedOperationException e) {
+                        skipped["hierarchy: ${e.message.replaceAll(/\[[^\]]*\]/, '[..]')}".toString()]++
+                    }
+                    if (hierarchy != null) {
+                        hierarchies["${hierarchy.strategy() ?: 'none'}${entity.isRoot() ? ' root' : ' subclass'}".toString()]++
+                        mismatches.addAll(compareEntity(entity, generator.entityFacets(entity), hierarchy))
+                        mismatches.addAll(compareHierarchy(entity, hierarchy))
+                    }
                     if (entity.isRoot()) {
-                        mismatches.addAll(compareEntity(entity, generator.entityFacets(entity)))
                         if (entity.identity instanceof HibernateSimpleIdentityProperty) {
                             mismatches.addAll(compareIdentifierGenerator(
                                     entity, generator.idFacets(entity), (SessionFactoryImplementor) datastore.sessionFactory, strategies))
@@ -113,9 +126,9 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                         if (entity.version != null) {
                             properties << entity.version
                         }
-                    }
-                    if (entity.identity != null) {
-                        properties << (HibernatePersistentProperty) entity.identity
+                        if (entity.identity != null) {
+                            properties << (HibernatePersistentProperty) entity.identity
+                        }
                     }
                     properties.addAll(entity.persistentPropertiesToBind)
                     for (HibernatePersistentProperty property : properties) {
@@ -161,6 +174,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 "(${derived} derived)\n"
         report << "explicit types compared: ${explicitTypes}\n"
         report << "id generators compared by strategy: ${strategies}\n"
+        report << "entities compared by hierarchy role: ${hierarchies}\n"
         report << "unsupported by kind: ${skipped}\n"
         report << "mismatches by facet: ${mismatches.groupBy { (it =~ /\s(\w+): generator=/)[0][1] }.collectEntries { k, v -> [k, v.size()] }}\n"
         unbootable.each { report << "unbootable: ${it.key.take(120)} -> ${it.value.take(200)}\n" }
@@ -303,16 +317,19 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         return expected == actual ? [] : ["${entity.name}.${property.name} enumStyle: generator=${expected} binder=${actual}".toString()]
     }
 
-    private List<String> compareEntity(GrailsHibernatePersistentEntity entity, EntityFacets facets) {
+    private List<String> compareEntity(GrailsHibernatePersistentEntity entity, EntityFacets facets, HierarchyFacets hierarchy) {
         PersistentClass persistentClass = entity.persistentClass
         Map<String, List> pairs = [
                 jpaName      : [facets.jpaName(), persistentClass.jpaEntityName],
                 tableName    : [facets.tableName().replace('`', ''), persistentClass.table.name],
                 dynamicInsert: [facets.dynamicInsert(), persistentClass.useDynamicInsert()],
                 dynamicUpdate: [facets.dynamicUpdate(), persistentClass.useDynamicUpdate()],
-                batchSize    : [facets.batchSize(), persistentClass.batchSize],
-                comment      : [facets.comment(), persistentClass.table.comment],
+                // the binder leaves a subclass's unset batch size at -1 and a root's at 0: both mean "not stated"
+                batchSize    : [facets.batchSize(), Math.max(persistentClass.batchSize, 0)],
         ]
+        if (hierarchy.ownsTable()) {
+            pairs.comment = [facets.comment(), persistentClass.table.comment]
+        }
         if (facets.schema() != null) {
             pairs.schema = [facets.schema(), persistentClass.table.schema]
         }
@@ -321,6 +338,66 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         }
         return pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
             "${entity.name} ${facet}: generator=${values[0]} binder=${values[1]}".toString()
+        }
+    }
+
+    /**
+     * Where the entity sits in its hierarchy: the Hibernate class the binder created for it, its direct superclass,
+     * its table, abstractness and discriminator.
+     */
+    private List<String> compareHierarchy(GrailsHibernatePersistentEntity entity, HierarchyFacets facets) {
+        PersistentClass persistentClass = entity.persistentClass
+        Map<String, List> pairs = [
+                kind              : [expectedKind(entity, facets), persistentClass.getClass().simpleName],
+                superclass        : [facets.superclass(), persistentClass.superclass?.entityName],
+                abstractClass     : [facets.abstractClass(), Boolean.TRUE == persistentClass.isAbstract()],
+                abstractTable     : [facets.abstractTable(), persistentClass.table.isAbstract()],
+                ownsTable         : [facets.ownsTable(),
+                                     persistentClass.superclass == null || !persistentClass.table.is(persistentClass.superclass.table)],
+                discriminatorValue: [facets.discriminatorValue(), persistentClass.discriminatorValue],
+        ]
+        List<String> found = pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
+            "${entity.name} ${facet}: generator=${values[0]} binder=${values[1]}".toString()
+        }
+        if (persistentClass instanceof RootClass) {
+            found.addAll(compareDiscriminator(entity, facets.discriminator(), (RootClass) persistentClass))
+        }
+        return found
+    }
+
+    private static String expectedKind(GrailsHibernatePersistentEntity entity, HierarchyFacets facets) {
+        if (entity.isRoot()) {
+            return RootClass.simpleName
+        }
+        return SingleTableSubclass.simpleName
+    }
+
+    /** The discriminator the binder put on the root: a column or a formula, its type, length and whether it is inserted. */
+    private List<String> compareDiscriminator(GrailsHibernatePersistentEntity entity, DiscriminatorFacets facets, RootClass root) {
+        String where = "${entity.name} discriminator"
+        if ((facets != null) != (root.discriminator != null)) {
+            return ["${where} present: generator=${facets != null} binder=${root.discriminator != null}".toString()]
+        }
+        if (facets == null) {
+            return []
+        }
+        BasicValue value = (BasicValue) root.discriminator
+        List<String> formulas = value.selectables.findAll { it instanceof Formula }.collect { ((Formula) it).getFormula() }
+        List<Column> columns = value.selectables.findAll { it instanceof Column }.collect { (Column) it }
+        Map<String, List> pairs = [
+                typeName  : [facets.typeName(), value.typeName],
+                insertable: [facets.insertable(), root.isDiscriminatorInsertable()],
+                formula   : [facets.formula() == null ? [] : [facets.formula()], formulas],
+                column    : [facets.column() == null ? [] : [facets.column()], columns*.name],
+        ]
+        if (!columns.isEmpty()) {
+            pairs.length = [facets.length(), columns[0].length?.intValue()]
+            if (facets.sqlType() != null) {
+                pairs.sqlType = [facets.sqlType(), columns[0].sqlType]
+            }
+        }
+        return pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
+            "${where} ${facet}: generator=${values[0]} binder=${values[1]}".toString()
         }
     }
 

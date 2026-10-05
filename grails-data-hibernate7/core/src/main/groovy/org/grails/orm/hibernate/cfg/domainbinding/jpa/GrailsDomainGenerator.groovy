@@ -23,22 +23,32 @@ import java.lang.reflect.Method
 
 import groovy.transform.CompileStatic
 import jakarta.persistence.Column as JpaColumn
+import jakarta.persistence.DiscriminatorColumn
+import jakarta.persistence.DiscriminatorType
+import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.Id
+import jakarta.persistence.Inheritance
+import jakarta.persistence.InheritanceType
+import jakarta.persistence.PrimaryKeyJoinColumn
 import jakarta.persistence.Table
 import jakarta.persistence.Version
 import net.bytebuddy.ByteBuddy
 import net.bytebuddy.description.annotation.AnnotationDescription
+import net.bytebuddy.description.modifier.TypeManifestation
 import net.bytebuddy.description.modifier.Visibility
 import net.bytebuddy.description.type.TypeDescription
 import net.bytebuddy.dynamic.DynamicType
 import net.bytebuddy.dynamic.loading.ClassLoadingStrategy
+import org.hibernate.Length
 import org.hibernate.annotations.BatchSize
 import org.hibernate.annotations.ColumnDefault
 import org.hibernate.annotations.ColumnTransformer
 import org.hibernate.annotations.Comment
+import org.hibernate.annotations.DiscriminatorFormula
+import org.hibernate.annotations.DiscriminatorOptions
 import org.hibernate.annotations.DynamicInsert
 import org.hibernate.annotations.DynamicUpdate
 import org.hibernate.annotations.Formula
@@ -55,6 +65,7 @@ import org.hibernate.type.spi.TypeConfiguration
 import org.hibernate.usertype.UserType
 
 import org.grails.orm.hibernate.cfg.ColumnConfig
+import org.grails.orm.hibernate.cfg.DiscriminatorConfig
 import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
 import org.grails.orm.hibernate.cfg.IdentityEnumType
 import org.grails.orm.hibernate.cfg.Mapping
@@ -121,34 +132,101 @@ class GrailsDomainGenerator {
     }
 
     /**
-     * @param entity the entity to describe
+     * Generates the class for an entity that is not part of an inheritance hierarchy.
+     *
+     * @param entity the entity to describe; it must be a root with no subclasses
      * @param parent the class loader the generated class is loaded under; the class lives as long as it does
      * @return a new class whose annotations describe the entity
+     * @throws IllegalArgumentException when the entity is part of a hierarchy, which {@link #generateAll} describes
      */
     Class<?> generate(GrailsHibernatePersistentEntity entity, ClassLoader parent) {
-        if (!entity.isRoot()) {
-            throw new UnsupportedOperationException(
-                    "Entity [${entity.name}] is part of an inheritance hierarchy, which the generator does not support yet")
-        }
-        DynamicType.Builder<Object> builder = new ByteBuddy()
-                .subclass(Object)
-                .name(generatedClassName(entity))
-                .annotateType(classAnnotations(entity) as AnnotationDescription[])
+        return generateAll([entity], parent).get(entity)
+    }
 
-        HibernatePersistentProperty identity = (HibernatePersistentProperty) entity.identity
-        if (!(identity instanceof HibernateSimpleIdentityProperty)) {
-            throw new UnsupportedOperationException(
-                    "Entity [${entity.name}] has no simple identifier (a composite identifier, for example), " +
-                            'which the generator does not support yet')
+    /**
+     * Generates one class for each entity, so that a hierarchy is described whole. Hibernate's annotation binder
+     * derives the hierarchy from {@code extends}, so the class generated for a subclass extends the class
+     * generated for its direct superclass.
+     *
+     * <p>All the classes of one call are loaded together into a single new class loader whose parent is
+     * {@code parent}: a subclass resolves its superclass by plain delegation inside that loader, and a Hibernate
+     * registry that must load the classes by name needs only that one loader
+     * ({@code BootstrapServiceRegistryBuilder.applyClassLoader(generated.classLoader)}). Nothing is injected into an
+     * existing loader, so no reflective access to {@code ClassLoader.defineClass} is needed, and the classes are
+     * collected together with the loader.</p>
+     *
+     * @param entities the entities to describe; every direct superclass and every direct subclass of an entity must
+     *     be in the collection
+     * @param parent the class loader the generated classes are loaded under
+     * @return the generated class of each entity, in the order of {@code entities}
+     * @throws IllegalArgumentException when a hierarchy is not complete
+     * @throws UnsupportedOperationException when an entity uses something the generator cannot describe yet
+     */
+    Map<GrailsHibernatePersistentEntity, Class<?>> generateAll(
+            Collection<? extends GrailsHibernatePersistentEntity> entities, ClassLoader parent) {
+        Set<GrailsHibernatePersistentEntity> given = new LinkedHashSet<GrailsHibernatePersistentEntity>(entities)
+        for (GrailsHibernatePersistentEntity entity : given) {
+            requireWholeHierarchy(entity, given)
         }
-        if (identity != null) {
-            List<AnnotationDescription> idAnnotations = [AnnotationDescription.Builder.ofType(Id).build()]
-            idAnnotations.addAll(idGeneratorAnnotations(idFacets(entity)))
-            builder = defineField(builder, identity, idAnnotations)
+        List<GrailsHibernatePersistentEntity> ordered = new ArrayList<GrailsHibernatePersistentEntity>(given)
+        ordered.sort { GrailsHibernatePersistentEntity a, GrailsHibernatePersistentEntity b -> depth(a) <=> depth(b) }
+
+        Map<GrailsHibernatePersistentEntity, DynamicType.Unloaded<?>> made = [:]
+        Map<TypeDescription, byte[]> types = [:]
+        for (GrailsHibernatePersistentEntity entity : ordered) {
+            TypeDescription superType = entity.isRoot() ?
+                    TypeDescription.ForLoadedType.of(Object) : made.get(superEntity(entity, given)).typeDescription
+            DynamicType.Unloaded<?> unloaded = make(entity, superType)
+            made.put(entity, unloaded)
+            types.putAll(unloaded.allTypes)
         }
-        HibernatePersistentProperty version = entity.version
-        if (version != null) {
-            builder = defineField(builder, version, [AnnotationDescription.Builder.ofType(Version).build()])
+        Map<TypeDescription, Class<?>> loaded = ClassLoadingStrategy.Default.WRAPPER.load(parent, types)
+        Map<GrailsHibernatePersistentEntity, Class<?>> result = [:]
+        for (GrailsHibernatePersistentEntity entity : given) {
+            result.put(entity, loaded.get(made.get(entity).typeDescription))
+        }
+        return result
+    }
+
+    private static void requireWholeHierarchy(GrailsHibernatePersistentEntity entity, Set<GrailsHibernatePersistentEntity> given) {
+        if (!entity.isRoot() && superEntity(entity, given) == null) {
+            throw new IllegalArgumentException(
+                    "Entity [${entity.name}] is part of an inheritance hierarchy: generate it together with its " +
+                            'superclass and subclasses (generateAll)')
+        }
+        for (GrailsHibernatePersistentEntity child : entity.childEntities) {
+            if (!given.any { GrailsHibernatePersistentEntity other -> other.javaClass == child.javaClass }) {
+                throw new IllegalArgumentException(
+                        "Entity [${entity.name}] is part of an inheritance hierarchy: generate it together with its " +
+                                "subclass [${child.name}] (generateAll)")
+            }
+        }
+    }
+
+    private static GrailsHibernatePersistentEntity superEntity(
+            GrailsHibernatePersistentEntity entity, Set<GrailsHibernatePersistentEntity> given) {
+        return given.find { GrailsHibernatePersistentEntity other -> other.javaClass == entity.javaClass.superclass }
+    }
+
+    private static int depth(GrailsHibernatePersistentEntity entity) {
+        int depth = 0
+        for (Class<?> type = entity.javaClass.superclass; type != null && type != Object; type = type.superclass) {
+            depth++
+        }
+        return depth
+    }
+
+    private DynamicType.Unloaded<?> make(GrailsHibernatePersistentEntity entity, TypeDescription superType) {
+        HierarchyFacets hierarchy = hierarchyFacets(entity)
+        DynamicType.Builder<Object> builder = (DynamicType.Builder<Object>) new ByteBuddy()
+                .subclass(superType)
+                .name(generatedClassName(entity))
+                .annotateType(classAnnotations(entity, hierarchy) as AnnotationDescription[])
+        if (hierarchy.abstractClass()) {
+            builder = builder.modifiers(Visibility.PUBLIC, TypeManifestation.ABSTRACT)
+        }
+        if (entity.isRoot()) {
+            builder = defineIdentityAndVersion(builder, entity)
         }
         for (HibernatePersistentProperty property : entity.persistentPropertiesToBind) {
             if (!supports(property)) {
@@ -156,7 +234,25 @@ class GrailsDomainGenerator {
             }
             builder = defineField(builder, property, [])
         }
-        return builder.make().load(parent, ClassLoadingStrategy.Default.WRAPPER).loaded
+        return builder.make()
+    }
+
+    private DynamicType.Builder<Object> defineIdentityAndVersion(
+            DynamicType.Builder<Object> builder, GrailsHibernatePersistentEntity entity) {
+        HibernatePersistentProperty identity = (HibernatePersistentProperty) entity.identity
+        if (!(identity instanceof HibernateSimpleIdentityProperty)) {
+            throw new UnsupportedOperationException(
+                    "Entity [${entity.name}] has no simple identifier (a composite identifier, for example), " +
+                            'which the generator does not support yet')
+        }
+        List<AnnotationDescription> idAnnotations = [AnnotationDescription.Builder.ofType(Id).build()]
+        idAnnotations.addAll(idGeneratorAnnotations(idFacets(entity)))
+        DynamicType.Builder<Object> result = defineField(builder, identity, idAnnotations)
+        HibernatePersistentProperty version = entity.version
+        if (version != null) {
+            result = defineField(result, version, [AnnotationDescription.Builder.ofType(Version).build()])
+        }
+        return result
     }
 
     private String unsupportedReason(GrailsHibernatePersistentEntity entity, HibernatePersistentProperty property) {
@@ -177,20 +273,123 @@ class GrailsDomainGenerator {
     }
 
     /**
-     * Decides the class-level facets of a root entity the way the domain binder does.
+     * Decides the class-level facets of an entity the way the domain binder does. A single-table subclass has no
+     * table of its own: it reports the table of its hierarchy and no comment, which belongs to the table and so to
+     * the root. A subclass's JPA
+     * name is always its simple name, whatever {@code autoImport} says: that is what the binder's subclass mapping
+     * does.
      */
     EntityFacets entityFacets(GrailsHibernatePersistentEntity entity) {
         Mapping mapping = entity.mappedForm
+        boolean sharesTable = entity.isTablePerHierarchySubclass()
+        GrailsHibernatePersistentEntity tableOwner = sharesTable ? entity.hibernateRootEntity : entity
+        Mapping tableMapping = tableOwner.mappedForm
         boolean autoImport = mapping == null || mapping.autoImport
         return new EntityFacets(
-                autoImport ? entity.javaClass.simpleName : entity.javaClass.name,
-                entity.getTableName(namingStrategy),
-                mapping?.table?.schema ?: null,
-                mapping?.table?.catalog ?: null,
+                autoImport || !entity.isRoot() ? entity.javaClass.simpleName : entity.javaClass.name,
+                tableOwner.getTableName(namingStrategy),
+                tableMapping?.table?.schema ?: null,
+                tableMapping?.table?.catalog ?: null,
                 mapping != null && mapping.dynamicInsert,
                 mapping != null && mapping.dynamicUpdate,
                 mapping?.batchSize != null ? mapping.batchSize : 0,
-                entity.comment)
+                sharesTable ? null : entity.comment)
+    }
+
+    /**
+     * Decides where the entity sits in its inheritance hierarchy the way the domain binder does: the strategy is the
+     * one the entity's own accessors report ({@code isUnionSubclass}, {@code isJoinedSubclass}, else single table),
+     * the discriminator is the one {@code DiscriminatorPropertyBinder} binds on the root of a single-table
+     * hierarchy that has subclasses, a subclass's discriminator value is the entity's own
+     * {@code getDiscriminatorValue}, and a joined subclass's key column is named like its identifier column.
+     *
+     * @throws UnsupportedOperationException for a hierarchy that mixes strategies (annotations state the strategy
+     *     once, on the root) or whose discriminator has no annotation equivalent
+     */
+    HierarchyFacets hierarchyFacets(GrailsHibernatePersistentEntity entity) {
+        boolean root = entity.isRoot()
+        if (root && entity.childEntities.isEmpty()) {
+            return new HierarchyFacets(null, null, entity.isAbstract(), entity.isTableAbstract(), true, null, null, null)
+        }
+        InheritanceType strategy = inheritanceType(entity)
+        InheritanceType hierarchyStrategy = inheritanceType(entity.hibernateRootEntity)
+        if (strategy != hierarchyStrategy) {
+            throw new UnsupportedOperationException(
+                    "Entity [${entity.name}] uses ${strategy} but the root of its hierarchy uses ${hierarchyStrategy}: " +
+                            'a hierarchy that mixes inheritance strategies is not supported')
+        }
+        if (strategy != InheritanceType.SINGLE_TABLE) {
+            throw new UnsupportedOperationException("Inheritance strategy ${strategy} of [${entity.name}] is not supported yet")
+        }
+        boolean singleTable = strategy == InheritanceType.SINGLE_TABLE
+        String discriminatorValue = null
+        if (singleTable) {
+            DiscriminatorConfig config = entity.hibernateMappedForm?.discriminator
+            discriminatorValue = root ? (config?.value != null ? config.value : entity.name) : entity.discriminatorValue
+        }
+        return new HierarchyFacets(
+                strategy,
+                root ? null : entity.parentEntity.name,
+                entity.isAbstract(),
+                root ? entity.isTableAbstract() : strategy == InheritanceType.TABLE_PER_CLASS && entity.isAbstract(),
+                root || !singleTable,
+                discriminatorValue,
+                root && singleTable ? discriminatorFacets(entity) : null,
+                !root && strategy == InheritanceType.JOINED ?
+                        columnNames.getColumnNameForPropertyAndPath((HibernatePersistentProperty) entity.identity, '', null) : null)
+    }
+
+    private static InheritanceType inheritanceType(GrailsHibernatePersistentEntity entity) {
+        if (entity.isUnionSubclass()) {
+            return InheritanceType.TABLE_PER_CLASS
+        }
+        return entity.isJoinedSubclass() ? InheritanceType.JOINED : InheritanceType.SINGLE_TABLE
+    }
+
+    /**
+     * Mirrors {@code ConfiguredDiscriminatorBinder} and {@code DefaultDiscriminatorBinder}: a formula, else a column
+     * that is named {@code class} unless configured and takes its length and SQL type from the column config.
+     */
+    private DiscriminatorFacets discriminatorFacets(GrailsHibernatePersistentEntity entity) {
+        DiscriminatorConfig config = entity.hibernateMappedForm?.discriminator
+        String typeName = config?.type == null ? 'string' :
+                (config.type instanceof Class ? ((Class<?>) config.type).name : config.type.toString())
+        DiscriminatorType type = discriminatorType(entity, typeName)
+        boolean insertable = config?.insertable == null || config.insertable
+        if (config?.formula != null) {
+            return new DiscriminatorFacets(null, config.formula, typeName, type, null, null, insertable)
+        }
+        ColumnConfig columnConfig = config?.column
+        Column column = new Column()
+        columnConfigBinder.bindColumnConfigToColumn(column, columnConfig, null)
+        if (column.precision != null || column.scale != null) {
+            throw new UnsupportedOperationException(
+                    "The discriminator column of [${entity.name}] sets a precision or a scale, " +
+                            'which @DiscriminatorColumn cannot state')
+        }
+        return new DiscriminatorFacets(
+                columnConfig?.name != null ? columnConfig.name : GrailsDomainBinder.DEFAULT_DISCRIMINATOR_COLUMN_NAME,
+                null, typeName, type, column.length?.intValue(), column.sqlType, insertable)
+    }
+
+    private static DiscriminatorType discriminatorType(GrailsHibernatePersistentEntity entity, String typeName) {
+        switch (typeName) {
+            case 'string':
+            case 'java.lang.String':
+                return DiscriminatorType.STRING
+            case 'integer':
+            case 'int':
+            case 'java.lang.Integer':
+                return DiscriminatorType.INTEGER
+            case 'character':
+            case 'char':
+            case 'java.lang.Character':
+                return DiscriminatorType.CHAR
+            default:
+                throw new UnsupportedOperationException(
+                        "The discriminator type [${typeName}] of [${entity.name}] is not one of string, integer " +
+                                'or character, which the generator does not support yet')
+        }
     }
 
     /**
@@ -433,19 +632,22 @@ class GrailsDomainGenerator {
         return columns == null || columns.isEmpty() ? null : columns[0]
     }
 
-    private List<AnnotationDescription> classAnnotations(GrailsHibernatePersistentEntity entity) {
+    private List<AnnotationDescription> classAnnotations(GrailsHibernatePersistentEntity entity, HierarchyFacets hierarchy) {
         EntityFacets facets = entityFacets(entity)
         List<AnnotationDescription> annotations = []
         annotations << AnnotationDescription.Builder.ofType(Entity).define('name', facets.jpaName()).build()
 
-        AnnotationDescription.Builder table = AnnotationDescription.Builder.ofType(Table).define('name', facets.tableName())
-        if (facets.schema()) {
-            table = table.define('schema', facets.schema())
+        if (hierarchy.ownsTable()) {
+            AnnotationDescription.Builder table = AnnotationDescription.Builder.ofType(Table).define('name', facets.tableName())
+            if (facets.schema()) {
+                table = table.define('schema', facets.schema())
+            }
+            if (facets.catalog()) {
+                table = table.define('catalog', facets.catalog())
+            }
+            annotations << table.build()
         }
-        if (facets.catalog()) {
-            table = table.define('catalog', facets.catalog())
-        }
-        annotations << table.build()
+        annotations.addAll(hierarchyAnnotations(entity, hierarchy))
 
         if (facets.dynamicInsert()) {
             annotations << AnnotationDescription.Builder.ofType(DynamicInsert).build()
@@ -458,6 +660,45 @@ class GrailsDomainGenerator {
         }
         if (facets.comment()) {
             annotations << AnnotationDescription.Builder.ofType(Comment).define('value', facets.comment()).build()
+        }
+        return annotations
+    }
+
+    private static List<AnnotationDescription> hierarchyAnnotations(GrailsHibernatePersistentEntity entity, HierarchyFacets hierarchy) {
+        List<AnnotationDescription> annotations = []
+        if (hierarchy.strategy() == null) {
+            return annotations
+        }
+        if (entity.isRoot()) {
+            annotations << AnnotationDescription.Builder.ofType(Inheritance).define('strategy', hierarchy.strategy()).build()
+        }
+        DiscriminatorFacets discriminator = hierarchy.discriminator()
+        if (discriminator != null) {
+            if (discriminator.formula() != null) {
+                annotations << AnnotationDescription.Builder.ofType(DiscriminatorFormula)
+                        .define('value', discriminator.formula())
+                        .define('discriminatorType', discriminator.type())
+                        .build()
+            } else {
+                AnnotationDescription.Builder column = AnnotationDescription.Builder.ofType(DiscriminatorColumn)
+                        .define('name', discriminator.column())
+                        .define('discriminatorType', discriminator.type())
+                        // the binder's discriminator column has Hibernate's default length unless the mapping says otherwise
+                        .define('length', discriminator.length() != null ? discriminator.length() : (int) Length.DEFAULT)
+                if (discriminator.sqlType()) {
+                    column = column.define('columnDefinition', discriminator.sqlType())
+                }
+                annotations << column.build()
+            }
+            if (!discriminator.insertable()) {
+                annotations << AnnotationDescription.Builder.ofType(DiscriminatorOptions).define('insert', false).build()
+            }
+        }
+        if (hierarchy.discriminatorValue() != null) {
+            annotations << AnnotationDescription.Builder.ofType(DiscriminatorValue).define('value', hierarchy.discriminatorValue()).build()
+        }
+        if (hierarchy.keyColumn() != null) {
+            annotations << AnnotationDescription.Builder.ofType(PrimaryKeyJoinColumn).define('name', hierarchy.keyColumn()).build()
         }
         return annotations
     }

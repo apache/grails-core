@@ -27,15 +27,22 @@ import java.lang.reflect.Field
 import grails.gorm.annotation.Entity
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import jakarta.persistence.Column
+import jakarta.persistence.DiscriminatorColumn
+import jakarta.persistence.DiscriminatorType
+import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.Id
+import jakarta.persistence.Inheritance
+import jakarta.persistence.InheritanceType
 import jakarta.persistence.Table
 import jakarta.persistence.Version
 import jakarta.validation.constraints.Size
 import org.hibernate.annotations.BatchSize
 import org.hibernate.annotations.ColumnDefault
 import org.hibernate.annotations.Comment
+import org.hibernate.annotations.DiscriminatorFormula
+import org.hibernate.annotations.DiscriminatorOptions
 import org.hibernate.annotations.DynamicUpdate
 import org.hibernate.annotations.Formula
 import org.hibernate.annotations.IdGeneratorType
@@ -53,6 +60,8 @@ import org.hibernate.id.enhanced.SequenceStyleGenerator
 import org.hibernate.id.enhanced.TableGenerator
 import org.hibernate.id.uuid.UuidGenerator as HibernateUuidGenerator
 import org.hibernate.mapping.PersistentClass
+import org.hibernate.mapping.RootClass
+import org.hibernate.mapping.SingleTableSubclass
 import org.hibernate.mapping.GeneratorCreator
 import org.hibernate.boot.registry.BootstrapServiceRegistry
 import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder
@@ -97,7 +106,15 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
         manager.registerDomainClasses(GenBasic, GenVehicle, GenCar, GenWithEnum, GenWithOwner, GenDerived, GenTyped, GenUnsupportedType, GenIdSequence, GenIdUuid, GenIdAssigned, GenIdTable,
-                GenIdIncrement, GenIdIdentity, GenIdNative)
+                GenIdIncrement, GenIdIdentity, GenIdNative, GenAnimal, GenDog, GenPuppy, GenCat, GenToy, GenPlushToy, GenGadget,
+                GenGizmo, GenCoded, GenCodedChild, GenFormulaRoot, GenFormulaChild, GenAbstractBase, GenConcreteChild, GenNoted, GenNotedChild)
+    }
+
+    List<StandardServiceRegistry> registries = []
+
+    void cleanup() {
+        registries.each { StandardServiceRegistryBuilder.destroy(it) }
+        registries.clear()
     }
 
     void setup() {
@@ -162,13 +179,17 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         field('tag').getAnnotation(Size).max() == 20
     }
 
-    void "an entity in an inheritance hierarchy is rejected until inheritance is supported"() {
+    void "an entity of an inheritance hierarchy cannot be generated on its own"() {
         when:
-        generate(GenCar)
+        generate(entityClass)
 
         then:
-        UnsupportedOperationException e = thrown()
+        IllegalArgumentException e = thrown()
         e.message.contains('inheritance hierarchy')
+        e.message.contains('generateAll')
+
+        where:
+        entityClass << [GenCar, GenVehicle]
     }
 
     void "a property the generator does not support is rejected by name"() {
@@ -404,6 +425,235 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         StandardServiceRegistryBuilder.destroy(registry)
     }
 
+    void "a single-table hierarchy is generated whole, each subclass extending the class generated for its superclass"() {
+        when:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateHierarchy(GenAnimal, GenDog, GenPuppy, GenCat)
+
+        then:
+        classes[entity(GenAnimal)].superclass == Object
+        classes[entity(GenDog)].superclass == classes[entity(GenAnimal)]
+        classes[entity(GenPuppy)].superclass == classes[entity(GenDog)]
+        classes[entity(GenCat)].superclass == classes[entity(GenAnimal)]
+        classes.keySet()*.javaClass == [GenAnimal, GenDog, GenPuppy, GenCat]
+    }
+
+    void "the classes of one hierarchy share one class loader that can load each of them by name and see the parent"() {
+        when:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateHierarchy(GenAnimal, GenDog, GenPuppy, GenCat)
+        ClassLoader loader = classes.values().first().classLoader
+
+        then:
+        classes.values().every { it.classLoader.is(loader) }
+        !loader.is(getClass().classLoader)
+        classes.values().every { Class.forName(it.name, false, loader).is(it) }
+        loader.parent.is(getClass().classLoader)
+
+        and: "the loader is not the loader of an unrelated generation"
+        !generate(GenBasic).classLoader.is(loader)
+    }
+
+    void "the root of a single-table hierarchy states the strategy and the default discriminator"() {
+        when:
+        Class<?> root = generateHierarchy(GenAnimal, GenDog, GenPuppy, GenCat)[entity(GenAnimal)]
+        DiscriminatorColumn column = root.getAnnotation(DiscriminatorColumn)
+
+        then:
+        root.getAnnotation(Inheritance).strategy() == InheritanceType.SINGLE_TABLE
+        root.getAnnotation(Table).name() == 'gen_animal'
+        column.name() == 'class'
+        column.discriminatorType() == DiscriminatorType.STRING
+        column.length() == 255
+        root.getAnnotation(DiscriminatorValue).value() == GenAnimal.name
+        !root.isAnnotationPresent(DiscriminatorOptions)
+        !root.isAnnotationPresent(DiscriminatorFormula)
+    }
+
+    void "a single-table subclass has no table, no strategy and no discriminator column, only its value"() {
+        given:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateHierarchy(GenAnimal, GenDog, GenPuppy, GenCat)
+
+        expect:
+        Class<?> subclass = classes[entity(entityClass)]
+        subclass.getAnnotation(DiscriminatorValue).value() == entityClass.name
+        subclass.getAnnotation(jakarta.persistence.Entity).name() == entityClass.simpleName
+        !subclass.isAnnotationPresent(Table)
+        !subclass.isAnnotationPresent(Inheritance)
+        !subclass.isAnnotationPresent(DiscriminatorColumn)
+
+        where:
+        entityClass << [GenDog, GenPuppy, GenCat]
+    }
+
+    void "a subclass declares only its own properties, with no identifier and no version, and its columns are nullable"() {
+        when:
+        Class<?> dog = generateHierarchy(GenAnimal, GenDog, GenPuppy, GenCat)[entity(GenDog)]
+
+        then:
+        dog.declaredFields*.name == ['breed']
+        !dog.getDeclaredField('breed').isAnnotationPresent(Id)
+        dog.getDeclaredField('breed').getAnnotation(Column).nullable()
+        dog.getDeclaredField('breed').getAnnotation(Column).name() == 'breed'
+    }
+
+    void "a configured discriminator states its value, column, length and the value of each subclass"() {
+        when:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateHierarchy(GenToy, GenPlushToy)
+        Class<?> root = classes[entity(GenToy)]
+        DiscriminatorColumn column = root.getAnnotation(DiscriminatorColumn)
+
+        then:
+        root.getAnnotation(DiscriminatorValue).value() == 'TOY'
+        column.name() == 'toy_kind'
+        column.length() == 12
+        column.discriminatorType() == DiscriminatorType.STRING
+        classes[entity(GenPlushToy)].getAnnotation(DiscriminatorValue).value() == 'PLUSH'
+    }
+
+    void "a root mapping that sets only the discriminator column keeps the class name as the root value"() {
+        when:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateHierarchy(GenGadget, GenGizmo)
+
+        then:
+        classes[entity(GenGadget)].getAnnotation(DiscriminatorColumn).name() == 'gadget_kind'
+        classes[entity(GenGadget)].getAnnotation(DiscriminatorValue).value() == GenGadget.name
+        classes[entity(GenGizmo)].getAnnotation(DiscriminatorValue).value() == GenGizmo.name
+    }
+
+    void "a discriminator type, an insert flag and an explicit value are carried over"() {
+        when:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateHierarchy(GenCoded, GenCodedChild)
+        Class<?> root = classes[entity(GenCoded)]
+
+        then:
+        root.getAnnotation(DiscriminatorColumn).discriminatorType() == DiscriminatorType.INTEGER
+        root.getAnnotation(DiscriminatorColumn).name() == 'class'
+        root.getAnnotation(DiscriminatorOptions).insert() == false
+        root.getAnnotation(DiscriminatorValue).value() == '1'
+        classes[entity(GenCodedChild)].getAnnotation(DiscriminatorValue).value() == '2'
+    }
+
+    void "a discriminator formula replaces the discriminator column"() {
+        when:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateHierarchy(GenFormulaRoot, GenFormulaChild)
+        Class<?> root = classes[entity(GenFormulaRoot)]
+
+        then:
+        root.getAnnotation(DiscriminatorFormula).value() == "case when kind_code = 1 then 'A' else 'B' end"
+        root.getAnnotation(DiscriminatorFormula).discriminatorType() == DiscriminatorType.STRING
+        !root.isAnnotationPresent(DiscriminatorColumn)
+        root.getAnnotation(DiscriminatorValue).value() == GenFormulaRoot.name
+        classes[entity(GenFormulaChild)].getAnnotation(DiscriminatorValue).value() == 'A'
+    }
+
+    void "an abstract class in a hierarchy is generated abstract"() {
+        when:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateHierarchy(GenAbstractBase, GenConcreteChild, GenNoted, GenNotedChild)
+
+        then:
+        java.lang.reflect.Modifier.isAbstract(classes[entity(GenAbstractBase)].modifiers)
+        !java.lang.reflect.Modifier.isAbstract(classes[entity(GenConcreteChild)].modifiers)
+        classes[entity(GenConcreteChild)].superclass == classes[entity(GenAbstractBase)]
+    }
+
+    void "a single-table subclass states its own class-level facets but never a table or a comment"() {
+        when:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateHierarchy(GenNoted, GenNotedChild)
+        Class<?> root = classes[entity(GenNoted)]
+        Class<?> child = classes[entity(GenNotedChild)]
+
+        then:
+        root.getAnnotation(Comment).value() == 'noted things'
+        root.getAnnotation(Table).name() == 'gen_noted'
+        child.isAnnotationPresent(org.hibernate.annotations.DynamicInsert)
+        child.getAnnotation(BatchSize).size() == 3
+        !child.isAnnotationPresent(Comment)
+        !child.isAnnotationPresent(Table)
+        !root.isAnnotationPresent(org.hibernate.annotations.DynamicInsert)
+    }
+
+    void "a hierarchy must be generated whole"() {
+        when:
+        newGenerator().generateAll(entityClasses.collect { entity(it) }, getClass().classLoader)
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message.contains(missing)
+
+        where:
+        entityClasses          | missing
+        [GenDog]               | 'superclass'
+        [GenAnimal, GenDog]    | 'subclass [org.grails.orm.hibernate.cfg.domainbinding.jpa.GenCat]'
+    }
+
+    void "the facets of a hierarchy are the ones the binder reports"() {
+        when:
+        HierarchyFacets facets = newGenerator().hierarchyFacets(entity(entityClass))
+
+        then:
+        facets.strategy() == strategy
+        facets.superclass() == superclass
+        facets.ownsTable() == ownsTable
+        facets.discriminatorValue() == value
+        (facets.discriminator() != null) == hasDiscriminator
+
+        where:
+        entityClass | strategy                     | superclass     | ownsTable | value         | hasDiscriminator
+        GenAnimal   | InheritanceType.SINGLE_TABLE | null           | true      | GenAnimal.name | true
+        GenDog      | InheritanceType.SINGLE_TABLE | GenAnimal.name | false     | GenDog.name   | false
+        GenPuppy    | InheritanceType.SINGLE_TABLE | GenDog.name    | false     | GenPuppy.name | false
+        GenBasic    | null                         | null           | true      | null          | false
+    }
+
+    void "Hibernate's annotation binder reads the generated single-table hierarchy as the binder builds it"() {
+        given:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateHierarchy(GenAnimal, GenDog, GenPuppy, GenCat)
+
+        when:
+        Metadata metadata = annotationMetadata(classes.values())
+        PersistentClass animal = metadata.getEntityBinding(classes[entity(GenAnimal)].name)
+        PersistentClass dog = metadata.getEntityBinding(classes[entity(GenDog)].name)
+        PersistentClass puppy = metadata.getEntityBinding(classes[entity(GenPuppy)].name)
+
+        then:
+        animal instanceof RootClass
+        dog instanceof SingleTableSubclass
+        puppy instanceof SingleTableSubclass
+        puppy.superclass.entityName == dog.entityName
+        dog.superclass.entityName == animal.entityName
+        puppy.table.is(animal.table)
+        animal.table.name == 'gen_animal'
+        animal.discriminator.selectables*.text == ['class']
+        animal.discriminatorValue == GenAnimal.name
+        puppy.discriminatorValue == GenPuppy.name
+        puppy.getProperty('weeks').columns*.nullable == [true]
+
+        and: "the binder built the same shape"
+        getPersistentEntity(GenPuppy).persistentClass.superclass.entityName == GenDog.name
+        getPersistentEntity(GenAnimal).persistentClass.discriminator.selectables*.text == ['class']
+    }
+
+    private Metadata annotationMetadata(Collection<Class<?>> classes) {
+        BootstrapServiceRegistry bootstrap = new BootstrapServiceRegistryBuilder()
+                .applyClassLoader(classes.first().classLoader)
+                .build()
+        StandardServiceRegistry registry = new StandardServiceRegistryBuilder(bootstrap)
+                .applySetting('hibernate.dialect', H2Dialect.name)
+                .applySetting('hibernate.connection.url', 'jdbc:h2:mem:generator-hierarchy;DB_CLOSE_DELAY=-1')
+                .build()
+        registries << registry
+        MetadataSources sources = new MetadataSources(registry)
+        classes.each { sources.addAnnotatedClass(it) }
+        return sources.buildMetadata()
+    }
+
+    private Map<GrailsHibernatePersistentEntity, Class<?>> generateHierarchy(Class<?>... domainClasses) {
+        return newGenerator().generateAll(domainClasses.collect { entity(it) }, getClass().classLoader)
+    }
+
+    private GrailsHibernatePersistentEntity entity(Class<?> domainClass) {
+        return getPersistentEntity(domainClass)
+    }
+
     private IdFacets idFacets(Class<?> domainClass) {
         return newGenerator().idFacets(getPersistentEntity(domainClass))
     }
@@ -501,6 +751,133 @@ class GenVehicle {
 class GenCar extends GenVehicle {
 
     Integer doors
+}
+
+@Entity
+class GenAnimal {
+
+    String name
+}
+
+@Entity
+class GenDog extends GenAnimal {
+
+    String breed
+
+    static constraints = {
+        breed nullable: false
+    }
+}
+
+@Entity
+class GenPuppy extends GenDog {
+
+    Integer weeks
+}
+
+@Entity
+class GenCat extends GenAnimal {
+
+    Boolean indoor
+}
+
+@Entity
+class GenToy {
+
+    String name
+
+    static mapping = {
+        discriminator value: 'TOY', column: [name: 'toy_kind', length: 12]
+    }
+}
+
+@Entity
+class GenPlushToy extends GenToy {
+
+    static mapping = {
+        discriminator 'PLUSH'
+    }
+}
+
+@Entity
+class GenGadget {
+
+    String name
+
+    static mapping = {
+        discriminator column: 'gadget_kind'
+    }
+}
+
+@Entity
+class GenGizmo extends GenGadget {
+}
+
+@Entity
+class GenCoded {
+
+    String name
+
+    static mapping = {
+        discriminator value: '1', type: 'integer', insert: false
+    }
+}
+
+@Entity
+class GenCodedChild extends GenCoded {
+
+    static mapping = {
+        discriminator '2'
+    }
+}
+
+@Entity
+class GenFormulaRoot {
+
+    Integer kindCode
+
+    static mapping = {
+        discriminator formula: "case when kind_code = 1 then 'A' else 'B' end"
+    }
+}
+
+@Entity
+class GenFormulaChild extends GenFormulaRoot {
+
+    static mapping = {
+        discriminator 'A'
+    }
+}
+
+@Entity
+class GenNoted {
+
+    String name
+
+    static mapping = {
+        comment 'noted things'
+    }
+}
+
+@Entity
+class GenNotedChild extends GenNoted {
+
+    static mapping = {
+        dynamicInsert true
+        batchSize 3
+    }
+}
+
+@Entity
+abstract class GenAbstractBase {
+
+    String title
+}
+
+@Entity
+class GenConcreteChild extends GenAbstractBase {
+
+    String extra
 }
 
 enum GenKind {
