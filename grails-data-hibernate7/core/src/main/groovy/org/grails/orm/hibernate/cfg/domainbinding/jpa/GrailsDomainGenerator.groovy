@@ -564,15 +564,14 @@ class GrailsDomainGenerator {
             }
         }
         if ((property instanceof HibernateSimpleProperty || property instanceof HibernateTenantIdProperty) && !decideType(property).supported) {
-            return typeNotSupported(property, decideType(property).name)
+            return typeNotSupported(property, decideType(property))
         }
         return "Property [${property.name}] of [${entity.name}] is a ${property.getClass().simpleName}, " +
                 'which the generator does not support yet'
     }
 
-    private static String typeNotSupported(HibernatePersistentProperty property, String name) {
-        return "Type [${name}] of property [${property.name}] of [${property.hibernateOwner.name}] " +
-                'is not a UserType or a registered type for the property class, which the generator does not support yet'
+    private static String typeNotSupported(HibernatePersistentProperty property, TypeDecision decision) {
+        return "Type [${decision.name}] of property [${property.name}] of [${property.hibernateOwner.name}] ${decision.problem}"
     }
 
     static String generatedClassName(GrailsHibernatePersistentEntity entity) {
@@ -941,7 +940,7 @@ class GrailsDomainGenerator {
     TypeFacets typeFacets(HibernatePersistentProperty property) {
         TypeDecision decision = decideType(property)
         if (!decision.supported) {
-            throw new UnsupportedOperationException(typeNotSupported(property, decision.name))
+            throw new UnsupportedOperationException(typeNotSupported(property, decision))
         }
         return decision.facets
     }
@@ -951,11 +950,13 @@ class GrailsDomainGenerator {
         final boolean supported
         final String name
         final TypeFacets facets
+        final String problem
 
-        TypeDecision(boolean supported, String name, TypeFacets facets) {
+        TypeDecision(boolean supported, String name, TypeFacets facets, String problem = null) {
             this.supported = supported
             this.name = name
             this.facets = facets
+            this.problem = problem
         }
     }
 
@@ -989,14 +990,28 @@ class GrailsDomainGenerator {
         if (named != null) {
             return UserType.isAssignableFrom(named) ?
                     new TypeDecision(true, name, new TypeFacets(named, null, parameters)) :
-                    new TypeDecision(false, name, null)
+                    new TypeDecision(false, name, null, 'names a class that is not a UserType (an AttributeConverter, for example), which ' +
+                            '@Type cannot name')
         }
         BasicType<?> registered = typeConfiguration.basicTypeRegistry.getRegisteredType(name)
         if (registered != null && registered.valueConverter == null && parameters.isEmpty() && !isEnum &&
                 registered.javaTypeDescriptor.javaTypeClass == boxed(type)) {
             return new TypeDecision(true, name, new TypeFacets(null, registered.jdbcType.defaultSqlTypeCode, parameters))
         }
-        return new TypeDecision(false, name, null)
+        String problem
+        if (registered == null) {
+            problem = 'is neither a UserType class nor a type registered with Hibernate'
+        } else if (isEnum) {
+            problem = 'is a registered type on an enum, which the binder binds with its own type parameters'
+        } else if (registered.valueConverter != null) {
+            problem = 'is a registered type that converts its value, which no annotation states'
+        } else if (!parameters.isEmpty()) {
+            problem = 'is a registered type with type parameters, which no annotation states'
+        } else {
+            problem = "is registered for the Java type [${registered.javaTypeDescriptor.javaTypeClass.name}], not the property's [${type?.name}]: " +
+                    'stating it would need a converter, which annotations do not say for a type name'
+        }
+        return new TypeDecision(false, name, null, problem)
     }
 
     private static Class<?> loadClass(String name, HibernatePersistentProperty property) {
@@ -1138,7 +1153,7 @@ class GrailsDomainGenerator {
         }
         TypeDecision type = decideType(property)
         if (!type.supported) {
-            return "the element type [${type.name}] is not a UserType or a registered type for the element class"
+            return "the element type [${type.name}] ${type.problem}"
         }
         if (kind == CollectionKind.MAP && type.facets != null) {
             return 'a mapped element type on a map'
@@ -1147,7 +1162,9 @@ class GrailsDomainGenerator {
             return "the index column type [${property.getIndexColumnType('integer')}] is not integer"
         }
         if (kind == CollectionKind.MAP && property.getIndexColumnType('string') != 'string') {
-            return "the map key type [${property.getIndexColumnType('string')}] is not string"
+            return "the index column of the map is mapped with the type [${property.getIndexColumnType('string')}], which the binder gives the key " +
+                    'independently of the declared key class; the generator types the key as the declared String and would need ' +
+                    '@MapKeyJdbcTypeCode to say another type, which it does not write yet'
         }
         ColumnFacets key = collectionKeyFacets(property)
         if (key.length() != null || key.precision() != null || key.scale() != null || key.defaultValue() != null ||
@@ -1494,7 +1511,9 @@ class GrailsDomainGenerator {
             return "the index column type [${property.getIndexColumnType('integer')}] is not integer"
         }
         if (kind == CollectionKind.MAP && property.getIndexColumnType('string') != 'string') {
-            return "the map key type [${property.getIndexColumnType('string')}] is not string"
+            return "the index column of the map is mapped with the type [${property.getIndexColumnType('string')}], which the binder gives the key " +
+                    'independently of the declared key class; the generator types the key as the declared String and would need ' +
+                    '@MapKeyJdbcTypeCode to say another type, which it does not write yet'
         }
         if (property.hasSort()) {
             if (kind.indexed) {

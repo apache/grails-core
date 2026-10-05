@@ -196,7 +196,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                     for (HibernatePersistentProperty property : properties) {
                         if (!generator.supports(property)) {
                             skipped[property instanceof HibernateSimpleProperty ?
-                                    "${property.getClass().simpleName} (type ${property.getTypeName()})".toString() :
+                                    "${property.getClass().simpleName}: ${generator.unsupportedReason(entity, property).replaceAll(/\[[^\]]*\]/, '[..]')}".toString() :
                                     property instanceof HibernateEmbeddedProperty ?
                                             "embedded: ${generator.unsupportedReason(entity, property).replaceAll(/\[[^\]]*\]/, '[..]')}".toString() :
                                             property instanceof HibernateBasicProperty || property instanceof HibernateToOneProperty || property instanceof HibernateToManyEntityProperty ?
