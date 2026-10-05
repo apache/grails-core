@@ -152,7 +152,7 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
                 GenEmbedOwner, GenEmbedOther, GenEmbedBase, GenEmbedChild, GenEmbedFormulaOwner, GenCollSingle, GenCollKinds, GenCollLazy,
                 GenFkTarget, GenFkOwned, GenFkOwner, GenFkCascades, GenFkNodeA, GenFkNodeB, GenFkHasOneOwner, GenFkHasOneDetail, GenOneFace, GenOneNose, GenFkManyOne, GenFkOneSide, GenFkSub, GenFkSubRoot,
                 GenOmParent, GenOmChild, GenOmListed, GenOmOrdered, GenOmOrphan, GenOmFetched, GenOmTag, GenOmStep, GenOmKept, GenOmSortedOwner, GenOmMapOwner, GenMapBidiOwner, GenMapBidiChild, GenEmbAssocOwner,
-                GenMmStudent, GenMmCourse, GenMmPerson, GenMmNoOwnerA, GenMmNoOwnerB)
+                GenMmStudent, GenMmCourse, GenMmPerson, GenMmNoOwnerA, GenMmNoOwnerB, GenParamsOnly)
     }
 
     List<StandardServiceRegistry> registries = []
@@ -235,6 +235,16 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
 
         where:
         entityClass << [GenCar, GenVehicle]
+    }
+
+    void "type parameters mapped with no type are not stated, because the built-in type the binder hands them to ignores them"() {
+        when:
+        Class<?> generated = generate(GenParamsOnly)
+
+        then:
+        generated.getDeclaredField('quantity').getAnnotations().every { !(it instanceof Type) && !(it instanceof JdbcTypeCode) }
+        generated.getDeclaredField('quantity').getAnnotation(Column).name() == 'quantity'
+        getPersistentEntity(GenParamsOnly).persistentClass.getProperty('quantity').value.typeParameters.getProperty('sequence_name') == 'seq'
     }
 
     void "a property the generator does not support is rejected by name"() {
@@ -1918,7 +1928,9 @@ class GenEmbedBadHolder {
 class GenEmbedBad {
 
     String text
-    GenFkComposite ref
+    Set<String> ref
+
+    static hasMany = [ref: String]
 }
 
 @Entity
@@ -2376,6 +2388,16 @@ class GenTyped {
         body type: 'text'
         shout type: GenUpperType, params: [mode: 'loud', other: 'x']
         kind type: GenKindType
+    }
+}
+
+@Entity
+class GenParamsOnly {
+
+    Integer quantity
+
+    static mapping = {
+        quantity params: [sequence_name: 'seq']
     }
 }
 

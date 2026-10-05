@@ -982,7 +982,8 @@ class GrailsDomainGenerator {
             }
         }
         if (!explicit) {
-            return new TypeDecision(isEnum || parameters.isEmpty(), name, null)
+            // type parameters with no type to give them to: the binder hands them to a built-in type, which ignores them
+            return new TypeDecision(true, name, null)
         }
         Class<?> named = loadClass(name, property)
         if (named != null) {
@@ -1935,6 +1936,17 @@ class GrailsDomainGenerator {
                 collectLeaves((HibernateEmbeddedProperty) peer, currentPath, path, enclosing, leaves)
             } else if (isDerived(peer)) {
                 leaves << new EmbeddedLeaf(path, peer, null, null)
+            } else if (peer instanceof HibernateToOneProperty && compositeIdentifier(((HibernateToOneProperty) peer).hibernateAssociatedEntity)) {
+                // a foreign key to a composite identifier has several columns, named by the identifier and not by the path; each one is
+                // nullable when an enclosing component is
+                ToOneFacets toOne = toOneFacets((HibernateToOneProperty) peer)
+                List<ColumnFacets> columns = toOne.joinColumns().collect { ColumnFacets column ->
+                    nullableInComponent(column, enclosing)
+                }
+                leaves << new EmbeddedLeaf(path, peer, columns[0], new ToOneFacets(
+                        toOne.target(), toOne.lazy(), toOne.fetchMode(), columns.every { ColumnFacets c -> c.nullable() },
+                        toOne.ignoreNotFound(), toOne.cascade(), columns[0], toOne.mappedBy(), toOne.referencedEntity(), columns,
+                        toOne.referencedColumns()))
             } else {
                 leaves << new EmbeddedLeaf(
                         path, peer, componentColumnFacets(peer, embedded, currentPath, enclosing),
@@ -1954,6 +1966,11 @@ class GrailsDomainGenerator {
         ColumnFacets facets = peer instanceof HibernateToOneProperty ? toOneColumnFacets((HibernateToOneProperty) peer, path) :
                 (peer instanceof HibernateEnumProperty ?
                         enumColumnFacets((HibernateEnumProperty) peer, path) : basicColumnFacets(peer, path, parent))
+        return nullableInComponent(facets, enclosing)
+    }
+
+    /** {@code ComponentUpdater} makes every column of an enclosing component nullable when that component is. */
+    private static ColumnFacets nullableInComponent(ColumnFacets facets, List<HibernateEmbeddedProperty> enclosing) {
         boolean nullable = facets.nullable() || enclosing.any { HibernateEmbeddedProperty e ->
             e.hibernateOwner.isComponentPropertyNullable(e)
         }
@@ -2006,7 +2023,10 @@ class GrailsDomainGenerator {
                     return problem
                 }
             } else if (peer instanceof HibernateToManyProperty) {
-                return "the property [${peer.name}] of [${type.name}] is a collection inside an embedded type, which the generator does not support yet"
+                return "the property [${peer.name}] of [${type.name}] is a collection inside an embedded type: the binder names its table and " +
+                        'its key column after the embedded type and not after the owner, so two owners of the type collide ' +
+                        'and Hibernate refuses the duplicate collection at boot (pinned in GrailsDomainBinderEmbeddedCollectionDefectSpec), ' +
+                        'which the generator does not copy and annotations cannot say'
             } else if (peer instanceof HibernateToOneProperty) {
                 if (!boundAsManyToOne((HibernateToOneProperty) peer)) {
                     return "the property [${peer.name}] of [${type.name}] is the inverse side of a one-to-one inside an embedded type, " +
@@ -2016,11 +2036,7 @@ class GrailsDomainGenerator {
                 if (problem != null) {
                     return "the association [${peer.name}] of [${type.name}]: ${problem}"
                 }
-                if (((HibernateToOneProperty) peer).hibernateAssociatedEntity != null &&
-                        compositeIdentifier(((HibernateToOneProperty) peer).hibernateAssociatedEntity)) {
-                    return "the association [${peer.name}] of [${type.name}] refers to an entity with a composite identifier, whose foreign " +
-                            'key has one column for each identifier property, which the generator does not state inside an embedded type yet'
-                }
+
             } else if (peer instanceof HibernateAssociation) {
                 return "the property [${peer.name}] of [${type.name}] is an association inside an embedded type, which the generator does not support yet"
             } else if (!supports(peer)) {
@@ -2603,7 +2619,10 @@ class GrailsDomainGenerator {
                     .collect { EmbeddedLeaf leaf ->
                         AnnotationDescription.Builder.ofType(AssociationOverride)
                                 .define('name', leaf.path())
-                                .defineAnnotationArray('joinColumns', TypeDescription.ForLoadedType.of(JoinColumn), joinColumnAnnotation(leaf.column()))
+                                .defineAnnotationArray('joinColumns', TypeDescription.ForLoadedType.of(JoinColumn),
+                                        leaf.toOne().joinColumns().size() > 1 ?
+                                                keyJoinColumns(leaf.toOne().joinColumns(), leaf.toOne().referencedColumns()) :
+                                                [joinColumnAnnotation(leaf.column())] as AnnotationDescription[])
                                 .build()
                     }
             if (!associationOverrides.isEmpty()) {

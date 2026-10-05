@@ -19,6 +19,8 @@
 package org.grails.orm.hibernate.cfg.domainbinding.jpa
 
 import grails.gorm.annotation.Entity
+import jakarta.persistence.AssociationOverride
+import jakarta.persistence.AssociationOverrides
 import jakarta.persistence.Column
 import jakarta.persistence.Embeddable
 import jakarta.persistence.EmbeddedId
@@ -64,7 +66,7 @@ class GrailsDomainGeneratorCompositeIdSpec extends GrailsDomainGeneratorSupport 
     void setupSpec() {
         manager.registerDomainClasses(
                 GenCidSimple, GenCidTarget, GenCidParts, GenCidRef, GenCidIndexed, GenCidNested, GenCidParent, GenCidChild,
-                GenCidOwner, GenCidItem, GenCidKid, GenCidListedKid, GenCidRefNested)
+                GenCidOwner, GenCidItem, GenCidKid, GenCidListedKid, GenCidRefNested, GenCidEmbOwner)
     }
 
     void "a composite identifier is an @EmbeddedId of a generated embeddable that holds the parts, and the entity keeps the other properties"() {
@@ -218,6 +220,30 @@ class GrailsDomainGeneratorCompositeIdSpec extends GrailsDomainGeneratorSupport 
         domain                    | composite             | property     | reason
         UnbootableJoinToComposite | UnbootableComposite   | 'targets'    | 'join table'
         UnbootableMmOther         | UnbootableMmComposite | 'composites' | 'many-to-many'
+    }
+
+    void "a foreign key to a composite identifier inside an embedded type is stated with an association override for each column"() {
+        when:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenCidEmbOwner, GenCidSimple)
+        Class<?> owner = classes[entity(GenCidEmbOwner)]
+        AssociationOverride override = owner.getDeclaredField('home').getAnnotation(AssociationOverrides).value().find { it.name() == 'ref' }
+
+        then:
+        override.joinColumns()*.name() == ['gen_cid_simple_last', 'gen_cid_simple_age']
+        override.joinColumns()*.referencedColumnName() == ['last', 'age']
+        owner.getDeclaredField('home').type.getDeclaredField('ref').getAnnotation(JoinColumns).value()*.name() == ['gen_cid_simple_last', 'gen_cid_simple_age']
+    }
+
+    void "Hibernate's annotation binder reads a foreign key to a composite identifier inside an embedded type as the binder bound it"() {
+        given:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenCidEmbOwner, GenCidSimple)
+        Metadata metadata = annotationMetadata(classes.values())
+        Component bound = (Component) entity(GenCidEmbOwner).persistentClass.getProperty('home').value
+        Component read = (Component) metadata.getEntityBinding(classes[entity(GenCidEmbOwner)].name).getProperty('home').value
+
+        expect:
+        read.getProperty('ref').columns*.name.toSet() == bound.getProperty('ref').columns*.name.toSet()
+        read.getProperty('ref').columns*.nullable == bound.getProperty('ref').columns*.nullable
     }
 
     void "an index on a part of the identifier is an index of the table, as the binder binds it"() {
@@ -440,4 +466,18 @@ class GenCidListedKid {
 class GenCidRefNested {
 
     GenCidNested target
+}
+
+@Entity
+class GenCidEmbOwner {
+
+    GenCidEmbHome home
+
+    static embedded = ['home']
+}
+
+class GenCidEmbHome {
+
+    GenCidSimple ref
+    String street
 }

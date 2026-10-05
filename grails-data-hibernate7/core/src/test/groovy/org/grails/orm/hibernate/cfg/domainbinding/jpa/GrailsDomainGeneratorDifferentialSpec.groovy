@@ -945,12 +945,14 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             String leafWhere = "${where}.${leaf.path()}".toString()
             if (leaf.column() == null) {
                 found.addAll(compareDerived(leafWhere, leaf.property, boundLeaf))
-            } else if (boundLeaf.columns.size() != 1) {
+            } else if (boundLeaf.columns.size() != (leaf.toOne() != null && leaf.toOne().joinColumns().size() > 1 ? leaf.toOne().joinColumns().size() : 1)) {
                 found << "${leafWhere} columns: generator=1 binder=${boundLeaf.columns.size()}".toString()
                 continue
             } else if (leaf.toOne() != null) {
                 // Hibernate copies the size of the referenced identifier onto a foreign key column after binding
-                found.addAll(compare(leafWhere, leaf.column(), boundLeaf, known, ['length', 'precision', 'scale']))
+                found.addAll(compareColumnsByName(
+                        leafWhere, leaf.toOne().joinColumns().size() > 1 ? leaf.toOne().joinColumns() : [leaf.column()], boundLeaf, known,
+                        ['length', 'precision', 'scale']))
                 found.addAll(compareToOne(leafWhere, leaf.toOne(), boundLeaf, known))
                 continue
             } else {
@@ -1057,7 +1059,8 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 found << "${where} typeName: generator=${type.name} binder=${value.typeName}".toString()
             }
             if (!(property instanceof HibernateEnumProperty) && !actualParameters.isEmpty()) {
-                found << "${where} typeParameters: generator=[:] binder=${actualParameters}".toString()
+                // the binder hands type parameters that are mapped with no type to a built-in type, which ignores them; the generator states none
+                explicitTypes['parameters with no type (ignored by the built-in type)']++
             }
         } else if (facets.userType() != null) {
             explicitTypes["UserType ${facets.userType().simpleName}".toString()]++
