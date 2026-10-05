@@ -29,6 +29,7 @@ import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder
 import org.hibernate.boot.registry.StandardServiceRegistry
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder
 import org.hibernate.dialect.H2Dialect
+import org.hibernate.engine.jdbc.Size
 import org.hibernate.engine.spi.FilterDefinition
 import org.hibernate.engine.spi.SessionFactoryImplementor
 import org.hibernate.generator.Generator
@@ -1840,6 +1841,13 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                     write    : [boundColumn.customWrite, annotatedColumn.customWrite],
                     comment  : [boundColumn.comment, annotatedColumn.comment],
             ]
+            // a precision with no scale: the binder leaves the scale null and the database default scale of the type applies, which
+            // @Column can only state (it cannot leave the scale unset next to a precision), so the scale is compared as that default
+            if (!key && boundColumn.precision != null && boundColumn.scale == null && annotatedColumn.precision != null &&
+                    bound.value instanceof BasicValue) {
+                Class<?> javaType = ((BasicValue) bound.value).resolve().domainJavaType.javaTypeClass
+                pairs.scale = [javaType == BigDecimal ? Size.DEFAULT_SCALE : 0, annotatedColumn.scale?.intValue() ?: 0]
+            }
             // Hibernate fills in defaults the binder leaves unset (length 255): only what the binder states is comparable,
             // and an SQL type is only stated when the mapping says so (the generator's own decision, passed in)
             pairs = pairs.findAll { String facet, List values -> facet in ['unique', 'sqlType'] || values[0] != null }

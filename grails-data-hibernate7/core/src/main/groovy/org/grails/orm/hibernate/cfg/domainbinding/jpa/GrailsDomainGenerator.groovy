@@ -72,6 +72,7 @@ import net.bytebuddy.dynamic.DynamicType
 import net.bytebuddy.dynamic.loading.ClassLoadingStrategy
 import org.hibernate.FetchMode
 import org.hibernate.Length
+import org.hibernate.engine.jdbc.Size
 import org.hibernate.annotations.BatchSize
 import org.hibernate.annotations.Cache
 import org.hibernate.annotations.CacheConcurrencyStrategy
@@ -2537,7 +2538,7 @@ class GrailsDomainGenerator {
             table = table.define('catalog', facets.catalog())
         }
         annotations << table.build()
-        annotations << columnAnnotation(facets.element())
+        annotations << columnAnnotation(facets.element(), property.componentType)
         if (facets.kind() == CollectionKind.LIST) {
             annotations << AnnotationDescription.Builder.ofType(OrderColumn)
                     .define('name', facets.index().name())
@@ -2655,7 +2656,7 @@ class GrailsDomainGenerator {
                     .collect { EmbeddedLeaf leaf ->
                         AnnotationDescription.Builder.ofType(AttributeOverride)
                                 .define('name', leaf.path())
-                                .define('column', columnAnnotation(leaf.column()))
+                                .define('column', columnAnnotation(leaf.column(), leaf.property().type))
                                 .build()
                     }
             if (!overrides.isEmpty()) {
@@ -2754,10 +2755,22 @@ class GrailsDomainGenerator {
     }
 
     private AnnotationDescription columnAnnotation(HibernatePersistentProperty property) {
-        return columnAnnotation(columnFacets(property))
+        return columnAnnotation(columnFacets(property), property.type)
     }
 
-    private static AnnotationDescription columnAnnotation(ColumnFacets facets) {
+    /**
+     * The scale of a decimal column that states a precision and no scale. The domain binder sets the precision and leaves the
+     * scale null, so the database default scale of the type applies (2 for a {@code BigDecimal}); {@code @Column} cannot leave a
+     * scale unset next to a precision (its {@code scale} is 0 by default and Hibernate then forces 0), so the default is stated.
+     */
+    private static Integer statedScale(ColumnFacets facets, Class<?> javaType) {
+        if (facets.scale() == null && facets.precision() != null && javaType == BigDecimal) {
+            return Size.DEFAULT_SCALE
+        }
+        return facets.scale()
+    }
+
+    private static AnnotationDescription columnAnnotation(ColumnFacets facets, Class<?> javaType = null) {
         AnnotationDescription.Builder annotation = AnnotationDescription.Builder.ofType(JpaColumn)
                 .define('name', facets.name())
                 .define('nullable', facets.nullable())
@@ -2770,8 +2783,9 @@ class GrailsDomainGenerator {
         if (facets.precision() != null) {
             annotation = annotation.define('precision', facets.precision())
         }
-        if (facets.scale() != null) {
-            annotation = annotation.define('scale', facets.scale())
+        Integer scale = statedScale(facets, javaType)
+        if (scale != null) {
+            annotation = annotation.define('scale', scale)
         }
         if (facets.sqlType()) {
             annotation = annotation.define('columnDefinition', facets.sqlType())

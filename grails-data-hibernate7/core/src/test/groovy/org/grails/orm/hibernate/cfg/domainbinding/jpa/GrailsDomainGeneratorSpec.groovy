@@ -152,7 +152,7 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
                 GenEmbedOwner, GenEmbedOther, GenEmbedBase, GenEmbedChild, GenEmbedFormulaOwner, GenCollSingle, GenCollKinds, GenCollLazy,
                 GenFkTarget, GenFkOwned, GenFkOwner, GenFkCascades, GenFkNodeA, GenFkNodeB, GenFkHasOneOwner, GenFkHasOneDetail, GenOneFace, GenOneNose, GenFkManyOne, GenFkOneSide, GenFkSub, GenFkSubRoot,
                 GenOmParent, GenOmChild, GenOmListed, GenOmOrdered, GenOmOrphan, GenOmFetched, GenOmTag, GenOmStep, GenOmKept, GenOmSortedOwner, GenOmMapOwner, GenMapBidiOwner, GenMapBidiChild, GenEmbAssocOwner,
-                GenMmStudent, GenMmCourse, GenMmPerson, GenMmNoOwnerA, GenMmNoOwnerB, GenParamsOnly)
+                GenMmStudent, GenMmCourse, GenMmPerson, GenMmNoOwnerA, GenMmNoOwnerB, GenParamsOnly, GenDecimal)
     }
 
     List<StandardServiceRegistry> registries = []
@@ -212,6 +212,22 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         'code'   | 'code_x' | true     | false  | 255    | 0
         'age'    | 'age'    | true     | false  | 255    | 0
         'price'  | 'price'  | true     | false  | 255    | 2
+    }
+
+    void "a decimal column with no scale states the scale Hibernate gives the type, because @Column cannot leave the scale unset next to a precision"() {
+        given:
+        Class<?> decimals = generate(GenDecimal)
+
+        expect: 'the domain binder sets the precision and no scale, so the database default scale of the type applies'
+        decimals.getDeclaredField(property).getAnnotation(Column).precision() == precision
+        decimals.getDeclaredField(property).getAnnotation(Column).scale() == scale
+
+        where:
+        property | precision | scale
+        'amount' | 38        | 2
+        'big'    | 38        | 0
+        'ratio'  | 0         | 0
+        'stated' | 38        | 4
     }
 
     void "the identifier column is never nullable"() {
@@ -2076,6 +2092,19 @@ class GenBasic {
         batchSize 5
         comment 'basic things'
         code column: 'code_x', defaultValue: "'none'", comment: 'the code'
+    }
+}
+
+@Entity
+class GenDecimal {
+
+    BigDecimal amount
+    BigInteger big
+    Double ratio
+    BigDecimal stated
+
+    static constraints = {
+        stated scale: 4
     }
 }
 

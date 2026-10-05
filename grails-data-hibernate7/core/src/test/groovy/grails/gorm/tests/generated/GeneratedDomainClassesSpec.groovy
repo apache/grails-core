@@ -142,6 +142,16 @@ class GeneratedDomainClassesSpec extends HibernateGormDatastoreSpec {
         columns.containsAll(['ID', 'VERSION', 'TITLE', 'STATUS', 'PAGES', 'AUTHOR_ID', 'SIZE_WIDTH', 'SIZE_HEIGHT', 'CHAPTERS', 'CLASS'])
     }
 
+    def "a decimal column keeps the scale of its type"() {
+        when:
+        List scales = sessionFactory.currentSession
+                .createNativeQuery("select numeric_scale from information_schema.columns where table_name = 'GDC_BOOK' and column_name = 'PRICE'", Integer)
+                .list()
+
+        then:
+        scales == [2]
+    }
+
     def "a hasMany association cascades and loads lazily"() {
         given:
         GdcAuthor author = new GdcAuthor(name: 'Herbert')
@@ -387,12 +397,14 @@ class GdcBook {
     GdcStatus status = GdcStatus.DRAFT
     GdcDimensions size
     Integer pages
+    BigDecimal price
     static belongsTo = [author: GdcAuthor]
     static embedded = ['size']
     static constraints = {
         author nullable: true
         size nullable: true
         pages nullable: true
+        price nullable: true
     }
 }
 
