@@ -20,10 +20,13 @@
 package org.grails.datastore.bson.query;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.codehaus.groovy.runtime.NullObject;
@@ -87,18 +90,29 @@ public abstract class BsonQuery extends Query {
     public static final String ID_REFERENCE_SUFFIX = ".$id";
 
     private static final String THIS_PREFIX = "this.";
+    /** Matches MongoDB's own document nesting limit, so no value the server would accept is refused. */
+    private static final int MAX_CRITERION_VALUE_DEPTH = 100;
     protected static Map<Class, QueryHandler> queryHandlers = new HashMap<>();
     protected static Map<String, OperatorHandler> operatorHandlers = new HashMap<>();
     protected static Map<Class, ProjectionHandler> groupByProjectionHandlers = new HashMap<>();
 
     protected static Map<Class, ProjectionHandler> projectProjectionHandlers = new HashMap<>();
 
+    /**
+     * Criterion types whose values are shapes or nested queries by design and are therefore not
+     * subject to {@link #validateCriterionValues(Criterion, PersistentEntity)}. Subclasses register
+     * their own exemptions here, the same way they register query handlers.
+     */
+    protected static final Set<Class<? extends Criterion>> VALUE_VALIDATION_EXEMPT_CRITERIA = new HashSet<>();
+
     static {
+        VALUE_VALIDATION_EXEMPT_CRITERIA.add(SubqueryCriterion.class);
+
         queryHandlers.put(IdEquals.class, new QueryHandler<IdEquals>() {
             public void handle(EmbeddedQueryEncoder queryEncoder, IdEquals criterion, Document query, PersistentEntity entity) {
-                Object value = criterion.getValue();
                 MappingContext mappingContext = entity.getMappingContext();
                 PersistentProperty identity = entity.getIdentity();
+                Object value = criterion.getValue();
                 Object converted = mappingContext.getConversionService().convert(value, identity.getType());
                 Property mappedForm = identity.getMapping().getMappedForm();
                 String targetProperty = mappedForm.getTargetName();
@@ -785,6 +799,114 @@ public abstract class BsonQuery extends Query {
         return values;
     }
 
+    /**
+     * Validates every value carried by a criterion before it is dispatched to a query handler or a
+     * {@link CustomTypeMarshaller}, recursing through junctions so that negated and nested criteria
+     * are covered as well. Running once at this choke point, rather than inside individual handlers,
+     * means custom typed properties such as enums, whose criteria never reach a handler, and any
+     * handler added later are validated too.
+     *
+     * @param criterion The criterion about to be dispatched
+     * @param entity    The entity being queried
+     * @throws InvalidDataAccessResourceUsageException if a value could be evaluated as an operator expression
+     */
+    protected static void validateCriterionValues(Criterion criterion, PersistentEntity entity) {
+        if (criterion instanceof Junction) {
+            for (Criterion nested : ((Junction) criterion).getCriteria()) {
+                validateCriterionValues(nested, entity);
+            }
+            return;
+        }
+        if (!(criterion instanceof PropertyCriterion) || isExemptFromValueValidation(criterion)) {
+            return;
+        }
+        PropertyCriterion propertyCriterion = (PropertyCriterion) criterion;
+        String propertyName = propertyCriterion.getProperty();
+        if (criterion instanceof Between) {
+            Between between = (Between) criterion;
+            validateCriterionValue(entity, propertyName, between.getFrom());
+            validateCriterionValue(entity, propertyName, between.getTo());
+        } else if (criterion instanceof In) {
+            Collection values = ((In) criterion).getValues();
+            if (values != null) {
+                for (Object value : values) {
+                    validateCriterionValue(entity, propertyName, value);
+                }
+            }
+        } else {
+            validateCriterionValue(entity, propertyName, propertyCriterion.getValue());
+        }
+    }
+
+    private static boolean isExemptFromValueValidation(Criterion criterion) {
+        for (Class<? extends Criterion> exempt : VALUE_VALIDATION_EXEMPT_CRITERIA) {
+            if (exempt.isInstance(criterion)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Ensures a criterion value cannot be interpreted by MongoDB as a query operator expression.
+     * <p>
+     * The MongoDB driver encodes any {@link Map} as a BSON subdocument, and MongoDB evaluates a
+     * value document whose keys start with {@code $} as an operator expression rather than as a
+     * value. A map without such keys is a literal subdocument comparison on any property, so it is
+     * passed through; a map carrying a {@code $}-prefixed key is rejected so that a criterion value
+     * is always compared as a value. MongoDB only evaluates operators in the top level of a value document, so the
+     * walk into nested maps, collections and arrays is belt-and-braces rather than a requirement;
+     * it is bounded to {@link #MAX_CRITERION_VALUE_DEPTH} levels, the limit MongoDB itself imposes
+     * on document nesting, so that a self-referential value is reported as invalid rather than
+     * overflowing the stack.
+     *
+     * @param entity       The entity being queried
+     * @param propertyName The name of the property the criterion applies to
+     * @param value        The criterion value
+     * @return The value, unchanged, when it is safe to place in the query document
+     * @throws InvalidDataAccessResourceUsageException if the value is a map that could be evaluated as an operator expression
+     */
+    protected static Object validateCriterionValue(PersistentEntity entity, String propertyName, Object value) {
+        if (value instanceof Map) {
+            rejectOperatorKeys(entity, propertyName, (Map<?, ?>) value, 0);
+        }
+        return value;
+    }
+
+    private static void rejectOperatorKeys(PersistentEntity entity, String propertyName, Map<?, ?> map, int depth) {
+        rejectExcessiveDepth(entity, propertyName, depth);
+        for (Map.Entry<?, ?> entry : map.entrySet()) {
+            if (String.valueOf(entry.getKey()).startsWith("$")) {
+                throw new InvalidDataAccessResourceUsageException("Invalid query value for property [" + propertyName +
+                        "] of entity [" + entity.getName() + "]: Map keys starting with '$' are not permitted in a query value");
+            }
+            rejectNestedOperatorKeys(entity, propertyName, entry.getValue(), depth + 1);
+        }
+    }
+
+    private static void rejectNestedOperatorKeys(PersistentEntity entity, String propertyName, Object nested, int depth) {
+        if (nested instanceof Map) {
+            rejectOperatorKeys(entity, propertyName, (Map<?, ?>) nested, depth);
+        } else if (nested instanceof Iterable) {
+            rejectExcessiveDepth(entity, propertyName, depth);
+            for (Object element : (Iterable<?>) nested) {
+                rejectNestedOperatorKeys(entity, propertyName, element, depth + 1);
+            }
+        } else if (nested instanceof Object[]) {
+            rejectExcessiveDepth(entity, propertyName, depth);
+            for (Object element : (Object[]) nested) {
+                rejectNestedOperatorKeys(entity, propertyName, element, depth + 1);
+            }
+        }
+    }
+
+    private static void rejectExcessiveDepth(PersistentEntity entity, String propertyName, int depth) {
+        if (depth > MAX_CRITERION_VALUE_DEPTH) {
+            throw new InvalidDataAccessResourceUsageException("Invalid query value for property [" + propertyName +
+                    "] of entity [" + entity.getName() + "]: value is nested deeper than " + MAX_CRITERION_VALUE_DEPTH + " levels");
+        }
+    }
+
     protected static Document getOrCreatePropertyQuery(Document query, String propertyName) {
         Object existing = query.get(propertyName);
         Document queryObject = existing instanceof Document ? (Document) existing : null;
@@ -840,6 +962,7 @@ public abstract class BsonQuery extends Query {
         // if a query combines more than 1 item, wrap the items in individual $and or $or arguments
         // so that property names can't clash (e.g. for an $and containing two $ors)
         for (Criterion criterion : criteria) {
+            validateCriterionValues(criterion, entity);
             final QueryHandler queryHandler = queryHandlers.get(criterion.getClass());
             if (queryHandler != null) {
                 Document dbo = query;
@@ -875,6 +998,7 @@ public abstract class BsonQuery extends Query {
         }
 
         for (Criterion criterion : criteria.getCriteria()) {
+            validateCriterionValues(criterion, entity);
             final QueryHandler queryHandler = queryHandlers.get(criterion.getClass());
             if (queryHandler != null) {
                 Document dbo = query;

@@ -331,4 +331,29 @@ class MappingBuilderSpec extends Specification {
         mapping.getPropertyConfig('firstName').sqlType == 'text'
         mapping.getPropertyConfig('firstName').column == 'test'
     }
+
+    void "test properties configured after a global mapping keep their configuration"() {
+        given:
+        Mapping mapping = define {
+            '*'(property {
+                column {
+                    sqlType "text"
+                }
+            })
+            firstName column: 'first_name'
+            version 'row_version'
+        }.build()
+
+        expect: "each starts from the global mapping and keeps what was configured on top of it"
+        mapping.getPropertyConfig('firstName').column == 'first_name'
+        mapping.getPropertyConfig('firstName').sqlType == 'text'
+
+        and: "the version column is the one copied from the global mapping, renamed, not a second one"
+        mapping.getPropertyConfig('version').columns.size() == 1
+        mapping.getPropertyConfig('version').column == 'row_version'
+        mapping.getPropertyConfig('version').sqlType == 'text'
+
+        and: "the global mapping itself is unchanged"
+        mapping.getPropertyConfig('*').column == null
+    }
 }

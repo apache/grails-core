@@ -19,6 +19,7 @@
 package org.grails.compiler.gorm
 
 import java.lang.reflect.Method
+import java.lang.reflect.Modifier
 
 import groovy.transform.Generated
 import org.codehaus.groovy.ast.ClassNode
@@ -191,6 +192,13 @@ class GormEntityTransformSpec extends Specification{
         Author.getDeclaredMethod('setBooks', Set).isAnnotationPresent(Generated)
         Author.getDeclaredMethod('getBooks').isAnnotationPresent(Generated)
         Book.getDeclaredMethod('getAuthorId').isAnnotationPresent(Generated)
+        Book.getDeclaredMethod('refresh', Map).isAnnotationPresent(Generated)
+        Book.getDeclaredMethod('refresh', Map).returnType == Book
+        !Modifier.isStatic(Book.getDeclaredMethod('refresh', Map).modifiers)
+        Book.getDeclaredMethod('lock', Map, Serializable).isAnnotationPresent(Generated)
+        Book.getDeclaredMethod('lock', Map, Serializable).returnType == Book
+        Modifier.isStatic(Book.getDeclaredMethod('lock', Map, Serializable).modifiers)
+        Book.getDeclaredMethod('lock', Serializable).returnType == Book
     }
 
     void 'test property/method missing'() {
@@ -221,12 +229,29 @@ class GormEntityTransformSpec extends Specification{
 
         expect: 'all GormEntity methods are marked as Generated on implementation class'
         GormEntity.methods.each { Method traitMethod ->
-            assert Book.getMethod(traitMethod.name, traitMethod.parameterTypes).isAnnotationPresent(Generated)
+            assert findGeneratedMethod(Book, traitMethod).isAnnotationPresent(Generated)
         }
 
         and: 'all GormValidateable methods are marked as Generated on implementation class'
         GormValidateable.methods.each { Method traitMethod ->
-            assert Book.getMethod(traitMethod.name, traitMethod.parameterTypes).isAnnotationPresent(Generated)
+            assert findGeneratedMethod(Book, traitMethod).isAnnotationPresent(Generated)
+        }
+    }
+
+    // Groovy 6 specializes a generic trait method's type-variable parameters to the implementing
+    // class, so Book.merge(Object) from GormEntity<D> becomes Book.merge(Book). Look the specialized
+    // signature up when the erased one is missing.
+    private static Method findGeneratedMethod(Class targetClass, Method traitMethod) {
+        try {
+            return targetClass.getMethod(traitMethod.name, traitMethod.parameterTypes)
+        } catch (NoSuchMethodException e) {
+            Class[] specializedParameterTypes = traitMethod.genericParameterTypes.withIndex().collect { type, index ->
+                type instanceof java.lang.reflect.TypeVariable ? targetClass : traitMethod.parameterTypes[index]
+            } as Class[]
+            if (specializedParameterTypes.toList() != traitMethod.parameterTypes.toList()) {
+                return targetClass.getMethod(traitMethod.name, specializedParameterTypes)
+            }
+            throw e
         }
     }
 

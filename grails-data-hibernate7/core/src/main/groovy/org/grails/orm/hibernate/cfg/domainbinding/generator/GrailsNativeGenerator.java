@@ -33,8 +33,7 @@ import org.hibernate.id.enhanced.SequenceStyleGenerator;
 /**
  * A native generator that supports Grails assigned identifiers and fixes Hibernate 7 ClassCastException.
  *
- * @author Graeme Rocher
- * @since 7.0
+ * @since 8.0
  */
 public class GrailsNativeGenerator extends NativeGenerator {
 

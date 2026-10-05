@@ -23,7 +23,6 @@ import org.grails.datastore.gorm.query.criteria.AbstractCriteriaBuilder
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.query.QueryCreator
-import org.grails.datastore.mapping.query.api.Criteria
 import org.grails.datastore.rx.query.RxQuery
 import rx.Observable
 

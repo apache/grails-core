@@ -59,7 +59,7 @@ jobs:
           current_limit=$(gh api rate_limit --jq '.resources.graphql')
           echo "Current Rate Limit: $current_limit"
       - name: "📥 Checkout repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0 # needed for docs release dropdown, (fetch-tags: true with fetch-depth: 1 does not work; https://github.com/actions/checkout/issues/1471)
           filter: tree:0 # limit size, keeping tags for docs release dropdown
@@ -76,7 +76,7 @@ jobs:
           echo "${GPG_KEY}" | gpg --batch --import
           gpg --list-keys
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@v6.0.1
         with:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
           java-version: ${{ env.JAVA_VERSION }}
@@ -92,6 +92,8 @@ jobs:
           RELEASE_SCRIPT_PATH: '.github/scripts/setReleasedGrailsVersion.sh'
       - name: "🔍 Validate dependency versions"
         run: ./gradlew validateDependencyVersions
+      - name: "🔍 Validate BOM properties"
+        run: ./gradlew validateBomProperties
       - name: "🧩 Run grails-core assemble"
         run: ./gradlew assemble -PgithubBranch=${TARGET_BRANCH}
       - name: "📦 Generate grails-core docs (to assert that it works, before proceeding)"
@@ -114,7 +116,7 @@ jobs:
           echo "Generated checksum for grails wrapper ZIP:"
           cat ${DIST_NAME}-wrapper-${VERSION}-bin.zip.sha512
       - name: "📤 Upload grails-wrapper ZIP"
-        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           tag_name: ${{ env.TAG }}
           files: |
@@ -139,7 +141,7 @@ jobs:
           echo "Generated checksum for grails cli ZIP:"
           cat ${DIST_NAME}-${VERSION}-bin.zip.sha512
       - name: "📤 Upload grails-cli ZIP"
-        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           tag_name: ${{ env.TAG }}
           files: |
@@ -210,7 +212,7 @@ jobs:
       - name: "📅 Generate build date file"
         run: echo "$SOURCE_DATE_EPOCH" >> build/BUILD_DATE.txt
       - name: "📤 Upload build date, checksums and published artifact files"
-        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           tag_name: ${{ env.TAG }}
           files: |
@@ -233,11 +235,12 @@ jobs:
           current_limit=$(gh api rate_limit --jq '.resources.graphql')
           echo "Current Rate Limit: $current_limit"
       - name: "📥 Checkout Grails Core repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
         with:
           path: grails
           ref: ${{ env.TAG }}
           token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: false
       - name: "🗑️ Remove unnecessary files"
         run: |
           rm -f grails/gradle/wrapper/gradle-wrapper.jar
@@ -272,13 +275,17 @@ jobs:
         run: |
           SOURCE_DATE_EPOCH=$(cat grails/BUILD_DATE)
           find . -depth \( -type f -o -type d \) -exec touch -d "@${SOURCE_DATE_EPOCH}" {} +
+          find . -depth -type l -exec touch -h -d "@${SOURCE_DATE_EPOCH}" {} +
       - name: "📦 Create source distribution ZIP"
         run: >
-          zip -r
+          zip -yr
           ${DIST_NAME}-${VERSION}-src.zip
           grails
           -x 'grails/.git/*'
           -x 'grails/.github/*'
+          -x 'grails/.omo/*'
+          -x 'grails/.worktrees/*'
+          -x 'grails/.claude/worktrees/*'
           -x 'grails/.mailmap'
       - name: "🔐 Set up GPG" # use env var to not expose the key
         env:
@@ -299,7 +306,7 @@ jobs:
       - name: "📦 Create source distribution checksum"
         run: sha512sum ${DIST_NAME}-${VERSION}-src.zip > ${DIST_NAME}-${VERSION}-src.zip.sha512
       - name: "🚀 Upload ZIP and Signature to GitHub Release"
-        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           tag_name: ${{ env.TAG }}
           files: |
@@ -426,12 +433,12 @@ jobs:
           cd dev-repo
           svn info ${VERSION} > DIST_SVN_REVISION.txt
       - name: "📤 Upload Distribution SVN revision"
-        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           tag_name: ${{ env.TAG }}
           files: dev-repo/DIST_SVN_REVISION.txt
       - name: "📥 Checkout repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
         with:
           path: ${{ env.REPO_NAME }}
           ref: ${{ env.TAG }}
@@ -482,7 +489,7 @@ jobs:
           current_limit=$(gh api rate_limit --jq '.resources.graphql')
           echo "Current Rate Limit: $current_limit"
       - name: "📥 Checkout repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
         with:
           ref: ${{ env.TAG }}
       - name: "🛠️️ Install tools"
@@ -534,8 +541,8 @@ jobs:
         run: |
           echo "::group::Manual Grails Forge deployment"
           echo "Deploy Forge via https://github.com/apache/grails-core/actions/workflows/forge-deploy-aws.yml"
-          echo "Use workflow from the maintenance branch. Choose slot latest, snapshot, next, next-snapshot, prev, prev-snapshot, or older."
-          echo "Do not run this workflow from a historical git tag."
+          echo "Use workflow from the release tag ${TAG}; the deployed version comes from that ref."
+          echo "Choose slot latest, next, prev, or older."
           echo "::endgroup::"
   docs:
     environment: docs
@@ -564,7 +571,7 @@ jobs:
 
           df -h
       - name: "📥 Checkout repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0 # needed for docs release dropdown, (fetch-tags: true with fetch-depth: 1 does not work; https://github.com/actions/checkout/issues/1471)
           filter: tree:0 # limit size, keeping tags for docs release dropdown
@@ -573,7 +580,7 @@ jobs:
       - name: "📅 Ensure Common Build Date" # to ensure a reproducible build
         run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@v6.0.1
         with:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
           java-version: ${{ env.JAVA_VERSION }}
@@ -608,11 +615,11 @@ jobs:
           current_limit=$(gh api rate_limit --jq '.resources.graphql')
           echo "Current Rate Limit: $current_limit"
       - name: "📥 Checkout repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
         with:
           ref: ${{ env.TAG }}
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@v6.0.1
         with:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
           java-version: ${{ env.JAVA_VERSION }}
@@ -653,15 +660,51 @@ jobs:
           current_limit=$(gh api rate_limit --jq '.resources.graphql')
           echo "Current Rate Limit: $current_limit"
       - name: "📥 Checkout repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
         with:
           ref: ${{ env.TAG }}
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: "⚙️ Run post-release"
+        id: post_release
+        # The release is already published by now, so a failure here must not skip the
+        # remaining reminders. The next step lists what is left to finish by hand.
+        continue-on-error: true
         uses: apache/grails-github-actions/post-release@asf
         env:
           PR_LABELS: skip-changelog
           RELEASE_SCRIPT_PATH: '.github/scripts/setSnapshotGrailsVersion.sh'
+      - name: "🩹 MANUAL - Finish post-release"
+        if: steps.post_release.outcome == 'failure'
+        env:
+          NEXT_VERSION: ${{ steps.post_release.outputs.NEXT_VERSION }}
+        run: |
+          NEXT_VERSION="${NEXT_VERSION:-X.Y.Z}"
+          MERGE_BRANCH="merge-back-${VERSION}"
+          cat >> "$GITHUB_STEP_SUMMARY" <<EOF
+          ## ⚠️ Post-release did not finish
+
+          The \`⚙️ Run post-release\` step failed; its log shows where it stopped. Anything it did only on the runner is gone, so check each item below and finish the ones that are missing.
+
+          1. The \`${VERSION}\` milestone, if there is one, is closed.
+          2. Branch \`${MERGE_BRANCH}\` exists. To recreate it, run these from a clone with \`${TAG}\` fetched (they need GNU sed), and push with your own credentials, since GitHub refuses the workflow token when it considers the branch to change a file under \`.github/workflows\`:
+
+             \`\`\`
+             git switch -c ${MERGE_BRANCH} ${TAG}
+             sed -i 's/^projectVersion=.*/projectVersion=${NEXT_VERSION}-SNAPSHOT/' gradle.properties
+             NEXT_VERSION=${NEXT_VERSION} GITHUB_WORKSPACE="\$PWD" .github/scripts/setSnapshotGrailsVersion.sh
+             git commit -am '[skip ci] Bump version to ${NEXT_VERSION}-SNAPSHOT'
+             git push <remote for ${REPO_SLUG}> ${MERGE_BRANCH}
+             \`\`\`
+          3. A pull request from \`${MERGE_BRANCH}\` into \`${TARGET_BRANCH}\` is open:
+
+             \`\`\`
+             gh pr create --repo ${REPO_SLUG} --base ${TARGET_BRANCH} --head ${MERGE_BRANCH} --label skip-changelog --title 'chore: merge ${VERSION}->${TARGET_BRANCH}; bump to ${NEXT_VERSION}-SNAPSHOT' --body 'Automated snapshot bump after completing release ${VERSION}'
+             \`\`\`
+          4. It is merged with a merge commit, not a squash or rebase, so \`${TAG}\` becomes part of the \`${TARGET_BRANCH}\` history.
+
+          The automated stages are in https://github.com/apache/grails-github-actions/blob/asf/post-release/entrypoint.sh
+          EOF
+          echo "::warning title=Post-release did not finish::Finish merging ${TAG} back into ${TARGET_BRANCH} by hand; the workflow summary lists what is left."
       - name: "🌎 MANUAL - Create Blog Post"
         run: |
           echo "::group::Blog Post Creation - MANUAL"

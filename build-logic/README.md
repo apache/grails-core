@@ -16,3 +16,5 @@ limitations under the License.
 # build-logic
 The Grails project is structured into 2 separate composite builds (`grails-core` and `grails-gradle`). Composite builds make use of Gradle's `includeBuild` feature, which do not share Gradle plugins from `buildSrc`. This project exists to share internal Gradle plugins across those builds. Forge lives under `grails-forge/` as `grails-core` subprojects, so it uses these plugins through the root build.
 
+
+The `plugins` project holds the shared convention plugins. The `vulnerability-scan` project holds only the `org.apache.grails.buildsrc.vulnerability-scan` plugin, because the Sonatype scan plugin it wraps is a fat jar that bundles Guava, Groovy and other libraries without relocating them; keeping it in its own project keeps those bundled classes off the settings classpath that every build shares when it requests a plugin from `plugins`.

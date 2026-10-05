@@ -23,9 +23,12 @@ import spock.lang.Shared
 
 import grails.gorm.DetachedCriteria
 import grails.gorm.tests.HibernateGormDatastoreSpec
+import grails.gorm.tests.UserTypeComparisonGrade
+import grails.gorm.tests.UserTypeComparisonGradeType
 import org.grails.datastore.mapping.query.Query
 import org.hibernate.query.criteria.JpaCriteriaQuery
 import org.grails.orm.hibernate.query.JpaCriteriaQueryCreator
+import org.grails.orm.hibernate.query.JpaQueryContext
 import org.springframework.core.convert.support.DefaultConversionService
 import grails.gorm.annotation.Entity
 import org.grails.datastore.gorm.GormEntity
@@ -34,7 +37,7 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
 
 
     void setupSpec() {
-        manager.registerDomainClasses(JpaCriteriaQueryCreatorSpecPerson, JpaCriteriaQueryCreatorSpecPet)
+        manager.registerDomainClasses(JpaCriteriaQueryCreatorSpecPerson, JpaCriteriaQueryCreatorSpecPet, JpaCriteriaQueryCreatorSpecGraded)
     }
 
     def "test createQuery"() {
@@ -289,6 +292,63 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
         noExceptionThrown()
         query != null
     }
+
+    def "test getParameterValues is empty before a query is built"() {
+        given:
+        var entity = getPersistentEntity(JpaCriteriaQueryCreatorSpecGraded)
+        var creator = new JpaCriteriaQueryCreator(new Query.ProjectionList(), criteriaBuilder, entity, new DetachedCriteria(JpaCriteriaQueryCreatorSpecGraded), new DefaultConversionService())
+
+        expect:
+        creator.getParameterValues().isEmpty()
+    }
+
+    def "test createQuery records a parameter for an ordering comparison with a value that is not Comparable"() {
+        given:
+        var grade = new UserTypeComparisonGrade(2)
+        var entity = getPersistentEntity(JpaCriteriaQueryCreatorSpecGraded)
+        var detachedCriteria = new DetachedCriteria(JpaCriteriaQueryCreatorSpecGraded).gt("grade", grade)
+        var creator = new JpaCriteriaQueryCreator(new Query.ProjectionList(), criteriaBuilder, entity, detachedCriteria, new DefaultConversionService())
+
+        when:
+        JpaCriteriaQuery<?> query = creator.createQuery()
+
+        then:
+        creator.getParameterValues().values().toList() == [grade]
+        query.getParameters() == creator.getParameterValues().keySet()
+    }
+
+    def "test createQuery records no parameter for comparisons the JPA value overloads take"() {
+        given:
+        var entity = getPersistentEntity(JpaCriteriaQueryCreatorSpecGraded)
+        var detachedCriteria = new DetachedCriteria(JpaCriteriaQueryCreatorSpecGraded)
+                .gt("level", 2)
+                .eq("grade", new UserTypeComparisonGrade(2))
+        var creator = new JpaCriteriaQueryCreator(new Query.ProjectionList(), criteriaBuilder, entity, detachedCriteria, new DefaultConversionService())
+
+        when:
+        creator.createQuery()
+
+        then:
+        creator.getParameterValues().isEmpty()
+    }
+
+    def "test populateSubquery records its parameters in the parent context"() {
+        given:
+        var grade = new UserTypeComparisonGrade(2)
+        var entity = getPersistentEntity(JpaCriteriaQueryCreatorSpecGraded)
+        var detachedCriteria = new DetachedCriteria(JpaCriteriaQueryCreatorSpecGraded).lt("grade", grade)
+        var creator = new JpaCriteriaQueryCreator(new Query.ProjectionList(), criteriaBuilder, entity, detachedCriteria, new DefaultConversionService())
+        var parentCq = criteriaBuilder.createQuery(JpaCriteriaQueryCreatorSpecGraded)
+        var parentContext = new JpaQueryContext(parentCq.from(JpaCriteriaQueryCreatorSpecGraded))
+        creator.setParentContext(parentContext)
+
+        when:
+        creator.populateSubquery(parentCq.subquery(Long))
+
+        then:
+        parentContext.getParameterValues().values().toList() == [grade]
+        creator.getParameterValues() == parentContext.getParameterValues()
+    }
 }
 
 @Entity
@@ -305,4 +365,15 @@ class JpaCriteriaQueryCreatorSpecPet implements GormEntity<JpaCriteriaQueryCreat
     Long id
     String name
     JpaCriteriaQueryCreatorSpecPerson owner
+}
+
+@Entity
+class JpaCriteriaQueryCreatorSpecGraded implements GormEntity<JpaCriteriaQueryCreatorSpecGraded> {
+    Long id
+    Integer level
+    UserTypeComparisonGrade grade
+
+    static mapping = {
+        grade type: UserTypeComparisonGradeType
+    }
 }

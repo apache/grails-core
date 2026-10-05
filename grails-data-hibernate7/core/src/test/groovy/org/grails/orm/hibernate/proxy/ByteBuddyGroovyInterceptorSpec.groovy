@@ -27,7 +27,7 @@ import org.hibernate.proxy.HibernateProxy
  * Direct coverage tests for {@link ByteBuddyGroovyInterceptor#intercept}.
  * <p>
  * Tests operate against real Hibernate lazy proxies obtained via
- * {@code hibernateSession.getReference()} and exercise each branch of
+ * {@code hibernateSession.getReference()} or GORM {@code load()} and exercise each branch of
  * {@code intercept()} by calling different method types on the proxy in
  * both the uninitialized and initialized states.
  */
@@ -142,15 +142,14 @@ class ByteBuddyGroovyInterceptorSpec extends HibernateGormDatastoreSpec {
         !Hibernate.isInitialized(proxy)
     }
 
-    void "getIdentifier() on uninitialized proxy returns identifier without initialization"() {
+    void "a user-defined getIdentifier() invokes the entity implementation"() {
         given:
-        def proxy = manager.hibernateSession.getReference(Location, savedId)
+        def proxy = Location.load(savedId)
 
         expect:
         !Hibernate.isInitialized(proxy)
-        // This should trigger the "getIdentifier" branch in the interceptor
         proxy.getIdentifier() == savedId
-        !Hibernate.isInitialized(proxy)
+        Hibernate.isInitialized(proxy)
     }
 
     void "setProperty on uninitialized proxy initializes the proxy"() {

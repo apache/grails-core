@@ -187,6 +187,13 @@ grails {
 }
 ----
 
+Grails Forge generates the same opt-ins for a new application with the `grails-compile-static` feature. It sets `controllers`, `services` and `tagLibs` individually rather than through `all`, so an artefact type a later release adds to `all` is not opted in without being asked for, and adds `gsp = true` when the application uses GSP:
+
+[source,console]
+----
+grails -t forge create-app --features=grails-compile-static com.example.demo
+----
+
 When an opt-in is enabled, every matching artefact is compiled exactly as if it were annotated with `@GrailsCompileStatic`, including the Grails-specific dispatch that the annotation already permits — dynamic finders, constraints and mapping DSLs, and tag library calls in both controllers and tag libraries.
 
 [NOTE]

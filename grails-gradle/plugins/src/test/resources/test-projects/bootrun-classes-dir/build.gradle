@@ -1,0 +1,30 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+// A second instance of one checkout builds into a directory of its own (-PbuildDir)
+if (project.hasProperty('ownBuildDir')) {
+    layout.buildDirectory = layout.projectDirectory.dir(project.property('ownBuildDir').toString())
+}
+
+// A build that sets the property on the task itself, as builds did before the plugin passed it
+if (project.hasProperty('ownClassDir')) {
+    tasks.named('bootRun') {
+        systemProperty 'grails.project.class.dir', project.property('ownClassDir').toString()
+    }
+}
+
+tasks.register('inspectBootRunClassesDir') {
+    doLast {
+        def task = tasks.named('bootRun').get()
+        // What the JVM is given: system properties and argument providers both, and the last -D wins
+        def lastValue = { String property ->
+            String prefix = "-D${property}="
+            String arg = task.allJvmArgs.findAll { it.startsWith(prefix) }.with { it ? it.last() : null }
+            arg ? arg.substring(prefix.length()) : ''
+        }
+        println "CLASSES_DIR=${lastValue('grails.project.class.dir')}"
+        println "RESOURCES_DIR=${lastValue('grails.project.resource.dir')}"
+        println "TARGET_DIR=${lastValue('grails.project.target.dir')}"
+    }
+}

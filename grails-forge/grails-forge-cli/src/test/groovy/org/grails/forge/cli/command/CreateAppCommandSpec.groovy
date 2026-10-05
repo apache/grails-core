@@ -25,7 +25,9 @@ import org.grails.forge.application.WebAvailableFeatures
 import org.grails.forge.cli.CodeGenConfig
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
+import org.grails.forge.cli.GrailsPicocliFactory
 import org.grails.forge.io.ConsoleOutput
+import picocli.CommandLine
 import spock.lang.AutoCleanup
 import spock.lang.Shared
 
@@ -141,6 +143,19 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
         then:
         noExceptionThrown()
         out.toString().contains("Application created")
+    }
+
+    void "the --features completion candidates are listed in name order"() {
+        when:
+        List<String> candidates = new CommandLine(ctx.getBean(CreateAppCommand), new GrailsPicocliFactory(ctx))
+                .commandSpec
+                .findOption('--features')
+                .completionCandidates()
+                .toList()
+
+        then:
+        candidates
+        candidates == candidates.toSorted()
     }
 
     void "community and preview features are labelled as such"() {

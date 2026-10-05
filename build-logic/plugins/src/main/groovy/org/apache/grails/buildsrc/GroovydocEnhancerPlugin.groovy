@@ -40,6 +40,13 @@ class GroovydocEnhancerPlugin implements Plugin<Project> {
                 GroovydocEnhancerExtension,
                 project
         )
+        Provider<GroovydocMemoryThrottle> throttle = project.gradle.sharedServices.registerIfAbsent(
+                'groovydocMemoryThrottle', GroovydocMemoryThrottle) {
+            it.maxParallelUsages.set(1)
+        }
+        project.tasks.withType(Groovydoc).configureEach {
+            it.usesService(throttle)
+        }
         registerDocumentationConfiguration(project)
         configureGroovydocDefaults(project, extension)
         configureAntBuilderExecution(project, extension)
@@ -88,6 +95,11 @@ class GroovydocEnhancerPlugin implements Plugin<Project> {
 
     @CompileDynamic
     private static void configureAntBuilderExecution(Project project, GroovydocEnhancerExtension extension) {
+        GroovydocRunner runner = project.objects.newInstance(GroovydocRunner)
+        // Same form as PublishGuideTask uses for guideMaxHeapSize, and the one that survives
+        // the configuration cache if gradle/gradle#15497 is ever closed.
+        Provider<String> maxHeapSizeOverride = project.providers.gradleProperty('groovydocMaxHeapSize')
+
         project.tasks.withType(Groovydoc).configureEach { gdoc ->
             if (!extension.useAntBuilder.get()) {
                 return
@@ -124,12 +136,6 @@ class GroovydocEnhancerPlugin implements Plugin<Project> {
                 // those types into external javadoc URLs.
                 def antClasspath = gdoc.classpath ? classpath.plus(gdoc.classpath) : classpath
 
-                project.ant.taskdef(
-                        name: 'groovydoc',
-                        classname: 'org.codehaus.groovy.ant.Groovydoc',
-                        classpath: antClasspath.asPath
-                )
-
                 def links = resolveLinks(gdoc)
                 def sourcepath = sourceDirs
                         .collect { it.absolutePath }
@@ -154,11 +160,14 @@ class GroovydocEnhancerPlugin implements Plugin<Project> {
                     antArgs.put('javaVersion', extension.javaVersion.get())
                 }
 
-                project.ant.groovydoc(antArgs) {
-                    for (var l in links) {
-                        link(packages: l.packages, href: l.href)
-                    }
-                }
+                runner.run(
+                        antClasspath,
+                        maxHeapSizeOverride.getOrElse(extension.maxHeapSize.get()),
+                        gdoc.temporaryDir,
+                        antArgs,
+                        links,
+                        gdoc.logger.infoEnabled
+                )
             }
         }
     }

@@ -25,11 +25,13 @@ import groovy.transform.Generated
 import org.grails.plugins.web.interceptors.InterceptorArtefactHandler
 import org.grails.web.mapping.ForwardUrlMappingInfo
 import org.grails.web.mapping.mvc.UrlMappingsHandlerMapping
+import org.grails.web.util.GrailsApplicationAttributes
 import org.grails.web.util.WebUtils
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.mock.web.MockServletContext
 import org.springframework.web.context.request.RequestContextHolder
+import org.springframework.web.servlet.ModelAndView
 import spock.lang.Issue
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -533,6 +535,52 @@ class InterceptorSpec extends Specification {
         '/grails'             | true
         '/grails/foo'         | true
         '/grails/foo/x'       | true
+    }
+
+    void "Test getModel returns null when neither MODEL_AND_VIEW nor TEMPLATE_MODEL is set"() {
+        given: "an interceptor with no model attributes on the request"
+        def i = new TestInterceptor()
+        GrailsWebMockUtil.bindMockWebRequest()
+
+        expect: "getModel returns null"
+        i.model == null
+    }
+
+    void "Test getModel returns modelMap from ModelAndView when MODEL_AND_VIEW is set"() {
+        given: "an interceptor with a ModelAndView on the request"
+        def i = new TestInterceptor()
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        def mav = new ModelAndView()
+        mav.addObject('foo', 'bar')
+        webRequest.setAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW, mav, 0)
+
+        expect: "getModel returns the ModelAndView's model map"
+        i.model == [foo: 'bar']
+    }
+
+    void "Test getModel falls back to TEMPLATE_MODEL when no ModelAndView is set"() {
+        given: "an interceptor with only TEMPLATE_MODEL on the request"
+        def i = new TestInterceptor()
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        Map<String, Object> templateModel = [baz: 'qux']
+        webRequest.setAttribute(GrailsApplicationAttributes.TEMPLATE_MODEL, templateModel, 0)
+
+        expect: "getModel returns the TEMPLATE_MODEL map"
+        i.model == [baz: 'qux']
+    }
+
+    void "Test getModel prefers MODEL_AND_VIEW over TEMPLATE_MODEL when both are set"() {
+        given: "an interceptor with both MODEL_AND_VIEW and TEMPLATE_MODEL on the request"
+        def i = new TestInterceptor()
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        def mav = new ModelAndView()
+        mav.addObject('fromMav', 'yes')
+        webRequest.setAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW, mav, 0)
+        webRequest.setAttribute(GrailsApplicationAttributes.TEMPLATE_MODEL, [fromTemplate: 'yes'], 0)
+
+        expect: "getModel returns the ModelAndView's model map, not the template model"
+        i.model == [fromMav: 'yes']
+        !i.model.containsKey('fromTemplate')
     }
 
     void clearMatch(i, HttpServletRequest request) {

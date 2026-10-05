@@ -15,10 +15,14 @@
  */
 package org.grails.orm.hibernate.query;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
+import jakarta.persistence.criteria.ParameterExpression;
 import jakarta.persistence.criteria.Path;
 
 /**
@@ -27,15 +31,14 @@ import jakarta.persistence.criteria.Path;
  * {@link ExpressionResolver} receives the shared {@link AliasRegistry} and {@link JoinTracker}
  * so aliases and joins remain scoped to the current root or subquery context.
  *
- * @author walterduquedeestrada
- * @author graemerocher
- * @since 7.0.0
+ * @since 8.0
  */
 public class JpaQueryContext implements Cloneable {
 
     private final AliasRegistry aliasRegistry;
     private final JoinTracker joinTracker;
     private final ExpressionResolver resolver;
+    private final Map<ParameterExpression<?>, Object> parameterValues = new LinkedHashMap<>();
     private JpaQueryContext parent;
 
     public JpaQueryContext() {
@@ -169,6 +172,30 @@ public class JpaQueryContext implements Cloneable {
         }
         Expression<?> resolved = resolver.resolve(path);
         return resolved instanceof Path<?> path1 ? path1 : null;
+    }
+
+    /**
+     * Records the value of a criteria parameter, to be bound once the query is created. A subquery context
+     * records it in the context of the query that contains the subquery.
+     *
+     * @param parameter the parameter used in the criteria query
+     * @param value the value to bind to the parameter
+     */
+    public void bindParameter(ParameterExpression<?> parameter, Object value) {
+        if (parent != null) {
+            parent.bindParameter(parameter, value);
+        } else {
+            parameterValues.put(parameter, value);
+        }
+    }
+
+    /**
+     * Returns the values of the criteria parameters recorded for the query, in the order they were recorded.
+     *
+     * @return the value of each parameter
+     */
+    public Map<ParameterExpression<?>, Object> getParameterValues() {
+        return parent != null ? parent.getParameterValues() : Collections.unmodifiableMap(parameterValues);
     }
 
     @Override

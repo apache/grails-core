@@ -40,8 +40,8 @@ import org.gradle.api.provider.Provider
  * <p>The plugin auto-detects which BOM is in use by scanning the project's
  * dependency declarations. Projects without a BOM are silently skipped.</p>
  *
- * <p>Usage: Apply via {@link CompilePlugin} (automatic) or directly, then run
- * {@code ./gradlew validateDependencyVersions}.</p>
+ * <p>Usage: apply {@code org.apache.grails.buildsrc.dependency-validator} in the project's
+ * {@code plugins} block, then run {@code ./gradlew validateDependencyVersions}.</p>
  */
 @CompileStatic
 class GrailsDependencyValidatorPlugin implements Plugin<Project> {
@@ -63,6 +63,9 @@ class GrailsDependencyValidatorPlugin implements Plugin<Project> {
      * is intentional.
      */
     static final String ALLOWED_OVERRIDES_EXT = 'allowedBomOverrides'
+
+    /** Opts a project out of {@link #VALIDATE_TASK_NAME}; see {@link GradleUtils#isOptedOut}. */
+    static final String SKIP_PROPERTY = 'skipDependencyValidation'
 
     private static final Set<String> BOM_PROJECT_NAMES = ['grails-bom', 'grails-gradle-bom', 'grails-base-bom', 'grails-hibernate5-bom', 'grails-hibernate7-bom', 'grails-neo4j-bom'].toSet()
 
@@ -98,7 +101,7 @@ class GrailsDependencyValidatorPlugin implements Plugin<Project> {
      */
     private static void registerDependencyVersionValidation(Project project) {
         Provider<String> bomPath = project.provider {
-            if (shouldSkip(project)) {
+            if (GradleUtils.isOptedOut(project, SKIP_PROPERTY)) {
                 return ''
             }
             String detected = detectBomPath(project)
@@ -134,7 +137,7 @@ class GrailsDependencyValidatorPlugin implements Plugin<Project> {
                 task.bomPath.set(bomPath)
                 task.bomVersions.set(bomVersions)
                 task.resolvedVersions.set(resolvedVersions)
-                task.allowedOverrides.set(project.provider { resolveAllowedOverrides(project) })
+                task.allowedOverrides.set(project.provider { GradleUtils.extStrings(project, ALLOWED_OVERRIDES_EXT) })
         }
     }
 
@@ -171,51 +174,6 @@ class GrailsDependencyValidatorPlugin implements Plugin<Project> {
                     !task.forbiddenCoordinates.get().isEmpty() && task.rootComponent.present
                 }
         }
-    }
-
-    /**
-     * Returns true when the project should skip dependency validation. Honors a
-     * {@code skipDependencyValidation} project property (any non-null, non-false value)
-     * and an {@code ext.skipDependencyValidation} extra property. This lets specific
-     * projects opt out via {@code ext.skipDependencyValidation = true} when they have
-     * unresolvable BOM conflicts.
-     */
-    private static boolean shouldSkip(Project project) {
-        if (!project.hasProperty('skipDependencyValidation')) {
-            return false
-        }
-        Object value = project.findProperty('skipDependencyValidation')
-        if (value == null) {
-            // -PskipDependencyValidation with no value is treated as truthy
-            return true
-        }
-        return Boolean.parseBoolean(value.toString())
-    }
-
-    /**
-     * Resolves the set of {@code "group:name"} coordinates the project has marked as
-     * intentional version overrides, via the {@link #ALLOWED_OVERRIDES_EXT} ext property.
-     * Accepts a {@link Collection} or a single {@link CharSequence}. Unknown types are
-     * silently ignored.
-     */
-    private static Set<String> resolveAllowedOverrides(Project project) {
-        if (!project.extensions.extraProperties.has(ALLOWED_OVERRIDES_EXT)) {
-            return Collections.emptySet()
-        }
-        Object raw = project.extensions.extraProperties.get(ALLOWED_OVERRIDES_EXT)
-        if (raw instanceof CharSequence) {
-            return Collections.singleton(raw.toString())
-        }
-        if (raw instanceof Collection) {
-            Set<String> result = new LinkedHashSet<>()
-            for (Object item : (Collection<?>) raw) {
-                if (item != null) {
-                    result.add(item.toString())
-                }
-            }
-            return result
-        }
-        return Collections.emptySet()
     }
 
     /**

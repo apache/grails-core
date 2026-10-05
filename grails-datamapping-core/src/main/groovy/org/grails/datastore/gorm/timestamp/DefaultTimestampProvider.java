@@ -26,9 +26,7 @@ import org.springframework.util.ClassUtils;
 
 /**
  * Default implementation of TimestampProvider
- *
  * supports creating timestamps for any class that supports a constructor that accepts a Long or long value.
- *
  * "currentTimeMillis" can be overrided in subclasses (useful for testing purposes)
  *
  */

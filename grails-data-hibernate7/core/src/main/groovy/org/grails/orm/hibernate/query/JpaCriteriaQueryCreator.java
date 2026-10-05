@@ -16,6 +16,7 @@
 package org.grails.orm.hibernate.query;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -25,6 +26,7 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.ParameterExpression;
 import jakarta.persistence.criteria.Root;
 
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
@@ -42,9 +44,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
 /**
  * A class that creates a JPA {@link CriteriaQuery} from a GORM {@link Query} and {@link DetachedCriteria}.
  *
- * @author burt
- * @author graemerocher
- * @since 7.0.0
+ * @since 8.0
  */
 public class JpaCriteriaQueryCreator<T> {
 
@@ -55,6 +55,7 @@ public class JpaCriteriaQueryCreator<T> {
     private final ConversionService conversionService;
     private final HibernateQuery hibernateQuery;
     private JpaQueryContext parentContext;
+    private JpaQueryContext context;
 
     public JpaCriteriaQueryCreator(
             Query.ProjectionList projections,
@@ -84,6 +85,17 @@ public class JpaCriteriaQueryCreator<T> {
         this.parentContext = parentContext;
     }
 
+    /**
+     * Returns the values of the criteria parameters in the query or subquery last built by this creator, which
+     * must be bound to the query once it is created. A subquery built under a parent context records its values
+     * in the parent's context, so they are bound with the query that contains it.
+     *
+     * @return the value of each parameter
+     */
+    public Map<ParameterExpression<?>, Object> getParameterValues() {
+        return context != null ? context.getParameterValues() : Collections.emptyMap();
+    }
+
     public JpaCriteriaQuery<?> createQuery() {
         var projectionList = collectProjections();
         var cq = createCriteriaQuery(projectionList);
@@ -100,7 +112,7 @@ public class JpaCriteriaQueryCreator<T> {
             }
         }
 
-        var context = JpaQueryContext.forSubquery(parentContext, aliases, root);
+        context = JpaQueryContext.forSubquery(parentContext, aliases, root);
         registerDetachedJoins(context);
         discoverAliases(detachedCriteria.getCriteria(), context);
 
@@ -162,7 +174,7 @@ public class JpaCriteriaQueryCreator<T> {
             }
         }
 
-        var context = JpaQueryContext.forSubquery(parentContext, aliases, root);
+        context = JpaQueryContext.forSubquery(parentContext, aliases, root);
         registerDetachedJoins(context);
         discoverAliases(detachedCriteria.getCriteria(), context);
 

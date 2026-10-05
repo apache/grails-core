@@ -17,35 +17,57 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Grails apps can be deployed to a Servlet Container or Application Server.
+An external servlet container manages one or more applications deployed as WAR files.
+This differs from an <<deploymentLayeredBuilds,OCI container image>>, which normally runs an executable Grails JAR with its embedded server.
 
+== Prepare a deployable WAR
 
-=== WAR file
+Ensure the application applies Gradle's `war` plugin. Add it to the existing `plugins` block, or use `apply plugin: 'war'` if the build uses imperative plugin application.
+The Grails web application plugins configure Spring Boot's packaging tasks; an additional Spring Boot plugin version is not required.
 
-
-A common approach to Grails application deployment in production is to deploy to an existing Servlet container via a WAR file. Containers allow multiple applications to be deployed on the same port with different paths.
-
-Creating a WAR file is as simple as executing the link:{commandLineRef}war.html[war] command:
-
-[source,groovy]
-----
-grails war
-----
-
-This will produce a WAR file that can be deployed to a container, in the `build/libs` directory.
-
-Note that by default Grails will include an embeddable version of Tomcat inside the WAR file so that it is runnable (see the previous section), this can cause problems if you deploy to a different version of Tomcat. If you don't intend to use the embedded container, replace `spring-boot-starter-tomcat` with `spring-boot-starter-tomcat-runtime` in `build.gradle`:
+For a Tomcat application, keep the Tomcat starter as an application dependency and declare its runtime components using `providedRuntime` in `build.gradle`:
 
 [source,groovy]
 ----
-providedRuntime "org.springframework.boot:spring-boot-starter-tomcat-runtime"
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-tomcat'
+    providedRuntime('org.springframework.boot:spring-boot-starter-tomcat-runtime') {
+        // Grails beans also use Spring Boot's integration classes in an external container.
+        exclude group: 'org.springframework.boot'
+    }
+}
 ----
 
-The `-runtime` variant was introduced in Spring Boot 4.
-It contributes only the integration classes Spring Boot needs to start in an external Servlet container, without bundling the embedded Tomcat distribution into the WAR.
+The `-runtime` starter is Spring Boot 4's way to identify the runtime components that must be provided by an external servlet container.
+It includes the embedded Tomcat libraries. `bootWar` packages those components in `WEB-INF/lib-provided`, outside the external servlet container's application library path, while keeping them available to executable WAR launches.
+The exclusion applies only to this provided dependency: Spring Boot's integration modules remain ordinary application dependencies through `spring-boot-starter-tomcat` and are packaged in `WEB-INF/lib`. Grails uses their types when registering application beans, and an external Tomcat installation does not supply them.
+`providedRuntime` also keeps them on the test classpath; `testImplementation` would make them unavailable when running the packaged WAR with `java -jar`.
+Review any additional servlet-container dependencies for the same packaging requirements.
 
+The Grails Gradle plugin applies the selected Grails BOM to `providedRuntime` by default, so these dependencies do not need explicit versions.
+An application that opts out of automatic BOM management must supply its chosen platform to this configuration as well as its ordinary application configurations.
 
+Grails generates servlet initialization support for the application's conventional `Application` class. Retain the generated Grails application structure rather than replacing it with a separate Spring Boot application entry point.
 
-== Application servers
+[source,bash]
+----
+./gradlew clean check bootWar
+----
 
-The Grails framework requires that runtime containers support Servlet 6.0.0 and above. By default, Grails framework applications are bundled with an embeddable Tomcat and testing is primarily done with Tomcat.  Any servlet container meeting the minimum requirements should be able to run Grails framework applications, but some workarounds may be required for container-specific bugs or configurations.
+Deploy the resulting executable WAR from `build/libs`, for example `myapp-0.1.war`, using the servlet container's deployment mechanism.
+Use the `bootWar` output, not a `*-plain.war`. The link:{commandLineRef}war.html[`grails war`] command is also available.
+
+== Container requirements and configuration
+
+Grails 8 requires a Jakarta Servlet 6.1-compatible container, such as Tomcat 11, and Java 21 or later.
+Older Tomcat generations, including Tomcat 10.1 (Servlet 6.0), do not meet this requirement.
+Test the packaged WAR against the actual container and Java versions used in production, including any application-server-specific classloading configuration.
+
+For external deployments:
+
+* Configure listeners, TLS certificates, connection limits, and graceful undeployment in the servlet container. Spring Boot's embedded-server settings do not configure an external server's connectors.
+* Configure the context path in the servlet container. For example, Tomcat normally derives it from the WAR name; `ROOT.war` deploys at `/`. An embedded-server `server.servlet.context-path` setting does not replace this configuration.
+* Supply <<deploymentTasks,external configuration and secrets>> through the deployment platform. JVM system properties apply to every application in a shared server JVM, so do not use them for settings that must differ between deployed applications.
+* Check startup logs, health, a representative application request, and static resources after deployment. Exercise shutdown and redeployment as part of release testing.
+
+See the link:{springBootHowTo}deployment/traditional-deployment.html[Spring Boot traditional deployment guide] for further WAR packaging and application server guidance.

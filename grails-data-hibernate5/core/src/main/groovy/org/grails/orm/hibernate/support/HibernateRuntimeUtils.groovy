@@ -28,7 +28,6 @@ import org.hibernate.SessionFactory
 import org.springframework.core.convert.ConversionService
 import org.springframework.validation.Errors
 import org.springframework.validation.FieldError
-import org.springframework.validation.ObjectError
 
 import org.grails.datastore.gorm.GormValidateable
 import org.grails.datastore.mapping.model.PersistentEntity
@@ -77,21 +76,16 @@ class HibernateRuntimeUtils {
         def errors = new ValidationErrors(target)
 
         Errors originalErrors = isGormValidateable ? ((GormValidateable) target).getErrors() : (Errors) mc.getProperty(target, GormProperties.ERRORS)
-        // Copy binding failures and any existing object-level errors
-        for (Object o in originalErrors.allErrors) {
-            if (o instanceof FieldError) {
-                FieldError fe = (FieldError) o
-                if (fe.isBindingFailure()) {
-                    errors.addError(new FieldError(fe.getObjectName(),
-                            fe.field,
-                            fe.rejectedValue,
-                            fe.bindingFailure,
-                            fe.codes,
-                            fe.arguments,
-                            fe.defaultMessage))
-                }
-            } else {
-                errors.addError((ObjectError) o)
+        for (Object o in originalErrors.fieldErrors) {
+            FieldError fe = (FieldError) o
+            if (fe.isBindingFailure()) {
+                errors.addError(new FieldError(fe.getObjectName(),
+                        fe.field,
+                        fe.rejectedValue,
+                        fe.bindingFailure,
+                        fe.codes,
+                        fe.arguments,
+                        fe.defaultMessage))
             }
         }
 

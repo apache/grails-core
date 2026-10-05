@@ -24,6 +24,7 @@ import org.codehaus.groovy.runtime.InvokerHelper
 import org.springframework.transaction.PlatformTransactionManager
 
 import grails.gorm.api.GormInstanceOperations
+import org.grails.datastore.gorm.internal.RefreshLockArguments
 import org.grails.datastore.gorm.schemaless.DynamicAttributes
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.DatastoreUtils
@@ -34,7 +35,11 @@ import org.grails.datastore.mapping.core.connections.ConnectionSources
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.proxy.EntityProxy
+import org.grails.datastore.mapping.proxy.ProxyHandler
+import org.grails.datastore.mapping.reflect.EntityReflector
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 import org.grails.datastore.mapping.validation.ValidationException
 
@@ -136,7 +141,14 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
     @Override
     def <T> T mutex(D instance, Closure<T> callable) {
         execute({ Session session ->
-            session.lock(instance)
+            if (supportsLockedRefresh()) {
+                // Reload the row under the lock instead of version-checking the state already loaded, so that a
+                // competing writer is waited for and the closure runs on the committed state. Always an
+                // exclusive lock: a shared or optimistic one would not give the closure mutual exclusion.
+                refresh(instance, [(RefreshLockArguments.LOCK): true])
+            } else {
+                session.lock(instance)
+            }
             callable?.call()
         } as SessionCallback)
     }
@@ -265,7 +277,32 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
 
     @Override
     Serializable ident(D instance) {
-        (Serializable)InvokerHelper.getProperty(instance, 'id')
+        ProxyHandler proxyHandler = mappingContext.proxyHandler
+        if (proxyHandler != null && proxyHandler.isProxy(instance) && !proxyHandler.isInitialized(instance)) {
+            return proxyHandler.getIdentifier(instance)
+        }
+
+        PersistentEntity entity = mappingContext.getPersistentEntity(persistentClass.name)
+        if (entity == null) {
+            return (Serializable) InvokerHelper.getProperty(instance, 'id')
+        }
+        PersistentProperty identity = entity.identity
+        if (identity != null) {
+            return (Serializable) InvokerHelper.getProperty(instance, identity.name)
+        }
+
+        PersistentProperty[] idProperties = entity.compositeIdentity
+        if (idProperties != null) {
+            def identifier = entity.newInstance()
+            if (identifier instanceof Serializable) {
+                EntityReflector reflector = entity.reflector
+                for (PersistentProperty property : idProperties) {
+                    reflector.setProperty(identifier, property.name, reflector.getProperty(instance, property.name))
+                }
+                return (Serializable) identifier
+            }
+        }
+        return null
     }
 
     @Override

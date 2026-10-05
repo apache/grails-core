@@ -96,13 +96,17 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
     @Override
     <T> T withNewSession(Closure<T> callable) {
         AbstractHibernateDatastore hibernateDatastore = (AbstractHibernateDatastore) datastore
-        hibernateDatastore.withNewSession(callable)
+        inConnectionScope {
+            hibernateDatastore.withNewSession(callable)
+        }
     }
 
     @Override
     def <T> T withSession(Closure<T> callable) {
         AbstractHibernateDatastore hibernateDatastore = (AbstractHibernateDatastore) datastore
-        hibernateDatastore.withSession(callable)
+        inConnectionScope {
+            hibernateDatastore.withSession(callable)
+        }
     }
 
     @Override

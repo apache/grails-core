@@ -26,8 +26,13 @@ import org.hibernate.boot.model.relational.Database
 import org.hibernate.boot.model.relational.SqlStringGenerationContext
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import org.hibernate.generator.GeneratorCreationContext
+import org.hibernate.id.PersistentIdentifierGenerator
 import org.hibernate.id.enhanced.DatabaseStructure
+import org.hibernate.id.enhanced.SequenceStyleGenerator
 import org.hibernate.mapping.RootClass
+import org.hibernate.mapping.Table
+
+import spock.lang.Unroll
 
 class GrailsSequenceStyleGeneratorSpec extends HibernateGormDatastoreSpec {
 
@@ -75,8 +80,9 @@ class GrailsSequenceStyleGeneratorSpec extends HibernateGormDatastoreSpec {
         def context = Mock(GeneratorCreationContext)
         def persistentEntity = getPersistentEntity(SequenceStyleGeneratorSpecEntity) as GrailsHibernatePersistentEntity
         def rootClass = new RootClass(binder.getMetadataBuildingContext())
+        rootClass.setTable(new Table('orm', 'sequence_style_generator_spec_entity'))
         persistentEntity.setPersistentClass(rootClass)
-        
+
         def database = binder.getMetadataBuildingContext().getMetadataCollector().getDatabase()
         def jdbcEnvironment = binder.getJdbcEnvironment()
         def mappedId = Mock(HibernateSimpleIdentity)
@@ -84,6 +90,7 @@ class GrailsSequenceStyleGeneratorSpec extends HibernateGormDatastoreSpec {
 
         context.getDatabase() >> database
         context.getServiceRegistry() >> binder.getMetadataBuildingContext().getBuildingOptions().getServiceRegistry()
+        context.getRootClass() >> rootClass
         mappedId.getProperties() >> props
 
         when:
@@ -92,6 +99,86 @@ class GrailsSequenceStyleGeneratorSpec extends HibernateGormDatastoreSpec {
         then:
         generator.capturedProps.getProperty("increment_size") == "50"
         generator.capturedProps.getProperty("optimizer") == "pooled-lo"
+
+        and: "the mapping names no sequence, so the target table is supplied for Hibernate to derive one from"
+        generator.capturedProps.getProperty(PersistentIdentifierGenerator.TABLE) == 'sequence_style_generator_spec_entity'
+    }
+
+    @Unroll
+    def "test no target table is supplied when the mapping names the sequence itself (#description)"() {
+        given:
+        def binder = getGrailsDomainBinder()
+        def context = Mock(GeneratorCreationContext)
+        def rootClass = new RootClass(binder.getMetadataBuildingContext())
+        rootClass.setTable(new Table('orm', 'sequence_style_generator_spec_entity'))
+        def mappedId = Mock(HibernateSimpleIdentity)
+        def props = new Properties()
+        params.each { key, value -> props.setProperty(key, value) }
+
+        context.getDatabase() >> binder.getMetadataBuildingContext().getMetadataCollector().getDatabase()
+        context.getServiceRegistry() >> binder.getMetadataBuildingContext().getBuildingOptions().getServiceRegistry()
+        context.getRootClass() >> rootClass
+        mappedId.getProperties() >> props
+
+        when:
+        def generator = new TestGrailsSequenceStyleGenerator(context, mappedId, binder.getJdbcEnvironment())
+
+        then: "Hibernate resolves the name from these params itself, so it needs no table to derive one"
+        generator.capturedProps.getProperty(PersistentIdentifierGenerator.TABLE) == null
+
+        where:
+        description                   | params
+        "'sequence' names it"         | [(SequenceStyleGenerator.ALT_SEQUENCE_PARAM): 'my_seq']
+        "'sequence_name' names it"    | [(SequenceStyleGenerator.SEQUENCE_PARAM): 'my_seq']
+        "'sequence_name' wins over 'sequence'" | [(SequenceStyleGenerator.SEQUENCE_PARAM): 'my_seq',
+                                                  (SequenceStyleGenerator.ALT_SEQUENCE_PARAM): 'other_seq']
+    }
+
+    @Unroll
+    def "test the target table is supplied when the named sequence is blank (#description)"() {
+        given:
+        def binder = getGrailsDomainBinder()
+        def context = Mock(GeneratorCreationContext)
+        def rootClass = new RootClass(binder.getMetadataBuildingContext())
+        rootClass.setTable(new Table('orm', 'sequence_style_generator_spec_entity'))
+        def mappedId = Mock(HibernateSimpleIdentity)
+        def props = new Properties()
+        params.each { key, value -> props.setProperty(key, value) }
+
+        context.getDatabase() >> binder.getMetadataBuildingContext().getMetadataCollector().getDatabase()
+        context.getServiceRegistry() >> binder.getMetadataBuildingContext().getBuildingOptions().getServiceRegistry()
+        context.getRootClass() >> rootClass
+        mappedId.getProperties() >> props
+
+        when:
+        def generator = new TestGrailsSequenceStyleGenerator(context, mappedId, binder.getJdbcEnvironment())
+
+        then: "a blank name is no name to Hibernate either, so it still has to derive one from the table"
+        generator.capturedProps.getProperty(PersistentIdentifierGenerator.TABLE) == 'sequence_style_generator_spec_entity'
+
+        where:
+        description                | params
+        "'sequence' is blank"      | [(SequenceStyleGenerator.ALT_SEQUENCE_PARAM): '']
+        "'sequence_name' is blank" | [(SequenceStyleGenerator.SEQUENCE_PARAM): '']
+    }
+
+    def "test no target table is supplied when there is no root class"() {
+        given: "a generator for something without one, such as a component identifier"
+        def binder = getGrailsDomainBinder()
+        def context = Mock(GeneratorCreationContext)
+        def mappedId = Mock(HibernateSimpleIdentity)
+
+        context.getDatabase() >> binder.getMetadataBuildingContext().getMetadataCollector().getDatabase()
+        context.getServiceRegistry() >> binder.getMetadataBuildingContext().getBuildingOptions().getServiceRegistry()
+        context.getRootClass() >> null
+        mappedId.getProperties() >> new Properties()
+
+        when:
+        def generator = new TestGrailsSequenceStyleGenerator(context, mappedId, binder.getJdbcEnvironment())
+
+        then: "there is no table to name, and resolving one anyway would fail"
+        generator.capturedProps.getProperty(PersistentIdentifierGenerator.TABLE) == null
+        generator.capturedProps.getProperty("increment_size") == "50"
     }
 
     def "test constructor with null mappedId and null jdbcEnvironment"() {

@@ -210,26 +210,6 @@ interface Settings {
     String CONTROLLERS_DEFAULT_SCOPE = 'grails.controllers.defaultScope'
 
     /**
-     * The upload directory for controllers, defaults to java.tmp.dir
-     */
-    String CONTROLLERS_UPLOAD_LOCATION = 'grails.controllers.upload.location'
-
-    /**
-     * The maximum file size
-     */
-    String CONTROLLERS_UPLOAD_MAX_FILE_SIZE = 'grails.controllers.upload.maxFileSize'
-
-    /**
-     * The maximum request size
-     */
-    String CONTROLLERS_UPLOAD_MAX_REQUEST_SIZE = 'grails.controllers.upload.maxRequestSize'
-
-    /**
-     * The file size threshold
-     */
-    String CONTROLLERS_UPLOAD_FILE_SIZE_THRESHOLD = 'grails.controllers.upload.fileSizeThreshold'
-
-    /**
      * The encoding to use for filters, default to UTF-8
      */
     String FILTER_ENCODING = 'grails.filter.encoding'

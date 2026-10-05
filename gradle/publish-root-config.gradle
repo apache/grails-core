@@ -77,6 +77,7 @@ def publishedProjects = [
         'grails-logging',
         'grails-mail',
         'grails-mimetypes',
+        'grails-openapi',
         'grails-quartz',
         'grails-redis',
         'grails-rest-transforms',
@@ -181,7 +182,7 @@ def publishedProjects = [
 ]
 
 subprojects {
-    if (name in publishedProjects) {
+    if (name in publishedProjects || name in skillProjects) {
         // This has to be applied here in the root project due to the nexus plugin requirements
         if (name.startsWith('grails-profiles')) {
             apply plugin: 'org.apache.grails.gradle.grails-publish-profile'

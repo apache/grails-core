@@ -82,3 +82,13 @@ ext {
 apply {
     from rootProject.layout.projectDirectory.file('gradle/forge-test-config.gradle')
 }
+
+tasks.withType(Test).configureEach { Test testTask ->
+    // gradleTestKit() contributes Gradle's Groovy 4 jars ahead of this project's Groovy 6.
+    // These tests are compiled with Groovy 6, whose invokedynamic property-set call sites
+    // Groovy 4's Selector rejects ("BUG! your call tried to do a property set").
+    FileCollection groovy6First = testTask.classpath.filter { File jar ->
+        !(jar.name ==~ /groovy(?:-[a-z0-9]+)*-4\..*\.jar/)
+    }
+    testTask.classpath = groovy6First
+}

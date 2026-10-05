@@ -66,6 +66,22 @@ public class GroovyPageAttributes extends TypeConvertingMap implements Cloneable
         this.gspTagSyntaxCall = gspTagSyntaxCall;
     }
 
+    /**
+     * Stores an attribute, so that {@code attrs['name'] = value} always writes a map entry.
+     *
+     * <p>Without it, Groovy 5 resolves subscript assignment of {@code gspTagSyntaxCall} to
+     * {@link #setGspTagSyntaxCall(boolean)}, while Groovy 6 routes it through {@link Map#put}.
+     * Declaring it gives both the Groovy 6 behaviour. Dotted assignment,
+     * {@code attrs.gspTagSyntaxCall = value}, still invokes the setter.
+     *
+     * @param key the attribute name
+     * @param value the attribute value
+     * @since 8.0
+     */
+    public void putAt(String key, Object value) {
+        put(key, value);
+    }
+
     @Override
     public Object clone() {
         return new GroovyPageAttributes(new LinkedHashMap(wrappedMap));

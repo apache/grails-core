@@ -68,11 +68,14 @@ dependencyManagement {
 // Spring Dependency Management may let Spring Boot's version properties win over the Grails BOM
 // import. Apply Grails' version map and mirror these security overrides when they are present.
 apply from: rootProject.layout.projectDirectory.file('../dependencies.gradle')
+// Spring DM lets spring-boot-dependencies' Groovy property override the Grails BOM import.
+// Keep the canary runtime aligned with the Groovy version used to compile the framework.
+ext['groovy.version'] = bomDependencyVersions['groovy.version']
 if (bomDependencyVersions.containsKey('logback.version')) {
     ext['logback.version'] = bomDependencyVersions['logback.version']
 }
-if (bomDependencyVersions.containsKey('jackson3.version')) {
-    ext['jackson-bom.version'] = bomDependencyVersions['jackson3.version']
+if (bomDependencyVersions.containsKey('jackson-bom.version')) {
+    ext['jackson-bom.version'] = bomDependencyVersions['jackson-bom.version']
 }
 
 dependencies {

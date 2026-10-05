@@ -42,6 +42,12 @@ include::{grailsDataMongodbCoreDir}/src/test/groovy/grails/gorm/tests/FindNative
 include::{grailsDataMongodbCoreDir}/src/test/groovy/grails/gorm/tests/FindNativeSpec.groovy[tags=collectionFind,indent=0]
 ----
 
+==== Criterion values
+
+A `Map` passed as a criterion value to `findWhere`, `findAllWhere`, a criteria query, the `where` DSL or a dynamic finder is sent to MongoDB as a literal subdocument comparison. Because MongoDB interprets a value document whose keys start with `$` as an operator expression rather than as a value, a map that contains such a key at any depth is rejected with `InvalidDataAccessResourceUsageException`. This applies to every property type, including enums and other custom types; geospatial criteria take shape documents by design and are exempt.
+
+If you need to run an operator query that GORM does not express, use the native `find` method with a `Bson` filter as shown above.
+
 === Bulk Updates
 
 `updateAll` sets the given properties on every document the criteria match, in a single `updateMany`, without loading the entities:

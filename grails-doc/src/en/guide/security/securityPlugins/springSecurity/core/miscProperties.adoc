@@ -75,7 +75,7 @@ under the License.
 
 |voterNames
 |`['authenticatedVoter', 'roleVoter', 'closureVoter']`
-|Bean names of voters. See <<voters>>
+|Bean names of voters. See <<core-voters,Voters>>
 
 |providerNames
 |`['daoAuthenticationProvider', 'anonymousAuthenticationProvider', 'rememberMeAuthenticationProvider']`
@@ -131,6 +131,6 @@ under the License.
 
 |excludeSpringSecurityAutoConfiguration
 |`true`
-|Whether to automatically exclude Spring Boot security auto-configuration classes that conflict with the plugin. Set to `false` to allow Spring Boot's security auto-configurations to load alongside the plugin. See <<installation>>
+|Whether to automatically exclude Spring Boot security auto-configuration classes that conflict with the plugin. Set to `false` to allow Spring Boot's security auto-configurations to load alongside the plugin. See <<core-installation,Installation>>
 
 |====================

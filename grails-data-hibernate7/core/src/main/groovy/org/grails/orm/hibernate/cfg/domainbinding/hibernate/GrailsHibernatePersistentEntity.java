@@ -50,7 +50,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.ConfigureDerivedPropertie
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamespaceNameExtractor;
 
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.JPA_DEFAULT_DISCRIMINATOR_TYPE;
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.DEFAULT_DISCRIMINATOR_COLUMN_NAME;
 
 /** Common interface for Hibernate persistent entities */
 public interface GrailsHibernatePersistentEntity extends PersistentEntity {
@@ -168,7 +168,7 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
         return Optional.ofNullable(getMappedForm())
                 .map(Mapping::getDiscriminator)
                 .map(DiscriminatorConfig::getValue)
-                .orElse(getJavaClass().getSimpleName());
+                .orElse(getJavaClass().getName());
     }
 
     String getDataSourceName();
@@ -329,7 +329,7 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
         return Optional.ofNullable(getRootMapping())
                 .map(Mapping::getDiscriminator)
                 .map(GrailsHibernatePersistentEntity::resolveDiscriminatorValue)
-                .orElse(JPA_DEFAULT_DISCRIMINATOR_TYPE);
+                .orElse(DEFAULT_DISCRIMINATOR_COLUMN_NAME);
     }
 
     default List<HibernatePersistentProperty> getHibernatePersistentProperties() {

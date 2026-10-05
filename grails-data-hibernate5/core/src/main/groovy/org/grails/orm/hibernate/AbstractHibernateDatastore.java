@@ -298,10 +298,13 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
     }
 
     /**
-     * Execute the given operation with the given flush mode
+     * Execute the given operation with the given flush mode. The previous flush mode of the current session is
+     * restored afterwards, also when the operation throws, unless the operation returns {@code false}.
+     * An exception thrown by the operation is rethrown; a checked exception is wrapped in an
+     * {@link java.lang.reflect.UndeclaredThrowableException}.
      *
-     * @param flushMode
-     * @param callable The callable
+     * @param flushMode The flush mode to apply while the operation runs
+     * @param callable The operation, which returns {@code false} to keep the given flush mode
      */
     public abstract void withFlushMode(FlushMode flushMode, Callable<Boolean> callable);
 
@@ -354,13 +357,16 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
     /**
      * Obtains a hibernate template for the given flush mode
      *
-     * @param flushMode The flush mode
+     * @param flushMode The flush mode, one of the {@code FLUSH_*} constants of {@link GrailsHibernateTemplate}
      * @return The IHibernateTemplate
      */
     public abstract IHibernateTemplate getHibernateTemplate(int flushMode);
 
+    /**
+     * @return A hibernate template that uses the default flush mode of this datastore
+     */
     public IHibernateTemplate getHibernateTemplate() {
-        return getHibernateTemplate(defaultFlushMode);
+        return getHibernateTemplate(GrailsHibernateTemplate.flushModeNameToConstant(defaultFlushModeName));
     }
 
     /**

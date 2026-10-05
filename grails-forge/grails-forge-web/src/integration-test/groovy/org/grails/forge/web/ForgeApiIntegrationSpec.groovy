@@ -133,7 +133,7 @@ class ForgeApiIntegrationSpec extends Specification {
         response.status == 200
         response.contentType.startsWith('application/json')
         preview.contents['build.gradle']
-        preview.contents['build.gradle'].contains('org.apache.grails:grails-quartz')
+        preview.contents['build.gradle'].contains('implementation "org.apache.grails:grails-quartz"')
     }
 
     void "GET diff endpoints return plain text feature changes"() {

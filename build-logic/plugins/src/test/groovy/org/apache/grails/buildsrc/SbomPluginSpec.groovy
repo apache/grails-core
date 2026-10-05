@@ -34,6 +34,10 @@ class SbomPluginSpec extends Specification {
         [[license: [id: 'LGPL-2.1-only']]]
     }
 
+    private static List bsd4Choice() {
+        [[license: [id: 'BSD-4-Clause']]]
+    }
+
     static class FakeCliArtifactExtension {
         final Property<String> artifactId
         FakeCliArtifactExtension(Property<String> artifactId) { this.artifactId = artifactId }
@@ -96,5 +100,26 @@ class SbomPluginSpec extends Specification {
         GradleException e = thrown(GradleException)
         e.message.contains('grails-data-hibernate5-dbmigration')
         e.message.contains('LGPL-2.1-only')
+    }
+
+    void "JLine 4 Maven jars use the BSD-3-Clause correction for new versions"() {
+        expect:
+        SbomPlugin.pickLicense(LOGGER, 'grails-console', 'grails-console',
+                'pkg:maven/org.jline/jansi@4.3.1?type=jar', bsd4Choice()).id == 'BSD-3-Clause'
+    }
+
+    void "JLine 4 license correction is limited to JLine 4 Maven jars"() {
+        when:
+        SbomPlugin.pickLicense(LOGGER, 'grails-console', 'grails-console', bomRef, bsd4Choice())
+
+        then:
+        GradleException e = thrown(GradleException)
+        e.message.contains('BSD-4-Clause')
+
+        where:
+        bomRef << [
+                'pkg:maven/com.example/jansi@4.3.1?type=jar',
+                'pkg:maven/org.jline/jansi@3.3.1?type=jar'
+        ]
     }
 }

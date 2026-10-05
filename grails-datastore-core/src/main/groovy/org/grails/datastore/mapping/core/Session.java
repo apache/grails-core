@@ -166,7 +166,7 @@ public interface Session extends QueryCreator {
     boolean contains(Object o);
 
     /**
-     * The flush mode, defaults to FlushModeType.COMMIT
+     * The flush mode, defaults to FlushModeType.AUTO
      *
      * @param flushMode The FlushModeType
      */
@@ -302,6 +302,18 @@ public interface Session extends QueryCreator {
      * @return Whether the current session has an active transaction
      */
     boolean hasTransaction();
+
+    /**
+     * Whether the session holds inserts, updates or deletes that {@link #flush()} has not written yet.
+     * A datastore that writes through immediately rather than queueing operations until the next flush
+     * returns {@code false}.
+     *
+     * @return {@code true} if a flush would write something
+     * @since 8.0
+     */
+    default boolean hasPendingOperations() {
+        return false;
+    }
 
     /**
      * The Datastore that created this Session

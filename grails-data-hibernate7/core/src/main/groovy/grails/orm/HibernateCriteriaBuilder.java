@@ -52,6 +52,7 @@ import org.grails.orm.hibernate.HibernateDatastore;
 import org.grails.orm.hibernate.HibernateSession;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.query.HibernateQuery;
+import org.grails.orm.hibernate.query.SqlRestriction;
 import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
 
 /**
@@ -926,8 +927,8 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
      * @return A Criterion instance
      */
     public Criteria eq(String propertyName, Object propertyValue, Map<?, ?> params) {
-        if (Boolean.TRUE.equals(params.get("ignoreCase"))) {
-            hibernateQuery.like(propertyName, "%" + propertyValue.toString() + "%");
+        if (Boolean.TRUE.equals(params.get("ignoreCase")) && propertyValue instanceof CharSequence) {
+            hibernateQuery.eqIgnoreCase(propertyName, propertyValue.toString());
         } else {
             hibernateQuery.eq(propertyName, propertyValue);
         }
@@ -1109,6 +1110,32 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     @Override
     public Criteria sizeLt(String propertyName, int size) {
         hibernateQuery.sizeLt(propertyName, size);
+        return this;
+    }
+
+    /**
+     * Restricts the results with a native SQL condition. {@code {alias}} in the SQL stands for the table alias of
+     * the queried entity.
+     *
+     * @param sqlRestriction the SQL condition
+     * @return this criteria
+     */
+    public org.grails.datastore.mapping.query.api.Criteria sqlRestriction(String sqlRestriction) {
+        return sqlRestriction(sqlRestriction, Collections.emptyList());
+    }
+
+    /**
+     * Restricts the results with a native SQL condition whose {@code ?} placeholders are bound to the given values.
+     * {@code {alias}} in the SQL stands for the table alias of the queried entity.
+     *
+     * @param sqlRestriction the SQL condition
+     * @param values the values of the {@code ?} placeholders, in order, none of them {@code null}
+     * @return this criteria
+     * @throws IllegalArgumentException if the number of {@code ?} placeholders differs from the number of values,
+     *     or a value is {@code null}
+     */
+    public org.grails.datastore.mapping.query.api.Criteria sqlRestriction(String sqlRestriction, List<?> values) {
+        hibernateQuery.add(new SqlRestriction(sqlRestriction, values));
         return this;
     }
 

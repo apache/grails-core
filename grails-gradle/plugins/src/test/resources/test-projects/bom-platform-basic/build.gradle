@@ -4,11 +4,21 @@ plugins {
 
 tasks.register('inspectBomSetup') {
     doLast {
-        def implDeps = configurations.implementation.allDependencies
-        def hasPlatform = implDeps.any { dep ->
-            dep.group == 'org.apache.grails' && dep.name == 'grails-bom'
-        }
-        println "HAS_PLATFORM_BOM=${hasPlatform}"
+        def isGrailsBom = { dep -> dep.group == 'org.apache.grails' && dep.name == 'grails-bom' }
+
+        // The platform is contributed lazily, through withDependencies: nothing is declared on a
+        // configuration until its dependencies are first observed. testImplementation is used to
+        // show that - unlike implementation, nothing observes it during configuration (the CLI
+        // companion probe resolves a configuration extending implementation in afterEvaluate).
+        println "DECLARED_EAGERLY=${configurations.testImplementation.dependencies.any(isGrailsBom)}"
+
+        // Observing a resolvable configuration runs the dependency actions of its whole
+        // hierarchy, which is when the platform lands on the declarable configurations.
+        def compileDeps = configurations.compileClasspath.incoming.dependencies
+        println "HAS_PLATFORM_BOM=${compileDeps.any(isGrailsBom)}"
+        println "IMPLEMENTATION_HAS_PLATFORM_BOM=${configurations.implementation.dependencies.any(isGrailsBom)}"
+        configurations.testCompileClasspath.incoming.dependencies
+        println "TEST_IMPLEMENTATION_HAS_PLATFORM_BOM=${configurations.testImplementation.dependencies.any(isGrailsBom)}"
 
         def hasBomPropertyOverrides = project.plugins.findPlugin('org.apache.grails.gradle.bom-property-overrides') != null
         println "HAS_BOM_PROPERTY_OVERRIDES=${hasBomPropertyOverrides}"

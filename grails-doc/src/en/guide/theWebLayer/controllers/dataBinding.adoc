@@ -734,6 +734,16 @@ The formats configured by default are:
 * `yyyy-MM-dd`
 * `HH:mm:ss`
 
+A value in the ISO 8601 form of the target type, which is how Grails renders it in JSON, is bound
+first, before any of those formats are tried. A `Date` given a date and time with an offset, such as
+`2024-05-01T10:00:00Z` or `2024-05-01T10:00:00.5+02:00`, is bound to the instant it names, whatever
+the time zone of the server, and a `java.time` type is bound from its ISO 8601 form, such as
+`2024-05-01T10:00:00+02:00` for an `OffsetDateTime` or `2024-05-01T10:00:00.250` for a
+`LocalDateTime`. A format that reads all of a value is used before an earlier format that reads only
+the start of it, so the time of `2024-05-01 10:00` is kept where a format such as `yyyy-MM-dd HH:mm` is
+listed. A value that no format reads all of is bound by the first format that reads the start of it,
+as in earlier versions.
+
 
 ==== Custom Formatted Converters
 

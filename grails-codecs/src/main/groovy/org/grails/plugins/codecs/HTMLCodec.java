@@ -18,6 +18,8 @@
  */
 package org.grails.plugins.codecs;
 
+import java.util.Locale;
+
 import org.springframework.beans.factory.InitializingBean;
 
 import grails.core.GrailsApplication;
@@ -57,7 +59,7 @@ public final class HTMLCodec implements CodecFactory, GrailsApplicationAware, In
     };
 
     public HTMLCodec() {
-        setUseLegacyEncoder(true);
+        setUseLegacyEncoder(false);
     }
 
     public Encoder getEncoder() {
@@ -82,10 +84,8 @@ public final class HTMLCodec implements CodecFactory, GrailsApplicationAware, In
             return;
         }
 
-        String htmlCodecSettingStr = htmlCodecSetting.toLowerCase();
-        if (htmlCodecSettingStr.startsWith("xml") || "xhtml".equalsIgnoreCase(htmlCodecSettingStr)) {
-            setUseLegacyEncoder(false);
-        }
+        String htmlCodecSettingStr = htmlCodecSetting.toLowerCase(Locale.ROOT);
+        setUseLegacyEncoder("html4".equals(htmlCodecSettingStr) || "html".equals(htmlCodecSettingStr));
     }
 
     public void setUseLegacyEncoder(boolean useLegacyEncoder) {

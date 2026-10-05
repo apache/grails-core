@@ -116,7 +116,7 @@ abstract class AbstractTraitApplyingGormASTTransformation extends AbstractGormAS
     }
 
     void visitAfterTraitApplied(SourceUnit sourceUnit, AnnotationNode annotationNode, ClassNode classNode) {
-        // no-dop
+        // no-op
     }
 
     protected abstract Class getTraitClass()

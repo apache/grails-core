@@ -1333,17 +1333,32 @@ include::deployment.adoc[]
 [[deploymentStandalone]]
 === Standalone
 
-include::deployment/deploymentStandalone.adoc[]
+include::deployment/deploymentStandalone.adoc[leveloffset=+2]
 
 [[deploymentContainer]]
-=== Container Deployment (e.g. Tomcat)
+=== External Servlet Container Deployment
 
-include::deployment/deploymentContainer.adoc[]
+include::deployment/deploymentContainer.adoc[leveloffset=+2]
+
+[[deploymentLayeredBuilds]]
+=== OCI Images and Layered Builds
+
+include::deployment/deploymentLayeredBuilds.adoc[leveloffset=+2]
 
 [[deploymentTasks]]
-=== Deployment Configuration Tasks
+=== Production Configuration
 
-include::deployment/deploymentTasks.adoc[]
+include::deployment/deploymentTasks.adoc[leveloffset=+2]
+
+[[deploymentAot]]
+=== Ahead-of-Time Processing
+
+include::deployment/deploymentAot.adoc[leveloffset=+1]
+
+[[deploymentAotCache]]
+=== Ahead-of-Time Caching
+
+include::deployment/deploymentAotCache.adoc[leveloffset=+1]
 
 [[contributing]]
 == Contributing to Grails

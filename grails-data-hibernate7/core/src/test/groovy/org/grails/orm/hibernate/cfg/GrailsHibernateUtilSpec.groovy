@@ -331,6 +331,82 @@ class GrailsHibernateUtilSpec extends HibernateGormDatastoreSpec {
         expect:
         !GrailsHibernateUtil.isDomainClass(GHUPojoMissingVersion)
     }
+
+    // -------------------------------------------------------------------------
+    // setObjectToReadyOnly / setObjectToReadWrite — proxy-unwrap branches
+    //
+    // canModifyReadWriteState requires Hibernate.isInitialized(target) to be true, so the
+    // proxy-unwrap branch is only reached once a HibernateProxy has already been initialized
+    // while the reference variable itself is still a HibernateProxy instance.
+    // -------------------------------------------------------------------------
+
+    @Rollback
+    def "setObjectToReadyOnly unwraps an already-initialized HibernateProxy"() {
+        given: "a proxy for an already-persisted entity, obtained after clearing the session so it isn't returned as the already-managed instance"
+        def saved = new GHUBook(title: "InitializedProxyBook", version: 0L).save(flush: true, failOnError: true)
+        def session = sessionFactory.currentSession
+        session.clear()
+        def proxy = session.getReference(GHUBook, saved.id)
+        org.hibernate.Hibernate.initialize(proxy)
+
+        expect: "the reference is still a HibernateProxy even though it has been initialized"
+        proxy instanceof HibernateProxy
+
+        when:
+        GrailsHibernateUtil.setObjectToReadyOnly(proxy, sessionFactory)
+
+        then:
+        noExceptionThrown()
+    }
+
+    @Rollback
+    def "setObjectToReadWrite unwraps an already-initialized HibernateProxy previously marked read-only"() {
+        given: "a proxy for an already-persisted entity, obtained after clearing the session so it isn't returned as the already-managed instance"
+        def saved = new GHUBook(title: "ProxyReadWriteRoundTrip", version: 0L).save(flush: true, failOnError: true)
+        def session = sessionFactory.currentSession
+        session.clear()
+        def proxy = session.getReference(GHUBook, saved.id)
+        org.hibernate.Hibernate.initialize(proxy)
+        GrailsHibernateUtil.setObjectToReadyOnly(proxy, sessionFactory)
+
+        expect:
+        proxy instanceof HibernateProxy
+
+        when:
+        GrailsHibernateUtil.setObjectToReadWrite(proxy, sessionFactory)
+
+        then:
+        noExceptionThrown()
+    }
+
+    // -------------------------------------------------------------------------
+    // Single-argument convenience overloads — delegate to the default proxy handler
+    // -------------------------------------------------------------------------
+
+    @Rollback
+    def "single-argument unwrapProxy delegates to the default proxy handler"() {
+        given: "a proxy for an already-persisted entity, obtained after clearing the session"
+        def saved = new GHUBook(title: "DefaultHandlerBook", version: 0L).save(flush: true, failOnError: true)
+        def session = sessionFactory.currentSession
+        session.clear()
+        HibernateProxy proxy = session.getReference(GHUBook, saved.id)
+
+        when:
+        def title = GrailsHibernateUtil.unwrapProxy(proxy).title
+
+        then:
+        title == "DefaultHandlerBook"
+    }
+
+    def "single-argument getAssociationProxy isInitialized and unwrapIfProxy delegate to the default handler"() {
+        given:
+        def book = new GHUBook(title: "PlainDefaultHandlerBook")
+
+        expect: "'title' is a plain String, not a proxy, so getAssociationProxy finds nothing but isInitialized is still true"
+        GrailsHibernateUtil.getAssociationProxy(book, "title") == null
+        GrailsHibernateUtil.isInitialized(book, "title")
+        GrailsHibernateUtil.unwrapIfProxy(book) == book
+    }
 }
 
 @jakarta.persistence.Entity

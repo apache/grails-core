@@ -68,6 +68,7 @@ import org.springframework.jdbc.datasource.ConnectionHolder;
 import org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.util.ReflectionUtils;
 
 import grails.gorm.multitenancy.Tenants;
 import org.grails.datastore.gorm.events.AutoTimestampEventListener;
@@ -609,20 +610,27 @@ public class HibernateDatastore extends AbstractDatastore
         return new GrailsHibernateTemplate(getSessionFactory(), this, flushMode);
     }
 
+    /**
+     * Execute the given operation with the given flush mode. The previous flush mode of the current session is
+     * restored afterwards, also when the operation throws, unless the operation returns {@code false}.
+     * An exception thrown by the operation is rethrown; a checked exception is wrapped in an
+     * {@link java.lang.reflect.UndeclaredThrowableException}.
+     *
+     * @param flushMode The flush mode to apply while the operation runs
+     * @param callable The operation, which returns {@code false} to keep the given flush mode
+     */
     public void withFlushMode(FlushMode flushMode, Callable<Boolean> callable) {
         final org.hibernate.Session session = sessionFactory.getCurrentSession();
         org.hibernate.FlushMode previousMode = null;
-        Boolean reset = true;
+        boolean reset = true;
         try {
             if (session != null) {
                 previousMode = session.getHibernateFlushMode();
                 session.setHibernateFlushMode(flushMode);
             }
-            try {
-                reset = callable.call();
-            } catch (Exception e) {
-                reset = false;
-            }
+            reset = !Boolean.FALSE.equals(callable.call());
+        } catch (Exception e) {
+            ReflectionUtils.rethrowRuntimeException(e);
         } finally {
             if (session != null && previousMode != null && reset) {
                 session.setHibernateFlushMode(previousMode);

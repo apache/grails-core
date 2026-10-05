@@ -55,11 +55,8 @@ class EarlyPluginRegistrationOrderingSpec extends Specification {
             def ctx = new AnnotationConfigApplicationContext()
             ctx.register(EarlyOrderingAutoConfigLikeConfig)
 
-        and: 'a plugin discovery promoted to the context, exactly as the bootstrap registry does'
-            def discovery = new DefaultPluginDiscovery([earlyOrderingPluginClass] as Class<?>[])
-            discovery.loadPluginsFromClasspath = false
-            discovery.init(ctx.environment)
-            ctx.beanFactory.registerSingleton(PluginDiscovery.BEAN_NAME, discovery)
+        and: 'a plugin discovery and an application class, exactly as a Grails application has'
+            registerDiscovery(ctx, earlyOrderingPluginClass)
 
         and: 'the early registration phase installed through its real entry point'
             new GrailsPluginLifecycleInitializer().initialize(ctx)
@@ -105,6 +102,132 @@ class EarlyPluginRegistrationOrderingSpec extends Specification {
 
         cleanup:
             ctx.close()
+    }
+
+    void 'an application GrailsApp launched gets the plugin lifecycle whatever its sources are'() {
+        given: 'the sources GrailsApp stashes, none of them a Grails application class'
+            def ctx = new AnnotationConfigApplicationContext()
+            ctx.register(EarlyOrderingAutoConfigLikeConfig)
+            promoteDiscovery(ctx, earlyOrderingPluginClass)
+            ctx.beanFactory.registerSingleton(GrailsEarlyPluginRegistrationPostProcessor.APPLICATION_SOURCE_CLASSES_BEAN_NAME,
+                    [EarlyOrderingAutoConfigLikeConfig] as Class<?>[])
+            new GrailsPluginLifecycleInitializer().initialize(ctx)
+
+        when:
+            ctx.refresh()
+
+        then: 'the plugin bean is registered, so the conditional default backed off'
+            ctx.getBean('myResolver') instanceof EarlyOrderingPluginResolver
+
+        cleanup:
+            ctx.close()
+            Holders.clear()
+            Environment.setInitializing(false)
+    }
+
+    void 'a context that registers the application class among its sources gets the plugin lifecycle'() {
+        given: 'the sources of a @SpringBootTest that names the application class alongside its own config'
+            def ctx = new AnnotationConfigApplicationContext()
+            ctx.register(EarlyOrderingAutoConfigLikeConfig, EarlyOrderingApplication)
+            promoteDiscovery(ctx, earlyOrderingPluginClass)
+            new GrailsPluginLifecycleInitializer().initialize(ctx)
+
+        when:
+            ctx.refresh()
+
+        then: 'the application class is recovered from the registry, so the lifecycle runs as for any Grails application'
+            ctx.getBean('myResolver') instanceof EarlyOrderingPluginResolver
+            ctx.beanFactory.containsSingleton(GrailsApplication.APPLICATION_ID)
+
+        cleanup:
+            ctx.close()
+            Holders.clear()
+            Environment.setInitializing(false)
+    }
+
+    void 'a context that is not a Grails application does not get the plugin lifecycle'() {
+        given: 'plugin discovery promoted to a context with no Grails application class in it'
+            def ctx = new AnnotationConfigApplicationContext()
+            ctx.register(EarlyOrderingAutoConfigLikeConfig)
+            promoteDiscovery(ctx, earlyOrderingPluginClass)
+            new GrailsPluginLifecycleInitializer().initialize(ctx)
+
+        when:
+            ctx.refresh()
+
+        then: 'no plugin contributed a bean, so the conditional default is the one created'
+            ctx.getBean('myResolver') instanceof EarlyOrderingBootDefaultResolver
+
+        and: 'and nothing of the Grails lifecycle was built for an application that did not ask for it'
+            !ctx.beanFactory.containsSingleton(GrailsApplication.APPLICATION_ID)
+            !ctx.beanFactory.containsSingleton(GrailsPluginManager.BEAN_NAME)
+            !Environment.isInitializing()
+
+        cleanup:
+            ctx.close()
+            Holders.clear()
+            Environment.setInitializing(false)
+    }
+
+    void 'a plain child beneath a Grails application does not run the lifecycle again'() {
+        given: 'a parent context standing for a running Grails application'
+            def parent = new AnnotationConfigApplicationContext()
+            parent.beanFactory.registerSingleton(GrailsApplication.APPLICATION_ID, new DefaultGrailsApplication())
+            parent.refresh()
+
+        and: 'a child beneath it with plugin discovery promoted but no Grails application class of its own'
+            def ctx = new AnnotationConfigApplicationContext()
+            ctx.parent = parent
+            ctx.register(EarlyOrderingAutoConfigLikeConfig)
+            promoteDiscovery(ctx, earlyOrderingPluginClass)
+            new GrailsPluginLifecycleInitializer().initialize(ctx)
+
+        when:
+            ctx.refresh()
+
+        then: 'the conditional default is created, as the plugin contributed nothing here'
+            ctx.getBean('myResolver') instanceof EarlyOrderingBootDefaultResolver
+            !ctx.beanFactory.containsSingleton(GrailsApplication.APPLICATION_ID)
+            !ctx.beanFactory.containsSingleton(GrailsPluginManager.BEAN_NAME)
+
+        and: 'the Grails application it sees is the one of the parent'
+            ctx.getBean(GrailsApplication.APPLICATION_ID).is(parent.getBean(GrailsApplication.APPLICATION_ID))
+
+        cleanup:
+            ctx.close()
+            parent.close()
+            Holders.clear()
+            Environment.setInitializing(false)
+    }
+
+    void 'a context whose parent already holds a Grails application refuses to start as a second one'() {
+        given: 'a parent context standing for a running Grails application'
+            def parent = new AnnotationConfigApplicationContext()
+            parent.beanFactory.registerSingleton(GrailsApplication.APPLICATION_ID, new DefaultGrailsApplication())
+            parent.refresh()
+
+        and: 'a child beneath it that is a Grails application in its own right'
+            def ctx = new AnnotationConfigApplicationContext()
+            ctx.parent = parent
+            registerDiscovery(ctx, earlyOrderingPluginClass)
+            new GrailsPluginLifecycleInitializer().initialize(ctx)
+
+        when:
+            ctx.refresh()
+
+        then: 'the lifecycle keeps JVM-wide state, so one hierarchy cannot hold two Grails applications'
+            IllegalStateException e = thrown()
+            e.message.contains('Only one context in a hierarchy can be the Grails application')
+
+        and: 'nothing of the lifecycle was started for it'
+            !ctx.beanFactory.containsSingleton(GrailsApplication.APPLICATION_ID)
+            !Environment.isInitializing()
+
+        cleanup:
+            ctx.close()
+            parent.close()
+            Holders.clear()
+            Environment.setInitializing(false)
     }
 
     void 'a plugin beanRegistrar bean registered early makes a @ConditionalOnMissingBean auto-config bean defer'() {
@@ -258,7 +381,18 @@ class EarlyPluginRegistrationOrderingSpec extends Specification {
             Environment.setInitializing(false)
     }
 
+    /**
+     * Promotes plugin discovery the way the bootstrap registry does, and stashes an application
+     * class the way {@code GrailsApp} does. Both are what makes a context a Grails application, and
+     * the early phase runs for nothing else.
+     */
     private static void registerDiscovery(AnnotationConfigApplicationContext ctx, Class<?> pluginClass) {
+        promoteDiscovery(ctx, pluginClass)
+        ctx.beanFactory.registerSingleton(GrailsEarlyPluginRegistrationPostProcessor.APPLICATION_SOURCE_CLASSES_BEAN_NAME,
+                [EarlyOrderingApplication] as Class<?>[])
+    }
+
+    private static void promoteDiscovery(AnnotationConfigApplicationContext ctx, Class<?> pluginClass) {
         def discovery = new DefaultPluginDiscovery([pluginClass] as Class<?>[])
         discovery.loadPluginsFromClasspath = false
         discovery.init(ctx.environment)
@@ -286,6 +420,10 @@ class EarlyOrderingGrailsPlugin {
             new EarlyOrderingBootDefaultResolver()
         }
     }
+}
+
+/** Stands in for the application class of a Grails application, which is what GrailsApp stashes. */
+class EarlyOrderingApplication extends GrailsAutoConfiguration {
 }
 
 class EarlyOrderingBootDefaultResolver {

@@ -88,7 +88,6 @@ public class GrailsGsp implements DefaultFeature {
     public void apply(GeneratorContext generatorContext) {
         final Map<String, Object> config = generatorContext.getConfiguration();
         config.put("grails.views.gsp.encoding", "UTF-8");
-        config.put("grails.views.gsp.htmlcodec", "xml");
         config.put("grails.views.gsp.codecs.scriptlet", "html");
         generatorContext.addDependency(Dependency.builder()
                 .groupId("org.apache.grails")

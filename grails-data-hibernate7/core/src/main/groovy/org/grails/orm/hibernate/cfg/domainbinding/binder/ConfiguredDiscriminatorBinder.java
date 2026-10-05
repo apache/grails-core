@@ -26,7 +26,7 @@ import org.hibernate.mapping.SimpleValue;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.DiscriminatorConfig;
 
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.JPA_DEFAULT_DISCRIMINATOR_TYPE;
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.DEFAULT_DISCRIMINATOR_COLUMN_NAME;
 
 public class ConfiguredDiscriminatorBinder {
 
@@ -49,8 +49,8 @@ public class ConfiguredDiscriminatorBinder {
      * @param config The discriminator configuration
      */
     public void bindConfiguredDiscriminator(RootClass entity, SimpleValue discriminator, DiscriminatorConfig config) {
-        // Set discriminator value
-        entity.setDiscriminatorValue(config.getValue());
+        // A configuration that maps only the column or formula keeps the class name as the value
+        entity.setDiscriminatorValue(config.getValue() != null ? config.getValue() : entity.getClassName());
 
         // Configure insertable if specified
         if (config.getInsertable() != null) {
@@ -84,7 +84,7 @@ public class ConfiguredDiscriminatorBinder {
     }
 
     private void bindDiscriminatorWithColumn(SimpleValue discriminator, String typeName, ColumnConfig columnConfig) {
-        simpleValueColumnBinder.bindSimpleValue(discriminator, typeName, JPA_DEFAULT_DISCRIMINATOR_TYPE, false);
+        simpleValueColumnBinder.bindSimpleValue(discriminator, typeName, DEFAULT_DISCRIMINATOR_COLUMN_NAME, false);
 
         if (columnConfig != null) {
             configureDiscriminatorColumn(discriminator, columnConfig);

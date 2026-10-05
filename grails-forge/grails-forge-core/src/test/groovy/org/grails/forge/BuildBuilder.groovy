@@ -147,9 +147,9 @@ class BuildBuilder implements ProjectFixture, ContextFixture {
     }
 
     GeneratorContext createGeneratorContextAndApplyFeatures(Options options, Features features, Project project, ApplicationType type) {
-        GeneratorContext ctx = new GeneratorContext(project, type, options, null, features.features, ctx.getBean(CoordinateResolver))
-        features.features.each { feat -> feat.apply(ctx) }
-        ctx
+        GeneratorContext generatorContext = new GeneratorContext(project, type, options, null, features.features, this.ctx.getBean(CoordinateResolver))
+        features.features.each { feat -> feat.apply(generatorContext) }
+        generatorContext
     }
 
     @Override

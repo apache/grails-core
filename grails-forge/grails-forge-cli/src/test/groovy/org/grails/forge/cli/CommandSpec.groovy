@@ -66,8 +66,9 @@ class CommandSpec extends Specification {
     private static final int POLL_INITIAL_DELAY_MILLIS = 3000
     private static final int POLL_DELAY_MILLIS = 1000
 
-    // Once the process has exited the output can no longer grow, so allow the consumer thread
-    // started by consumeProcessOutputStream a moment to drain before deciding the value is absent.
+    // Once the process has exited the output can no longer grow, so allow the stdout and stderr
+    // consumer threads started by consumeProcessOutput a moment to drain before deciding the
+    // value is absent.
     private static final int OUTPUT_DRAIN_MILLIS = 2000
 
     PollingConditions getDefaultPollingConditions() {
@@ -116,7 +117,7 @@ class CommandSpec extends Specification {
         pb.environment().put('JAVA_HOME', System.getenv('JAVA_HOME') ?: System.getProperty('java.home'))
         pb.environment().put('GRAILS_REPO_URL', System.getenv('GRAILS_REPO_URL') ?: null)
         process = pb.directory(dir).start()
-        process.consumeProcessOutputStream(output)
+        process.consumeProcessOutput(output, output)
         process
     }
 

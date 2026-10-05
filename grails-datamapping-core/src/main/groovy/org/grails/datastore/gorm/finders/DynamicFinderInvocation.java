@@ -33,12 +33,12 @@ import grails.gorm.DetachedCriteria;
 @SuppressWarnings("rawtypes")
 public class DynamicFinderInvocation {
 
-    private Class javaClass;
-    private String methodName;
-    private Object[] arguments;
-    private List<MethodExpression> expressions;
-    private Closure criteria;
-    private String operator;
+    private final Class javaClass;
+    private final String methodName;
+    private final Object[] arguments;
+    private final List<MethodExpression> expressions;
+    private final Closure criteria;
+    private final String operator;
     private DetachedCriteria detachedCriteria;
 
     public DynamicFinderInvocation(Class javaClass, String methodName, Object[] arguments,

@@ -66,7 +66,10 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
     public static final String ENUM_CLASS_PROP = "enumClass";
     public static final Logger LOG = LoggerFactory.getLogger(GrailsDomainBinder.class);
 
-    public static final String JPA_DEFAULT_DISCRIMINATOR_TYPE = "DTYPE";
+    /**
+     * The name of the discriminator column of a table-per-hierarchy tree that does not map one.
+     */
+    public static final String DEFAULT_DISCRIMINATOR_COLUMN_NAME = "class";
 
     private final String sessionFactoryName;
     private final String dataSourceName;

@@ -1,0 +1,73 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+
+import org.gradle.api.execution.TaskExecutionGraph
+import org.gradle.api.tasks.TaskState
+
+// Command-line init scripts also apply to included builds. Only the
+// invocation root should write the functional-suite sentinel.
+if (gradle.parent != null) {
+    return
+}
+
+File repoDir = gradle.startParameter.currentDir
+File dir = new File(repoDir, 'build')
+File tmp = new File(dir, 'ci-build-finished.txt.tmp')
+File marker = new File(dir, 'ci-build-finished.txt')
+tmp.delete()
+marker.delete()
+
+void writeMarker(File dir, File tmp, File marker, String status) {
+    dir.mkdirs()
+    tmp.text = status
+    Files.move(tmp.toPath(), marker.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+}
+
+// The hang is after the last task completes and before buildFinished
+// (workers never release). Write the sentinel when the task graph empties.
+gradle.taskGraph.whenReady { TaskExecutionGraph graph ->
+    Object lock = new Object()
+    Set remaining = new HashSet(graph.allTasks)
+    boolean failed = false
+    graph.afterTask { task, TaskState state ->
+        synchronized (lock) {
+            if (state.failure != null) {
+                failed = true
+            }
+            remaining.remove(task)
+            if (remaining.isEmpty()) {
+                String status = failed ? 'FAILURE' : 'SUCCESS'
+                writeMarker(dir, tmp, marker, status)
+                logger.lifecycle("CI_BUILD_FINISHED ${status}")
+            }
+        }
+    }
+}
+
+gradle.buildFinished { result ->
+    if (marker.exists()) {
+        return
+    }
+    String status = result.failure == null ? 'SUCCESS' : 'FAILURE'
+    writeMarker(dir, tmp, marker, status)
+    logger.lifecycle("CI_BUILD_FINISHED ${status}")
+}

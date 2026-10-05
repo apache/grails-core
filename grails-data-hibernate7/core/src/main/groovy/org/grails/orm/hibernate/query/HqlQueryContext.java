@@ -124,7 +124,9 @@ public record HqlQueryContext(
         namedParamsCopy.replaceAll((k, v) -> convertValue(v));
         positionalParamsCopy.replaceAll(HqlQueryMethods::convertValue);
 
-        Class<?> targetClass = targetClassOverride != null ? targetClassOverride : getTarget(hql, entity.getJavaClass());
+        // a native query always returns entities, as Hibernate 5 did by adding the entity to every native query
+        Class<?> targetClass = targetClassOverride != null ? targetClassOverride :
+                isNative ? entity.getJavaClass() : getTarget(hql, entity.getJavaClass());
 
         return new HqlQueryContext(
             hql,
@@ -161,8 +163,8 @@ public record HqlQueryContext(
 
     /**
      * Returns the result target class for a query: the entity class when there is no explicit SELECT
-     * or a single entity projection, {@code Object.class} for a single scalar projection, or {@code
-     * Object[].class} for multiple projections.
+     * or the SELECT is the root alias, {@code Object.class} for any other single projection, such as a
+     * property, a joined alias or a function, or {@code Object[].class} for multiple projections.
      */
     static Class<?> getTarget(CharSequence hql, Class<?> clazz) {
         String normalized = normalizeNonAliasedSelect(hql == null ? null : hql.toString());
@@ -177,7 +179,7 @@ public record HqlQueryContext(
                         yield null; // Let Hibernate determine the result type for aggregates
                     }
                 }
-                yield (isPropertyProjection(normalized) ? Object.class : clazz);
+                yield isRootAliasProjection(normalized, clause) ? clazz : Object.class;
             }
             default -> Object[].class;
         };
@@ -374,9 +376,40 @@ public record HqlQueryContext(
 
     // ─── Private helpers ─────────────────────────────────────────────────────
 
-    private static boolean isPropertyProjection(CharSequence hql) {
-        String clause = getSingleProjectionClause(hql);
-        return clause != null && clause.contains(".");
+    /**
+     * Whether the single projection is the alias of the queried entity. An unaliased query has been given the
+     * alias {@code e} by {@link #normalizeNonAliasedSelect(String)}, which also turns a projection of the entity
+     * name into {@code e}.
+     */
+    private static boolean isRootAliasProjection(String normalizedHql, @Nullable String clause) {
+        if (clause == null) {
+            return true;
+        }
+        String rootAlias = getRootAlias(normalizedHql);
+        return rootAlias != null && clause.equals(rootAlias.toLowerCase(Locale.ROOT));
+    }
+
+    /** The alias of the entity named first after FROM, or {@code null} if it has none. */
+    static @Nullable String getRootAlias(@Nullable String hql) {
+        if (hql == null) return null;
+        String s = hql.trim();
+        String lower = s.toLowerCase(Locale.ROOT);
+        int selectIdx = lower.indexOf(HibernateQueryArgument.HQL_SELECT.value() + " ");
+        int fromIdx = lower.indexOf(" %s ".formatted(HibernateQueryArgument.HQL_FROM.value()), Math.max(selectIdx, 0));
+        if (fromIdx < 0) return null;
+        int cur = fromIdx + HibernateQueryArgument.HQL_FROM.value().length() + 2;
+        while (cur < s.length() && Character.isWhitespace(s.charAt(cur))) cur++;
+        while (cur < s.length() && !Character.isWhitespace(s.charAt(cur))) cur++;
+        while (cur < s.length() && Character.isWhitespace(s.charAt(cur))) cur++;
+        if (cur + 2 < s.length() &&
+                s.substring(cur, cur + 2).equalsIgnoreCase(HibernateQueryArgument.HQL_AS.value()) &&
+                Character.isWhitespace(s.charAt(cur + 2))) {
+            cur += HibernateQueryArgument.HQL_AS.value().length();
+            while (cur < s.length() && Character.isWhitespace(s.charAt(cur))) cur++;
+        }
+        int tokenEnd = cur;
+        while (tokenEnd < s.length() && !Character.isWhitespace(s.charAt(tokenEnd)) && s.charAt(tokenEnd) != ',') tokenEnd++;
+        return isHasAlias(s, cur, tokenEnd) ? s.substring(cur, tokenEnd) : null;
     }
 
     private static String normalizeMultiLineQueryString(String query) {

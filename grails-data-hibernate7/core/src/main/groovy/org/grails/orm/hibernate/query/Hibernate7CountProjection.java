@@ -20,8 +20,7 @@ import org.grails.datastore.mapping.query.Query;
 /**
  * A {@link Query.CountProjection} that also includes a property name.
  *
- * @author graemerocher
- * @since 7.0.0
+ * @since 8.0
  */
 public class Hibernate7CountProjection extends Query.CountProjection {
     private final String propertyName;

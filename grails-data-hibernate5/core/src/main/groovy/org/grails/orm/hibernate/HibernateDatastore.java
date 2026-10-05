@@ -53,6 +53,7 @@ import org.springframework.core.env.PropertyResolver;
 import org.springframework.jdbc.datasource.ConnectionHolder;
 import org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.util.ReflectionUtils;
 
 import grails.gorm.MultiTenant;
 import org.grails.datastore.gorm.events.AutoTimestampEventListener;
@@ -508,17 +509,16 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
     public void withFlushMode(FlushMode flushMode, Callable<Boolean> callable) {
         final org.hibernate.Session session = sessionFactory.getCurrentSession();
         org.hibernate.FlushMode previousMode = null;
-        Boolean reset = true;
+        boolean reset = true;
         try {
             if (session != null) {
                 previousMode = session.getHibernateFlushMode();
                 session.setHibernateFlushMode(org.hibernate.FlushMode.valueOf(flushMode.name()));
             }
-            try {
-                reset = callable.call();
-            } catch (Exception e) {
-                reset = false;
-            }
+            reset = !Boolean.FALSE.equals(callable.call());
+        }
+        catch (Exception e) {
+            ReflectionUtils.rethrowRuntimeException(e);
         }
         finally {
             if (session != null && previousMode != null && reset) {

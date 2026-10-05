@@ -21,6 +21,8 @@ package org.grails.datastore.gorm
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.Generated
+import groovy.transform.NamedParam
+import groovy.transform.NamedParams
 
 import jakarta.persistence.Transient
 
@@ -82,7 +84,12 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     }
 
     /**
-     * Locks the instance for updates for the scope of the passed closure
+     * Locks the instance for updates for the scope of the passed closure.
+     *
+     * <p>The lock is exclusive. Where the datastore supports it the instance's state and version are reloaded
+     * under the lock, so that a competing writer is waited for and the closure runs on the committed state
+     * rather than failing on the version loaded earlier. Reloading discards unflushed changes to the instance,
+     * so call this before making changes, and an active transaction and an attached instance are required.</p>
      *
      * @param callable The closure
      * @return The result of the closure
@@ -99,6 +106,45 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     @Generated
     D refresh() {
         currentGormInstanceApi().refresh(this)
+    }
+
+    /**
+     * Refreshes the state of the current instance, with options.
+     *
+     * <p>Supported arguments:</p>
+     * <ul>
+     *   <li>{@code lock} - {@code true} reloads this instance's database state and version under a pessimistic
+     *   write lock; a {@link jakarta.persistence.LockModeType} reloads them under that lock mode instead. Either
+     *   form acquires the lock before it reloads, discards unflushed changes, requires an attached
+     *   instance and an active transaction, and holds the lock until that transaction commits or rolls back.
+     *   {@code false} and {@link jakarta.persistence.LockModeType#NONE} request no lock.</li>
+     * </ul>
+     *
+     * <p>The supported argument names are declared as {@code @NamedParam} metadata, so a statically compiled
+     * caller has them checked and completed. Each is typed {@code Object} because it deliberately accepts
+     * several value forms, which are validated at runtime.</p>
+     *
+     * <pre>
+     * Book.withTransaction {
+     *     def book = Book.get(id)
+     *     book.refresh(lock: true)
+     *     book.refresh(lock: LockModeType.PESSIMISTIC_READ)
+     * }
+     * </pre>
+     *
+     * @param args The named arguments
+     * @return The instance
+     * @throws RuntimeException an implementation-specific exception if a lock is requested without an active
+     * transaction, such as {@code jakarta.persistence.TransactionRequiredException} for Hibernate
+     * @throws IllegalArgumentException if a lock is requested for an instance that is not attached to the
+     * current session, or the {@code lock} argument is neither a boolean nor a lock mode
+     * @throws UnsupportedOperationException if a lock is requested and the datastore does not support it
+     */
+    @Generated
+    D refresh(@NamedParams([
+            @NamedParam(value = 'lock', type = Object, required = false)
+    ]) Map args) {
+        currentGormInstanceApi().refresh(this, args)
     }
 
     /**
@@ -711,7 +757,55 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      */
     @Generated
     static D lock(Serializable id) {
+        if (id instanceof Map) {
+            // Groovy resolves entity.lock(refresh: true) to this static method with the options map as the id.
+            throw new IllegalArgumentException('lock was called with named arguments but no identifier. ' +
+                    'Use DomainClass.lock(id, refresh: true) to lock by identifier, ' +
+                    'or instance.refresh(lock: true) to reload an instance under a lock')
+        }
         currentGormStaticApi().lock(id)
+    }
+
+    /**
+     * Locks an instance for an update, with options.
+     *
+     * <p>Supported arguments:</p>
+     * <ul>
+     *   <li>{@code type} - the {@link jakarta.persistence.LockModeType} to acquire, or its name. Defaults to
+     *   {@link jakarta.persistence.LockModeType#PESSIMISTIC_WRITE}; {@code NONE} is rejected. Naming a mode
+     *   requires an active transaction, the default one included; a {@code null} counts as not naming one.</li>
+     *   <li>{@code refresh} - when {@code true}, reloads the database state and version of an instance that is
+     *   already managed in the current session under the lock instead of locking the version already loaded.
+     *   Unflushed changes to the instance are discarded. Requires an active transaction.</li>
+     * </ul>
+     *
+     * <p>The supported argument names are declared as {@code @NamedParam} metadata, so a statically compiled
+     * caller has them checked and completed. Each is typed {@code Object} because it deliberately accepts
+     * several value forms, which are validated at runtime.</p>
+     *
+     * <pre>
+     * Book.withTransaction {
+     *     def book = Book.lock(id, refresh: true)
+     *     def shared = Book.lock(otherId, type: LockModeType.PESSIMISTIC_READ)
+     * }
+     * </pre>
+     *
+     * @param args The named arguments
+     * @param id The identifier
+     * @return The instance, or {@code null} if no instance exists for the identifier
+     * @throws RuntimeException an implementation-specific exception if {@code refresh: true} or a {@code type} is
+     * requested without an active transaction, such as {@code jakarta.persistence.TransactionRequiredException}
+     * for Hibernate
+     * @throws IllegalArgumentException if {@code type} is neither a lock mode nor the name of one, or is {@code NONE}
+     * @throws UnsupportedOperationException if {@code refresh: true} or a non-default {@code type} is requested
+     * and the datastore does not support it
+     */
+    @Generated
+    static D lock(@NamedParams([
+            @NamedParam(value = 'refresh', type = Object, required = false),
+            @NamedParam(value = 'type', type = Object, required = false)
+    ]) Map args, Serializable id) {
+        currentGormStaticApi().lock(args, id)
     }
 
     /**

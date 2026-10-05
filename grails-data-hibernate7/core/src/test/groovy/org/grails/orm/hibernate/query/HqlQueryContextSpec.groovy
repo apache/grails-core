@@ -103,6 +103,27 @@ class HqlQueryContextSpec extends Specification {
         "select avg(b.pages) from Book b"                       | null
         "select new map(b.title as title) from Book b"          | Object
         "select distinct b.author from Book b"                  | Object
+        "select Book from Book"                                 | HqlQueryContextSpecBook
+        "select b from Book as b"                               | HqlQueryContextSpecBook
+        "select b from Book b join b.author a"                  | HqlQueryContextSpecBook
+        "select a from Book b join b.author a"                  | Object
+        "select distinct a from Book b join b.author a"         | Object
+        "select a from Book b, Author a where a = b.author"     | Object
+        "select current_date from Book b"                       | Object
+        "select new map(title as title) from Book"              | Object
+    }
+
+    void "prepare targets the entity for a native query whatever its select clause"() {
+        when:
+        def ctx = HqlQueryContext.prepare(bookEntity, sql, [:], null, [:], [:], true, false)
+
+        then:
+        ctx.targetClass() == HqlQueryContextSpecBook
+
+        where:
+        sql << ['select * from hql_query_context_spec_book order by title',
+                'select b.* from hql_query_context_spec_book b',
+                'select * from hql_query_context_spec_book b where b.title = :title']
     }
 
     @Unroll
@@ -182,18 +203,6 @@ class HqlQueryContextSpec extends Specification {
         "from Book b where"             | 10  | 11  | true  // 'b' is alias
         "from Book where"               | 10  | 15  | false // 'where' is keyword
         "from Book join"                | 10  | 14  | false // 'join' is keyword
-    }
-
-    @Unroll
-    void "isPropertyProjection: '#hql' -> #expected"() {
-        expect:
-        HqlQueryContext.isPropertyProjection(hql) == expected
-
-        where:
-        hql                             | expected
-        "select b.title from Book b"    | true
-        "select b from Book b"          | false
-        "select count(b.id) from Book b"| true
     }
 }
 

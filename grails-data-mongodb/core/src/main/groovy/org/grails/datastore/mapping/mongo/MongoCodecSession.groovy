@@ -108,6 +108,14 @@ class MongoCodecSession extends AbstractMongoSession {
 
     @Override
     void flush(WriteConcern writeConcern) {
+        // A query that a listener runs while this flush runs its insert or update (count() in
+        // beforeInsert, say) flushes first, which would run the same pending operations, and the
+        // listener, again until the stack overflowed. AbstractSession.flush(), which this flush
+        // replaces, has the same guard.
+        if (flushActive) {
+            return
+        }
+        flushActive = true
         WriteConcern currentWriteConcern = this.getWriteConcern()
         try {
             this.writeConcern = writeConcern
@@ -269,6 +277,7 @@ class MongoCodecSession extends AbstractMongoSession {
             postFlushOperations.clear()
             firstLevelCollectionCache.clear()
             this.writeConcern = currentWriteConcern
+            flushActive = false
         }
     }
 

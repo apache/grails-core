@@ -136,11 +136,15 @@ class GrailsInterceptorHandlerInterceptorAdapter implements HandlerInterceptor {
 
     @Override
     void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
-        if (!ex) {
-            //Attempting to find an existing exception in the request
-            ex = (Exception) request.getAttribute(WebUtils.EXCEPTION_ATTRIBUTE)
+        Throwable throwable = ex
+        if (throwable == null) {
+            // The request attribute may hold an Error, or a value that is not a Throwable at all
+            Object requestException = request.getAttribute(WebUtils.EXCEPTION_ATTRIBUTE)
+            if (requestException instanceof Throwable) {
+                throwable = (Throwable) requestException
+            }
         }
-        request.setAttribute(Matcher.THROWABLE, ex)
+        request.setAttribute(Matcher.THROWABLE, throwable)
         Object matchedInterceptorsObject = request.getAttribute(ATTRIBUTE_MATCHED_INTERCEPTORS)
         if (matchedInterceptorsObject) {
             for (Interceptor i in ((List<Interceptor>) matchedInterceptorsObject)) {

@@ -307,7 +307,10 @@ public class MongoEntityPersister extends AbstractMongoObectEntityPersister<Docu
                         .getNativeInterface()
                         .getDatabase(mongoSession.getDatabase(persistentEntity))
                         .getCollection(mongoSession.getCollectionName(persistentEntity));
-        return mongoSession.find(collection, createDBObjectWithKey(key)).limit(1).first();
+        // a subclass shares its root's collection, so a document of another class must not match
+        Document query = createDBObjectWithKey(key);
+        query.putAll(MongoQuery.createClassFieldQuery(persistentEntity));
+        return mongoSession.find(collection, query).limit(1).first();
     }
 
     private Document removeNullEntries(Document nativeEntry) {

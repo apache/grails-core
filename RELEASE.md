@@ -311,23 +311,25 @@ the date you moved the distribution artifacts and report the release.
 
 Publish the released version to [Grails Forge](https://start.grails.org) using [Forge - AWS Elastic Beanstalk Deploy](https://github.com/apache/grails-core/actions/workflows/forge-deploy-aws.yml).
 
-There is one workflow and two choices: **Use workflow from** (the maintenance branch to build) and **slot**.
+There is one workflow and two choices: **Use workflow from** (the ref to build) and **slot**. The workflow builds the ref you select, so the deployed Forge version is the version on that ref. For a release, select the release tag, for example `v7.0.17`. For a snapshot slot, select the maintenance branch.
 
 GitHub registers `workflow_dispatch` inputs from the **default branch**. The new `next-snapshot` and `older` choices appear in that UI only after this change is merged up from `7.0.x` through `7.1.x` / `7.2.x` onto the default line. Until then, dispatch from a maintenance branch that already contains the updated workflow file, or package and upload locally as below.
 
-| Slot | Host | Typical branch |
+| Slot | Host | Typical ref |
 | --- | --- | --- |
-| `latest` | `latest.grails.org` | current release line, for example `7.2.x` |
-| `snapshot` | `snapshot.grails.org` | current snapshot line, for example `8.0.x` |
-| `next` | `next.grails.org` | milestone / RC line |
-| `next-snapshot` | `next-snapshot.grails.org` | next snapshot line, currently `8.0.0-SNAPSHOT` from `8.0.x` |
-| `prev` | `prev.grails.org` | previous release line |
-| `prev-snapshot` | `prev-snapshot.grails.org` | previous snapshot line |
-| `older` | `older.grails.org` | older release, currently `7.0.6` from `7.0.x` |
+| `latest` | `latest.grails.org` | release tag of the current release line, for example `v7.2.4` |
+| `snapshot` | `snapshot.grails.org` | current snapshot branch, for example `8.0.x` |
+| `next` | `next.grails.org` | milestone / RC release tag, for example `v8.0.0-RC1` |
+| `next-snapshot` | `next-snapshot.grails.org` | next snapshot branch, currently `8.0.0-SNAPSHOT` from `8.0.x` |
+| `prev` | `prev.grails.org` | release tag of the previous release line |
+| `prev-snapshot` | `prev-snapshot.grails.org` | previous snapshot branch |
+| `older` | `older.grails.org` | release tag of an older release line, for example `v7.0.17` |
 
-Do not select a historical git tag in **Use workflow from**. The AWS workflow file is not on old tags. Snapshot slots can deploy from the maintenance branch.
+Do not deploy a release slot from its maintenance branch. After the release, that branch has moved on to the next `-SNAPSHOT` version.
 
-A tagged release that must match an exact tag is packaged locally, then uploaded to Elastic Beanstalk. From a checkout of that tag, copy `grails-forge/grails-forge-web/aws/` from the matching maintenance branch, then from the repository root run:
+Tags created before the AWS workflow was added (for example `v7.0.16`, `v7.1.6`, `v7.2.3`, and `v8.0.0-M6` or earlier) do not contain the workflow file, so they cannot be selected. Package these locally, then upload to Elastic Beanstalk. From a checkout of that tag, copy `grails-forge/grails-forge-web-netty/aws/` from the matching maintenance branch, then from `grails-forge` run `./gradlew grails-forge-web-netty:awsElasticBeanstalk`. The bundle is `grails-forge-web-netty/build/distributions/grails-forge-web-netty-aws.zip`.
+
+Current tags package from the repository root:
 
 ```bash
 ./gradlew :grails-forge-web:awsElasticBeanstalk
@@ -349,7 +351,9 @@ version from Maven Central.
 
 ### Close out the `grails-core` release
 
-The last step in the `grails-core` release workflow is to run the `Close Release` step.  This will create a merge branch for the original tag with version number and then open a PR to merge back into the next branch.  You will need to merge this PR into the branch after correcting any merge conflict.
+The last step in the `grails-core` release workflow is to run the `Close Release` step.  This will create a merge branch for the original tag with version number and then open a PR to merge back into the next branch.  You will need to merge this PR into the branch after correcting any merge conflict.  Merge it with a merge commit, not a squash or rebase, so that the release tag becomes part of the branch history.
+
+If the post-release step fails, for example because GitHub refuses to let the workflow token push a merge branch that it considers to change a workflow file, the `Close Release` job still runs its remaining steps.  The `🩹 MANUAL - Finish post-release` step then raises a warning, and the workflow summary lists the commands to create the merge branch and PR by hand.
 
 After this PR is merged, deploy the new SNAPSHOT to Forge via https://github.com/apache/grails-core/actions/workflows/forge-deploy-aws.yml (Use workflow from the snapshot branch, slot `snapshot`).
 

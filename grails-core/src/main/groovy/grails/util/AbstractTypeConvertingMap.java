@@ -51,9 +51,13 @@ import org.apache.grails.core.internal.util.TypeConverters;
  * Expose such a value under a name that is not a JavaBean accessor - for example
  * {@code GrailsParameterMap.request()} - or under a method that takes an argument.
  *
- * A setter is a weaker case and is allowed: it leaves reads addressing the map, but assignment to
- * that one name invokes the setter instead of storing an entry, so such an entry must be written
- * with {@link Map#put}. {@code GroovyPageAttributes.setGspTagSyntaxCall(boolean)} is the only one.
+ * A setter is a weaker case and is allowed: it leaves reads addressing the map, but dotted
+ * assignment to that one name invokes the setter instead of storing an entry, so such an entry
+ * must be written with {@link Map#put} or by subscript. Subscript assignment stores an entry only
+ * where the class declares a {@code putAt(String, Object)} that calls {@link Map#put}: Groovy 6
+ * routes it through {@link Map#put} on its own, but Groovy 5 invokes the setter.
+ * {@code GroovyPageAttributes.setGspTagSyntaxCall(boolean)} is the only one, and that class
+ * declares {@code putAt}.
  *
  * @author Graeme Rocher
  * @author Lari Hotari

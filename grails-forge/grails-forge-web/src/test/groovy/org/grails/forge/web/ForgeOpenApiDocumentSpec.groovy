@@ -45,8 +45,9 @@ class ForgeOpenApiDocumentSpec extends Specification {
         featureListParams.any { it.name == 'gorm' && it['in'] == 'query' }
         !featureListParams.any { it.name == 'features' }
         spec.paths['/versions'].get.responses['200'].content['application/json'].schema['$ref'] == '#/components/schemas/VersionDTO'
-        spec.components.schemas.VersionDTO.properties.versions
-        spec.components.schemas.PreviewDTO.properties.contents
-        spec.components.schemas.FeatureDTO.properties.name
+        // "properties" is a GroovyObject meta-property, so the OpenAPI map key has to be read by subscript.
+        spec.components.schemas.VersionDTO['properties'].versions
+        spec.components.schemas.PreviewDTO['properties'].contents
+        spec.components.schemas.FeatureDTO['properties'].name
     }
 }

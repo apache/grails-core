@@ -133,6 +133,9 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
     public static final String NEAR_SPHERE_OPERATOR = "$nearSphere";
 
     static {
+        // Geospatial criteria carry shape documents by design and are exempt from criterion value validation.
+        VALUE_VALIDATION_EXEMPT_CRITERIA.add(GeoCriterion.class);
+
         queryHandlers.put(IdEquals.class, new QueryHandler<IdEquals>() {
             // Exercised end-to-end by StringIdWithObjectIdStorageSpec:
             //   - "with storedAs ObjectId, point lookup by hex string works" (happy path)
@@ -461,8 +464,12 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
 
     @Override
     protected void flushBeforeQuery() {
-        // with Mongo we only flush the session if a transaction is not active to allow for session-managed transactions
-        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+        // Within a transaction the session is not flushed ahead of a query, so that a rollback can still
+        // discard what is queued: without a server-side transaction, a flushed write cannot be taken
+        // back. Inside one it is aborted with the transaction, so the query sees the transaction's own
+        // writes, as on Hibernate.
+        if (!TransactionSynchronizationManager.isSynchronizationActive() ||
+                (mongoSession != null && mongoSession.hasActiveTransaction())) {
             super.flushBeforeQuery();
         }
     }
@@ -655,7 +662,17 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
         return iterable;
     }
 
-    private Document getClassFieldDocument(final PersistentEntity entity) {
+    /**
+     * Creates the query that restricts the collection of an inheritance hierarchy to the documents
+     * of the given entity and its subclasses.
+     *
+     * @param entity The entity
+     * @return The query, which is empty for a root entity
+     */
+    public static Document createClassFieldQuery(final PersistentEntity entity) {
+        if (entity.isRoot()) {
+            return new Document();
+        }
         Object classFieldValue;
         Collection<PersistentEntity> childEntities = entity.getMappingContext().getChildEntities(entity);
         if (childEntities.size() > 0) {
@@ -674,13 +691,7 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
     }
 
     protected Document createQueryObject(PersistentEntity persistentEntity) {
-        Document query;
-        if (persistentEntity.isRoot()) {
-            query = new Document();
-        } else {
-            query = getClassFieldDocument(persistentEntity);
-        }
-        return query;
+        return createClassFieldQuery(persistentEntity);
     }
 
     public static void populateMongoQuery(final AbstractMongoSession session, Document query, Junction criteria, final PersistentEntity entity) {
@@ -736,6 +747,7 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
                 }
 
                 coerceIdCriterion(criterion, entity);
+                validateCriterionValues(criterion, entity);
 
                 if (criterion instanceof PropertyCriterion && !(criterion instanceof GeoCriterion)) {
                     PropertyCriterion pc = (PropertyCriterion) criterion;

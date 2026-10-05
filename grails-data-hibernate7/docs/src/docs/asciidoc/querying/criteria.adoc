@@ -173,7 +173,7 @@ Common projections include `count`, `countDistinct`, `groupProperty`, `avg`, `mi
 ==== SQL Restrictions
 
 
-You can access Hibernate's SQL Restrictions capabilities.
+You can restrict the results with a native SQL condition, which is added to the `where` clause of the query as written, in parentheses.
 
 [source,java]
 ----
@@ -196,6 +196,26 @@ def peopleWithShortFirstNames = c.list {
 ----
 
 NOTE: Note that the parameter there is SQL. The `first_name` attribute referenced in the example refers to the persistence model, not the object model like in HQL queries.
+
+Each `?` in the SQL is bound to the value at the same position in the list, so the number of `?` placeholders must match the number of values, and a value must not be `null`. A `?` in a string literal, such as `'%?'`, in a quoted identifier or in a comment is not a placeholder.
+
+When the query joins other tables, qualify the columns with `{alias}`, which stands for the table alias of the queried class, so that a column a joined table also has is not ambiguous:
+
+[source,java]
+----
+def c = Person.createCriteria()
+
+def peopleWithShortFirstNames = c.list {
+    pets {
+        eq 'name', 'Lucky'
+    }
+    sqlRestriction "char_length({alias}.first_name) <= ?", [4]
+}
+----
+
+Inside an association block, such as `pets { ... }`, the condition restricts the association, as the other criteria in the block do, and `{alias}` stands for the table alias of the association instead. This includes an association block inside an `and`, `or` or `not` block.
+
+A <<querying-detachedCriteria,detached criteria>> accepts `sqlRestriction` too.
 
 ==== Setting Properties in the Criteria Instance
 

@@ -1,0 +1,12 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-plugin'
+}
+
+// Mirrors an analysis task that reads the main classes directories directly instead of going through
+// the 'classes' lifecycle task, and prints which tasks Gradle will run to produce them.
+tasks.register('inspectMainClassesDirs') {
+    doLast {
+        def producers = sourceSets.main.output.classesDirs.buildDependencies.getDependencies(null)*.name.sort()
+        println "MAIN_CLASSES_DIRS_BUILT_BY=${producers.join(',')}"
+    }
+}

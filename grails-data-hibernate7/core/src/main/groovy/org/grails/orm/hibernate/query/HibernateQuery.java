@@ -180,18 +180,13 @@ public class HibernateQuery extends Query {
         detachedCriteria.add(criterion);
     }
 
-    public void add(DetachedCriteria<?> detachedCriteria) {
-        detachedCriteria.add(new Conjunction(detachedCriteria.getCriteria()));
+    public void add(DetachedCriteria<?> criteria) {
+        detachedCriteria.add(new Conjunction(criteria.getCriteria()));
     }
 
     @Override
     public void add(Junction currentJunction, Criterion criterion) {
-        Disjunction disjunction = (Disjunction) detachedCriteria.getCriteria().stream()
-                .filter(it -> it instanceof Disjunction)
-                .findFirst()
-                .orElse(new Disjunction());
-        disjunction.add(criterion);
-        detachedCriteria.add(disjunction);
+        currentJunction.add(criterion);
     }
 
     // The factory junctions must operate on detachedCriteria (the source this query builds its JPA
@@ -221,6 +216,18 @@ public class HibernateQuery extends Query {
     @Override
     public Query eq(String property, Object value) {
         detachedCriteria.eq(calculatePropertyName(property), value);
+        return this;
+    }
+
+    /**
+     * Restricts the results to those where the property equals the value when both are compared in lower case.
+     *
+     * @param property the name of the property
+     * @param value the value the property must equal, ignoring case
+     * @return this query
+     */
+    public Query eqIgnoreCase(String property, Object value) {
+        detachedCriteria.add(new EqualsIgnoreCase(calculatePropertyName(property), value));
         return this;
     }
 
@@ -468,11 +475,12 @@ public class HibernateQuery extends Query {
     }
 
     private List executeList() {
-        return getHibernateQueryExecutor().list(getCurrentSession(), getJpaCriteriaQuery());
+        return list(getCurrentSession());
     }
 
     public List list(Session session) {
-        return getHibernateQueryExecutor().list(session, getJpaCriteriaQuery());
+        var creator = createJpaCriteriaQueryCreator();
+        return getHibernateQueryExecutor().list(session, creator.createQuery(), creator.getParameterValues());
     }
 
     private HibernateQueryExecutor getHibernateQueryExecutor() {
@@ -480,11 +488,10 @@ public class HibernateQuery extends Query {
                 offset, max, lockResult, queryCache, fetchSize, timeout, flushMode, readOnly, proxyHandler);
     }
 
-    public JpaCriteriaQuery<?> getJpaCriteriaQuery() {
+    private JpaCriteriaQueryCreator<?> createJpaCriteriaQueryCreator() {
         ConversionService conversionService = getSession().getMappingContext().getConversionService();
-        return new JpaCriteriaQueryCreator(
-                        projections, getCriteriaBuilder(), (GrailsHibernatePersistentEntity) entity, detachedCriteria, conversionService, this)
-                .createQuery();
+        return new JpaCriteriaQueryCreator<>(
+                projections, getCriteriaBuilder(), (GrailsHibernatePersistentEntity) entity, detachedCriteria, conversionService, this);
     }
 
     public void setFetchSize(Integer fetchSize) {
@@ -504,11 +511,12 @@ public class HibernateQuery extends Query {
     }
 
     private Object executeSingleResult() {
-        return getHibernateQueryExecutor().singleResult(getCurrentSession(), getJpaCriteriaQuery());
+        return singleResult(getCurrentSession());
     }
 
     public Object singleResult(Session session) {
-        return getHibernateQueryExecutor().singleResult(session, getJpaCriteriaQuery());
+        var creator = createJpaCriteriaQueryCreator();
+        return getHibernateQueryExecutor().singleResult(session, creator.createQuery(), creator.getParameterValues());
     }
 
     @Override
@@ -526,11 +534,12 @@ public class HibernateQuery extends Query {
             JpaSubQuery<Tuple> innerSubquery = countQuery.subquery(Tuple.class);
 
             ConversionService cs = getSession().getMappingContext().getConversionService();
-            new JpaCriteriaQueryCreator(projections, cb, (GrailsHibernatePersistentEntity) entity, detachedCriteria, cs).populateSubquery(innerSubquery);
+            var creator = new JpaCriteriaQueryCreator<>(projections, cb, (GrailsHibernatePersistentEntity) entity, detachedCriteria, cs);
+            creator.populateSubquery(innerSubquery);
 
             countQuery.from(innerSubquery);
             countQuery.select(cb.count(cb.literal(1)));
-            result = (Number) getHibernateQueryExecutor().singleResult(getCurrentSession(), countQuery);
+            result = (Number) getHibernateQueryExecutor().singleResult(getCurrentSession(), countQuery, creator.getParameterValues());
         }
 
         return (Number) firePostQueryEvent(result);
@@ -562,11 +571,12 @@ public class HibernateQuery extends Query {
 
     public Object scroll() {
         firePreQueryEvent();
-        return getHibernateQueryExecutor().scroll(getCurrentSession(), getJpaCriteriaQuery());
+        return scroll(getCurrentSession());
     }
 
     public Object scroll(Session session) {
-        return getHibernateQueryExecutor().scroll(session, getJpaCriteriaQuery());
+        var creator = createJpaCriteriaQueryCreator();
+        return getHibernateQueryExecutor().scroll(session, creator.createQuery(), creator.getParameterValues());
     }
 
     private Session getCurrentSession() {

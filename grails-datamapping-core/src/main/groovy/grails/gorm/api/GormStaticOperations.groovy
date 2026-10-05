@@ -19,10 +19,17 @@
 
 package grails.gorm.api
 
+import groovy.transform.CompileStatic
+import groovy.transform.NamedParam
+import groovy.transform.NamedParams
+
+import jakarta.persistence.LockModeType
+
 import org.springframework.transaction.TransactionDefinition
 
 import grails.gorm.DetachedCriteria
 import org.grails.datastore.gorm.finders.FinderMethod
+import org.grails.datastore.gorm.internal.RefreshLockArguments
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.query.api.BuildableCriteria
 import org.grails.datastore.mapping.query.api.Criteria
@@ -223,6 +230,50 @@ interface GormStaticOperations<D> {
      * @return The instance
      */
     D lock(Serializable id)
+
+    /**
+     * Locks an instance for an update, with options.
+     *
+     * <p>Supported arguments:</p>
+     * <ul>
+     *   <li>{@code type} - the {@link jakarta.persistence.LockModeType} to acquire, or its name. Defaults to
+     *   {@link jakarta.persistence.LockModeType#PESSIMISTIC_WRITE}; {@code NONE} is rejected. Naming a mode
+     *   requires an active transaction, the default one included; a {@code null} counts as not naming one.</li>
+     *   <li>{@code refresh} - when {@code true}, reloads the database state and version of an instance that is
+     *   already managed in the current session under the lock instead of locking the version already loaded.
+     *   Unflushed changes to the instance are discarded. Requires an active transaction.</li>
+     * </ul>
+     *
+     * <p>Without either argument this behaves like {@link #lock(java.io.Serializable)}. The default
+     * implementation rejects {@code refresh: true} and any {@code type} other than a pessimistic write lock;
+     * datastores that support them override this method.</p>
+     *
+     * @param args The named arguments
+     * @param id The identifier
+     * @return The instance, or {@code null} if no instance exists for the identifier
+     * @throws RuntimeException an implementation-specific exception if {@code refresh: true} or a {@code type} is
+     * requested without an active transaction, such as {@code jakarta.persistence.TransactionRequiredException}
+     * for Hibernate
+     * @throws IllegalArgumentException if {@code type} is neither a lock mode nor the name of one, or is {@code NONE}
+     * @throws UnsupportedOperationException if {@code refresh: true} or a non-default {@code type} is requested
+     * and the datastore does not support it
+     */
+    @CompileStatic
+    default D lock(@NamedParams([
+            @NamedParam(value = 'refresh', type = Object, required = false),
+            @NamedParam(value = 'type', type = Object, required = false)
+    ]) Map args, Serializable id) {
+        // Validated in the same order as GormStaticApi.lock(Map, Serializable), the implementation this
+        // default backs for any datastore that does not override it, so the same invalid combination of
+        // arguments is rejected with the same reason regardless of which of the two runs.
+        if (RefreshLockArguments.lockTypeFrom(args) != LockModeType.PESSIMISTIC_WRITE) {
+            throw new UnsupportedOperationException(RefreshLockArguments.UNSUPPORTED_TYPE)
+        }
+        if (RefreshLockArguments.refreshRequested(args)) {
+            throw new UnsupportedOperationException(RefreshLockArguments.UNSUPPORTED)
+        }
+        lock(id)
+    }
 
     /**
      * Merges an instance with the current session

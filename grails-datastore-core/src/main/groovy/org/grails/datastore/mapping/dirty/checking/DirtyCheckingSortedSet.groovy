@@ -30,7 +30,8 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class DirtyCheckingSortedSet extends DirtyCheckingCollection implements SortedSet {
 
-    @Delegate SortedSet target
+    // See the note on DirtyCheckingList: reversed() must not be generated over the override.
+    @Delegate(excludes = 'reversed') SortedSet target
 
     DirtyCheckingSortedSet(SortedSet target, DirtyCheckable parent, String property) {
         this(target, parent, property, false)

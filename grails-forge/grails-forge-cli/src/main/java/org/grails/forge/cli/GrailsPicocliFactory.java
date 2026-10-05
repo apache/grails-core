@@ -26,7 +26,7 @@ import picocli.CommandLine;
 /**
  * Picocli factory that uses a Spring ApplicationContext to obtain bean instances.
  */
-class GrailsPicocliFactory implements CommandLine.IFactory {
+public class GrailsPicocliFactory implements CommandLine.IFactory {
 
     private final CommandLine.IFactory defaultFactory = CommandLine.defaultFactory();
     private final ApplicationContext beanContext;
