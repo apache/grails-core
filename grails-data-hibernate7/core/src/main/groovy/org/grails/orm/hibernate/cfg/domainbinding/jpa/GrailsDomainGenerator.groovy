@@ -152,6 +152,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehaviorFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.CreateKeyForProps
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
+import org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator
 import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsEnumType
 import org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator
 
@@ -186,6 +187,7 @@ class GrailsDomainGenerator {
     private final CascadeBehaviorFetcher cascadeFetcher = new CascadeBehaviorFetcher()
     private final IndexBinder indexBinder = new IndexBinder()
     private final CreateKeyForProps keyForProps
+    private final ForeignKeyColumnCountCalculator foreignKeyColumnCount = new ForeignKeyColumnCountCalculator()
 
     GrailsDomainGenerator(
             PersistentEntityNamingStrategy namingStrategy,
@@ -349,6 +351,10 @@ class GrailsDomainGenerator {
      *     does not support. It does not look at the other entities of the call.
      */
     String generationProblem(GrailsHibernatePersistentEntity entity) {
+        if (!entity.isRoot() && compositeIdentifier(entity.hibernateRootEntity) && entity.isJoinedSubclass()) {
+            return "Entity [${entity.name}] is a joined subclass of [${entity.hibernateRootEntity.name}], which has a composite identifier: " +
+                    'the key of a joined subclass table copies the key of the root, which the binder binds with one column'
+        }
         try {
             hierarchyFacets(entity)
             tenantFacets(entity)
@@ -360,10 +366,6 @@ class GrailsDomainGenerator {
             if (compositeProblem != null) {
                 return compositeProblem
             }
-        }
-        if (!entity.isRoot() && compositeIdentifier(entity.hibernateRootEntity)) {
-            return "Entity [${entity.name}] is a subclass of [${entity.hibernateRootEntity.name}], which has a composite identifier: " +
-                    'the key of a subclass table would copy the columns of the composite key, which the generator does not support yet'
         }
         String naturalIdProblem = naturalIdProblem(entity)
         if (naturalIdProblem != null) {
@@ -469,13 +471,16 @@ class GrailsDomainGenerator {
      *     identifier (a part that refers to an entity with a composite identifier makes the foreign key columns depend on the
      *     order {@code Component.sortProperties} gave the referenced key), and the entity must have no subclasses
      */
-    private String compositeIdProblem(GrailsHibernatePersistentEntity entity) {
+    private String compositeIdProblem(GrailsHibernatePersistentEntity entity, Set<String> visiting = new HashSet<String>()) {
+        if (!visiting.add(entity.name)) {
+            return "Entity [${entity.name}] has a composite identifier that refers to itself"
+        }
         if (!compositeIdentifier(entity)) {
             return "Entity [${entity.name}] has no identifier the generator knows"
         }
-        if (!entity.childEntities.isEmpty()) {
-            return "Entity [${entity.name}] has a composite identifier and subclasses: the key of a subclass table would copy the " +
-                    'columns of the composite key, which the generator does not support yet'
+        if (entity.childEntities.any { GrailsHibernatePersistentEntity child -> child.isJoinedSubclass() }) {
+            return "Entity [${entity.name}] has a composite identifier and a joined subclass: the key of a joined subclass table copies " +
+                    'the key of the root, which the binder binds with one column'
         }
         for (HibernatePersistentProperty part : entity.compositeIdentity) {
             if (part instanceof HibernateToOneProperty) {
@@ -484,10 +489,13 @@ class GrailsDomainGenerator {
                     return "Composite identifier part [${part.name}] of [${entity.name}] is a one-to-one the binder binds as a Hibernate " +
                             'OneToOne, which the generator does not support yet'
                 }
-                if (toOne.hibernateAssociatedEntity != null && compositeIdentifier(toOne.hibernateAssociatedEntity.hibernateRootEntity)) {
-                    return "Composite identifier part [${part.name}] of [${entity.name}] refers to [${toOne.hibernateAssociatedEntity.name}], " +
-                            'which has a composite identifier too: the foreign key columns follow the order Hibernate gives the sorted ' +
-                            'properties of the referenced key, which the generator does not reproduce yet'
+                GrailsHibernatePersistentEntity partTarget = toOne.hibernateAssociatedEntity?.hibernateRootEntity
+                if (partTarget != null && compositeIdentifier(partTarget)) {
+                    String partTargetProblem = compositeIdProblem(partTarget, visiting)
+                    if (partTargetProblem != null) {
+                        return "Composite identifier part [${part.name}] of [${entity.name}] refers to [${partTarget.name}], which has a " +
+                                "composite identifier the generator cannot describe: ${partTargetProblem}"
+                    }
                 }
                 String problem = toOneProblem(toOne)
                 if (problem != null) {
@@ -1643,11 +1651,32 @@ class GrailsDomainGenerator {
             return "the associated entity [${target.name}] has a composite identifier that the mapping does not state, which the " +
                     'binder binds as a simple one'
         }
-        if (compositeIdProblem(root) != null) {
-            return "the associated entity [${target.name}] has a composite identifier the generator cannot describe: ${compositeIdProblem(root)}"
+        String idProblem = compositeIdProblem(root)
+        if (idProblem != null) {
+            return "the associated entity [${target.name}] has a composite identifier the generator cannot describe: ${idProblem}"
+        }
+        HibernatePersistentProperty simplePart = root.compositeIdentity.find { HibernatePersistentProperty part ->
+            part instanceof HibernateToOneProperty && !compositeIdentifier(((HibernateToOneProperty) part).hibernateAssociatedEntity)
+        }
+        if (simplePart != null) {
+            return "the composite identifier of the associated entity [${target.name}] has a part [${simplePart.name}] that refers to an " +
+                    'entity with a simple identifier: ForeignKeyColumnCountCalculator counts such a part as no column, so the binder gives ' +
+                    'the foreign key fewer columns than the key and Hibernate refuses it at boot (pinned in GrailsDomainBinderCompositeIdDefectSpec)'
+        }
+        HibernatePersistentProperty deepPart = root.compositeIdentity.find { HibernatePersistentProperty part ->
+            part instanceof HibernateToOneProperty && compositeIdentifier(((HibernateToOneProperty) part).hibernateAssociatedEntity) &&
+                    ((HibernateToOneProperty) part).hibernateAssociatedEntity.hibernateRootEntity.compositeIdentity.any { HibernatePersistentProperty inner ->
+                        inner instanceof HibernateToOneProperty && compositeIdentifier(((HibernateToOneProperty) inner).hibernateAssociatedEntity)
+                    }
+        }
+        if (deepPart != null) {
+            return "the composite identifier of the associated entity [${target.name}] has a part [${deepPart.name}] whose own composite " +
+                    'identifier refers to a composite identifier: the binder names the columns of a foreign key to a composite identifier ' +
+                    'only one level deep (CompositeIdentifierToManyToOneBinder.tryExpandNestedComposite), so it gives the foreign key ' +
+                    'fewer columns than the key'
         }
         List<ColumnConfig> columns = property.hibernateMappedForm.columns
-        int expected = root.hibernateCompositeIdentity.get().propertyNames.length
+        int expected = foreignKeyColumnCount.calculateForeignKeyColumnCount(root, root.hibernateCompositeIdentity.get().propertyNames)
         if (!columns.isEmpty() && (columns.size() != expected || columns.any { ColumnConfig cc -> cc.name == null })) {
             return "the mapping states ${columns.size()} columns (or leaves one unnamed) for a foreign key to a composite identifier " +
                     "with ${expected} properties: the binder fills the missing ones and the generator does not reproduce that yet"
@@ -1668,21 +1697,43 @@ class GrailsDomainGenerator {
         }
         GrailsHibernatePersistentEntity root = target.hibernateRootEntity
         String prefix = root.getTableName(namingStrategy)
-        return root.hibernateCompositeIdentity.get().propertyNames.collect { String propertyName ->
+        List<ColumnConfig> generated = []
+        for (String propertyName : root.hibernateCompositeIdentity.get().propertyNames) {
             HibernatePersistentProperty referenced = root.getHibernatePropertyByName(propertyName)
-            String suffix = referenced != null ? defaultColumnNames.getDefaultColumnName(referenced) : propertyName
-            new ColumnConfig(name: [prefix, suffix].collect { String part -> part.replace('`', '') }.join('_'))
+            HibernatePersistentProperty[] nested = referenced instanceof HibernateToOneProperty ?
+                    ((HibernateToOneProperty) referenced).hibernateAssociatedEntity.compositeIdentity : null
+            if (nested != null && nested.length > 0) {
+                // a part that refers to an entity with a composite identifier: one column for each of its identifier properties
+                for (HibernatePersistentProperty inner : nested) {
+                    generated << new ColumnConfig(name: foreignKeyColumnName(
+                            prefix, namingStrategy.resolveColumnName(propertyName), defaultColumnNames.getDefaultColumnName(inner)))
+                }
+            } else {
+                String suffix = referenced != null ? defaultColumnNames.getDefaultColumnName(referenced) : propertyName
+                generated << new ColumnConfig(name: foreignKeyColumnName(prefix, suffix))
+            }
         }
+        return generated
+    }
+
+    private static String foreignKeyColumnName(String... parts) {
+        return parts.collect { String part -> part.replace('`', '') }.join('_')
     }
 
     /** The column of the key of the entity that each foreign key column points at, in the order of the identifier properties. */
     private List<String> compositeReferencedColumns(GrailsHibernatePersistentEntity target) {
         GrailsHibernatePersistentEntity root = target.hibernateRootEntity
-        return root.hibernateCompositeIdentity.get().propertyNames.collect { String propertyName ->
+        List<String> referenced = []
+        for (String propertyName : root.hibernateCompositeIdentity.get().propertyNames) {
             HibernatePersistentProperty part = root.getHibernatePropertyByName(propertyName)
-            part instanceof HibernateToOneProperty ?
-                    toOneColumnFacets((HibernateToOneProperty) part).name() : columnFacets(part).name()
+            if (part instanceof HibernateToOneProperty) {
+                // a part that refers to an entity with a composite identifier has one column for each of its identifier properties
+                referenced.addAll(toOneColumnsFacets((HibernateToOneProperty) part)*.name())
+            } else {
+                referenced << columnFacets(part).name()
+            }
         }
+        return referenced
     }
 
     /**

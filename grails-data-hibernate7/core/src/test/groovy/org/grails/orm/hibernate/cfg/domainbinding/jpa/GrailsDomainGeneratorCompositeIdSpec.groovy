@@ -38,6 +38,15 @@ import org.hibernate.mapping.Property
 import org.hibernate.mapping.ToOne
 
 import grails.unbootable.UnbootableComposite
+import grails.unbootable.UnbootableFlat
+import grails.unbootable.UnbootableJoinedChild
+import grails.unbootable.UnbootableJoinedParent
+import grails.unbootable.UnbootableMiddle
+import grails.unbootable.UnbootableParts
+import grails.unbootable.UnbootableRefToParts
+import grails.unbootable.UnbootableRefToTop
+import grails.unbootable.UnbootableTarget
+import grails.unbootable.UnbootableTop
 import grails.unbootable.UnbootableJoinToComposite
 import grails.unbootable.UnbootableMmComposite
 import grails.unbootable.UnbootableMmOther
@@ -55,7 +64,7 @@ class GrailsDomainGeneratorCompositeIdSpec extends GrailsDomainGeneratorSupport 
     void setupSpec() {
         manager.registerDomainClasses(
                 GenCidSimple, GenCidTarget, GenCidParts, GenCidRef, GenCidIndexed, GenCidNested, GenCidParent, GenCidChild,
-                GenCidOwner, GenCidItem, GenCidKid, GenCidListedKid)
+                GenCidOwner, GenCidItem, GenCidKid, GenCidListedKid, GenCidRefNested)
     }
 
     void "a composite identifier is an @EmbeddedId of a generated embeddable that holds the parts, and the entity keeps the other properties"() {
@@ -221,25 +230,77 @@ class GrailsDomainGeneratorCompositeIdSpec extends GrailsDomainGeneratorSupport 
         entity(GenCidIndexed).persistentClass.table.indexes.keySet() == ['gen_cid_a_idx'].toSet()
     }
 
-    void "an identifier part that refers to an entity with a composite identifier is rejected by name"() {
+    void "an identifier part that refers to an entity with a composite identifier has a join column for each of its identifier properties"() {
         when:
-        generateGroup(GenCidNested, GenCidSimple)
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenCidNested, GenCidSimple)
+        Class<?> key = classes[entity(GenCidNested)].getDeclaredField('id').type
+        JoinColumns parent = key.getDeclaredField('parent').getAnnotation(JoinColumns)
 
         then:
-        UnsupportedOperationException e = thrown()
-        e.message.contains('GenCidNested')
-        e.message.contains('parent')
-        e.message.contains('composite identifier')
+        parent.value()*.name() == ['gen_cid_simple_last', 'gen_cid_simple_age']
+        parent.value()*.referencedColumnName() == ['last', 'age']
+        parent.value().every { !it.nullable() }
     }
 
-    void "a composite identifier with subclasses is rejected by name"() {
+    void "a foreign key to a composite identifier that has such a part expands the part, one column for each of its identifier properties"() {
         when:
-        generateGroup(GenCidParent, GenCidChild)
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenCidRefNested, GenCidNested, GenCidSimple)
+        JoinColumns target = classes[entity(GenCidRefNested)].getDeclaredField('target').getAnnotation(JoinColumns)
+
+        then: "the columns are named after the part and the identifier property of the part, and each points at the column the part has in the key"
+        target.value()*.name() == ['gen_cid_nested_parent_last', 'gen_cid_nested_parent_age', 'gen_cid_nested_name']
+        target.value()*.referencedColumnName() == ['gen_cid_simple_last', 'gen_cid_simple_age', 'name']
+    }
+
+    void "Hibernate's annotation binder reads a composite identifier with such a part, and a foreign key to it, as the binder bound them"() {
+        given:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenCidRefNested, GenCidNested, GenCidSimple)
+        Metadata metadata = annotationMetadata(classes.values())
+        PersistentClass boundKey = entity(GenCidNested).persistentClass
+        PersistentClass readKey = metadata.getEntityBinding(classes[entity(GenCidNested)].name)
+        PersistentClass bound = entity(GenCidRefNested).persistentClass
+        PersistentClass read = metadata.getEntityBinding(classes[entity(GenCidRefNested)].name)
+
+        expect:
+        readKey.table.primaryKey.columns*.name.toSet() == boundKey.table.primaryKey.columns*.name.toSet()
+        ((ToOne) bound.getProperty('target').value).selectables*.text.toSet() == ((ToOne) read.getProperty('target').value).selectables*.text.toSet()
+        read.table.foreignKeys.values().collect { it.columns*.name.toSet() }.toSet() ==
+                bound.table.foreignKeys.values().collect { it.columns*.name.toSet() }.toSet()
+    }
+
+    void "a foreign key to a composite identifier that the binder cannot bind is rejected by name"() {
+        when:
+        newGenerator().generateAll(unbound(domain, *others), getClass().classLoader)
 
         then:
         UnsupportedOperationException e = thrown()
-        e.message.contains('GenCidParent')
-        e.message.contains('subclasses')
+        e.message.contains(domain.simpleName)
+        e.message.contains(reason)
+
+        where:
+        domain                | others                                                 | reason
+        UnbootableRefToParts  | [UnbootableParts, UnbootableTarget]                     | 'ForeignKeyColumnCountCalculator'
+        UnbootableRefToTop    | [UnbootableTop, UnbootableMiddle, UnbootableFlat]       | 'one level deep'
+    }
+
+    void "a single-table subclass of an entity with a composite identifier shares the key of its root"() {
+        when:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenCidParent, GenCidChild)
+
+        then:
+        classes[entity(GenCidChild)].superclass == classes[entity(GenCidParent)]
+        classes[entity(GenCidChild)].declaredFields*.name == ['c']
+        classes[entity(GenCidParent)].getDeclaredField('id').isAnnotationPresent(EmbeddedId)
+    }
+
+    void "a joined subclass of an entity with a composite identifier is rejected by name"() {
+        when:
+        newGenerator().generateAll(unbound(UnbootableJoinedParent, UnbootableJoinedChild), getClass().classLoader)
+
+        then: "the binder binds the key of a joined subclass with one column (see GrailsDomainBinderCompositeIdDefectSpec)"
+        UnsupportedOperationException e = thrown()
+        e.message.contains('UnbootableJoinedParent')
+        e.message.contains('joined subclass')
     }
 
     private static Map<String, Map<String, Object>> parts(PersistentClass persistentClass) {
@@ -373,4 +434,10 @@ class GenCidListedKid {
     GenCidOwner owner
 
     static belongsTo = [owner: GenCidOwner]
+}
+
+@Entity
+class GenCidRefNested {
+
+    GenCidNested target
 }

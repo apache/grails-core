@@ -65,3 +65,83 @@ class UnbootableMmOther {
     static hasMany = [composites: UnbootableMmComposite]
     static belongsTo = [UnbootableMmComposite]
 }
+
+@Entity
+class UnbootableTarget {
+
+    String label
+}
+
+@Entity
+class UnbootableParts implements Serializable {
+
+    UnbootableTarget owner
+    String name
+
+    static mapping = {
+        id composite: ['name', 'owner']
+    }
+}
+
+@Entity
+class UnbootableRefToParts {
+
+    UnbootableParts target
+}
+
+@Entity
+class UnbootableFlat implements Serializable {
+
+    String a
+    String b
+
+    static mapping = {
+        id composite: ['a', 'b']
+    }
+}
+
+@Entity
+class UnbootableMiddle implements Serializable {
+
+    UnbootableFlat flat
+    String name
+
+    static mapping = {
+        id composite: ['flat', 'name']
+    }
+}
+
+@Entity
+class UnbootableTop implements Serializable {
+
+    UnbootableMiddle middle
+    String name
+
+    static mapping = {
+        id composite: ['middle', 'name']
+    }
+}
+
+@Entity
+class UnbootableRefToTop {
+
+    UnbootableTop target
+}
+
+@Entity
+class UnbootableJoinedParent implements Serializable {
+
+    String a
+    String b
+
+    static mapping = {
+        tablePerHierarchy false
+        id composite: ['a', 'b']
+    }
+}
+
+@Entity
+class UnbootableJoinedChild extends UnbootableJoinedParent {
+
+    String c
+}

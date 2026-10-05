@@ -21,6 +21,15 @@ package org.grails.orm.hibernate.cfg.domainbinding.jpa
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.unbootable.UnbootableComposite
 import grails.unbootable.UnbootableJoinToComposite
+import grails.unbootable.UnbootableJoinedChild
+import grails.unbootable.UnbootableJoinedParent
+import grails.unbootable.UnbootableParts
+import grails.unbootable.UnbootableRefToParts
+import grails.unbootable.UnbootableRefToTop
+import grails.unbootable.UnbootableTarget
+import grails.unbootable.UnbootableTop
+import grails.unbootable.UnbootableMiddle
+import grails.unbootable.UnbootableFlat
 import org.grails.orm.hibernate.HibernateDatastore
 import spock.lang.PendingFeature
 
@@ -38,6 +47,42 @@ class GrailsDomainBinderCompositeIdDefectSpec extends HibernateGormDatastoreSpec
     void "a unidirectional collection of entities with a composite identifier can be bound"() {
         when:
         HibernateDatastore datastore = new HibernateDatastore(UnbootableJoinToComposite, UnbootableComposite)
+
+        then:
+        notThrown(Exception)
+
+        cleanup:
+        datastore?.close()
+    }
+
+    @PendingFeature(reason = 'ForeignKeyColumnCountCalculator counts a composite identifier part that refers to an entity with a simple identifier as no column, so the foreign key has fewer columns than the key and Hibernate refuses it')
+    void "a foreign key to a composite identifier with a part that refers to an entity can be bound"() {
+        when:
+        HibernateDatastore datastore = new HibernateDatastore(UnbootableRefToParts, UnbootableParts, UnbootableTarget)
+
+        then:
+        notThrown(Exception)
+
+        cleanup:
+        datastore?.close()
+    }
+
+    @PendingFeature(reason = 'CompositeIdentifierToManyToOneBinder expands a nested composite identifier one level only, so a foreign key to a composite identifier three levels deep has fewer columns than the key')
+    void "a foreign key to a composite identifier three levels deep can be bound"() {
+        when:
+        HibernateDatastore datastore = new HibernateDatastore(UnbootableRefToTop, UnbootableTop, UnbootableMiddle, UnbootableFlat)
+
+        then:
+        notThrown(Exception)
+
+        cleanup:
+        datastore?.close()
+    }
+
+    @PendingFeature(reason = 'the key of a joined subclass is bound with one column, so a joined subclass of an entity with a composite identifier cannot be bound')
+    void "a joined subclass of an entity with a composite identifier can be bound"() {
+        when:
+        HibernateDatastore datastore = new HibernateDatastore(UnbootableJoinedParent, UnbootableJoinedChild)
 
         then:
         notThrown(Exception)

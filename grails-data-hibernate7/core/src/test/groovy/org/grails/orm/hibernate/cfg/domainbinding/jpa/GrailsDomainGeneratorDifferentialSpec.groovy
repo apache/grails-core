@@ -274,9 +274,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                             if (bound.columns.size() > 1) {
                                 associations['to-one to a composite identifier']++
                             }
-                            toOneFacets.joinColumns().eachWithIndex { ColumnFacets column, int index ->
-                                mismatches.addAll(compare(where, column, bound, known, ['length', 'precision', 'scale'], false, index))
-                            }
+                            mismatches.addAll(compareColumnsByName(where, toOneFacets.joinColumns(), bound, known, ['length', 'precision', 'scale']))
                             mismatches.addAll(compareToOne(where, toOneFacets, bound, known))
                             continue
                         }
@@ -434,6 +432,24 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
     }
 
     /**
+     * The columns of a property that has several (a foreign key to a composite identifier), each paired with the bound column of the
+     * same name: the binder orders them like the referenced key once that key has been sorted, the generator like the mapping.
+     */
+    private List<String> compareColumnsByName(
+            String where, List<ColumnFacets> columns, Property bound, Map<String, Integer> known, Collection<String> ignore) {
+        List<String> found = []
+        for (ColumnFacets facets : columns) {
+            int index = bound.columns.findIndexOf { Column column -> column.name == facets.name().replace('`', '') }
+            if (index < 0) {
+                found << "${where} columns: generator=${columns*.name()} binder=${bound.columns*.name}".toString()
+            } else {
+                found.addAll(compare(where, facets, bound, known, ignore, false, index))
+            }
+        }
+        return found
+    }
+
+    /**
      * The composite identifier as {@code CompositeIdBinder} bound it: one component with a property for every part, whose columns
      * are the primary key and so not null. A simple part must have the column facets of an ordinary property; a many-to-one part
      * the foreign key column and the associated entity (nothing cascades through an identifier, so the cascade the binder states on
@@ -455,13 +471,14 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         for (EmbeddedLeaf part : facets.parts()) {
             Property bound = id.getProperty(part.path())
             String partWhere = "${where} part ${part.path()}".toString()
-            if (bound.columns.size() != 1) {
-                found << "${partWhere} columns: generator=1 binder=${bound.columns.size()}".toString()
+            List<ColumnFacets> partColumns = part.toOne() != null ? part.toOne().joinColumns() : [part.column()]
+            if (bound.columns.size() != partColumns.size()) {
+                found << "${partWhere} columns: generator=${partColumns*.name()} binder=${bound.columns*.name}".toString()
                 continue
             }
             if (part.toOne() != null) {
                 composites['to-one parts']++
-                found.addAll(compare(partWhere, part.column(), bound, known, ['length', 'precision', 'scale']))
+                found.addAll(compareColumnsByName(partWhere, partColumns, bound, known, ['length', 'precision', 'scale']))
                 found.addAll(compareToOne(partWhere, part.toOne(), bound, known).findAll { String line ->
                     !line.contains(' cascade: ') && !line.contains(' optional: ')
                 })
@@ -470,7 +487,9 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 found.addAll(compare(partWhere, part.column(), bound, known, [], part.property instanceof HibernateEnumProperty))
             }
         }
-        Set<String> expectedKey = facets.parts().collect { EmbeddedLeaf part -> part.column().name().replace('`', '') }.toSet()
+        Set<String> expectedKey = facets.parts().collectMany { EmbeddedLeaf part ->
+            (part.toOne() != null ? part.toOne().joinColumns() : [part.column()])*.name()
+        }*.replace('`', '').toSet()
         if (persistentClass.table.primaryKey?.columns*.name?.toSet() != expectedKey) {
             found << "${where} primaryKey: generator=${expectedKey} binder=${persistentClass.table.primaryKey?.columns*.name}".toString()
         }
@@ -495,9 +514,11 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         }
         boundId.properties.each { Property boundPart ->
             Property annotatedPart = annotatedId.getProperty(boundPart.name)
+            boolean multiple = boundPart.columns.size() > 1
             Map<String, List> pairs = [
-                    columns : [boundPart.columns*.name, annotatedPart.columns*.name],
-                    nullable: [boundPart.columns*.nullable, annotatedPart.columns*.nullable],
+                    columns : multiple ? [boundPart.columns*.name.toSet(), annotatedPart.columns*.name.toSet()] :
+                            [boundPart.columns*.name, annotatedPart.columns*.name],
+                    nullable: [boundPart.columns*.nullable.toSet(), annotatedPart.columns*.nullable.toSet()],
                     kind    : [boundPart.value.getClass().simpleName, annotatedPart.value.getClass().simpleName],
             ]
             found.addAll(pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
