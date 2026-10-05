@@ -43,6 +43,7 @@ import jakarta.persistence.Id
 import jakarta.persistence.Inheritance
 import jakarta.persistence.InheritanceType
 import jakarta.persistence.JoinColumn
+import jakarta.persistence.ManyToOne
 import jakarta.persistence.MapKeyColumn
 import jakarta.persistence.OrderColumn
 import jakarta.persistence.PrimaryKeyJoinColumn
@@ -52,6 +53,7 @@ import jakarta.validation.constraints.Size
 import org.hibernate.annotations.BatchSize
 import org.hibernate.annotations.Cache
 import org.hibernate.annotations.CacheConcurrencyStrategy
+import org.hibernate.annotations.Cascade
 import org.hibernate.annotations.ColumnDefault
 import org.hibernate.annotations.Comment
 import org.hibernate.annotations.DiscriminatorFormula
@@ -62,6 +64,8 @@ import org.hibernate.annotations.FetchMode
 import org.hibernate.annotations.Formula
 import org.hibernate.annotations.IdGeneratorType
 import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.annotations.NotFound
+import org.hibernate.annotations.NotFoundAction
 import org.hibernate.annotations.Type
 import org.hibernate.annotations.UuidGenerator
 import org.hibernate.boot.Metadata
@@ -105,6 +109,10 @@ import org.grails.orm.hibernate.cfg.HibernateMappingContext
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToOneProperty
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIdentityGenerator
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIncrementGenerator
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsNativeGenerator
@@ -135,7 +143,8 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
                 GenGizmo, GenCoded, GenCodedChild, GenFormulaRoot, GenFormulaChild, GenAbstractBase, GenConcreteChild, GenNoted, GenNotedChild,
                 GenJoinedVehicle, GenJoinedCar, GenJoinedSportsCar, GenJoinedSedan, GenJoinedKeyed, GenJoinedKeyedChild,
                 GenFleetVehicle, GenFleetCar, GenFleetSportsCar, GenFleetSedan, GenUnionBase, GenUnionLeaf, GenUnionMiddle, GenUnionBottom,
-                GenEmbedOwner, GenEmbedOther, GenEmbedBase, GenEmbedChild, GenEmbedBadHolder, GenEmbedFormulaOwner, GenCollSingle, GenCollKinds, GenCollLazy)
+                GenEmbedOwner, GenEmbedOther, GenEmbedBase, GenEmbedChild, GenEmbedBadHolder, GenEmbedFormulaOwner, GenCollSingle, GenCollKinds, GenCollLazy,
+                GenFkTarget, GenFkOwned, GenFkOwner, GenFkCascades, GenFkNodeA, GenFkNodeB, GenFkHasOneOwner, GenFkHasOneDetail, GenFkManyOne, GenFkOneSide, GenFkSub, GenFkSubRoot)
     }
 
     List<StandardServiceRegistry> registries = []
@@ -221,13 +230,16 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
     }
 
     void "a property the generator does not support is rejected by name"() {
+        given:
+        GrailsHibernatePersistentEntity entity = unbound(GenFkCompositeRef)
+
         when:
-        generate(GenWithOwner)
+        newGenerator().generateAll([entity], getClass().classLoader)
 
         then:
         UnsupportedOperationException e = thrown()
-        e.message.contains('basic')
-        e.message.contains('does not support yet')
+        e.message.contains('Association property [target] of [' + GenFkCompositeRef.name + ']')
+        e.message.contains('composite identifier')
     }
 
     void "the version is marked as the optimistic lock"() {
@@ -1176,6 +1188,200 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         newGenerator().unsupportedReason(holder, holder.getHibernatePropertyByName('inner')).contains('collection inside an embedded type')
     }
 
+    void "a to-one association is a field typed with the class generated for its target, in the same class loader"() {
+        given:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenFkOwner, GenFkTarget, GenFkOwned)
+        Class<?> owner = classes[entity(GenFkOwner)]
+        Class<?> target = classes[entity(GenFkTarget)]
+
+        expect:
+        owner.getDeclaredField('plain').type == target
+        owner.getDeclaredField('owned').type == classes[entity(GenFkOwned)]
+        owner.classLoader == target.classLoader
+        owner.getDeclaredField('plain').isAnnotationPresent(ManyToOne)
+        !owner.getDeclaredField('plain').isAnnotationPresent(jakarta.persistence.OneToOne)
+    }
+
+    void "an entity that refers to another is rejected by name when the target is not part of the call"() {
+        when:
+        generate(GenFkOwner)
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message.contains('[' + GenFkOwner.name + ']')
+        e.message.contains('[' + GenFkTarget.name + ']')
+        e.message.contains('generateAll')
+    }
+
+    void "the fetching, optionality, foreign key column and missing-row handling of a to-one association are the ones the binder decides"() {
+        given:
+        Class<?> owner = generateGroup(GenFkOwner, GenFkTarget, GenFkOwned)[entity(GenFkOwner)]
+        Field field = owner.getDeclaredField(property)
+
+        expect:
+        field.getAnnotation(ManyToOne).fetch() == fetch
+        field.getAnnotation(ManyToOne).optional() == optional
+        field.getAnnotation(JoinColumn).name() == column
+        field.getAnnotation(JoinColumn).nullable() == nullable
+        field.getAnnotation(JoinColumn).unique() == unique
+        field.getAnnotation(Fetch).value() == fetchMode
+        field.isAnnotationPresent(NotFound) == ignoreNotFound
+        !ignoreNotFound || field.getAnnotation(NotFound).action() == NotFoundAction.IGNORE
+
+        where:
+        property   | fetch           | optional | column       | nullable | unique | fetchMode         | ignoreNotFound
+        'plain'    | FetchType.LAZY  | true     | 'plain_id'   | true     | false  | FetchMode.SELECT  | false
+        'required' | FetchType.LAZY  | true     | 'required_id'| true     | false  | FetchMode.SELECT  | false
+        'joined'   | FetchType.EAGER | true     | 'joined_id'  | true     | false  | FetchMode.JOIN    | false
+        'eager'    | FetchType.EAGER | true     | 'eager_id'   | true     | false  | FetchMode.SELECT  | false
+        'missing'  | FetchType.LAZY  | true     | 'missing_id' | true     | false  | FetchMode.SELECT  | true
+        'named'    | FetchType.LAZY  | true     | 'target_ref' | true     | true   | FetchMode.SELECT  | false
+    }
+
+    void "a self reference is a field of the generated class itself"() {
+        given:
+        Class<?> owner = generateGroup(GenFkOwner, GenFkTarget, GenFkOwned)[entity(GenFkOwner)]
+
+        expect:
+        owner.getDeclaredField('parent').type == owner
+    }
+
+    void "the cascade of a to-one association is the binder's, split into what JPA and Hibernate can state"() {
+        given:
+        Class<?> owner = generateGroup(GenFkCascades, GenFkTarget)[entity(GenFkCascades)]
+        Field field = owner.getDeclaredField(property)
+
+        expect:
+        field.getAnnotation(ManyToOne).cascade().toList() == jpa
+        (field.isAnnotationPresent(Cascade) ? field.getAnnotation(Cascade).value().toList() : []) == hibernate
+
+        where:
+        property    | jpa                                                                  | hibernate
+        'cascadeAll' | [jakarta.persistence.CascadeType.ALL]                                | []
+        'cascadeOrphan' | [jakarta.persistence.CascadeType.ALL]                                | [org.hibernate.annotations.CascadeType.DELETE_ORPHAN]
+        'cascadeSaveUpdate' | [jakarta.persistence.CascadeType.PERSIST, jakarta.persistence.CascadeType.MERGE] | []
+        'cascadeMerged' | [jakarta.persistence.CascadeType.MERGE]                              | []
+        'cascadePersisted' | [jakarta.persistence.CascadeType.PERSIST]                            | []
+        'cascadeDeleted' | [jakarta.persistence.CascadeType.REMOVE]                             | []
+        'cascadeEvicted' | [jakarta.persistence.CascadeType.DETACH]                             | []
+        'cascadeLocked' | []                                                                   | [org.hibernate.annotations.CascadeType.LOCK]
+        'cascadeReplicated' | []                                                                   | [org.hibernate.annotations.CascadeType.REPLICATE]
+        'cascadeNone' | []                                                                   | []
+    }
+
+    void "two entities that refer to each other are generated in one call, whatever the order"() {
+        when:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(*order)
+        Class<?> a = classes[entity(GenFkNodeA)]
+        Class<?> b = classes[entity(GenFkNodeB)]
+
+        then:
+        a.getDeclaredField('other').type == b
+        b.getDeclaredField('back').type == a
+        a.getDeclaredField('other').getAnnotation(JoinColumn).name() == 'other_id'
+        b.getDeclaredField('back').getAnnotation(JoinColumn).name() == 'back_id'
+
+        where:
+        order << [[GenFkNodeA, GenFkNodeB], [GenFkNodeB, GenFkNodeA]]
+    }
+
+    void "a one-to-one with no inverse is bound as a many-to-one, so it is a @ManyToOne with a plain join column"() {
+        given:
+        GrailsHibernatePersistentEntity entity = entity(GenFkOwner)
+
+        expect:
+        entity.getHibernatePropertyByName('plain') instanceof HibernateOneToOneProperty
+        !((HibernateOneToOneProperty) entity.getHibernatePropertyByName('plain')).isValidHibernateOneToOne()
+        newGenerator().supports(entity.getHibernatePropertyByName('plain'))
+    }
+
+    void "a many-to-one with an inverse hasMany is a to-one association with the same facets"() {
+        given:
+        HibernatePersistentProperty property = entity(GenFkManyOne).getHibernatePropertyByName('one')
+        ToOneFacets facets = newGenerator().toOneFacets((HibernateToOneProperty) property)
+
+        expect:
+        property instanceof HibernateManyToOneProperty
+        facets.target() == GenFkOneSide.name
+        facets.lazy()
+        facets.fetchMode() == org.hibernate.FetchMode.SELECT
+        facets.optional()
+        !facets.ignoreNotFound()
+        facets.joinColumn().name() == 'one_id'
+        facets.joinColumn().nullable()
+    }
+
+    void "a to-one association of a subclass in a table-per-hierarchy is always nullable and named like its property"() {
+        given:
+        ToOneFacets facets = newGenerator().toOneFacets(
+                (HibernateToOneProperty) entity(GenFkSub).getHibernatePropertyByName('target'))
+
+        expect:
+        facets.joinColumn().name() == 'target_id'
+        facets.joinColumn().nullable()
+        facets.optional()
+    }
+
+    void "a one-to-one the binder binds as a Hibernate OneToOne is rejected by name until it is supported"() {
+        given:
+        GrailsHibernatePersistentEntity entity = entity(GenFkHasOneOwner)
+        HibernatePersistentProperty property = entity.getHibernatePropertyByName('detail')
+
+        expect:
+        !newGenerator().supports(property)
+        newGenerator().unsupportedReason(entity, property).contains('Hibernate OneToOne')
+    }
+
+    void "an association to an entity with a composite identifier is rejected by name"() {
+        given:
+        GrailsHibernatePersistentEntity entity = unbound(GenFkCompositeRef)
+        HibernatePersistentProperty property = entity.getHibernatePropertyByName('target')
+
+        expect:
+        !newGenerator().supports(property)
+        newGenerator().unsupportedReason(entity, property).contains('composite identifier')
+    }
+
+    void "Hibernate's own annotation binder reads a generated to-one association as a ManyToOne to the generated target"() {
+        given:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenFkOwner, GenFkTarget, GenFkOwned)
+        Metadata metadata = annotationMetadata(classes.values())
+        PersistentClass owner = metadata.getEntityBinding(classes[entity(GenFkOwner)].name)
+        Property read = owner.getProperty(property)
+        org.hibernate.mapping.ManyToOne value = (org.hibernate.mapping.ManyToOne) read.value
+
+        expect:
+        value.referencedEntityName == classes[entity(target)].name
+        value.selectables*.text == [column]
+        value.lazy == lazy
+        value.fetchMode == fetchMode
+        value.ignoreNotFound == ignoreNotFound
+        read.cascade == cascade
+
+        where:
+        property   | target       | column       | lazy  | fetchMode                   | ignoreNotFound | cascade
+        'plain'    | GenFkTarget  | 'plain_id'   | true  | org.hibernate.FetchMode.SELECT | false       | 'persist,merge'
+        'joined'   | GenFkTarget  | 'joined_id'  | false | org.hibernate.FetchMode.JOIN   | false       | 'persist,merge'
+        'eager'    | GenFkTarget  | 'eager_id'   | false | org.hibernate.FetchMode.SELECT | false       | 'persist,merge'
+        'missing'  | GenFkTarget  | 'missing_id' | false | org.hibernate.FetchMode.SELECT | true        | 'persist,merge'
+        'named'    | GenFkTarget  | 'target_ref' | true  | org.hibernate.FetchMode.SELECT | false       | 'persist,merge'
+        'parent'   | GenFkOwner   | 'parent_id'  | true  | org.hibernate.FetchMode.SELECT | false       | 'persist,merge'
+    }
+
+    void "a to-one association keeps the unique foreign key of its mapping in the annotation-built column"() {
+        given:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenFkOwner, GenFkTarget, GenFkOwned)
+        PersistentClass owner = annotationMetadata(classes.values()).getEntityBinding(classes[entity(GenFkOwner)].name)
+
+        expect:
+        owner.getProperty('named').columns[0].unique
+        !owner.getProperty('plain').columns[0].unique
+    }
+
+    private Map<GrailsHibernatePersistentEntity, Class<?>> generateGroup(Class<?>... domainClasses) {
+        return newGenerator().generateAll(domainClasses.collect { entity(it) }, getClass().classLoader)
+    }
+
     private GrailsHibernatePersistentEntity unbound(Class<?> domainClass) {
         // the mapping model alone, so a domain the binder cannot boot can still be described
         return (GrailsHibernatePersistentEntity) new HibernateMappingContext(
@@ -2022,4 +2228,136 @@ class GenNativeProbeEntity {
     @Id
     @GenNativeProbe
     Long id
+}
+
+@Entity
+class GenFkTarget {
+
+    String name
+}
+
+@Entity
+class GenFkOwned {
+
+    String name
+
+    static belongsTo = [GenFkOwner]
+}
+
+@Entity
+class GenFkOwner {
+
+    String title
+    GenFkTarget plain
+    GenFkTarget required
+    GenFkTarget joined
+    GenFkTarget eager
+    GenFkTarget missing
+    GenFkTarget named
+    GenFkOwned owned
+    GenFkOwner parent
+
+    static constraints = {
+        required nullable: false
+    }
+
+    static mapping = {
+        joined fetch: 'join'
+        eager lazy: false
+        missing ignoreNotFound: true
+        named column: 'target_ref', unique: true
+    }
+}
+
+@Entity
+class GenFkCascades {
+
+    GenFkTarget cascadeAll
+    GenFkTarget cascadeOrphan
+    GenFkTarget cascadeSaveUpdate
+    GenFkTarget cascadeMerged
+    GenFkTarget cascadePersisted
+    GenFkTarget cascadeDeleted
+    GenFkTarget cascadeEvicted
+    GenFkTarget cascadeLocked
+    GenFkTarget cascadeReplicated
+    GenFkTarget cascadeNone
+
+    static mapping = {
+        cascadeAll cascade: 'all'
+        cascadeOrphan cascade: 'all-delete-orphan'
+        cascadeSaveUpdate cascade: 'save-update'
+        cascadeMerged cascade: 'merge'
+        cascadePersisted cascade: 'persist'
+        cascadeDeleted cascade: 'delete'
+        cascadeEvicted cascade: 'evict'
+        cascadeLocked cascade: 'lock'
+        cascadeReplicated cascade: 'replicate'
+        cascadeNone cascade: 'none'
+    }
+}
+
+@Entity
+class GenFkNodeA {
+
+    GenFkNodeB other
+}
+
+@Entity
+class GenFkNodeB {
+
+    GenFkNodeA back
+}
+
+@Entity
+class GenFkHasOneOwner {
+
+    static hasOne = [detail: GenFkHasOneDetail]
+}
+
+@Entity
+class GenFkHasOneDetail {
+
+    GenFkHasOneOwner owner
+}
+
+@Entity
+class GenFkManyOne {
+
+    GenFkOneSide one
+}
+
+@Entity
+class GenFkOneSide {
+
+    static hasMany = [many: GenFkManyOne]
+}
+
+@Entity
+class GenFkSubRoot {
+
+    String name
+}
+
+@Entity
+class GenFkSub extends GenFkSubRoot {
+
+    GenFkTarget target
+}
+
+@Entity
+class GenFkComposite implements Serializable {
+
+    String first
+    String last
+
+    static mapping = {
+        id composite: ['first', 'last']
+    }
+}
+
+@Entity
+class GenFkCompositeRef {
+
+    GenFkComposite target
 }

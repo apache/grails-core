@@ -47,6 +47,10 @@ import org.hibernate.mapping.Formula
 import org.hibernate.mapping.JoinedSubclass
 import org.hibernate.mapping.List as HibernateList
 import org.hibernate.mapping.Map as HibernateMap
+import org.hibernate.mapping.ManyToOne
+import org.hibernate.mapping.ToOne
+import org.hibernate.mapping.Backref
+import org.hibernate.mapping.IndexBackref
 import org.hibernate.mapping.PersistentClass
 import org.hibernate.mapping.Property
 import org.hibernate.mapping.RootClass
@@ -77,7 +81,9 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedPro
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleIdentityProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToOneProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
@@ -123,6 +129,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         Map<String, Integer> strategies = [:].withDefault { 0 }
         Map<String, Integer> hierarchies = [:].withDefault { 0 }
         Map<String, Integer> annotationRead = [:].withDefault { 0 }
+        Map<String, Integer> associations = [:].withDefault { 0 }
 
         when:
         for (List<Class<?>> group : groups) {
@@ -172,7 +179,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                                     "${property.getClass().simpleName} (type ${property.getTypeName()})".toString() :
                                     property instanceof HibernateEmbeddedProperty ?
                                             "embedded: ${generator.unsupportedReason(entity, property).replaceAll(/\[[^\]]*\]/, '[..]')}".toString() :
-                                            property instanceof HibernateBasicProperty ?
+                                            property instanceof HibernateBasicProperty || property instanceof HibernateToOneProperty ?
                                                     "${property.getClass().simpleName}: ${generator.unsupportedReason(entity, property).replaceAll(/\[[^\]]*\]/, '[..]')}".toString() :
                                                     property.getClass().simpleName]++
                             continue
@@ -210,6 +217,19 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                             }
                             continue
                         }
+                        if (property instanceof HibernateToOneProperty) {
+                            if (bound == null || !(bound.value instanceof ToOne) || bound.columns.size() != 1) {
+                                skipped['association with no single bound column']++
+                                continue
+                            }
+                            compared++
+                            String where = "${entity.name}.${property.name}".toString()
+                            associations[toOneKind(property)]++
+                            // Hibernate copies the length, precision and scale of the referenced identifier onto a foreign key column after binding
+                            mismatches.addAll(compare(where, generator.columnFacets(property), bound, ['length', 'precision', 'scale']))
+                            mismatches.addAll(compareToOne(where, generator.toOneFacets((HibernateToOneProperty) property), bound, known))
+                            continue
+                        }
                         if (bound != null && generator.isDerived(property)) {
                             compared++
                             derived++
@@ -243,6 +263,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 "(${derived} derived); ${embeddedProperties} embedded properties compared, ${embeddedLeaves} embedded columns\n"
         report << "explicit types compared: ${explicitTypes}\n"
         report << "collections of basic values compared by kind: ${collections}\n"
+        report << "associations compared by kind: ${associations}\n"
         report << "tenant filters compared: ${tenants}\n"
         report << "id generators compared by strategy: ${strategies}\n"
         report << "entities compared by hierarchy role: ${hierarchies}\n"
@@ -278,7 +299,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         return new HibernateDatastore(group as Class[])
     }
 
-    private List<String> compare(String where, ColumnFacets facets, Property bound) {
+    private List<String> compare(String where, ColumnFacets facets, Property bound, Collection<String> ignore = []) {
         Column column = (Column) bound.columns[0]
         Map<String, List> pairs = [
                 name      : [facets.name().replace('`', ''), column.name],
@@ -300,6 +321,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             // Hibernate derives an sqlType for every column after binding; only an explicit one is comparable
             pairs.remove('sqlType')
         }
+        ignore.each { pairs.remove(it) }
         return pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
             "${where} ${facet}: generator=${values[0]} binder=${values[1]}".toString()
         }
@@ -783,53 +805,93 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
     }
 
     /**
-     * For every hierarchy the generator can describe whole, binds the generated classes with Hibernate's own annotation
-     * binder and compares the resulting {@code PersistentClass} of each entity with the one the domain binder built:
-     * the link between what the generator decides and what Hibernate makes of the annotations.
+     * Binds the classes generated for a group with Hibernate's own annotation binder and compares the resulting
+     * {@code PersistentClass} of each entity with the one the domain binder built: the link between what the generator
+     * decides and what Hibernate makes of the annotations. A group is generated whole, because an association's field is
+     * typed with the class generated for its target; entities the generator cannot describe are left out together with
+     * everything that refers to them.
      */
     private List<String> compareAnnotationBoundHierarchies(
             GrailsDomainGenerator generator, List<GrailsHibernatePersistentEntity> entities, Map<String, Integer> skipped,
             Map<String, Integer> annotationRead, Map<String, Integer> known, Map<String, Integer> tenants) {
         List<String> found = []
-        Map<GrailsHibernatePersistentEntity, List<GrailsHibernatePersistentEntity>> hierarchies = [:]
-        for (GrailsHibernatePersistentEntity entity : entities) {
-            hierarchies.get(entity.hibernateRootEntity, []) << entity
+        List<GrailsHibernatePersistentEntity> generatable = generatableClosure(generator, entities, skipped)
+        if (generatable.isEmpty()) {
+            return found
         }
-        for (Map.Entry<GrailsHibernatePersistentEntity, List<GrailsHibernatePersistentEntity>> hierarchy : hierarchies.entrySet()) {
-            Map<GrailsHibernatePersistentEntity, Class<?>> classes
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes
+        try {
+            classes = generator.generateAll(generatable, getClass().classLoader)
+        } catch (UnsupportedOperationException | IllegalArgumentException e) {
+            found << "${generatable*.name} generateAll: generator=rejected binder=accepted (${e.message?.readLines()?.first()})".toString()
+            return found
+        }
+        StandardServiceRegistry registry = new StandardServiceRegistryBuilder(
+                new BootstrapServiceRegistryBuilder().applyClassLoader(classes.values().first().classLoader).build())
+                .applySetting('hibernate.dialect', H2Dialect.name)
+                .applySetting('hibernate.connection.url', 'jdbc:h2:mem:generator-differential;DB_CLOSE_DELAY=-1')
+                .build()
+        try {
+            MetadataSources sources = new MetadataSources(registry)
+            classes.values().each { sources.addAnnotatedClass(it) }
+            Metadata metadata
             try {
-                classes = generator.generateAll(hierarchy.value, getClass().classLoader)
-            } catch (UnsupportedOperationException | IllegalArgumentException e) {
-                skipped["${hierarchy.value.size() > 1 ? 'hierarchy' : 'entity'} not generated whole: ${e.getClass().simpleName}".toString()]++
-                continue
+                metadata = sources.buildMetadata()
+            } catch (Exception e) {
+                found << "${generatable*.name} annotationBinder: generator=accepted binder=${e.message?.readLines()?.first()}".toString()
+                return found
             }
-            StandardServiceRegistry registry = new StandardServiceRegistryBuilder(
-                    new BootstrapServiceRegistryBuilder().applyClassLoader(classes.values().first().classLoader).build())
-                    .applySetting('hibernate.dialect', H2Dialect.name)
-                    .applySetting('hibernate.connection.url', 'jdbc:h2:mem:generator-differential;DB_CLOSE_DELAY=-1')
-                    .build()
-            try {
-                MetadataSources sources = new MetadataSources(registry)
-                classes.values().each { sources.addAnnotatedClass(it) }
-                Metadata metadata
-                try {
-                    metadata = sources.buildMetadata()
-                } catch (Exception e) {
-                    found << "${hierarchy.key.name} annotationBinder: generator=accepted binder=${e.message?.readLines()?.first()}".toString()
-                    continue
-                }
-                annotationRead["${generator.hierarchyFacets(hierarchy.key).strategy() ?: 'single class'} (${classes.size()} classes)".toString()]++
-                Map<String, GrailsHibernatePersistentEntity> byName = hierarchy.value.collectEntries { [(it.name): it] }
-                found.addAll(compareAnnotatedFilterDefinition(hierarchy.value, generator, metadata, tenants))
-                classes.each { GrailsHibernatePersistentEntity entity, Class<?> generated ->
-                    found.addAll(compareAnnotatedTenantFilter(entity, generator, metadata.getEntityBinding(generated.name), tenants))
-                    found.addAll(compareAnnotationBound(generator, entity, metadata.getEntityBinding(generated.name), byName, annotationRead, known))
-                }
-            } finally {
-                StandardServiceRegistryBuilder.destroy(registry)
+            annotationRead['groups']++
+            Map<Class<?>, List<GrailsHibernatePersistentEntity>> hierarchies = generatable.groupBy { it.hibernateRootEntity.javaClass }
+            hierarchies.each { Class<?> root, List<GrailsHibernatePersistentEntity> members ->
+                annotationRead["${generator.hierarchyFacets(members.first().hibernateRootEntity).strategy() ?: 'single class'} (${members.size()} classes)".toString()]++
             }
+            Map<String, GrailsHibernatePersistentEntity> byName = generatable.collectEntries { [(it.name): it] }
+            found.addAll(compareAnnotatedFilterDefinition(generatable, generator, metadata, tenants))
+            classes.each { GrailsHibernatePersistentEntity entity, Class<?> generated ->
+                found.addAll(compareAnnotatedTenantFilter(entity, generator, metadata.getEntityBinding(generated.name), tenants))
+                found.addAll(compareAnnotationBound(generator, entity, metadata.getEntityBinding(generated.name), byName, annotationRead, known))
+            }
+        } finally {
+            StandardServiceRegistryBuilder.destroy(registry)
         }
         return found
+    }
+
+    /**
+     * The entities of a group that can be generated together: those the generator describes, whose whole hierarchy it
+     * describes, and whose association targets it describes too. An entity that fails any of that is dropped with its whole
+     * hierarchy, which can in turn drop the entities that refer to it, until nothing changes.
+     */
+    private static List<GrailsHibernatePersistentEntity> generatableClosure(
+            GrailsDomainGenerator generator, List<GrailsHibernatePersistentEntity> entities, Map<String, Integer> skipped) {
+        List<GrailsHibernatePersistentEntity> candidates = new ArrayList<GrailsHibernatePersistentEntity>(entities)
+        boolean changed = true
+        while (changed) {
+            changed = false
+            for (GrailsHibernatePersistentEntity entity : new ArrayList<GrailsHibernatePersistentEntity>(candidates)) {
+                if (!candidates.contains(entity)) {
+                    continue
+                }
+                String reason = generator.generationProblem(entity)
+                if (reason == null) {
+                    GrailsHibernatePersistentEntity missing = GrailsDomainGenerator.referencedEntities(entity).find {
+                        GrailsHibernatePersistentEntity target -> !candidates.any { it.javaClass == target.javaClass }
+                    }
+                    if (missing != null) {
+                        reason = "it refers to [${missing.name}], which is not generated"
+                    }
+                }
+                if (reason != null) {
+                    Class<?> root = entity.hibernateRootEntity.javaClass
+                    List<GrailsHibernatePersistentEntity> removed = candidates.findAll { it.hibernateRootEntity.javaClass == root }
+                    candidates.removeAll(removed)
+                    skipped["not read back (${removed.size() > 1 ? 'hierarchy' : 'entity'}): ${reason.replaceAll(/\[[^\]]*\]/, '[..]')}".toString()]++
+                    changed = true
+                }
+            }
+        }
+        return candidates
     }
 
     private static List<String> compareAnnotationBound(
@@ -849,7 +911,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                                      annotated.superclass == null || !annotated.table.is(annotated.superclass.table)],
                 abstractClass     : [Boolean.TRUE == bound.isAbstract(), Boolean.TRUE == annotated.isAbstract()],
                 abstractUnionTable: [bound.table.isAbstractUnionTable(), annotated.table.isAbstractUnionTable()],
-                properties        : [bound.declaredProperties*.name.toSet(), annotated.declaredProperties*.name.toSet()],
+                properties        : [declaredNames(bound), declaredNames(annotated)],
         ]
         if (bound instanceof SingleTableSubclass || bound instanceof RootClass && bound.discriminator != null) {
             pairs.discriminatorValue = [bound.discriminatorValue, annotated.discriminatorValue]
@@ -880,6 +942,15 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                         generator.collectionFacets(collectionProperty), known))
                 continue
             }
+            if (property.value instanceof ToOne) {
+                HibernatePersistentProperty source = entity.persistentPropertiesToBind.find { it.name == property.name }
+                if (source instanceof HibernateToOneProperty && generator.validationAnnotations(source).isEmpty()) {
+                    annotationRead['associations']++
+                    found.addAll(compareAnnotatedToOne(
+                            "${where} property ${property.name}".toString(), generator.toOneFacets((HibernateToOneProperty) source),
+                            property, other, byName, known))
+                }
+            }
             Map<String, Property> boundLeaves = terminalProperties(property)
             Map<String, Property> annotatedLeaves = terminalProperties(other)
             if (boundLeaves.keySet() != annotatedLeaves.keySet()) {
@@ -895,6 +966,118 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                     found.addAll(compareAnnotatedLeaf(
                             "${where} property ${path}".toString(), leaf, annotatedLeaves[path], (String) expected.sqlType, false))
                 }
+            }
+        }
+        return found
+    }
+
+    /** The names of the properties a class declares itself: the binder's and Hibernate's back references are not part of the field set. */
+    private static Set<String> declaredNames(PersistentClass persistentClass) {
+        return persistentClass.declaredProperties.findAll { !(it instanceof Backref) && !(it instanceof IndexBackref) }*.name.toSet()
+    }
+
+    private static String toOneKind(HibernatePersistentProperty property) {
+        return property instanceof HibernateManyToOneProperty ? 'many-to-one' : 'one-to-one'
+    }
+
+    private static String fetchModeOf(ToOne value) {
+        return value.fetchMode == FetchMode.JOIN ? 'JOIN' : 'SELECT'
+    }
+
+    /**
+     * A to-one association against the binder's {@code ToOne} value and property: the referenced entity, whether it is lazy,
+     * how it is fetched, what a missing row does, the cascade and whether the property is optional. The foreign key column
+     * itself goes through the ordinary column comparison.
+     */
+    private static List<String> compareToOne(String where, ToOneFacets facets, Property bound, Map<String, Integer> known) {
+        ToOne value = (ToOne) bound.value
+        Map<String, List> pairs = [
+                target        : [facets.target(), value.referencedEntityName],
+                lazy          : [facets.lazy(), value.lazy],
+                fetchMode     : [facets.fetchMode() == FetchMode.JOIN ? 'JOIN' : 'SELECT', fetchModeOf(value)],
+                ignoreNotFound: [facets.ignoreNotFound(), value instanceof ManyToOne && ((ManyToOne) value).ignoreNotFound],
+                cascade       : [cascadeActions(facets.cascade()), cascadeActions(bound.cascade)],
+        ]
+        List<String> found = pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
+            "${where} ${facet}: generator=${values[0]} binder=${values[1]}".toString()
+        }
+        if (facets.optional() != bound.optional) {
+            if (facets.optional() == facets.joinColumn().nullable()) {
+                known['the binder makes a to-one association optional or not independently of its foreign key column being nullable; annotations state both together, so the generated field follows the column']++
+            } else {
+                found << "${where} optional: generator=${facets.optional()} binder=${bound.optional}".toString()
+            }
+        }
+        return found
+    }
+
+    private static Set<String> cascadeActions(CascadeFacets facets) {
+        Map<String, String> jpa = [ALL: 'all', PERSIST: 'persist', MERGE: 'merge', REMOVE: 'delete', REFRESH: 'refresh', DETACH: 'evict']
+        List<String> tokens = facets.jpa().collect { jpa[it.name()] }
+        tokens.addAll(facets.hibernate().collect { it.name().toLowerCase().replace('_', '-') })
+        if (facets.orphanRemoval()) {
+            tokens << 'delete-orphan'
+        }
+        return normalizedCascade(tokens)
+    }
+
+    private static Set<String> cascadeActions(String cascade) {
+        return normalizedCascade(cascade == null ? [] : cascade.split(',').collect { it.trim() })
+    }
+
+    /** The actions a cascade string stands for: {@code all} subsumes the others but orphan removal, and {@code none} is no action. */
+    private static Set<String> normalizedCascade(Collection<String> tokens) {
+        Set<String> actions = new TreeSet<String>()
+        tokens.each { String token ->
+            if (token == 'all-delete-orphan') {
+                actions << 'all' << 'delete-orphan'
+            } else if (token != 'none' && !token.isEmpty()) {
+                actions << token
+            }
+        }
+        if (actions.contains('all')) {
+            actions.retainAll(['all', 'delete-orphan'])
+        }
+        return actions
+    }
+
+    /**
+     * A to-one association of the binder's entity against the one Hibernate's annotation binder built: the same referenced
+     * entity (by the name of the class generated for it), fetching, cascade and write behavior. Where Hibernate's
+     * annotation path cannot say what the binder says, the difference is listed as a known divergence.
+     */
+    private static List<String> compareAnnotatedToOne(
+            String where, ToOneFacets facets, Property boundProperty, Property annotatedProperty,
+            Map<String, GrailsHibernatePersistentEntity> byName, Map<String, Integer> known) {
+        if (!(annotatedProperty.value instanceof ToOne)) {
+            return ["${where} kind: generator=${annotatedProperty.value.getClass().simpleName} binder=${boundProperty.value.getClass().simpleName}".toString()]
+        }
+        ToOne bound = (ToOne) boundProperty.value
+        ToOne annotated = (ToOne) annotatedProperty.value
+        Map<String, List> pairs = [
+                target        : [GrailsDomainGenerator.generatedClassName(byName[bound.referencedEntityName]), annotated.referencedEntityName],
+                fetchMode     : [fetchModeOf(bound), fetchModeOf(annotated)],
+                ignoreNotFound: [bound instanceof ManyToOne && ((ManyToOne) bound).ignoreNotFound,
+                                 annotated instanceof ManyToOne && ((ManyToOne) annotated).ignoreNotFound],
+                cascade       : [cascadeActions(boundProperty.cascade), cascadeActions(annotatedProperty.cascade)],
+                insertable    : [boundProperty.insertable, annotatedProperty.insertable],
+                updatable     : [boundProperty.updateable, annotatedProperty.updateable],
+        ]
+        List<String> found = pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
+            "${where} ${facet}: generator=${values[1]} binder=${values[0]}".toString()
+        }
+        if (bound.lazy != annotated.lazy) {
+            if (bound.lazy && !annotated.lazy && facets.ignoreNotFound()) {
+                known['Hibernate binds a @NotFound association as eager (lazy false), the binder keeps it lazy']++
+            } else {
+                found << "${where} lazy: generator=${annotated.lazy} binder=${bound.lazy}".toString()
+            }
+        }
+        if (boundProperty.optional != annotatedProperty.optional) {
+            if (annotatedProperty.optional == facets.joinColumn().nullable()) {
+                known['the binder makes a to-one association optional or not independently of its foreign key column being nullable; annotations state both together, so the generated field follows the column']++
+            } else {
+                found << "${where} optional: generator=${annotatedProperty.optional} binder=${boundProperty.optional}".toString()
             }
         }
         return found

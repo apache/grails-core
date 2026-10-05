@@ -20,10 +20,12 @@ package org.grails.orm.hibernate.cfg.domainbinding.jpa
 
 import java.lang.annotation.Annotation
 import java.lang.reflect.Method
+import java.lang.reflect.Modifier
 
 import groovy.transform.CompileStatic
 import jakarta.persistence.AttributeOverride
 import jakarta.persistence.AttributeOverrides
+import jakarta.persistence.CascadeType
 import jakarta.persistence.CollectionTable
 import jakarta.persistence.Column as JpaColumn
 import jakarta.persistence.DiscriminatorColumn
@@ -40,6 +42,7 @@ import jakarta.persistence.Id
 import jakarta.persistence.Inheritance
 import jakarta.persistence.InheritanceType
 import jakarta.persistence.JoinColumn
+import jakarta.persistence.ManyToOne
 import jakarta.persistence.MapKeyColumn
 import jakarta.persistence.OrderColumn
 import jakarta.persistence.PrimaryKeyJoinColumn
@@ -47,9 +50,11 @@ import jakarta.persistence.Table
 import jakarta.persistence.Version
 import net.bytebuddy.ByteBuddy
 import net.bytebuddy.description.annotation.AnnotationDescription
+import net.bytebuddy.description.method.MethodDescription
 import net.bytebuddy.description.modifier.TypeManifestation
 import net.bytebuddy.description.modifier.Visibility
 import net.bytebuddy.description.type.TypeDescription
+import net.bytebuddy.description.type.TypeList
 import net.bytebuddy.dynamic.DynamicType
 import net.bytebuddy.dynamic.loading.ClassLoadingStrategy
 import org.hibernate.FetchMode
@@ -57,6 +62,7 @@ import org.hibernate.Length
 import org.hibernate.annotations.BatchSize
 import org.hibernate.annotations.Cache
 import org.hibernate.annotations.CacheConcurrencyStrategy
+import org.hibernate.annotations.Cascade
 import org.hibernate.annotations.ColumnDefault
 import org.hibernate.annotations.ColumnTransformer
 import org.hibernate.annotations.Comment
@@ -70,6 +76,8 @@ import org.hibernate.annotations.FilterDef
 import org.hibernate.annotations.FetchMode as AnnotationFetchMode
 import org.hibernate.annotations.Formula
 import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.annotations.NotFound
+import org.hibernate.annotations.NotFoundAction
 import org.hibernate.annotations.ParamDef
 import org.hibernate.annotations.Parameter
 import org.hibernate.annotations.Type
@@ -83,6 +91,7 @@ import org.hibernate.type.spi.TypeConfiguration
 import org.hibernate.usertype.UserType
 
 import org.grails.datastore.mapping.model.config.GormProperties
+import org.grails.datastore.mapping.model.types.Association
 import org.grails.orm.hibernate.cfg.ColumnConfig
 import org.grails.orm.hibernate.cfg.DiscriminatorConfig
 import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
@@ -102,15 +111,21 @@ import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGenera
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceStyleGenerator
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsTableGenerator
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateAssociation
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedCollectionProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleIdentityProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateTenantIdProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToOneProperty
+import org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior
+import org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehaviorFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsEnumType
@@ -144,6 +159,7 @@ class GrailsDomainGenerator {
     private final TypeConfiguration typeConfiguration
     private final TableForManyCalculator tableForMany
     private final DefaultColumnNameFetcher defaultColumnNames
+    private final CascadeBehaviorFetcher cascadeFetcher = new CascadeBehaviorFetcher()
 
     GrailsDomainGenerator(
             PersistentEntityNamingStrategy namingStrategy,
@@ -208,6 +224,15 @@ class GrailsDomainGenerator {
         for (GrailsHibernatePersistentEntity entity : given) {
             requireWholeHierarchy(entity, given)
         }
+        for (GrailsHibernatePersistentEntity entity : given) {
+            String problem = generationProblem(entity)
+            if (problem != null) {
+                throw new UnsupportedOperationException(problem)
+            }
+        }
+        for (GrailsHibernatePersistentEntity entity : given) {
+            requireReferencedEntities(entity, given)
+        }
         List<GrailsHibernatePersistentEntity> ordered = new ArrayList<GrailsHibernatePersistentEntity>(given)
         ordered.sort { GrailsHibernatePersistentEntity a, GrailsHibernatePersistentEntity b -> depth(a) <=> depth(b) }
 
@@ -249,6 +274,58 @@ class GrailsDomainGenerator {
         }
     }
 
+    private static void requireReferencedEntities(GrailsHibernatePersistentEntity entity, Set<GrailsHibernatePersistentEntity> given) {
+        for (GrailsHibernatePersistentEntity target : referencedEntities(entity)) {
+            if (!given.any { GrailsHibernatePersistentEntity other -> other.javaClass == target.javaClass }) {
+                throw new IllegalArgumentException(
+                        "Entity [${entity.name}] refers to [${target.name}], which is not part of the call: the generated field " +
+                                'is typed with the class generated for its target, so every entity of a connected group must be ' +
+                                'generated together (generateAll)')
+            }
+        }
+    }
+
+    /**
+     * @return the entities the generated class of the entity refers to through its associations, in property order and
+     *     without duplicates: the classes generated for them must be part of the same call
+     */
+    static List<GrailsHibernatePersistentEntity> referencedEntities(GrailsHibernatePersistentEntity entity) {
+        List<GrailsHibernatePersistentEntity> found = []
+        for (HibernatePersistentProperty property : entity.persistentPropertiesToBind) {
+            if (property instanceof HibernateToOneProperty) {
+                GrailsHibernatePersistentEntity target = ((HibernateToOneProperty) property).hibernateAssociatedEntity
+                if (target != null && !found.any { GrailsHibernatePersistentEntity other -> other.javaClass == target.javaClass }) {
+                    found << target
+                }
+            }
+        }
+        return found
+    }
+
+    /**
+     * @return why {@link #generateAll} cannot describe the entity, or {@code null} when it can: a hierarchy that mixes
+     *     strategies, a tenant id with a mapped type, an entity with no simple identifier, or a property the generator
+     *     does not support. It does not look at the other entities of the call.
+     */
+    String generationProblem(GrailsHibernatePersistentEntity entity) {
+        try {
+            hierarchyFacets(entity)
+            tenantFacets(entity)
+        } catch (UnsupportedOperationException e) {
+            return e.message
+        }
+        if (entity.isRoot() && !(entity.identity instanceof HibernateSimpleIdentityProperty)) {
+            return "Entity [${entity.name}] has no simple identifier (a composite identifier, for example), " +
+                    'which the generator does not support yet'
+        }
+        for (HibernatePersistentProperty property : entity.persistentPropertiesToBind) {
+            if (!supports(property)) {
+                return unsupportedReason(entity, property)
+            }
+        }
+        return null
+    }
+
     private static GrailsHibernatePersistentEntity superEntity(
             GrailsHibernatePersistentEntity entity, Set<GrailsHibernatePersistentEntity> given) {
         return given.find { GrailsHibernatePersistentEntity other -> other.javaClass == entity.javaClass.superclass }
@@ -277,9 +354,6 @@ class GrailsDomainGenerator {
             builder = defineIdentityAndVersion(builder, entity, embeddables)
         }
         for (HibernatePersistentProperty property : entity.persistentPropertiesToBind) {
-            if (!supports(property)) {
-                throw new UnsupportedOperationException(unsupportedReason(entity, property))
-            }
             builder = defineField(builder, property, [], embeddables)
         }
         return builder.make()
@@ -289,11 +363,6 @@ class GrailsDomainGenerator {
             DynamicType.Builder<Object> builder, GrailsHibernatePersistentEntity entity,
             Map<String, DynamicType.Unloaded<?>> embeddables) {
         HibernatePersistentProperty identity = (HibernatePersistentProperty) entity.identity
-        if (!(identity instanceof HibernateSimpleIdentityProperty)) {
-            throw new UnsupportedOperationException(
-                    "Entity [${entity.name}] has no simple identifier (a composite identifier, for example), " +
-                            'which the generator does not support yet')
-        }
         List<AnnotationDescription> idAnnotations = [AnnotationDescription.Builder.ofType(Id).build()]
         idAnnotations.addAll(idGeneratorAnnotations(idFacets(entity)))
         DynamicType.Builder<Object> result = defineField(builder, identity, idAnnotations, embeddables)
@@ -324,6 +393,12 @@ class GrailsDomainGenerator {
             String problem = collectionProblem((HibernateBasicProperty) property)
             if (problem != null) {
                 return "Collection property [${property.name}] of [${entity.name}]: ${problem}"
+            }
+        }
+        if (property instanceof HibernateToOneProperty) {
+            String problem = toOneProblem((HibernateToOneProperty) property)
+            if (problem != null) {
+                return "Association property [${property.name}] of [${entity.name}]: ${problem}"
             }
         }
         if ((property instanceof HibernateSimpleProperty || property instanceof HibernateTenantIdProperty) && !decideType(property).supported) {
@@ -467,8 +542,8 @@ class GrailsDomainGenerator {
     /**
      * @return whether the generator can describe the property today: a plain single-column basic property, a
      *     derived (formula) property, the tenant id (an ordinary column), the version, an enum, an embedded object whose own properties are all
-     *     supported, a collection of basic values or enums, or the simple identifier. Custom types, multi-column properties and every association are not
-     *     supported yet.
+     *     supported, a collection of basic values or enums, a many-to-one association, or the simple identifier. Custom types,
+     *     multi-column properties and the other associations are not supported yet.
      */
     boolean supports(HibernatePersistentProperty property) {
         if (property instanceof HibernateSimpleIdentityProperty) {
@@ -479,6 +554,9 @@ class GrailsDomainGenerator {
         }
         if (property instanceof HibernateBasicProperty) {
             return collectionProblem((HibernateBasicProperty) property) == null
+        }
+        if (property instanceof HibernateToOneProperty) {
+            return toOneProblem((HibernateToOneProperty) property) == null
         }
         if (!(property instanceof HibernateSimpleProperty) && !(property instanceof HibernateTenantIdProperty)) {
             return false
@@ -826,6 +904,136 @@ class GrailsDomainGenerator {
     }
 
     /**
+     * @return why the generator cannot describe the to-one association, or {@code null} when it can
+     */
+    private String toOneProblem(HibernateToOneProperty property) {
+        if (!boundAsManyToOne(property)) {
+            return 'the binder binds this one-to-one as a Hibernate OneToOne (an inverse side, a hasOne or a shared primary key), ' +
+                    'which the generator does not support yet'
+        }
+        GrailsHibernatePersistentEntity target = property.hibernateAssociatedEntity
+        if (target == null) {
+            return 'the associated entity is unknown'
+        }
+        GrailsHibernatePersistentEntity root = target.hibernateRootEntity
+        if (root.hibernateCompositeIdentity.isPresent() || (root.compositeIdentity?.length ?: 0) > 1) {
+            return "the associated entity [${target.name}] has a composite identifier: the foreign key has one column for each " +
+                    'identifier property, named and ordered from the identifier'
+        }
+        PropertyConfig mapped = property.hibernateMappedForm
+        if (mapped.columns != null && mapped.columns.size() > 1) {
+            return 'the mapping states several columns, which the binder binds as a composite foreign key'
+        }
+        if (mapped.derived) {
+            return 'the association is mapped with a formula'
+        }
+        ColumnFacets key = toOneColumnFacets(property)
+        if (key.length() != null || key.precision() != null || key.scale() != null || key.defaultValue() != null ||
+                key.read() != null || key.write() != null || key.comment() != null) {
+            return 'the column config sets a length, a precision, a scale, a default, a read or write expression or a comment, ' +
+                    'which a join column cannot state'
+        }
+        return null
+    }
+
+    /**
+     * The binder binds a many-to-one as a {@code ManyToOne} value, and so it does a one-to-one that is not a valid Hibernate
+     * one-to-one ({@code ForeignKeyOneToOneBinder}): the foreign key is a column of the owner's table and only the
+     * uniqueness differs.
+     */
+    private static boolean boundAsManyToOne(HibernateToOneProperty property) {
+        return property instanceof HibernateManyToOneProperty ||
+                (property instanceof HibernateOneToOneProperty && !((HibernateOneToOneProperty) property).isValidHibernateOneToOne())
+    }
+
+    /**
+     * Decides how the binder binds a to-one association whose foreign key is a column of the owner's table: the associated
+     * entity, whether it is lazy, how it is fetched, whether the foreign key may be null, what happens when the row it
+     * points at is missing, the cascade and the join column.
+     *
+     * <p>{@code ColumnBinder} makes the foreign key column nullable as {@code isAssociationColumnNullable} says (always, for
+     * the associations handled here) and only then lets a subclass override it: a table-per-hierarchy subclass is always
+     * nullable, any other subclass follows the property's {@code nullable}. A root entity's association with
+     * {@code nullable: false} therefore keeps a nullable column, and only its {@code Property.optional} is false, which
+     * annotations cannot say (a non-optional association is a NOT NULL column), so the generated field is optional.</p>
+     *
+     * @throws UnsupportedOperationException when something about the association cannot be stated yet
+     */
+    ToOneFacets toOneFacets(HibernateToOneProperty property) {
+        if (toOneProblem(property) != null) {
+            throw new UnsupportedOperationException(unsupportedReason(property.hibernateOwner, property))
+        }
+        PropertyConfig mapped = property.hibernateMappedForm
+        ColumnFacets column = toOneColumnFacets(property)
+        return new ToOneFacets(
+                property.hibernateAssociatedEntity.name,
+                property.isLazy(),
+                FetchMode.JOIN == mapped.fetchMode ? FetchMode.JOIN : FetchMode.SELECT,
+                column.nullable(),
+                mapped.ignoreNotFound,
+                cascadeFacets(property),
+                column)
+    }
+
+    private ColumnFacets toOneColumnFacets(HibernateToOneProperty property) {
+        PropertyConfig mapped = property.hibernateMappedForm
+        ColumnConfig columnConfig = firstColumnConfig(mapped)
+        Column column = new Column()
+        columnConfigBinder.bindColumnConfigToColumn(column, columnConfig, mapped)
+        if (columnConfig != null) {
+            column.comment = columnConfig.comment
+            column.defaultValue = columnConfig.defaultValue
+            column.customRead = columnConfig.read
+            column.customWrite = columnConfig.write
+        }
+        String name = columnNames.getColumnNameForPropertyAndPath(property, '', columnConfig)
+        boolean nullable = property.isAssociationColumnNullable()
+        if (!property.hibernateOwner.isRoot()) {
+            Mapping mapping = property.hibernateOwner.hibernateMappedForm
+            nullable = mapping != null && mapping.tablePerHierarchy ? true : property.nullable
+        }
+        boolean unique = mapped.isUnique() && !mapped.isUniqueWithinGroup()
+        if (property instanceof HibernateOneToOneProperty && mapped.isUniqueWithinGroup()) {
+            // ForeignKeyOneToOneBinder: a column in a unique group is unique on its own only when the other side is a valid one-to-one
+            HibernateOneToOneProperty inverse = ((HibernateOneToOneProperty) property).hibernateInverseSide
+            unique = property.isBidirectional() && inverse != null && inverse.isValidHibernateOneToOne()
+        }
+        return facets(property, column, name, nullable, unique, true)
+    }
+
+    /**
+     * Decides the cascade of an association with the binder's own {@code CascadeBehaviorFetcher} (an explicit
+     * {@code cascade} mapping, else the behavior implied by the kind of association and who owns it) and splits it into what
+     * the annotations can say: JPA's {@code cascade}, Hibernate's {@code @Cascade} for what JPA cannot name, and
+     * {@code orphanRemoval}.
+     */
+    CascadeFacets cascadeFacets(HibernateAssociation property) {
+        CascadeBehavior behavior = CascadeBehavior.fromString(cascadeFetcher.getCascadeBehaviour((Association<?>) property))
+        switch (behavior) {
+            case CascadeBehavior.ALL:
+                return new CascadeFacets([CascadeType.ALL], [], false)
+            case CascadeBehavior.ALL_DELETE_ORPHAN:
+                return new CascadeFacets([CascadeType.ALL], [], true)
+            case CascadeBehavior.SAVE_UPDATE:
+                return new CascadeFacets([CascadeType.PERSIST, CascadeType.MERGE], [], false)
+            case CascadeBehavior.MERGE:
+                return new CascadeFacets([CascadeType.MERGE], [], false)
+            case CascadeBehavior.PERSIST:
+                return new CascadeFacets([CascadeType.PERSIST], [], false)
+            case CascadeBehavior.DELETE:
+                return new CascadeFacets([CascadeType.REMOVE], [], false)
+            case CascadeBehavior.EVICT:
+                return new CascadeFacets([CascadeType.DETACH], [], false)
+            case CascadeBehavior.LOCK:
+                return new CascadeFacets([], [org.hibernate.annotations.CascadeType.LOCK], false)
+            case CascadeBehavior.REPLICATE:
+                return new CascadeFacets([], [org.hibernate.annotations.CascadeType.REPLICATE], false)
+            default:
+                return new CascadeFacets([], [], false)
+        }
+    }
+
+    /**
      * Decides the column facets for a supported property by running the domain binder's own rules on a scratch
      * {@link Column}, in the order the binder applies them.
      */
@@ -833,6 +1041,9 @@ class GrailsDomainGenerator {
         if (property instanceof HibernateBasicProperty) {
             throw new IllegalArgumentException(
                     "Property [${property.name}] is a collection: it has a key, an element and perhaps an index column, see collectionFacets")
+        }
+        if (property instanceof HibernateToOneProperty) {
+            return toOneColumnFacets((HibernateToOneProperty) property)
         }
         if (property instanceof HibernateEnumProperty) {
             return enumColumnFacets((HibernateEnumProperty) property, null)
@@ -923,6 +1134,8 @@ class GrailsDomainGenerator {
                 }
             } else if (peer instanceof HibernateToManyProperty) {
                 return "the property [${peer.name}] of [${type.name}] is a collection inside an embedded type, which the generator does not support yet"
+            } else if (peer instanceof HibernateAssociation) {
+                return "the property [${peer.name}] of [${type.name}] is an association inside an embedded type, which the generator does not support yet"
             } else if (!supports(peer)) {
                 return unsupportedReason(type, peer)
             }
@@ -1103,6 +1316,9 @@ class GrailsDomainGenerator {
         if (property instanceof HibernateBasicProperty) {
             return defineCollectionField(builder, (HibernateBasicProperty) property)
         }
+        if (property instanceof HibernateToOneProperty) {
+            return defineToOneField(builder, (HibernateToOneProperty) property)
+        }
         List<AnnotationDescription> annotations = new ArrayList<>(extra)
         if (isDerived(property)) {
             annotations << AnnotationDescription.Builder.ofType(Formula).define('value', property.hibernateMappedForm.formula).build()
@@ -1122,6 +1338,83 @@ class GrailsDomainGenerator {
         }
         return builder.defineField(property.name, property.type, Visibility.PRIVATE)
                 .annotateField(annotations as AnnotationDescription[])
+    }
+
+    /**
+     * A many-to-one association is a field typed with the class generated for its target (which is why the target must be
+     * part of the same call), with {@code @ManyToOne} stating the fetch type, the optionality and the cascade, a
+     * {@code @JoinColumn}, an explicit {@code @Fetch} (without it an eager association would be a join fetch, which the
+     * binder's default is not), and {@code @NotFound} when the mapping says to ignore a missing row.
+     */
+    private DynamicType.Builder<Object> defineToOneField(DynamicType.Builder<Object> builder, HibernateToOneProperty property) {
+        ToOneFacets facets = toOneFacets(property)
+        List<AnnotationDescription> annotations = []
+        annotations << AnnotationDescription.Builder.ofType(ManyToOne)
+                .define('fetch', facets.lazy() ? FetchType.LAZY : FetchType.EAGER)
+                .define('optional', facets.optional())
+                .defineEnumerationArray('cascade', CascadeType, facets.cascade().jpa() as CascadeType[])
+                .build()
+        annotations << joinColumnAnnotation(facets.joinColumn())
+        annotations << AnnotationDescription.Builder.ofType(Fetch)
+                .define('value', facets.fetchMode() == FetchMode.JOIN ? AnnotationFetchMode.JOIN : AnnotationFetchMode.SELECT).build()
+        if (facets.ignoreNotFound()) {
+            annotations << AnnotationDescription.Builder.ofType(NotFound).define('action', NotFoundAction.IGNORE).build()
+        }
+        List<org.hibernate.annotations.CascadeType> hibernateCascade = new ArrayList<org.hibernate.annotations.CascadeType>(facets.cascade().hibernate())
+        if (facets.cascade().orphanRemoval()) {
+            // @ManyToOne has no orphanRemoval attribute
+            hibernateCascade << org.hibernate.annotations.CascadeType.DELETE_ORPHAN
+        }
+        if (!hibernateCascade.isEmpty()) {
+            annotations << AnnotationDescription.Builder.ofType(Cascade)
+                    .defineEnumerationArray('value', org.hibernate.annotations.CascadeType,
+                            hibernateCascade as org.hibernate.annotations.CascadeType[])
+                    .build()
+        }
+        for (Annotation constraint : validationAnnotations(property)) {
+            annotations << AnnotationDescription.ForLoadedAnnotation.of(constraint)
+        }
+        return builder.defineField(property.name, generatedType(property.hibernateAssociatedEntity), Visibility.PRIVATE)
+                .annotateField(annotations as AnnotationDescription[])
+    }
+
+    /**
+     * The type of a field that refers to another generated entity. It is only a name: the class itself is built in the same
+     * call and loaded together with its referrers, so entities may refer to each other in any shape, cycles included.
+     */
+    private static TypeDescription generatedType(GrailsHibernatePersistentEntity entity) {
+        return new GeneratedType(generatedClassName(entity))
+    }
+
+    /**
+     * A top-level class that is only named. ByteBuddy's own latent description refuses to say that it has no declaring or
+     * enclosing type, which it asks for when it writes a field of that type.
+     */
+    private static final class GeneratedType extends TypeDescription.Latent {
+
+        GeneratedType(String name) {
+            super(name, Modifier.PUBLIC, TypeDescription.Generic.OBJECT)
+        }
+
+        @Override
+        TypeDescription getDeclaringType() {
+            return null
+        }
+
+        @Override
+        TypeDescription getEnclosingType() {
+            return null
+        }
+
+        @Override
+        MethodDescription.InDefinedShape getEnclosingMethod() {
+            return null
+        }
+
+        @Override
+        TypeList getDeclaredTypes() {
+            return new TypeList.Empty()
+        }
     }
 
     /**
