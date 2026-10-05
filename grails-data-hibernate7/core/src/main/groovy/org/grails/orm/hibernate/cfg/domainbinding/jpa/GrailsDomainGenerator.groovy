@@ -45,12 +45,17 @@ import org.hibernate.annotations.Formula
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.annotations.Parameter
 import org.hibernate.annotations.Type
+import org.hibernate.annotations.UuidGenerator
+import org.hibernate.id.uuid.UuidGenerator as HibernateUuidGenerator
 import org.hibernate.mapping.Column
+import org.hibernate.generator.Assigned
+import org.hibernate.generator.Generator
 import org.hibernate.type.BasicType
 import org.hibernate.type.spi.TypeConfiguration
 import org.hibernate.usertype.UserType
 
 import org.grails.orm.hibernate.cfg.ColumnConfig
+import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
 import org.grails.orm.hibernate.cfg.IdentityEnumType
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
@@ -59,6 +64,12 @@ import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBin
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.NumericColumnConstraintsBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.StringColumnConstraintsBinder
+import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIdentityGenerator
+import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIncrementGenerator
+import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsNativeGenerator
+import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGeneratorEnum
+import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceStyleGenerator
+import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsTableGenerator
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
@@ -125,8 +136,15 @@ class GrailsDomainGenerator {
                 .annotateType(classAnnotations(entity) as AnnotationDescription[])
 
         HibernatePersistentProperty identity = (HibernatePersistentProperty) entity.identity
+        if (!(identity instanceof HibernateSimpleIdentityProperty)) {
+            throw new UnsupportedOperationException(
+                    "Entity [${entity.name}] has no simple identifier (a composite identifier, for example), " +
+                            'which the generator does not support yet')
+        }
         if (identity != null) {
-            builder = defineField(builder, identity, [AnnotationDescription.Builder.ofType(Id).build()])
+            List<AnnotationDescription> idAnnotations = [AnnotationDescription.Builder.ofType(Id).build()]
+            idAnnotations.addAll(idGeneratorAnnotations(idFacets(entity)))
+            builder = defineField(builder, identity, idAnnotations)
         }
         HibernatePersistentProperty version = entity.version
         if (version != null) {
@@ -284,6 +302,52 @@ class GrailsDomainGenerator {
     }
 
     /**
+     * Decides the identifier generation of a root entity the way the domain binder does: the strategy name is the
+     * one the binder asks the entity for, and the parameters are the ones it hands the generator. The generator
+     * class is the one {@code GrailsSequenceGeneratorEnum.getGenerator} instantiates for the strategy.
+     */
+    IdFacets idFacets(GrailsHibernatePersistentEntity entity) {
+        HibernatePersistentProperty identity = (HibernatePersistentProperty) entity.identity
+        GrailsSequenceGeneratorEnum strategy =
+                GrailsSequenceGeneratorEnum.fromName(identity.generatorName).orElse(GrailsSequenceGeneratorEnum.NATIVE)
+        // BasicValueCreator: the entity's simple identity, else one built from the identifier property's type params
+        HibernateSimpleIdentity mappedId = entity.hibernateIdentity instanceof HibernateSimpleIdentity ?
+                (HibernateSimpleIdentity) entity.hibernateIdentity : identity.buildPropertyIdentity().orElse(null)
+        Map<String, String> parameters = [:]
+        Properties properties = mappedId?.properties
+        if (properties != null) {
+            for (String key : new TreeSet<String>(properties.stringPropertyNames())) {
+                parameters[key] = properties.getProperty(key)
+            }
+        }
+        return new IdFacets(strategy, generatorClass(strategy), parameters)
+    }
+
+    /** Mirrors the {@code switch} in {@code GrailsSequenceGeneratorEnum.getGenerator}. */
+    private static Class<? extends Generator> generatorClass(GrailsSequenceGeneratorEnum strategy) {
+        switch (strategy) {
+            case GrailsSequenceGeneratorEnum.IDENTITY:
+                return GrailsIdentityGenerator
+            case GrailsSequenceGeneratorEnum.SEQUENCE:
+            case GrailsSequenceGeneratorEnum.SEQUENCE_IDENTITY:
+            case GrailsSequenceGeneratorEnum.HILO:
+                return GrailsSequenceStyleGenerator
+            case GrailsSequenceGeneratorEnum.INCREMENT:
+                return GrailsIncrementGenerator
+            case GrailsSequenceGeneratorEnum.UUID:
+            case GrailsSequenceGeneratorEnum.UUID2:
+                return HibernateUuidGenerator
+            case GrailsSequenceGeneratorEnum.ASSIGNED:
+                return Assigned
+            case GrailsSequenceGeneratorEnum.TABLE:
+            case GrailsSequenceGeneratorEnum.ENHANCED_TABLE:
+                return GrailsTableGenerator
+            default:
+                return GrailsNativeGenerator
+        }
+    }
+
+    /**
      * Decides the column facets for a supported property by running the domain binder's own rules on a scratch
      * {@link Column}, in the order the binder applies them.
      */
@@ -419,6 +483,28 @@ class GrailsDomainGenerator {
         }
         return builder.defineField(property.name, property.type, Visibility.PRIVATE)
                 .annotateField(annotations as AnnotationDescription[])
+    }
+
+    /**
+     * An assigned identifier is Hibernate's default for an {@code @Id} with no generator annotation, and the
+     * {@code uuid} strategies are Hibernate's own {@code UuidGenerator}, so those are stated with plain Hibernate
+     * annotations. Every other strategy is a GORM generator and is carried by {@link GrailsIdGenerator}.
+     */
+    private static List<AnnotationDescription> idGeneratorAnnotations(IdFacets facets) {
+        if (facets.generatorClass() == Assigned) {
+            return []
+        }
+        if (facets.generatorClass() == HibernateUuidGenerator) {
+            return [AnnotationDescription.Builder.ofType(UuidGenerator).build()]
+        }
+        List<AnnotationDescription> parameters = facets.parameters().collect { String name, String value ->
+            AnnotationDescription.Builder.ofType(Parameter).define('name', name).define('value', value).build()
+        }
+        return [AnnotationDescription.Builder.ofType(GrailsIdGenerator)
+                .define('strategy', facets.strategy().name)
+                .defineAnnotationArray('parameters', TypeDescription.ForLoadedType.of(Parameter),
+                        parameters as AnnotationDescription[])
+                .build()]
     }
 
     private static AnnotationDescription typeAnnotation(TypeFacets facets) {

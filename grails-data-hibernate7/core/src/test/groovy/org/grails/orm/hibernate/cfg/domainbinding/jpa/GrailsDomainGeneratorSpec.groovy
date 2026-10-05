@@ -18,6 +18,10 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.jpa
 
+import java.lang.annotation.ElementType
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
 import java.lang.reflect.Field
 
 import grails.gorm.annotation.Entity
@@ -34,10 +38,22 @@ import org.hibernate.annotations.ColumnDefault
 import org.hibernate.annotations.Comment
 import org.hibernate.annotations.DynamicUpdate
 import org.hibernate.annotations.Formula
+import org.hibernate.annotations.IdGeneratorType
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.annotations.Type
+import org.hibernate.annotations.UuidGenerator
 import org.hibernate.boot.Metadata
 import org.hibernate.boot.MetadataSources
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
+import org.hibernate.engine.spi.SessionFactoryImplementor
+import org.hibernate.generator.Assigned
+import org.hibernate.generator.Generator
+import org.hibernate.generator.GeneratorCreationContext
+import org.hibernate.id.enhanced.SequenceStyleGenerator
+import org.hibernate.id.enhanced.TableGenerator
+import org.hibernate.id.uuid.UuidGenerator as HibernateUuidGenerator
+import org.hibernate.mapping.PersistentClass
+import org.hibernate.mapping.GeneratorCreator
 import org.hibernate.boot.registry.BootstrapServiceRegistry
 import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder
 import org.hibernate.boot.registry.StandardServiceRegistry
@@ -53,7 +69,15 @@ import java.sql.ResultSet
 import java.sql.SQLException
 import java.sql.Types
 
+import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
 import org.grails.orm.hibernate.cfg.IdentityEnumType
+import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIdentityGenerator
+import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIncrementGenerator
+import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsNativeGenerator
+import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceStyleGenerator
+import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceWrapper
+import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsTableGenerator
+import org.grails.orm.hibernate.cfg.domainbinding.util.GeneratorCreationContextWrapper
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.NumericColumnConstraintsBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.StringColumnConstraintsBinder
@@ -72,7 +96,8 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
     Class<?> generated
 
     void setupSpec() {
-        manager.registerDomainClasses(GenBasic, GenVehicle, GenCar, GenWithEnum, GenWithOwner, GenDerived, GenTyped, GenUnsupportedType)
+        manager.registerDomainClasses(GenBasic, GenVehicle, GenCar, GenWithEnum, GenWithOwner, GenDerived, GenTyped, GenUnsupportedType, GenIdSequence, GenIdUuid, GenIdAssigned, GenIdTable,
+                GenIdIncrement, GenIdIdentity, GenIdNative)
     }
 
     void setup() {
@@ -285,16 +310,151 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         StandardServiceRegistryBuilder.destroy(registry)
     }
 
-    private Class<?> generate(Class<?> domainClass) {
-        def domainBinder = getGrailsDomainBinder()
-        def naming = domainBinder.getNamingStrategy()
-        def generator = new GrailsDomainGenerator(
+    void "the identifier generation is the strategy and the parameters the binder uses"() {
+        when:
+        IdFacets facets = idFacets(domainClass)
+
+        then:
+        facets.strategy().name == strategy
+        facets.generatorClass() == generatorClass
+        facets.parameters() == parameters
+
+        where:
+        domainClass   | strategy          | generatorClass            | parameters
+        GenBasic      | 'identity'        | GrailsIdentityGenerator   | [:]
+        GenIdNative   | 'native'          | GrailsNativeGenerator     | [:]
+        GenIdSequence | 'sequence'        | GrailsSequenceStyleGenerator | [increment_size: '10', sequence_name: 'gen_id_seq']
+        GenIdUuid     | 'uuid2'           | HibernateUuidGenerator            | [:]
+        GenIdAssigned | 'assigned'        | Assigned                  | [:]
+        GenIdTable    | 'table'           | GrailsTableGenerator      | [segment_value: 'gen_table', table_name: 'gen_ids']
+        GenIdIncrement | 'increment'      | GrailsIncrementGenerator  | [:]
+        GenIdIdentity | 'identity'        | GrailsIdentityGenerator   | [:]
+    }
+
+    void "a GORM generator is carried by the marker annotation with its parameters"() {
+        when:
+        Field id = generate(GenIdSequence).getDeclaredField('id')
+        GrailsIdGenerator marker = id.getAnnotation(GrailsIdGenerator)
+
+        then:
+        id.isAnnotationPresent(Id)
+        marker.strategy() == 'sequence'
+        marker.parameters().collectEntries { [(it.name()): it.value()] } == [increment_size: '10', sequence_name: 'gen_id_seq']
+        !id.isAnnotationPresent(UuidGenerator)
+    }
+
+    void "a strategy without parameters is carried by the marker with none"() {
+        expect:
+        field('id').getAnnotation(GrailsIdGenerator).strategy() == 'identity'
+        field('id').getAnnotation(GrailsIdGenerator).parameters().length == 0
+        generate(GenIdNative).getDeclaredField('id').getAnnotation(GrailsIdGenerator).strategy() == 'native'
+    }
+
+    void "a uuid identifier is Hibernate's own UuidGenerator, and an assigned one has no generator annotation"() {
+        when:
+        Field uuid = generate(GenIdUuid).getDeclaredField('id')
+        Field assigned = generate(GenIdAssigned).getDeclaredField('id')
+
+        then:
+        uuid.isAnnotationPresent(UuidGenerator)
+        !uuid.isAnnotationPresent(GrailsIdGenerator)
+        !assigned.isAnnotationPresent(UuidGenerator)
+        !assigned.isAnnotationPresent(GrailsIdGenerator)
+    }
+
+    void "a generated class gets the identifier generator the binder installs, for every strategy"() {
+        given:
+        Class<?> generatedClass = generate(domainClass)
+        Generator oracle = getSessionFactory().mappingMetamodel.getEntityDescriptor(domainClass.name).generator
+
+        when:
+        Generator bound = boundGenerator(domainClass, generatedClass)
+
+        then:
+        bound.getClass() == oracle.getClass()
+
+        and:
+        !(oracle instanceof SequenceStyleGenerator) ||
+                (bound.databaseStructure.physicalName == oracle.databaseStructure.physicalName &&
+                        bound.optimizer.incrementSize == oracle.optimizer.incrementSize &&
+                        bound.optimizer.class == oracle.optimizer.class)
+        !(oracle instanceof TableGenerator) ||
+                (bound.tableName == oracle.tableName && bound.segmentValue == oracle.segmentValue &&
+                        bound.incrementSize == oracle.incrementSize)
+
+        where:
+        domainClass << [GenBasic, GenIdNative, GenIdSequence, GenIdUuid, GenIdAssigned, GenIdTable, GenIdIncrement, GenIdIdentity]
+    }
+
+    void "a Hibernate IdGeneratorType annotation cannot name GrailsNativeGenerator, which is why a marker carries GORM generators"() {
+        given:
+        StandardServiceRegistry registry = new StandardServiceRegistryBuilder()
+                .applySetting('hibernate.dialect', H2Dialect.name)
+                .applySetting('hibernate.connection.url', 'jdbc:h2:mem:generator-probe;DB_CLOSE_DELAY=-1')
+                .build()
+
+        when:
+        new MetadataSources(registry).addAnnotatedClass(GenNativeProbeEntity).buildMetadata().buildSessionFactory().close()
+
+        then: "GrailsNativeGenerator inherits AnnotationBasedGenerator<NativeGenerator>, which accepts only Hibernate's own annotation"
+        Exception e = thrown()
+        e.message.contains('is not assignable to')
+
+        cleanup:
+        StandardServiceRegistryBuilder.destroy(registry)
+    }
+
+    private IdFacets idFacets(Class<?> domainClass) {
+        return newGenerator().idFacets(getPersistentEntity(domainClass))
+    }
+
+    /**
+     * Binds the generated class with Hibernate's own annotation binder, then installs on its identifier the GORM
+     * generator the marker names, built by the same code the domain binder uses.
+     */
+    private Generator boundGenerator(Class<?> domainClass, Class<?> generatedClass) {
+        BootstrapServiceRegistry bootstrap = new BootstrapServiceRegistryBuilder().applyClassLoader(generatedClass.classLoader).build()
+        StandardServiceRegistry registry = new StandardServiceRegistryBuilder(bootstrap)
+                .applySetting('hibernate.dialect', H2Dialect.name)
+                .applySetting('hibernate.connection.url', 'jdbc:h2:mem:generator-id;DB_CLOSE_DELAY=-1')
+                .build()
+        SessionFactoryImplementor sessionFactory = null
+        try {
+            Metadata metadata = new MetadataSources(registry).addAnnotatedClass(generatedClass).buildMetadata()
+            PersistentClass persistentClass = metadata.entityBindings.first()
+            GrailsIdGenerator marker = generatedClass.getDeclaredField(persistentClass.identifierProperty.name).getAnnotation(GrailsIdGenerator)
+            if (marker != null) {
+                GrailsHibernatePersistentEntity entity = getPersistentEntity(domainClass)
+                BasicValue identifier = (BasicValue) persistentClass.identifier
+                JdbcEnvironment jdbcEnvironment = getSessionFactory().jdbcServices.jdbcEnvironment
+                def naming = getGrailsDomainBinder().getNamingStrategy()
+                identifier.setCustomIdGeneratorCreator({ GeneratorCreationContext context ->
+                    new GrailsSequenceWrapper().getGenerator(
+                            marker.strategy(), new GeneratorCreationContextWrapper(context, identifier),
+                            (HibernateSimpleIdentity) entity.hibernateIdentity, entity, jdbcEnvironment, naming)
+                } as GeneratorCreator)
+            }
+            sessionFactory = (SessionFactoryImplementor) metadata.buildSessionFactory()
+            return sessionFactory.mappingMetamodel.getEntityDescriptor(persistentClass.entityName).generator
+        } finally {
+            sessionFactory?.close()
+            StandardServiceRegistryBuilder.destroy(registry)
+        }
+    }
+
+    private GrailsDomainGenerator newGenerator() {
+        def naming = getGrailsDomainBinder().getNamingStrategy()
+        return new GrailsDomainGenerator(
                 naming,
                 new ColumnNameForPropertyAndPathFetcher(naming, new DefaultColumnNameFetcher(naming), new BackticksRemover()),
                 new ColumnConfigToColumnBinder(),
                 new StringColumnConstraintsBinder(),
                 new NumericColumnConstraintsBinder(new H2Dialect()),
                 getSessionFactory().typeConfiguration)
+    }
+
+    private Class<?> generate(Class<?> domainClass) {
+        GrailsDomainGenerator generator = newGenerator()
         GrailsHibernatePersistentEntity entity = getPersistentEntity(domainClass)
         return generator.generate(entity, getClass().classLoader)
     }
@@ -526,4 +686,90 @@ class GenKindType implements UserType<GenKind>, ParameterizedType {
     GenKind assemble(Serializable cached, Object owner) {
         return (GenKind) cached
     }
+}
+
+@Entity
+class GenIdSequence {
+
+    String name
+
+    static mapping = {
+        id generator: 'sequence', params: [sequence_name: 'gen_id_seq', increment_size: '10']
+    }
+}
+
+@Entity
+class GenIdUuid {
+
+    String id
+    String name
+
+    static mapping = {
+        id generator: 'uuid2'
+    }
+}
+
+@Entity
+class GenIdAssigned {
+
+    String id
+    String name
+
+    static mapping = {
+        id generator: 'assigned'
+    }
+}
+
+@Entity
+class GenIdTable {
+
+    String name
+
+    static mapping = {
+        id generator: 'table', params: [table_name: 'gen_ids', segment_value: 'gen_table']
+    }
+}
+
+@Entity
+class GenIdIncrement {
+
+    String name
+
+    static mapping = {
+        id generator: 'increment'
+    }
+}
+
+@Entity
+class GenIdIdentity {
+
+    String name
+
+    static mapping = {
+        id generator: 'identity'
+    }
+}
+
+@Entity
+class GenIdNative {
+
+    String name
+
+    static mapping = {
+        id generator: 'native'
+    }
+}
+
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.FIELD)
+@IdGeneratorType(GrailsNativeGenerator)
+@interface GenNativeProbe {
+}
+
+@jakarta.persistence.Entity
+class GenNativeProbeEntity {
+
+    @Id
+    @GenNativeProbe
+    Long id
 }

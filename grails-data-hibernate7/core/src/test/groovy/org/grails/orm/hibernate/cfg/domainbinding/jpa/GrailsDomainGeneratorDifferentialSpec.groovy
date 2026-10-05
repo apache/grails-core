@@ -21,6 +21,11 @@ package org.grails.orm.hibernate.cfg.domainbinding.jpa
 import grails.gorm.annotation.Entity
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.hibernate.dialect.H2Dialect
+import org.hibernate.engine.spi.SessionFactoryImplementor
+import org.hibernate.generator.Generator
+import org.hibernate.id.enhanced.OptimizerFactory
+import org.hibernate.id.enhanced.SequenceStyleGenerator
+import org.hibernate.id.enhanced.TableGenerator
 import org.hibernate.mapping.BasicValue
 import org.hibernate.mapping.Column
 import org.hibernate.mapping.Formula
@@ -81,6 +86,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         int entities = 0
         int derived = 0
         Map<String, Integer> explicitTypes = [:].withDefault { 0 }
+        Map<String, Integer> strategies = [:].withDefault { 0 }
 
         when:
         for (List<Class<?>> group : groups) {
@@ -98,6 +104,12 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                     List<HibernatePersistentProperty> properties = []
                     if (entity.isRoot()) {
                         mismatches.addAll(compareEntity(entity, generator.entityFacets(entity)))
+                        if (entity.identity instanceof HibernateSimpleIdentityProperty) {
+                            mismatches.addAll(compareIdentifierGenerator(
+                                    entity, generator.idFacets(entity), (SessionFactoryImplementor) datastore.sessionFactory, strategies))
+                        } else {
+                            skipped['entity without a simple identifier']++
+                        }
                         if (entity.version != null) {
                             properties << entity.version
                         }
@@ -148,6 +160,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 "${unbootable.size()} groups could not boot alone; ${entities} entities, ${compared} properties compared " +
                 "(${derived} derived)\n"
         report << "explicit types compared: ${explicitTypes}\n"
+        report << "id generators compared by strategy: ${strategies}\n"
         report << "unsupported by kind: ${skipped}\n"
         report << "mismatches by facet: ${mismatches.groupBy { (it =~ /\s(\w+): generator=/)[0][1] }.collectEntries { k, v -> [k, v.size()] }}\n"
         unbootable.each { report << "unbootable: ${it.key.take(120)} -> ${it.value.take(200)}\n" }
@@ -185,6 +198,48 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         return pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
             "${entity.name}.${property.name} ${facet}: generator=${values[0]} binder=${values[1]}".toString()
         }
+    }
+
+    /**
+     * The generator class the binder installed on the identifier must be the one the generator names for the
+     * strategy, and the parameters the generator passes on must have reached it.
+     */
+    private List<String> compareIdentifierGenerator(
+            GrailsHibernatePersistentEntity entity, IdFacets facets, SessionFactoryImplementor sessionFactory,
+            Map<String, Integer> strategies) {
+        Generator bound = sessionFactory.mappingMetamodel.getEntityDescriptor(entity.name).generator
+        strategies["${facets.strategy().name}".toString()]++
+        List<String> found = []
+        String where = "${entity.name} identifier"
+        if (bound.getClass() != facets.generatorClass()) {
+            found << "${where} generatorClass: generator=${facets.generatorClass().name} binder=${bound.getClass().name}".toString()
+            return found
+        }
+        Map<String, String> parameters = facets.parameters()
+        if (bound instanceof SequenceStyleGenerator) {
+            String sequence = parameters['sequence_name'] ?: parameters['sequence']
+            if (sequence != null && !bound.databaseStructure.physicalName.objectName.text.equalsIgnoreCase(sequence)) {
+                found << "${where} sequenceName: generator=${sequence} binder=${bound.databaseStructure.physicalName.objectName.text}".toString()
+            }
+            if (parameters['increment_size'] != null && bound.optimizer.incrementSize != parameters['increment_size'].toInteger()) {
+                found << "${where} incrementSize: generator=${parameters['increment_size']} binder=${bound.optimizer.incrementSize}".toString()
+            }
+            if (parameters['optimizer'] != null && bound.optimizer.class !=
+                    OptimizerFactory.StandardOptimizerDescriptor.fromExternalName(parameters['optimizer']).optimizerClass) {
+                found << "${where} optimizer: generator=${parameters['optimizer']} binder=${bound.optimizer.class.name}".toString()
+            }
+        } else if (bound instanceof TableGenerator) {
+            if (parameters['table_name'] != null && !bound.tableName.toLowerCase().endsWith(parameters['table_name'].toLowerCase())) {
+                found << "${where} tableName: generator=${parameters['table_name']} binder=${bound.tableName}".toString()
+            }
+            if (parameters['segment_value'] != null && bound.segmentValue != parameters['segment_value']) {
+                found << "${where} segmentValue: generator=${parameters['segment_value']} binder=${bound.segmentValue}".toString()
+            }
+            if (parameters['increment_size'] != null && bound.incrementSize != parameters['increment_size'].toInteger()) {
+                found << "${where} incrementSize: generator=${parameters['increment_size']} binder=${bound.incrementSize}".toString()
+            }
+        }
+        return found
     }
 
     /** A derived property is a Formula with the same text and no column. */
