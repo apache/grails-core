@@ -318,9 +318,6 @@ class GrailsDomainGenerator {
                     "Entity [${entity.name}] uses ${strategy} but the root of its hierarchy uses ${hierarchyStrategy}: " +
                             'a hierarchy that mixes inheritance strategies is not supported')
         }
-        if (strategy == InheritanceType.TABLE_PER_CLASS) {
-            throw new UnsupportedOperationException("Inheritance strategy ${strategy} of [${entity.name}] is not supported yet")
-        }
         boolean singleTable = strategy == InheritanceType.SINGLE_TABLE
         String discriminatorValue = null
         if (singleTable) {
