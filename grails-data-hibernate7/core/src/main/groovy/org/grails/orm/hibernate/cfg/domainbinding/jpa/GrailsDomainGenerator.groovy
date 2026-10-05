@@ -18,6 +18,9 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.jpa
 
+import java.lang.annotation.Annotation
+import java.lang.reflect.Method
+
 import groovy.transform.CompileStatic
 import jakarta.persistence.Column as JpaColumn
 import jakarta.persistence.Entity
@@ -38,7 +41,11 @@ import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBin
 import org.grails.orm.hibernate.cfg.domainbinding.binder.NumericColumnConstraintsBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.StringColumnConstraintsBinder
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleIdentityProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateVersionProperty
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
 
 /**
@@ -86,6 +93,10 @@ class GrailsDomainGenerator {
      * @return a new class whose annotations describe the entity
      */
     Class<?> generate(GrailsHibernatePersistentEntity entity, ClassLoader parent) {
+        if (!entity.isRoot()) {
+            throw new UnsupportedOperationException(
+                    "Entity [${entity.name}] is part of an inheritance hierarchy, which the generator does not support yet")
+        }
         DynamicType.Builder<Object> builder = new ByteBuddy()
                 .subclass(Object)
                 .name(generatedClassName(entity))
@@ -96,6 +107,11 @@ class GrailsDomainGenerator {
             builder = defineField(builder, identity, [AnnotationDescription.Builder.ofType(Id).build()])
         }
         for (HibernatePersistentProperty property : entity.persistentPropertiesToBind) {
+            if (!supports(property)) {
+                throw new UnsupportedOperationException(
+                        "Property [${property.name}] of [${entity.name}] is a ${property.getClass().simpleName}, " +
+                                'which the generator does not support yet')
+            }
             builder = defineField(builder, property, [])
         }
         return builder.make().load(parent, ClassLoadingStrategy.Default.WRAPPER).loaded
@@ -129,17 +145,37 @@ class GrailsDomainGenerator {
             DynamicType.Builder<Object> builder, HibernatePersistentProperty property, List<AnnotationDescription> extra) {
         List<AnnotationDescription> annotations = new ArrayList<>(extra)
         annotations << columnAnnotation(property)
+        for (Annotation constraint : validationAnnotations(property)) {
+            annotations << AnnotationDescription.ForLoadedAnnotation.of(constraint)
+        }
         return builder.defineField(property.name, property.type, Visibility.PRIVATE).annotateField(annotations as AnnotationDescription[])
     }
 
-    private AnnotationDescription columnAnnotation(HibernatePersistentProperty property) {
+    /**
+     * @return whether the generator can describe the property today: a plain single-column basic property, or the
+     *     simple identifier. Enums, versions, custom types, derived properties, multi-column properties and every
+     *     association are not supported yet.
+     */
+    boolean supports(HibernatePersistentProperty property) {
+        if (property instanceof HibernateSimpleIdentityProperty) {
+            return property.hibernateOwner.isRoot()
+        }
+        if (!(property instanceof HibernateSimpleProperty) ||
+                property instanceof HibernateEnumProperty ||
+                property instanceof HibernateVersionProperty) {
+            return false
+        }
+        PropertyConfig mappedForm = property.hibernateMappedForm
+        return !mappedForm.derived && (mappedForm.columns == null || mappedForm.columns.size() <= 1)
+    }
+
+    /**
+     * Decides the column facets for a supported property by running the domain binder's own constraint rules on a
+     * scratch {@link Column}, in the order the binder applies them.
+     */
+    ColumnFacets columnFacets(HibernatePersistentProperty property) {
         PropertyConfig mappedForm = property.hibernateMappedForm
         List<ColumnConfig> columns = mappedForm.columns
-        if (columns != null && columns.size() > 1) {
-            throw new UnsupportedOperationException(
-                    "Property [${property.name}] of [${property.hibernateOwner.name}] maps ${columns.size()} columns, " +
-                            'which the generator does not support yet')
-        }
         ColumnConfig columnConfig = columns == null || columns.isEmpty() ? null : columns[0]
 
         Column column = new Column()
@@ -151,29 +187,69 @@ class GrailsDomainGenerator {
         } else if (type != null && Number.isAssignableFrom(type)) {
             numericConstraints.bindNumericColumnConstraints(column, columnConfig, mappedForm, type)
         }
+        return new ColumnFacets(
+                name,
+                isNullable(property),
+                mappedForm.isUnique() && !mappedForm.isUniqueWithinGroup(),
+                mappedForm.insertable,
+                mappedForm.updatable,
+                column.length?.intValue(),
+                column.precision?.intValue(),
+                column.scale?.intValue(),
+                column.sqlType)
+    }
 
+    private AnnotationDescription columnAnnotation(HibernatePersistentProperty property) {
+        ColumnFacets facets = columnFacets(property)
         AnnotationDescription.Builder annotation = AnnotationDescription.Builder.ofType(JpaColumn)
-                .define('name', name)
-                .define('nullable', isNullable(property))
-                .define('unique', mappedForm.isUnique() && !mappedForm.isUniqueWithinGroup())
-                .define('insertable', mappedForm.insertable)
-                .define('updatable', mappedForm.updatable)
-        if (column.length != null) {
-            annotation = annotation.define('length', column.length.intValue())
+                .define('name', facets.name())
+                .define('nullable', facets.nullable())
+                .define('unique', facets.unique())
+                .define('insertable', facets.insertable())
+                .define('updatable', facets.updatable())
+        if (facets.length() != null) {
+            annotation = annotation.define('length', facets.length())
         }
-        if (column.precision != null) {
-            annotation = annotation.define('precision', column.precision.intValue())
+        if (facets.precision() != null) {
+            annotation = annotation.define('precision', facets.precision())
         }
-        if (column.scale != null) {
-            annotation = annotation.define('scale', column.scale.intValue())
+        if (facets.scale() != null) {
+            annotation = annotation.define('scale', facets.scale())
         }
-        if (column.sqlType) {
-            annotation = annotation.define('columnDefinition', column.sqlType)
+        if (facets.sqlType()) {
+            annotation = annotation.define('columnDefinition', facets.sqlType())
         }
         return annotation.build()
     }
 
+    /**
+     * The Bean Validation constraints declared on the property. Hibernate turns them into DDL (not null, precision,
+     * scale, length) after binding, so they are copied onto the generated field for Hibernate to apply itself.
+     */
+    List<Annotation> validationAnnotations(HibernatePersistentProperty property) {
+        Class<?> owner = property.hibernateOwner.javaClass
+        List<Annotation> found = []
+        try {
+            found.addAll(owner.getDeclaredField(property.name).declaredAnnotations as List<Annotation>)
+        } catch (NoSuchFieldException ignored) {
+            // the property has no backing field of its own
+        }
+        String accessor = 'get' + property.name.capitalize()
+        for (Method method : owner.declaredMethods) {
+            if (method.name == accessor && method.parameterCount == 0) {
+                found.addAll(method.declaredAnnotations as List<Annotation>)
+            }
+        }
+        return found.findAll { Annotation a ->
+            String type = a.annotationType().name
+            type.startsWith('jakarta.validation.constraints.') || type.startsWith('org.hibernate.validator.constraints.')
+        }
+    }
+
     private static boolean isNullable(HibernatePersistentProperty property) {
+        if (property instanceof HibernateSimpleIdentityProperty) {
+            return false
+        }
         if (!property.hibernateOwner.isRoot()) {
             Mapping mapping = property.hibernateOwner.hibernateMappedForm
             return mapping != null && mapping.tablePerHierarchy ? true : property.nullable

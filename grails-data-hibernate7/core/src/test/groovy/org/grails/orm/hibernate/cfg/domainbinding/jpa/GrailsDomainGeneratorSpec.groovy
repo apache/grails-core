@@ -25,6 +25,7 @@ import grails.gorm.tests.HibernateGormDatastoreSpec
 import jakarta.persistence.Column
 import jakarta.persistence.Id
 import jakarta.persistence.Table
+import jakarta.validation.constraints.Size
 import org.hibernate.dialect.H2Dialect
 
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder
@@ -45,7 +46,7 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
     Class<?> generated
 
     void setupSpec() {
-        manager.registerDomainClasses(GenBasic)
+        manager.registerDomainClasses(GenBasic, GenVehicle, GenCar, GenWithEnum)
     }
 
     void setup() {
@@ -67,7 +68,7 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
 
     void "the generated fields are exactly the persistent properties"() {
         expect:
-        generated.declaredFields*.name.toSet() == ['id', 'name', 'code', 'age', 'price', 'notes'].toSet()
+        generated.declaredFields*.name.toSet() == ['id', 'name', 'code', 'age', 'price', 'notes', 'tag'].toSet()
     }
 
     void "a field keeps the Java type of its property"() {
@@ -100,6 +101,35 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         'price'  | 'price'  | true     | false  | 255    | 2
     }
 
+    void "the identifier column is never nullable"() {
+        expect:
+        !field('id').getAnnotation(Column).nullable()
+    }
+
+    void "Bean Validation constraints are copied so Hibernate applies their DDL"() {
+        expect:
+        field('tag').getAnnotation(Size).max() == 20
+    }
+
+    void "an entity in an inheritance hierarchy is rejected until inheritance is supported"() {
+        when:
+        generate(GenCar)
+
+        then:
+        UnsupportedOperationException e = thrown()
+        e.message.contains('inheritance hierarchy')
+    }
+
+    void "a property the generator does not support is rejected by name"() {
+        when:
+        generate(GenWithEnum)
+
+        then:
+        UnsupportedOperationException e = thrown()
+        e.message.contains('kind')
+        e.message.contains('HibernateSimpleEnumProperty')
+    }
+
     private Class<?> generate(Class<?> domainClass) {
         def domainBinder = getGrailsDomainBinder()
         def naming = domainBinder.getNamingStrategy()
@@ -127,6 +157,9 @@ class GenBasic {
     BigDecimal price
     String notes
 
+    @Size(max = 20)
+    String tag
+
     static constraints = {
         name maxSize: 50, unique: true, nullable: false
         age nullable: true
@@ -137,4 +170,26 @@ class GenBasic {
     static mapping = {
         code column: 'code_x'
     }
+}
+
+@Entity
+class GenVehicle {
+
+    String name
+}
+
+@Entity
+class GenCar extends GenVehicle {
+
+    Integer doors
+}
+
+enum GenKind {
+    SMALL, LARGE
+}
+
+@Entity
+class GenWithEnum {
+
+    GenKind kind
 }
