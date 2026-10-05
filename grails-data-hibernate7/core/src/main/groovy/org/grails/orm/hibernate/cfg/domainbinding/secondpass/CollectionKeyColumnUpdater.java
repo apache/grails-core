@@ -22,6 +22,7 @@ import java.util.Objects;
 
 import org.hibernate.mapping.DependantValue;
 
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyCollectionProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 
 /** Forces columns to be nullable and checks if the key is updatable. */
@@ -46,7 +47,9 @@ public class CollectionKeyColumnUpdater {
                 .filter(p -> !p.isBidirectional())
                 .count();
 
-        key.setUpdateable(unidirectionalCount <= 1);
+        // The key of a collection of basic values lives in a table of its own and Hibernate writes no rows for a
+        // collection whose key is not updatable, so only the key of an entity collection is ever made non-updatable.
+        key.setUpdateable(property instanceof HibernateToManyCollectionProperty || unidirectionalCount <= 1);
     }
 
 }
