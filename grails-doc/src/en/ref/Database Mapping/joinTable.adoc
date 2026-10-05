@@ -132,3 +132,5 @@ Arguments:
 * `column` (optional) - The inverse column
 
 GORM has various strategies for mapping association types. Some of them, such as basic collection types and many-to-many associations, use a join table. You can customize how this join table is created using the `joinTable` argument.
+
+For a bidirectional many-to-many, both sides share one join table that the owning side writes. When only the owning side configures `joinTable`, the inverse side uses the same table, schema and catalog; its `key` is the owner's `column` and its `column` is the owner's `key`. An inverse side that configures its own `joinTable` name keeps its own configuration.
