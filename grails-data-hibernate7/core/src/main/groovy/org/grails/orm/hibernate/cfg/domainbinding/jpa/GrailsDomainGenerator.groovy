@@ -24,18 +24,24 @@ import java.lang.reflect.Method
 import groovy.transform.CompileStatic
 import jakarta.persistence.AttributeOverride
 import jakarta.persistence.AttributeOverrides
+import jakarta.persistence.CollectionTable
 import jakarta.persistence.Column as JpaColumn
 import jakarta.persistence.DiscriminatorColumn
 import jakarta.persistence.DiscriminatorType
 import jakarta.persistence.DiscriminatorValue
+import jakarta.persistence.ElementCollection
 import jakarta.persistence.Embeddable
 import jakarta.persistence.Embedded
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
+import jakarta.persistence.FetchType
 import jakarta.persistence.Id
 import jakarta.persistence.Inheritance
 import jakarta.persistence.InheritanceType
+import jakarta.persistence.JoinColumn
+import jakarta.persistence.MapKeyColumn
+import jakarta.persistence.OrderColumn
 import jakarta.persistence.PrimaryKeyJoinColumn
 import jakarta.persistence.Table
 import jakarta.persistence.Version
@@ -46,8 +52,11 @@ import net.bytebuddy.description.modifier.Visibility
 import net.bytebuddy.description.type.TypeDescription
 import net.bytebuddy.dynamic.DynamicType
 import net.bytebuddy.dynamic.loading.ClassLoadingStrategy
+import org.hibernate.FetchMode
 import org.hibernate.Length
 import org.hibernate.annotations.BatchSize
+import org.hibernate.annotations.Cache
+import org.hibernate.annotations.CacheConcurrencyStrategy
 import org.hibernate.annotations.ColumnDefault
 import org.hibernate.annotations.ColumnTransformer
 import org.hibernate.annotations.Comment
@@ -55,6 +64,8 @@ import org.hibernate.annotations.DiscriminatorFormula
 import org.hibernate.annotations.DiscriminatorOptions
 import org.hibernate.annotations.DynamicInsert
 import org.hibernate.annotations.DynamicUpdate
+import org.hibernate.annotations.Fetch
+import org.hibernate.annotations.FetchMode as AnnotationFetchMode
 import org.hibernate.annotations.Formula
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.annotations.Parameter
@@ -72,6 +83,7 @@ import org.grails.orm.hibernate.cfg.ColumnConfig
 import org.grails.orm.hibernate.cfg.DiscriminatorConfig
 import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
 import org.grails.orm.hibernate.cfg.IdentityEnumType
+import org.grails.orm.hibernate.cfg.JoinTable
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.PropertyConfig
@@ -86,13 +98,17 @@ import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGenera
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceStyleGenerator
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsTableGenerator
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedCollectionProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleIdentityProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsEnumType
+import org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator
 
 /**
  * Describes a GORM domain class to Hibernate as an annotated JPA entity.
@@ -120,6 +136,7 @@ class GrailsDomainGenerator {
     private final StringColumnConstraintsBinder stringConstraints
     private final NumericColumnConstraintsBinder numericConstraints
     private final TypeConfiguration typeConfiguration
+    private final TableForManyCalculator tableForMany
 
     GrailsDomainGenerator(
             PersistentEntityNamingStrategy namingStrategy,
@@ -134,6 +151,8 @@ class GrailsDomainGenerator {
         this.stringConstraints = stringConstraints
         this.numericConstraints = numericConstraints
         this.typeConfiguration = typeConfiguration
+        // the table name rules never touch the metadata collector; only the schema and catalog defaults do, and those are mirrored here
+        this.tableForMany = new TableForManyCalculator(namingStrategy, null)
     }
 
     /**
@@ -280,6 +299,18 @@ class GrailsDomainGenerator {
                 return "Embedded property [${property.name}] of [${entity.name}]: ${problem}"
             }
         }
+        if (property instanceof HibernateEmbeddedCollectionProperty) {
+            return "Collection property [${property.name}] of [${entity.name}]: a collection of embedded objects, which the binder " +
+                    'cannot bind: without a join table key it creates a key with no column and Hibernate fails to boot ' +
+                    "('Foreign key must have the same number of columns as the referenced primary key'), and with one the boot " +
+                    'overflows the stack while Hibernate builds the collection tables'
+        }
+        if (property instanceof HibernateBasicProperty) {
+            String problem = collectionProblem((HibernateBasicProperty) property)
+            if (problem != null) {
+                return "Collection property [${property.name}] of [${entity.name}]: ${problem}"
+            }
+        }
         if (property instanceof HibernateSimpleProperty && !decideType(property).supported) {
             return typeNotSupported(property, decideType(property).name)
         }
@@ -421,7 +452,7 @@ class GrailsDomainGenerator {
     /**
      * @return whether the generator can describe the property today: a plain single-column basic property, a
      *     derived (formula) property, the version, an enum, an embedded object whose own properties are all
-     *     supported, or the simple identifier. Custom types, multi-column properties and every association are not
+     *     supported, a collection of basic values or enums, or the simple identifier. Custom types, multi-column properties and every association are not
      *     supported yet.
      */
     boolean supports(HibernatePersistentProperty property) {
@@ -430,6 +461,9 @@ class GrailsDomainGenerator {
         }
         if (property instanceof HibernateEmbeddedProperty) {
             return embeddedProblem((HibernateEmbeddedProperty) property, []) == null
+        }
+        if (property instanceof HibernateBasicProperty) {
+            return collectionProblem((HibernateBasicProperty) property) == null
         }
         if (!(property instanceof HibernateSimpleProperty)) {
             return false
@@ -478,7 +512,10 @@ class GrailsDomainGenerator {
 
     private TypeDecision decideType(HibernatePersistentProperty property) {
         boolean isEnum = property instanceof HibernateEnumProperty
-        Class<?> type = isEnum ? ((HibernateEnumProperty) property).enumType : property.type
+        // the type of a collection property is the collection's; the binder types the element with the component type
+        boolean element = property instanceof HibernateBasicProperty
+        Class<?> type = isEnum ? ((HibernateEnumProperty) property).enumType :
+                (element ? ((HibernateBasicProperty) property).componentType : property.type)
         String name = property.getTypeName(type)
         // a non-enum property is bound with its own class name when nothing says otherwise
         boolean explicit = name != null && (isEnum || type == null || name != type.name)
@@ -486,7 +523,8 @@ class GrailsDomainGenerator {
         if (isEnum) {
             // EnumTypeBinder replaces the configured type parameters with the enum class
             parameters[GrailsDomainBinder.ENUM_CLASS_PROP] = type.name
-        } else {
+        } else if (!element) {
+            // the binder gives a collection element its type name only, never the type parameters
             Properties typeParams = property.hibernateMappedForm.typeParams
             if (typeParams != null) {
                 for (String key : new TreeSet<String>(typeParams.stringPropertyNames())) {
@@ -577,10 +615,182 @@ class GrailsDomainGenerator {
     }
 
     /**
+     * @return why the generator cannot describe the collection of basic values, or {@code null} when it can
+     */
+    private String collectionProblem(HibernateBasicProperty property) {
+        PropertyConfig mapped = property.hibernateMappedForm
+        CollectionKind kind = CollectionKind.of(property.type)
+        if (property.type == SortedSet) {
+            return 'a SortedSet: the binder names java.util.SortedSet as the collection\'s custom type, which Hibernate rejects when it boots'
+        }
+        if (kind == null) {
+            return "the declared type [${property.type?.name}] is not one of Set, List, Collection or Map, " +
+                    'the only ones the binder creates a collection for'
+        }
+        if (mapped.type != null) {
+            return 'a type is mapped on the collection property itself, which the binder applies to the collection and its element alike'
+        }
+        Class<?> elementType = property.componentType
+        if (elementType == null || elementType == Object) {
+            return 'the element type is not known'
+        }
+        if (mapped.lazy == Boolean.TRUE) {
+            return 'an explicit lazy: true makes the binder bind an extra-lazy collection, which Hibernate 7 annotations cannot state'
+        }
+        if (mapped.joinTable.keys != null && mapped.joinTable.keys.size() > 1) {
+            return 'the join table has a composite key'
+        }
+        boolean isEnum = property instanceof HibernateEnumProperty
+        if (isEnum && kind == CollectionKind.MAP) {
+            return 'a map of enums: the binder types the element from the map class (java.util.Map, JAVA_OBJECT) and the schema export fails'
+        }
+        TypeDecision type = decideType(property)
+        if (!type.supported) {
+            return "the element type [${type.name}] is not a UserType or a registered type for the element class"
+        }
+        if (kind == CollectionKind.MAP && type.facets != null) {
+            return 'a mapped element type on a map'
+        }
+        if (kind == CollectionKind.LIST && property.getIndexColumnType('integer') != 'integer') {
+            return "the index column type [${property.getIndexColumnType('integer')}] is not integer"
+        }
+        if (kind == CollectionKind.MAP && property.getIndexColumnType('string') != 'string') {
+            return "the map key type [${property.getIndexColumnType('string')}] is not string"
+        }
+        ColumnFacets key = collectionKeyFacets(property)
+        if (key.length() != null || key.precision() != null || key.scale() != null || key.defaultValue() != null ||
+                key.read() != null || key.write() != null || key.comment() != null) {
+            return 'the column config of the collection property sets a length, a precision, a scale, a default, a read or ' +
+                    'write expression or a comment, which a join column cannot state'
+        }
+        return null
+    }
+
+    /**
+     * Decides how the binder binds a collection of basic values or enums: its table, the key column pointing at the
+     * owner, the element column, the index (list) or key (map) column, and the fetching.
+     *
+     * @throws UnsupportedOperationException when something about the collection cannot be stated yet
+     */
+    CollectionFacets collectionFacets(HibernateBasicProperty property) {
+        String problem = collectionProblem(property)
+        if (problem != null) {
+            throw new UnsupportedOperationException(unsupportedReason(property.hibernateOwner, property))
+        }
+        PropertyConfig mapped = property.hibernateMappedForm
+        CollectionKind kind = CollectionKind.of(property.type)
+        JoinTable joinTable = mapped.joinTable
+        // TableForManyCalculator: the join table's own schema, else the owner's table schema; the catalog is never the owner's
+        String schema = joinTable?.schema != null ? joinTable.schema : entityFacets(property.hibernateOwner).schema()
+        return new CollectionFacets(
+                kind,
+                tableForMany.getTableName(property),
+                schema,
+                joinTable?.catalog,
+                collectionKeyFacets(property),
+                collectionElementFacets(property, kind),
+                collectionIndexFacets(property, kind),
+                property.isLazy(),
+                FetchMode.JOIN == mapped.fetchMode ? FetchMode.JOIN : FetchMode.SELECT,
+                Math.max(property.batchSize, 0),
+                property.cacheUsage)
+    }
+
+    /**
+     * Mirrors {@code CollectionKeyBinder}: a single join table key is a plain column named by the key; otherwise the key
+     * is bound like the property's own column (name from the column config or the naming strategy, the column config's
+     * facets, uniqueness). It is nullable, as {@code CollectionKeyColumnUpdater} makes it, and always updatable.
+     *
+     * <p>That updater also makes the key NOT updatable when the owner has more than one unidirectional to-many property,
+     * which is a defect rather than a rule to copy: Hibernate's collection persister disables inserting and deleting the
+     * rows of a collection whose key is not updatable, so such an owner silently loses the elements of all its
+     * collections (probed: two collections on one owner saved and reloaded empty, one collection persists). Hibernate's
+     * annotation binder cannot state it either, a join column must be insertable and updatable alike.</p>
+     */
+    private ColumnFacets collectionKeyFacets(HibernateBasicProperty property) {
+        PropertyConfig mapped = property.hibernateMappedForm
+        boolean updatable = true
+        if (mapped.hasJoinKeyMapping()) {
+            return new ColumnFacets(
+                    mapped.joinTable.keys.get(0).name, true, false, true, updatable, null, null, null, null, null, null, null, null)
+        }
+        ColumnConfig columnConfig = firstColumnConfig(mapped)
+        Column column = new Column()
+        columnConfigBinder.bindColumnConfigToColumn(column, columnConfig, mapped)
+        if (columnConfig != null) {
+            column.comment = columnConfig.comment
+            column.defaultValue = columnConfig.defaultValue
+            column.customRead = columnConfig.read
+            column.customWrite = columnConfig.write
+        }
+        return new ColumnFacets(
+                columnNames.getColumnNameForPropertyAndPath(property, '', columnConfig),
+                true,
+                mapped.isUnique() && !mapped.isUniqueWithinGroup(),
+                true,
+                updatable,
+                column.length?.intValue(),
+                column.precision?.intValue(),
+                column.scale?.intValue(),
+                column.sqlType,
+                column.defaultValue,
+                column.customRead,
+                column.customWrite,
+                column.comment)
+    }
+
+    /**
+     * Mirrors {@code BasicCollectionElementBinder} for a set, a bag and a list (the element is named after the property
+     * and the element class, nullable, with the join table column config's facets), and {@code MapSecondPassBinder} for a
+     * map (a not-null column named {@code <property>_elt} unless the join table names it).
+     */
+    private ColumnFacets collectionElementFacets(HibernateBasicProperty property, CollectionKind kind) {
+        PropertyConfig mapped = property.hibernateMappedForm
+        if (kind == CollectionKind.MAP) {
+            return new ColumnFacets(
+                    property.getMapElementName(namingStrategy), false, false, true, true, null, null, null, null, null, null, null, null)
+        }
+        if (property instanceof HibernateEnumProperty) {
+            ColumnFacets facets = enumColumnFacets((HibernateEnumProperty) property, null)
+            return new ColumnFacets(
+                    facets.name(), facets.nullable(), facets.unique(), true, true, facets.length(), facets.precision(), facets.scale(),
+                    facets.sqlType(), null, null, null, null)
+        }
+        Column column = new Column()
+        columnConfigBinder.bindColumnConfigToColumn(column, mapped.joinTableColumnConfig, mapped)
+        return new ColumnFacets(
+                property.joinTableColumName(namingStrategy), true, column.unique, true, true, column.length?.intValue(),
+                column.precision?.intValue(), column.scale?.intValue(), column.sqlType, null, null, null, null)
+    }
+
+    /**
+     * Mirrors {@code ListSecondPassBinder} (a nullable index column named by {@code getIndexColumnName}) and
+     * {@code MapSecondPassBinder} (the same name, plus the index column config's facets); {@code null} for a set or a bag.
+     */
+    private ColumnFacets collectionIndexFacets(HibernateBasicProperty property, CollectionKind kind) {
+        if (!kind.indexed) {
+            return null
+        }
+        String name = property.getIndexColumnName(namingStrategy)
+        Column column = new Column()
+        if (kind == CollectionKind.MAP && property.hibernateMappedForm.indexColumn != null) {
+            columnConfigBinder.bindColumnConfigToColumn(
+                    column, firstColumnConfig(property.hibernateMappedForm.indexColumn), property.hibernateMappedForm)
+        }
+        return new ColumnFacets(
+                name, true, column.unique, true, true, column.length?.intValue(), column.precision?.intValue(),
+                column.scale?.intValue(), column.sqlType, null, null, null, null)
+    }
+
+    /**
      * Decides the column facets for a supported property by running the domain binder's own rules on a scratch
      * {@link Column}, in the order the binder applies them.
      */
     ColumnFacets columnFacets(HibernatePersistentProperty property) {
+        if (property instanceof HibernateBasicProperty) {
+            throw new IllegalArgumentException(
+                    "Property [${property.name}] is a collection: it has a key, an element and perhaps an index column, see collectionFacets")
+        }
         if (property instanceof HibernateEnumProperty) {
             return enumColumnFacets((HibernateEnumProperty) property, null)
         }
@@ -668,6 +878,8 @@ class GrailsDomainGenerator {
                 if (problem != null) {
                     return problem
                 }
+            } else if (peer instanceof HibernateToManyProperty) {
+                return "the property [${peer.name}] of [${type.name}] is a collection inside an embedded type, which the generator does not support yet"
             } else if (!supports(peer)) {
                 return unsupportedReason(type, peer)
             }
@@ -827,6 +1039,9 @@ class GrailsDomainGenerator {
         if (property instanceof HibernateEmbeddedProperty) {
             return defineEmbeddedField(builder, (HibernateEmbeddedProperty) property, embeddables, true)
         }
+        if (property instanceof HibernateBasicProperty) {
+            return defineCollectionField(builder, (HibernateBasicProperty) property)
+        }
         List<AnnotationDescription> annotations = new ArrayList<>(extra)
         if (isDerived(property)) {
             annotations << AnnotationDescription.Builder.ofType(Formula).define('value', property.hibernateMappedForm.formula).build()
@@ -846,6 +1061,97 @@ class GrailsDomainGenerator {
         }
         return builder.defineField(property.name, property.type, Visibility.PRIVATE)
                 .annotateField(annotations as AnnotationDescription[])
+    }
+
+    /**
+     * A collection of basic values or enums is an {@code @ElementCollection} field whose generic signature names the
+     * element (and the {@code String} key of a map), with its table, key, element, index and fetching stated by the
+     * annotations the facets describe.
+     */
+    private DynamicType.Builder<Object> defineCollectionField(DynamicType.Builder<Object> builder, HibernateBasicProperty property) {
+        CollectionFacets facets = collectionFacets(property)
+        List<AnnotationDescription> annotations = []
+        annotations << AnnotationDescription.Builder.ofType(ElementCollection)
+                .define('fetch', facets.lazy() ? FetchType.LAZY : FetchType.EAGER).build()
+        AnnotationDescription.Builder table = AnnotationDescription.Builder.ofType(CollectionTable)
+                .define('name', facets.tableName())
+                .defineAnnotationArray('joinColumns', TypeDescription.ForLoadedType.of(JoinColumn), joinColumnAnnotation(facets.key()))
+        if (facets.schema()) {
+            table = table.define('schema', facets.schema())
+        }
+        if (facets.catalog()) {
+            table = table.define('catalog', facets.catalog())
+        }
+        annotations << table.build()
+        annotations << columnAnnotation(facets.element())
+        if (facets.kind() == CollectionKind.LIST) {
+            annotations << AnnotationDescription.Builder.ofType(OrderColumn)
+                    .define('name', facets.index().name())
+                    .define('nullable', facets.index().nullable())
+                    .build()
+        } else if (facets.kind() == CollectionKind.MAP) {
+            annotations << mapKeyColumnAnnotation(facets.index())
+        }
+        TypeFacets type = typeFacets(property)
+        if (type != null) {
+            annotations << typeAnnotation(type)
+        } else if (property instanceof HibernateEnumProperty) {
+            annotations << enumAnnotation((HibernateEnumProperty) property)
+        }
+        annotations << AnnotationDescription.Builder.ofType(Fetch)
+                .define('value', facets.fetchMode() == FetchMode.JOIN ? AnnotationFetchMode.JOIN : AnnotationFetchMode.SELECT).build()
+        if (facets.batchSize() > 0) {
+            annotations << AnnotationDescription.Builder.ofType(BatchSize).define('size', facets.batchSize()).build()
+        }
+        if (facets.cacheUsage() != null) {
+            annotations << AnnotationDescription.Builder.ofType(Cache)
+                    .define('usage', CacheConcurrencyStrategy.parse(facets.cacheUsage())).build()
+        }
+        for (Annotation constraint : validationAnnotations(property)) {
+            annotations << AnnotationDescription.ForLoadedAnnotation.of(constraint)
+        }
+        Class<?> elementClass = property instanceof HibernateEnumProperty ?
+                ((HibernateEnumProperty) property).enumType : ((HibernateBasicProperty) property).componentType
+        TypeDescription.Generic fieldType = facets.kind() == CollectionKind.MAP ?
+                TypeDescription.Generic.Builder.parameterizedType(Map, String, elementClass).build() :
+                TypeDescription.Generic.Builder.parameterizedType(facets.kind().javaType, elementClass).build()
+        return builder.defineField(property.name, fieldType, Visibility.PRIVATE)
+                .annotateField(annotations as AnnotationDescription[])
+    }
+
+    private static AnnotationDescription joinColumnAnnotation(ColumnFacets facets) {
+        AnnotationDescription.Builder annotation = AnnotationDescription.Builder.ofType(JoinColumn)
+                .define('name', facets.name())
+                .define('nullable', facets.nullable())
+                .define('unique', facets.unique())
+                .define('insertable', facets.insertable())
+                .define('updatable', facets.updatable())
+        if (facets.sqlType()) {
+            annotation = annotation.define('columnDefinition', facets.sqlType())
+        }
+        return annotation.build()
+    }
+
+    private static AnnotationDescription mapKeyColumnAnnotation(ColumnFacets facets) {
+        AnnotationDescription.Builder annotation = AnnotationDescription.Builder.ofType(MapKeyColumn)
+                .define('name', facets.name())
+                .define('nullable', facets.nullable())
+                .define('unique', facets.unique())
+                .define('insertable', facets.insertable())
+                .define('updatable', facets.updatable())
+        if (facets.length() != null) {
+            annotation = annotation.define('length', facets.length())
+        }
+        if (facets.precision() != null) {
+            annotation = annotation.define('precision', facets.precision())
+        }
+        if (facets.scale() != null) {
+            annotation = annotation.define('scale', facets.scale())
+        }
+        if (facets.sqlType()) {
+            annotation = annotation.define('columnDefinition', facets.sqlType())
+        }
+        return annotation.build()
     }
 
     /**

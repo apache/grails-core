@@ -28,27 +28,37 @@ import grails.gorm.annotation.Entity
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import jakarta.persistence.AttributeOverride
 import jakarta.persistence.AttributeOverrides
+import jakarta.persistence.CollectionTable
 import jakarta.persistence.Column
 import jakarta.persistence.DiscriminatorColumn
 import jakarta.persistence.DiscriminatorType
 import jakarta.persistence.DiscriminatorValue
+import jakarta.persistence.ElementCollection
 import jakarta.persistence.Embeddable
 import jakarta.persistence.Embedded
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
+import jakarta.persistence.FetchType
 import jakarta.persistence.Id
 import jakarta.persistence.Inheritance
 import jakarta.persistence.InheritanceType
+import jakarta.persistence.JoinColumn
+import jakarta.persistence.MapKeyColumn
+import jakarta.persistence.OrderColumn
 import jakarta.persistence.PrimaryKeyJoinColumn
 import jakarta.persistence.Table
 import jakarta.persistence.Version
 import jakarta.validation.constraints.Size
 import org.hibernate.annotations.BatchSize
+import org.hibernate.annotations.Cache
+import org.hibernate.annotations.CacheConcurrencyStrategy
 import org.hibernate.annotations.ColumnDefault
 import org.hibernate.annotations.Comment
 import org.hibernate.annotations.DiscriminatorFormula
 import org.hibernate.annotations.DiscriminatorOptions
 import org.hibernate.annotations.DynamicUpdate
+import org.hibernate.annotations.Fetch
+import org.hibernate.annotations.FetchMode
 import org.hibernate.annotations.Formula
 import org.hibernate.annotations.IdGeneratorType
 import org.hibernate.annotations.JdbcTypeCode
@@ -77,6 +87,7 @@ import org.hibernate.boot.registry.StandardServiceRegistryBuilder
 import org.hibernate.dialect.H2Dialect
 import org.hibernate.mapping.BasicValue
 import org.hibernate.mapping.Component
+import org.hibernate.mapping.IndexedCollection
 import org.hibernate.mapping.Property
 import org.hibernate.type.CustomType
 import org.hibernate.type.descriptor.WrapperOptions
@@ -90,6 +101,9 @@ import java.sql.Types
 import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
 import org.grails.orm.hibernate.cfg.IdentityEnumType
 import org.grails.orm.hibernate.cfg.PropertyConfig
+import org.grails.orm.hibernate.cfg.HibernateMappingContext
+import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIdentityGenerator
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIncrementGenerator
@@ -121,7 +135,7 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
                 GenGizmo, GenCoded, GenCodedChild, GenFormulaRoot, GenFormulaChild, GenAbstractBase, GenConcreteChild, GenNoted, GenNotedChild,
                 GenJoinedVehicle, GenJoinedCar, GenJoinedSportsCar, GenJoinedSedan, GenJoinedKeyed, GenJoinedKeyedChild,
                 GenFleetVehicle, GenFleetCar, GenFleetSportsCar, GenFleetSedan, GenUnionBase, GenUnionLeaf, GenUnionMiddle, GenUnionBottom,
-                GenEmbedOwner, GenEmbedOther, GenEmbedBase, GenEmbedChild, GenEmbedBadHolder, GenEmbedFormulaOwner)
+                GenEmbedOwner, GenEmbedOther, GenEmbedBase, GenEmbedChild, GenEmbedBadHolder, GenEmbedFormulaOwner, GenCollSingle, GenCollKinds, GenCollLazy)
     }
 
     List<StandardServiceRegistry> registries = []
@@ -956,6 +970,218 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         !newGenerator().supports(entity(GenEmbedBadHolder).getHibernatePropertyByName('bad'))
     }
 
+    void "a collection of basic values is an @ElementCollection with its table, key column and element column"() {
+        // a basic collection is not lazy unless the mapping says so: that is what the binder binds
+        given:
+        Class<?> owner = generate(GenCollSingle)
+        Field tags = owner.getDeclaredField('tags')
+
+        expect:
+        tags.genericType.typeName == 'java.util.Set<java.lang.String>'
+        tags.getAnnotation(ElementCollection).fetch() == FetchType.EAGER
+        tags.getAnnotation(CollectionTable).name() == 'gen_coll_single_tags'
+        tags.getAnnotation(CollectionTable).joinColumns()*.name() == ['gen_coll_single_id']
+        tags.getAnnotation(CollectionTable).joinColumns()[0].nullable()
+        tags.getAnnotation(CollectionTable).joinColumns()[0].updatable()
+        tags.getAnnotation(Column).name() == 'tags_java_lang_string'
+        tags.getAnnotation(Column).nullable()
+        tags.getAnnotation(Fetch).value() == FetchMode.SELECT
+        !tags.isAnnotationPresent(OrderColumn)
+        !tags.isAnnotationPresent(MapKeyColumn)
+    }
+
+    void "each kind of collection is a field of the exact declared type with the index or key column the binder names"() {
+        given:
+        Class<?> owner = generate(GenCollKinds)
+        Field field = owner.getDeclaredField(property)
+
+        expect:
+        field.genericType.typeName == type
+        field.isAnnotationPresent(OrderColumn) == indexed
+        field.isAnnotationPresent(MapKeyColumn) == keyed
+        !indexed || field.getAnnotation(OrderColumn).name() == indexName
+        !keyed || field.getAnnotation(MapKeyColumn).name() == indexName
+
+        where:
+        property  | type                                                  | indexed | keyed | indexName
+        'tags'    | 'java.util.Set<java.lang.String>'                     | false   | false | null
+        'scores'  | 'java.util.List<java.lang.Integer>'                   | true    | false | 'position'
+        'aliases' | 'java.util.Collection<java.lang.String>'              | false   | false | null
+        'labels'  | 'java.util.Set<java.lang.String>'                     | false   | false | null
+        'attrs'   | 'java.util.Map<java.lang.String, java.lang.String>'   | false   | true  | 'attr_key'
+        'kinds'   | 'java.util.Set<' + GenKind.name + '>'                 | false   | false | null
+        'ranks'   | 'java.util.List<' + GenKind.name + '>'                | true    | false | 'ranks_idx'
+    }
+
+    void "a join table mapping names the collection table, the key column and the element column"() {
+        given:
+        Field tags = generate(GenCollKinds).getDeclaredField('tags')
+
+        expect:
+        tags.getAnnotation(CollectionTable).name() == 'gen_coll_tag'
+        tags.getAnnotation(CollectionTable).joinColumns()[0].name() == 'owner_ref'
+        tags.getAnnotation(Column).name() == 'tag_value'
+    }
+
+    void "a map has a not-null value column and a key column with the facets of its index column mapping"() {
+        given:
+        Field attrs = generate(GenCollKinds).getDeclaredField('attrs')
+
+        expect:
+        attrs.getAnnotation(CollectionTable).name() == 'gen_coll_kinds_attrs'
+        attrs.getAnnotation(Column).name() == 'attr_value'
+        !attrs.getAnnotation(Column).nullable()
+        attrs.getAnnotation(MapKeyColumn).length() == 40
+        attrs.getAnnotation(MapKeyColumn).nullable()
+    }
+
+    void "an enum element is stored as the enum style says, in a column named after the enum"() {
+        given:
+        Class<?> owner = generate(GenCollKinds)
+
+        expect:
+        owner.getDeclaredField('kinds').getAnnotation(Enumerated).value() == EnumType.ORDINAL
+        owner.getDeclaredField('kinds').getAnnotation(Column).name() == 'kind_code'
+        owner.getDeclaredField('ranks').getAnnotation(Enumerated).value() == EnumType.STRING
+        owner.getDeclaredField('ranks').getAnnotation(Column).name() == 'gen_kind'
+    }
+
+    void "the fetching of a collection is the lazy, fetch, batch size and cache the mapping states"() {
+        given:
+        Class<?> owner = generate(GenCollKinds)
+
+        expect:
+        owner.getDeclaredField('aliases').getAnnotation(ElementCollection).fetch() == FetchType.EAGER
+        owner.getDeclaredField('aliases').getAnnotation(Fetch).value() == FetchMode.JOIN
+        owner.getDeclaredField('ranks').getAnnotation(ElementCollection).fetch() == FetchType.EAGER
+        owner.getDeclaredField('ranks').getAnnotation(Fetch).value() == FetchMode.SELECT
+        owner.getDeclaredField('labels').getAnnotation(BatchSize).size() == 5
+        owner.getDeclaredField('labels').getAnnotation(Cache).usage() == CacheConcurrencyStrategy.READ_WRITE
+        !owner.getDeclaredField('tags').isAnnotationPresent(BatchSize)
+        !owner.getDeclaredField('tags').isAnnotationPresent(Cache)
+    }
+
+    void "a collection key is always updatable, however many collections the owner has"() {
+        given:
+        Class<?> owner = generate(GenCollKinds)
+
+        expect: "the binder makes the key not updatable once the owner has more than one unidirectional collection, which stops Hibernate writing the rows"
+        owner.declaredFields.findAll { it.isAnnotationPresent(ElementCollection) }.every {
+            it.getAnnotation(CollectionTable).joinColumns()[0].updatable() && it.getAnnotation(CollectionTable).joinColumns()[0].insertable()
+        }
+        !((IndexedCollection) getPersistentEntity(GenCollKinds).persistentClass.getProperty('scores').value).key.updateable
+    }
+
+    void "Hibernate's annotation binder reads the generated collections as the binder builds them"() {
+        given:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateHierarchy(GenCollKinds, GenCollSingle)
+        Class<?> owner = classes[entity(GenCollKinds)]
+        Class<?> single = classes[entity(GenCollSingle)]
+        org.hibernate.mapping.PersistentClass bound = getPersistentEntity(GenCollKinds).persistentClass
+
+        when:
+        Metadata metadata = annotationMetadata(classes.values())
+        org.hibernate.mapping.PersistentClass annotated = metadata.getEntityBinding(owner.name)
+        org.hibernate.mapping.Collection scores = (org.hibernate.mapping.Collection) annotated.getProperty('scores').value
+        org.hibernate.mapping.Collection attrs = (org.hibernate.mapping.Collection) annotated.getProperty('attrs').value
+        org.hibernate.mapping.Collection tags = (org.hibernate.mapping.Collection) annotated.getProperty('tags').value
+        org.hibernate.mapping.Collection singleTags = (org.hibernate.mapping.Collection) metadata.getEntityBinding(single.name).getProperty('tags').value
+
+        then:
+        annotated.getProperty(name).value.getClass() == bound.getProperty(name).value.getClass()
+        scores instanceof org.hibernate.mapping.List
+        ((IndexedCollection) scores).index.selectables*.text == ['position']
+        attrs instanceof org.hibernate.mapping.Map
+        ((IndexedCollection) attrs).index.selectables*.text == ['attr_key']
+        attrs.element.selectables*.text == ['attr_value']
+        tags.collectionTable.name == 'gen_coll_tag'
+        tags.key.selectables*.text == ['owner_ref']
+        tags.element.selectables*.text == ['tag_value']
+        singleTags.collectionTable.name == bound.getProperty('tags').value.collectionTable.name.replace('gen_coll_tag', 'gen_coll_single_tags')
+        singleTags.key.selectables*.text == ['gen_coll_single_id']
+        singleTags.element.selectables*.text == ['tags_java_lang_string']
+        annotated.getProperty('labels').value.batchSize == 5
+        annotated.getProperty('labels').value.cacheConcurrencyStrategy == 'read-write'
+        annotated.getProperty('aliases').value.fetchMode == org.hibernate.FetchMode.JOIN
+        !annotated.getProperty('aliases').value.lazy
+
+        where:
+        name << ['tags', 'scores', 'aliases', 'labels', 'attrs', 'kinds', 'ranks']
+    }
+
+    void "an explicit lazy true is an extra-lazy collection, which annotations cannot state, so it is rejected by name"() {
+        when:
+        generate(GenCollLazy)
+
+        then:
+        UnsupportedOperationException e = thrown()
+        e.message.contains('Collection property [tags] of [' + GenCollLazy.name + ']')
+        e.message.contains('extra-lazy')
+    }
+
+    void "a map of enums is rejected by name, because the binder itself cannot export its schema"() {
+        given:
+        GrailsHibernatePersistentEntity entity = unbound(GenCollEnumMap)
+        HibernateBasicProperty property = (HibernateBasicProperty) entity.getHibernatePropertyByName('byName')
+
+        expect:
+        !newGenerator().supports(property)
+        newGenerator().unsupportedReason(entity, property).contains('a map of enums')
+    }
+
+    void "a sorted set is rejected by name, because the binder names it as a custom collection type"() {
+        given:
+        GrailsHibernatePersistentEntity entity = unbound(GenCollSorted)
+        HibernateBasicProperty property = (HibernateBasicProperty) entity.getHibernatePropertyByName('labels')
+
+        expect:
+        !newGenerator().supports(property)
+        newGenerator().unsupportedReason(entity, property).contains('SortedSet')
+    }
+
+    void "a type mapped on the collection property itself is rejected by name"() {
+        given:
+        GrailsHibernatePersistentEntity entity = unbound(GenCollTyped)
+        HibernateBasicProperty property = (HibernateBasicProperty) entity.getHibernatePropertyByName('notes')
+
+        expect:
+        !newGenerator().supports(property)
+        newGenerator().unsupportedReason(entity, property).contains('a type is mapped on the collection property itself')
+    }
+
+    void "a collection of embedded objects is rejected by name, because the binder cannot bind one"() {
+        given:
+        GrailsHibernatePersistentEntity entity = unbound(GenCollEmbeddedItems)
+        org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty property = entity.getHibernatePropertyByName('items')
+
+        expect:
+        !newGenerator().supports(property)
+        newGenerator().unsupportedReason(entity, property).contains('a collection of embedded objects')
+    }
+
+    void "a collection has several columns, so it has no single column facets"() {
+        when:
+        newGenerator().columnFacets(entity(GenCollSingle).getHibernatePropertyByName('tags'))
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message.contains('collectionFacets')
+    }
+
+    void "a collection of basic values inside an embedded type is rejected by name"() {
+        given:
+        GrailsHibernatePersistentEntity holder = unbound(GenCollEmbeddedHolder)
+
+        expect:
+        newGenerator().unsupportedReason(holder, holder.getHibernatePropertyByName('inner')).contains('collection inside an embedded type')
+    }
+
+    private GrailsHibernatePersistentEntity unbound(Class<?> domainClass) {
+        // the mapping model alone, so a domain the binder cannot boot can still be described
+        return (GrailsHibernatePersistentEntity) new HibernateMappingContext(
+                new HibernateConnectionSourceSettings(), (Object) null, [domainClass] as Class[]).getPersistentEntity(domainClass.name)
+    }
+
     private Map<String, Column> overrides(Class<?> owner, String embedded) {
         AttributeOverrides overrides = owner.getDeclaredField(embedded).getAnnotation(AttributeOverrides)
         return overrides.value().collectEntries { AttributeOverride override -> [(override.name()): override.column()] }
@@ -1146,6 +1372,106 @@ class GenEmbedFormulaType {
     static mapping = {
         full formula: "CONCAT(first, ' ', last)"
     }
+}
+
+@Entity
+class GenCollSingle {
+
+    Set<String> tags
+
+    static hasMany = [tags: String]
+}
+
+@Entity
+class GenCollKinds {
+
+    String name
+    Set<String> tags
+    List<Integer> scores
+    Collection<String> aliases
+    Set<String> labels
+    Map<String, String> attrs
+    Set<GenKind> kinds
+    List<GenKind> ranks
+
+    static hasMany = [tags: String, scores: Integer, aliases: String, labels: String, attrs: String, kinds: GenKind, ranks: GenKind]
+
+    static mapping = {
+        tags joinTable: [name: 'gen_coll_tag', key: 'owner_ref', column: 'tag_value']
+        scores indexColumn: [name: 'position']
+        aliases fetch: 'join'
+        labels batchSize: 5, cache: 'read-write'
+        attrs joinTable: [column: 'attr_value'], indexColumn: [name: 'attr_key', length: 40]
+        kinds enumType: 'ordinal', joinTable: [column: 'kind_code']
+        ranks lazy: false
+    }
+}
+
+@Entity
+class GenCollLazy {
+
+    Set<String> tags
+
+    static hasMany = [tags: String]
+
+    static mapping = {
+        tags lazy: true
+    }
+}
+
+@Entity
+class GenCollSorted {
+
+    SortedSet<String> labels
+
+    static hasMany = [labels: String]
+}
+
+@Entity
+class GenCollTyped {
+
+    Set<String> notes
+
+    static hasMany = [notes: String]
+
+    static mapping = {
+        notes type: 'text'
+    }
+}
+
+@Entity
+class GenCollEnumMap {
+
+    Map<String, GenKind> byName
+
+    static hasMany = [byName: GenKind]
+}
+
+@Entity
+class GenCollEmbeddedItems {
+
+    static hasMany = [items: GenCollItem]
+    static embedded = ['items']
+}
+
+class GenCollItem {
+
+    String label
+}
+
+@Entity
+class GenCollEmbeddedHolder {
+
+    GenCollEmbedded inner
+
+    static embedded = ['inner']
+}
+
+class GenCollEmbedded {
+
+    Set<String> words
+
+    static hasMany = [words: String]
 }
 
 @Entity

@@ -21,6 +21,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.jpa
 import grails.gorm.annotation.Entity
 import jakarta.persistence.InheritanceType
 import grails.gorm.tests.HibernateGormDatastoreSpec
+import org.hibernate.FetchMode
 import org.hibernate.Length
 import org.hibernate.boot.Metadata
 import org.hibernate.boot.MetadataSources
@@ -33,14 +34,22 @@ import org.hibernate.generator.Generator
 import org.hibernate.id.enhanced.OptimizerFactory
 import org.hibernate.id.enhanced.SequenceStyleGenerator
 import org.hibernate.id.enhanced.TableGenerator
+import org.hibernate.mapping.Bag
 import org.hibernate.mapping.BasicValue
 import org.hibernate.mapping.Column
+import org.hibernate.mapping.Collection as HibernateCollection
 import org.hibernate.mapping.Component
+import org.hibernate.mapping.DependantValue
+import org.hibernate.mapping.IndexedCollection
 import org.hibernate.mapping.Formula
 import org.hibernate.mapping.JoinedSubclass
+import org.hibernate.mapping.List as HibernateList
+import org.hibernate.mapping.Map as HibernateMap
 import org.hibernate.mapping.PersistentClass
 import org.hibernate.mapping.Property
 import org.hibernate.mapping.RootClass
+import org.hibernate.mapping.Set as HibernateSet
+import org.hibernate.mapping.Table
 import org.hibernate.mapping.SingleTableSubclass
 import org.hibernate.mapping.UnionSubclass
 import java.lang.reflect.Field
@@ -58,11 +67,13 @@ import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBin
 import org.grails.orm.hibernate.cfg.domainbinding.binder.NumericColumnConstraintsBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.StringColumnConstraintsBinder
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleIdentityProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
@@ -101,6 +112,8 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         int embeddedProperties = 0
         int embeddedLeaves = 0
         Map<String, Integer> explicitTypes = [:].withDefault { 0 }
+        Map<String, Integer> collections = [:].withDefault { 0 }
+        Map<String, Integer> known = [:].withDefault { 0 }
         Map<String, Integer> strategies = [:].withDefault { 0 }
         Map<String, Integer> hierarchies = [:].withDefault { 0 }
         Map<String, Integer> annotationRead = [:].withDefault { 0 }
@@ -152,7 +165,9 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                                     "${property.getClass().simpleName} (type ${property.getTypeName()})".toString() :
                                     property instanceof HibernateEmbeddedProperty ?
                                             "embedded: ${generator.unsupportedReason(entity, property).replaceAll(/\[[^\]]*\]/, '[..]')}".toString() :
-                                            property.getClass().simpleName]++
+                                            property instanceof HibernateBasicProperty ?
+                                                    "${property.getClass().simpleName}: ${generator.unsupportedReason(entity, property).replaceAll(/\[[^\]]*\]/, '[..]')}".toString() :
+                                                    property.getClass().simpleName]++
                             continue
                         }
                         if (!generator.validationAnnotations(property).isEmpty()) {
@@ -171,6 +186,20 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                                 embeddedProperties++
                                 embeddedLeaves += leaves.size()
                                 mismatches.addAll(compareEmbedded(entity, embedded, leaves, generator, bound, explicitTypes))
+                            }
+                            continue
+                        }
+                        if (property instanceof HibernateBasicProperty) {
+                            if (!generator.validationAnnotations(property).isEmpty()) {
+                                skipped['bean validation constraints (applied by Hibernate after binding)']++
+                            } else if (bound == null || !(bound.value instanceof HibernateCollection)) {
+                                skipped['collection property with no bound collection']++
+                            } else {
+                                CollectionFacets facets = generator.collectionFacets((HibernateBasicProperty) property)
+                                collections["${facets.kind()}${property instanceof HibernateEnumProperty ? ' of enums' : ''}".toString()]++
+                                mismatches.addAll(compareCollection(
+                                        "${entity.name}.${property.name}".toString(), (HibernateBasicProperty) property, facets,
+                                        generator, (HibernateCollection) bound.value, explicitTypes, known))
                             }
                             continue
                         }
@@ -196,7 +225,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                         }
                     }
                 }
-                mismatches.addAll(compareAnnotationBoundHierarchies(generator, boundEntities, skipped, annotationRead))
+                mismatches.addAll(compareAnnotationBoundHierarchies(generator, boundEntities, skipped, annotationRead, known))
             } finally {
                 datastore.close()
             }
@@ -206,9 +235,11 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 "${unbootable.size()} groups could not boot alone; ${entities} entities, ${compared} properties compared " +
                 "(${derived} derived); ${embeddedProperties} embedded properties compared, ${embeddedLeaves} embedded columns\n"
         report << "explicit types compared: ${explicitTypes}\n"
+        report << "collections of basic values compared by kind: ${collections}\n"
         report << "id generators compared by strategy: ${strategies}\n"
         report << "entities compared by hierarchy role: ${hierarchies}\n"
         report << "hierarchies read back through Hibernate's annotation binder: ${annotationRead}\n"
+        report << "known divergences (explained in the plan, not mismatches): ${known}\n"
         report << "unsupported by kind: ${skipped}\n"
         report << "mismatches by facet: ${mismatches.groupBy { (it =~ /\s(\w+): generator=/)[0][1] }.collectEntries { k, v -> [k, v.size()] }}\n"
         unbootable.each { report << "unbootable: ${it.key.take(120)} -> ${it.value.take(200)}\n" }
@@ -245,6 +276,129 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         return pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
             "${where} ${facet}: generator=${values[0]} binder=${values[1]}".toString()
         }
+    }
+
+    /**
+     * A collection of basic values or enums as {@code CollectionBinder} and its second passes bound it: the kind of
+     * collection, its table, the key, element and index columns, and the fetching.
+     */
+    private List<String> compareCollection(
+            String where, HibernateBasicProperty property, CollectionFacets facets, GrailsDomainGenerator generator,
+            HibernateCollection collection, Map<String, Integer> explicitTypes, Map<String, Integer> known) {
+        List<String> found = []
+        Map<String, List> pairs = [
+                kind     : [facets.kind(), kindOf(collection)],
+                table    : [facets.tableName().replace('`', ''), collection.collectionTable.name],
+                schema   : [facets.schema(), collection.collectionTable.schema],
+                catalog  : [facets.catalog(), collection.collectionTable.catalog],
+                lazy     : [facets.lazy(), collection.lazy],
+                extraLazy: [false, collection.extraLazy],
+                fetchMode: [facets.fetchMode(), collection.fetchMode == FetchMode.JOIN ? FetchMode.JOIN : FetchMode.SELECT],
+                batchSize: [facets.batchSize(), Math.max(collection.batchSize, 0)],
+                cache    : [facets.cacheUsage(), collection.cacheConcurrencyStrategy],
+                inverse  : [false, collection.inverse],
+        ]
+        found.addAll(pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
+            "${where} ${facet}: generator=${values[0]} binder=${values[1]}".toString()
+        })
+        found.addAll(keyUpdatable(where, property, facets, (DependantValue) collection.key, known))
+        found.addAll(compareValueColumn("${where} key".toString(), facets.key(), collection.key, collection.collectionTable, true))
+        Property element = new Property()
+        element.value = collection.element
+        found.addAll(compareValueColumn("${where} element".toString(), facets.element(), collection.element, collection.collectionTable, false))
+        if (property instanceof HibernateEnumProperty && generator.typeFacets(property) == null) {
+            found.addAll(compareEnum("${where} element".toString(), (HibernateEnumProperty) property, generator, element))
+        }
+        found.addAll(compareType("${where} element".toString(), property, generator, element, explicitTypes))
+        List<String> described = [facets.key().name().replace('`', ''), facets.element().name().replace('`', '')]
+        if (facets.index() != null) {
+            described << facets.index().name().replace('`', '')
+            if (collection instanceof IndexedCollection) {
+                found.addAll(compareValueColumn(
+                        "${where} index".toString(), facets.index(), ((IndexedCollection) collection).index, collection.collectionTable, false))
+            } else {
+                found << "${where} index: generator=${facets.index().name()} binder=none".toString()
+            }
+        } else if (collection instanceof IndexedCollection) {
+            found << "${where} index: generator=none binder=${((IndexedCollection) collection).index.selectables*.text}".toString()
+        }
+        List<String> unused = collection.collectionTable.columns*.name.findAll { String name -> !described.contains(name) }
+        if (!unused.isEmpty()) {
+            if (facets.kind() == CollectionKind.MAP && unused.size() == 1) {
+                known['the binder leaves an unused column in the table of a map of values (the element bound before the map replaces it)']++
+            } else {
+                found << "${where} tableColumns: generator=${described} binder=${collection.collectionTable.columns*.name}".toString()
+            }
+        }
+        return found
+    }
+
+    /**
+     * {@code CollectionKeyColumnUpdater} makes the key updatable only while the owner has at most one unidirectional to-many
+     * property. Hibernate then refuses to insert or delete the rows of every collection of that owner, so the generator
+     * never states it (and could not: a join column is insertable and updatable alike). The binder's value is therefore
+     * pinned to that rule here, and the owners it hits are counted as a known defect.
+     */
+    private static List<String> keyUpdatable(
+            String where, HibernateBasicProperty property, CollectionFacets facets, DependantValue key, Map<String, Integer> known) {
+        List<String> found = []
+        long unidirectional = property.hibernateOwner.persistentPropertiesToBind.count {
+            it instanceof HibernateToManyProperty && !((HibernateToManyProperty) it).isBidirectional()
+        }
+        boolean defect = unidirectional > 1
+        if (!facets.key().updatable()) {
+            found << "${where} keyUpdatable: generator=false binder=${key.updateable}".toString()
+        }
+        if (key.updateable != !defect) {
+            found << "${where} keyUpdatable: generator=${!defect} binder=${key.updateable}".toString()
+        }
+        if (defect) {
+            known['the binder makes the key of a collection not updatable when its owner has several unidirectional to-many properties, so Hibernate never writes their rows']++
+        }
+        return found
+    }
+
+    /**
+     * The single column of a collection's key, element or index value, against what the generator decided for it. The key's
+     * size facets come from the referenced identifier, and a column of a primary key is not null whatever the binder said:
+     * Hibernate makes it so when it creates the primary key.
+     */
+    private static List<String> compareValueColumn(String where, ColumnFacets facets, org.hibernate.mapping.Value value, Table table, boolean key) {
+        List<Column> columns = value.selectables.findAll { it instanceof Column }.collect { (Column) it }
+        if (columns.size() != 1) {
+            return ["${where} columns: generator=1 binder=${columns.size()}".toString()]
+        }
+        Column column = columns[0]
+        boolean primaryKey = table.primaryKey != null && table.primaryKey.columns.contains(column)
+        Map<String, List> pairs = [
+                name    : [facets.name().replace('`', ''), column.name],
+                nullable: [facets.nullable() && !primaryKey, column.nullable],
+                unique  : [facets.unique(), column.unique],
+        ]
+        if (!key) {
+            pairs.length = [facets.length(), column.length?.intValue()]
+            pairs.precision = [facets.precision(), column.precision?.intValue()]
+            pairs.scale = [facets.scale(), column.scale?.intValue()]
+        }
+        if (facets.sqlType() != null) {
+            pairs.sqlType = [facets.sqlType(), column.sqlType]
+        }
+        return pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
+            "${where} ${facet}: generator=${values[0]} binder=${values[1]}".toString()
+        }
+    }
+
+    private static CollectionKind kindOf(HibernateCollection collection) {
+        if (collection instanceof HibernateList) {
+            return CollectionKind.LIST
+        }
+        if (collection instanceof HibernateMap) {
+            return CollectionKind.MAP
+        }
+        if (collection instanceof HibernateSet) {
+            return CollectionKind.SET
+        }
+        return collection instanceof Bag ? CollectionKind.BAG : null
     }
 
     /**
@@ -366,12 +520,14 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             Property bound, Map<String, Integer> explicitTypes) {
         BasicValue value = (BasicValue) bound.value
         TypeFacets facets = generator.typeFacets(property)
+        // a collection property is typed with its element's class
+        Class<?> type = property instanceof HibernateBasicProperty ? ((HibernateBasicProperty) property).componentType : property.type
         List<String> found = []
         Map<String, String> actualParameters = [:]
         value.typeParameters?.stringPropertyNames()?.each { String key -> actualParameters[key] = value.typeParameters.getProperty(key) }
         if (facets == null) {
-            if (!(property instanceof HibernateEnumProperty) && value.typeName != property.type.name) {
-                found << "${where} typeName: generator=${property.type.name} binder=${value.typeName}".toString()
+            if (!(property instanceof HibernateEnumProperty) && value.typeName != type.name) {
+                found << "${where} typeName: generator=${type.name} binder=${value.typeName}".toString()
             }
             if (!(property instanceof HibernateEnumProperty) && !actualParameters.isEmpty()) {
                 found << "${where} typeParameters: generator=[:] binder=${actualParameters}".toString()
@@ -387,7 +543,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         } else {
             explicitTypes["registered ${value.typeName}".toString()]++
             Integer actual = value.resolve().jdbcType.defaultSqlTypeCode
-            if (value.typeName != property.getTypeName() || actual != facets.jdbcTypeCode()) {
+            if (value.typeName != property.getTypeName(type) || actual != facets.jdbcTypeCode()) {
                 found << "${where} jdbcTypeCode: generator=${facets.jdbcTypeCode()} binder=${actual} (type ${value.typeName})".toString()
             }
         }
@@ -508,7 +664,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
      */
     private List<String> compareAnnotationBoundHierarchies(
             GrailsDomainGenerator generator, List<GrailsHibernatePersistentEntity> entities, Map<String, Integer> skipped,
-            Map<String, Integer> annotationRead) {
+            Map<String, Integer> annotationRead, Map<String, Integer> known) {
         List<String> found = []
         Map<GrailsHibernatePersistentEntity, List<GrailsHibernatePersistentEntity>> hierarchies = [:]
         for (GrailsHibernatePersistentEntity entity : entities) {
@@ -540,7 +696,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 annotationRead["${generator.hierarchyFacets(hierarchy.key).strategy() ?: 'single class'} (${classes.size()} classes)".toString()]++
                 Map<String, GrailsHibernatePersistentEntity> byName = hierarchy.value.collectEntries { [(it.name): it] }
                 classes.each { GrailsHibernatePersistentEntity entity, Class<?> generated ->
-                    found.addAll(compareAnnotationBound(generator, entity, metadata.getEntityBinding(generated.name), byName, annotationRead))
+                    found.addAll(compareAnnotationBound(generator, entity, metadata.getEntityBinding(generated.name), byName, annotationRead, known))
                 }
             } finally {
                 StandardServiceRegistryBuilder.destroy(registry)
@@ -551,7 +707,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
 
     private static List<String> compareAnnotationBound(
             GrailsDomainGenerator generator, GrailsHibernatePersistentEntity entity, PersistentClass annotated,
-            Map<String, GrailsHibernatePersistentEntity> byName, Map<String, Integer> annotationRead) {
+            Map<String, GrailsHibernatePersistentEntity> byName, Map<String, Integer> annotationRead, Map<String, Integer> known) {
         PersistentClass bound = entity.persistentClass
         String where = "${entity.name} hibernate"
         if (annotated == null) {
@@ -586,6 +742,17 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             if (other == null) {
                 continue
             }
+            if (property.value instanceof HibernateCollection) {
+                HibernateBasicProperty collectionProperty = (HibernateBasicProperty) entity.persistentPropertiesToBind.find { it.name == property.name }
+                if (!generator.validationAnnotations(collectionProperty).isEmpty()) {
+                    continue
+                }
+                annotationRead['collections']++
+                found.addAll(compareAnnotatedCollection(
+                        "${where} property ${property.name}".toString(), collectionProperty, property, other,
+                        generator.collectionFacets(collectionProperty), known))
+                continue
+            }
             Map<String, Property> boundLeaves = terminalProperties(property)
             Map<String, Property> annotatedLeaves = terminalProperties(other)
             if (boundLeaves.keySet() != annotatedLeaves.keySet()) {
@@ -599,9 +766,71 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 }
                 if (!expected.validated) {
                     found.addAll(compareAnnotatedLeaf(
-                            "${where} property ${path}".toString(), leaf, annotatedLeaves[path], (String) expected.sqlType))
+                            "${where} property ${path}".toString(), leaf, annotatedLeaves[path], (String) expected.sqlType, false))
                 }
             }
+        }
+        return found
+    }
+
+    /**
+     * A collection of the binder's entity against the one Hibernate's annotation binder built: the same kind, table, key,
+     * element and index columns, and the same fetching and caching.
+     */
+    private static List<String> compareAnnotatedCollection(
+            String where, HibernateBasicProperty source, Property boundProperty, Property annotatedProperty, CollectionFacets facets,
+            Map<String, Integer> known) {
+        if (!(annotatedProperty.value instanceof HibernateCollection)) {
+            return ["${where} kind: generator=${annotatedProperty.value.getClass().simpleName} binder=${boundProperty.value.getClass().simpleName}".toString()]
+        }
+        HibernateCollection bound = (HibernateCollection) boundProperty.value
+        HibernateCollection annotated = (HibernateCollection) annotatedProperty.value
+        Map<String, List> pairs = [
+                kind        : [kindOf(bound), kindOf(annotated)],
+                table       : [bound.collectionTable.name, annotated.collectionTable.name],
+                schema      : [bound.collectionTable.schema, annotated.collectionTable.schema],
+                catalog     : [bound.collectionTable.catalog, annotated.collectionTable.catalog],
+                lazy        : [bound.lazy, annotated.lazy],
+                extraLazy   : [bound.extraLazy, annotated.extraLazy],
+                fetchMode   : [bound.fetchMode == FetchMode.JOIN ? FetchMode.JOIN : FetchMode.SELECT,
+                               annotated.fetchMode == FetchMode.JOIN ? FetchMode.JOIN : FetchMode.SELECT],
+                batchSize   : [Math.max(bound.batchSize, 0), Math.max(annotated.batchSize, 0)],
+                cache       : [bound.cacheConcurrencyStrategy, annotated.cacheConcurrencyStrategy],
+                inverse     : [bound.inverse, annotated.inverse],
+                orphanDelete: [bound.hasOrphanDelete(), annotated.hasOrphanDelete()],
+                keyUpdatable: [facets.key().updatable(), annotated.key.updateable],
+                propertyLazy: [boundProperty.lazy, annotatedProperty.lazy],
+        ]
+        List<String> found = pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
+            "${where} ${facet}: generator=${values[1]} binder=${values[0]}".toString()
+        }
+        // Hibernate forces the key column of a collection table NOT NULL ("I break the spec, but it's for good"), the binder leaves it nullable
+        if (annotated.key.nullable) {
+            found << "${where} keyNullable: generator=${annotated.key.nullable} binder=${bound.key.nullable}".toString()
+        }
+        if (bound.key.nullable) {
+            known['Hibernate makes the key column of a collection table NOT NULL; the binder leaves it nullable unless it is part of the primary key']++
+        }
+        // a collection of values has nothing to cascade to; the binder still states a cascade on its property
+        if (annotatedProperty.cascade != null && annotatedProperty.cascade != boundProperty.cascade) {
+            found << "${where} propertyCascade: generator=${annotatedProperty.cascade} binder=${boundProperty.cascade}".toString()
+        }
+        if (annotatedProperty.cascade != boundProperty.cascade) {
+            known['the binder states a cascade on a collection of values, which cascades to nothing; the annotation path states none']++
+        }
+        Map<String, List> values = [
+                key    : [bound.key, annotated.key, facets.key()],
+                element: [bound.element, annotated.element, facets.element()],
+        ]
+        if (bound instanceof IndexedCollection && annotated instanceof IndexedCollection) {
+            values.index = [((IndexedCollection) bound).index, ((IndexedCollection) annotated).index, facets.index()]
+        }
+        values.each { String part, List triple ->
+            Property b = new Property()
+            b.value = (org.hibernate.mapping.Value) triple[0]
+            Property a = new Property()
+            a.value = (org.hibernate.mapping.Value) triple[1]
+            found.addAll(compareAnnotatedLeaf("${where} ${part}".toString(), b, a, ((ColumnFacets) triple[2]).sqlType(), part == 'key'))
         }
         return found
     }
@@ -611,14 +840,15 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
      * or formulas, the same nullability, and every column facet the binder states (length, precision, scale, unique,
      * explicit SQL type, default, read and write expressions, comment) must have reached the annotation-built column.
      */
-    private static List<String> compareAnnotatedLeaf(String where, Property bound, Property annotated, String explicitSqlType) {
+    private static List<String> compareAnnotatedLeaf(String where, Property bound, Property annotated, String explicitSqlType, boolean key) {
         List<String> boundSelectables = bound.selectables.collect { it instanceof Column ? ((Column) it).name : "formula:${((Formula) it).getFormula()}" }
         List<String> annotatedSelectables = annotated.selectables.collect { it instanceof Column ? ((Column) it).name : "formula:${((Formula) it).getFormula()}" }
         List<Column> boundColumns = bound.selectables.findAll { it instanceof Column }.collect { (Column) it }
         List<Column> annotatedColumns = annotated.selectables.findAll { it instanceof Column }.collect { (Column) it }
         List<Boolean> boundNullable = boundColumns*.nullable
         List<Boolean> annotatedNullable = annotatedColumns*.nullable
-        if (boundSelectables != annotatedSelectables || boundNullable != annotatedNullable) {
+        // a collection's key columns are NOT NULL in the annotation path whatever the binder did (see compareAnnotatedCollection), and their size comes from the referenced identifier
+        if (boundSelectables != annotatedSelectables || (!key && boundNullable != annotatedNullable)) {
             return ["${where} columns: generator=${annotatedSelectables}${annotatedNullable} binder=${boundSelectables}${boundNullable}".toString()]
         }
         List<String> found = []
@@ -639,6 +869,11 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             // Hibernate fills in defaults the binder leaves unset (length 255): only what the binder states is comparable,
             // and an SQL type is only stated when the mapping says so (the generator's own decision, passed in)
             pairs = pairs.findAll { String facet, List values -> facet in ['unique', 'sqlType'] || values[0] != null }
+            if (key) {
+                pairs.remove('length')
+                pairs.remove('precision')
+                pairs.remove('scale')
+            }
             found.addAll(pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
                 "${where} ${facet}: generator=${values[1]} binder=${values[0]}".toString()
             })
@@ -669,6 +904,8 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                             validated: !generator.validationAnnotations(leaf.property).isEmpty(),
                     ]
                 }
+            } else if (property instanceof HibernateBasicProperty) {
+                found[property.name] = [sqlType: null, validated: !generator.validationAnnotations(property).isEmpty()]
             } else {
                 found[property.name] = [
                         sqlType  : generator.isDerived(property) ? null : generator.columnFacets(property).sqlType(),
