@@ -92,6 +92,8 @@ rocker {
 }
 
 // profile base
+// Generated under build/ so the source tree stays free of build output
+def grailsWrapperResourcesPath = layout.buildDirectory.dir('grails-wrapper-resources')
 TaskProvider<Sync> copyGrailsWrapper = tasks.register('copyGrailsWrapper', Sync)
 copyGrailsWrapper.configure { Sync it ->
     it.dependsOn(':grails-wrapper:installDist')
@@ -108,7 +110,16 @@ copyGrailsWrapper.configure { Sync it ->
         )
         eachFile { details -> details.path = details.name } // flatten
     }
-    it.into(layout.projectDirectory.dir('src/main/resources/grails-wrapper'))
+    it.into(grailsWrapperResourcesPath.map { it.dir('grails-wrapper') })
+}
+sourceSets.main.resources.srcDir(grailsWrapperResourcesPath)
+
+// Older builds generated these files into the source tree; ignore any leftovers so they cannot duplicate the generated copies
+def legacyGrailsWrapperDir = layout.projectDirectory.dir('src/main/resources/grails-wrapper').asFile
+['processResources', 'sourcesJar'].each { name ->
+    tasks.named(name, AbstractCopyTask).configure {
+        it.exclude { FileTreeElement details -> details.file.parentFile == legacyGrailsWrapperDir }
+    }
 }
 
 apply {

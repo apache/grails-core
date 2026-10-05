@@ -17,4 +17,3 @@ build/
 *.patch
 application-dev.yml
 etc/bin/results
-grails-forge-core/src/main/resources/grails-wrapper
