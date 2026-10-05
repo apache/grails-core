@@ -204,7 +204,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                             } else {
                                 embeddedProperties++
                                 embeddedLeaves += leaves.size()
-                                mismatches.addAll(compareEmbedded(entity, embedded, leaves, generator, bound, explicitTypes))
+                                mismatches.addAll(compareEmbedded(entity, embedded, leaves, generator, bound, explicitTypes, known))
                             }
                             continue
                         }
@@ -581,7 +581,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
      */
     private List<String> compareEmbedded(
             GrailsHibernatePersistentEntity entity, HibernateEmbeddedProperty property, List<EmbeddedLeaf> leaves,
-            GrailsDomainGenerator generator, Property bound, Map<String, Integer> explicitTypes) {
+            GrailsDomainGenerator generator, Property bound, Map<String, Integer> explicitTypes, Map<String, Integer> known) {
         List<String> found = []
         String where = "${entity.name}.${property.name}"
         Map<String, Property> boundLeaves = terminalProperties(bound).collectEntries { String path, Property leaf ->
@@ -598,6 +598,11 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 found.addAll(compareDerived(leafWhere, leaf.property, boundLeaf))
             } else if (boundLeaf.columns.size() != 1) {
                 found << "${leafWhere} columns: generator=1 binder=${boundLeaf.columns.size()}".toString()
+                continue
+            } else if (leaf.toOne() != null) {
+                // Hibernate copies the size of the referenced identifier onto a foreign key column after binding
+                found.addAll(compare(leafWhere, leaf.column(), boundLeaf, ['length', 'precision', 'scale']))
+                found.addAll(compareToOne(leafWhere, leaf.toOne(), boundLeaf, known))
                 continue
             } else {
                 found.addAll(compare(leafWhere, leaf.column(), boundLeaf))
@@ -1001,6 +1006,10 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 Map<String, Object> expected = expectations[path] ?: [:]
                 if (property.value instanceof Component) {
                     annotationRead['embedded columns']++
+                }
+                if (!expected.validated && expected.toOne != null) {
+                    found.addAll(compareAnnotatedToOne(
+                            "${where} property ${path}".toString(), (ToOneFacets) expected.toOne, leaf, annotatedLeaves[path], byName, known))
                 }
                 if (!expected.validated) {
                     found.addAll(compareAnnotatedLeaf(
@@ -1464,6 +1473,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 generator.embeddedLeaves((HibernateEmbeddedProperty) property).each { EmbeddedLeaf leaf ->
                     found["${property.name}.${leaf.path()}".toString()] = [
                             sqlType  : leaf.column()?.sqlType(),
+                            toOne    : leaf.toOne(),
                             validated: !generator.validationAnnotations(leaf.property).isEmpty(),
                     ]
                 }

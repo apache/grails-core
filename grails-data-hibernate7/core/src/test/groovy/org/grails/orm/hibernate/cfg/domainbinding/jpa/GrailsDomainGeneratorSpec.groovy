@@ -26,6 +26,8 @@ import java.lang.reflect.Field
 
 import grails.gorm.annotation.Entity
 import grails.gorm.tests.HibernateGormDatastoreSpec
+import jakarta.persistence.AssociationOverride
+import jakarta.persistence.AssociationOverrides
 import jakarta.persistence.AttributeOverride
 import jakarta.persistence.AttributeOverrides
 import jakarta.persistence.CollectionTable
@@ -147,9 +149,9 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
                 GenGizmo, GenCoded, GenCodedChild, GenFormulaRoot, GenFormulaChild, GenAbstractBase, GenConcreteChild, GenNoted, GenNotedChild,
                 GenJoinedVehicle, GenJoinedCar, GenJoinedSportsCar, GenJoinedSedan, GenJoinedKeyed, GenJoinedKeyedChild,
                 GenFleetVehicle, GenFleetCar, GenFleetSportsCar, GenFleetSedan, GenUnionBase, GenUnionLeaf, GenUnionMiddle, GenUnionBottom,
-                GenEmbedOwner, GenEmbedOther, GenEmbedBase, GenEmbedChild, GenEmbedBadHolder, GenEmbedFormulaOwner, GenCollSingle, GenCollKinds, GenCollLazy,
+                GenEmbedOwner, GenEmbedOther, GenEmbedBase, GenEmbedChild, GenEmbedFormulaOwner, GenCollSingle, GenCollKinds, GenCollLazy,
                 GenFkTarget, GenFkOwned, GenFkOwner, GenFkCascades, GenFkNodeA, GenFkNodeB, GenFkHasOneOwner, GenFkHasOneDetail, GenOneFace, GenOneNose, GenFkManyOne, GenFkOneSide, GenFkSub, GenFkSubRoot,
-                GenOmParent, GenOmChild, GenOmListed, GenOmOrdered, GenOmOrphan, GenOmFetched, GenOmTag, GenOmStep, GenOmKept, GenOmSortedOwner, GenOmMapOwner, GenMapBidiOwner, GenMapBidiChild,
+                GenOmParent, GenOmChild, GenOmListed, GenOmOrdered, GenOmOrphan, GenOmFetched, GenOmTag, GenOmStep, GenOmKept, GenOmSortedOwner, GenOmMapOwner, GenMapBidiOwner, GenMapBidiChild, GenEmbAssocOwner,
                 GenMmStudent, GenMmCourse, GenMmPerson, GenMmNoOwnerA, GenMmNoOwnerB)
     }
 
@@ -979,13 +981,13 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
 
     void "an embedded type with a property the generator does not support is rejected by name"() {
         when:
-        generate(GenEmbedBadHolder)
+        newGenerator().generateAll([unbound(GenEmbedBadHolder)], getClass().classLoader)
 
         then:
         UnsupportedOperationException e = thrown()
         e.message.contains('Embedded property [bad] of [' + GenEmbedBadHolder.name + ']')
         e.message.contains('ref')
-        !newGenerator().supports(entity(GenEmbedBadHolder).getHibernatePropertyByName('bad'))
+        !newGenerator().supports(unbound(GenEmbedBadHolder).getHibernatePropertyByName('bad'))
     }
 
     void "a collection of basic values is an @ElementCollection with its table, key column and element column"() {
@@ -1714,6 +1716,38 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         GenMapBidiOwner | 'kids'   | GenMapBidiChild | 'gen_map_bidi_owner_kids' | 'kids_id' | 'owner_id'              | 'kids_idx'
     }
 
+    void "an association inside an embedded type is a field of the embeddable, and each owner states its join column with @AssociationOverride"() {
+        given:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenEmbAssocOwner, GenFkTarget)
+        Class<?> owner = classes[entity(GenEmbAssocOwner)]
+        Class<?> embeddable = owner.getDeclaredField('home').type
+        Closure<Map<String, JoinColumn>> overrides = { String property ->
+            owner.getDeclaredField(property).getAnnotation(AssociationOverrides).value().collectEntries { AssociationOverride override ->
+                [(override.name()): override.joinColumns()[0]]
+            }
+        }
+
+        expect:
+        owner.getDeclaredField('work').type == embeddable
+        embeddable.getDeclaredField('city').type == classes[entity(GenFkTarget)]
+        embeddable.getDeclaredField('city').isAnnotationPresent(ManyToOne)
+        overrides('home')['city'].name() == 'home_city_id'
+        overrides('work')['city'].name() == 'work_city_id'
+        overrides('home')['city'].nullable()
+    }
+
+    void "Hibernate's own annotation binder reads an association inside an embedded type as a many-to-one of the component"() {
+        given:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenEmbAssocOwner, GenFkTarget)
+        PersistentClass owner = annotationMetadata(classes.values()).getEntityBinding(classes[entity(GenEmbAssocOwner)].name)
+        Component home = (Component) owner.getProperty('home').value
+        org.hibernate.mapping.ManyToOne city = (org.hibernate.mapping.ManyToOne) home.getProperty('city').value
+
+        expect:
+        city.referencedEntityName == classes[entity(GenFkTarget)].name
+        city.selectables*.text == ['home_city_id']
+    }
+
     private Map<GrailsHibernatePersistentEntity, Class<?>> generateOmGroup() {
         return generateGroup(GenOmParent, GenOmChild, GenOmListed, GenOmOrdered, GenOmOrphan, GenOmFetched, GenOmTag, GenOmStep, GenOmKept)
     }
@@ -1898,7 +1932,7 @@ class GenEmbedBadHolder {
 class GenEmbedBad {
 
     String text
-    GenBasic ref
+    GenFkComposite ref
 }
 
 @Entity
@@ -2892,4 +2926,20 @@ class GenMapBidiOwner {
 class GenMapBidiChild {
 
     GenMapBidiOwner owner
+}
+
+@Entity
+class GenEmbAssocOwner {
+
+    String name
+    GenEmbAssocPlace home
+    GenEmbAssocPlace work
+
+    static embedded = ['home', 'work']
+}
+
+class GenEmbAssocPlace {
+
+    String street
+    GenFkTarget city
 }

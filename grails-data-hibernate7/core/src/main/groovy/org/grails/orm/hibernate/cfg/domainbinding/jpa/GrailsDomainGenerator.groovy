@@ -23,6 +23,8 @@ import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 
 import groovy.transform.CompileStatic
+import jakarta.persistence.AssociationOverride
+import jakarta.persistence.AssociationOverrides
 import jakarta.persistence.AttributeOverride
 import jakarta.persistence.AttributeOverrides
 import jakarta.persistence.CascadeType
@@ -300,15 +302,26 @@ class GrailsDomainGenerator {
      */
     static List<GrailsHibernatePersistentEntity> referencedEntities(GrailsHibernatePersistentEntity entity) {
         List<GrailsHibernatePersistentEntity> found = []
-        for (HibernatePersistentProperty property : entity.persistentPropertiesToBind) {
+        collectReferencedEntities(entity.persistentPropertiesToBind, found, [])
+        return found
+    }
+
+    private static void collectReferencedEntities(
+            List<HibernatePersistentProperty> properties, List<GrailsHibernatePersistentEntity> found, List<Class<?>> visiting) {
+        for (HibernatePersistentProperty property : properties) {
             if (property instanceof HibernateToOneProperty || property instanceof HibernateToManyEntityProperty) {
                 GrailsHibernatePersistentEntity target = ((HibernateAssociation) property).hibernateAssociatedEntity
                 if (target != null && !found.any { GrailsHibernatePersistentEntity other -> other.javaClass == target.javaClass }) {
                     found << target
                 }
+            } else if (property instanceof HibernateEmbeddedProperty) {
+                // the generated embeddable types its association fields with the generated target classes
+                GrailsHibernatePersistentEntity type = (GrailsHibernatePersistentEntity) ((HibernateEmbeddedProperty) property).associatedEntity
+                if (type != null && !visiting.contains(type.javaClass)) {
+                    collectReferencedEntities(embeddedPeers((HibernateEmbeddedProperty) property), found, visiting + [type.javaClass])
+                }
             }
         }
-        return found
     }
 
     /**
@@ -1207,7 +1220,7 @@ class GrailsDomainGenerator {
                 null)
     }
 
-    private ColumnFacets toOneColumnFacets(HibernateAssociation property) {
+    private ColumnFacets toOneColumnFacets(HibernateAssociation property, String path = '') {
         PropertyConfig mapped = property.hibernateMappedForm
         ColumnConfig columnConfig = firstColumnConfig(mapped)
         Column column = new Column()
@@ -1218,7 +1231,7 @@ class GrailsDomainGenerator {
             column.customRead = columnConfig.read
             column.customWrite = columnConfig.write
         }
-        String name = columnNames.getColumnNameForPropertyAndPath(property, '', columnConfig)
+        String name = columnNames.getColumnNameForPropertyAndPath(property, path, columnConfig)
         boolean nullable = property.isAssociationColumnNullable()
         if (!property.hibernateOwner.isRoot()) {
             Mapping mapping = property.hibernateOwner.hibernateMappedForm
@@ -1316,9 +1329,11 @@ class GrailsDomainGenerator {
             if (peer instanceof HibernateEmbeddedProperty) {
                 collectLeaves((HibernateEmbeddedProperty) peer, currentPath, path, enclosing, leaves)
             } else if (isDerived(peer)) {
-                leaves << new EmbeddedLeaf(path, peer, null)
+                leaves << new EmbeddedLeaf(path, peer, null, null)
             } else {
-                leaves << new EmbeddedLeaf(path, peer, componentColumnFacets(peer, embedded, currentPath, enclosing))
+                leaves << new EmbeddedLeaf(
+                        path, peer, componentColumnFacets(peer, embedded, currentPath, enclosing),
+                        peer instanceof HibernateToOneProperty ? toOneFacets((HibernateToOneProperty) peer) : null)
             }
         }
     }
@@ -1331,8 +1346,9 @@ class GrailsDomainGenerator {
     private ColumnFacets componentColumnFacets(
             HibernatePersistentProperty peer, HibernateEmbeddedProperty parent, String path,
             List<HibernateEmbeddedProperty> enclosing) {
-        ColumnFacets facets = peer instanceof HibernateEnumProperty ?
-                enumColumnFacets((HibernateEnumProperty) peer, path) : basicColumnFacets(peer, path, parent)
+        ColumnFacets facets = peer instanceof HibernateToOneProperty ? toOneColumnFacets((HibernateToOneProperty) peer, path) :
+                (peer instanceof HibernateEnumProperty ?
+                        enumColumnFacets((HibernateEnumProperty) peer, path) : basicColumnFacets(peer, path, parent))
         boolean nullable = facets.nullable() || enclosing.any { HibernateEmbeddedProperty e ->
             e.hibernateOwner.isComponentPropertyNullable(e)
         }
@@ -1374,6 +1390,15 @@ class GrailsDomainGenerator {
                 }
             } else if (peer instanceof HibernateToManyProperty) {
                 return "the property [${peer.name}] of [${type.name}] is a collection inside an embedded type, which the generator does not support yet"
+            } else if (peer instanceof HibernateToOneProperty) {
+                if (!boundAsManyToOne((HibernateToOneProperty) peer)) {
+                    return "the property [${peer.name}] of [${type.name}] is the inverse side of a one-to-one inside an embedded type, " +
+                            'which the generator does not support yet'
+                }
+                String problem = toOneProblem((HibernateToOneProperty) peer)
+                if (problem != null) {
+                    return "the association [${peer.name}] of [${type.name}]: ${problem}"
+                }
             } else if (peer instanceof HibernateAssociation) {
                 return "the property [${peer.name}] of [${type.name}] is an association inside an embedded type, which the generator does not support yet"
             } else if (!supports(peer)) {
@@ -1869,8 +1894,23 @@ class GrailsDomainGenerator {
         TypeDescription embeddable = embeddable(property, embeddables)
         List<AnnotationDescription> annotations = [AnnotationDescription.Builder.ofType(Embedded).build()]
         if (withOverrides) {
-            List<AnnotationDescription> overrides = embeddedLeaves(property)
-                    .findAll { EmbeddedLeaf leaf -> leaf.column() != null }
+            List<EmbeddedLeaf> leaves = embeddedLeaves(property)
+            List<AnnotationDescription> associationOverrides = leaves
+                    .findAll { EmbeddedLeaf leaf -> leaf.toOne() != null }
+                    .collect { EmbeddedLeaf leaf ->
+                        AnnotationDescription.Builder.ofType(AssociationOverride)
+                                .define('name', leaf.path())
+                                .defineAnnotationArray('joinColumns', TypeDescription.ForLoadedType.of(JoinColumn), joinColumnAnnotation(leaf.column()))
+                                .build()
+                    }
+            if (!associationOverrides.isEmpty()) {
+                annotations << AnnotationDescription.Builder.ofType(AssociationOverrides)
+                        .defineAnnotationArray('value', TypeDescription.ForLoadedType.of(AssociationOverride),
+                                associationOverrides as AnnotationDescription[])
+                        .build()
+            }
+            List<AnnotationDescription> overrides = leaves
+                    .findAll { EmbeddedLeaf leaf -> leaf.column() != null && leaf.toOne() == null }
                     .collect { EmbeddedLeaf leaf ->
                         AnnotationDescription.Builder.ofType(AttributeOverride)
                                 .define('name', leaf.path())

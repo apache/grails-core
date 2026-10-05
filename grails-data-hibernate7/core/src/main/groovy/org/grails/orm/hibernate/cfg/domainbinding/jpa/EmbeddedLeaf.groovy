@@ -27,7 +27,9 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentP
  * embedded type, its path relative to the embedded property ({@code street}, or {@code zip.code} inside a nested
  * embedded type) and the column facets the owner states for it with {@code @AttributeOverride}.
  *
- * <p>{@code column} is {@code null} for a derived (formula) property, which has no column.</p>
+ * <p>{@code column} is {@code null} for a derived (formula) property, which has no column. {@code toOne} is set when the
+ * property is a to-one association (its {@code column} is then the foreign key column): the owner states that column with
+ * {@code @AssociationOverride} and the embeddable keeps the association's own facets.</p>
  *
  * @since 9.0
  */
@@ -35,5 +37,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentP
 record EmbeddedLeaf(
     String path,
     HibernatePersistentProperty property,
-    ColumnFacets column) {
+    ColumnFacets column,
+    ToOneFacets toOne) {
 }
