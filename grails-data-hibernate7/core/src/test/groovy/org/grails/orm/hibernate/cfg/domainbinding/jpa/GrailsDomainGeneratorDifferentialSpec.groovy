@@ -470,27 +470,15 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         return found
     }
 
-    /**
-     * {@code CollectionKeyColumnUpdater} makes the key updatable only while the owner has at most one unidirectional to-many
-     * property. Hibernate then refuses to insert or delete the rows of every collection of that owner, so the generator
-     * never states it (and could not: a join column is insertable and updatable alike). The binder's value is therefore
-     * pinned to that rule here, and the owners it hits are counted as a known defect.
-     */
+    /** The key of a collection of basic values must be updatable: Hibernate writes no rows for a collection whose key is not. */
     private static List<String> keyUpdatable(
             String where, HibernateBasicProperty property, CollectionFacets facets, DependantValue key, Map<String, Integer> known) {
         List<String> found = []
-        long unidirectional = property.hibernateOwner.persistentPropertiesToBind.count {
-            it instanceof HibernateToManyProperty && !((HibernateToManyProperty) it).isBidirectional()
-        }
-        boolean defect = unidirectional > 1
         if (!facets.key().updatable()) {
             found << "${where} keyUpdatable: generator=false binder=${key.updateable}".toString()
         }
-        if (key.updateable != !defect) {
-            found << "${where} keyUpdatable: generator=${!defect} binder=${key.updateable}".toString()
-        }
-        if (defect) {
-            known['the binder makes the key of a collection not updatable when its owner has several unidirectional to-many properties, so Hibernate never writes their rows']++
+        if (!key.updateable) {
+            found << "${where} keyUpdatable: generator=true binder=false".toString()
         }
         return found
     }

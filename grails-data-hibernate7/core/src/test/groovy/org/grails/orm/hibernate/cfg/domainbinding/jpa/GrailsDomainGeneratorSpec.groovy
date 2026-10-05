@@ -1061,15 +1061,15 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         !owner.getDeclaredField('tags').isAnnotationPresent(Cache)
     }
 
-    void "a collection key is always updatable, however many collections the owner has"() {
+    void "a collection key is updatable however many collections the owner has"() {
         given:
         Class<?> owner = generate(GenCollKinds)
 
-        expect: "the binder makes the key not updatable once the owner has more than one unidirectional collection, which stops Hibernate writing the rows"
+        expect: "the binder and the generator both keep the key updatable, or Hibernate would write no rows"
         owner.declaredFields.findAll { it.isAnnotationPresent(ElementCollection) }.every {
             it.getAnnotation(CollectionTable).joinColumns()[0].updatable() && it.getAnnotation(CollectionTable).joinColumns()[0].insertable()
         }
-        !((IndexedCollection) getPersistentEntity(GenCollKinds).persistentClass.getProperty('scores').value).key.updateable
+        ((IndexedCollection) getPersistentEntity(GenCollKinds).persistentClass.getProperty('scores').value).key.updateable
     }
 
     void "Hibernate's annotation binder reads the generated collections as the binder builds them"() {

@@ -20,15 +20,12 @@ package org.grails.orm.hibernate.cfg.domainbinding.jpa
 
 import grails.gorm.annotation.Entity
 import grails.gorm.tests.HibernateGormDatastoreSpec
-import spock.lang.PendingFeature
 
 /**
- * Pins a defect of the domain binder that {@link GrailsDomainGenerator} deliberately does not copy.
- *
- * <p>{@code CollectionKeyColumnUpdater} makes the key of a collection not updatable when its owner has more than one
- * unidirectional to-many property. Hibernate's collection persister then disables inserting and deleting the rows of
- * every collection of that owner, so the elements of a collection of basic values are never written. The feature that
- * shows it is pending: it fails today and the spec reports it as soon as the binder is fixed.</p>
+ * Regression test for a defect of the domain binder: {@code CollectionKeyColumnUpdater} made the key of a collection
+ * not updatable when its owner had more than one unidirectional to-many property. Hibernate's collection persister then
+ * disables inserting and deleting the rows of the collection, so the elements of a collection of basic values were never
+ * written. The key of a collection of basic values must stay updatable.
  */
 class BasicCollectionKeyDefectSpec extends HibernateGormDatastoreSpec {
 
@@ -46,7 +43,6 @@ class BasicCollectionKeyDefectSpec extends HibernateGormDatastoreSpec {
         DefectOneCollection.get(owner.id).tags == ['a', 'b'] as Set
     }
 
-    @PendingFeature(reason = 'CollectionKeyColumnUpdater makes the key not updatable once an owner has two unidirectional collections, so Hibernate writes no rows')
     void "the elements of each of two collections of an owner are persisted"() {
         given:
         DefectTwoCollections owner = new DefectTwoCollections(name: 'two', tags: ['a', 'b'] as Set, scores: [1, 2, 3])
