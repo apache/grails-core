@@ -35,6 +35,7 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.Id
 import jakarta.persistence.Inheritance
 import jakarta.persistence.InheritanceType
+import jakarta.persistence.PrimaryKeyJoinColumn
 import jakarta.persistence.Table
 import jakarta.persistence.Version
 import jakarta.validation.constraints.Size
@@ -60,6 +61,7 @@ import org.hibernate.id.enhanced.SequenceStyleGenerator
 import org.hibernate.id.enhanced.TableGenerator
 import org.hibernate.id.uuid.UuidGenerator as HibernateUuidGenerator
 import org.hibernate.mapping.PersistentClass
+import org.hibernate.mapping.JoinedSubclass
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.SingleTableSubclass
 import org.hibernate.mapping.GeneratorCreator
@@ -107,7 +109,8 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
     void setupSpec() {
         manager.registerDomainClasses(GenBasic, GenVehicle, GenCar, GenWithEnum, GenWithOwner, GenDerived, GenTyped, GenUnsupportedType, GenIdSequence, GenIdUuid, GenIdAssigned, GenIdTable,
                 GenIdIncrement, GenIdIdentity, GenIdNative, GenAnimal, GenDog, GenPuppy, GenCat, GenToy, GenPlushToy, GenGadget,
-                GenGizmo, GenCoded, GenCodedChild, GenFormulaRoot, GenFormulaChild, GenAbstractBase, GenConcreteChild, GenNoted, GenNotedChild)
+                GenGizmo, GenCoded, GenCodedChild, GenFormulaRoot, GenFormulaChild, GenAbstractBase, GenConcreteChild, GenNoted, GenNotedChild,
+                GenJoinedVehicle, GenJoinedCar, GenJoinedSportsCar, GenJoinedSedan, GenJoinedKeyed, GenJoinedKeyedChild)
     }
 
     List<StandardServiceRegistry> registries = []
@@ -547,7 +550,8 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
 
     void "an abstract class in a hierarchy is generated abstract"() {
         when:
-        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateHierarchy(GenAbstractBase, GenConcreteChild, GenNoted, GenNotedChild)
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateHierarchy(GenAbstractBase, GenConcreteChild, GenNoted, GenNotedChild,
+                GenJoinedVehicle, GenJoinedCar, GenJoinedSportsCar, GenJoinedSedan, GenJoinedKeyed, GenJoinedKeyedChild)
 
         then:
         java.lang.reflect.Modifier.isAbstract(classes[entity(GenAbstractBase)].modifiers)
@@ -557,7 +561,8 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
 
     void "a single-table subclass states its own class-level facets but never a table or a comment"() {
         when:
-        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateHierarchy(GenNoted, GenNotedChild)
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateHierarchy(GenNoted, GenNotedChild,
+                GenJoinedVehicle, GenJoinedCar, GenJoinedSportsCar, GenJoinedSedan, GenJoinedKeyed, GenJoinedKeyedChild)
         Class<?> root = classes[entity(GenNoted)]
         Class<?> child = classes[entity(GenNotedChild)]
 
@@ -569,6 +574,75 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         !child.isAnnotationPresent(Comment)
         !child.isAnnotationPresent(Table)
         !root.isAnnotationPresent(org.hibernate.annotations.DynamicInsert)
+    }
+
+    void "a joined hierarchy states the strategy on the root and a table and key column on every subclass"() {
+        when:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes =
+                generateHierarchy(GenJoinedVehicle, GenJoinedCar, GenJoinedSportsCar, GenJoinedSedan)
+        Class<?> root = classes[entity(GenJoinedVehicle)]
+        Class<?> car = classes[entity(GenJoinedCar)]
+        Class<?> sports = classes[entity(GenJoinedSportsCar)]
+
+        then:
+        root.getAnnotation(Inheritance).strategy() == InheritanceType.JOINED
+        root.getAnnotation(Table).name() == 'gen_joined_vehicle'
+        !root.isAnnotationPresent(PrimaryKeyJoinColumn)
+        car.getAnnotation(Table).name() == 'gen_joined_car'
+        car.getAnnotation(PrimaryKeyJoinColumn).name() == 'id'
+        sports.getAnnotation(Table).name() == 'gen_joined_sports_car'
+        sports.getAnnotation(PrimaryKeyJoinColumn).name() == 'id'
+        !car.isAnnotationPresent(Inheritance)
+
+        and: "a joined hierarchy has no discriminator"
+        [root, car, sports].every {
+            !it.isAnnotationPresent(DiscriminatorColumn) && !it.isAnnotationPresent(DiscriminatorValue) &&
+                    !it.isAnnotationPresent(DiscriminatorFormula)
+        }
+
+        and: "the extends chain follows the entity hierarchy and subclasses keep their own columns non-forced"
+        sports.superclass == car
+        car.superclass == root
+        classes[entity(GenJoinedSedan)].superclass == car
+        car.getDeclaredField('doors').getAnnotation(Column).nullable() == false
+    }
+
+    void "a joined subclass keys its table with the name of the identifier column and keeps an explicit table name"() {
+        when:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateHierarchy(GenJoinedKeyed, GenJoinedKeyedChild)
+
+        then:
+        classes[entity(GenJoinedKeyed)].getAnnotation(Table).name() == 'keyed_roots'
+        classes[entity(GenJoinedKeyedChild)].getAnnotation(Table).name() == 'keyed_children'
+        classes[entity(GenJoinedKeyedChild)].getAnnotation(PrimaryKeyJoinColumn).name() == 'key_id'
+    }
+
+    void "Hibernate's annotation binder reads the generated joined hierarchy as the binder builds it"() {
+        given:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes =
+                generateHierarchy(GenJoinedVehicle, GenJoinedCar, GenJoinedSportsCar, GenJoinedSedan)
+
+        when:
+        Metadata metadata = annotationMetadata(classes.values())
+        PersistentClass root = metadata.getEntityBinding(classes[entity(GenJoinedVehicle)].name)
+        PersistentClass car = metadata.getEntityBinding(classes[entity(GenJoinedCar)].name)
+        PersistentClass sports = metadata.getEntityBinding(classes[entity(GenJoinedSportsCar)].name)
+        PersistentClass bound = getPersistentEntity(GenJoinedSportsCar).persistentClass
+
+        then:
+        root instanceof RootClass
+        car instanceof JoinedSubclass
+        sports instanceof JoinedSubclass
+        sports.superclass.entityName == car.entityName
+        sports.table.name == 'gen_joined_sports_car' && !sports.table.is(car.table)
+        ((JoinedSubclass) sports).key.columns*.name == ['id']
+        root.discriminator == null
+
+        and: "the binder built the same shape"
+        bound instanceof JoinedSubclass
+        bound.table.name == sports.table.name
+        ((JoinedSubclass) bound).key.columns*.name == ((JoinedSubclass) sports).key.columns*.name
+        bound.superclass.entityName == GenJoinedCar.name
     }
 
     void "a hierarchy must be generated whole"() {
@@ -602,6 +676,8 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         GenDog      | InheritanceType.SINGLE_TABLE | GenAnimal.name | false     | GenDog.name   | false
         GenPuppy    | InheritanceType.SINGLE_TABLE | GenDog.name    | false     | GenPuppy.name | false
         GenBasic    | null                         | null           | true      | null          | false
+        GenJoinedVehicle | InheritanceType.JOINED  | null           | true      | null          | false
+        GenJoinedCar     | InheritanceType.JOINED  | GenJoinedVehicle.name | true | null     | false
     }
 
     void "Hibernate's annotation binder reads the generated single-table hierarchy as the binder builds it"() {
@@ -865,6 +941,60 @@ class GenNotedChild extends GenNoted {
     static mapping = {
         dynamicInsert true
         batchSize 3
+    }
+}
+
+@Entity
+class GenJoinedVehicle {
+
+    String name
+
+    static mapping = {
+        tablePerHierarchy false
+    }
+}
+
+@Entity
+class GenJoinedCar extends GenJoinedVehicle {
+
+    Integer doors
+
+    static constraints = {
+        doors nullable: false
+    }
+}
+
+@Entity
+class GenJoinedSportsCar extends GenJoinedCar {
+
+    Integer topSpeed
+}
+
+@Entity
+class GenJoinedSedan extends GenJoinedCar {
+
+    Boolean limousine
+}
+
+@Entity
+class GenJoinedKeyed {
+
+    String name
+
+    static mapping = {
+        table 'keyed_roots'
+        tablePerHierarchy false
+        id column: 'key_id'
+    }
+}
+
+@Entity
+class GenJoinedKeyedChild extends GenJoinedKeyed {
+
+    String extra
+
+    static mapping = {
+        table 'keyed_children'
     }
 }
 

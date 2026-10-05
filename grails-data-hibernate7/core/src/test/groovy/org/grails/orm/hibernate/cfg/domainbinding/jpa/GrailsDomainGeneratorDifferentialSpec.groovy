@@ -19,6 +19,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding.jpa
 
 import grails.gorm.annotation.Entity
+import jakarta.persistence.InheritanceType
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.hibernate.dialect.H2Dialect
 import org.hibernate.engine.spi.SessionFactoryImplementor
@@ -29,10 +30,12 @@ import org.hibernate.id.enhanced.TableGenerator
 import org.hibernate.mapping.BasicValue
 import org.hibernate.mapping.Column
 import org.hibernate.mapping.Formula
+import org.hibernate.mapping.JoinedSubclass
 import org.hibernate.mapping.PersistentClass
 import org.hibernate.mapping.Property
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.SingleTableSubclass
+import org.hibernate.mapping.UnionSubclass
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
 import java.lang.reflect.ParameterizedType
@@ -362,6 +365,14 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         if (persistentClass instanceof RootClass) {
             found.addAll(compareDiscriminator(entity, facets.discriminator(), (RootClass) persistentClass))
         }
+        if (persistentClass instanceof JoinedSubclass) {
+            List<String> keyColumns = ((JoinedSubclass) persistentClass).key.columns*.name
+            if ([facets.keyColumn()] != keyColumns) {
+                found << "${entity.name} keyColumn: generator=${[facets.keyColumn()]} binder=${keyColumns}".toString()
+            }
+        } else if (facets.keyColumn() != null) {
+            found << "${entity.name} keyColumn: generator=${facets.keyColumn()} binder=none".toString()
+        }
         return found
     }
 
@@ -369,7 +380,14 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         if (entity.isRoot()) {
             return RootClass.simpleName
         }
-        return SingleTableSubclass.simpleName
+        switch (facets.strategy()) {
+            case InheritanceType.JOINED:
+                return JoinedSubclass.simpleName
+            case InheritanceType.TABLE_PER_CLASS:
+                return UnionSubclass.simpleName
+            default:
+                return SingleTableSubclass.simpleName
+        }
     }
 
     /** The discriminator the binder put on the root: a column or a formula, its type, length and whether it is inserted. */
