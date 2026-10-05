@@ -138,7 +138,6 @@ trait ResponseRenderer extends WebAttributes {
 
         try {
             response.writer.write(object.inspect())
-            response.flushBuffer()
         }
         catch (IOException e) {
             throw new ControllerExecutionException('I/O error obtaining response writer: ' + e.getMessage(), e)
@@ -188,12 +187,6 @@ trait ResponseRenderer extends WebAttributes {
         response.setContentType(GrailsWebUtil.getContentType(MimeType.JSON.getName(), response.getCharacterEncoding() ?: 'UTF-8'))
         def jsonBuilder = new StreamingJsonBuilder(response.writer)
         jsonBuilder.call(callable)
-        try {
-            response.flushBuffer()
-        }
-        catch (IOException e) {
-            throw new ControllerExecutionException(e.message, e)
-        }
     }
 
     /**
@@ -233,7 +226,6 @@ trait ResponseRenderer extends WebAttributes {
             }
             writer.flush()
             webRequest.renderView = false
-            response.flushBuffer()
         }
         catch (IOException e) {
             throw new ControllerExecutionException(e.message, e)
@@ -257,12 +249,6 @@ trait ResponseRenderer extends WebAttributes {
         renderWritable(writable, response)
         setLayout(webRequest.request, false, layoutArg)
         webRequest.renderView = false
-        try {
-            response.flushBuffer()
-        }
-        catch (IOException e) {
-            throw new ControllerExecutionException(e.message, e)
-        }
     }
 
     /**
@@ -284,12 +270,6 @@ trait ResponseRenderer extends WebAttributes {
             if (textArg instanceof Writable) {
                 renderWritable((Writable) textArg, response)
                 webRequest.renderView = false
-                try {
-                    response.flushBuffer()
-                }
-                catch (IOException e) {
-                    throw new ControllerExecutionException(e.message, e)
-                }
             } else {
                 CharSequence text = (textArg instanceof CharSequence) ? ((CharSequence) textArg) : textArg.toString()
                 render(text)
@@ -391,7 +371,6 @@ trait ResponseRenderer extends WebAttributes {
                 } else {
                     renderViewForTemplate(webRequest, view, binding)
                 }
-                response.flushBuffer()
             }
             catch (GroovyRuntimeException gre) {
                 throw new ControllerExecutionException("Error rendering template [$templateName]: ${gre.message}", gre)
@@ -430,7 +409,6 @@ trait ResponseRenderer extends WebAttributes {
                         input = IOUtils.openStream(new File(o.toString()))
                     }
                     SpringIOUtils.copy(input, response.getOutputStream())
-                    response.flushBuffer()
                 } catch (IOException e) {
                     throw new ControllerExecutionException(
                             "I/O error copying file to response: ${e.message}", e)
@@ -514,12 +492,6 @@ trait ResponseRenderer extends WebAttributes {
         renderWritable(markup, response)
 
         webRequest.setRenderView(false)
-        try {
-            response.flushBuffer()
-        }
-        catch (IOException e) {
-            throw new ControllerExecutionException(e.message, e)
-        }
     }
 
     private boolean isJSONResponse(HttpServletResponse response) {

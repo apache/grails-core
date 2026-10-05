@@ -26,6 +26,7 @@ import grails.web.HyphenatedUrlConverter
 import grails.web.mapping.AbstractUrlMappingsSpec
 import org.grails.web.mapping.DefaultUrlMappingData
 import org.grails.web.mapping.DefaultUrlMappingInfo
+import org.grails.web.util.GrailsApplicationAttributes
 import org.grails.web.util.WebUtils
 import org.springframework.ui.ModelMap
 import org.springframework.web.context.request.RequestContextHolder
@@ -33,9 +34,11 @@ import org.springframework.web.context.request.WebRequest
 import org.springframework.web.context.request.WebRequestInterceptor
 import org.springframework.web.context.support.StaticWebApplicationContext
 import org.springframework.web.servlet.HandlerInterceptor
+import org.springframework.web.servlet.ModelAndView
 import org.springframework.web.servlet.handler.WebRequestHandlerInterceptorAdapter
 import org.springframework.web.servlet.view.InternalResourceView
 import spock.lang.Issue
+import spock.lang.Unroll
 
 /**
  * Created by graemerocher on 26/05/14.
@@ -290,6 +293,61 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         new UrlMappingsHandlerMapping(holder)
     }
 
+    @Issue('https://github.com/apache/grails-core/issues/15819')
+    @Unroll
+    void "adapter returns null when renderView=false is set by action '#actionName' (result=#resultDesc)"() {
+        given: "a URL mapping for an action that sets renderView=false (simulating render(template:), render(text:), etc.)"
+        def grailsApplication = new DefaultGrailsApplication(FooController)
+        grailsApplication.initialise()
+        def holder = getUrlMappingsHolder {
+            "/foo/$actionName"(controller: "foo", action: actionName)
+        }
+        holder = new GrailsControllerUrlMappings(grailsApplication, holder)
+        def handler = new UrlMappingsHandlerMapping(holder)
+
+        when: "the request is dispatched"
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        webRequest.renderView = true
+        def request = webRequest.request
+        request.setRequestURI("/foo/$actionName")
+        def handlerChain = handler.getHandler(request)
+        def handlerAdapter = new UrlMappingsInfoHandlerAdapter()
+        def result = handlerAdapter.handle(request, webRequest.response, handlerChain.handler)
+
+        then: "the adapter returns null — no ModelAndView is passed to DispatcherServlet for view resolution"
+        result == null
+
+        where:
+        actionName              | resultDesc
+        'renderText'            | 'null (renderView=false, returns null)'
+        'renderTextWithMap'     | 'Map (renderView=false, action also returns a Map)'
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15819')
+    void "adapter returns ModelAndView when render(view:) is used (renderView stays true, MODEL_AND_VIEW attribute is set)"() {
+        given: "a URL mapping for an action that uses render(view:)"
+        def grailsApplication = new DefaultGrailsApplication(FooController)
+        grailsApplication.initialise()
+        def holder = getUrlMappingsHolder {
+            "/foo/renderView"(controller: "foo", action: "renderView")
+        }
+        holder = new GrailsControllerUrlMappings(grailsApplication, holder)
+        def handler = new UrlMappingsHandlerMapping(holder)
+
+        when: "the request is dispatched"
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        webRequest.renderView = true
+        def request = webRequest.request
+        request.setRequestURI("/foo/renderView")
+        def handlerChain = handler.getHandler(request)
+        def handlerAdapter = new UrlMappingsInfoHandlerAdapter()
+        def result = handlerAdapter.handle(request, webRequest.response, handlerChain.handler)
+
+        then: "the adapter returns the ModelAndView set by render(view:) so DispatcherServlet resolves the named view"
+        result != null
+        result.viewName == '/foo/myView'
+    }
+
     void cleanup() {
         RequestContextHolder.resetRequestAttributes()
     }
@@ -318,5 +376,45 @@ class FooController  {
     @Action
     def notFound() {
         RequestContextHolder.currentRequestAttributes().response.writer << "Not Found"
+    }
+
+    /**
+     * Simulates render(text: 'hello') or render(template: '_partial'): sets renderView=false,
+     * writes content, returns null. The adapter must return null so DispatcherServlet does not
+     * attempt view resolution. (#15819)
+     */
+    @Action
+    def renderText() {
+        def webRequest = RequestContextHolder.currentRequestAttributes()
+        webRequest.renderView = false
+        webRequest.response.writer.write('hello')
+        null
+    }
+
+    /**
+     * Simulates an action that calls render(text:) but also returns a Map — the bug scenario
+     * from #15819 where the adapter previously ignored renderView=false when result instanceof Map.
+     */
+    @Action
+    def renderTextWithMap() {
+        def webRequest = RequestContextHolder.currentRequestAttributes()
+        webRequest.renderView = false
+        webRequest.response.writer.write('hello')
+        [foo: 'bar']
+    }
+
+    /**
+     * Simulates render(view: 'myView'): sets MODEL_AND_VIEW on the request but does NOT set
+     * renderView=false. The adapter must return the ModelAndView so DispatcherServlet resolves
+     * the named view. (#15819)
+     */
+    @Action
+    def renderView() {
+        def webRequest = RequestContextHolder.currentRequestAttributes()
+        webRequest.request.setAttribute(
+            GrailsApplicationAttributes.MODEL_AND_VIEW,
+            new ModelAndView('/foo/myView')
+        )
+        null
     }
 }
