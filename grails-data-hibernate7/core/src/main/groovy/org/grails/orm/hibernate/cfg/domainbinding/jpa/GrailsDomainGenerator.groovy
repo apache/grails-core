@@ -65,9 +65,12 @@ import org.hibernate.annotations.DiscriminatorOptions
 import org.hibernate.annotations.DynamicInsert
 import org.hibernate.annotations.DynamicUpdate
 import org.hibernate.annotations.Fetch
+import org.hibernate.annotations.Filter
+import org.hibernate.annotations.FilterDef
 import org.hibernate.annotations.FetchMode as AnnotationFetchMode
 import org.hibernate.annotations.Formula
 import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.annotations.ParamDef
 import org.hibernate.annotations.Parameter
 import org.hibernate.annotations.Type
 import org.hibernate.annotations.UuidGenerator
@@ -79,6 +82,7 @@ import org.hibernate.type.BasicType
 import org.hibernate.type.spi.TypeConfiguration
 import org.hibernate.usertype.UserType
 
+import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.orm.hibernate.cfg.ColumnConfig
 import org.grails.orm.hibernate.cfg.DiscriminatorConfig
 import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
@@ -105,8 +109,10 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumPropert
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleIdentityProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateTenantIdProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
+import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsEnumType
 import org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator
 
@@ -137,6 +143,7 @@ class GrailsDomainGenerator {
     private final NumericColumnConstraintsBinder numericConstraints
     private final TypeConfiguration typeConfiguration
     private final TableForManyCalculator tableForMany
+    private final DefaultColumnNameFetcher defaultColumnNames
 
     GrailsDomainGenerator(
             PersistentEntityNamingStrategy namingStrategy,
@@ -153,6 +160,7 @@ class GrailsDomainGenerator {
         this.typeConfiguration = typeConfiguration
         // the table name rules never touch the metadata collector; only the schema and catalog defaults do, and those are mirrored here
         this.tableForMany = new TableForManyCalculator(namingStrategy, null)
+        this.defaultColumnNames = new DefaultColumnNameFetcher(namingStrategy)
     }
 
     /**
@@ -171,6 +179,10 @@ class GrailsDomainGenerator {
      * Generates one class for each entity, so that a hierarchy is described whole. Hibernate's annotation binder
      * derives the hierarchy from {@code extends}, so the class generated for a subclass extends the class
      * generated for its direct superclass.
+     *
+     * <p>A multi-tenant entity gets the tenant {@code @Filter}; the one {@code @FilterDef} that declares the filter is
+     * placed on the first such entity of the call. Hibernate refuses a second definition of the same filter, so every
+     * multi-tenant entity of a Hibernate registry must be generated in one call.</p>
      *
      * <p>A GORM embedded property becomes an {@code @Embedded} field whose type is a generated {@code @Embeddable}
      * class. Owners that embed the same type with the same properties share one embeddable class, and each owner
@@ -199,13 +211,15 @@ class GrailsDomainGenerator {
         List<GrailsHibernatePersistentEntity> ordered = new ArrayList<GrailsHibernatePersistentEntity>(given)
         ordered.sort { GrailsHibernatePersistentEntity a, GrailsHibernatePersistentEntity b -> depth(a) <=> depth(b) }
 
+        // Hibernate refuses a second @FilterDef of the same name, so exactly one class of the call carries the definition
+        GrailsHibernatePersistentEntity filterDefinition = given.find { GrailsHibernatePersistentEntity entity -> tenantFacets(entity) != null }
         Map<GrailsHibernatePersistentEntity, DynamicType.Unloaded<?>> made = [:]
         Map<String, DynamicType.Unloaded<?>> embeddables = [:]
         Map<TypeDescription, byte[]> types = [:]
         for (GrailsHibernatePersistentEntity entity : ordered) {
             TypeDescription superType = entity.isRoot() ?
                     TypeDescription.ForLoadedType.of(Object) : made.get(superEntity(entity, given)).typeDescription
-            DynamicType.Unloaded<?> unloaded = make(entity, superType, embeddables)
+            DynamicType.Unloaded<?> unloaded = make(entity, superType, embeddables, entity.is(filterDefinition))
             made.put(entity, unloaded)
             types.putAll(unloaded.allTypes)
         }
@@ -249,12 +263,13 @@ class GrailsDomainGenerator {
     }
 
     private DynamicType.Unloaded<?> make(
-            GrailsHibernatePersistentEntity entity, TypeDescription superType, Map<String, DynamicType.Unloaded<?>> embeddables) {
+            GrailsHibernatePersistentEntity entity, TypeDescription superType, Map<String, DynamicType.Unloaded<?>> embeddables,
+            boolean definesFilter) {
         HierarchyFacets hierarchy = hierarchyFacets(entity)
         DynamicType.Builder<Object> builder = (DynamicType.Builder<Object>) new ByteBuddy()
                 .subclass(superType)
                 .name(generatedClassName(entity))
-                .annotateType(classAnnotations(entity, hierarchy) as AnnotationDescription[])
+                .annotateType(classAnnotations(entity, hierarchy, definesFilter) as AnnotationDescription[])
         if (hierarchy.abstractClass()) {
             builder = builder.modifiers(Visibility.PUBLIC, TypeManifestation.ABSTRACT)
         }
@@ -311,7 +326,7 @@ class GrailsDomainGenerator {
                 return "Collection property [${property.name}] of [${entity.name}]: ${problem}"
             }
         }
-        if (property instanceof HibernateSimpleProperty && !decideType(property).supported) {
+        if ((property instanceof HibernateSimpleProperty || property instanceof HibernateTenantIdProperty) && !decideType(property).supported) {
             return typeNotSupported(property, decideType(property).name)
         }
         return "Property [${property.name}] of [${entity.name}] is a ${property.getClass().simpleName}, " +
@@ -451,7 +466,7 @@ class GrailsDomainGenerator {
 
     /**
      * @return whether the generator can describe the property today: a plain single-column basic property, a
-     *     derived (formula) property, the version, an enum, an embedded object whose own properties are all
+     *     derived (formula) property, the tenant id (an ordinary column), the version, an enum, an embedded object whose own properties are all
      *     supported, a collection of basic values or enums, or the simple identifier. Custom types, multi-column properties and every association are not
      *     supported yet.
      */
@@ -465,7 +480,7 @@ class GrailsDomainGenerator {
         if (property instanceof HibernateBasicProperty) {
             return collectionProblem((HibernateBasicProperty) property) == null
         }
-        if (!(property instanceof HibernateSimpleProperty)) {
+        if (!(property instanceof HibernateSimpleProperty) && !(property instanceof HibernateTenantIdProperty)) {
             return false
         }
         PropertyConfig mappedForm = property.hibernateMappedForm
@@ -566,6 +581,34 @@ class GrailsDomainGenerator {
         }
         return [(int): Integer, (long): Long, (boolean): Boolean, (double): Double, (float): Float, (short): Short,
                 (byte): Byte, (char): Character].get(type)
+    }
+
+    /**
+     * Decides the multi-tenant filter the domain binder gives the entity, as {@code MultiTenantFilterBinder} does: only an
+     * entity whose multi-tenancy is active (it has a tenant id, which GORM only sets in discriminator mode) is filtered,
+     * and only a root, or a joined or table-per-class subclass that declares the tenant id itself; the single-table
+     * subclasses share the root's filter. The condition compares the filter parameter with the tenant id property's
+     * DEFAULT column name (the binder never uses a mapped column name there), and the parameter has the tenant id's type.
+     *
+     * <p>Hibernate's own {@code @TenantId} is not used: it also sets the tenant on insert and filters every query through
+     * a {@code CurrentTenantIdentifierResolver}, while GORM enables the filter itself per session and lets the tenant id be
+     * written and queried like any other property (plan decision on item 6a).</p>
+     *
+     * @return the filter, or {@code null} when the binder adds none to the entity
+     * @throws UnsupportedOperationException when the tenant id has a mapped type, which the filter parameter would need too
+     */
+    TenantFacets tenantFacets(GrailsHibernatePersistentEntity entity) {
+        HibernatePersistentProperty tenantId = entity.isMultiTenant() ? entity.hibernateTenantId : null
+        if (tenantId == null || !(entity.isRoot() || (!entity.isTablePerHierarchySubclass() && !tenantId.isInherited()))) {
+            return null
+        }
+        TypeDecision type = decideType(tenantId)
+        if (!type.supported || type.facets != null) {
+            throw new UnsupportedOperationException(
+                    "The tenant id [${tenantId.name}] of [${entity.name}] has a mapped type, which the filter parameter " +
+                            'would need too and the generator cannot state yet')
+        }
+        return new TenantFacets(GormProperties.TENANT_IDENTITY, entity.getMultiTenantFilterCondition(defaultColumnNames), boxed(tenantId.type))
     }
 
     /**
@@ -962,7 +1005,8 @@ class GrailsDomainGenerator {
         return columns == null || columns.isEmpty() ? null : columns[0]
     }
 
-    private List<AnnotationDescription> classAnnotations(GrailsHibernatePersistentEntity entity, HierarchyFacets hierarchy) {
+    private List<AnnotationDescription> classAnnotations(
+            GrailsHibernatePersistentEntity entity, HierarchyFacets hierarchy, boolean definesFilter) {
         EntityFacets facets = entityFacets(entity)
         List<AnnotationDescription> annotations = []
         annotations << AnnotationDescription.Builder.ofType(Entity).define('name', facets.jpaName()).build()
@@ -990,6 +1034,23 @@ class GrailsDomainGenerator {
         }
         if (facets.comment()) {
             annotations << AnnotationDescription.Builder.ofType(Comment).define('value', facets.comment()).build()
+        }
+        TenantFacets tenant = tenantFacets(entity)
+        if (tenant != null) {
+            if (definesFilter) {
+                annotations << AnnotationDescription.Builder.ofType(FilterDef)
+                        .define('name', tenant.filterName())
+                        .defineAnnotationArray('parameters', TypeDescription.ForLoadedType.of(ParamDef),
+                                AnnotationDescription.Builder.ofType(ParamDef)
+                                        .define('name', tenant.filterName())
+                                        .define('type', TypeDescription.ForLoadedType.of(tenant.parameterType()))
+                                        .build())
+                        .build()
+            }
+            annotations << AnnotationDescription.Builder.ofType(Filter)
+                    .define('name', tenant.filterName())
+                    .define('condition', tenant.condition())
+                    .build()
         }
         return annotations
     }
@@ -1343,10 +1404,12 @@ class GrailsDomainGenerator {
 
     /**
      * @return whether the binder binds the property as a Hibernate {@code Formula} with no column, which is what
-     *     {@code SimpleValueBinder} does for every derived property except an enum
+     *     {@code SimpleValueBinder} does for every derived property except an enum and the tenant id (which stays a
+     *     column)
      */
     boolean isDerived(HibernatePersistentProperty property) {
-        return property.hibernateMappedForm.derived && !(property instanceof HibernateEnumProperty)
+        return property.hibernateMappedForm.derived && !(property instanceof HibernateEnumProperty) &&
+                !(property instanceof HibernateTenantIdProperty)
     }
 
     private static boolean isNullable(HibernatePersistentProperty property, HibernatePersistentProperty parent) {

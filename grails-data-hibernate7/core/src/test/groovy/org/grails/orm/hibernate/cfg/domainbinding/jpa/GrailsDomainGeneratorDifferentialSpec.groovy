@@ -29,6 +29,7 @@ import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder
 import org.hibernate.boot.registry.StandardServiceRegistry
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder
 import org.hibernate.dialect.H2Dialect
+import org.hibernate.engine.spi.FilterDefinition
 import org.hibernate.engine.spi.SessionFactoryImplementor
 import org.hibernate.generator.Generator
 import org.hibernate.id.enhanced.OptimizerFactory
@@ -40,6 +41,7 @@ import org.hibernate.mapping.Column
 import org.hibernate.mapping.Collection as HibernateCollection
 import org.hibernate.mapping.Component
 import org.hibernate.mapping.DependantValue
+import org.hibernate.mapping.FilterConfiguration
 import org.hibernate.mapping.IndexedCollection
 import org.hibernate.mapping.Formula
 import org.hibernate.mapping.JoinedSubclass
@@ -57,6 +59,9 @@ import java.lang.reflect.Modifier
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 
+import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
+import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
+import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.orm.hibernate.HibernateDatastore
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider
@@ -114,6 +119,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         Map<String, Integer> explicitTypes = [:].withDefault { 0 }
         Map<String, Integer> collections = [:].withDefault { 0 }
         Map<String, Integer> known = [:].withDefault { 0 }
+        Map<String, Integer> tenants = [:].withDefault { 0 }
         Map<String, Integer> strategies = [:].withDefault { 0 }
         Map<String, Integer> hierarchies = [:].withDefault { 0 }
         Map<String, Integer> annotationRead = [:].withDefault { 0 }
@@ -122,7 +128,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         for (List<Class<?>> group : groups) {
             HibernateDatastore datastore
             try {
-                datastore = new HibernateDatastore(group as Class[])
+                datastore = boot(group)
             } catch (Throwable e) {
                 unbootable[group*.simpleName.join(',')] = (e.message ?: e.getClass().simpleName).readLines().first()
                 continue
@@ -144,6 +150,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                         mismatches.addAll(compareEntity(entity, generator.entityFacets(entity), hierarchy))
                         mismatches.addAll(compareHierarchy(entity, hierarchy))
                     }
+                    mismatches.addAll(compareTenantFilter(entity, generator, (SessionFactoryImplementor) datastore.sessionFactory, skipped, tenants))
                     if (entity.isRoot()) {
                         if (entity.identity instanceof HibernateSimpleIdentityProperty) {
                             mismatches.addAll(compareIdentifierGenerator(
@@ -225,7 +232,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                         }
                     }
                 }
-                mismatches.addAll(compareAnnotationBoundHierarchies(generator, boundEntities, skipped, annotationRead, known))
+                mismatches.addAll(compareAnnotationBoundHierarchies(generator, boundEntities, skipped, annotationRead, known, tenants))
             } finally {
                 datastore.close()
             }
@@ -236,6 +243,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 "(${derived} derived); ${embeddedProperties} embedded properties compared, ${embeddedLeaves} embedded columns\n"
         report << "explicit types compared: ${explicitTypes}\n"
         report << "collections of basic values compared by kind: ${collections}\n"
+        report << "tenant filters compared: ${tenants}\n"
         report << "id generators compared by strategy: ${strategies}\n"
         report << "entities compared by hierarchy role: ${hierarchies}\n"
         report << "hierarchies read back through Hibernate's annotation binder: ${annotationRead}\n"
@@ -249,6 +257,25 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         then:
         compared > 200
         mismatches.isEmpty()
+    }
+
+    /**
+     * Boots a group of entities. GORM only gives an entity a tenant id (and the binder only adds the tenant filter) in
+     * discriminator multi-tenancy mode, so a group with multi-tenant entities is booted in that mode when it can be.
+     */
+    private static HibernateDatastore boot(List<Class<?>> group) {
+        if (group.any { Class<?> type -> ClassUtils.isMultiTenant(type) }) {
+            try {
+                return new HibernateDatastore([
+                        'dataSource.dbCreate'                     : 'create-drop',
+                        'grails.gorm.multiTenancy.mode'          : MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR,
+                        'grails.gorm.multiTenancy.tenantResolver': new SystemPropertyTenantResolver(),
+                ], group as Class[])
+            } catch (Exception ignored) {
+                // a domain that needs another configuration is booted by default below
+            }
+        }
+        return new HibernateDatastore(group as Class[])
     }
 
     private List<String> compare(String where, ColumnFacets facets, Property bound) {
@@ -275,6 +302,116 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         }
         return pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
             "${where} ${facet}: generator=${values[0]} binder=${values[1]}".toString()
+        }
+    }
+
+    /**
+     * The tenant filter {@code MultiTenantFilterBinder} puts on the entity's class and the one global definition it
+     * registers: the same name, condition and parameter, or no filter at all when the generator says there is none.
+     */
+    private List<String> compareTenantFilter(
+            GrailsHibernatePersistentEntity entity, GrailsDomainGenerator generator, SessionFactoryImplementor sessionFactory,
+            Map<String, Integer> skipped, Map<String, Integer> tenants) {
+        TenantFacets facets
+        try {
+            facets = generator.tenantFacets(entity)
+        } catch (UnsupportedOperationException e) {
+            skipped['tenant filter: a mapped type on the tenant id']++
+            return []
+        }
+        List<FilterConfiguration> filters = ownTenantFilters(entity.persistentClass)
+        String where = "${entity.name} tenant filter"
+        if (facets == null) {
+            return filters.isEmpty() ? [] : ["${where}: generator=none binder=${filters*.condition}".toString()]
+        }
+        tenants['filters']++
+        if (filters.size() != 1) {
+            return ["${where}: generator=1 binder=${filters.size()}".toString()]
+        }
+        FilterConfiguration filter = filters[0]
+        FilterDefinition definition = sessionFactory.getFilterDefinition(facets.filterName())
+        Map<String, List> pairs = [
+                condition     : [facets.condition(), filter.condition],
+                autoAlias     : [true, filter.useAutoAliasInjection()],
+                parameterNames: [[facets.filterName()].toSet(), definition?.parameterNames],
+                parameterType : [facets.parameterType(), definition?.getParameterJdbcMapping(facets.filterName())?.javaTypeDescriptor?.javaTypeClass],
+                defaultCond   : [null, definition?.defaultFilterCondition],
+                autoEnabled   : [false, definition?.autoEnabled],
+                loadByKey     : [false, definition?.appliedToLoadByKey],
+        ]
+        return pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
+            "${where} ${facet}: generator=${values[0]} binder=${values[1]}".toString()
+        }
+    }
+
+    /** The tenant filters a class added itself: a subclass reports the filters of its superclass as its own, too. */
+    private static List<FilterConfiguration> ownTenantFilters(PersistentClass persistentClass) {
+        return persistentClass.filters.findAll { FilterConfiguration f ->
+            f.name == 'tenantId' && (persistentClass.superclass == null || !persistentClass.superclass.filters.any { it.is(f) })
+        }
+    }
+
+    /** The filter the generated class gets, read back by Hibernate's annotation binder, against the binder's. */
+    private static List<String> compareAnnotatedTenantFilter(
+            GrailsHibernatePersistentEntity entity, GrailsDomainGenerator generator, PersistentClass annotated, Map<String, Integer> tenants) {
+        TenantFacets facets
+        try {
+            facets = generator.tenantFacets(entity)
+        } catch (UnsupportedOperationException ignored) {
+            return []
+        }
+        List<FilterConfiguration> bound = ownTenantFilters(entity.persistentClass)
+        List<FilterConfiguration> read = ownTenantFilters(annotated)
+        String where = "${entity.name} hibernate tenant filter"
+        if (bound.size() != read.size()) {
+            return ["${where}: generator=${read*.condition} binder=${bound*.condition}".toString()]
+        }
+        if (!bound.isEmpty()) {
+            tenants['filters read back']++
+        }
+        return [bound, read].transpose().collectMany { List pair ->
+            FilterConfiguration b = (FilterConfiguration) pair[0]
+            FilterConfiguration r = (FilterConfiguration) pair[1]
+            Map<String, List> pairs = [
+                    condition: [b.condition, r.condition],
+                    autoAlias: [b.useAutoAliasInjection(), r.useAutoAliasInjection()],
+            ]
+            pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
+                "${where} ${facet}: generator=${values[1]} binder=${values[0]}".toString()
+            }
+        } as List<String>
+    }
+
+    /**
+     * The filter definition Hibernate's annotation binder registers for a generated hierarchy: present exactly when the
+     * hierarchy has a tenant filter, with the one parameter of the tenant id's type and nothing else.
+     */
+    private static List<String> compareAnnotatedFilterDefinition(
+            List<GrailsHibernatePersistentEntity> entities, GrailsDomainGenerator generator, Metadata metadata, Map<String, Integer> tenants) {
+        TenantFacets facets = null
+        try {
+            facets = entities.collect { generator.tenantFacets(it) }.find { it != null }
+        } catch (UnsupportedOperationException ignored) {
+            return []
+        }
+        FilterDefinition definition = metadata.getFilterDefinition('tenantId')
+        String where = "${entities.first().hibernateRootEntity.name} hibernate filter definition"
+        if (facets == null) {
+            return definition == null ? [] : ["${where}: generator=${definition.filterName} binder=none".toString()]
+        }
+        tenants['filter definitions read back']++
+        if (definition == null) {
+            return ["${where}: generator=none binder=${facets.filterName()}".toString()]
+        }
+        Map<String, List> pairs = [
+                parameterNames: [[facets.filterName()].toSet(), definition.parameterNames],
+                parameterType : [facets.parameterType(), definition.getParameterJdbcMapping(facets.filterName())?.javaTypeDescriptor?.javaTypeClass],
+                defaultCond   : [null, definition.defaultFilterCondition ?: null],
+                autoEnabled   : [false, definition.autoEnabled],
+                loadByKey     : [false, definition.appliedToLoadByKey],
+        ]
+        return pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
+            "${where} ${facet}: generator=${values[1]} binder=${values[0]}".toString()
         }
     }
 
@@ -664,7 +801,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
      */
     private List<String> compareAnnotationBoundHierarchies(
             GrailsDomainGenerator generator, List<GrailsHibernatePersistentEntity> entities, Map<String, Integer> skipped,
-            Map<String, Integer> annotationRead, Map<String, Integer> known) {
+            Map<String, Integer> annotationRead, Map<String, Integer> known, Map<String, Integer> tenants) {
         List<String> found = []
         Map<GrailsHibernatePersistentEntity, List<GrailsHibernatePersistentEntity>> hierarchies = [:]
         for (GrailsHibernatePersistentEntity entity : entities) {
@@ -695,7 +832,9 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 }
                 annotationRead["${generator.hierarchyFacets(hierarchy.key).strategy() ?: 'single class'} (${classes.size()} classes)".toString()]++
                 Map<String, GrailsHibernatePersistentEntity> byName = hierarchy.value.collectEntries { [(it.name): it] }
+                found.addAll(compareAnnotatedFilterDefinition(hierarchy.value, generator, metadata, tenants))
                 classes.each { GrailsHibernatePersistentEntity entity, Class<?> generated ->
+                    found.addAll(compareAnnotatedTenantFilter(entity, generator, metadata.getEntityBinding(generated.name), tenants))
                     found.addAll(compareAnnotationBound(generator, entity, metadata.getEntityBinding(generated.name), byName, annotationRead, known))
                 }
             } finally {
