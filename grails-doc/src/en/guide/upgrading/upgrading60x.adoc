@@ -1176,5 +1176,5 @@ With `DISCRIMINATOR` multi-tenancy, GORM for MongoDB and GORM's in-memory datast
 
 * The id of another tenant's instance is treated like an id that does not exist: `get` and `read` return `null`, `exists` returns `false`, `getAll` returns `null` in its place, and the proxy returned by `load` or `proxy` throws when it is initialized.
 * Without a current tenant, these methods throw `TenantNotFoundException`, as a query does.
-* Inside `Tenants.withoutId { }` a lookup by id is still not restricted to a tenant.
+* Inside `Tenants.withoutId { }` a lookup by id is still not restricted to a tenant, and neither is a proxy returned by `load` or `proxy` that is initialized there.
 * A lookup by id of a multi-tenant entity runs as a query, so with the `AUTO` flush mode it flushes the session first. With the `COMMIT` flush mode, an instance that has been saved but not flushed is no longer found by `get`.

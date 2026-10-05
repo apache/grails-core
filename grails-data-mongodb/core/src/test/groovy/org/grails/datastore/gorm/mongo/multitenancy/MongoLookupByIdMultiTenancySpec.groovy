@@ -19,6 +19,7 @@
 package org.grails.datastore.gorm.mongo.multitenancy
 
 import org.bson.types.ObjectId
+import org.springframework.core.convert.ConversionFailedException
 import org.springframework.dao.DataIntegrityViolationException
 import spock.lang.AutoCleanup
 import spock.lang.Shared
@@ -55,7 +56,7 @@ class MongoLookupByIdMultiTenancySpec extends AutoStartedMongoSpec {
                 'grails.gorm.multiTenancy.tenantResolverClass': SystemPropertyTenantResolver,
                 (MongoSettings.SETTING_URL)                   : "mongodb://${mongoHost}:${mongoPort}/lookupByIdDb" as String,
         ]
-        this.datastore = new MongoDatastore(config, Memo)
+        this.datastore = new MongoDatastore(config, Memo, NumberedMemo)
     }
 
     void setup() {
@@ -77,6 +78,33 @@ class MongoLookupByIdMultiTenancySpec extends AutoStartedMongoSpec {
         Memo.withNewSession { Memo.read(otherId) } == null
         !Memo.withNewSession { Memo.exists(otherId) }
         Memo.withNewSession { Memo.get(otherId.toHexString()) } == null
+    }
+
+    void 'a lookup by an id that cannot be converted to the type of the identifier behaves as a lookup by key does'() {
+        given:
+        Long numberedId = NumberedMemo.withTenant('own') {
+            NumberedMemo.withNewSession { new NumberedMemo(title: 'Own').save(flush: true).id }
+        }
+
+        expect:
+        NumberedMemo.withNewSession { NumberedMemo.get(numberedId.toString())?.title } == 'Own'
+
+        and: 'get, read and exists treat an id that cannot be converted like an id that does not exist'
+        NumberedMemo.withNewSession { NumberedMemo.get('not-a-number') } == null
+        NumberedMemo.withNewSession { NumberedMemo.read('not-a-number') } == null
+        !NumberedMemo.withNewSession { NumberedMemo.exists('not-a-number') }
+
+        when: 'getAll is given an id that cannot be converted'
+        NumberedMemo.withNewSession { NumberedMemo.getAll('not-a-number', numberedId) }
+
+        then: 'it throws, as it did before lookups by id were restricted to the current tenant'
+        thrown(ConversionFailedException)
+
+        when: 'load is given an id that cannot be converted'
+        NumberedMemo.withNewSession { NumberedMemo.load('not-a-number') }
+
+        then: 'it throws as well'
+        thrown(ConversionFailedException)
     }
 
     void 'getAll returns null in place of an instance of another tenant'() {
@@ -114,6 +142,15 @@ class MongoLookupByIdMultiTenancySpec extends AutoStartedMongoSpec {
         } == ['Own', 'Other']
     }
 
+    void 'a proxy created under a tenant is not restricted to a tenant when it is initialized inside withoutId'() {
+        expect:
+        Memo.withNewSession {
+            Memo own = Memo.load(ownId)
+            Memo other = Memo.load(otherId)
+            Tenants.withoutId(datastore) { [own.title, other.title] }
+        } == ['Own', 'Other']
+    }
+
     void 'a lookup by id without a current tenant throws TenantNotFoundException'() {
         given:
         System.clearProperty(SystemPropertyTenantResolver.PROPERTY_NAME)
@@ -135,6 +172,13 @@ class MongoLookupByIdMultiTenancySpec extends AutoStartedMongoSpec {
 @Entity
 class Memo implements MultiTenant<Memo>, MongoEntity<Memo> {
     ObjectId id
+    String tenantId
+    String title
+}
+
+@Entity
+class NumberedMemo implements MultiTenant<NumberedMemo>, MongoEntity<NumberedMemo> {
+    Long id
     String tenantId
     String title
 }

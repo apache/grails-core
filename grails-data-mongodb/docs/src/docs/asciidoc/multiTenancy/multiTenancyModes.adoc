@@ -115,7 +115,7 @@ Lookups by id are restricted to the current tenant as well. `get`, `read`, `exis
 Book.get(id)
 ----
 
-Without a current tenant a lookup by id throws `TenantNotFoundException`, as a query does. Inside `Tenants.withoutId { }` a lookup by id is not restricted to a tenant.
+Without a current tenant a lookup by id throws `TenantNotFoundException`, as a query does. Inside `Tenants.withoutId { }` a lookup by id is not restricted to a tenant, and neither is a proxy returned by `load` that is initialized there.
 
 But this logic bypasses any built into tenant id interception and inclusion:
 

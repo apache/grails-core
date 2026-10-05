@@ -18,6 +18,7 @@
  */
 package grails.gorm.multitenancy.partitioned
 
+import org.springframework.core.convert.ConversionFailedException
 import org.springframework.dao.DataIntegrityViolationException
 import spock.lang.AutoCleanup
 import spock.lang.Shared
@@ -73,6 +74,25 @@ class PartitionedLookupByIdSpec extends Specification {
         Note.withNewSession { Note.get(ownId.toString())?.title } == 'Own'
         Note.withNewSession { Note.get(otherId.toString()) } == null
         Note.withNewSession { Note.get(null) } == null
+    }
+
+    void 'a lookup by an id that cannot be converted to the type of the identifier behaves as a lookup by key does'() {
+        expect: 'get, read and exists treat an id that cannot be converted like an id that does not exist'
+        Note.withNewSession { Note.get('not-a-number') } == null
+        Note.withNewSession { Note.read('not-a-number') } == null
+        !Note.withNewSession { Note.exists('not-a-number') }
+
+        when: 'getAll is given an id that cannot be converted'
+        Note.withNewSession { Note.getAll('not-a-number', ownId) }
+
+        then: 'it throws, as it did before lookups by id were restricted to the current tenant'
+        thrown(ConversionFailedException)
+
+        when: 'load is given an id that cannot be converted'
+        Note.withNewSession { Note.load('not-a-number') }
+
+        then: 'it throws as well'
+        thrown(ConversionFailedException)
     }
 
     void 'getAll returns null in place of an instance of another tenant'() {
@@ -131,6 +151,15 @@ class PartitionedLookupByIdSpec extends Specification {
         expect:
         Tenants.withoutId(datastore) {
             Note.withNewSession { [Note.get(ownId)?.title, Note.get(otherId)?.title] }
+        } == ['Own', 'Other']
+    }
+
+    void 'a proxy created under a tenant is not restricted to a tenant when it is initialized inside withoutId'() {
+        expect:
+        Note.withNewSession {
+            Note own = Note.load(ownId)
+            Note other = Note.load(otherId)
+            Tenants.withoutId(datastore) { [own.title, other.title] }
         } == ['Own', 'Other']
     }
 

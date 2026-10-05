@@ -346,7 +346,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
      */
     D get(Serializable id) {
         if (id != null && isRetrievedByQuery()) {
-            return retrieveAllByQuery([id])[0]
+            return retrieveAllByQuery([id], false)[0]
         }
         (D) execute({ Session session ->
             session.retrieve((Class)persistentClass, id)
@@ -398,7 +398,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
      */
     List<D> getAll(Serializable... ids) {
         if (isRetrievedByQuery()) {
-            return retrieveAllByQuery((Collection<Serializable>) ids.flatten())
+            return retrieveAllByQuery((Collection<Serializable>) ids.flatten(), true)
         }
         (List<D>) execute({ Session session ->
             session.retrieveAll(persistentClass, ids.flatten())
@@ -421,10 +421,21 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
                 || persistentEntity.identity == null) {
             return false
         }
+        return !isWithoutTenant()
+    }
+
+    /**
+     * Whether the current id is the default connection source, as it is inside
+     * {@link Tenants#withoutId(groovy.lang.Closure)}.
+     *
+     * @return Whether the current id is the default connection source
+     * @throws org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException if there is no current tenant
+     */
+    private boolean isWithoutTenant() {
         Serializable currentId = datastore instanceof MultiTenantCapableDatastore
                 ? Tenants.currentId((MultiTenantCapableDatastore) datastore)
                 : Tenants.currentId(datastore.getClass())
-        return !ConnectionSource.DEFAULT.equals(currentId)
+        return ConnectionSource.DEFAULT.equals(currentId)
     }
 
     /**
@@ -432,11 +443,12 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
      * restricts to the current tenant.
      *
      * @param ids The identifiers
+     * @param strict Whether an identifier that cannot be converted to the type of the identity throws
      * @return The instances in the order of the identifiers, with {@code null} for an identifier no instance was found for
      */
-    private List<D> retrieveAllByQuery(Collection<Serializable> ids) {
+    private List<D> retrieveAllByQuery(Collection<Serializable> ids, boolean strict) {
         (List<D>) execute({ Session session ->
-            List<Serializable> keys = ids.collect { Serializable id -> convertIdentifier(session, id) }
+            List<Serializable> keys = ids.collect { Serializable id -> convertIdentifier(session, id, strict) }
             List<Serializable> present = keys.findAll { Serializable key -> key != null }
             Map<Object, Object> found = [:]
             if (present) {
@@ -458,39 +470,52 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     /**
      * Creates a proxy that is initialized through a query by id, which the multi-tenant event listener restricts to
      * the tenant that is current when the proxy is initialized. A proxy for an instance of another tenant then fails
-     * to initialize, as a proxy for an instance that does not exist does.
+     * to initialize, as a proxy for an instance that does not exist does. A proxy initialized inside
+     * {@link Tenants#withoutId(groovy.lang.Closure)} looks the instance up by key, so it is not restricted to a tenant.
      *
      * @param id The identifier
      * @return The proxy
      */
     private D proxyByQuery(Serializable id) {
         (D) execute({ Session session ->
-            Serializable key = convertIdentifier(session, id)
+            Serializable key = convertIdentifier(session, id, true)
             try {
-                return session.mappingContext.proxyFactory.createProxy(session, new IdQueryExecutor(session, persistentEntity), key)
+                return session.mappingContext.proxyFactory.createProxy(session, new IdQueryExecutor(this, session), key)
             }
             catch (UnsupportedOperationException ignored) {
                 // a proxy factory that cannot initialize a proxy through a query gets the instance itself
-                return retrieveAllByQuery([key])[0]
+                return retrieveAllByQuery([key], true)[0]
             }
         } as SessionCallback)
     }
 
-    private Serializable convertIdentifier(Session session, Serializable id) {
+    /**
+     * Converts an identifier to the type of the identity as the lookup by key converts it: {@code getAll} and
+     * {@code load} throw for an identifier that cannot be converted, and {@code get} finds no instance for it.
+     *
+     * @param session The session
+     * @param id The identifier
+     * @param strict Whether an identifier that cannot be converted throws
+     * @return The converted identifier, or {@code null} for an identifier that cannot be converted if not strict
+     */
+    private Serializable convertIdentifier(Session session, Serializable id, boolean strict) {
         Class identityType = persistentEntity.identity.type
         if (id == null || identityType.isInstance(id)) {
             return id
         }
         ConversionService conversionService = session.mappingContext.conversionService
-        if (conversionService.canConvert(id.getClass(), identityType)) {
-            try {
-                return (Serializable) conversionService.convert(id, identityType)
-            }
-            catch (ConversionFailedException ignored) {
-                // the lookup by key ignores an identifier it cannot convert as well
-            }
+        if (strict) {
+            return (Serializable) conversionService.convert(id, identityType)
         }
-        return id
+        if (!conversionService.canConvert(id.getClass(), identityType)) {
+            return null
+        }
+        try {
+            return (Serializable) conversionService.convert(id, identityType)
+        }
+        catch (ConversionFailedException ignored) {
+            return null
+        }
     }
 
     /**
@@ -1312,28 +1337,34 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     }
 
     /**
-     * Queries an instance by id for a proxy created by {@link GormStaticApi#load(Serializable)}.
+     * Queries an instance by id for a proxy created by {@link GormStaticApi#load(Serializable)}. Inside
+     * {@link Tenants#withoutId(groovy.lang.Closure)} the instance is looked up by key instead, as {@code load} looks it
+     * up there.
      */
     private static class IdQueryExecutor implements AssociationQueryExecutor<Serializable, Object> {
 
+        private final GormStaticApi<?> api
         private final Session session
-        private final PersistentEntity entity
 
-        IdQueryExecutor(Session session, PersistentEntity entity) {
+        IdQueryExecutor(GormStaticApi<?> api, Session session) {
+            this.api = api
             this.session = session
-            this.entity = entity
         }
 
         @Override
         List<Object> query(Serializable id) {
-            Query query = session.createQuery(entity.javaClass)
+            if (api.isWithoutTenant()) {
+                Object instance = session.retrieve(api.persistentClass, id)
+                return instance == null ? [] : [instance]
+            }
+            Query query = session.createQuery(api.persistentClass)
             query.idEq(id)
             query.list()
         }
 
         @Override
         PersistentEntity getIndexedEntity() {
-            entity
+            api.persistentEntity
         }
 
         @Override
