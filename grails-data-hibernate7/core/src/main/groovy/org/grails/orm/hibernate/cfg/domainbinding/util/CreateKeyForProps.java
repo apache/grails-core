@@ -28,6 +28,7 @@ import org.hibernate.mapping.Table;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class CreateKeyForProps {
@@ -48,6 +49,11 @@ public class CreateKeyForProps {
     }
 
     public void createKeyForProps(HibernatePersistentProperty grailsProp, String path, Table table, String columnName) {
+        if (grailsProp instanceof HibernateToManyProperty) {
+            // The column of a collection property lives in the collection table, which does not hold the columns
+            // of the other properties of the group, so a unique group has no key to create there.
+            return;
+        }
         PropertyConfig mappedForm = grailsProp.getMappedForm();
 
         if (mappedForm.isUnique() && mappedForm.isUniqueWithinGroup()) {

@@ -21,6 +21,7 @@ package org.grails.orm.hibernate.cfg.domainbinding
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 import org.hibernate.MappingException
 import org.hibernate.mapping.Table
 import spock.lang.Specification
@@ -135,6 +136,22 @@ class CreateKeyForPropsSpec extends Specification {
         1 * mappedForm.getUniquenessGroup() >> ["missingProp"]
         1 * owner.getJavaClass() >> CreateKeyForPropsSpec
         1 * owner.getHibernatePropertyByName("missingProp")
+        0 * uniqueKeyCreator._
+        0 * columnNameFetcher._
+    }
+
+    def "creates no key for a collection property, whose table does not hold the other columns of the group"() {
+        given:
+        def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
+        def uniqueKeyCreator = Mock(UniqueKeyForColumnsCreator)
+        def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator)
+        def collectionProp = Mock(HibernateToManyProperty)
+
+        when:
+        subject.createKeyForProps(collectionProp, "", new Table("t_collection"), "owner_id")
+
+        then:
+        0 * collectionProp._
         0 * uniqueKeyCreator._
         0 * columnNameFetcher._
     }
