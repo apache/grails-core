@@ -41,6 +41,7 @@ import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.Id
+import jakarta.persistence.Index
 import jakarta.persistence.Inheritance
 import jakarta.persistence.InheritanceType
 import jakarta.persistence.JoinColumn
@@ -54,6 +55,7 @@ import jakarta.persistence.OrderBy
 import jakarta.persistence.OrderColumn
 import jakarta.persistence.PrimaryKeyJoinColumn
 import jakarta.persistence.Table
+import jakarta.persistence.UniqueConstraint
 import jakarta.persistence.Version
 import net.bytebuddy.ByteBuddy
 import net.bytebuddy.description.annotation.AnnotationDescription
@@ -110,6 +112,7 @@ import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.IndexBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.NumericColumnConstraintsBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.StringColumnConstraintsBinder
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIdentityGenerator
@@ -138,6 +141,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToOneProper
 import org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior
 import org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehaviorFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
+import org.grails.orm.hibernate.cfg.domainbinding.util.CreateKeyForProps
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsEnumType
 import org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator
@@ -171,6 +175,8 @@ class GrailsDomainGenerator {
     private final TableForManyCalculator tableForMany
     private final DefaultColumnNameFetcher defaultColumnNames
     private final CascadeBehaviorFetcher cascadeFetcher = new CascadeBehaviorFetcher()
+    private final IndexBinder indexBinder = new IndexBinder()
+    private final CreateKeyForProps keyForProps
 
     GrailsDomainGenerator(
             PersistentEntityNamingStrategy namingStrategy,
@@ -188,6 +194,7 @@ class GrailsDomainGenerator {
         // the table name rules never touch the metadata collector; only the schema and catalog defaults do, and those are mirrored here
         this.tableForMany = new TableForManyCalculator(namingStrategy, null)
         this.defaultColumnNames = new DefaultColumnNameFetcher(namingStrategy)
+        this.keyForProps = new CreateKeyForProps(columnNames)
     }
 
     /**
@@ -429,6 +436,11 @@ class GrailsDomainGenerator {
                 return "Association property [${property.name}] of [${entity.name}]: ${problem}"
             }
         }
+        if (property instanceof HibernateEnumProperty && property.hibernateMappedForm.isUniqueWithinGroup()) {
+            return "Enum property [${property.name}] of [${entity.name}] is in a unique group, which the binder ignores for an enum " +
+                    '(it creates no unique key and leaves the column not unique), so the constraint the mapping asks for would exist ' +
+                    'only in the generated model'
+        }
         if ((property instanceof HibernateSimpleProperty || property instanceof HibernateTenantIdProperty) && !decideType(property).supported) {
             return typeNotSupported(property, decideType(property).name)
         }
@@ -472,6 +484,104 @@ class GrailsDomainGenerator {
                 mapping != null && mapping.dynamicUpdate,
                 mapping?.batchSize != null ? mapping.batchSize : 0,
                 sharesTable ? null : entity.comment)
+    }
+
+    /**
+     * Decides the indexes and multi-column unique keys the domain binder puts on the table the entity owns. The binder's own
+     * {@code IndexBinder} and {@code CreateKeyForProps} run, on a scratch table with the entity's table name, for every column
+     * the binder passes through {@code ColumnBinder} (a simple property, the identifier, the version, a to-one foreign key, each
+     * leaf of an embedded type) or {@code EnumTypeBinder} (an enum, which only gets an index), in the order the binder binds
+     * them, so the names ({@code <table>_<column>_idx}, {@code UK} and a hash) and the column order are the binder's. The
+     * single-table subclasses of a hierarchy share the table of the root, so their columns are part of the root's constraints.
+     *
+     * @param entity an entity that owns its table: a root, or a joined or table-per-class subclass
+     */
+    ConstraintFacets constraintFacets(GrailsHibernatePersistentEntity entity) {
+        org.hibernate.mapping.Table table = new org.hibernate.mapping.Table('grails', entityFacets(entity).tableName().replace('`', ''))
+        List<GrailsHibernatePersistentEntity> contributors = [entity]
+        collectSharingSubclasses(entity, contributors)
+        for (GrailsHibernatePersistentEntity contributor : contributors) {
+            List<ConstraintSite> sites = []
+            collectConstraintSites(contributor, sites)
+            for (ConstraintSite site : sites) {
+                Column column = new Column(site.columnName)
+                indexBinder.bindIndex(site.columnName, column, site.columnConfig, table)
+                if (!site.enumeration) {
+                    keyForProps.createKeyForProps(site.property, site.path, table, site.columnName)
+                }
+            }
+        }
+        return new ConstraintFacets(
+                table.indexes.values().collect { org.hibernate.mapping.Index index ->
+                    new IndexFacets(index.name, index.columns*.name)
+                },
+                table.uniqueKeys.values().collect { org.hibernate.mapping.UniqueKey key ->
+                    new UniqueKeyFacets(key.name, key.columns*.name)
+                })
+    }
+
+    private static void collectSharingSubclasses(GrailsHibernatePersistentEntity entity, List<GrailsHibernatePersistentEntity> into) {
+        for (GrailsHibernatePersistentEntity child : entity.childEntities) {
+            if (child.isTablePerHierarchySubclass()) {
+                into << child
+                collectSharingSubclasses(child, into)
+            }
+        }
+    }
+
+    private void collectConstraintSites(GrailsHibernatePersistentEntity contributor, List<ConstraintSite> sites) {
+        List<HibernatePersistentProperty> properties = []
+        if (contributor.isRoot()) {
+            if (contributor.identity instanceof HibernateSimpleIdentityProperty) {
+                properties << (HibernatePersistentProperty) contributor.identity
+            }
+            if (contributor.version != null) {
+                properties << contributor.version
+            }
+        }
+        properties.addAll(contributor.persistentPropertiesToBind)
+        for (HibernatePersistentProperty property : properties) {
+            collectConstraintSites(property, '', sites)
+        }
+    }
+
+    private void collectConstraintSites(HibernatePersistentProperty property, String path, List<ConstraintSite> sites) {
+        if (property instanceof HibernateEmbeddedProperty) {
+            HibernateEmbeddedProperty embedded = (HibernateEmbeddedProperty) property
+            String current = path.isEmpty() ? embedded.name : "${path}.${embedded.name}".toString()
+            for (HibernatePersistentProperty peer : embeddedPeers(embedded)) {
+                collectConstraintSites(peer, current, sites)
+            }
+        } else if (property instanceof HibernateBasicProperty || property instanceof HibernateToManyEntityProperty ||
+                isDerived(property) || (property instanceof HibernateToOneProperty && boundAsOneToOne((HibernateToOneProperty) property))) {
+            return
+        } else {
+            ColumnConfig columnConfig = firstColumnConfig(property.hibernateMappedForm)
+            boolean enumeration = property instanceof HibernateEnumProperty
+            String name = enumeration ?
+                    ((HibernateEnumProperty) property).resolveEnumColumnName(namingStrategy, columnNames, path) :
+                    columnNames.getColumnNameForPropertyAndPath(property, path, columnConfig)
+            sites << new ConstraintSite(property, path, name, columnConfig, enumeration)
+        }
+    }
+
+    /** One column the binder passes through {@code ColumnBinder} or {@code EnumTypeBinder}: where its index and unique group come from. */
+    private static final class ConstraintSite {
+
+        final HibernatePersistentProperty property
+        final String path
+        final String columnName
+        final ColumnConfig columnConfig
+        final boolean enumeration
+
+        ConstraintSite(
+                HibernatePersistentProperty property, String path, String columnName, ColumnConfig columnConfig, boolean enumeration) {
+            this.property = property
+            this.path = path
+            this.columnName = columnName
+            this.columnConfig = columnConfig
+            this.enumeration = enumeration
+        }
     }
 
     /**
@@ -598,6 +708,9 @@ class GrailsDomainGenerator {
         }
         if (property instanceof HibernateEnumProperty && mappedForm.derived) {
             // the enum binder never reads the formula, it always binds a column
+            return false
+        }
+        if (property instanceof HibernateEnumProperty && mappedForm.isUniqueWithinGroup()) {
             return false
         }
         return decideType(property).supported
@@ -786,6 +899,10 @@ class GrailsDomainGenerator {
         if (elementType == null || elementType == Object) {
             return 'the element type is not known'
         }
+        String constraintProblem = collectionConstraintProblem(property)
+        if (constraintProblem != null) {
+            return constraintProblem
+        }
         if (mapped.lazy == Boolean.TRUE) {
             return 'an explicit lazy: true makes the binder bind an extra-lazy collection, which Hibernate 7 annotations cannot state'
         }
@@ -814,6 +931,32 @@ class GrailsDomainGenerator {
                 key.read() != null || key.write() != null || key.comment() != null) {
             return 'the column config of the collection property sets a length, a precision, a scale, a default, a read or ' +
                     'write expression or a comment, which a join column cannot state'
+        }
+        return null
+    }
+
+    /**
+     * The binder binds the key column of a collection like any other column ({@code DependentKeyValueBinder} runs
+     * {@code ColumnBinder} on the property), so an {@code index:} or a {@code unique:} group on the collection property
+     * becomes an index or a unique key of the collection table over the key column, and for a collection of enums the
+     * element column is indexed too. A unique group names columns of the owner's table, which the collection table does not
+     * have. That is not what the mapping means, and not something the generator states, so it rejects the property.
+     *
+     * @return why the generator rejects the constraint on the collection property, or {@code null} when there is none the binder binds
+     */
+    private static String collectionConstraintProblem(HibernateToManyProperty property) {
+        PropertyConfig mapped = property.hibernateMappedForm
+        ColumnConfig columnConfig = firstColumnConfig(mapped)
+        boolean indexed = columnConfig?.index != null && !Boolean.FALSE.equals(columnConfig.index) &&
+                !'false'.equalsIgnoreCase(columnConfig.index.toString())
+        boolean bindsKey = property.isBidirectional() ?
+                (property.hibernateInverseSide instanceof HibernateManyToManyProperty || Map.isAssignableFrom(property.type)) :
+                !mapped.hasJoinKeyMapping()
+        boolean bindsEnumElement = property instanceof HibernateEnumProperty
+        if ((bindsKey || bindsEnumElement) && indexed || bindsKey && mapped.isUniqueWithinGroup()) {
+            return 'an index or a unique group is mapped on the collection property: the binder creates it over the key column of the ' +
+                    'collection table (a unique group over columns of the owner\'s table, which the collection table does not have), ' +
+                    'which the generator does not state'
         }
         return null
     }
@@ -975,6 +1118,10 @@ class GrailsDomainGenerator {
         }
         if (mapped.lazy == Boolean.TRUE) {
             return 'an explicit lazy: true makes the binder bind an extra-lazy collection, which Hibernate 7 annotations cannot state'
+        }
+        String constraintProblem = collectionConstraintProblem(property)
+        if (constraintProblem != null) {
+            return constraintProblem
         }
         if (property instanceof HibernateManyToManyProperty) {
             HibernateAssociation other = property.hibernateInverseSide
@@ -1496,6 +1643,25 @@ class GrailsDomainGenerator {
             }
             if (facets.catalog()) {
                 table = table.define('catalog', facets.catalog())
+            }
+            ConstraintFacets constraints = constraintFacets(entity)
+            if (!constraints.indexes().isEmpty()) {
+                table = table.defineAnnotationArray('indexes', TypeDescription.ForLoadedType.of(Index),
+                        constraints.indexes().collect { IndexFacets index ->
+                            AnnotationDescription.Builder.ofType(Index)
+                                    .define('name', index.name())
+                                    .define('columnList', index.columns().join(', '))
+                                    .build()
+                        } as AnnotationDescription[])
+            }
+            if (!constraints.uniqueKeys().isEmpty()) {
+                table = table.defineAnnotationArray('uniqueConstraints', TypeDescription.ForLoadedType.of(UniqueConstraint),
+                        constraints.uniqueKeys().collect { UniqueKeyFacets key ->
+                            AnnotationDescription.Builder.ofType(UniqueConstraint)
+                                    .define('name', key.name())
+                                    .defineArray('columnNames', key.columns() as String[])
+                                    .build()
+                        } as AnnotationDescription[])
             }
             annotations << table.build()
         }

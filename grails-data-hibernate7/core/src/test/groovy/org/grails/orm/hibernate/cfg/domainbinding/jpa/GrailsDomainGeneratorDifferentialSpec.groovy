@@ -135,6 +135,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         Map<String, Integer> hierarchies = [:].withDefault { 0 }
         Map<String, Integer> annotationRead = [:].withDefault { 0 }
         Map<String, Integer> associations = [:].withDefault { 0 }
+        Map<String, Integer> constraints = [:].withDefault { 0 }
 
         when:
         for (List<Class<?>> group : groups) {
@@ -161,6 +162,9 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                         hierarchies["${hierarchy.strategy() ?: 'none'}${entity.isRoot() ? ' root' : ' subclass'}".toString()]++
                         mismatches.addAll(compareEntity(entity, generator.entityFacets(entity), hierarchy))
                         mismatches.addAll(compareHierarchy(entity, hierarchy))
+                        if (hierarchy.ownsTable() && generator.generationProblem(entity) == null) {
+                            mismatches.addAll(compareConstraints(entity, generator.constraintFacets(entity), constraints))
+                        }
                     }
                     mismatches.addAll(compareTenantFilter(entity, generator, (SessionFactoryImplementor) datastore.sessionFactory, skipped, tenants))
                     if (entity.isRoot()) {
@@ -251,7 +255,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                                 continue
                             }
                             // Hibernate copies the length, precision and scale of the referenced identifier onto a foreign key column after binding
-                            mismatches.addAll(compare(where, generator.columnFacets(property), bound, ['length', 'precision', 'scale']))
+                            mismatches.addAll(compare(where, generator.columnFacets(property), bound, known, ['length', 'precision', 'scale']))
                             mismatches.addAll(compareToOne(where, generator.toOneFacets((HibernateToOneProperty) property), bound, known))
                             continue
                         }
@@ -268,7 +272,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                         }
                         compared++
                         String where = "${entity.name}.${property.name}".toString()
-                        mismatches.addAll(compare(where, generator.columnFacets(property), bound))
+                        mismatches.addAll(compare(where, generator.columnFacets(property), bound, known))
                         if (property instanceof HibernateEnumProperty && generator.typeFacets(property) == null) {
                             mismatches.addAll(compareEnum(where, (HibernateEnumProperty) property, generator, bound))
                         }
@@ -290,6 +294,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         report << "collections of basic values compared by kind: ${collections}\n"
         report << "associations compared by kind: ${associations}\n"
         report << "tenant filters compared: ${tenants}\n"
+        report << "table constraints compared: ${constraints}\n"
         report << "id generators compared by strategy: ${strategies}\n"
         report << "entities compared by hierarchy role: ${hierarchies}\n"
         report << "hierarchies read back through Hibernate's annotation binder: ${annotationRead}\n"
@@ -324,7 +329,14 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         return new HibernateDatastore(group as Class[])
     }
 
-    private List<String> compare(String where, ColumnFacets facets, Property bound, Collection<String> ignore = []) {
+    /**
+     * The column facets the generator decided against the bound column and property. A mapping that says {@code insertable: false}
+     * or {@code updatable: false} is a known divergence, not a mismatch: {@code PropertyBinder} overwrites those flags with the
+     * ones of the columns, which are always set, so the binder ignores the option (pinned in
+     * {@link GrailsDomainBinderOptionDefectSpec}) and the generator states what the mapping asks for.
+     */
+    private List<String> compare(
+            String where, ColumnFacets facets, Property bound, Map<String, Integer> known, Collection<String> ignore = []) {
         Column column = (Column) bound.columns[0]
         Map<String, List> pairs = [
                 name      : [facets.name().replace('`', ''), column.name],
@@ -347,9 +359,56 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             pairs.remove('sqlType')
         }
         ignore.each { pairs.remove(it) }
+        ['insertable', 'updatable'].each { String facet ->
+            if (pairs[facet] != null && pairs[facet][0] == false && pairs[facet][1] == true) {
+                known["the binder ignores insertable: false and updatable: false in a mapping (PropertyBinder overwrites them); the generator states them".toString()]++
+                pairs.remove(facet)
+            }
+        }
         return pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
             "${where} ${facet}: generator=${values[0]} binder=${values[1]}".toString()
         }
+    }
+
+    /**
+     * The indexes and multi-column unique keys on the table the entity owns: the same names, the same columns in the same
+     * order. The unique key the binder adds for a natural id is not part of them (it is compared with the natural id).
+     */
+    private List<String> compareConstraints(GrailsHibernatePersistentEntity entity, ConstraintFacets facets, Map<String, Integer> constraints) {
+        org.hibernate.mapping.Table table = entity.persistentClass.table
+        String where = "${entity.name} table ${table.name}"
+        Map<String, List<String>> boundIndexes = table.indexes.values().collectEntries { org.hibernate.mapping.Index index ->
+            [(index.name): index.columns*.name]
+        } as Map<String, List<String>>
+        Map<String, List<String>> boundKeys = tableKeysWithoutNaturalId(entity.persistentClass)
+        Map<String, List<String>> generatedIndexes = facets.indexes().collectEntries { IndexFacets index -> [(index.name()): index.columns()] } as Map<String, List<String>>
+        Map<String, List<String>> generatedKeys = facets.uniqueKeys().collectEntries { UniqueKeyFacets key -> [(key.name()): key.columns()] } as Map<String, List<String>>
+        constraints['indexes'] += boundIndexes.size()
+        constraints['unique keys'] += boundKeys.size()
+        List<String> found = []
+        if (generatedIndexes != boundIndexes) {
+            found << "${where} indexes: generator=${generatedIndexes} binder=${boundIndexes}".toString()
+        }
+        if (generatedKeys != boundKeys) {
+            found << "${where} uniqueKeys: generator=${generatedKeys} binder=${boundKeys}".toString()
+        }
+        return found
+    }
+
+    /**
+     * The unique keys of the table that a mapping states with a group, by name. Left out: the single-column keys Hibernate derives
+     * from a unique column once the metadata is complete (their names start with {@code UK_}), and the unique key over the columns
+     * of a natural id, which is compared with the natural id.
+     */
+    private static Map<String, List<String>> tableKeysWithoutNaturalId(PersistentClass persistentClass) {
+        List<Set<String>> naturalColumns = persistentClass.subclassClosure.collect { PersistentClass member ->
+            member.declaredProperties.findAll { Property p -> p.naturalIdentifier }*.columns.flatten()*.name.toSet()
+        }.findAll { Set<String> columns -> !columns.isEmpty() }
+        return persistentClass.table.uniqueKeys.values().findAll { org.hibernate.mapping.UniqueKey key ->
+            !(key.columns.size() == 1 && key.name.startsWith('UK_')) && !naturalColumns.contains(key.columns*.name.toSet())
+        }.collectEntries { org.hibernate.mapping.UniqueKey key ->
+            [(key.name): key.columns*.name]
+        } as Map<String, List<String>>
     }
 
     /**
@@ -514,7 +573,20 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 found << "${where} tableColumns: generator=${described} binder=${collection.collectionTable.columns*.name}".toString()
             }
         }
+        found.addAll(compareCollectionTableIndexes(where, collection))
         return found
+    }
+
+    /**
+     * The generator states no index on the table of a collection: the binder only creates one there when the mapping puts
+     * {@code index:} on the collection property, which the generator rejects, so any index it finds is a mapping the generator
+     * accepted and drops.
+     */
+    private static List<String> compareCollectionTableIndexes(String where, HibernateCollection collection) {
+        List<String> indexes = collection.collectionTable.indexes.values().collect { org.hibernate.mapping.Index index ->
+            "${index.name}:${index.columns*.name}".toString()
+        }
+        return indexes.isEmpty() ? [] : ["${where} collectionTableIndexes: generator=[] binder=${indexes}".toString()]
     }
 
     /** The key of a collection of basic values must be updatable: Hibernate writes no rows for a collection whose key is not. */
@@ -601,11 +673,11 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 continue
             } else if (leaf.toOne() != null) {
                 // Hibernate copies the size of the referenced identifier onto a foreign key column after binding
-                found.addAll(compare(leafWhere, leaf.column(), boundLeaf, ['length', 'precision', 'scale']))
+                found.addAll(compare(leafWhere, leaf.column(), boundLeaf, known, ['length', 'precision', 'scale']))
                 found.addAll(compareToOne(leafWhere, leaf.toOne(), boundLeaf, known))
                 continue
             } else {
-                found.addAll(compare(leafWhere, leaf.column(), boundLeaf))
+                found.addAll(compare(leafWhere, leaf.column(), boundLeaf, known))
                 if (leaf.property instanceof HibernateEnumProperty && generator.typeFacets(leaf.property) == null) {
                     found.addAll(compareEnum(leafWhere, (HibernateEnumProperty) leaf.property, generator, boundLeaf))
                 }
@@ -956,6 +1028,9 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         if (bound instanceof RootClass) {
             found.addAll(compareAnnotatedDiscriminator(where, (RootClass) bound, (RootClass) annotated))
         }
+        if (pairs.ownsTable[0]) {
+            found.addAll(compareAnnotatedConstraints(where, bound, annotated))
+        }
         Map<String, Map<String, Object>> expectations = leafExpectations(generator, entity)
         for (Property property : bound.declaredProperties) {
             Property other = annotated.hasProperty(property.name) ? annotated.getProperty(property.name) : null
@@ -1016,6 +1091,30 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                             "${where} property ${path}".toString(), leaf, annotatedLeaves[path], (String) expected.sqlType, false))
                 }
             }
+        }
+        return found
+    }
+
+    /**
+     * The indexes and unique keys Hibernate's annotation binder puts on the table of the generated class: the same as the
+     * binder's, by name and column order. Hibernate adds a unique key of its own for a natural id, with its own name, so that one
+     * is compared by columns in the natural id comparison and not here.
+     */
+    private static List<String> compareAnnotatedConstraints(String where, PersistentClass bound, PersistentClass annotated) {
+        Map<String, List<String>> boundIndexes = bound.table.indexes.values().collectEntries { org.hibernate.mapping.Index index ->
+            [(index.name): index.columns*.name]
+        } as Map<String, List<String>>
+        Map<String, List<String>> annotatedIndexes = annotated.table.indexes.values().collectEntries { org.hibernate.mapping.Index index ->
+            [(index.name): index.columns*.name]
+        } as Map<String, List<String>>
+        List<String> found = []
+        if (boundIndexes != annotatedIndexes) {
+            found << "${where} indexes: generator=${annotatedIndexes} binder=${boundIndexes}".toString()
+        }
+        Map<String, List<String>> boundKeys = tableKeysWithoutNaturalId(bound)
+        Map<String, List<String>> annotatedKeys = tableKeysWithoutNaturalId(annotated)
+        if (boundKeys != annotatedKeys) {
+            found << "${where} uniqueKeys: generator=${annotatedKeys} binder=${boundKeys}".toString()
         }
         return found
     }
@@ -1244,6 +1343,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             })
             // Hibernate copies the size of the referenced identifier onto the element column after binding
             found.addAll(circularOrFound(property, compareValueColumn("${where} element".toString(), facets.element(), collection.element, collection.collectionTable, true), known))
+            found.addAll(compareCollectionTableIndexes(where, collection))
         }
         found.addAll(circularOrFound(property, compareValueColumn("${where} key".toString(), facets.key(), collection.key, collection.collectionTable, true), known))
         if (!((DependantValue) collection.key).updateable) {
