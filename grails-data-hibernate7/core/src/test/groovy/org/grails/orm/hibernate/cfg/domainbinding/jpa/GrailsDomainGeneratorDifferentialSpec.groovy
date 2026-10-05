@@ -783,7 +783,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             "${where} ${facet}: generator=${values[0]} binder=${values[1]}".toString()
         })
         found.addAll(keyUpdatable(where, property, facets, (DependantValue) collection.key, known))
-        found.addAll(compareValueColumn("${where} key".toString(), facets.key(), collection.key, collection.collectionTable, true))
+        found.addAll(compareValueColumns("${where} key".toString(), facets.keys(), collection.key, collection.collectionTable, true))
         Property element = new Property()
         element.value = collection.element
         found.addAll(compareValueColumn("${where} element".toString(), facets.element(), collection.element, collection.collectionTable, false))
@@ -791,7 +791,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             found.addAll(compareEnum("${where} element".toString(), (HibernateEnumProperty) property, generator, element))
         }
         found.addAll(compareType("${where} element".toString(), property, generator, element, explicitTypes))
-        List<String> described = [facets.key().name().replace('`', ''), facets.element().name().replace('`', '')]
+        List<String> described = facets.keys().collect { ColumnFacets key -> key.name().replace('`', '') } + [facets.element().name().replace('`', '')]
         if (facets.index() != null) {
             described << facets.index().name().replace('`', '')
             if (collection instanceof IndexedCollection) {
@@ -846,29 +846,47 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
      * Hibernate makes it so when it creates the primary key.
      */
     private static List<String> compareValueColumn(String where, ColumnFacets facets, org.hibernate.mapping.Value value, Table table, boolean key) {
+        return compareValueColumns(where, [facets], value, table, key)
+    }
+
+    /**
+     * The columns of a collection's key against what the generator decided for them: one column, or one for each identifier property
+     * when the owner has a composite identifier, paired by name because the binder orders them like the identifier (sorted) and the
+     * generator like the mapping.
+     */
+    private static List<String> compareValueColumns(
+            String where, List<ColumnFacets> allFacets, org.hibernate.mapping.Value value, Table table, boolean key) {
         List<Column> columns = value.selectables.findAll { it instanceof Column }.collect { (Column) it }
-        if (columns.size() != 1) {
-            return ["${where} columns: generator=1 binder=${columns.size()}".toString()]
+        if (columns.size() != allFacets.size()) {
+            return ["${where} columns: generator=${allFacets.size()} binder=${columns.size()}".toString()]
         }
-        Column column = columns[0]
-        // two collections may share one table (the sides of a many-to-many), and then the primary key holds one of the Column objects of that name
-        boolean primaryKey = table.primaryKey != null && table.primaryKey.columns.any { it.name == column.name }
-        Map<String, List> pairs = [
-                name    : [facets.name().replace('`', ''), column.name],
-                nullable: [facets.nullable() && !primaryKey, column.nullable && !primaryKey],
-                unique  : [facets.unique(), column.unique],
-        ]
-        if (!key) {
-            pairs.length = [facets.length(), column.length?.intValue()]
-            pairs.precision = [facets.precision(), column.precision?.intValue()]
-            pairs.scale = [facets.scale(), column.scale?.intValue()]
+        List<String> found = []
+        for (ColumnFacets facets : allFacets) {
+            Column column = allFacets.size() == 1 ? columns[0] : columns.find { Column c -> c.name == facets.name().replace('`', '') }
+            if (column == null) {
+                found << "${where} columns: generator=${allFacets*.name()} binder=${columns*.name}".toString()
+                continue
+            }
+            // two collections may share one table (the sides of a many-to-many), and then the primary key holds one of the Column objects of that name
+            boolean primaryKey = table.primaryKey != null && table.primaryKey.columns.any { it.name == column.name }
+            Map<String, List> pairs = [
+                    name    : [facets.name().replace('`', ''), column.name],
+                    nullable: [facets.nullable() && !primaryKey, column.nullable && !primaryKey],
+                    unique  : [facets.unique(), column.unique],
+            ]
+            if (!key) {
+                pairs.length = [facets.length(), column.length?.intValue()]
+                pairs.precision = [facets.precision(), column.precision?.intValue()]
+                pairs.scale = [facets.scale(), column.scale?.intValue()]
+            }
+            if (facets.sqlType() != null) {
+                pairs.sqlType = [facets.sqlType(), column.sqlType]
+            }
+            found.addAll(pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
+                "${where} ${facet}: generator=${values[0]} binder=${values[1]}".toString()
+            })
         }
-        if (facets.sqlType() != null) {
-            pairs.sqlType = [facets.sqlType(), column.sqlType]
-        }
-        return pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
-            "${where} ${facet}: generator=${values[0]} binder=${values[1]}".toString()
-        }
+        return found
     }
 
     private static CollectionKind kindOf(HibernateCollection collection) {
@@ -1595,7 +1613,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             found.addAll(circularOrFound(property, compareValueColumn("${where} element".toString(), facets.element(), collection.element, collection.collectionTable, true), known))
             found.addAll(compareCollectionTableIndexes(where, collection))
         }
-        found.addAll(circularOrFound(property, compareValueColumn("${where} key".toString(), facets.key(), collection.key, collection.collectionTable, true), known))
+        found.addAll(circularOrFound(property, compareValueColumns("${where} key".toString(), facets.keys(), collection.key, collection.collectionTable, true), known))
         if (!((DependantValue) collection.key).updateable) {
             known['the binder makes the key of an entity collection not updatable when its owner has several unidirectional to-many properties; Hibernate then writes no join table rows, and annotations cannot state it']++
         }
@@ -1683,7 +1701,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             b.value = (org.hibernate.mapping.Value) triple[0]
             Property a = new Property()
             a.value = (org.hibernate.mapping.Value) triple[1]
-            List<String> leaf = compareAnnotatedLeaf("${where} ${part}".toString(), b, a, ((ColumnFacets) triple[2]).sqlType(), part != 'index')
+            List<String> leaf = compareAnnotatedLeaf("${where} ${part}".toString(), b, a, ((ColumnFacets) triple[2]).sqlType(), part != 'index', known)
             if (!leaf.isEmpty() && part != 'index' && facets.manyToMany() && circularSelf) {
                 known['a circular many-to-many names the key of its first-bound side by default, because the binder renames the join keys of a circular many-to-many while it binds, so the two sides name different columns of one join table']++
             } else if (inverseManyToMany && !leaf.isEmpty() && part != 'index') {
@@ -1752,7 +1770,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             b.value = (org.hibernate.mapping.Value) triple[0]
             Property a = new Property()
             a.value = (org.hibernate.mapping.Value) triple[1]
-            found.addAll(compareAnnotatedLeaf("${where} ${part}".toString(), b, a, ((ColumnFacets) triple[2]).sqlType(), part == 'key'))
+            found.addAll(compareAnnotatedLeaf("${where} ${part}".toString(), b, a, ((ColumnFacets) triple[2]).sqlType(), part == 'key', known))
         }
         return found
     }

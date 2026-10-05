@@ -26,6 +26,7 @@ import org.hibernate.boot.registry.StandardServiceRegistry
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder
 import org.hibernate.dialect.H2Dialect
 
+import org.grails.orm.hibernate.cfg.HibernateMappingContext
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.NumericColumnConstraintsBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.StringColumnConstraintsBinder
@@ -33,6 +34,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
+import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings
 
 /**
  * What the specs of {@link GrailsDomainGenerator} share: a generator wired like the domain binder, generation of a group
@@ -61,6 +63,15 @@ abstract class GrailsDomainGeneratorSupport extends HibernateGormDatastoreSpec {
 
     protected GrailsHibernatePersistentEntity entity(Class<?> domainClass) {
         return getPersistentEntity(domainClass)
+    }
+
+    /**
+     * The mapping model of the domain classes alone, built without binding them, so that a domain the binder cannot boot can still
+     * be described. The entities share one mapping context, so they find each other.
+     */
+    protected List<GrailsHibernatePersistentEntity> unbound(Class<?>... domainClasses) {
+        HibernateMappingContext context = new HibernateMappingContext(new HibernateConnectionSourceSettings(), (Object) null, domainClasses)
+        return domainClasses.collect { Class<?> domainClass -> (GrailsHibernatePersistentEntity) context.getPersistentEntity(domainClass.name) }
     }
 
     protected Map<GrailsHibernatePersistentEntity, Class<?>> generateGroup(Class<?>... domainClasses) {

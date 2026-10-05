@@ -40,6 +40,10 @@ import org.hibernate.FetchMode
  * {@code null} when the collection is not ordered, and {@code tenantCondition} is {@code null} unless the target is
  * multi-tenant. {@code fetchMode} is {@code JOIN} or {@code SELECT}: the binder's {@code DEFAULT} is a select.</p>
  *
+ * <p>{@code keys} are the key columns in the order the binder binds them: one, or one for each identifier property when the owner has
+ * a composite identifier; {@code referencedKeys} names the column of the owner's key each one points at, and is empty unless the
+ * owner has a composite identifier. {@code key} is the first of the key columns.</p>
+ *
  * @since 9.0
  */
 @CompileStatic
@@ -61,5 +65,7 @@ record ToManyFacets(
     CascadeFacets cascade,
     String orderProperty,
     String orderDirection,
-    String tenantCondition) {
+    String tenantCondition,
+    List<ColumnFacets> keys,
+    List<String> referencedKeys) {
 }

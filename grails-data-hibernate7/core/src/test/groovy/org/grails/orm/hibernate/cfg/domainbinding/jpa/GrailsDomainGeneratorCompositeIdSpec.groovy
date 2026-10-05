@@ -23,16 +23,24 @@ import jakarta.persistence.Column
 import jakarta.persistence.Embeddable
 import jakarta.persistence.EmbeddedId
 import jakarta.persistence.JoinColumn
+import jakarta.persistence.CollectionTable
 import jakarta.persistence.JoinColumns
+import jakarta.persistence.JoinTable
 import jakarta.persistence.ManyToOne
+import jakarta.persistence.OneToMany
 import jakarta.persistence.Table
 import jakarta.persistence.Version
 import org.hibernate.boot.Metadata
+import org.hibernate.mapping.Collection as HibernateCollection
 import org.hibernate.mapping.Component
 import org.hibernate.mapping.PersistentClass
 import org.hibernate.mapping.Property
 import org.hibernate.mapping.ToOne
 
+import grails.unbootable.UnbootableComposite
+import grails.unbootable.UnbootableJoinToComposite
+import grails.unbootable.UnbootableMmComposite
+import grails.unbootable.UnbootableMmOther
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 
 /**
@@ -46,7 +54,8 @@ class GrailsDomainGeneratorCompositeIdSpec extends GrailsDomainGeneratorSupport 
 
     void setupSpec() {
         manager.registerDomainClasses(
-                GenCidSimple, GenCidTarget, GenCidParts, GenCidRef, GenCidIndexed, GenCidNested, GenCidParent, GenCidChild)
+                GenCidSimple, GenCidTarget, GenCidParts, GenCidRef, GenCidIndexed, GenCidNested, GenCidParent, GenCidChild,
+                GenCidOwner, GenCidItem, GenCidKid, GenCidListedKid)
     }
 
     void "a composite identifier is an @EmbeddedId of a generated embeddable that holds the parts, and the entity keeps the other properties"() {
@@ -134,6 +143,72 @@ class GrailsDomainGeneratorCompositeIdSpec extends GrailsDomainGeneratorSupport 
         }
         read.table.foreignKeys.values().collect { it.columns*.name.toSet() }.toSet() ==
                 bound.table.foreignKeys.values().collect { it.columns*.name.toSet() }.toSet()
+    }
+
+    void "a collection of basic values of an entity with a composite identifier has a key column for each identifier property"() {
+        when:
+        Class<?> generated = generateGroup(GenCidOwner, GenCidItem, GenCidKid, GenCidListedKid).get(entity(GenCidOwner))
+        CollectionTable table = generated.getDeclaredField('tags').getAnnotation(CollectionTable)
+
+        then:
+        table.name() == 'gen_cid_owner_tags'
+        table.joinColumns()*.name() == ['gen_cid_owner_code', 'gen_cid_owner_region']
+        table.joinColumns()*.referencedColumnName() == ['code', 'region']
+    }
+
+    void "a unidirectional collection of an entity with a composite identifier is a join table whose key has a column for each identifier property"() {
+        when:
+        Class<?> generated = generateGroup(GenCidOwner, GenCidItem, GenCidKid, GenCidListedKid).get(entity(GenCidOwner))
+        JoinTable table = generated.getDeclaredField('items').getAnnotation(JoinTable)
+
+        then:
+        table.joinColumns()*.name() == ['gen_cid_owner_code', 'gen_cid_owner_region']
+        table.joinColumns()*.referencedColumnName() == ['code', 'region']
+        table.inverseJoinColumns()*.name() == ['gen_cid_item_id']
+    }
+
+    void "a collection mapped by the foreign key of the other side needs no columns, and an indexed list names the foreign key columns it manages"() {
+        when:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenCidOwner, GenCidItem, GenCidKid, GenCidListedKid)
+        Class<?> owner = classes[entity(GenCidOwner)]
+
+        then:
+        owner.getDeclaredField('kids').getAnnotation(OneToMany).mappedBy() == 'owner'
+        owner.getDeclaredField('listedKids').getAnnotation(OneToMany).mappedBy() == ''
+        owner.getDeclaredField('listedKids').getAnnotation(JoinColumns).value()*.name() == ['gen_cid_owner_code', 'gen_cid_owner_region']
+        classes[entity(GenCidKid)].getDeclaredField('owner').getAnnotation(JoinColumns).value()*.referencedColumnName() == ['code', 'region']
+    }
+
+    void "Hibernate's annotation binder reads the collections of an entity with a composite identifier as the binder bound them"() {
+        given:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenCidOwner, GenCidItem, GenCidKid, GenCidListedKid)
+        Metadata metadata = annotationMetadata(classes.values())
+        PersistentClass bound = entity(GenCidOwner).persistentClass
+        PersistentClass read = metadata.getEntityBinding(classes[entity(GenCidOwner)].name)
+
+        expect: "the same table and the same key columns, whatever the order Hibernate arranges them in"
+        ['tags', 'items', 'kids', 'listedKids'].every { String name ->
+            HibernateCollection b = (HibernateCollection) bound.getProperty(name).value
+            HibernateCollection r = (HibernateCollection) read.getProperty(name).value
+            b.key.columns*.name.toSet() == r.key.columns*.name.toSet() && b.inverse == r.inverse &&
+                    (b.oneToMany || b.collectionTable.name == r.collectionTable.name)
+        }
+    }
+
+    void "a collection to an entity with a composite identifier that the generator cannot describe is rejected by name"() {
+        when:
+        newGenerator().generateAll(unbound(domain, composite), getClass().classLoader)
+
+        then: "the binder cannot boot a join table to a composite identifier either (see GrailsDomainBinderCompositeIdDefectSpec)"
+        UnsupportedOperationException e = thrown()
+        e.message.contains(domain.simpleName)
+        e.message.contains(property)
+        e.message.contains(reason)
+
+        where:
+        domain                    | composite             | property     | reason
+        UnbootableJoinToComposite | UnbootableComposite   | 'targets'    | 'join table'
+        UnbootableMmOther         | UnbootableMmComposite | 'composites' | 'many-to-many'
     }
 
     void "an index on a part of the identifier is an index of the table, as the binder binds it"() {
@@ -257,4 +332,45 @@ class GenCidParent implements Serializable {
 class GenCidChild extends GenCidParent {
 
     String c
+}
+
+@Entity
+class GenCidOwner implements Serializable {
+
+    String code
+    String region
+    Set<String> tags
+    Set<GenCidItem> items
+    Set<GenCidKid> kids
+    List<GenCidListedKid> listedKids
+
+    static hasMany = [tags: String, items: GenCidItem, kids: GenCidKid, listedKids: GenCidListedKid]
+
+    static mapping = {
+        id composite: ['code', 'region']
+    }
+}
+
+@Entity
+class GenCidItem {
+
+    String label
+}
+
+@Entity
+class GenCidKid {
+
+    String name
+    GenCidOwner owner
+
+    static belongsTo = [owner: GenCidOwner]
+}
+
+@Entity
+class GenCidListedKid {
+
+    String name
+    GenCidOwner owner
+
+    static belongsTo = [owner: GenCidOwner]
 }

@@ -1117,6 +1117,12 @@ class GrailsDomainGenerator {
         if (mapped.joinTable.keys != null && mapped.joinTable.keys.size() > 1) {
             return 'the join table has a composite key'
         }
+        if (compositeIdentifier(property.hibernateOwner)) {
+            String compositeProblem = compositeOwnerKeyProblem(property)
+            if (compositeProblem != null) {
+                return compositeProblem
+            }
+        }
         boolean isEnum = property instanceof HibernateEnumProperty
         if (isEnum && kind == CollectionKind.MAP) {
             return 'a map of enums: the binder types the element from the map class (java.util.Map, JAVA_OBJECT) and the schema export fails'
@@ -1156,6 +1162,62 @@ class GrailsDomainGenerator {
                     'both for every property), and annotations cannot state them on it'
         }
         return null
+    }
+
+    /**
+     * @return why the generator cannot describe the collection whose owner or associated entity has a composite identifier, or
+     *     {@code null} when it can: the key columns of a collection of the owner are one for each identifier property
+     *     ({@code DependentKeyValueBinder}), and a collection mapped by the foreign key of the other side copies the columns of
+     *     that foreign key. A many-to-many, a map and a join table to an entity with a composite identifier are not described:
+     *     the binder names the element columns from the column configs of the collection property, which the key reads too
+     *     (the key of such a collection gets the element's columns).
+     */
+    private String compositeCollectionProblem(HibernateToManyEntityProperty property, GrailsHibernatePersistentEntity target) {
+        for (GrailsHibernatePersistentEntity entity : [property.hibernateOwner, target]) {
+            if (compositeIdentifier(entity)) {
+                String problem = compositeIdProblem(entity.hibernateRootEntity)
+                if (problem != null) {
+                    return "the entity [${entity.name}] has a composite identifier the generator cannot describe: ${problem}"
+                }
+            }
+        }
+        if (property instanceof HibernateManyToManyProperty || Map.isAssignableFrom(property.type)) {
+            return 'the owner or the associated entity has a composite identifier, and the collection is a many-to-many or a map: the ' +
+                    'generator does not describe the key and element columns of those yet'
+        }
+        if (compositeIdentifier(target) && !property.shouldBindWithForeignKey()) {
+            return 'the associated entity has a composite identifier and the collection is bound through a join table: the binder gives ' +
+                    'the element columns from the column configs of the collection property, which it reads again for the key, so the ' +
+                    'key gets the element\'s columns'
+        }
+        if (compositeIdentifier(property.hibernateOwner) && !property.shouldBindWithForeignKey()) {
+            return compositeOwnerKeyProblem(property)
+        }
+        return null
+    }
+
+    /** @return why the key of a collection of an entity with a composite identifier cannot be described, or {@code null} when it can */
+    private String compositeOwnerKeyProblem(HibernateToManyProperty property) {
+        GrailsHibernatePersistentEntity owner = property.hibernateOwner
+        if (property.hibernateMappedForm.hasJoinKeyMapping()) {
+            return 'the join table maps its key columns and the owner has a composite identifier: the binder binds the key from the ' +
+                    'column configs of the collection property and ignores them'
+        }
+        return compositeForeignKeyProblem(property, owner)
+    }
+
+    /**
+     * The name {@code mappedBy} uses for the property that holds the foreign key: the property of the other side, or, when that
+     * property is a part of the composite identifier of its entity, the path through the {@code @EmbeddedId} field
+     * ({@code id.parent}), because the part lives in the generated embeddable.
+     */
+    private String mappedByPath(HibernatePersistentProperty inverse) {
+        return isCompositeIdPart(inverse) ? compositeIdFacets(inverse.hibernateOwner).fieldName() + '.' + inverse.name : inverse.name
+    }
+
+    private String mappedByPath(GrailsHibernatePersistentEntity entity, String propertyName) {
+        HibernatePersistentProperty property = entity?.getHibernatePropertyByName(propertyName)
+        return property != null ? mappedByPath(property) : propertyName
     }
 
     /**
@@ -1211,7 +1273,9 @@ class GrailsDomainGenerator {
                 property.isLazy(),
                 FetchMode.JOIN == mapped.fetchMode ? FetchMode.JOIN : FetchMode.SELECT,
                 Math.max(property.batchSize, 0),
-                property.cacheUsage)
+                property.cacheUsage,
+                collectionKeyColumns(property),
+                collectionKeyReferencedColumns(property))
     }
 
     /**
@@ -1227,12 +1291,39 @@ class GrailsDomainGenerator {
      */
     private ColumnFacets collectionKeyFacets(HibernateToManyProperty property) {
         PropertyConfig mapped = property.hibernateMappedForm
-        boolean updatable = true
         if (mapped.hasJoinKeyMapping()) {
             return new ColumnFacets(
-                    mapped.joinTable.keys.get(0).name, true, false, true, updatable, null, null, null, null, null, null, null, null)
+                    mapped.joinTable.keys.get(0).name, true, false, true, true, null, null, null, null, null, null, null, null)
         }
-        ColumnConfig columnConfig = firstColumnConfig(mapped)
+        return collectionKeyFacets(property, firstColumnConfig(mapped))
+    }
+
+    /**
+     * The key columns of a collection: one, or one for each identifier property when the owner has a composite identifier
+     * ({@code DependentKeyValueBinder} binds them like the foreign key to a composite identifier, from the column configs of the
+     * collection property; a collection mapped by the foreign key of the other side copies the columns of that foreign key).
+     */
+    private List<ColumnFacets> collectionKeyColumns(HibernateToManyProperty property) {
+        GrailsHibernatePersistentEntity owner = property.hibernateOwner
+        if (property instanceof HibernateToManyEntityProperty && property.shouldBindWithForeignKey()) {
+            // CollectionKeyBinder copies the foreign key columns of the other side into the key; the key updater makes them nullable
+            return toOneColumnsFacets((HibernateToOneProperty) property.hibernateInverseSide).collect { ColumnFacets column ->
+                new ColumnFacets(column.name(), true, false, true, true, null, null, null, null, null, null, null, null)
+            }
+        }
+        if (!compositeIdentifier(owner)) {
+            return [collectionKeyFacets(property)]
+        }
+        return compositeForeignKeyConfigs(property, owner).collect { ColumnConfig columnConfig -> collectionKeyFacets(property, columnConfig) }
+    }
+
+    private List<String> collectionKeyReferencedColumns(HibernateToManyProperty property) {
+        return compositeIdentifier(property.hibernateOwner) ? compositeReferencedColumns(property.hibernateOwner) : []
+    }
+
+    private ColumnFacets collectionKeyFacets(HibernateToManyProperty property, ColumnConfig columnConfig) {
+        PropertyConfig mapped = property.hibernateMappedForm
+        boolean updatable = true
         Column column = new Column()
         columnConfigBinder.bindColumnConfigToColumn(column, columnConfig, mapped)
         if (columnConfig != null) {
@@ -1337,8 +1428,10 @@ class GrailsDomainGenerator {
             return 'the associated entity is unknown'
         }
         if (compositeIdentifier(target) || compositeIdentifier(property.hibernateOwner)) {
-            return 'the owner or the associated entity has a composite identifier: the key and element columns have one column for ' +
-                    'each identifier property, named and ordered from the identifier'
+            String compositeProblem = compositeCollectionProblem(property, target)
+            if (compositeProblem != null) {
+                return compositeProblem
+            }
         }
         if (mapped.type != null) {
             return 'a type is mapped on the collection property itself, which the binder applies to the collection and its element alike'
@@ -1433,6 +1526,7 @@ class GrailsDomainGenerator {
         String schema = null
         String catalog = null
         ColumnFacets key
+        List<ColumnFacets> keys = null
         ColumnFacets element = null
         boolean manyToMany = true
         if (property instanceof HibernateManyToManyProperty) {
@@ -1448,16 +1542,17 @@ class GrailsDomainGenerator {
         } else if (property.shouldBindWithForeignKey()) {
             HibernateToOneProperty inverse = (HibernateToOneProperty) property.hibernateInverseSide
             // CollectionKeyBinder copies the other side's foreign key column into the key; the key updater makes it nullable
-            key = new ColumnFacets(
-                    toOneColumnFacets(inverse).name(), true, false, true, true, null, null, null, null, null, null, null, null)
-            mappedBy = kind == CollectionKind.LIST ? null : inverse.name
+            keys = collectionKeyColumns(property)
+            key = keys[0]
+            mappedBy = kind == CollectionKind.LIST ? null : mappedByPath(inverse)
             manyToMany = false
         } else {
             JoinTable joinTable = mapped.joinTable
             table = tableForMany.getTableName(property)
             schema = joinTable?.schema != null ? joinTable.schema : entityFacets(property.hibernateOwner).schema()
             catalog = joinTable?.catalog
-            key = collectionKeyFacets(property)
+            keys = collectionKeyColumns(property)
+            key = keys[0]
             if (property.bidirectional) {
                 // BidirectionalMapElementBinder binds the element like the many-to-one of the other side (its column name rules)
                 ColumnFacets inverseColumn = toOneColumnFacets((HibernateToOneProperty) property.hibernateInverseSide)
@@ -1490,7 +1585,9 @@ class GrailsDomainGenerator {
                 cascadeFacets(property),
                 property.hasSort() ? property.sort : null,
                 property.hasSort() ? (property.order != null ? property.order : 'asc') : null,
-                condition)
+                condition,
+                keys != null ? keys : [key],
+                keys != null ? collectionKeyReferencedColumns(property) : [])
     }
 
     /**
@@ -1636,7 +1733,7 @@ class GrailsDomainGenerator {
                     false,
                     cascadeFacets(property),
                     null,
-                    oneToOne.hibernateReferencedPropertyName,
+                    mappedByPath(property.hibernateAssociatedEntity, oneToOne.hibernateReferencedPropertyName),
                     oneToOne.hibernateReferencedEntityName,
                     [],
                     [])
@@ -2213,7 +2310,7 @@ class GrailsDomainGenerator {
             } else {
                 AnnotationDescription.Builder joinTable = AnnotationDescription.Builder.ofType(JpaJoinTable)
                         .define('name', facets.tableName())
-                        .defineAnnotationArray('joinColumns', TypeDescription.ForLoadedType.of(JoinColumn), joinColumnAnnotation(facets.key()))
+                        .defineAnnotationArray('joinColumns', TypeDescription.ForLoadedType.of(JoinColumn), keyJoinColumns(facets.keys(), facets.referencedKeys()))
                         .defineAnnotationArray('inverseJoinColumns', TypeDescription.ForLoadedType.of(JoinColumn), joinColumnAnnotation(facets.element()))
                 if (facets.schema()) {
                     joinTable = joinTable.define('schema', facets.schema())
@@ -2236,7 +2333,14 @@ class GrailsDomainGenerator {
             if (facets.mappedBy() != null) {
                 oneToMany = oneToMany.define('mappedBy', facets.mappedBy())
             } else {
-                annotations << joinColumnAnnotation(facets.key())
+                if (facets.keys().size() > 1) {
+                    // the foreign key to a composite identifier of the owner: each column states the key column it points at
+                    annotations << AnnotationDescription.Builder.ofType(JoinColumns)
+                            .defineAnnotationArray('value', TypeDescription.ForLoadedType.of(JoinColumn), keyJoinColumns(facets.keys(), facets.referencedKeys()))
+                            .build()
+                } else {
+                    annotations << joinColumnAnnotation(facets.key(), facets.referencedKeys().isEmpty() ? null : facets.referencedKeys()[0])
+                }
             }
             annotations << oneToMany.build()
         }
@@ -2339,7 +2443,7 @@ class GrailsDomainGenerator {
                 .define('fetch', facets.lazy() ? FetchType.LAZY : FetchType.EAGER).build()
         AnnotationDescription.Builder table = AnnotationDescription.Builder.ofType(CollectionTable)
                 .define('name', facets.tableName())
-                .defineAnnotationArray('joinColumns', TypeDescription.ForLoadedType.of(JoinColumn), joinColumnAnnotation(facets.key()))
+                .defineAnnotationArray('joinColumns', TypeDescription.ForLoadedType.of(JoinColumn), keyJoinColumns(facets.keys(), facets.referencedKeys()))
         if (facets.schema()) {
             table = table.define('schema', facets.schema())
         }
@@ -2381,6 +2485,15 @@ class GrailsDomainGenerator {
                 TypeDescription.Generic.Builder.parameterizedType(facets.kind().javaType, elementClass).build()
         return builder.defineField(property.name, fieldType, Visibility.PRIVATE)
                 .annotateField(annotations as AnnotationDescription[])
+    }
+
+    /** The join columns of a collection key: one, or one for each identifier property of a composite identifier of the owner. */
+    private static AnnotationDescription[] keyJoinColumns(List<ColumnFacets> keys, List<String> referenced) {
+        List<AnnotationDescription> columns = []
+        for (int i = 0; i < keys.size(); i++) {
+            columns << joinColumnAnnotation(keys[i], referenced.isEmpty() ? null : referenced[i])
+        }
+        return columns as AnnotationDescription[]
     }
 
     private static AnnotationDescription joinColumnAnnotation(ColumnFacets facets, String referencedColumn = null) {
