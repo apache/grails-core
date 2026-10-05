@@ -23,11 +23,20 @@ import java.lang.reflect.Field
 import grails.gorm.annotation.Entity
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import jakarta.persistence.Column
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
 import jakarta.persistence.Id
 import jakarta.persistence.Table
+import jakarta.persistence.Version
 import jakarta.validation.constraints.Size
+import org.hibernate.annotations.BatchSize
+import org.hibernate.annotations.ColumnDefault
+import org.hibernate.annotations.Comment
+import org.hibernate.annotations.DynamicUpdate
+import org.hibernate.annotations.Type
 import org.hibernate.dialect.H2Dialect
 
+import org.grails.orm.hibernate.cfg.IdentityEnumType
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.NumericColumnConstraintsBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.StringColumnConstraintsBinder
@@ -46,7 +55,7 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
     Class<?> generated
 
     void setupSpec() {
-        manager.registerDomainClasses(GenBasic, GenVehicle, GenCar, GenWithEnum)
+        manager.registerDomainClasses(GenBasic, GenVehicle, GenCar, GenWithEnum, GenWithOwner)
     }
 
     void setup() {
@@ -68,7 +77,7 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
 
     void "the generated fields are exactly the persistent properties"() {
         expect:
-        generated.declaredFields*.name.toSet() == ['id', 'name', 'code', 'age', 'price', 'notes', 'tag'].toSet()
+        generated.declaredFields*.name.toSet() == ['id', 'version', 'name', 'code', 'age', 'price', 'notes', 'tag'].toSet()
     }
 
     void "a field keeps the Java type of its property"() {
@@ -122,12 +131,44 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
 
     void "a property the generator does not support is rejected by name"() {
         when:
-        generate(GenWithEnum)
+        generate(GenWithOwner)
 
         then:
         UnsupportedOperationException e = thrown()
-        e.message.contains('kind')
-        e.message.contains('HibernateSimpleEnumProperty')
+        e.message.contains('basic')
+        e.message.contains('does not support yet')
+    }
+
+    void "the version is marked as the optimistic lock"() {
+        expect:
+        field('version').isAnnotationPresent(Version)
+        field('id').isAnnotationPresent(Id)
+        !field('name').isAnnotationPresent(Version)
+    }
+
+    void "the class carries the class-level facets stated in the mapping"() {
+        expect:
+        generated.isAnnotationPresent(DynamicUpdate)
+        generated.getAnnotation(BatchSize).size() == 5
+        generated.getAnnotation(Comment).value() == 'basic things'
+    }
+
+    void "the column extras stated in the mapping become Hibernate annotations"() {
+        expect:
+        field('code').getAnnotation(ColumnDefault).value() == "'none'"
+        field('code').getAnnotation(Comment).value() == 'the code'
+    }
+
+    void "an enum is stored by name unless the mapping says otherwise"() {
+        when:
+        Class<?> enumEntity = generate(GenWithEnum)
+
+        then:
+        enumEntity.getDeclaredField('kind').getAnnotation(Enumerated).value() == EnumType.STRING
+        enumEntity.getDeclaredField('rank').getAnnotation(Enumerated).value() == EnumType.ORDINAL
+        enumEntity.getDeclaredField('code').getAnnotation(Type).value() == IdentityEnumType
+        enumEntity.getDeclaredField('code').getAnnotation(Type).parameters()*.name() == ['enumClass']
+        enumEntity.getDeclaredField('code').getAnnotation(Type).parameters()*.value() == [GenCode.name]
     }
 
     private Class<?> generate(Class<?> domainClass) {
@@ -168,7 +209,10 @@ class GenBasic {
     }
 
     static mapping = {
-        code column: 'code_x'
+        dynamicUpdate true
+        batchSize 5
+        comment 'basic things'
+        code column: 'code_x', defaultValue: "'none'", comment: 'the code'
     }
 }
 
@@ -188,8 +232,31 @@ enum GenKind {
     SMALL, LARGE
 }
 
+enum GenCode {
+    FIRST('a'), SECOND('b')
+
+    final String id
+
+    GenCode(String id) {
+        this.id = id
+    }
+}
+
 @Entity
 class GenWithEnum {
 
     GenKind kind
+    GenKind rank
+    GenCode code
+
+    static mapping = {
+        rank enumType: 'ordinal'
+        code enumType: 'identity'
+    }
+}
+
+@Entity
+class GenWithOwner {
+
+    GenBasic basic
 }

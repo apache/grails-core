@@ -21,6 +21,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.jpa
 import grails.gorm.annotation.Entity
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.hibernate.dialect.H2Dialect
+import org.hibernate.mapping.BasicValue
 import org.hibernate.mapping.Column
 import org.hibernate.mapping.PersistentClass
 import org.hibernate.mapping.Property
@@ -34,10 +35,12 @@ import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider
 import org.springframework.core.type.filter.AnnotationTypeFilter
 
+import org.grails.orm.hibernate.cfg.IdentityEnumType
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.NumericColumnConstraintsBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.StringColumnConstraintsBinder
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
@@ -85,9 +88,15 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             }
             try {
                 for (GrailsHibernatePersistentEntity entity : datastore.mappingContext.getHibernatePersistentEntities()
-                        .findAll { group.contains(it.javaClass) && it.persistentClass != null }) {
+                        .findAll { group.contains(it.javaClass) && it.persistentClass != null && it.persistentClass.entityName == it.name }) {
                     entities++
                     List<HibernatePersistentProperty> properties = []
+                    if (entity.isRoot()) {
+                        mismatches.addAll(compareEntity(entity, generator.entityFacets(entity)))
+                        if (entity.version != null) {
+                            properties << entity.version
+                        }
+                    }
                     if (entity.identity != null) {
                         properties << (HibernatePersistentProperty) entity.identity
                     }
@@ -108,6 +117,9 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                         }
                         compared++
                         mismatches.addAll(compare(entity, property, generator.columnFacets(property), bound))
+                        if (property instanceof HibernateEnumProperty) {
+                            mismatches.addAll(compareEnum(entity, (HibernateEnumProperty) property, generator, bound))
+                        }
                     }
                 }
             } finally {
@@ -118,7 +130,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         report << "differential: ${candidates.size()} candidate classes in ${groups.size()} groups; " +
                 "${unbootable.size()} groups could not boot alone; ${entities} entities, ${compared} properties compared\n"
         report << "unsupported by kind: ${skipped}\n"
-        report << "mismatches by facet: ${mismatches.groupBy { it.split(' ')[1] }.collectEntries { k, v -> [k, v.size()] }}\n"
+        report << "mismatches by facet: ${mismatches.groupBy { (it =~ /\s(\w+): generator=/)[0][1] }.collectEntries { k, v -> [k, v.size()] }}\n"
         unbootable.each { report << "unbootable: ${it.key.take(120)} -> ${it.value.take(200)}\n" }
         mismatches.each { report << "MISMATCH ${it}\n" }
         new File('build/differential-report.txt').text = report.toString()
@@ -142,6 +154,10 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 precision : [facets.precision(), column.precision?.intValue()],
                 scale     : [facets.scale(), column.scale?.intValue()],
                 sqlType   : [facets.sqlType(), column.sqlType],
+                default   : [facets.defaultValue(), column.defaultValue],
+                read      : [facets.read(), column.customRead],
+                write     : [facets.write(), column.customWrite],
+                comment   : [facets.comment(), column.comment],
         ]
         if (facets.sqlType() == null) {
             // Hibernate derives an sqlType for every column after binding; only an explicit one is comparable
@@ -149,6 +165,35 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         }
         return pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
             "${entity.name}.${property.name} ${facet}: generator=${values[0]} binder=${values[1]}".toString()
+        }
+    }
+
+    private List<String> compareEnum(
+            GrailsHibernatePersistentEntity entity, HibernateEnumProperty property, GrailsDomainGenerator generator, Property bound) {
+        BasicValue value = (BasicValue) bound.value
+        String actual = value.typeName == IdentityEnumType.name ? 'IDENTITY' : value.enumerationStyle?.name()
+        String expected = generator.enumStyle(property)
+        return expected == actual ? [] : ["${entity.name}.${property.name} enumStyle: generator=${expected} binder=${actual}".toString()]
+    }
+
+    private List<String> compareEntity(GrailsHibernatePersistentEntity entity, EntityFacets facets) {
+        PersistentClass persistentClass = entity.persistentClass
+        Map<String, List> pairs = [
+                jpaName      : [facets.jpaName(), persistentClass.jpaEntityName],
+                tableName    : [facets.tableName().replace('`', ''), persistentClass.table.name],
+                dynamicInsert: [facets.dynamicInsert(), persistentClass.useDynamicInsert()],
+                dynamicUpdate: [facets.dynamicUpdate(), persistentClass.useDynamicUpdate()],
+                batchSize    : [facets.batchSize(), persistentClass.batchSize],
+                comment      : [facets.comment(), persistentClass.table.comment],
+        ]
+        if (facets.schema() != null) {
+            pairs.schema = [facets.schema(), persistentClass.table.schema]
+        }
+        if (facets.catalog() != null) {
+            pairs.catalog = [facets.catalog(), persistentClass.table.catalog]
+        }
+        return pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
+            "${entity.name} ${facet}: generator=${values[0]} binder=${values[1]}".toString()
         }
     }
 

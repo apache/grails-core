@@ -24,16 +24,29 @@ import java.lang.reflect.Method
 import groovy.transform.CompileStatic
 import jakarta.persistence.Column as JpaColumn
 import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
 import jakarta.persistence.Id
 import jakarta.persistence.Table
+import jakarta.persistence.Version
 import net.bytebuddy.ByteBuddy
 import net.bytebuddy.description.annotation.AnnotationDescription
 import net.bytebuddy.description.modifier.Visibility
+import net.bytebuddy.description.type.TypeDescription
 import net.bytebuddy.dynamic.DynamicType
 import net.bytebuddy.dynamic.loading.ClassLoadingStrategy
+import org.hibernate.annotations.BatchSize
+import org.hibernate.annotations.ColumnDefault
+import org.hibernate.annotations.ColumnTransformer
+import org.hibernate.annotations.Comment
+import org.hibernate.annotations.DynamicInsert
+import org.hibernate.annotations.DynamicUpdate
+import org.hibernate.annotations.Parameter
+import org.hibernate.annotations.Type
 import org.hibernate.mapping.Column
 
 import org.grails.orm.hibernate.cfg.ColumnConfig
+import org.grails.orm.hibernate.cfg.IdentityEnumType
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.PropertyConfig
@@ -45,8 +58,8 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumPropert
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleIdentityProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleProperty
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateVersionProperty
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
+import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsEnumType
 
 /**
  * Describes a GORM domain class to Hibernate as an annotated JPA entity.
@@ -106,6 +119,10 @@ class GrailsDomainGenerator {
         if (identity != null) {
             builder = defineField(builder, identity, [AnnotationDescription.Builder.ofType(Id).build()])
         }
+        HibernatePersistentProperty version = entity.version
+        if (version != null) {
+            builder = defineField(builder, version, [AnnotationDescription.Builder.ofType(Version).build()])
+        }
         for (HibernatePersistentProperty property : entity.persistentPropertiesToBind) {
             if (!supports(property)) {
                 throw new UnsupportedOperationException(
@@ -121,65 +138,85 @@ class GrailsDomainGenerator {
         return GENERATED_PACKAGE + '.' + entity.javaClass.name.replace('.', '_')
     }
 
-    private List<AnnotationDescription> classAnnotations(GrailsHibernatePersistentEntity entity) {
+    /**
+     * Decides the class-level facets of a root entity the way the domain binder does.
+     */
+    EntityFacets entityFacets(GrailsHibernatePersistentEntity entity) {
         Mapping mapping = entity.mappedForm
-        List<AnnotationDescription> annotations = []
         boolean autoImport = mapping == null || mapping.autoImport
-        annotations << AnnotationDescription.Builder.ofType(Entity)
-                .define('name', autoImport ? entity.javaClass.simpleName : entity.javaClass.name)
-                .build()
-
-        AnnotationDescription.Builder table = AnnotationDescription.Builder.ofType(Table)
-                .define('name', entity.getTableName(namingStrategy))
-        if (mapping?.table?.schema) {
-            table = table.define('schema', mapping.table.schema)
-        }
-        if (mapping?.table?.catalog) {
-            table = table.define('catalog', mapping.table.catalog)
-        }
-        annotations << table.build()
-        return annotations
-    }
-
-    private DynamicType.Builder<Object> defineField(
-            DynamicType.Builder<Object> builder, HibernatePersistentProperty property, List<AnnotationDescription> extra) {
-        List<AnnotationDescription> annotations = new ArrayList<>(extra)
-        annotations << columnAnnotation(property)
-        for (Annotation constraint : validationAnnotations(property)) {
-            annotations << AnnotationDescription.ForLoadedAnnotation.of(constraint)
-        }
-        return builder.defineField(property.name, property.type, Visibility.PRIVATE).annotateField(annotations as AnnotationDescription[])
+        return new EntityFacets(
+                autoImport ? entity.javaClass.simpleName : entity.javaClass.name,
+                entity.getTableName(namingStrategy),
+                mapping?.table?.schema ?: null,
+                mapping?.table?.catalog ?: null,
+                mapping != null && mapping.dynamicInsert,
+                mapping != null && mapping.dynamicUpdate,
+                mapping?.batchSize != null ? mapping.batchSize : 0,
+                entity.comment)
     }
 
     /**
-     * @return whether the generator can describe the property today: a plain single-column basic property, or the
-     *     simple identifier. Enums, versions, custom types, derived properties, multi-column properties and every
-     *     association are not supported yet.
+     * @return whether the generator can describe the property today: a plain single-column basic property, the
+     *     version, an enum, or the simple identifier. Custom types, derived properties, multi-column properties
+     *     and every association are not supported yet.
      */
     boolean supports(HibernatePersistentProperty property) {
         if (property instanceof HibernateSimpleIdentityProperty) {
             return property.hibernateOwner.isRoot()
         }
-        if (!(property instanceof HibernateSimpleProperty) ||
-                property instanceof HibernateEnumProperty ||
-                property instanceof HibernateVersionProperty) {
+        if (!(property instanceof HibernateSimpleProperty)) {
             return false
         }
         PropertyConfig mappedForm = property.hibernateMappedForm
-        return !mappedForm.derived && (mappedForm.columns == null || mappedForm.columns.size() <= 1)
+        if (mappedForm.derived || (mappedForm.columns != null && mappedForm.columns.size() > 1)) {
+            return false
+        }
+        if (property instanceof HibernateEnumProperty) {
+            // an explicitly mapped type (not one of the enum styles) is a user type, which is not supported yet
+            HibernateEnumProperty enumProperty = (HibernateEnumProperty) property
+            return enumProperty.getTypeName(enumProperty.enumType) == null
+        }
+        return true
     }
 
     /**
-     * Decides the column facets for a supported property by running the domain binder's own constraint rules on a
-     * scratch {@link Column}, in the order the binder applies them.
+     * Decides the column facets for a supported property by running the domain binder's own rules on a scratch
+     * {@link Column}, in the order the binder applies them.
      */
     ColumnFacets columnFacets(HibernatePersistentProperty property) {
+        if (property instanceof HibernateEnumProperty) {
+            return enumColumnFacets((HibernateEnumProperty) property)
+        }
+        return basicColumnFacets(property)
+    }
+
+    /**
+     * @return the enum mapping the binder chooses for the property: {@code STRING}, {@code ORDINAL} or
+     *     {@code IDENTITY}
+     */
+    String enumStyle(HibernateEnumProperty property) {
+        switch (GrailsEnumType.fromString(property.hibernateMappedForm.enumType)) {
+            case GrailsEnumType.ORDINAL:
+                return 'ORDINAL'
+            case GrailsEnumType.IDENTITY:
+                return 'IDENTITY'
+            default:
+                return 'STRING'
+        }
+    }
+
+    private ColumnFacets basicColumnFacets(HibernatePersistentProperty property) {
         PropertyConfig mappedForm = property.hibernateMappedForm
-        List<ColumnConfig> columns = mappedForm.columns
-        ColumnConfig columnConfig = columns == null || columns.isEmpty() ? null : columns[0]
+        ColumnConfig columnConfig = firstColumnConfig(mappedForm)
 
         Column column = new Column()
         columnConfigBinder.bindColumnConfigToColumn(column, columnConfig, mappedForm)
+        if (columnConfig != null) {
+            column.comment = columnConfig.comment
+            column.defaultValue = columnConfig.defaultValue
+            column.customRead = columnConfig.read
+            column.customWrite = columnConfig.write
+        }
         String name = columnNames.getColumnNameForPropertyAndPath(property, null, columnConfig)
         Class<?> type = property.type
         if (type != null && (String.isAssignableFrom(type) || byte[].isAssignableFrom(type))) {
@@ -187,16 +224,104 @@ class GrailsDomainGenerator {
         } else if (type != null && Number.isAssignableFrom(type)) {
             numericConstraints.bindNumericColumnConstraints(column, columnConfig, mappedForm, type)
         }
+        return facets(property, column, name, isNullable(property),
+                mappedForm.isUnique() && !mappedForm.isUniqueWithinGroup(), true)
+    }
+
+    /** Mirrors {@code EnumTypeBinder}: only the column config rules apply, and the column config's own uniqueness. */
+    private ColumnFacets enumColumnFacets(HibernateEnumProperty property) {
+        PropertyConfig mappedForm = property.hibernateMappedForm
+        Column column = new Column()
+        ColumnConfig columnConfig = firstColumnConfig(mappedForm)
+        if (columnConfig != null) {
+            columnConfigBinder.bindColumnConfigToColumn(column, columnConfig, mappedForm)
+        }
+        String name = property.resolveEnumColumnName(namingStrategy, columnNames, null)
+        return facets(property, column, name, property.isEnumColumnNullable(), column.unique, false)
+    }
+
+    private static ColumnFacets facets(
+            HibernatePersistentProperty property, Column column, String name, boolean nullable, boolean unique,
+            boolean withExtras) {
+        PropertyConfig mappedForm = property.hibernateMappedForm
         return new ColumnFacets(
                 name,
-                isNullable(property),
-                mappedForm.isUnique() && !mappedForm.isUniqueWithinGroup(),
+                nullable,
+                unique,
                 mappedForm.insertable,
                 mappedForm.updatable,
                 column.length?.intValue(),
                 column.precision?.intValue(),
                 column.scale?.intValue(),
-                column.sqlType)
+                column.sqlType,
+                withExtras ? column.defaultValue : null,
+                withExtras ? column.customRead : null,
+                withExtras ? column.customWrite : null,
+                withExtras ? column.comment : null)
+    }
+
+    private static ColumnConfig firstColumnConfig(PropertyConfig mappedForm) {
+        List<ColumnConfig> columns = mappedForm.columns
+        return columns == null || columns.isEmpty() ? null : columns[0]
+    }
+
+    private List<AnnotationDescription> classAnnotations(GrailsHibernatePersistentEntity entity) {
+        EntityFacets facets = entityFacets(entity)
+        List<AnnotationDescription> annotations = []
+        annotations << AnnotationDescription.Builder.ofType(Entity).define('name', facets.jpaName()).build()
+
+        AnnotationDescription.Builder table = AnnotationDescription.Builder.ofType(Table).define('name', facets.tableName())
+        if (facets.schema()) {
+            table = table.define('schema', facets.schema())
+        }
+        if (facets.catalog()) {
+            table = table.define('catalog', facets.catalog())
+        }
+        annotations << table.build()
+
+        if (facets.dynamicInsert()) {
+            annotations << AnnotationDescription.Builder.ofType(DynamicInsert).build()
+        }
+        if (facets.dynamicUpdate()) {
+            annotations << AnnotationDescription.Builder.ofType(DynamicUpdate).build()
+        }
+        if (facets.batchSize() > 0) {
+            annotations << AnnotationDescription.Builder.ofType(BatchSize).define('size', facets.batchSize()).build()
+        }
+        if (facets.comment()) {
+            annotations << AnnotationDescription.Builder.ofType(Comment).define('value', facets.comment()).build()
+        }
+        return annotations
+    }
+
+    private DynamicType.Builder<Object> defineField(
+            DynamicType.Builder<Object> builder, HibernatePersistentProperty property, List<AnnotationDescription> extra) {
+        List<AnnotationDescription> annotations = new ArrayList<>(extra)
+        annotations << columnAnnotation(property)
+        annotations.addAll(extraColumnAnnotations(property))
+        if (property instanceof HibernateEnumProperty) {
+            annotations << enumAnnotation((HibernateEnumProperty) property)
+        }
+        for (Annotation constraint : validationAnnotations(property)) {
+            annotations << AnnotationDescription.ForLoadedAnnotation.of(constraint)
+        }
+        return builder.defineField(property.name, property.type, Visibility.PRIVATE)
+                .annotateField(annotations as AnnotationDescription[])
+    }
+
+    private AnnotationDescription enumAnnotation(HibernateEnumProperty property) {
+        String style = enumStyle(property)
+        if (style == 'IDENTITY') {
+            return AnnotationDescription.Builder.ofType(Type)
+                    .define('value', TypeDescription.ForLoadedType.of(IdentityEnumType))
+                    .defineAnnotationArray('parameters', TypeDescription.ForLoadedType.of(Parameter),
+                            AnnotationDescription.Builder.ofType(Parameter)
+                                    .define('name', 'enumClass')
+                                    .define('value', property.enumType.name)
+                                    .build())
+                    .build()
+        }
+        return AnnotationDescription.Builder.ofType(Enumerated).define('value', EnumType.valueOf(style)).build()
     }
 
     private AnnotationDescription columnAnnotation(HibernatePersistentProperty property) {
@@ -220,6 +345,28 @@ class GrailsDomainGenerator {
             annotation = annotation.define('columnDefinition', facets.sqlType())
         }
         return annotation.build()
+    }
+
+    private List<AnnotationDescription> extraColumnAnnotations(HibernatePersistentProperty property) {
+        ColumnFacets facets = columnFacets(property)
+        List<AnnotationDescription> extras = []
+        if (facets.defaultValue() != null) {
+            extras << AnnotationDescription.Builder.ofType(ColumnDefault).define('value', facets.defaultValue()).build()
+        }
+        if (facets.read() != null || facets.write() != null) {
+            AnnotationDescription.Builder transformer = AnnotationDescription.Builder.ofType(ColumnTransformer)
+            if (facets.read() != null) {
+                transformer = transformer.define('read', facets.read())
+            }
+            if (facets.write() != null) {
+                transformer = transformer.define('write', facets.write())
+            }
+            extras << transformer.build()
+        }
+        if (facets.comment() != null) {
+            extras << AnnotationDescription.Builder.ofType(Comment).define('value', facets.comment()).build()
+        }
+        return extras
     }
 
     /**
