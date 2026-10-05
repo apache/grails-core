@@ -38,6 +38,12 @@ import org.hibernate.FetchMode
  * {@code optional} is what the annotation states: Hibernate makes the join column NOT NULL for a non-optional
  * association, so it is {@code true} exactly when the join column is nullable (and for the inverse side of a one-to-one, which has no column).</p>
  *
+ * <p>{@code joinColumns} are the foreign key columns in the order the binder binds them: one for an ordinary association, one
+ * for each identifier property when the associated entity has a composite identifier, none for the inverse side of a
+ * one-to-one. {@code referencedColumns} names, for a composite identifier, the column of the associated entity's key that each
+ * foreign key column points at (the generated {@code @JoinColumn} states it); it is empty for an ordinary association, which
+ * points at the single key column by default. {@code joinColumn} is the first of the foreign key columns.</p>
+ *
  * @since 9.0
  */
 @CompileStatic
@@ -50,5 +56,7 @@ record ToOneFacets(
     CascadeFacets cascade,
     ColumnFacets joinColumn,
     String mappedBy,
-    String referencedEntity) {
+    String referencedEntity,
+    List<ColumnFacets> joinColumns,
+    List<String> referencedColumns) {
 }

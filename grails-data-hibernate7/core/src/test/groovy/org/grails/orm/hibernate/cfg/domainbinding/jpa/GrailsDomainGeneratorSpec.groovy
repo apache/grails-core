@@ -238,16 +238,12 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
     }
 
     void "a property the generator does not support is rejected by name"() {
-        given:
-        GrailsHibernatePersistentEntity entity = unbound(GenFkCompositeRef)
-
         when:
-        newGenerator().generateAll([entity], getClass().classLoader)
+        newGenerator().generateAll([unbound(GenUnsupportedType)], getClass().classLoader)
 
         then:
         UnsupportedOperationException e = thrown()
-        e.message.contains('Association property [target] of [' + GenFkCompositeRef.name + ']')
-        e.message.contains('composite identifier')
+        e.message.contains('Type [serializable] of property [tag] of [' + GenUnsupportedType.name + ']')
     }
 
     void "the version is marked as the optimistic lock"() {
@@ -1409,16 +1405,6 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         inverse.cascade == 'all'
         key.selectables*.text == ['owner_id']
         !key.columns[0].nullable
-    }
-
-    void "an association to an entity with a composite identifier is rejected by name"() {
-        given:
-        GrailsHibernatePersistentEntity entity = unbound(GenFkCompositeRef)
-        HibernatePersistentProperty property = entity.getHibernatePropertyByName('target')
-
-        expect:
-        !newGenerator().supports(property)
-        newGenerator().unsupportedReason(entity, property).contains('composite identifier')
     }
 
     void "Hibernate's own annotation binder reads a generated to-one association as a ManyToOne to the generated target"() {

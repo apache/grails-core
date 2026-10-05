@@ -138,6 +138,8 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         Map<String, Integer> constraints = [:].withDefault { 0 }
         Map<String, Integer> naturals = [:].withDefault { 0 }
         Map<String, Integer> caches = [:].withDefault { 0 }
+        Map<String, Integer> composites = [:].withDefault { 0 }
+        List<String> rejectedComposites = []
 
         when:
         for (List<Class<?>> group : groups) {
@@ -177,8 +179,11 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                         if (entity.identity instanceof HibernateSimpleIdentityProperty) {
                             mismatches.addAll(compareIdentifierGenerator(
                                     entity, generator.idFacets(entity), (SessionFactoryImplementor) datastore.sessionFactory, strategies))
+                        } else if (generator.generationProblem(entity) == null) {
+                            mismatches.addAll(compareCompositeId(entity, generator.compositeIdFacets(entity), composites, known))
                         } else {
-                            skipped['entity without a simple identifier']++
+                            rejectedComposites << "${entity.name}: ${generator.generationProblem(entity)}".toString()
+                            skipped["entity without a simple identifier: ${generator.generationProblem(entity).replaceAll(/\[[^\]]*\]/, '[..]')}".toString()]++
                         }
                         if (entity.version != null) {
                             properties << entity.version
@@ -249,8 +254,8 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                         }
                         if (property instanceof HibernateToOneProperty) {
                             if (bound == null || !(bound.value instanceof ToOne) ||
-                                    (!(bound.value instanceof OneToOne) && bound.columns.size() != 1)) {
-                                skipped['association with no single bound column']++
+                                    (!(bound.value instanceof OneToOne) && bound.columns.isEmpty())) {
+                                skipped['association with no bound column']++
                                 continue
                             }
                             compared++
@@ -261,8 +266,18 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                                 continue
                             }
                             // Hibernate copies the length, precision and scale of the referenced identifier onto a foreign key column after binding
-                            mismatches.addAll(compare(where, generator.columnFacets(property), bound, known, ['length', 'precision', 'scale']))
-                            mismatches.addAll(compareToOne(where, generator.toOneFacets((HibernateToOneProperty) property), bound, known))
+                            ToOneFacets toOneFacets = generator.toOneFacets((HibernateToOneProperty) property)
+                            if (toOneFacets.joinColumns().size() != bound.columns.size()) {
+                                mismatches << "${where} columns: generator=${toOneFacets.joinColumns()*.name()} binder=${bound.columns*.name}".toString()
+                                continue
+                            }
+                            if (bound.columns.size() > 1) {
+                                associations['to-one to a composite identifier']++
+                            }
+                            toOneFacets.joinColumns().eachWithIndex { ColumnFacets column, int index ->
+                                mismatches.addAll(compare(where, column, bound, known, ['length', 'precision', 'scale'], false, index))
+                            }
+                            mismatches.addAll(compareToOne(where, toOneFacets, bound, known))
                             continue
                         }
                         if (bound != null && generator.isDerived(property)) {
@@ -303,6 +318,8 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         report << "table constraints compared: ${constraints}\n"
         report << "natural ids compared: ${naturals}\n"
         report << "entity caches compared: ${caches}\n"
+        report << "composite identifiers compared: ${composites}\n"
+        rejectedComposites.each { report << "composite identifier rejected: ${it}\n" }
         report << "id generators compared by strategy: ${strategies}\n"
         report << "entities compared by hierarchy role: ${hierarchies}\n"
         report << "hierarchies read back through Hibernate's annotation binder: ${annotationRead}\n"
@@ -345,8 +362,8 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
      */
     private List<String> compare(
             String where, ColumnFacets facets, Property bound, Map<String, Integer> known, Collection<String> ignore = [],
-            boolean enumeration = false) {
-        Column column = (Column) bound.columns[0]
+            boolean enumeration = false, int columnIndex = 0) {
+        Column column = (Column) bound.columns[columnIndex]
         Map<String, List> pairs = [
                 name      : [facets.name().replace('`', ''), column.name],
                 quoted    : [facets.name().startsWith('`'), column.quoted],
@@ -412,6 +429,99 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         }
         if (generatedKeys != boundKeys) {
             found << "${where} uniqueKeys: generator=${generatedKeys} binder=${boundKeys}".toString()
+        }
+        return found
+    }
+
+    /**
+     * The composite identifier as {@code CompositeIdBinder} bound it: one component with a property for every part, whose columns
+     * are the primary key and so not null. A simple part must have the column facets of an ordinary property; a many-to-one part
+     * the foreign key column and the associated entity (nothing cascades through an identifier, so the cascade the binder states on
+     * the part is not compared).
+     */
+    private List<String> compareCompositeId(
+            GrailsHibernatePersistentEntity entity, CompositeIdFacets facets, Map<String, Integer> composites, Map<String, Integer> known) {
+        PersistentClass persistentClass = entity.persistentClass
+        String where = "${entity.name} composite id"
+        if (!(persistentClass.identifier instanceof Component)) {
+            return ["${where} kind: generator=component binder=${persistentClass.identifier.getClass().simpleName}".toString()]
+        }
+        Component id = (Component) persistentClass.identifier
+        composites['entities']++
+        List<String> found = []
+        if (facets.parts()*.path().toSet() != id.properties*.name.toSet()) {
+            return ["${where} parts: generator=${facets.parts()*.path()} binder=${id.properties*.name}".toString()]
+        }
+        for (EmbeddedLeaf part : facets.parts()) {
+            Property bound = id.getProperty(part.path())
+            String partWhere = "${where} part ${part.path()}".toString()
+            if (bound.columns.size() != 1) {
+                found << "${partWhere} columns: generator=1 binder=${bound.columns.size()}".toString()
+                continue
+            }
+            if (part.toOne() != null) {
+                composites['to-one parts']++
+                found.addAll(compare(partWhere, part.column(), bound, known, ['length', 'precision', 'scale']))
+                found.addAll(compareToOne(partWhere, part.toOne(), bound, known).findAll { String line ->
+                    !line.contains(' cascade: ') && !line.contains(' optional: ')
+                })
+            } else {
+                composites['simple parts']++
+                found.addAll(compare(partWhere, part.column(), bound, known, [], part.property instanceof HibernateEnumProperty))
+            }
+        }
+        Set<String> expectedKey = facets.parts().collect { EmbeddedLeaf part -> part.column().name().replace('`', '') }.toSet()
+        if (persistentClass.table.primaryKey?.columns*.name?.toSet() != expectedKey) {
+            found << "${where} primaryKey: generator=${expectedKey} binder=${persistentClass.table.primaryKey?.columns*.name}".toString()
+        }
+        return found
+    }
+
+    /**
+     * The composite identifier Hibernate's annotation binder reads from an {@code @EmbeddedId}: a component with the same parts,
+     * the same columns (not null), the same primary key and the same foreign key columns. The binder's identifier has no property
+     * and its unsaved value is {@code undefined}; Hibernate's has a property of its own and no unsaved value: listed.
+     */
+    private static List<String> compareAnnotatedCompositeId(
+            String where, PersistentClass bound, PersistentClass annotated, CompositeIdFacets facets, Map<String, Integer> known) {
+        if (!(annotated.identifier instanceof Component)) {
+            return ["${where} compositeId: generator=${annotated.identifier.getClass().simpleName} binder=Component".toString()]
+        }
+        Component boundId = (Component) bound.identifier
+        Component annotatedId = (Component) annotated.identifier
+        List<String> found = []
+        if (boundId.properties*.name.toSet() != annotatedId.properties*.name.toSet()) {
+            return ["${where} compositeId parts: generator=${annotatedId.properties*.name} binder=${boundId.properties*.name}".toString()]
+        }
+        boundId.properties.each { Property boundPart ->
+            Property annotatedPart = annotatedId.getProperty(boundPart.name)
+            Map<String, List> pairs = [
+                    columns : [boundPart.columns*.name, annotatedPart.columns*.name],
+                    nullable: [boundPart.columns*.nullable, annotatedPart.columns*.nullable],
+                    kind    : [boundPart.value.getClass().simpleName, annotatedPart.value.getClass().simpleName],
+            ]
+            found.addAll(pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
+                "${where} compositeId part ${boundPart.name} ${facet}: generator=${values[1]} binder=${values[0]}".toString()
+            })
+            if (boundPart.value instanceof ToOne && annotatedPart.value instanceof ToOne) {
+                String target = ((ToOne) annotatedPart.value).referencedEntityName
+                if (!target.endsWith(((ToOne) boundPart.value).referencedEntityName.replace('.', '_'))) {
+                    found << "${where} compositeId part ${boundPart.name} target: generator=${target} binder=${((ToOne) boundPart.value).referencedEntityName}".toString()
+                }
+            }
+        }
+        Set<String> boundKey = bound.table.primaryKey?.columns*.name?.toSet()
+        Set<String> annotatedKey = annotated.table.primaryKey?.columns*.name?.toSet()
+        if (boundKey != annotatedKey) {
+            found << "${where} compositeId primaryKey: generator=${annotatedKey} binder=${boundKey}".toString()
+        }
+        Set<Set<String>> boundKeys = bound.table.foreignKeys.values().collect { it.columns*.name.toSet() }.toSet()
+        Set<Set<String>> annotatedKeys = annotated.table.foreignKeys.values().collect { it.columns*.name.toSet() }.toSet()
+        if (boundKeys != annotatedKeys) {
+            found << "${where} compositeId foreignKeys: generator=${annotatedKeys} binder=${boundKeys}".toString()
+        }
+        if (boundId.nullValue != annotatedId.nullValue) {
+            known['the binder gives a composite identifier the unsaved value undefined; Hibernate gives an @EmbeddedId none']++
         }
         return found
     }
@@ -1157,6 +1267,10 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             found.addAll(compareAnnotatedDiscriminator(where, (RootClass) bound, (RootClass) annotated))
             found.addAll(compareAnnotatedNaturalId(where, bound, annotated, known))
             found.addAll(compareAnnotatedCache(where, (RootClass) bound, (RootClass) annotated))
+            if (entity.identity == null && generator.generationProblem(entity) == null) {
+                annotationRead['composite identifiers']++
+                found.addAll(compareAnnotatedCompositeId(where, bound, annotated, generator.compositeIdFacets(entity), known))
+            }
         }
         if (pairs.ownsTable[0]) {
             found.addAll(compareAnnotatedConstraints(where, bound, annotated, generator.constraintFacets(entity)))
@@ -1218,7 +1332,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 }
                 if (!expected.validated) {
                     found.addAll(compareAnnotatedLeaf(
-                            "${where} property ${path}".toString(), leaf, annotatedLeaves[path], (String) expected.sqlType, false))
+                            "${where} property ${path}".toString(), leaf, annotatedLeaves[path], (String) expected.sqlType, false, known))
                 }
             }
         }
@@ -1648,11 +1762,18 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
      * or formulas, the same nullability, and every column facet the binder states (length, precision, scale, unique,
      * explicit SQL type, default, read and write expressions, comment) must have reached the annotation-built column.
      */
-    private static List<String> compareAnnotatedLeaf(String where, Property bound, Property annotated, String explicitSqlType, boolean key) {
+    private static List<String> compareAnnotatedLeaf(
+            String where, Property bound, Property annotated, String explicitSqlType, boolean key, Map<String, Integer> known = [:]) {
         List<String> boundSelectables = bound.selectables.collect { it instanceof Column ? ((Column) it).name : "formula:${((Formula) it).getFormula()}" }
         List<String> annotatedSelectables = annotated.selectables.collect { it instanceof Column ? ((Column) it).name : "formula:${((Formula) it).getFormula()}" }
         List<Column> boundColumns = bound.selectables.findAll { it instanceof Column }.collect { (Column) it }
         List<Column> annotatedColumns = annotated.selectables.findAll { it instanceof Column }.collect { (Column) it }
+        if (boundColumns.size() > 1 && boundSelectables != annotatedSelectables && boundSelectables.toSet() == annotatedSelectables.toSet()) {
+            // the columns of a foreign key to a composite identifier: Hibernate orders them like the columns of the referenced key
+            known['Hibernate orders the columns of a foreign key to a composite identifier like the referenced key, the binder like the mapping']++
+            annotatedColumns = boundColumns.collect { Column column -> annotatedColumns.find { Column other -> other.name == column.name } }
+            annotatedSelectables = boundSelectables
+        }
         List<Boolean> boundNullable = boundColumns*.nullable
         List<Boolean> annotatedNullable = annotatedColumns*.nullable
         // a collection's key columns are NOT NULL in the annotation path whatever the binder did (see compareAnnotatedCollection), and their size comes from the referenced identifier
@@ -1701,7 +1822,9 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         Map<String, Map<String, Object>> found = [:]
         List<HibernatePersistentProperty> properties = []
         if (entity.isRoot()) {
-            properties << (HibernatePersistentProperty) entity.identity
+            if (entity.identity != null) {
+                properties << (HibernatePersistentProperty) entity.identity
+            }
             if (entity.version != null) {
                 properties << entity.version
             }

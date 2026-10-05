@@ -38,6 +38,7 @@ import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.ElementCollection
 import jakarta.persistence.Embeddable
 import jakarta.persistence.Embedded
+import jakarta.persistence.EmbeddedId
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
@@ -47,6 +48,7 @@ import jakarta.persistence.Index
 import jakarta.persistence.Inheritance
 import jakarta.persistence.InheritanceType
 import jakarta.persistence.JoinColumn
+import jakarta.persistence.JoinColumns
 import jakarta.persistence.JoinTable as JpaJoinTable
 import jakarta.persistence.ManyToMany
 import jakarta.persistence.ManyToOne
@@ -98,6 +100,7 @@ import org.hibernate.annotations.Type
 import org.hibernate.annotations.UuidGenerator
 import org.hibernate.id.uuid.UuidGenerator as HibernateUuidGenerator
 import org.hibernate.mapping.Column
+import org.hibernate.mapping.PrimaryKey
 import org.hibernate.generator.Assigned
 import org.hibernate.generator.Generator
 import org.hibernate.type.BasicType
@@ -316,6 +319,9 @@ class GrailsDomainGenerator {
     static List<GrailsHibernatePersistentEntity> referencedEntities(GrailsHibernatePersistentEntity entity) {
         List<GrailsHibernatePersistentEntity> found = []
         collectReferencedEntities(entity.persistentPropertiesToBind, found, [])
+        if (entity.isRoot() && compositeIdentifier(entity)) {
+            collectReferencedEntities(entity.compositeIdentity.toList(), found, [])
+        }
         return found
     }
 
@@ -350,8 +356,14 @@ class GrailsDomainGenerator {
             return e.message
         }
         if (entity.isRoot() && !(entity.identity instanceof HibernateSimpleIdentityProperty)) {
-            return "Entity [${entity.name}] has no simple identifier (a composite identifier, for example), " +
-                    'which the generator does not support yet'
+            String compositeProblem = compositeIdProblem(entity)
+            if (compositeProblem != null) {
+                return compositeProblem
+            }
+        }
+        if (!entity.isRoot() && compositeIdentifier(entity.hibernateRootEntity)) {
+            return "Entity [${entity.name}] is a subclass of [${entity.hibernateRootEntity.name}], which has a composite identifier: " +
+                    'the key of a subclass table would copy the columns of the composite key, which the generator does not support yet'
         }
         String naturalIdProblem = naturalIdProblem(entity)
         if (naturalIdProblem != null) {
@@ -406,15 +418,107 @@ class GrailsDomainGenerator {
     private DynamicType.Builder<Object> defineIdentityAndVersion(
             DynamicType.Builder<Object> builder, GrailsHibernatePersistentEntity entity,
             Map<String, DynamicType.Unloaded<?>> embeddables) {
-        HibernatePersistentProperty identity = (HibernatePersistentProperty) entity.identity
-        List<AnnotationDescription> idAnnotations = [AnnotationDescription.Builder.ofType(Id).build()]
-        idAnnotations.addAll(idGeneratorAnnotations(idFacets(entity)))
-        DynamicType.Builder<Object> result = defineField(builder, identity, idAnnotations, embeddables)
+        DynamicType.Builder<Object> result
+        if (entity.identity instanceof HibernateSimpleIdentityProperty) {
+            HibernatePersistentProperty identity = (HibernatePersistentProperty) entity.identity
+            List<AnnotationDescription> idAnnotations = [AnnotationDescription.Builder.ofType(Id).build()]
+            idAnnotations.addAll(idGeneratorAnnotations(idFacets(entity)))
+            result = defineField(builder, identity, idAnnotations, embeddables)
+        } else {
+            result = defineCompositeIdentity(builder, entity, embeddables)
+        }
         HibernatePersistentProperty version = entity.version
         if (version != null) {
             result = defineField(result, version, [AnnotationDescription.Builder.ofType(Version).build()], embeddables)
         }
         return result
+    }
+
+    /**
+     * Describes the composite identifier of a root entity as {@code CompositeIdBinder} binds it: one identifier component with a
+     * property for every part, in the order the mapping names them. The columns of a part are the ones the part would have as an
+     * ordinary property, except that they are never null: the binder's component is the primary key, and Hibernate makes every
+     * column of a primary key not null.
+     */
+    CompositeIdFacets compositeIdFacets(GrailsHibernatePersistentEntity entity) {
+        List<EmbeddedLeaf> parts = entity.compositeIdentity.collect { HibernatePersistentProperty part ->
+            part instanceof HibernateToOneProperty ?
+                    new EmbeddedLeaf(part.name, part, toOneColumnFacets((HibernateToOneProperty) part), toOneFacets((HibernateToOneProperty) part)) :
+                    new EmbeddedLeaf(part.name, part, columnFacets(part), null)
+        }
+        String fieldName = 'id'
+        while (entity.persistentPropertiesToBind.any { HibernatePersistentProperty p -> p.name == fieldName }) {
+            fieldName += '_'
+        }
+        return new CompositeIdFacets(fieldName, parts)
+    }
+
+    /**
+     * @return whether the property is one of the parts of the composite identifier of its entity, which the binder binds into the
+     *     identifier component instead of binding it as a property of the entity
+     */
+    private static boolean isCompositeIdPart(HibernatePersistentProperty property) {
+        GrailsHibernatePersistentEntity owner = property.hibernateOwner
+        return owner != null && owner.isRoot() && compositeIdentifier(owner) &&
+                owner.compositeIdentity.any { HibernatePersistentProperty part -> part.name == property.name }
+    }
+
+    /**
+     * @return why the generator cannot describe the composite identifier of the root entity, or {@code null} when it can: every
+     *     part must be a simple property or an enum that the generator supports, or a many-to-one to an entity with a simple
+     *     identifier (a part that refers to an entity with a composite identifier makes the foreign key columns depend on the
+     *     order {@code Component.sortProperties} gave the referenced key), and the entity must have no subclasses
+     */
+    private String compositeIdProblem(GrailsHibernatePersistentEntity entity) {
+        if (!compositeIdentifier(entity)) {
+            return "Entity [${entity.name}] has no identifier the generator knows"
+        }
+        if (!entity.childEntities.isEmpty()) {
+            return "Entity [${entity.name}] has a composite identifier and subclasses: the key of a subclass table would copy the " +
+                    'columns of the composite key, which the generator does not support yet'
+        }
+        for (HibernatePersistentProperty part : entity.compositeIdentity) {
+            if (part instanceof HibernateToOneProperty) {
+                HibernateToOneProperty toOne = (HibernateToOneProperty) part
+                if (!boundAsManyToOne(toOne)) {
+                    return "Composite identifier part [${part.name}] of [${entity.name}] is a one-to-one the binder binds as a Hibernate " +
+                            'OneToOne, which the generator does not support yet'
+                }
+                if (toOne.hibernateAssociatedEntity != null && compositeIdentifier(toOne.hibernateAssociatedEntity.hibernateRootEntity)) {
+                    return "Composite identifier part [${part.name}] of [${entity.name}] refers to [${toOne.hibernateAssociatedEntity.name}], " +
+                            'which has a composite identifier too: the foreign key columns follow the order Hibernate gives the sorted ' +
+                            'properties of the referenced key, which the generator does not reproduce yet'
+                }
+                String problem = toOneProblem(toOne)
+                if (problem != null) {
+                    return "Composite identifier part [${part.name}] of [${entity.name}]: ${problem}"
+                }
+            } else if (!(part instanceof HibernateSimpleProperty) || isDerived(part)) {
+                return "Composite identifier part [${part.name}] of [${entity.name}] is a ${part.getClass().simpleName}, which the " +
+                        'generator does not support yet'
+            } else if (!supports(part)) {
+                return "Composite identifier part [${part.name}] of [${entity.name}]: ${unsupportedReason(entity, part)}"
+            }
+        }
+        return null
+    }
+
+    private DynamicType.Builder<Object> defineCompositeIdentity(
+            DynamicType.Builder<Object> builder, GrailsHibernatePersistentEntity entity,
+            Map<String, DynamicType.Unloaded<?>> embeddables) {
+        CompositeIdFacets id = compositeIdFacets(entity)
+        DynamicType.Builder<Object> key = (DynamicType.Builder<Object>) new ByteBuddy()
+                .subclass(Object)
+                .implement(Serializable)
+                .name(generatedClassName(entity) + '_Id')
+                .annotateType(AnnotationDescription.Builder.ofType(Embeddable).build())
+        for (EmbeddedLeaf part : id.parts()) {
+            key = defineField(key, part.property(), [], embeddables)
+        }
+        DynamicType.Unloaded<?> unloaded = key.make()
+        embeddables.put('id|' + entity.name, unloaded)
+        return builder.defineField(id.fieldName(), unloaded.typeDescription, Visibility.PRIVATE)
+                .annotateField(AnnotationDescription.Builder.ofType(EmbeddedId).build())
     }
 
     /**
@@ -582,18 +686,19 @@ class GrailsDomainGenerator {
         collectSharingSubclasses(entity, contributors)
         Set<String> unbound = new HashSet<String>()
         for (GrailsHibernatePersistentEntity contributor : contributors) {
-            List<ConstraintSite> sites = []
-            collectConstraintSites(contributor, sites)
-            for (ConstraintSite site : sites) {
-                Column column = new Column(site.columnName)
-                indexBinder.bindIndex(site.columnName, column, site.columnConfig, table)
-                Set<String> before = new HashSet<String>(table.uniqueKeys.keySet())
-                keyForProps.createKeyForProps(site.property, site.path, table, site.columnName)
-                if (site.enumeration) {
-                    // EnumTypeBinder never calls CreateKeyForProps: the key is the mapping's, not the binder's
-                    unbound.addAll(table.uniqueKeys.keySet() - before)
-                }
+            List<ConstraintSite> identity = []
+            List<ConstraintSite> version = []
+            List<ConstraintSite> properties = []
+            collectConstraintSites(contributor, identity, version, properties)
+            applyConstraintSites(table, identity + version, unbound)
+            if (contributor.isRoot()) {
+                // RootPersistentClassCommonValuesBinder creates the primary key after the identifier and the version, and
+                // Hibernate then drops a unique key that repeats exactly the columns of the primary key
+                PrimaryKey primaryKey = new PrimaryKey(table)
+                identity.each { ConstraintSite site -> primaryKey.addColumn(new Column(site.columnName)) }
+                table.primaryKey = primaryKey
             }
+            applyConstraintSites(table, properties, unbound)
         }
         return new ConstraintFacets(
                 table.indexes.values().collect { org.hibernate.mapping.Index index ->
@@ -602,6 +707,19 @@ class GrailsDomainGenerator {
                 table.uniqueKeys.values().collect { org.hibernate.mapping.UniqueKey key ->
                     new UniqueKeyFacets(key.name, key.columns*.name, !unbound.contains(key.name))
                 })
+    }
+
+    private void applyConstraintSites(org.hibernate.mapping.Table table, List<ConstraintSite> sites, Set<String> unbound) {
+        for (ConstraintSite site : sites) {
+            Column column = new Column(site.columnName)
+            indexBinder.bindIndex(site.columnName, column, site.columnConfig, table)
+            Set<String> before = new HashSet<String>(table.uniqueKeys.keySet())
+            keyForProps.createKeyForProps(site.property, site.path, table, site.columnName)
+            if (site.enumeration) {
+                // EnumTypeBinder never calls CreateKeyForProps: the key is the mapping's, not the binder's
+                unbound.addAll(table.uniqueKeys.keySet() - before)
+            }
+        }
     }
 
     private static void collectSharingSubclasses(GrailsHibernatePersistentEntity entity, List<GrailsHibernatePersistentEntity> into) {
@@ -613,19 +731,24 @@ class GrailsDomainGenerator {
         }
     }
 
-    private void collectConstraintSites(GrailsHibernatePersistentEntity contributor, List<ConstraintSite> sites) {
-        List<HibernatePersistentProperty> properties = []
+    private void collectConstraintSites(
+            GrailsHibernatePersistentEntity contributor, List<ConstraintSite> identity, List<ConstraintSite> version,
+            List<ConstraintSite> properties) {
         if (contributor.isRoot()) {
             if (contributor.identity instanceof HibernateSimpleIdentityProperty) {
-                properties << (HibernatePersistentProperty) contributor.identity
+                collectConstraintSites((HibernatePersistentProperty) contributor.identity, '', identity)
+            } else if (compositeIdentifier(contributor)) {
+                // CompositeIdBinder binds the parts of the identifier one after the other, like any property
+                for (HibernatePersistentProperty part : contributor.compositeIdentity) {
+                    collectConstraintSites(part, '', identity)
+                }
             }
             if (contributor.version != null) {
-                properties << contributor.version
+                collectConstraintSites(contributor.version, '', version)
             }
         }
-        properties.addAll(contributor.persistentPropertiesToBind)
-        for (HibernatePersistentProperty property : properties) {
-            collectConstraintSites(property, '', sites)
+        for (HibernatePersistentProperty property : contributor.persistentPropertiesToBind) {
+            collectConstraintSites(property, '', properties)
         }
     }
 
@@ -1383,28 +1506,86 @@ class GrailsDomainGenerator {
         if (target == null) {
             return 'the associated entity is unknown'
         }
-        GrailsHibernatePersistentEntity root = target.hibernateRootEntity
-        if (root.hibernateCompositeIdentity.isPresent() || (root.compositeIdentity?.length ?: 0) > 1) {
-            return "the associated entity [${target.name}] has a composite identifier: the foreign key has one column for each " +
-                    'identifier property, named and ordered from the identifier'
-        }
         PropertyConfig mapped = property.hibernateMappedForm
         if (inverseOneToOne) {
             return writeRestrictionProblem(mapped)
         }
-        if (mapped.columns != null && mapped.columns.size() > 1) {
+        boolean compositeTarget = compositeIdentifier(target)
+        if (compositeTarget) {
+            String problem = compositeForeignKeyProblem(property, target)
+            if (problem != null) {
+                return problem
+            }
+        } else if (mapped.columns != null && mapped.columns.size() > 1) {
             return 'the mapping states several columns, which the binder binds as a composite foreign key'
         }
         if (mapped.derived) {
             return 'the association is mapped with a formula'
         }
-        ColumnFacets key = toOneColumnFacets(property)
-        if (key.length() != null || key.precision() != null || key.scale() != null || key.defaultValue() != null ||
-                key.read() != null || key.write() != null || key.comment() != null) {
-            return 'the column config sets a length, a precision, a scale, a default, a read or write expression or a comment, ' +
-                    'which a join column cannot state'
+        for (ColumnFacets key : toOneColumnsFacets(property)) {
+            if (key.length() != null || key.precision() != null || key.scale() != null || key.defaultValue() != null ||
+                    key.read() != null || key.write() != null || key.comment() != null) {
+                return 'the column config sets a length, a precision, a scale, a default, a read or write expression or a comment, ' +
+                        'which a join column cannot state'
+            }
         }
         return null
+    }
+
+    /**
+     * The foreign key to an entity with a composite identifier has one column for each identifier property
+     * ({@code CompositeIdentifierToManyToOneBinder}). The generator reproduces that when the identifier properties are simple
+     * columns or foreign keys to entities with a simple identifier, and the mapping states either no columns or exactly one for
+     * each identifier property, all named.
+     *
+     * @return why the generator cannot describe the foreign key, or {@code null} when it can
+     */
+    private String compositeForeignKeyProblem(HibernateAssociation property, GrailsHibernatePersistentEntity target) {
+        GrailsHibernatePersistentEntity root = target.hibernateRootEntity
+        if (!root.hibernateCompositeIdentity.isPresent()) {
+            return "the associated entity [${target.name}] has a composite identifier that the mapping does not state, which the " +
+                    'binder binds as a simple one'
+        }
+        if (compositeIdProblem(root) != null) {
+            return "the associated entity [${target.name}] has a composite identifier the generator cannot describe: ${compositeIdProblem(root)}"
+        }
+        List<ColumnConfig> columns = property.hibernateMappedForm.columns
+        int expected = root.hibernateCompositeIdentity.get().propertyNames.length
+        if (!columns.isEmpty() && (columns.size() != expected || columns.any { ColumnConfig cc -> cc.name == null })) {
+            return "the mapping states ${columns.size()} columns (or leaves one unnamed) for a foreign key to a composite identifier " +
+                    "with ${expected} properties: the binder fills the missing ones and the generator does not reproduce that yet"
+        }
+        return null
+    }
+
+    /**
+     * The column configs the binder binds the foreign key to an entity with a composite identifier with. A mapping that states
+     * them names them; otherwise {@code CompositeIdentifierToManyToOneBinder} (which adds them to the mapping, as it binds)
+     * names one for each identifier property after the table of the associated entity and the default column name of the
+     * identifier property.
+     */
+    private List<ColumnConfig> compositeForeignKeyConfigs(HibernateAssociation property, GrailsHibernatePersistentEntity target) {
+        List<ColumnConfig> columns = property.hibernateMappedForm.columns
+        if (!columns.isEmpty()) {
+            return columns
+        }
+        GrailsHibernatePersistentEntity root = target.hibernateRootEntity
+        String prefix = root.getTableName(namingStrategy)
+        return root.hibernateCompositeIdentity.get().propertyNames.collect { String propertyName ->
+            HibernatePersistentProperty referenced = root.getHibernatePropertyByName(propertyName)
+            String suffix = referenced != null ? defaultColumnNames.getDefaultColumnName(referenced) : propertyName
+            new ColumnConfig(name: [prefix, suffix].collect { String part -> part.replace('`', '') }.join('_'))
+        }
+    }
+
+    /** The column of the key of the entity that each foreign key column points at, in the order of the identifier properties. */
+    private List<String> compositeReferencedColumns(GrailsHibernatePersistentEntity target) {
+        GrailsHibernatePersistentEntity root = target.hibernateRootEntity
+        return root.hibernateCompositeIdentity.get().propertyNames.collect { String propertyName ->
+            HibernatePersistentProperty part = root.getHibernatePropertyByName(propertyName)
+            part instanceof HibernateToOneProperty ?
+                    toOneColumnFacets((HibernateToOneProperty) part).name() : columnFacets(part).name()
+        }
     }
 
     /**
@@ -1456,24 +1637,44 @@ class GrailsDomainGenerator {
                     cascadeFacets(property),
                     null,
                     oneToOne.hibernateReferencedPropertyName,
-                    oneToOne.hibernateReferencedEntityName)
+                    oneToOne.hibernateReferencedEntityName,
+                    [],
+                    [])
         }
-        ColumnFacets column = toOneColumnFacets(property)
+        List<ColumnFacets> columns = toOneColumnsFacets(property)
+        ColumnFacets column = columns[0]
         return new ToOneFacets(
                 property.hibernateAssociatedEntity.name,
                 property.isLazy(),
                 FetchMode.JOIN == mapped.fetchMode ? FetchMode.JOIN : FetchMode.SELECT,
-                column.nullable(),
+                columns.every { ColumnFacets c -> c.nullable() },
                 mapped.ignoreNotFound,
                 cascadeFacets(property),
                 column,
                 null,
-                null)
+                null,
+                columns,
+                compositeIdentifier(property.hibernateAssociatedEntity) ? compositeReferencedColumns(property.hibernateAssociatedEntity) : [])
     }
 
     private ColumnFacets toOneColumnFacets(HibernateAssociation property, String path = '') {
+        return toOneColumnsFacets(property, path)[0]
+    }
+
+    /** The foreign key columns of the association, one for an ordinary association, one for each identifier property of a composite identifier. */
+    private List<ColumnFacets> toOneColumnsFacets(HibernateAssociation property, String path = '') {
+        GrailsHibernatePersistentEntity target = property.hibernateAssociatedEntity
+        if (target != null && compositeIdentifier(target) && property.hibernateMappedForm.derived == false &&
+                target.hibernateRootEntity.hibernateCompositeIdentity.isPresent() && compositeForeignKeyProblem(property, target) == null) {
+            return compositeForeignKeyConfigs(property, target).collect { ColumnConfig columnConfig ->
+                toOneColumnFacets(property, path, columnConfig)
+            }
+        }
+        return [toOneColumnFacets(property, path, firstColumnConfig(property.hibernateMappedForm))]
+    }
+
+    private ColumnFacets toOneColumnFacets(HibernateAssociation property, String path, ColumnConfig columnConfig) {
         PropertyConfig mapped = property.hibernateMappedForm
-        ColumnConfig columnConfig = firstColumnConfig(mapped)
         Column column = new Column()
         columnConfigBinder.bindColumnConfigToColumn(column, columnConfig, mapped)
         if (columnConfig != null) {
@@ -1494,7 +1695,8 @@ class GrailsDomainGenerator {
             HibernateOneToOneProperty inverse = ((HibernateOneToOneProperty) property).hibernateInverseSide
             unique = property.isBidirectional() && inverse != null && inverse.isValidHibernateOneToOne()
         }
-        return facets(property, column, name, nullable, unique)
+        // a part of the composite identifier is a primary key column, and Hibernate makes those not null
+        return facets(property, column, name, nullable && !isCompositeIdPart((HibernatePersistentProperty) property), unique)
     }
 
     /**
@@ -1504,6 +1706,10 @@ class GrailsDomainGenerator {
      * {@code orphanRemoval}.
      */
     CascadeFacets cascadeFacets(HibernateAssociation property) {
+        if (isCompositeIdPart((HibernatePersistentProperty) property)) {
+            // a part of the identifier is a key: nothing cascades through it
+            return new CascadeFacets([], [], false)
+        }
         CascadeBehavior behavior = CascadeBehavior.fromString(cascadeFetcher.getCascadeBehaviour((Association<?>) property))
         switch (behavior) {
             case CascadeBehavior.ALL:
@@ -1662,6 +1868,11 @@ class GrailsDomainGenerator {
                 if (problem != null) {
                     return "the association [${peer.name}] of [${type.name}]: ${problem}"
                 }
+                if (((HibernateToOneProperty) peer).hibernateAssociatedEntity != null &&
+                        compositeIdentifier(((HibernateToOneProperty) peer).hibernateAssociatedEntity)) {
+                    return "the association [${peer.name}] of [${type.name}] refers to an entity with a composite identifier, whose foreign " +
+                            'key has one column for each identifier property, which the generator does not state inside an embedded type yet'
+                }
             } else if (peer instanceof HibernateAssociation) {
                 return "the property [${peer.name}] of [${type.name}] is an association inside an embedded type, which the generator does not support yet"
             } else if (!supports(peer)) {
@@ -1705,7 +1916,7 @@ class GrailsDomainGenerator {
         } else if (type != null && Number.isAssignableFrom(type)) {
             numericConstraints.bindNumericColumnConstraints(column, columnConfig, mappedForm, type)
         }
-        return facets(property, column, name, isNullable(property, parent),
+        return facets(property, column, name, isNullable(property, parent) && !isCompositeIdPart(property),
                 mappedForm.isUnique() && !mappedForm.isUniqueWithinGroup())
     }
 
@@ -1941,7 +2152,18 @@ class GrailsDomainGenerator {
                     .define('optional', facets.optional())
                     .defineEnumerationArray('cascade', CascadeType, facets.cascade().jpa() as CascadeType[])
                     .build()
-            annotations << joinColumnAnnotation(facets.joinColumn())
+            if (facets.joinColumns().size() > 1) {
+                // a foreign key to a composite identifier: each column states the column of the key it points at
+                List<AnnotationDescription> columns = []
+                for (int i = 0; i < facets.joinColumns().size(); i++) {
+                    columns << joinColumnAnnotation(facets.joinColumns()[i], facets.referencedColumns()[i])
+                }
+                annotations << AnnotationDescription.Builder.ofType(JoinColumns)
+                        .defineAnnotationArray('value', TypeDescription.ForLoadedType.of(JoinColumn), columns as AnnotationDescription[])
+                        .build()
+            } else {
+                annotations << joinColumnAnnotation(facets.joinColumn())
+            }
         }
         Boolean naturalMutable = naturalIdMutable(property)
         if (naturalMutable != null) {
@@ -2161,7 +2383,7 @@ class GrailsDomainGenerator {
                 .annotateField(annotations as AnnotationDescription[])
     }
 
-    private static AnnotationDescription joinColumnAnnotation(ColumnFacets facets) {
+    private static AnnotationDescription joinColumnAnnotation(ColumnFacets facets, String referencedColumn = null) {
         AnnotationDescription.Builder annotation = AnnotationDescription.Builder.ofType(JoinColumn)
                 .define('name', facets.name())
                 .define('nullable', facets.nullable())
@@ -2170,6 +2392,9 @@ class GrailsDomainGenerator {
                 .define('updatable', facets.updatable())
         if (facets.sqlType()) {
             annotation = annotation.define('columnDefinition', facets.sqlType())
+        }
+        if (referencedColumn != null) {
+            annotation = annotation.define('referencedColumnName', referencedColumn)
         }
         return annotation.build()
     }
