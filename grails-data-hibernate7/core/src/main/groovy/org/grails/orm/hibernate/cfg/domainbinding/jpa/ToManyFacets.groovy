@@ -28,10 +28,12 @@ import org.hibernate.FetchMode
  * {@code @OneToMany}, {@code @ManyToMany}, {@code @JoinColumn}, {@code @JoinTable}, {@code @OrderColumn},
  * {@code @OrderBy}, {@code @Fetch}, {@code @BatchSize}, {@code @Cache}, {@code @Cascade} and {@code @Filter}.
  *
- * <p>Exactly one of three shapes: {@code mappedBy} names the property of the target that holds the foreign key (the
- * collection is inverse, no table of its own); {@code mappedBy} and {@code tableName} are both {@code null} (an indexed list
- * the owner manages through the foreign key column {@code key} in the target's table); {@code tableName} is set (a join
- * table, with {@code key} pointing at the owner and {@code element} at the target).</p>
+ * <p>One of four shapes: {@code mappedBy} names the property of the target that holds the foreign key (an inverse
+ * one-to-many, no table of its own); {@code mappedBy} and {@code tableName} are both {@code null} (an indexed list the owner
+ * manages through the foreign key column {@code key} in the target's table); {@code manyToMany} with a {@code tableName} and no
+ * {@code mappedBy} (a join table, with {@code key} pointing at the owner and {@code element} at the target: a many-to-many
+ * or the unidirectional one-to-many the binder binds as one); {@code manyToMany} with a {@code mappedBy} (the inverse side
+ * of a many-to-many: the table, key and element are what the binder bound for it, and the owning side states the table).</p>
  *
  * <p>{@code index} is {@code null} unless the collection is an indexed list, {@code cacheUsage} is {@code null} when the
  * collection is not cached, {@code batchSize} is {@code 0} when unset, {@code orderProperty} and {@code orderDirection} are
@@ -44,6 +46,7 @@ import org.hibernate.FetchMode
 record ToManyFacets(
     CollectionKind kind,
     String target,
+    boolean manyToMany,
     String mappedBy,
     String tableName,
     String schema,

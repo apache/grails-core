@@ -122,6 +122,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProper
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedCollectionProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty
@@ -409,8 +410,8 @@ class GrailsDomainGenerator {
                 return "Association property [${property.name}] of [${entity.name}]: ${problem}"
             }
         }
-        if (property instanceof HibernateOneToManyProperty) {
-            String problem = toManyProblem((HibernateOneToManyProperty) property)
+        if (property instanceof HibernateToManyEntityProperty) {
+            String problem = toManyProblem((HibernateToManyEntityProperty) property)
             if (problem != null) {
                 return "Association property [${property.name}] of [${entity.name}]: ${problem}"
             }
@@ -572,8 +573,8 @@ class GrailsDomainGenerator {
         if (property instanceof HibernateToOneProperty) {
             return toOneProblem((HibernateToOneProperty) property) == null
         }
-        if (property instanceof HibernateOneToManyProperty) {
-            return toManyProblem((HibernateOneToManyProperty) property) == null
+        if (property instanceof HibernateToManyEntityProperty) {
+            return toManyProblem((HibernateToManyEntityProperty) property) == null
         }
         if (!(property instanceof HibernateSimpleProperty) && !(property instanceof HibernateTenantIdProperty)) {
             return false
@@ -921,9 +922,24 @@ class GrailsDomainGenerator {
     }
 
     /**
+     * {@code ManyToOneBinder.prepareCircularManyToMany} gives a circular many-to-many that names no join key the key
+     * {@code <property>_id}, by changing the mapping while it binds. The generator runs without that mutation, so it applies
+     * the rule itself.
+     */
+    private ColumnFacets circularKeyName(HibernateManyToManyProperty property, ColumnFacets facets) {
+        if (!property.isCircular() || property.hibernateMappedForm.hasJoinKeyMapping()) {
+            return facets
+        }
+        return new ColumnFacets(
+                namingStrategy.resolveColumnName(property.name) + '_id', facets.nullable(), facets.unique(), facets.insertable(),
+                facets.updatable(), facets.length(), facets.precision(), facets.scale(), facets.sqlType(), facets.defaultValue(),
+                facets.read(), facets.write(), facets.comment())
+    }
+
+    /**
      * @return why the generator cannot describe the collection of entities, or {@code null} when it can
      */
-    private String toManyProblem(HibernateOneToManyProperty property) {
+    private String toManyProblem(HibernateToManyEntityProperty property) {
         PropertyConfig mapped = property.hibernateMappedForm
         if (Map.isAssignableFrom(property.type)) {
             return 'a map of entities, which the generator does not support yet'
@@ -947,7 +963,30 @@ class GrailsDomainGenerator {
         if (mapped.lazy == Boolean.TRUE) {
             return 'an explicit lazy: true makes the binder bind an extra-lazy collection, which Hibernate 7 annotations cannot state'
         }
-        if (property.bidirectional) {
+        if (property instanceof HibernateManyToManyProperty) {
+            HibernateAssociation other = property.hibernateInverseSide
+            if (!(other instanceof HibernateManyToManyProperty) || Map.isAssignableFrom(other.type)) {
+                return "the other side [${other?.name}] is not a many-to-many collection"
+            }
+            if (!property.owningSide && !other.owningSide) {
+                return 'neither side of the many-to-many owns it (no belongsTo): the binder binds both collections inverse, so ' +
+                        'no row is ever written, and annotations cannot say it (Hibernate\'s annotation binder fails with a ' +
+                        'NullPointerException when both sides are mappedBy)'
+            }
+            if (property.hibernateMappedForm.joinTable.keys != null && property.hibernateMappedForm.joinTable.keys.size() > 1 ||
+                    other.hibernateMappedForm.joinTable.keys != null && other.hibernateMappedForm.joinTable.keys.size() > 1) {
+                return 'a join table has a composite key'
+            }
+            ColumnFacets key = collectionKeyFacets(property)
+            ColumnFacets element = toOneColumnFacets(other)
+            for (ColumnFacets facets : [key, element]) {
+                if (facets.length() != null || facets.precision() != null || facets.scale() != null || facets.defaultValue() != null ||
+                        facets.read() != null || facets.write() != null || facets.comment() != null) {
+                    return 'the column config of a side of the many-to-many sets a length, a precision, a scale, a default, a read or ' +
+                            'write expression or a comment, which a join column cannot state'
+                }
+            }
+        } else if (property.bidirectional) {
             if (!(property.hibernateInverseSide instanceof HibernateManyToOneProperty)) {
                 return "the other side [${property.hibernateInverseSide?.name}] is not a many-to-one"
             }
@@ -992,7 +1031,7 @@ class GrailsDomainGenerator {
      *
      * @throws UnsupportedOperationException when something about the collection cannot be stated yet
      */
-    ToManyFacets toManyFacets(HibernateOneToManyProperty property) {
+    ToManyFacets toManyFacets(HibernateToManyEntityProperty property) {
         if (toManyProblem(property) != null) {
             throw new UnsupportedOperationException(unsupportedReason(property.hibernateOwner, property))
         }
@@ -1005,12 +1044,24 @@ class GrailsDomainGenerator {
         String catalog = null
         ColumnFacets key
         ColumnFacets element = null
-        if (property.shouldBindWithForeignKey()) {
+        boolean manyToMany = true
+        if (property instanceof HibernateManyToManyProperty) {
+            HibernateManyToManyProperty other = (HibernateManyToManyProperty) property.hibernateInverseSide
+            JoinTable joinTable = mapped.joinTable
+            table = tableForMany.getTableName(property)
+            schema = joinTable?.schema != null ? joinTable.schema : entityFacets(property.hibernateOwner).schema()
+            catalog = joinTable?.catalog
+            key = circularKeyName((HibernateManyToManyProperty) property, collectionKeyFacets(property))
+            // ManyToOneBinder binds the element like the other side's own column: its name rules and its (never) nullable column
+            element = circularKeyName(other, toOneColumnFacets(other))
+            mappedBy = property.owningSide ? null : other.name
+        } else if (property.shouldBindWithForeignKey()) {
             HibernateToOneProperty inverse = (HibernateToOneProperty) property.hibernateInverseSide
             // CollectionKeyBinder copies the other side's foreign key column into the key; the key updater makes it nullable
             key = new ColumnFacets(
                     toOneColumnFacets(inverse).name(), true, false, true, true, null, null, null, null, null, null, null, null)
             mappedBy = kind == CollectionKind.LIST ? null : inverse.name
+            manyToMany = false
         } else {
             JoinTable joinTable = mapped.joinTable
             table = tableForMany.getTableName(property)
@@ -1021,10 +1072,12 @@ class GrailsDomainGenerator {
                     property.resolveJoinTableForeignKeyColumnName(namingStrategy), true, false, true, true, null, null, null,
                     null, null, null, null, null)
         }
-        String condition = target.isMultiTenant() ? target.getMultiTenantFilterCondition(defaultColumnNames) : null
+        String condition = property instanceof HibernateOneToManyProperty && target.isMultiTenant() ?
+                target.getMultiTenantFilterCondition(defaultColumnNames) : null
         return new ToManyFacets(
                 kind,
                 target.name,
+                manyToMany,
                 mappedBy,
                 table,
                 schema,
@@ -1143,7 +1196,7 @@ class GrailsDomainGenerator {
                 null)
     }
 
-    private ColumnFacets toOneColumnFacets(HibernateToOneProperty property) {
+    private ColumnFacets toOneColumnFacets(HibernateAssociation property) {
         PropertyConfig mapped = property.hibernateMappedForm
         ColumnConfig columnConfig = firstColumnConfig(mapped)
         Column column = new Column()
@@ -1495,8 +1548,8 @@ class GrailsDomainGenerator {
         if (property instanceof HibernateToOneProperty) {
             return defineToOneField(builder, (HibernateToOneProperty) property)
         }
-        if (property instanceof HibernateOneToManyProperty) {
-            return defineToManyField(builder, (HibernateOneToManyProperty) property)
+        if (property instanceof HibernateToManyEntityProperty) {
+            return defineToManyField(builder, (HibernateToManyEntityProperty) property)
         }
         List<AnnotationDescription> annotations = new ArrayList<>(extra)
         if (isDerived(property)) {
@@ -1573,27 +1626,32 @@ class GrailsDomainGenerator {
      * (and no {@code mappedBy}) for the indexed list the owner manages, and {@code @ManyToMany} with a {@code @JoinTable}
      * for a unidirectional collection.
      */
-    private DynamicType.Builder<Object> defineToManyField(DynamicType.Builder<Object> builder, HibernateOneToManyProperty property) {
+    private DynamicType.Builder<Object> defineToManyField(DynamicType.Builder<Object> builder, HibernateToManyEntityProperty property) {
         ToManyFacets facets = toManyFacets(property)
         List<AnnotationDescription> annotations = []
         FetchType fetchType = facets.lazy() ? FetchType.LAZY : FetchType.EAGER
         List<org.hibernate.annotations.CascadeType> hibernateCascade = new ArrayList<org.hibernate.annotations.CascadeType>(facets.cascade().hibernate())
-        if (facets.tableName() != null) {
-            annotations << AnnotationDescription.Builder.ofType(ManyToMany)
+        if (facets.manyToMany()) {
+            AnnotationDescription.Builder manyToMany = AnnotationDescription.Builder.ofType(ManyToMany)
                     .define('fetch', fetchType)
                     .defineEnumerationArray('cascade', CascadeType, facets.cascade().jpa() as CascadeType[])
-                    .build()
-            AnnotationDescription.Builder joinTable = AnnotationDescription.Builder.ofType(JpaJoinTable)
-                    .define('name', facets.tableName())
-                    .defineAnnotationArray('joinColumns', TypeDescription.ForLoadedType.of(JoinColumn), joinColumnAnnotation(facets.key()))
-                    .defineAnnotationArray('inverseJoinColumns', TypeDescription.ForLoadedType.of(JoinColumn), joinColumnAnnotation(facets.element()))
-            if (facets.schema()) {
-                joinTable = joinTable.define('schema', facets.schema())
+            if (facets.mappedBy() != null) {
+                // the inverse side takes its table from the owning side
+                manyToMany = manyToMany.define('mappedBy', facets.mappedBy())
+            } else {
+                AnnotationDescription.Builder joinTable = AnnotationDescription.Builder.ofType(JpaJoinTable)
+                        .define('name', facets.tableName())
+                        .defineAnnotationArray('joinColumns', TypeDescription.ForLoadedType.of(JoinColumn), joinColumnAnnotation(facets.key()))
+                        .defineAnnotationArray('inverseJoinColumns', TypeDescription.ForLoadedType.of(JoinColumn), joinColumnAnnotation(facets.element()))
+                if (facets.schema()) {
+                    joinTable = joinTable.define('schema', facets.schema())
+                }
+                if (facets.catalog()) {
+                    joinTable = joinTable.define('catalog', facets.catalog())
+                }
+                annotations << joinTable.build()
             }
-            if (facets.catalog()) {
-                joinTable = joinTable.define('catalog', facets.catalog())
-            }
-            annotations << joinTable.build()
+            annotations << manyToMany.build()
             if (facets.cascade().orphanRemoval()) {
                 // @ManyToMany has no orphanRemoval attribute
                 hibernateCascade << org.hibernate.annotations.CascadeType.DELETE_ORPHAN
@@ -1610,7 +1668,7 @@ class GrailsDomainGenerator {
             }
             annotations << oneToMany.build()
         }
-        if (facets.kind() == CollectionKind.LIST) {
+        if (facets.kind() == CollectionKind.LIST && facets.mappedBy() == null) {
             annotations << AnnotationDescription.Builder.ofType(OrderColumn)
                     .define('name', facets.index().name())
                     .define('nullable', facets.index().nullable())

@@ -149,7 +149,8 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
                 GenFleetVehicle, GenFleetCar, GenFleetSportsCar, GenFleetSedan, GenUnionBase, GenUnionLeaf, GenUnionMiddle, GenUnionBottom,
                 GenEmbedOwner, GenEmbedOther, GenEmbedBase, GenEmbedChild, GenEmbedBadHolder, GenEmbedFormulaOwner, GenCollSingle, GenCollKinds, GenCollLazy,
                 GenFkTarget, GenFkOwned, GenFkOwner, GenFkCascades, GenFkNodeA, GenFkNodeB, GenFkHasOneOwner, GenFkHasOneDetail, GenOneFace, GenOneNose, GenFkManyOne, GenFkOneSide, GenFkSub, GenFkSubRoot,
-                GenOmParent, GenOmChild, GenOmListed, GenOmOrdered, GenOmOrphan, GenOmFetched, GenOmTag, GenOmStep, GenOmKept, GenOmSortedOwner)
+                GenOmParent, GenOmChild, GenOmListed, GenOmOrdered, GenOmOrphan, GenOmFetched, GenOmTag, GenOmStep, GenOmKept, GenOmSortedOwner,
+                GenMmStudent, GenMmCourse, GenMmPerson, GenMmNoOwnerA, GenMmNoOwnerB)
     }
 
     List<StandardServiceRegistry> registries = []
@@ -1648,6 +1649,53 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         'labels' | 'gen_om_label'              | 'owner_ref'              | 'tag_ref'
     }
 
+    void "the owning side of a many-to-many is a @ManyToMany with the binder's join table, the other side is mappedBy it"() {
+        given:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenMmStudent, GenMmCourse)
+        Field courses = classes[entity(GenMmStudent)].getDeclaredField('courses')
+        Field students = classes[entity(GenMmCourse)].getDeclaredField('students')
+
+        expect:
+        courses.genericType.typeName == "java.util.Set<${classes[entity(GenMmCourse)].name}>"
+        courses.getAnnotation(ManyToMany).mappedBy() == ''
+        courses.getAnnotation(JoinTable).name() == 'gen_mm_student_courses'
+        courses.getAnnotation(JoinTable).joinColumns()*.name() == [keyColumn]
+        courses.getAnnotation(JoinTable).inverseJoinColumns()*.name() == [elementColumn]
+        !courses.getAnnotation(JoinTable).inverseJoinColumns()[0].nullable()
+        students.getAnnotation(ManyToMany).mappedBy() == 'courses'
+        !students.isAnnotationPresent(JoinTable)
+
+        where:
+        keyColumn         | elementColumn
+        'gen_mm_student_id' | 'gen_mm_course_id'
+    }
+
+    void "neither side of a many-to-many that has no belongsTo owns it, which the generator rejects by name"() {
+        given:
+        GrailsHibernatePersistentEntity entity = entity(GenMmNoOwnerA)
+        HibernatePersistentProperty property = entity.getHibernatePropertyByName('others')
+
+        expect:
+        !newGenerator().supports(property)
+        newGenerator().unsupportedReason(entity, property).contains('neither side of the many-to-many owns it')
+    }
+
+    void "Hibernate's own annotation binder reads the two sides of a many-to-many as an owning and an inverse collection of one table"() {
+        given:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenMmStudent, GenMmCourse)
+        Metadata metadata = annotationMetadata(classes.values())
+        org.hibernate.mapping.Collection owning = (org.hibernate.mapping.Collection) metadata.getEntityBinding(classes[entity(GenMmStudent)].name).getProperty('courses').value
+        org.hibernate.mapping.Collection inverse = (org.hibernate.mapping.Collection) metadata.getEntityBinding(classes[entity(GenMmCourse)].name).getProperty('students').value
+
+        expect:
+        !owning.inverse
+        inverse.inverse
+        owning.collectionTable.is(inverse.collectionTable)
+        owning.collectionTable.name == 'gen_mm_student_courses'
+        owning.key.selectables*.text == inverse.element.selectables*.text
+        owning.element.selectables*.text == inverse.key.selectables*.text
+    }
+
     private Map<GrailsHibernatePersistentEntity, Class<?>> generateOmGroup() {
         return generateGroup(GenOmParent, GenOmChild, GenOmListed, GenOmOrdered, GenOmOrphan, GenOmFetched, GenOmTag, GenOmStep, GenOmKept)
     }
@@ -2756,4 +2804,60 @@ class GenOmSortedOwner {
     SortedSet<GenOmTag> tags
 
     static hasMany = [tags: GenOmTag]
+}
+
+@Entity
+class GenMmStudent {
+
+    String name
+    Set<GenMmCourse> courses
+
+    static hasMany = [courses: GenMmCourse]
+}
+
+@Entity
+class GenMmCourse {
+
+    String title
+    Set<GenMmStudent> students
+
+    static hasMany = [students: GenMmStudent]
+    static belongsTo = [GenMmStudent]
+}
+
+@Entity
+class GenMmPerson {
+
+    String name
+    Set<GenMmPerson> friends
+
+    static hasMany = [friends: GenMmPerson]
+}
+
+@Entity
+class GenMmNoOwnerA {
+
+    Set<GenMmNoOwnerB> others
+
+    static hasMany = [others: GenMmNoOwnerB]
+}
+
+@Entity
+class GenMmNoOwnerB {
+
+    Set<GenMmNoOwnerA> others
+
+    static hasMany = [others: GenMmNoOwnerA]
+}
+
+@Entity
+class GenMmSelf {
+
+    String name
+    Set<GenMmSelf> followers
+    Set<GenMmSelf> following
+
+    static hasMany = [followers: GenMmSelf, following: GenMmSelf]
+    static mappedBy = [followers: 'following', following: 'followers']
+    static belongsTo = [GenMmSelf]
 }

@@ -83,6 +83,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedPro
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleIdentityProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyEntityProperty
@@ -207,14 +208,18 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                             }
                             continue
                         }
-                        if (property instanceof HibernateOneToManyProperty) {
+                        if (property instanceof HibernateToManyEntityProperty) {
                             if (bound == null || !(bound.value instanceof HibernateCollection)) {
                                 skipped['collection property with no bound collection']++
                             } else {
-                                ToManyFacets facets = generator.toManyFacets((HibernateOneToManyProperty) property)
-                                associations["one-to-many (${facets.mappedBy() != null ? 'inverse' : facets.tableName() != null ? 'join table' : 'owned foreign key'}, ${facets.kind()})".toString()]++
+                                ToManyFacets facets = generator.toManyFacets((HibernateToManyEntityProperty) property)
+                                String shape = facets.manyToMany() ?
+                                        (facets.mappedBy() != null ? 'many-to-many (inverse)' : property instanceof HibernateOneToManyProperty ?
+                                                'one-to-many (join table)' : 'many-to-many (owning)') :
+                                        (facets.mappedBy() != null ? 'one-to-many (inverse)' : 'one-to-many (owned foreign key)')
+                                associations["${shape}, ${facets.kind()}".toString()]++
                                 mismatches.addAll(compareToMany(
-                                        "${entity.name}.${property.name}".toString(), facets, bound, known))
+                                        "${entity.name}.${property.name}".toString(), (HibernateToManyEntityProperty) property, facets, bound, known))
                             }
                             continue
                         }
@@ -536,10 +541,11 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             return ["${where} columns: generator=1 binder=${columns.size()}".toString()]
         }
         Column column = columns[0]
-        boolean primaryKey = table.primaryKey != null && table.primaryKey.columns.contains(column)
+        // two collections may share one table (the sides of a many-to-many), and then the primary key holds one of the Column objects of that name
+        boolean primaryKey = table.primaryKey != null && table.primaryKey.columns.any { it.name == column.name }
         Map<String, List> pairs = [
                 name    : [facets.name().replace('`', ''), column.name],
-                nullable: [facets.nullable() && !primaryKey, column.nullable],
+                nullable: [facets.nullable() && !primaryKey, column.nullable && !primaryKey],
                 unique  : [facets.unique(), column.unique],
         ]
         if (!key) {
@@ -858,7 +864,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             try {
                 metadata = sources.buildMetadata()
             } catch (Exception e) {
-                found << "${generatable*.name} annotationBinder: generator=accepted binder=${e.message?.readLines()?.first()}".toString()
+                found << "${generatable*.name} annotationBinder: generator=accepted binder=${e.message?.readLines()?.first()} at ${e.stackTrace.take(5)*.toString()}".toString()
                 return found
             }
             annotationRead['groups']++
@@ -952,8 +958,8 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 continue
             }
             if (property.value instanceof HibernateCollection &&
-                    entity.persistentPropertiesToBind.find { it.name == property.name } instanceof HibernateOneToManyProperty) {
-                HibernateOneToManyProperty toMany = (HibernateOneToManyProperty) entity.persistentPropertiesToBind.find { it.name == property.name }
+                    entity.persistentPropertiesToBind.find { it.name == property.name } instanceof HibernateToManyEntityProperty) {
+                HibernateToManyEntityProperty toMany = (HibernateToManyEntityProperty) entity.persistentPropertiesToBind.find { it.name == property.name }
                 if (generator.validationAnnotations(toMany).isEmpty()) {
                     annotationRead['entity collections']++
                     found.addAll(compareAnnotatedToMany(
@@ -1162,7 +1168,21 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         return found
     }
 
-    private static String orderByOf(HibernateOneToManyProperty property, ToManyFacets facets) {
+    /**
+     * The key and element column names of a circular many-to-many depend on the order the binder's second passes run:
+     * {@code ManyToOneBinder.prepareCircularManyToMany} renames the join key of the other side while it binds one side, so the
+     * side that runs first keeps the default key name. The generator states the names the binder would give once both sides
+     * are prepared, which is consistent on both sides; the difference is listed, not reported.
+     */
+    private static List<String> circularOrFound(HibernateToManyEntityProperty property, List<String> found, Map<String, Integer> known) {
+        if (!found.isEmpty() && property instanceof HibernateManyToManyProperty && property.isCircular()) {
+            known['a circular many-to-many names the key of its first-bound side by default, because the binder renames the join keys of a circular many-to-many while it binds, so the two sides name different columns of one join table']++
+            return []
+        }
+        return found
+    }
+
+    private static String orderByOf(HibernateToManyEntityProperty property, ToManyFacets facets) {
         if (facets.orderProperty() == null) {
             return null
         }
@@ -1182,7 +1202,8 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
      * A collection of entities as {@code CollectionBinder} and its second passes bound it: kind, ownership, join table, key,
      * element and index columns, fetching, cascade, ordering and tenant filter.
      */
-    private List<String> compareToMany(String where, ToManyFacets facets, Property boundProperty, Map<String, Integer> known) {
+    private List<String> compareToMany(
+            String where, HibernateToManyEntityProperty property, ToManyFacets facets, Property boundProperty, Map<String, Integer> known) {
         HibernateCollection collection = (HibernateCollection) boundProperty.value
         Map<String, List> pairs = [
                 kind       : [facets.kind(), kindOf(collection)],
@@ -1194,7 +1215,8 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 inverse    : [facets.mappedBy() != null, collection.inverse],
                 orphanDelete: [facets.cascade().orphanRemoval(), collection.hasOrphanDelete()],
                 cascade    : [cascadeActions(facets.cascade()), cascadeActions(boundProperty.cascade)],
-                oneToMany  : [facets.tableName() == null, collection.oneToMany],
+                oneToMany  : [!facets.manyToMany(), collection.oneToMany],
+                orderBy    : [normalizedOrderBy(orderByOf(property, facets)), normalizedOrderBy(collection.orderBy)],
                 element    : [facets.target(), collection.element instanceof OneToMany ? ((OneToMany) collection.element).referencedEntityName :
                         ((ToOne) collection.element).referencedEntityName],
         ]
@@ -1202,6 +1224,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             "${where} ${facet}: generator=${values[0]} binder=${values[1]}".toString()
         }
         if (facets.tableName() != null) {
+            // the inverse side of a many-to-many has the table the binder computed for it, which is the owning side's
             Map<String, List> table = [
                     table  : [facets.tableName().replace('`', ''), collection.collectionTable.name],
                     schema : [facets.schema(), collection.collectionTable.schema],
@@ -1211,9 +1234,9 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 "${where} ${facet}: generator=${values[0]} binder=${values[1]}".toString()
             })
             // Hibernate copies the size of the referenced identifier onto the element column after binding
-            found.addAll(compareValueColumn("${where} element".toString(), facets.element(), collection.element, collection.collectionTable, true))
+            found.addAll(circularOrFound(property, compareValueColumn("${where} element".toString(), facets.element(), collection.element, collection.collectionTable, true), known))
         }
-        found.addAll(compareValueColumn("${where} key".toString(), facets.key(), collection.key, collection.collectionTable, true))
+        found.addAll(circularOrFound(property, compareValueColumn("${where} key".toString(), facets.key(), collection.key, collection.collectionTable, true), known))
         if (!((DependantValue) collection.key).updateable) {
             known['the binder makes the key of an entity collection not updatable when its owner has several unidirectional to-many properties; Hibernate then writes no join table rows, and annotations cannot state it']++
         }
@@ -1242,8 +1265,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         }
         HibernateCollection bound = (HibernateCollection) boundProperty.value
         HibernateCollection annotated = (HibernateCollection) annotatedProperty.value
-        HibernateOneToManyProperty source = (HibernateOneToManyProperty) entity.persistentPropertiesToBind.find { it.name == boundProperty.name }
-        Map<String, List> pairs = [
+                Map<String, List> pairs = [
                 kind        : [kindOf(bound), kindOf(annotated)],
                 role        : [roleProperty(bound), roleProperty(annotated)],
                 lazy        : [bound.lazy, annotated.lazy],
@@ -1256,15 +1278,22 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 orphanDelete: [bound.hasOrphanDelete(), annotated.hasOrphanDelete()],
                 oneToMany   : [bound.oneToMany, annotated.oneToMany],
                 cascade     : [cascadeActions(boundProperty.cascade), cascadeActions(annotatedProperty.cascade)],
-                orderBy     : [normalizedOrderBy(bound.orderBy), normalizedOrderBy(annotated.orderBy)],
+                orderBy     : [normalizedOrderBy(bound.orderBy), normalizedOrderBy(annotated.orderBy ?: annotated.manyToManyOrdering)],
                 element     : [GrailsDomainGenerator.generatedClassName(byName[facets.target()]),
                                annotated.element instanceof OneToMany ? ((OneToMany) annotated.element).referencedEntityName :
                                        ((ToOne) annotated.element).referencedEntityName],
                 filters     : [bound.filters*.condition.toSet(), annotated.filters*.condition.toSet()],
                 manyToManyFilters: [bound.manyToManyFilters*.condition.toSet(), annotated.manyToManyFilters*.condition.toSet()],
         ]
+        boolean inverseManyToMany = facets.manyToMany() && facets.mappedBy() != null
+        HibernatePersistentProperty sourceProperty = entity.persistentPropertiesToBind.find { it.name == boundProperty.name }
+        boolean circularSelf = sourceProperty instanceof HibernateManyToManyProperty && sourceProperty.isCircular()
         if (bound.collectionTable.name != annotated.collectionTable.name) {
-            pairs.table = [bound.collectionTable.name, annotated.collectionTable.name]
+            if (inverseManyToMany) {
+                known['the binder names the join table of the inverse side of a many-to-many from the inverse side\'s own mapping, so it differs from the owning side\'s table when only the owner names it; Hibernate uses the owning side\'s table']++
+            } else {
+                pairs.table = [bound.collectionTable.name, annotated.collectionTable.name]
+            }
         }
         List<String> found = pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
             "${where} ${facet}: generator=${values[1]} binder=${values[0]}".toString()
@@ -1295,7 +1324,14 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             b.value = (org.hibernate.mapping.Value) triple[0]
             Property a = new Property()
             a.value = (org.hibernate.mapping.Value) triple[1]
-            found.addAll(compareAnnotatedLeaf("${where} ${part}".toString(), b, a, ((ColumnFacets) triple[2]).sqlType(), part != 'index'))
+            List<String> leaf = compareAnnotatedLeaf("${where} ${part}".toString(), b, a, ((ColumnFacets) triple[2]).sqlType(), part != 'index')
+            if (!leaf.isEmpty() && part != 'index' && facets.manyToMany() && circularSelf) {
+                known['a circular many-to-many names the key of its first-bound side by default, because the binder renames the join keys of a circular many-to-many while it binds, so the two sides name different columns of one join table']++
+            } else if (inverseManyToMany && !leaf.isEmpty() && part != 'index') {
+                known['the binder names the key and element columns of the inverse side of a many-to-many from its own mapping, so they differ from the owning side\'s when only the owner names them; Hibernate uses the owning side\'s']++
+            } else {
+                found.addAll(leaf)
+            }
         }
         return found
     }
