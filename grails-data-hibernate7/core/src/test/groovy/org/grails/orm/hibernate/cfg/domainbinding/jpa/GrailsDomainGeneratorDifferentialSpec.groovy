@@ -21,6 +21,12 @@ package org.grails.orm.hibernate.cfg.domainbinding.jpa
 import grails.gorm.annotation.Entity
 import jakarta.persistence.InheritanceType
 import grails.gorm.tests.HibernateGormDatastoreSpec
+import org.hibernate.Length
+import org.hibernate.boot.Metadata
+import org.hibernate.boot.MetadataSources
+import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder
+import org.hibernate.boot.registry.StandardServiceRegistry
+import org.hibernate.boot.registry.StandardServiceRegistryBuilder
 import org.hibernate.dialect.H2Dialect
 import org.hibernate.engine.spi.SessionFactoryImplementor
 import org.hibernate.generator.Generator
@@ -93,6 +99,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         Map<String, Integer> explicitTypes = [:].withDefault { 0 }
         Map<String, Integer> strategies = [:].withDefault { 0 }
         Map<String, Integer> hierarchies = [:].withDefault { 0 }
+        Map<String, Integer> annotationRead = [:].withDefault { 0 }
 
         when:
         for (List<Class<?>> group : groups) {
@@ -104,8 +111,9 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 continue
             }
             try {
-                for (GrailsHibernatePersistentEntity entity : datastore.mappingContext.getHibernatePersistentEntities()
-                        .findAll { group.contains(it.javaClass) && it.persistentClass != null && it.persistentClass.entityName == it.name }) {
+                List<GrailsHibernatePersistentEntity> boundEntities = datastore.mappingContext.getHibernatePersistentEntities()
+                        .findAll { group.contains(it.javaClass) && it.persistentClass != null && it.persistentClass.entityName == it.name }
+                for (GrailsHibernatePersistentEntity entity : boundEntities) {
                     entities++
                     List<HibernatePersistentProperty> properties = []
                     HierarchyFacets hierarchy = null
@@ -167,6 +175,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                         }
                     }
                 }
+                mismatches.addAll(compareAnnotationBoundHierarchies(generator, boundEntities, skipped, annotationRead))
             } finally {
                 datastore.close()
             }
@@ -178,6 +187,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         report << "explicit types compared: ${explicitTypes}\n"
         report << "id generators compared by strategy: ${strategies}\n"
         report << "entities compared by hierarchy role: ${hierarchies}\n"
+        report << "hierarchies read back through Hibernate's annotation binder: ${annotationRead}\n"
         report << "unsupported by kind: ${skipped}\n"
         report << "mismatches by facet: ${mismatches.groupBy { (it =~ /\s(\w+): generator=/)[0][1] }.collectEntries { k, v -> [k, v.size()] }}\n"
         unbootable.each { report << "unbootable: ${it.key.take(120)} -> ${it.value.take(200)}\n" }
@@ -416,6 +426,129 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         }
         return pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
             "${where} ${facet}: generator=${values[0]} binder=${values[1]}".toString()
+        }
+    }
+
+    /**
+     * For every hierarchy the generator can describe whole, binds the generated classes with Hibernate's own annotation
+     * binder and compares the resulting {@code PersistentClass} of each entity with the one the domain binder built:
+     * the link between what the generator decides and what Hibernate makes of the annotations.
+     */
+    private List<String> compareAnnotationBoundHierarchies(
+            GrailsDomainGenerator generator, List<GrailsHibernatePersistentEntity> entities, Map<String, Integer> skipped,
+            Map<String, Integer> annotationRead) {
+        List<String> found = []
+        Map<GrailsHibernatePersistentEntity, List<GrailsHibernatePersistentEntity>> hierarchies = [:]
+        for (GrailsHibernatePersistentEntity entity : entities) {
+            if (entity.isRoot() && entity.childEntities.isEmpty()) {
+                continue
+            }
+            hierarchies.get(entity.hibernateRootEntity, []) << entity
+        }
+        for (Map.Entry<GrailsHibernatePersistentEntity, List<GrailsHibernatePersistentEntity>> hierarchy : hierarchies.entrySet()) {
+            Map<GrailsHibernatePersistentEntity, Class<?>> classes
+            try {
+                classes = generator.generateAll(hierarchy.value, getClass().classLoader)
+            } catch (UnsupportedOperationException | IllegalArgumentException e) {
+                skipped["hierarchy not generated whole: ${e.getClass().simpleName}".toString()]++
+                continue
+            }
+            StandardServiceRegistry registry = new StandardServiceRegistryBuilder(
+                    new BootstrapServiceRegistryBuilder().applyClassLoader(classes.values().first().classLoader).build())
+                    .applySetting('hibernate.dialect', H2Dialect.name)
+                    .applySetting('hibernate.connection.url', 'jdbc:h2:mem:generator-differential;DB_CLOSE_DELAY=-1')
+                    .build()
+            try {
+                MetadataSources sources = new MetadataSources(registry)
+                classes.values().each { sources.addAnnotatedClass(it) }
+                Metadata metadata
+                try {
+                    metadata = sources.buildMetadata()
+                } catch (Exception e) {
+                    found << "${hierarchy.key.name} annotationBinder: generator=accepted binder=${e.message?.readLines()?.first()}".toString()
+                    continue
+                }
+                annotationRead["${generator.hierarchyFacets(hierarchy.key).strategy()} (${classes.size()} classes)".toString()]++
+                Map<String, GrailsHibernatePersistentEntity> byName = hierarchy.value.collectEntries { [(it.name): it] }
+                classes.each { GrailsHibernatePersistentEntity entity, Class<?> generated ->
+                    found.addAll(compareAnnotationBound(entity, metadata.getEntityBinding(generated.name), byName))
+                }
+            } finally {
+                StandardServiceRegistryBuilder.destroy(registry)
+            }
+        }
+        return found
+    }
+
+    private static List<String> compareAnnotationBound(
+            GrailsHibernatePersistentEntity entity, PersistentClass annotated, Map<String, GrailsHibernatePersistentEntity> byName) {
+        PersistentClass bound = entity.persistentClass
+        String where = "${entity.name} hibernate"
+        if (annotated == null) {
+            return ["${where} entity: generator=bound binder=missing".toString()]
+        }
+        Map<String, List> pairs = [
+                kind              : [bound.getClass().simpleName, annotated.getClass().simpleName],
+                superclass        : [bound.superclass == null ? null : GrailsDomainGenerator.generatedClassName(byName[bound.superclass.entityName]),
+                                     annotated.superclass?.entityName],
+                tableName         : [bound.table.name, annotated.table.name],
+                ownsTable         : [bound.superclass == null || !bound.table.is(bound.superclass.table),
+                                     annotated.superclass == null || !annotated.table.is(annotated.superclass.table)],
+                abstractClass     : [Boolean.TRUE == bound.isAbstract(), Boolean.TRUE == annotated.isAbstract()],
+                abstractUnionTable: [bound.table.isAbstractUnionTable(), annotated.table.isAbstractUnionTable()],
+                properties        : [bound.declaredProperties*.name.toSet(), annotated.declaredProperties*.name.toSet()],
+        ]
+        if (bound instanceof SingleTableSubclass || bound instanceof RootClass && bound.discriminator != null) {
+            pairs.discriminatorValue = [bound.discriminatorValue, annotated.discriminatorValue]
+        }
+        if (bound instanceof JoinedSubclass) {
+            pairs.keyColumn = [((JoinedSubclass) bound).key.columns*.name, ((JoinedSubclass) annotated).key.columns*.name]
+        }
+        List<String> found = pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
+            "${where} ${facet}: generator=${values[1]} binder=${values[0]}".toString()
+        }
+        if (bound instanceof RootClass) {
+            found.addAll(compareAnnotatedDiscriminator(where, (RootClass) bound, (RootClass) annotated))
+        }
+        for (Property property : bound.declaredProperties) {
+            Property other = annotated.hasProperty(property.name) ? annotated.getProperty(property.name) : null
+            if (other == null) {
+                continue
+            }
+            List<String> boundColumns = property.selectables.collect { it instanceof Column ? ((Column) it).name : "formula:${((Formula) it).getFormula()}" }
+            List<String> annotatedColumns = other.selectables.collect { it instanceof Column ? ((Column) it).name : "formula:${((Formula) it).getFormula()}" }
+            List<Boolean> boundNullable = property.columns*.nullable
+            List<Boolean> annotatedNullable = other.columns*.nullable
+            if (boundColumns != annotatedColumns || boundNullable != annotatedNullable) {
+                found << ("${where} property ${property.name}: generator=${annotatedColumns}${annotatedNullable} " +
+                        "binder=${boundColumns}${boundNullable}").toString()
+            }
+        }
+        return found
+    }
+
+    private static List<String> compareAnnotatedDiscriminator(String where, RootClass bound, RootClass annotated) {
+        if ((bound.discriminator != null) != (annotated.discriminator != null)) {
+            return ["${where} discriminator: generator=${annotated.discriminator != null} binder=${bound.discriminator != null}".toString()]
+        }
+        if (bound.discriminator == null) {
+            return []
+        }
+        List<String> boundSelectables = bound.discriminator.selectables.collect { it instanceof Column ? ((Column) it).name : "formula:${((Formula) it).getFormula()}" }
+        List<String> annotatedSelectables = annotated.discriminator.selectables.collect { it instanceof Column ? ((Column) it).name : "formula:${((Formula) it).getFormula()}" }
+        Map<String, List> pairs = [
+                selectables: [boundSelectables, annotatedSelectables],
+                jdbcType   : [((BasicValue) bound.discriminator).resolve().jdbcType.defaultSqlTypeCode,
+                              ((BasicValue) annotated.discriminator).resolve().jdbcType.defaultSqlTypeCode],
+                insertable : [bound.isDiscriminatorInsertable(), annotated.isDiscriminatorInsertable()],
+        ]
+        Column boundColumn = (Column) bound.discriminator.selectables.find { it instanceof Column }
+        if (boundColumn != null && ((BasicValue) bound.discriminator).typeName == 'string') {
+            // the binder leaves an unset length null, which Hibernate reads as its default
+            pairs.length = [boundColumn.length ?: (long) Length.DEFAULT, ((Column) annotated.discriminator.selectables.first()).length]
+        }
+        return pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
+            "${where} discriminator ${facet}: generator=${values[1]} binder=${values[0]}".toString()
         }
     }
 
