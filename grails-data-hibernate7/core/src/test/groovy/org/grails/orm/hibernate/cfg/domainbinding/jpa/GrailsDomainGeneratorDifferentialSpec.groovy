@@ -23,6 +23,7 @@ import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.hibernate.dialect.H2Dialect
 import org.hibernate.mapping.BasicValue
 import org.hibernate.mapping.Column
+import org.hibernate.mapping.Formula
 import org.hibernate.mapping.PersistentClass
 import org.hibernate.mapping.Property
 import java.lang.reflect.Field
@@ -42,6 +43,8 @@ import org.grails.orm.hibernate.cfg.domainbinding.binder.StringColumnConstraints
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleIdentityProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleProperty
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
@@ -76,6 +79,8 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         Map<String, String> unbootable = [:]
         int compared = 0
         int entities = 0
+        int derived = 0
+        Map<String, Integer> explicitTypes = [:].withDefault { 0 }
 
         when:
         for (List<Class<?>> group : groups) {
@@ -103,7 +108,9 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                     properties.addAll(entity.persistentPropertiesToBind)
                     for (HibernatePersistentProperty property : properties) {
                         if (!generator.supports(property)) {
-                            skipped[property.getClass().simpleName]++
+                            skipped[property instanceof HibernateSimpleProperty ?
+                                    "${property.getClass().simpleName} (type ${property.getTypeName()})".toString() :
+                                    property.getClass().simpleName]++
                             continue
                         }
                         if (!generator.validationAnnotations(property).isEmpty()) {
@@ -111,14 +118,24 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                             continue
                         }
                         Property bound = boundProperty(entity.persistentClass, property)
+                        if (bound != null && generator.isDerived(property)) {
+                            compared++
+                            derived++
+                            mismatches.addAll(compareDerived(entity, property, bound))
+                            mismatches.addAll(compareType(entity, property, generator, bound, explicitTypes))
+                            continue
+                        }
                         if (bound == null || bound.columns.size() != 1) {
                             skipped['no single bound column']++
                             continue
                         }
                         compared++
                         mismatches.addAll(compare(entity, property, generator.columnFacets(property), bound))
-                        if (property instanceof HibernateEnumProperty) {
+                        if (property instanceof HibernateEnumProperty && generator.typeFacets(property) == null) {
                             mismatches.addAll(compareEnum(entity, (HibernateEnumProperty) property, generator, bound))
+                        }
+                        if (!(property instanceof HibernateSimpleIdentityProperty)) {
+                            mismatches.addAll(compareType(entity, property, generator, bound, explicitTypes))
                         }
                     }
                 }
@@ -128,7 +145,9 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         }
         StringBuilder report = new StringBuilder()
         report << "differential: ${candidates.size()} candidate classes in ${groups.size()} groups; " +
-                "${unbootable.size()} groups could not boot alone; ${entities} entities, ${compared} properties compared\n"
+                "${unbootable.size()} groups could not boot alone; ${entities} entities, ${compared} properties compared " +
+                "(${derived} derived)\n"
+        report << "explicit types compared: ${explicitTypes}\n"
         report << "unsupported by kind: ${skipped}\n"
         report << "mismatches by facet: ${mismatches.groupBy { (it =~ /\s(\w+): generator=/)[0][1] }.collectEntries { k, v -> [k, v.size()] }}\n"
         unbootable.each { report << "unbootable: ${it.key.take(120)} -> ${it.value.take(200)}\n" }
@@ -166,6 +185,59 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         return pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
             "${entity.name}.${property.name} ${facet}: generator=${values[0]} binder=${values[1]}".toString()
         }
+    }
+
+    /** A derived property is a Formula with the same text and no column. */
+    private List<String> compareDerived(GrailsHibernatePersistentEntity entity, HibernatePersistentProperty property, Property bound) {
+        List<String> formulas = bound.value.selectables.findAll { it instanceof Formula }.collect { ((Formula) it).getFormula() }
+        List<String> columns = bound.value.selectables.findAll { it instanceof Column }.collect { ((Column) it).name }
+        List<String> found = []
+        if (formulas != [property.hibernateMappedForm.formula]) {
+            found << "${entity.name}.${property.name} formula: generator=[${property.hibernateMappedForm.formula}] binder=${formulas}".toString()
+        }
+        if (!columns.isEmpty()) {
+            found << "${entity.name}.${property.name} columns: generator=[] binder=${columns}".toString()
+        }
+        return found
+    }
+
+    /**
+     * The explicit type the generator states must be the one the binder put on the bound value: the same
+     * {@code UserType} class and parameters, or the same JDBC type for a registered type name; with no explicit type the
+     * binder's type name is the property's own class and it has no parameters.
+     */
+    private List<String> compareType(
+            GrailsHibernatePersistentEntity entity, HibernatePersistentProperty property, GrailsDomainGenerator generator,
+            Property bound, Map<String, Integer> explicitTypes) {
+        BasicValue value = (BasicValue) bound.value
+        TypeFacets facets = generator.typeFacets(property)
+        String where = "${entity.name}.${property.name}"
+        List<String> found = []
+        Map<String, String> actualParameters = [:]
+        value.typeParameters?.stringPropertyNames()?.each { String key -> actualParameters[key] = value.typeParameters.getProperty(key) }
+        if (facets == null) {
+            if (!(property instanceof HibernateEnumProperty) && value.typeName != property.type.name) {
+                found << "${where} typeName: generator=${property.type.name} binder=${value.typeName}".toString()
+            }
+            if (!(property instanceof HibernateEnumProperty) && !actualParameters.isEmpty()) {
+                found << "${where} typeParameters: generator=[:] binder=${actualParameters}".toString()
+            }
+        } else if (facets.userType() != null) {
+            explicitTypes["UserType ${facets.userType().simpleName}".toString()]++
+            if (value.typeName != facets.userType().name) {
+                found << "${where} typeName: generator=${facets.userType().name} binder=${value.typeName}".toString()
+            }
+            if (actualParameters != facets.parameters()) {
+                found << "${where} typeParameters: generator=${facets.parameters()} binder=${actualParameters}".toString()
+            }
+        } else {
+            explicitTypes["registered ${value.typeName}".toString()]++
+            Integer actual = value.resolve().jdbcType.defaultSqlTypeCode
+            if (value.typeName != property.getTypeName() || actual != facets.jdbcTypeCode()) {
+                found << "${where} jdbcTypeCode: generator=${facets.jdbcTypeCode()} binder=${actual} (type ${value.typeName})".toString()
+            }
+        }
+        return found
     }
 
     private List<String> compareEnum(
@@ -211,7 +283,8 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 new ColumnNameForPropertyAndPathFetcher(naming, new DefaultColumnNameFetcher(naming), new BackticksRemover()),
                 new ColumnConfigToColumnBinder(),
                 new StringColumnConstraintsBinder(),
-                new NumericColumnConstraintsBinder(new H2Dialect()))
+                new NumericColumnConstraintsBinder(new H2Dialect()),
+                getSessionFactory().typeConfiguration)
     }
 
     private static List<Class<?>> findEntities() {

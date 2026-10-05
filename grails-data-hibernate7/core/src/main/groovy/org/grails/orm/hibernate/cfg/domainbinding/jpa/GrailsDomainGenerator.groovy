@@ -41,9 +41,14 @@ import org.hibernate.annotations.ColumnTransformer
 import org.hibernate.annotations.Comment
 import org.hibernate.annotations.DynamicInsert
 import org.hibernate.annotations.DynamicUpdate
+import org.hibernate.annotations.Formula
+import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.annotations.Parameter
 import org.hibernate.annotations.Type
 import org.hibernate.mapping.Column
+import org.hibernate.type.BasicType
+import org.hibernate.type.spi.TypeConfiguration
+import org.hibernate.usertype.UserType
 
 import org.grails.orm.hibernate.cfg.ColumnConfig
 import org.grails.orm.hibernate.cfg.IdentityEnumType
@@ -51,6 +56,7 @@ import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.NumericColumnConstraintsBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.StringColumnConstraintsBinder
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
@@ -86,18 +92,21 @@ class GrailsDomainGenerator {
     private final ColumnConfigToColumnBinder columnConfigBinder
     private final StringColumnConstraintsBinder stringConstraints
     private final NumericColumnConstraintsBinder numericConstraints
+    private final TypeConfiguration typeConfiguration
 
     GrailsDomainGenerator(
             PersistentEntityNamingStrategy namingStrategy,
             ColumnNameForPropertyAndPathFetcher columnNames,
             ColumnConfigToColumnBinder columnConfigBinder,
             StringColumnConstraintsBinder stringConstraints,
-            NumericColumnConstraintsBinder numericConstraints) {
+            NumericColumnConstraintsBinder numericConstraints,
+            TypeConfiguration typeConfiguration) {
         this.namingStrategy = namingStrategy
         this.columnNames = columnNames
         this.columnConfigBinder = columnConfigBinder
         this.stringConstraints = stringConstraints
         this.numericConstraints = numericConstraints
+        this.typeConfiguration = typeConfiguration
     }
 
     /**
@@ -125,13 +134,24 @@ class GrailsDomainGenerator {
         }
         for (HibernatePersistentProperty property : entity.persistentPropertiesToBind) {
             if (!supports(property)) {
-                throw new UnsupportedOperationException(
-                        "Property [${property.name}] of [${entity.name}] is a ${property.getClass().simpleName}, " +
-                                'which the generator does not support yet')
+                throw new UnsupportedOperationException(unsupportedReason(entity, property))
             }
             builder = defineField(builder, property, [])
         }
         return builder.make().load(parent, ClassLoadingStrategy.Default.WRAPPER).loaded
+    }
+
+    private String unsupportedReason(GrailsHibernatePersistentEntity entity, HibernatePersistentProperty property) {
+        if (property instanceof HibernateSimpleProperty && !decideType(property).supported) {
+            return typeNotSupported(property, decideType(property).name)
+        }
+        return "Property [${property.name}] of [${entity.name}] is a ${property.getClass().simpleName}, " +
+                'which the generator does not support yet'
+    }
+
+    private static String typeNotSupported(HibernatePersistentProperty property, String name) {
+        return "Type [${name}] of property [${property.name}] of [${property.hibernateOwner.name}] " +
+                'is not a UserType or a registered type for the property class, which the generator does not support yet'
     }
 
     static String generatedClassName(GrailsHibernatePersistentEntity entity) {
@@ -156,9 +176,9 @@ class GrailsDomainGenerator {
     }
 
     /**
-     * @return whether the generator can describe the property today: a plain single-column basic property, the
-     *     version, an enum, or the simple identifier. Custom types, derived properties, multi-column properties
-     *     and every association are not supported yet.
+     * @return whether the generator can describe the property today: a plain single-column basic property, a
+     *     derived (formula) property, the version, an enum, or the simple identifier. Custom types,
+     *     multi-column properties and every association are not supported yet.
      */
     boolean supports(HibernatePersistentProperty property) {
         if (property instanceof HibernateSimpleIdentityProperty) {
@@ -168,15 +188,99 @@ class GrailsDomainGenerator {
             return false
         }
         PropertyConfig mappedForm = property.hibernateMappedForm
-        if (mappedForm.derived || (mappedForm.columns != null && mappedForm.columns.size() > 1)) {
+        if (mappedForm.columns != null && mappedForm.columns.size() > 1) {
             return false
         }
-        if (property instanceof HibernateEnumProperty) {
-            // an explicitly mapped type (not one of the enum styles) is a user type, which is not supported yet
-            HibernateEnumProperty enumProperty = (HibernateEnumProperty) property
-            return enumProperty.getTypeName(enumProperty.enumType) == null
+        if (property instanceof HibernateEnumProperty && mappedForm.derived) {
+            // the enum binder never reads the formula, it always binds a column
+            return false
         }
-        return true
+        return decideType(property).supported
+    }
+
+    /**
+     * Decides the explicit Hibernate type of a supported property the way the domain binder resolves it:
+     * {@code PropertyConfig.type}, else the mapping's {@code userTypes} entry for the property's class, else
+     * nothing (Hibernate derives the type from the field). The resolved name is a {@code UserType} class
+     * ({@code @Type}), or a type name registered with Hibernate that maps the property's own Java type
+     * ({@code @JdbcTypeCode}).
+     *
+     * @return the facets, or {@code null} when the property has no explicit type
+     * @throws UnsupportedOperationException when the type is one the generator cannot state yet
+     */
+    TypeFacets typeFacets(HibernatePersistentProperty property) {
+        TypeDecision decision = decideType(property)
+        if (!decision.supported) {
+            throw new UnsupportedOperationException(typeNotSupported(property, decision.name))
+        }
+        return decision.facets
+    }
+
+    private static final class TypeDecision {
+
+        final boolean supported
+        final String name
+        final TypeFacets facets
+
+        TypeDecision(boolean supported, String name, TypeFacets facets) {
+            this.supported = supported
+            this.name = name
+            this.facets = facets
+        }
+    }
+
+    private TypeDecision decideType(HibernatePersistentProperty property) {
+        boolean isEnum = property instanceof HibernateEnumProperty
+        Class<?> type = isEnum ? ((HibernateEnumProperty) property).enumType : property.type
+        String name = property.getTypeName(type)
+        // a non-enum property is bound with its own class name when nothing says otherwise
+        boolean explicit = name != null && (isEnum || type == null || name != type.name)
+        Map<String, String> parameters = [:]
+        if (isEnum) {
+            // EnumTypeBinder replaces the configured type parameters with the enum class
+            parameters[GrailsDomainBinder.ENUM_CLASS_PROP] = type.name
+        } else {
+            Properties typeParams = property.hibernateMappedForm.typeParams
+            if (typeParams != null) {
+                for (String key : new TreeSet<String>(typeParams.stringPropertyNames())) {
+                    parameters[key] = typeParams.getProperty(key)
+                }
+            }
+        }
+        if (!explicit) {
+            return new TypeDecision(isEnum || parameters.isEmpty(), name, null)
+        }
+        Class<?> named = loadClass(name, property)
+        if (named != null) {
+            return UserType.isAssignableFrom(named) ?
+                    new TypeDecision(true, name, new TypeFacets(named, null, parameters)) :
+                    new TypeDecision(false, name, null)
+        }
+        BasicType<?> registered = typeConfiguration.basicTypeRegistry.getRegisteredType(name)
+        if (registered != null && registered.valueConverter == null && parameters.isEmpty() && !isEnum &&
+                registered.javaTypeDescriptor.javaTypeClass == boxed(type)) {
+            return new TypeDecision(true, name, new TypeFacets(null, registered.jdbcType.defaultSqlTypeCode, parameters))
+        }
+        return new TypeDecision(false, name, null)
+    }
+
+    private static Class<?> loadClass(String name, HibernatePersistentProperty property) {
+        for (ClassLoader loader : [property.hibernateOwner.javaClass.classLoader, Thread.currentThread().contextClassLoader]) {
+            try {
+                return Class.forName(name, false, loader)
+            } catch (ClassNotFoundException | LinkageError ignored) {
+                // try the next loader
+            }
+        }
+        return null
+    }
+
+    private static Class<?> boxed(Class<?> type) {
+        if (type == null || !type.primitive) {
+            return type
+        }
+        return [(int): Integer, (long): Long, (boolean): Boolean, (double): Double, (float): Float, (short): Short,
+                (byte): Byte, (char): Character].get(type)
     }
 
     /**
@@ -297,9 +401,17 @@ class GrailsDomainGenerator {
     private DynamicType.Builder<Object> defineField(
             DynamicType.Builder<Object> builder, HibernatePersistentProperty property, List<AnnotationDescription> extra) {
         List<AnnotationDescription> annotations = new ArrayList<>(extra)
-        annotations << columnAnnotation(property)
-        annotations.addAll(extraColumnAnnotations(property))
-        if (property instanceof HibernateEnumProperty) {
+        if (isDerived(property)) {
+            annotations << AnnotationDescription.Builder.ofType(Formula).define('value', property.hibernateMappedForm.formula).build()
+        } else {
+            annotations << columnAnnotation(property)
+            annotations.addAll(extraColumnAnnotations(property))
+        }
+        // an identifier's type is decided with its generator, which the generator does not describe yet
+        TypeFacets type = property instanceof HibernateSimpleIdentityProperty ? null : typeFacets(property)
+        if (type != null) {
+            annotations << typeAnnotation(type)
+        } else if (property instanceof HibernateEnumProperty) {
             annotations << enumAnnotation((HibernateEnumProperty) property)
         }
         for (Annotation constraint : validationAnnotations(property)) {
@@ -307,6 +419,20 @@ class GrailsDomainGenerator {
         }
         return builder.defineField(property.name, property.type, Visibility.PRIVATE)
                 .annotateField(annotations as AnnotationDescription[])
+    }
+
+    private static AnnotationDescription typeAnnotation(TypeFacets facets) {
+        if (facets.jdbcTypeCode() != null) {
+            return AnnotationDescription.Builder.ofType(JdbcTypeCode).define('value', facets.jdbcTypeCode().intValue()).build()
+        }
+        List<AnnotationDescription> parameters = facets.parameters().collect { String name, String value ->
+            AnnotationDescription.Builder.ofType(Parameter).define('name', name).define('value', value).build()
+        }
+        return AnnotationDescription.Builder.ofType(Type)
+                .define('value', TypeDescription.ForLoadedType.of(facets.userType()))
+                .defineAnnotationArray('parameters', TypeDescription.ForLoadedType.of(Parameter),
+                        parameters as AnnotationDescription[])
+                .build()
     }
 
     private AnnotationDescription enumAnnotation(HibernateEnumProperty property) {
@@ -391,6 +517,14 @@ class GrailsDomainGenerator {
             String type = a.annotationType().name
             type.startsWith('jakarta.validation.constraints.') || type.startsWith('org.hibernate.validator.constraints.')
         }
+    }
+
+    /**
+     * @return whether the binder binds the property as a Hibernate {@code Formula} with no column, which is what
+     *     {@code SimpleValueBinder} does for every derived property except an enum
+     */
+    boolean isDerived(HibernatePersistentProperty property) {
+        return property.hibernateMappedForm.derived && !(property instanceof HibernateEnumProperty)
     }
 
     private static boolean isNullable(HibernatePersistentProperty property) {

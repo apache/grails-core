@@ -33,8 +33,25 @@ import org.hibernate.annotations.BatchSize
 import org.hibernate.annotations.ColumnDefault
 import org.hibernate.annotations.Comment
 import org.hibernate.annotations.DynamicUpdate
+import org.hibernate.annotations.Formula
+import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.annotations.Type
+import org.hibernate.boot.Metadata
+import org.hibernate.boot.MetadataSources
+import org.hibernate.boot.registry.BootstrapServiceRegistry
+import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder
+import org.hibernate.boot.registry.StandardServiceRegistry
+import org.hibernate.boot.registry.StandardServiceRegistryBuilder
 import org.hibernate.dialect.H2Dialect
+import org.hibernate.mapping.BasicValue
+import org.hibernate.type.CustomType
+import org.hibernate.type.descriptor.WrapperOptions
+import org.hibernate.usertype.ParameterizedType
+import org.hibernate.usertype.UserType
+import java.sql.PreparedStatement
+import java.sql.ResultSet
+import java.sql.SQLException
+import java.sql.Types
 
 import org.grails.orm.hibernate.cfg.IdentityEnumType
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder
@@ -55,7 +72,7 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
     Class<?> generated
 
     void setupSpec() {
-        manager.registerDomainClasses(GenBasic, GenVehicle, GenCar, GenWithEnum, GenWithOwner)
+        manager.registerDomainClasses(GenBasic, GenVehicle, GenCar, GenWithEnum, GenWithOwner, GenDerived, GenTyped, GenUnsupportedType)
     }
 
     void setup() {
@@ -171,6 +188,103 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         enumEntity.getDeclaredField('code').getAnnotation(Type).parameters()*.value() == [GenCode.name]
     }
 
+    void "a derived property is a formula with no column"() {
+        when:
+        Class<?> derived = generate(GenDerived)
+        Field fullName = derived.getDeclaredField('fullName')
+
+        then:
+        fullName.getAnnotation(Formula).value() == "CONCAT(first_name, ' ', last_name)"
+        !fullName.isAnnotationPresent(Column)
+        derived.getDeclaredField('firstName').isAnnotationPresent(Column)
+    }
+
+    void "a mapped user type becomes @Type with its parameters"() {
+        when:
+        Class<?> typed = generate(GenTyped)
+        Type type = typed.getDeclaredField('shout').getAnnotation(Type)
+
+        then:
+        type.value() == GenUpperType
+        type.parameters().collectEntries { [(it.name()): it.value()] } == [mode: 'loud', other: 'x']
+        !typed.getDeclaredField('shout').isAnnotationPresent(JdbcTypeCode)
+    }
+
+    void "a registered type name becomes the JDBC type code it resolves to"() {
+        when:
+        Class<?> typed = generate(GenTyped)
+
+        then:
+        typed.getDeclaredField('body').getAnnotation(JdbcTypeCode).value() == java.sql.Types.LONGVARCHAR
+        !typed.getDeclaredField('body').isAnnotationPresent(Type)
+    }
+
+    void "a property without an explicit type carries no type annotation"() {
+        when:
+        Class<?> typed = generate(GenTyped)
+
+        then:
+        !typed.getDeclaredField('plain').isAnnotationPresent(Type)
+        !typed.getDeclaredField('plain').isAnnotationPresent(JdbcTypeCode)
+    }
+
+    void "an enum with an explicit user type states it with the enum class parameter"() {
+        when:
+        Class<?> typed = generate(GenTyped)
+        Type type = typed.getDeclaredField('kind').getAnnotation(Type)
+
+        then:
+        type.value() == GenKindType
+        type.parameters().collectEntries { [(it.name()): it.value()] } == [enumClass: GenKind.name]
+        !typed.getDeclaredField('kind').isAnnotationPresent(Enumerated)
+    }
+
+    void "a type name that is neither a user type nor a registered type for the class is rejected by name"() {
+        when:
+        generate(GenUnsupportedType)
+
+        then:
+        UnsupportedOperationException e = thrown()
+        e.message.contains('tag')
+        e.message.contains('serializable')
+    }
+
+    void "Hibernate's own annotation binder reads the generated types and formulas"() {
+        given: "generated classes live in their own class loader, which the registry must be told about"
+        Class<?> typedClass = generate(GenTyped)
+        Class<?> derivedClass = generate(GenDerived)
+        BootstrapServiceRegistry bootstrap = new BootstrapServiceRegistryBuilder()
+                .applyClassLoader(typedClass.classLoader)
+                .applyClassLoader(derivedClass.classLoader)
+                .build()
+        StandardServiceRegistry registry = new StandardServiceRegistryBuilder(bootstrap)
+                .applySetting('hibernate.dialect', H2Dialect.name)
+                .applySetting('hibernate.connection.url', 'jdbc:h2:mem:generator-binder;DB_CLOSE_DELAY=-1')
+                .build()
+
+        when:
+        Metadata metadata = new MetadataSources(registry)
+                .addAnnotatedClass(typedClass)
+                .addAnnotatedClass(derivedClass)
+                .buildMetadata()
+        BasicValue shout = (BasicValue) metadata.entityBindings.find { it.jpaEntityName == 'GenTyped' }.getProperty('shout').value
+        BasicValue body = (BasicValue) metadata.entityBindings.find { it.jpaEntityName == 'GenTyped' }.getProperty('body').value
+        BasicValue kind = (BasicValue) metadata.entityBindings.find { it.jpaEntityName == 'GenTyped' }.getProperty('kind').value
+        BasicValue fullName = (BasicValue) metadata.entityBindings.find { it.jpaEntityName == 'GenDerived' }.getProperty('fullName').value
+
+        then:
+        ((CustomType) shout.type).userType.getClass() == GenUpperType
+        shout.typeParameters.getProperty('mode') == 'loud'
+        body.resolve().jdbcType.defaultSqlTypeCode == Types.LONGVARCHAR
+        ((CustomType) kind.type).userType.getClass() == GenKindType
+        kind.typeParameters.getProperty('enumClass') == GenKind.name
+        fullName.selectables*.isFormula() == [true]
+        ((org.hibernate.mapping.Formula) fullName.selectables[0]).getFormula() == "CONCAT(first_name, ' ', last_name)"
+
+        cleanup:
+        StandardServiceRegistryBuilder.destroy(registry)
+    }
+
     private Class<?> generate(Class<?> domainClass) {
         def domainBinder = getGrailsDomainBinder()
         def naming = domainBinder.getNamingStrategy()
@@ -179,7 +293,8 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
                 new ColumnNameForPropertyAndPathFetcher(naming, new DefaultColumnNameFetcher(naming), new BackticksRemover()),
                 new ColumnConfigToColumnBinder(),
                 new StringColumnConstraintsBinder(),
-                new NumericColumnConstraintsBinder(new H2Dialect()))
+                new NumericColumnConstraintsBinder(new H2Dialect()),
+                getSessionFactory().typeConfiguration)
         GrailsHibernatePersistentEntity entity = getPersistentEntity(domainClass)
         return generator.generate(entity, getClass().classLoader)
     }
@@ -259,4 +374,156 @@ class GenWithEnum {
 class GenWithOwner {
 
     GenBasic basic
+}
+
+@Entity
+class GenDerived {
+
+    String firstName
+    String lastName
+    String fullName
+
+    static mapping = {
+        fullName formula: "CONCAT(first_name, ' ', last_name)"
+    }
+}
+
+@Entity
+class GenTyped {
+
+    String body
+    String shout
+    String plain
+    GenKind kind
+
+    static mapping = {
+        body type: 'text'
+        shout type: GenUpperType, params: [mode: 'loud', other: 'x']
+        kind type: GenKindType
+    }
+}
+
+@Entity
+class GenUnsupportedType {
+
+    String tag
+
+    static mapping = {
+        tag type: 'serializable'
+    }
+}
+
+class GenUpperType implements UserType<String>, ParameterizedType {
+
+    @Override
+    void setParameterValues(Properties parameters) {
+    }
+
+    @Override
+    int getSqlType() {
+        return Types.VARCHAR
+    }
+
+    @Override
+    Class<String> returnedClass() {
+        return String
+    }
+
+    @Override
+    boolean equals(String x, String y) {
+        return x == y
+    }
+
+    @Override
+    int hashCode(String x) {
+        return x.hashCode()
+    }
+
+    @Override
+    String nullSafeGet(ResultSet rs, int position, WrapperOptions options) throws SQLException {
+        return rs.getString(position)
+    }
+
+    @Override
+    void nullSafeSet(PreparedStatement st, String value, int index, WrapperOptions options) throws SQLException {
+        st.setString(index, value?.toUpperCase())
+    }
+
+    @Override
+    String deepCopy(String value) {
+        return value
+    }
+
+    @Override
+    boolean isMutable() {
+        return false
+    }
+
+    @Override
+    Serializable disassemble(String value) {
+        return value
+    }
+
+    @Override
+    String assemble(Serializable cached, Object owner) {
+        return (String) cached
+    }
+}
+
+class GenKindType implements UserType<GenKind>, ParameterizedType {
+
+    @Override
+    void setParameterValues(Properties parameters) {
+    }
+
+    @Override
+    int getSqlType() {
+        return Types.VARCHAR
+    }
+
+    @Override
+    Class<GenKind> returnedClass() {
+        return GenKind
+    }
+
+    @Override
+    boolean equals(GenKind x, GenKind y) {
+        return x == y
+    }
+
+    @Override
+    int hashCode(GenKind x) {
+        return x.hashCode()
+    }
+
+    @Override
+    GenKind nullSafeGet(ResultSet rs, int position, WrapperOptions options) throws SQLException {
+        String name = rs.getString(position)
+        return name == null ? null : GenKind.valueOf(name)
+    }
+
+    @Override
+    void nullSafeSet(PreparedStatement st, GenKind value, int index, WrapperOptions options) throws SQLException {
+        st.setString(index, value?.name())
+    }
+
+    @Override
+    GenKind deepCopy(GenKind value) {
+        return value
+    }
+
+    @Override
+    boolean isMutable() {
+        return false
+    }
+
+    @Override
+    Serializable disassemble(GenKind value) {
+        return value
+    }
+
+    @Override
+    GenKind assemble(Serializable cached, Object owner) {
+        return (GenKind) cached
+    }
 }
