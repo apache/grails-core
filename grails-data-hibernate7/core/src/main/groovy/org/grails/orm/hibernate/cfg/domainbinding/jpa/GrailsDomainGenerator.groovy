@@ -451,11 +451,6 @@ class GrailsDomainGenerator {
                 return "Association property [${property.name}] of [${entity.name}]: ${problem}"
             }
         }
-        if (property instanceof HibernateEnumProperty && property.hibernateMappedForm.isUniqueWithinGroup()) {
-            return "Enum property [${property.name}] of [${entity.name}] is in a unique group, which the binder ignores for an enum " +
-                    '(it creates no unique key and leaves the column not unique), so the constraint the mapping asks for would exist ' +
-                    'only in the generated model'
-        }
         if ((property instanceof HibernateSimpleProperty || property instanceof HibernateTenantIdProperty) && !decideType(property).supported) {
             return typeNotSupported(property, decideType(property).name)
         }
@@ -575,8 +570,8 @@ class GrailsDomainGenerator {
      * Decides the indexes and multi-column unique keys the domain binder puts on the table the entity owns. The binder's own
      * {@code IndexBinder} and {@code CreateKeyForProps} run, on a scratch table with the entity's table name, for every column
      * the binder passes through {@code ColumnBinder} (a simple property, the identifier, the version, a to-one foreign key, each
-     * leaf of an embedded type) or {@code EnumTypeBinder} (an enum, which only gets an index), in the order the binder binds
-     * them, so the names ({@code <table>_<column>_idx}, {@code UK} and a hash) and the column order are the binder's. The
+     * leaf of an embedded type) or {@code EnumTypeBinder} (an enum, which only gets an index from the binder and a unique group
+     * from the generator), in the order the binder binds them, so the names ({@code <table>_<column>_idx}, {@code UK} and a hash) and the column order are the binder's. The
      * single-table subclasses of a hierarchy share the table of the root, so their columns are part of the root's constraints.
      *
      * @param entity an entity that owns its table: a root, or a joined or table-per-class subclass
@@ -585,14 +580,18 @@ class GrailsDomainGenerator {
         org.hibernate.mapping.Table table = new org.hibernate.mapping.Table('grails', entityFacets(entity).tableName().replace('`', ''))
         List<GrailsHibernatePersistentEntity> contributors = [entity]
         collectSharingSubclasses(entity, contributors)
+        Set<String> unbound = new HashSet<String>()
         for (GrailsHibernatePersistentEntity contributor : contributors) {
             List<ConstraintSite> sites = []
             collectConstraintSites(contributor, sites)
             for (ConstraintSite site : sites) {
                 Column column = new Column(site.columnName)
                 indexBinder.bindIndex(site.columnName, column, site.columnConfig, table)
-                if (!site.enumeration) {
-                    keyForProps.createKeyForProps(site.property, site.path, table, site.columnName)
+                Set<String> before = new HashSet<String>(table.uniqueKeys.keySet())
+                keyForProps.createKeyForProps(site.property, site.path, table, site.columnName)
+                if (site.enumeration) {
+                    // EnumTypeBinder never calls CreateKeyForProps: the key is the mapping's, not the binder's
+                    unbound.addAll(table.uniqueKeys.keySet() - before)
                 }
             }
         }
@@ -601,7 +600,7 @@ class GrailsDomainGenerator {
                     new IndexFacets(index.name, index.columns*.name)
                 },
                 table.uniqueKeys.values().collect { org.hibernate.mapping.UniqueKey key ->
-                    new UniqueKeyFacets(key.name, key.columns*.name)
+                    new UniqueKeyFacets(key.name, key.columns*.name, !unbound.contains(key.name))
                 })
     }
 
@@ -795,9 +794,6 @@ class GrailsDomainGenerator {
             // the enum binder never reads the formula, it always binds a column
             return false
         }
-        if (property instanceof HibernateEnumProperty && mappedForm.isUniqueWithinGroup()) {
-            return false
-        }
         return decideType(property).supported
     }
 
@@ -969,6 +965,10 @@ class GrailsDomainGenerator {
      */
     private String collectionProblem(HibernateBasicProperty property) {
         PropertyConfig mapped = property.hibernateMappedForm
+        String writeProblem = writeRestrictionProblem(mapped)
+        if (writeProblem != null) {
+            return writeProblem
+        }
         CollectionKind kind = CollectionKind.of(property.type)
         if (property.type == SortedSet) {
             return 'a SortedSet: the binder names java.util.SortedSet as the collection\'s custom type, which Hibernate rejects when it boots'
@@ -1016,6 +1016,21 @@ class GrailsDomainGenerator {
                 key.read() != null || key.write() != null || key.comment() != null) {
             return 'the column config of the collection property sets a length, a precision, a scale, a default, a read or ' +
                     'write expression or a comment, which a join column cannot state'
+        }
+        return null
+    }
+
+    /**
+     * {@code PropertyBinder} overwrites the insertable and updatable flags of every property with the ones of its columns, which
+     * are always set, so the binder ignores {@code insertable: false} and {@code updatable: false} (pinned in
+     * {@code GrailsDomainBinderOptionDefectSpec}). The generator states them where there is a column to state them on (a simple
+     * property, an enum, a foreign key). A property with no column of its own, an embedded object, a collection or the inverse
+     * side of a one-to-one, has nothing to state them on, so the generator rejects it rather than drop the option.
+     */
+    private static String writeRestrictionProblem(PropertyConfig mapped) {
+        if (mapped != null && (!mapped.insertable || !mapped.updatable)) {
+            return 'insertable: false or updatable: false is mapped on a property that has no column of its own (the binder ignores ' +
+                    'both for every property), and annotations cannot state them on it'
         }
         return null
     }
@@ -1182,6 +1197,10 @@ class GrailsDomainGenerator {
      */
     private String toManyProblem(HibernateToManyEntityProperty property) {
         PropertyConfig mapped = property.hibernateMappedForm
+        String writeProblem = writeRestrictionProblem(mapped)
+        if (writeProblem != null) {
+            return writeProblem
+        }
         if (Map.isAssignableFrom(property.type) && property instanceof HibernateManyToManyProperty) {
             return 'a map on a many-to-many, which the generator does not support yet'
         }
@@ -1371,7 +1390,7 @@ class GrailsDomainGenerator {
         }
         PropertyConfig mapped = property.hibernateMappedForm
         if (inverseOneToOne) {
-            return null
+            return writeRestrictionProblem(mapped)
         }
         if (mapped.columns != null && mapped.columns.size() > 1) {
             return 'the mapping states several columns, which the binder binds as a composite foreign key'
@@ -1475,7 +1494,7 @@ class GrailsDomainGenerator {
             HibernateOneToOneProperty inverse = ((HibernateOneToOneProperty) property).hibernateInverseSide
             unique = property.isBidirectional() && inverse != null && inverse.isValidHibernateOneToOne()
         }
-        return facets(property, column, name, nullable, unique, true)
+        return facets(property, column, name, nullable, unique)
     }
 
     /**
@@ -1613,6 +1632,14 @@ class GrailsDomainGenerator {
             return 'the property is mapped lazy: true, which the binder marks on the component as a lazy attribute and which ' +
                     'annotations cannot state on an @Embedded'
         }
+        if (property.isUserButNotCollectionType()) {
+            return "the property is mapped with the type [${property.userType.name}]: the binder binds it as one simple value of that " +
+                    'type and not as an embedded object, which the generator does not state'
+        }
+        String writeProblem = writeRestrictionProblem(property.hibernateMappedForm)
+        if (writeProblem != null) {
+            return writeProblem
+        }
         if (visiting.contains(type.javaClass)) {
             return "the embedded type [${type.name}] contains itself"
         }
@@ -1679,10 +1706,10 @@ class GrailsDomainGenerator {
             numericConstraints.bindNumericColumnConstraints(column, columnConfig, mappedForm, type)
         }
         return facets(property, column, name, isNullable(property, parent),
-                mappedForm.isUnique() && !mappedForm.isUniqueWithinGroup(), true)
+                mappedForm.isUnique() && !mappedForm.isUniqueWithinGroup())
     }
 
-    /** Mirrors {@code EnumTypeBinder}: only the column config rules apply, and the column config's own uniqueness. */
+    /** Mirrors {@code EnumTypeBinder}: the column config's length, precision, scale, SQL type and uniqueness, plus the comment, default and read and write expressions it forgets. */
     private ColumnFacets enumColumnFacets(HibernateEnumProperty property, String path) {
         PropertyConfig mappedForm = property.hibernateMappedForm
         Column column = new Column()
@@ -1690,13 +1717,20 @@ class GrailsDomainGenerator {
         if (columnConfig != null) {
             columnConfigBinder.bindColumnConfigToColumn(column, columnConfig, mappedForm)
         }
+        if (columnConfig != null) {
+            // EnumTypeBinder ignores the comment, the default and the read and write expressions of the column config (a binder
+            // defect, pinned in GrailsDomainBinderOptionDefectSpec); the generator states what the mapping asks for
+            column.comment = columnConfig.comment
+            column.defaultValue = columnConfig.defaultValue
+            column.customRead = columnConfig.read
+            column.customWrite = columnConfig.write
+        }
         String name = property.resolveEnumColumnName(namingStrategy, columnNames, path)
-        return facets(property, column, name, property.isEnumColumnNullable(), column.unique, false)
+        return facets(property, column, name, property.isEnumColumnNullable(), column.unique)
     }
 
     private ColumnFacets facets(
-            HibernatePersistentProperty property, Column column, String name, boolean nullable, boolean unique,
-            boolean withExtras) {
+            HibernatePersistentProperty property, Column column, String name, boolean nullable, boolean unique) {
         PropertyConfig mappedForm = property.hibernateMappedForm
         // NaturalId.createUniqueKey sets the updatability of each of its properties to the mutability of the natural id
         Boolean naturalMutable = naturalIdMutable(property)
@@ -1710,10 +1744,10 @@ class GrailsDomainGenerator {
                 column.precision?.intValue(),
                 column.scale?.intValue(),
                 column.sqlType,
-                withExtras ? column.defaultValue : null,
-                withExtras ? column.customRead : null,
-                withExtras ? column.customWrite : null,
-                withExtras ? column.comment : null)
+                column.defaultValue,
+                column.customRead,
+                column.customWrite,
+                column.comment)
     }
 
     private static ColumnConfig firstColumnConfig(PropertyConfig mappedForm) {

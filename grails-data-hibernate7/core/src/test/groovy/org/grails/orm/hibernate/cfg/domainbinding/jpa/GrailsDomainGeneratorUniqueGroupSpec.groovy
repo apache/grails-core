@@ -90,15 +90,14 @@ class GrailsDomainGeneratorUniqueGroupSpec extends GrailsDomainGeneratorSupport 
         readConstraints(metadata.getEntityBinding(classes[entity(GenUqJoinedChild)].name)) == boundConstraints(GenUqJoinedChild)
     }
 
-    void "a unique group on an enum property is rejected by name, because the binder ignores it"() {
+    void "a unique group on an enum property is stated, although the binder never creates the key"() {
         when:
-        generateGroup(GenUqEnum)
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenUqEnum)
+        ConstraintFacets facets = newGenerator().constraintFacets(entity(GenUqEnum))
 
-        then: "the binder makes no unique key for it, so the constraint would exist only in the generated model"
-        UnsupportedOperationException e = thrown()
-        e.message.contains('GenUqEnum')
-        e.message.contains('state')
-        e.message.contains('unique group')
+        then: "EnumTypeBinder never calls CreateKeyForProps, which the mapping does not mean: the generator states the key and says the binder does not"
+        generatedConstraints(classes[entity(GenUqEnum)]).values().toList() == [['other', 'state']]
+        facets.uniqueKeys()*.bound() == [false]
         entity(GenUqEnum).persistentClass.table.uniqueKeys.values().every { it.columns.size() < 2 }
     }
 

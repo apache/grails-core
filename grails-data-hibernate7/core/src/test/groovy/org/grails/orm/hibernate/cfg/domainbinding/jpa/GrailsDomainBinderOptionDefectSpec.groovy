@@ -21,6 +21,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.jpa
 import grails.gorm.annotation.Entity
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.hibernate.mapping.Collection as HibernateCollection
+import org.hibernate.mapping.Column
 import org.hibernate.mapping.Table
 import spock.lang.PendingFeature
 
@@ -32,7 +33,7 @@ import spock.lang.PendingFeature
 class GrailsDomainBinderOptionDefectSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.registerDomainClasses(DefectWritable, DefectReadOnlyColumns, DefectEnumGroup, DefectCollectionGroup)
+        manager.registerDomainClasses(DefectWritable, DefectReadOnlyColumns, DefectEnumGroup, DefectCollectionGroup, DefectEnumColumn)
     }
 
     void "a column with no write restriction is inserted and updated"() {
@@ -86,6 +87,18 @@ class GrailsDomainBinderOptionDefectSpec extends HibernateGormDatastoreSpec {
         thrown(Exception)
     }
 
+    @PendingFeature(reason = 'EnumTypeBinder only applies the length, precision, scale, SQL type and uniqueness of the column config, so a comment, a default and read and write expressions on an enum column are ignored')
+    void "the comment, default and read and write expressions of an enum column reach the column"() {
+        given:
+        Column column = getPersistentEntity(DefectEnumColumn).persistentClass.getProperty('state').columns[0] as Column
+
+        expect:
+        column.comment == 'the state'
+        column.defaultValue == "'ON'"
+        column.customRead == 'lower(state)'
+        column.customWrite == 'upper(?)'
+    }
+
     @PendingFeature(reason = 'CollectionKeyBinder runs ColumnBinder on the collection property, so a unique group becomes a unique key of the collection table that names a column of the owner\'s table')
     void "the unique key of a collection table names only columns of that table"() {
         given:
@@ -137,6 +150,16 @@ class DefectCollectionGroup {
 
     static mapping = {
         tags unique: 'x'
+    }
+}
+
+@Entity
+class DefectEnumColumn {
+
+    DefectState state
+
+    static mapping = {
+        state comment: 'the state', defaultValue: "'ON'", read: 'lower(state)', write: 'upper(?)'
     }
 }
 
