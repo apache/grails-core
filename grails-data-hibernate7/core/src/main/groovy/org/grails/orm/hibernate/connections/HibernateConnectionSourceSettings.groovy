@@ -90,6 +90,13 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
          */
         boolean hibernateDirtyChecking = false
         /**
+         * Whether Hibernate's annotation binder binds classes generated from the GORM mapping, instead of the domain
+         * binder building Hibernate's boot model by hand. The application's real domain classes are still what is
+         * persisted and loaded. Experimental; off by default.
+         */
+        boolean generatedDomainClasses = false
+
+        /**
          * Cache settings
          */
         CacheSettings cache = new CacheSettings()

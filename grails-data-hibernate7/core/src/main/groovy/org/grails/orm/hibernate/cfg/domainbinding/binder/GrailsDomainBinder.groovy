@@ -39,6 +39,7 @@ import org.grails.orm.hibernate.cfg.MappingCacheHolder
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.jpa.GeneratedDomainClassBinder
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
 import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueCreator
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
@@ -79,6 +80,7 @@ class GrailsDomainBinder implements AdditionalMappingContributor, TypeContributo
     private final List<HibernatePersistentEntity> persistentEntities
     private final NamingStrategyProvider namingStrategyProvider
     private final MappingCacheHolder mappingCacheHolder
+    private final GeneratedDomainClassBinder generatedDomainClassBinder
     private PersistentEntityNamingStrategy namingStrategy
     private MetadataBuildingContext metadataBuildingContext
 
@@ -91,6 +93,22 @@ class GrailsDomainBinder implements AdditionalMappingContributor, TypeContributo
             List<HibernatePersistentEntity> persistentEntities,
             NamingStrategyProvider namingStrategyProvider,
             MappingCacheHolder mappingCacheHolder) {
+        this(dataSourceName, sessionFactoryName, persistentEntities, namingStrategyProvider, mappingCacheHolder, null)
+    }
+
+    /**
+     * @param persistentEntities the entities to bind; each must already carry the name of {@code dataSourceName}
+     * @param generatedDomainClassBinder when not {@code null}, the entities are not built into Hibernate's boot model by
+     *     this binder: classes are generated from them and Hibernate's annotation binder binds those
+     */
+    GrailsDomainBinder(
+            String dataSourceName,
+            String sessionFactoryName,
+            List<HibernatePersistentEntity> persistentEntities,
+            NamingStrategyProvider namingStrategyProvider,
+            MappingCacheHolder mappingCacheHolder,
+            GeneratedDomainClassBinder generatedDomainClassBinder) {
+        this.generatedDomainClassBinder = generatedDomainClassBinder
         this.sessionFactoryName = sessionFactoryName
         this.dataSourceName = dataSourceName
         this.persistentEntities = persistentEntities
@@ -113,7 +131,14 @@ class GrailsDomainBinder implements AdditionalMappingContributor, TypeContributo
             InFlightMetadataCollector metadataCollector,
             ResourceStreamLocator resourceStreamLocator,
             MetadataBuildingContext buildingContext) {
-        bind(metadataCollector, buildingContext, persistentEntities)
+        if (generatedDomainClassBinder == null) {
+            bind(metadataCollector, buildingContext, persistentEntities)
+        }
+        else {
+            this.metadataBuildingContext = buildingContext
+            generatedDomainClassBinder.contribute(
+                    contributions, buildingContext, persistentEntities, getNamingStrategy(), getJdbcEnvironment())
+        }
     }
 
     @SuppressWarnings('PMD.DataflowAnomalyAnalysis')

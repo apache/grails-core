@@ -118,6 +118,20 @@ class HibernateConnectionSourceSettingsSpec extends Specification {
         listeners['create-onflush'].is(onFlushListener)
     }
 
+    void "the generated domain classes switch is off by default and can be turned on"() {
+        given:
+        def settings = new HibernateConnectionSourceSettings()
+
+        expect:
+        !settings.hibernate.generatedDomainClasses
+
+        when:
+        settings.hibernate.generatedDomainClasses = true
+
+        then:
+        settings.hibernate.generatedDomainClasses
+    }
+
     void "test toProperties with dirty checking and custom config"() {
         given:
         def settings = new HibernateConnectionSourceSettings()

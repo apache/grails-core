@@ -33,6 +33,7 @@ import org.hibernate.boot.registry.StandardServiceRegistryBuilder
 import org.hibernate.boot.registry.classloading.internal.ClassLoaderServiceImpl
 import org.hibernate.boot.registry.classloading.spi.ClassLoaderService
 import org.hibernate.boot.spi.AdditionalMappingContributor
+import org.hibernate.boot.spi.SessionFactoryBuilderFactory
 import org.hibernate.bytecode.spi.BytecodeProvider
 import org.hibernate.cfg.AvailableSettings
 import org.hibernate.cfg.BytecodeSettings
@@ -67,6 +68,7 @@ import org.grails.orm.hibernate.HibernateEventListeners
 import org.grails.orm.hibernate.MetadataIntegrator
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.jpa.GeneratedDomainClassBinder
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyProvider
 import org.grails.orm.hibernate.proxy.GrailsBytecodeProvider
 
@@ -103,6 +105,21 @@ class HibernateMappingContextConfiguration extends Configuration
     private transient ResourcePatternResolver resourcePatternResolver = new PathMatchingResourcePatternResolver()
     private transient NamingStrategyProvider namingStrategyProvider = new NamingStrategyProvider()
     protected GrailsBytecodeProvider bytecodeProvider
+    private boolean generatedDomainClasses
+
+    /**
+     * Whether Hibernate's annotation binder binds classes generated from the GORM mapping instead of the domain binder
+     * building Hibernate's boot model by hand. The real domain classes are still what is persisted and loaded.
+     *
+     * @param generatedDomainClasses {@code true} to bind generated classes; {@code false} (the default) for the domain binder
+     */
+    void setGeneratedDomainClasses(boolean generatedDomainClasses) {
+        this.generatedDomainClasses = generatedDomainClasses
+    }
+
+    boolean isGeneratedDomainClasses() {
+        return generatedDomainClasses
+    }
 
     void setBytecodeProvider(GrailsBytecodeProvider bytecodeProvider) {
         this.bytecodeProvider = bytecodeProvider
@@ -303,16 +320,20 @@ class HibernateMappingContextConfiguration extends Configuration
             persistentEntity.setDataSourceName(dataSourceName)
         }
 
+        final GeneratedDomainClassBinder generatedBinder =
+                generatedDomainClasses ? new GeneratedDomainClassBinder(dataSourceName, appClassLoader) : null
         final GrailsDomainBinder domainBinder = new GrailsDomainBinder(
                 dataSourceName,
                 sessionFactoryBeanName,
                 persistentEntities,
                 namingStrategyProvider,
-                hibernateMappingContext.mappingCacheHolder)
+                hibernateMappingContext.mappingCacheHolder,
+                generatedBinder)
 
         addAnnotatedClasses(annotatedClasses.toArray(new Class[0]))
 
-        ClassLoaderService classLoaderService = new ClassLoaderServiceImpl(appClassLoader) {
+        ClassLoaderService classLoaderService = new ClassLoaderServiceImpl(
+                generatedBinder != null ? generatedBinder.classLoader : appClassLoader) {
             @Override
             <S> Collection<S> loadJavaServices(Class<S> serviceContract) {
                 // Ensure Grails contributes mappings for GORM entities even if they lack JPA @Entity
@@ -327,6 +348,13 @@ class HibernateMappingContextConfiguration extends Configuration
                     allContributors.add(grailsBinder)
                     allContributors.addAll(parentContributors)
                     return allContributors
+                }
+                // Hibernate asks for these once the metadata is complete; the generated-class binder points the bound
+                // entities at the real classes then
+                if (generatedBinder != null && SessionFactoryBuilderFactory.isAssignableFrom(serviceContract)) {
+                    List<S> factories = new ArrayList<>(super.loadJavaServices(serviceContract))
+                    factories.add((S) generatedBinder)
+                    return factories
                 }
                 return super.loadJavaServices(serviceContract)
             }

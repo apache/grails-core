@@ -55,6 +55,17 @@ class GrailsDataHibernate7TckManager extends GrailsDataTckManager {
     HibernateDatastore multiTenantMultiDataSourceDatastore
     ConfigObject grailsConfig = new ConfigObject()
     boolean isTransactional = true
+    boolean generatedDomainClasses = false
+
+    /**
+     * Registers the classes like {@link #registerDomainClasses} and boots the datastore through the generated-domain-class
+     * path: Hibernate's annotation binder binds classes generated from the GORM mapping, and the real domain classes are what
+     * sessions persist and load. {@code registerDomainClasses} is unchanged and keeps booting through the domain binder.
+     */
+    void registerGeneratedDomainClasses(Class... classes) {
+        generatedDomainClasses = true
+        registerDomainClasses(classes)
+    }
 
     @Override
     void setup(Class<? extends Specification> spec) {
@@ -67,6 +78,9 @@ class GrailsDataHibernate7TckManager extends GrailsDataTckManager {
         grailsApplication = new DefaultGrailsApplication(domainClasses as Class[], new GroovyClassLoader(GrailsDataHibernate7TckManager.getClassLoader()))
         grailsConfig.dataSource.dbCreate = "create-drop"
         grailsConfig.hibernate.proxy_factory_class = "org.grails.orm.hibernate.proxy.ByteBuddyGroovyProxyFactory"
+        if (generatedDomainClasses) {
+            grailsConfig.hibernate.generatedDomainClasses = true
+        }
         grailsConfig.'grails.gorm.default.mapping' = {
             id generator: 'identity'
         }
