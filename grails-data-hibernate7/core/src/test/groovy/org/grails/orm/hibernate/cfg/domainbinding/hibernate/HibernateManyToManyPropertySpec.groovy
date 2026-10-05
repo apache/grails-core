@@ -20,6 +20,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.persistence.Entity
+import org.grails.orm.hibernate.cfg.HibernateMappingContext
 
 class HibernateManyToManyPropertySpec extends HibernateGormDatastoreSpec {
 
@@ -105,6 +106,63 @@ class HibernateManyToManyPropertySpec extends HibernateGormDatastoreSpec {
         def e = thrown(org.hibernate.MappingException)
         e.message.contains("List collection types only supported on the owning side")
     }
+
+    def "a many-to-many with no belongsTo on either side has exactly one owning side, chosen by entity name"() {
+        given:
+        def context = new HibernateMappingContext()
+        def left = (HibernatePersistentEntity) context.addPersistentEntity(HMMPNoOwnerLeft)
+        def right = (HibernatePersistentEntity) context.addPersistentEntity(HMMPNoOwnerRight)
+        def rights = (HibernateManyToManyProperty) left.getPropertyByName("rights")
+        def lefts = (HibernateManyToManyProperty) right.getPropertyByName("lefts")
+
+        expect: "the entity whose name sorts first owns the relationship, the other side is the inverse"
+        rights.isOwningSide()
+        !lefts.isOwningSide()
+    }
+
+    def "belongsTo wins over the name order when choosing the owning side"() {
+        given:
+        def context = new HibernateMappingContext()
+        def dependent = (HibernatePersistentEntity) context.addPersistentEntity(HMMPADependent)
+        def owner = (HibernatePersistentEntity) context.addPersistentEntity(HMMPZOwner)
+        def owners = (HibernateManyToManyProperty) dependent.getPropertyByName("owners")
+        def dependents = (HibernateManyToManyProperty) owner.getPropertyByName("dependents")
+
+        expect:
+        dependents.isOwningSide()
+        !owners.isOwningSide()
+    }
+
+    def "a unidirectional many-to-many has no owning side to choose"() {
+        given:
+        def context = new HibernateMappingContext()
+        def entity = (HibernatePersistentEntity) context.addPersistentEntity(HMMPUnidirectional)
+        context.addPersistentEntity(HMMPNoOwnerRight)
+
+        expect:
+        !entity.getPropertyByName("rights").isOwningSide()
+    }
+}
+
+@Entity
+class HMMPNoOwnerLeft {
+    Long id
+    Set<HMMPNoOwnerRight> rights
+    static hasMany = [rights: HMMPNoOwnerRight]
+}
+
+@Entity
+class HMMPNoOwnerRight {
+    Long id
+    Set<HMMPNoOwnerLeft> lefts
+    static hasMany = [lefts: HMMPNoOwnerLeft]
+}
+
+@Entity
+class HMMPUnidirectional {
+    Long id
+    Set<HMMPNoOwnerRight> rights
+    static hasMany = [rights: HMMPNoOwnerRight]
 }
 
 @Entity
@@ -121,4 +179,17 @@ class HMMPB {
     Long id
     static hasMany = [owners: HMMPA]
     static belongsTo = [owners: HMMPA]
+}
+
+@Entity
+class HMMPADependent {
+    Long id
+    static hasMany = [owners: HMMPZOwner]
+    static belongsTo = [owners: HMMPZOwner]
+}
+
+@Entity
+class HMMPZOwner {
+    Long id
+    static hasMany = [dependents: HMMPADependent]
 }

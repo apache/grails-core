@@ -66,6 +66,33 @@ public class HibernateManyToManyProperty extends ManyToManyWithMapping<PropertyC
         }
     }
 
+    /**
+     * A bidirectional many-to-many is written by exactly one side, the owning side, which {@code belongsTo}
+     * designates. When neither side declares {@code belongsTo}, both collections would be bound inverse, nothing
+     * would ever be written to the join table and the relationship would be lost silently. So that the
+     * relationship is stored, one side is then chosen deterministically: the one whose entity name sorts first
+     * (then the property name). Declare {@code belongsTo} to choose the owning side explicitly.
+     */
+    @Override
+    public boolean isOwningSide() {
+        if (declaresOwningSide()) {
+            return true;
+        }
+        if (!isBidirectional() || !(getHibernateInverseSide() instanceof HibernateManyToManyProperty inverse) ||
+                inverse.declaresOwningSide()) {
+            return false;
+        }
+        int order = getOwner().getName().compareTo(inverse.getOwner().getName());
+        if (order == 0) {
+            order = getName().compareTo(inverse.getName());
+        }
+        return order <= 0;
+    }
+
+    private boolean declaresOwningSide() {
+        return super.isOwningSide();
+    }
+
     @Override
     public boolean isLazy() {
         return getHibernateOwner().isLazy(this);
