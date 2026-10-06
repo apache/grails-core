@@ -112,6 +112,9 @@ class HibernateMappingContextConfiguration extends Configuration
      * Whether Hibernate's annotation binder binds classes generated from the GORM mapping instead of the domain binder
      * building Hibernate's boot model by hand. The real domain classes are still what is persisted and loaded.
      *
+     * <p>Set it before the annotated classes are added: with the switch on, {@link #addAnnotatedClass} keeps the GORM entities
+     * that are not JPA entities away from Hibernate's own sources (see there).</p>
+     *
      * @param generatedDomainClasses {@code true} to bind generated classes; {@code false} (the default) for the domain binder
      */
     void setGeneratedDomainClasses(boolean generatedDomainClasses) {
@@ -206,9 +209,19 @@ class HibernateMappingContextConfiguration extends Configuration
         return this
     }
 
+    /**
+     * Registers the class for the mapping context and hands it to Hibernate's own sources. With
+     * {@link #setGeneratedDomainClasses generated domain classes} a GORM entity that is not a JPA entity is not handed to
+     * Hibernate: the class generated for it has the same name, and Hibernate keeps the first class it is given for a name, so
+     * the real class, which Hibernate cannot read as an entity, would hide the generated one and leave the entity unmapped.
+     * The entity is bound through the mapping context as usual.
+     */
     @Override
     Configuration addAnnotatedClass(Class annotatedClass) {
         additionalClasses.add(annotatedClass)
+        if (generatedDomainClasses && GormEntity.isAssignableFrom(annotatedClass) && !annotatedClass.isAnnotationPresent(Entity)) {
+            return this
+        }
         return super.addAnnotatedClass(annotatedClass)
     }
 
