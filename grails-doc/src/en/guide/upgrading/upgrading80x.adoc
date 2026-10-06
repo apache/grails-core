@@ -54,7 +54,7 @@ skill 'org.apache.grails.skills:grails-8-upgrade:{version}'
 
 ==== 1. Java 21 Minimum Requirement
 
-Grails 8 requires a minimum of Java 21 to both build and run Grails applications.
+Grails 8 requires a minimum of Java 21 to both build and run Grails applications. Grails 8 also supports Java 25 (the next LTS after Java 21).
 This is an increase from Grails 7, which required Java 17.
 Update your project's toolchain, CI pipelines, and deployment environments to use JDK 21 or later.
 
@@ -4898,3 +4898,38 @@ As of Grails 8.0.1, and 7.0.18 on the 7.0.x line, the lists of bindable properti
 * `bindData` with an `exclude` list, including the `bindData(target, source, List excludes)` overloads, keeps the generated list in effect in the permissive mode too and removes the excluded properties from it. Previously, in the permissive mode, an `exclude` list without an `include` list set the generated list aside, so that only the excluded properties were kept out.
 * A class that gets the lists now carries them as new `public static final` fields. A class that implements `Serializable` without declaring a `serialVersionUID`, such as a `Validateable` object kept in a persisted HTTP session or in a distributed cache, therefore gets a new default `serialVersionUID`, and instances serialized before the upgrade do not deserialize after it. Declare a `serialVersionUID` on such a class.
 * A controller compiled against a command object that was compiled without the lists, by an earlier version of Grails or without the data binding library, warns that the command object is bound without restriction and should be recompiled.
+
+[[java25-memory-upgrade]]
+==== 89. Metaspace and Compressed Class Pointers on Java 25
+
+Both Java 21 and Java 25 leave metaspace unlimited by default unless you set an explicit ceiling with `-XX:MaxMetaspaceSize`; this default has been unchanged since JDK 8.
+On both versions, `-XX:MetaspaceSize` sets the initial high-water mark that triggers garbage collection, not a limit on metaspace growth. The JVM adjusts this threshold according to metadata usage.
+
+A Grails application loads a large number of classes — plugins, Hibernate entity mappings, GSP-compiled views, Spring beans — so metaspace can account for a significant part of the process's native memory on either JDK.
+In a container environment this is especially important: the heap limit (`-Xmx` or `-XX:MaxRAMPercentage`) does not cover metaspace, so a container sized only for the heap can be killed by the container runtime's OOM killer when metaspace grows beyond the remaining native memory budget.
+
+**What to do when running on Java 25:**
+
+Set an explicit metaspace ceiling with `-XX:MaxMetaspaceSize` so the JVM raises `OutOfMemoryError: Metaspace` before the container runtime kills the process:
+
+[source,bash]
+----
+java -Xmx512m -XX:MaxMetaspaceSize=256m -Dgrails.env=prod -jar application.jar
+----
+
+Or, using percentage-based heap sizing in a container:
+
+[source,bash]
+----
+java -XX:MaxRAMPercentage=60.0 -XX:MaxMetaspaceSize=256m -Dgrails.env=prod -jar application.jar
+----
+
+Tune `-XX:MaxMetaspaceSize` from a measured baseline: run the application under representative load, observe metaspace usage with `jcmd <pid> VM.metaspace`, and add a safety margin.
+
+The `-XX:+/-UseCompressedClassPointers` flag is deprecated in Java 25 and becomes obsolete in JDK 27 (https://github.com/openjdk/jdk/commit/da296cbea1[JDK-8363996]), where it is accepted with a warning and ignored.
+
+* If your startup scripts pass `-XX:+UseCompressedClassPointers`, remove it because it is the default.
+* If they pass `-XX:-UseCompressedClassPointers` to disable compressed class pointers, check the class-space use that `jcmd <pid> VM.metaspace` reports before you drop it.
+Dropping it changes the memory layout, and from JDK 27 compressed class pointers are always on, whether or not the flag is there.
+
+See <<java25-memory,Metaspace and Off-Heap Memory>> in the deployment guide for full details, including a systemd service unit example.
