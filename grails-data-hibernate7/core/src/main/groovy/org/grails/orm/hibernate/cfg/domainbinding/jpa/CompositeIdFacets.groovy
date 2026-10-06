@@ -24,16 +24,12 @@ import groovy.transform.CompileStatic
  * The composite identifier the domain binder binds for a root entity ({@code id composite: [...]}): the parts in the order the
  * mapping names them, each with its column facets (a simple property) or its foreign key column facets and association facets
  * (a many-to-one part). The binder builds one embedded identifier component from them, whose columns form the primary key and so
- * are never null. {@link GrailsDomainGenerator} writes them into a generated {@code @Embeddable} that the entity uses as its
- * {@code @EmbeddedId}.
- *
- * <p>{@code fieldName} is the name of the {@code @EmbeddedId} field of the generated class: the binder's identifier has no
- * property name, so any name that no property of the entity uses will do.</p>
+ * are never null. {@link GrailsDomainGenerator} writes each part as an {@code @Id} field of the generated entity, and names
+ * a generated key class with {@code @IdClass}.
  *
  * @since 9.0
  */
 @CompileStatic
 record CompositeIdFacets(
-    String fieldName,
     List<EmbeddedLeaf> parts) {
 }

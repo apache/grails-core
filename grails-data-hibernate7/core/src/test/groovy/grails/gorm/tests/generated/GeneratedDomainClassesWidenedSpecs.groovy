@@ -111,7 +111,6 @@ import org.apache.grails.data.testing.tck.tests.WhereQueryEmbeddedSpec
 import org.apache.grails.data.testing.tck.tests.WhereQueryIssueVerificationSpec
 import org.apache.grails.data.testing.tck.tests.WhereQueryLeftJoinSpec
 import org.apache.grails.data.testing.tck.tests.WithTransactionSpec
-import spock.lang.Ignore
 
 /**
  * Existing specs of the module and of the TCK run unchanged against a datastore booted through the generated-domain-class
@@ -561,7 +560,6 @@ class GeneratedSizeConstraintSpec extends SizeConstraintSpec {
     }
 }
 
-@Ignore('the domain has a composite identifier, which the generated-domain-class binding does not support yet')
 class GeneratedSortArgumentValidationSpec extends SortArgumentValidationSpec {
 
     void setupSpec() {
@@ -681,7 +679,6 @@ class GeneratedFindOrSaveWhereSpec extends FindOrSaveWhereSpec {
     }
 }
 
-@Ignore('the domain has a composite identifier, which the generated-domain-class binding does not support yet')
 class GeneratedFirstAndLastMethodSpec extends FirstAndLastMethodSpec {
 
     void setupSpec() {
@@ -759,7 +756,6 @@ class GeneratedWhereQueryEmbeddedSpec extends WhereQueryEmbeddedSpec {
     }
 }
 
-@Ignore('the domain has a composite identifier, which the generated-domain-class binding does not support yet')
 class GeneratedWhereQueryIssueVerificationSpec extends WhereQueryIssueVerificationSpec {
 
     void setupSpec() {

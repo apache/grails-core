@@ -21,7 +21,6 @@ package org.grails.orm.hibernate.cfg.domainbinding.jpa
 import java.lang.reflect.Field
 
 import groovy.transform.CompileStatic
-import org.hibernate.MappingException
 import org.hibernate.boot.SessionFactoryBuilder
 import org.hibernate.boot.spi.AdditionalMappingContributions
 import org.hibernate.boot.spi.MetadataBuildingContext
@@ -154,7 +153,7 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
         for (PersistentClass persistentClass : new ArrayList<PersistentClass>(metadata.entityBindings)) {
             Generated generated = generatedByName.get(persistentClass.className)
             if (generated != null) {
-                align(persistentClass, generated)
+                align(persistentClass, generated, metadata)
             }
         }
         defineTenantFilter(metadata)
@@ -197,7 +196,7 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
         return result
     }
 
-    private void align(PersistentClass persistentClass, Generated generated) {
+    private void align(PersistentClass persistentClass, Generated generated, MetadataImplementor metadata) {
         GrailsHibernatePersistentEntity entity = generated.entity()
         Class<?> real = entity.javaClass
         persistentClass.className = real.name
@@ -206,18 +205,18 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
         }
         entity.persistentClass = persistentClass
         if (persistentClass instanceof RootClass) {
-            alignIdentifier((RootClass) persistentClass, generated)
+            alignIdentifier((RootClass) persistentClass, generated, metadata)
         }
         for (Property property : persistentClass.declaredProperties) {
             alignProperty(property, entity, real)
         }
     }
 
-    private void alignIdentifier(RootClass root, Generated generated) {
+    private void alignIdentifier(RootClass root, Generated generated, MetadataImplementor metadata) {
         GrailsHibernatePersistentEntity entity = generated.entity()
         if (!(entity.identity instanceof HibernateSimpleIdentityProperty)) {
-            throw new MappingException(
-                    "Entity [${entity.name}] has a composite identifier, which the generated-domain-class binding does not support yet".toString())
+            alignCompositeIdentifier(root, entity, metadata)
+            return
         }
         alignProperty(root.identifierProperty, entity, entity.javaClass)
         String name = entity.identity.name
@@ -225,6 +224,35 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
         GrailsIdGenerator marker = field.getAnnotation(GrailsIdGenerator)
         if (marker != null) {
             installGenerator((BasicValue) root.identifier, entity, marker.strategy())
+        }
+    }
+
+    /**
+     * The generated entity names an {@code @IdClass}, so Hibernate bound a non-aggregated identifier: the entity has no
+     * identifier property, the identifier component is embedded, and an {@code _identifierMapper} component maps the same parts
+     * from the entity. GORM's identifier for such an entity is the entity instance itself, so both components are re-pointed at the
+     * real entity class, and read its parts the way the domain binder would.
+     *
+     * <p>Hibernate's JPA metamodel registers an embeddable for the class of the identifier component and an entity for the
+     * class of the entity, and when both are the same class the one whose Java type descriptor was resolved first wins the
+     * class. The entity descriptor is therefore resolved here, before the metamodel is built.</p>
+     */
+    private void alignCompositeIdentifier(RootClass root, GrailsHibernatePersistentEntity entity, MetadataImplementor metadata) {
+        Class<?> real = entity.javaClass
+        metadata.typeConfiguration.javaTypeRegistry.resolveEntityTypeDescriptor(real)
+        alignIdentifierComponent((Component) root.identifier, entity, real)
+        if (root.identifierMapper != null) {
+            alignIdentifierComponent(root.identifierMapper, entity, real)
+        }
+    }
+
+    private void alignIdentifierComponent(Component component, GrailsHibernatePersistentEntity entity, Class<?> real) {
+        component.componentClassName = real.name
+        for (Property property : component.getProperties()) {
+            HibernatePersistentProperty part = entity.compositeIdentity.find { HibernatePersistentProperty candidate -> candidate.name == property.name }
+            if (part != null) {
+                property.propertyAccessorName = propertyBinder.accessorName(part)
+            }
         }
     }
 

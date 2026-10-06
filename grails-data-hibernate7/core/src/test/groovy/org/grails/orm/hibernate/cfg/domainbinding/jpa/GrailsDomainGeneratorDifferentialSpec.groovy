@@ -61,6 +61,7 @@ import org.hibernate.mapping.Set as HibernateSet
 import org.hibernate.mapping.Table
 import org.hibernate.mapping.SingleTableSubclass
 import org.hibernate.mapping.UnionSubclass
+import org.hibernate.spi.NavigablePath
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
 import java.lang.reflect.ParameterizedType
@@ -498,9 +499,10 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
     }
 
     /**
-     * The composite identifier Hibernate's annotation binder reads from an {@code @EmbeddedId}: a component with the same parts,
-     * the same columns (not null), the same primary key and the same foreign key columns. The binder's identifier has no property
-     * and its unsaved value is {@code undefined}; Hibernate's has a property of its own and no unsaved value: listed.
+     * The composite identifier Hibernate's annotation binder reads from an {@code @IdClass}: no identifier property, as the
+     * binder's, an embedded component with the same parts, the same columns (not null), the same primary key columns (the order is a listed
+     * divergence) and the same foreign key columns. The binder's component has the unsaved value {@code undefined}; Hibernate's has none, and
+     * Hibernate adds an {@code _identifierMapper} property and component to the entity: both listed.
      */
     private static List<String> compareAnnotatedCompositeId(
             String where, PersistentClass bound, PersistentClass annotated, CompositeIdFacets facets, Map<String, Integer> known) {
@@ -510,6 +512,18 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         Component boundId = (Component) bound.identifier
         Component annotatedId = (Component) annotated.identifier
         List<String> found = []
+        if (annotated.identifierProperty != null) {
+            found << "${where} compositeId identifierProperty: generator=${annotated.identifierProperty.name} binder=none".toString()
+        }
+        if (!annotatedId.embedded) {
+            found << "${where} compositeId embedded: generator=false binder=true".toString()
+        }
+        if (annotated.identifierMapper == null ||
+                annotated.identifierMapper.properties*.name.toSet() != boundId.properties*.name.toSet()) {
+            found << "${where} compositeId identifierMapper: generator=${annotated.identifierMapper?.properties*.name} binder=${boundId.properties*.name}".toString()
+        } else {
+            known['Hibernate adds an _identifierMapper property and component to an @IdClass entity; the binder has none']++
+        }
         if (boundId.properties*.name.toSet() != annotatedId.properties*.name.toSet()) {
             return ["${where} compositeId parts: generator=${annotatedId.properties*.name} binder=${boundId.properties*.name}".toString()]
         }
@@ -535,7 +549,10 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         Set<String> boundKey = bound.table.primaryKey?.columns*.name?.toSet()
         Set<String> annotatedKey = annotated.table.primaryKey?.columns*.name?.toSet()
         if (boundKey != annotatedKey) {
-            found << "${where} compositeId primaryKey: generator=${annotatedKey} binder=${boundKey}".toString()
+            found << ("${where} compositeId primaryKey: generator=${annotated.table.primaryKey?.columns*.name} " +
+                    "binder=${bound.table.primaryKey?.columns*.name}").toString()
+        } else if (bound.table.primaryKey?.columns*.name != annotated.table.primaryKey?.columns*.name) {
+            known['Hibernate orders the primary key columns of an @IdClass by the sorted identifier properties; the binder by its component']++
         }
         Set<Set<String>> boundKeys = bound.table.foreignKeys.values().collect { it.columns*.name.toSet() }.toSet()
         Set<Set<String>> annotatedKeys = annotated.table.foreignKeys.values().collect { it.columns*.name.toSet() }.toSet()
@@ -543,7 +560,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             found << "${where} compositeId foreignKeys: generator=${annotatedKeys} binder=${boundKeys}".toString()
         }
         if (boundId.nullValue != annotatedId.nullValue) {
-            known['the binder gives a composite identifier the unsaved value undefined; Hibernate gives an @EmbeddedId none']++
+            known['the binder gives a composite identifier the unsaved value undefined; Hibernate gives an @IdClass identifier none']++
         }
         return found
     }
@@ -1411,9 +1428,14 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         return found
     }
 
-    /** The names of the properties a class declares itself: the binder's and Hibernate's back references are not part of the field set. */
+    /**
+     * The names of the properties a class declares itself: the binder's and Hibernate's back references are not part of the field
+     * set, nor is the {@code _identifierMapper} Hibernate adds to an entity with an {@code @IdClass} (listed as a known divergence).
+     */
     private static Set<String> declaredNames(PersistentClass persistentClass) {
-        return persistentClass.declaredProperties.findAll { !(it instanceof Backref) && !(it instanceof IndexBackref) }*.name.toSet()
+        return persistentClass.declaredProperties.findAll {
+            !(it instanceof Backref) && !(it instanceof IndexBackref) && it.name != NavigablePath.IDENTIFIER_MAPPER_PROPERTY
+        }*.name.toSet()
     }
 
     private static String toOneKind(HibernatePersistentProperty property, Property bound) {

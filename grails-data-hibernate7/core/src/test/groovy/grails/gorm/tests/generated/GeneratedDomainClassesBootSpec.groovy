@@ -19,28 +19,35 @@
 package grails.gorm.tests.generated
 
 import grails.persistence.Entity
+import org.hibernate.persister.entity.EntityPersister
 import spock.lang.Specification
 
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.orm.hibernate.HibernateDatastore
 
 /**
- * What the generated-domain-class binding refuses to boot, and that it says so by entity name.
+ * What the generated-domain-class binding boots (an entity with a composite identifier) and the plain binder boots too.
  */
 class GeneratedDomainClassesBootSpec extends Specification {
 
-    def "a composite identifier is rejected by name"() {
+    def "a composite identifier boots through the generated classes, and the entity has no identifier property of its own"() {
         when:
-        new HibernateDatastore(
+        HibernateDatastore datastore = new HibernateDatastore(
                 DatastoreUtils.createPropertyResolver([
                         'dataSource.url'                  : 'jdbc:h2:mem:gdcBoot;LOCK_TIMEOUT=10000',
                         'dataSource.dbCreate'             : 'create-drop',
                         'hibernate.generatedDomainClasses': true,
                 ]), GdcComposite)
+        EntityPersister persister = datastore.sessionFactory.mappingMetamodel.getEntityDescriptor(GdcComposite)
 
         then:
-        RuntimeException e = thrown()
-        causeMessages(e).any { String message -> message.contains('GdcComposite') && message.contains('composite identifier') }
+        persister.entityName.endsWith('GdcComposite')
+        persister.mappedClass == GdcComposite
+        persister.identifierPropertyName == null
+        persister.identifierMapping.virtualIdEmbeddable.mappedJavaType.javaTypeClass == GdcComposite
+
+        cleanup:
+        datastore?.close()
     }
 
     def "the same entity boots through the domain binder"() {
@@ -56,14 +63,6 @@ class GeneratedDomainClassesBootSpec extends Specification {
 
         cleanup:
         datastore?.close()
-    }
-
-    private static List<String> causeMessages(Throwable throwable) {
-        List<String> messages = []
-        for (Throwable current = throwable; current != null; current = current.cause) {
-            messages << String.valueOf(current.message)
-        }
-        return messages
     }
 }
 

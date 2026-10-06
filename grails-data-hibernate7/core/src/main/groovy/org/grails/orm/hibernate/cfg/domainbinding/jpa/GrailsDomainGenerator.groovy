@@ -38,12 +38,12 @@ import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.ElementCollection
 import jakarta.persistence.Embeddable
 import jakarta.persistence.Embedded
-import jakarta.persistence.EmbeddedId
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.Id
+import jakarta.persistence.IdClass
 import jakarta.persistence.Index
 import jakarta.persistence.Inheritance
 import jakarta.persistence.InheritanceType
@@ -442,6 +442,10 @@ class GrailsDomainGenerator {
      * property for every part, in the order the mapping names them. The columns of a part are the ones the part would have as an
      * ordinary property, except that they are never null: the binder's component is the primary key, and Hibernate makes every
      * column of a primary key not null.
+     *
+     * <p>The parts are written onto the generated entity itself, each as an {@code @Id} field, and the entity names a generated
+     * key class with {@code @IdClass}: Hibernate then binds a non-aggregated identifier, which has no identifier property of its
+     * own, as the binder's component has none, and GORM's identifier (the entity instance itself) fits it.</p>
      */
     CompositeIdFacets compositeIdFacets(GrailsHibernatePersistentEntity entity) {
         List<EmbeddedLeaf> parts = entity.compositeIdentity.collect { HibernatePersistentProperty part ->
@@ -449,11 +453,7 @@ class GrailsDomainGenerator {
                     new EmbeddedLeaf(part.name, part, toOneColumnFacets((HibernateToOneProperty) part), toOneFacets((HibernateToOneProperty) part)) :
                     new EmbeddedLeaf(part.name, part, columnFacets(part), null)
         }
-        String fieldName = 'id'
-        while (entity.persistentPropertiesToBind.any { HibernatePersistentProperty p -> p.name == fieldName }) {
-            fieldName += '_'
-        }
-        return new CompositeIdFacets(fieldName, parts)
+        return new CompositeIdFacets(parts)
     }
 
     /**
@@ -520,14 +520,23 @@ class GrailsDomainGenerator {
                 .subclass(Object)
                 .implement(Serializable)
                 .name(generatedClassName(entity) + '_Id')
-                .annotateType(AnnotationDescription.Builder.ofType(Embeddable).build())
         for (EmbeddedLeaf part : id.parts()) {
-            key = defineField(key, part.property(), [], embeddables)
+            // the key class only names the parts and their types; the entity carries their mapping. A part that refers to an entity
+            // has that entity's generated class as its type, which Hibernate binds as an association inside the identifier
+            TypeDescription type = part.property() instanceof HibernateToOneProperty ?
+                    generatedType(((HibernateToOneProperty) part.property()).hibernateAssociatedEntity) :
+                    TypeDescription.ForLoadedType.of(part.property().type)
+            key = key.defineField(part.path(), type, Visibility.PRIVATE)
         }
         DynamicType.Unloaded<?> unloaded = key.make()
         embeddables.put('id|' + entity.name, unloaded)
-        return builder.defineField(id.fieldName(), unloaded.typeDescription, Visibility.PRIVATE)
-                .annotateField(AnnotationDescription.Builder.ofType(EmbeddedId).build())
+        DynamicType.Builder<Object> result = builder.annotateType(
+                AnnotationDescription.Builder.ofType(IdClass).define('value', unloaded.typeDescription).build())
+        List<AnnotationDescription> idAnnotation = [AnnotationDescription.Builder.ofType(Id).build()]
+        for (EmbeddedLeaf part : id.parts()) {
+            result = defineField(result, part.property(), idAnnotation, embeddables)
+        }
+        return result
     }
 
     /**
@@ -1234,20 +1243,6 @@ class GrailsDomainGenerator {
     }
 
     /**
-     * The name {@code mappedBy} uses for the property that holds the foreign key: the property of the other side, or, when that
-     * property is a part of the composite identifier of its entity, the path through the {@code @EmbeddedId} field
-     * ({@code id.parent}), because the part lives in the generated embeddable.
-     */
-    private String mappedByPath(HibernatePersistentProperty inverse) {
-        return isCompositeIdPart(inverse) ? compositeIdFacets(inverse.hibernateOwner).fieldName() + '.' + inverse.name : inverse.name
-    }
-
-    private String mappedByPath(GrailsHibernatePersistentEntity entity, String propertyName) {
-        HibernatePersistentProperty property = entity?.getHibernatePropertyByName(propertyName)
-        return property != null ? mappedByPath(property) : propertyName
-    }
-
-    /**
      * The binder binds the key column of a collection like any other column ({@code DependentKeyValueBinder} runs
      * {@code ColumnBinder} on the property), so an {@code index:} or a {@code unique:} group on the collection property
      * becomes an index or a unique key of the collection table over the key column, and for a collection of enums the
@@ -1573,7 +1568,7 @@ class GrailsDomainGenerator {
             // CollectionKeyBinder copies the other side's foreign key column into the key; the key updater makes it nullable
             keys = collectionKeyColumns(property)
             key = keys[0]
-            mappedBy = kind == CollectionKind.LIST ? null : mappedByPath(inverse)
+            mappedBy = kind == CollectionKind.LIST ? null : inverse.name
             manyToMany = false
         } else {
             JoinTable joinTable = mapped.joinTable
@@ -1805,7 +1800,7 @@ class GrailsDomainGenerator {
                     false,
                     cascadeFacets(property),
                     null,
-                    mappedByPath(property.hibernateAssociatedEntity, oneToOne.hibernateReferencedPropertyName),
+                    oneToOne.hibernateReferencedPropertyName,
                     oneToOne.hibernateReferencedEntityName,
                     [],
                     [])
@@ -2279,7 +2274,7 @@ class GrailsDomainGenerator {
             return defineCollectionField(builder, (HibernateBasicProperty) property)
         }
         if (property instanceof HibernateToOneProperty) {
-            return defineToOneField(builder, (HibernateToOneProperty) property)
+            return defineToOneField(builder, (HibernateToOneProperty) property, extra)
         }
         if (property instanceof HibernateToManyEntityProperty) {
             return defineToManyField(builder, (HibernateToManyEntityProperty) property)
@@ -2319,9 +2314,10 @@ class GrailsDomainGenerator {
      * {@code @JoinColumn}, an explicit {@code @Fetch} (without it an eager association would be a join fetch, which the
      * binder's default is not), and {@code @NotFound} when the mapping says to ignore a missing row.
      */
-    private DynamicType.Builder<Object> defineToOneField(DynamicType.Builder<Object> builder, HibernateToOneProperty property) {
+    private DynamicType.Builder<Object> defineToOneField(
+            DynamicType.Builder<Object> builder, HibernateToOneProperty property, List<AnnotationDescription> extra) {
         ToOneFacets facets = toOneFacets(property)
-        List<AnnotationDescription> annotations = []
+        List<AnnotationDescription> annotations = new ArrayList<>(extra)
         if (facets.mappedBy() != null) {
             annotations << AnnotationDescription.Builder.ofType(OneToOne)
                     .define('mappedBy', facets.mappedBy())
