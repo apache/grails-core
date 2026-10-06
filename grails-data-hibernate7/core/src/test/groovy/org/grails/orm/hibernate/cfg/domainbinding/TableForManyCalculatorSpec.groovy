@@ -110,7 +110,7 @@ class TableForManyCalculatorSpec extends HibernateGormDatastoreSpec {
         "a Map property"                      | "map_collection_owner_data"
         "a Basic property"                    | "basic_collection_owner_items"
         "an owning OneToMany"                 | "owning_side_associated_side"
-        "an owning ManyToMany"                | "owning_side_tags"
+        "an owning ManyToMany"                | "tag_owners"
         "an inverse ManyToMany"               | "owning_side_tags"
         "a ManyToMany with explicit joinTable" | "my_custom_join_table"
         "a ToMany with supportsJoinColumnMapping" | "unidirectional_owner_unidirectional_item"

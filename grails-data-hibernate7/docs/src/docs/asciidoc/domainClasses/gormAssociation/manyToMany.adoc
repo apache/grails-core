@@ -40,8 +40,6 @@ class Author {
 
 GORM creates a join table `author_books` with foreign-key columns for both sides.
 
-NOTE: Exactly one side of a many-to-many writes the join table. If neither class declares `belongsTo`, GORM still has to pick one so the relationship is stored: the class whose name sorts first alphabetically owns it. Declare `belongsTo` on one side to choose the owner explicitly.
-
 === Saving a Many-to-Many
 
 Always save from the owning side (the side that does **not** have `belongsTo`):
