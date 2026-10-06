@@ -40,6 +40,7 @@ import org.hibernate.boot.spi.MetadataBuildingOptions
 import org.hibernate.dialect.H2Dialect
 import org.hibernate.mapping.PersistentClass
 import org.hibernate.mapping.RootClass
+import org.hibernate.mapping.SingleTableSubclass
 import org.hibernate.mapping.BasicValue
 import org.hibernate.mapping.Table as HibernateTable
 import spock.lang.Specification
@@ -214,6 +215,62 @@ class GormColumnSnapshotGeneratorSpec extends Specification {
         metadata.getEntityBindings() >> [pc]
         mappingContext.getPersistentEntity("com.example.TestEntity") >> gpe
         gpe.getMappedForm() >> gormMapping
+        gormMapping.getIdentity() >> gormIdentity
+        gormIdentity.determineGeneratorName(_) >> "identity"
+
+        !result.isNullable()
+        result.getAutoIncrementInformation() != null
+    }
+
+    def "the identifier of a table per hierarchy root gets the identity settings when a subclass of the table is listed first"() {
+        given:
+        Column example = new Column(name: "id")
+        Table table = new Table(name: "test_table")
+        example.setRelation(table)
+
+        Column chainResult = new Column(name: "id")
+        chainResult.setRelation(table)
+        chainResult.setNullable(true)
+
+        SnapshotGeneratorChain chain = Mock()
+        DatabaseSnapshot snapshot = Mock()
+        GormDatabase database = Mock()
+        HibernateDatastore datastore = Mock()
+        Metadata metadata = Mock()
+        HibernateMappingContext mappingContext = Mock()
+        MetadataBuildingContext buildingContext = createMetadataBuildingContext()
+
+        RootClass root = new RootClass(buildingContext)
+        root.setEntityName("TestEntity")
+        root.setClassName("com.example.TestEntity")
+        HibernateTable hTable = new HibernateTable("hibernate", "test_table")
+        root.setTable(hTable)
+        BasicValue identifier = new BasicValue(buildingContext, hTable)
+        identifier.addColumn(new org.hibernate.mapping.Column("id"))
+        root.setIdentifier(identifier)
+        SingleTableSubclass sub = new SingleTableSubclass(root, buildingContext)
+        sub.setEntityName("SubEntity")
+        sub.setClassName("com.example.SubEntity")
+
+        GrailsHibernatePersistentEntity rootEntity = Mock()
+        GrailsHibernatePersistentEntity subEntity = Mock()
+        Mapping gormMapping = Mock()
+        HibernateSimpleIdentity gormIdentity = Mock()
+
+        when:
+        Column result = generator.snapshot(example, snapshot, chain)
+
+        then:
+        1 * chain.snapshot(example, snapshot) >> chainResult
+        snapshot.database >> database
+        database.gormDatastore >> datastore
+        database.metadata >> metadata
+        datastore.mappingContext >> mappingContext
+
+        metadata.getEntityBindings() >> [sub, root]
+        mappingContext.getPersistentEntity("com.example.TestEntity") >> rootEntity
+        mappingContext.getPersistentEntity("com.example.SubEntity") >> subEntity
+        rootEntity.getMappedForm() >> gormMapping
         gormMapping.getIdentity() >> gormIdentity
         gormIdentity.determineGeneratorName(_) >> "identity"
 
