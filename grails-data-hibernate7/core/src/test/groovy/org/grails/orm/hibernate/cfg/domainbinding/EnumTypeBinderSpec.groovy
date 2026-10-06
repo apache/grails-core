@@ -55,6 +55,10 @@ class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
     @Subject
     EnumTypeBinder binder
 
+    void setupSpec() {
+        manager.registerDomainClasses(PersonWithColumnExtras)
+    }
+
     def setup() {
         def grailsDomainBinder = getGrailsDomainBinder()
         def metadataBuildingContext = grailsDomainBinder.getMetadataBuildingContext()
@@ -161,6 +165,53 @@ class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
         1 * indexBinder.bindIndex("status_col", _, _, _)
     }
 
+    def "should apply the comment, default value and read and write expressions of the column config"() {
+        given:
+        def table = new Table("person")
+        def property = setupProperty(PersonWithColumnExtras, "status", table)
+
+        when:
+        def column = binder.bindEnumType(property as HibernateEnumProperty, "").getColumns()[0] as org.hibernate.mapping.Column
+
+        then:
+        column.getComment() == "the status"
+        column.getDefaultValue() == "'AVAILABLE'"
+        column.getCustomRead() == "lower(status)"
+        column.getCustomWrite() == "upper(?)"
+    }
+
+    def "should leave the column extras unset when the enum property has no column config"() {
+        given:
+        def table = new Table("person")
+        def property = setupProperty(Person01, "status", table)
+
+        when:
+        def column = binder.bindEnumType(property as HibernateEnumProperty, "").getColumns()[0] as org.hibernate.mapping.Column
+
+        then:
+        column.getComment() == null
+        column.getDefaultValue() == null
+        column.getCustomRead() == null
+        column.getCustomWrite() == null
+    }
+
+    def "the column extras of an enum property reach the bound column and the schema"() {
+        given:
+        def column = getPersistentEntity(PersonWithColumnExtras).persistentClass.getProperty("status").columns[0] as org.hibernate.mapping.Column
+        def metadata = sessionFactory.currentSession
+                .createNativeQuery("select column_default, remarks from information_schema.columns " +
+                        "where table_name = 'PERSON_WITH_COLUMN_EXTRAS' and column_name = 'STATUS'", Object[])
+                .uniqueResult() as Object[]
+
+        expect:
+        column.getComment() == "the status"
+        column.getDefaultValue() == "'AVAILABLE'"
+        column.getCustomRead() == "lower(status)"
+        column.getCustomWrite() == "upper(?)"
+        metadata[0].toString().contains("AVAILABLE")
+        metadata[1] == "the status"
+    }
+
     def "should create the unique group key for the enum column on the bound table"() {
         given:
         def grailsDomainBinder = getGrailsDomainBinder()
@@ -212,6 +263,12 @@ enum Status01 { AVAILABLE, OUT_OF_STOCK }
 @Entity class PersonWithExplicitColumn {
     Long id; Status01 status
     static mapping = { status column: "status_col", index: "idx_status" }
+}
+@Entity class PersonWithColumnExtras {
+    Long id; Status01 status
+    static mapping = {
+        status comment: "the status", defaultValue: "'AVAILABLE'", read: "lower(status)", write: "upper(?)"
+    }
 }
 @Entity class Clown01 extends Person01 { String clownName }
 

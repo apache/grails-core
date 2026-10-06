@@ -7,21 +7,17 @@ import liquibase.diff.output.DiffOutputControl;
 import liquibase.diff.output.changelog.ChangeGeneratorChain;
 import liquibase.ext.hibernate.database.HibernateDatabase;
 import liquibase.structure.DatabaseObject;
-import liquibase.structure.core.PrimaryKey;
+import liquibase.structure.core.Index;
 
 /**
- * Hibernate doesn't know about all the variations that occur with primary keys, especially backing index stuff.
- * To prevent changing customized primary keys, we suppress this kind of changes from hibernate side.
+ * Suppresses unknown Hibernate index attributes while preserving concrete uniqueness changes.
  */
-public class HibernateChangedPrimaryKeyChangeGenerator
-        extends liquibase.diff.output.changelog.core.ChangedPrimaryKeyChangeGenerator {
+public class HibernateChangedIndexChangeGenerator
+        extends liquibase.diff.output.changelog.core.ChangedIndexChangeGenerator {
 
     @Override
     public int getPriority(Class<? extends DatabaseObject> objectType, Database database) {
-        if (PrimaryKey.class.isAssignableFrom(objectType)) {
-            return PRIORITY_ADDITIONAL;
-        }
-        return PRIORITY_NONE;
+        return Index.class.isAssignableFrom(objectType) ? PRIORITY_ADDITIONAL : PRIORITY_NONE;
     }
 
     @Override
@@ -33,14 +29,17 @@ public class HibernateChangedPrimaryKeyChangeGenerator
             Database comparisonDatabase,
             ChangeGeneratorChain chain) {
         if (referenceDatabase instanceof HibernateDatabase || comparisonDatabase instanceof HibernateDatabase) {
-            differences.removeDifference("unique");
-            differences.removeDifference("validate");
+            var unique = differences.getDifference("unique");
+            if (unique == null || !(unique.getReferenceValue() instanceof Boolean) ||
+                    !(unique.getComparedValue() instanceof Boolean) ||
+                    unique.getReferenceValue().equals(unique.getComparedValue())) {
+                differences.removeDifference("unique");
+            }
             differences.removeDifference("using");
             if (!differences.hasDifferences()) {
                 return new Change[0];
             }
         }
-
         return super.fixChanged(changedObject, differences, control, referenceDatabase, comparisonDatabase, chain);
     }
 }

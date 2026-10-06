@@ -365,6 +365,9 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
      * Returns the application main class for a task that runs against the application, or fails the task with
      * an explanation when the project has none, as is the case for a plugin without an {@code Application} class.
      *
+     * <p>Task actions call it qualified with the class name: with the configuration cache, an action's closure
+     * does not keep its owner, so an unqualified call would be looked up on the task instead.</p>
+     *
      * @param mainClass the main class found by the {@code findMainClass} task
      * @param taskName the name of the task that requires the main class
      * @return the name of the main class
@@ -419,7 +422,7 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                         def appClassProvider = GrailsGradlePlugin.getMainClassProvider(project)
 
                         it.doFirst {
-                            args << requireMainClass(appClassProvider, it.name)
+                            args << GrailsCliGradlePlugin.requireMainClass(appClassProvider, it.name)
                             it.args(args)
                         }
                     }
@@ -498,7 +501,7 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                 def appClass = GrailsGradlePlugin.getMainClassProvider(project)
 
                 it.doFirst {
-                    it.args(requireMainClass(appClass, it.name))
+                    it.args(GrailsCliGradlePlugin.requireMainClass(appClass, it.name))
                 }
             }
         }
@@ -523,7 +526,7 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                 def appClass = GrailsGradlePlugin.getMainClassProvider(project)
 
                 it.doFirst {
-                    it.args(requireMainClass(appClass, it.name))
+                    it.args(GrailsCliGradlePlugin.requireMainClass(appClass, it.name))
                 }
             }
         }
@@ -555,7 +558,7 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                     def appClassProvider = GrailsGradlePlugin.getMainClassProvider(project)
 
                     it.doFirst {
-                        args << requireMainClass(appClassProvider, it.name)
+                        args << GrailsCliGradlePlugin.requireMainClass(appClassProvider, it.name)
                         it.args(args)
                     }
                 }
@@ -588,7 +591,7 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                     def appClassProvider = GrailsGradlePlugin.getMainClassProvider(project)
 
                     it.doFirst {
-                        args << requireMainClass(appClassProvider, it.name)
+                        args << GrailsCliGradlePlugin.requireMainClass(appClassProvider, it.name)
                         it.args(args)
                     }
 

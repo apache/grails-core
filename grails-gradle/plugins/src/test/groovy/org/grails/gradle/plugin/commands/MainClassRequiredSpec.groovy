@@ -22,18 +22,22 @@ import org.grails.gradle.plugin.core.GradleSpecification
 
 class MainClassRequiredSpec extends GradleSpecification {
 
-    def "the #taskName task explains that it requires an application class"() {
+    def "the #taskName task explains that it requires an application class #cacheDescription"() {
         given: 'a plugin without an Application class'
             def runner = setupTestResourceProject('main-class-required')
 
         when: 'running a task that runs against the application'
-            def result = runner.withArguments(taskName, '--stacktrace').buildAndFail()
+            def result = runner.withArguments(taskName, cacheArgument, '--stacktrace').buildAndFail()
 
         then: 'the failure says what is missing instead of reporting a provider without a value'
             result.output.contains("The '${taskName}' task requires an application class with a main method, but none was found.")
             !result.output.contains('Cannot query the value of this provider because it has no value available')
 
         where:
-            taskName << ['runCommand', 'runScript', 'console', 'shell']
+            [taskName, cacheArgument] << [
+                    ['runCommand', 'runScript', 'console', 'shell'],
+                    ['--no-configuration-cache', '--configuration-cache']
+            ].combinations()
+            cacheDescription = cacheArgument == '--configuration-cache' ? 'with the configuration cache' : 'without the configuration cache'
     }
 }
