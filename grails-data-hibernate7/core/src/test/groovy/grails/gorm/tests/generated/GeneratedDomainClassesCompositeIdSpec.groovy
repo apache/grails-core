@@ -163,11 +163,14 @@ class GeneratedDomainClassesCompositeIdSpec extends HibernateGormDatastoreSpec {
         when:
         GdcCidItem loaded = GdcCidItem.get(new GdcCidItem(region: 'eu', code: 'a'))
 
-        then: "Hibernate's identifier is an instance of the entity class that carries the key; GORM's ident() has no value for a composite identifier, as with the binder"
+        then: "Hibernate's identifier is an instance of the entity class that carries the key; GORM's ident() is a separate instance of the same class that holds a copy of the key properties, as with the binder"
         sessionFactory.persistenceUnitUtil.getIdentifier(loaded).getClass() == GdcCidItem
         sessionFactory.persistenceUnitUtil.getIdentifier(loaded).code == 'a'
         sessionFactory.persistenceUnitUtil.getIdentifier(loaded).region == 'eu'
-        loaded.ident() == null
+        loaded.ident().getClass() == GdcCidItem
+        ((GdcCidItem) loaded.ident()).region == 'eu'
+        ((GdcCidItem) loaded.ident()).code == 'a'
+        !loaded.ident().is(loaded)
         sessionFactory.currentSession.getReference(GdcCidItem, new GdcCidItem(region: 'eu', code: 'a')).label == 'first'
         GdcCidItem.proxy(new GdcCidItem(region: 'eu', code: 'a')).label == 'first'
         GdcCidItem.lock(new GdcCidItem(region: 'eu', code: 'a')).label == 'first'
