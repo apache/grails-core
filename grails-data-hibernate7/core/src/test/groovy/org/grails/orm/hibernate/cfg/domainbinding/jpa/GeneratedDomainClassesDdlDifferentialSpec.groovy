@@ -60,21 +60,20 @@ import org.grails.orm.hibernate.HibernateDatastore
 class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
 
     /**
-     * The differences kept on purpose: an id, the reason it cannot or should not be removed, and the test that selects it.
-     * Empty while every difference class is fixed.
+     * The difference classes kept on purpose, each with the reason it cannot or should not be removed ({@code classify} names them).
      */
     private static final List<Map> KNOWN = [
-            [id: 'LIST_INDEX_CHECK', reason: 'not yet analysed'],
-            [id: 'ENUM_COLUMN_EXTRAS', reason: 'not yet analysed'],
+            [id: 'CIRCULAR_MANY_TO_MANY', reason: 'A self-referencing many-to-many (one entity on both sides) names its join table columns differently. The binder changes the mapping of the other side while it binds (ManyToOneBinder.prepareCircularManyToMany), so the key name of the side bound first is the default and of the side bound second is <property>_id: the result depends on second-pass order and the two sides name different columns of one table (a naming inconsistency, no data loss in a write-one-side, read-both probe). The generator applies one rule to both sides. Matching would reproduce an order-dependent result. 1 table in the scanned domains (GenMmSelf).'],
+            [id: 'COLUMN_ORDER', reason: 'The order of the columns inside a table: Hibernate\'s column ordering strategy orders the generated tables by size and name, the binder\'s tables keep the order the binder created them in for the entities of a composite key whose column types the binder swaps (see COMPOSITE_KEY_ORDER) and for the table of a table id generator (next_val, sequence_name). A schema diff tool (Liquibase diff, hibernate validate) does not compare column order, and no annotation or public boot-model setter states the binder\'s order. Cosmetic.'],
+            [id: 'COMPOSITE_KEY_ORDER', reason: 'Foreign keys and primary keys over a composite identifier whose parts are mapped in an order other than the sorted one. Hibernate\'s @IdClass key is sorted by property name. (a) Types: the binder names the foreign key columns after the parts in the mapped order but gives them the types of the sorted referenced key, so a part of another type than its neighbour gets the NAME of the other part (child.parent_grand_parent_name is INTEGER, referencing the integer luckyNumber): a binder defect that mislabels columns, and the generated mode names them correctly; matching it would mean mislabelling columns on purpose. (b) Order: the foreign key columns follow the mapping in the binder and the sorted key in the generated mode, and the primary key of Thing follows the order of its unique group in the binder (PrimaryKey.orderingUniqueKey); both are positional matches of the same columns, so the data is the same, the constraint differs for a schema diff. No public API gives the binder\'s order for the generated key (the binder takes it from an internal ordering of its own component). 4 domains in the scanned test domains, all with composite keys of 2 or more parts that are not mapped in sorted order.'],
+            [id: 'ENUM_COLUMN_EXTRAS', reason: 'A binder defect (pinned in GrailsDomainBinderOptionDefectSpec): EnumTypeBinder ignores the comment and default expressions of an enum column\'s mapping. The generated mode honours them, so a database created by the binder lacks a default and a comment that the mapping states. Matching the binder would drop what the mapping says; decision for the lead (the 8.x line has the same defect).'],
+            [id: 'IGNORE_NOT_FOUND_FOREIGN_KEY', reason: 'ignoreNotFound: true: Hibernate\'s @NotFound(IGNORE) disables the foreign key (SimpleValue.disableForeignKey, there is no enabling counterpart), the binder keeps it, which makes the option contradict itself (a dangling reference cannot exist). Re-creating the key would need Table.createForeignKey with a name computed through the implicit naming strategy\'s internal ForeignKeyNameSource. Hibernate\'s own behaviour is arguably the right one; decision for the lead. 1 association in the scanned domains.'],
+            [id: 'INVERSE_JOIN_TABLE_NAME', reason: 'A binder defect (pinned in ManyToManyOwnershipDefectSpec): when only the owning side of a many-to-many names the join table, the inverse side computes the default name and the binder creates a second, unused table for it. The generated mode creates the table the owning side names (Hibernate derives the inverse side from mappedBy), so the unused table is absent. Nothing reads or writes the binder\'s extra table. 3 tables in the scanned domains.'],
+            [id: 'LIST_INDEX_CHECK', reason: 'Hibernate adds check (<index column> >= 0) to the index column of every list (IndexColumn.addIndexCheckConstraint, always, for @OrderColumn) and offers no annotation to avoid it; Column.getCheckConstraints() is unmodifiable and Column has no removal method (Column.copy shares the list), so it cannot be removed through public API, only by reflection on the private list, which is not done. The check can never reject a value GORM writes (indexes start at 0). 18 list columns in the scanned domains. Decision for the lead: accept the check.'],
             [id: 'MAP_ELEMENT_NULLABLE', reason: 'The mapping of a map of values states nullable: false on the element column and the binder leaves the column nullable (it ignores the option, like the enum column extras); the generated mode honours the mapping, so a database created by the binder has a nullable column where the generated mode creates NOT NULL. Matching the binder would drop a constraint the mapping states.'],
-            [id: 'CIRCULAR_MANY_TO_MANY', reason: 'not yet analysed'],
-            [id: 'COLUMN_ORDER', reason: 'not yet analysed'],
-            [id: 'COMPOSITE_KEY_ORDER', reason: 'not yet analysed'],
-            [id: 'IGNORE_NOT_FOUND_FOREIGN_KEY', reason: 'not yet analysed'],
-            [id: 'SEQUENCE', reason: 'not yet analysed'],
-            [id: 'MAP_UNUSED_COLUMN', reason: 'not yet analysed'],
-            [id: 'INVERSE_JOIN_TABLE_NAME', reason: 'not yet analysed'],
-            [id: 'UNIQUE_GROUP_ON_ENUM', reason: 'not yet analysed'],
+            [id: 'MAP_UNUSED_COLUMN', reason: 'The binder leaves an unused nullable column in the table of a map of values (the element it bound before the map replaced it, attributes_java_lang_string); the generated mode creates no such column. Nothing reads the extra column; an existing database keeps it (update does not drop columns).'],
+            [id: 'SEQUENCE', reason: 'A generator mapped on one part of a composite identifier (idColumn generator: \'sequence\'): the binder creates the sequence, Hibernate\'s annotation binder has no generator for a part of a non-aggregated identifier (an @IdClass key is assigned), so there is nothing to create it for. 1 mapping in the scanned domains (Tooth/ToothDisease), whose composite key parts are assigned in both modes.'],
+            [id: 'UNIQUE_GROUP_ON_ENUM', reason: 'A binder defect (pinned in GrailsDomainBinderOptionDefectSpec): a unique group that includes an enum property is dropped by the binder. The generated mode creates the constraint the mapping states, so a database created by the binder lacks it and `update` would add it. 2 groups in the scanned domains.']
     ]
 
     /**
@@ -300,7 +299,8 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
             foreignKeys[key.name] = [
                     columns  : key.columns*.name,
                     refTable : key.referencedTable?.name,
-                    refCols  : key.referencedColumns*.name,
+                    // a key with no referenced columns references the primary key of the table
+                    refCols  : key.referencedColumns.isEmpty() ? key.referencedTable?.primaryKey?.columns*.name : key.referencedColumns*.name,
                     onDelete : key.onDeleteAction?.toString(),
                     created  : key.creationEnabled,
                     physical : key.physicalConstraint,
@@ -503,7 +503,10 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
         Map<String, List<Map>> byClass = differences.groupBy { Map d -> d.cls }
         byClass.sort { a, b -> a.key <=> b.key }.each { String key, List<Map> members ->
             Map entry = knownEntry(members.first())
-            report << "${members.size().toString().padLeft(5)}  ${key}${entry != null ? '   KNOWN ' + entry.id : ''}\n"
+            report << "${members.size().toString().padLeft(5)}  ${key}${entry != null ? '   KNOWN' : ''}\n"
+            if (entry != null) {
+                report << "       reason: ${entry.reason}\n"
+            }
             report << "       e.g. ${members.first().group} / ${members.first().table}: ${members.first().detail}\n"
             members.groupBy { Map d -> "${d.kind} on ${d.collections}".toString() }.sort().each { String shape, List<Map> shaped ->
                 report << "       - ${shaped.size()} x ${shape}\n"
