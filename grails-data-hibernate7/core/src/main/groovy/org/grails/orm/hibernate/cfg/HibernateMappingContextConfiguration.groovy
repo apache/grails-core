@@ -95,6 +95,10 @@ class HibernateMappingContextConfiguration extends Configuration
         new AnnotationTypeFilter(MappedSuperclass, false),
     ] as TypeFilter[]
     private static final String FALSE_LITERAL = 'false'
+
+    // Literal copy of org.hibernate.envers.configuration.EnversSettings.DO_NOT_AUDIT_OPTIMISTIC_LOCKING_FIELD: Envers is not a
+    // dependency of this module
+    private static final String ENVERS_DO_NOT_AUDIT_OPTIMISTIC_LOCKING_FIELD = 'org.hibernate.envers.do_not_audit_optimistic_locking_field'
     private final Class<? extends CurrentSessionContext> currentSessionContext = GrailsSessionContext
     private final Set<Class> additionalClasses = new HashSet<>()
     protected String sessionFactoryBeanName = 'sessionFactory'
@@ -365,6 +369,13 @@ class HibernateMappingContextConfiguration extends Configuration
 
         StandardServiceRegistryBuilder standardServiceRegistryBuilder =
                 createStandardServiceRegistryBuilder(bootstrapServiceRegistry).applySettings((Map) properties)
+
+        if (generatedBinder != null && !properties.containsKey(ENVERS_DO_NOT_AUDIT_OPTIMISTIC_LOCKING_FIELD)) {
+            // Binder mode never marks the version as one for Envers, which therefore audits it as a plain property and the
+            // audit tables of an existing application have the column. A generated entity carries a JPA @Version, which
+            // Envers skips by default. A value the user sets always wins.
+            standardServiceRegistryBuilder.applySetting(ENVERS_DO_NOT_AUDIT_OPTIMISTIC_LOCKING_FIELD, FALSE_LITERAL)
+        }
 
         Object dataSource = properties.get(JdbcSettings.JAKARTA_NON_JTA_DATASOURCE)
         if (dataSource instanceof DataSource) {

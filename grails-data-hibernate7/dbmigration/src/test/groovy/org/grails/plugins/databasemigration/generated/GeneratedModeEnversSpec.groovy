@@ -18,6 +18,7 @@
  */
 package org.grails.plugins.databasemigration.generated
 
+import groovy.sql.Sql
 import grails.gorm.annotation.Entity
 import org.hibernate.Session
 import org.hibernate.boot.spi.MetadataImplementor
@@ -141,7 +142,7 @@ class GeneratedModeEnversSpec extends Specification {
                 generatedTables.findAll { String name, List<String> columns -> !name.endsWith('_aud') }
 
         and: 'the audit table of the entity differs only in the columns named in the next feature'
-        binderTables['envers_book_aud'] - generatedTables['envers_book_aud'] == ['secret', 'version']
+        binderTables['envers_book_aud'] - generatedTables['envers_book_aud'] == ['secret']
         generatedTables['envers_book_aud'] - binderTables['envers_book_aud'] == []
 
         and: 'the revisions and the audit queries return the same'
@@ -158,13 +159,79 @@ class GeneratedModeEnversSpec extends Specification {
         then: 'binder mode audits both, because Envers reads the getter of a property accessed property and the Groovy field is the one annotated, and the version has no @Version annotation to recognise'
         binder['envers_book_aud'].containsAll(['secret', 'version'])
 
-        and: 'generated mode puts the annotation on the field Envers reads and the version carries @Version'
+        and: 'generated mode puts the annotation on the field Envers reads, and audits the version as binder mode does'
         !generated['envers_book_aud'].contains('secret')
-        !generated['envers_book_aud'].contains('version')
+        generated['envers_book_aud'].contains('version')
 
-        and: 'Envers\' own setting audits the version in generated mode too'
+        and: 'Envers\' own setting, which a user can still set, gives the same'
         generatedWithVersion['envers_book_aud'].contains('version')
         !generatedWithVersion['envers_book_aud'].contains('secret')
+    }
+
+    def "a user value of the Envers optimistic locking setting wins over the generated mode default"() {
+        when:
+        Map generated = columnsByTable(boot(true, [EnversVersioned],
+                ['hibernate.additionalProperties': ['org.hibernate.envers.do_not_audit_optimistic_locking_field': 'true']]))
+
+        then:
+        !generated['envers_versioned_aud'].contains('version')
+        generated['envers_versioned_aud'].contains('name')
+    }
+
+    private static Map versionAudit(HibernateDatastore datastore, String table, String versionColumn) {
+        Map result = [:]
+        Sql sql = new Sql((javax.sql.DataSource) datastore.connectionSources.defaultConnectionSource.dataSource)
+        try {
+            result.rows = versionColumn == null ? null :
+                    sql.rows("select revtype, $versionColumn as v from $table order by rev".toString())
+                            .collect { [it.revtype, it.v] }
+            result.columns = sql.rows("select column_name, data_type, is_nullable from information_schema.columns where lower(table_name) = ${table} order by column_name")
+                    .collect { [it.column_name.toLowerCase(), it.data_type, it.is_nullable] }
+        } finally {
+            sql.close()
+        }
+        return result
+    }
+
+    private static void changeTwice(Class type, String field) {
+        Long id
+        type.withTransaction {
+            id = type.newInstance(name: 'a').save(flush: true, failOnError: true).id
+        }
+        2.times { int i ->
+            type.withTransaction {
+                def found = type.get(id)
+                found.name = "b${i}".toString()
+                found.save(flush: true, failOnError: true)
+            }
+        }
+        type.withTransaction {
+            type.get(id).delete(flush: true)
+        }
+    }
+
+    def "the audit table and its rows carry the optimistic locking version as in binder mode for #type.simpleName"() {
+        when:
+        HibernateDatastore binderDatastore = boot(false, [type])
+        changeTwice(type, 'name')
+        Map binder = versionAudit(binderDatastore, table, versionColumn)
+        HibernateDatastore generatedDatastore = boot(true, [type])
+        changeTwice(type, 'name')
+        Map generated = versionAudit(generatedDatastore, table, versionColumn)
+
+        then: 'the audit table has the same columns, types and nullability'
+        binder.columns == generated.columns
+        binder.columns*.getAt(0).contains(versionColumn) == hasVersion
+
+        and: 'the version written at each revision is the same'
+        binder.rows == generated.rows
+        !hasVersion || binder.rows*.getAt(1).any { it != null }
+
+        where:
+        type                | table                    | versionColumn | hasVersion
+        EnversVersioned     | 'envers_versioned_aud'   | 'version'     | true
+        EnversUnversioned   | 'envers_unversioned_aud' | null          | false
+        EnversCustomVersion | 'envers_custom_version_aud' | 'lock_no'  | true
     }
 
     private static Map shelfHistory() {
@@ -245,4 +312,28 @@ class EnversShelf {
 class EnversItem {
     String label
     static belongsTo = [shelf: EnversShelf]
+}
+
+@Audited
+@Entity
+class EnversVersioned {
+    String name
+}
+
+@Audited
+@Entity
+class EnversUnversioned {
+    String name
+    static mapping = {
+        version false
+    }
+}
+
+@Audited
+@Entity
+class EnversCustomVersion {
+    String name
+    static mapping = {
+        version 'lock_no'
+    }
 }
