@@ -45,15 +45,13 @@ tasks.withType(Test).configureEach {
     }
 
     useJUnitPlatform()
-    // This script does not apply gradle/test-config.gradle, so forkEvery would otherwise stay 0
-    // and one worker would run every class assigned to the task. :grails-data-hibernate7-core:test
-    // retains a SessionFactory per spec for the life of that worker. After the 8.1.x specs landed
-    // on 9.0.x, a worker that draws a large slice of this task exhausts its heap (Java heap space).
-    // That is what fails the Hibernate 7 CI shards that include such a slice, and the same task
-    // fails coverage and the Groovy snapshot canary. Recycle on the unit-test cadence. Cap the
-    // single worker at 2g and leave maxParallelForks at
-    // 1: without a cap the worker takes the ergonomic heap, and several of those plus the 3g
-    // daemon do not fit a 16 GB runner.
+    // This script does not apply gradle/test-config.gradle, so forkEvery stays 0 and maxHeapSize
+    // stays unset. Gradle then runs every class in one worker and gives that worker 512m.
+    // :grails-data-hibernate7-core:test is large enough to exhaust that heap (Java heap space).
+    // That fails the Hibernate 7 CI shards that include the task, plus coverage and the Groovy
+    // snapshot canary. Spec teardown closes the SessionFactory; the worker is too small for the
+    // whole suite, not leaking one factory per spec. Recycle on the unit-test cadence and raise
+    // the worker to 2g.
     forkEvery = hasProperty('forkEveryUnitTest') ? getProperty('forkEveryUnitTest') as long : (isCiBuild ? 50 : 100)
     maxHeapSize = '2048m'
     // Lets TCK specs gate features on the running suite. Spock evaluates @IgnoreIf/@Requires
