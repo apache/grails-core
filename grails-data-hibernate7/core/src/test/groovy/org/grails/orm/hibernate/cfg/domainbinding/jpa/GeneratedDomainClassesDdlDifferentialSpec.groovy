@@ -75,7 +75,6 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
             [id: 'MAP_UNUSED_COLUMN', reason: 'not yet analysed'],
             [id: 'INVERSE_JOIN_TABLE_NAME', reason: 'not yet analysed'],
             [id: 'UNIQUE_GROUP_ON_ENUM', reason: 'not yet analysed'],
-            [id: 'UNIQUE_KEY_NAME', reason: 'not yet analysed'],
     ]
 
     /**
@@ -310,7 +309,8 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
         }
         Map<String, Map> uniqueKeys = [:]
         for (UniqueKey key : table.uniqueKeys.values()) {
-            uniqueKeys[key.name] = [columns: key.columns*.name, order: key.columnOrderMap.values().toList(), nameExplicit: key.nameExplicit, explicit: key.explicit]
+            // a key with no explicit name gets the database's own, so its name is not part of the schema
+            uniqueKeys[key.nameExplicit ? key.name : "(unnamed over ${key.columns*.name.sort()})".toString()] = [columns: key.columns*.name, order: key.columnOrderMap.values().toList(), nameExplicit: key.nameExplicit, explicit: key.explicit]
         }
         Map<String, Map> indexes = [:]
         for (Index index : table.indexes.values()) {

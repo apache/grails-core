@@ -39,6 +39,7 @@ import org.hibernate.mapping.Property
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.Set as HibernateSet
 import org.hibernate.mapping.Table
+import org.hibernate.mapping.UniqueKey
 import org.hibernate.mapping.Value
 import org.springframework.beans.BeanUtils
 
@@ -232,6 +233,33 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
         }
         for (Property property : persistentClass.declaredProperties) {
             alignProperty(property, entity, real)
+        }
+        alignUniqueKeys(persistentClass, entity)
+    }
+
+    /**
+     * Hibernate's annotation binder names the unique keys of a table and marks them as stated by the user: the schema then has
+     * them as named constraints, and the key an {@code orderingUniqueKey} gives the primary key is named too. The domain binder's keys
+     * are neither, and are created unnamed with the database's own name. The natural id's key takes its columns in the order the
+     * mapping names the properties, as the binder's does, where Hibernate's follow the order of the fields.
+     */
+    private void alignUniqueKeys(PersistentClass persistentClass, GrailsHibernatePersistentEntity entity) {
+        for (UniqueKey key : persistentClass.table.uniqueKeys.values()) {
+            key.nameExplicit = false
+            key.explicit = false
+        }
+        NaturalIdFacets naturalId = persistentClass instanceof RootClass ? generator.naturalIdFacets(entity) : null
+        if (naturalId != null) {
+            List<String> columns = naturalId.propertyNames().collectMany { String name ->
+                persistentClass.getProperty(name).columns*.name
+            }
+            for (UniqueKey key : persistentClass.table.uniqueKeys.values()) {
+                if (key.columns*.name.toSet() == columns.toSet()) {
+                    List<Column> ordered = key.columns.sort(false) { Column column -> columns.indexOf(column.name) }
+                    key.columns.clear()
+                    key.columns.addAll(ordered)
+                }
+            }
         }
     }
 

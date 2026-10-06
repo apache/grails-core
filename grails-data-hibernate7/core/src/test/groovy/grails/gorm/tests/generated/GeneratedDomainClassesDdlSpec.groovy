@@ -34,7 +34,7 @@ import org.hibernate.mapping.RootClass
 class GeneratedDomainClassesDdlSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        registerGeneratedDomainClasses(GddVehicle, GddCar, GddTruck, GddStudent, GddSchool, GddTeacher, GddBadge, GddToken)
+        registerGeneratedDomainClasses(GddVehicle, GddCar, GddTruck, GddStudent, GddSchool, GddTeacher, GddBadge, GddToken, GddMember, GddAccount)
     }
 
     private List<String> checkClauses(String table) {
@@ -120,6 +120,29 @@ class GeneratedDomainClassesDdlSpec extends HibernateGormDatastoreSpec {
         then:
         GddStudent.get(student.id).schools*.name == ['x']
         GddStudent.get(student.id).nicknames == ['a', 'b'] as Set
+    }
+
+    private List<String> uniqueConstraintNames(String table) {
+        return query("select CONSTRAINT_NAME from INFORMATION_SCHEMA.TABLE_CONSTRAINTS where CONSTRAINT_TYPE = 'UNIQUE' and upper(TABLE_NAME) = '${table.toUpperCase()}'".toString())
+    }
+
+    private List<String> uniqueColumns(String table) {
+        return query('select k.COLUMN_NAME from INFORMATION_SCHEMA.KEY_COLUMN_USAGE k join INFORMATION_SCHEMA.TABLE_CONSTRAINTS t ' +
+                'on k.CONSTRAINT_NAME = t.CONSTRAINT_NAME and k.CONSTRAINT_SCHEMA = t.CONSTRAINT_SCHEMA ' +
+                "where t.CONSTRAINT_TYPE = 'UNIQUE' and upper(t.TABLE_NAME) = '${table.toUpperCase()}' order by k.ORDINAL_POSITION".toString())*.toLowerCase()
+    }
+
+    void "a unique group is an unnamed constraint over its columns, as with the domain binder, not one named by Hibernate"() {
+        expect:
+        uniqueConstraintNames('gdd_member').size() == 1
+        !uniqueConstraintNames('gdd_member')[0].toUpperCase().startsWith('UK')
+        uniqueColumns('gdd_member').toSet() == ['org', 'login'].toSet()
+    }
+
+    void "the unique key of a natural id takes its columns in the order the mapping names the properties, and has no name of its own"() {
+        expect:
+        uniqueColumns('gdd_account') == ['zeta', 'alpha']
+        !uniqueConstraintNames('gdd_account')[0].toUpperCase().startsWith('UK')
     }
 
     void "an identifier mapped with type uuid-binary is a binary column, not the database's uuid type, as with the domain binder"() {
@@ -213,5 +236,23 @@ class GddToken {
     String name
     static mapping = {
         id generator: 'uuid2', type: 'uuid-binary'
+    }
+}
+
+@Entity
+class GddMember {
+    String org
+    String login
+    static constraints = {
+        login unique: 'org'
+    }
+}
+
+@Entity
+class GddAccount {
+    String zeta
+    String alpha
+    static mapping = {
+        id natural: ['zeta', 'alpha']
     }
 }
