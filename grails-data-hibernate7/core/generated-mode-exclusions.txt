@@ -31,7 +31,6 @@ org.grails.orm.hibernate.cfg.domainbinding.jpa.EntityCollectionKeyDefectSpec
 org.grails.orm.hibernate.cfg.domainbinding.jpa.GrailsDomainBinderOptionDefectSpec
 org.grails.orm.hibernate.cfg.domainbinding.jpa.GrailsDomainGeneratorDifferentialSpec
 org.grails.orm.hibernate.cfg.domainbinding.jpa.GrailsDomainGeneratorIndexSpec
-org.grails.orm.hibernate.cfg.domainbinding.jpa.GrailsDomainGeneratorLazyPropertySpec
 org.grails.orm.hibernate.cfg.domainbinding.jpa.GrailsDomainGeneratorNaturalIdSpec
 org.grails.orm.hibernate.cfg.domainbinding.jpa.GrailsDomainGeneratorSpec
 org.grails.orm.hibernate.cfg.domainbinding.jpa.GrailsDomainGeneratorTenantSpec
