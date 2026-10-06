@@ -56,7 +56,7 @@ class ServerInteractionSpec extends Specification {
         where:
         answer                                              | phase            | status || available
         'as the startup progress page'                      | 'CREATING_BEANS' | 503    || false
-        'as the application still running its startup hooks' | 'INITIALIZING'   | 503    || false
+        'as the startup progress page, after a failed start' | 'FAILED'         | 503    || false
         'that the application is ready'                     | 'READY'          | 200    || true
         'as the application'                                | null             | 200    || true
         'as the application, with an error'                 | null             | 404    || true

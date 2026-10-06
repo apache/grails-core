@@ -47,10 +47,11 @@ trait ServerInteraction {
     }
 
     /**
-     * Returns true if the server is available, which is once the application answers on the port. While a
-     * Grails application starts, its startup progress page can answer on the port before the application does,
-     * marking each response with the {@code Grails-Startup-Phase} header, so a response that carries it means the
-     * application is still starting.
+     * Returns true if the server is available, which is once the application's web server answers on the port.
+     * An application that uses the {@code grails-startup-progress} module answers on the port before its web
+     * server starts, marking each response with the {@code Grails-Startup-Phase} header, so a response that
+     * carries it means the application is still starting. Once the web server has the port, it answers this
+     * request itself, even while {@code BootStrap} runs, as it does for an application without that module.
      *
      * @param host The host
      * @param port The port

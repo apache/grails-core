@@ -263,6 +263,11 @@ class StartupProgressSpec extends Specification {
         request('/app/hello').body == 'hello'
         request('/app/hello').phase == null
 
+        and: 'so does the HEAD request grails run-app makes to see whether the application is up'
+        Response head = request('/app/', HTML, 'HEAD')
+        head.status == 404
+        head.phase == null
+
         when: 'the startup hook finishes'
         Gates.startupHook.countDown()
         runner.join(30_000)

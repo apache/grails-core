@@ -108,7 +108,7 @@ Startup progress is shown at http://localhost:8080/?grailsStartupToken=… until
 
 Opening that address once signs the browser in for as long as the application runs, through restarts by Spring Boot DevTools, and takes the token back out of the address bar. A browser opened by the application, as described below, is signed in already. Anyone else reaching the port sees only the progress bar: the details are left out of the page and out of its data, rather than hidden in them. The sign-in is a cookie, so it covers every tab of the browser that signed in. The token is made afresh each time the JVM starts and is only ever written to the log, so seeing the details takes the same access as reading the log.
 
-Until the embedded server takes the port over, the page is served by the HTTP server built into the JDK, so it changes nothing about how the application itself serves requests. `grails run-app` waits for the application to answer, not the page, before it says the application is running. It is not served when the application:
+Until the embedded server takes the port over, the page is served by the HTTP server built into the JDK, so it changes nothing about how the application itself serves requests. In the interactive shell, `grails run-app` keeps waiting while the page holds the port, and stops waiting once the embedded server has taken the port over, as it does for an application without the module, so it does not wait for `BootStrap`. The page is not served when the application:
 
 * is deployed as a WAR to a servlet container
 * uses a random port (`server.port: 0`) or SSL
