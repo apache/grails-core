@@ -140,6 +140,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsTableGenerator
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateAssociation
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateCustomProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedCollectionProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty
@@ -582,8 +583,13 @@ class GrailsDomainGenerator {
                 return "Association property [${property.name}] of [${entity.name}]: ${problem}"
             }
         }
-        if ((property instanceof HibernateSimpleProperty || property instanceof HibernateTenantIdProperty) && !decideType(property).supported) {
+        if ((property instanceof HibernateSimpleProperty || property instanceof HibernateTenantIdProperty ||
+                isCustomProperty(property)) && !decideType(property).supported) {
             return typeNotSupported(property, decideType(property))
+        }
+        if (isCustomProperty(property)) {
+            return "Property [${property.name}] of [${entity.name}] is a HibernateCustomProperty with no type mapped, " +
+                    'which the generator does not support yet: it states a custom type only when the mapping names a UserType class'
         }
         return "Property [${property.name}] of [${entity.name}] is a ${property.getClass().simpleName}, " +
                 'which the generator does not support yet'
@@ -925,8 +931,9 @@ class GrailsDomainGenerator {
     /**
      * @return whether the generator can describe the property today: a plain single-column basic property, a
      *     derived (formula) property, the tenant id (an ordinary column), the version, an enum, an embedded object whose own properties are all
-     *     supported, a collection of basic values or enums, a many-to-one association, or the simple identifier. Custom types,
-     *     multi-column properties and the other associations are not supported yet.
+     *     supported, a collection of basic values or enums, a many-to-one association, the simple identifier, or a property of a type
+     *     GORM does not know ({@link HibernateCustomProperty}) that the mapping gives a {@code UserType} class. Custom types with no
+     *     type mapped, multi-column properties and the other associations are not supported yet.
      */
     boolean supports(HibernatePersistentProperty property) {
         if (property instanceof HibernateSimpleIdentityProperty) {
@@ -944,7 +951,8 @@ class GrailsDomainGenerator {
         if (property instanceof HibernateToManyEntityProperty) {
             return toManyProblem((HibernateToManyEntityProperty) property) == null
         }
-        if (!(property instanceof HibernateSimpleProperty) && !(property instanceof HibernateTenantIdProperty)) {
+        if (!(property instanceof HibernateSimpleProperty) && !(property instanceof HibernateTenantIdProperty) &&
+                !isCustomProperty(property)) {
             return false
         }
         PropertyConfig mappedForm = property.hibernateMappedForm
@@ -955,7 +963,17 @@ class GrailsDomainGenerator {
             // the enum binder never reads the formula, it always binds a column
             return false
         }
-        return decideType(property).supported
+        TypeDecision decision = decideType(property)
+        // the binder binds a custom property like a simple one, from the type its mapping names; with none, the type it resolves
+        // from the class alone is not one an annotation states, so only a mapped UserType class is supported
+        return decision.supported && (!isCustomProperty(property) || decision.facets != null)
+    }
+
+    /**
+     * @return whether the property is of a type GORM does not know and that is not an enum: the binder binds it like a simple property
+     */
+    private static boolean isCustomProperty(HibernatePersistentProperty property) {
+        return property instanceof HibernateCustomProperty && !(property instanceof HibernateEnumProperty)
     }
 
     /**

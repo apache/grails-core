@@ -90,10 +90,6 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
             'which is not a persistent property of the entity',
             'is a registered type with type parameters',
             'the index column of the map is mapped with the type',
-            // not stated by an annotation because the generator does not describe a custom-type property yet (a value object mapped
-            // with type: SomeUserType, UserTypeComparisonItem and JpaCriteriaQueryCreatorSpecGraded in the scanned domains): a gap to
-            // close by treating it like a simple property with a UserType, not a mapping that cannot be stated
-            'is a HibernateCustomProperty, which the generator does not support yet',
     ]
 
     private static final AtomicInteger BOOTS = new AtomicInteger()

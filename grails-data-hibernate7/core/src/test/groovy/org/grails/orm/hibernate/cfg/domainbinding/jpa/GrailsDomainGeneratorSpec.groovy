@@ -122,6 +122,7 @@ import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.grails.orm.hibernate.cfg.HibernateMappingContext
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateCustomProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyEntityProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty
@@ -161,7 +162,7 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
                 GenEmbedOwner, GenEmbedOther, GenEmbedBase, GenEmbedChild, GenEmbedFormulaOwner, GenCollSingle, GenCollKinds, GenCollLazy,
                 GenFkTarget, GenFkOwned, GenFkOwner, GenFkCascades, GenFkNodeA, GenFkNodeB, GenFkHasOneOwner, GenFkHasOneDetail, GenOneFace, GenOneNose, GenFkManyOne, GenFkOneSide, GenFkSub, GenFkSubRoot,
                 GenOmParent, GenOmChild, GenOmListed, GenOmOrdered, GenOmOrphan, GenOmFetched, GenOmTag, GenOmStep, GenOmKept, GenOmSortedOwner, GenOmMapOwner, GenMapBidiOwner, GenMapBidiChild, GenEmbAssocOwner,
-                GenMmStudent, GenMmCourse, GenMmPerson, GenParamsOnly, GenDecimal, GenUnversioned, GenUnversionedRoot, GenUnversionedChild, GenConverted)
+                GenMmStudent, GenMmCourse, GenMmPerson, GenParamsOnly, GenDecimal, GenUnversioned, GenUnversionedRoot, GenUnversionedChild, GenConverted, GenValueTyped)
     }
 
     List<StandardServiceRegistry> registries = []
@@ -396,6 +397,24 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
     private static Class<?> converterClass(BasicValue.Resolution<?> resolution) {
         def converter = resolution.valueConverter
         return converter.hasProperty('converterBean') ? converter.converterBean.beanClass : converter.getClass()
+    }
+
+    void "a value object of a class GORM does not know, mapped with a UserType class, becomes @Type like a simple property"() {
+        given:
+        GrailsHibernatePersistentEntity entity = unbound(GenValueTyped)
+        HibernatePersistentProperty property = entity.getHibernatePropertyByName('amount')
+
+        when:
+        Class<?> valueTyped = generate(GenValueTyped)
+
+        then:
+        property instanceof HibernateCustomProperty
+        newGenerator().supports(property)
+        newGenerator().typeFacets(property).userType() == GenMoneyType
+        valueTyped.getDeclaredField('amount').getAnnotation(Type).value() == GenMoneyType
+        valueTyped.getDeclaredField('amount').type == GenMoney
+        valueTyped.getDeclaredField('amount').isAnnotationPresent(Column)
+        !valueTyped.getDeclaredField('name').isAnnotationPresent(Type)
     }
 
     void "a property without an explicit type carries no type annotation"() {
@@ -2538,6 +2557,84 @@ class GenTyped {
         body type: 'text'
         shout type: GenUpperType, params: [mode: 'loud', other: 'x']
         kind type: GenKindType
+    }
+}
+
+@Entity
+class GenValueTyped {
+
+    String name
+    GenMoney amount
+
+    static mapping = {
+        amount type: GenMoneyType
+    }
+}
+
+class GenMoney implements Serializable {
+
+    final long cents
+
+    GenMoney(long cents) {
+        this.cents = cents
+    }
+}
+
+class GenMoneyType implements UserType<GenMoney> {
+
+    @Override
+    int getSqlType() {
+        return Types.BIGINT
+    }
+
+    @Override
+    Class<GenMoney> returnedClass() {
+        return GenMoney
+    }
+
+    @Override
+    boolean equals(GenMoney x, GenMoney y) {
+        return x?.cents == y?.cents
+    }
+
+    @Override
+    int hashCode(GenMoney x) {
+        return Long.hashCode(x.cents)
+    }
+
+    @Override
+    GenMoney nullSafeGet(ResultSet rs, int position, WrapperOptions options) throws SQLException {
+        long cents = rs.getLong(position)
+        return rs.wasNull() ? null : new GenMoney(cents)
+    }
+
+    @Override
+    void nullSafeSet(PreparedStatement st, GenMoney value, int index, WrapperOptions options) throws SQLException {
+        if (value == null) {
+            st.setNull(index, Types.BIGINT)
+        } else {
+            st.setLong(index, value.cents)
+        }
+    }
+
+    @Override
+    GenMoney deepCopy(GenMoney value) {
+        return value
+    }
+
+    @Override
+    boolean isMutable() {
+        return false
+    }
+
+    @Override
+    Serializable disassemble(GenMoney value) {
+        return value
+    }
+
+    @Override
+    GenMoney assemble(Serializable cached, Object owner) {
+        return (GenMoney) cached
     }
 }
 
