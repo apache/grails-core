@@ -54,7 +54,7 @@ skill 'org.apache.grails.skills:grails-8-upgrade:{version}'
 
 ==== 1. Java 21 Minimum Requirement
 
-Grails 8 requires a minimum of Java 21 to both build and run Grails applications.
+Grails 8 requires a minimum of Java 21 to both build and run Grails applications. Grails 8 also supports Java 25 (the next LTS after Java 21).
 This is an increase from Grails 7, which required Java 17.
 Update your project's toolchain, CI pipelines, and deployment environments to use JDK 21 or later.
 

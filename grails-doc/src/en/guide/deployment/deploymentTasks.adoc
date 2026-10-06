@@ -70,12 +70,21 @@ Heap is only part of total memory: allow space for metaspace, code cache, direct
 A container can be killed for exceeding its limit even if the Java heap has not run out of memory.
 Measure resident memory and GC behavior under load rather than copying a fixed heap percentage between applications.
 
-[[java25-memory]]
-=== Java 25 Memory Considerations
+`JAVA_TOOL_OPTIONS` is read by the JVM and works with the exec-form entry point in the Dockerfile.
+`JAVA_OPTS` has no automatic meaning to `java`, and Docker does not expand variables inside an exec-form entry point.
+For a buildpack image, preserve the launcher and use the buildpack's memory configuration, as described in <<deploymentLayeredBuilds,Cloud Native Buildpacks>>.
 
-Java 25 uses more off-heap memory than earlier LTS releases.
-The most significant change is that the metaspace — the native memory region that holds class metadata — is now **unbounded by default**.
-On earlier JDKs the initial metaspace high-water mark was approximately 12 MB; on Java 25 there is no upper limit unless you set one explicitly.
+Write application logs to standard output and standard error for the service manager or container platform to collect, with platform-managed retention.
+Keep uploads and durable data in external storage or persistent volumes; an image's writable layer and `/tmp` are disposable.
+Configure writable paths explicitly when using a read-only root filesystem.
+Heap dumps and other diagnostics need a writable destination with sufficient space and controlled access.
+Keep JVM debugging and management interfaces private; they should not be exposed through the application's public ingress.
+
+[[java25-memory]]
+=== Java 25 Metaspace and Off-Heap Memory
+
+Java 25 uses more off-heap memory than earlier LTS releases, primarily because newer JVM features, optimized garbage collectors, and container-aware runtimes proactively allocate non-heap space (such as Metaspace, thread stacks, and JFR buffers) to improve performance and reduce GC frequency.
+On earlier JDKs the initial metaspace high-water mark was approximately 12-21 MB; on Java 25 there is no upper limit unless you set one explicitly.
 A Grails application that loads many classes (plugins, Hibernate mappings, GSP-compiled views) can therefore consume substantially more native memory than the same application on Java 21.
 
 In a container environment this matters most: the JVM heap limit (`-Xmx` or `-XX:MaxRAMPercentage`) does not cover metaspace, so a container sized only for the heap can be killed by the container runtime's OOM killer when metaspace grows beyond the remaining native memory budget.
@@ -97,14 +106,6 @@ java -XX:MaxRAMPercentage=60.0 -XX:MaxMetaspaceSize=256m -Dgrails.env=prod -jar 
 ----
 
 Tune `-XX:MaxMetaspaceSize` from a measured baseline: run the application under representative load, observe the metaspace usage with `jcmd <pid> VM.metaspace` or a monitoring agent, and add a safety margin.
-A typical Grails application with Hibernate and a moderate number of plugins stabilizes between 128 MB and 256 MB of metaspace; a large application with many plugins may need more.
-
-If you also want to control how aggressively the JVM reclaims unused metaspace after a GC cycle, set the free-ratio bounds:
-
-[source,bash]
-----
--XX:MinMetaspaceFreeRatio=20 -XX:MaxMetaspaceFreeRatio=80
-----
 
 For a systemd service unit, add the flags to `ExecStart`:
 
@@ -121,16 +122,6 @@ ExecStart=/usr/bin/java \
 NOTE: The `-XX:+/-UseCompressedClassPointers` flag is deprecated in Java 25 and will be removed in a future release.
 If your startup scripts pass `-XX:+UseCompressedClassPointers` (the default), remove it.
 If they pass `-XX:-UseCompressedClassPointers` to disable compressed class pointers, remove it and, if you encounter class-space exhaustion, increase the class space with `-XX:CompressedClassSpaceSize=4g` instead.
-
-`JAVA_TOOL_OPTIONS` is read by the JVM and works with the exec-form entry point in the Dockerfile.
-`JAVA_OPTS` has no automatic meaning to `java`, and Docker does not expand variables inside an exec-form entry point.
-For a buildpack image, preserve the launcher and use the buildpack's memory configuration, as described in <<deploymentLayeredBuilds,Cloud Native Buildpacks>>.
-
-Write application logs to standard output and standard error for the service manager or container platform to collect, with platform-managed retention.
-Keep uploads and durable data in external storage or persistent volumes; an image's writable layer and `/tmp` are disposable.
-Configure writable paths explicitly when using a read-only root filesystem.
-Heap dumps and other diagnostics need a writable destination with sufficient space and controlled access.
-Keep JVM debugging and management interfaces private; they should not be exposed through the application's public ingress.
 
 == Graceful shutdown and rolling updates
 
