@@ -25,8 +25,10 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Stream;
@@ -302,7 +304,7 @@ public final class TagLibraryIndexGenerator {
         configuration.setSourceEncoding(encoding);
         CompilationUnit unit = new CompilationUnit(configuration);
         if (!resolutionRoots.isEmpty()) {
-            unit.setClassNodeResolver(new SourceRootClassNodeResolver(resolutionRoots));
+            unit.setClassNodeResolver(new SourceRootClassNodeResolver(resolutionRoots, encoding));
         }
         for (File source : sources) {
             unit.addSource(source);
@@ -328,13 +330,21 @@ public final class TagLibraryIndexGenerator {
      * namespace, or leave out tags the running application has, and the index would then disagree with
      * what the application does - which is the one thing it must never do. A type that cannot be found
      * in source is left unresolved, and the tag library referring to it is skipped as before.
+     *
+     * <p>A nested class is asked for by its binary name, {@code Outer$Inner}, which no source file is
+     * named after, so it is looked for in its outermost class's source. The compiler also asks for
+     * names that only might be nested - a type named inside {@code Outer} is tried as
+     * {@code Outer$Name} before anything else - so that source answers only for a class it declares.
      */
     private static final class SourceRootClassNodeResolver extends ClassNodeResolver {
 
         private final List<File> roots;
+        private final String encoding;
+        private final Map<File, Set<String>> declaredClasses = new HashMap<>();
 
-        private SourceRootClassNodeResolver(List<File> roots) {
+        private SourceRootClassNodeResolver(List<File> roots, String encoding) {
             this.roots = roots;
+            this.encoding = encoding;
         }
 
         @Override
@@ -354,14 +364,40 @@ public final class TagLibraryIndexGenerator {
         }
 
         private File findSource(String name) {
-            String relativePath = name.replace('.', File.separatorChar) + ".groovy";
+            int nested = name.indexOf('$');
+            String outermost = nested < 0 ? name : name.substring(0, nested);
+            String relativePath = outermost.replace('.', File.separatorChar) + ".groovy";
             for (File root : roots) {
                 File candidate = new File(root, relativePath);
                 if (candidate.isFile()) {
-                    return candidate;
+                    return nested < 0 || declares(candidate, name) ? candidate : null;
                 }
             }
             return null;
+        }
+
+        /**
+         * Whether a source declares a class, read from its syntax tree. Conversion builds the tree and
+         * stops before resolving anything, so this cannot fail on a type the source refers to.
+         */
+        private boolean declares(File source, String className) {
+            return declaredClasses.computeIfAbsent(source, file -> {
+                Set<String> names = new HashSet<>();
+                try {
+                    CompilerConfiguration configuration = new CompilerConfiguration();
+                    configuration.setSourceEncoding(encoding);
+                    CompilationUnit unit = new CompilationUnit(configuration);
+                    unit.addSource(file);
+                    unit.compile(Phases.CONVERSION);
+                    for (ClassNode classNode : collectClassNodes(unit)) {
+                        names.add(classNode.getName());
+                    }
+                }
+                catch (Exception unparseable) {
+                    // Declares nothing that can be read, so the name stays unresolved.
+                }
+                return names;
+            }).contains(className);
         }
     }
 
