@@ -22,6 +22,9 @@ import java.lang.reflect.Field
 
 import groovy.transform.CompileStatic
 import org.hibernate.boot.SessionFactoryBuilder
+import org.hibernate.boot.internal.InFlightMetadataCollectorImpl
+import org.hibernate.boot.internal.MetadataBuildingContextRootImpl
+import org.hibernate.boot.model.source.internal.annotations.AnnotationMetadataSourceProcessorImpl
 import org.hibernate.boot.spi.AdditionalMappingContributions
 import org.hibernate.boot.spi.MetadataBuildingContext
 import org.hibernate.boot.spi.MetadataImplementor
@@ -160,7 +163,25 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
         classLoader.register(generated.values().first().classLoader)
         for (Map.Entry<GrailsHibernatePersistentEntity, Class<?>> entry : generated.entrySet()) {
             generatedByName.put(entry.value.name, new Generated(entry.key, entry.value))
-            contributions.contributeEntity(entry.value)
+        }
+        bindNow(contributions, buildingContext, new ArrayList<Class<?>>(generated.values()))
+    }
+
+    /**
+     * Hibernate binds the classes handed to {@code contributeEntity} only after every {@code AdditionalMappingContributor}
+     * has run, and runs the second passes of those entities later still. A contributor that reads the bound entities, such as
+     * Envers building the audit mappings of the audited ones, would then see none, or collections with no element. The
+     * generated classes are therefore bound here, with the entity hierarchy processing Hibernate applies to such classes and
+     * the second passes it applies to the entities of its main mapping sources, so that a contributor running after this
+     * binder finds the same bound model as it finds for annotated entities.
+     */
+    private static void bindNow(AdditionalMappingContributions contributions, MetadataBuildingContext buildingContext, List<Class<?>> classes) {
+        if (buildingContext instanceof MetadataBuildingContextRootImpl && buildingContext.metadataCollector instanceof InFlightMetadataCollectorImpl) {
+            AnnotationMetadataSourceProcessorImpl.processAdditionalMappings(
+                    classes, null, null, (MetadataBuildingContextRootImpl) buildingContext, buildingContext.buildingOptions)
+            ((InFlightMetadataCollectorImpl) buildingContext.metadataCollector).processSecondPasses(buildingContext)
+        } else {
+            classes.each { Class<?> generatedClass -> contributions.contributeEntity(generatedClass) }
         }
     }
 

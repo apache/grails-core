@@ -183,6 +183,9 @@ class GrailsDomainGenerator {
 
     static final String GENERATED_PACKAGE = 'org.grails.orm.hibernate.generated'
 
+    private static final List<String> VALIDATION_PACKAGES = ['jakarta.validation.constraints.', 'org.hibernate.validator.constraints.']
+    private static final List<String> AUDIT_PACKAGES = ['org.hibernate.envers.']
+
     private final PersistentEntityNamingStrategy namingStrategy
     private final ColumnNameForPropertyAndPathFetcher columnNames
     private final ColumnConfigToColumnBinder columnConfigBinder
@@ -2170,6 +2173,9 @@ class GrailsDomainGenerator {
         EntityFacets facets = entityFacets(entity)
         List<AnnotationDescription> annotations = []
         annotations << AnnotationDescription.Builder.ofType(Entity).define('name', facets.jpaName()).build()
+        for (Annotation audit : auditAnnotations(entity)) {
+            annotations << AnnotationDescription.ForLoadedAnnotation.of(audit)
+        }
 
         if (hierarchy.ownsTable()) {
             AnnotationDescription.Builder table = AnnotationDescription.Builder.ofType(Table).define('name', facets.tableName())
@@ -2334,7 +2340,7 @@ class GrailsDomainGenerator {
         } else if (property instanceof HibernateEnumProperty) {
             annotations << enumAnnotation((HibernateEnumProperty) property)
         }
-        for (Annotation constraint : validationAnnotations(property)) {
+        for (Annotation constraint : carriedAnnotations(property)) {
             annotations << AnnotationDescription.ForLoadedAnnotation.of(constraint)
         }
         return builder.defineField(property.name, type?.javaType() ?: columnFieldType(property), Visibility.PRIVATE)
@@ -2416,7 +2422,7 @@ class GrailsDomainGenerator {
                             hibernateCascade as org.hibernate.annotations.CascadeType[])
                     .build()
         }
-        for (Annotation constraint : validationAnnotations(property)) {
+        for (Annotation constraint : carriedAnnotations(property)) {
             annotations << AnnotationDescription.ForLoadedAnnotation.of(constraint)
         }
         return builder.defineField(property.name, generatedType(property.hibernateAssociatedEntity), Visibility.PRIVATE)
@@ -2514,7 +2520,7 @@ class GrailsDomainGenerator {
                     .define('condition', facets.tenantCondition())
                     .build()
         }
-        for (Annotation constraint : validationAnnotations(property)) {
+        for (Annotation constraint : carriedAnnotations(property)) {
             annotations << AnnotationDescription.ForLoadedAnnotation.of(constraint)
         }
         List<TypeDescription> arguments = facets.kind() == CollectionKind.MAP ?
@@ -2609,7 +2615,7 @@ class GrailsDomainGenerator {
             annotations << AnnotationDescription.Builder.ofType(Cache)
                     .define('usage', CacheConcurrencyStrategy.parse(facets.cacheUsage())).build()
         }
-        for (Annotation constraint : validationAnnotations(property)) {
+        for (Annotation constraint : carriedAnnotations(property)) {
             annotations << AnnotationDescription.ForLoadedAnnotation.of(constraint)
         }
         Class<?> elementClass = property instanceof HibernateEnumProperty ?
@@ -2712,6 +2718,9 @@ class GrailsDomainGenerator {
                                 overrides as AnnotationDescription[])
                         .build()
             }
+        }
+        for (Annotation audit : auditAnnotations(property)) {
+            annotations << AnnotationDescription.ForLoadedAnnotation.of(audit)
         }
         return builder.defineField(property.name, embeddable, Visibility.PRIVATE)
                 .annotateField(annotations as AnnotationDescription[])
@@ -2867,10 +2876,42 @@ class GrailsDomainGenerator {
     }
 
     /**
+     * The annotations of other libraries that Hibernate or its integrations read from the entity class and that the
+     * generated field must therefore carry: the Bean Validation constraints and the Envers annotations.
+     */
+    List<Annotation> carriedAnnotations(HibernatePersistentProperty property) {
+        List<Annotation> carried = validationAnnotations(property)
+        carried.addAll(auditAnnotations(property))
+        return carried
+    }
+
+    /**
      * The Bean Validation constraints declared on the property. Hibernate turns them into DDL (not null, precision,
      * scale, length) after binding, so they are copied onto the generated field for Hibernate to apply itself.
      */
     List<Annotation> validationAnnotations(HibernatePersistentProperty property) {
+        return memberAnnotations(property, VALIDATION_PACKAGES)
+    }
+
+    /**
+     * The Hibernate Envers annotations ({@code @Audited}, {@code @NotAudited}, {@code @AuditJoinTable}, ...) declared on the
+     * property. Envers reads them from the bound entity's class, which is the generated class while the mappings are bound,
+     * so they are copied onto the generated field. Envers is not a dependency of this module: the annotations are recognised by
+     * package.
+     */
+    List<Annotation> auditAnnotations(HibernatePersistentProperty property) {
+        return memberAnnotations(property, AUDIT_PACKAGES)
+    }
+
+    /**
+     * The Hibernate Envers annotations declared on the domain class itself ({@code @Audited}, {@code @AuditTable},
+     * {@code @AuditOverride}, ...), which the generated class carries so that Envers audits the entity.
+     */
+    List<Annotation> auditAnnotations(GrailsHibernatePersistentEntity entity) {
+        return entity.javaClass.declaredAnnotations.findAll { Annotation a -> inPackages(a, AUDIT_PACKAGES) } as List<Annotation>
+    }
+
+    private static List<Annotation> memberAnnotations(HibernatePersistentProperty property, List<String> packages) {
         Class<?> owner = property.hibernateOwner.javaClass
         List<Annotation> found = []
         try {
@@ -2884,10 +2925,14 @@ class GrailsDomainGenerator {
                 found.addAll(method.declaredAnnotations as List<Annotation>)
             }
         }
-        return found.findAll { Annotation a ->
-            String type = a.annotationType().name
-            type.startsWith('jakarta.validation.constraints.') || type.startsWith('org.hibernate.validator.constraints.')
-        }
+        // a field and its getter may both carry the annotation: a class can state it once
+        Set<Class<? extends Annotation>> seen = new HashSet<Class<? extends Annotation>>()
+        return found.findAll { Annotation a -> inPackages(a, packages) && seen.add(a.annotationType()) }
+    }
+
+    private static boolean inPackages(Annotation annotation, List<String> packages) {
+        String type = annotation.annotationType().name
+        return packages.any { String prefix -> type.startsWith(prefix) }
     }
 
     /**
