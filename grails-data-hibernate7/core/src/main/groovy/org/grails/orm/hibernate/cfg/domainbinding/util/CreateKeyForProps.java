@@ -49,9 +49,10 @@ public class CreateKeyForProps {
     }
 
     public void createKeyForProps(HibernatePersistentProperty grailsProp, String path, Table table, String columnName) {
-        if (grailsProp instanceof HibernateToManyProperty) {
-            // The column of a collection property lives in the collection table, which does not hold the columns
-            // of the other properties of the group, so a unique group has no key to create there.
+        if (grailsProp instanceof HibernateToManyProperty && !grailsProp.isSerializableType()) {
+            // The column of a bound collection lives in the collection table, which does not hold the columns
+            // of the other properties of the group, so a unique group has no key to create there. A serializable
+            // collection is a plain column of the owner table, so it keeps its key.
             return;
         }
         PropertyConfig mappedForm = grailsProp.getMappedForm();

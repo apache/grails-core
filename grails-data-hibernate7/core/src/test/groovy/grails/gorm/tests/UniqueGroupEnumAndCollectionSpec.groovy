@@ -36,7 +36,7 @@ import spock.lang.Specification
 class UniqueGroupEnumAndCollectionSpec extends Specification {
 
     @Shared @AutoCleanup HibernateDatastore datastore = new HibernateDatastore(
-            UgEnumGroup, UgEnumConstraintGroup, UgStringGroup, UgEnumUnique, UgCollectionGroup, UgEnumCollectionGroup)
+            UgEnumGroup, UgEnumConstraintGroup, UgStringGroup, UgEnumUnique, UgCollectionGroup, UgEnumCollectionGroup, UgSerializableGroup)
 
     void "a unique group on an enum property makes a unique key over the enum and the listed columns"() {
         expect:
@@ -121,6 +121,23 @@ class UniqueGroupEnumAndCollectionSpec extends Specification {
         UgEnumCollectionGroup.get(owner.id).states == [UgState.ON, UgState.OFF] as Set
     }
 
+    void "a serializable collection property keeps its unique group key on the owner table"() {
+        expect:
+        uniqueKeyColumns(UgSerializableGroup) == [['tags', 'x'] as Set]
+    }
+
+    void "a duplicate of a serializable collection unique group is rejected by the database"() {
+        given:
+        new UgSerializableGroup(x: 'x', tags: ['one'] as Set).save(flush: true, failOnError: true)
+        UgSerializableGroup.withSession { it.clear() }
+
+        when:
+        new UgSerializableGroup(x: 'x', tags: ['one'] as Set).save(flush: true, validate: false)
+
+        then:
+        thrown(Exception)
+    }
+
     private List<Set<String>> uniqueKeyColumns(Class<?> domain) {
         Table table = datastore.metadata.getEntityBinding(domain.name).table
         table.uniqueKeys.values().collect { it.columns*.name*.toLowerCase().toSet() }
@@ -191,5 +208,17 @@ class UgEnumCollectionGroup {
 
     static mapping = {
         states unique: 'x'
+    }
+}
+
+@Entity
+class UgSerializableGroup {
+    String x
+    Set<String> tags
+
+    static hasMany = [tags: String]
+
+    static mapping = {
+        tags type: 'serializable', unique: 'x'
     }
 }
