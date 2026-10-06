@@ -32,6 +32,11 @@ class InsertableUpdatableMappingSpec extends HibernateGormDatastoreSpec {
         manager.registerDomainClasses(IUMColumns)
     }
 
+    /**
+     * Reads one column of the row natively. {@code name} is always a fixed column literal from this spec, never input.
+     * The base class {@code session} is a GORM session without native queries; {@code sessionFactory.currentSession}
+     * is the Hibernate session it wraps, the same one {@code session.clear()} clears.
+     */
     private String column(Long id, String name) {
         sessionFactory.currentSession
                 .createNativeQuery("select ${name} from ium_columns where id = :id".toString(), String)
