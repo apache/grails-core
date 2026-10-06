@@ -22,6 +22,8 @@ import java.sql.Connection
 
 import groovy.transform.CompileStatic
 
+import liquibase.Contexts
+import liquibase.LabelExpression
 import liquibase.Liquibase
 import liquibase.database.Database
 import liquibase.exception.DatabaseException
@@ -31,6 +33,8 @@ import liquibase.resource.ResourceAccessor
 
 import org.springframework.context.ApplicationContext
 import org.springframework.core.io.DefaultResourceLoader
+
+import grails.boot.StartupTask
 
 import static org.grails.plugins.databasemigration.PluginConstants.DATA_SOURCE_NAME_KEY
 
@@ -82,25 +86,66 @@ class GrailsLiquibase extends SpringLiquibase {
 
     @Override
     protected void performUpdate(Liquibase liquibase) throws LiquibaseException {
-        if (!applicationContext.containsBean('migrationCallbacks')) {
+        // begun before the migration callbacks run, so a callback that sets a change listener of its own replaces the
+        // one that reports each change set, and works as it did before the update was reported
+        StartupTask task = startTask(liquibase)
+        try {
+            if (!applicationContext.containsBean('migrationCallbacks')) {
+                super.performUpdate(liquibase)
+                return
+            }
+
+            def database = liquibase.database
+            def migrationCallbacks = applicationContext.getBean('migrationCallbacks')
+
+            if (migrationCallbacks.metaClass.respondsTo(migrationCallbacks, 'beforeStartMigration')) {
+                migrationCallbacks.invokeMethod('beforeStartMigration', [database] as Object[])
+            }
+            if (migrationCallbacks.metaClass.respondsTo(migrationCallbacks, 'onStartMigration')) {
+                migrationCallbacks.invokeMethod('onStartMigration', [database, liquibase, changeLog] as Object[])
+            }
+
             super.performUpdate(liquibase)
-            return
-        }
 
-        def database = liquibase.database
-        def migrationCallbacks = applicationContext.getBean('migrationCallbacks')
-
-        if (migrationCallbacks.metaClass.respondsTo(migrationCallbacks, 'beforeStartMigration')) {
-            migrationCallbacks.invokeMethod('beforeStartMigration', [database] as Object[])
+            if (migrationCallbacks.metaClass.respondsTo(migrationCallbacks, 'afterMigrations')) {
+                migrationCallbacks.invokeMethod('afterMigrations', [database] as Object[])
+            }
         }
-        if (migrationCallbacks.metaClass.respondsTo(migrationCallbacks, 'onStartMigration')) {
-            migrationCallbacks.invokeMethod('onStartMigration', [database, liquibase, changeLog] as Object[])
+        finally {
+            task?.close()
         }
+    }
 
-        super.performUpdate(liquibase)
-
-        if (migrationCallbacks.metaClass.respondsTo(migrationCallbacks, 'afterMigrations')) {
-            migrationCallbacks.invokeMethod('afterMigrations', [database] as Object[])
+    /**
+     * Begins a {@link StartupTask} for the update when anything records the application's start, such as the
+     * startup progress page, which then shows how many change sets are left and the one being run. Returns
+     * {@code null} when nothing records the start, since knowing how many change sets there are takes one more
+     * read of the change log and the database.
+     */
+    private StartupTask startTask(Liquibase liquibase) {
+        if (!StartupTask.isRecorded(applicationContext)) {
+            return null
         }
+        StartupTask task = StartupTask.start(applicationContext, migrationDescription(), pendingChangeSets(liquibase))
+        liquibase.changeExecListener = new StartupTaskChangeExecListener(task)
+        task
+    }
+
+    /**
+     * How many change sets the update will run, or {@code -1} when that cannot be told. Liquibase's own tables are
+     * left alone, so they are only ever created by the update, which holds Liquibase's lock while it does so.
+     */
+    private int pendingChangeSets(Liquibase liquibase) {
+        try {
+            return liquibase.listUnrunChangeSets(new Contexts(contexts), new LabelExpression(labelFilter), false).size()
+        }
+        catch (LiquibaseException | RuntimeException ignored) {
+            // the count only serves the progress page, and the update reports whatever stopped it
+            return -1
+        }
+    }
+
+    private String migrationDescription() {
+        !dataSourceName || dataSourceName == 'dataSource' ? 'Running database migrations' : "Running database migrations on ${dataSourceName}".toString()
     }
 }

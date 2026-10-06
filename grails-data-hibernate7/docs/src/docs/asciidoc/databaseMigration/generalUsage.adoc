@@ -69,6 +69,8 @@ You may optionally limit the plugin's auto-run feature to run only specific cont
 grails.plugin.databasemigration.updateOnStartContexts = ['context1,context2']
 ----
 
+The update on start reports its progress as a startup task, so the Grails startup progress page, signed in with the address the application logs as it starts, shows how many change sets are left to run and the one being run, and the startup report lists how many ran and how long the update took. Counting the change sets takes one more read of the change log and the database, which is only done when something records the application's start, such as the startup progress page or Spring Boot Actuator's `startup` endpoint. See _Watching the Application Start_ in the Grails user guide.
+
 You can be notified when migration are run (for example to do some work before and/or after the migrations execute) by registering a "callback" class as a Spring bean. The class can have any name and package and doesn't have to implement any interface since its methods will be called using Groovy duck-typing.
 
 The bean name is "migrationCallbacks" and there are currently three callback methods supported (all are optional):

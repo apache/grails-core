@@ -47,17 +47,35 @@ trait ServerInteraction {
     }
 
     /**
-     * Returns true if the server is available
+     * Returns true if the server is available, which is once the application answers on the port. While a
+     * Grails application starts, its startup progress page can answer on the port before the application does,
+     * marking each response with the {@code Grails-Startup-Phase} header, so a response that carries it means the
+     * application is still starting.
      *
      * @param host The host
      * @param port The port
      */
     boolean isServerAvailable(String host = 'localhost', int port = 8080) {
         try {
-            new Socket(host, port)
-            return true
+            new Socket(host, port).close()
         } catch (e) {
             return false
+        }
+        HttpURLConnection connection = null
+        try {
+            connection = (HttpURLConnection) URI.create("http://${host}:${port}/").toURL().openConnection()
+            connection.requestMethod = 'HEAD'
+            connection.instanceFollowRedirects = false
+            connection.connectTimeout = 1000
+            connection.readTimeout = 2000
+            connection.responseCode
+            String phase = connection.getHeaderField('Grails-Startup-Phase')
+            return phase == null || phase == 'READY'
+        } catch (e) {
+            // the port does not answer plain HTTP, as with SSL, so that it accepts connections is all there is to go on
+            return true
+        } finally {
+            connection?.disconnect()
         }
     }
 }

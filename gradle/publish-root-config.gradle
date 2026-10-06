@@ -113,6 +113,7 @@ def publishedProjects = [
         'grails-views-core',
         'grails-views-gson',
         'grails-views-markup',
+        'grails-startup-progress',
         'grails-web-boot',
         'grails-web-common',
         'grails-web-core',

@@ -106,6 +106,7 @@ include(
         'grails-services',
         'grails-shell-cli',
         'grails-spring',
+        'grails-startup-progress',
         'grails-test-core',
         'grails-undertow',
         'grails-undertow-spring-boot',
@@ -598,6 +599,7 @@ include(
         'grails-test-examples-undertow',
         'grails-test-examples-views-functional-tests',
         'grails-test-examples-views-functional-tests-plugin',
+        'grails-test-examples-startup-progress',
         'grails-test-examples-welcome-page',
         'grails-test-examples-welcome-page-jetty',
 )
@@ -649,6 +651,7 @@ project(':grails-test-examples-views-functional-tests-plugin').projectDir = file
 project(':grails-test-examples-test-phases').projectDir = file('grails-test-examples/test-phases')
 project(':grails-test-examples-jetty').projectDir = file('grails-test-examples/jetty')
 project(':grails-test-examples-undertow').projectDir = file('grails-test-examples/undertow')
+project(':grails-test-examples-startup-progress').projectDir = file('grails-test-examples/startup-progress')
 project(':grails-test-examples-welcome-page').projectDir = file('grails-test-examples/welcome-page')
 project(':grails-test-examples-welcome-page-jetty').projectDir = file('grails-test-examples/welcome-page-jetty')
 project(':grails-test-examples-latency').projectDir = file('grails-test-examples/latency')

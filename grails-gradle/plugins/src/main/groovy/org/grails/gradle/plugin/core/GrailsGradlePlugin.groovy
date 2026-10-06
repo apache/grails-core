@@ -1382,6 +1382,10 @@ ${importStatements}
                 // internally (return !OS_NAME.contains("win")), so legacy Windows consoles never receive
                 // raw ANSI escapes, while macOS/Linux and modern terminals get colored bootRun output.
                 it.systemProperty('spring.output.ansi.console-available', 'true')
+                // startup progress settings a developer keeps as Gradle properties, such as opening a browser,
+                // reach the application under their own names
+                it.jvmArgumentProviders.add(new GrailsStartupProgressProvider(
+                        project.providers.gradlePropertiesPrefixedBy(GrailsStartupProgressProvider.PREFIX)))
             }
 
             project.tasks.withType(ResolveMainClassName).configureEach {
