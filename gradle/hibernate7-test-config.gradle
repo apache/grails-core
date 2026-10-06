@@ -43,6 +43,20 @@ tasks.withType(Test).configureEach {
     onlyIf { !skipped }
 
     useJUnitPlatform()
+
+    // Opt-in: -Pgrails.test.generatedDomainClasses=true runs the suite with every manager-built datastore booted through the
+    // generated-domain-class path (hibernate.generatedDomainClasses). Binder mode stays the default. Specs that exercise the
+    // domain binder's internals do not apply to that path and are listed, one class name per line, in the module's
+    // generated-mode-exclusions.txt.
+    if (providers.gradleProperty('grails.test.generatedDomainClasses').map { it.toBoolean() }.getOrElse(false)) {
+        systemProperty('grails.hibernate.generatedDomainClasses', 'true')
+        File exclusions = project.file('generated-mode-exclusions.txt')
+        if (exclusions.exists()) {
+            exclusions.readLines().collect { it.trim() }.findAll { it && !it.startsWith('#') }.each { String pattern ->
+                filter.excludeTestsMatching(pattern)
+            }
+        }
+    }
     // Lets TCK specs gate features on the running suite. Spock evaluates @IgnoreIf/@Requires
     // preconditions before setupSpec() runs, so this must be set at the task level - a
     // TCK-manager System.setProperty would come too late.

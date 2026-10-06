@@ -92,9 +92,11 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
         /**
          * Whether Hibernate's annotation binder binds classes generated from the GORM mapping, instead of the domain
          * binder building Hibernate's boot model by hand. The application's real domain classes are still what is
-         * persisted and loaded. Experimental; off by default.
+         * persisted and loaded. Experimental; off by default. The default can be switched on for a whole JVM, for example to
+         * run an existing test suite through the generated path, with the system property
+         * {@code grails.hibernate.generatedDomainClasses=true}; a value set in the configuration always wins.
          */
-        boolean generatedDomainClasses = false
+        boolean generatedDomainClasses = Boolean.getBoolean('grails.hibernate.generatedDomainClasses')
 
         /**
          * Cache settings
