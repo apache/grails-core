@@ -31,6 +31,7 @@ import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import org.hibernate.engine.spi.FilterDefinition
 import org.hibernate.generator.GeneratorCreationContext
 import org.hibernate.mapping.BasicValue
+import org.hibernate.mapping.Collection
 import org.hibernate.mapping.Component
 import org.hibernate.mapping.PersistentClass
 import org.hibernate.mapping.Property
@@ -74,7 +75,9 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterDefiniti
  *   {@code Book} instance all find it; the generated class is never instantiated.</li>
  * </ol>
  *
- * <p>The entity name stays the name of the generated class (a JPA name such as {@code Book} is imported for HQL).</p>
+ * <p>The entity name stays the name of the generated class (a JPA name such as {@code Book} is imported for HQL). The
+ * second-level cache regions of cached entities and collections are named after the real classes, as the domain binder names
+ * them.</p>
  *
  * @since 9.0
  */
@@ -156,8 +159,33 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
                 align(persistentClass, generated, metadata)
             }
         }
+        alignCollectionRegions(metadata)
         defineTenantFilter(metadata)
         return null
+    }
+
+    /**
+     * Hibernate names the second-level cache region of a cached collection after its role, the entity name of the owner and the
+     * property path, which here is the name of the generated class. The region is named after the real owner class, as it is
+     * when the domain binder binds the owner, so that the cache configuration an application states by the names of its domain
+     * classes applies. A region name that differs from the role was stated explicitly and is left alone.
+     */
+    private void alignCollectionRegions(MetadataImplementor metadata) {
+        for (Collection collection : metadata.collectionBindings) {
+            PersistentClass owner = collection.owner
+            if (!isGeneratedEntityName(owner)) {
+                continue
+            }
+            if (collection.cacheRegionName == collection.role) {
+                collection.cacheRegionName = owner.className + collection.role.substring(owner.entityName.length())
+            }
+        }
+    }
+
+    private boolean isGeneratedEntityName(PersistentClass owner) {
+        return owner.entityName != owner.className && generatedByName.values().any { Generated generated ->
+            generated.generatedClass().name == owner.entityName
+        }
     }
 
     /**
@@ -205,10 +233,23 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
         }
         entity.persistentClass = persistentClass
         if (persistentClass instanceof RootClass) {
+            alignEntityRegion((RootClass) persistentClass, real)
             alignIdentifier((RootClass) persistentClass, generated, metadata)
         }
         for (Property property : persistentClass.declaredProperties) {
             alignProperty(property, entity, real)
+        }
+    }
+
+    /**
+     * Hibernate names the second-level cache region of an entity after its entity name, which here is the name of the generated
+     * class. The region is named after the real root class, as it is when the domain binder binds the entity (the domain
+     * binder never states a region of its own). A region that is not the default was stated explicitly and is left alone; the
+     * natural id of an entity has no cache region in either binding.
+     */
+    private void alignEntityRegion(RootClass root, Class<?> real) {
+        if (root.cached && root.cacheRegionName == root.entityName) {
+            root.cacheRegionName = real.name
         }
     }
 
