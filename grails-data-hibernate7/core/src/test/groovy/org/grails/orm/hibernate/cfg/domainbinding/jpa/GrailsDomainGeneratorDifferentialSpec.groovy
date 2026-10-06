@@ -76,9 +76,9 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleIdentityProperty
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyEntityProperty
@@ -1588,14 +1588,16 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
     }
 
     /**
-     * The key and element column names of a circular many-to-many depend on the order the binder's second passes run:
-     * {@code ManyToOneBinder.prepareCircularManyToMany} renames the join key of the other side while it binds one side, so the
-     * side that runs first keeps the default key name. The generator states the names the binder would give once both sides
-     * are prepared, which is consistent on both sides; the difference is listed, not reported.
+     * This comparison reads the mapping after the binder has bound it, and {@code ManyToOneBinder.prepareCircularManyToMany}
+     * writes the renamed join key into the mapping of a circular many-to-many while it binds, so the generator, which sees that
+     * written key as a mapped one, states the renamed name for both sides, where the binder bound the side bound first before
+     * the rename. The generator flow itself never sees the written key (it runs on the unbound mapping): the key names are
+     * compared against the binder's own in {@code GeneratedDomainClassesDdlDifferentialSpec} and
+     * {@code GeneratedDomainClassesCircularManyToManySpec}, which boot both modes. The element column is compared here.
      */
-    private static List<String> circularOrFound(HibernateToManyEntityProperty property, List<String> found, Map<String, Integer> known) {
+    private static List<String> circularKeyOrFound(HibernateToManyEntityProperty property, List<String> found, Map<String, Integer> known) {
         if (!found.isEmpty() && property instanceof HibernateManyToManyProperty && property.isCircular()) {
-            known['a circular many-to-many names the key of its first-bound side by default, because the binder renames the join keys of a circular many-to-many while it binds, so the two sides name different columns of one join table']++
+            known['the binder writes the renamed join key of a circular many-to-many into the mapping while it binds, so a generator that reads the bound mapping states the renamed key for the side the binder bound first (the generator flow reads the unbound mapping; the DDL differential compares the key names)']++
             return []
         }
         return found
@@ -1653,10 +1655,10 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 "${where} ${facet}: generator=${values[0]} binder=${values[1]}".toString()
             })
             // Hibernate copies the size of the referenced identifier onto the element column after binding
-            found.addAll(circularOrFound(property, compareValueColumn("${where} element".toString(), facets.element(), collection.element, collection.collectionTable, true), known))
+            found.addAll(compareValueColumn("${where} element".toString(), facets.element(), collection.element, collection.collectionTable, true))
             found.addAll(compareCollectionTableIndexes(where, collection))
         }
-        found.addAll(circularOrFound(property, compareValueColumns("${where} key".toString(), facets.keys(), collection.key, collection.collectionTable, true), known))
+        found.addAll(circularKeyOrFound(property, compareValueColumns("${where} key".toString(), facets.keys(), collection.key, collection.collectionTable, true), known))
         if (!((DependantValue) collection.key).updateable) {
             known['the binder makes the key of an entity collection not updatable when its owner has several unidirectional to-many properties; Hibernate then writes no join table rows, and annotations cannot state it']++
         }
@@ -1745,8 +1747,8 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             Property a = new Property()
             a.value = (org.hibernate.mapping.Value) triple[1]
             List<String> leaf = compareAnnotatedLeaf("${where} ${part}".toString(), b, a, ((ColumnFacets) triple[2]).sqlType(), part != 'index', known)
-            if (!leaf.isEmpty() && part != 'index' && facets.manyToMany() && circularSelf) {
-                known['a circular many-to-many names the key of its first-bound side by default, because the binder renames the join keys of a circular many-to-many while it binds, so the two sides name different columns of one join table']++
+            if (!leaf.isEmpty() && part == 'key' && facets.manyToMany() && circularSelf) {
+                known['the binder writes the renamed join key of a circular many-to-many into the mapping while it binds, so a generator that reads the bound mapping states the renamed key for the side the binder bound first (the generator flow reads the unbound mapping; the DDL differential compares the key names)']++
             } else if (inverseManyToMany && !leaf.isEmpty() && part != 'index') {
                 known['the binder names the key and element columns of the inverse side of a many-to-many from its own mapping, so they differ from the owning side\'s when only the owner names them; Hibernate uses the owning side\'s']++
             } else {

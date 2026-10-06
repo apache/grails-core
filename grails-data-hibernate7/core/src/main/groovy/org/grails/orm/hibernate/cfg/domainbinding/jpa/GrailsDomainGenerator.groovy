@@ -1445,7 +1445,8 @@ class GrailsDomainGenerator {
     /**
      * {@code ManyToOneBinder.prepareCircularManyToMany} gives a circular many-to-many that names no join key the key
      * {@code <property>_id}, by changing the mapping while it binds. The generator runs without that mutation, so it applies
-     * the rule itself.
+     * the rule itself, to the name of the element column (the binder binds it after the rename of the other side) and, for the
+     * key column, only where the binder renamed the key before it bound it, see {@link #boundBeforeInverseSide}.
      */
     private ColumnFacets circularKeyName(HibernateManyToManyProperty property, ColumnFacets facets) {
         if (!property.isCircular() || property.hibernateMappedForm.hasJoinKeyMapping()) {
@@ -1455,6 +1456,23 @@ class GrailsDomainGenerator {
                 namingStrategy.resolveColumnName(property.name) + '_id', facets.nullable(), facets.unique(), facets.insertable(),
                 facets.updatable(), facets.length(), facets.precision(), facets.scale(), facets.sqlType(), facets.defaultValue(),
                 facets.read(), facets.write(), facets.comment())
+    }
+
+    /**
+     * Whether the binder binds the key of the collection of this many-to-many before the element of the collection of its
+     * inverse side. The element of a many-to-many is bound like the column of the other side and renames the join key of that
+     * side (it must be circular and name no join key), so the key of a circular side that is bound first keeps the default name
+     * and the key of one bound second is renamed. The collections are bound in the order of the properties of the entity
+     * ({@code persistentPropertiesToBind}), the superclass before its subclasses, so a side whose inverse side is not circular
+     * (it belongs to a superclass) is always bound second.
+     */
+    private boolean boundBeforeInverseSide(HibernateManyToManyProperty property) {
+        HibernateAssociation inverse = property.hibernateInverseSide
+        if (inverse == null || !inverse.isCircular() || inverse.owner != property.owner) {
+            return false
+        }
+        List<String> order = property.hibernateOwner.persistentPropertiesToBind*.name
+        return order.indexOf(property.name) <= order.indexOf(inverse.name)
     }
 
     /**
@@ -1585,7 +1603,10 @@ class GrailsDomainGenerator {
             table = tableForMany.getTableName(property)
             schema = joinTable?.schema != null ? joinTable.schema : entityFacets(property.hibernateOwner).schema()
             catalog = joinTable?.catalog
-            key = circularKeyName((HibernateManyToManyProperty) property, collectionKeyFacets(property))
+            key = collectionKeyFacets(property)
+            if (!boundBeforeInverseSide((HibernateManyToManyProperty) property)) {
+                key = circularKeyName((HibernateManyToManyProperty) property, key)
+            }
             // ManyToOneBinder binds the element like the other side's own column: its name rules and its (never) nullable column
             element = circularKeyName(other, toOneColumnFacets(other))
             mappedBy = property.owningSide ? null : other.name
