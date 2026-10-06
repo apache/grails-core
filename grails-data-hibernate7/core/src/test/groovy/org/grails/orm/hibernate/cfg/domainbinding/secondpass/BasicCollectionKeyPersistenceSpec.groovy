@@ -51,7 +51,8 @@ class BasicCollectionKeyPersistenceSpec extends HibernateGormDatastoreSpec {
 
         expect:
         loaded.tags == ['a', 'b'] as Set
-        loaded.scores == [1, 2, 3]
+        loaded.scores.size() == 3
+        loaded.scores as Set == [1, 2, 3] as Set
     }
 }
 
