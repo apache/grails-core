@@ -64,7 +64,6 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
      * Empty while every difference class is fixed.
      */
     private static final List<Map> KNOWN = [
-            [id: 'DISCRIMINATOR_CHECK', reason: 'not yet analysed'],
             [id: 'LIST_INDEX_CHECK', reason: 'not yet analysed'],
             [id: 'SUBCLASS_NOT_NULL_CHECK', reason: 'not yet analysed'],
             [id: 'ENUM_COLUMN_EXTRAS', reason: 'not yet analysed'],

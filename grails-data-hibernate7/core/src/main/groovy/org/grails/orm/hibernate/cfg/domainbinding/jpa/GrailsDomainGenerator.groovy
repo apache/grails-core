@@ -2262,8 +2262,18 @@ class GrailsDomainGenerator {
                 }
                 annotations << column.build()
             }
+            // Hibernate adds a check constraint over the discriminator values to the column unless the discriminator is forced; the
+            // binder adds none. The class is bound forced so that Hibernate adds no check, and GeneratedDomainClassBinder restores the
+            // binder's unforced discriminator (which has no check-constraint role, only a query one) once the mappings are bound.
+            AnnotationDescription.Builder options = AnnotationDescription.Builder.ofType(DiscriminatorOptions)
+            if (discriminator.formula() == null) {
+                options = options.define('force', true)
+            }
             if (!discriminator.insertable()) {
-                annotations << AnnotationDescription.Builder.ofType(DiscriminatorOptions).define('insert', false).build()
+                options = options.define('insert', false)
+            }
+            if (discriminator.formula() == null || !discriminator.insertable()) {
+                annotations << options.build()
             }
         }
         if (hierarchy.discriminatorValue() != null) {

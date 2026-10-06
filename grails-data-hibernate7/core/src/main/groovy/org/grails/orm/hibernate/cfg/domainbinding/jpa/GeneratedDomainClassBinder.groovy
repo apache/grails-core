@@ -219,6 +219,8 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
         }
         entity.persistentClass = persistentClass
         if (persistentClass instanceof RootClass) {
+            // the generated root forces its discriminator so that Hibernate adds no check constraint; the binder never forces it
+            ((RootClass) persistentClass).forceDiscriminator = false
             alignIdentifier((RootClass) persistentClass, generated, metadata)
         }
         for (Property property : persistentClass.declaredProperties) {

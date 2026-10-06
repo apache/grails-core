@@ -536,7 +536,8 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         column.discriminatorType() == DiscriminatorType.STRING
         column.length() == 255
         root.getAnnotation(DiscriminatorValue).value() == GenAnimal.name
-        !root.isAnnotationPresent(DiscriminatorOptions)
+        root.getAnnotation(DiscriminatorOptions).force()
+        root.getAnnotation(DiscriminatorOptions).insert()
         !root.isAnnotationPresent(DiscriminatorFormula)
     }
 
@@ -600,6 +601,7 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         root.getAnnotation(DiscriminatorColumn).discriminatorType() == DiscriminatorType.INTEGER
         root.getAnnotation(DiscriminatorColumn).name() == 'class'
         root.getAnnotation(DiscriminatorOptions).insert() == false
+        root.getAnnotation(DiscriminatorOptions).force()
         root.getAnnotation(DiscriminatorValue).value() == '1'
         classes[entity(GenCodedChild)].getAnnotation(DiscriminatorValue).value() == '2'
     }
