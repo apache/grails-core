@@ -28,6 +28,7 @@ import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder
 import org.hibernate.boot.registry.StandardServiceRegistry
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder
 import org.hibernate.dialect.H2Dialect
+import org.hibernate.engine.OptimisticLockStyle
 import org.hibernate.engine.jdbc.Size
 import org.hibernate.engine.spi.FilterDefinition
 import org.hibernate.engine.spi.SessionFactoryImplementor
@@ -1100,6 +1101,8 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 dynamicUpdate: [facets.dynamicUpdate(), persistentClass.useDynamicUpdate()],
                 // the binder leaves a subclass's unset batch size at -1 and a root's at 0: both mean "not stated"
                 batchSize    : [facets.batchSize(), Math.max(persistentClass.batchSize, 0)],
+                // VersionBinder: NONE for a root without a version, VERSION otherwise; a subclass reads its root's
+                versioned    : [facets.versioned(), persistentClass.optimisticLockStyle == OptimisticLockStyle.VERSION],
         ]
         if (hierarchy.ownsTable()) {
             pairs.comment = [facets.comment(), persistentClass.table.comment]
@@ -1298,6 +1301,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 abstractClass     : [Boolean.TRUE == bound.isAbstract(), Boolean.TRUE == annotated.isAbstract()],
                 abstractUnionTable: [bound.table.isAbstractUnionTable(), annotated.table.isAbstractUnionTable()],
                 properties        : [declaredNames(bound), declaredNames(annotated)],
+                optimisticLock    : [bound.optimisticLockStyle, annotated.optimisticLockStyle],
         ]
         if (bound instanceof SingleTableSubclass || bound instanceof RootClass && bound.discriminator != null) {
             pairs.discriminatorValue = [bound.discriminatorValue, annotated.discriminatorValue]

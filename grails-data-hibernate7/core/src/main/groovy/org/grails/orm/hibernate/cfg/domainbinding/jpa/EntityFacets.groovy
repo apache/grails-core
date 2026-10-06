@@ -25,7 +25,8 @@ import groovy.transform.CompileStatic
  * {@code PersistentClass} and its table, and that {@link GrailsDomainGenerator} writes into the class annotations.
  *
  * <p>{@code schema}, {@code catalog} and {@code comment} are {@code null} when unset; {@code batchSize} is
- * {@code 0} when unset.</p>
+ * {@code 0} when unset. {@code versioned} is whether the hierarchy has a version property: when it has none the binder
+ * sets the optimistic lock style of the root to {@code NONE}, where Hibernate's own default is {@code VERSION}.</p>
  *
  * @since 9.0
  */
@@ -38,5 +39,6 @@ record EntityFacets(
     boolean dynamicInsert,
     boolean dynamicUpdate,
     int batchSize,
-    String comment) {
+    String comment,
+    boolean versioned) {
 }

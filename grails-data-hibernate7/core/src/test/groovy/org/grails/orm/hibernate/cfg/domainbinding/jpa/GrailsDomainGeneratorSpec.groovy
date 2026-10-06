@@ -65,6 +65,8 @@ import org.hibernate.annotations.Comment
 import org.hibernate.annotations.DiscriminatorFormula
 import org.hibernate.annotations.DiscriminatorOptions
 import org.hibernate.annotations.DynamicUpdate
+import org.hibernate.annotations.OptimisticLockType
+import org.hibernate.annotations.OptimisticLocking
 import org.hibernate.annotations.Fetch
 import org.hibernate.annotations.FetchMode
 import org.hibernate.annotations.Formula
@@ -152,7 +154,7 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
                 GenEmbedOwner, GenEmbedOther, GenEmbedBase, GenEmbedChild, GenEmbedFormulaOwner, GenCollSingle, GenCollKinds, GenCollLazy,
                 GenFkTarget, GenFkOwned, GenFkOwner, GenFkCascades, GenFkNodeA, GenFkNodeB, GenFkHasOneOwner, GenFkHasOneDetail, GenOneFace, GenOneNose, GenFkManyOne, GenFkOneSide, GenFkSub, GenFkSubRoot,
                 GenOmParent, GenOmChild, GenOmListed, GenOmOrdered, GenOmOrphan, GenOmFetched, GenOmTag, GenOmStep, GenOmKept, GenOmSortedOwner, GenOmMapOwner, GenMapBidiOwner, GenMapBidiChild, GenEmbAssocOwner,
-                GenMmStudent, GenMmCourse, GenMmPerson, GenMmNoOwnerA, GenMmNoOwnerB, GenParamsOnly, GenDecimal)
+                GenMmStudent, GenMmCourse, GenMmPerson, GenMmNoOwnerA, GenMmNoOwnerB, GenParamsOnly, GenDecimal, GenUnversioned, GenUnversionedRoot, GenUnversionedChild)
     }
 
     List<StandardServiceRegistry> registries = []
@@ -286,6 +288,22 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         generated.isAnnotationPresent(DynamicUpdate)
         generated.getAnnotation(BatchSize).size() == 5
         generated.getAnnotation(Comment).value() == 'basic things'
+    }
+
+    void "a root without a version states the NONE optimistic lock style, a versioned root states none"() {
+        expect:
+        !generated.isAnnotationPresent(OptimisticLocking)
+        generate(GenUnversioned).getAnnotation(OptimisticLocking).type() == OptimisticLockType.NONE
+        !generate(GenUnversioned).declaredFields*.name.contains('version')
+    }
+
+    void "a subclass of an unversioned root leaves the lock style to the root"() {
+        when:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = newGenerator().generateAll(
+                [GenUnversionedRoot, GenUnversionedChild].collect { getPersistentEntity(it) }, getClass().classLoader)
+
+        then:
+        classes.values().findAll { it.isAnnotationPresent(OptimisticLocking) }*.name == [GenUnversionedRoot.name]
     }
 
     void "the column extras stated in the mapping become Hibernate annotations"() {
@@ -3063,4 +3081,30 @@ class GenEmbAssocPlace {
 
     String street
     GenFkTarget city
+}
+
+@Entity
+class GenUnversioned {
+
+    String name
+
+    static mapping = {
+        version false
+    }
+}
+
+@Entity
+class GenUnversionedRoot {
+
+    String name
+
+    static mapping = {
+        version false
+    }
+}
+
+@Entity
+class GenUnversionedChild extends GenUnversionedRoot {
+
+    String extra
 }

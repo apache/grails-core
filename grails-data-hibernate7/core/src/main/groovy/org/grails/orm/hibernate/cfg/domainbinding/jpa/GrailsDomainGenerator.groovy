@@ -94,6 +94,8 @@ import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.annotations.NaturalId as HibernateNaturalId
 import org.hibernate.annotations.NotFound
 import org.hibernate.annotations.NotFoundAction
+import org.hibernate.annotations.OptimisticLockType
+import org.hibernate.annotations.OptimisticLocking
 import org.hibernate.annotations.ParamDef
 import org.hibernate.annotations.Parameter
 import org.hibernate.annotations.SortNatural
@@ -627,7 +629,8 @@ class GrailsDomainGenerator {
                 mapping != null && mapping.dynamicInsert,
                 mapping != null && mapping.dynamicUpdate,
                 mapping?.batchSize != null ? mapping.batchSize : 0,
-                sharesTable ? null : entity.comment)
+                sharesTable ? null : entity.comment,
+                entity.hibernateRootEntity.version != null)
     }
 
     /**
@@ -2203,6 +2206,10 @@ class GrailsDomainGenerator {
         }
         if (facets.dynamicUpdate()) {
             annotations << AnnotationDescription.Builder.ofType(DynamicUpdate).build()
+        }
+        if (entity.isRoot() && !facets.versioned()) {
+            // VersionBinder sets the lock style NONE for a root without a version; Hibernate's default is VERSION
+            annotations << AnnotationDescription.Builder.ofType(OptimisticLocking).define('type', OptimisticLockType.NONE).build()
         }
         if (facets.batchSize() > 0) {
             annotations << AnnotationDescription.Builder.ofType(BatchSize).define('size', facets.batchSize()).build()
