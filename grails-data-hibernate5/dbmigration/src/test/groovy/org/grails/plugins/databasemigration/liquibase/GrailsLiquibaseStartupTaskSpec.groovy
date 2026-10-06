@@ -26,6 +26,7 @@ import liquibase.changelog.ChangeSet
 import liquibase.changelog.DatabaseChangeLog
 import liquibase.changelog.visitor.AbstractChangeExecListener
 import liquibase.database.Database
+import liquibase.exception.UnexpectedLiquibaseException
 import org.h2.jdbcx.JdbcDataSource
 import spock.lang.Specification
 
@@ -41,6 +42,9 @@ import grails.boot.StartupTask
  */
 class GrailsLiquibaseStartupTaskSpec extends Specification {
 
+    /** How Liquibase is given a listener class from outside, on the command line or in a properties file. */
+    private static final String CONFIGURED_LISTENER_PROPERTY = 'liquibase.command.changeExecListenerClass'
+
     BufferingApplicationStartup recorder = new BufferingApplicationStartup(1000)
 
     GenericApplicationContext context
@@ -53,6 +57,8 @@ class GrailsLiquibaseStartupTaskSpec extends Specification {
 
     void cleanup() {
         context.close()
+        System.clearProperty(CONFIGURED_LISTENER_PROPERTY)
+        ConfiguredListener.ran.clear()
     }
 
     void 'an update reports each change set it runs as an item of a startup task'() {
@@ -98,16 +104,17 @@ class GrailsLiquibaseStartupTaskSpec extends Specification {
     }
 
     void 'an update nothing records reports nothing, and updates the database as before'() {
-        given: 'a context whose start nothing records'
-        GenericApplicationContext unrecorded = new GenericApplicationContext()
-        unrecorded.refresh()
+        given: 'a context whose start nothing records, with migration callbacks that see what listens to the update'
+        AuditingCallbacks callbacks = new AuditingCallbacks(recorder: recorder)
+        GenericApplicationContext unrecorded = contextWith(callbacks, null)
         DataSource dataSource = newDatabase()
 
         when:
         update(dataSource, 'dataSource', unrecorded)
 
-        then: 'no task is reported anywhere'
+        then: 'no task is reported anywhere, and nothing was set to listen to the update on behalf of one'
         taskStep() == null
+        callbacks.listenersAlreadySet == 0
 
         and: 'the database was updated'
         tables(dataSource).containsAll(['BOOK', 'AUTHOR'])
@@ -116,13 +123,10 @@ class GrailsLiquibaseStartupTaskSpec extends Specification {
         unrecorded.close()
     }
 
-    void 'a change listener a migration callback sets of its own takes the place of the one that reports each change set'() {
+    void 'a change listener a migration callback sets of its own hears of every change set, as does the one that reports each'() {
         given: 'migration callbacks that listen to the change sets themselves'
-        GenericApplicationContext withCallbacks = new GenericApplicationContext()
-        withCallbacks.applicationStartup = recorder
-        AuditingCallbacks callbacks = new AuditingCallbacks()
-        withCallbacks.beanFactory.registerSingleton('migrationCallbacks', callbacks)
-        withCallbacks.refresh()
+        AuditingCallbacks callbacks = new AuditingCallbacks(recorder: recorder)
+        GenericApplicationContext withCallbacks = contextWith(callbacks, recorder)
 
         when:
         update(newDatabase(), 'dataSource', withCallbacks)
@@ -130,20 +134,88 @@ class GrailsLiquibaseStartupTaskSpec extends Specification {
         then: 'the callbacks hear of every change set, as they did before the update was reported'
         callbacks.ran == ['create-book', 'create-author']
 
-        and: 'the task still says how many change sets the update ran'
-        tags(taskStep())[StartupTask.TOTAL_TAG] == '2'
+        and: 'the listener that reports the update was set before the callbacks ran, and heard of every change set too'
+        callbacks.listenersAlreadySet == 1
+        StartupStep task = taskStep()
+        tags(task)[StartupTask.TOTAL_TAG] == '2'
+        items(task) == ['create-book', 'create-author']
 
         cleanup:
         withCallbacks.close()
     }
 
-    private void update(DataSource dataSource, String dataSourceName, GenericApplicationContext applicationContext = context) {
+    void 'a change listener class configured for Liquibase hears of every change set, whoever else listens'() {
+        given: 'a listener class configured for Liquibase, and migration callbacks listening themselves'
+        System.setProperty(CONFIGURED_LISTENER_PROPERTY, ConfiguredListener.name)
+        AuditingCallbacks callbacks = new AuditingCallbacks(recorder: recorder)
+        GenericApplicationContext withCallbacks = contextWith(callbacks, recorder)
+
+        when:
+        update(newDatabase(), 'dataSource', withCallbacks)
+
+        then: 'the configured listener, the callbacks and the task all hear of every change set'
+        ConfiguredListener.ran == ['create-book', 'create-author']
+        callbacks.ran == ['create-book', 'create-author']
+        items(taskStep()) == ['create-book', 'create-author']
+
+        and: 'the configured listener was set before the one that reports the update, as it would be with no update reported'
+        callbacks.listenersAlreadySet == 2
+
+        cleanup:
+        withCallbacks.close()
+    }
+
+    void 'an update that fails on a change set ends the task as it fails, at the change set that failed'() {
+        given: 'migration callbacks that look at what has been reported when a change set fails'
+        AuditingCallbacks callbacks = new AuditingCallbacks(recorder: recorder)
+        GenericApplicationContext withCallbacks = contextWith(callbacks, recorder)
+        DataSource dataSource = newDatabase()
+
+        when: 'the database is updated with a change log whose second change set fails'
+        update(dataSource, 'dataSource', withCallbacks, 'startup-task-failing-changelog.xml')
+
+        then: 'the update fails'
+        thrown(UnexpectedLiquibaseException)
+
+        and: 'the task was ended all the same, with the change sets up to and including the one that failed as its items'
+        StartupStep task = taskStep()
+        tags(task)[StartupTask.TOTAL_TAG] == '3'
+        items(task) == ['create-book', 'index-the-shelf']
+
+        and: 'the failed change set was reported as done when it failed, while the task was still running'
+        callbacks.stepsEndedAtFailure.count { it == StartupTask.ITEM_STEP } == 2
+        !callbacks.stepsEndedAtFailure.contains(StartupTask.TASK_STEP)
+
+        and: 'the database was updated up to the change set that failed'
+        tables(dataSource).contains('BOOK')
+        !tables(dataSource).contains('AUTHOR')
+
+        cleanup:
+        withCallbacks.close()
+    }
+
+    private void update(DataSource dataSource, String dataSourceName, GenericApplicationContext applicationContext = context,
+                        String changeLog = 'startup-task-changelog.xml') {
         GrailsLiquibase liquibase = new GrailsLiquibase(applicationContext)
         liquibase.dataSource = dataSource
-        liquibase.changeLog = 'startup-task-changelog.xml'
+        liquibase.changeLog = changeLog
         liquibase.contexts = 'production'
         liquibase.dataSourceName = dataSourceName
         liquibase.afterPropertiesSet()
+    }
+
+    /**
+     * A context with the given migration callbacks, whose start the given recorder records, or nothing does
+     * when it is {@code null}.
+     */
+    private static GenericApplicationContext contextWith(AuditingCallbacks callbacks, BufferingApplicationStartup recorder) {
+        GenericApplicationContext applicationContext = new GenericApplicationContext()
+        if (recorder) {
+            applicationContext.applicationStartup = recorder
+        }
+        applicationContext.beanFactory.registerSingleton('migrationCallbacks', callbacks)
+        applicationContext.refresh()
+        applicationContext
     }
 
     private StartupStep taskStep() {
@@ -185,15 +257,41 @@ class GrailsLiquibaseStartupTaskSpec extends Specification {
     /** Migration callbacks, duck-typed as the plugin calls them, that listen to the change sets of an update. */
     static class AuditingCallbacks {
 
+        /** Records the start, so the listener can see what has been reported when a change set fails. */
+        BufferingApplicationStartup recorder
+
         List<String> ran = []
 
+        /** How many listeners the update had before the callbacks set their own. */
+        int listenersAlreadySet
+
+        /** The names of the steps that had ended when a change set failed. */
+        List<String> stepsEndedAtFailure = []
+
         void onStartMigration(Database database, Liquibase liquibase, String changeLog) {
+            listenersAlreadySet = liquibase.defaultChangeExecListener.listeners.size()
             liquibase.changeExecListener = new AbstractChangeExecListener() {
                 @Override
                 void ran(ChangeSet changeSet, DatabaseChangeLog databaseChangeLog, Database changed, ChangeSet.ExecType execType) {
                     ran << changeSet.id
                 }
+
+                @Override
+                void runFailed(ChangeSet changeSet, DatabaseChangeLog databaseChangeLog, Database failed, Exception exception) {
+                    stepsEndedAtFailure = recorder.bufferedTimeline.events*.startupStep*.name
+                }
             }
+        }
+    }
+
+    /** A change listener as one configured for Liquibase by class name, which Liquibase creates itself. */
+    static class ConfiguredListener extends AbstractChangeExecListener {
+
+        static List<String> ran = []
+
+        @Override
+        void ran(ChangeSet changeSet, DatabaseChangeLog databaseChangeLog, Database database, ChangeSet.ExecType execType) {
+            ran << changeSet.id
         }
     }
 }

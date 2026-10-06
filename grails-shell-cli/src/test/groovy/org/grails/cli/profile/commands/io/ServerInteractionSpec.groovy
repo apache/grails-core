@@ -24,17 +24,57 @@ import spock.lang.Unroll
 
 class ServerInteractionSpec extends Specification {
 
+    private static final List<String> PROXY_PROPERTIES = ['http.proxyHost', 'http.proxyPort', 'http.nonProxyHosts']
+
     ServerInteraction interaction = new ServerInteraction() {}
 
     HttpServer server
 
+    HttpServer proxy
+
+    Map<String, String> proxyPropertiesBefore = PROXY_PROPERTIES.collectEntries { [(it): System.getProperty(it)] }
+
     void cleanup() {
         server?.stop(0)
+        proxy?.stop(0)
+        proxyPropertiesBefore.each { String name, String value ->
+            if (value == null) {
+                System.clearProperty(name)
+            }
+            else {
+                System.setProperty(name, value)
+            }
+        }
     }
 
-    void 'a port nothing listens on is not available'() {
+    void 'a port nothing listens on, as between the progress page releasing it and the web server taking it, is not available'() {
         expect:
         !interaction.isServerAvailable('localhost', freePort())
+    }
+
+    void 'a proxy set for the JVM does not answer for an application that is still starting'() {
+        given: 'a proxy that answers for anything, which the JVM is told to use for every host'
+        proxy = HttpServer.create(new InetSocketAddress('localhost', 0), 0)
+        proxy.createContext('/') { exchange ->
+            exchange.sendResponseHeaders(200, -1)
+            exchange.close()
+        }
+        proxy.start()
+        System.setProperty('http.proxyHost', 'localhost')
+        System.setProperty('http.proxyPort', String.valueOf(proxy.address.port))
+        System.setProperty('http.nonProxyHosts', 'nothing.invalid')
+
+        and: 'an application whose port still answers as the startup progress page'
+        server = HttpServer.create(new InetSocketAddress('localhost', 0), 0)
+        server.createContext('/') { exchange ->
+            exchange.responseHeaders.set('Grails-Startup-Phase', 'CREATING_BEANS')
+            exchange.sendResponseHeaders(503, -1)
+            exchange.close()
+        }
+        server.start()
+
+        expect: 'the application is asked, not the proxy, so it is not yet available'
+        !interaction.isServerAvailable('localhost', server.address.port)
     }
 
     @Unroll

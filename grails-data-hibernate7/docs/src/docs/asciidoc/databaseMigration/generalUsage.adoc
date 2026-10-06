@@ -76,7 +76,7 @@ You can be notified when migration are run (for example to do some work before a
 The bean name is "migrationCallbacks" and there are currently three callback methods supported (all are optional):
 
 * `beforeStartMigration` will be called (if it exists) for each datasource before any migrations have run; the method will be passed a single argument, the Liquibase `Database` for that datasource
-* `onStartMigration` will be called (if it exists) for each migration script; the method will be passed three arguments, the Liquibase `Database`, the `Liquibase` instance, and the changelog file name
+* `onStartMigration` will be called (if it exists) for each migration script; the method will be passed three arguments, the Liquibase `Database`, the `Liquibase` instance, and the changelog file name. A change listener the callback sets on the `Liquibase` instance is added to the listeners already set, so the one that reports the update's progress and a listener class configured for Liquibase with `liquibase.command.changeExecListenerClass` still hear of each change set.
 * `afterMigrations` will be called (if it exists) for each datasource after all migrations have run; the method will be passed a single argument, the Liquibase `Database` for that datasource
 
 An example class will look like this:

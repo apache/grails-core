@@ -58,13 +58,17 @@ class StartupProgressPageSpec extends Specification {
             }
         }
 
-        when: 'the status is polled until it says the application is ready'
+        when: 'the status is polled until it says the application is ready, and the application is asked for its page at that moment'
         Set<String> phases = new LinkedHashSet<>()
+        String pageWhenReady = null
         long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(2)
-        while (!phases.contains('READY') && System.nanoTime() < deadline) {
+        while (pageWhenReady == null && System.nanoTime() < deadline) {
             Map response = get(port, STATUS_PATH)
             if (response?.phase) {
                 phases << response.phase
+            }
+            if (response?.phase == 'READY') {
+                pageWhenReady = get(port, '/')?.body
             }
             Thread.sleep(50)
         }
@@ -75,9 +79,9 @@ class StartupProgressPageSpec extends Specification {
         phases.contains('CREATING_BEANS')
         phases.contains('INITIALIZING')
 
-        and: 'by the time the page was told the application is ready, BootStrap had finished'
+        and: 'when the page was first told the application is ready, BootStrap had already finished'
         phases.contains('READY')
-        get(port, '/').body.contains('BootStrap seeded 3 catalog items')
+        pageWhenReady.contains('BootStrap seeded 3 catalog items')
     }
 
     private static Map get(int port, String path) {

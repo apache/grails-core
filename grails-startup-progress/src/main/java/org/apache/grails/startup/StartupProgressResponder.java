@@ -155,11 +155,17 @@ final class StartupProgressResponder {
 
     /**
      * Whether the request is a browser loading a page, which browsers say with the fetch metadata headers
-     * they send on every navigation. A client that does not send them, such as an HTTP client in application
+     * they send on every navigation. Browsers only send those to {@code localhost} and over HTTPS, so a
+     * request without them is a page load when it asks to be upgraded to HTTPS, which browsers ask on every
+     * navigation and nothing else does. A client that sends neither, such as an HTTP client in application
      * code, is never mistaken for one.
      */
     private static boolean isPageLoad(Exchange exchange) {
-        return "navigate".equals(exchange.header("Sec-Fetch-Mode")) && "document".equals(exchange.header("Sec-Fetch-Dest"));
+        String mode = exchange.header("Sec-Fetch-Mode");
+        if (mode != null) {
+            return "navigate".equals(mode) && "document".equals(exchange.header("Sec-Fetch-Dest"));
+        }
+        return "1".equals(exchange.header("Upgrade-Insecure-Requests"));
     }
 
     /** Signs a browser in when its request carries the token from the log, and says whether it did. */

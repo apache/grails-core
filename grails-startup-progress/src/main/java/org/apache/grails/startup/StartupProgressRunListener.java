@@ -36,6 +36,8 @@ import org.springframework.boot.context.properties.bind.Bindable;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.web.server.context.WebServerApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.support.DefaultLifecycleProcessor;
+import org.springframework.core.SpringProperties;
 import org.springframework.util.StringUtils;
 
 import grails.util.Environment;
@@ -53,9 +55,9 @@ import grails.util.Environment;
  * page reloads.</p>
  *
  * <p>The page is only served for a servlet application starting its own embedded web server on a fixed
- * port without SSL, and only when {@code grails.startup.progress.enabled} allows it, which by default it
- * does in development mode. If the port cannot be bound the application starts exactly as it would
- * without the page.</p>
+ * port without SSL, not when the JVM is to take a CRaC checkpoint on refresh, which an open port would fail,
+ * and only when {@code grails.startup.progress.enabled} allows it, which by default it does in development
+ * mode. If the port cannot be bound the application starts exactly as it would without the page.</p>
  *
  * <p>When {@code grails.startup.progress.openBrowser} is set, a browser is opened on the page as soon as it
  * is served, or on the application once it is ready when the page is not served.</p>
@@ -202,6 +204,12 @@ public class StartupProgressRunListener implements SpringApplicationRunListener 
             LOG.debug("Not serving startup progress: the web server uses SSL");
             return false;
         }
+        if (isCheckpointOnRefresh()) {
+            // the checkpoint is taken before any lifecycle bean starts, so before the port would be handed over,
+            // and a checkpoint fails on an open socket
+            LOG.debug("Not serving startup progress: a checkpoint is taken on refresh");
+            return false;
+        }
         StartupProgressServer progressServer = new StartupProgressServer(address, port, responder);
         try {
             progressServer.start();
@@ -307,6 +315,11 @@ public class StartupProgressRunListener implements SpringApplicationRunListener 
         if (server != null) {
             server.stop();
         }
+    }
+
+    /** Whether Spring is to take a CRaC checkpoint when the context refreshes, as {@code -Dspring.context.checkpoint=onRefresh} asks. */
+    private static boolean isCheckpointOnRefresh() {
+        return DefaultLifecycleProcessor.ON_REFRESH_VALUE.equalsIgnoreCase(SpringProperties.getProperty(DefaultLifecycleProcessor.CHECKPOINT_PROPERTY_NAME));
     }
 
     private static boolean isSslEnabled(Binder binder) {

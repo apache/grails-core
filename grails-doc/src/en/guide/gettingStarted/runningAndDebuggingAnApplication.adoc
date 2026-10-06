@@ -113,21 +113,22 @@ Until the embedded server takes the port over, the page is served by the HTTP se
 * is deployed as a WAR to a servlet container
 * uses a random port (`server.port: 0`) or SSL
 * finds its port already in use, in which case the application fails to start exactly as it would without the page
+* is to take a CRaC checkpoint on refresh (`-Dspring.context.checkpoint=onRefresh`), which an open port would fail
 
-These settings control the page:
+These settings control the page. The three left commented out have no fixed default: unset, each is on in development mode and off elsewhere, so set one only to decide it yourself:
 
 [source,yaml]
 ----
 grails:
     startup:
         progress:
-            enabled: false       # whether to serve the page; by default, only in development mode
-            showDetails: false   # whether a signed-in browser sees bean names and failures; by default, only in development mode
+            # enabled: true      # whether to serve the page; unset, only in development mode
+            # showDetails: true  # whether a signed-in browser sees bean names and failures; unset, only in development mode
             openBrowser: false   # whether to open a browser on the page as the application starts
             browserCommand: []   # the command that opens the browser; by default, the operating system's own
             statusPath: /__grails/startup-progress   # where the page polls for progress, below the context path
             endpoint:
-                enabled: false   # whether to serve the startup report; by default, only in development mode
+                # enabled: true  # whether to serve the startup report; unset, only in development mode
                 path: /__grails/startup   # where to serve it, below the context path
 ----
 

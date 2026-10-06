@@ -23,8 +23,10 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -54,6 +56,11 @@ final class StartupProgressServer {
     /**
      * Binds the port and starts answering. A stopped server can be started again.
      *
+     * <p>Every thread of the server is a daemon, so that a run which binds the port but never reaches the
+     * hand-off, {@code started()} or {@code failed()} cannot keep the JVM running once it returns. Spring Boot's
+     * AOT processing is such a run: it abandons the run from {@code contextLoaded}, and the run listeners are not
+     * told that it failed.</p>
+     *
      * @throws IOException when the port cannot be bound, typically because something else holds it
      */
     void start() throws IOException {
@@ -68,10 +75,42 @@ final class StartupProgressServer {
         });
         httpServer.createContext("/", this::handle);
         httpServer.setExecutor(pool);
-        httpServer.start();
+        startFromDaemonThread(httpServer);
         server = httpServer;
         executor = pool;
         running = true;
+    }
+
+    /**
+     * Starts the server from a daemon thread. The JDK's HTTP server gives the dispatcher thread it starts the
+     * daemon status of the thread that calls {@code start()}, and nothing else makes it a daemon.
+     */
+    private static void startFromDaemonThread(HttpServer httpServer) throws IOException {
+        FutureTask<Void> start = new FutureTask<>(httpServer::start, null);
+        Thread starter = new Thread(start, "grails-startup-progress-start");
+        starter.setDaemon(true);
+        starter.start();
+        boolean interrupted = false;
+        try {
+            while (true) {
+                try {
+                    start.get();
+                    return;
+                }
+                catch (InterruptedException ex) {
+                    // the server is starting whether or not this thread is interrupted, so wait for it either way
+                    interrupted = true;
+                }
+                catch (ExecutionException ex) {
+                    throw new IOException("The startup progress server could not be started", ex.getCause());
+                }
+            }
+        }
+        finally {
+            if (interrupted) {
+                Thread.currentThread().interrupt();
+            }
+        }
     }
 
     boolean isRunning() {

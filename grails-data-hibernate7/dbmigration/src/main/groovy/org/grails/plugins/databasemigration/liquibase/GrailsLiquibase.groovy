@@ -56,7 +56,8 @@ class GrailsLiquibase extends SpringLiquibase {
 
     @Override
     protected Liquibase createLiquibase(Connection connection) throws LiquibaseException {
-        Liquibase liquibase = new Liquibase(getChangeLog(), createResourceOpener(), createDatabase(connection, null))
+        // every change listener set on it is kept, so the one that reports the update and any a migration callback sets both run
+        Liquibase liquibase = new MultiListenerLiquibase(getChangeLog(), createResourceOpener(), createDatabase(connection, null))
         if (parameters != null) {
             for (Map.Entry<String, String> entry : parameters.entrySet()) {
                 liquibase.setChangeLogParameter(entry.getKey(), entry.getValue())
@@ -86,8 +87,8 @@ class GrailsLiquibase extends SpringLiquibase {
 
     @Override
     protected void performUpdate(Liquibase liquibase) throws LiquibaseException {
-        // begun before the migration callbacks run, so a callback that sets a change listener of its own replaces the
-        // one that reports each change set, and works as it did before the update was reported
+        // begun before the migration callbacks run; a change listener a callback sets of its own is added to the one
+        // that reports each change set, so the callback works as it did before the update was reported
         StartupTask task = startTask(liquibase)
         try {
             if (!applicationContext.containsBean('migrationCallbacks')) {

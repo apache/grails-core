@@ -43,6 +43,8 @@ import spock.util.concurrent.PollingConditions
 import org.springframework.boot.Banner
 import org.springframework.boot.CommandLineRunner
 import org.springframework.boot.SpringApplication
+import org.springframework.boot.SpringApplicationHook
+import org.springframework.boot.SpringApplicationRunListener
 import org.springframework.boot.builder.SpringApplicationBuilder
 import org.springframework.boot.context.metrics.buffering.BufferingApplicationStartup
 import org.springframework.boot.tomcat.servlet.TomcatServletWebServerFactory
@@ -58,6 +60,8 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.DependsOn
 import org.springframework.context.annotation.Scope
 import org.springframework.context.event.ContextRefreshedEvent
+import org.springframework.context.support.DefaultLifecycleProcessor
+import org.springframework.core.SpringProperties
 import org.springframework.core.env.Environment
 import org.springframework.core.metrics.ApplicationStartup
 import org.springframework.web.SpringServletContainerInitializer
@@ -258,6 +262,12 @@ class StartupProgressSpec extends Specification {
         page.contentType.startsWith('text/html')
         page.body.contains('"statusPath":"/app/__grails/startup-progress"')
 
+        and: 'so does a browser that sends no fetch metadata, as none does over plain HTTP to any host but localhost'
+        Response upgrade = request('/app/hello', HTML, 'GET', ['Upgrade-Insecure-Requests': '1'])
+        upgrade.status == 503
+        upgrade.phase == 'INITIALIZING'
+        upgrade.body.contains('"statusPath":"/app/__grails/startup-progress"')
+
         and: 'any other request reaches the application, as it did before there was a progress page'
         request('/app/hello', HTML).body == 'hello'
         request('/app/hello').body == 'hello'
@@ -414,6 +424,56 @@ class StartupProgressSpec extends Specification {
 
         cleanup:
         holder.close()
+    }
+
+    void 'does not hold the port when a checkpoint is to be taken on refresh, which an open port would fail'() {
+        given: 'a JVM told to take a checkpoint on refresh, after Spring has read the setting, since this JVM cannot take one'
+        Class.forName(DefaultLifecycleProcessor.name)
+        SpringProperties.setProperty(DefaultLifecycleProcessor.CHECKPOINT_PROPERTY_NAME, DefaultLifecycleProcessor.ON_REFRESH_VALUE)
+        Gates.beanCreation = new CountDownLatch(1)
+
+        when: 'the application starts with the page and the report, and is creating its beans'
+        start('grails.startup.progress.enabled': true, 'grails.startup.progress.endpoint.enabled': true)
+        assert Gates.beanStarted.await(30, TimeUnit.SECONDS)
+
+        then: 'nothing answers on the port'
+        request('/hello', HTML) == null
+
+        when: 'the beans are created'
+        Gates.beanCreation.countDown()
+        runner.join(30_000)
+
+        then: 'the application starts as usual, and the report is still served'
+        runFailure == null
+        request('/__grails/startup', 'application/json').json().phase == 'READY'
+
+        cleanup:
+        SpringProperties.setProperty(DefaultLifecycleProcessor.CHECKPOINT_PROPERTY_NAME, null)
+    }
+
+    void 'a run abandoned before the hand-off, as AOT processing abandons one, leaves no thread that would keep the JVM running'() {
+        given: 'a hook that abandons the run once the context is loaded, as Spring Boot AOT processing does'
+        SpringApplicationHook abandoning = { SpringApplication application ->
+            new SpringApplicationRunListener() {
+                @Override
+                void contextLoaded(ConfigurableApplicationContext loaded) {
+                    throw new SpringApplication.AbandonedRunException(loaded)
+                }
+            }
+        } as SpringApplicationHook
+
+        when: 'the application starts with the page, and the run is abandoned'
+        start(['grails.startup.progress.enabled': true], abandoning)
+        runner.join(30_000)
+
+        then: 'the run was abandoned without the run listeners hearing that it failed, so the page still holds the port'
+        runFailure instanceof SpringApplication.AbandonedRunException
+        request('/hello', HTML)?.status == 503
+
+        and: 'every thread the page runs on is a daemon, so none keeps the JVM running once the run returns'
+        Collection<Thread> threads = Thread.allStackTraces.keySet().findAll { it.name == 'HTTP-Dispatcher' || it.name.startsWith('grails-startup-progress') }
+        threads.any { it.name == 'HTTP-Dispatcher' }
+        threads.every { it.daemon }
     }
 
     void 'an application deployed to a servlet container does not open the port it is configured with'() {
@@ -932,7 +992,10 @@ class StartupProgressSpec extends Specification {
         }
     }
 
-    private void start(Map<String, Object> properties) {
+    /**
+     * @param hook a hook applied to the run, as Spring Boot's AOT processing applies one, or {@code null} for none
+     */
+    private void start(Map<String, Object> properties, SpringApplicationHook hook = null) {
         recorder = new BufferingApplicationStartup(10_000)
         SpringApplication application = new SpringApplication(ProgressTestApplication)
         application.registerShutdownHook = false
@@ -941,7 +1004,12 @@ class StartupProgressSpec extends Specification {
         application.defaultProperties = ['server.port': port, 'spring.application.name': 'progress-test'] + properties
         runner = Thread.start('startup-progress-spec') {
             try {
-                context = application.run()
+                if (hook) {
+                    SpringApplication.withHook(hook, { context = application.run() } as Runnable)
+                }
+                else {
+                    context = application.run()
+                }
             }
             catch (Throwable failure) {
                 runFailure = failure
@@ -966,8 +1034,8 @@ class StartupProgressSpec extends Specification {
         response?.phase ? response : null
     }
 
-    private Response request(String path, String accept = 'application/json', String method = 'GET') {
-        request(port, path, accept, method, cookie)
+    private Response request(String path, String accept = 'application/json', String method = 'GET', Map<String, String> headers = [:]) {
+        request(port, path, accept, method, cookie, headers)
     }
 
     /**
@@ -999,7 +1067,7 @@ class StartupProgressSpec extends Specification {
         }
     }
 
-    private static Response request(int port, String path, String accept, String method = 'GET', String cookie = null) {
+    private static Response request(int port, String path, String accept, String method = 'GET', String cookie = null, Map<String, String> headers = [:]) {
         HttpURLConnection connection = (HttpURLConnection) URI.create("http://localhost:${port}${path}").toURL().openConnection()
         connection.requestMethod = method
         connection.useCaches = false
@@ -1007,6 +1075,7 @@ class StartupProgressSpec extends Specification {
         if (cookie) {
             connection.setRequestProperty('Cookie', cookie)
         }
+        headers.each { String name, String value -> connection.setRequestProperty(name, value) }
         connection.connectTimeout = 2000
         connection.readTimeout = 10_000
         connection.setRequestProperty('Accept', accept)
