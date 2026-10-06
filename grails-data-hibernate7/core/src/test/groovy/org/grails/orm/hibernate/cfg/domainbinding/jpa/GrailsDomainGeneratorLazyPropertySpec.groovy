@@ -29,8 +29,8 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
 /**
  * Describes how {@link GrailsDomainGenerator} states {@code lazy: true} on a simple or enum property: the binder marks
  * the Hibernate property lazy (a lazy attribute, which Hibernate loads on first access when the class is enhanced), and
- * the annotation for that is {@code @Basic(fetch = LAZY)}. Where the binder sets it and annotations cannot say it, the
- * generator rejects the entity by name.
+ * the annotation for that is {@code @Basic(fetch = LAZY)}. Hibernate's annotation binder ignores that annotation on an
+ * {@code @Embedded}, so a lazy embedded property is accepted and marked lazy when the generated classes are bound.
  */
 class GrailsDomainGeneratorLazyPropertySpec extends GrailsDomainGeneratorSupport {
 
@@ -60,15 +60,17 @@ class GrailsDomainGeneratorLazyPropertySpec extends GrailsDomainGeneratorSupport
         bound.getProperty('big').lazy
     }
 
-    void "lazy on an embedded property is rejected by name"() {
-        when:
-        generateGroup(GenLazyEmbedded)
+    void "a lazy embedded property is accepted: annotations cannot state it, so the binder of the generated classes sets it"() {
+        given:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenLazyEmbedded)
+        Metadata metadata = annotationMetadata(classes.values())
+        PersistentClass bound = entity(GenLazyEmbedded).persistentClass
+        PersistentClass read = metadata.getEntityBinding(classes[entity(GenLazyEmbedded)].name)
 
-        then:
-        UnsupportedOperationException e = thrown()
-        e.message.contains('GenLazyEmbedded')
-        e.message.contains('home')
-        e.message.contains('lazy')
+        expect:
+        bound.getProperty('home').lazy
+        !read.getProperty('home').lazy
+        !classes.values().first().getDeclaredField('home').isAnnotationPresent(Basic)
     }
 }
 

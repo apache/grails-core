@@ -362,6 +362,11 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
             alignCollectionTable((Collection) property.value, (HibernatePersistentProperty) persistentProperty)
         }
         if (property.value instanceof Component && persistentProperty instanceof Embedded) {
+            // PropertyBinder marks the property lazy when the mapping says lazy: true; @Basic(fetch = LAZY) on an @Embedded is ignored
+            // by Hibernate's annotation binder, so the mapping's flag is set on the bound property
+            if (persistentProperty instanceof HibernatePersistentProperty && ((HibernatePersistentProperty) persistentProperty).isLazy()) {
+                property.lazy = true
+            }
             PersistentEntity embedded = ((Embedded<?>) persistentProperty).associatedEntity
             if (embedded instanceof GrailsHibernatePersistentEntity) {
                 alignComponent(

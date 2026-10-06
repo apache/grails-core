@@ -2029,10 +2029,6 @@ class GrailsDomainGenerator {
         if (!type.isRoot()) {
             return "the embedded type [${type.name}] extends another persistent class"
         }
-        if (property.isLazy()) {
-            return 'the property is mapped lazy: true, which the binder marks on the component as a lazy attribute and which ' +
-                    'annotations cannot state on an @Embedded'
-        }
         if (property.isUserButNotCollectionType()) {
             return "the property is mapped with the type [${property.userType.name}]: the binder binds it as one simple value of that " +
                     'type and not as an embedded object, which the generator does not state'

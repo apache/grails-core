@@ -37,6 +37,7 @@ import org.grails.orm.hibernate.cfg.NaturalId
 import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyEntityProperty
 
@@ -404,7 +405,8 @@ class GrailsDomainGeneratorOptionCoverageSpec extends GrailsDomainGeneratorSuppo
 
     /**
      * What the generator decides for the group: the generated classes (annotations and fields) and the facets that no annotation
-     * carries but the binding of the generated classes applies to the bound collections, such as an extra-lazy collection.
+     * carries but the binding of the generated classes applies to the bound properties: an extra-lazy collection and a lazy
+     * embedded property.
      */
     private String signature() {
         Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenCovOwner, GenCovTarget)
@@ -413,14 +415,17 @@ class GrailsDomainGeneratorOptionCoverageSpec extends GrailsDomainGeneratorSuppo
             generated.declaredAnnotations.collect { it.toString() }.join('|') + '#' +
                     generated.declaredFields.sort { it.name }.collect { java.lang.reflect.Field field ->
                         "${field.name}:${field.genericType}:${field.declaredAnnotations.collect { it.toString() }.join(',')}".toString()
-                    }.join(';') + '#' + extraLazyCollections(generator, entity)
+                    }.join(';') + '#' + appliedAfterBinding(generator, entity)
         }.join('\n')
     }
 
-    private static String extraLazyCollections(GrailsDomainGenerator generator, GrailsHibernatePersistentEntity entity) {
+    private static String appliedAfterBinding(GrailsDomainGenerator generator, GrailsHibernatePersistentEntity entity) {
         return entity.hibernatePersistentProperties.findAll { HibernatePersistentProperty property ->
             if (property instanceof HibernateBasicProperty && generator.supports(property)) {
                 return generator.collectionFacets((HibernateBasicProperty) property).extraLazy()
+            }
+            if (property instanceof HibernateEmbeddedProperty) {
+                return generator.supports(property) && property.isLazy()
             }
             return property instanceof HibernateToManyEntityProperty && generator.supports(property) &&
                     generator.toManyFacets((HibernateToManyEntityProperty) property).extraLazy()
