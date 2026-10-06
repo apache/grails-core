@@ -34,7 +34,7 @@ import org.hibernate.mapping.RootClass
 class GeneratedDomainClassesDdlSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        registerGeneratedDomainClasses(GddVehicle, GddCar, GddTruck)
+        registerGeneratedDomainClasses(GddVehicle, GddCar, GddTruck, GddStudent, GddSchool, GddTeacher, GddBadge)
     }
 
     private List<String> checkClauses(String table) {
@@ -58,6 +58,68 @@ class GeneratedDomainClassesDdlSpec extends HibernateGormDatastoreSpec {
         } finally {
             session.close()
         }
+    }
+
+    private List<String> query(String sql) {
+        Session session = sessionFactory.openSession()
+        try {
+            return session.doReturningWork { Connection connection ->
+                List<String> found = []
+                connection.createStatement().withCloseable { statement ->
+                    statement.executeQuery(sql).withCloseable { rows ->
+                        while (rows.next()) {
+                            found << rows.getString(1)
+                        }
+                    }
+                }
+                return found
+            } as List<String>
+        } finally {
+            session.close()
+        }
+    }
+
+    private List<String> constraintTypes(String table) {
+        return query("select CONSTRAINT_TYPE from INFORMATION_SCHEMA.TABLE_CONSTRAINTS where upper(TABLE_NAME) = '${table.toUpperCase()}'".toString())
+    }
+
+    private List<String> nullableColumns(String table) {
+        return query("select COLUMN_NAME from INFORMATION_SCHEMA.COLUMNS where upper(TABLE_NAME) = '${table.toUpperCase()}' and IS_NULLABLE = 'YES'".toString())
+                *.toLowerCase()
+    }
+
+    void "the join table of a unidirectional one-to-many has a unique key over its nullable columns, not a primary key, as with the domain binder"() {
+        given:
+        String table = datastore.metadata.getCollectionBinding(GddTeacher.name + '.badges').collectionTable.name
+
+        expect:
+        'PRIMARY KEY' !in constraintTypes(table)
+        constraintTypes(table).count('UNIQUE') == 1
+        nullableColumns(table).size() == 2
+    }
+
+    void "the join table of a many-to-many has the primary key over its not null columns, as with the domain binder"() {
+        expect:
+        constraintTypes('gdd_student_schools').count('PRIMARY KEY') == 1
+        nullableColumns('gdd_student_schools').isEmpty()
+    }
+
+    void "the key column of a collection of values stays nullable, as with the domain binder"() {
+        expect:
+        'gdd_student_id' in nullableColumns('gdd_student_nicknames')
+    }
+
+    void "a many-to-many still saves and loads through the join table"() {
+        when:
+        GddStudent student = new GddStudent(name: 's')
+        student.addToSchools(new GddSchool(name: 'x'))
+        student.nicknames = ['a', 'b'] as Set
+        student.save(flush: true)
+        session.clear()
+
+        then:
+        GddStudent.get(student.id).schools*.name == ['x']
+        GddStudent.get(student.id).nicknames == ['a', 'b'] as Set
     }
 
     void "a single-table hierarchy gets no check constraint over its discriminator values, as with the domain binder"() {
@@ -108,4 +170,29 @@ class GddCar extends GddVehicle {
 @Entity
 class GddTruck extends GddVehicle {
     Integer axles
+}
+
+@Entity
+class GddStudent {
+    String name
+    Set<String> nicknames
+    static hasMany = [schools: GddSchool, nicknames: String]
+}
+
+@Entity
+class GddSchool {
+    String name
+    static hasMany = [students: GddStudent]
+    static belongsTo = GddStudent
+}
+
+@Entity
+class GddTeacher {
+    String name
+    static hasMany = [badges: GddBadge]
+}
+
+@Entity
+class GddBadge {
+    String name
 }

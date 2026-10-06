@@ -31,10 +31,15 @@ import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import org.hibernate.engine.spi.FilterDefinition
 import org.hibernate.generator.GeneratorCreationContext
 import org.hibernate.mapping.BasicValue
+import org.hibernate.mapping.Collection
+import org.hibernate.mapping.Column
 import org.hibernate.mapping.Component
 import org.hibernate.mapping.PersistentClass
 import org.hibernate.mapping.Property
 import org.hibernate.mapping.RootClass
+import org.hibernate.mapping.Set as HibernateSet
+import org.hibernate.mapping.Table
+import org.hibernate.mapping.Value
 import org.springframework.beans.BeanUtils
 
 import org.grails.datastore.mapping.model.PersistentEntity
@@ -50,7 +55,9 @@ import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGenera
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleIdentityProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyEntityProperty
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
@@ -293,6 +300,9 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
         if (persistentProperty instanceof HibernatePersistentProperty) {
             property.propertyAccessorName = propertyBinder.accessorName((HibernatePersistentProperty) persistentProperty)
         }
+        if (property.value instanceof Collection && persistentProperty instanceof HibernatePersistentProperty) {
+            alignCollectionTable((Collection) property.value, (HibernatePersistentProperty) persistentProperty)
+        }
         if (property.value instanceof Component && persistentProperty instanceof Embedded) {
             PersistentEntity embedded = ((Embedded<?>) persistentProperty).associatedEntity
             if (embedded instanceof GrailsHibernatePersistentEntity) {
@@ -300,6 +310,51 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
                         (Component) property.value,
                         (GrailsHibernatePersistentEntity) embedded,
                         BeanUtils.findPropertyType(property.name, ownerClass))
+            }
+        }
+    }
+
+    /**
+     * Hibernate's annotation binder forces the key and element columns of a collection table not null ("I break the spec, but it's
+     * for good"), where the domain binder leaves them nullable unless they are part of the primary key, and a set whose element
+     * column is nullable gets a unique key over its columns instead of a primary key. The nullability the generator decided
+     * (the binder's) is restored on the columns, and for a set the key Hibernate derived from them is derived again.
+     */
+    private void alignCollectionTable(Collection collection, HibernatePersistentProperty property) {
+        if (collection.inverse || collection.oneToMany) {
+            return
+        }
+        List<ColumnFacets> keys
+        ColumnFacets element
+        if (property instanceof HibernateToManyEntityProperty) {
+            ToManyFacets facets = generator.toManyFacets((HibernateToManyEntityProperty) property)
+            keys = facets.keys()
+            element = facets.element()
+        } else if (property instanceof HibernateBasicProperty) {
+            CollectionFacets facets = generator.collectionFacets((HibernateBasicProperty) property)
+            keys = facets.keys()
+            element = facets.element()
+        } else {
+            return
+        }
+        Table table = collection.collectionTable
+        boolean rederive = collection instanceof HibernateSet && table.primaryKey != null
+        if (rederive) {
+            table.primaryKey = null
+        }
+        restoreNullability(collection.key, keys)
+        restoreNullability(collection.element, [element])
+        if (rederive) {
+            collection.createAllKeys()
+        }
+    }
+
+    private static void restoreNullability(Value value, List<ColumnFacets> facets) {
+        List<Column> columns = value.selectables.findAll { it instanceof Column }.collect { (Column) it }
+        for (ColumnFacets facet : facets) {
+            Column column = columns.size() == 1 ? columns[0] : columns.find { Column c -> c.name == facet.name().replace('`', '') }
+            if (column != null) {
+                column.nullable = facet.nullable()
             }
         }
     }
