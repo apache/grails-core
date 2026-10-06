@@ -798,7 +798,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 schema   : [facets.schema(), collection.collectionTable.schema],
                 catalog  : [facets.catalog(), collection.collectionTable.catalog],
                 lazy     : [facets.lazy(), collection.lazy],
-                extraLazy: [false, collection.extraLazy],
+                extraLazy: [facets.extraLazy(), collection.extraLazy],
                 fetchMode: [facets.fetchMode(), collection.fetchMode == FetchMode.JOIN ? FetchMode.JOIN : FetchMode.SELECT],
                 batchSize: [facets.batchSize(), Math.max(collection.batchSize, 0)],
                 cache    : [facets.cacheUsage(), collection.cacheConcurrencyStrategy],
@@ -1620,7 +1620,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         Map<String, List> pairs = [
                 kind       : [facets.kind(), kindOf(collection)],
                 lazy       : [facets.lazy(), collection.lazy],
-                extraLazy  : [false, collection.extraLazy],
+                extraLazy  : [facets.extraLazy(), collection.extraLazy],
                 fetchMode  : [facets.fetchMode(), collection.fetchMode == FetchMode.JOIN ? FetchMode.JOIN : FetchMode.SELECT],
                 batchSize  : [facets.batchSize(), Math.max(collection.batchSize, 0)],
                 cache      : [facets.cacheUsage(), collection.cacheConcurrencyStrategy],
@@ -1682,7 +1682,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 kind        : [kindOf(bound), kindOf(annotated)],
                 role        : [roleProperty(bound), roleProperty(annotated)],
                 lazy        : [bound.lazy, annotated.lazy],
-                extraLazy   : [bound.extraLazy, annotated.extraLazy],
+                extraLazy   : [bound.extraLazy && !annotated.extraLazy ? extraLazyAligned(known) : bound.extraLazy, annotated.extraLazy],
                 fetchMode   : [bound.fetchMode == FetchMode.JOIN ? FetchMode.JOIN : FetchMode.SELECT,
                                annotated.fetchMode == FetchMode.JOIN ? FetchMode.JOIN : FetchMode.SELECT],
                 batchSize   : [Math.max(bound.batchSize, 0), Math.max(annotated.batchSize, 0)],
@@ -1767,7 +1767,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 schema      : [bound.collectionTable.schema, annotated.collectionTable.schema],
                 catalog     : [bound.collectionTable.catalog, annotated.collectionTable.catalog],
                 lazy        : [bound.lazy, annotated.lazy],
-                extraLazy   : [bound.extraLazy, annotated.extraLazy],
+                extraLazy   : [bound.extraLazy && !annotated.extraLazy ? extraLazyAligned(known) : bound.extraLazy, annotated.extraLazy],
                 fetchMode   : [bound.fetchMode == FetchMode.JOIN ? FetchMode.JOIN : FetchMode.SELECT,
                                annotated.fetchMode == FetchMode.JOIN ? FetchMode.JOIN : FetchMode.SELECT],
                 batchSize   : [Math.max(bound.batchSize, 0), Math.max(annotated.batchSize, 0)],
@@ -1917,6 +1917,16 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             }
         }
         return found
+    }
+
+    /**
+     * Hibernate's annotation binder cannot state an extra-lazy collection (it hard-codes {@code extraLazy = false}); the binder
+     * that wires the generated classes sets the flag after binding, and the real-boot spec proves it. Here the annotation
+     * path is read before that step, so the difference is recorded as known and the annotated value is the expected one.
+     */
+    private static boolean extraLazyAligned(Map<String, Integer> known) {
+        known['an extra-lazy collection (lazy: true): Hibernate 7 annotations cannot state it; GeneratedDomainClassBinder sets it after binding']++
+        return false
     }
 
     private static List<String> compareAnnotatedDiscriminator(String where, RootClass bound, RootClass annotated) {

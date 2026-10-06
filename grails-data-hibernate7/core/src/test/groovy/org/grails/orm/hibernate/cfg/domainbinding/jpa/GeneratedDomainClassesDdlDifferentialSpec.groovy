@@ -86,7 +86,6 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
             'a type is mapped on the collection property itself',
             'an index or a unique group is mapped on the collection property',
             'is a collection inside an embedded type',
-            'an explicit lazy: true makes the binder bind an extra-lazy collection',
             'the property is mapped lazy: true',
             'declares a natural id but is a subclass',
             'which is HibernateEmbeddedProperty',

@@ -44,6 +44,9 @@ import org.hibernate.FetchMode
  * a composite identifier; {@code referencedKeys} names the column of the owner's key each one points at, and is empty unless the
  * owner has a composite identifier. {@code key} is the first of the key columns.</p>
  *
+ * <p>{@code extraLazy} is an explicit {@code lazy: true}: the binder makes the collection extra-lazy, which Hibernate's annotation
+ * binder cannot state, so {@code GeneratedDomainClassBinder} sets it on the collection after binding.</p>
+ *
  * @since 9.0
  */
 @CompileStatic
@@ -59,6 +62,7 @@ record ToManyFacets(
     ColumnFacets element,
     ColumnFacets index,
     boolean lazy,
+    boolean extraLazy,
     FetchMode fetchMode,
     int batchSize,
     String cacheUsage,

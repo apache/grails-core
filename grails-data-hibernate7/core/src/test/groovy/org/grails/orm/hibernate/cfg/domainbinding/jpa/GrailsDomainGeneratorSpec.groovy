@@ -116,6 +116,7 @@ import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.grails.orm.hibernate.cfg.HibernateMappingContext
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyEntityProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty
@@ -1202,14 +1203,16 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         name << ['tags', 'scores', 'aliases', 'labels', 'attrs', 'kinds', 'ranks']
     }
 
-    void "an explicit lazy true is an extra-lazy collection, which annotations cannot state, so it is rejected by name"() {
+    void "an explicit lazy true is an extra-lazy collection: the facets say so, and the fetch type follows the binder's lazy facet"() {
         when:
-        generate(GenCollLazy)
+        GrailsHibernatePersistentEntity entity = unbound(GenCollLazy)
+        CollectionFacets facets = newGenerator().collectionFacets((HibernateBasicProperty) entity.getHibernatePropertyByName('tags'))
+        Class<?> generatedLazy = generate(GenCollLazy)
 
         then:
-        UnsupportedOperationException e = thrown()
-        e.message.contains('Collection property [tags] of [' + GenCollLazy.name + ']')
-        e.message.contains('extra-lazy')
+        facets.extraLazy()
+        generatedLazy.getDeclaredField('tags').getAnnotation(ElementCollection).fetch() == (facets.lazy() ? FetchType.LAZY : FetchType.EAGER)
+        !newGenerator().collectionFacets((HibernateBasicProperty) unbound(GenCollSingle).getHibernatePropertyByName('tags')).extraLazy()
     }
 
     void "a map of enums is rejected by name, because the binder itself cannot export its schema"() {
@@ -1648,18 +1651,14 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         tags.isAnnotationPresent(ManyToMany)
     }
 
-    void "an extra-lazy collection is rejected by name"() {
+    void "an explicit lazy true on a collection of entities is an extra-lazy collection in the facets"() {
         given:
-        GrailsHibernatePersistentEntity entity = unbound(domain)
-        HibernatePersistentProperty property = entity.getHibernatePropertyByName(name)
+        GrailsHibernatePersistentEntity entity = unbound(GenOmLazyOwner)
+        HibernateToManyEntityProperty property = (HibernateToManyEntityProperty) entity.getHibernatePropertyByName('tags')
 
         expect:
-        !newGenerator().supports(property)
-        newGenerator().unsupportedReason(entity, property).contains(reason)
-
-        where:
-        domain          | name     | reason
-        GenOmLazyOwner  | 'tags'   | 'extra-lazy'
+        newGenerator().supports(property)
+        newGenerator().toManyFacets(property).extraLazy()
     }
 
     void "Hibernate's own annotation binder reads a bidirectional collection as an inverse one-to-many on the generated target"() {

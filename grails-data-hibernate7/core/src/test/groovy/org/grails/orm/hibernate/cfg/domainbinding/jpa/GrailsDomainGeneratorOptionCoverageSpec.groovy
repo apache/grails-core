@@ -36,6 +36,9 @@ import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.NaturalId
 import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyEntityProperty
 
 /**
  * Guards the rule that {@link GrailsDomainGenerator} never drops a mapping option without a word. Every option of
@@ -399,14 +402,29 @@ class GrailsDomainGeneratorOptionCoverageSpec extends GrailsDomainGeneratorSuppo
         ]
     }
 
+    /**
+     * What the generator decides for the group: the generated classes (annotations and fields) and the facets that no annotation
+     * carries but the binding of the generated classes applies to the bound collections, such as an extra-lazy collection.
+     */
     private String signature() {
         Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenCovOwner, GenCovTarget)
-        return classes.values().collect { Class<?> generated ->
+        GrailsDomainGenerator generator = newGenerator()
+        return classes.collect { GrailsHibernatePersistentEntity entity, Class<?> generated ->
             generated.declaredAnnotations.collect { it.toString() }.join('|') + '#' +
                     generated.declaredFields.sort { it.name }.collect { java.lang.reflect.Field field ->
                         "${field.name}:${field.genericType}:${field.declaredAnnotations.collect { it.toString() }.join(',')}".toString()
-                    }.join(';')
+                    }.join(';') + '#' + extraLazyCollections(generator, entity)
         }.join('\n')
+    }
+
+    private static String extraLazyCollections(GrailsDomainGenerator generator, GrailsHibernatePersistentEntity entity) {
+        return entity.hibernatePersistentProperties.findAll { HibernatePersistentProperty property ->
+            if (property instanceof HibernateBasicProperty && generator.supports(property)) {
+                return generator.collectionFacets((HibernateBasicProperty) property).extraLazy()
+            }
+            return property instanceof HibernateToManyEntityProperty && generator.supports(property) &&
+                    generator.toManyFacets((HibernateToManyEntityProperty) property).extraLazy()
+        }*.name.sort().join(',')
     }
 }
 

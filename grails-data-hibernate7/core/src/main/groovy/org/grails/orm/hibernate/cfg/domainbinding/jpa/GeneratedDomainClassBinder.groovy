@@ -358,6 +358,7 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
             property.propertyAccessorName = propertyBinder.accessorName((HibernatePersistentProperty) persistentProperty)
         }
         if (property.value instanceof Collection && persistentProperty instanceof HibernatePersistentProperty) {
+            alignExtraLazy((Collection) property.value, (HibernatePersistentProperty) persistentProperty)
             alignCollectionTable((Collection) property.value, (HibernatePersistentProperty) persistentProperty)
         }
         if (property.value instanceof Component && persistentProperty instanceof Embedded) {
@@ -368,6 +369,25 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
                         (GrailsHibernatePersistentEntity) embedded,
                         BeanUtils.findPropertyType(property.name, ownerClass))
             }
+        }
+    }
+
+    /**
+     * An explicit {@code lazy: true} on a collection makes the domain binder bind an extra-lazy collection ({@code size()},
+     * {@code contains()} and {@code isEmpty()} do not initialize it). Hibernate 7's annotation binder always binds an ordinary
+     * lazy collection and has no annotation for the extra-lazy kind, so the flag is set on the bound collection.
+     */
+    private void alignExtraLazy(Collection collection, HibernatePersistentProperty property) {
+        boolean extraLazy
+        if (property instanceof HibernateToManyEntityProperty) {
+            extraLazy = generator.toManyFacets((HibernateToManyEntityProperty) property).extraLazy()
+        } else if (property instanceof HibernateBasicProperty) {
+            extraLazy = generator.collectionFacets((HibernateBasicProperty) property).extraLazy()
+        } else {
+            return
+        }
+        if (extraLazy) {
+            collection.extraLazy = true
         }
     }
 

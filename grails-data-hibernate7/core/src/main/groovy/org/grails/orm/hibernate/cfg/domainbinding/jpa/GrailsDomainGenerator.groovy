@@ -1164,9 +1164,6 @@ class GrailsDomainGenerator {
         if (constraintProblem != null) {
             return constraintProblem
         }
-        if (mapped.lazy == Boolean.TRUE) {
-            return 'an explicit lazy: true makes the binder bind an extra-lazy collection, which Hibernate 7 annotations cannot state'
-        }
         if (mapped.joinTable.keys != null && mapped.joinTable.keys.size() > 1) {
             return 'the join table has a composite key'
         }
@@ -1312,6 +1309,7 @@ class GrailsDomainGenerator {
                 collectionElementFacets(property, kind),
                 collectionIndexFacets(property, kind),
                 property.isLazy(),
+                property.getLazy() == Boolean.TRUE,
                 FetchMode.JOIN == mapped.fetchMode ? FetchMode.JOIN : FetchMode.SELECT,
                 Math.max(property.batchSize, 0),
                 property.cacheUsage,
@@ -1477,9 +1475,6 @@ class GrailsDomainGenerator {
         if (mapped.type != null) {
             return 'a type is mapped on the collection property itself, which the binder applies to the collection and its element alike'
         }
-        if (mapped.lazy == Boolean.TRUE) {
-            return 'an explicit lazy: true makes the binder bind an extra-lazy collection, which Hibernate 7 annotations cannot state'
-        }
         String constraintProblem = collectionConstraintProblem(property)
         if (constraintProblem != null) {
             return constraintProblem
@@ -1622,6 +1617,7 @@ class GrailsDomainGenerator {
                 element,
                 collectionIndexFacets(property, kind),
                 property.isLazy(),
+                property.getLazy() == Boolean.TRUE,
                 FetchMode.JOIN == mapped.fetchMode ? FetchMode.JOIN : FetchMode.SELECT,
                 Math.max(property.batchSize, 0),
                 property.cacheUsage,
