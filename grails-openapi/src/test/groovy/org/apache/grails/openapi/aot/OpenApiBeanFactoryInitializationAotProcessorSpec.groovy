@@ -21,7 +21,7 @@ package org.apache.grails.openapi.aot
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
-import org.springframework.aot.generate.ClassNameGenerator
+import org.springframework.aot.generate.NameGenerator
 import org.springframework.aot.generate.DefaultGenerationContext
 import org.springframework.aot.generate.InMemoryGeneratedFiles
 import org.springframework.aot.hint.MemberCategory
@@ -203,7 +203,7 @@ class OpenApiBeanFactoryInitializationAotProcessorSpec extends Specification {
     private RuntimeHints process(DefaultListableBeanFactory beanFactory) {
         def contribution = new OpenApiBeanFactoryInitializationAotProcessor().processAheadOfTime(beanFactory)
         def generationContext = new DefaultGenerationContext(
-                new ClassNameGenerator(ClassName.get('com.example', 'Application')), new InMemoryGeneratedFiles())
+                new NameGenerator(ClassName.get('com.example', 'Application')), new InMemoryGeneratedFiles())
         contribution.applyTo(generationContext, Stub(BeanFactoryInitializationCode))
         generationContext.runtimeHints
     }
