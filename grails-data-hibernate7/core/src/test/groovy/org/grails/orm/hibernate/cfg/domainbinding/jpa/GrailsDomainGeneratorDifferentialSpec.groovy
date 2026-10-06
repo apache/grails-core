@@ -541,7 +541,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             })
             if (boundPart.value instanceof ToOne && annotatedPart.value instanceof ToOne) {
                 String target = ((ToOne) annotatedPart.value).referencedEntityName
-                if (!target.endsWith(((ToOne) boundPart.value).referencedEntityName.replace('.', '_'))) {
+                if (target != ((ToOne) boundPart.value).referencedEntityName) {
                     found << "${where} compositeId part ${boundPart.name} target: generator=${target} binder=${((ToOne) boundPart.value).referencedEntityName}".toString()
                 }
             }

@@ -21,7 +21,6 @@ package grails.gorm.tests.generated
 import grails.gorm.tests.hibernatequery.HibernateQuerySpec
 import org.apache.grails.data.testing.tck.domains.Person
 
-import org.grails.orm.hibernate.cfg.domainbinding.jpa.GrailsDomainGenerator
 
 /**
  * Runs every feature of {@link HibernateQuerySpec} with the datastore booted through the generated-domain-class path: the
@@ -36,7 +35,7 @@ class GeneratedDomainClassesQuerySpec extends HibernateQuerySpec {
     def "the inherited features run against the generated mapping"() {
         expect:
         sessionFactory.mappingMetamodel.getEntityDescriptor(Person).entityName ==
-                GrailsDomainGenerator.GENERATED_PACKAGE + '.' + Person.name.replace('.', '_')
+                Person.name
         sessionFactory.mappingMetamodel.getEntityDescriptor(Person).mappedClass == Person
     }
 }

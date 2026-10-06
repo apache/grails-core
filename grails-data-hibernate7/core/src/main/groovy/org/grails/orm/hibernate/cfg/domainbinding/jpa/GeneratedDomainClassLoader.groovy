@@ -25,11 +25,15 @@ import groovy.transform.CompileStatic
 /**
  * The class loader Hibernate's annotation binder resolves the generated domain classes through.
  *
- * <p>The classes {@link GrailsDomainGenerator#generateAll} makes live in a class loader of their own, whose parent is the
- * application's. Hibernate loads an annotated class by name, so its class loader service must be able to see them; this
- * loader sits between that service and the application: it answers with its parent's classes first and, failing that,
- * with the classes of the loaders registered with it. The generated loaders do not delegate back to this one (their
- * parent is the application loader), so no lookup can loop.</p>
+ * <p>The classes {@link GrailsDomainGenerator#generateAll} makes carry the names of the domain classes they describe, and
+ * live in a class loader of their own, whose parent is the application's. While Hibernate binds the mappings, a domain
+ * class name must resolve to the generated class, so this loader answers with the classes of the loaders registered with
+ * it first and only then with its parent's; the generated loaders delegate everything they did not generate to the
+ * application loader, not back to this one, so no lookup can loop.</p>
+ *
+ * <p>This loader is only used while the mappings are bound. A class loader answers a name the same way for ever once it has
+ * been asked through {@code Class.forName}, which is what Hibernate's class loader service does, so the switch to the real
+ * classes is made by {@link GeneratedDomainClassLoaderService}, not by this loader.</p>
  *
  * @since 9.0
  */
@@ -43,7 +47,8 @@ class GeneratedDomainClassLoader extends ClassLoader {
     }
 
     /**
-     * Makes the classes of a loader that {@link GrailsDomainGenerator} created loadable by name through this loader.
+     * Makes the classes of a loader that {@link GrailsDomainGenerator} created loadable by name through this loader, in
+     * preference to the classes of the same name of the parent.
      */
     void register(ClassLoader generatedClassLoader) {
         generated.add(generatedClassLoader)
@@ -51,19 +56,25 @@ class GeneratedDomainClassLoader extends ClassLoader {
 
     @Override
     protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
-        try {
-            return super.loadClass(name, resolve)
-        }
-        catch (ClassNotFoundException notInParent) {
-            for (ClassLoader loader : generated) {
-                try {
-                    return Class.forName(name, false, loader)
-                }
-                catch (ClassNotFoundException ignored) {
-                    // not one of this loader's classes: try the next
-                }
+        for (ClassLoader loader : generated) {
+            Class<?> made = generatedClass(loader, name)
+            if (made != null) {
+                return made
             }
-            throw notInParent
+        }
+        return super.loadClass(name, resolve)
+    }
+
+    /**
+     * A generated loader delegates the names it did not generate to its parent, so only a class it defined itself counts.
+     */
+    private static Class<?> generatedClass(ClassLoader loader, String name) {
+        try {
+            Class<?> candidate = Class.forName(name, false, loader)
+            return candidate.classLoader.is(loader) ? candidate : null
+        }
+        catch (ClassNotFoundException ignored) {
+            return null
         }
     }
 }

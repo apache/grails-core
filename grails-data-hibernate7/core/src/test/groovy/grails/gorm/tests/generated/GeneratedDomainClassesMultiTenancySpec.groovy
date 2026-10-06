@@ -64,9 +64,8 @@ class GeneratedDomainClassesMultiTenancySpec extends Specification {
             new GdcTenantItem(name: 'model 3').save(flush: true)
         }
 
-        then: 'the generated mapping is what is bound'
-        datastore.sessionFactory.mappingMetamodel.getEntityDescriptor(GdcTenantItem).entityName !=
-                GdcTenantItem.name
+        then: 'the entity is named after the domain class'
+        datastore.sessionFactory.mappingMetamodel.getEntityDescriptor(GdcTenantItem).entityName == GdcTenantItem.name
 
         and:
         GdcTenantItem.withNewSession { GdcTenantItem.count() } == 2

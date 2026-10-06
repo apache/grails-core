@@ -41,7 +41,7 @@ class GeneratedDomainClassesBootSpec extends Specification {
         EntityPersister persister = datastore.sessionFactory.mappingMetamodel.getEntityDescriptor(GdcComposite)
 
         then:
-        persister.entityName.endsWith('GdcComposite')
+        persister.entityName == GdcComposite.name
         persister.mappedClass == GdcComposite
         persister.identifierPropertyName == null
         persister.identifierMapping.virtualIdEmbeddable.mappedJavaType.javaTypeClass == GdcComposite

@@ -168,7 +168,9 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
 
     void "the generated class carries the entity and table annotations"() {
         expect:
-        generated.name == 'org.grails.orm.hibernate.generated.org_grails_orm_hibernate_cfg_domainbinding_jpa_GenBasic'
+        generated.name == GenBasic.name
+        !generated.is(GenBasic)
+        !generated.classLoader.is(GenBasic.classLoader)
         generated.getAnnotation(jakarta.persistence.Entity).name() == 'GenBasic'
         generated.getAnnotation(Table).name() == 'gen_basic'
     }
@@ -367,11 +369,11 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
 
     void "Hibernate's own annotation binder reads the generated types and formulas"() {
         given: "generated classes live in their own class loader, which the registry must be told about"
-        Class<?> typedClass = generate(GenTyped)
-        Class<?> derivedClass = generate(GenDerived)
+        Collection<Class<?>> classes = generateGroup(GenTyped, GenDerived).values()
+        Class<?> typedClass = classes[0]
+        Class<?> derivedClass = classes[1]
         BootstrapServiceRegistry bootstrap = new BootstrapServiceRegistryBuilder()
                 .applyClassLoader(typedClass.classLoader)
-                .applyClassLoader(derivedClass.classLoader)
                 .build()
         StandardServiceRegistry registry = new StandardServiceRegistryBuilder(bootstrap)
                 .applySetting('hibernate.dialect', H2Dialect.name)

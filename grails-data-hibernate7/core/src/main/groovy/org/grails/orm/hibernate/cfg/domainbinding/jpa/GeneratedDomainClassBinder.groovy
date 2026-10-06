@@ -31,7 +31,6 @@ import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import org.hibernate.engine.spi.FilterDefinition
 import org.hibernate.generator.GeneratorCreationContext
 import org.hibernate.mapping.BasicValue
-import org.hibernate.mapping.Collection
 import org.hibernate.mapping.Component
 import org.hibernate.mapping.PersistentClass
 import org.hibernate.mapping.Property
@@ -62,22 +61,23 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterDefiniti
  * Lets Hibernate's own annotation binder bind the GORM domain classes, while the application's real instances stay what
  * Hibernate persists and loads.
  *
- * <p>The binder works in two steps, one on each side of Hibernate's metadata build:</p>
+ * <p>The generated class of an entity has the name of the domain class, so Hibernate's entity name, which is the name of
+ * the annotated class, is the real name: statistics, entity graphs, collection roles, second-level cache regions and
+ * exception messages all use it, as they do when the domain binder binds the entity. The two classes live in different class
+ * loaders. The binder works in two steps, one on each side of Hibernate's metadata build:</p>
  * <ol>
  *   <li>{@link #contribute}, called by the domain binder while Hibernate collects mappings, generates an annotated class
  *   for every entity ({@link GrailsDomainGenerator}) and hands the generated classes to Hibernate, which binds them as it
- *   binds any annotated entity.</li>
+ *   binds any annotated entity; Hibernate's class loader service resolves a domain class name to the generated class
+ *   meanwhile ({@link GeneratedDomainClassLoader}).</li>
  *   <li>{@link #getSessionFactoryBuilder}, called by Hibernate once the metadata is complete and before the session
- *   factory is built, points the bound entities at the real classes: the mapped class and proxy interface become the
- *   domain class, the property accessors are the ones the domain binder would choose, the identifier gets GORM's
- *   generator, and embedded types become the real embedded classes. Hibernate registers a persister under the class name
- *   of its mapped class, so {@code session.get(Book, id)}, HQL, criteria queries and the entity name of a real
- *   {@code Book} instance all find it; the generated class is never instantiated.</li>
+ *   factory is built, switches the class loader service so that the same names resolve to the real classes
+ *   ({@link GeneratedDomainClassLoaderService}) and points the bound entities at them: the mapped class and proxy interface
+ *   become the domain class, the property accessors are the ones the domain binder would choose, the identifier gets GORM's
+ *   generator, and embedded types become the real embedded classes. Hibernate registers a persister under the entity name
+ *   and the class name of its mapped class, so {@code session.get(Book, id)}, HQL, criteria queries and the entity name of a
+ *   real {@code Book} instance all find it; the generated class is never instantiated.</li>
  * </ol>
- *
- * <p>The entity name stays the name of the generated class (a JPA name such as {@code Book} is imported for HQL). The
- * second-level cache regions of cached entities and collections are named after the real classes, as the domain binder names
- * them.</p>
  *
  * @since 9.0
  */
@@ -92,6 +92,7 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
     private PersistentEntityNamingStrategy namingStrategy
     private JdbcEnvironment jdbcEnvironment
     private GrailsDomainGenerator generator
+    private GeneratedDomainClassLoaderService classLoaderService
 
     /**
      * @param dataSourceName the data source whose entities are generated
@@ -108,6 +109,14 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
      */
     GeneratedDomainClassLoader getClassLoader() {
         return classLoader
+    }
+
+    /**
+     * @param classLoaderService the class loader service of the registry the mappings are bound in; the binder switches it to
+     *     the real classes once the mappings are bound
+     */
+    void setClassLoaderService(GeneratedDomainClassLoaderService classLoaderService) {
+        this.classLoaderService = classLoaderService
     }
 
     /**
@@ -153,39 +162,16 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
      */
     @Override
     SessionFactoryBuilder getSessionFactoryBuilder(MetadataImplementor metadata, SessionFactoryBuilderImplementor defaultBuilder) {
+        // the mappings are bound: from here on the domain class names resolve to the real classes
+        classLoaderService?.useRealClasses()
         for (PersistentClass persistentClass : new ArrayList<PersistentClass>(metadata.entityBindings)) {
             Generated generated = generatedByName.get(persistentClass.className)
             if (generated != null) {
                 align(persistentClass, generated, metadata)
             }
         }
-        alignCollectionRegions(metadata)
         defineTenantFilter(metadata)
         return null
-    }
-
-    /**
-     * Hibernate names the second-level cache region of a cached collection after its role, the entity name of the owner and the
-     * property path, which here is the name of the generated class. The region is named after the real owner class, as it is
-     * when the domain binder binds the owner, so that the cache configuration an application states by the names of its domain
-     * classes applies. A region name that differs from the role was stated explicitly and is left alone.
-     */
-    private void alignCollectionRegions(MetadataImplementor metadata) {
-        for (Collection collection : metadata.collectionBindings) {
-            PersistentClass owner = collection.owner
-            if (!isGeneratedEntityName(owner)) {
-                continue
-            }
-            if (collection.cacheRegionName == collection.role) {
-                collection.cacheRegionName = owner.className + collection.role.substring(owner.entityName.length())
-            }
-        }
-    }
-
-    private boolean isGeneratedEntityName(PersistentClass owner) {
-        return owner.entityName != owner.className && generatedByName.values().any { Generated generated ->
-            generated.generatedClass().name == owner.entityName
-        }
     }
 
     /**
@@ -233,23 +219,10 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
         }
         entity.persistentClass = persistentClass
         if (persistentClass instanceof RootClass) {
-            alignEntityRegion((RootClass) persistentClass, real)
             alignIdentifier((RootClass) persistentClass, generated, metadata)
         }
         for (Property property : persistentClass.declaredProperties) {
             alignProperty(property, entity, real)
-        }
-    }
-
-    /**
-     * Hibernate names the second-level cache region of an entity after its entity name, which here is the name of the generated
-     * class. The region is named after the real root class, as it is when the domain binder binds the entity (the domain
-     * binder never states a region of its own). A region that is not the default was stated explicitly and is left alone; the
-     * natural id of an entity has no cache region in either binding.
-     */
-    private void alignEntityRegion(RootClass root, Class<?> real) {
-        if (root.cached && root.cacheRegionName == root.entityName) {
-            root.cacheRegionName = real.name
         }
     }
 

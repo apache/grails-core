@@ -20,12 +20,12 @@ package grails.gorm.tests.generated
 
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.persistence.Entity
+import org.grails.orm.hibernate.cfg.domainbinding.jpa.GrailsDomainGenerator
 import org.hibernate.Hibernate
-import spock.lang.PendingFeature
+import org.hibernate.ObjectNotFoundException
 import org.hibernate.proxy.HibernateProxy
 import org.hibernate.persister.entity.EntityPersister
 
-import org.grails.orm.hibernate.cfg.domainbinding.jpa.GrailsDomainGenerator
 
 /**
  * Boots the datastore through the generated-domain-class path and checks that Hibernate binds classes generated from the
@@ -47,9 +47,10 @@ class GeneratedDomainClassesSpec extends HibernateGormDatastoreSpec {
         when:
         EntityPersister persister = sessionFactory.mappingMetamodel.getEntityDescriptor(GdcBook)
 
-        then: 'the entity is the generated class; the class Hibernate instantiates is the real one'
-        persister.entityName == GrailsDomainGenerator.GENERATED_PACKAGE + '.' + GdcBook.name.replace('.', '_')
+        then: 'the entity is named after the domain class, as when the domain binder binds it; the class Hibernate instantiates is the real one'
+        persister.entityName == GdcBook.name
         persister.mappedClass == GdcBook
+        persister.mappedClass.classLoader == GdcBook.classLoader
     }
 
     def "the entity name of a real instance is resolved and the JPA metamodel is typed with the real class"() {
@@ -57,7 +58,7 @@ class GeneratedDomainClassesSpec extends HibernateGormDatastoreSpec {
         GdcBook book = savedBook()
 
         expect:
-        sessionFactory.currentSession.getEntityName(book).endsWith('GdcBook')
+        sessionFactory.currentSession.getEntityName(book) == GdcBook.name
         sessionFactory.metamodel.entity(GdcBook).javaType == GdcBook
         sessionFactory.metamodel.entity(GdcNovel).javaType == GdcNovel
     }
@@ -77,17 +78,6 @@ class GeneratedDomainClassesSpec extends HibernateGormDatastoreSpec {
         !loaded.is(saved)
     }
 
-    def "statistics are kept for the entity under the generated entity name"() {
-        given:
-        sessionFactory.statistics.statisticsEnabled = true
-        GdcBook book = savedBook()
-        String entityName = sessionFactory.mappingMetamodel.getEntityDescriptor(GdcBook).entityName
-
-        expect:
-        sessionFactory.statistics.getEntityStatistics(entityName).insertCount == 1
-    }
-
-    @PendingFeature(reason = 'Hibernate keys statistics, second-level cache regions and entity graphs by entity name, which is the name of the generated class, not the domain class name')
     def "statistics are available under the domain class name"() {
         given:
         sessionFactory.statistics.statisticsEnabled = true
@@ -95,6 +85,26 @@ class GeneratedDomainClassesSpec extends HibernateGormDatastoreSpec {
 
         expect:
         sessionFactory.statistics.getEntityStatistics(GdcBook.name).insertCount == 1
+    }
+
+    def "the collection role, the entity graph and the exception messages carry the domain class name"() {
+        given:
+        GdcBook book = savedBook()
+        session.clear()
+
+        expect:
+        sessionFactory.mappingMetamodel.getCollectionDescriptor(GdcAuthor.name + '.books').role == GdcAuthor.name + '.books'
+        sessionFactory.createEntityGraph(GdcBook).graphedType.javaType == GdcBook
+        sessionFactory.metamodel.entity(GdcBook).name == 'GdcBook'
+
+        when:
+        sessionFactory.currentSession.getReference(GdcBook, book.id + 1000).title
+
+        then:
+        ObjectNotFoundException e = thrown()
+        e.entityName == GdcBook.name
+        e.message.contains(GdcBook.name)
+        !e.message.contains(GrailsDomainGenerator.GENERATED_PACKAGE)
     }
 
     def "the id is generated and the instance is attached to the session it was saved in"() {

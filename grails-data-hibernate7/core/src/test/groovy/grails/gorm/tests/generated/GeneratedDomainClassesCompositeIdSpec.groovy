@@ -48,7 +48,7 @@ class GeneratedDomainClassesCompositeIdSpec extends HibernateGormDatastoreSpec {
         EntityPersister persister = sessionFactory.mappingMetamodel.getEntityDescriptor(GdcCidItem)
 
         then:
-        persister.entityName.endsWith('GdcCidItem')
+        persister.entityName == GdcCidItem.name
         persister.mappedClass == GdcCidItem
         persister.identifierPropertyName == null
         persister.identifierMapping.virtualIdEmbeddable.mappedJavaType.javaTypeClass == GdcCidItem

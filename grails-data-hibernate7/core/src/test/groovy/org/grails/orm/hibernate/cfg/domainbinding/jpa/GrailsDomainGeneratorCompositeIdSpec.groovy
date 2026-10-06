@@ -79,7 +79,8 @@ class GrailsDomainGeneratorCompositeIdSpec extends GrailsDomainGeneratorSupport 
         then:
         !key.isAnnotationPresent(Embeddable)
         Serializable.isAssignableFrom(key)
-        key.name == generated.name + '_Id'
+        key.name == GrailsDomainGenerator.GENERATED_PACKAGE + '.' + GenCidSimple.name.replace('.', '_') + '_Id'
+        !key.is(GenCidSimple)
         key.declaredFields*.name == ['last', 'age']
         key.getDeclaredField('last').type == String
         key.getDeclaredField('age').type == Long

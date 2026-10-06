@@ -27,6 +27,7 @@ import grails.gorm.tests.FetchJoinSpec
 import grails.gorm.tests.Hibernate7OptimisticLockingSpec
 import grails.gorm.tests.HibernateGetAllConvertibleIdSpec
 import grails.gorm.tests.HibernateValidationSpec
+import grails.gorm.tests.Issue16349Spec
 import grails.gorm.tests.LastUpdateWithDynamicUpdateSpec
 import grails.gorm.tests.ManagedEntitySaveSpec
 import grails.gorm.tests.ManyToOneSpec
@@ -764,6 +765,13 @@ class GeneratedWhereQueryIssueVerificationSpec extends WhereQueryIssueVerificati
 }
 
 class GeneratedWhereQueryLeftJoinSpec extends WhereQueryLeftJoinSpec {
+
+    void setupSpec() {
+        manager.registerGeneratedDomainClasses()
+    }
+}
+
+class GeneratedIssue16349Spec extends Issue16349Spec {
 
     void setupSpec() {
         manager.registerGeneratedDomainClasses()

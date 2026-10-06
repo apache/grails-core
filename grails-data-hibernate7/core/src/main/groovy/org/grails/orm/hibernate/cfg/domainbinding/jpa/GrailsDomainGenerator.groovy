@@ -281,7 +281,7 @@ class GrailsDomainGenerator {
         for (DynamicType.Unloaded<?> embeddable : embeddables.values()) {
             types.putAll(embeddable.allTypes)
         }
-        Map<TypeDescription, Class<?>> loaded = ClassLoadingStrategy.Default.WRAPPER.load(parent, types)
+        Map<TypeDescription, Class<?>> loaded = ClassLoadingStrategy.Default.CHILD_FIRST.load(parent, types)
         Map<GrailsHibernatePersistentEntity, Class<?>> result = [:]
         for (GrailsHibernatePersistentEntity entity : given) {
             result.put(entity, loaded.get(made.get(entity).typeDescription))
@@ -519,7 +519,7 @@ class GrailsDomainGenerator {
         DynamicType.Builder<Object> key = (DynamicType.Builder<Object>) new ByteBuddy()
                 .subclass(Object)
                 .implement(Serializable)
-                .name(generatedClassName(entity) + '_Id')
+                .name(generatedSupportName(entity) + '_Id')
         for (EmbeddedLeaf part : id.parts()) {
             // the key class only names the parts and their types; the entity carries their mapping. A part that refers to an entity
             // has that entity's generated class as its type, which Hibernate binds as an association inside the identifier
@@ -584,13 +584,24 @@ class GrailsDomainGenerator {
         return "Type [${decision.name}] of property [${property.name}] of [${property.hibernateOwner.name}] ${decision.problem}"
     }
 
+    /**
+     * The name of the class generated for an entity: the name of the domain class itself. The generated class lives in a class
+     * loader of its own that answers for the name before the application's does (see {@link #generateAll}), so Hibernate's
+     * entity name, which is the name of the annotated class, is the name of the domain class: statistics, entity graphs,
+     * collection roles, cache regions and messages all use it.
+     */
     static String generatedClassName(GrailsHibernatePersistentEntity entity) {
+        return entity.javaClass.name
+    }
+
+    /** The name of a generated class that is not an entity (an identifier class, an embeddable): it must not shadow a real class. */
+    static String generatedSupportName(GrailsHibernatePersistentEntity entity) {
         return GENERATED_PACKAGE + '.' + entity.javaClass.name.replace('.', '_')
     }
 
     /** The name of the {@code @Embeddable} generated for an embedded type; distinct from an entity's generated name. */
     static String generatedEmbeddableName(GrailsHibernatePersistentEntity type) {
-        return generatedClassName(type) + '_Embeddable'
+        return generatedSupportName(type) + '_Embeddable'
     }
 
     /**

@@ -18,13 +18,21 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.jpa
 
+import net.bytebuddy.ByteBuddy
+import net.bytebuddy.dynamic.loading.ClassLoadingStrategy
 import spock.lang.Specification
 
 class GeneratedDomainClassLoaderSpec extends Specification {
 
-    def "a class of the parent is loaded from the parent"() {
+    private ClassLoader generatedLoader(String name) {
+        return new ByteBuddy().subclass(Object).name(name).make()
+                .load(getClass().classLoader, ClassLoadingStrategy.Default.CHILD_FIRST).loaded.classLoader
+    }
+
+    def "a class that no generated loader defines is loaded from the parent"() {
         given:
         GeneratedDomainClassLoader loader = new GeneratedDomainClassLoader(getClass().classLoader)
+        loader.register(generatedLoader('generatedloader.Other'))
 
         expect:
         loader.loadClass(String.name) == String
@@ -34,8 +42,7 @@ class GeneratedDomainClassLoaderSpec extends Specification {
 
     def "a class of a registered loader is loaded by name"() {
         given:
-        ClassLoader generated = new GroovyClassLoader(getClass().classLoader)
-        Class<?> made = generated.parseClass('package generatedloader\nclass Made { }')
+        ClassLoader generated = generatedLoader('generatedloader.Made')
         GeneratedDomainClassLoader loader = new GeneratedDomainClassLoader(getClass().classLoader)
 
         when:
@@ -48,13 +55,28 @@ class GeneratedDomainClassLoaderSpec extends Specification {
         loader.register(generated)
 
         then:
-        loader.loadClass('generatedloader.Made').is(made)
+        loader.loadClass('generatedloader.Made').classLoader.is(generated)
+    }
+
+    def "a generated class is preferred to a class of the same name of the parent"() {
+        given: 'a generated class that has the name of a class the application loader knows'
+        ClassLoader generated = generatedLoader(GeneratedDomainClassLoaderSpec.name)
+        GeneratedDomainClassLoader loader = new GeneratedDomainClassLoader(getClass().classLoader)
+        loader.register(generated)
+
+        when:
+        Class<?> resolved = loader.loadClass(GeneratedDomainClassLoaderSpec.name)
+
+        then:
+        resolved.name == GeneratedDomainClassLoaderSpec.name
+        resolved.classLoader.is(generated)
+        !resolved.is(GeneratedDomainClassLoaderSpec)
     }
 
     def "a class that no loader knows is not found"() {
         given:
         GeneratedDomainClassLoader loader = new GeneratedDomainClassLoader(getClass().classLoader)
-        loader.register(new GroovyClassLoader(getClass().classLoader))
+        loader.register(generatedLoader('generatedloader.Other'))
 
         when:
         loader.loadClass('generatedloader.Missing')
