@@ -21,6 +21,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.jpa
 import java.lang.reflect.Field
 
 import groovy.transform.CompileStatic
+import org.hibernate.MappingException
 import org.hibernate.boot.SessionFactoryBuilder
 import org.hibernate.boot.internal.InFlightMetadataCollectorImpl
 import org.hibernate.boot.internal.MetadataBuildingContextRootImpl
@@ -146,6 +147,7 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
         if (toGenerate.isEmpty()) {
             return
         }
+        requireTargetsOnTheDataSource(toGenerate)
         // GORM's dirty checking reads the 'derived' flag the domain binder sets on the mapping of a formula property
         for (GrailsHibernatePersistentEntity entity : toGenerate) {
             entity.configureDerivedProperties()
@@ -216,6 +218,24 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
                 Property tenantId = entity.persistentClass.getRecursiveProperty(entity.hibernateTenantId.name)
                 filterDefinitionBinder.create(tenant.filterName(), tenantId).ifPresent { FilterDefinition definition ->
                     metadata.filterDefinitions.put(tenant.filterName(), definition)
+                }
+            }
+        }
+    }
+
+    /**
+     * An association can only refer to an entity of the same data source: the session factory of a data source maps its own
+     * entities. The domain binder fails with a mapping exception that names the unmapped class; this one names the data
+     * source too, and stops before the generator reports a target that it was not given.
+     */
+    private void requireTargetsOnTheDataSource(List<GrailsHibernatePersistentEntity> entities) {
+        Set<Class<?>> mapped = entities*.javaClass.toSet()
+        for (GrailsHibernatePersistentEntity entity : entities) {
+            for (GrailsHibernatePersistentEntity target : GrailsDomainGenerator.referencedEntities(entity)) {
+                if (!mapped.contains(target.javaClass)) {
+                    throw new MappingException(
+                            "An association from entity [${entity.name}] refers to [${target.name}], which is not mapped to " +
+                                    "data source [${dataSourceName}]: an association cannot cross data sources")
                 }
             }
         }
