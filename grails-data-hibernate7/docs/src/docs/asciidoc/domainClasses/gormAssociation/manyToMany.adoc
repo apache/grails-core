@@ -21,6 +21,8 @@ under the License.
 
 A many-to-many association is created when both domain classes declare `hasMany` pointing at each other, and one side also declares `belongsTo`.
 
+NOTE: One side of a bidirectional many-to-many must declare `belongsTo`: the owning side is the one that writes the join table rows. If neither side declares it, the relationship would never be stored, so the application fails at startup with a `MappingException` that names both sides, for example `Neither side of the many-to-many between [Author.books] and [Book.authors] declares belongsTo, so the relationship would never be stored`. Declare `belongsTo` on the side that should be owned (`static belongsTo = Author` in `Book`). This also applies to a many-to-many from a class to itself, where `belongsTo` names the class itself (`static belongsTo = [Person]`). A unidirectional many-to-many, where only one class declares `hasMany`, needs no `belongsTo`.
+
 === Declaring the Relationship
 
 [source,groovy]

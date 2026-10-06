@@ -105,6 +105,10 @@ If you are migrating an application from Hibernate 5 or the Grails Hibernate 5 p
 | Hibernate 7 is less tolerant of inconsistent managed association state at flush time.
 | Keep both sides of bidirectional associations synchronized. Prefer GORM association helpers where possible.
 
+| Many-to-many without `belongsTo`
+| Grails 9 refuses to start when a bidirectional many-to-many has no `belongsTo` on either side. Earlier versions bound both sides as inverse, so no join table row was ever written and the relationship was silently lost.
+| Declare `belongsTo` on the side that should be owned, for example `static belongsTo = Author` in `Book`. For a many-to-many from a class to itself, `belongsTo` names the class itself. The startup error names both sides of each affected relationship. See <<gormAssociation-manyToMany,Many-to-Many Associations>>.
+
 | Query locks and query cache
 | Locked queries are not query-cacheable.
 | Do not expect `lock: true` queries to use the query cache. Treat pessimistically locked queries as database reads that require fresh row state.
