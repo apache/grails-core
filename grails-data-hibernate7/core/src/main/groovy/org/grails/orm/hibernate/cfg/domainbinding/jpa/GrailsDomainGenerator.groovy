@@ -922,7 +922,7 @@ class GrailsDomainGenerator {
      */
     boolean supports(HibernatePersistentProperty property) {
         if (property instanceof HibernateSimpleIdentityProperty) {
-            return property.hibernateOwner.isRoot()
+            return property.hibernateOwner.isRoot() && decideType(property).supported
         }
         if (property instanceof HibernateEmbeddedProperty) {
             return embeddedProblem((HibernateEmbeddedProperty) property, []) == null
@@ -1017,9 +1017,12 @@ class GrailsDomainGenerator {
                             '@Type cannot name')
         }
         BasicType<?> registered = typeConfiguration.basicTypeRegistry.getRegisteredType(name)
+        boolean identity = property instanceof HibernateSimpleIdentityProperty
         if (registered != null && registered.valueConverter == null && parameters.isEmpty() && !isEnum &&
-                registered.javaTypeDescriptor.javaTypeClass == boxed(type)) {
-            return new TypeDecision(true, name, new TypeFacets(null, registered.jdbcType.defaultSqlTypeCode, parameters))
+                (identity || registered.javaTypeDescriptor.javaTypeClass == boxed(type))) {
+            Class<?> registeredJava = registered.javaTypeDescriptor.javaTypeClass
+            return new TypeDecision(true, name, new TypeFacets(
+                    null, registered.jdbcType.defaultSqlTypeCode, parameters, registeredJava == boxed(type) ? null : registeredJava))
         }
         String problem
         if (registered == null) {
@@ -2317,8 +2320,7 @@ class GrailsDomainGenerator {
             // PropertyBinder marks the property lazy when the mapping says lazy: true (the version never is)
             annotations << AnnotationDescription.Builder.ofType(Basic).define('fetch', FetchType.LAZY).build()
         }
-        // an identifier's type is decided with its generator, which the generator does not describe yet
-        TypeFacets type = property instanceof HibernateSimpleIdentityProperty ? null : typeFacets(property)
+        TypeFacets type = typeFacets(property)
         if (type != null) {
             annotations << typeAnnotation(type)
         } else if (property instanceof HibernateEnumProperty) {
@@ -2327,7 +2329,7 @@ class GrailsDomainGenerator {
         for (Annotation constraint : validationAnnotations(property)) {
             annotations << AnnotationDescription.ForLoadedAnnotation.of(constraint)
         }
-        return builder.defineField(property.name, columnFieldType(property), Visibility.PRIVATE)
+        return builder.defineField(property.name, type?.javaType() ?: columnFieldType(property), Visibility.PRIVATE)
                 .annotateField(annotations as AnnotationDescription[])
     }
 

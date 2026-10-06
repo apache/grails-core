@@ -26,7 +26,9 @@ import groovy.transform.CompileStatic
  * type name such as {@code text} ({@code @JdbcTypeCode}).
  *
  * <p>Exactly one of {@code userType} and {@code jdbcTypeCode} is set. {@code parameters} is only meaningful for a
- * user type and is never {@code null}.</p>
+ * user type and is never {@code null}. {@code javaType} is the Java type the registered type maps when it is not the
+ * property's own, which only an identifier can have (its value comes from a generator, so the mapping may name a type for a
+ * value the property's class does not hold); the generated field then has that type.</p>
  *
  * @since 9.0
  */
@@ -34,5 +36,6 @@ import groovy.transform.CompileStatic
 record TypeFacets(
     Class<?> userType,
     Integer jdbcTypeCode,
-    Map<String, String> parameters) {
+    Map<String, String> parameters,
+    Class<?> javaType = null) {
 }

@@ -34,7 +34,7 @@ import org.hibernate.mapping.RootClass
 class GeneratedDomainClassesDdlSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        registerGeneratedDomainClasses(GddVehicle, GddCar, GddTruck, GddStudent, GddSchool, GddTeacher, GddBadge)
+        registerGeneratedDomainClasses(GddVehicle, GddCar, GddTruck, GddStudent, GddSchool, GddTeacher, GddBadge, GddToken)
     }
 
     private List<String> checkClauses(String table) {
@@ -122,6 +122,16 @@ class GeneratedDomainClassesDdlSpec extends HibernateGormDatastoreSpec {
         GddStudent.get(student.id).nicknames == ['a', 'b'] as Set
     }
 
+    void "an identifier mapped with type uuid-binary is a binary column, not the database's uuid type, as with the domain binder"() {
+        when:
+        GddToken token = new GddToken(name: 't').save(flush: true)
+        session.clear()
+
+        then:
+        query("select DATA_TYPE from INFORMATION_SCHEMA.COLUMNS where upper(TABLE_NAME) = 'GDD_TOKEN' and upper(COLUMN_NAME) = 'ID'") == ['BINARY']
+        GddToken.get(token.id).name == 't'
+    }
+
     void "a single-table hierarchy gets no check constraint over its discriminator values, as with the domain binder"() {
         expect:
         checkClauses('gdd_vehicle').isEmpty()
@@ -195,4 +205,13 @@ class GddTeacher {
 @Entity
 class GddBadge {
     String name
+}
+
+@Entity
+class GddToken {
+    UUID id
+    String name
+    static mapping = {
+        id generator: 'uuid2', type: 'uuid-binary'
+    }
 }

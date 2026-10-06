@@ -145,7 +145,7 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
         manager.registerDomainClasses(GenBasic, GenVehicle, GenCar, GenWithEnum, GenWithOwner, GenDerived, GenTyped, GenUnsupportedType, GenIdSequence, GenIdUuid, GenIdAssigned, GenIdTable,
-                GenIdIncrement, GenIdIdentity, GenIdNative, GenPrimVehicle, GenPrimCar, GenPrimJoinedRoot, GenPrimJoinedChild, GenAnimal, GenDog, GenPuppy, GenCat, GenToy, GenPlushToy, GenGadget,
+                GenIdIncrement, GenIdIdentity, GenIdNative, GenIdTyped, GenIdTypedMismatch, GenPrimVehicle, GenPrimCar, GenPrimJoinedRoot, GenPrimJoinedChild, GenAnimal, GenDog, GenPuppy, GenCat, GenToy, GenPlushToy, GenGadget,
                 GenGizmo, GenCoded, GenCodedChild, GenFormulaRoot, GenFormulaChild, GenAbstractBase, GenConcreteChild, GenNoted, GenNotedChild,
                 GenJoinedVehicle, GenJoinedCar, GenJoinedSportsCar, GenJoinedSedan, GenJoinedKeyed, GenJoinedKeyedChild,
                 GenFleetVehicle, GenFleetCar, GenFleetSportsCar, GenFleetSedan, GenUnionBase, GenUnionLeaf, GenUnionMiddle, GenUnionBottom,
@@ -453,6 +453,20 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         !uuid.isAnnotationPresent(GrailsIdGenerator)
         !assigned.isAnnotationPresent(UuidGenerator)
         !assigned.isAnnotationPresent(GrailsIdGenerator)
+    }
+
+    void "an identifier with a mapped type states the JDBC type of the registered type, and a field of the Java type that type holds"() {
+        when:
+        Field typed = generate(GenIdTyped).getDeclaredField('id')
+        Field mismatch = generate(GenIdTypedMismatch).getDeclaredField('id')
+
+        then: 'the type names the binary form of the UUID: the column is binary(16), not the default of the Java type'
+        typed.type == UUID
+        typed.getAnnotation(JdbcTypeCode).value() == Types.BINARY
+
+        and: 'a mapping may name a type for a value the identifier property cannot hold (the generator makes it): the field has the type'
+        mismatch.type == UUID
+        mismatch.getAnnotation(JdbcTypeCode).value() == Types.BINARY
     }
 
     void "a generated class gets the identifier generator the binder installs, for every strategy"() {
@@ -2610,6 +2624,28 @@ class GenIdSequence {
 
     static mapping = {
         id generator: 'sequence', params: [sequence_name: 'gen_id_seq', increment_size: '10']
+    }
+}
+
+@Entity
+class GenIdTyped {
+
+    UUID id
+    String name
+
+    static mapping = {
+        id generator: 'uuid2', type: 'uuid-binary'
+    }
+}
+
+@Entity
+class GenIdTypedMismatch {
+
+    Long id
+    String name
+
+    static mapping = {
+        id generator: 'assigned', type: 'uuid-binary'
     }
 }
 

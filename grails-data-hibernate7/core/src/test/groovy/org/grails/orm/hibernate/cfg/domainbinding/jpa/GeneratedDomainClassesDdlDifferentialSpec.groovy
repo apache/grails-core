@@ -69,7 +69,6 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
             [id: 'MAP_ELEMENT_NULLABLE', reason: 'The mapping of a map of values states nullable: false on the element column and the binder leaves the column nullable (it ignores the option, like the enum column extras); the generated mode honours the mapping, so a database created by the binder has a nullable column where the generated mode creates NOT NULL. Matching the binder would drop a constraint the mapping states.'],
             [id: 'CIRCULAR_MANY_TO_MANY', reason: 'not yet analysed'],
             [id: 'COLUMN_ORDER', reason: 'not yet analysed'],
-            [id: 'UUID_ID_TYPE', reason: 'not yet analysed'],
             [id: 'COMPOSITE_KEY_ORDER', reason: 'not yet analysed'],
             [id: 'IGNORE_NOT_FOUND_FOREIGN_KEY', reason: 'not yet analysed'],
             [id: 'SEQUENCE', reason: 'not yet analysed'],
