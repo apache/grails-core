@@ -1074,6 +1074,13 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             if (actualParameters != facets.parameters()) {
                 found << "${where} typeParameters: generator=${facets.parameters()} binder=${actualParameters}".toString()
             }
+        } else if (facets.converter() != null) {
+            explicitTypes["registered ${value.typeName} (converter)".toString()]++
+            BasicValue.Resolution<?> resolution = value.resolve()
+            if (value.typeName != property.getTypeName(type) || resolution.valueConverter?.getClass() != facets.converter() ||
+                    resolution.jdbcType.defaultSqlTypeCode != facets.jdbcTypeCode()) {
+                found << "${where} converter: generator=${facets.converter()}/${facets.jdbcTypeCode()} binder=${resolution.valueConverter?.getClass()}/${resolution.jdbcType.defaultSqlTypeCode} (type ${value.typeName})".toString()
+            }
         } else {
             explicitTypes["registered ${value.typeName}".toString()]++
             Integer actual = value.resolve().jdbcType.defaultSqlTypeCode

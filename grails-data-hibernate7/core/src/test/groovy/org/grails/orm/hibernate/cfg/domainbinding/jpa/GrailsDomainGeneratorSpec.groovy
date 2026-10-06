@@ -35,6 +35,7 @@ import jakarta.persistence.Column
 import jakarta.persistence.DiscriminatorColumn
 import jakarta.persistence.DiscriminatorType
 import jakarta.persistence.DiscriminatorValue
+import jakarta.persistence.Convert
 import jakarta.persistence.ElementCollection
 import jakarta.persistence.Embeddable
 import jakarta.persistence.Embedded
@@ -72,6 +73,9 @@ import org.hibernate.annotations.FetchMode
 import org.hibernate.annotations.Formula
 import org.hibernate.annotations.IdGeneratorType
 import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.NumericBooleanConverter
+import org.hibernate.type.TrueFalseConverter
+import org.hibernate.type.YesNoConverter
 import org.hibernate.annotations.NotFound
 import org.hibernate.annotations.NotFoundAction
 import org.hibernate.annotations.Type
@@ -155,7 +159,7 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
                 GenEmbedOwner, GenEmbedOther, GenEmbedBase, GenEmbedChild, GenEmbedFormulaOwner, GenCollSingle, GenCollKinds, GenCollLazy,
                 GenFkTarget, GenFkOwned, GenFkOwner, GenFkCascades, GenFkNodeA, GenFkNodeB, GenFkHasOneOwner, GenFkHasOneDetail, GenOneFace, GenOneNose, GenFkManyOne, GenFkOneSide, GenFkSub, GenFkSubRoot,
                 GenOmParent, GenOmChild, GenOmListed, GenOmOrdered, GenOmOrphan, GenOmFetched, GenOmTag, GenOmStep, GenOmKept, GenOmSortedOwner, GenOmMapOwner, GenMapBidiOwner, GenMapBidiChild, GenEmbAssocOwner,
-                GenMmStudent, GenMmCourse, GenMmPerson, GenMmNoOwnerA, GenMmNoOwnerB, GenParamsOnly, GenDecimal, GenUnversioned, GenUnversionedRoot, GenUnversionedChild)
+                GenMmStudent, GenMmCourse, GenMmPerson, GenMmNoOwnerA, GenMmNoOwnerB, GenParamsOnly, GenDecimal, GenUnversioned, GenUnversionedRoot, GenUnversionedChild, GenConverted)
     }
 
     List<StandardServiceRegistry> registries = []
@@ -354,6 +358,42 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         then:
         typed.getDeclaredField('body').getAnnotation(JdbcTypeCode).value() == java.sql.Types.LONGVARCHAR
         !typed.getDeclaredField('body').isAnnotationPresent(Type)
+    }
+
+    void "a registered type name that converts its value becomes the JPA converter it wraps"() {
+        when:
+        Class<?> converted = generate(GenConverted)
+
+        then:
+        converted.getDeclaredField('yesNo').getAnnotation(Convert).converter() == YesNoConverter
+        converted.getDeclaredField('trueFalse').getAnnotation(Convert).converter() == TrueFalseConverter
+        converted.getDeclaredField('numeric').getAnnotation(Convert).converter() == NumericBooleanConverter
+        !converted.getDeclaredField('yesNo').isAnnotationPresent(Type)
+        converted.getDeclaredField('yesNo').getAnnotation(JdbcTypeCode).value() == java.sql.Types.CHAR
+        converted.getDeclaredField('numeric').getAnnotation(JdbcTypeCode).value() == java.sql.Types.TINYINT
+        !converted.getDeclaredField('plain').isAnnotationPresent(Convert)
+    }
+
+    void "Hibernate's own annotation binder resolves a converted type like the domain binder"() {
+        given:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenConverted)
+        PersistentClass bound = entity(GenConverted).persistentClass
+        PersistentClass read = annotationMetadata(classes.values()).getEntityBinding(classes[entity(GenConverted)].name)
+
+        expect:
+        ['yesNo', 'trueFalse', 'numeric'].every { String name ->
+            BasicValue.Resolution<?> expected = ((BasicValue) bound.getProperty(name).value).resolve()
+            BasicValue.Resolution<?> actual = ((BasicValue) read.getProperty(name).value).resolve()
+            converterClass(expected) == converterClass(actual) &&
+                    expected.jdbcType.defaultSqlTypeCode == actual.jdbcType.defaultSqlTypeCode &&
+                    expected.domainJavaType.javaTypeClass == actual.domainJavaType.javaTypeClass
+        }
+        ((BasicValue) bound.getProperty('yesNo').value).resolve().valueConverter instanceof YesNoConverter
+    }
+
+    private static Class<?> converterClass(BasicValue.Resolution<?> resolution) {
+        def converter = resolution.valueConverter
+        return converter.hasProperty('converterBean') ? converter.converterBean.beanClass : converter.getClass()
     }
 
     void "a property without an explicit type carries no type annotation"() {
@@ -2496,6 +2536,21 @@ class GenTyped {
         body type: 'text'
         shout type: GenUpperType, params: [mode: 'loud', other: 'x']
         kind type: GenKindType
+    }
+}
+
+@Entity
+class GenConverted {
+
+    Boolean yesNo
+    Boolean trueFalse
+    Boolean numeric
+    Boolean plain
+
+    static mapping = {
+        yesNo type: 'yes_no'
+        trueFalse type: 'true_false'
+        numeric type: 'numeric_boolean'
     }
 }
 

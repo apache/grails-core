@@ -25,6 +25,7 @@ import java.lang.reflect.Modifier
 import groovy.transform.CompileStatic
 import jakarta.persistence.AssociationOverride
 import jakarta.persistence.AssociationOverrides
+import jakarta.persistence.AttributeConverter
 import jakarta.persistence.AttributeOverride
 import jakarta.persistence.AttributeOverrides
 import jakarta.persistence.Basic
@@ -32,6 +33,7 @@ import jakarta.persistence.Cacheable
 import jakarta.persistence.CascadeType
 import jakarta.persistence.CollectionTable
 import jakarta.persistence.Column as JpaColumn
+import jakarta.persistence.Convert
 import jakarta.persistence.DiscriminatorColumn
 import jakarta.persistence.DiscriminatorType
 import jakarta.persistence.DiscriminatorValue
@@ -1021,6 +1023,12 @@ class GrailsDomainGenerator {
         }
         BasicType<?> registered = typeConfiguration.basicTypeRegistry.getRegisteredType(name)
         boolean identity = property instanceof HibernateSimpleIdentityProperty
+        if (registered != null && registered.valueConverter instanceof AttributeConverter && parameters.isEmpty() && !isEnum && !identity &&
+                !element && registered.javaTypeDescriptor.javaTypeClass == boxed(type)) {
+            // a registered type that converts its value (yes_no, true_false, numeric_boolean) is the JPA converter it wraps
+            return new TypeDecision(true, name, new TypeFacets(
+                    null, registered.jdbcType.defaultSqlTypeCode, parameters, null, registered.valueConverter.getClass()))
+        }
         if (registered != null && registered.valueConverter == null && parameters.isEmpty() && !isEnum &&
                 (identity || registered.javaTypeDescriptor.javaTypeClass == boxed(type))) {
             Class<?> registeredJava = registered.javaTypeDescriptor.javaTypeClass
@@ -1033,7 +1041,8 @@ class GrailsDomainGenerator {
         } else if (isEnum) {
             problem = 'is a registered type on an enum, which the binder binds with its own type parameters'
         } else if (registered.valueConverter != null) {
-            problem = 'is a registered type that converts its value, which no annotation states'
+            problem = 'is a registered type that converts its value in a way @Convert does not state (not a JPA attribute converter, ' +
+                    'or the type of a collection element, an identifier or an enum)'
         } else if (!parameters.isEmpty()) {
             problem = 'is a registered type with type parameters, which no annotation states'
         } else {
@@ -2321,7 +2330,7 @@ class GrailsDomainGenerator {
         }
         TypeFacets type = typeFacets(property)
         if (type != null) {
-            annotations << typeAnnotation(type)
+            annotations.addAll(typeAnnotations(type))
         } else if (property instanceof HibernateEnumProperty) {
             annotations << enumAnnotation((HibernateEnumProperty) property)
         }
@@ -2587,7 +2596,7 @@ class GrailsDomainGenerator {
         }
         TypeFacets type = typeFacets(property)
         if (type != null) {
-            annotations << typeAnnotation(type)
+            annotations.addAll(typeAnnotations(type))
         } else if (property instanceof HibernateEnumProperty) {
             annotations << enumAnnotation((HibernateEnumProperty) property)
         }
@@ -2763,18 +2772,22 @@ class GrailsDomainGenerator {
                 .build()]
     }
 
-    private static AnnotationDescription typeAnnotation(TypeFacets facets) {
+    private static List<AnnotationDescription> typeAnnotations(TypeFacets facets) {
+        if (facets.converter() != null) {
+            return [AnnotationDescription.Builder.ofType(Convert).define('converter', TypeDescription.ForLoadedType.of(facets.converter())).build(),
+                    AnnotationDescription.Builder.ofType(JdbcTypeCode).define('value', facets.jdbcTypeCode().intValue()).build()]
+        }
         if (facets.jdbcTypeCode() != null) {
-            return AnnotationDescription.Builder.ofType(JdbcTypeCode).define('value', facets.jdbcTypeCode().intValue()).build()
+            return [AnnotationDescription.Builder.ofType(JdbcTypeCode).define('value', facets.jdbcTypeCode().intValue()).build()]
         }
         List<AnnotationDescription> parameters = facets.parameters().collect { String name, String value ->
             AnnotationDescription.Builder.ofType(Parameter).define('name', name).define('value', value).build()
         }
-        return AnnotationDescription.Builder.ofType(Type)
+        return [AnnotationDescription.Builder.ofType(Type)
                 .define('value', TypeDescription.ForLoadedType.of(facets.userType()))
                 .defineAnnotationArray('parameters', TypeDescription.ForLoadedType.of(Parameter),
                         parameters as AnnotationDescription[])
-                .build()
+                .build()]
     }
 
     private AnnotationDescription enumAnnotation(HibernateEnumProperty property) {

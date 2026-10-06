@@ -22,10 +22,12 @@ import groovy.transform.CompileStatic
 
 /**
  * The explicit Hibernate type the domain binder gives a basic property, in the two forms an annotated class can
- * state it: a {@code UserType} class with its parameters ({@code @Type}), or the JDBC type of a registered legacy
- * type name such as {@code text} ({@code @JdbcTypeCode}).
+ * state it: a {@code UserType} class with its parameters ({@code @Type}), the JDBC type of a registered legacy
+ * type name such as {@code text} ({@code @JdbcTypeCode}), or the converter of a registered type name that converts its
+ * value, such as {@code yes_no} ({@code @Convert} together with the {@code @JdbcTypeCode} of the registered type, which can differ
+ * from the one the converter alone resolves to: {@code numeric_boolean} is a TINYINT, the converter alone an INTEGER).
  *
- * <p>Exactly one of {@code userType} and {@code jdbcTypeCode} is set. {@code parameters} is only meaningful for a
+ * <p>Exactly one of {@code userType} and {@code jdbcTypeCode} is set, and {@code converter} only next to {@code jdbcTypeCode}. {@code parameters} is only meaningful for a
  * user type and is never {@code null}. {@code javaType} is the Java type the registered type maps when it is not the
  * property's own, which only an identifier can have (its value comes from a generator, so the mapping may name a type for a
  * value the property's class does not hold); the generated field then has that type.</p>
@@ -37,5 +39,6 @@ record TypeFacets(
     Class<?> userType,
     Integer jdbcTypeCode,
     Map<String, String> parameters,
-    Class<?> javaType = null) {
+    Class<?> javaType = null,
+    Class<?> converter = null) {
 }
