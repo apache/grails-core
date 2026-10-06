@@ -72,7 +72,6 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
             [id: 'LIST_INDEX_CHECK', reason: 'Hibernate adds check (<index column> >= 0) to the index column of every list (IndexColumn.addIndexCheckConstraint, always, for @OrderColumn) and offers no annotation to avoid it; Column.getCheckConstraints() is unmodifiable and Column has no removal method (Column.copy shares the list), so it cannot be removed through public API, only by reflection on the private list, which is not done. The check can never reject a value GORM writes (indexes start at 0). 18 list columns in the scanned domains. Decision for the lead: accept the check.'],
             [id: 'MAP_ELEMENT_NULLABLE', reason: 'The mapping of a map of values states nullable: false on the element column and the binder leaves the column nullable (it ignores the option, like the enum column extras); the generated mode honours the mapping, so a database created by the binder has a nullable column where the generated mode creates NOT NULL. Matching the binder would drop a constraint the mapping states.'],
             [id: 'MAP_UNUSED_COLUMN', reason: 'The binder leaves an unused nullable column in the table of a map of values (the element it bound before the map replaced it, attributes_java_lang_string); the generated mode creates no such column. Nothing reads the extra column; an existing database keeps it (update does not drop columns).'],
-            [id: 'SEQUENCE', reason: 'A generator mapped on one part of a composite identifier (idColumn generator: \'sequence\'): the binder creates the sequence, Hibernate\'s annotation binder has no generator for a part of a non-aggregated identifier (an @IdClass key is assigned), so there is nothing to create it for. 1 mapping in the scanned domains (Tooth/ToothDisease), whose composite key parts are assigned in both modes.'],
             [id: 'UNIQUE_GROUP_ON_ENUM', reason: 'A binder defect (pinned in GrailsDomainBinderOptionDefectSpec): a unique group that includes an enum property is dropped by the binder. The generated mode creates the constraint the mapping states, so a database created by the binder lacks it and `update` would add it. 2 groups in the scanned domains.']
     ]
 
@@ -194,9 +193,6 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
         }
         if (kind == 'foreign key only in binder mode') {
             return 'IGNORE_NOT_FOUND_FOREIGN_KEY'
-        }
-        if (kind == 'sequence') {
-            return 'SEQUENCE'
         }
         if (kind == 'table only in binder mode') {
             return 'INVERSE_JOIN_TABLE_NAME'

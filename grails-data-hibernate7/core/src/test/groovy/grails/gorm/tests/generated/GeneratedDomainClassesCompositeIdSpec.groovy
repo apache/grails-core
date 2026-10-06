@@ -36,11 +36,27 @@ class GeneratedDomainClassesCompositeIdSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
         registerGeneratedDomainClasses(
-                GdcCidItem, GdcCidSpecial, GdcCidOwner, GdcCidPart, GdcCidRef, GdcCidBox, GdcCidThing)
+                GdcCidItem, GdcCidSpecial, GdcCidOwner, GdcCidPart, GdcCidRef, GdcCidBox, GdcCidThing, GdcCidSequenced)
     }
 
     private GdcCidItem savedItem(String region = 'eu', String code = 'a', String label = 'first') {
         return new GdcCidItem(region: region, code: code, label: label).save(flush: true)
+    }
+
+    def "a part of the identifier that maps a generator is generated, the others are assigned"() {
+        when:
+        GdcCidSequenced first = new GdcCidSequenced(region: 'eu', label: 'one').save(flush: true)
+        GdcCidSequenced second = new GdcCidSequenced(region: 'eu', label: 'two').save(flush: true)
+        sessionFactory.currentSession.clear()
+        List sequences = sessionFactory.currentSession.createNativeQuery(
+                "select sequence_name from information_schema.sequences where sequence_name = 'GDC_CID_SEQ'", String).list()
+
+        then:
+        first.partNumber != null
+        second.partNumber == first.partNumber + 1
+        GdcCidSequenced.count() == 2
+        GdcCidSequenced.get(new GdcCidSequenced(partNumber: first.partNumber, region: 'eu')).label == 'one'
+        sequences == ['GDC_CID_SEQ']
     }
 
     def "the entity is its own identifier and has no identifier property"() {
@@ -294,4 +310,15 @@ class GdcCidBox implements Serializable {
 class GdcCidThing {
     String name
     static belongsTo = [box: GdcCidBox]
+}
+
+@Entity
+class GdcCidSequenced implements Serializable {
+    Integer partNumber
+    String region
+    String label
+    static mapping = {
+        partNumber generator: 'sequence', params: [sequence_name: 'GDC_CID_SEQ']
+        id composite: ['partNumber', 'region']
+    }
 }

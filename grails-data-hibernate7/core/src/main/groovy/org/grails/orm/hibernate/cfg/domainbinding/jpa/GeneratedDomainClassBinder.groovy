@@ -291,9 +291,38 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
     private void alignCompositeIdentifier(RootClass root, GrailsHibernatePersistentEntity entity, MetadataImplementor metadata) {
         Class<?> real = entity.javaClass
         metadata.typeConfiguration.javaTypeRegistry.resolveEntityTypeDescriptor(real)
-        alignIdentifierComponent((Component) root.identifier, entity, real)
+        Component identifier = (Component) root.identifier
+        alignIdentifierComponent(identifier, entity, real)
+        installPartGenerators(identifier, entity)
         if (root.identifierMapper != null) {
             alignIdentifierComponent(root.identifierMapper, entity, real)
+        }
+    }
+
+    /**
+     * The domain binder gives the value of every property that maps a {@code generator} a generator creator, and Hibernate
+     * consults the creators of the parts of a non-aggregated identifier when it builds the identifier generator (it generates the
+     * parts that are not assigned). The same creator is set on the identifier's part, with the generator and the parameters the
+     * mapping names; the {@code @IdClass} Hibernate bound has none, as it has no annotation for one.
+     */
+    private void installPartGenerators(Component identifier, GrailsHibernatePersistentEntity entity) {
+        for (Property property : identifier.getProperties()) {
+            HibernatePersistentProperty part = entity.compositeIdentity.find { HibernatePersistentProperty candidate -> candidate.name == property.name }
+            String strategy = part?.generatorName
+            if (strategy != null && property.value instanceof BasicValue) {
+                BasicValue value = (BasicValue) property.value
+                value.setCustomIdGeneratorCreator({ GeneratorCreationContext context ->
+                    HibernateSimpleIdentity mappedId = entity.hibernateIdentity instanceof HibernateSimpleIdentity ?
+                            (HibernateSimpleIdentity) entity.hibernateIdentity : part.buildPropertyIdentity().orElse(null)
+                    return GrailsSequenceGeneratorEnum.getGenerator(
+                            GrailsSequenceGeneratorEnum.fromName(strategy).orElse(GrailsSequenceGeneratorEnum.NATIVE),
+                            new GeneratorCreationContextWrapper(context, value),
+                            mappedId,
+                            entity,
+                            jdbcEnvironment,
+                            namingStrategy)
+                })
+            }
         }
     }
 
