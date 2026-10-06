@@ -32,6 +32,7 @@ import groovy.lang.Closure;
 import jakarta.persistence.Tuple;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.ParameterExpression;
 
 import org.hibernate.FlushMode;
 import org.hibernate.Session;
@@ -533,7 +534,7 @@ public class HibernateQuery extends Query {
         if (projections.getProjectionList().isEmpty()) {
             projections().count();
             var creator = createJpaCriteriaQueryCreator();
-            result = (Number) getCountQueryExecutor().singleResult(getCurrentSession(), creator.createQuery(), creator.getParameterValues());
+            result = executeCount(creator.createQuery(), creator.getParameterValues());
         } else {
             HibernateCriteriaBuilder cb = getCriteriaBuilder();
 
@@ -546,10 +547,14 @@ public class HibernateQuery extends Query {
 
             countQuery.from(innerSubquery);
             countQuery.select(cb.count(cb.literal(1)));
-            result = (Number) getCountQueryExecutor().singleResult(getCurrentSession(), countQuery, creator.getParameterValues());
+            result = executeCount(countQuery, creator.getParameterValues());
         }
 
         return (Number) firePostQueryEvent(result);
+    }
+
+    private Number executeCount(JpaCriteriaQuery<?> query, Map<ParameterExpression<?>, Object> parameterValues) {
+        return (Number) getCountQueryExecutor().singleResult(getCurrentSession(), query, parameterValues);
     }
 
     private void firePreQueryEvent() {
