@@ -102,6 +102,10 @@ public class EnumTypeBinder {
 
         if (!pc.getColumns().isEmpty()) {
             ColumnConfig columnConfig = pc.getColumns().get(0);
+            column.setComment(columnConfig.getComment());
+            column.setDefaultValue(columnConfig.getDefaultValue());
+            column.setCustomRead(columnConfig.getRead());
+            column.setCustomWrite(columnConfig.getWrite());
             indexBinder.bindIndex(columnName, column, columnConfig, t);
             columnConfigToColumnBinder.bindColumnConfigToColumn(column, columnConfig, pc);
         }

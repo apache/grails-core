@@ -289,7 +289,8 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
             }
         } else {
             // for non multi-tenant entities we process get(..) via the second level cache
-            (D) hibernateTemplate.execute { Session session -> session.find(persistentEntity.javaClass, id) }
+            (D) proxyHandler.unwrap(
+                    hibernateTemplate.execute { Session session -> session.find(persistentEntity.javaClass, id) })
         }
     }
 

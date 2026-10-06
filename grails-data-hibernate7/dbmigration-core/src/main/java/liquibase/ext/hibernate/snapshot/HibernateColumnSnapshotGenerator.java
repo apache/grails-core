@@ -21,12 +21,9 @@ import liquibase.structure.core.Relation;
 import liquibase.structure.core.Table;
 import liquibase.util.SqlUtil;
 import liquibase.util.StringUtil;
-import org.hibernate.boot.model.relational.SqlStringGenerationContext;
-import org.hibernate.boot.model.relational.internal.SqlStringGenerationContextImpl;
 import org.hibernate.boot.spi.MetadataImplementor;
 import org.hibernate.dialect.Dialect;
 import org.hibernate.dialect.PostgreSQLDialect;
-import org.hibernate.mapping.GeneratorSettings;
 import org.hibernate.mapping.SimpleValue;
 import org.hibernate.type.SqlTypes;
 
@@ -155,6 +152,7 @@ public class HibernateColumnSnapshotGenerator extends HibernateSnapshotGenerator
                             hibernatePrimaryKey.getColumns()) {
                         if (pkColumn.getName().equalsIgnoreCase(hibernateColumn.getName())) {
                             isPrimaryKeyColumn = true;
+                            column.setNullable(false);
                             break;
                         }
                     }
@@ -164,30 +162,33 @@ public class HibernateColumnSnapshotGenerator extends HibernateSnapshotGenerator
 
                         if (persistentClass != null) {
                             var rootClass = persistentClass.getRootClass();
-                            var generatorSettings = createGeneratorSettings(simpleValue);
-                            var generator = simpleValue.createGenerator(dialect, rootClass, null, generatorSettings);
+                            var identifierProperty = rootClass.getIdentifierProperty();
 
-                            if (generator != null) {
-                                boolean isAutoIncrement = false;
+                            if (IdentifierGeneratorSupport.hasGenerationIntent(simpleValue)) {
+                                var generatorSettings = IdentifierGeneratorSupport.createGeneratorSettings(simpleValue);
+                                var generator = simpleValue.createGenerator(
+                                        dialect, rootClass, identifierProperty, generatorSettings);
 
-                                if (generator instanceof org.hibernate.id.IdentityGenerator) {
-                                    isAutoIncrement = true;
-                                } else if (generator instanceof
-                                        org.hibernate.id.enhanced.SequenceStyleGenerator seqGen) {
-                                    if (PostgreSQLDialect.class.isAssignableFrom(dialect.getClass())) {
-                                        String sequenceName =
-                                                resolveSequenceName(seqGen, hibernateTable, hibernateColumn);
-                                        column.setDefaultValue(
-                                                new DatabaseFunction("nextval('" + sequenceName + "'::regclass)"));
-                                    } else if (database.supportsAutoIncrement()) {
+                                if (generator != null) {
+                                    boolean isAutoIncrement = false;
+
+                                    // IDENTITY maps to a database-native auto-increment column. SEQUENCE and TABLE
+                                    // are separate generator objects and are not auto-increment in Liquibase.
+                                    if (generator instanceof org.hibernate.id.IdentityGenerator) {
                                         isAutoIncrement = true;
+                                    } else if (generator instanceof
+                                            org.hibernate.id.enhanced.SequenceStyleGenerator seqGen) {
+                                        isAutoIncrement = handleSequenceGenerator(
+                                                seqGen, dialect, database, column, hibernateTable, hibernateColumn);
+                                    } else if (generator instanceof org.hibernate.id.NativeGenerator nativeGen) {
+                                        isAutoIncrement = handleNativeGenerator(
+                                                nativeGen, dialect, database, column, hibernateTable, hibernateColumn);
+                                    }
+
+                                    if (isAutoIncrement && database.supportsAutoIncrement()) {
+                                        column.setAutoIncrementInformation(new Column.AutoIncrementInformation());
                                     }
                                 }
-
-                                if (isAutoIncrement && database.supportsAutoIncrement()) {
-                                    column.setAutoIncrementInformation(new Column.AutoIncrementInformation());
-                                }
-                                column.setNullable(false);
                             }
                         }
                     }
@@ -267,6 +268,45 @@ public class HibernateColumnSnapshotGenerator extends HibernateSnapshotGenerator
         return new Class[] {liquibase.snapshot.jvm.ColumnSnapshotGenerator.class};
     }
 
+    private boolean handleSequenceGenerator(
+            org.hibernate.id.enhanced.SequenceStyleGenerator seqGen,
+            Dialect dialect,
+            HibernateDatabase database,
+            Column column,
+            org.hibernate.mapping.Table hibernateTable,
+            org.hibernate.mapping.Column hibernateColumn) {
+        var structure = seqGen.getDatabaseStructure();
+        if (structure == null || !structure.isPhysicalSequence()) {
+            return false;
+        }
+        if (PostgreSQLDialect.class.isAssignableFrom(dialect.getClass())) {
+            String sequenceName = resolveSequenceName(seqGen, hibernateTable, hibernateColumn);
+            column.setDefaultValue(new DatabaseFunction("nextval('" + sequenceName + "'::regclass)"));
+            return false;
+        }
+        return false;
+    }
+
+    private boolean handleNativeGenerator(
+            org.hibernate.id.NativeGenerator nativeGen,
+            Dialect dialect,
+            HibernateDatabase database,
+            Column column,
+            org.hibernate.mapping.Table hibernateTable,
+            org.hibernate.mapping.Column hibernateColumn) {
+        return switch (nativeGen.getGenerationType()) {
+            case IDENTITY -> true;
+            case SEQUENCE -> {
+                var delegate = IdentifierGeneratorSupport.nativeDelegate(nativeGen);
+                if (delegate instanceof org.hibernate.id.enhanced.SequenceStyleGenerator seqGen) {
+                    yield handleSequenceGenerator(seqGen, dialect, database, column, hibernateTable, hibernateColumn);
+                }
+                yield false;
+            }
+            default -> false;
+        };
+    }
+
     private org.hibernate.mapping.PersistentClass findPersistentClass(
             MetadataImplementor metadata, org.hibernate.mapping.Table hibernateTable) {
         return metadata.getEntityBindings().stream()
@@ -275,33 +315,14 @@ public class HibernateColumnSnapshotGenerator extends HibernateSnapshotGenerator
                 .orElse(null);
     }
 
-    private GeneratorSettings createGeneratorSettings(SimpleValue simpleValue) {
-        var buildingContext = simpleValue.getBuildingContext();
-        return new GeneratorSettings() {
-            @Override
-            public String getDefaultCatalog() {
-                return null;
-            }
-
-            @Override
-            public String getDefaultSchema() {
-                return null;
-            }
-
-            @Override
-            public SqlStringGenerationContext getSqlStringGenerationContext() {
-                var db = buildingContext.getMetadataCollector().getDatabase();
-                return SqlStringGenerationContextImpl.fromExplicit(
-                        db.getJdbcEnvironment(), db, getDefaultCatalog(), getDefaultSchema());
-            }
-        };
-    }
-
     private String resolveSequenceName(
             org.hibernate.id.enhanced.SequenceStyleGenerator seqGen,
             org.hibernate.mapping.Table hibernateTable,
             org.hibernate.mapping.Column hibernateColumn) {
         var structure = seqGen.getDatabaseStructure();
+        if (structure == null) {
+            return null;
+        }
         if (structure.getPhysicalName() != null) {
             return structure.getPhysicalName().render();
         }
