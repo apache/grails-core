@@ -53,6 +53,7 @@ import org.grails.datastore.mapping.model.types.Embedded
 import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToManyOwnerValidator
 import org.grails.orm.hibernate.cfg.domainbinding.binder.NumericColumnConstraintsBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.PropertyBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.StringColumnConstraintsBinder
@@ -148,6 +149,7 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
             return
         }
         requireTargetsOnTheDataSource(toGenerate)
+        requireOwnedManyToMany(toGenerate)
         // GORM's dirty checking reads the 'derived' flag the domain binder sets on the mapping of a formula property
         for (GrailsHibernatePersistentEntity entity : toGenerate) {
             entity.configureDerivedProperties()
@@ -236,6 +238,21 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
                     throw new MappingException(
                             "An association from entity [${entity.name}] refers to [${target.name}], which is not mapped to " +
                                     "data source [${dataSourceName}]: an association cannot cross data sources")
+                }
+            }
+        }
+    }
+
+    /**
+     * A many-to-many that neither side owns would never be stored: the domain binder refuses it at startup, and so does this
+     * binder, with the same message, before the generator reports the mapping as one it cannot express.
+     */
+    private static void requireOwnedManyToMany(List<GrailsHibernatePersistentEntity> entities) {
+        ManyToManyOwnerValidator validator = new ManyToManyOwnerValidator()
+        for (GrailsHibernatePersistentEntity entity : entities) {
+            for (PersistentProperty<?> property : entity.persistentProperties) {
+                if (property instanceof HibernatePersistentProperty) {
+                    validator.validate((HibernatePersistentProperty) property)
                 }
             }
         }
