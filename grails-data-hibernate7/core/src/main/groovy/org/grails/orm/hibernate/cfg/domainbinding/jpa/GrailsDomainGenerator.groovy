@@ -108,6 +108,8 @@ import org.hibernate.type.BasicType
 import org.hibernate.type.spi.TypeConfiguration
 import org.hibernate.usertype.UserType
 
+import org.springframework.util.ClassUtils
+
 import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.orm.hibernate.cfg.CacheConfig
@@ -2325,8 +2327,26 @@ class GrailsDomainGenerator {
         for (Annotation constraint : validationAnnotations(property)) {
             annotations << AnnotationDescription.ForLoadedAnnotation.of(constraint)
         }
-        return builder.defineField(property.name, property.type, Visibility.PRIVATE)
+        return builder.defineField(property.name, columnFieldType(property), Visibility.PRIVATE)
                 .annotateField(annotations as AnnotationDescription[])
+    }
+
+    /**
+     * The type of the field of a basic property. Hibernate treats a primitive field as not optional and, for every property of a
+     * single-table hierarchy with subclasses (the properties the root declares as well as those of the subclasses), adds a table
+     * check constraint ({@code class <> 'X' or (column is not null)}) to a subclass when the column is nullable; the domain binder
+     * adds none, and the column facets already say whether the column is nullable. The carrier is never instantiated, so such a
+     * field is boxed.
+     */
+    private static Class<?> columnFieldType(HibernatePersistentProperty property) {
+        Class<?> type = property.type
+        if (type.primitive && property.owner instanceof GrailsHibernatePersistentEntity) {
+            GrailsHibernatePersistentEntity owner = (GrailsHibernatePersistentEntity) property.owner
+            if (inheritanceType(owner) == InheritanceType.SINGLE_TABLE && (!owner.isRoot() || !owner.childEntities.isEmpty())) {
+                return ClassUtils.resolvePrimitiveIfNecessary(type)
+            }
+        }
+        return type
     }
 
     /**

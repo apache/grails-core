@@ -65,7 +65,6 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
      */
     private static final List<Map> KNOWN = [
             [id: 'LIST_INDEX_CHECK', reason: 'not yet analysed'],
-            [id: 'SUBCLASS_NOT_NULL_CHECK', reason: 'not yet analysed'],
             [id: 'ENUM_COLUMN_EXTRAS', reason: 'not yet analysed'],
             [id: 'COLLECTION_TABLE_KEY', reason: 'not yet analysed'],
             [id: 'CIRCULAR_MANY_TO_MANY', reason: 'not yet analysed'],

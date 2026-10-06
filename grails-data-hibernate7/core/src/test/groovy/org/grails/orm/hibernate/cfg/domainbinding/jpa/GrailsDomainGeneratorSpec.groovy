@@ -145,7 +145,7 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
         manager.registerDomainClasses(GenBasic, GenVehicle, GenCar, GenWithEnum, GenWithOwner, GenDerived, GenTyped, GenUnsupportedType, GenIdSequence, GenIdUuid, GenIdAssigned, GenIdTable,
-                GenIdIncrement, GenIdIdentity, GenIdNative, GenAnimal, GenDog, GenPuppy, GenCat, GenToy, GenPlushToy, GenGadget,
+                GenIdIncrement, GenIdIdentity, GenIdNative, GenPrimVehicle, GenPrimCar, GenPrimJoinedRoot, GenPrimJoinedChild, GenAnimal, GenDog, GenPuppy, GenCat, GenToy, GenPlushToy, GenGadget,
                 GenGizmo, GenCoded, GenCodedChild, GenFormulaRoot, GenFormulaChild, GenAbstractBase, GenConcreteChild, GenNoted, GenNotedChild,
                 GenJoinedVehicle, GenJoinedCar, GenJoinedSportsCar, GenJoinedSedan, GenJoinedKeyed, GenJoinedKeyedChild,
                 GenFleetVehicle, GenFleetCar, GenFleetSportsCar, GenFleetSedan, GenUnionBase, GenUnionLeaf, GenUnionMiddle, GenUnionBottom,
@@ -590,6 +590,21 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         classes[entity(GenGadget)].getAnnotation(DiscriminatorColumn).name() == 'gadget_kind'
         classes[entity(GenGadget)].getAnnotation(DiscriminatorValue).value() == GenGadget.name
         classes[entity(GenGizmo)].getAnnotation(DiscriminatorValue).value() == GenGizmo.name
+    }
+
+    void "a primitive property of a single-table subclass is a boxed field, so Hibernate adds no not-null check for the subclass"() {
+        when:
+        Map<GrailsHibernatePersistentEntity, Class<?>> single = generateHierarchy(GenPrimVehicle, GenPrimCar)
+        Map<GrailsHibernatePersistentEntity, Class<?>> joined = generateHierarchy(GenPrimJoinedRoot, GenPrimJoinedChild)
+
+        then: 'a joined root and subclass keep the primitive, which makes the column not null in their own table'
+        joined[entity(GenPrimJoinedChild)].getDeclaredField('doors').type == int
+        joined[entity(GenPrimJoinedRoot)].getDeclaredField('name').type == String
+
+        and: 'the root and the subclasses of a single-table hierarchy share the table, where such a column must stay nullable'
+        single[entity(GenPrimVehicle)].getDeclaredField('wheels').type == Integer
+        single[entity(GenPrimCar)].getDeclaredField('doors').type == Integer
+        single[entity(GenPrimCar)].getDeclaredField('sporty').type == Boolean
     }
 
     void "a discriminator type, an insert flag and an explicit value are carried over"() {
@@ -2122,6 +2137,35 @@ class GenVehicle {
 class GenCar extends GenVehicle {
 
     Integer doors
+}
+
+@Entity
+class GenPrimVehicle {
+
+    String name
+    int wheels
+}
+
+@Entity
+class GenPrimCar extends GenPrimVehicle {
+
+    int doors
+    boolean sporty
+}
+
+@Entity
+class GenPrimJoinedRoot {
+
+    String name
+    static mapping = {
+        tablePerHierarchy false
+    }
+}
+
+@Entity
+class GenPrimJoinedChild extends GenPrimJoinedRoot {
+
+    int doors
 }
 
 @Entity

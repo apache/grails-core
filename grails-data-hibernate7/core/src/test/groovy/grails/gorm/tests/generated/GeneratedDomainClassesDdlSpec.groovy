@@ -65,6 +65,13 @@ class GeneratedDomainClassesDdlSpec extends HibernateGormDatastoreSpec {
         checkClauses('gdd_vehicle').isEmpty()
     }
 
+    void "a primitive property of a single-table subclass adds no not-null check to the table, as with the domain binder"() {
+        expect:
+        checkClauses('gdd_vehicle').isEmpty()
+        datastore.metadata.getEntityBinding(GddCar.name).getProperty('doors').columns[0].nullable
+        datastore.metadata.getEntityBinding(GddVehicle.name).getProperty('wheels').columns[0].nullable
+    }
+
     void "the discriminator of the root is not forced, so root queries do not filter on it"() {
         given:
         RootClass root = (RootClass) datastore.metadata.getEntityBinding(GddVehicle.name)
@@ -76,7 +83,7 @@ class GeneratedDomainClassesDdlSpec extends HibernateGormDatastoreSpec {
 
     void "the instances of the hierarchy still save, load polymorphically and keep their discriminator"() {
         when:
-        new GddCar(name: 'c', doors: 4).save(flush: true)
+        new GddCar(name: 'c', doors: 4, sporty: true).save(flush: true)
         new GddTruck(name: 't', axles: 3).save(flush: true)
         session.clear()
 
@@ -89,11 +96,13 @@ class GeneratedDomainClassesDdlSpec extends HibernateGormDatastoreSpec {
 @Entity
 class GddVehicle {
     String name
+    int wheels
 }
 
 @Entity
 class GddCar extends GddVehicle {
-    Integer doors
+    int doors
+    boolean sporty
 }
 
 @Entity
