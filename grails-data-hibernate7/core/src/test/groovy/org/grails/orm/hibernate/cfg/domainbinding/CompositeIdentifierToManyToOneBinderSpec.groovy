@@ -83,7 +83,10 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
 
         def nestedPartA = Mock(HibernatePersistentProperty)
         def nestedPartB = Mock(HibernatePersistentProperty)
-        def perArray = [nestedPartA, nestedPartB] as HibernatePersistentProperty[]
+        nestedPartA.name >> "partA"
+        nestedPartB.name >> "partB"
+        // mapped in the reverse of the name order: the columns must still follow the sorted order of the referenced key
+        def perArray = [nestedPartB, nestedPartA] as HibernatePersistentProperty[]
         nestedAssociatedEntity.getCompositeIdentity() >> perArray
 
         // 4. Mock the behavior of the dependency methods

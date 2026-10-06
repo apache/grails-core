@@ -19,6 +19,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -126,7 +127,10 @@ public class CompositeIdentifierToManyToOneBinder {
         if (nestedComposite == null) {
             return Optional.empty();
         }
+        // Hibernate sorts the properties of a composite identifier by name, and the columns this key
+        // references follow that order, so the foreign key columns are named in the same order
         return Optional.of(Arrays.stream(nestedComposite)
+                .sorted(Comparator.comparing(HibernatePersistentProperty::getName))
                 .map(cip -> namedColumn(join(
                         prefix,
                         namingStrategy.resolveColumnName(propertyName),
