@@ -23,14 +23,15 @@ import grails.gorm.tests.HibernateGormDatastoreSpec
 import spock.lang.PendingFeature
 
 /**
- * Pins two defects of the domain binder in the many-to-many ownership rules, found by comparing it with the annotations
- * {@link GrailsDomainGenerator} generates. The generator does not copy either: it rejects the second shape by name and
- * follows the owning side for the first. Each feature reports as fixed when the binder is.
+ * Pins a defect of the domain binder in the many-to-many ownership rules, found by comparing it with the annotations
+ * {@link GrailsDomainGenerator} generates. The generator does not copy it: it follows the owning side. The feature reports
+ * as fixed when the binder is. A many-to-many that neither side owns, the other defect found that way, no longer boots: see
+ * {@code ManyToManyWithoutOwnerSpec}.
  */
 class ManyToManyOwnershipDefectSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.registerDomainClasses(DefectNamedOwner, DefectNamedInverse, DefectLeft, DefectRight)
+        manager.registerDomainClasses(DefectNamedOwner, DefectNamedInverse)
     }
 
     @PendingFeature(reason = 'the inverse side names its join table from its own mapping, not from the owner that names it, so it reads another table')
@@ -44,18 +45,6 @@ class ManyToManyOwnershipDefectSpec extends HibernateGormDatastoreSpec {
 
         expect:
         DefectNamedInverse.get(inverse.id).owners*.name == ['owner']
-    }
-
-    @PendingFeature(reason = 'with no belongsTo neither side owns the many-to-many, so the binder binds both collections inverse and writes no row')
-    void "a many-to-many with no belongsTo on either side persists its rows"() {
-        given:
-        DefectLeft left = new DefectLeft(name: 'left')
-        left.addToRights(new DefectRight(name: 'right'))
-        left.save(flush: true, failOnError: true)
-        session.clear()
-
-        expect:
-        DefectLeft.get(left.id).rights*.name == ['right']
     }
 }
 
@@ -80,22 +69,4 @@ class DefectNamedInverse {
 
     static hasMany = [owners: DefectNamedOwner]
     static belongsTo = [owners: DefectNamedOwner]
-}
-
-@Entity
-class DefectLeft {
-
-    String name
-    Set<DefectRight> rights
-
-    static hasMany = [rights: DefectRight]
-}
-
-@Entity
-class DefectRight {
-
-    String name
-    Set<DefectLeft> lefts
-
-    static hasMany = [lefts: DefectLeft]
 }

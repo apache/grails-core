@@ -258,7 +258,7 @@ class Tag_BT {
     static belongsTo = Post
 }
 
-@Entity class Mammal { String name; static hasMany = [dogs: Dog] }
+@Entity class Mammal { String name; static hasMany = [dogs: Dog]; static belongsTo = [Dog] }
 @Entity class Dog extends Mammal { String foo; static hasMany = [animals: Mammal] }
 
 @Entity class Bird { String title; static belongsTo = [canary: Canary] }

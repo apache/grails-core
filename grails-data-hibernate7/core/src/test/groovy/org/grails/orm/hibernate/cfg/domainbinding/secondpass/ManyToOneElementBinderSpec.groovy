@@ -90,6 +90,7 @@ class MTMEItem {
     Long id
     String description
     static hasMany = [owners: MTMEOwner]
+    static belongsTo = [MTMEOwner]
 }
 
 @Entity
@@ -101,4 +102,5 @@ class MTMEBase {
 @Entity
 class MTMESubtype extends MTMEBase {
     static hasMany = [related: MTMEBase]
+    static belongsTo = [MTMEBase]
 }

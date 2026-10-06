@@ -26,6 +26,8 @@ import java.lang.reflect.Field
 
 import grails.gorm.annotation.Entity
 import grails.gorm.tests.HibernateGormDatastoreSpec
+import grails.unbootable.NoOwnerLeft
+import grails.unbootable.NoOwnerRight
 import jakarta.persistence.AssociationOverride
 import jakarta.persistence.AssociationOverrides
 import jakarta.persistence.AttributeOverride
@@ -159,7 +161,7 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
                 GenEmbedOwner, GenEmbedOther, GenEmbedBase, GenEmbedChild, GenEmbedFormulaOwner, GenCollSingle, GenCollKinds, GenCollLazy,
                 GenFkTarget, GenFkOwned, GenFkOwner, GenFkCascades, GenFkNodeA, GenFkNodeB, GenFkHasOneOwner, GenFkHasOneDetail, GenOneFace, GenOneNose, GenFkManyOne, GenFkOneSide, GenFkSub, GenFkSubRoot,
                 GenOmParent, GenOmChild, GenOmListed, GenOmOrdered, GenOmOrphan, GenOmFetched, GenOmTag, GenOmStep, GenOmKept, GenOmSortedOwner, GenOmMapOwner, GenMapBidiOwner, GenMapBidiChild, GenEmbAssocOwner,
-                GenMmStudent, GenMmCourse, GenMmPerson, GenMmNoOwnerA, GenMmNoOwnerB, GenParamsOnly, GenDecimal, GenUnversioned, GenUnversionedRoot, GenUnversionedChild, GenConverted)
+                GenMmStudent, GenMmCourse, GenMmPerson, GenParamsOnly, GenDecimal, GenUnversioned, GenUnversionedRoot, GenUnversionedChild, GenConverted)
     }
 
     List<StandardServiceRegistry> registries = []
@@ -1775,8 +1777,8 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
 
     void "neither side of a many-to-many that has no belongsTo owns it, which the generator rejects by name"() {
         given:
-        GrailsHibernatePersistentEntity entity = entity(GenMmNoOwnerA)
-        HibernatePersistentProperty property = entity.getHibernatePropertyByName('others')
+        GrailsHibernatePersistentEntity entity = unbound(NoOwnerLeft, NoOwnerRight)
+        HibernatePersistentProperty property = entity.getHibernatePropertyByName('rights')
 
         expect:
         !newGenerator().supports(property)
@@ -1858,10 +1860,10 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         return newGenerator().generateAll(domainClasses.collect { entity(it) }, getClass().classLoader)
     }
 
-    private GrailsHibernatePersistentEntity unbound(Class<?> domainClass) {
+    private GrailsHibernatePersistentEntity unbound(Class<?> domainClass, Class<?>... companions) {
         // the mapping model alone, so a domain the binder cannot boot can still be described
         return (GrailsHibernatePersistentEntity) new HibernateMappingContext(
-                new HibernateConnectionSourceSettings(), (Object) null, [domainClass] as Class[]).getPersistentEntity(domainClass.name)
+                new HibernateConnectionSourceSettings(), (Object) null, ([domainClass] + companions.toList()) as Class[]).getPersistentEntity(domainClass.name)
     }
 
     private Map<String, Column> overrides(Class<?> owner, String embedded) {
@@ -3077,22 +3079,6 @@ class GenMmPerson {
     Set<GenMmPerson> friends
 
     static hasMany = [friends: GenMmPerson]
-}
-
-@Entity
-class GenMmNoOwnerA {
-
-    Set<GenMmNoOwnerB> others
-
-    static hasMany = [others: GenMmNoOwnerB]
-}
-
-@Entity
-class GenMmNoOwnerB {
-
-    Set<GenMmNoOwnerA> others
-
-    static hasMany = [others: GenMmNoOwnerA]
 }
 
 @Entity
