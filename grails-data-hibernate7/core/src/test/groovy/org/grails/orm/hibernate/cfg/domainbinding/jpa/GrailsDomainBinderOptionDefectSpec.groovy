@@ -50,7 +50,6 @@ class GrailsDomainBinderOptionDefectSpec extends HibernateGormDatastoreSpec {
         DefectWritable.get(row.id).updated == 'c'
     }
 
-    @PendingFeature(reason = 'PropertyBinder overwrites the insertable flag of the property with the one of its columns, which are always insertable, so insertable: false is ignored')
     void "insertable false keeps the value out of the insert"() {
         given:
         DefectReadOnlyColumns row = new DefectReadOnlyColumns(inserted: 'a', updated: 'b').save(flush: true, failOnError: true)
@@ -60,7 +59,6 @@ class GrailsDomainBinderOptionDefectSpec extends HibernateGormDatastoreSpec {
         DefectReadOnlyColumns.get(row.id).inserted == null
     }
 
-    @PendingFeature(reason = 'PropertyBinder overwrites the updatable flag of the property with the one of its columns, which are always updatable, so updatable: false is ignored')
     void "updatable false keeps the value out of the update"() {
         given:
         DefectReadOnlyColumns row = new DefectReadOnlyColumns(updated: 'b').save(flush: true, failOnError: true)
@@ -87,7 +85,6 @@ class GrailsDomainBinderOptionDefectSpec extends HibernateGormDatastoreSpec {
         thrown(Exception)
     }
 
-    @PendingFeature(reason = 'EnumTypeBinder only applies the length, precision, scale, SQL type and uniqueness of the column config, so a comment, a default and read and write expressions on an enum column are ignored')
     void "the comment, default and read and write expressions of an enum column reach the column"() {
         given:
         Column column = getPersistentEntity(DefectEnumColumn).persistentClass.getProperty('state').columns[0] as Column

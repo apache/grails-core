@@ -20,7 +20,6 @@ package org.grails.orm.hibernate.cfg.domainbinding.jpa
 
 import grails.gorm.annotation.Entity
 import grails.gorm.tests.HibernateGormDatastoreSpec
-import spock.lang.PendingFeature
 
 /**
  * Pins a defect of the domain binder in the many-to-many ownership rules, found by comparing it with the annotations
@@ -34,7 +33,6 @@ class ManyToManyOwnershipDefectSpec extends HibernateGormDatastoreSpec {
         manager.registerDomainClasses(DefectNamedOwner, DefectNamedInverse)
     }
 
-    @PendingFeature(reason = 'the inverse side names its join table from its own mapping, not from the owner that names it, so it reads another table')
     void "the inverse side of a many-to-many sees the rows the owner wrote when only the owner names the join table"() {
         given:
         DefectNamedInverse inverse = new DefectNamedInverse(name: 'inverse')
