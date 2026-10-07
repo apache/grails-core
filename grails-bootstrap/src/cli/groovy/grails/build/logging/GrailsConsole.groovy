@@ -225,7 +225,7 @@ class GrailsConsole implements ConsoleLogger {
             DefaultHistory defaultHistory = (DefaultHistory) history
             try {
                 defaultHistory.attach(reader)
-            } catch (Exception e) {
+            } catch (Exception ignored) {
                 // History initialization failed, continue without persistent history
             }
         }
@@ -364,7 +364,7 @@ class GrailsConsole implements ConsoleLogger {
             if (instance.terminal != null) {
                 try {
                     instance.terminal.close()
-                } catch (IOException e) {
+                } catch (IOException ignored) {
                     // ignore
                 }
             }
@@ -382,7 +382,7 @@ class GrailsConsole implements ConsoleLogger {
             if (terminal != null) {
                 terminal.close()
             }
-        } catch (Exception e) {
+        } catch (Exception ignored) {
             // ignore
         }
     }
@@ -391,7 +391,7 @@ class GrailsConsole implements ConsoleLogger {
         if (history != null && reader != null) {
             try {
                 history.save()
-            } catch (Throwable e) {
+            } catch (Throwable ignored) {
                 // ignore exception
             }
         }

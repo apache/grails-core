@@ -136,7 +136,7 @@ class WatchServiceDirectoryWatcher extends AbstractDirectoryWatcher {
                     }
                     watchKey.reset()
                 }
-            } catch (InterruptedException e) {
+            } catch (InterruptedException ignored) {
                 // ignore
             }
         }
@@ -197,7 +197,7 @@ class WatchServiceDirectoryWatcher extends AbstractDirectoryWatcher {
                     return FileVisitResult.CONTINUE
                 }
             })
-        } catch (NoSuchFileException e) {
+        } catch (NoSuchFileException ignored) {
             // The directory may have been deleted while the tree was being walked; nothing to watch
         } catch (IOException e) {
             throw new RuntimeException(e)

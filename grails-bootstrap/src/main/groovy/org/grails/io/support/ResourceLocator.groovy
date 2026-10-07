@@ -78,7 +78,7 @@ class ResourceLocator {
                     classSearchDirectories.add(directory.getCanonicalPath())
                 }
             }
-        } catch (IOException e) {
+        } catch (IOException ignored) {
             // ignore
         }
 
