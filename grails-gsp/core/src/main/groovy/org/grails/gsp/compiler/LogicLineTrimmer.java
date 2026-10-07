@@ -18,14 +18,19 @@
  */
 package org.grails.gsp.compiler;
 
-import java.util.regex.Matcher;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Pattern;
 
 /**
  * Removes the lines of a page that hold only template logic, for a page declaring
  * {@code trimLogicLines="true"}: a line holding nothing but page directives, scriptlets and comments,
  * besides spaces and tabs, writes neither its indentation nor its line break. A line holding text, an
- * expression or a tag is left as it is.
+ * expression, a declaration or a tag is left as it is.
+ *
+ * <p>The page is walked the way {@link GroovyPageScanner} reads it, so only a line of the page's
+ * text can be removed: text inside an expression, a tag, a scriptlet or a comment is never touched,
+ * whatever it looks like.</p>
  *
  * <p>The line break of a removed line is moved inside the line's last construct, just after its
  * opening delimiter, rather than dropped, so that every line of the page keeps its number in the
@@ -33,62 +38,192 @@ import java.util.regex.Pattern;
  */
 final class LogicLineTrimmer {
 
-    private static final String CONSTRUCT = "(?:" +
-            "<%--(?:(?!--%>).)*--%>" +          // <%-- comment --%>
-            "|%\\{--(?:(?!--\\}%).)*--\\}%" +   // %{-- comment --}%
-            "|<%@(?:(?!%>).)*%>" +              // <%@ directive %>
-            "|<%(?![=@]|--)(?:(?!%>).)*%>" +    // <% scriptlet %>
-            "|%\\{(?!--)(?:(?!\\}%).)*\\}%" +   // %{ scriptlet }%
-            ")";
+    private static final Pattern TAG_NAMESPACE_PATTERN = Pattern.compile("^\\p{Alpha}\\w*$");
 
-    private static final Pattern CONSTRUCT_PATTERN = Pattern.compile(CONSTRUCT, Pattern.DOTALL);
+    private static final int UNCLOSED = -1;
 
-    private static final Pattern LOGIC_LINE_PATTERN = Pattern.compile(
-            "^[ \\t]*(" + CONSTRUCT + "(?:[ \\t]*" + CONSTRUCT + ")*)[ \\t]*(\\r?\\n|\\z)",
-            Pattern.MULTILINE | Pattern.DOTALL);
+    private final String source;
+    private final int length;
 
-    private LogicLineTrimmer() {
+    private LogicLineTrimmer(String source) {
+        this.source = source;
+        this.length = source.length();
     }
 
     static String trim(String gspSource) {
-        Matcher line = LOGIC_LINE_PATTERN.matcher(gspSource);
-        StringBuilder result = new StringBuilder(gspSource.length());
+        return new LogicLineTrimmer(gspSource).trim();
+    }
+
+    private String trim() {
+        StringBuilder result = new StringBuilder(length);
         int copied = 0;
-        while (line.find()) {
-            result.append(gspSource, copied, line.start());
-            appendConstructs(result, line.group(1), line.group(2));
-            copied = line.end();
+        int position = 0;
+        while (position < length) {
+            if (position == 0 || source.charAt(position - 1) == '\n') {
+                int lineEnd = trimLogicLine(position, result, copied);
+                if (lineEnd != position) {
+                    copied = position = lineEnd;
+                    continue;
+                }
+            }
+            Construct construct = constructAt(position);
+            if (construct == null) {
+                position++;
+            } else if (construct.end() == UNCLOSED) {
+                // left for the parser to report
+                break;
+            } else {
+                position = construct.end();
+            }
         }
-        result.append(gspSource, copied, gspSource.length());
+        result.append(source, copied, length);
         return result.toString();
     }
 
     /**
-     * Appends the constructs of a logic line without the spaces between them, the line break going
-     * just after the opening delimiter of the last one.
+     * Writes the line starting at {@code lineStart} without its blanks if it holds only template
+     * logic, the line break going just after the opening delimiter of its last construct.
+     *
+     * @return where the line ends, after its line break, or {@code lineStart} when it is not a logic line
      */
-    private static void appendConstructs(StringBuilder result, String constructs, String lineBreak) {
-        Matcher construct = CONSTRUCT_PATTERN.matcher(constructs);
-        String previous = null;
-        while (construct.find()) {
-            if (previous != null) {
-                result.append(previous);
+    private int trimLogicLine(int lineStart, StringBuilder result, int copied) {
+        List<Construct> constructs = new ArrayList<>();
+        int position = skipBlanks(lineStart);
+        String lineBreak = null;
+        while (lineBreak == null) {
+            Construct construct = constructAt(position);
+            if (construct == null || construct.end() == UNCLOSED || !construct.logic()) {
+                return lineStart;
             }
-            previous = construct.group();
+            constructs.add(construct);
+            position = skipBlanks(construct.end());
+            if (position == length) {
+                lineBreak = "";
+            } else if (source.startsWith("\r\n", position)) {
+                lineBreak = "\r\n";
+            } else if (source.charAt(position) == '\n') {
+                lineBreak = "\n";
+            }
         }
-        if (previous != null) {
-            int opening = openingDelimiterLength(previous);
-            result.append(previous, 0, opening).append(lineBreak).append(previous, opening, previous.length());
+        result.append(source, copied, lineStart);
+        Construct last = constructs.get(constructs.size() - 1);
+        for (Construct construct : constructs) {
+            if (construct == last) {
+                int opening = construct.start() + construct.openingLength();
+                result.append(source, construct.start(), opening).append(lineBreak).append(source, opening, construct.end());
+            } else {
+                result.append(source, construct.start(), construct.end());
+            }
         }
+        return position + lineBreak.length();
     }
 
-    private static int openingDelimiterLength(String construct) {
-        if (construct.startsWith("<%--") || construct.startsWith("%{--")) {
-            return 4;
+    private int skipBlanks(int position) {
+        while (position < length && (source.charAt(position) == ' ' || source.charAt(position) == '\t')) {
+            position++;
         }
-        if (construct.startsWith("<%@")) {
-            return 3;
+        return position;
+    }
+
+    /**
+     * Reads the construct that {@link GroovyPageScanner} would start at {@code position} of the page's
+     * text, or returns {@code null} when the text goes on there.
+     */
+    private Construct constructAt(int position) {
+        char c = source.charAt(position);
+        char c1 = charAt(position + 1);
+        char c2 = charAt(position + 2);
+        if (c == '<' && length - position > 3) {
+            if (c1 == '%') {
+                if (c2 == '=' || c2 == '!') {
+                    return new Construct(position, endAfter("%>", position + 3), 3, false);
+                }
+                if (c2 == '@') {
+                    return new Construct(position, endAfter("%>", position + 3), 3, true);
+                }
+                if (c2 == '-' && charAt(position + 3) == '-') {
+                    int end = endAfter("--%>", position + 4);
+                    if (end != UNCLOSED) {
+                        return new Construct(position, end, 4, true);
+                    }
+                }
+                return new Construct(position, endAfter("%>", position + 2), 2, true);
+            }
+            return tagAt(position);
         }
-        return 2;
+        if (c == '$' && c1 == '{' && (position == 0 || source.charAt(position - 1) != '\\')) {
+            return new Construct(position, endOfExpression(position + 2), 2, false);
+        }
+        if (c == '%' && c1 == '{') {
+            if (c2 == '-' && charAt(position + 3) == '-') {
+                int end = endAfter("--}%", position + 4);
+                if (end != UNCLOSED) {
+                    return new Construct(position, end, 4, true);
+                }
+            }
+            return new Construct(position, endAfter("}%", position + 2), 2, true);
+        }
+        if (c == '!' && c1 == '{') {
+            int end = position + 2;
+            while (end < length - 1 && !(source.charAt(end) == '}' && (source.charAt(end + 1) == '!' || source.charAt(end + 1) == '%'))) {
+                end++;
+            }
+            return new Construct(position, end < length - 1 ? end + 2 : UNCLOSED, 2, false);
+        }
+        if (c == '@' && c1 == '{') {
+            return new Construct(position, endAfter("}", position + 2), 2, false);
+        }
+        return null;
+    }
+
+    /**
+     * Reads a start or end tag of a tag library, whose attributes may hold expressions.
+     */
+    private Construct tagAt(int position) {
+        boolean startTag = source.charAt(position + 1) != '/';
+        int namespaceStart = startTag ? position + 1 : position + 2;
+        int colon = source.indexOf(':', namespaceStart);
+        if (colon == -1 || !TAG_NAMESPACE_PATTERN.matcher(source.substring(namespaceStart, colon)).matches()) {
+            return null;
+        }
+        if (!startTag) {
+            return new Construct(position, endAfter(">", colon + 1), 0, false);
+        }
+        int end = colon + 1;
+        while (end < length) {
+            char c = source.charAt(end);
+            if (c == '$' && charAt(end + 1) == '{') {
+                end = endOfExpression(end + 2);
+                if (end == UNCLOSED) {
+                    break;
+                }
+            } else if (c == '>') {
+                return new Construct(position, end + 1, 0, false);
+            } else {
+                end++;
+            }
+        }
+        return new Construct(position, UNCLOSED, 0, false);
+    }
+
+    private int endOfExpression(int expressionStart) {
+        int closing = new GroovyPageExpressionParser(source, expressionStart, '}', (char) 0, true).parse();
+        return closing == -1 ? UNCLOSED : closing + 1;
+    }
+
+    private int endAfter(String delimiter, int from) {
+        int found = source.indexOf(delimiter, from);
+        return found == -1 ? UNCLOSED : found + delimiter.length();
+    }
+
+    private char charAt(int position) {
+        return position < length ? source.charAt(position) : 0;
+    }
+
+    /**
+     * A construct of the page from {@code start} to {@code end}, {@link #UNCLOSED} when it never
+     * ends; a {@code logic} one writes nothing, so a line may be removed for it.
+     */
+    private record Construct(int start, int end, int openingLength, boolean logic) {
     }
 }

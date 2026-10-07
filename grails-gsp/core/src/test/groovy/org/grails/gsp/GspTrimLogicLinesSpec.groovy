@@ -19,6 +19,7 @@
 
 package org.grails.gsp
 
+import org.grails.taglib.GrailsTagException
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -117,6 +118,53 @@ ${day}
 ${DayOfWeek.FRIDAY}
 <% } %>
 ''', [:]) == 'FRIDAY\n'
+    }
+
+    void "text that looks like logic inside an expression is written as it is"() {
+        expect:
+        render('''<%@ page trimLogicLines="true" expressionCodec="none" %>
+${"""first
+    <% not logic %>
+    %{ not logic }%
+last"""}
+''', [:]) == '''first
+    <% not logic %>
+    %{ not logic }%
+last
+'''
+    }
+
+    void "text that looks like logic inside a scriptlet is kept as it is"() {
+        expect:
+        render('''<%@ page trimLogicLines="true" expressionCodec="none" %>
+<% String text = """
+    %{ not logic }%
+""" %>${text}
+''', [:]) == '\n    %{ not logic }%\n\n'
+    }
+
+    void "text that looks like logic inside a tag attribute is written as it is"() {
+        expect:
+        render('''<%@ page trimLogicLines="true" expressionCodec="none" %>
+<g:each in="${["""
+    <% not logic %>
+"""]}">${it}</g:each>
+''', [:]) == '\n    <% not logic %>\n\n'
+    }
+
+    @Unroll
+    void "a declaration on its own line is #description"() {
+        when:
+        render(directive + '\n<%! int count = 0 %>\n', [:])
+
+        then:
+        GrailsTagException e = thrown()
+        e.message.contains(':2] JSP-style declaration blocks (<%! ... %>) are not supported')
+
+        where:
+        description                          | directive
+        'rejected as it is without trimming' | ''
+        'rejected as it is with trimming'    | '<%@ page trimLogicLines="true" %>'
     }
 
     void "without the directive every line is written as it always was"() {

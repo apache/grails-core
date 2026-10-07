@@ -68,4 +68,4 @@ plugins {
 }
 ----
 
-A line holding text, an expression (`${}` or `<%= %>`) or a tag besides the logic is written as it is. The lines of the page keep their numbers in the errors reported against it.
+A line holding text, an expression (`${}` or `<%= %>`) or a tag besides the logic is written as it is. Only the lines of the page's text are trimmed: a line inside an expression, a tag, a scriptlet or a comment is never changed, even when it looks like a scriptlet. The lines of the page keep their numbers in the errors reported against it.
