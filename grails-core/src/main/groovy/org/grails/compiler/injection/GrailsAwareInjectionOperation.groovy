@@ -137,14 +137,14 @@ class GrailsAwareInjectionOperation implements CompilationUnit.IPrimaryClassNode
                                         }
                                     }
                                 }
-                            } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+                            } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException ignored) {
                                 // ignore
                             }
                             return super.visitAnnotation(desc, visible)
                         }
                     }, ClassReader.SKIP_CODE)
 
-                } catch (IOException | NoClassDefFoundError e) {
+                } catch (IOException | NoClassDefFoundError ignored) {
                     // ignore
                 }
             }
@@ -160,7 +160,7 @@ class GrailsAwareInjectionOperation implements CompilationUnit.IPrimaryClassNode
             OrderComparator.sort(injectors)
             classInjectors = injectors.toArray(new ClassInjector[0])
             globalClassInjectors = globalInjectors.toArray(new ClassInjector[0])
-        } catch (IOException e) {
+        } catch (IOException ignored) {
             // ignore
         }
     }
@@ -182,7 +182,7 @@ class GrailsAwareInjectionOperation implements CompilationUnit.IPrimaryClassNode
         if (resource.exists()) {
             try {
                 url = resource.getURL()
-            } catch (IOException e) {
+            } catch (IOException ignored) {
                 // ignore
             }
         }

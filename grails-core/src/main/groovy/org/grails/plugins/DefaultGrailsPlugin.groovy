@@ -675,7 +675,7 @@ class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentApplicat
         for (BeanFactoryPostProcessor postProcessor in ctx.getBeanFactoryPostProcessors()) {
             try {
                 postProcessor.postProcessBeanFactory(beanFactory)
-            } catch (IllegalStateException e) {
+            } catch (IllegalStateException ignored) {
                 // post processor doesn't allow running again, just continue
             }
         }

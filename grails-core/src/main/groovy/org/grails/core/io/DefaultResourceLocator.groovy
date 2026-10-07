@@ -91,7 +91,7 @@ class DefaultResourceLocator implements ResourceLocator, ResourceLoaderAware, Pl
                 }
             }
         }
-        catch (IOException e) {
+        catch (IOException ignored) {
             // ignore
         }
 
@@ -131,7 +131,7 @@ class DefaultResourceLocator implements ResourceLocator, ResourceLoaderAware, Pl
                                     }
                                 }
                             }
-                            catch (IOException e) {
+                            catch (IOException ignored) {
                                 // ignore
                             }
                         }

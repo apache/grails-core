@@ -339,7 +339,7 @@ abstract class NavigableMapConfig implements Config {
                             try {
                                 T value = (T) toEnumValue(targetType, stringValue)
                                 return value
-                            } catch (Throwable e2) {
+                            } catch (Throwable ignored) {
                                 // ignore e2 and throw original
                             }
                         }

@@ -89,7 +89,7 @@ class BinaryGrailsPlugin extends DefaultGrailsPlugin {
                 if (projectDirectory.getCanonicalPath().startsWith(BuildSettings.BASE_DIR.getCanonicalPath())) {
                     this.@isBase = true
                 }
-            } catch (IOException e) {
+            } catch (IOException ignored) {
                 // ignore
             }
         }
@@ -116,7 +116,7 @@ class BinaryGrailsPlugin extends DefaultGrailsPlugin {
         Resource viewsPropertiesResource = null
         try {
             viewsPropertiesResource = descriptorResource.createRelative(VIEWS_PROPERTIES)
-        } catch (IOException e) {
+        } catch (IOException ignored) {
             // ignore
         }
 
@@ -128,7 +128,7 @@ class BinaryGrailsPlugin extends DefaultGrailsPlugin {
                     URL newUrl = URI.create(urlString + RELATIVE_VIEWS_PROPERTIES).toURL()
                     viewsPropertiesResource = new UrlResource(newUrl)
                 }
-            } catch (IOException e) {
+            } catch (IOException ignored) {
                 // ignore
             }
         }
@@ -157,7 +157,7 @@ class BinaryGrailsPlugin extends DefaultGrailsPlugin {
         } finally {
             try {
                 if (input != null) input.close()
-            } catch (IOException e) {
+            } catch (IOException ignored) {
                 // ignore
             }
         }
@@ -293,7 +293,7 @@ class BinaryGrailsPlugin extends DefaultGrailsPlugin {
             } finally {
                 try {
                     inputStream.close()
-                } catch (IOException e) {
+                } catch (IOException ignored) {
                     // ignore
                 }
             }

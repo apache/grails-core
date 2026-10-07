@@ -1603,7 +1603,7 @@ class GrailsASTUtils {
         if (resource.exists()) {
             try {
                 url = resource.getURL()
-            } catch (IOException e) {
+            } catch (IOException ignored) {
                 // ignore
             }
         }

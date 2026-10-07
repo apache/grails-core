@@ -140,7 +140,7 @@ class TraitInjectionUtils {
                 System.err.println('Error occurred calling Trait injector [' + TraitInjectionUtils.getName() + ']: ' +
                         e.getMessage())
                 e.printStackTrace()
-            } catch (Throwable t) {
+            } catch (Throwable ignored) {
                 // ignore it
             }
             throw e

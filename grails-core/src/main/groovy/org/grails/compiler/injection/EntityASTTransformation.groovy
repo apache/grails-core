@@ -91,7 +91,7 @@ class EntityASTTransformation implements ASTTransformation, CompilationUnitAware
             } catch (RuntimeException e) {
                 try {
                     System.err.println('Error occurred calling AST injector [' + injector.getClass().getName() + ']: ' + e.getMessage())
-                } catch (Throwable t) {
+                } catch (Throwable ignored) {
                     // ignore
                 }
                 throw e

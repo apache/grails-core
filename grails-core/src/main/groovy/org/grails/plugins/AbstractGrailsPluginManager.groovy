@@ -547,7 +547,7 @@ abstract class AbstractGrailsPluginManager implements GrailsPluginManager {
         Class<?> cls = null
         try {
             cls = application.getClassLoader().loadClass(className)
-        } catch (ClassNotFoundException e) {
+        } catch (ClassNotFoundException ignored) {
             // ignore
         }
         return cls

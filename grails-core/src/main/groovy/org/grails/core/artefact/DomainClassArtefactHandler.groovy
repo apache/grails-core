@@ -129,7 +129,7 @@ class DomainClassArtefactHandler extends ArtefactHandlerAdapter implements Grail
         Artefact artefactAnn = null
         try {
             artefactAnn = clazz.getAnnotation(Artefact)
-        } catch (ArrayStoreException e) {
+        } catch (ArrayStoreException ignored) {
             // happens if a reference to a class that no longer exists is there
         }
 
@@ -140,7 +140,7 @@ class DomainClassArtefactHandler extends ArtefactHandlerAdapter implements Grail
         Annotation[] annotations = null
         try {
             annotations = clazz.getAnnotations()
-        } catch (ArrayStoreException e) {
+        } catch (ArrayStoreException ignored) {
             // happens if a reference to a class that no longer exists is there
         }
 
