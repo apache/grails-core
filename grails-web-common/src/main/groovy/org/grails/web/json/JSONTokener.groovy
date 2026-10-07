@@ -343,7 +343,7 @@ class JSONTokener {
                     long time = Long.parseLong(matcher.group(1))
                     return new Date(time)
                 }
-            } catch (Exception e) {
+            } catch (Exception ignored) {
                 // ignored
             }
         }
@@ -362,13 +362,13 @@ class JSONTokener {
                         (s.charAt(1) == 'x' || s.charAt(1) == 'X')) {
                     try {
                         return Integer.parseInt(s.substring(2), 16)
-                    } catch (Exception e) {
+                    } catch (Exception ignored) {
                         /* Ignore the error */
                     }
                 } else {
                     try {
                         return Integer.parseInt(s, 8)
-                    } catch (Exception e) {
+                    } catch (Exception ignored) {
                         /* Ignore the error */
                     }
                 }

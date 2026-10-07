@@ -79,7 +79,7 @@ class JSONObject implements JSONElement, Map {
             javascriptEncoderStateless = (EncodesToWriter) javascriptEncoder
             useStreamingJavascriptEncoder = true
         }
-        catch (Exception e) {
+        catch (Exception ignored) {
             // ignore
         }
     }

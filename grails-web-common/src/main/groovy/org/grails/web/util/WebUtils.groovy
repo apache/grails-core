@@ -325,7 +325,7 @@ class WebUtils extends org.springframework.web.util.WebUtils {
                     else {
                         result.put(name, value)
                     }
-                } catch (UnsupportedEncodingException e) {
+                } catch (UnsupportedEncodingException ignored) {
                     // ignore
                 }
             }
