@@ -1,0 +1,85 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.grails.forge.feature.database
+
+import groovy.transform.CompileStatic
+import org.springframework.stereotype.Component
+import org.grails.forge.application.ApplicationType
+import org.grails.forge.application.generator.GeneratorContext
+import org.grails.forge.build.dependencies.Dependency
+import org.grails.forge.feature.Category
+
+@Component
+@CompileStatic
+class MongoSync extends MongoFeature {
+
+    MongoSync(TestContainers testContainers) {
+        super(testContainers)
+    }
+
+    @Override
+    String getName() {
+        return 'mongo-sync'
+    }
+
+    @Override
+    String getTitle() {
+        return 'MongoDB Synchronous Driver'
+    }
+
+    @Override
+    String getDescription() {
+        return 'Add support for the MongoDB Synchronous Driver.'
+    }
+
+    @Override
+    void apply(GeneratorContext generatorContext) {
+        Map<String, Object> config = generatorContext.getConfiguration()
+        // One url cannot name a database that is right in every environment, so each names its
+        // own on the same server, the way a generated SQL application already does.
+        config.put('grails.mongodb.url', externalUrl(PROD_DATABASE))
+        config.put('environments.development.grails.mongodb.url', externalUrl(DEV_DATABASE))
+        config.put('environments.test.grails.mongodb.url', externalUrl(TEST_DATABASE))
+        generatorContext.addDependency(Dependency.builder()
+                .groupId('org.mongodb')
+                .artifactId('mongodb-driver-sync')
+                .implementation()
+        )
+    }
+
+    @Override
+    boolean supports(ApplicationType applicationType) {
+        return true
+    }
+
+    @Override
+    String getCategory() {
+        return Category.DATABASE
+    }
+
+    @Override
+    String getDocumentation() {
+        return 'https://www.mongodb.com/docs/drivers/java/sync/current/'
+    }
+
+    @Override
+    String getThirdPartyDocumentation() {
+        return 'https://www.mongodb.com/docs/'
+    }
+}

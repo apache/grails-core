@@ -1,0 +1,128 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.grails.forge.feature.database
+
+import groovy.transform.CompileStatic
+import org.springframework.context.annotation.Primary
+import org.springframework.stereotype.Component
+import org.grails.forge.application.ApplicationType
+import org.grails.forge.application.generator.GeneratorContext
+import org.grails.forge.build.dependencies.Dependency
+import org.grails.forge.feature.Feature
+import org.grails.forge.feature.FeatureContext
+import org.grails.forge.options.GormImpl
+import org.grails.forge.options.Options
+
+@Primary
+@Component
+@CompileStatic
+class GrailsDataHibernate5 extends GormFeature implements DatabaseDriverConfigurationFeature {
+
+    private static final String URL_KEY = DATASOURCE_PREFIX + 'url'
+    private static final String DRIVER_KEY = DATASOURCE_PREFIX + 'driverClassName'
+    private static final String USERNAME_KEY = DATASOURCE_PREFIX + 'username'
+    private static final String PASSWORD_KEY = DATASOURCE_PREFIX + 'password'
+    private static final String DB_CREATE_KEY = DATASOURCE_PREFIX + 'dbCreate'
+
+    private final DatabaseDriverFeature defaultDbFeature
+
+    GrailsDataHibernate5(DatabaseDriverFeature defaultDbFeature) {
+        this.defaultDbFeature = defaultDbFeature
+    }
+
+    @Override
+    String getName() {
+        return 'gorm-hibernate5'
+    }
+
+    @Override
+    String getTitle() {
+        return 'Grails Data for Hibernate 5'
+    }
+
+    @Override
+    String getDescription() {
+        return 'Configure Grails Data for using Hibernate 5.'
+    }
+
+    @Override
+    void processSelectedFeatures(FeatureContext featureContext) {
+        if (!featureContext.isPresent(DatabaseDriverFeature)) {
+            featureContext.addFeature(defaultDbFeature)
+        }
+    }
+
+    @Override
+    void apply(GeneratorContext generatorContext) {
+        Map<String, Object> config = generatorContext.getConfiguration()
+        DatabaseDriverFeature dbFeature = generatorContext.getRequiredFeature(DatabaseDriverFeature)
+        applyDefaultConfig(dbFeature, config)
+        applyDefaultGormConfig(config)
+        config.put('dataSource.pooled', true)
+        config.put('dataSource.jmxExport', true)
+        config.put('hibernate.cache.queries', false)
+        config.put('hibernate.cache.use_second_level_cache', false)
+        config.put('hibernate.cache.use_query_cache', false)
+
+        generatorContext.addBuildscriptDependency(Dependency.builder()
+                .groupId('org.apache.grails')
+                .artifactId('grails-data-hibernate5')
+                .buildSrc())
+        generatorContext.addDependency(Dependency.builder()
+                .groupId('org.apache.grails')
+                .artifactId('grails-data-hibernate5')
+                .implementation())
+        generatorContext.addDependency(Dependency.builder()
+                .groupId('com.zaxxer')
+                .artifactId('HikariCP')
+                .runtimeOnly())
+    }
+
+    @Override
+    String getUrlKey() {
+        return URL_KEY
+    }
+
+    @Override
+    String getDriverKey() {
+        return DRIVER_KEY
+    }
+
+    @Override
+    String getUsernameKey() {
+        return USERNAME_KEY
+    }
+
+    @Override
+    String getPasswordKey() {
+        return PASSWORD_KEY
+    }
+
+    @Override
+    String getDbCreateKey() {
+        return DB_CREATE_KEY
+    }
+
+    @Override
+    boolean shouldApply(ApplicationType applicationType, Options options, Set<Feature> selectedFeatures) {
+        return selectedFeatures.stream().anyMatch(f -> f instanceof GrailsDataHibernate5)
+                || (options.getGormImpl() == GormImpl.HIBERNATE5
+                        && selectedFeatures.stream().noneMatch { it instanceof GrailsDataHibernate7 })
+    }
+}

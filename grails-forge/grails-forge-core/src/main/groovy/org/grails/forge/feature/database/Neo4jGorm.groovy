@@ -1,0 +1,77 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.grails.forge.feature.database
+
+import groovy.transform.CompileStatic
+import jakarta.annotation.Nullable
+import org.springframework.stereotype.Component
+import org.grails.forge.application.ApplicationType
+import org.grails.forge.application.generator.GeneratorContext
+import org.grails.forge.build.dependencies.Dependency
+import org.grails.forge.feature.Feature
+import org.grails.forge.options.GormImpl
+import org.grails.forge.options.Options
+
+@Component
+@CompileStatic
+class Neo4jGorm extends GormOneOfFeature {
+
+    @Override
+    String getName() {
+        return 'gorm-neo4j'
+    }
+
+    @Override
+    String getTitle() {
+        return 'GORM for Neo4j'
+    }
+
+    @Override
+    String getDescription() {
+        return 'Configure GORM for using Neo4j'
+    }
+
+    @Override
+    void apply(GeneratorContext generatorContext) {
+        Map<String, Object> config = generatorContext.getConfiguration()
+        applyDefaultGormConfig(config)
+        config.put('grails.neo4j.type', 'embedded')
+        config.put('grails.neo4j.location', 'build/data/neo4j')
+        generatorContext.addDependency(Dependency.builder()
+                .groupId('org.apache.grails')
+                .artifactId('grails-data-neo4j')
+                .implementation())
+
+        generatorContext.addDependency(Dependency.builder()
+                .groupId('org.neo4j.test')
+                .artifactId('neo4j-harness')
+                .testRuntimeOnly())
+    }
+
+    @Override
+    boolean shouldApply(ApplicationType applicationType, Options options, Set<Feature> selectedFeatures) {
+        return selectedFeatures.stream().anyMatch(f -> f instanceof Neo4jGorm) || options.getGormImpl() == GormImpl.NEO4J
+    }
+
+    @Nullable
+    @Override
+    String getThirdPartyDocumentation() {
+        return 'https://grails.apache.org/docs/latest/grails-data/neo4j/manual/'
+    }
+}

@@ -21,20 +21,24 @@ import org.grails.forge.internal.tasks.GenerateManpageAsciidoc
 import org.grails.forge.internal.tasks.PicocliBuildCompletionTask
 
 plugins {
-    id 'groovy'
-    id 'java-library'
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.gradle.grails-app'
+    id 'java-test-fixtures' // CliRunner, which the specs here and in test-core run one command bean with
     id 'org.grails.forge.rocker'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.gradle.grails-code-style'
 }
 
 version = projectVersion
 group = 'org.apache.grails.forge'
 
-apply from: rootProject.layout.projectDirectory.file('../dependencies.gradle')
+grails {
+    // a generator has no developer CLI tier of its own
+    cliAutoProvision = false
+}
 
 sourceSets {
     main {
@@ -64,30 +68,36 @@ configurations {
     }
 }
 
+// the test fixtures serve the specs of this build and are not published with the CLI
+components.java.withVariantsFromConfiguration(configurations.testFixturesApiElements) { ConfigurationVariantDetails details ->
+    details.skip()
+}
+components.java.withVariantsFromConfiguration(configurations.testFixturesRuntimeElements) { ConfigurationVariantDetails details ->
+    details.skip()
+}
+
 ext {
+    pomTitle = 'Apache Grails® Application Forge CLI'
+    pomDescription = 'Generates Apache Grails® applications from the command line'
     cliProject = true
+    // the Grails application the launcher starts, and the picocli root command the code generators read
     startMainClass = 'org.grails.forge.cli.Application'
+    rootCommandClass = 'org.grails.forge.cli.ForgeCommand'
     sbomProjectType = org.cyclonedx.model.Component.Type.APPLICATION.name()
+    forgeTestsNeedLocalMaven = true
 }
 
 dependencies {
-    annotationProcessor platform("io.micronaut.platform:micronaut-platform:$micronautVersion")
-    implementation platform("io.micronaut.platform:micronaut-platform:$micronautVersion")
-    annotationProcessor 'io.micronaut:micronaut-inject-java'
-    testAnnotationProcessor platform("io.micronaut.platform:micronaut-platform:$micronautVersion")
-    testAnnotationProcessor 'io.micronaut:micronaut-inject-java'
-
+    implementation platform("org.apache.grails:grails-bom:$projectVersion")
     generateConfig "info.picocli:picocli-codegen:$picocliVersion"
 
-    annotationProcessor 'io.micronaut:micronaut-graal'
-    annotationProcessor 'io.micronaut:micronaut-inject-java'
-
+    // the generator: the Forge plugin, consumed as an application consumes any Grails plugin
     implementation project(':grails-forge-core')
-    implementation("org.apache.grails.bootstrap:grails-bootstrap:$projectVersion") {
-        exclude group: 'org.apache.grails', module: 'grails-bom'
-        exclude group: 'org.apache.groovy'
-    }
-    compileOnly 'org.apache.groovy:groovy'
+    // the framework of a Grails application without a web server
+    implementation 'org.apache.grails:grails-core'
+    implementation 'org.apache.grails.bootstrap:grails-bootstrap' // grails.codegen.model, for add-property
+    implementation 'org.apache.groovy:groovy'
+
     implementation "com.fizzed:rocker-runtime:$rockerVersion"
     implementation "info.picocli:picocli:$picocliVersion"
     implementation "info.picocli:picocli-shell-jline3:$picocliVersion"
@@ -95,28 +105,24 @@ dependencies {
     // InteractiveShell drives JLine directly, and since the ansi stream install was dropped it also
     // relies on JLine's terminal for virtual-terminal processing; pin it rather than inheriting
     // whatever version picocli-shell-jline3 happens to bring
-    implementation "org.jline:jline:${gradleBomDependencyVersions['jline.version']}"
-    implementation "org.slf4j:slf4j-nop"
-    implementation "org.yaml:snakeyaml"
+    implementation 'org.jline:jline'
+    implementation 'org.yaml:snakeyaml'
+    runtimeOnly 'org.slf4j:slf4j-nop'
 
-    compileOnly 'com.google.code.findbugs:jsr305'
+    // CliRunner, the fixture the specs run one command bean with
+    testFixturesImplementation platform("org.apache.grails:grails-bom:$projectVersion")
+    testFixturesImplementation 'org.apache.groovy:groovy'
+    testFixturesImplementation 'org.springframework:spring-context'
+    testFixturesImplementation "info.picocli:picocli:$picocliVersion"
 
-    testImplementation enforcedPlatform('org.spockframework:spock-bom:2.4-groovy-4.0')
-    testImplementation 'io.micronaut.picocli:micronaut-picocli'
     testImplementation "org.reflections:reflections:$reflectionsVersion"
-    testImplementation "org.testcontainers:spock"
-    if (project.hasProperty('micronautVersion')) {
-        testCompileOnly "io.micronaut:micronaut-inject-groovy:$micronautVersion"
-    }
-
+    testImplementation "org.testcontainers:spock:$testcontainersVersion"
     testImplementation 'org.apache.groovy:groovy'
-    testImplementation "org.spockframework:spock-core", {
+    testImplementation 'org.spockframework:spock-core', {
         exclude group: 'org.apache.groovy', module: 'groovy-all'
     }
-
-    testRuntimeOnly "ch.qos.logback:logback-classic"
-    testRuntimeOnly "org.objenesis:objenesis:$objenesisVersion"
     testImplementation 'org.apache.groovy:groovy-test'
+    testRuntimeOnly 'org.objenesis:objenesis'
 }
 
 rocker {
@@ -124,14 +130,12 @@ rocker {
 }
 
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/groovy-version-pin.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/doc-config.gradle')
 }
 
 def generateManpageAsciiDoc = tasks.register('generateManpageAsciiDoc', GenerateManpageAsciidoc) {
-    mainClass = findProperty('startMainClass') as String
+    mainClass = findProperty('rootCommandClass') as String
     classpath.from(configurations.generateConfig, sourceSets.main.runtimeClasspath)
     outputDirectory = layout.buildDirectory.dir('generated-picocli-docs')
 }
@@ -156,12 +160,18 @@ def buildCompletion = tasks.register('buildCompletion', PicocliBuildCompletionTa
 buildCompletion.configure { PicocliBuildCompletionTask it ->
     it.outputDirectory.set(layout.buildDirectory.dir('build-completion'))
     it.classpath.from(sourceSets.main.runtimeClasspath)
-    it.mainClass.set(findProperty('startMainClass'))
+    it.mainClass.set(findProperty('rootCommandClass'))
 }
 
+// The CLI is distributed through the shadow jar of grails-cli and consumed as a library by it and by
+// test-core, so the plain jar keeps its name, and the executable jar Spring Boot would build is not made.
 TaskProvider<Jar> jarTask = tasks.named('jar', Jar)
 jarTask.configure { Jar it ->
+    it.archiveClassifier.set('')
     it.manifest {
         attributes 'Main-Class': project.property('startMainClass')
     }
+}
+tasks.named('bootJar').configure {
+    it.enabled = false
 }

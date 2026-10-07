@@ -19,7 +19,6 @@
 
 package org.grails.forge.cli.command
 
-import io.micronaut.configuration.picocli.PicocliRunner
 import org.grails.forge.cli.CodeGenConfig
 import org.grails.forge.options.Language
 import org.grails.forge.utils.CommandSpec
@@ -31,13 +30,14 @@ class CreateControllerSpec extends CommandSpec {
     void "test create-controller command"() {
         when:
         generateProjectWithDefaults()
-        applicationContext.createBean(CodeGenConfig.class, new CodeGenConfig())
+        applicationContext.beanFactory.registerSingleton(CodeGenConfig.name, new CodeGenConfig())
+        applicationContext.registerBean(CreateControllerCommand)
 
         then:
         applicationContext.getBean(CodeGenConfig.class)
 
         when:
-        PicocliRunner.run(CreateControllerCommand.class, applicationContext, "greetings")
+        org.grails.forge.cli.CliRunner.run(CreateControllerCommand.class, applicationContext, "greetings")
 
         then:
         new File(dir, "grails-app/controllers/example/grails/GreetingsController.groovy").exists()

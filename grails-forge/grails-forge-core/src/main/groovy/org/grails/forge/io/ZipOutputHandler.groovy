@@ -1,0 +1,146 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.grails.forge.io
+
+import groovy.transform.CompileStatic
+import org.apache.commons.compress.archivers.zip.UnixStat
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry
+import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream
+import org.grails.forge.application.Project
+import org.grails.forge.template.Template
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
+import java.nio.file.attribute.FileTime
+
+@CompileStatic
+class ZipOutputHandler implements OutputHandler {
+
+    private final ZipArchiveOutputStream zipOutputStream
+    private final File zip
+    private final String directory
+    private final Set<String> createdDirs = new HashSet<>()
+    private final FileTime lastModified
+
+    ZipOutputHandler(Project project) throws IOException {
+        File baseDirectory = new File('.').getCanonicalFile()
+        Path zipPath = Paths.get(baseDirectory.getPath(), project.getName() + '.zip')
+        zip = zipPath.toAbsolutePath().normalize().toFile()
+        if (zip.exists()) {
+            throw new IllegalArgumentException('Cannot create the project because the target zip file already exists')
+        }
+        zip.createNewFile()
+        zipOutputStream = new ZipArchiveOutputStream(Files.newOutputStream(zip.toPath()))
+        directory = project.getName()
+        lastModified = FileTime.from(OutputUtils.createLastModified())
+    }
+
+    ZipOutputHandler(OutputStream outputStream) {
+        this(null, outputStream)
+    }
+
+    ZipOutputHandler(String projectName, OutputStream outputStream) {
+        zip = null
+        zipOutputStream = new ZipArchiveOutputStream(outputStream)
+        directory = projectName
+        lastModified = FileTime.from(OutputUtils.createLastModified())
+    }
+
+    @Override
+    String getOutputLocation() {
+        if (zip == null) {
+            return null
+        } else {
+            return zip.getAbsolutePath()
+        }
+    }
+
+    @Override
+    boolean exists(String path) {
+        return false
+    }
+
+    @Override
+    void write(String path, Template contents) throws IOException {
+        String entryName = (directory != null ? joinUri(directory, path) : path)
+
+        // ensure parent directories exist as explicit dir entries
+        // https://github.com/apache/grails-core/issues/15186
+        createParentDirs(entryName, lastModified)
+
+        ZipArchiveEntry zipEntry = new ZipArchiveEntry(entryName)
+        setZipEntryMetadata(
+                zipEntry,
+                lastModified,
+                UnixStat.FILE_FLAG | (contents.isExecutable() ? 0755 : 0644)
+        )
+        zipOutputStream.putArchiveEntry(zipEntry)
+        contents.write(zipOutputStream)
+        zipOutputStream.closeArchiveEntry()
+    }
+
+    @Override
+    void close() throws IOException {
+        zipOutputStream.finish()
+        zipOutputStream.close()
+    }
+
+    private void createParentDirs(String entryName, FileTime lastModified) throws IOException {
+        int slash = entryName.lastIndexOf('/')
+        if (slash < 0) {
+            return
+        }
+
+        int i = 0
+        while ((i = entryName.indexOf('/', i)) >= 0) {
+            String dir = entryName.substring(0, i + 1)
+            if (createdDirs.add(dir)) {
+                ZipArchiveEntry directoryEntry = new ZipArchiveEntry(dir)
+                setZipEntryMetadata(directoryEntry, lastModified, UnixStat.DIR_FLAG | 0755)
+                zipOutputStream.putArchiveEntry(directoryEntry)
+                zipOutputStream.closeArchiveEntry()
+            }
+            i++
+        }
+    }
+
+    static String joinUri(String directory, String path) {
+        if (directory == null || directory.isEmpty()) {
+            return path
+        }
+        if (path == null || path.isEmpty()) {
+            return directory
+        }
+        boolean directoryEndsWithSlash = directory.endsWith('/')
+        boolean pathStartsWithSlash = path.startsWith('/')
+        if (directoryEndsWithSlash && pathStartsWithSlash) {
+            return directory + path.substring(1)
+        }
+        if (!directoryEndsWithSlash && !pathStartsWithSlash) {
+            return directory + '/' + path
+        }
+        return directory + path
+    }
+
+    private void setZipEntryMetadata(ZipArchiveEntry zipEntry, FileTime lastModified, int unixMode) {
+        zipEntry.setLastModifiedTime(lastModified)
+        zipEntry.setTime(lastModified.toMillis())
+        zipEntry.setUnixMode(unixMode)
+    }
+}

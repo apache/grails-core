@@ -19,8 +19,6 @@
 
 package org.grails.forge
 
-import io.micronaut.context.ApplicationContext
-import io.micronaut.context.BeanContext
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.OperatingSystem
 import org.grails.forge.application.Project
@@ -37,6 +35,7 @@ import org.grails.forge.fixture.ContextFixture
 import org.grails.forge.fixture.ProjectFixture
 import org.grails.forge.options.*
 import org.grails.forge.util.VersionInfo
+import org.springframework.context.ApplicationContext
 
 import java.util.function.Function
 
@@ -154,7 +153,7 @@ class BuildBuilder implements ProjectFixture, ContextFixture {
     }
 
     @Override
-    BeanContext getBeanContext() {
+    ApplicationContext getBeanContext() {
         ctx
     }
 }

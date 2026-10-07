@@ -63,6 +63,9 @@ stacktrace.log
 target
 tmp/
 !grails-fields/src/main/groovy/org/grails/scaffolding/registry/output
+!grails-forge/*/src/**/build/
+# copied from the grails-wrapper build by the Forge plugin's copyGrailsWrapper task
+grails-forge/grails-forge-core/src/main/resources/grails-wrapper/
 !etc/bin
 etc/bin/results
 .vscode/

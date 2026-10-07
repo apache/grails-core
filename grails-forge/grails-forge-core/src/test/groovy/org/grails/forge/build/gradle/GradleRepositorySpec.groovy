@@ -28,6 +28,22 @@ class GradleRepositorySpec extends Specification {
     @TempDir
     Path tempDir
 
+    def 'repositories that differ only by their version filters are distinct'() {
+        given:
+        VersionRegexRepoFilter snapshots = new VersionRegexRepoFilter('org[.]apache[.]grails.*', '.*', '.*-SNAPSHOT')
+        VersionRegexRepoFilter releases = new VersionRegexRepoFilter('org[.]apache[.]grails.*', '.*', '[0-9.]+')
+
+        expect:
+        snapshots == new VersionRegexRepoFilter('org[.]apache[.]grails.*', '.*', '.*-SNAPSHOT')
+        snapshots.hashCode() == new VersionRegexRepoFilter('org[.]apache[.]grails.*', '.*', '.*-SNAPSHOT').hashCode()
+        snapshots != releases
+        snapshots.toString().contains('versionRegex:.*-SNAPSHOT')
+        new DefaultGradleRepository(1, 'https://repo.example', 'example', [snapshots]) !=
+                new DefaultGradleRepository(1, 'https://repo.example', 'example', [releases])
+        new DefaultGradleRepository(1, 'https://repo.example', 'example', [snapshots]) ==
+                new DefaultGradleRepository(1, 'https://repo.example', 'example', [new VersionRegexRepoFilter('org[.]apache[.]grails.*', '.*', '.*-SNAPSHOT')])
+    }
+
     def 'GRAILS_REPO_URL overrides accept HTTPS and local repositories'() {
         given:
         String localRepo = tempDir.resolve('local-repo').toString()

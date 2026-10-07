@@ -67,7 +67,7 @@ This git repo is **several independent Gradle builds**, not one flat multiprojec
 | **Root framework** | repo root | 60+ published modules, BOMs, test-examples, profiles, docs | `./gradlew …` from root |
 | **build-logic** | `build-logic/` | Shared **convention plugins** via `includeBuild` | `cd build-logic && ./gradlew …` (or root pluginManagement includeBuild) |
 | **grails-gradle** | `grails-gradle/` | **Published** Grails Gradle plugins for apps | `cd grails-gradle && ./gradlew …` |
-| **grails-forge** | `grails-forge/` | App generator (own wrapper, own deps) | `cd grails-forge && ./gradlew …` |
+| **grails-forge** | `grails-forge/` | App generator: a Grails plugin and two Grails applications built against the framework by coordinates (`includeBuild('..')` substitution) | `cd grails-forge && ./gradlew …` |
 | **end-to-end** | `end-to-end/` | Tests against **published** artifacts in `build/local-maven` | Full 3-step flow below (see `end-to-end/README.md`) |
 | **gradle-bootstrap** | `gradle-bootstrap/` | Regenerates shared wrappers from `.sdkmanrc` | `gradle -p gradle-bootstrap` (see wrapper section) |
 

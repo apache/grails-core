@@ -68,11 +68,6 @@ final class ActiveProcessorCountArgumentProvider implements CommandLineArgumentP
 
 allprojects {
     tasks.withType(Test).configureEach { testTask ->
-        testTask.dependsOn(
-                gradle.includedBuild('grails-core').task(':publishAllPublicationsToTestCaseMavenRepoRepository'),
-                gradle.includedBuild('grails-gradle').task(':publishAllPublicationsToTestCaseMavenRepoRepository')
-        )
-
         // Honor DO_NOT_CACHE_TESTS=1 so developers can repeatedly invoke the same test command
         // without --rerun-tasks (and without recompiling everything else).
         testTask.outputs.cacheIf { !doNotCacheTests }

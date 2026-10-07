@@ -19,14 +19,14 @@
 
 package org.grails.forge.feature
 
-import org.grails.forge.BeanContextSpec
+import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.application.ApplicationType
 
-class BaseAvailableFeaturesSpec extends BeanContextSpec {
+class BaseAvailableFeaturesSpec extends ApplicationContextSpec {
 
     void "feature names are listed in name order whatever order the features are injected in"() {
         given: 'the registered features, in injection order and reversed'
-        List<Feature> features = beanContext.getBeansOfType(Feature).toList()
+        List<Feature> features = beanContext.getBeansOfType(Feature).values().toList()
 
         when:
         List<String> injected = new BaseAvailableFeatures(features, ApplicationType.WEB).toList()

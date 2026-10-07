@@ -15,6 +15,7 @@
  *  limitations under the License.
  */
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import com.github.jengelman.gradle.plugins.shadow.transformers.PropertiesFileTransformer
 import org.apache.grails.forge.buildlogic.shadowjar.GrailsGroovyExtensionTransformer
 import org.apache.grails.forge.buildlogic.shadowjar.GrailsShadowLicenseTransform
 import org.apache.grails.forge.buildlogic.shadowjar.GrailsShadowNoticeTransform
@@ -30,6 +31,7 @@ plugins {
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.gradle.grails-code-style'
 }
 
 ext {
@@ -81,9 +83,6 @@ dependencies {
     shadowCombined files(rootProject.project(':grails-cli-shadow').tasks.named('shadowJar'))
 }
 
-apply {
-    from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
-}
 
 // It's surprisingly hard to generate start scripts and *not* have them nested into a bin / lib directory
 // rather than defining the application and then having to add tasks to rework it, just define a distribution and
@@ -105,6 +104,14 @@ shadowJarTask.configure { ShadowJar it ->
     // services & custom grails.factories have to be merged since commands can be created from both sources
     it.mergeServiceFiles()
     it.mergeServiceFiles('META-INF/grails.factories')
+    // the Forge CLI starts a Grails application: Spring Boot finds its auto-configurations and
+    // bootstrap initializers through these files, one per jar, so they are merged rather than
+    // letting the first jar win
+    it.mergeServiceFiles('META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports')
+    it.transform(PropertiesFileTransformer) {
+        paths = ['META-INF/spring.factories']
+        mergeStrategy = 'append'
+    }
 
     // groovy extensions are shipped with grails-core, use our own transformer instead of mergeGroovyExtensionModules()
     // for property file reproducibility
@@ -123,7 +130,7 @@ shadowJarTask.configure { ShadowJar it ->
 
     it.exclude(
             'META-INF/DEPENDENCIES', // until we publish our own SBOM, this won't be correct so exclude
-            'META-INF/grails-plugin.xml', // we do not start or compile a grails application so these files are not needed (grails-core, url mappings, etc plugins)
+            'META-INF/grails-plugin.xml', // one descriptor per plugin at the same path: the Forge CLI declares the plugins it runs instead of discovering them (see org.grails.forge.cli.Application)
             'META-INF/grails-plugin.xml.asc', // avoid signing artifacts
             'META-INF/sbom.json', // re-introduced below from this project's own cyclonedxDirectBom output to avoid the wrong transitive SBOM winning the shadow merge
             'about.html' // restatement of the Eclipse Distribution License - Version 1.0 for jakarta

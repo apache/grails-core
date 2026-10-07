@@ -52,6 +52,8 @@ Create or identify a GitHub Actions OIDC provider and record its ARN. Set the re
 
 Do not store a GitHub OAuth app client ID or secret. The start.grails.org UI removed Push to GitHub, and the unused server-side create/OAuth integration is not part of this deployment. Keep `GITHUB_REDIRECT_URL` as the browser redirect to the Forge UI.
 
+The Grails application reads its configurable CORS origins from `CORS_ALLOWED_ORIGIN`, which defaults to `https://start.grails.org`, and `CORS_ALLOWED_ORIGIN_APACHE`, which defaults to `https://grails.apache.org`. It also always allows `https://grails.github.io`. These are browser origins, not API slot hostnames.
+
 Grails 7 and Grails 8 both run on Java 25, so select a concrete Corretto 25 Elastic Beanstalk `PlatformArn`. Prefer an `arm64` platform with `t4g.small` only when that platform supports `arm64`; otherwise select an `x86_64` platform with `t3.small`.
 
 ```bash
@@ -130,10 +132,10 @@ Repeat that command for the other six rows. Before the first Forge deployment, r
 From `grails-forge`, build the Elastic Beanstalk bundle with the repository task:
 
 ```bash
-./gradlew grails-forge-web-netty:awsElasticBeanstalk
+./gradlew grails-forge-web:awsElasticBeanstalk
 ```
 
-The output is `grails-forge-web-netty/build/distributions/grails-forge-web-netty-aws.zip`. Its ZIP root contains `app.jar`, `Procfile`, `start.sh`, and `.platform`. Do not create an `application.jar` archive manually. The workflow uploads this ZIP and creates a distinct immutable Elastic Beanstalk application version for the selected slot; it does not require the same artifact to be deployed to all seven slots.
+The output is `grails-forge-web/build/distributions/grails-forge-web-aws.zip`. Its ZIP root contains the Grails 8 application as an executable Tomcat `bootJar` named `app.jar`, plus `Procfile`, `start.sh`, and `.platform`. Do not create an `application.jar` archive manually. The workflow uploads this ZIP and creates a distinct immutable Elastic Beanstalk application version for the selected slot; it does not require the same artifact to be deployed to all seven slots.
 
 ## GitHub Actions Deployment
 
