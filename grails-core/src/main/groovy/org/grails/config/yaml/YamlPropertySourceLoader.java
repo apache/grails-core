@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -65,12 +66,12 @@ public class YamlPropertySourceLoader extends YamlProcessor implements PropertyS
         final List<String> activeProfiles = Arrays.asList(
                 StringUtils.tokenizeToStringArray(System.getProperty("spring.profiles.active", ""), ","));
         setDocumentMatchers((DocumentMatcher) properties -> {
-            final String profile = properties.getProperty("spring.config.activate.on-profile", "").trim();
-            final String legacyProfile = properties.getProperty("spring.profiles", "").trim();
-            final boolean matchesProfile = profile.isEmpty() ||
-                    Profiles.of(profile).matches(activeProfiles::contains);
-            final boolean matchesLegacyProfile = legacyProfile.isEmpty() ||
-                    Profiles.of(legacyProfile).matches(candidate -> activeProfiles.stream().anyMatch(candidate::equalsIgnoreCase));
+            final String[] profiles = profileSelectors(properties, "spring.config.activate.on-profile");
+            final String[] legacyProfiles = profileSelectors(properties, "spring.profiles");
+            final boolean matchesProfile = profiles.length == 0 ||
+                    Profiles.of(profiles).matches(activeProfiles::contains);
+            final boolean matchesLegacyProfile = legacyProfiles.length == 0 ||
+                    Profiles.of(legacyProfiles).matches(candidate -> activeProfiles.stream().anyMatch(candidate::equalsIgnoreCase));
             return matchesProfile && matchesLegacyProfile ? MatchStatus.FOUND : MatchStatus.NOT_FOUND;
         });
         List<Map<String, Object>> loaded = load();
@@ -103,6 +104,42 @@ public class YamlPropertySourceLoader extends YamlProcessor implements PropertyS
                 new NavigableMapPropertySource(name, propertySource));
 
         return propertySources;
+    }
+
+    /**
+     * Collects the non-blank selector values for the given key. A scalar selector is read from the key itself,
+     * while a YAML sequence is flattened to indexed keys ({@code key[0]}, {@code key[1]}, ...) whose values are
+     * alternatives, matching how Spring Boot binds {@code spring.config.activate.on-profile} to a {@code String[]}.
+     */
+    private static String[] profileSelectors(Properties properties, String key) {
+        final List<String> selectors = new ArrayList<>();
+        addProfileSelector(selectors, properties.getProperty(key));
+        for (Object name : properties.keySet()) {
+            if (name instanceof String && isIndexedKey((String) name, key)) {
+                addProfileSelector(selectors, properties.getProperty((String) name));
+            }
+        }
+        return selectors.toArray(new String[0]);
+    }
+
+    private static void addProfileSelector(List<String> selectors, String selector) {
+        if (selector != null && !selector.trim().isEmpty()) {
+            selectors.add(selector.trim());
+        }
+    }
+
+    private static boolean isIndexedKey(String name, String key) {
+        final int start = key.length() + 1;
+        final int end = name.length() - 1;
+        if (end <= start || !name.startsWith(key + "[") || name.charAt(end) != ']') {
+            return false;
+        }
+        for (int i = start; i < end; i++) {
+            if (!Character.isDigit(name.charAt(i))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public List<Map<String, Object>> load() {

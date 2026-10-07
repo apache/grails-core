@@ -61,6 +61,8 @@ Conditions support a single profile name or Spring profile expressions using `|`
 
 Commas separate names in the active-profiles system property, but do not express alternatives in a document selector. Use `'dev | test'`, not `'dev,test'`, to match either profile. Missing, empty, and whitespace-only selectors impose no profile restriction; leading and trailing whitespace in a selector is ignored.
 
+A selector can also be a YAML sequence, such as `on-profile: [dev, test]`. The document is loaded when any entry matches, and each entry can be a profile expression. Empty and whitespace-only entries are ignored, so a sequence restricts the document unless all of its entries are blank.
+
 [source,yaml]
 ----
 sample:

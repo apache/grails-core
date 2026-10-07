@@ -152,6 +152,131 @@ sample.message: selected
         '!(dev | prod)'           | 'dev,alpha'           | 'default'
     }
 
+    void 'YAML sequence selector #entries selects documents with active profiles #activeProfiles'() {
+        given:
+        if (activeProfiles == null) {
+            System.clearProperty('spring.profiles.active')
+        }
+        else {
+            System.setProperty('spring.profiles.active', activeProfiles)
+        }
+        String quotedEntries = entries.collect { "'${it}'" }.join(', ')
+
+        expect:
+        for (Map.Entry<String, String> selector : [
+                'spring.config.activate.on-profile:': '',
+                'spring:\n  config:\n    activate:\n      on-profile:': '      ',
+                'spring.profiles:': '',
+                'spring:\n  profiles:': '  '
+        ]) {
+            List<String> sequences = ["${selector.key} [${quotedEntries}]".toString()]
+            if (entries) {
+                sequences << selector.key + entries.collect { "\n${selector.value}  - '${it}'" }.join('')
+            }
+            for (String sequence : sequences) {
+                String yaml = """
+sample.message: default
+---
+${sequence}
+sample.message: selected
+"""
+                def sources = new YamlPropertySourceLoader().load('application.yml', new ByteArrayResource(yaml.bytes))
+                def config = new PropertySourcesConfig(sources.first())
+                assert config.getProperty('sample.message') == expectedMessage : sequence
+            }
+        }
+
+        where:
+        entries                    | activeProfiles | expectedMessage
+        ['alpha', 'beta']          | 'gamma'        | 'default'
+        ['alpha', 'beta']          | null           | 'default'
+        ['alpha', 'beta']          | ''             | 'default'
+        ['alpha', 'beta']          | 'alpha'        | 'selected'
+        ['alpha', 'beta']          | 'beta'         | 'selected'
+        ['alpha', 'beta']          | 'dev,beta'     | 'selected'
+        ['alpha']                  | 'alpha'        | 'selected'
+        ['alpha']                  | 'beta'         | 'default'
+        [' alpha ', 'beta']        | 'alpha'        | 'selected'
+        ['dev & alpha', 'beta']    | 'alpha'        | 'default'
+        ['dev & alpha', 'beta']    | 'dev,alpha'    | 'selected'
+        ['dev & alpha', 'beta']    | 'beta'         | 'selected'
+        ['!prod', 'alpha']         | 'prod'         | 'default'
+        ['!prod', 'alpha']         | 'prod,alpha'   | 'selected'
+        ['!prod', 'alpha']         | null           | 'selected'
+        [' ', 'alpha']             | 'beta'         | 'default'
+        [' ', 'alpha']             | 'alpha'        | 'selected'
+        ['', ' ']                  | 'alpha'        | 'selected'
+        []                         | null           | 'selected'
+        []                         | 'alpha'        | 'selected'
+    }
+
+    void 'YAML sequence selectors preserve case sensitivity for #selector'() {
+        given:
+        System.setProperty('spring.profiles.active', 'dev,ALPHA')
+        def resource = new ByteArrayResource("""
+sample.message: default
+---
+${selector}: [alpha, beta]
+sample.message: selected
+""".bytes)
+
+        when:
+        def sources = new YamlPropertySourceLoader().load('application.yml', resource)
+        def config = new PropertySourcesConfig(sources.first())
+
+        then:
+        config.getProperty('sample.message') == expectedMessage
+
+        where:
+        selector                            | expectedMessage
+        'spring.config.activate.on-profile' | 'default'
+        'spring.profiles'                   | 'selected'
+    }
+
+    void 'YAML sequence and scalar selectors must both match active profiles #activeProfiles'() {
+        given:
+        System.setProperty('spring.profiles.active', activeProfiles)
+        def resource = new ByteArrayResource('''
+sample.message: default
+---
+spring.config.activate.on-profile: [alpha, beta]
+spring.profiles: dev
+sample.message: selected
+'''.bytes)
+
+        when:
+        def sources = new YamlPropertySourceLoader().load('application.yml', resource)
+        def config = new PropertySourcesConfig(sources.first())
+
+        then:
+        config.getProperty('sample.message') == expectedMessage
+
+        where:
+        activeProfiles | expectedMessage
+        'dev,beta'     | 'selected'
+        'dev,gamma'    | 'default'
+        'beta'         | 'default'
+    }
+
+    void 'YAML sequence entries do not select documents through unrelated indexed keys'() {
+        given:
+        System.setProperty('spring.profiles.active', 'beta')
+        def resource = new ByteArrayResource('''
+sample.message: default
+---
+spring.profiles.include: [alpha]
+spring.config.activate.on-profile-group: [alpha]
+sample.message: selected
+'''.bytes)
+
+        when:
+        def sources = new YamlPropertySourceLoader().load('application.yml', resource)
+        def config = new PropertySourcesConfig(sources.first())
+
+        then:
+        config.getProperty('sample.message') == 'selected'
+    }
+
     void 'YAML profile expressions preserve case sensitivity for #selector'() {
         given:
         System.setProperty('spring.profiles.active', 'dev,ALPHA')
@@ -177,10 +302,10 @@ sample.message: selected
         'spring.profiles'                   | '!alpha'       | 'default'
     }
 
-    void 'invalid YAML profile expressions are rejected for #selector'() {
+    void 'invalid YAML profile expression #value is rejected for #selector'() {
         given:
         System.setProperty('spring.profiles.active', 'alpha')
-        def resource = new ByteArrayResource("${selector}: 'alpha & beta | gamma'\nsample.message: selected".bytes)
+        def resource = new ByteArrayResource("${selector}: ${value}\nsample.message: selected".bytes)
 
         when:
         new YamlPropertySourceLoader().load('application.yml', resource)
@@ -190,7 +315,11 @@ sample.message: selected
         exception.message.contains('Malformed profile expression')
 
         where:
-        selector << ['spring.config.activate.on-profile', 'spring.profiles']
+        selector                            | value
+        'spring.config.activate.on-profile' | "'alpha & beta | gamma'"
+        'spring.profiles'                   | "'alpha & beta | gamma'"
+        'spring.config.activate.on-profile' | "[beta, 'alpha & beta | gamma']"
+        'spring.profiles'                   | "[beta, 'alpha & beta | gamma']"
     }
 
     void 'both modern and legacy YAML profile conditions must match active profiles #activeProfiles'() {
