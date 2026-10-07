@@ -45,6 +45,11 @@ dependencies {
     implementation gradleBomDependencies['asm']
     // validateBomProperties reads BOM POMs with Maven's own model, as ExtractDependenciesTask in docs-core does
     implementation "org.apache.maven:maven-model:${gradleBomDependencyVersions['maven-model.version']}"
+    // Forge build conventions: the Rocker template compiler behind org.grails.forge.rocker and the
+    // shadow transformers that assemble the grails CLI distribution
+    implementation "com.fizzed:rocker-compiler:${gradleProperties.rockerVersion}"
+    implementation "org.antlr:antlr4-runtime:${gradleProperties.antlr4Version}"
+    implementation "com.gradleup.shadow:shadow-gradle-plugin:${gradleProperties.shadowVersion}"
 
     testImplementation "org.spockframework:spock-core:${gradleBomDependencyVersions['gradle-spock.version']}"
     testImplementation gradleTestKit()
@@ -142,6 +147,10 @@ gradlePlugin {
         register('agentSkillsPlugin') {
             id = 'org.apache.grails.buildsrc.agent-skills'
             implementationClass = 'org.apache.grails.buildsrc.AgentSkillsPlugin'
+        }
+        register('forgeRockerPlugin') {
+            id = 'org.grails.forge.rocker'
+            implementationClass = 'org.grails.forge.rocker.plugin.RockerPlugin'
         }
     }
 }
