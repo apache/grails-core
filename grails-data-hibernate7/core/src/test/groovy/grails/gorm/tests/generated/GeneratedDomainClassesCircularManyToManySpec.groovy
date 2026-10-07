@@ -98,6 +98,17 @@ class GeneratedDomainClassesCircularManyToManySpec extends Specification {
         'a second side that names its join key'                  | [CmKeyedSecond]
     }
 
+    void "a non-circular owning side that names the key and the column of its join table gives the generated mode the same columns"() {
+        when:
+        Map<String, Object> binder = schema([CmNamedOwner, CmNamedOther], false)
+        Map<String, Object> generated = schema([CmNamedOwner, CmNamedOther], true)
+
+        then:
+        generated == binder
+        generated['grails.gorm.tests.generated.CmNamedOwner.others'].key == ['owner_ref']
+        generated['grails.gorm.tests.generated.CmNamedOwner.others'].element == ['other_ref']
+    }
+
     void "the side bound first keeps the default key name and the side bound second is named after its property"() {
         when:
         Map<String, Object> generated = schema([CmFollowers], true)
@@ -268,4 +279,22 @@ class CmKeyedSecond {
     static mapping = {
         following joinTable: [name: 'cm_keyed_second_f', key: 'owner_ref', column: 'other_ref']
     }
+}
+
+@Entity
+class CmNamedOwner {
+    String name
+    Set<CmNamedOther> others
+    static hasMany = [others: CmNamedOther]
+    static mapping = {
+        others joinTable: [name: 'cm_named_join', key: 'owner_ref', column: 'other_ref']
+    }
+}
+
+@Entity
+class CmNamedOther {
+    String name
+    Set<CmNamedOwner> owners
+    static hasMany = [owners: CmNamedOwner]
+    static belongsTo = [owners: CmNamedOwner]
 }

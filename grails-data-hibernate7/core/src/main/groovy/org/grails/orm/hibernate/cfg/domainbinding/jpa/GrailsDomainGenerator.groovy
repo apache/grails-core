@@ -1628,6 +1628,15 @@ class GrailsDomainGenerator {
             }
             // ManyToOneBinder binds the element like the other side's own column: its name rules and its (never) nullable column
             element = circularKeyName(other, toOneColumnFacets(other))
+            String joinColumnName = joinTable?.column?.name
+            if (joinColumnName != null && property.owningSide && !property.isCircular()) {
+                // the owning side names the element column of the join table it writes (the inverse side adopts it); a circular
+                // side keeps naming it after the property of the other side, as the binder does
+                element = new ColumnFacets(
+                        joinColumnName, element.nullable(), element.unique(), element.insertable(), element.updatable(),
+                        element.length(), element.precision(), element.scale(), element.sqlType(), element.defaultValue(),
+                        element.read(), element.write(), element.comment())
+            }
             mappedBy = property.owningSide ? null : other.name
         } else if (property.shouldBindWithForeignKey()) {
             HibernateToOneProperty inverse = (HibernateToOneProperty) property.hibernateInverseSide
