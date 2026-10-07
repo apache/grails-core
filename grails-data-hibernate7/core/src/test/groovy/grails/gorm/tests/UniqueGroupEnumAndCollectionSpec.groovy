@@ -18,11 +18,18 @@
  */
 package grails.gorm.tests
 
+import java.sql.PreparedStatement
+import java.sql.ResultSet
+import java.sql.SQLException
+import java.sql.Types
+
 import grails.gorm.annotation.Entity
 import grails.gorm.transactions.Rollback
 import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.mapping.Collection
 import org.hibernate.mapping.Table
+import org.hibernate.type.descriptor.WrapperOptions
+import org.hibernate.usertype.UserType
 import spock.lang.AutoCleanup
 import spock.lang.Shared
 import spock.lang.Specification
@@ -36,7 +43,7 @@ import spock.lang.Specification
 class UniqueGroupEnumAndCollectionSpec extends Specification {
 
     @Shared @AutoCleanup HibernateDatastore datastore = new HibernateDatastore(
-            UgEnumGroup, UgEnumConstraintGroup, UgStringGroup, UgEnumUnique, UgCollectionGroup, UgEnumCollectionGroup, UgSerializableGroup)
+            UgEnumGroup, UgEnumConstraintGroup, UgStringGroup, UgEnumUnique, UgCollectionGroup, UgEnumCollectionGroup, UgSerializableGroup, UgUserTypeGroup)
 
     void "a unique group on an enum property makes a unique key over the enum and the listed columns"() {
         expect:
@@ -138,6 +145,26 @@ class UniqueGroupEnumAndCollectionSpec extends Specification {
         thrown(Exception)
     }
 
+    void "a to-many property mapped with a user type keeps its unique group key on the owner table"() {
+        expect:
+        uniqueKeyColumns(UgUserTypeGroup) == [['tags', 'x'] as Set]
+    }
+
+    void "a duplicate of a user type to-many unique group is rejected by the database"() {
+        given:
+        new UgUserTypeGroup(x: 'x', tags: ['one', 'two'] as Set).save(flush: true, failOnError: true)
+        UgUserTypeGroup.withSession { it.clear() }
+
+        expect: 'the user type round-trips the value'
+        UgUserTypeGroup.list().first().tags == ['one', 'two'] as Set
+
+        when:
+        new UgUserTypeGroup(x: 'x', tags: ['one', 'two'] as Set).save(flush: true, validate: false)
+
+        then:
+        thrown(Exception)
+    }
+
     private List<Set<String>> uniqueKeyColumns(Class<?> domain) {
         Table table = datastore.metadata.getEntityBinding(domain.name).table
         table.uniqueKeys.values().collect { it.columns*.name*.toLowerCase().toSet() }
@@ -220,5 +247,56 @@ class UgSerializableGroup {
 
     static mapping = {
         tags type: 'serializable', unique: 'x'
+    }
+}
+
+@Entity
+class UgUserTypeGroup {
+    String x
+    Set<String> tags
+
+    static hasMany = [tags: String]
+
+    static mapping = {
+        tags type: UgTagSetType, unique: 'x'
+    }
+}
+
+class UgTagSetType implements UserType<Set> {
+
+    @Override
+    int getSqlType() {
+        Types.VARCHAR
+    }
+
+    @Override
+    Class<Set> returnedClass() {
+        Set
+    }
+
+    @Override
+    Set nullSafeGet(ResultSet rs, int position, WrapperOptions options) throws SQLException {
+        String value = rs.getString(position)
+        rs.wasNull() ? null : (value.split(',') as Set)
+    }
+
+    @Override
+    void nullSafeSet(PreparedStatement st, Set value, int position, WrapperOptions options) throws SQLException {
+        if (value == null) {
+            st.setNull(position, Types.VARCHAR)
+        }
+        else {
+            st.setString(position, value.toList().sort().join(','))
+        }
+    }
+
+    @Override
+    Set deepCopy(Set value) {
+        value == null ? null : new LinkedHashSet(value)
+    }
+
+    @Override
+    boolean isMutable() {
+        true
     }
 }
