@@ -85,7 +85,7 @@ class AuditorAwareLookup {
                         bean = applicationContext.getBean(type)
                         getCurrentAuditor = type.getMethod('getCurrentAuditor')
                     }
-                    catch (BeansException noBean) {
+                    catch (BeansException ignored) {
                         // optional — no bean registered
                     }
                 }
