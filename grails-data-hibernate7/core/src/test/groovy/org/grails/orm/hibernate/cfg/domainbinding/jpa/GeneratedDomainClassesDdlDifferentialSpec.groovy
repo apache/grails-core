@@ -89,6 +89,7 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
             'which is not a persistent property of the entity',
             'is a registered type with type parameters',
             'the index column of the map is mapped with the type',
+            'a map on a many-to-many',
     ]
 
     private static final AtomicInteger BOOTS = new AtomicInteger()

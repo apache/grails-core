@@ -32,7 +32,8 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentP
  *
  * <p>The rule covers a self-referencing many-to-many too: its sides are owning only when the class declares itself in
  * {@code belongsTo}, and without that both are inverse as well. A unidirectional many-to-many, and one where either side
- * owns the relationship, are accepted.</p>
+ * owns the relationship, are accepted. So is one with a {@code Map} on either side, which is stored regardless
+ * because that side writes the join table.</p>
  *
  * @since 9.0
  */
@@ -53,6 +54,11 @@ class ManyToManyOwnerValidator {
         }
         HibernateAssociation otherSide = manyToMany.hibernateInverseSide
         if (!(otherSide instanceof HibernateManyToManyProperty) || otherSide.isOwningSide()) {
+            return
+        }
+        // a Map-valued side is never inverse once its second pass has run: MapSecondPassBinder makes it write the
+        // join table, so a relationship with a Map on either side is stored even without belongsTo
+        if (Map.isAssignableFrom(manyToMany.type) || Map.isAssignableFrom(otherSide.type)) {
             return
         }
         // the same message whichever side is bound first: the sides are named in alphabetical order

@@ -67,6 +67,20 @@ class ManyToManyWithoutOwnerSpec extends Specification {
         return null
     }
 
+    private static UnsupportedOperationException refusalFailure(Closure<?> boot) {
+        try {
+            boot()
+        } catch (Throwable e) {
+            for (Throwable cause = e; cause != null; cause = cause.cause == cause ? null : cause.cause) {
+                if (cause instanceof UnsupportedOperationException) {
+                    return (UnsupportedOperationException) cause
+                }
+            }
+            throw e
+        }
+        return null
+    }
+
     @Unroll
     def "the application does not start when neither side of a many-to-many declares belongsTo (generated mapping: #generated)"() {
         when:
@@ -142,6 +156,49 @@ class ManyToManyWithoutOwnerSpec extends Specification {
         where:
         generated << [false, true]
     }
+
+    @Unroll
+    def "a many-to-many with a Map on #shape starts without belongsTo and stores its rows through the Map side"() {
+        when:
+        boot(false, left, right)
+        left.withTransaction {
+            def rightRow = right.newInstance(name: 'right').save(failOnError: true)
+            left.newInstance(name: 'left', (leftProperty): [first: rightRow]).save(flush: true, failOnError: true)
+        }
+
+        then:
+        left.withNewSession { left.findByName('left')."$leftProperty".keySet() } == ['first'] as Set
+        !readsBack || right.withNewSession { right.findByName('right')."$rightProperty"*.name } == ['left']
+
+        where:
+        shape        | left       | right       | leftProperty | rightProperty | readsBack
+        'one side'   | MapSetLeft | MapSetRight | 'rights'     | 'lefts'       | true
+        'both sides' | MapMapLeft | MapMapRight | 'rights'     | 'lefts'       | false
+    }
+
+    @Unroll
+    def "the generated mapping refuses a many-to-many with a Map on #shape as a map on a many-to-many, not as a missing belongsTo"() {
+        when:
+        UnsupportedOperationException refusal = refusalFailure { boot(true, left, right) }
+
+        then:
+        refusal != null
+        refusal.message.contains('a map on a many-to-many, which the generator does not support yet')
+
+        where:
+        shape        | left       | right
+        'one side'   | MapSetLeft | MapSetRight
+        'both sides' | MapMapLeft | MapMapRight
+    }
+
+    def "a Set on both sides without belongsTo still does not start"() {
+        when:
+        MappingException failure = mappingFailure { boot(false, NoOwnerLeft, NoOwnerRight) }
+
+        then:
+        failure != null
+        failure.message.startsWith('Neither side of the many-to-many')
+    }
 }
 
 @Entity
@@ -188,4 +245,40 @@ class OwnedSelf {
     static hasMany = [followers: OwnedSelf, following: OwnedSelf]
     static mappedBy = [followers: 'following', following: 'followers']
     static belongsTo = [OwnedSelf]
+}
+
+@Entity
+class MapSetLeft {
+
+    String name
+    Map<String, MapSetRight> rights
+
+    static hasMany = [rights: MapSetRight]
+}
+
+@Entity
+class MapSetRight {
+
+    String name
+    Set<MapSetLeft> lefts
+
+    static hasMany = [lefts: MapSetLeft]
+}
+
+@Entity
+class MapMapLeft {
+
+    String name
+    Map<String, MapMapRight> rights
+
+    static hasMany = [rights: MapMapRight]
+}
+
+@Entity
+class MapMapRight {
+
+    String name
+    Map<String, MapMapLeft> lefts
+
+    static hasMany = [lefts: MapMapLeft]
 }
