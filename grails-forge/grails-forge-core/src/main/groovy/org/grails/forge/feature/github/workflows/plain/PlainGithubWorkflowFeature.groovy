@@ -22,8 +22,8 @@ import groovy.transform.CompileStatic
 import org.springframework.stereotype.Component
 import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.feature.github.workflows.GitHubWorkflowFeature
-import org.grails.forge.feature.github.workflows.plain.templates.plainGithubWorkflow
-import org.grails.forge.template.RockerTemplate
+import org.grails.forge.template.GspTemplate
+import org.grails.forge.template.GspView
 
 @Component
 @CompileStatic
@@ -49,8 +49,8 @@ class PlainGithubWorkflowFeature extends GitHubWorkflowFeature {
     @Override
     void apply(GeneratorContext generatorContext) {
         final String workflowFilePath = getWorkflowFilePath()
-        generatorContext.addTemplate('javaWorkflow', new RockerTemplate(workflowFilePath,
-                plainGithubWorkflow.template(generatorContext.getProject(), generatorContext.getJdkVersion())))
+        generatorContext.addTemplate('javaWorkflow', new GspTemplate(workflowFilePath,
+                GspView.of('/forge/feature/github/workflows/plain/templates/plainGithubWorkflow.gsp', [project: generatorContext.getProject(), jdkVersion: generatorContext.getJdkVersion()])))
     }
 
     protected String getWorkflowFileName() {

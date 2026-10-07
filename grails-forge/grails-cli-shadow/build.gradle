@@ -69,7 +69,8 @@ shadowJarTask.configure { ShadowJar it ->
     // letting the first jar win
     it.mergeServiceFiles('META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports')
     it.transform(PropertiesFileTransformer) {
-        paths = ['META-INF/spring.factories']
+        // the views registries of the Forge plugin and the Forge CLI, each naming its own compiled pages
+        paths = ['META-INF/spring.factories', 'gsp/views.properties']
         mergeStrategy = 'append'
     }
 

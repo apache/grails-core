@@ -22,11 +22,9 @@ import groovy.transform.CompileStatic
 import org.springframework.stereotype.Component
 import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.build.dependencies.Dependency
-import org.grails.forge.feature.security.template.securityApplicationGroovy
-import org.grails.forge.feature.security.template.userClassicService
-import org.grails.forge.feature.security.template.userController
 import org.grails.forge.feature.view.Scaffolding
-import org.grails.forge.template.RockerTemplate
+import org.grails.forge.template.GspTemplate
+import org.grails.forge.template.GspView
 
 /**
  * Secures the application with the Grails Spring Security Core plugin over the
@@ -79,14 +77,14 @@ class GrailsSpringSecurity extends SecurityFeature implements PrimarySecurityFea
 
         applyClassicDomainModel(generatorContext)
         generatorContext.addTemplate('securityUserService',
-                new RockerTemplate('grails-app/services/{packagePath}/UserService.groovy',
-                        userClassicService.template(generatorContext.getProject())))
+                new GspTemplate('grails-app/services/{packagePath}/UserService.groovy',
+                        GspView.of('/forge/feature/security/template/userClassicService.gsp', [project: generatorContext.getProject()])))
         generatorContext.addTemplate('securityUserController',
-                new RockerTemplate('grails-app/controllers/{packagePath}/UserController.groovy',
-                        userController.template(generatorContext.getProject())))
+                new GspTemplate('grails-app/controllers/{packagePath}/UserController.groovy',
+                        GspView.of('/forge/feature/security/template/userController.gsp', [project: generatorContext.getProject()])))
         boolean ui = generatorContext.getFeatures().contains('grails-spring-security-ui')
         generatorContext.addTemplate('securityApplicationGroovy',
-                new RockerTemplate('grails-app/conf/application.groovy',
-                        securityApplicationGroovy.template(generatorContext.getProject(), ui)))
+                new GspTemplate('grails-app/conf/application.groovy',
+                        GspView.of('/forge/feature/security/template/securityApplicationGroovy.gsp', [project: generatorContext.getProject(), ui: ui])))
     }
 }

@@ -29,15 +29,12 @@ import org.grails.forge.build.gradle.GradleBuildCreator
 import org.grails.forge.build.gradle.GradlePlugin
 import org.grails.forge.feature.Feature
 import org.grails.forge.feature.build.BuildFeature
-import org.grails.forge.feature.build.gitignore
-import org.grails.forge.feature.build.gradle.templates.buildGradle
-import org.grails.forge.feature.build.gradle.templates.gradleProperties
-import org.grails.forge.feature.build.gradle.templates.gradleWrapperProperties
 import org.grails.forge.options.BuildTool
 import org.grails.forge.options.Options
 import org.grails.forge.template.BinaryTemplate
-import org.grails.forge.template.RockerTemplate
 import org.grails.forge.util.VersionInfo
+import org.grails.forge.template.GspTemplate
+import org.grails.forge.template.GspView
 import org.springframework.stereotype.Component
 import java.util.function.Function
 
@@ -76,20 +73,13 @@ class Gradle implements BuildFeature {
         GradleBuild build = dependencyResolver.create(generatorContext)
 
         final Function<String, Coordinate> coordinateResolver = (artifactId) -> resolver.resolve(artifactId).orElseThrow(() -> new LookupFailedException(artifactId))
-        generatorContext.addTemplate('build', new RockerTemplate(buildTool.getBuildFileName(), buildGradle.template(
-                generatorContext.getApplicationType(),
-                generatorContext.getProject(),
-                coordinateResolver,
-                generatorContext.getFeatures(),
-                build,
-                VersionInfo.getGrailsVersion()
-        )))
+        generatorContext.addTemplate('build', new GspTemplate(buildTool.getBuildFileName(), GspView.of('/forge/feature/build/gradle/templates/buildGradle.gsp', [applicationType: generatorContext.getApplicationType(), project: generatorContext.getProject(), coordinateResolver: coordinateResolver, features: generatorContext.getFeatures(), gradleBuild: build, grailsVersion: VersionInfo.getGrailsVersion()])))
 
         configureDefaultGradleProps(generatorContext)
-        generatorContext.addTemplate('gitignore', new RockerTemplate('.gitignore', gitignore.template()))
-        generatorContext.addTemplate('projectProperties', new RockerTemplate('gradle.properties', gradleProperties.template(generatorContext.getBuildProperties().getProperties())))
+        generatorContext.addTemplate('gitignore', new GspTemplate('.gitignore', GspView.of('/forge/feature/build/gitignore.gsp', [:])))
+        generatorContext.addTemplate('projectProperties', new GspTemplate('gradle.properties', GspView.of('/forge/feature/build/gradle/templates/gradleProperties.gsp', [properties: generatorContext.getBuildProperties().getProperties()])))
 
-        generatorContext.addTemplate('gradleWrapperProperties', new RockerTemplate(WRAPPER_PROPS, gradleWrapperProperties.template(generatorContext.getProject(), build, coordinateResolver, generatorContext.getFeatures())))
+        generatorContext.addTemplate('gradleWrapperProperties', new GspTemplate(WRAPPER_PROPS, GspView.of('/forge/feature/build/gradle/templates/gradleWrapperProperties.gsp', [project: generatorContext.getProject(), gradleBuild: build, coordinateResolver: coordinateResolver, features: generatorContext.getFeatures()])))
     }
 
     private void configureDefaultGradleProps(GeneratorContext generatorContext) {

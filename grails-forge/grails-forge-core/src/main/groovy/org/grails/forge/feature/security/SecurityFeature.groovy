@@ -26,12 +26,9 @@ import org.grails.forge.feature.Category
 import org.grails.forge.feature.FeatureContext
 import org.grails.forge.feature.Feature
 import org.grails.forge.feature.FeaturePhase
-import org.grails.forge.feature.security.template.role
-import org.grails.forge.feature.security.template.userClassic
-import org.grails.forge.feature.security.template.userClassicSpec
-import org.grails.forge.feature.security.template.userRole
 import org.grails.forge.feature.view.Scaffolding
-import org.grails.forge.template.RockerTemplate
+import org.grails.forge.template.GspTemplate
+import org.grails.forge.template.GspView
 
 /**
  * Common ground of the security features: category, WEB-only support, the ordering
@@ -78,13 +75,13 @@ abstract class SecurityFeature implements Feature {
     protected void applyClassicDomainModel(GeneratorContext generatorContext) {
         final Project project = generatorContext.getProject()
         generatorContext.addTemplate('securityUser',
-                new RockerTemplate('grails-app/domain/{packagePath}/User.groovy',
-                        userClassic.template(project, generatorContext.getFeatures())))
+                new GspTemplate('grails-app/domain/{packagePath}/User.groovy',
+                        GspView.of('/forge/feature/security/template/userClassic.gsp', [project: project, features: generatorContext.getFeatures()])))
         generatorContext.addTemplate('securityRole',
-                new RockerTemplate('grails-app/domain/{packagePath}/Role.groovy', role.template(project)))
+                new GspTemplate('grails-app/domain/{packagePath}/Role.groovy', GspView.of('/forge/feature/security/template/role.gsp', [project: project])))
         generatorContext.addTemplate('securityUserRole',
-                new RockerTemplate('grails-app/domain/{packagePath}/UserRole.groovy', userRole.template(project)))
+                new GspTemplate('grails-app/domain/{packagePath}/UserRole.groovy', GspView.of('/forge/feature/security/template/userRole.gsp', [project: project])))
         generatorContext.addTemplate('securityUserSpec',
-                new RockerTemplate(generatorContext.getTestSourcePath('/{packagePath}/User'), userClassicSpec.template(project)))
+                new GspTemplate(generatorContext.getTestSourcePath('/{packagePath}/User'), GspView.of('/forge/feature/security/template/userClassicSpec.gsp', [project: project])))
     }
 }

@@ -24,10 +24,10 @@ import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.build.dependencies.CoordinateResolver
 import org.grails.forge.build.gradle.GradleBuild
 import org.grails.forge.build.gradle.GradleBuildCreator
-import org.grails.forge.feature.build.gradle.templates.buildSrcBuildGradle
 import org.grails.forge.options.BuildTool
-import org.grails.forge.template.RockerTemplate
 import org.grails.forge.util.VersionInfo
+import org.grails.forge.template.GspTemplate
+import org.grails.forge.template.GspView
 import org.springframework.stereotype.Component
 
 @Component
@@ -67,13 +67,7 @@ class GradleBuildSrc implements GradleBuildSrcFeature {
         BuildTool buildTool = BuildTool.DEFAULT_OPTION
         GradleBuild build = dependencyResolver.create(generatorContext)
 
-        generatorContext.addTemplate('buildSrc/build', new RockerTemplate('buildSrc/' + buildTool.getBuildFileName(), buildSrcBuildGradle.template(
-                generatorContext.getApplicationType(),
-                generatorContext.getProject(),
-                generatorContext.getFeatures(),
-                build,
-                VersionInfo.getGrailsVersion()
-        )))
+        generatorContext.addTemplate('buildSrc/build', new GspTemplate('buildSrc/' + buildTool.getBuildFileName(), GspView.of('/forge/feature/build/gradle/templates/buildSrcBuildGradle.gsp', [applicationType: generatorContext.getApplicationType(), project: generatorContext.getProject(), features: generatorContext.getFeatures(), gradleBuild: build, grailsVersion: VersionInfo.getGrailsVersion()])))
     }
 
     @Override

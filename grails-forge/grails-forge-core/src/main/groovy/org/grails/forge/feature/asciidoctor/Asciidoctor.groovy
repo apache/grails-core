@@ -27,9 +27,8 @@ import org.grails.forge.build.dependencies.CoordinateResolver
 import org.grails.forge.build.gradle.GradlePlugin
 import org.grails.forge.feature.Category
 import org.grails.forge.feature.Feature
-import org.grails.forge.feature.asciidoctor.template.asciidocGradle
-import org.grails.forge.feature.asciidoctor.template.indexAdoc
-import org.grails.forge.template.RockerTemplate
+import org.grails.forge.template.GspTemplate
+import org.grails.forge.template.GspView
 
 @Component
 @CompileStatic
@@ -62,14 +61,14 @@ class Asciidoctor implements Feature {
                 .map(Coordinate::getVersion).orElse('3.0.0')
         final String asciidoctorjDiagramVersion = coordinateResolver.resolve('asciidoctorj-diagram')
                 .map(Coordinate::getVersion).orElse('2.3.1')
-        generatorContext.addTemplate('asciidocGradle', new RockerTemplate('gradle/asciidoc.gradle', asciidocGradle.template(asciidoctorjVersion, asciidoctorjDiagramVersion)))
+        generatorContext.addTemplate('asciidocGradle', new GspTemplate('gradle/asciidoc.gradle', GspView.of('/forge/feature/asciidoctor/template/asciidocGradle.gsp', [asciidoctorjVersion: asciidoctorjVersion, asciidoctorjModuleDiagramVersion: asciidoctorjDiagramVersion])))
 
         generatorContext.addBuildPlugin(GradlePlugin.builder()
                 .id('org.asciidoctor.jvm.convert')
                 .lookupArtifactId('asciidoctor-gradle-jvm')
                 .build())
 
-        generatorContext.addTemplate('indexAdoc', new RockerTemplate('src/docs/asciidoc/index.adoc', indexAdoc.template()))
+        generatorContext.addTemplate('indexAdoc', new GspTemplate('src/docs/asciidoc/index.adoc', GspView.of('/forge/feature/asciidoctor/template/indexAdoc.gsp', [:])))
     }
 
     @Override

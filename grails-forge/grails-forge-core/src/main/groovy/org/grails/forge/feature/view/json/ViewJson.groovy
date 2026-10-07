@@ -28,14 +28,10 @@ import org.grails.forge.build.gradle.GradlePlugin
 import org.grails.forge.feature.DefaultFeature
 import org.grails.forge.feature.Feature
 import org.grails.forge.feature.view.GrailsViews
-import org.grails.forge.feature.view.json.templates._errors
-import org.grails.forge.feature.view.json.templates._object
-import org.grails.forge.feature.view.json.templates.error
-import org.grails.forge.feature.view.json.templates.index
-import org.grails.forge.feature.view.json.templates.notFound
 import org.grails.forge.feature.web.GrailsWeb
 import org.grails.forge.options.Options
-import org.grails.forge.template.RockerTemplate
+import org.grails.forge.template.GspTemplate
+import org.grails.forge.template.GspView
 
 @Component
 @CompileStatic
@@ -83,11 +79,11 @@ class ViewJson extends GrailsViews implements DefaultFeature {
                 .artifactId('grails-testing-support-views-gson')
                 .testImplementation())
 
-        generatorContext.addTemplate('application_index_gson', new RockerTemplate(getViewFolderPath() + 'application/index.gson', index.template()))
-        generatorContext.addTemplate('_errors_gson', new RockerTemplate(getViewFolderPath() + 'errors/_errors.gson', _errors.template()))
-        generatorContext.addTemplate('_object_gson', new RockerTemplate(getViewFolderPath() + 'object/_object.gson', _object.template()))
-        generatorContext.addTemplate('error_gson', new RockerTemplate(getViewFolderPath() + 'error.gson', error.template()))
-        generatorContext.addTemplate('notFound_gson', new RockerTemplate(getViewFolderPath() + 'notFound.gson', notFound.template()))
+        generatorContext.addTemplate('application_index_gson', new GspTemplate(getViewFolderPath() + 'application/index.gson', GspView.of('/forge/feature/view/json/templates/index.gsp', [:])))
+        generatorContext.addTemplate('_errors_gson', new GspTemplate(getViewFolderPath() + 'errors/_errors.gson', GspView.of('/forge/feature/view/json/templates/_errors.gsp', [:])))
+        generatorContext.addTemplate('_object_gson', new GspTemplate(getViewFolderPath() + 'object/_object.gson', GspView.of('/forge/feature/view/json/templates/_object.gsp', [:])))
+        generatorContext.addTemplate('error_gson', new GspTemplate(getViewFolderPath() + 'error.gson', GspView.of('/forge/feature/view/json/templates/error.gsp', [:])))
+        generatorContext.addTemplate('notFound_gson', new GspTemplate(getViewFolderPath() + 'notFound.gson', GspView.of('/forge/feature/view/json/templates/notFound.gsp', [:])))
     }
 
     @Override

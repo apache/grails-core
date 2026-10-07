@@ -28,12 +28,12 @@ import org.grails.forge.build.dependencies.Dependency
 import org.grails.forge.feature.DefaultFeature
 import org.grails.forge.feature.Feature
 import org.grails.forge.feature.FeatureContext
-import org.grails.forge.feature.test.template.containerGebSpec
-import org.grails.forge.options.DefaultTestRockerModelProvider
+import org.grails.forge.options.DefaultTestViewProvider
 import org.grails.forge.options.Options
 import org.grails.forge.options.TestFramework
-import org.grails.forge.options.TestRockerModelProvider
-import org.grails.forge.template.RockerTemplate
+import org.grails.forge.options.TestViewProvider
+import org.grails.forge.template.GspTemplate
+import org.grails.forge.template.GspView
 
 @Component
 @CompileStatic
@@ -93,13 +93,13 @@ class GebWithTestcontainers implements GebFeature, DefaultFeature {
                 .integrationTestImplementationTestFixtures())
 
         Project project = generatorContext.getProject()
-        TestRockerModelProvider provider = new DefaultTestRockerModelProvider(
-                containerGebSpec.template(project)
+        TestViewProvider provider = new DefaultTestViewProvider(
+                GspView.of('/forge/feature/test/template/containerGebSpec.gsp', [project: project])
         )
         generatorContext.addTemplate('applicationTest',
-                new RockerTemplate(
+                new GspTemplate(
                         generatorContext.getIntegrationTestSourcePath('/{packagePath}/{className}'),
-                        provider.findModel(TestFramework.SPOCK)
+                        provider.findView(TestFramework.SPOCK)
                 )
         )
     }

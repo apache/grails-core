@@ -23,12 +23,12 @@ import org.grails.forge.util.ThrowingSupplier
 import jakarta.inject.Inject
 import org.grails.forge.application.Project
 import org.grails.forge.cli.CodeGenConfig
-import org.grails.forge.cli.command.templates.job
 import org.grails.forge.feature.other.GrailsQuartz
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.OutputHandler
 import org.grails.forge.template.RenderResult
-import org.grails.forge.template.RockerTemplate
+import org.grails.forge.template.GspTemplate
+import org.grails.forge.template.GspView
 import picocli.CommandLine
 
 @CommandLine.Command(name = CreateJobCommand.NAME, description = 'Creates a new Quartz scheduled job')
@@ -63,7 +63,7 @@ class CreateJobCommand extends CodeGenCommand {
         }
         final Project project = getProject(jobName)
         final RenderResult result = getTemplateRenderer(project)
-            .render(new RockerTemplate('grails-app/jobs/{packagePath}/{className}Job.groovy', job.template(project)), overwrite)
+            .render(new GspTemplate('grails-app/jobs/{packagePath}/{className}Job.groovy', GspView.of('/forge/cli/command/templates/job.gsp', [project: project])), overwrite)
         if (result != null) {
             logRenderResult(result)
         }

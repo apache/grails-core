@@ -23,7 +23,8 @@ plugins {
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.gradle.grails-plugin'
-    id 'org.grails.forge.rocker'
+    // the generator's pages, under grails-app/views/forge, are GSPs compiled with the plugin
+    id 'org.apache.grails.gradle.grails-gsp'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
@@ -46,14 +47,6 @@ grails {
     native2ascii = false
 }
 
-sourceSets {
-    main {
-        rocker {
-            srcDir('src/main/java')
-        }
-    }
-}
-
 dependencies {
     implementation platform("org.apache.grails:grails-bom:$projectVersion")
 
@@ -65,9 +58,14 @@ dependencies {
     api 'jakarta.annotation:jakarta.annotation-api'
     api 'jakarta.inject:jakarta.inject-api'
     api 'jakarta.validation:jakarta.validation-api'
-    api "com.fizzed:rocker-runtime:$rockerVersion"
     api "io.github.java-diff-utils:java-diff-utils:$javaDiffUtils"
 
+    // renders the compiled pages, without a web request
+    implementation 'org.apache.grails.views:grails-gsp-core'
+    // the page compiler compileGroovyPages forks, which lives in the web GSP module; needed to build
+    // the pages only, the plugin renders them with grails-gsp-core alone
+    compileOnly 'org.apache.grails.views:grails-web-gsp'
+    compileOnly 'jakarta.servlet:jakarta.servlet-api'
     implementation "com.typesafe:config:$typesafeConfigVersion"
     implementation "org.apache.commons:commons-compress:$commonsCompressVersion"
     implementation "org.yaml:snakeyaml"
@@ -98,10 +96,6 @@ sourceSets.main.resources.srcDir(grailsVersionsPath)
 
 tasks.named('build').configure {
     it.dependsOn(grailsVersionInfoTask)
-}
-
-rocker {
-    postProcessing = ['org.grails.forge.rocker.plugin.WhitespaceProcessor']
 }
 
 // A Grails plugin's GSPs are its views, compiled rather than packaged, so the plugin build keeps them out
@@ -140,4 +134,9 @@ apply {
     tasks.named(name).configure {
         it.dependsOn(copyGrailsWrapper, grailsVersionInfoTask)
     }
+}
+// The specs render the pages as the plugin ships them, compiled. The GSP plugin leaves the compiled
+// pages off a Grails build's test class path, where an application renders its views from source.
+tasks.named('test', Test).configure { Test test ->
+    test.classpath += files(layout.buildDirectory.dir('gsp-classes/main')).builtBy('compileGroovyPages')
 }

@@ -25,12 +25,11 @@ import org.grails.forge.application.Project
 import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.build.dependencies.Dependency
 import org.grails.forge.feature.FeatureContext
-import org.grails.forge.feature.test.template.gebConfig
-import org.grails.forge.feature.test.template.gebSpec
-import org.grails.forge.options.DefaultTestRockerModelProvider
+import org.grails.forge.options.DefaultTestViewProvider
 import org.grails.forge.options.TestFramework
-import org.grails.forge.options.TestRockerModelProvider
-import org.grails.forge.template.RockerTemplate
+import org.grails.forge.options.TestViewProvider
+import org.grails.forge.template.GspTemplate
+import org.grails.forge.template.GspView
 import java.util.stream.Stream
 
 @Component
@@ -106,19 +105,19 @@ class GebWithLocalBrowsers implements GebFeature {
         )
 
         Project project = generatorContext.getProject()
-        TestRockerModelProvider provider = new DefaultTestRockerModelProvider(
-                gebSpec.template(project)
+        TestViewProvider provider = new DefaultTestViewProvider(
+                GspView.of('/forge/feature/test/template/gebSpec.gsp', [project: project])
         )
         generatorContext.addTemplate('applicationTest',
-                new RockerTemplate(
+                new GspTemplate(
                         generatorContext.getIntegrationTestSourcePath('/{packagePath}/{className}'),
-                        provider.findModel(TestFramework.SPOCK)
+                        provider.findView(TestFramework.SPOCK)
                 )
         )
         generatorContext.addTemplate('gebConfig',
-                new RockerTemplate(
+                new GspTemplate(
                         'src/integration-test/resources/GebConfig.groovy',
-                        gebConfig.template(project)
+                        GspView.of('/forge/feature/test/template/gebConfig.gsp', [project: project])
                 )
         )
     }

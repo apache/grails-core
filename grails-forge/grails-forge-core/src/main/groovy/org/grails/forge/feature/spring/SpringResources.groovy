@@ -25,9 +25,9 @@ import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.feature.Category
 import org.grails.forge.feature.DefaultFeature
 import org.grails.forge.feature.Feature
-import org.grails.forge.feature.spring.template.springResources
 import org.grails.forge.options.Options
-import org.grails.forge.template.RockerTemplate
+import org.grails.forge.template.GspTemplate
+import org.grails.forge.template.GspView
 
 @Component
 @CompileStatic
@@ -55,7 +55,7 @@ class SpringResources implements DefaultFeature {
 
     @Override
     void apply(GeneratorContext generatorContext) {
-        generatorContext.addTemplate('springResources', new RockerTemplate('grails-app/conf/spring/resources.groovy', springResources.template()))
+        generatorContext.addTemplate('springResources', new GspTemplate('grails-app/conf/spring/resources.groovy', GspView.of('/forge/feature/spring/template/springResources.gsp', [:])))
     }
 
     @Override

@@ -23,8 +23,8 @@ import org.springframework.stereotype.Component
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.build.dependencies.Dependency
-import org.grails.forge.feature.logging.template.logback
-import org.grails.forge.template.RockerTemplate
+import org.grails.forge.template.GspTemplate
+import org.grails.forge.template.GspView
 
 /**
  * Opt-in logging feature that generates an editable
@@ -71,8 +71,8 @@ class LogbackConfig implements LoggingFeature {
         String projectName = generatorContext.getProject().getName()
         String packageName = generatorContext.getProject().getPackageName()
 
-        generatorContext.addTemplate('loggingConfig', new RockerTemplate('grails-app/conf/logback-spring.xml',
-                logback.template(projectName, packageName)))
+        generatorContext.addTemplate('loggingConfig', new GspTemplate('grails-app/conf/logback-spring.xml',
+                GspView.of('/forge/feature/logging/template/logback.gsp', [projectName: projectName, packageName: packageName])))
         generatorContext.addDependency(Dependency.builder()
                 .groupId('org.apache.grails')
                 .artifactId('grails-logging')

@@ -25,8 +25,8 @@ import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.feature.DefaultFeature
 import org.grails.forge.feature.Feature
 import org.grails.forge.options.Options
-import org.grails.forge.template.RockerTemplate
-import org.grails.forge.feature.grails.templates.urlMappings
+import org.grails.forge.template.GspTemplate
+import org.grails.forge.template.GspView
 
 @Component
 @CompileStatic
@@ -54,7 +54,7 @@ class GrailsUrlMappings implements DefaultFeature {
 
     @Override
     void apply(GeneratorContext generatorContext) {
-        generatorContext.addTemplate('urlMappings', new RockerTemplate(getPath(), urlMappings.template(generatorContext.getProject(), generatorContext.getApplicationType())))
+        generatorContext.addTemplate('urlMappings', new GspTemplate(getPath(), GspView.of('/forge/feature/grails/templates/urlMappings.gsp', [project: generatorContext.getProject(), applicationType: generatorContext.getApplicationType()])))
     }
 
     protected String getPath() {

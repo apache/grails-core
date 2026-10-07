@@ -26,13 +26,9 @@ import org.grails.forge.build.dependencies.Dependency
 import org.grails.forge.build.gradle.GradlePlugin
 import org.grails.forge.feature.Feature
 import org.grails.forge.feature.view.GrailsViews
-import org.grails.forge.feature.view.markup.templates._errors
-import org.grails.forge.feature.view.markup.templates._object
-import org.grails.forge.feature.view.markup.templates.error
-import org.grails.forge.feature.view.markup.templates.index
-import org.grails.forge.feature.view.markup.templates.notFound
 import org.grails.forge.feature.web.GrailsWeb
-import org.grails.forge.template.RockerTemplate
+import org.grails.forge.template.GspTemplate
+import org.grails.forge.template.GspView
 
 @Component
 @CompileStatic
@@ -71,11 +67,11 @@ class ViewMarkup extends GrailsViews implements Feature {
                 .artifactId('grails-views-markup')
                 .implementation())
 
-        generatorContext.addTemplate('application_index_gml', new RockerTemplate(getViewFolderPath() + 'application/index.gml', index.template()))
-        generatorContext.addTemplate('_errors_gml', new RockerTemplate(getViewFolderPath() + 'errors/_errors.gml', _errors.template()))
-        generatorContext.addTemplate('_object_gml', new RockerTemplate(getViewFolderPath() + 'object/_object.gml', _object.template()))
-        generatorContext.addTemplate('error_gml', new RockerTemplate(getViewFolderPath() + 'error.gml', error.template()))
-        generatorContext.addTemplate('notFound_gml', new RockerTemplate(getViewFolderPath() + 'notFound.gml', notFound.template()))
+        generatorContext.addTemplate('application_index_gml', new GspTemplate(getViewFolderPath() + 'application/index.gml', GspView.of('/forge/feature/view/markup/templates/index.gsp', [:])))
+        generatorContext.addTemplate('_errors_gml', new GspTemplate(getViewFolderPath() + 'errors/_errors.gml', GspView.of('/forge/feature/view/markup/templates/_errors.gsp', [:])))
+        generatorContext.addTemplate('_object_gml', new GspTemplate(getViewFolderPath() + 'object/_object.gml', GspView.of('/forge/feature/view/markup/templates/_object.gsp', [:])))
+        generatorContext.addTemplate('error_gml', new GspTemplate(getViewFolderPath() + 'error.gml', GspView.of('/forge/feature/view/markup/templates/error.gsp', [:])))
+        generatorContext.addTemplate('notFound_gml', new GspTemplate(getViewFolderPath() + 'notFound.gml', GspView.of('/forge/feature/view/markup/templates/notFound.gsp', [:])))
     }
 
 }

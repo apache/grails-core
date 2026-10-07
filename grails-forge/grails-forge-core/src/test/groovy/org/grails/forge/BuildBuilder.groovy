@@ -29,12 +29,11 @@ import org.grails.forge.build.dependencies.LookupFailedException
 import org.grails.forge.build.gradle.GradleBuild
 import org.grails.forge.build.gradle.GradleBuildCreator
 import org.grails.forge.feature.Features
-import org.grails.forge.feature.build.gradle.templates.buildGradle
-import org.grails.forge.feature.build.gradle.templates.buildSrcBuildGradle
 import org.grails.forge.fixture.ContextFixture
 import org.grails.forge.fixture.ProjectFixture
 import org.grails.forge.options.*
 import org.grails.forge.util.VersionInfo
+import org.grails.forge.template.GspView
 import org.springframework.context.ApplicationContext
 
 import java.util.function.Function
@@ -116,7 +115,7 @@ class BuildBuilder implements ProjectFixture, ContextFixture {
         CoordinateResolver resolver = ctx.getBean(CoordinateResolver);
         Function<String, Coordinate> coordinateResolver = (artifactId) -> resolver.resolve(artifactId).orElseThrow(() -> new LookupFailedException(artifactId))
         String grailsVersion = VersionInfo.grailsVersion
-        return buildGradle.template(type, project, coordinateResolver, features, build, grailsVersion).render().toString()
+        return GspView.of('/forge/feature/build/gradle/templates/buildGradle.gsp', [applicationType: type, project: project, coordinateResolver: coordinateResolver, features: features, gradleBuild: build, grailsVersion: grailsVersion]).render()
     }
 
     String renderBuildSrc() {
@@ -131,7 +130,7 @@ class BuildBuilder implements ProjectFixture, ContextFixture {
         Features features = getFeatures(featureNames, options, type)
         String grailsVersion = VersionInfo.grailsVersion
         GradleBuild build = gradleBuild(options, features, project, type)
-        return buildSrcBuildGradle.template(type, project, features, build, grailsVersion).render().toString()
+        return GspView.of('/forge/feature/build/gradle/templates/buildSrcBuildGradle.gsp', [applicationType: type, project: project, features: features, gradleBuild: build, grailsVersion: grailsVersion]).render()
     }
 
     private GradleBuildCreator getGradleDependencyResolver() {

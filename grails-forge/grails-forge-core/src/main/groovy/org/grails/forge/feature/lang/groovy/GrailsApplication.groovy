@@ -26,12 +26,9 @@ import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.build.gradle.GradlePlugin
 import org.grails.forge.feature.DefaultFeature
 import org.grails.forge.feature.Feature
-import org.grails.forge.feature.grails.templates.applicationController
-import org.grails.forge.feature.grails.templates.plugin
-import org.grails.forge.feature.lang.groovy.templates.application
-import org.grails.forge.feature.lang.groovy.templates.bootStrap
 import org.grails.forge.options.Options
-import org.grails.forge.template.RockerTemplate
+import org.grails.forge.template.GspTemplate
+import org.grails.forge.template.GspView
 
 @Component('grailsApplicationFeature')
 @CompileStatic
@@ -59,18 +56,18 @@ class GrailsApplication implements GrailsApplicationFeature, DefaultFeature {
         final ApplicationType applicationType = generatorContext.getApplicationType()
         if (shouldGenerateApplicationFile(applicationType, generatorContext)) {
             generatorContext.addBuildPlugin(GradlePlugin.builder().id('war').build())
-            generatorContext.addTemplate('application', new RockerTemplate(getPath(),
-                    application.template(applicationType, generatorContext.getProject(), generatorContext.getFeatures())))
+            generatorContext.addTemplate('application', new GspTemplate(getPath(),
+                    GspView.of('/forge/feature/lang/groovy/templates/application.gsp', [applicationType: applicationType, project: generatorContext.getProject(), features: generatorContext.getFeatures()])))
             if (applicationType == ApplicationType.REST_API) {
-                generatorContext.addTemplate('applicationController', new RockerTemplate('grails-app/controllers/{packagePath}/ApplicationController.groovy',
-                        applicationController.template(generatorContext.getProject())))
+                generatorContext.addTemplate('applicationController', new GspTemplate('grails-app/controllers/{packagePath}/ApplicationController.groovy',
+                        GspView.of('/forge/feature/grails/templates/applicationController.gsp', [project: generatorContext.getProject()])))
             }
         }
         if (applicationType == ApplicationType.PLUGIN || applicationType == ApplicationType.WEB_PLUGIN) {
-            generatorContext.addTemplate('plugin', new RockerTemplate(generatorContext.getSourcePath('/{packagePath}/{className}GrailsPlugin'),
-                    plugin.template(generatorContext.getProject(), applicationType)))
+            generatorContext.addTemplate('plugin', new GspTemplate(generatorContext.getSourcePath('/{packagePath}/{className}GrailsPlugin'),
+                    GspView.of('/forge/feature/grails/templates/plugin.gsp', [project: generatorContext.getProject(), applicationType: applicationType])))
         }
-        generatorContext.addTemplate('bootStrap', new RockerTemplate('grails-app/init/{packagePath}/BootStrap.groovy', bootStrap.template(generatorContext.getProject(), generatorContext.getFeatures())))
+        generatorContext.addTemplate('bootStrap', new GspTemplate('grails-app/init/{packagePath}/BootStrap.groovy', GspView.of('/forge/feature/lang/groovy/templates/bootStrap.gsp', [project: generatorContext.getProject(), features: generatorContext.getFeatures()])))
     }
 
     protected boolean shouldGenerateApplicationFile(ApplicationType applicationType, GeneratorContext generatorContext) {

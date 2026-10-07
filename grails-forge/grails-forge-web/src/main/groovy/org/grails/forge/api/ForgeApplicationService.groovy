@@ -25,12 +25,10 @@ import org.grails.forge.options.GormImpl
 import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.Options
 import org.grails.forge.options.ServletImpl
-import org.grails.forge.template.RockerWritable
-import org.grails.forge.template.api.grailsForgeApi
 import org.grails.forge.util.VersionInfo
+import org.grails.forge.template.GspView
 import org.springframework.context.MessageSource
 import org.springframework.stereotype.Service
-import java.nio.charset.StandardCharsets
 import java.util.stream.Collectors
 
 @Service
@@ -56,12 +54,10 @@ class ForgeApplicationService {
     }
 
     String homeText(RequestInfo info) {
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream()
-        new RockerWritable(new grailsForgeApi()
-                .serverURL(info.getServerURL())
-                .grailsVersion(VersionInfo.getGrailsVersion()))
-                .write(outputStream)
-        return outputStream.toString(StandardCharsets.UTF_8)
+        return GspView.of('/forge/template/api/grailsForgeApi.gsp', [
+                serverURL: info.getServerURL(),
+                grailsVersion: VersionInfo.getGrailsVersion()
+        ]).render()
     }
 
     ApplicationTypeList list(RequestInfo info) {

@@ -162,7 +162,7 @@ Never unify those casually.
    - `grails-profiles/base/skeleton/` and `grails-profiles/profile/skeleton/`
    - `grails-shell-cli/src/test/resources/gradle-sample/` (and `bin/test` copy if present)
    - Forge **generated-app** wrapper assets (all of these - properties alone is not enough):
-     - `grails-forge/grails-forge-core/.../gradleWrapperProperties.rocker.raw` (properties template)
+     - `grails-forge/grails-forge-core/grails-app/views/forge/.../gradleWrapperProperties.gsp` (properties page)
      - `grails-forge/grails-forge-core/src/main/resources/gradle/gradlew`
      - `grails-forge/grails-forge-core/src/main/resources/gradle/gradlew.bat`
      - `grails-forge/grails-forge-core/src/main/resources/gradle/wrapper/gradle-wrapper.jar`

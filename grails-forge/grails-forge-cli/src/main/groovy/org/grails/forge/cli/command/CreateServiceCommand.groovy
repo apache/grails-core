@@ -23,13 +23,12 @@ import org.grails.forge.util.ThrowingSupplier
 import jakarta.inject.Inject
 import org.grails.forge.application.Project
 import org.grails.forge.cli.CodeGenConfig
-import org.grails.forge.cli.command.templates.service
-import org.grails.forge.cli.command.templates.serviceSpec
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.OutputHandler
 import org.grails.forge.template.RenderResult
-import org.grails.forge.template.RockerTemplate
 import org.grails.forge.template.TemplateRenderer
+import org.grails.forge.template.GspTemplate
+import org.grails.forge.template.GspView
 import picocli.CommandLine
 
 @CommandLine.Command(name = CreateServiceCommand.NAME, description = 'Creates a Service Class')
@@ -61,8 +60,8 @@ class CreateServiceCommand extends CodeGenCommand {
     Integer call() throws Exception {
         final Project project = getProject(serviceName)
         final TemplateRenderer templateRenderer = getTemplateRenderer(project)
-        final RenderResult renderResult = templateRenderer.render(new RockerTemplate('grails-app/services/{packagePath}/{className}Service.groovy', service.template(project)), overwrite)
-        final RenderResult specRenderResult = templateRenderer.render(new RockerTemplate('src/test/groovy/{packagePath}/{className}ServiceSpec.groovy', serviceSpec.template(project)), overwrite)
+        final RenderResult renderResult = templateRenderer.render(new GspTemplate('grails-app/services/{packagePath}/{className}Service.groovy', GspView.of('/forge/cli/command/templates/service.gsp', [project: project])), overwrite)
+        final RenderResult specRenderResult = templateRenderer.render(new GspTemplate('src/test/groovy/{packagePath}/{className}ServiceSpec.groovy', GspView.of('/forge/cli/command/templates/serviceSpec.gsp', [project: project])), overwrite)
         if (renderResult != null && specRenderResult != null) {
             logRenderResult(renderResult)
             logRenderResult(specRenderResult)

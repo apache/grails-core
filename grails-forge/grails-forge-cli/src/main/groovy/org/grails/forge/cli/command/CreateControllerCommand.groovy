@@ -23,13 +23,12 @@ import org.grails.forge.util.ThrowingSupplier
 import jakarta.inject.Inject
 import org.grails.forge.application.Project
 import org.grails.forge.cli.CodeGenConfig
-import org.grails.forge.cli.command.templates.controller
-import org.grails.forge.cli.command.templates.controllerSpec
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.OutputHandler
 import org.grails.forge.template.RenderResult
-import org.grails.forge.template.RockerTemplate
 import org.grails.forge.template.TemplateRenderer
+import org.grails.forge.template.GspTemplate
+import org.grails.forge.template.GspView
 import picocli.CommandLine
 
 @CommandLine.Command(name = CreateControllerCommand.NAME, description = 'Creates a Grails Controller')
@@ -61,8 +60,8 @@ class CreateControllerCommand extends CodeGenCommand {
     Integer call() throws Exception {
         final Project project = getProject(controllerName)
         TemplateRenderer templateRenderer = getTemplateRenderer(project)
-        final RenderResult controllerRenderResult = templateRenderer.render(new RockerTemplate('grails-app/controllers/{packagePath}/{className}Controller.groovy', controller.template(project)), overwrite)
-        final RenderResult controllerSpecRenderResult = templateRenderer.render(new RockerTemplate('src/test/groovy/{packagePath}/{className}ControllerSpec.groovy', controllerSpec.template(project)), overwrite)
+        final RenderResult controllerRenderResult = templateRenderer.render(new GspTemplate('grails-app/controllers/{packagePath}/{className}Controller.groovy', GspView.of('/forge/cli/command/templates/controller.gsp', [project: project])), overwrite)
+        final RenderResult controllerSpecRenderResult = templateRenderer.render(new GspTemplate('src/test/groovy/{packagePath}/{className}ControllerSpec.groovy', GspView.of('/forge/cli/command/templates/controllerSpec.gsp', [project: project])), overwrite)
         if (controllerRenderResult != null && controllerSpecRenderResult != null) {
             logRenderResult(controllerRenderResult)
             logRenderResult(controllerSpecRenderResult)

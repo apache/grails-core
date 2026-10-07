@@ -26,9 +26,9 @@ import org.grails.forge.build.dependencies.CoordinateResolver
 import org.grails.forge.build.dependencies.LookupFailedException
 import org.grails.forge.build.gradle.GradleBuild
 import org.grails.forge.build.gradle.GradleBuildCreator
-import org.grails.forge.feature.build.gradle.templates.settingsGradle
 import org.grails.forge.options.BuildTool
-import org.grails.forge.template.RockerTemplate
+import org.grails.forge.template.GspTemplate
+import org.grails.forge.template.GspView
 import org.springframework.stereotype.Component
 import java.util.function.Function
 
@@ -71,7 +71,7 @@ class GradleSettingsFile implements GradleSettingsFileFeature {
 
         String settingsFile = 'settings.gradle'
         final Function<String, Coordinate> coordinateResolver = (artifactId) -> resolver.resolve(artifactId).orElseThrow(() -> new LookupFailedException(artifactId))
-        generatorContext.addTemplate('gradleSettings', new RockerTemplate(settingsFile, settingsGradle.template(generatorContext.getProject(), build, coordinateResolver, generatorContext.getFeatures())))
+        generatorContext.addTemplate('gradleSettings', new GspTemplate(settingsFile, GspView.of('/forge/feature/build/gradle/templates/settingsGradle.gsp', [project: generatorContext.getProject(), gradleBuild: build, coordinateResolver: coordinateResolver, features: generatorContext.getFeatures()])))
     }
 
     @Override

@@ -23,12 +23,9 @@ import org.springframework.stereotype.Component
 import org.grails.forge.application.Project
 import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.build.dependencies.Dependency
-import org.grails.forge.feature.security.template.user
-import org.grails.forge.feature.security.template.userController
-import org.grails.forge.feature.security.template.userService
-import org.grails.forge.feature.security.template.userSpec
 import org.grails.forge.feature.view.Scaffolding
-import org.grails.forge.template.RockerTemplate
+import org.grails.forge.template.GspTemplate
+import org.grails.forge.template.GspView
 
 /**
  * Secures the application with plain Spring Security: the spring-boot-starter-security
@@ -77,13 +74,13 @@ class SpringBootStarterSecurity extends SecurityFeature implements PrimarySecuri
 
         final Project project = generatorContext.getProject()
         generatorContext.addTemplate('securityUser',
-                new RockerTemplate('grails-app/domain/{packagePath}/User.groovy',
-                        user.template(project, generatorContext.getFeatures())))
+                new GspTemplate('grails-app/domain/{packagePath}/User.groovy',
+                        GspView.of('/forge/feature/security/template/user.gsp', [project: project, features: generatorContext.getFeatures()])))
         generatorContext.addTemplate('securityUserController',
-                new RockerTemplate('grails-app/controllers/{packagePath}/UserController.groovy', userController.template(project)))
+                new GspTemplate('grails-app/controllers/{packagePath}/UserController.groovy', GspView.of('/forge/feature/security/template/userController.gsp', [project: project])))
         generatorContext.addTemplate('securityUserService',
-                new RockerTemplate('grails-app/services/{packagePath}/UserService.groovy', userService.template(project)))
+                new GspTemplate('grails-app/services/{packagePath}/UserService.groovy', GspView.of('/forge/feature/security/template/userService.gsp', [project: project])))
         generatorContext.addTemplate('securityUserSpec',
-                new RockerTemplate(generatorContext.getTestSourcePath('/{packagePath}/User'), userSpec.template(project)))
+                new GspTemplate(generatorContext.getTestSourcePath('/{packagePath}/User'), GspView.of('/forge/feature/security/template/userSpec.gsp', [project: project])))
     }
 }

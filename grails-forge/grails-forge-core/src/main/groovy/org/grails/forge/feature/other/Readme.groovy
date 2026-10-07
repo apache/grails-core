@@ -26,12 +26,10 @@ import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.feature.DefaultFeature
 import org.grails.forge.feature.Feature
 import org.grails.forge.feature.FeaturePhase
-import org.grails.forge.feature.other.template.maindocs
-import org.grails.forge.feature.other.template.readme
 import org.grails.forge.options.Options
-import org.grails.forge.template.RockerWritable
 import org.grails.forge.template.Template
 import org.grails.forge.template.Writable
+import org.grails.forge.template.GspView
 import java.util.stream.Collectors
 
 @Component
@@ -62,7 +60,7 @@ class Readme implements DefaultFeature {
 
                 @Override
                 void write(OutputStream outputStream) throws IOException {
-                    Writable mainDocsWritable = new RockerWritable(maindocs.template())
+                    Writable mainDocsWritable = GspView.of('/forge/feature/other/template/maindocs.gsp', [:])
                     mainDocsWritable.write(outputStream)
 
                     for (Writable writable : generatorContext.getHelpTemplates()) {
@@ -70,7 +68,7 @@ class Readme implements DefaultFeature {
                     }
 
                     for (Feature feature : featuresWithDocumentationLinks) {
-                        Writable writable = new RockerWritable(readme.template(feature))
+                        Writable writable = GspView.of('/forge/feature/other/template/readme.gsp', [feature: feature])
                         writable.write(outputStream)
                     }
                 }

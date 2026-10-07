@@ -23,10 +23,9 @@ import org.springframework.stereotype.Component
 import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.build.dependencies.Dependency
 import org.grails.forge.feature.database.GrailsDataHibernate7
-import org.grails.forge.feature.migration.templates.dbMigrationGradle
-import org.grails.forge.template.RockerWritable
 import org.grails.forge.template.URLTemplate
 import org.grails.forge.util.VersionInfo
+import org.grails.forge.template.GspView
 
 @Component
 @CompileStatic
@@ -70,7 +69,7 @@ class DatabaseMigrationPlugin implements MigrationFeature {
                 .groupId('org.apache.grails')
                 .artifactId(dbMigrationArtifactId)
                 .implementation()
-                .extension(new RockerWritable(dbMigrationGradle.template(srcDirPath))))
+                .extension(GspView.of('/forge/feature/migration/templates/dbMigrationGradle.gsp', [srcDirPath: srcDirPath])))
         final ClassLoader classLoader = Thread.currentThread().getContextClassLoader()
         generatorContext.addTemplate(srcDirPath, new URLTemplate(srcDirPath + '/.gitkeep', classLoader.getResource('.gitkeep')))
     }

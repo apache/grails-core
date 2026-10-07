@@ -27,6 +27,14 @@ same generator from the command line. Both applications consume the framework th
 application does, by Maven coordinates, so building Forge is also the first use of the Grails that was just
 built. The `grails` launcher (`grails-cli`) assembles the CLI with the Grails shell CLI into one distribution.
 
+The files the generator writes are rendered from GSPs under `grails-app/views/forge` of `grails-forge-core`
+(and, for the CLI's code generation commands, of `grails-forge-cli`). Each page declares the model it is
+rendered with and is compiled with its module, so a page that does not type check fails the build. The pages
+are rendered by the GSP engine alone, without a web request, and declare `trimLogicLines="true"`: a line
+holding only a scriptlet, a directive or a comment writes nothing, so the line breaks of a generated file are
+the ones its page shows as text. A feature renders a page through `GspView.of(uri, model)`, written as a file
+of the generated project by `GspTemplate`.
+
 ## Building
 
 Forge is a separate Gradle build next to the framework build, run with its own wrapper from this directory:

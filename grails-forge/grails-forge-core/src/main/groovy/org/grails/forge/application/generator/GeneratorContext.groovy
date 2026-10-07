@@ -19,7 +19,6 @@
 package org.grails.forge.application.generator
 
 import groovy.transform.CompileStatic
-import com.fizzed.rocker.RockerModel
 import jakarta.annotation.Nonnull
 import jakarta.annotation.Nullable
 import org.grails.forge.application.ApplicationType
@@ -40,7 +39,6 @@ import org.grails.forge.feature.build.gradle.GradleBuildSrc
 import org.grails.forge.feature.config.ApplicationConfiguration
 import org.grails.forge.feature.config.BootstrapConfiguration
 import org.grails.forge.feature.config.Configuration
-import org.grails.forge.feature.other.template.markdownLink
 import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.GormImpl
 import org.grails.forge.options.JdkVersion
@@ -48,12 +46,12 @@ import org.grails.forge.options.Language
 import org.grails.forge.options.Options
 import org.grails.forge.options.ServletImpl
 import org.grails.forge.options.TestFramework
-import org.grails.forge.options.TestRockerModelProvider
-import org.grails.forge.template.RockerTemplate
-import org.grails.forge.template.RockerWritable
+import org.grails.forge.options.TestViewProvider
 import org.grails.forge.template.Template
 import org.grails.forge.template.Writable
 import org.grails.forge.util.VersionInfo
+import org.grails.forge.template.GspTemplate
+import org.grails.forge.template.GspView
 
 /**
  * A context object used when generating projects.
@@ -138,7 +136,7 @@ class GeneratorContext implements DependencyContext {
      * @param href Link's uri
      */
     void addHelpLink(String label, String href) {
-        addHelpTemplate(new RockerWritable(markdownLink.template(label, href)))
+        addHelpTemplate(GspView.of('/forge/feature/other/template/markdownLink.gsp', [label: label, href: href]))
     }
 
     /**
@@ -305,23 +303,23 @@ class GeneratorContext implements DependencyContext {
         return TestFramework.SPOCK.getIntegrationSourcePath(path)
     }
 
-    RockerModel parseModel(RockerModel javaTemplate, RockerModel groovyTemplate) {
+    GspView parseView(GspView javaTemplate, GspView groovyTemplate) {
         return groovyTemplate
     }
 
-    void addTemplate(String name, String path, TestRockerModelProvider testRockerModelProvider) {
-        RockerModel rockerModel = testRockerModelProvider.findModel(TestFramework.SPOCK)
-        if (rockerModel != null) {
-            addTemplate(name, new RockerTemplate(path, rockerModel))
+    void addTemplate(String name, String path, TestViewProvider testViewProvider) {
+        GspView view = testViewProvider.findView(TestFramework.SPOCK)
+        if (view != null) {
+            addTemplate(name, new GspTemplate(path, view))
         }
     }
 
     void addTemplate(String templateName,
                             String triggerFile,
-                            RockerModel javaTemplate,
-                            RockerModel groovyTemplate) {
-        RockerModel rockerModel = parseModel(javaTemplate, groovyTemplate)
-        addTemplate(templateName, new RockerTemplate(triggerFile, rockerModel))
+                            GspView javaTemplate,
+                            GspView groovyTemplate) {
+        GspView view = parseView(javaTemplate, groovyTemplate)
+        addTemplate(templateName, new GspTemplate(triggerFile, view))
     }
 
     @Override

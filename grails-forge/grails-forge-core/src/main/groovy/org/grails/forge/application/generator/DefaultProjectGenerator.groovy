@@ -28,16 +28,16 @@ import org.grails.forge.feature.AvailableFeatures
 import org.grails.forge.feature.FeatureRegistry
 import org.springframework.stereotype.Component
 import org.grails.forge.feature.FeatureContext
-import org.grails.forge.feature.cli
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.OutputHandler
 import org.grails.forge.options.BuildTool
 import org.grails.forge.options.Language
 import org.grails.forge.options.Options
 import org.grails.forge.template.RenderResult
-import org.grails.forge.template.RockerTemplate
 import org.grails.forge.template.Template
 import org.grails.forge.template.TemplateRenderer
+import org.grails.forge.template.GspTemplate
+import org.grails.forge.template.GspView
 import java.util.function.Function
 
 @Component('projectGenerator')
@@ -84,15 +84,8 @@ class DefaultProjectGenerator implements ProjectGenerator {
         features.sort(Comparator.comparing(Function.identity()))
 
         generatorContext.addTemplate('grailsCli',
-                new RockerTemplate('grails-forge-cli.yml',
-                        cli.template(Language.DEFAULT_OPTION,
-                                generatorContext.getDevelopmentReloading(),
-                                BuildTool.DEFAULT_OPTION,
-                                generatorContext.getGorm(),
-                                generatorContext.getServlet(),
-                                generatorContext.getProject(),
-                                features,
-                                applicationType)))
+                new GspTemplate('grails-forge-cli.yml',
+                        GspView.of('/forge/feature/cli.gsp', [language: Language.DEFAULT_OPTION, reloading: generatorContext.getDevelopmentReloading(), buildTool: BuildTool.DEFAULT_OPTION, gormImpl: generatorContext.getGorm(), servletImpl: generatorContext.getServlet(), project: generatorContext.getProject(), features: features, applicationType: applicationType])))
 
         generatorContext.applyFeatures()
 
