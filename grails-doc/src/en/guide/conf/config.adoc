@@ -53,6 +53,29 @@ For example:
 my.tmp.dir = "${userHome}/.grails/tmp"
 ----
 
+=== Profile-specific YAML Documents
+
+Use `spring.config.activate.on-profile` to load a YAML document only when its profile condition matches. Grails evaluates these conditions against the comma-separated profiles in the JVM's `spring.profiles.active` system property. For example, `-Dspring.profiles.active=dev,alpha` activates both `dev` and `alpha`; whitespace around each name is ignored.
+
+Conditions support a single profile name or Spring profile expressions using `|` (OR), `&` (AND), `!` (NOT), and parentheses. When combining `&` and `|` in one expression, use parentheses to make the grouping explicit. Quote expressions in YAML, especially those beginning with `!`.
+
+[source,yaml]
+----
+sample:
+    message: Default message
+---
+spring:
+    config:
+        activate:
+            on-profile: '(dev | test) & !prod'
+sample:
+    message: Development or test message
+----
+
+With `-Dspring.profiles.active=dev,alpha`, the second document overrides `sample.message`. With `-Dspring.profiles.active=dev,prod`, it does not. A negated condition such as `'!prod'` also matches when no active profiles are specified.
+
+The legacy `spring.profiles` document selector supports the same expressions and retains case-insensitive profile-name matching for compatibility. The modern `spring.config.activate.on-profile` selector is case-sensitive. Both nested YAML keys and dotted keys are supported. If a document declares both selectors, both conditions must match. Settings such as `spring.profiles.active` and `spring.profiles.include` are not document selectors.
+
 
 === Accessing Configuration with GrailsApplication
 
