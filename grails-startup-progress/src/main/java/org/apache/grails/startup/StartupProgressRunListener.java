@@ -67,7 +67,7 @@ import grails.util.Environment;
  * {@code grails.startup.progress.endpoint.path}. The report does not need the progress page, so it is
  * served wherever the application starts its own embedded web server.</p>
  *
- * @since 8.1
+ * @since 8.0
  */
 public class StartupProgressRunListener implements SpringApplicationRunListener {
 

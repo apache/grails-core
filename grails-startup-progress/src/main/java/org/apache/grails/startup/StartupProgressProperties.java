@@ -33,7 +33,7 @@ import grails.util.Environment;
  * {@code development} and the application runs from its project directory, as it does under
  * {@code bootRun}, and to off otherwise.</p>
  *
- * @since 8.1
+ * @since 8.0
  */
 @ConfigurationProperties(prefix = "grails.startup.progress")
 public class StartupProgressProperties {

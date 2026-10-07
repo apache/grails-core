@@ -38,7 +38,7 @@ import liquibase.resource.ResourceAccessor
  * would create it, and the listeners are combined in the {@link #getDefaultChangeExecListener() default listener},
  * which is the one set.</p>
  *
- * @since 8.1
+ * @since 8.0
  */
 @CompileStatic
 class MultiListenerLiquibase extends Liquibase {

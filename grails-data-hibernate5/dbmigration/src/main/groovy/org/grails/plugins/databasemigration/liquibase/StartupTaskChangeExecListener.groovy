@@ -31,7 +31,7 @@ import grails.boot.StartupTask
  * Reports each change set of a database update as an item of a {@link StartupTask}, so a start that
  * migrates the database shows which change set it is on and how many it has run.
  *
- * @since 8.1
+ * @since 8.0
  */
 @CompileStatic
 class StartupTaskChangeExecListener extends AbstractChangeExecListener {

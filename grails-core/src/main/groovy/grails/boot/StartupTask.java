@@ -47,7 +47,7 @@ import org.springframework.core.metrics.StartupStep;
  * Work done only to report a task, such as counting its items, can be skipped then, which
  * {@link #isRecorded(ApplicationContext)} tells. A task is reported from the thread that does its work.</p>
  *
- * @since 8.1
+ * @since 8.0
  */
 public final class StartupTask implements AutoCloseable {
 
