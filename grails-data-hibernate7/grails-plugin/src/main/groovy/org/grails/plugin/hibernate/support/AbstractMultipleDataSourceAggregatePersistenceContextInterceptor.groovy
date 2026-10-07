@@ -76,7 +76,7 @@ abstract class AbstractMultipleDataSourceAggregatePersistenceContextInterceptor
                 if (interceptor.isOpen()) {
                     interceptor.destroy()
                 }
-            } catch (Exception e) {
+            } catch (Exception ignored) {
                 // ignore exception
             }
         }
