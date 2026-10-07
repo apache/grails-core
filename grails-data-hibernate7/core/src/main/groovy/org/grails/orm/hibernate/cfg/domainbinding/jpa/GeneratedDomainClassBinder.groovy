@@ -25,12 +25,18 @@ import org.hibernate.MappingException
 import org.hibernate.boot.SessionFactoryBuilder
 import org.hibernate.boot.internal.InFlightMetadataCollectorImpl
 import org.hibernate.boot.internal.MetadataBuildingContextRootImpl
+import org.hibernate.boot.model.relational.Database
+import org.hibernate.boot.model.relational.SqlStringGenerationContext
+import org.hibernate.boot.model.relational.internal.SqlStringGenerationContextImpl
 import org.hibernate.boot.model.source.internal.annotations.AnnotationMetadataSourceProcessorImpl
 import org.hibernate.boot.spi.AdditionalMappingContributions
 import org.hibernate.boot.spi.MetadataBuildingContext
 import org.hibernate.boot.spi.MetadataImplementor
 import org.hibernate.boot.spi.SessionFactoryBuilderFactory
 import org.hibernate.boot.spi.SessionFactoryBuilderImplementor
+import org.hibernate.cfg.MappingSettings
+import org.hibernate.engine.config.spi.ConfigurationService
+import org.hibernate.engine.config.spi.StandardConverters
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import org.hibernate.engine.spi.FilterDefinition
 import org.hibernate.generator.GeneratorCreationContext
@@ -38,6 +44,7 @@ import org.hibernate.mapping.BasicValue
 import org.hibernate.mapping.Collection
 import org.hibernate.mapping.Column
 import org.hibernate.mapping.Component
+import org.hibernate.mapping.GeneratorSettings
 import org.hibernate.mapping.PersistentClass
 import org.hibernate.mapping.Property
 import org.hibernate.mapping.RootClass
@@ -203,8 +210,51 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
                 align(persistentClass, generated, metadata)
             }
         }
+        createIdentifierGenerators(metadata)
         defineTenantFilter(metadata)
         return null
+    }
+
+    /**
+     * Hibernate creates the generator of every root's identifier once while it builds the metadata, to let a generator register
+     * what it exports (the table of a table generator, a sequence), and again when the session factory is built. The generators
+     * this binder installed are installed only after the metadata is built, so without this call they would register their table
+     * only when the persisters are built, after Hibernate ordered the columns of every table (by size and name): the table of a
+     * table generator would then keep the order the generator added its columns in ({@code sequence_name, next_val}) where the
+     * domain binder's, created in time, is ordered ({@code next_val, sequence_name}). Hibernate itself ignores a
+     * {@link MappingException} here and raises it again when it builds the session factory, so this does too.
+     */
+    private static void createIdentifierGenerators(MetadataImplementor metadata) {
+        Database database = metadata.database
+        ConfigurationService settings = metadata.metadataBuildingOptions.serviceRegistry.requireService(ConfigurationService)
+        String catalog = settings.getSetting(MappingSettings.DEFAULT_CATALOG, StandardConverters.STRING)
+        String schema = settings.getSetting(MappingSettings.DEFAULT_SCHEMA, StandardConverters.STRING)
+        SqlStringGenerationContext context = SqlStringGenerationContextImpl.fromExplicit(database.jdbcEnvironment, database, catalog, schema)
+        GeneratorSettings generatorSettings = new GeneratorSettings() {
+            @Override
+            String getDefaultCatalog() {
+                return catalog
+            }
+
+            @Override
+            String getDefaultSchema() {
+                return schema
+            }
+
+            @Override
+            SqlStringGenerationContext getSqlStringGenerationContext() {
+                return context
+            }
+        }
+        for (PersistentClass persistentClass : new ArrayList<PersistentClass>(metadata.entityBindings)) {
+            if (persistentClass instanceof RootClass) {
+                try {
+                    persistentClass.identifier.createGenerator(database.dialect, (RootClass) persistentClass, persistentClass.identifierProperty, generatorSettings)
+                } catch (MappingException ignored) {
+                    // raised again, with the same cause, when the session factory is built
+                }
+            }
+        }
     }
 
     /**

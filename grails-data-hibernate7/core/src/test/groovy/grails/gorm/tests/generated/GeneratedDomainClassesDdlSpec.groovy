@@ -34,7 +34,7 @@ import org.hibernate.mapping.RootClass
 class GeneratedDomainClassesDdlSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        registerGeneratedDomainClasses(GddVehicle, GddCar, GddTruck, GddStudent, GddSchool, GddTeacher, GddBadge, GddToken, GddMember, GddAccount)
+        registerGeneratedDomainClasses(GddVehicle, GddCar, GddTruck, GddStudent, GddSchool, GddTeacher, GddBadge, GddToken, GddMember, GddAccount, GddSequenced)
     }
 
     private List<String> checkClauses(String table) {
@@ -143,6 +143,22 @@ class GeneratedDomainClassesDdlSpec extends HibernateGormDatastoreSpec {
         expect:
         uniqueColumns('gdd_account') == ['zeta', 'alpha']
         !uniqueConstraintNames('gdd_account')[0].toUpperCase().startsWith('UK')
+    }
+
+    void "the table of a table id generator has its columns in the order Hibernate gives a table it knows when it orders the columns, as with the domain binder"() {
+        expect: "the generator's own order is sequence_name, next_val; by size the integer comes first"
+        query("select COLUMN_NAME from INFORMATION_SCHEMA.COLUMNS where upper(TABLE_NAME) = 'GDD_IDS' order by ORDINAL_POSITION")*.toLowerCase() == ['next_val', 'sequence_name']
+    }
+
+    void "an entity with a table id generator still gets its ids"() {
+        when:
+        GddSequenced first = new GddSequenced(name: 'a').save(flush: true)
+        GddSequenced second = new GddSequenced(name: 'b').save(flush: true)
+
+        then:
+        first.id != null
+        second.id != null
+        first.id != second.id
     }
 
     void "an identifier mapped with type uuid-binary is a binary column, not the database's uuid type, as with the domain binder"() {
@@ -254,5 +270,13 @@ class GddAccount {
     String alpha
     static mapping = {
         id natural: ['zeta', 'alpha']
+    }
+}
+
+@Entity
+class GddSequenced {
+    String name
+    static mapping = {
+        id generator: 'table', params: [table_name: 'gdd_ids', segment_value: 'gdd_table']
     }
 }
