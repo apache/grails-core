@@ -121,7 +121,7 @@ class DependencyCustomizer {
                         Class.forName(className, false, DependencyCustomizer.this.loader)
                         return false
                     }
-                    catch (Exception ex) {
+                    catch (Exception ignored) {
                         // swallow exception and continue
                     }
                 }
@@ -146,7 +146,7 @@ class DependencyCustomizer {
                             return false
                         }
                     }
-                    catch (Exception ex) {
+                    catch (Exception ignored) {
                         // swallow exception and continue
                     }
                 }
@@ -169,7 +169,7 @@ class DependencyCustomizer {
                     try {
                         return DependencyCustomizer.this.loader.getResource(path) != null
                     }
-                    catch (Exception ex) {
+                    catch (Exception ignored) {
                         // swallow exception and continue
                     }
                 }

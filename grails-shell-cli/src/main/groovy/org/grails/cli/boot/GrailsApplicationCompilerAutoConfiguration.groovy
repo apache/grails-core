@@ -124,7 +124,7 @@ class GrailsApplicationCompilerAutoConfiguration extends CompilerAutoConfigurati
         AnnotationNode enableAutoAnnotation = new AnnotationNode(ENABLE_AUTO_CONFIGURATION_CLASS_NODE)
         try {
             enableAutoAnnotation.addMember('exclude', new ClassExpression(ClassHelper.make('org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration')))
-        } catch (Throwable e) {
+        } catch (Throwable ignored) {
             // ignore
         }
         applicationClassNode.addAnnotation(enableAutoAnnotation)

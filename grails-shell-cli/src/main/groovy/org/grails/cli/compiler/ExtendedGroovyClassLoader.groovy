@@ -205,7 +205,7 @@ class ExtendedGroovyClassLoader extends GroovyClassLoader {
                         try {
                             urls.add(file.toURI().toURL())
                         }
-                        catch (MalformedURLException ex) {
+                        catch (MalformedURLException ignored) {
                             // Swallow and continue
                         }
                     }

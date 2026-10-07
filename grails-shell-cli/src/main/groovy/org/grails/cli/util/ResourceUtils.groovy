@@ -83,7 +83,7 @@ abstract class ResourceUtils {
         try {
             result.addAll(getUrls(FILE_URL_PREFIX + path, classLoader))
         }
-        catch (IllegalArgumentException ex) {
+        catch (IllegalArgumentException ignored) {
             // ignore
         }
         path = stripLeadingSlashes(path)

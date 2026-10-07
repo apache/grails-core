@@ -186,7 +186,7 @@ class SpringApplicationRunner {
                         Method method = this.applicationContext.getClass().getMethod('close')
                         method.invoke(this.applicationContext)
                     }
-                    catch (NoSuchMethodException ex) {
+                    catch (NoSuchMethodException ignored) {
                         // Not an application context that we can close
                     }
                     catch (Exception ex) {
@@ -250,7 +250,7 @@ class SpringApplicationRunner {
                             sources.add(new File(url.getFile()))
                         }
                     }
-                    catch (MalformedURLException ex) {
+                    catch (MalformedURLException ignored) {
                         // Ignore
                     }
                 }
@@ -276,7 +276,7 @@ class SpringApplicationRunner {
                 catch (InterruptedException ex) {
                     Thread.currentThread().interrupt()
                 }
-                catch (Exception ex) {
+                catch (Exception ignored) {
                     // Swallow, will be reported by compileAndRun
                 }
             }
