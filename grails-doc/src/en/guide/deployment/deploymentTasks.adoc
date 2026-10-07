@@ -83,10 +83,7 @@ Keep JVM debugging and management interfaces private; they should not be exposed
 [[java25-memory]]
 === Java 25 Metaspace and Off-Heap Memory
 
-Java 25 uses more off-heap memory than earlier LTS releases, primarily because newer JVM features, optimized garbage collectors, and container-aware runtimes proactively allocate non-heap space (such as Metaspace, thread stacks, and JFR buffers) to improve performance and reduce GC frequency.
-On earlier JDKs the initial metaspace high-water mark was approximately 12-21 MB; on Java 25 there is no upper limit unless you set one explicitly.
-A Grails application that loads many classes (plugins, Hibernate mappings, GSP-compiled views) can therefore consume substantially more native memory than the same application on Java 21.
-
+Java 25 uses more off-heap memory than earlier LTS releases. Metaspace has no upper limit by default (MaxMetaspaceSize is unlimited on every JDK since 8). Grails applications load many classes (plugins, Hibernate mappings, GSP-compiled views), so metaspace can make up a large part of the process's native memory.
 In a container environment this matters most: the JVM heap limit (`-Xmx` or `-XX:MaxRAMPercentage`) does not cover metaspace, so a container sized only for the heap can be killed by the container runtime's OOM killer when metaspace grows beyond the remaining native memory budget.
 
 **Recommended settings for Java 25:**
@@ -119,7 +116,8 @@ ExecStart=/usr/bin/java \
     --spring.config.additional-location=file:/etc/myapp/
 ----
 
-NOTE: The `-XX:+/-UseCompressedClassPointers` flag is deprecated in Java 25 and will be removed in a future release.
+NOTE: The `-XX:+/-UseCompressedClassPointers` flag is deprecated in Java 25. Removal is scheduled (https://github.com/openjdk/jdk/commit/da296cbea1[JDK-8363996]) which makes `UseCompressedClassPointers` obsolete in JDK 27. This means the flag is accepted with a warning and ignored. Anyone who relies on `-XX:-UseCompressedClassPointers` will be using compressed class space on 27 whether or not they remove the flag.
+
 If your startup scripts pass `-XX:+UseCompressedClassPointers` (the default), remove it.
 If they pass `-XX:-UseCompressedClassPointers` to disable compressed class pointers, remove it and, if you encounter class-space exhaustion, increase the class space with `-XX:CompressedClassSpaceSize=4g` instead.
 

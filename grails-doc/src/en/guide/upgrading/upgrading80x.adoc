@@ -4766,9 +4766,6 @@ java -XX:MaxRAMPercentage=60.0 -XX:MaxMetaspaceSize=256m -Dgrails.env=prod -jar 
 ----
 
 Tune `-XX:MaxMetaspaceSize` from a measured baseline: run the application under representative load, observe metaspace usage with `jcmd <pid> VM.metaspace`, and add a safety margin.
-A typical Grails application with Hibernate and a moderate number of plugins stabilizes between 128 MB and 256 MB of metaspace; a large application with many plugins may need more.
-
-**Deprecated flag to remove:**
 
 The `-XX:+/-UseCompressedClassPointers` flag is deprecated in Java 25 and will be removed in a future release.
 
