@@ -65,11 +65,11 @@ public class YamlPropertySourceLoader extends YamlProcessor implements PropertyS
         final List<String> activeProfiles = Arrays.asList(
                 StringUtils.tokenizeToStringArray(System.getProperty("spring.profiles.active", ""), ","));
         setDocumentMatchers((DocumentMatcher) properties -> {
-            final String profile = properties.getProperty("spring.config.activate.on-profile");
-            final String legacyProfile = properties.getProperty("spring.profiles");
-            final boolean matchesProfile = profile == null || profile.isEmpty() ||
+            final String profile = properties.getProperty("spring.config.activate.on-profile", "").trim();
+            final String legacyProfile = properties.getProperty("spring.profiles", "").trim();
+            final boolean matchesProfile = profile.isEmpty() ||
                     Profiles.of(profile).matches(activeProfiles::contains);
-            final boolean matchesLegacyProfile = legacyProfile == null || legacyProfile.isEmpty() ||
+            final boolean matchesLegacyProfile = legacyProfile.isEmpty() ||
                     Profiles.of(legacyProfile).matches(candidate -> activeProfiles.stream().anyMatch(candidate::equalsIgnoreCase));
             return matchesProfile && matchesLegacyProfile ? MatchStatus.FOUND : MatchStatus.NOT_FOUND;
         });

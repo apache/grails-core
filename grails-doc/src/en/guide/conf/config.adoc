@@ -59,6 +59,8 @@ Use `spring.config.activate.on-profile` to load a YAML document only when its pr
 
 Conditions support a single profile name or Spring profile expressions using `|` (OR), `&` (AND), `!` (NOT), and parentheses. When combining `&` and `|` in one expression, use parentheses to make the grouping explicit. Quote expressions in YAML, especially those beginning with `!`.
 
+Commas separate names in the active-profiles system property, but do not express alternatives in a document selector. Use `'dev | test'`, not `'dev,test'`, to match either profile. Missing, empty, and whitespace-only selectors impose no profile restriction; leading and trailing whitespace in a selector is ignored.
+
 [source,yaml]
 ----
 sample:
@@ -75,6 +77,8 @@ sample:
 With `-Dspring.profiles.active=dev,alpha`, the second document overrides `sample.message`. With `-Dspring.profiles.active=dev,prod`, it does not. A negated condition such as `'!prod'` also matches when no active profiles are specified.
 
 The legacy `spring.profiles` document selector supports the same expressions and retains case-insensitive profile-name matching for compatibility. The modern `spring.config.activate.on-profile` selector is case-sensitive. Both nested YAML keys and dotted keys are supported. If a document declares both selectors, both conditions must match. Settings such as `spring.profiles.active` and `spring.profiles.include` are not document selectors.
+
+Groovy configuration files (`application.groovy` and `runtime.groovy`) do not support document-level Spring profile selectors. Assignments such as `spring.profiles = 'prod'` or `spring.config.activate.'on-profile' = 'prod'` are retained as configuration data and do not conditionally exclude the file or its settings. For conditional Groovy configuration, use `environments` blocks selected by the Grails environment, as described in <<environments,Per Environment Configuration>>.
 
 
 === Accessing Configuration with GrailsApplication

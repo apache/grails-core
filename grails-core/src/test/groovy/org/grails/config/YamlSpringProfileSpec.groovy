@@ -84,6 +84,10 @@ sample.message: selected
         'spring.profiles: ALPHA\nspring.config.activate.on-profile: alpha' | 'dev,alpha'   | 'selected'
         'spring.profiles: beta\nspring.config.activate.on-profile: alpha'  | 'alpha'       | 'default'
         'spring.profiles: alpha\nspring.config.activate.on-profile: beta'  | 'alpha'       | 'default'
+        'spring.profiles: " "\nspring.config.activate.on-profile: alpha'   | 'alpha'       | 'selected'
+        'spring.profiles: " "\nspring.config.activate.on-profile: beta'    | 'alpha'       | 'default'
+        'spring.profiles: alpha\nspring.config.activate.on-profile: " "'   | 'alpha'       | 'selected'
+        'spring.profiles: beta\nspring.config.activate.on-profile: " "'    | 'alpha'       | 'default'
     }
 
     void 'YAML profile expression #expression selects documents with active profiles #activeProfiles'() {
@@ -115,10 +119,20 @@ sample.message: selected
 
         where:
         expression                | activeProfiles        | expectedMessage
+        ''                        | null                  | 'selected'
+        ' '                       | null                  | 'selected'
+        ' '                       | 'alpha'               | 'selected'
+        ' \t '                    | null                  | 'selected'
+        ' \t '                    | 'alpha'               | 'selected'
+        ' alpha '                 | 'alpha'               | 'selected'
+        ' alpha '                 | 'beta'                | 'default'
         'alpha'                   | 'dev,alpha'           | 'selected'
         'alpha'                   | ' alpha , dev '       | 'selected'
         'alpha'                   | 'dev,,alpha,alpha,'    | 'selected'
         'alpha'                   | 'dev,beta'            | 'default'
+        'dev,alpha'               | 'dev'                 | 'default'
+        'dev,alpha'               | 'alpha'               | 'default'
+        'dev,alpha'               | 'dev,alpha'           | 'default'
         'alpha | beta'            | 'dev,alpha'           | 'selected'
         'alpha | beta'            | 'dev,beta'            | 'selected'
         'alpha | beta'            | 'dev,gamma'           | 'default'
