@@ -412,7 +412,7 @@ final class SecurityHeadersResponseWrapper extends HttpServletResponseWrapper {
                     return charset
                 }
             }
-            catch (IllegalArgumentException unsupported) {
+            catch (IllegalArgumentException ignored) {
                 // Fall through to UTF-8.
             }
         }
