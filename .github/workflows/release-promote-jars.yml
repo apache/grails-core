@@ -1,0 +1,84 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Apache Polaris, a TLP, promotes a closed staging repository after its vote:
+# https://github.com/apache/polaris/blob/7866ce5c009d64e4c1454b47bca3df9873c6c0b2/.github/workflows/release-4-publish-release.yml
+# Grails already uses the same NEXUS_STAGE_DEPLOYER_* secrets in
+# release-drop-staging.yml. This workflow never writes dist.apache.org/release:
+# https://infra.apache.org/github-actions-policy.html
+name: "Release - Promote Nexus Staging"
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version without the v prefix (e.g. 8.0.0-M1)'
+        required: true
+        type: string
+      staging_description:
+        description: 'Nexus staging repository description (defaults to <repository>:<version>)'
+        required: false
+        type: string
+        default: ''
+      repository:
+        description: 'Repository name used only for the default staging description'
+        required: false
+        type: string
+        default: grails-core
+permissions:
+  contents: read
+jobs:
+  promote:
+    name: "Promote Nexus staging repository"
+    environment: release
+    # Keep the release environment restricted to trusted refs.
+    runs-on: ubuntu-24.04
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: v${{ inputs.version }}
+          persist-credentials: false
+      - name: "📝 Establish staging description"
+        env:
+          VERSION: ${{ inputs.version }}
+          STAGING_DESCRIPTION_INPUT: ${{ inputs.staging_description }}
+          REPOSITORY: ${{ inputs.repository }}
+        run: |
+          set -euo pipefail
+          if [ -z "${VERSION}" ]; then
+            echo "::error::Version must not be empty."
+            exit 1
+          fi
+          if [ -n "${STAGING_DESCRIPTION_INPUT}" ]; then
+            echo "STAGING_DESCRIPTION=${STAGING_DESCRIPTION_INPUT}" >> "$GITHUB_ENV"
+          else
+            echo "STAGING_DESCRIPTION=${REPOSITORY}:${VERSION}" >> "$GITHUB_ENV"
+          fi
+      - name: "🚀 Promote Nexus staging repository"
+        env:
+          NEXUS_USER: ${{ secrets.NEXUS_STAGE_DEPLOYER_USER }}
+          NEXUS_PASS: ${{ secrets.NEXUS_STAGE_DEPLOYER_PW }}
+          STAGING_DESCRIPTION: ${{ env.STAGING_DESCRIPTION }}
+        run: |
+          set -euo pipefail
+          if [ -z "${NEXUS_USER}" ] || [ -z "${NEXUS_PASS}" ]; then
+            echo "::error::NEXUS_STAGE_DEPLOYER_USER and NEXUS_STAGE_DEPLOYER_PW must be configured."
+            exit 1
+          fi
+          bash .github/scripts/releaseJarFiles.sh "$STAGING_DESCRIPTION" "$NEXUS_USER"
+      - name: "📦 Next steps"
+        run: |
+          echo "If ATR was used, once Maven Central is live run Actions → Release - ATR Record Distribution (experimental) with platform=MAVEN."
+          echo "SDKMAN! still waits for Maven Central."

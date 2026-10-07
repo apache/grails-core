@@ -1,0 +1,91 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Experimental Apache Trusted Releases (ATR) distribution-record step.
+# Tells ATR that a finished release was published to an external channel
+# (Maven Central, SDKMAN!, GitHub Releases). Does not perform the publish.
+# ATR documentation and the official workflow example:
+# https://tooling.apache.org/
+# https://github.com/apache/tooling-asf-example/blob/main/.github/workflows/record-distribution-on-atr.yaml
+#
+# Typical Grails usage after promoting the Nexus staging repository:
+#   platform=MAVEN  (ATR DistributionPlatform is case-sensitive)
+#   distribution_owner_namespace=org.apache.grails
+#   distribution_package=grails-bom
+#   distribution_version=<same as the release version>
+#
+# Prerequisites (see RELEASE.md "Experimental: Apache Trusted Releases"):
+#   * This workflow listed under the project's ATR finish workflow paths
+#   * Vote already resolved as passed on ATR
+name: "Release - ATR Record Distribution (experimental)"
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'ATR release version without the v prefix (e.g. 7.0.0 or 8.0.0-M1)'
+        required: true
+        type: string
+      platform:
+        description: 'ATR DistributionPlatform member name (case-sensitive). Use MAVEN for Maven Central.'
+        required: true
+        type: string
+        default: MAVEN
+      distribution_owner_namespace:
+        description: 'Owner namespace (Maven groupId, empty for some platforms)'
+        required: false
+        type: string
+        default: org.apache.grails
+      distribution_package:
+        description: 'Distribution package (Maven artifactId)'
+        required: true
+        type: string
+        default: grails-bom
+      distribution_version:
+        description: 'Version on that platform. Leave empty to use the ATR version.'
+        required: false
+        type: string
+        default: ''
+      staging:
+        description: 'Record a staging (not yet released) distribution'
+        required: true
+        type: boolean
+        default: false
+      atr_host:
+        description: 'ATR host (Alpha default is release-test.apache.org)'
+        required: true
+        type: string
+        default: release-test.apache.org
+permissions: { }
+jobs:
+  record:
+    name: "Record distribution on ATR"
+    environment: release
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write # required for GitHub OIDC → ATR
+      contents: read
+    steps:
+      - name: "📦 Record distribution on ATR"
+        # Pin to a full SHA; apache/tooling-actions does not publish tags.
+        # SHA is apache/tooling-actions@e8594ee9cc5ef5fbb48c367a9ab87042c0ccbbc5 (2026-08-24)
+        uses: apache/tooling-actions/record-atr-distribution@e8594ee9cc5ef5fbb48c367a9ab87042c0ccbbc5
+        with:
+          version: ${{ inputs.version }}
+          atr-host: ${{ inputs.atr_host }}
+          platform: ${{ inputs.platform }}
+          distribution-owner-namespace: ${{ inputs.distribution_owner_namespace }}
+          distribution-package: ${{ inputs.distribution_package }}
+          distribution-version: ${{ inputs.distribution_version != '' && inputs.distribution_version || inputs.version }}
+          staging: ${{ inputs.staging }}
