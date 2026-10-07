@@ -63,8 +63,8 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
      * The difference classes kept on purpose, each with the reason it cannot or should not be removed ({@code classify} names them).
      */
     private static final List<Map> KNOWN = [
-            [id: 'COLUMN_ORDER', reason: 'The order of the columns inside a table of an entity with a composite key whose column types the binder swaps (see COMPOSITE_KEY_ORDER): Hibernate orders the columns by size and name, so the swapped types give the binder another order than the correctly named columns of the generated mode. A schema diff tool (Liquibase diff, hibernate validate) does not compare column order, and matching it would mean mislabelling columns on purpose. Cosmetic. 5 tables in the scanned test domains.'],
-            [id: 'COMPOSITE_KEY_ORDER', reason: 'Foreign keys and primary keys over a composite identifier whose parts are mapped in an order other than the sorted one. Hibernate\'s @IdClass key is sorted by property name. (a) Types: the binder names the foreign key columns after the parts in the mapped order but gives them the types of the sorted referenced key, so a part of another type than its neighbour gets the NAME of the other part (child.parent_grand_parent_name is INTEGER, referencing the integer luckyNumber): a binder defect that mislabels columns, and the generated mode names them correctly; matching it would mean mislabelling columns on purpose. (b) Order: the foreign key columns follow the mapping in the binder and the sorted key in the generated mode, and the primary key of Thing follows the order of its unique group in the binder (PrimaryKey.orderingUniqueKey); both are positional matches of the same columns, so the data is the same, the constraint differs for a schema diff. No public API gives the binder\'s order for the generated key (the binder takes it from an internal ordering of its own component). 4 domains in the scanned test domains, all with composite keys of 2 or more parts that are not mapped in sorted order.'],
+            [id: 'BINDER_DUPLICATE_FOREIGN_KEY', reason: 'A binder defect: a bidirectional association to an entity with a composite identifier gets two foreign keys of the same name over the same columns, one from the to-one side (referenced columns stated) and one from the collection key (referenced columns left to the primary key), listed in two column orders. Hibernate creates one constraint of that name; which of the two it is depends on the order the domain classes are bound in. The generated mode has the one key and, like the binder in H2, orders its columns as the sorted identifier. 1 association in the scanned test domains (CompositeIdParent.children).'],
+            [id: 'COMPOSITE_KEY_TYPE_SWAP', reason: 'A binder defect: for a foreign key to a composite identifier whose part is itself a to-one to a composite identifier, the binder names the foreign key columns after the parts in the mapped order but gives them the types of the sorted referenced key, so a part of another type than its neighbour gets the NAME of the other part (child.parent_grand_parent_name is INTEGER, referencing the integer luckyNumber). The generated mode names them correctly; matching it would mean mislabelling columns on purpose. Fixed on the 8.0.x line (PR 16539), so the class disappears with the next up-merge. The cause is SimpleValue.sortColumns(int[]), which applies the permutation of the identifier\'s parts (one entry for each part) to the foreign key\'s columns (several for a nested part). The order of the columns and of the primary key of such a table follows from the swapped types (Hibernate orders them by size and name), and the order of the foreign key columns and of the columns it references over a nested part is the same permutation applied to the wrong list, so those differences are part of this class; a to-one to a composite identifier whose parts are plain is matched (see the aligner). 3 groups of the scanned test domains. After the up-merge of the 8.0.x fix this class has to be measured again: the nested foreign key order may remain.'],
             [id: 'ENUM_COLUMN_EXTRAS', reason: 'A binder defect (pinned in GrailsDomainBinderOptionDefectSpec): EnumTypeBinder ignores the comment and default expressions of an enum column\'s mapping. The generated mode honours them, so a database created by the binder lacks a default and a comment that the mapping states. Matching the binder would drop what the mapping says; decision for the lead (the 8.x line has the same defect).'],
             [id: 'IGNORE_NOT_FOUND_FOREIGN_KEY', reason: 'ignoreNotFound: true: Hibernate\'s @NotFound(IGNORE) disables the foreign key (SimpleValue.disableForeignKey, there is no enabling counterpart), the binder keeps it, which makes the option contradict itself (a dangling reference cannot exist). Re-creating the key would need Table.createForeignKey with a name computed through the implicit naming strategy\'s internal ForeignKeyNameSource. Hibernate\'s own behaviour is arguably the right one; decision for the lead. 1 association in the scanned domains.'],
             [id: 'INVERSE_JOIN_TABLE_NAME', reason: 'A binder defect (pinned in ManyToManyOwnershipDefectSpec): when only the owning side of a many-to-many names the join table, the inverse side computes the default name and the binder creates a second, unused table for it. The generated mode creates the table the owning side names (Hibernate derives the inverse side from mappedBy), so the unused table is absent. Nothing reads or writes the binder\'s extra table. 3 tables in the scanned domains.'],
@@ -159,6 +159,9 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
             return 'DISCRIMINATOR_CHECK'
         }
         boolean collection = d.joinTable
+        if (d.duplicateName) {
+            return 'BINDER_DUPLICATE_FOREIGN_KEY'
+        }
         if (kind == 'check constraint') {
             return 'SUBCLASS_NOT_NULL_CHECK'
         }
@@ -174,15 +177,11 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
         if (collection && kind in ['column nullable', 'primary key only in generated mode', 'unique key only in binder mode']) {
             return 'COLLECTION_TABLE_KEY'
         }
-        if (kind.startsWith('column order')) {
-            return 'COLUMN_ORDER'
-        }
         if (kind == 'column type' && detail.contains('binder=binary(16)')) {
             return 'UUID_ID_TYPE'
         }
-        if (kind.startsWith('column type') || kind.startsWith('foreign key columns') || kind.startsWith('foreign key refCols') ||
-                kind.startsWith('primary key column order')) {
-            return 'COMPOSITE_KEY_ORDER'
+        if (kind == 'column type' && !detail.contains('binder=binary(16)')) {
+            return 'COMPOSITE_KEY_TYPE_SWAP'
         }
         if (kind == 'foreign key only in binder mode') {
             return 'IGNORE_NOT_FOUND_FOREIGN_KEY'
@@ -286,6 +285,8 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
         Map<String, Map> foreignKeys = [:]
         for (ForeignKey key : table.foreignKeys.values()) {
             foreignKeys[key.name] = [
+                    // the domain binder can create two keys of one name over the same columns in two orders (see BINDER_DUPLICATE_FOREIGN_KEY)
+                    duplicate: foreignKeys.containsKey(key.name),
                     columns  : key.columns*.name,
                     refTable : key.referencedTable?.name,
                     // a key with no referenced columns references the primary key of the table
@@ -347,6 +348,14 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
             found << difference
             return
         }
+        // the tables with a swapped column type: the order of their columns and of their primary key follows from the types
+        Closure<Void> reclassify = {
+            Set<String> swapped = found.findAll { Map d -> d.cls == 'COMPOSITE_KEY_TYPE_SWAP' }*.table.toSet()
+            found.findAll { Map d -> d.kind in ['column order', 'primary key column order', 'foreign key columns', 'foreign key refCols'] && swapped.contains(d.table) }.each { Map d ->
+                d.cls = 'COMPOSITE_KEY_TYPE_SWAP'
+            }
+            return
+        }
         Set<String> names = (binder.tables.keySet() + generated.tables.keySet()) as Set<String>
         for (String name : names.sort()) {
             Map b = binder.tables[name]
@@ -377,6 +386,7 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
                 add('sequence', name, "binder=${binder.sequences[name]} generated=${generated.sequences[name]}")
             }
         }
+        reclassify()
         return found
     }
 
@@ -430,9 +440,9 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
         Set<String> onlyGenerated = (g.keySet() - b.keySet()) as Set<String>
         for (String name : (b.keySet() + g.keySet()).toSet().sort()) {
             if (b[name] != null && g[name] != null && b[name] != g[name]) {
-                for (String facet : b[name].keySet()) {
+                for (String facet : b[name].keySet() - 'duplicate') {
                     if (b[name][facet] != g[name][facet]) {
-                        add("${what} ${facet}".toString(), table, "${name}: binder=${b[name][facet]} generated=${g[name][facet]}", tags)
+                        add("${what} ${facet}".toString(), table, "${name}: binder=${b[name][facet]} generated=${g[name][facet]}", tags + [duplicateName: b[name].duplicate == true])
                     }
                 }
             }

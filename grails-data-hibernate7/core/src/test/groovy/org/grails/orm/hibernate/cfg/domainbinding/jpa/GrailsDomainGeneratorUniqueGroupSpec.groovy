@@ -35,7 +35,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
 class GrailsDomainGeneratorUniqueGroupSpec extends GrailsDomainGeneratorSupport {
 
     void setupSpec() {
-        manager.registerDomainClasses(GenUqTarget, GenUqOwner, GenUqChild, GenUqJoinedRoot, GenUqJoinedChild, GenUqEnum, GenUqCollection)
+        manager.registerDomainClasses(GenUqTarget, GenUqOwner, GenUqChild, GenUqJoinedRoot, GenUqJoinedChild, GenUqEnum, GenUqCollection, GenUqPair)
     }
 
     void "a unique group is a unique constraint on the table over the columns of the group"() {
@@ -99,6 +99,21 @@ class GrailsDomainGeneratorUniqueGroupSpec extends GrailsDomainGeneratorSupport 
         generatedConstraints(classes[entity(GenUqEnum)]).values().toList() == [['other', 'state']]
         facets.uniqueKeys()*.bound() == [false]
         entity(GenUqEnum).persistentClass.table.uniqueKeys.values().every { it.columns.size() < 2 }
+    }
+
+    void "a unique group over the columns of a composite identifier states the order of its primary key, as the binder gives it"() {
+        when:
+        generateGroup(GenUqPair)
+
+        then: "the group names world first, and the key itself is dropped by Hibernate, as the primary key's ordering"
+        newGenerator().constraintFacets(entity(GenUqPair)).primaryKeyOrder() == ['world', 'hello']
+        newGenerator().constraintFacets(entity(GenUqPair)).uniqueKeys().isEmpty()
+        entity(GenUqPair).persistentClass.table.primaryKey.orderingUniqueKey.columns*.name == ['world', 'hello']
+    }
+
+    void "an entity without such a group states no order for its primary key"() {
+        expect:
+        newGenerator().constraintFacets(entity(GenUqTarget)).primaryKeyOrder() == null
     }
 
     void "a unique group on a collection property is rejected by name, because the binder makes it a key of the collection table"() {
@@ -241,5 +256,18 @@ class GenUqCollection {
 
     static mapping = {
         tags unique: 'x'
+    }
+}
+
+@Entity
+class GenUqPair implements Serializable {
+    Long hello
+    Long world
+    static constraints = {
+        hello unique: 'world'
+    }
+    static mapping = {
+        version false
+        id composite: ['hello', 'world']
     }
 }

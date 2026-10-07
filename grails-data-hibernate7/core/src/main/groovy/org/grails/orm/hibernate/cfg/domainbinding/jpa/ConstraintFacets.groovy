@@ -25,6 +25,10 @@ import groovy.transform.CompileStatic
  * names and column order it gives them. {@link GrailsDomainGenerator} writes them into
  * {@code @Table(indexes, uniqueConstraints)}.
  *
+ * <p>{@code primaryKeyOrder} is the order of the primary key's columns when a unique key over exactly those columns is created
+ * before the primary key, which Hibernate then drops after taking its column order for the primary key ({@code null} when there is
+ * no such key).</p>
+ *
  * <p>The indexes come from {@code index:} on a column ({@code IndexBinder}), the unique keys from {@code unique:} with
  * a group of properties ({@code CreateKeyForProps}). A plain {@code unique: true} is a unique column, not a unique key.</p>
  *
@@ -33,5 +37,6 @@ import groovy.transform.CompileStatic
 @CompileStatic
 record ConstraintFacets(
     List<IndexFacets> indexes,
-    List<UniqueKeyFacets> uniqueKeys) {
+    List<UniqueKeyFacets> uniqueKeys,
+    List<String> primaryKeyOrder) {
 }

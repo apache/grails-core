@@ -750,7 +750,8 @@ class GrailsDomainGenerator {
                 },
                 table.uniqueKeys.values().collect { org.hibernate.mapping.UniqueKey key ->
                     new UniqueKeyFacets(key.name, key.columns*.name, !unbound.contains(key.name))
-                })
+                },
+                table.primaryKey?.orderingUniqueKey?.columns*.name)
     }
 
     private void applyConstraintSites(org.hibernate.mapping.Table table, List<ConstraintSite> sites, Set<String> unbound) {

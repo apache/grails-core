@@ -44,8 +44,11 @@ import org.hibernate.mapping.BasicValue
 import org.hibernate.mapping.Collection
 import org.hibernate.mapping.Column
 import org.hibernate.mapping.Component
+import org.hibernate.mapping.ForeignKey
 import org.hibernate.mapping.GeneratorSettings
+import org.hibernate.mapping.ManyToOne
 import org.hibernate.mapping.PersistentClass
+import org.hibernate.mapping.PrimaryKey
 import org.hibernate.mapping.Property
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.Set as HibernateSet
@@ -210,6 +213,7 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
                 align(persistentClass, generated, metadata)
             }
         }
+        alignCompositeForeignKeys(metadata)
         createIdentifierGenerators(metadata)
         defineTenantFilter(metadata)
         return null
@@ -356,6 +360,7 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
             key.nameExplicit = false
             key.explicit = false
         }
+        alignPrimaryKeyOrder(persistentClass, entity)
         NaturalIdFacets naturalId = persistentClass instanceof RootClass ? generator.naturalIdFacets(entity) : null
         if (naturalId != null) {
             List<String> columns = naturalId.propertyNames().collectMany { String name ->
@@ -369,6 +374,84 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
                 }
             }
         }
+    }
+
+    /**
+     * A to-one foreign key to an entity with a composite identifier names the referenced columns, in the order of the identifier's
+     * parts sorted by name: the domain binder's {@code CompositeIdentifierToManyToOneBinder} creates it with the referenced columns it
+     * collected after {@code Component.sortProperties()}. The key Hibernate derives refers to the primary key without naming its
+     * columns, and before the schema is built Hibernate puts the columns of such a key in the order it gives the primary key
+     * (by size and name); a key that names its referenced columns keeps the order it was created in, which is the sorted order of
+     * the parts, as the binder's does. The columns of the key already pair with the columns of the primary key in that order.
+     */
+    private void alignCompositeForeignKeys(MetadataImplementor metadata) {
+        for (PersistentClass persistentClass : new ArrayList<PersistentClass>(metadata.entityBindings)) {
+            if (generatedByName.containsKey(persistentClass.entityName)) {
+                List<Value> values = new ArrayList<Value>()
+                collectValues(persistentClass, values)
+                for (Value value : values) {
+                    if (value instanceof ManyToOne) {
+                        alignCompositeForeignKey((ManyToOne) value)
+                    }
+                }
+            }
+        }
+    }
+
+    private static void collectValues(PersistentClass persistentClass, List<Value> into) {
+        if (persistentClass instanceof RootClass && persistentClass.identifier instanceof Component) {
+            collectValues((Component) persistentClass.identifier, into)
+        }
+        for (Property property : persistentClass.declaredProperties) {
+            into << property.value
+            if (property.value instanceof Component) {
+                collectValues((Component) property.value, into)
+            }
+        }
+    }
+
+    private static void collectValues(Component component, List<Value> into) {
+        for (Property property : component.properties) {
+            into << property.value
+            if (property.value instanceof Component) {
+                collectValues((Component) property.value, into)
+            }
+        }
+    }
+
+    private void alignCompositeForeignKey(ManyToOne value) {
+        Generated target = generatedByName.get(value.referencedEntityName)
+        if (target == null || target.entity().compositeIdentity == null) {
+            return
+        }
+        ForeignKey key = value.table.foreignKeys.values().find { ForeignKey candidate ->
+            candidate.referencedEntityName == value.referencedEntityName && candidate.columns == value.columns
+        }
+        if (key != null && key.referencedColumns.isEmpty() && key.referencedTable.primaryKey != null) {
+            key.addReferencedColumns(new ArrayList<Column>(key.referencedTable.primaryKey.columns))
+        }
+    }
+
+    /**
+     * A unique key over exactly the columns of the primary key orders the primary key's columns: the domain binder creates the
+     * primary key after the key, and Hibernate takes the order of the key for the primary key and drops the key
+     * ({@code Table.setPrimaryKey}). Hibernate's annotation binder adds the key after the primary key and drops it without telling
+     * the primary key, so the order the generator decided (the binder's) is stated here with a key that is not part of the table.
+     */
+    private void alignPrimaryKeyOrder(PersistentClass persistentClass, GrailsHibernatePersistentEntity entity) {
+        PrimaryKey primaryKey = persistentClass.table.primaryKey
+        if (!(persistentClass instanceof RootClass) || primaryKey == null) {
+            return
+        }
+        List<String> order = generator.constraintFacets(entity).primaryKeyOrder()
+        if (order == null || order.toSet() != primaryKey.columns*.name.toSet()) {
+            return
+        }
+        UniqueKey ordering = new UniqueKey(persistentClass.table)
+        for (String name : order) {
+            ordering.addColumn(primaryKey.columns.find { Column column -> column.name == name })
+        }
+        primaryKey.orderingUniqueKey = ordering
     }
 
     private void alignIdentifier(RootClass root, Generated generated, MetadataImplementor metadata) {

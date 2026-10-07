@@ -34,7 +34,7 @@ import org.hibernate.mapping.RootClass
 class GeneratedDomainClassesDdlSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        registerGeneratedDomainClasses(GddVehicle, GddCar, GddTruck, GddStudent, GddSchool, GddTeacher, GddBadge, GddToken, GddMember, GddAccount, GddSequenced)
+        registerGeneratedDomainClasses(GddVehicle, GddCar, GddTruck, GddStudent, GddSchool, GddTeacher, GddBadge, GddToken, GddMember, GddAccount, GddPair, GddEdition, GddImprint, GddSequenced)
     }
 
     private List<String> checkClauses(String table) {
@@ -143,6 +143,47 @@ class GeneratedDomainClassesDdlSpec extends HibernateGormDatastoreSpec {
         expect:
         uniqueColumns('gdd_account') == ['zeta', 'alpha']
         !uniqueConstraintNames('gdd_account')[0].toUpperCase().startsWith('UK')
+    }
+
+    private List<String> importedKeys(String table) {
+        Session session = sessionFactory.openSession()
+        try {
+            return session.doReturningWork { Connection connection ->
+                List<String> found = []
+                connection.metaData.getImportedKeys(null, null, table.toUpperCase()).withCloseable { rows ->
+                    while (rows.next()) {
+                        found << "${rows.getString('FKCOLUMN_NAME')}->${rows.getString('PKCOLUMN_NAME')}".toString().toLowerCase()
+                    }
+                }
+                return found
+            } as List<String>
+        } finally {
+            session.close()
+        }
+    }
+
+    void "the primary key of a composite identifier takes the order of the unique group over its columns, as with the domain binder"() {
+        expect: "the group names world first, where Hibernate would order two columns of one size by name"
+        query("select k.COLUMN_NAME from INFORMATION_SCHEMA.KEY_COLUMN_USAGE k join INFORMATION_SCHEMA.TABLE_CONSTRAINTS t " +
+                "on k.CONSTRAINT_NAME = t.CONSTRAINT_NAME and k.CONSTRAINT_SCHEMA = t.CONSTRAINT_SCHEMA " +
+                "where t.CONSTRAINT_TYPE = 'PRIMARY KEY' and upper(t.TABLE_NAME) = 'GDD_PAIR' order by k.ORDINAL_POSITION")*.toLowerCase() == ['world', 'hello']
+        uniqueConstraintNames('gdd_pair').isEmpty()
+    }
+
+    void "a foreign key to a composite identifier names the referenced columns in the order of the sorted parts, as with the domain binder"() {
+        expect: "the primary key of the edition is ordered by size (number first), the foreign key follows the parts by name"
+        importedKeys('gdd_imprint') == ['gdd_edition_isbn->isbn', 'gdd_edition_number->number']
+    }
+
+    void "a foreign key to a composite identifier still saves and loads"() {
+        when:
+        GddEdition edition = new GddEdition(isbn: 'x', number: 2, label: 'l').save(flush: true)
+        new GddImprint(edition: edition, code: 'c').save(flush: true)
+        session.clear()
+
+        then:
+        GddImprint.list().size() == 1
+        GddImprint.list()[0].edition.label == 'l'
     }
 
     void "the table of a table id generator has its columns in the order Hibernate gives a table it knows when it orders the columns, as with the domain binder"() {
@@ -270,6 +311,38 @@ class GddAccount {
     String alpha
     static mapping = {
         id natural: ['zeta', 'alpha']
+    }
+}
+
+@Entity
+class GddPair implements Serializable {
+    Long hello
+    Long world
+    static constraints = {
+        hello unique: 'world'
+    }
+    static mapping = {
+        version false
+        id composite: ['hello', 'world']
+    }
+}
+
+@Entity
+class GddEdition implements Serializable {
+    String isbn
+    Integer number
+    String label
+    static mapping = {
+        id composite: ['isbn', 'number']
+    }
+}
+
+@Entity
+class GddImprint implements Serializable {
+    GddEdition edition
+    String code
+    static mapping = {
+        id composite: ['edition', 'code']
     }
 }
 
