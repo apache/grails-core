@@ -73,6 +73,48 @@ class ManyToManyWithoutOwnerWarningSpec extends Specification {
         !output.contains(WARNING)
     }
 
+    void 'a many-to-many with a Map on one side logs no warning, because the Map side writes the join table'() {
+        when:
+        var output = stderrWhile {
+            new HibernateDatastore(WarnMapLeft, WarnMapRight).close()
+        }
+
+        then:
+        !output.contains(WARNING)
+    }
+
+    void 'a many-to-many with a Map on both sides logs no warning'() {
+        when:
+        var output = stderrWhile {
+            new HibernateDatastore(WarnMapBothLeft, WarnMapBothRight).close()
+        }
+
+        then:
+        !output.contains(WARNING)
+    }
+
+    void 'the relationship is stored when it is written through the Map side'() {
+        given:
+        HibernateDatastore datastore = new HibernateDatastore(WarnMapLeft, WarnMapRight)
+
+        when:
+        WarnMapLeft.withNewTransaction {
+            WarnMapRight right = new WarnMapRight(name: 'right').save(failOnError: true)
+            new WarnMapLeft(name: 'left', rights: [first: right]).save(failOnError: true)
+        }
+
+        then:
+        WarnMapLeft.withNewSession {
+            WarnMapLeft.findByName('left').rights.keySet() == ['first'] as Set
+        }
+        WarnMapRight.withNewSession {
+            WarnMapRight.findByName('right').lefts*.name == ['left']
+        }
+
+        cleanup:
+        datastore?.close()
+    }
+
     private static String stderrWhile(Closure<?> work) {
         var original = System.err
         var buffer = new ByteArrayOutputStream()
@@ -147,4 +189,40 @@ class WarnParent {
 class WarnChild {
 
     String name
+}
+
+@Entity
+class WarnMapLeft {
+
+    String name
+    Map<String, WarnMapRight> rights
+
+    static hasMany = [rights: WarnMapRight]
+}
+
+@Entity
+class WarnMapRight {
+
+    String name
+    Set<WarnMapLeft> lefts
+
+    static hasMany = [lefts: WarnMapLeft]
+}
+
+@Entity
+class WarnMapBothLeft {
+
+    String name
+    Map<String, WarnMapBothRight> rights
+
+    static hasMany = [rights: WarnMapBothRight]
+}
+
+@Entity
+class WarnMapBothRight {
+
+    String name
+    Map<String, WarnMapBothLeft> lefts
+
+    static hasMany = [lefts: WarnMapBothLeft]
 }

@@ -18,6 +18,8 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
+import java.util.Map;
+
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.Collection;
@@ -225,7 +227,9 @@ public class CollectionBinder {
     /**
      * A bidirectional many-to-many is written by its owning side, which {@code belongsTo} designates. When neither
      * side declares {@code belongsTo}, both sides are inverse and the relationship is never stored, so warn about it
-     * once per relationship.
+     * once per relationship. A Map-valued side is never inverse once its second pass has run, because
+     * {@code MapSecondPassBinder} makes it write the join table, so a relationship with a Map on either side is
+     * stored and gets no warning.
      */
     private void warnIfManyToManyHasNoOwningSide(HibernateToManyProperty property) {
         if (!(property instanceof HibernateManyToManyProperty manyToMany) ||
@@ -233,7 +237,8 @@ public class CollectionBinder {
             return;
         }
         Association<?> otherSide = manyToMany.getInverseSide();
-        if (otherSide == null || otherSide.isOwningSide()) {
+        if (otherSide == null || otherSide.isOwningSide() ||
+                Map.class.isAssignableFrom(manyToMany.getType()) || Map.class.isAssignableFrom(otherSide.getType())) {
             return;
         }
         if (manyToMany.getOwner().getName().compareTo(otherSide.getOwner().getName()) > 0) {
