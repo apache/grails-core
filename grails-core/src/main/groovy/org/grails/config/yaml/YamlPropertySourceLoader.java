@@ -58,9 +58,14 @@ public class YamlPropertySourceLoader extends YamlProcessor implements PropertyS
 
     public List<PropertySource<?>> load(String name, Resource resource, List<String> filteredKeys) throws IOException {
         setResources(resource);
+        // Select source documents once; merging resolved configuration must not re-evaluate JVM profiles.
+        final String activeProfile = System.getProperty("spring.profiles.active", "").trim();
         setDocumentMatchers((DocumentMatcher) properties -> {
-            final String profile = properties.getProperty("spring.profiles");
-            return profile == null || profile.equalsIgnoreCase(System.getProperty("spring.profiles.active")) ? MatchStatus.FOUND : MatchStatus.NOT_FOUND;
+            final String profile = properties.getProperty("spring.config.activate.on-profile");
+            final String legacyProfile = properties.getProperty("spring.profiles");
+            final boolean matchesProfile = profile == null || profile.isEmpty() || profile.equals(activeProfile);
+            final boolean matchesLegacyProfile = legacyProfile == null || legacyProfile.isEmpty() || legacyProfile.equals(activeProfile);
+            return matchesProfile && matchesLegacyProfile ? MatchStatus.FOUND : MatchStatus.NOT_FOUND;
         });
         List<Map<String, Object>> loaded = load();
         if (loaded.isEmpty()) {
