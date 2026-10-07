@@ -46,7 +46,8 @@ class CompositeForeignKeyColumnTypesSpec extends Specification {
                     'dataSource.dialect'  : H2Dialect.name,
                     'hibernate.hbm2ddl.auto': 'create',
             ],
-            CfkParent, CfkChild, CfkGrandParent, CfkMiddle, CfkLeaf)
+            CfkParent, CfkChild, CfkGrandParent, CfkMiddle, CfkLeaf,
+            CfkOrdParent, CfkOrdChild, CfkOrdGrand, CfkOrdMiddle, CfkOrdLeaf)
 
     private List<List> columns(String table) {
         List<List> rows = []
@@ -64,6 +65,71 @@ class CompositeForeignKeyColumnTypesSpec extends Specification {
             }
         }
         rows
+    }
+
+
+    /**
+     * The foreign keys of a table, each as its column pairs [foreign key column, referenced column] in
+     * {@code KEY_SEQ} order, which is the order the database matches the columns of a key by.
+     */
+    private Map<String, List<List<String>>> foreignKeyPairs(String table) {
+        Map<String, List<List<String>>> keys = [:]
+        datastore.sessionFactory.openSession().withCloseable { session ->
+            session.doWork { Connection c ->
+                c.metaData.getImportedKeys(null, null, table).withCloseable { rs ->
+                    List<List> rows = []
+                    while (rs.next()) {
+                        rows << [rs.getString('FK_NAME'), rs.getInt('KEY_SEQ'),
+                                 rs.getString('PKTABLE_NAME').toLowerCase(),
+                                 rs.getString('FKCOLUMN_NAME').toLowerCase(), rs.getString('PKCOLUMN_NAME').toLowerCase()]
+                    }
+                    rows.sort { it[1] }.each { List row ->
+                        keys.get(row[0] + ' -> ' + row[2], []) << [row[3], row[4]]
+                    }
+                }
+            }
+        }
+        keys.collectEntries { String name, List<List<String>> pairs -> [(name.substring(name.indexOf(' -> ') + 4)): pairs] }
+    }
+
+    void "a foreign key to a composite parent pairs its columns with the referenced key columns in key order"() {
+        expect:
+        foreignKeyPairs('CFK_CHILD') == [
+                cfk_parent: [['cfk_parent_lucky_number', 'lucky_number'], ['cfk_parent_name', 'name']]
+        ]
+    }
+
+    void "a foreign key to a composite parent whose parts are declared out of name order pairs the same-typed parts in key order"() {
+        expect: 'the parts are declared as zeta, alpha, and the primary key and the foreign key both follow the name order'
+        foreignKeyPairs('CFK_ORD_CHILD') == [
+                cfk_ord_parent: [['cfk_ord_parent_alpha', 'alpha'], ['cfk_ord_parent_zeta', 'zeta']]
+        ]
+    }
+
+    void "the foreign keys of a three level composite chain pair their columns with the referenced key columns in key order"() {
+        expect:
+        foreignKeyPairs('CFK_MIDDLE') == [
+                cfk_grand_parent: [['cfk_grand_parent_lucky_number', 'lucky_number'], ['cfk_grand_parent_name', 'name']]
+        ]
+        foreignKeyPairs('CFK_LEAF') == [
+                cfk_middle: [
+                        ['cfk_middle_grand_parent_lucky_number', 'cfk_grand_parent_lucky_number'],
+                        ['cfk_middle_grand_parent_name', 'cfk_grand_parent_name'],
+                        ['cfk_middle_name', 'name']]
+        ]
+    }
+
+    void "the foreign keys of a three level chain with out of order, same-typed parts pair them in key order"() {
+        expect: 'the nested composite is declared as zeta, alpha, so only its order tells the columns apart'
+        foreignKeyPairs('CFK_ORD_MIDDLE') == [
+                cfk_ord_grand: [['cfk_ord_grand_alpha', 'alpha'], ['cfk_ord_grand_zeta', 'zeta']]
+        ]
+        foreignKeyPairs('CFK_ORD_LEAF') == [
+                cfk_ord_middle: [
+                        ['cfk_ord_middle_grand_parent_alpha', 'cfk_ord_grand_alpha'],
+                        ['cfk_ord_middle_grand_parent_zeta', 'cfk_ord_grand_zeta'],
+                        ['cfk_ord_middle_name', 'name']]
+        ]
     }
 
     void "foreign key columns carry the type of the primary key column they are named after"() {
@@ -175,5 +241,57 @@ class CfkGrandParent implements Serializable {
 
     static mapping = MappingBuilder.define {
         composite('name', 'luckyNumber')
+    }
+}
+
+@Entity
+class CfkOrdParent implements Serializable {
+    String zeta
+    String alpha
+
+    static mapping = MappingBuilder.define {
+        composite('zeta', 'alpha')
+    }
+}
+
+@Entity
+class CfkOrdChild implements Serializable {
+    String label
+    CfkOrdParent parent
+
+    static mapping = MappingBuilder.define {
+        composite('parent', 'label')
+    }
+}
+
+@Entity
+class CfkOrdLeaf implements Serializable {
+    String name
+    static belongsTo = [middle: CfkOrdMiddle]
+
+    static mapping = MappingBuilder.define {
+        composite('middle', 'name')
+    }
+}
+
+@Entity
+class CfkOrdMiddle implements Serializable {
+    String name
+    static belongsTo = [grandParent: CfkOrdGrand]
+    static hasMany = [leaves: CfkOrdLeaf]
+
+    static mapping = MappingBuilder.define {
+        composite('grandParent', 'name')
+    }
+}
+
+@Entity
+class CfkOrdGrand implements Serializable {
+    String zeta
+    String alpha
+    static hasMany = [middles: CfkOrdMiddle]
+
+    static mapping = MappingBuilder.define {
+        composite('zeta', 'alpha')
     }
 }
