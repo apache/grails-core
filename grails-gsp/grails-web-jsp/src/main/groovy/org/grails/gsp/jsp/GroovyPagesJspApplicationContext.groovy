@@ -93,7 +93,7 @@ class GroovyPagesJspApplicationContext implements JspApplicationContext {
             LOG.warn('Class ' + className + ' does not implement ' +
                     ExpressionFactory.name)
         }
-        catch (ClassNotFoundException e) {
+        catch (ClassNotFoundException ignored) {
             // ignored
         }
         catch (Exception e) {
