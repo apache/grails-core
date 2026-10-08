@@ -74,14 +74,13 @@ For the domain classes in GORM's own test suites, both bindings produce the same
 * The `defaultValue`, `comment`, `read` and `write` of the column mapping of an association or of a `hasMany` are put on the foreign key column (on the key column of a collection, and on the element column of a many-to-many for the options of the other side). The `length`, `precision` and `scale` change nothing: a foreign key column has the type of the column it references, and a `hasMany` of basic values ignores them too. This is the same in both bindings.
 * A many-to-many or a map of domain classes may involve an entity with a composite identifier on either side or on both: the join table has a key column for each identifier property of the owner and an element column for each one of the target, named as with classic binding. A foreign key to a composite identifier that the mapping gives fewer columns than the identifier has properties keeps the columns the mapping names and names the missing ones as classic binding does.
 * A `joinTable` that names several `key` columns uses the first one in both bindings (the other names are ignored). A `type` that names a Java class that is no `UserType` or converter, for example `type: 'java.util.Date'`, gives the column of the type Hibernate registers for that class, and a property of a class GORM does not know (a `Serializable` class, with no `type`) is stored as bytes. An embedded property with a `type` that is a `UserType` is one column of that type, not an embedded object. An embedded class may extend a domain class: its inherited properties become columns of the owner too.
+* The default `sort` of a bidirectional `hasMany` orders a set and a map by the property, also when it is an association (by its foreign key), and does nothing for a list, which stays in the order of its index. This is the same in both bindings.
 * Identifier generators, inheritance strategies (single table, joined and table-per-concrete-class), discriminators, natural ids, optimistic locking, lazy and eager fetching, cascades, sorting, batch size and `cache` usage are mapped as with classic binding.
 
 [[nativeDomainBinding-refused]]
 === Mappings Native Binding Refuses
 
-Where an annotation cannot express a mapping option faithfully, native binding refuses the mapping instead of dropping the option. The application fails at startup. The exception has an `UnsupportedOperationException` as its root cause, and the message names the domain class and the property.
-
-Nothing is ignored silently. A mapping that boots is bound the way it is written.
+Native binding does not refuse a mapping that classic binding accepts and can use. It refuses the mappings below, which classic binding cannot use either: classic binding fails to start with them, or it boots them and fails on the first row. The application fails at startup. The exception has an `UnsupportedOperationException` as its root cause, and the message names the domain class and the property, and says what classic binding does with the mapping.
 
 [cols="2,3,3", options="header"]
 |===
@@ -91,26 +90,28 @@ Nothing is ignored silently. A mapping that boots is bound the way it is written
 
 | A natural id that names a collection or a formula.
 | `The natural id of [...] names [...], which is ... only a simple property, an enum, a foreign key or an embedded type can be part of a natural id ...`
-| Name only simple properties, enums, many-to-one associations and embedded objects in `natural`. Classic binding does not boot either: it fails with a `ClassCastException` for a collection and with `constraint involves a formula` for a formula.
+| Name only simple properties, enums, many-to-one associations and embedded objects in `natural`. Classic binding fails with a `ClassCastException` for a collection and with `constraint involves a formula` for a formula.
 
 | A `type` on a `hasMany` of basic values that is a registered Hibernate type name, for example `type: 'text'`, or a custom collection type.
 | `Collection property [...]: the type [...] mapped on the collection property names neither a class nor serializable ...` or `... a custom collection type (a UserCollectionType) is mapped on a collection of basic values ...`
-| Remove the `type`, or use `'serializable'` or a `UserType` class to store the collection in one column. Classic binding does not boot with a registered type name (it fails with `Could not load requested class`), and neither with a custom collection type on a collection of basic values.
+| Remove the `type`, or use `'serializable'` or a `UserType` class to store the collection in one column. Classic binding fails with `Could not load requested class`, and with a custom collection type on a collection of basic values.
 
-| A composite identifier combined with something that classic binding cannot boot either: a `hasMany` of domain classes with a join table to an entity with a composite identifier (a many-to-many and a map of a many-to-many are fine), a join table whose key columns are mapped on an entity with a composite identifier, a composite identifier part that is the inverse side of a one-to-one, a part that refers to an entity with a simple identifier or to a composite identifier more than one level deep, a joined subclass of such an entity, or a foreign key mapped with more columns than the identifier has properties.
+| A composite identifier combined with something classic binding cannot boot: a `hasMany` of domain classes that is not a many-to-many and uses a join table to an entity with a composite identifier, a join table whose key columns are mapped on an entity with a composite identifier, a composite identifier part that is the inverse side of a one-to-one, a part that refers to an entity with a simple identifier or to a composite identifier more than one level deep, a joined subclass of such an entity, or a foreign key mapped with more columns than the identifier has properties.
 | `... composite identifier ...`, naming the entity and the part.
 | Give the entity a single-column identifier, or map the relationship with a domain class of its own. Classic binding fails with `Foreign key ... must have same number of columns as the referenced primary key` or an `IndexOutOfBoundsException`.
+
+| Several columns mapped on a property that has one: on a simple property, on an association to an entity with a simple identifier, or on the key of a `hasMany` of an entity with a simple identifier. An association mapped with a `formula`. A one-to-one declared `hasOne` on both sides.
+| `... the mapping states several columns ...`, `... the association is mapped with a formula ...` or `... the binder binds this one-to-one as a Hibernate OneToOne with a column of its own ...`
+| Map the property or the association with a single `column`. Classic binding fails with `Foreign key ... must have same number of columns as the referenced primary key`, `maps to 2 columns but 1 columns are required`, `value involves formulas` or `PostInitCallback queue could not be processed`.
+
+| A collection that classic binding cannot create: a `SortedSet` of basic values, a `UserType` class as the `type` of a `hasMany` of domain classes, a `Map` of enums, a collection declared with a type that is not `Set`, `SortedSet`, `List`, `Collection` or `Map` (for example `HashSet`), a `hasMany` of a class that is not a domain class, an unknown `indexColumn` type, a default `sort` on a unidirectional `hasMany`, a `Map` or `Set` on a many-to-many that neither side owns (no `belongsTo`), and a hierarchy that mixes inheritance strategies.
+| `Collection property [...]: ...`, `Association property [...]: ...` or `Entity [...] uses ... but the root of its hierarchy uses ...`
+| Change the mapping as the message says. Classic binding fails to start with each of them.
 
 | A registered Hibernate type name as the `type` of an enum property (`type: 'integer'`), or a registered type that converts its value (`yes_no`) as the `type` of the `indexColumn` of a list or a map.
 | `Type [...] of property [...] is a registered type on an enum ...` or `... the index column type [...] is a registered type that converts its value ...`
 | Remove the `type` (an enum is stored as a string unless `enumType` says otherwise). Classic binding boots these mappings but cannot use them: saving a row fails with a `ClassCastException` for the enum, with a check constraint violation for the list, and the table of the map is not created.
-
-| An association mapped with a `formula`, or with several columns where the target does not have a composite identifier.
-| `... the association is mapped with a formula` or `... the mapping states several columns ...`
-| Map the association with a single `column`.
 |===
-
-A few mappings fail to boot with classic binding too, so they are not a difference between the two: a `SortedSet` of basic values, a `UserType` class as the `type` of a `hasMany` of domain classes, a `Map` of enums, a hierarchy that mixes inheritance strategies and a joined subclass of a root with a composite identifier.
 
 [[nativeDomainBinding-behavior]]
 === Differences in Behavior

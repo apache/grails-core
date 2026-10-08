@@ -1728,6 +1728,20 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
         return sortBy.selectables.collect { "${it.text} ${facets.orderDirection()}".toString() }.join(', ')
     }
 
+    /**
+     * The order-by of the generator's facets against the binder's collection. The binder keeps the default sort of a list on its
+     * model although a list is ordered by its index column (probed: the elements come back in the order they were stored), so the
+     * generator states none.
+     */
+    private static List orderByPair(
+            HibernateToManyEntityProperty property, ToManyFacets facets, HibernateCollection collection, Map<String, Integer> known) {
+        if (facets.kind() == CollectionKind.LIST && collection.orderBy != null) {
+            known['the binder keeps the default sort of a list on its model, which is ordered by its index column; the generator states none']++
+            return [null, null]
+        }
+        return [normalizedOrderBy(orderByOf(property, facets)), normalizedOrderBy(collection.orderBy)]
+    }
+
     private static String normalizedOrderBy(String orderBy) {
         return orderBy?.toLowerCase()?.replaceAll(/\s+/, ' ')?.trim()
     }
@@ -1754,7 +1768,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 orphanDelete: [facets.cascade().orphanRemoval(), collection.hasOrphanDelete()],
                 cascade    : [cascadeActions(facets.cascade()), cascadeActions(boundProperty.cascade)],
                 oneToMany  : [!facets.manyToMany(), collection.oneToMany],
-                orderBy    : [normalizedOrderBy(orderByOf(property, facets)), normalizedOrderBy(collection.orderBy)],
+                orderBy    : orderByPair(property, facets, collection, known),
                 element    : [facets.target(), collection.element instanceof OneToMany ? ((OneToMany) collection.element).referencedEntityName :
                         ((ToOne) collection.element).referencedEntityName],
         ]
@@ -1844,7 +1858,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 orphanDelete: [bound.hasOrphanDelete(), annotated.hasOrphanDelete()],
                 oneToMany   : [bound.oneToMany, annotated.oneToMany],
                 cascade     : [cascadeActions(boundProperty.cascade), cascadeActions(annotatedProperty.cascade)],
-                orderBy     : [normalizedOrderBy(bound.orderBy), normalizedOrderBy(annotated.orderBy ?: annotated.manyToManyOrdering)],
+                orderBy     : annotatedOrderByPair(facets, bound, annotated, byName, known),
                 element     : [GrailsDomainGenerator.generatedClassName(byName[facets.target()]),
                                annotated.element instanceof OneToMany ? ((OneToMany) annotated.element).referencedEntityName :
                                        ((ToOne) annotated.element).referencedEntityName],
@@ -1900,6 +1914,27 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             }
         }
         return found
+    }
+
+    /**
+     * The order-by of the binder's collection against the one the annotation binder built. A list states none (see {@link #orderByPair}),
+     * and a sort by an association is the foreign key column for the binder and the name of the association for the annotation.
+     */
+    private static List annotatedOrderByPair(
+            ToManyFacets facets, HibernateCollection bound, HibernateCollection annotated,
+            Map<String, GrailsHibernatePersistentEntity> byName, Map<String, Integer> known) {
+        String boundOrder = normalizedOrderBy(bound.orderBy)
+        String annotatedOrder = normalizedOrderBy(annotated.orderBy ?: annotated.manyToManyOrdering)
+        if (facets.kind() == CollectionKind.LIST && boundOrder != null && annotatedOrder == null) {
+            known['the binder keeps the default sort of a list on its model, which is ordered by its index column; the generator states none']++
+            return [null, null]
+        }
+        if (boundOrder != annotatedOrder && facets.orderProperty() != null &&
+                byName[facets.target()].getHibernatePropertyByName(facets.orderProperty()) instanceof HibernateToOneProperty) {
+            known['a sort by an association is the foreign key column for the binder and the name of the association for the annotation']++
+            return [annotatedOrder, annotatedOrder]
+        }
+        return [boundOrder, annotatedOrder]
     }
 
     /**

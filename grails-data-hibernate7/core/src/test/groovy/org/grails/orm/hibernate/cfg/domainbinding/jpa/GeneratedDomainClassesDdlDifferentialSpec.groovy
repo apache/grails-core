@@ -76,14 +76,6 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
             [id: 'UNIQUE_GROUP_ON_ENUM', reason: 'A binder defect (pinned in GrailsDomainBinderOptionDefectSpec): a unique group that includes an enum property is dropped by the binder. The generated mode creates the constraint the mapping states, so a database created by the binder lacks it and `update` would add it. 2 groups in the scanned domains.']
     ]
 
-    /**
-     * The reasons the generated mode may refuse a group the domain binder boots: each is a mapping the generator rejects by name
-     * because no annotation can state it faithfully. A refusal for any other reason fails the spec.
-     */
-    private static final List<String> REFUSALS = [
-            'neither side of the many-to-many owns it',
-    ]
-
     private static final AtomicInteger BOOTS = new AtomicInteger()
 
     void "the generated-class mode creates the same schema as the domain binder"() {
@@ -130,7 +122,7 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
         compared > 400
         unknown.isEmpty()
         unexplained.isEmpty()
-        generatedRefused.findAll { String name, String reason -> !REFUSALS.any { String known -> reason.contains(known) } }.isEmpty()
+        generatedRefused.isEmpty()
     }
 
     private static Map knownEntry(Map difference) {

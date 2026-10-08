@@ -461,7 +461,8 @@ class GrailsDomainGenerator {
     String generationProblem(GrailsHibernatePersistentEntity entity) {
         if (!entity.isRoot() && compositeIdentifier(entity.hibernateRootEntity) && entity.isJoinedSubclass()) {
             return "Entity [${entity.name}] is a joined subclass of [${entity.hibernateRootEntity.name}], which has a composite identifier: " +
-                    'the key of a joined subclass table copies the key of the root, which the binder binds with one column'
+                    'the key of a joined subclass table copies the key of the root, which the binder binds with one column, so the ' +
+                    'application does not start with the binder either'
         }
         try {
             hierarchyFacets(entity)
@@ -588,14 +589,14 @@ class GrailsDomainGenerator {
         }
         if (entity.childEntities.any { GrailsHibernatePersistentEntity child -> child.isJoinedSubclass() }) {
             return "Entity [${entity.name}] has a composite identifier and a joined subclass: the key of a joined subclass table copies " +
-                    'the key of the root, which the binder binds with one column'
+                    'the key of the root, which the binder binds with one column, so the application does not start with the binder either'
         }
         for (HibernatePersistentProperty part : entity.compositeIdentity) {
             if (part instanceof HibernateToOneProperty) {
                 HibernateToOneProperty toOne = (HibernateToOneProperty) part
                 if (!boundAsManyToOne(toOne)) {
                     return "Composite identifier part [${part.name}] of [${entity.name}] is a one-to-one the binder binds as a Hibernate " +
-                            'OneToOne, which the generator does not support yet'
+                            'OneToOne, which it cannot do for a part of an identifier: it fails with an IndexOutOfBoundsException'
                 }
                 GrailsHibernatePersistentEntity partTarget = toOne.hibernateAssociatedEntity?.hibernateRootEntity
                 if (partTarget != null && compositeIdentifier(partTarget)) {
@@ -611,7 +612,8 @@ class GrailsDomainGenerator {
                 }
             } else if (!(part instanceof HibernateSimpleProperty) || isDerived(part)) {
                 return "Composite identifier part [${part.name}] of [${entity.name}] is a ${part.getClass().simpleName}, which the " +
-                        'generator does not support yet'
+                        'generator does not support yet (the binder boots an embedded object as a part of the identifier, and Hibernate ' +
+                        'cannot state one in an identifier class)'
             } else if (!supports(part)) {
                 return "Composite identifier part [${part.name}] of [${entity.name}]: ${unsupportedReason(entity, part)}"
             }
@@ -797,7 +799,8 @@ class GrailsDomainGenerator {
                     property instanceof HibernateToManyEntityProperty || isDerived(property) ||
                     (property instanceof HibernateToOneProperty && boundAsOneToOne((HibernateToOneProperty) property))) {
                 return "The natural id of [${entity.name}] names [${name}], which is ${property.getClass().simpleName}: " +
-                        'only a simple property, an enum, a foreign key or an embedded type can be part of a natural id the generator states'
+                        'only a simple property, an enum, a foreign key or an embedded type can be part of a natural id, and the binder ' +
+                        'cannot bind a collection (ClassCastException) or a formula (constraint involves a formula) either'
             }
         }
         return null
@@ -971,7 +974,7 @@ class GrailsDomainGenerator {
         if (strategy != hierarchyStrategy) {
             throw new UnsupportedOperationException(
                     "Entity [${entity.name}] uses ${strategy} but the root of its hierarchy uses ${hierarchyStrategy}: " +
-                            'a hierarchy that mixes inheritance strategies is not supported')
+                            'a hierarchy that mixes inheritance strategies is not supported, and the binder fails on it with a NullPointerException')
         }
         boolean singleTable = strategy == InheritanceType.SINGLE_TABLE
         String discriminatorValue = null
@@ -1312,7 +1315,7 @@ class GrailsDomainGenerator {
         }
     }
 
-    private static final String severalKeyColumns = 'the mapping states several columns for the key of a collection of an entity with a ' +
+    private static final String SEVERAL_KEY_COLUMNS = 'the mapping states several columns for the key of a collection of an entity with a ' +
             'simple identifier: the binder gives the key as many columns as the mapping states and Hibernate refuses the foreign key ' +
             "('Foreign key must have the same number of columns as the referenced primary key'), so the application does not start"
 
@@ -1345,7 +1348,7 @@ class GrailsDomainGenerator {
                 return compositeProblem
             }
         } else if (mapped.columns != null && mapped.columns.size() > 1) {
-            return severalKeyColumns
+            return SEVERAL_KEY_COLUMNS
         }
         boolean isEnum = property instanceof HibernateEnumProperty
         if (isEnum && kind == CollectionKind.MAP) {
@@ -1783,7 +1786,7 @@ class GrailsDomainGenerator {
         }
         if (!compositeIdentifier(property.hibernateOwner) && !property.shouldBindWithForeignKey() &&
                 mapped.columns != null && mapped.columns.size() > 1) {
-            return severalKeyColumns
+            return SEVERAL_KEY_COLUMNS
         }
         if (property.isUserButNotCollectionType()) {
             return 'a class is mapped as the type of the collection property, which the binder binds as one column of the owner\'s table ' +
@@ -1795,9 +1798,8 @@ class GrailsDomainGenerator {
                 return "the other side [${other?.name}] is not a many-to-many collection"
             }
             if (!ownsManyToMany(property) && !ownsManyToMany((HibernateManyToManyProperty) other)) {
-                return 'neither side of the many-to-many owns it (no belongsTo): the binder binds both collections inverse, so ' +
-                        'no row is ever written, and annotations cannot say it (Hibernate\'s annotation binder fails with a ' +
-                        'NullPointerException when both sides are mappedBy)'
+                return 'neither side of the many-to-many owns it (no belongsTo): no row would ever be written, and the binder refuses it ' +
+                        'too at startup'
             }
         } else if (property.bidirectional) {
             if (!(property.hibernateInverseSide instanceof HibernateManyToOneProperty)) {
@@ -1807,15 +1809,6 @@ class GrailsDomainGenerator {
         String indexTypeProblem = collectionIndexTypeProblem(property, kind)
         if (indexTypeProblem != null) {
             return indexTypeProblem
-        }
-        if (property.hasSort()) {
-            if (kind.indexed) {
-                return 'a list or a map with a default sort: it is ordered by its index or key column'
-            }
-            HibernatePersistentProperty sortBy = target.getHibernatePropertyByName(property.sort)
-            if (!(sortBy instanceof HibernateSimpleProperty) && !(sortBy instanceof HibernateEnumProperty) || isDerived(sortBy)) {
-                return "the sort property [${property.sort}] of [${target.name}] is not a plain column"
-            }
         }
         return null
     }
@@ -1953,8 +1946,10 @@ class GrailsDomainGenerator {
                 Math.max(property.batchSize, 0),
                 property.cacheUsage,
                 cascadeFacets(property),
-                property.hasSort() ? property.sort : null,
-                property.hasSort() ? (property.order != null ? property.order : 'asc') : null,
+                // a list is ordered by its index column, so the binder's order-by of a list changes nothing (probed: the elements come back in
+                // the order they were stored)
+                property.hasSort() && kind != CollectionKind.LIST ? property.sort : null,
+                property.hasSort() && kind != CollectionKind.LIST ? (property.order != null ? property.order : 'asc') : null,
                 condition,
                 keys != null ? keys : [key],
                 keys != null ? collectionKeyReferencedColumns(property) : [],
@@ -1972,7 +1967,8 @@ class GrailsDomainGenerator {
         boolean inverseOneToOne = boundAsOneToOne(property)
         if (inverseOneToOne && ((HibernateOneToOneProperty) property).needsSimpleValueBinding()) {
             return 'the binder binds this one-to-one as a Hibernate OneToOne with a column of its own (constrained), ' +
-                    'which the generator does not support yet'
+                    'which it cannot do: both sides are hasOne and the application does not start with the binder either ' +
+                    "('PostInitCallback queue could not be processed')"
         }
         GrailsHibernatePersistentEntity target = property.hibernateAssociatedEntity
         if (target == null) {
@@ -1989,10 +1985,11 @@ class GrailsDomainGenerator {
                 return problem
             }
         } else if (mapped.columns != null && mapped.columns.size() > 1) {
-            return 'the mapping states several columns, which the binder binds as a composite foreign key'
+            return 'the mapping states several columns, which the binder binds as a composite foreign key and Hibernate refuses because ' +
+                    "the key it points at has one column ('Foreign key must have the same number of columns as the referenced primary key')"
         }
         if (mapped.derived) {
-            return 'the association is mapped with a formula'
+            return 'the association is mapped with a formula, which the binder cannot bind either (AssertionFailure: value involves formulas)'
         }
         return null
     }
