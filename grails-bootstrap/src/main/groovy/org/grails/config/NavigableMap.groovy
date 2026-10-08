@@ -148,10 +148,6 @@ class NavigableMap implements Map<String, Object>, Cloneable {
                            Map sourceMap,
                            boolean parseFlatKeys) {
 
-        if (isSourceMapExcludedBySpringProfile(sourceMap, path)) {
-            return
-        }
-
         for (Entry entry in sourceMap) {
             Object sourceKeyObject = entry.key
             Object sourceValue = entry.value
@@ -171,44 +167,6 @@ class NavigableMap implements Map<String, Object>, Cloneable {
                 mergeMapEntry(rootMap, path, targetMap, sourceKey, sourceValue, parseFlatKeys)
             }
         }
-    }
-
-    private static Object resolveConfigMapValue(Map map, Object... keys) {
-        keys.inject(map) { acc, key -> acc instanceof Map ? acc[key] : null }
-    }
-
-    private static boolean isSourceMapExcludedBySpringProfile(Map configSource, String path) {
-
-        // get the active spring profile: treat empty string as null
-        def active = System.getProperty('spring.profiles.active')?.trim() ?: null
-
-        // lookup 'spring.config.activate.on-profile' in this config source
-        def onProfile =
-                resolveConfigMapValue(configSource, 'spring', 'config', 'activate', 'on-profile') ?:
-                        (path == 'spring.config.activate' ? configSource['on-profile'] : null) ?:
-                                configSource['spring.config.activate.on-profile']
-
-        // no active profile is set but 'spring.config.activate.on-profile' is set in this config source -> exclude it
-        if (!active && onProfile) return true
-        // active profile is set and matches 'spring.config.activate.on-profile' in this config source -> include it
-        if (active && onProfile == active) return false
-
-        // lookup (legacy) 'spring.profiles' in this config source
-        def profiles =
-                resolveConfigMapValue(configSource, 'spring', 'profiles') ?:
-                        (path == 'spring' ? configSource['profiles'] : null) ?:
-                                configSource['spring.profiles']
-
-        // no active profile is set but 'spring.profiles' is set in this config source -> exclude it
-        if (!active && profiles) return true
-        // active profile is set and matches 'spring.profiles' in this config source -> include it
-        if (active && profiles == active) return false
-
-        // active profile is not required for this this source map -> include it
-        if (!onProfile && !profiles) return false
-
-        // a profile constraint exists but doesn't match the active profile -> exclude
-        return true
     }
 
     protected void mergeMapEntry(NavigableMap rootMap, String path, NavigableMap targetMap, String sourceKey, Object sourceValue, boolean parseFlatKeys, boolean isNestedSet = false) {

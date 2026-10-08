@@ -20,6 +20,7 @@ package org.grails.config
 
 import grails.util.Environment
 import org.grails.config.yaml.YamlPropertySourceLoader
+import org.springframework.core.io.ByteArrayResource
 import org.springframework.core.io.FileSystemResource
 import org.springframework.core.io.Resource
 import spock.lang.Specification
@@ -31,6 +32,29 @@ class YamlPropertySourceLoaderSpec extends Specification {
     def setup() {
         System.setProperty(Environment.KEY, Environment.DEVELOPMENT.name)
         Environment.reset()
+    }
+
+    void 'nested application data is not treated as a YAML document profile condition'() {
+        given:
+        System.setProperty('spring.profiles.active', 'beta')
+        def resource = new ByteArrayResource('''
+sample:
+    spring:
+        profiles: alpha
+        config:
+            activate:
+                on-profile: alpha
+    message: original
+'''.bytes)
+
+        when:
+        def source = new YamlPropertySourceLoader().load('application.yml', resource).first()
+        def config = new PropertySourcesConfig(source)
+
+        then:
+        config.getProperty('sample.message') == 'original'
+        config.getProperty('sample.spring.profiles') == 'alpha'
+        config.getProperty('sample.spring.config.activate.on-profile') == 'alpha'
     }
 
     def "ensure the config for environment is merged with single environment block"() {

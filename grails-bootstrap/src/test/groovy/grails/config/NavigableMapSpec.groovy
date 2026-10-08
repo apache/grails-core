@@ -21,8 +21,29 @@ package grails.config
 import org.grails.config.NavigableMap
 import spock.lang.Specification
 import spock.lang.Unroll
+import spock.util.environment.RestoreSystemProperties
 
+@RestoreSystemProperties
 class NavigableMapSpec extends Specification {
+
+    void 'merge preserves profile metadata as ordinary map values'() {
+        given:
+        System.setProperty('spring.profiles.active', 'beta')
+        def input = [
+                spring: [profiles: [active: 'alpha', include: ['shared']], config: [activate: ['on-profile': 'alpha']]],
+                sample: [message: 'original']
+        ]
+        def output = new NavigableMap()
+
+        when:
+        output.merge(input, true)
+
+        then:
+        output.get('sample.message') == 'original'
+        output.get('spring.profiles.active') == 'alpha'
+        output.get('spring.profiles.include') == ['shared']
+        output.get('spring.config.activate.on-profile') == 'alpha'
+    }
 
     @Unroll
     def "merge navigable map for #input "(Map input) {
