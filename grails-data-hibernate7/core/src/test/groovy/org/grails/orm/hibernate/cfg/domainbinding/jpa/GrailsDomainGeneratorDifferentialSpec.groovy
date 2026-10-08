@@ -209,7 +209,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                             } else {
                                 embeddedProperties++
                                 embeddedLeaves += leaves.size()
-                                mismatches.addAll(compareEmbedded(entity, embedded, leaves, generator, bound, explicitTypes, known))
+                                mismatches.addAll(compareEmbedded(entity, embedded, leaves, generator, bound, explicitTypes, known, collections, associations))
                             }
                             continue
                         }
@@ -951,7 +951,8 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
      */
     private List<String> compareEmbedded(
             GrailsHibernatePersistentEntity entity, HibernateEmbeddedProperty property, List<EmbeddedLeaf> leaves,
-            GrailsDomainGenerator generator, Property bound, Map<String, Integer> explicitTypes, Map<String, Integer> known) {
+            GrailsDomainGenerator generator, Property bound, Map<String, Integer> explicitTypes, Map<String, Integer> known,
+            Map<String, Integer> collections, Map<String, Integer> associations) {
         List<String> found = []
         String where = "${entity.name}.${property.name}"
         Map<String, Property> boundLeaves = terminalProperties(bound).collectEntries { String path, Property leaf ->
@@ -984,6 +985,40 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             }
             found.addAll(compareType(leafWhere, leaf.property, generator, boundLeaf, explicitTypes))
         }
+        found.addAll(compareEmbeddedCollections(where, property, (Component) bound.value, generator, explicitTypes, known, collections, associations))
+        return found
+    }
+
+    /**
+     * A collection inside an embedded type has a table of its own and no leaf in the owner's table: the facets the generator decides
+     * for it are compared with the collection the binder bound inside the component, nested components included.
+     */
+    private List<String> compareEmbeddedCollections(
+            String where, HibernateEmbeddedProperty property, Component component, GrailsDomainGenerator generator,
+            Map<String, Integer> explicitTypes, Map<String, Integer> known, Map<String, Integer> collections,
+            Map<String, Integer> associations) {
+        List<String> found = []
+        GrailsHibernatePersistentEntity type = (GrailsHibernatePersistentEntity) property.associatedEntity
+        for (HibernatePersistentProperty peer : type.getHibernatePersistentProperties(property.owner.javaClass)) {
+            Property inner = component.properties.find { Property candidate -> candidate.name == peer.name }
+            if (inner == null) {
+                continue
+            }
+            String peerWhere = "${where}.${peer.name}".toString()
+            if (peer instanceof HibernateEmbeddedProperty && inner.value instanceof Component) {
+                found.addAll(compareEmbeddedCollections(
+                        peerWhere, (HibernateEmbeddedProperty) peer, (Component) inner.value, generator, explicitTypes, known, collections, associations))
+            } else if (peer instanceof HibernateToManyEntityProperty && inner.value instanceof HibernateCollection) {
+                ToManyFacets facets = generator.toManyFacets((HibernateToManyEntityProperty) peer)
+                associations["embedded ${facets.manyToMany() ? 'many-to-many' : 'one-to-many'}, ${facets.kind()}".toString()]++
+                found.addAll(compareToMany(peerWhere, (HibernateToManyEntityProperty) peer, facets, inner, known))
+            } else if (peer instanceof HibernateBasicProperty && inner.value instanceof HibernateCollection) {
+                CollectionFacets facets = generator.collectionFacets((HibernateBasicProperty) peer)
+                collections["embedded ${facets.kind()}${peer instanceof HibernateEnumProperty ? ' of enums' : ''}".toString()]++
+                found.addAll(compareCollection(
+                        peerWhere, (HibernateBasicProperty) peer, facets, generator, (HibernateCollection) inner.value, explicitTypes, known))
+            }
+        }
         return found
     }
 
@@ -994,7 +1029,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             for (Property inner : ((Component) property.value).properties) {
                 if (inner.value instanceof Component) {
                     terminalProperties(inner).each { String path, Property leaf -> result["${property.name}.${path}".toString()] = leaf }
-                } else {
+                } else if (!(inner.value instanceof HibernateCollection)) {
                     result["${property.name}.${inner.name}".toString()] = inner
                 }
             }

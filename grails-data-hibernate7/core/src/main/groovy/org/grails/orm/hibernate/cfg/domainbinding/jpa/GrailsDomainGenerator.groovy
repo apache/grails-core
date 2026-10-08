@@ -279,6 +279,10 @@ class GrailsDomainGenerator {
         for (GrailsHibernatePersistentEntity entity : given) {
             requireReferencedEntities(entity, given)
         }
+        String collision = embeddedCollectionCollision(given)
+        if (collision != null) {
+            throw new UnsupportedOperationException(collision)
+        }
         List<GrailsHibernatePersistentEntity> ordered = new ArrayList<GrailsHibernatePersistentEntity>(given)
         ordered.sort { GrailsHibernatePersistentEntity a, GrailsHibernatePersistentEntity b -> depth(a) <=> depth(b) }
 
@@ -303,6 +307,53 @@ class GrailsDomainGenerator {
             result.put(entity, loaded.get(made.get(entity).typeDescription))
         }
         return result
+    }
+
+    /**
+     * The binder names the table and the key column of a collection inside an embedded type after the embedded type and not after
+     * the owner, and gives it no owner-specific identity, so two embedded properties that share a type with a collection share one
+     * table whose key is a foreign key to the owner that was bound first (probed: the rows of the other owner violate it unless the
+     * identifiers happen to coincide), and Hibernate refuses the duplicate collection at boot when the two properties have the same name
+     * (pinned in {@code GrailsDomainBinderEmbeddedCollectionDefectSpec}). One embedded property per type is described exactly as the
+     * binder binds it; a second one is rejected by name rather than described with a table the generator would have to invent.
+     *
+     * @return why the embedded properties of the entities cannot be described together, or {@code null} when no collection of an
+     *     embedded type is reachable through more than one embedded property
+     */
+    private static String embeddedCollectionCollision(Collection<GrailsHibernatePersistentEntity> entities) {
+        Map<String, List<String>> uses = new LinkedHashMap<String, List<String>>()
+        for (GrailsHibernatePersistentEntity entity : entities) {
+            for (HibernatePersistentProperty property : entity.persistentPropertiesToBind) {
+                if (property instanceof HibernateEmbeddedProperty) {
+                    collectCollectionUses((HibernateEmbeddedProperty) property, "${entity.name}.${property.name}".toString(), uses, [])
+                }
+            }
+        }
+        Map.Entry<String, List<String>> shared = uses.entrySet().find { Map.Entry<String, List<String>> use -> use.value.size() > 1 }
+        if (shared == null) {
+            return null
+        }
+        String[] parts = shared.key.split('#')
+        return "The collection [${parts[1]}] of the embedded type [${parts[0]}] is reachable through ${shared.value.size()} embedded " +
+                "properties (${shared.value.join(', ')}): the binder names its table and its key column after the embedded type and not " +
+                'after the owner, so the owners share one table whose key is a foreign key to only one of them, and Hibernate refuses ' +
+                'the duplicate collection at boot when the properties have the same name (pinned in ' +
+                'GrailsDomainBinderEmbeddedCollectionDefectSpec), which the generator does not copy and annotations cannot say'
+    }
+
+    private static void collectCollectionUses(
+            HibernateEmbeddedProperty property, String path, Map<String, List<String>> uses, List<Class<?>> visiting) {
+        GrailsHibernatePersistentEntity type = (GrailsHibernatePersistentEntity) property.associatedEntity
+        if (type == null || visiting.contains(type.javaClass)) {
+            return
+        }
+        for (HibernatePersistentProperty peer : embeddedPeers(property)) {
+            if (peer instanceof HibernateEmbeddedProperty) {
+                collectCollectionUses((HibernateEmbeddedProperty) peer, "${path}.${peer.name}".toString(), uses, visiting + [type.javaClass])
+            } else if (peer instanceof HibernateToManyProperty) {
+                uses.computeIfAbsent("${type.javaClass.name}#${peer.name}".toString()) { String key -> new ArrayList<String>() }.add(path)
+            }
+        }
     }
 
     private static void requireWholeHierarchy(GrailsHibernatePersistentEntity entity, Set<GrailsHibernatePersistentEntity> given) {
@@ -2152,6 +2203,9 @@ class GrailsDomainGenerator {
             String path = relative.isEmpty() ? peer.name : "${relative}.${peer.name}".toString()
             if (peer instanceof HibernateEmbeddedProperty) {
                 collectLeaves((HibernateEmbeddedProperty) peer, currentPath, path, enclosing, leaves)
+            } else if (peer instanceof HibernateToManyProperty) {
+                // a collection has a table of its own and no column in the owner's table: the embeddable states its table and columns itself
+                continue
             } else if (isDerived(peer)) {
                 leaves << new EmbeddedLeaf(path, peer, null, null)
             } else if (peer instanceof HibernateToOneProperty && compositeIdentifier(((HibernateToOneProperty) peer).hibernateAssociatedEntity)) {
@@ -2237,10 +2291,9 @@ class GrailsDomainGenerator {
                     return problem
                 }
             } else if (peer instanceof HibernateToManyProperty) {
-                return "the property [${peer.name}] of [${type.name}] is a collection inside an embedded type: the binder names its table and " +
-                        'its key column after the embedded type and not after the owner, so two owners of the type collide ' +
-                        'and Hibernate refuses the duplicate collection at boot (pinned in GrailsDomainBinderEmbeddedCollectionDefectSpec), ' +
-                        'which the generator does not copy and annotations cannot say'
+                if (!supports(peer)) {
+                    return unsupportedReason(type, peer)
+                }
             } else if (peer instanceof HibernateToOneProperty) {
                 if (!boundAsManyToOne((HibernateToOneProperty) peer)) {
                     return "the property [${peer.name}] of [${type.name}] is the inverse side of a one-to-one inside an embedded type, " +
@@ -2969,9 +3022,19 @@ class GrailsDomainGenerator {
         if (existing != null) {
             return existing.typeDescription
         }
-        String base = generatedEmbeddableName(type)
+        // Hibernate checks the declared element type of a collection of entities against the class it finds for the declaring type by
+        // name, and retries a failed check without end. It finds the class generated for an entity under the entity's name, which has
+        // no getters to check, but would find the real class of an embedded type with its getters and the generated class of the
+        // entity as the element type, so the embeddable that holds such a collection takes the name of the embedded type like an entity.
+        boolean holdsEntities = peers.any { HibernatePersistentProperty peer -> peer instanceof HibernateToManyEntityProperty }
+        String base = holdsEntities ? type.javaClass.name : generatedEmbeddableName(type)
         String name = base
         int variant = 1
+        if (holdsEntities && embeddables.values().any { DynamicType.Unloaded<?> other -> other.typeDescription.name == name }) {
+            throw new UnsupportedOperationException(
+                    "The embedded type [${type.name}] holds a collection of entities and is embedded with two different sets of " +
+                            'properties, which the generator cannot describe: Hibernate needs the class generated for it to carry the name of the type')
+        }
         while (embeddables.values().any { DynamicType.Unloaded<?> other -> other.typeDescription.name == name }) {
             name = base + '_' + (++variant)
         }

@@ -26,6 +26,10 @@ import java.lang.reflect.Field
 
 import grails.gorm.annotation.Entity
 import grails.gorm.tests.HibernateGormDatastoreSpec
+import grails.unbootable.EmbeddedCollectionHolder
+import grails.unbootable.EmbeddedCollectionOwnerA
+import grails.unbootable.EmbeddedCollectionOwnerB
+import grails.unbootable.EmbeddedCollectionOwnerTwice
 import grails.unbootable.NoOwnerLeft
 import grails.unbootable.NoOwnerRight
 import jakarta.persistence.AssociationOverride
@@ -162,7 +166,8 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
                 GenEmbedOwner, GenEmbedOther, GenEmbedBase, GenEmbedChild, GenEmbedFormulaOwner, GenCollSingle, GenCollKinds, GenCollLazy,
                 GenFkTarget, GenFkOwned, GenFkOwner, GenFkCascades, GenFkNodeA, GenFkNodeB, GenFkHasOneOwner, GenFkHasOneDetail, GenOneFace, GenOneNose, GenFkManyOne, GenFkOneSide, GenFkSub, GenFkSubRoot,
                 GenOmParent, GenOmChild, GenOmListed, GenOmOrdered, GenOmOrphan, GenOmFetched, GenOmTag, GenOmStep, GenOmKept, GenOmSortedOwner, GenOmMapOwner, GenMapBidiOwner, GenMapBidiChild, GenEmbAssocOwner,
-                GenMmStudent, GenMmCourse, GenMmPerson, GenParamsOnly, GenDecimal, GenUnversioned, GenUnversionedRoot, GenUnversionedChild, GenConverted, GenValueTyped)
+                GenMmStudent, GenMmCourse, GenMmPerson, GenParamsOnly, GenDecimal, GenUnversioned, GenUnversionedRoot, GenUnversionedChild, GenConverted, GenValueTyped,
+                GenCollEmbeddedHolder, GenCollEmbeddedSibling, GenCollEmbeddedItem, GenCollEmbeddedEntityHolder)
     }
 
     List<StandardServiceRegistry> registries = []
@@ -1325,12 +1330,70 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         e.message.contains('collectionFacets')
     }
 
-    void "a collection of basic values inside an embedded type is rejected by name"() {
+    void "a collection of basic values inside an embedded type is an element collection of the embeddable, named after the embedded type"() {
         given:
         GrailsHibernatePersistentEntity holder = unbound(GenCollEmbeddedHolder)
+        Class<?> owner = generate(GenCollEmbeddedHolder)
+        Class<?> embeddable = owner.getDeclaredField('inner').type
+        Field words = embeddable.getDeclaredField('words')
 
         expect:
-        newGenerator().unsupportedReason(holder, holder.getHibernatePropertyByName('inner')).contains('collection inside an embedded type')
+        newGenerator().supports(holder.getHibernatePropertyByName('inner'))
+        words.isAnnotationPresent(ElementCollection)
+        words.getAnnotation(CollectionTable).name() == 'gen_coll_embedded_words'
+        words.getAnnotation(CollectionTable).joinColumns()*.name() == ['gen_coll_embedded_id']
+        words.getAnnotation(Column).name() == 'words_java_lang_string'
+        embeddable.name == 'org.grails.orm.hibernate.generated.org_grails_orm_hibernate_cfg_domainbinding_jpa_GenCollEmbedded_Embeddable'
+
+        and: "the collection has no column of the owner's table, so the owner overrides none for it"
+        newGenerator().embeddedLeaves(holder.getHibernatePropertyByName('inner') as HibernateEmbeddedProperty).isEmpty()
+        !owner.getDeclaredField('inner').isAnnotationPresent(AttributeOverrides)
+    }
+
+    void "a collection of entities inside an embedded type is a to-many of the embeddable, which takes the name of the embedded type"() {
+        given:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenCollEmbeddedEntityHolder, GenCollEmbeddedItem)
+        Class<?> owner = classes[entity(GenCollEmbeddedEntityHolder)]
+        Class<?> embeddable = owner.getDeclaredField('inner').type
+        Field items = embeddable.getDeclaredField('items')
+
+        expect: "Hibernate retries without end the element check of a collection whose declaring class it resolves to the real embedded class"
+        embeddable.name == GenCollEmbeddedEntities.name
+        embeddable.isAnnotationPresent(Embeddable)
+        items.genericType.typeName == 'java.util.Set<' + GenCollEmbeddedItem.name + '>'
+        items.getAnnotation(ManyToMany).fetch() == FetchType.LAZY
+        items.getAnnotation(JoinTable).name() == 'gen_coll_embedded_entities_gen_coll_embedded_item'
+        items.getAnnotation(JoinTable).joinColumns()*.name() == ['gen_coll_embedded_entities_items_id']
+    }
+
+    void "an embedded type that has a collection is rejected when a second embedded property shares it"() {
+        when:
+        newGenerator().generateAll([unbound(EmbeddedCollectionOwnerA), unbound(EmbeddedCollectionOwnerB)], getClass().classLoader)
+
+        then:
+        UnsupportedOperationException e = thrown()
+        e.message.contains('The collection [words] of the embedded type [' + EmbeddedCollectionHolder.name + ']')
+        e.message.contains('is reachable through 2 embedded properties')
+        e.message.contains(EmbeddedCollectionOwnerA.name + '.inner')
+        e.message.contains(EmbeddedCollectionOwnerB.name + '.inner')
+    }
+
+    void "an owner that embeds the same type with a collection twice is rejected"() {
+        when:
+        newGenerator().generateAll([unbound(EmbeddedCollectionOwnerTwice)], getClass().classLoader)
+
+        then:
+        UnsupportedOperationException e = thrown()
+        e.message.contains('is reachable through 2 embedded properties')
+        e.message.contains(EmbeddedCollectionOwnerTwice.name + '.home')
+        e.message.contains(EmbeddedCollectionOwnerTwice.name + '.work')
+    }
+
+    void "owners that embed different types with collections are generated together"() {
+        expect:
+        generateGroup(GenCollEmbeddedHolder).size() == 1
+        newGenerator().generateAll(
+                [unbound(GenCollEmbeddedHolder), unbound(GenCollEmbeddedSibling)], getClass().classLoader).size() == 2
     }
 
     void "a to-one association is a field typed with the class generated for its target, in the same class loader"() {
@@ -2058,6 +2121,9 @@ class GenEmbedBad {
     Set<String> ref
 
     static hasMany = [ref: String]
+    static mapping = {
+        ref type: 'text'
+    }
 }
 
 @Entity
@@ -2177,6 +2243,42 @@ class GenCollEmbedded {
     Set<String> words
 
     static hasMany = [words: String]
+}
+
+@Entity
+class GenCollEmbeddedSibling {
+
+    GenCollOther inner
+
+    static embedded = ['inner']
+}
+
+class GenCollOther {
+
+    Set<String> tags
+
+    static hasMany = [tags: String]
+}
+
+@Entity
+class GenCollEmbeddedItem {
+
+    String name
+}
+
+@Entity
+class GenCollEmbeddedEntityHolder {
+
+    GenCollEmbeddedEntities inner
+
+    static embedded = ['inner']
+}
+
+class GenCollEmbeddedEntities {
+
+    Set<GenCollEmbeddedItem> items
+
+    static hasMany = [items: GenCollEmbeddedItem]
 }
 
 @Entity

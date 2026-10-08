@@ -60,6 +60,7 @@ For the domain classes in GORM's own test suites, both bindings produce the same
 * Properties mapped with a `UserType` class, and with the registered converter types `yes_no`, `true_false` and `numeric_boolean`, are stored as before.
 * A `hasMany` of basic values whose `type` is `'serializable'` or a `UserType` class is stored in one column of the owner's table, as before, with the `index`, `unique` group and column settings of the property. A `type` on a `hasMany` of domain classes changes nothing in both bindings.
 * An `index` on the property of a `hasMany` is created over the key column of the collection table (and over the element column of a collection of enums), and `indexColumn` may give the index of a list or the key of a map a `type` other than integer or string.
+* A `hasMany` inside a class listed in `static embedded` (basic values, enums or domain classes, also in a nested embedded class) is stored in a collection table named after the embedded class, not after the owner, with a key column named after the embedded class too, as with classic binding.
 * Identifier generators, inheritance strategies (single table, joined and table-per-concrete-class), discriminators, natural ids, optimistic locking, lazy and eager fetching, cascades, sorting, batch size and `cache` usage are mapped as with classic binding.
 
 [[nativeDomainBinding-refused]]
@@ -75,9 +76,9 @@ Nothing is ignored silently. A mapping that boots is bound the way it is written
 | Message of the root cause
 | What to do
 
-| A collection inside an embedded class: a `hasMany` of basic values in a class listed in `static embedded`.
-| `... is a collection inside an embedded type ...`
-| Move the collection to the owning domain class, or make the embedded class a domain class and map an association. Classic binding boots this only in some cases, and fails when two classes embed the type.
+| A collection inside an embedded class that two embedded properties share: a `hasMany` in a class listed in `static embedded`, where more than one property of the application (of one domain class or of several) embeds that class.
+| `The collection [...] of the embedded type [...] is reachable through N embedded properties (...) ...`
+| Embed the class from one property only, or make it a domain class and map an association. Classic binding names the table and the key column of the collection after the embedded class, so all the owners share one table whose foreign key points at only one of them, and it fails to boot when the owners name the property alike.
 
 | A natural id declared on a subclass.
 | `Entity [...] declares a natural id but is a subclass ...`
@@ -167,7 +168,7 @@ Some bugs of classic binding are not copied by native binding. Native binding do
 [[nativeDomainBinding-schema]]
 === Differences in the Schema
 
-The schema of 663 groups of related domain classes was created with both bindings on H2 and compared: tables, columns with type, nullability, default, length, precision and scale, primary keys with their column order, foreign keys, unique keys, indexes, check constraints and sequences. Apart from the 12 groups that native binding refuses, these are the differences. Other databases are not covered by this comparison, so verify against your own database as described below.
+The schema of 679 groups of related domain classes was created with both bindings on H2 and compared: tables, columns with type, nullability, default, length, precision and scale, primary keys with their column order, foreign keys, unique keys, indexes, check constraints and sequences. Apart from the 10 groups that native binding refuses, these are the differences. Other databases are not covered by this comparison, so verify against your own database as described below.
 
 [cols="2,3,3", options="header"]
 |===

@@ -46,3 +46,35 @@ class EmbeddedCollectionHolder {
 
     static hasMany = [words: String]
 }
+
+/**
+ * Two owners that embed the same type under different property names: the binder boots (the roles differ) but binds one collection
+ * table, whose key is a foreign key to the owner that was bound first.
+ */
+@Entity
+class EmbeddedCollectionOwnerC {
+
+    EmbeddedCollectionHolder first
+
+    static embedded = ['first']
+}
+
+@Entity
+class EmbeddedCollectionOwnerD {
+
+    EmbeddedCollectionHolder second
+
+    static embedded = ['second']
+}
+
+/**
+ * One owner that embeds the same type under two property names: the same single table again.
+ */
+@Entity
+class EmbeddedCollectionOwnerTwice {
+
+    EmbeddedCollectionHolder home
+    EmbeddedCollectionHolder work
+
+    static embedded = ['home', 'work']
+}
