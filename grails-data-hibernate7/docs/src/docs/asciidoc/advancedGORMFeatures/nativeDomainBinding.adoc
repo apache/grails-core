@@ -64,6 +64,7 @@ For the domain classes in GORM's own test suites, both bindings produce the same
 * A `Map` on a many-to-many (`Map<String, Book> books` with a `Set` or another `Map` on the other side) writes its own join table, with the key column of the map as part of the primary key, as with classic binding. A `Set` on the other side reads that table and does not write it, and two maps are two separate tables: rows stored through one map are not visible through the other, in both bindings.
 * `type: 'serializable'` on a property that is not a collection (a `String`, a `byte[]` or any `Serializable`) is a binary column holding the Java serialization of the value, as with classic binding.
 * `params` on a registered type name such as `type: 'string'` are ignored, as with classic binding. They reach the type when it is a `UserType` that implements `ParameterizedType`.
+* A `type` that names an `AttributeConverter` class, for example `type: 'org.hibernate.type.YesNoConverter'`, converts the property with it, on a single property as well as on a `hasMany` stored in one column, as with classic binding.
 * Identifier generators, inheritance strategies (single table, joined and table-per-concrete-class), discriminators, natural ids, optimistic locking, lazy and eager fetching, cascades, sorting, batch size and `cache` usage are mapped as with classic binding.
 
 [[nativeDomainBinding-refused]]
@@ -102,10 +103,6 @@ Nothing is ignored silently. A mapping that boots is bound the way it is written
 | A `type` that is a registered Hibernate type name for a different Java type than the property, where the type is not an interface the property implements, for example `type: 'string'` on an `Integer`.
 | `Type [string] of property [...] is registered for the Java type [java.lang.String], not the property's [java.lang.Integer] ...`
 | Use a `UserType` class, or a type name registered for the property's own type.
-
-| An `AttributeConverter` class named as the `type`, for example `type: 'org.hibernate.type.YesNoConverter'`.
-| `Type [...] of property [...] names a class that is not a UserType (an AttributeConverter, for example) ...`
-| Use the registered names `yes_no`, `true_false` or `numeric_boolean`, or write a `UserType`.
 
 | `insertable: false` or `updatable: false` on a property that has no column of its own: a collection, an embedded object, or the inverse side of a one-to-one.
 | `... insertable: false or updatable: false is mapped on a property that has no column of its own ...`
@@ -163,7 +160,7 @@ Some bugs of classic binding are not copied by native binding. Native binding do
 [[nativeDomainBinding-schema]]
 === Differences in the Schema
 
-The schema of 694 groups of related domain classes was created with both bindings on H2 and compared: tables, columns with type, nullability, default, length, precision and scale, primary keys with their column order, foreign keys, unique keys, indexes, check constraints and sequences. Apart from the 6 groups that native binding refuses, these are the differences. Other databases are not covered by this comparison, so verify against your own database as described below.
+The schema of 700 groups of related domain classes was created with both bindings on H2 and compared: tables, columns with type, nullability, default, length, precision and scale, primary keys with their column order, foreign keys, unique keys, indexes, check constraints and sequences. Apart from the 4 groups that native binding refuses, these are the differences. Other databases are not covered by this comparison, so verify against your own database as described below.
 
 [cols="2,3,3", options="header"]
 |===

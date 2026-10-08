@@ -27,10 +27,13 @@ import groovy.transform.CompileStatic
  * value, such as {@code yes_no} ({@code @Convert} together with the {@code @JdbcTypeCode} of the registered type, which can differ
  * from the one the converter alone resolves to: {@code numeric_boolean} is a TINYINT, the converter alone an INTEGER).
  *
- * <p>Exactly one of {@code userType} and {@code jdbcTypeCode} is set, and {@code converter} only next to {@code jdbcTypeCode}. {@code parameters} is only meaningful for a
- * user type and is never {@code null}. {@code javaType} is the Java type the registered type maps when it is not the
- * property's own, which only an identifier can have (its value comes from a generator, so the mapping may name a type for a
- * value the property's class does not hold); the generated field then has that type.</p>
+ * <p>A converter named by its class ({@code type: 'org.hibernate.type.YesNoConverter'}) is {@code converter} alone: no {@code userType} and no
+ * {@code jdbcTypeCode}, which the converter resolves itself. Otherwise exactly one of {@code userType} and {@code jdbcTypeCode} is set, and
+ * {@code converter} only next to {@code jdbcTypeCode}. {@code parameters} is only meaningful for a user type and is never {@code null}.
+ * {@code javaType} is the Java type the generated field has when it is not the property's own: the type a registered type maps for an
+ * identifier (its value comes from a generator, so the mapping may name a type for a value the property's class does not hold), the
+ * interface of a registered type the property's class implements ({@code serializable}), or the type a converter converts when the property's
+ * class is not one it accepts.</p>
  *
  * @since 9.0
  */

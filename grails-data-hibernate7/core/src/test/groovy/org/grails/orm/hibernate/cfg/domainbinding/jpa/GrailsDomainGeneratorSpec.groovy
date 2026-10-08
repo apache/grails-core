@@ -168,7 +168,7 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
                 GenOmParent, GenOmChild, GenOmListed, GenOmOrdered, GenOmOrphan, GenOmFetched, GenOmTag, GenOmStep, GenOmKept, GenOmSortedOwner, GenOmMapOwner, GenMapBidiOwner, GenMapBidiChild, GenEmbAssocOwner,
                 GenMmStudent, GenMmCourse, GenMmPerson, GenParamsOnly, GenDecimal, GenUnversioned, GenUnversionedRoot, GenUnversionedChild, GenConverted, GenValueTyped,
                 GenCollEmbeddedHolder, GenCollEmbeddedSibling, GenCollEmbeddedItem, GenCollEmbeddedEntityHolder, GenMapM2mLeft, GenMapM2mRight,
-                GenSerialized, GenTypeParams)
+                GenSerialized, GenTypeParams, GenConverterClass)
     }
 
     List<StandardServiceRegistry> registries = []
@@ -406,6 +406,19 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         params.getDeclaredField('name').getAnnotation(JdbcTypeCode).value() == java.sql.Types.VARCHAR
         params.getDeclaredField('amount').type == Integer
         params.getDeclaredField('amount').getAnnotation(JdbcTypeCode).value() == java.sql.Types.INTEGER
+    }
+
+    void "a type that names an attribute converter class becomes @Convert, on a field of the type the converter converts"() {
+        when:
+        Class<?> converted = generate(GenConverterClass)
+
+        then:
+        converted.getDeclaredField('flag').getAnnotation(Convert).converter() == YesNoConverter
+        converted.getDeclaredField('flag').type == Boolean
+        !converted.getDeclaredField('flag').isAnnotationPresent(Type)
+        !converted.getDeclaredField('flag').isAnnotationPresent(JdbcTypeCode)
+        converted.getDeclaredField('data').getAnnotation(Convert).converter() == YesNoConverter
+        converted.getDeclaredField('data').type == Boolean
     }
 
     void "Hibernate's own annotation binder resolves a converted type like the domain binder"() {
@@ -2843,6 +2856,18 @@ class GenTypeParams {
     static mapping = {
         name type: 'string', params: [param1: 'value1']
         amount type: 'integer', params: [param1: 'value1']
+    }
+}
+
+@Entity
+class GenConverterClass {
+
+    Boolean flag
+    String data
+
+    static mapping = {
+        flag type: 'org.hibernate.type.YesNoConverter'
+        data type: 'org.hibernate.type.YesNoConverter'
     }
 }
 

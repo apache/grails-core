@@ -1098,7 +1098,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
     /**
      * The explicit type the generator states must be the one the binder put on the bound value: the same
      * {@code UserType} class and parameters, or the same JDBC type for a registered type name; with no explicit type the
-     * binder's type name is the property's own class and it has no parameters.
+     * binder's type name is the property's own class and it has no parameters. A converter named by its class carries no JDBC type.
      */
     private List<String> compareType(
             String where, HibernatePersistentProperty property, GrailsDomainGenerator generator,
@@ -1130,7 +1130,8 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             explicitTypes["registered ${value.typeName} (converter)".toString()]++
             BasicValue.Resolution<?> resolution = value.resolve()
             if (value.typeName != property.getTypeName(type) || resolution.valueConverter?.getClass() != facets.converter() ||
-                    resolution.jdbcType.defaultSqlTypeCode != facets.jdbcTypeCode()) {
+                    (facets.jdbcTypeCode() != null && resolution.jdbcType.defaultSqlTypeCode != facets.jdbcTypeCode())) {
+                // a converter named by its class states no JDBC type: the one the converter alone resolves to is the binder's too
                 found << "${where} converter: generator=${facets.converter()}/${facets.jdbcTypeCode()} binder=${resolution.valueConverter?.getClass()}/${resolution.jdbcType.defaultSqlTypeCode} (type ${value.typeName})".toString()
             }
         } else {

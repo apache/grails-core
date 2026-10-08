@@ -118,6 +118,7 @@ import org.hibernate.type.spi.TypeConfiguration
 import org.hibernate.usertype.UserCollectionType
 import org.hibernate.usertype.UserType
 
+import org.springframework.core.GenericTypeResolver
 import org.springframework.util.ClassUtils
 
 import org.grails.datastore.mapping.model.config.GormProperties
@@ -1100,10 +1101,14 @@ class GrailsDomainGenerator {
         }
         Class<?> named = loadClass(name, property)
         if (named != null) {
-            return UserType.isAssignableFrom(named) ?
-                    new TypeDecision(true, name, new TypeFacets(named, null, parameters)) :
-                    new TypeDecision(false, name, null, 'names a class that is not a UserType (an AttributeConverter, for example), which ' +
-                            '@Type cannot name')
+            if (UserType.isAssignableFrom(named)) {
+                return new TypeDecision(true, name, new TypeFacets(named, null, parameters))
+            }
+            if (AttributeConverter.isAssignableFrom(named) && !isEnum) {
+                return convertedType(name, named, type)
+            }
+            return new TypeDecision(false, name, null, 'names a class that is neither a UserType nor an AttributeConverter, which ' +
+                    '@Type and @Convert cannot name')
         }
         BasicType<?> registered = typeConfiguration.basicTypeRegistry.getRegisteredType(name)
         boolean identity = property instanceof HibernateSimpleIdentityProperty
@@ -1152,6 +1157,18 @@ class GrailsDomainGenerator {
     private static boolean serializesValueOf(BasicType<?> registered, Class<?> type) {
         Class<?> registeredJava = registered.javaTypeDescriptor.javaTypeClass
         return registeredJava.interface && type != null && registeredJava.isAssignableFrom(boxed(type))
+    }
+
+    /**
+     * A {@code type} naming an {@code AttributeConverter}: the binder resolves the name to the converter and binds the property with it,
+     * whatever the property's class is. {@code @Convert} states it, on a field of the Java type the converter converts when the
+     * property's class is not one the converter accepts (the binder does not check, Hibernate does).
+     */
+    private static TypeDecision convertedType(String name, Class<?> converter, Class<?> type) {
+        Class<?>[] arguments = GenericTypeResolver.resolveTypeArguments(converter, AttributeConverter)
+        Class<?> domain = arguments != null ? arguments[0] : null
+        Class<?> javaType = domain != null && (type == null || !domain.isAssignableFrom(boxed(type))) ? domain : null
+        return new TypeDecision(true, name, new TypeFacets(null, null, [:], javaType, converter))
     }
 
     private static Class<?> loadClass(String name, HibernatePersistentProperty property) {
@@ -3088,8 +3105,12 @@ class GrailsDomainGenerator {
 
     private static List<AnnotationDescription> typeAnnotations(TypeFacets facets) {
         if (facets.converter() != null) {
-            return [AnnotationDescription.Builder.ofType(Convert).define('converter', TypeDescription.ForLoadedType.of(facets.converter())).build(),
-                    AnnotationDescription.Builder.ofType(JdbcTypeCode).define('value', facets.jdbcTypeCode().intValue()).build()]
+            List<AnnotationDescription> converted = [AnnotationDescription.Builder.ofType(Convert)
+                    .define('converter', TypeDescription.ForLoadedType.of(facets.converter())).build()]
+            if (facets.jdbcTypeCode() != null) {
+                converted << AnnotationDescription.Builder.ofType(JdbcTypeCode).define('value', facets.jdbcTypeCode().intValue()).build()
+            }
+            return converted
         }
         if (facets.jdbcTypeCode() != null) {
             return [AnnotationDescription.Builder.ofType(JdbcTypeCode).define('value', facets.jdbcTypeCode().intValue()).build()]

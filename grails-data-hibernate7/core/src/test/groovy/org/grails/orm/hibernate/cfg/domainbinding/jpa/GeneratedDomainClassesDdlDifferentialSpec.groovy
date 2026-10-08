@@ -83,7 +83,6 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
     private static final List<String> REFUSALS = [
             'neither side of the many-to-many owns it',
             'is registered for the Java type',
-            'names a class that is not a UserType',
             'declares a natural id but is a subclass',
             'which is HibernateEmbeddedProperty',
             'which is not a persistent property of the entity',
