@@ -719,15 +719,36 @@ jobs:
         with:
           cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: "🔎 Determine SDKMAN release type"
+        id: sdkman-release
+        run: |
+          # Only the newest final release becomes the SDKMAN default. Milestones, release candidates
+          # and releases of an older line are published without changing the default.
+          latest=$(git ls-remote --tags --refs origin 'v*' \
+            | sed 's#.*refs/tags/v##' \
+            | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' \
+            | sort -V \
+            | tail -n 1)
+          if [ -z "${latest}" ]; then
+            echo "❌ Could not determine the newest final release from the repository tags" >&2
+            exit 1
+          fi
+          if [ "${VERSION}" = "${latest}" ]; then
+            echo "${VERSION} is the newest final release, publishing it as the SDKMAN default"
+            echo "type=major" >> "$GITHUB_OUTPUT"
+          else
+            echo "${VERSION} is not the newest final release (${latest}), keeping the SDKMAN default"
+            echo "type=minor" >> "$GITHUB_OUTPUT"
+          fi
       - name: "🚀 Grails SDK Minor Release"
-        if: contains(env.VERSION, 'M') || contains(env.VERSION, 'RC')
+        if: steps.sdkman-release.outputs.type == 'minor'
         working-directory: grails-forge
         run: ./gradlew sdkMinorRelease
         env:
           GVM_SDKVENDOR_KEY: ${{ secrets.GVM_SDKVENDOR_KEY }}
           GVM_SDKVENDOR_TOKEN: ${{ secrets.GVM_SDKVENDOR_TOKEN }}
       - name: "🚀 Grails SDK Major Release"
-        if: startsWith(env.VERSION, '7.') && !contains(env.VERSION, 'M') && !contains(env.VERSION, 'RC')
+        if: steps.sdkman-release.outputs.type == 'major'
         working-directory: grails-forge
         run: ./gradlew sdkMajorRelease
         env:

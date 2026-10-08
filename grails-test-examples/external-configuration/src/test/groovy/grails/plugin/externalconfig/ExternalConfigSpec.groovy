@@ -20,6 +20,7 @@
 package grails.plugin.externalconfig
 
 import grails.config.external.ExternalConfigRunListener
+import grails.util.Environment
 import grails.web.servlet.context.support.GrailsEnvironment
 import org.grails.config.NavigableMap
 import org.grails.config.NavigableMapPropertySource
@@ -29,6 +30,7 @@ import spock.lang.Issue
 import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 import spock.lang.Unroll
+import spock.util.environment.RestoreSystemProperties
 
 class ExternalConfigSpec extends Specification implements GrailsUnitTest {
 
@@ -301,7 +303,7 @@ class ExternalConfigSpec extends Specification implements GrailsUnitTest {
 
     def "getting configuration from yml with multiple documents"() {
         given:
-        addToEnvironment('environments.test.grails.config.locations': ["classpath:/externalConfigMultipleDocs.yml"])
+        addToEnvironment('environments.test.grails.config.locations': ['${EXAMPLE_CONFIG_LOCATION:classpath:/externalConfigMultipleDocs.yml}'])
 
         when:
         listener.environmentPrepared(null, environment)
@@ -311,6 +313,45 @@ class ExternalConfigSpec extends Specification implements GrailsUnitTest {
         getConfigProperty("yml.second") == 'yml-second-value'
     }
 
+
+    @RestoreSystemProperties
+    @Unroll("getting configuration from the locations of the custom environment #environmentName")
+    def "getting configuration from the locations of a custom environment"() {
+        given:
+        System.setProperty(Environment.KEY, environmentName)
+        Environment.reset()
+        addToEnvironment(("environments.${environmentName}.grails.config.locations".toString()): ['classpath:externalConfig.yml'])
+
+        when:
+        listener.environmentPrepared(null, environment)
+
+        then:
+        Environment.current.name == environmentName
+        getConfigProperty('yml.config') == 'yml-expected-value'
+
+        cleanup:
+        Environment.reset()
+
+        where:
+        environmentName << ['UAT', 'myCustomEnv', 'custom_env']
+    }
+
+    @RestoreSystemProperties
+    def "a custom environment without configured locations starts without changing the config"() {
+        given:
+        System.setProperty(Environment.KEY, 'UAT')
+        Environment.reset()
+
+        when:
+        listener.environmentPrepared(null, environment)
+
+        then:
+        noExceptionThrown()
+        environment.properties == old(environment.properties)
+
+        cleanup:
+        Environment.reset()
+    }
 
     private void addToEnvironment(Map properties = [:]) {
         NavigableMap navigableMap = new NavigableMap()

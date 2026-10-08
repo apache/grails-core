@@ -372,6 +372,8 @@ GitHub registers `workflow_dispatch` inputs from the **default branch**. The new
 
 Do not deploy a release slot from its maintenance branch. After the release, that branch has moved on to the next `-SNAPSHOT` version.
 
+Forge reports the last supported day of its release line as `endOfSupport` (an ISO `yyyy-MM-dd` date) from `/versions`, and Forge UI uses it to flag deprecated or unsupported Grails versions. The date comes from `grailsEndOfSupport` in the root `gradle.properties` and is checked in per release branch, so keep each branch's own value when merging up. Both release and snapshot builds report it when the property is set. A value that is not a valid date fails the Forge build.
+
 Tags created before the AWS workflow was added (for example `v7.0.16`, `v7.1.6`, `v7.2.3`, and `v8.0.0-M6` or earlier) do not contain the workflow file, so they cannot be selected. Package these locally, then upload to Elastic Beanstalk. From a checkout of that tag, copy `grails-forge/grails-forge-web-netty/aws/` from the matching maintenance branch, then from `grails-forge` run:
 
 ```bash
@@ -574,9 +576,10 @@ Some common gotchas with Java build reproducibility problems:
    are reproducible. Grails sets this based on the last Git Commit and it's release process preserves the date chosen.
 2. The date set by `SOURCE_DATE_EPOCH` will need to be passed to various Gradle configuration to ensure the same date is
    used. Grails performs this configuration in it's root `build.gradle` file.
-3. Properties files are not reproducible because they write out the current time. Grails publishes a utility to mutate
-   property files so they're reproducible. As part of our build process, we mutate any property file we generate and do
-   not ship property files with dynamic timestamps.
+3. Java's `Properties.store` writes the current time in a comment. Grails removes this automatic timestamp comment
+   from generated build metadata properties files, preserving their descriptive comments and property values. These
+   files do not include a replacement `SOURCE_DATE_EPOCH` comment, so timestamp metadata cannot change their contents
+   between builds.
 4. Gradle builds are not reproducible by default because Gradle does not guarantee file ordering. Grails configures all
    tasks that create archive files to ensure file ordering is reproducible. This configuration can be found in
    the `CompilePlugin` in the `build-logic` project.
