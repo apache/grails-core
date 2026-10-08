@@ -105,6 +105,18 @@ ${day}
         'with Windows line breaks' | '<% } %>\r\n'
     }
 
+    @Unroll
+    void "a page ending with a line of #description and no line break writes that line as it is"() {
+        expect:
+        render('<%@ page trimLogicLines="true" %>\n<% if (true) { %>\nline\n<% } %>\n' + ending, [:]) == 'line\n' + ending
+
+        where:
+        description           | ending
+        'spaces'              | '   '
+        'tabs'                | '\t\t'
+        'spaces and tabs'     | ' \t '
+    }
+
     void "Windows line breaks are removed with the logic line"() {
         expect:
         render('<%@ page trimLogicLines="true" %>\r\n<% if (true) { %>\r\none\r\n<% } %>\r\ntwo\r\n', [:]) == 'one\r\ntwo\r\n'

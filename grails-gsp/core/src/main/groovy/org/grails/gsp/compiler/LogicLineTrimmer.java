@@ -89,6 +89,10 @@ final class LogicLineTrimmer {
     private int trimLogicLine(int lineStart, StringBuilder result, int copied) {
         List<Construct> constructs = new ArrayList<>();
         int position = skipBlanks(lineStart);
+        if (position == length) {
+            // a last line of blanks only holds no logic
+            return lineStart;
+        }
         String lineBreak = null;
         while (lineBreak == null) {
             Construct construct = constructAt(position);
