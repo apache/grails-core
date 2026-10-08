@@ -89,12 +89,12 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
          * Whether to use Hibernate's dirty checking instead of Grails'
          */
         boolean hibernateDirtyChecking = false
+
+        // the JVM-wide system property switches the default on to run an existing test suite through the generated path; a configured value wins
         /**
          * Whether Hibernate's annotation binder binds classes generated from the GORM mapping, instead of the domain
          * binder building Hibernate's boot model by hand. The application's real domain classes are still what is
-         * persisted and loaded. Experimental; off by default. The default can be switched on for a whole JVM, for example to
-         * run an existing test suite through the generated path, with the system property
-         * {@code grails.hibernate.generatedDomainClasses=true}; a value set in the configuration always wins.
+         * persisted and loaded. Off by default, and intended to become the default.
          */
         boolean generatedDomainClasses = Boolean.getBoolean('grails.hibernate.generatedDomainClasses')
 

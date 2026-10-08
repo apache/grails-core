@@ -1,0 +1,234 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[advancedGORMFeatures-nativeDomainBinding]]
+== Native Domain Binding
+
+GORM for Hibernate 7 can bind your domain classes to Hibernate in two ways.
+
+Classic binding::
+GORM reads your `static mapping` blocks and constraints and builds Hibernate's mapping model itself. This is the default.
+
+Native binding::
+GORM describes each domain class with the JPA and Hibernate annotations that express the same mapping, and Hibernate's own annotation binder binds them. Your domain classes are not changed. Sessions, queries, proxies, dirty checking and the instances you work with are still your real domain classes.
+
+Native binding is where GORM for Hibernate 7 is heading: the mapping is bound by the same code that binds hand-annotated JPA entities, so it follows Hibernate releases without GORM keeping its own copy of Hibernate's mapping rules. It is opt-in today and is intended to become the default. Classic binding will then be retired.
+
+This page lists everything that differs from classic binding, so you can decide when to switch.
+
+=== Enabling Native Binding
+
+Set `hibernate.generatedDomainClasses` to `true`. It is a boolean and defaults to `false`.
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+hibernate:
+    generatedDomainClasses: true
+----
+
+The same key works wherever the configuration is read: `application.yml` in Spring Boot, or the `Map` or `PropertyResolver` passed to `HibernateDatastore` when GORM is used standalone. The setting applies to every data source of the application.
+
+NOTE: Native binding changes how the mapping is built, not the API. `save()`, `get()`, finders, criteria, HQL, `where` queries, events, validation and transactions are used exactly as before.
+
+=== What Stays the Same
+
+For the domain classes in GORM's own test suites, both bindings produce the same schema apart from the differences listed below. The following are the same on purpose:
+
+* Entity names are the names of your domain classes, so statistics, entity graphs, cache regions and log messages use the names they used with classic binding.
+* Second-level cache regions are named as with classic binding.
+* Hibernate Envers audits your entities, with the two differences described in <<nativeDomainBinding-envers,Envers>>.
+* The Database Migration plugin snapshots and `dbm-gorm-diff` see the same model, apart from the differences below.
+* All multi-tenancy modes (`DISCRIMINATOR`, `SCHEMA`, `DATABASE`) and multiple data sources work. An association still cannot refer to an entity of another data source.
+* Composite identifiers use the same primary key column order.
+* Properties mapped with a `UserType` class, and with the registered converter types `yes_no`, `true_false` and `numeric_boolean`, are stored as before.
+* Identifier generators, inheritance strategies (single table, joined and table-per-concrete-class), discriminators, natural ids, optimistic locking, lazy and eager fetching, cascades, sorting, batch size and `cache` usage are mapped as with classic binding.
+
+[[nativeDomainBinding-refused]]
+=== Mappings Native Binding Refuses
+
+Where an annotation cannot express a mapping option faithfully, native binding refuses the mapping instead of dropping the option. The application fails at startup. The exception has an `UnsupportedOperationException` as its root cause, and the message names the domain class and the property.
+
+Nothing is ignored silently. A mapping that boots is bound the way it is written.
+
+[cols="2,3,3", options="header"]
+|===
+| Mapping
+| Message of the root cause
+| What to do
+
+| A collection inside an embedded class: a `hasMany` of basic values in a class listed in `static embedded`.
+| `... is a collection inside an embedded type ...`
+| Move the collection to the owning domain class, or make the embedded class a domain class and map an association. Classic binding boots this only in some cases, and fails when two classes embed the type.
+
+| A natural id declared on a subclass.
+| `Entity [...] declares a natural id but is a subclass ...`
+| Declare the natural id on the root class of the hierarchy. For a subclass, use a `unique` constraint on its property. Classic binding adds a unique key to the table of the hierarchy.
+
+| A natural id that names an embedded property, a collection or a formula.
+| `The natural id of [...] names [...], which is ... only a simple property, an enum or a foreign key can be part of a natural id ...`
+| Name only simple properties, enums and many-to-one associations in `natural`.
+
+| A natural id that names a property the class does not have.
+| `The natural id of [...] names [...], which is not a persistent property of the entity ...`
+| Correct the name. Classic binding skips an unknown name without a message, so the entity has no natural id.
+
+| An `index` or a `unique` group on the property of a collection (`hasMany`).
+| `Collection property [...]: an index or a unique group is mapped on the collection property ...`
+| Remove the option from the collection property and create the index in a database migration if you need it. Classic binding creates the index over the key column of the collection table, and a `unique` group that names columns of the owner's table makes the schema fail to create.
+
+| A `type` on the property of a collection (`hasMany`).
+| `Collection property [...]: a type is mapped on the collection property itself ...`
+| Remove the `type`. Classic binding applies it to the collection and to its elements alike.
+
+| A `Map` on a many-to-many.
+| `Association property [...]: a map on a many-to-many ...`
+| Use a `Set` or `List` many-to-many, or model the join with a domain class of its own.
+
+| A map whose `indexColumn` has a `type` other than string, or a list whose `indexColumn` has a `type` other than integer.
+| `... the index column of the map is mapped with the type [long] ...` or `... the index column type [long] is not integer`
+| Remove the `type` from `indexColumn`. Use `String` map keys and the default list index.
+
+| A `type` that is a registered Hibernate type name for a different Java type than the property, for example `type: 'serializable'` on a `String`.
+| `Type [serializable] of property [...] is registered for the Java type [java.io.Serializable], not the property's [java.lang.String] ...`
+| Use a `UserType` class, or a type name registered for the property's own type.
+
+| A registered type name together with `params`.
+| `Type [string] of property [...] is a registered type with type parameters, which no annotation states`
+| Use a `UserType` class that implements `ParameterizedType`, or drop the parameters.
+
+| An `AttributeConverter` class named as the `type`, for example `type: 'org.hibernate.type.YesNoConverter'`.
+| `Type [...] of property [...] names a class that is not a UserType (an AttributeConverter, for example) ...`
+| Use the registered names `yes_no`, `true_false` or `numeric_boolean`, or write a `UserType`.
+
+| `insertable: false` or `updatable: false` on a property that has no column of its own: a collection, an embedded object, or the inverse side of a one-to-one.
+| `... insertable: false or updatable: false is mapped on a property that has no column of its own ...`
+| Remove the option. Classic binding ignores it on such a property. On a property with a column, both bindings honor it.
+
+| A `discriminator` column with `precision` or `scale`.
+| `The discriminator column of [...] sets a precision or a scale, which @DiscriminatorColumn cannot state`
+| Remove them. Use `length` to size the column.
+
+| A composite identifier that is combined with something the mapping does not state faithfully: a many-to-many, a map or a join table that involves an entity with a composite identifier, a composite identifier part that is the inverse side of a one-to-one, a foreign key mapped with a different number of columns than the identifier has properties, or a composite identifier referring to a deeply nested composite identifier.
+| `... composite identifier ...`, naming the entity and the part.
+| Give the entity a single-column identifier, or map the relationship with a domain class of its own.
+
+| A foreign key, join column or collection key whose column mapping sets `length`, `precision`, `scale`, `defaultValue`, `read`, `write` or `comment`.
+| `... the column config ... sets a length, a precision, a scale, a default, a read or write expression or a comment, which a join column cannot state`
+| Remove the option. A join column takes its type from the column it references.
+
+| An association mapped with a `formula`, or with several columns where the target does not have a composite identifier.
+| `... the association is mapped with a formula` or `... the mapping states several columns ...`
+| Map the association with a single `column`.
+
+| A multi-tenant id (`tenantId`) that has a mapped `type`.
+| `The tenant id [...] of [...] has a mapped type ...`
+| Remove the `type` from the tenant id.
+|===
+
+A few mappings fail to boot with classic binding too, so they are not a difference between the two: a `SortedSet` of basic values, a `Map` of enums, a hierarchy that mixes inheritance strategies, a `discriminator` type other than string, integer or character, and a joined subclass of a root with a composite identifier.
+
+[[nativeDomainBinding-behavior]]
+=== Differences in Behavior
+
+Some bugs of classic binding are not copied by native binding. Native binding does what the mapping says.
+
+[cols="2,3", options="header"]
+|===
+| Mapping
+| Difference
+
+| A `unique` group that includes an enum property.
+| Classic binding drops the group. Native binding creates the unique constraint. With `dbCreate: update` the constraint is added to an existing table, and fails if the table holds duplicates.
+
+| An owner with two or more unidirectional `hasMany` collections that use a join table.
+| Classic binding can fail to write the join table rows of such a collection. Native binding writes them.
+
+| The `nullable: false` constraint on the element column of a map of values.
+| Classic binding leaves the column nullable. Native binding makes it `not null`.
+|===
+
+[[nativeDomainBinding-schema]]
+=== Differences in the Schema
+
+The schema of 620 groups of related domain classes was created with both bindings on H2 and compared: tables, columns with type, nullability, default, length, precision and scale, primary keys with their column order, foreign keys, unique keys, indexes, check constraints and sequences. Apart from the 22 groups that native binding refuses, these are the differences. Other databases are not covered by this comparison, so verify against your own database as described below.
+
+[cols="2,3,3", options="header"]
+|===
+| Difference
+| Why
+| Impact on an existing database
+
+| `check (<index column> >= 0)` on the index column of every `List` mapping.
+| Hibernate adds it to every list index column and offers no way to leave it out. GORM never writes a negative index.
+| Tables created by classic binding have no such constraint. It cannot reject a value that GORM writes.
+
+| Column types, column order and primary key order of a table that has a foreign key to an entity whose composite identifier contains another composite identifier.
+| Classic binding gives such foreign key columns the type of a different part of the key than their name says, for example a column `parent_grand_parent_name` of type `integer`. Native binding names and types them correctly. The fix for classic binding is in the 8.0.x line; once your version includes it, this difference disappears for the column types.
+| The column types differ from those of a database created by classic binding. Migrate or recreate such tables before you switch. The order of the foreign key columns may remain different.
+
+| The order of the columns of the foreign key from a collection to an entity with a composite identifier.
+| Classic binding creates two foreign keys of the same name in two column orders and keeps one of them depending on the order the classes are bound in.
+| Same constraint name and same columns, in another order.
+
+| No foreign key for an association mapped with `ignoreNotFound: true`.
+| Hibernate does not create the foreign key for `@NotFound(IGNORE)`. A dangling reference is the point of the option.
+| A database created by classic binding has the foreign key. A diff reports a foreign key that the model no longer has.
+
+| One join table instead of two when the two sides of a many-to-many name the join table differently.
+| Classic binding creates a second table for the inverse side that nothing reads or writes. Native binding uses the table that the owning side names.
+| The second table stays in an existing database. Remove it yourself.
+
+| `not null` on the element column of a map of values mapped with `nullable: false`.
+| See <<nativeDomainBinding-behavior,Differences in Behavior>>.
+| `update` does not change an existing nullable column. A diff reports the difference.
+
+| No unused extra nullable column on the table of a map of values.
+| Classic binding creates a column such as `attributes_java_lang_string` that nothing uses.
+| The column stays in an existing database. It does no harm.
+
+| A unique constraint over the columns of a `unique` group that includes an enum.
+| See <<nativeDomainBinding-behavior,Differences in Behavior>>.
+| `update` adds the constraint.
+|===
+
+The comparison finds no difference in the unique keys, indexes and identifier columns that natural ids, `unique` groups and `index` options create: they have the same columns in the same order as with classic binding.
+
+=== Switching an Existing Database
+
+Do not switch a production database over blindly. Whether `dbCreate: update` or a Liquibase changelog would change anything depends on the differences above.
+
+. Start the application with `hibernate.generatedDomainClasses: true` against a copy of your schema. Fix every refused mapping from the table above.
+. Run <<ref-diff-scripts-dbm-gorm-diff,dbm-gorm-diff>> against the copy. An empty diff means the switch does not change the schema. Otherwise, compare each reported change with the table above, and apply the changes you want through a migration.
+. Run your test suite once with the setting on.
+. Set the property in the environment where you want it first, for example in `development` only.
+
+Prefer migrations over `dbCreate: update` for a production schema.
+
+[[nativeDomainBinding-envers]]
+=== Envers
+
+Envers audits the same entities and writes the same revisions with both bindings. There are two differences:
+
+* A `@NotAudited` annotation on a Groovy property is honored by native binding. Classic binding ignores it: Groovy puts the annotation on the field, and Envers reads the getter, so the property is audited. Classic binding audits a property that you excluded.
+* The `version` column of optimistic locking is audited by both bindings, as it is with classic binding.
+
+=== Reporting an Unsupported Mapping
+
+If a mapping is refused that you think should work, or if the schema differs in a way that this page does not list, open an issue at https://github.com/apache/grails-core/issues with the domain classes, the `static mapping` blocks and the exception message or the DDL of each binding. The refusals above are not permanent; each one is a mapping that native binding does not yet express, and the list is expected to shrink.
