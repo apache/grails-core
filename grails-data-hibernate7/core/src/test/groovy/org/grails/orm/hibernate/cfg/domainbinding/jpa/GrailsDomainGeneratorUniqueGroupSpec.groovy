@@ -19,12 +19,14 @@
 package org.grails.orm.hibernate.cfg.domainbinding.jpa
 
 import grails.gorm.annotation.Entity
+import jakarta.persistence.CollectionTable
 import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
 import org.hibernate.boot.Metadata
 import org.hibernate.mapping.PersistentClass
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty
 
 /**
  * Describes how {@link GrailsDomainGenerator} states the unique constraints a mapping asks for with {@code unique: 'group'}
@@ -116,18 +118,18 @@ class GrailsDomainGeneratorUniqueGroupSpec extends GrailsDomainGeneratorSupport 
         newGenerator().constraintFacets(entity(GenUqTarget)).primaryKeyOrder() == null
     }
 
-    void "a unique group on a collection property is rejected by name, because the binder makes it a key of the collection table"() {
+    void "a unique group on a collection property states no key, since the key the binder makes names columns the collection table does not have"() {
         when:
-        generateGroup(GenUqCollection)
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenUqCollection)
+        CollectionTable table = classes[entity(GenUqCollection)].getDeclaredField('tags').getAnnotation(CollectionTable)
 
-        then: "the key names a column of the owner's table, which the collection table does not have"
-        UnsupportedOperationException e = thrown()
-        e.message.contains('GenUqCollection')
-        e.message.contains('tags')
-        e.message.contains('index or a unique group')
+        then: "the binder's key names a column of the owner's table, so it cannot be created; the generated collection has none"
         entity(GenUqCollection).persistentClass.getProperty('tags').value.collectionTable.uniqueKeys.values().any {
             it.columns*.name.contains('x')
         }
+        table.uniqueConstraints().length == 0
+        newGenerator().collectionFacets((HibernateBasicProperty) entity(GenUqCollection).getPropertyByName('tags')).indexes().isEmpty()
+        newGenerator().constraintFacets(entity(GenUqCollection)).uniqueKeys().isEmpty()
     }
 
     private Map<GrailsHibernatePersistentEntity, Class<?>> generateAll() {

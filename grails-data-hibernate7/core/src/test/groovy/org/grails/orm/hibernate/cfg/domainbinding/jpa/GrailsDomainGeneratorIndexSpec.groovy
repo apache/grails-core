@@ -24,6 +24,7 @@ import org.hibernate.boot.Metadata
 import org.hibernate.mapping.PersistentClass
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty
 
 /**
  * Describes how {@link GrailsDomainGenerator} states the indexes a mapping asks for with {@code index:} on a column. The
@@ -115,20 +116,21 @@ class GrailsDomainGeneratorIndexSpec extends GrailsDomainGeneratorSupport {
         readIndexes(metadata.getEntityBinding(classes[entity(GenIdxJoinedChild)].name)) == boundIndexes(GenIdxJoinedChild)
     }
 
-    void "an index on a collection property is rejected by name, because the binder indexes the key column of the collection table"() {
+    void "an index on a collection property is stated over the key column of the collection table, with the name the binder gives it"() {
         when:
-        generateGroup(GenIdxCollections)
+        CollectionFacets facets = newGenerator().collectionFacets((HibernateBasicProperty) entity(GenIdxCollections).getPropertyByName(property))
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenIdxCollections)
 
-        then:
-        UnsupportedOperationException e = thrown()
-        e.message.contains('GenIdxCollections')
-        e.message.contains(property)
-        e.message.contains('index or a unique group')
-        entity(GenIdxCollections).persistentClass.getProperty(property).value.collectionTable.indexes.values()*.name == [indexName]
+        then: "it is created on the bound table after Hibernate binds the collection, not by an annotation of the carrier"
+        facets.indexes() == expected.collect { String name, List<String> columns -> new IndexFacets(name, columns) }
+        entity(GenIdxCollections).persistentClass.getProperty(property).value.collectionTable.indexes.values().collect {
+            [it.name, it.columns*.name]
+        } == expected.collect { String name, List<String> columns -> [name, columns] }
+        classes[entity(GenIdxCollections)].getAnnotation(Table).indexes().length == 0
 
         where:
-        property | indexName
-        'tags'   | 'gen_idx_tags'
+        property | expected
+        'tags'   | ['gen_idx_tags': ['gen_idx_collections_id']]
     }
 
     private Map<String, List<String>> boundIndexes(Class<?> domain) {

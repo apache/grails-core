@@ -89,10 +89,6 @@ Nothing is ignored silently. A mapping that boots is bound the way it is written
 | `The natural id of [...] names [...], which is not a persistent property of the entity ...`
 | Correct the name. Classic binding skips an unknown name without a message, so the entity has no natural id.
 
-| An `index` or a `unique` group on the property of a collection (`hasMany`).
-| `Collection property [...]: an index or a unique group is mapped on the collection property ...`
-| Remove the option from the collection property and create the index in a database migration if you need it. Classic binding creates the index over the key column of the collection table, and a `unique` group that names columns of the owner's table makes the schema fail to create.
-
 | A `type` on the property of a collection (`hasMany`).
 | `Collection property [...]: a type is mapped on the collection property itself ...`
 | Remove the `type`. Classic binding applies it to the collection and to its elements alike.
@@ -158,6 +154,12 @@ Some bugs of classic binding are not copied by native binding. Native binding do
 
 | The `nullable: false` constraint on the element column of a map of values.
 | Classic binding leaves the column nullable. Native binding makes it `not null`.
+
+| A `unique` group on the property of a collection (`hasMany`).
+| The group names columns of the owner's table, which the table of the collection does not have. Classic binding tries to create a unique key over them and the statement fails when the schema is created, so the database has no such key. Native binding creates no key. The `index` option on the same property works in both bindings: the index is created over the key column of the collection table (and over the element column of a collection of enums), with the name the mapping gives it.
+
+| An `index` given as a closure on the property of a collection, for example `index: { column name: 'position' }`.
+| The closure configures the index column of a list or a map in both bindings. Classic binding also creates an index of the collection table that is named after the closure, a name that changes on every start. Native binding creates the index column and no such index.
 |===
 
 [[nativeDomainBinding-schema]]

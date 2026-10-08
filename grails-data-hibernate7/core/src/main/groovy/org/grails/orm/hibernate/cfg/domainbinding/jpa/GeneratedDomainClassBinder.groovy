@@ -556,6 +556,7 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
             alignExtraLazy((Collection) property.value, (HibernatePersistentProperty) persistentProperty)
             alignCollectionTable((Collection) property.value, (HibernatePersistentProperty) persistentProperty)
             alignListIndexLength((Collection) property.value, (HibernatePersistentProperty) persistentProperty)
+            alignCollectionIndexes((Collection) property.value, (HibernatePersistentProperty) persistentProperty)
         }
         if (property.value instanceof Component && persistentProperty instanceof Embedded) {
             // PropertyBinder marks the property lazy when the mapping says lazy: true; @Basic(fetch = LAZY) on an @Embedded is ignored
@@ -589,6 +590,37 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
         }
         if (extraLazy) {
             collection.extraLazy = true
+        }
+    }
+
+    /**
+     * The domain binder indexes the key column of a collection (and the element column of a collection of enums) when the mapping puts
+     * {@code index:} on the collection property. {@code @CollectionTable} and {@code @JoinTable} could state the index of the owning side
+     * only: the inverse side of a many-to-many has no table annotation of its own, and the binder indexes the key of both sides in the one
+     * join table. The indexes the generator decided are created here on the table Hibernate bound for the collection, with the names the
+     * mapping gives them.
+     */
+    private void alignCollectionIndexes(Collection collection, HibernatePersistentProperty property) {
+        List<IndexFacets> indexes
+        if (property instanceof HibernateToManyEntityProperty) {
+            indexes = generator.toManyFacets((HibernateToManyEntityProperty) property).indexes()
+        } else if (property instanceof HibernateBasicProperty) {
+            indexes = generator.collectionFacets((HibernateBasicProperty) property).indexes()
+        } else {
+            return
+        }
+        Table table = collection.collectionTable
+        if (table == null) {
+            return
+        }
+        for (IndexFacets facets : indexes) {
+            org.hibernate.mapping.Index index = table.getOrCreateIndex(facets.name())
+            for (String name : facets.columns()) {
+                Column column = table.columns.find { Column candidate -> candidate.name.equalsIgnoreCase(name.replace('`', '')) }
+                if (column != null) {
+                    index.addColumn(column)
+                }
+            }
         }
     }
 

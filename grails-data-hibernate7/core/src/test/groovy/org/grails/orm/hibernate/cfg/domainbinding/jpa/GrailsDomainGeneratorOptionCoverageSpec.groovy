@@ -79,7 +79,9 @@ class GrailsDomainGeneratorOptionCoverageSpec extends GrailsDomainGeneratorSuppo
             'property.min'                 : ['number'],
             'property.scale'               : ['number'],
             'property.unique'              : ['basic', 'number', 'target', 'tags', 'modes', 'targets', 'ordered'],
-            'property.uniqueGroup'         : ['basic', 'number', 'mode', 'target', 'tags', 'modes', 'targets', 'ordered'],
+            // a unique group on a collection property names columns of the owner's table, which the collection table does not have: the binder's
+            // key over them cannot be created (a defect fixed on the 8.0.x line), so the generator deliberately states none
+            'property.uniqueGroup'         : ['basic', 'number', 'mode', 'target'],
             'property.insertable'          : KINDS,
             'property.updatable'           : KINDS,
             'property.type'                : ['basic'],
@@ -405,8 +407,8 @@ class GrailsDomainGeneratorOptionCoverageSpec extends GrailsDomainGeneratorSuppo
 
     /**
      * What the generator decides for the group: the generated classes (annotations and fields) and the facets that no annotation
-     * carries but the binding of the generated classes applies to the bound properties: an extra-lazy collection and a lazy
-     * embedded property.
+     * carries but the binding of the generated classes applies to the bound properties: an extra-lazy collection, the indexes of the
+     * table of a collection and a lazy embedded property.
      */
     private String signature() {
         Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenCovOwner, GenCovTarget)
@@ -422,13 +424,17 @@ class GrailsDomainGeneratorOptionCoverageSpec extends GrailsDomainGeneratorSuppo
     private static String appliedAfterBinding(GrailsDomainGenerator generator, GrailsHibernatePersistentEntity entity) {
         return entity.hibernatePersistentProperties.findAll { HibernatePersistentProperty property ->
             if (property instanceof HibernateBasicProperty && generator.supports(property)) {
-                return generator.collectionFacets((HibernateBasicProperty) property).extraLazy()
+                CollectionFacets facets = generator.collectionFacets((HibernateBasicProperty) property)
+                return facets.extraLazy() || !facets.indexes().isEmpty()
             }
             if (property instanceof HibernateEmbeddedProperty) {
                 return generator.supports(property) && property.isLazy()
             }
-            return property instanceof HibernateToManyEntityProperty && generator.supports(property) &&
-                    generator.toManyFacets((HibernateToManyEntityProperty) property).extraLazy()
+            if (property instanceof HibernateToManyEntityProperty && generator.supports(property)) {
+                ToManyFacets facets = generator.toManyFacets((HibernateToManyEntityProperty) property)
+                return facets.extraLazy() || !facets.indexes().isEmpty()
+            }
+            return false
         }*.name.sort().join(',')
     }
 }

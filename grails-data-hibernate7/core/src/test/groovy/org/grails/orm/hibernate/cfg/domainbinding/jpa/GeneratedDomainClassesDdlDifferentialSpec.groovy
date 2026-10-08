@@ -64,12 +64,14 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
      */
     private static final List<Map> KNOWN = [
             [id: 'BINDER_DUPLICATE_FOREIGN_KEY', reason: 'A binder defect: a bidirectional association to an entity with a composite identifier gets two foreign keys of the same name over the same columns, one from the to-one side (referenced columns stated) and one from the collection key (referenced columns left to the primary key), listed in two column orders. Hibernate creates one constraint of that name; which of the two it is depends on the order the domain classes are bound in. The generated mode has the one key and, like the binder in H2, orders its columns as the sorted identifier. 1 association in the scanned test domains (CompositeIdParent.children).'],
+            [id: 'CLOSURE_INDEX_NAME', reason: 'A closure mapped as the index of a collection property (index: { column name: ... }, which configures the index column of a list or a map): the binder also reads it as the name of an index of the collection table and names it with the closure\'s toString(), which holds the identity of the closure instance (...$_closure2@3ff5aef4) and differs on every boot. A name that cannot be reproduced is not stated: the generated mode creates the index column the closure configures and no index. (An index mapped as a map or a string is created with the name the binder gives it, however odd, so the schema is the same.)'],
             [id: 'COMPOSITE_KEY_TYPE_SWAP', reason: 'A binder defect: for a foreign key to a composite identifier whose part is itself a to-one to a composite identifier, the binder names the foreign key columns after the parts in the mapped order but gives them the types of the sorted referenced key, so a part of another type than its neighbour gets the NAME of the other part (child.parent_grand_parent_name is INTEGER, referencing the integer luckyNumber). The generated mode names them correctly; matching it would mean mislabelling columns on purpose. Fixed on the 8.0.x line (PR 16539), so the class disappears with the next up-merge. The cause is SimpleValue.sortColumns(int[]), which applies the permutation of the identifier\'s parts (one entry for each part) to the foreign key\'s columns (several for a nested part). The order of the columns and of the primary key of such a table follows from the swapped types (Hibernate orders them by size and name), and the order of the foreign key columns and of the columns it references over a nested part is the same permutation applied to the wrong list, so those differences are part of this class; a to-one to a composite identifier whose parts are plain is matched (see the aligner). 3 groups of the scanned test domains. After the up-merge of the 8.0.x fix this class has to be measured again: the nested foreign key order may remain.'],
             [id: 'IGNORE_NOT_FOUND_FOREIGN_KEY', reason: 'ignoreNotFound: true: Hibernate\'s @NotFound(IGNORE) disables the foreign key (SimpleValue.disableForeignKey, there is no enabling counterpart), the binder keeps it, which makes the option contradict itself (a dangling reference cannot exist). Re-creating the key would need Table.createForeignKey with a name computed through the implicit naming strategy\'s internal ForeignKeyNameSource. Hibernate\'s own behaviour is arguably the right one; decision for the lead. 1 association in the scanned domains.'],
             [id: 'INVERSE_JOIN_TABLE_NAME', reason: 'A mapping that names the join table on both sides of a many-to-many with different names (the binder adopts the owning side\'s name only when the inverse side names none, since the 8.0.x fix for the inverse join table): the inverse side keeps its own name and the binder creates a second, unused table for it. The generated mode creates the table the owning side names (Hibernate derives the inverse side from mappedBy), so the unused table is absent. Nothing reads or writes the binder\'s extra table. 1 table in the scanned domains (CBOwnNameOwner and CBOwnNameInverse).'],
             [id: 'LIST_INDEX_CHECK', reason: 'Hibernate adds check (<index column> >= 0) to the index column of every list (IndexColumn.addIndexCheckConstraint, always, for @OrderColumn) and offers no annotation to avoid it; Column.getCheckConstraints() is unmodifiable and Column has no removal method (Column.copy shares the list), so it cannot be removed through public API, only by reflection on the private list, which is not done. The check can never reject a value GORM writes (indexes start at 0). 18 list columns in the scanned domains. Decision for the lead: accept the check.'],
             [id: 'MAP_ELEMENT_NULLABLE', reason: 'The mapping of a map of values states nullable: false on the element column and the binder leaves the column nullable (it ignores the option, like the enum column extras); the generated mode honours the mapping, so a database created by the binder has a nullable column where the generated mode creates NOT NULL. Matching the binder would drop a constraint the mapping states.'],
             [id: 'MAP_UNUSED_COLUMN', reason: 'The binder leaves an unused nullable column in the table of a map of values (the element it bound before the map replaced it, attributes_java_lang_string); the generated mode creates no such column. Nothing reads the extra column; an existing database keeps it (update does not drop columns).'],
+            [id: 'UNIQUE_GROUP_ON_COLLECTION', reason: 'A binder defect (fixed on the 8.0.x line by PR 16533, so the class disappears with the next up-merge): a unique group mapped on a collection property makes the binder create a unique key on the collection table over the key column and the other properties of the group, which are columns of the owner\'s table and not of the collection table, so the key cannot be created (Hibernate logs the failed statement and boots; the key is not in the H2 script of the binder either). The generated mode creates no key, which is what the fix does.'],
             [id: 'UNIQUE_GROUP_ON_ENUM', reason: 'A binder defect (pinned in GrailsDomainBinderOptionDefectSpec): a unique group that includes an enum property is dropped by the binder. The generated mode creates the constraint the mapping states, so a database created by the binder lacks it and `update` would add it. 2 groups in the scanned domains.']
     ]
 
@@ -82,7 +84,6 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
             'is registered for the Java type',
             'names a class that is not a UserType',
             'a type is mapped on the collection property itself',
-            'an index or a unique group is mapped on the collection property',
             'is a collection inside an embedded type',
             'declares a natural id but is a subclass',
             'which is HibernateEmbeddedProperty',
@@ -172,6 +173,12 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
         }
         if (collection && kind == 'column nullable' && d.collections*.startsWith('Map of BasicValue').any()) {
             return 'MAP_ELEMENT_NULLABLE'
+        }
+        if (collection && kind == 'index only in binder mode' && (detail =~ /_closure\d+@[0-9a-f]+/).find()) {
+            return 'CLOSURE_INDEX_NAME'
+        }
+        if (kind == 'unique key only in binder mode' && d.impossibleKey) {
+            return 'UNIQUE_GROUP_ON_COLLECTION'
         }
         if (collection && kind in ['column nullable', 'primary key only in generated mode', 'unique key only in binder mode']) {
             return 'COLLECTION_TABLE_KEY'
@@ -371,7 +378,9 @@ class GeneratedDomainClassesDdlDifferentialSpec extends Specification {
             compareColumns(name, b, g, add, tags)
             comparePrimaryKeys(name, b, g, add, tags)
             compareNamed('foreign key', name, b.foreignKeys, g.foreignKeys, ['columns', 'refTable'], add, tags)
-            compareNamed('unique key', name, b.uniqueKeys, g.uniqueKeys, ['columns'], add, tags)
+            // a key over a column the table does not have cannot be created: the group names columns of the owner's table
+            Map keyTags = tags + [impossibleKey: tags.joinTable && b.uniqueKeys.values().any { Map key -> key.columns.any { String column -> !b.columns.containsKey(column) } }]
+            compareNamed('unique key', name, b.uniqueKeys, g.uniqueKeys, ['columns'], add, keyTags)
             compareNamed('index', name, b.indexes, g.indexes, ['columns'], add, tags)
             if (b.checks != g.checks) {
                 add('check constraint', name, "binder=${b.checks} generated=${g.checks}", tags)

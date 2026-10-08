@@ -839,20 +839,33 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 found << "${where} tableColumns: generator=${described} binder=${collection.collectionTable.columns*.name}".toString()
             }
         }
-        found.addAll(compareCollectionTableIndexes(where, collection))
+        found.addAll(compareCollectionTableIndexes(where, facets.indexes(), collection, false, known))
         return found
     }
 
     /**
-     * The generator states no index on the table of a collection: the binder only creates one there when the mapping puts
-     * {@code index:} on the collection property, which the generator rejects, so any index it finds is a mapping the generator
-     * accepted and drops.
+     * The indexes the binder put on the table of a collection against the ones the generator decided: the same names over the same
+     * columns in the same order. The two sides of a bidirectional many-to-many share the one join table, so each side's indexes are
+     * part of the binder's, which holds both sides'. An index the binder named after a closure (the closure's own {@code toString()}, which
+     * holds the identity of the closure instance) is the binder's alone: the generator states none for a closure.
      */
-    private static List<String> compareCollectionTableIndexes(String where, HibernateCollection collection) {
-        List<String> indexes = collection.collectionTable.indexes.values().collect { org.hibernate.mapping.Index index ->
-            "${index.name}:${index.columns*.name}".toString()
+    private static List<String> compareCollectionTableIndexes(
+            String where, List<IndexFacets> facets, HibernateCollection collection, boolean sharedTable, Map<String, Integer> known) {
+        Map<String, List<String>> bound = [:]
+        for (org.hibernate.mapping.Index index : collection.collectionTable.indexes.values()) {
+            if ((index.name =~ /_closure\d+@[0-9a-f]+/).find()) {
+                known['the binder names an index of the collection table after the closure mapped as its index, which differs on every boot']++
+            } else {
+                bound[index.name] = index.columns*.name
+            }
         }
-        return indexes.isEmpty() ? [] : ["${where} collectionTableIndexes: generator=[] binder=${indexes}".toString()]
+        Map<String, List<String>> expected = facets.collectEntries { IndexFacets index -> [(index.name()): index.columns().collect { it.replace('`', '') }] }
+        if (sharedTable) {
+            return expected.findAll { String name, List<String> columns -> !bound.containsKey(name) || !bound[name].containsAll(columns) }.collect {
+                String name, List<String> columns -> "${where} collectionTableIndexes: generator=${name}:${columns} binder=${bound}".toString()
+            }
+        }
+        return expected == bound ? [] : ["${where} collectionTableIndexes: generator=${expected} binder=${bound}".toString()]
     }
 
     /** The key of a collection of basic values must be updatable: Hibernate writes no rows for a collection whose key is not. */
@@ -1659,7 +1672,8 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             })
             // Hibernate copies the size of the referenced identifier onto the element column after binding
             found.addAll(compareValueColumn("${where} element".toString(), facets.element(), collection.element, collection.collectionTable, true))
-            found.addAll(compareCollectionTableIndexes(where, collection))
+            found.addAll(compareCollectionTableIndexes(
+                    where, facets.indexes(), collection, property instanceof HibernateManyToManyProperty && property.bidirectional, known))
         }
         found.addAll(circularKeyOrFound(property, compareValueColumns("${where} key".toString(), facets.keys(), collection.key, collection.collectionTable, true), known))
         if (!((DependantValue) collection.key).updateable) {

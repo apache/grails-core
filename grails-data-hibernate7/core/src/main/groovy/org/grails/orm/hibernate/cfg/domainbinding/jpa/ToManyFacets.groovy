@@ -49,6 +49,13 @@ import org.hibernate.FetchMode
  * type of that name. It is {@code null} when the mapping states none, or the type is the default (an integer for a list, a string for
  * a map). A list's index stays an integer in Java whatever its JDBC type; the key of a map is typed with the facets' Java type.</p>
  *
+ * <p>{@code indexes} are the indexes the binder puts on the table of the collection when the mapping gives the collection property an
+ * {@code index:}, with the names and the column order it gives them: over the key column and, for a collection of enums, the element
+ * column too. It is empty when there are none, or when the binder binds no key column for the property (it is mapped by the foreign key of
+ * the other side, or the join table maps its key columns). A {@code unique} group on the property creates no key: it names columns of the
+ * owner's table, which the table of the collection does not have. {@link GeneratedDomainClassBinder} creates the indexes on the bound
+ * table, since the inverse side of a many-to-many has no table annotation of its own to state them on.</p>
+ *
  * <p>{@code extraLazy} is an explicit {@code lazy: true}: the binder makes the collection extra-lazy, which Hibernate's annotation
  * binder cannot state, so {@code GeneratedDomainClassBinder} sets it on the collection after binding.</p>
  *
@@ -77,5 +84,6 @@ record ToManyFacets(
     String tenantCondition,
     List<ColumnFacets> keys,
     List<String> referencedKeys,
-    TypeFacets indexType) {
+    TypeFacets indexType,
+    List<IndexFacets> indexes) {
 }

@@ -1194,10 +1194,6 @@ class GrailsDomainGenerator {
         if (elementType == null || elementType == Object) {
             return 'the element type is not known'
         }
-        String constraintProblem = collectionConstraintProblem(property)
-        if (constraintProblem != null) {
-            return constraintProblem
-        }
         if (mapped.joinTable.keys != null && mapped.joinTable.keys.size() > 1) {
             return 'the join table has a composite key'
         }
@@ -1289,29 +1285,43 @@ class GrailsDomainGenerator {
     }
 
     /**
-     * The binder binds the key column of a collection like any other column ({@code DependentKeyValueBinder} runs
-     * {@code ColumnBinder} on the property), so an {@code index:} or a {@code unique:} group on the collection property
-     * becomes an index or a unique key of the collection table over the key column, and for a collection of enums the
-     * element column is indexed too. A unique group names columns of the owner's table, which the collection table does not
-     * have. That is not what the mapping means, and not something the generator states, so it rejects the property.
+     * The binder binds the key column of a collection like any other column ({@code DependentKeyValueBinder} runs {@code ColumnBinder}
+     * on the collection property), so an {@code index:} on the property becomes an index of the collection table over the key column,
+     * named as the mapping says ({@code IndexBinder}), and for a collection of enums the element column is indexed too, before the key.
+     * A {@code unique} group on the property would name columns of the owner's table, which the collection table does not have: the
+     * binder creates a key over columns that do not exist (a defect fixed on the 8.0.x line), so the generator states none.
      *
-     * @return why the generator rejects the constraint on the collection property, or {@code null} when there is none the binder binds
+     * <p>The {@code index:} of a closure is not an index: it configures the index column of a list or a map, and the name the binder
+     * gives the index is the closure's own ({@code toString()}, which holds the identity of the closure instance and differs on every
+     * boot), so none is stated for it.</p>
+     *
+     * @return the indexes of the collection table in the order the binder creates them
      */
-    private static String collectionConstraintProblem(HibernateToManyProperty property) {
-        PropertyConfig mapped = property.hibernateMappedForm
-        ColumnConfig columnConfig = firstColumnConfig(mapped)
-        boolean indexed = columnConfig?.index != null && !Boolean.FALSE.equals(columnConfig.index) &&
-                !'false'.equalsIgnoreCase(columnConfig.index.toString())
-        boolean bindsKey = property.isBidirectional() ?
-                (property.hibernateInverseSide instanceof HibernateManyToManyProperty || Map.isAssignableFrom(property.type)) :
-                !mapped.hasJoinKeyMapping()
-        boolean bindsEnumElement = property instanceof HibernateEnumProperty
-        if ((bindsKey || bindsEnumElement) && indexed || bindsKey && mapped.isUniqueWithinGroup()) {
-            return 'an index or a unique group is mapped on the collection property: the binder creates it over the key column of the ' +
-                    'collection table (a unique group over columns of the owner\'s table, which the collection table does not have), ' +
-                    'which the generator does not state'
+    private List<IndexFacets> collectionTableIndexes(
+            HibernateToManyProperty property, String tableName, List<ColumnFacets> keys, ColumnFacets element) {
+        ColumnConfig columnConfig = firstColumnConfig(property.hibernateMappedForm)
+        if (tableName == null || columnConfig?.index == null || columnConfig.index instanceof Closure) {
+            return []
         }
-        return null
+        org.hibernate.mapping.Table table = new org.hibernate.mapping.Table('grails', tableName.replace('`', ''))
+        if (property instanceof HibernateEnumProperty) {
+            indexBinder.bindIndex(element.name(), new Column(element.name()), columnConfig, table)
+        }
+        if (bindsCollectionKey(property)) {
+            GrailsHibernatePersistentEntity owner = property.hibernateOwner
+            List<ColumnConfig> configs = compositeIdentifier(owner) ? compositeForeignKeyConfigs(property, owner) : [columnConfig]
+            for (int i = 0; i < keys.size() && i < configs.size(); i++) {
+                indexBinder.bindIndex(keys[i].name(), new Column(keys[i].name()), configs[i], table)
+            }
+        }
+        return table.indexes.values().collect { org.hibernate.mapping.Index index -> new IndexFacets(index.name, index.columns*.name) }
+    }
+
+    /** Whether the binder binds the key column of the collection like a column of the mapping (and so indexes it). */
+    private static boolean bindsCollectionKey(HibernateToManyProperty property) {
+        return property.isBidirectional() ?
+                (property.hibernateInverseSide instanceof HibernateManyToManyProperty || Map.isAssignableFrom(property.type)) :
+                !property.hibernateMappedForm.hasJoinKeyMapping()
     }
 
     /**
@@ -1345,7 +1355,8 @@ class GrailsDomainGenerator {
                 property.cacheUsage,
                 collectionKeyColumns(property),
                 collectionKeyReferencedColumns(property),
-                collectionIndexType(property, kind))
+                collectionIndexType(property, kind),
+                collectionTableIndexes(property, tableForMany.getTableName(property), collectionKeyColumns(property), collectionElementFacets(property, kind)))
     }
 
     /**
@@ -1572,10 +1583,6 @@ class GrailsDomainGenerator {
         if (mapped.type != null) {
             return 'a type is mapped on the collection property itself, which the binder applies to the collection and its element alike'
         }
-        String constraintProblem = collectionConstraintProblem(property)
-        if (constraintProblem != null) {
-            return constraintProblem
-        }
         if (property instanceof HibernateManyToManyProperty) {
             HibernateAssociation other = property.hibernateInverseSide
             if (!(other instanceof HibernateManyToManyProperty) || Map.isAssignableFrom(other.type)) {
@@ -1732,7 +1739,8 @@ class GrailsDomainGenerator {
                 condition,
                 keys != null ? keys : [key],
                 keys != null ? collectionKeyReferencedColumns(property) : [],
-                collectionIndexType(property, kind))
+                collectionIndexType(property, kind),
+                collectionTableIndexes(property, table, keys != null ? keys : [key], element))
     }
 
     /**
