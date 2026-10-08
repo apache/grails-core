@@ -36,6 +36,7 @@ import org.hibernate.mapping.Column;
 import org.hibernate.mapping.Component;
 import org.hibernate.mapping.KeyValue;
 import org.hibernate.mapping.PersistentClass;
+import org.hibernate.mapping.Property;
 import org.hibernate.mapping.SimpleValue;
 
 import org.grails.datastore.mapping.model.PersistentEntity;
@@ -384,9 +385,10 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
     default void sortOrIndexForeignKeyColumns(SimpleValue value) {
         PersistentClass pc = getPersistentClass();
         KeyValue identifier = pc != null ? pc.getIdentifier() : null;
-        int[] originalOrder = identifier instanceof Component c ? c.sortProperties() : null;
+        Component component = identifier instanceof Component c ? c : null;
+        int[] originalOrder = component != null ? component.sortProperties() : null;
         if (originalOrder != null) {
-            value.sortColumns(originalOrder);
+            value.sortColumns(toColumnPermutation(originalOrder, partColumnSpans(component, originalOrder)));
         } else {
             List<Column> cols = value.getColumns();
             for (int i = 0; i < cols.size(); i++) {
@@ -420,13 +422,60 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
         List<Column> referencedColumns = Arrays.stream(propertyNames)
                 .flatMap(name -> component.getProperty(name).getValue().getColumns().stream())
                 .collect(Collectors.toCollection(ArrayList::new));
-        return originalOrder != null ? sortedByPermutation(referencedColumns, originalOrder) : referencedColumns;
+        if (originalOrder == null) {
+            return referencedColumns;
+        }
+        int[] spans = Arrays.stream(propertyNames)
+                .mapToInt(name -> component.getProperty(name).getValue().getColumnSpan())
+                .toArray();
+        return sortedByPermutation(referencedColumns, toColumnPermutation(originalOrder, spans));
     }
 
     private static List<Column> sortedByPermutation(List<Column> columns, int[] permutation) {
         List<Column> result = new ArrayList<>(columns);
         for (int i = 0; i < permutation.length; i++) {
             result.set(permutation[i], columns.get(i));
+        }
+        return result;
+    }
+
+    /**
+     * Returns the number of columns each part of the composite identifier spans, in declared order.
+     * {@code propertyPermutation[i]} is the position of declared part {@code i} in the sorted property list.
+     */
+    private static int[] partColumnSpans(Component component, int[] propertyPermutation) {
+        List<Property> sorted = component.getProperties();
+        int[] spans = new int[propertyPermutation.length];
+        for (int i = 0; i < spans.length; i++) {
+            spans[i] = sorted.get(propertyPermutation[i]).getValue().getColumnSpan();
+        }
+        return spans;
+    }
+
+    /**
+     * Expands a permutation of identifier parts into a permutation of columns. A to-one part that
+     * references a composite identifier spans several columns, so moving it to its sorted position
+     * has to move its whole column span. {@code result[c]} is the sorted position of declared column
+     * {@code c}. With one column per part the result equals {@code propertyPermutation}.
+     */
+    private static int[] toColumnPermutation(int[] propertyPermutation, int[] spans) {
+        int[] sortedStart = new int[propertyPermutation.length];
+        int[] declaredAtSortedPosition = new int[propertyPermutation.length];
+        for (int i = 0; i < propertyPermutation.length; i++) {
+            declaredAtSortedPosition[propertyPermutation[i]] = i;
+        }
+        int offset = 0;
+        for (int position : declaredAtSortedPosition) {
+            sortedStart[position] = offset;
+            offset += spans[position];
+        }
+        int[] result = new int[offset];
+        int declaredStart = 0;
+        for (int i = 0; i < spans.length; i++) {
+            for (int k = 0; k < spans[i]; k++) {
+                result[declaredStart + k] = sortedStart[i] + k;
+            }
+            declaredStart += spans[i];
         }
         return result;
     }

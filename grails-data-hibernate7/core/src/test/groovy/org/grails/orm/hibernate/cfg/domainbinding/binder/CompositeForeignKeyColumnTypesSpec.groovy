@@ -24,7 +24,6 @@ import java.sql.Connection
 
 import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.mapping.MappingBuilder
-import grails.gorm.transactions.Transactional
 import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.dialect.H2Dialect
 import spock.lang.AutoCleanup
@@ -47,7 +46,8 @@ class CompositeForeignKeyColumnTypesSpec extends Specification {
                     'hibernate.hbm2ddl.auto': 'create',
             ],
             CfkParent, CfkChild, CfkGrandParent, CfkMiddle, CfkLeaf,
-            CfkOrdParent, CfkOrdChild, CfkOrdGrand, CfkOrdMiddle, CfkOrdLeaf)
+            CfkOrdParent, CfkOrdChild, CfkOrdGrand, CfkOrdMiddle, CfkOrdLeaf,
+            PrbGrand, PrbMiddle, PrbLeaf, PrbSpanLeaf)
 
     private List<List> columns(String table) {
         List<List> rows = []
@@ -189,6 +189,102 @@ class CompositeForeignKeyColumnTypesSpec extends Specification {
         CfkChild.withNewSession {
             CfkChild.where { parent.name == 'Fred' && parent.luckyNumber == 7 }.count() == 1
         }
+    }
+
+    void "a nested composite part that sorts after a plain part moves with all of its columns"() {
+        expect: 'the middle key is declared as name, grandParent, so grandParent spans the columns that sort before and after name'
+        foreignKeyPairs('PRB_MIDDLE') == [
+                prb_grand: [['prb_grand_alpha', 'alpha'], ['prb_grand_zeta', 'zeta']]
+        ]
+        foreignKeyPairs('PRB_LEAF') == [
+                prb_middle: [
+                        ['prb_middle_grand_parent_alpha', 'prb_grand_alpha'],
+                        ['prb_middle_grand_parent_zeta', 'prb_grand_zeta'],
+                        ['prb_middle_name', 'name']]
+        ]
+    }
+
+    void "a leaf whose composite key nests a part declared after a plain part is saved and reloaded"() {
+        when:
+        PrbGrand.withNewTransaction {
+            PrbGrand grand = new PrbGrand(zeta: 'z', alpha: 'a').save(failOnError: true)
+            PrbMiddle middle = new PrbMiddle(name: 'm', grandParent: grand).save(failOnError: true)
+            new PrbLeaf(name: 'l', middle: middle).save(failOnError: true, flush: true)
+        }
+
+        then:
+        PrbLeaf.withNewSession {
+            PrbLeaf leaf = PrbLeaf.findByName('l')
+            leaf.middle.name == 'm' && leaf.middle.grandParent.alpha == 'a' && leaf.middle.grandParent.zeta == 'z'
+        }
+    }
+
+    void "a multi-column nested part between two plain parts keeps its columns together in key order"() {
+        expect: 'the key is declared as zed, middle, ace, so the three column middle part sorts between the two plain parts'
+        foreignKeyPairs('PRB_SPAN_LEAF') == [
+                prb_middle: [
+                        ['prb_middle_grand_parent_alpha', 'prb_grand_alpha'],
+                        ['prb_middle_grand_parent_zeta', 'prb_grand_zeta'],
+                        ['prb_middle_name', 'name']]
+        ]
+    }
+
+    void "a leaf whose multi-column nested part sorts between two plain parts is saved and reloaded"() {
+        when:
+        PrbGrand.withNewTransaction {
+            PrbGrand grand = new PrbGrand(zeta: 'z2', alpha: 'a2').save(failOnError: true)
+            PrbMiddle middle = new PrbMiddle(name: 'm2', grandParent: grand).save(failOnError: true)
+            new PrbSpanLeaf(zed: 'zz', ace: 'aa', middle: middle).save(failOnError: true, flush: true)
+        }
+
+        then:
+        PrbSpanLeaf.withNewSession {
+            PrbSpanLeaf leaf = PrbSpanLeaf.findByZed('zz')
+            leaf.ace == 'aa' && leaf.middle.name == 'm2' && leaf.middle.grandParent.zeta == 'z2'
+        }
+    }
+}
+
+@Entity
+class PrbGrand implements Serializable {
+    String zeta
+    String alpha
+    static hasMany = [middles: PrbMiddle]
+
+    static mapping = MappingBuilder.define {
+        composite('zeta', 'alpha')
+    }
+}
+
+@Entity
+class PrbMiddle implements Serializable {
+    String name
+    static belongsTo = [grandParent: PrbGrand]
+    static hasMany = [leaves: PrbLeaf]
+
+    static mapping = MappingBuilder.define {
+        composite('name', 'grandParent')
+    }
+}
+
+@Entity
+class PrbLeaf implements Serializable {
+    String name
+    static belongsTo = [middle: PrbMiddle]
+
+    static mapping = MappingBuilder.define {
+        composite('middle', 'name')
+    }
+}
+
+@Entity
+class PrbSpanLeaf implements Serializable {
+    String zed
+    String ace
+    PrbMiddle middle
+
+    static mapping = MappingBuilder.define {
+        composite('zed', 'middle', 'ace')
     }
 }
 
