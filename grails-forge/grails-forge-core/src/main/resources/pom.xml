@@ -50,9 +50,9 @@
             <version>3.0.0</version>
         </dependency>
         <dependency>
-            <groupId>org.asciidoctor.jvm.convert</groupId>
+            <groupId>org.asciidoctor.jvm.convert.classic</groupId>
             <artifactId>asciidoctor-gradle-jvm</artifactId>
-            <version>4.0.5</version>
+            <version>5.0.3</version>
         </dependency>
         <dependency>
             <groupId>com.gradleup.shadow</groupId>
