@@ -27,8 +27,9 @@ import grails.web.HyphenatedUrlConverter
 import grails.web.mapping.AbstractUrlMappingsSpec
 import org.grails.web.mapping.DefaultUrlMappingData
 import org.grails.web.mapping.DefaultUrlMappingInfo
-import org.grails.web.util.GrailsApplicationAttributes
 import org.grails.web.util.WebUtils
+import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.ui.ModelMap
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.request.WebRequest
@@ -300,14 +301,22 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         given: "a URL mapping for an action that calls render() to write the response body"
         def grailsApplication = new DefaultGrailsApplication(FooController)
         grailsApplication.initialise()
+        def linkGenerator = getLinkGenerator {
+            "/$controller/$action?/$id?"()
+        }
         def holder = getUrlMappingsHolder {
             "/foo/$actionName"(controller: "foo", action: actionName)
         }
         holder = new GrailsControllerUrlMappings(grailsApplication, holder)
         def handler = new UrlMappingsHandlerMapping(holder)
 
+        and: "an application context that provides the LinkGenerator needed by redirect()"
+        def ctx = new StaticWebApplicationContext()
+        ctx.beanFactory.registerSingleton('grailsLinkGenerator', linkGenerator)
+        ctx.refresh()
+
         when: "the request is dispatched"
-        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest(ctx, new MockHttpServletRequest(), new MockHttpServletResponse())
         webRequest.renderView = true
         def request = webRequest.request
         request.setRequestURI("/foo/$actionName")
@@ -349,6 +358,37 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         then: "the adapter returns the ModelAndView set by render(view:) so DispatcherServlet resolves the named view"
         result != null
         result.viewName == '/foo/myView'
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15819')
+    void "adapter returns ModelAndView for an include dispatch even when the outer response is already committed"() {
+        given: "a URL mapping for an action that returns a Map"
+        def grailsApplication = new DefaultGrailsApplication(FooController)
+        grailsApplication.initialise()
+        def holder = getUrlMappingsHolder {
+            "/foo/bar"(controller: "foo", action: "bar")
+        }
+        holder = new GrailsControllerUrlMappings(grailsApplication, holder)
+        def handler = new UrlMappingsHandlerMapping(holder)
+
+        when: "the request is an include dispatch and the outer response is already committed"
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        webRequest.renderView = true
+        def request = webRequest.request
+        def response = webRequest.response
+        request.setRequestURI("/foo/bar")
+        // Mark the request as a servlet include dispatch
+        request.setAttribute(WebUtils.INCLUDE_REQUEST_URI_ATTRIBUTE, "/foo/bar")
+        // Simulate the outer response having been flushed before the include ran
+        response.flushBuffer()
+        def handlerChain = handler.getHandler(request)
+        def handlerAdapter = new UrlMappingsInfoHandlerAdapter()
+        def result = handlerAdapter.handle(request, response, handlerChain.handler)
+
+        then: "the adapter returns a ModelAndView so the included action's view is rendered"
+        result != null
+        result.viewName == 'bar'
+        result.model == [foo: 'bar']
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15819')
@@ -433,11 +473,7 @@ class FooController implements Controller {
      */
     @Action
     def redirectWithMap() {
-        request.setAttribute(
-            GrailsApplicationAttributes.REDIRECT_ISSUED,
-            'http://example.com/redirected'
-        )
-        response.status = 302
+        redirect(uri: 'http://example.com/redirected')
         [foo: 'bar']
     }
 

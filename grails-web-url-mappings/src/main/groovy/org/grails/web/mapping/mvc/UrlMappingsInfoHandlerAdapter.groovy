@@ -177,9 +177,13 @@ class UrlMappingsInfoHandlerAdapter implements HandlerAdapter, ApplicationContex
                     // setRenderView(false), so renderViewRequested stays true. Similarly, the response
                     // may already be committed (e.g. the body was written directly) without that flag
                     // being cleared. In both cases there is nothing left for DispatcherServlet to do.
+                    //
+                    // Exception: during a servlet include dispatch the outer response is already
+                    // committed, but the include can still append output and must still resolve a
+                    // view. Skip the committed check for include dispatches.
                     if (!webRequest.renderViewRequested
                             || request.getAttribute(GrailsApplicationAttributes.REDIRECT_ISSUED) != null
-                            || response.committed) {
+                            || (response.committed && !WebUtils.isInclude(request))) {
                         return null
                     }
                     String viewName = controllerClass.actionUriToViewName(action)
