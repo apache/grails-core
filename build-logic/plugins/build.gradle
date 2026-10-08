@@ -47,6 +47,17 @@ dependencies {
     implementation "org.apache.maven:maven-model:${gradleBomDependencyVersions['maven-model.version']}"
     // Forge build conventions: the shadow transformers that assemble the grails CLI distribution
     implementation "com.gradleup.shadow:shadow-gradle-plugin:${gradleProperties.shadowVersion}"
+    constraints {
+        // Shadow brings plexus-xml 4.x, which delegates to Maven 4's XmlService and finds it through the
+        // thread context class loader. CycloneDX builds effective POMs with Maven 3.9 while the configuration
+        // cache is stored, where that loader cannot see the service, so every SBOM task failed with
+        // "No XmlService implementation found". The 3.x line is the Maven 3 compatible one.
+        implementation('org.codehaus.plexus:plexus-xml') {
+            version {
+                strictly bomDependencyVersions['plexus-xml.version']
+            }
+        }
+    }
 
     testImplementation "org.spockframework:spock-core:${gradleBomDependencyVersions['gradle-spock.version']}"
     testImplementation gradleTestKit()
