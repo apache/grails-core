@@ -375,6 +375,9 @@ class StartupProgressSpec extends Specification {
         and: 'with nothing to sign in for, the address opened carries no token'
         awaitOpened(opened) == "http://localhost:${port}/".toString()
 
+        and: 'the page polls again, as it would have while the browser opened, so the failed start knows it is watched'
+        status()?.phase == 'CREATING_BEANS'
+
         when: 'the start fails'
         Gates.openAll()
 
