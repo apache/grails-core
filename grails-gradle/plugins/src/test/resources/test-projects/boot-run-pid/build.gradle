@@ -3,10 +3,14 @@ plugins {
 }
 
 tasks.register('inspectBootRunPid') {
-    doLast {
-        def task = tasks.named('bootRun').get()
+    def pidFile = providers.provider {
         def prefix = '-Dgrails.cli.pid.file='
-        def pidArg = task.jvmArgumentProviders.collectMany { it.asArguments() as List }.find { it.startsWith(prefix) }
-        println "PID_FILE=${pidArg ? pidArg.substring(prefix.length()) : ''}"
+        def pidArg = tasks.named('bootRun').get().jvmArgumentProviders
+                .collectMany { it.asArguments() as List }
+                .find { it.startsWith(prefix) }
+        pidArg ? pidArg.substring(prefix.length()) : ''
+    }
+    doLast {
+        println "PID_FILE=${pidFile.get()}"
     }
 }

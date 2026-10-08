@@ -159,4 +159,51 @@ class GroovydocEnhancerPluginSpec extends Specification {
         overridden.task(':groovydoc').outcome == TaskOutcome.FAILED
         overridden.output.contains('finished with non-zero exit value')
     }
+
+    void 'groovydoc reads the source directories and links the build script sets when the configuration cache is reused'() {
+        given: 'a build script that documents a source directory of its own and links an external package'
+        writeGroovydocProject()
+        File extraSource = new File(projectDir, 'extra/com/example/extra/Extra.groovy')
+        extraSource.parentFile.mkdirs()
+        extraSource.text = '''
+            package com.example.extra
+
+            /** Documented outside the main source set. */
+            class Extra {
+                /** @return a list */
+                List<String> names() { [] }
+            }
+        '''.stripIndent()
+        new File(projectDir, 'build.gradle') << '''
+            tasks.named('groovydoc', Groovydoc) {
+                ext.groovydocSourceDirs = [file('src/main/groovy'), file('extra')]
+                ext.groovydocLinks = [[packages: 'java.', href: 'https://docs.oracle.com/en/java/javase/21/docs/api/']]
+            }
+        '''
+
+        when: 'groovydoc runs twice from a clean build, storing and then reusing the configuration cache entry'
+        def stored = runGroovydocFromClean()
+        def reused = runGroovydocFromClean()
+
+        then:
+        stored.output.contains('Configuration cache entry stored')
+        reused.output.contains('Configuration cache entry reused')
+        reused.task(':groovydoc').outcome == TaskOutcome.SUCCESS
+
+        and: 'both source directories were documented'
+        new File(projectDir, 'build/docs/groovydoc/com/example/Documented.html').exists()
+        File extra = new File(projectDir, 'build/docs/groovydoc/com/example/extra/Extra.html')
+        extra.exists()
+
+        and: 'the external link was applied'
+        extra.text.contains('https://docs.oracle.com/en/java/javase/21/docs/api/')
+    }
+
+    private def runGroovydocFromClean() {
+        GradleRunner.create()
+                .withProjectDir(projectDir)
+                .withArguments('clean', 'groovydoc', '--configuration-cache')
+                .withPluginClasspath()
+                .build()
+    }
 }

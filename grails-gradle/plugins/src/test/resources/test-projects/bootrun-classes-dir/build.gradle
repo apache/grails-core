@@ -15,16 +15,23 @@ if (project.hasProperty('ownClassDir')) {
 }
 
 tasks.register('inspectBootRunClassesDir') {
-    doLast {
-        def task = tasks.named('bootRun').get()
-        // What the JVM is given: system properties and argument providers both, and the last -D wins
+    // What the JVM is given: system properties and argument providers both, and the last -D wins
+    def lastValues = providers.provider {
+        def allJvmArgs = tasks.named('bootRun').get().allJvmArgs
         def lastValue = { String property ->
             String prefix = "-D${property}="
-            String arg = task.allJvmArgs.findAll { it.startsWith(prefix) }.with { it ? it.last() : null }
+            String arg = allJvmArgs.findAll { it.startsWith(prefix) }.with { it ? it.last() : null }
             arg ? arg.substring(prefix.length()) : ''
         }
-        println "CLASSES_DIR=${lastValue('grails.project.class.dir')}"
-        println "RESOURCES_DIR=${lastValue('grails.project.resource.dir')}"
-        println "TARGET_DIR=${lastValue('grails.project.target.dir')}"
+        [
+                classes: lastValue('grails.project.class.dir'),
+                resources: lastValue('grails.project.resource.dir'),
+                target: lastValue('grails.project.target.dir')
+        ]
+    }
+    doLast {
+        println "CLASSES_DIR=${lastValues.get().classes}"
+        println "RESOURCES_DIR=${lastValues.get().resources}"
+        println "TARGET_DIR=${lastValues.get().target}"
     }
 }

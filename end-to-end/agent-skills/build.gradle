@@ -30,7 +30,7 @@ plugins {
     // Supplies grailsVersion, which an application sets in its gradle.properties
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.gradle.grails-web'
-    id 'com.skillsjars.gradle-plugin' version '0.1.4'
+    id 'com.skillsjars.gradle-plugin' version '0.2.0'
 }
 
 version = '0.1'

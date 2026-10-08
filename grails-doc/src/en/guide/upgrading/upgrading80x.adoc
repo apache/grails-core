@@ -4716,3 +4716,21 @@ for template renders:
 
 Objects passed with `bean` or `collection` are not part of `model`. See
 link:theWebLayer.html#definingInterceptors[Defining Interceptors].
+
+==== 85. Gradle Configuration Cache
+
+The Grails Gradle plugins of Grails 8.0, and the Asset Pipeline and Grails Publish plugins in the versions the Grails 8.0 BOM manages, support the https://docs.gradle.org/{gradleVersion}/userguide/configuration_cache.html[Gradle configuration cache].
+Applications and plugins created with Grails 8.0 enable it in `gradle.properties`.
+
+An application or plugin upgraded to Grails 8.0 can enable it by adding the same property, once it uses the Grails 8.0 Gradle plugins and BOM:
+
+[source,properties]
+.gradle.properties
+----
+org.gradle.configuration-cache=true
+----
+
+When upgrading from an earlier Grails 8 milestone or release candidate, update the Grails Gradle plugins and BOM before enabling the configuration cache.
+
+With the configuration cache, task actions such as `doFirst` and `doLast` closures may not use `project`, other tasks or build script properties while they run, and Gradle fails the build when a build script or another Gradle plugin does.
+See xref:commandLine#gradleConfigurationCache[Using the Gradle Configuration Cache] for how to adapt build scripts and what to do about plugins that do not support it.

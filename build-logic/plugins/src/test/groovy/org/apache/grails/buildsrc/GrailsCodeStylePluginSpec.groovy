@@ -66,7 +66,7 @@ class Test{
         when: "running codenarcFix"
         def result = GradleRunner.create()
                 .withProjectDir(testProjectDir.toFile())
-                .withArguments('codenarcFix', '--stacktrace')
+                .withArguments('codenarcFix', '--stacktrace', '--configuration-cache')
                 .withPluginClasspath()
                 .build()
 
@@ -82,6 +82,32 @@ class Test{
         fixedContent.contains("def semi = 'semicolon'") // UnnecessarySemicolon
         !fixedContent.contains(";")
         fixedContent.count('\n\n') == 3 // ConsecutiveBlankLines
+    }
+
+    def "codenarcFix keeps fixing files when its configuration cache entry is reused"() {
+        given: "a file with a violation"
+        groovyFile.text = 'class Test{}\n'
+
+        and: "the default configuration files the plugin writes while the first build is configured"
+        runCodenarcFix()
+
+        when: "codenarcFix runs, a new violation appears, and it runs again"
+        def stored = runCodenarcFix()
+        groovyFile.text = 'class Test{\n    def semi = 1;\n}\n'
+        def reused = runCodenarcFix()
+
+        then: "the later build reuses the entry and still sees the current sources"
+        stored.output.contains('Configuration cache entry stored')
+        reused.output.contains('Configuration cache entry reused')
+        !groovyFile.text.contains(';')
+    }
+
+    private def runCodenarcFix() {
+        GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('codenarcFix', '--stacktrace', '--configuration-cache')
+                .withPluginClasspath()
+                .build()
     }
 
     def "applying code style also registers code analysis"() {
@@ -112,7 +138,7 @@ class Test {
         when: "running codenarcFix"
         def result = GradleRunner.create()
                 .withProjectDir(testProjectDir.toFile())
-                .withArguments('codenarcFix', '--stacktrace')
+                .withArguments('codenarcFix', '--stacktrace', '--configuration-cache')
                 .withPluginClasspath()
                 .build()
 
@@ -138,7 +164,7 @@ class Test {
         when: "running codenarcFix"
         def result = GradleRunner.create()
                 .withProjectDir(testProjectDir.toFile())
-                .withArguments('codenarcFix', '--stacktrace')
+                .withArguments('codenarcFix', '--stacktrace', '--configuration-cache')
                 .withPluginClasspath()
                 .build()
 
@@ -164,7 +190,7 @@ class Test {
         when: "running codenarcFix"
         def result = GradleRunner.create()
                 .withProjectDir(testProjectDir.toFile())
-                .withArguments('codenarcFix', '--stacktrace')
+                .withArguments('codenarcFix', '--stacktrace', '--configuration-cache')
                 .withPluginClasspath()
                 .build()
 
@@ -195,7 +221,7 @@ class Test {
         when: "running codenarcFix"
         def result = GradleRunner.create()
                 .withProjectDir(testProjectDir.toFile())
-                .withArguments('codenarcFix', '--stacktrace')
+                .withArguments('codenarcFix', '--stacktrace', '--configuration-cache')
                 .withPluginClasspath()
                 .build()
 
@@ -223,7 +249,7 @@ class Test {
         when: "running codenarcFix"
         def result = GradleRunner.create()
                 .withProjectDir(testProjectDir.toFile())
-                .withArguments('codenarcFix', '--stacktrace')
+                .withArguments('codenarcFix', '--stacktrace', '--configuration-cache')
                 .withPluginClasspath()
                 .build()
 

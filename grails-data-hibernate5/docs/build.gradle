@@ -17,11 +17,10 @@
  *  under the License.
  */
 
-import org.asciidoctor.gradle.jvm.AsciidoctorTask
+import grails.doc.gradle.ConvertAsciidocTask
 
 plugins {
     id 'groovy'
-    id 'org.asciidoctor.jvm.convert'
     id 'org.apache.grails.buildsrc.dependency-validator'
 }
 
@@ -54,22 +53,9 @@ dependencies {
             .each { documentation project(":$it.name") }
 }
 
-tasks.named('asciidoctor', AsciidoctorTask) { AsciidoctorTask it ->
-    it.inputs.dir(layout.projectDirectory.dir('src/docs/asciidoc')).withPropertyName('docsSrcDir').withPathSensitivity(PathSensitivity.RELATIVE)
-    it.outputs.dir layout.buildDirectory.dir('asciidoc/manual')
-
-    it.jvm {
-        jvmArgs('--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED', '--add-opens', 'java.base/java.io=ALL-UNNAMED')
-    }
-    it.baseDirFollowsSourceFile()
-    it.sourceDir layout.projectDirectory.dir('src/docs/asciidoc')
+tasks.register('asciidoctor', ConvertAsciidocTask) { ConvertAsciidocTask it ->
+    it.sourceDir = layout.projectDirectory.dir('src/docs/asciidoc')
     it.outputDir = layout.buildDirectory.dir('asciidoc/manual')
-
-    resources {
-        from(project.layout.projectDirectory.dir("src/docs/asciidoc/images"))
-        into './images'
-    }
-
     it.attributes = [
             'experimental'              : 'true',
             'compat-mode'               : 'true',
@@ -88,6 +74,7 @@ tasks.named('asciidoctor', AsciidoctorTask) { AsciidoctorTask it ->
             // are converted as fragments. The '@' lets index.adoc switch this back off to keep its own checks.
             'fragment'                  : '@'
     ]
+    it.includedFiles.from(rootProject.findProject(':grails-data-hibernate5-dbmigration').layout.projectDirectory.dir('src/integration-test/resources'))
 }
 
 tasks.withType(Groovydoc).configureEach {

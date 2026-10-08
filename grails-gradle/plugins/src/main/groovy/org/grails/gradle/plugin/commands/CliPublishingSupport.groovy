@@ -29,6 +29,7 @@ import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.component.AdhocComponentWithVariants
 import org.gradle.api.component.ConfigurationVariantDetails
+import org.gradle.api.provider.Provider
 import org.gradle.api.publish.tasks.GenerateModuleMetadata
 
 /**
@@ -85,12 +86,12 @@ final class CliPublishingSupport {
             return
         }
         project.extensions.extraProperties.set(REWRITE_REGISTERED_PROPERTY, true)
+        Provider<Set<String>> companionCapabilities = project.providers.provider { knownCompanionCapabilities(project) }
         project.tasks.withType(GenerateModuleMetadata).configureEach { GenerateModuleMetadata task ->
             task.doLast(new Action<Task>() {
                 @Override
                 void execute(Task t) {
-                    rewriteModuleFile(((GenerateModuleMetadata) t).outputFile.get().asFile,
-                            knownCompanionCapabilities(project))
+                    rewriteModuleFile(((GenerateModuleMetadata) t).outputFile.get().asFile, companionCapabilities.get())
                 }
             })
         }
@@ -99,8 +100,8 @@ final class CliPublishingSupport {
     /**
      * The companion capabilities advertised by the projects of this build ({@code group:artifactId}),
      * including customized companion coordinates ({@code cliArtifact { artifactId = ... }}) that the
-     * default {@code <module>-cli} naming convention cannot recognize. Computed at execution time,
-     * when every project has been evaluated.
+     * default {@code <module>-cli} naming convention cannot recognize. Computed once every project has
+     * been evaluated: when the task graph is stored in the configuration cache, or else when the task runs.
      */
     private static Set<String> knownCompanionCapabilities(Project project) {
         Set<String> capabilities = [] as Set
