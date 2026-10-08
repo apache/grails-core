@@ -67,6 +67,7 @@ import org.hibernate.annotations.BatchSize
 import org.hibernate.annotations.Cache
 import org.hibernate.annotations.CacheConcurrencyStrategy
 import org.hibernate.annotations.Cascade
+import org.hibernate.annotations.CollectionType
 import org.hibernate.annotations.ColumnDefault
 import org.hibernate.annotations.Comment
 import org.hibernate.annotations.DiscriminatorFormula
@@ -114,6 +115,7 @@ import org.hibernate.mapping.Property
 import org.hibernate.type.CustomType
 import org.hibernate.type.descriptor.WrapperOptions
 import org.hibernate.usertype.ParameterizedType
+import org.hibernate.usertype.UserCollectionType
 import org.hibernate.usertype.UserType
 import java.sql.PreparedStatement
 import java.sql.ResultSet
@@ -168,7 +170,7 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
                 GenOmParent, GenOmChild, GenOmListed, GenOmOrdered, GenOmOrphan, GenOmFetched, GenOmTag, GenOmStep, GenOmKept, GenOmSortedOwner, GenOmMapOwner, GenMapBidiOwner, GenMapBidiChild, GenEmbAssocOwner,
                 GenMmStudent, GenMmCourse, GenMmPerson, GenParamsOnly, GenDecimal, GenUnversioned, GenUnversionedRoot, GenUnversionedChild, GenConverted, GenValueTyped,
                 GenCollEmbeddedHolder, GenCollEmbeddedSibling, GenCollEmbeddedItem, GenCollEmbeddedEntityHolder, GenMapM2mLeft, GenMapM2mRight,
-                GenSerialized, GenTypeParams, GenConverterClass)
+                GenSerialized, GenTypeParams, GenConverterClass, GenCustomCollectionOwner, GenCustomCollectionKid)
     }
 
     List<StandardServiceRegistry> registries = []
@@ -419,6 +421,14 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         !converted.getDeclaredField('flag').isAnnotationPresent(JdbcTypeCode)
         converted.getDeclaredField('data').getAnnotation(Convert).converter() == YesNoConverter
         converted.getDeclaredField('data').type == Boolean
+    }
+
+    void "a custom collection type on a collection of entities becomes @CollectionType"() {
+        given:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenCustomCollectionOwner, GenCustomCollectionKid)
+
+        expect:
+        classes[entity(GenCustomCollectionOwner)].getDeclaredField('kids').getAnnotation(CollectionType).type() == GenSetCollectionType
     }
 
     void "Hibernate's own annotation binder resolves a converted type like the domain binder"() {
@@ -2868,6 +2878,53 @@ class GenConverterClass {
     static mapping = {
         flag type: 'org.hibernate.type.YesNoConverter'
         data type: 'org.hibernate.type.YesNoConverter'
+    }
+}
+
+class GenSetCollectionType implements UserCollectionType {
+
+    org.hibernate.metamodel.CollectionClassification getClassification() { org.hibernate.metamodel.CollectionClassification.SET }
+
+    Class<?> getCollectionClass() { Set }
+
+    org.hibernate.collection.spi.PersistentCollection<?> instantiate(
+            org.hibernate.engine.spi.SharedSessionContractImplementor session, org.hibernate.persister.collection.CollectionPersister persister) {
+        new org.hibernate.collection.spi.PersistentSet(session)
+    }
+
+    org.hibernate.collection.spi.PersistentCollection<?> wrap(org.hibernate.engine.spi.SharedSessionContractImplementor session, Object collection) {
+        new org.hibernate.collection.spi.PersistentSet(session, (Set) collection)
+    }
+
+    Iterator<?> getElementsIterator(Object collection) { ((Set) collection).iterator() }
+
+    boolean contains(Object collection, Object entity) { ((Set) collection).contains(entity) }
+
+    Object indexOf(Object collection, Object entity) { null }
+
+    Object replaceElements(Object original, Object target, org.hibernate.persister.collection.CollectionPersister persister, Object owner,
+                           Map copyCache, org.hibernate.engine.spi.SharedSessionContractImplementor session) {
+        target
+    }
+
+    Object instantiate(int anticipatedSize) { new HashSet() }
+}
+
+@Entity
+class GenCustomCollectionKid {
+
+    String name
+}
+
+@Entity
+class GenCustomCollectionOwner {
+
+    Set<GenCustomCollectionKid> kids
+
+    static hasMany = [kids: GenCustomCollectionKid]
+
+    static mapping = {
+        kids type: GenSetCollectionType
     }
 }
 

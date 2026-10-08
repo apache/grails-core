@@ -81,6 +81,7 @@ import org.hibernate.annotations.BatchSize
 import org.hibernate.annotations.Cache
 import org.hibernate.annotations.CacheConcurrencyStrategy
 import org.hibernate.annotations.Cascade
+import org.hibernate.annotations.CollectionType
 import org.hibernate.annotations.ColumnDefault
 import org.hibernate.annotations.ColumnTransformer
 import org.hibernate.annotations.Comment
@@ -1451,14 +1452,14 @@ class GrailsDomainGenerator {
     /**
      * A {@code type} on a collection property that is neither a class nor {@code serializable}: the binder gives the name to the
      * element of the collection as a class name and fails to boot ({@code Could not load requested class: text}, probed for the
-     * registered names {@code string}, {@code text}, {@code materialized_clob} and {@code yes_no}), and a custom collection type is a
-     * class the generator does not describe yet.
+     * registered names {@code string}, {@code text}, {@code materialized_clob} and {@code yes_no}), and so does a custom collection
+     * type, which it gives to the element as its type.
      */
     private static String mappedCollectionTypeProblem(HibernateBasicProperty property) {
         Class<?> userType = property.userType
         if (userType != null && UserCollectionType.isAssignableFrom(userType)) {
-            return 'a custom collection type (a UserCollectionType) is mapped on the collection property, which the generator does not ' +
-                    'support yet'
+            return 'a custom collection type (a UserCollectionType) is mapped on a collection of basic values: the binder gives the class to ' +
+                    'the element as its type and fails to boot (Named type did not implement BasicType nor UserType)'
         }
         return "the type [${property.hibernateMappedForm.typeName}] mapped on the collection property names neither a class nor " +
                 "serializable: the binder gives the name to the element as a class name and fails to boot ('Could not load requested class')"
@@ -1730,10 +1731,6 @@ class GrailsDomainGenerator {
             return 'a class is mapped as the type of the collection property, which the binder binds as one column of the owner\'s table ' +
                     'that holds the collection, and Hibernate fails to boot for a collection of entities'
         }
-        if (mapped.type != null && property.userType != null) {
-            return 'a custom collection type (a UserCollectionType) is mapped on the collection property, which the generator does not ' +
-                    'support yet'
-        }
         if (property instanceof HibernateManyToManyProperty) {
             HibernateAssociation other = property.hibernateInverseSide
             if (!(other instanceof HibernateManyToManyProperty)) {
@@ -1891,7 +1888,8 @@ class GrailsDomainGenerator {
                 keys != null ? keys : [key],
                 keys != null ? collectionKeyReferencedColumns(property) : [],
                 collectionIndexType(property, kind),
-                collectionTableIndexes(property, table, keys != null ? keys : [key], element))
+                collectionTableIndexes(property, table, keys != null ? keys : [key], element),
+                mapped.type != null && property.userType != null && UserCollectionType.isAssignableFrom(property.userType) ? property.userType : null)
     }
 
     /**
@@ -2776,6 +2774,10 @@ class GrailsDomainGenerator {
         if (facets.kind() == CollectionKind.SORTED_SET) {
             // the binder marks the collection sorted and names no comparator: the elements' natural order
             annotations << AnnotationDescription.Builder.ofType(SortNatural).build()
+        }
+        if (facets.collectionType() != null) {
+            annotations << AnnotationDescription.Builder.ofType(CollectionType)
+                    .define('type', TypeDescription.ForLoadedType.of(facets.collectionType())).build()
         }
         if (facets.orderProperty() != null) {
             annotations << AnnotationDescription.Builder.ofType(OrderBy).define('value', "${facets.orderProperty()} ${facets.orderDirection()}".toString()).build()

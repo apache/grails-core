@@ -56,6 +56,9 @@ import org.hibernate.FetchMode
  * owner's table, which the table of the collection does not have. {@link GeneratedDomainClassBinder} creates the indexes on the bound
  * table, since the inverse side of a many-to-many has no table annotation of its own to state them on.</p>
  *
+ * <p>{@code collectionType} is the custom collection type ({@code UserCollectionType}) the mapping's {@code type} names for the collection, and
+ * {@code null} when it names none ({@code @CollectionType}).</p>
+ *
  * <p>{@code extraLazy} is an explicit {@code lazy: true}: the binder makes the collection extra-lazy, which Hibernate's annotation
  * binder cannot state, so {@code GeneratedDomainClassBinder} sets it on the collection after binding.</p>
  *
@@ -85,5 +88,6 @@ record ToManyFacets(
     List<ColumnFacets> keys,
     List<String> referencedKeys,
     TypeFacets indexType,
-    List<IndexFacets> indexes) {
+    List<IndexFacets> indexes,
+    Class<?> collectionType = null) {
 }
