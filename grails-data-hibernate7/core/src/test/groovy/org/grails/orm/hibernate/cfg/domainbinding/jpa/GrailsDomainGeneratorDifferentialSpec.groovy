@@ -2018,6 +2018,14 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 pairs.remove('precision')
                 pairs.remove('scale')
             }
+            if (key || bound.value instanceof ToOne) {
+                ['default', 'read', 'write', 'comment'].each { String facet ->
+                    if (pairs[facet] != null && pairs[facet][1] == null) {
+                        known['the default, comment and read and write expressions of a foreign key column: a join column annotation cannot state them, GeneratedDomainClassBinder sets them after binding']++
+                        pairs.remove(facet)
+                    }
+                }
+            }
             found.addAll(pairs.findAll { String facet, List values -> values[0] != values[1] }.collect { String facet, List values ->
                 "${where} ${facet}: generator=${values[1]} binder=${values[0]}".toString()
             })

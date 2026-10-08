@@ -71,6 +71,7 @@ For the domain classes in GORM's own test suites, both bindings produce the same
 * `insertable: false` and `updatable: false` are honored on a property with a column. On an embedded object they apply to every column of the object. On a `hasMany` and on the inverse side of a one-to-one (the side with no column) both bindings ignore them: the collection is written through its own table, and the foreign key lives on the other side.
 * A `discriminator` column may set `precision` and `scale`. They change nothing in the DDL of a string, integer or character column, in both bindings.
 * A multi-tenant id (`tenantId`) may have a mapped `type`: its column has the type, and the tenant filter still compares it with the current tenant.
+* The `defaultValue`, `comment`, `read` and `write` of the column mapping of an association or of a `hasMany` are put on the foreign key column (on the key column of a collection, and on the element column of a many-to-many for the options of the other side). The `length`, `precision` and `scale` change nothing: a foreign key column has the type of the column it references, and a `hasMany` of basic values ignores them too. This is the same in both bindings.
 * Identifier generators, inheritance strategies (single table, joined and table-per-concrete-class), discriminators, natural ids, optimistic locking, lazy and eager fetching, cascades, sorting, batch size and `cache` usage are mapped as with classic binding.
 
 [[nativeDomainBinding-refused]]
@@ -101,10 +102,6 @@ Nothing is ignored silently. A mapping that boots is bound the way it is written
 | A composite identifier that is combined with something the mapping does not state faithfully: a many-to-many, a map or a join table that involves an entity with a composite identifier, a composite identifier part that is the inverse side of a one-to-one, a foreign key mapped with a different number of columns than the identifier has properties, or a composite identifier referring to a deeply nested composite identifier.
 | `... composite identifier ...`, naming the entity and the part.
 | Give the entity a single-column identifier, or map the relationship with a domain class of its own.
-
-| A foreign key, join column or collection key whose column mapping sets `length`, `precision`, `scale`, `defaultValue`, `read`, `write` or `comment`.
-| `... the column config ... sets a length, a precision, a scale, a default, a read or write expression or a comment, which a join column cannot state`
-| Remove the option. A join column takes its type from the column it references.
 
 | An association mapped with a `formula`, or with several columns where the target does not have a composite identifier.
 | `... the association is mapped with a formula` or `... the mapping states several columns ...`

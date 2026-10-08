@@ -1312,12 +1312,6 @@ class GrailsDomainGenerator {
         if (indexTypeProblem != null) {
             return indexTypeProblem
         }
-        ColumnFacets key = collectionKeyFacets(property)
-        if (key.length() != null || key.precision() != null || key.scale() != null || key.defaultValue() != null ||
-                key.read() != null || key.write() != null || key.comment() != null) {
-            return 'the column config of the collection property sets a length, a precision, a scale, a default, a read or ' +
-                    'write expression or a comment, which a join column cannot state'
-        }
         return null
     }
 
@@ -1722,15 +1716,6 @@ class GrailsDomainGenerator {
                     other.hibernateMappedForm.joinTable.keys != null && other.hibernateMappedForm.joinTable.keys.size() > 1) {
                 return 'a join table has a composite key'
             }
-            ColumnFacets key = collectionKeyFacets(property)
-            ColumnFacets element = toOneColumnFacets(other)
-            for (ColumnFacets facets : [key, element]) {
-                if (facets.length() != null || facets.precision() != null || facets.scale() != null || facets.defaultValue() != null ||
-                        facets.read() != null || facets.write() != null || facets.comment() != null) {
-                    return 'the column config of a side of the many-to-many sets a length, a precision, a scale, a default, a read or ' +
-                            'write expression or a comment, which a join column cannot state'
-                }
-            }
         } else if (property.bidirectional) {
             if (!(property.hibernateInverseSide instanceof HibernateManyToOneProperty)) {
                 return "the other side [${property.hibernateInverseSide?.name}] is not a many-to-one"
@@ -1738,12 +1723,6 @@ class GrailsDomainGenerator {
         } else {
             if (mapped.joinTable.keys != null && mapped.joinTable.keys.size() > 1) {
                 return 'the join table has a composite key'
-            }
-            ColumnFacets key = collectionKeyFacets(property)
-            if (key.length() != null || key.precision() != null || key.scale() != null || key.defaultValue() != null ||
-                    key.read() != null || key.write() != null || key.comment() != null) {
-                return 'the column config of the collection property sets a length, a precision, a scale, a default, a read or ' +
-                        'write expression or a comment, which a join column cannot state'
             }
         }
         String indexTypeProblem = collectionIndexTypeProblem(property, kind)
@@ -1897,13 +1876,6 @@ class GrailsDomainGenerator {
         }
         if (mapped.derived) {
             return 'the association is mapped with a formula'
-        }
-        for (ColumnFacets key : toOneColumnsFacets(property)) {
-            if (key.length() != null || key.precision() != null || key.scale() != null || key.defaultValue() != null ||
-                    key.read() != null || key.write() != null || key.comment() != null) {
-                return 'the column config sets a length, a precision, a scale, a default, a read or write expression or a comment, ' +
-                        'which a join column cannot state'
-            }
         }
         return null
     }

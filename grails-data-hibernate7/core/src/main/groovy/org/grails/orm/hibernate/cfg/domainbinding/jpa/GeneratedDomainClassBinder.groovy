@@ -79,6 +79,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentP
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleIdentityProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyEntityProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToOneProperty
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
@@ -600,6 +601,9 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
             HibernatePersistentProperty part = entity.compositeIdentity.find { HibernatePersistentProperty candidate -> candidate.name == property.name }
             if (part != null) {
                 property.propertyAccessorName = propertyBinder.accessorName(part)
+                if (property.value instanceof ManyToOne && part instanceof HibernateToOneProperty) {
+                    alignJoinColumns(property.value, generator.toOneFacets((HibernateToOneProperty) part).joinColumns())
+                }
             }
         }
     }
@@ -625,7 +629,11 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
         if (persistentProperty instanceof HibernatePersistentProperty) {
             property.propertyAccessorName = propertyBinder.accessorName((HibernatePersistentProperty) persistentProperty)
         }
+        if (property.value instanceof ManyToOne && persistentProperty instanceof HibernateToOneProperty) {
+            alignJoinColumns(property.value, generator.toOneFacets((HibernateToOneProperty) persistentProperty).joinColumns())
+        }
         if (property.value instanceof Collection && persistentProperty instanceof HibernatePersistentProperty) {
+            alignJoinColumns((Collection) property.value, (HibernatePersistentProperty) persistentProperty)
             alignExtraLazy((Collection) property.value, (HibernatePersistentProperty) persistentProperty)
             alignCollectionTable((Collection) property.value, (HibernatePersistentProperty) persistentProperty)
             alignListIndexLength((Collection) property.value, (HibernatePersistentProperty) persistentProperty)
@@ -643,6 +651,48 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
                         (Component) property.value,
                         (GrailsHibernatePersistentEntity) embedded,
                         BeanUtils.findPropertyType(property.name, ownerClass))
+            }
+        }
+    }
+
+    /**
+     * The domain binder puts the {@code defaultValue}, {@code comment}, {@code read} and {@code write} of a column config on the foreign
+     * key column of a to-one association, on the key column of a collection and on the element column of a many-to-many (the {@code length},
+     * {@code precision} and {@code scale} change nothing, as the type of a foreign key column is the one of the column it references). A
+     * {@code @JoinColumn} states none of them, so they are set on the columns of the bound model.
+     */
+    private void alignJoinColumns(Collection collection, HibernatePersistentProperty property) {
+        if (property instanceof HibernateToManyEntityProperty) {
+            ToManyFacets facets = generator.toManyFacets((HibernateToManyEntityProperty) property)
+            alignJoinColumns(collection.key, facets.keys())
+            if (facets.manyToMany()) {
+                alignJoinColumns(collection.element, [facets.element()])
+            }
+        } else if (property instanceof HibernateBasicProperty) {
+            alignJoinColumns(collection.key, generator.collectionFacets((HibernateBasicProperty) property).keys())
+        }
+    }
+
+    private static void alignJoinColumns(Value value, List<ColumnFacets> facets) {
+        List<Column> columns = value.selectables.findAll { it instanceof Column }.collect { (Column) it }
+        for (int i = 0; i < facets.size(); i++) {
+            ColumnFacets facet = facets[i]
+            Column column = columns.size() == facets.size() ? columns[i] :
+                    columns.find { Column candidate -> candidate.name == facet.name().replace('`', '') }
+            if (column == null) {
+                continue
+            }
+            if (facet.defaultValue() != null) {
+                column.defaultValue = facet.defaultValue()
+            }
+            if (facet.comment() != null) {
+                column.comment = facet.comment()
+            }
+            if (facet.read() != null) {
+                column.customRead = facet.read()
+            }
+            if (facet.write() != null) {
+                column.customWrite = facet.write()
             }
         }
     }

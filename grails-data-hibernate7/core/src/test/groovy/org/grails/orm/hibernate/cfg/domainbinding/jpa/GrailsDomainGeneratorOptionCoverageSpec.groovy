@@ -40,6 +40,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProper
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyEntityProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToOneProperty
 
 /**
  * Guards the rule that {@link GrailsDomainGenerator} never drops a mapping option without a word. Every option of
@@ -107,9 +108,9 @@ class GrailsDomainGeneratorOptionCoverageSpec extends GrailsDomainGeneratorSuppo
             'column.enumType'              : ['mode', 'modes'],
             'column.index'                 : KINDS - ['home'],
             'column.unique'                : KINDS - ['home'],
-            'column.length'                : KINDS - ['home'],
-            'column.precision'             : KINDS - ['home'],
-            'column.scale'                 : KINDS - ['home'],
+            'column.length'                : KINDS - ['home'] - ['target', 'tags', 'targets', 'ordered'],
+            'column.precision'             : KINDS - ['home'] - ['target', 'tags', 'targets', 'ordered'],
+            'column.scale'                 : KINDS - ['home'] - ['target', 'tags', 'targets', 'ordered'],
             'column.defaultValue'          : KINDS - ['home'],
             'column.comment'               : KINDS - ['home'],
             'column.read'                  : KINDS - ['home'],
@@ -134,6 +135,11 @@ class GrailsDomainGeneratorOptionCoverageSpec extends GrailsDomainGeneratorSuppo
     private static final Map<String, List<String>> IGNORED_LIKE_THE_BINDER = [
             'property.insertable': NO_COLUMN_KINDS,
             'property.updatable' : NO_COLUMN_KINDS,
+            // the type of a foreign key column is the one of the column it references, and the binder ignores the length, precision and scale
+            // of a collection of basic values too
+            'column.length'      : ['target', 'tags', 'targets', 'ordered'],
+            'column.precision'   : ['target', 'tags', 'targets', 'ordered'],
+            'column.scale'       : ['target', 'tags', 'targets', 'ordered'],
     ]
 
     /** Options that change nothing anywhere, and why that is no silent drop. */
@@ -431,7 +437,7 @@ class GrailsDomainGeneratorOptionCoverageSpec extends GrailsDomainGeneratorSuppo
     /**
      * What the generator decides for the group: the generated classes (annotations and fields) and the facets that no annotation
      * carries but the binding of the generated classes applies to the bound properties: an extra-lazy collection, the indexes of the
-     * table of a collection and a lazy embedded property.
+     * table of a collection, a lazy embedded property and the default, comment and read and write expressions of a foreign key column.
      */
     private String signature() {
         Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateGroup(GenCovOwner, GenCovTarget)
@@ -445,7 +451,7 @@ class GrailsDomainGeneratorOptionCoverageSpec extends GrailsDomainGeneratorSuppo
     }
 
     private static String appliedAfterBinding(GrailsDomainGenerator generator, GrailsHibernatePersistentEntity entity) {
-        return entity.hibernatePersistentProperties.findAll { HibernatePersistentProperty property ->
+        String lazyAndIndexes = entity.hibernatePersistentProperties.findAll { HibernatePersistentProperty property ->
             if (property instanceof HibernateBasicProperty && generator.supports(property)) {
                 CollectionFacets facets = generator.collectionFacets((HibernateBasicProperty) property)
                 return facets.extraLazy() || !facets.indexes().isEmpty()
@@ -459,6 +465,26 @@ class GrailsDomainGeneratorOptionCoverageSpec extends GrailsDomainGeneratorSuppo
             }
             return false
         }*.name.sort().join(',')
+        return lazyAndIndexes + '#' + joinColumnExtras(generator, entity)
+    }
+
+    private static String joinColumnExtras(GrailsDomainGenerator generator, GrailsHibernatePersistentEntity entity) {
+        Closure<String> extras = { ColumnFacets facets -> "${facets.defaultValue()}|${facets.comment()}|${facets.read()}|${facets.write()}".toString() }
+        return entity.hibernatePersistentProperties.collect { HibernatePersistentProperty property ->
+            if (!generator.supports(property)) {
+                return ''
+            }
+            if (property instanceof HibernateToOneProperty) {
+                return "${property.name}=${generator.toOneFacets((HibernateToOneProperty) property).joinColumns().collect(extras)}".toString()
+            }
+            if (property instanceof HibernateToManyEntityProperty) {
+                return "${property.name}=${generator.toManyFacets((HibernateToManyEntityProperty) property).keys().collect(extras)}".toString()
+            }
+            if (property instanceof HibernateBasicProperty) {
+                return "${property.name}=${generator.collectionFacets((HibernateBasicProperty) property).keys().collect(extras)}".toString()
+            }
+            return ''
+        }.join(';')
     }
 }
 
