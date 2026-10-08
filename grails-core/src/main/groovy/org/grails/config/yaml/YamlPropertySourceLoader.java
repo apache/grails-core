@@ -50,6 +50,10 @@ import org.grails.config.NavigableMapPropertySource;
  */
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class YamlPropertySourceLoader extends YamlProcessor implements PropertySourceLoader {
+
+    private static final String PROFILE_SELECTOR = "spring.config.activate.on-profile";
+    private static final String LEGACY_PROFILE_SELECTOR = "spring.profiles";
+
     @Override
     public String[] getFileExtensions() {
         return new String[] { "yml", "yaml" };
@@ -66,8 +70,8 @@ public class YamlPropertySourceLoader extends YamlProcessor implements PropertyS
         final List<String> activeProfiles = Arrays.asList(
                 StringUtils.tokenizeToStringArray(System.getProperty("spring.profiles.active", ""), ","));
         setDocumentMatchers((DocumentMatcher) properties -> {
-            final String[] profiles = profileSelectors(properties, "spring.config.activate.on-profile");
-            final String[] legacyProfiles = profileSelectors(properties, "spring.profiles");
+            final String[] profiles = profileSelectors(properties, PROFILE_SELECTOR);
+            final String[] legacyProfiles = profileSelectors(properties, LEGACY_PROFILE_SELECTOR);
             final boolean matchesProfile = profiles.length == 0 ||
                     Profiles.of(profiles).matches(activeProfiles::contains);
             final boolean matchesLegacyProfile = legacyProfiles.length == 0 ||
@@ -98,6 +102,8 @@ public class YamlPropertySourceLoader extends YamlProcessor implements PropertyS
                     map.remove(filteredKey);
                 }
             }
+            // Spring Boot would evaluate these again against its own active profiles and drop the merged source.
+            map.keySet().removeIf(YamlPropertySourceLoader::isProfileSelectorKey);
             propertySource.merge(map, true);
         });
         propertySources.add(
@@ -107,13 +113,16 @@ public class YamlPropertySourceLoader extends YamlProcessor implements PropertyS
     }
 
     /**
-     * Collects the non-blank selector values for the given key. A scalar selector is read from the key itself,
-     * while a YAML sequence is flattened to indexed keys ({@code key[0]}, {@code key[1]}, ...) whose values are
-     * alternatives, matching how Spring Boot binds {@code spring.config.activate.on-profile} to a {@code String[]}.
+     * Collects the non-blank selector values for the given key. A scalar selector is read from the key itself and
+     * split on commas, while a YAML sequence is flattened to indexed keys ({@code key[0]}, {@code key[1]}, ...).
+     * Either way the values are alternatives, matching how Spring Boot binds {@code spring.config.activate.on-profile}
+     * to a {@code String[]}.
      */
     private static String[] profileSelectors(Properties properties, String key) {
         final List<String> selectors = new ArrayList<>();
-        addProfileSelector(selectors, properties.getProperty(key));
+        for (String selector : StringUtils.commaDelimitedListToStringArray(properties.getProperty(key))) {
+            addProfileSelector(selectors, selector);
+        }
         for (Object name : properties.keySet()) {
             if (name instanceof String && isIndexedKey((String) name, key)) {
                 addProfileSelector(selectors, properties.getProperty((String) name));
@@ -126,6 +135,11 @@ public class YamlPropertySourceLoader extends YamlProcessor implements PropertyS
         if (selector != null && !selector.trim().isEmpty()) {
             selectors.add(selector.trim());
         }
+    }
+
+    private static boolean isProfileSelectorKey(String name) {
+        return name.equals(PROFILE_SELECTOR) || isIndexedKey(name, PROFILE_SELECTOR) ||
+                name.equals(LEGACY_PROFILE_SELECTOR) || isIndexedKey(name, LEGACY_PROFILE_SELECTOR);
     }
 
     private static boolean isIndexedKey(String name, String key) {

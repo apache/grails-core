@@ -130,9 +130,19 @@ sample.message: selected
         'alpha'                   | ' alpha , dev '       | 'selected'
         'alpha'                   | 'dev,,alpha,alpha,'    | 'selected'
         'alpha'                   | 'dev,beta'            | 'default'
-        'dev,alpha'               | 'dev'                 | 'default'
-        'dev,alpha'               | 'alpha'               | 'default'
-        'dev,alpha'               | 'dev,alpha'           | 'default'
+        'dev,alpha'               | 'dev'                 | 'selected'
+        'dev,alpha'               | 'alpha'               | 'selected'
+        'dev,alpha'               | 'dev,alpha'           | 'selected'
+        ' dev , alpha '           | 'alpha'               | 'selected'
+        'dev,alpha'               | 'beta'                | 'default'
+        'dev,alpha'               | null                  | 'default'
+        'dev,,alpha,'             | 'alpha'               | 'selected'
+        'dev,,alpha,'             | 'beta'                | 'default'
+        ' , '                     | 'alpha'               | 'selected'
+        'beta, dev & alpha'       | 'dev,alpha'           | 'selected'
+        'beta, dev & alpha'       | 'alpha'               | 'default'
+        '!prod,!test'             | 'prod'                | 'selected'
+        '!prod,!test'             | 'prod,test'           | 'default'
         'alpha | beta'            | 'dev,alpha'           | 'selected'
         'alpha | beta'            | 'dev,beta'            | 'selected'
         'alpha | beta'            | 'dev,gamma'           | 'default'
@@ -203,6 +213,8 @@ sample.message: selected
         ['!prod', 'alpha']         | 'prod'         | 'default'
         ['!prod', 'alpha']         | 'prod,alpha'   | 'selected'
         ['!prod', 'alpha']         | null           | 'selected'
+        ['beta,alpha']             | 'alpha'        | 'default'
+        ['beta,alpha']             | 'beta,alpha'   | 'default'
         [' ', 'alpha']             | 'beta'         | 'default'
         [' ', 'alpha']             | 'alpha'        | 'selected'
         ['', ' ']                  | 'alpha'        | 'selected'
@@ -347,6 +359,58 @@ sample.message: selected
         'dev,gamma'      | 'default'
         'alpha'          | 'default'
         'dev,prod,alpha' | 'default'
+    }
+
+    void 'selected #selector documents do not retain the selector or replace profile settings'() {
+        given:
+        System.setProperty('spring.profiles.active', 'alpha')
+        def resource = new ByteArrayResource("""
+spring.profiles.active: alpha
+spring.profiles.include: [shared]
+sample.message: default
+---
+${selector}
+sample.message: selected
+""".bytes)
+
+        when:
+        def sources = new YamlPropertySourceLoader().load('application.yml', resource)
+        def config = new PropertySourcesConfig(sources.first())
+
+        then:
+        config.getProperty('sample.message') == 'selected'
+        config.getProperty('spring.profiles.active') == 'alpha'
+        config.getProperty('spring.profiles.include', List) == ['shared']
+        config.getProperty('spring.config.activate.on-profile') == null
+        config.getProperty('spring.config.activate.on-profile[0]') == null
+        sources.first().propertyNames.findAll { it.startsWith('spring.config') || it ==~ /spring\.profiles(\[\d+])?/ }.isEmpty()
+
+        where:
+        selector << [
+                'spring.config.activate.on-profile: alpha',
+                'spring.config.activate.on-profile: [beta, alpha]',
+                'spring:\n  config:\n    activate:\n      on-profile: alpha',
+                'spring.profiles: alpha',
+                'spring.profiles: [beta, alpha]',
+                'spring:\n  profiles:\n    - alpha'
+        ]
+    }
+
+    void 'keys that only share a prefix with a profile selector are retained'() {
+        given:
+        System.clearProperty('spring.profiles.active')
+        def resource = new ByteArrayResource('''
+spring.config.activate.on-profile-group: [alpha]
+spring.profiles.group.local: [alpha]
+sample.message: default
+'''.bytes)
+
+        when:
+        def config = new PropertySourcesConfig(new YamlPropertySourceLoader().load('application.yml', resource).first())
+
+        then:
+        config.getProperty('spring.config.activate.on-profile-group', List) == ['alpha']
+        config.getProperty('spring.profiles.group.local', List) == ['alpha']
     }
 
     void 'a resource containing only an inactive profile document contributes no property source'() {
