@@ -167,7 +167,7 @@ Some bugs of classic binding are not copied by native binding. Native binding do
 [[nativeDomainBinding-schema]]
 === Differences in the Schema
 
-The schema of 620 groups of related domain classes was created with both bindings on H2 and compared: tables, columns with type, nullability, default, length, precision and scale, primary keys with their column order, foreign keys, unique keys, indexes, check constraints and sequences. Apart from the 22 groups that native binding refuses, these are the differences. Other databases are not covered by this comparison, so verify against your own database as described below.
+The schema of 663 groups of related domain classes was created with both bindings on H2 and compared: tables, columns with type, nullability, default, length, precision and scale, primary keys with their column order, foreign keys, unique keys, indexes, check constraints and sequences. Apart from the 12 groups that native binding refuses, these are the differences. Other databases are not covered by this comparison, so verify against your own database as described below.
 
 [cols="2,3,3", options="header"]
 |===
@@ -206,6 +206,14 @@ The schema of 620 groups of related domain classes was created with both binding
 | A unique constraint over the columns of a `unique` group that includes an enum.
 | See <<nativeDomainBinding-behavior,Differences in Behavior>>.
 | `update` adds the constraint.
+
+| No unique key on the table of a collection for a `unique` group mapped on the collection property.
+| See <<nativeDomainBinding-behavior,Differences in Behavior>>.
+| The key never existed in a database created by classic binding: the statement that creates it fails.
+
+| No index named after a closure on the table of a collection whose `index` is a closure.
+| See <<nativeDomainBinding-behavior,Differences in Behavior>>.
+| A database created by classic binding has an index with a name that depends on the start it was created in. Drop it if you want to be rid of it.
 |===
 
 The comparison finds no difference in the unique keys, indexes and identifier columns that natural ids, `unique` groups and `index` options create: they have the same columns in the same order as with classic binding.
