@@ -1,0 +1,109 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+=== Upgrade Instructions for Grails 8 to Grails 9
+
+This guide outlines the changes introduced in Grails {version} and the steps required to upgrade your application from Grails 8.
+
+==== 1. Hibernate 7 Domain Binding
+
+These notes apply to applications that use GORM for Hibernate 7 (`grails-hibernate7`).
+
+===== 1.1 A Many-to-Many Without `belongsTo` Fails at Startup
+
+A bidirectional many-to-many is written by its owning side, which `belongsTo` designates.
+When neither side declares `belongsTo`, both collections used to be bound as inverse, so no join table row was ever written and the relationship was silently lost.
+The application now refuses to start instead:
+
+[source,text]
+----
+Neither side of the many-to-many between [com.example.Author.books] and [com.example.Book.authors] declares belongsTo, so the relationship would never be stored. Declare belongsTo on the owned side, for example in Book: static belongsTo = Author
+----
+
+The message is a Hibernate `MappingException`.
+It names both sides of each affected relationship, and the sides in alphabetical order.
+
+Declare `belongsTo` on the side that should be owned:
+
+[source,groovy]
+----
+class Book {
+    String title
+    static hasMany = [authors: Author]
+    static belongsTo = Author
+}
+
+class Author {
+    String name
+    static hasMany = [books: Book]
+}
+----
+
+The same applies to a many-to-many from a class to itself: `belongsTo` names the class itself.
+A unidirectional many-to-many, a many-to-many that has `belongsTo` on either side, and one where either side is a `Map` need no change.
+The rule is the same whether or not you enable native domain binding, see below.
+
+See link:{hibernate7Guide}index.html#gormAssociation-manyToMany[Many-to-Many Associations] in the GORM for Hibernate 7 manual.
+
+===== 1.2 Fixes That Change Mappings and Generated Schemas
+
+The following defects of the Hibernate 7 mapping are fixed.
+They are also fixed in the 8.0.x line, so an application that is already on a recent Grails 8 release has seen them.
+
+* *`insertable: false` and `updatable: false`* were ignored on every property.
+  They are honored now: a column mapped `insertable: false` is left out of the `INSERT`, and one mapped `updatable: false` is left out of the `UPDATE`.
+  Review the domain classes that use them, because values that used to be written are now not written.
+* *Enum columns* did not receive the `comment`, `defaultValue`, `read` and `write` of their column mapping.
+  They do now, so the generated column definition of an enum property changes.
+  Compare the generated schema with your database before you use `dbCreate: update`.
+* *Collections of basic values* of an owner with more than one unidirectional `hasMany` were not written to their table.
+  The elements are now stored.
+  No change is needed.
+* *The inverse side of a many-to-many* read a join table of its own default name when only the owning side named the join table.
+  The inverse side now reads the table that the owner writes.
+  An empty table with the default name may remain in an existing database.
+
+===== 1.3 Native Domain Binding
+
+GORM for Hibernate 7 can bind your domain classes with Hibernate's own annotation binder instead of building Hibernate's mapping itself.
+This is native domain binding.
+It is the direction GORM for Hibernate 7 is taking and is intended to become the default.
+In Grails {version} it is opt-in and the default stays classic binding.
+
+Enable it with the `hibernate.generatedDomainClasses` setting:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+hibernate:
+    generatedDomainClasses: true
+----
+
+Your domain classes, your queries and the GORM API do not change.
+The mapping can, though:
+
+* A few mapping options cannot be expressed with annotations.
+  Native binding refuses such a mapping with an `UnsupportedOperationException` at startup instead of ignoring the option.
+  Examples are an `index` or a `unique` group on a collection property, a natural id on a subclass, a collection inside an embedded class, and a `Map` on a many-to-many.
+* The generated schema differs from the one of classic binding in a few documented cases, for example a `check (idx >= 0)` constraint on the index column of every list, and the column types of foreign keys to nested composite identifiers.
+* A few defects of classic binding are not copied, such as a `unique` group that includes an enum property being dropped.
+
+Before you switch an existing database, run `dbm-gorm-diff` against a copy of it with the setting on.
+
+The link:{hibernate7Guide}index.html#advancedGORMFeatures-nativeDomainBinding[Native Domain Binding] chapter of the GORM for Hibernate 7 manual lists every refused mapping, every schema difference and what each means for an existing database.
