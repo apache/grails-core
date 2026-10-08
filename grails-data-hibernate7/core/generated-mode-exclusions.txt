@@ -28,6 +28,7 @@
 org.grails.orm.hibernate.cfg.domainbinding.GrailsPropertyBinderSpec
 org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicPropertySpec
 org.grails.orm.hibernate.cfg.domainbinding.jpa.EntityCollectionKeyDefectSpec
+org.grails.orm.hibernate.cfg.domainbinding.jpa.GrailsDomainBinderEmbeddedCollectionDefectSpec
 org.grails.orm.hibernate.cfg.domainbinding.jpa.GrailsDomainBinderOptionDefectSpec
 org.grails.orm.hibernate.cfg.domainbinding.jpa.GrailsDomainGeneratorDifferentialSpec
 org.grails.orm.hibernate.cfg.domainbinding.jpa.GrailsDomainGeneratorIndexSpec
