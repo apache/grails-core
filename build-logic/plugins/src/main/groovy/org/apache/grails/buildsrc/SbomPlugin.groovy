@@ -35,10 +35,12 @@ import org.cyclonedx.model.OrganizationalEntity
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.file.CopySpec
 import org.gradle.api.file.Directory
 import org.gradle.api.file.RegularFile
 import org.gradle.api.java.archives.Manifest
+import org.gradle.api.logging.Logger
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.bundling.Jar
 
@@ -294,7 +296,8 @@ class SbomPlugin implements Plugin<Project> {
                 Provider<String> sbomComponent = componentName
                 Provider<Boolean> isReproducibleBuildProvider = project.provider { lookupProperty(project, 'isReproducibleBuild') as boolean }
                 Provider<ZonedDateTime> buildDateProvider = project.provider { lookupProperty(project, 'buildDate') as ZonedDateTime }
-                doLast {
+                doLast { Task t ->
+                    Logger logger = t.logger
                     // json schema is documented here: https://cyclonedx.org/docs/1.6/json/
                     def rewriteSbom = { File f ->
                         def bom = new JsonSlurper().parse(f)
@@ -436,10 +439,10 @@ class SbomPlugin implements Plugin<Project> {
                 manifest.attributes('Sbom-Location': 'META-INF/sbom.json')
                 manifest.attributes('Sbom-Format': 'CycloneDX')
             }
-            jar.doFirst {
+            jar.doFirst { Task t ->
                 if (!publishesJavaComponent.get()) {
-                    jar.manifest.attributes.remove('Sbom-Location')
-                    jar.manifest.attributes.remove('Sbom-Format')
+                    ((Jar) t).manifest.attributes.remove('Sbom-Location')
+                    ((Jar) t).manifest.attributes.remove('Sbom-Format')
                 }
             }
         }

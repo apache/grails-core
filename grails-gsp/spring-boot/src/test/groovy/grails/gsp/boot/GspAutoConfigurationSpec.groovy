@@ -18,9 +18,13 @@
  */
 package grails.gsp.boot
 
+import org.springframework.core.env.StandardEnvironment
+import org.springframework.core.env.SystemEnvironmentPropertySource
+import org.springframework.core.io.ByteArrayResource
 import org.springframework.core.io.DefaultResourceLoader
 import org.springframework.core.io.ResourceLoader
 
+import org.grails.config.yaml.YamlPropertySourceLoader
 import org.grails.gsp.GroovyPage
 import org.grails.gsp.io.GroovyPageCompiledScriptSource
 import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator
@@ -75,8 +79,52 @@ class GspAutoConfigurationSpec extends Specification {
         !(locator().findPage('/probe.gsp') instanceof GroovyPageCompiledScriptSource)
     }
 
+    void 'the template roots are read from a list in application.yml with environment #variables'() {
+        given:
+        configuration.environment = environment('''\
+            spring:
+              gsp:
+                templateRoots:
+                  - classpath:/templates
+                  - "${EXAMPLE_TEMPLATE_ROOT:file:./src/main/resources/templates}"
+            '''.stripIndent(), variables)
+
+        expect:
+        configuration.templateRoots as List == ['classpath:/templates', root]
+        (locator().findPage('/probe.gsp') instanceof GroovyPageCompiledScriptSource) == compiled
+
+        where:
+        variables                                             | root                                    | compiled
+        [:]                                                   | 'file:./src/main/resources/templates'  | false
+        [EXAMPLE_TEMPLATE_ROOT: 'classpath:/other-templates'] | 'classpath:/other-templates'            | true
+    }
+
+    void 'comma-separated template roots are split into trimmed roots'() {
+        given:
+        configuration.environment = environment('spring.gsp.templateRoots: "classpath:/templates, file:./templates"')
+
+        expect:
+        configuration.templateRoots as List == ['classpath:/templates', 'file:./templates']
+        !(locator().findPage('/probe.gsp') instanceof GroovyPageCompiledScriptSource)
+    }
+
+    void 'no template roots are configured when the setting is absent'() {
+        given:
+        configuration.environment = environment('spring.gsp.reloadingEnabled: false')
+
+        expect:
+        configuration.templateRoots.length == 0
+    }
+
     private GrailsConventionGroovyPageLocator locator() {
         configuration.groovyPageLocator(resourceLoader)
+    }
+
+    private static StandardEnvironment environment(String yaml, Map<String, Object> variables = [:]) {
+        def environment = new StandardEnvironment()
+        environment.propertySources.addFirst(new YamlPropertySourceLoader().load('application.yml', new ByteArrayResource(yaml.bytes)).first())
+        environment.propertySources.addFirst(new SystemEnvironmentPropertySource('testEnvironment', variables))
+        environment
     }
 
     void 'the compiled views are left unread for an application served from #root'() {

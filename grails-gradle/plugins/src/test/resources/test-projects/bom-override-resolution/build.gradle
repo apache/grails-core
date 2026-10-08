@@ -34,12 +34,13 @@ ext['grouplib.version'] = '2.0.0'
 
 tasks.register('printVersions') {
     def runtimeClasspath = configurations.runtimeClasspath
+    def resolved = providers.provider {
+        runtimeClasspath.incoming.resolutionResult.allComponents
+                .collect { it.moduleVersion }
+                .findAll { it != null }
+                .collect { "${it.group}:${it.name}:${it.version}" as String }
+    }
     doLast {
-        runtimeClasspath.incoming.resolutionResult.allComponents.each { component ->
-            def id = component.moduleVersion
-            if (id != null) {
-                println "RESOLVED=${id.group}:${id.name}:${id.version}"
-            }
-        }
+        resolved.get().each { println "RESOLVED=${it}" }
     }
 }

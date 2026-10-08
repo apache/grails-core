@@ -8,9 +8,9 @@ tasks.register('printLauncher', JavaExec) {
 }
 
 tasks.register('checkToolchain') {
+    def hasLauncher = providers.provider { tasks.named('printLauncher', JavaExec).get().javaLauncher.isPresent() }
     doLast {
-        def launcher = tasks.named('printLauncher', JavaExec).get().javaLauncher
-        if (launcher.isPresent()) {
+        if (hasLauncher.get()) {
             println 'HAS_LAUNCHER=true'
         } else {
             println 'HAS_LAUNCHER=false'

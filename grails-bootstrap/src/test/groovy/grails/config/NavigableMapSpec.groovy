@@ -93,4 +93,62 @@ class NavigableMapSpec extends Specification {
         output['rabbitmq.connections']['foo'].username == 'guest'
         output['rabbitmq.connections']['foo'].password == 'guest'
     }
+
+    def "consecutive subscripts are collapsed to nested lists"() {
+        given:
+        Map input = [
+                'groups[0][0]': 'a',
+                'groups[0][1]': 'b',
+                'groups[1][0]': 'c',
+                'deep[0][0][0]': 'x',
+        ]
+
+        when:
+        Map output = new NavigableMap()
+        output.merge(input)
+
+        then:
+        output['groups'] == [['a', 'b'], ['c']]
+        output['deep'] == [[['x']]]
+
+        and: "each element stays readable under its indexed name"
+        output['groups[0][1]'] == 'b'
+        output['deep[0][0][0]'] == 'x'
+    }
+
+    def "consecutive subscripts followed by a property are collapsed to a map in a nested list"() {
+        given:
+        Map input = [
+                'items[0][1].name': 'n',
+                'items[0][1].host': 'h',
+                'routes[api][0]': '/a',
+                'routes[api][1]': '/b',
+        ]
+
+        when:
+        Map output = new NavigableMap()
+        output.merge(input)
+
+        then:
+        output['items'] == [[null, [name: 'n', host: 'h']]]
+        output['routes'] == [api: ['/a', '/b']]
+    }
+
+    def "dotted keys with consecutive subscripts are collapsed to nested lists"() {
+        given:
+        Map input = [
+                'app.groups[0][0]': 'a',
+                'app.groups[0][1]': 'b',
+                'app.groups[1][0]': 'c',
+        ]
+
+        when:
+        NavigableMap output = new NavigableMap()
+        output.merge(input, true)
+
+        then:
+        output['app.groups'] == [['a', 'b'], ['c']]
+        output['app.groups[1][0]'] == 'c'
+        output.navigate('app', 'groups') == [['a', 'b'], ['c']]
+    }
 }

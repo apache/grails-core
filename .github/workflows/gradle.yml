@@ -49,7 +49,7 @@ jobs:
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
@@ -93,7 +93,7 @@ jobs:
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
@@ -108,6 +108,30 @@ jobs:
           ./gradlew validateBomProperties
           --continue
           --stacktrace
+  validateGithubBranch:
+    name: 'Validate githubBranch'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v7.0.1
+      - name: "🔍 Verify githubBranch names the maintenance branch"
+        # The documentation links every page to its source on githubBranch, and a release fails unless githubBranch names
+        # the branch it targets, so a maintenance branch must set it to itself from the moment it is created. A pull
+        # request is checked against the branch it merges into. GitHub expressions have no regular expressions, so the
+        # step skips any branch that is not named X.Y.x.
+        env:
+          BRANCH: ${{ github.base_ref || github.ref_name }}
+        run: |
+          if [[ ! "${BRANCH}" =~ ^[0-9]+\.[0-9]+\.x$ ]]; then
+            echo "Skipping, ${BRANCH} is not a maintenance branch"
+            exit 0
+          fi
+          githubBranch=$(sed -n 's/^githubBranch=//p' gradle.properties)
+          if [[ "${githubBranch}" != "${BRANCH}" ]]; then
+            echo "❌ githubBranch in gradle.properties is '${githubBranch}', not ${BRANCH}." >&2
+            exit 1
+          fi
+          echo "✅ gradle.properties sets githubBranch=${BRANCH}"
   buildGradle:
     name: 'Build Gradle Plugins'
     strategy:
@@ -138,7 +162,7 @@ jobs:
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
@@ -162,6 +186,46 @@ jobs:
           --stacktrace
           --rerun-tasks
           -PskipCodeStyle
+  buildLogic:
+    # The build logic is an included build: the root build uses its plugins but never runs its tests
+    name: 'Build Logic'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v7.0.1
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v6.0.1
+        with:
+          distribution: liberica
+          java-version: 21
+      - name: "🗄️ Restore dependency jar cache"
+        uses: actions/cache@v6.1.0
+        with:
+          # Cache only downloaded dependency jars and wrapper distributions, never Grails build outputs.
+          # Keyed by branch version so each release branch maintains its own warm cache.
+          # Fixed-depth paths: the post step re-hashes after the build, where a `**` glob walks every output and times out.
+          path: |
+            ~/.gradle/caches/modules-2
+            ~/.gradle/wrapper
+          key: gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-${{ hashFiles('dependencies.gradle', 'gradle/wrapper/gradle-wrapper.properties', '*/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
+      - name: "🔍 Setup TestLens"
+        uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # v1.9.4
+      - name: "🔨 Build and test the build logic"
+        if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
+        working-directory: 'build-logic'
+        run: >
+          ./gradlew check
+          --continue
+          --stacktrace
   build:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: 'Build Grails-Core (${{ matrix.job_name }})'
@@ -236,15 +300,16 @@ jobs:
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
       - name: "🔍 Setup TestLens"
         uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # v1.9.4
       - name: "🔨 Build project"
+        # build-logic is an included build, so the specs of its vulnerability-scan plugin are run through the root build.
         run: >
-          ./gradlew ${{ matrix.gradle_task }}
+          ./gradlew ${{ matrix.gradle_task }} :build-logic-root:vulnerability-scan:check
           --continue
           --stacktrace
           -PonlyCoreTests
@@ -315,7 +380,7 @@ jobs:
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
@@ -323,7 +388,7 @@ jobs:
         uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # v1.9.4
       - name: "🔨 Build project"
         run: >
-          ./gradlew ${{ matrix.gradle_task }}
+          ./gradlew ${{ matrix.gradle_task }} :build-logic-root:vulnerability-scan:check
           --continue
           --rerun-tasks
           --stacktrace
@@ -372,7 +437,7 @@ jobs:
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
@@ -492,7 +557,7 @@ jobs:
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
@@ -572,7 +637,7 @@ jobs:
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
@@ -624,7 +689,7 @@ jobs:
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
@@ -678,7 +743,7 @@ jobs:
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
@@ -726,7 +791,7 @@ jobs:
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
@@ -790,7 +855,7 @@ jobs:
           path: ~/.embedmongo
           key: embedmongo-${{ runner.os }}-${{ matrix.mongodb-version }}
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
@@ -842,7 +907,7 @@ jobs:
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
@@ -924,7 +989,7 @@ jobs:
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
@@ -976,7 +1041,7 @@ jobs:
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
@@ -1018,7 +1083,7 @@ jobs:
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
@@ -1086,7 +1151,7 @@ jobs:
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
@@ -1153,7 +1218,7 @@ jobs:
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
@@ -1265,7 +1330,7 @@ jobs:
           restore-keys: |
             gradle-deps-${{ runner.os }}-${{ github.base_ref || github.ref_name }}-
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-disabled: true # dependency jars are cached by the explicit branch-keyed step above
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}

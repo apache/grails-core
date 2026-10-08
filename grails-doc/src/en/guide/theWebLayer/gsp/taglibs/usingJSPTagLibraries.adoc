@@ -39,7 +39,7 @@ Then you will need to declare the JSP taglib to use with the `taglib` directive 
 ----
 
 Besides this you have to configure Grails to scan for the JSP tld files.
-This is configured with the `grails.gsp.tldScanPattern` setting. It accepts a comma separated String value. Spring's PathMatchingResourcePatternResolver is used to resolve the patterns.
+This is configured with the `grails.gsp.tldScanPattern` setting. It accepts a comma separated String value or a list. Spring's PathMatchingResourcePatternResolver is used to resolve the patterns.
 
 For example, you could scan for all available tld files by adding this to `application.yml`:
 

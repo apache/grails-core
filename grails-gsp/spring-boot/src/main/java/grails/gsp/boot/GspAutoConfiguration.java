@@ -47,6 +47,7 @@ import org.springframework.beans.factory.support.GenericBeanDefinition;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.context.annotation.Bean;
@@ -114,7 +115,7 @@ public class GspAutoConfiguration {
 
     @Configuration
     @Import({TagLibraryLookupRegistrar.class, ReplaceViewResolverRegistrar.class})
-    protected static class GspTemplateEngineAutoConfiguration extends AbstractGspConfig {
+    protected static class GspTemplateEngineAutoConfiguration extends AbstractGspConfig implements EnvironmentAware {
         /** Where the {@code compileGroovyPages} build task writes the views it compiled. */
         protected static final String PRECOMPILED_VIEWS_LOCATION = "classpath:gsp/views.properties";
 
@@ -123,8 +124,7 @@ public class GspAutoConfiguration {
 
         private static final Logger logger = LoggerFactory.getLogger(GspTemplateEngineAutoConfiguration.class);
 
-        @Value("${spring.gsp.templateRoots:}")
-        String[] templateRoots;
+        String[] templateRoots = new String[0];
 
         @Value("${spring.gsp.locator.cacheTimeout:5000}")
         long locatorCacheTimeout;
@@ -134,6 +134,16 @@ public class GspAutoConfiguration {
 
         @Value("${sitemesh.decorator.default:}")
         String defaultLayoutName;
+
+        /**
+         * Reads {@code spring.gsp.templateRoots}, given as a comma-separated value or as a list. The
+         * roots are bound rather than injected with {@code @Value}, which cannot read a list from
+         * {@code application.yml}, because Grails exposes such a list element by element.
+         */
+        @Override
+        public void setEnvironment(Environment environment) {
+            templateRoots = Binder.get(environment).bind("spring.gsp.template-roots", String[].class).orElse(templateRoots);
+        }
 
         @Bean
         @ConditionalOnMissingBean(name = "groovyPagesTemplateEngine")

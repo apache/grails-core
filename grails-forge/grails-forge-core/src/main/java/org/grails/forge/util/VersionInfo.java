@@ -26,14 +26,18 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 
 public class VersionInfo {
 
+    private static final String END_OF_SUPPORT = "grails.endOfSupport";
     private static final Properties VERSIONS = new Properties();
 
     static {
@@ -95,13 +99,32 @@ public class VersionInfo {
     }
 
     /**
+     * Retrieves the last day the Grails release line is supported.
+     *
+     * @return The end of support date, or empty when none is configured
+     */
+    public static Optional<LocalDate> getEndOfSupport() {
+        Object endOfSupport = VERSIONS.get(END_OF_SUPPORT);
+        if (endOfSupport == null) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(LocalDate.parse(endOfSupport.toString().trim()));
+        } catch (DateTimeParseException e) {
+            return Optional.empty();
+        }
+    }
+
+    /**
      * Gets the dependency versions.
      *
      * @return The versions
      */
     public static Map<String, String> getDependencyVersions() {
         Map<String, String> map = new LinkedHashMap<>();
-        VERSIONS.entrySet().stream().sorted(Comparator.comparing(o -> o.getKey().toString()))
+        VERSIONS.entrySet().stream()
+                .filter(entry -> !END_OF_SUPPORT.equals(entry.getKey()))
+                .sorted(Comparator.comparing(o -> o.getKey().toString()))
                 .forEach((entry) -> map.put(entry.getKey().toString(), entry.getValue().toString()));
         return Collections.unmodifiableMap(map);
     }

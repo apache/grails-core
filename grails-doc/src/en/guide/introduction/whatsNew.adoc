@@ -32,6 +32,12 @@ Notable new features are included below.
 Grails {grailsMajorVersion} raises the standard build and runtime baseline to Java 21 and uses Gradle {gradleVersion}.
 The standard Grails BOM uses Groovy {groovyVersion} and Spock {spockVersion}.
 
+==== Gradle Configuration Cache
+
+Starting with Grails 8.0, the Grails Gradle plugins support the https://docs.gradle.org/{gradleVersion}/userguide/configuration_cache.html[Gradle configuration cache], and new applications and plugins turn it on in their `gradle.properties`.
+A build that runs the same tasks again skips configuring the project, so repeated runs of tasks such as `bootRun` and `test` start faster.
+See xref:commandLine#gradleConfigurationCache[Using the Gradle Configuration Cache] for how to enable it in an existing project and what it asks of build scripts.
+
 ==== Grails Micronaut Repository
 
 Grails Micronaut is maintained and released from the https://github.com/apache/grails-micronaut[Apache Grails Micronaut repository] and consumes published Grails Core artifacts.

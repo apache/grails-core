@@ -7,23 +7,29 @@ grails {
 }
 
 tasks.register('inspectBomSetup') {
-    doLast {
+    def report = providers.provider {
         // Observing compileClasspath runs the dependency actions of its whole hierarchy, so a
         // platform the plugin contributes lazily to 'implementation' would be declared by now.
         def compileDeps = configurations.compileClasspath.incoming.dependencies
         def hasPlatform = compileDeps.any { dep ->
             dep.group == 'org.apache.grails' && dep.name == 'grails-bom'
         }
-        println "HAS_PLATFORM_BOM=${hasPlatform}"
 
         // bom-property-overrides is now always applied (see GrailsGradlePlugin#applyGrailsBom for
         // why), so plugin identity alone no longer signals whether the BOM opt-out took effect.
         // What matters functionally is that it found nothing to override: no declared platform, so
         // no constraints added.
         def hasOverrideConstraints = !configurations.implementation.dependencyConstraints.isEmpty()
-        println "HAS_BOM_OVERRIDE_CONSTRAINTS=${hasOverrideConstraints}"
 
         def hasSpringDm = project.plugins.findPlugin('io.spring.dependency-management') != null
-        println "HAS_SPRING_DM=${hasSpringDm}"
+
+        [
+                "HAS_PLATFORM_BOM=${hasPlatform}",
+                "HAS_BOM_OVERRIDE_CONSTRAINTS=${hasOverrideConstraints}",
+                "HAS_SPRING_DM=${hasSpringDm}"
+        ]*.toString()
+    }
+    doLast {
+        report.get().each { println it }
     }
 }

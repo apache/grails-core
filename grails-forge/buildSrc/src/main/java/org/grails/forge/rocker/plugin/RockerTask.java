@@ -77,8 +77,7 @@ public abstract class RockerTask extends DefaultTask {
      */
     @TaskAction
     public void compileRocker() {
-        RockerConfiguration ext = (RockerConfiguration)
-                getProject().getExtensions().findByName("rocker");
+        RockerConfiguration ext = getRockerProjectConfig().get();
         File outputDir = getOutputDir().get().getAsFile();
         // Rocker only writes files, so remove sources generated from templates that no longer exist
         getFileSystemOperations().delete(spec -> spec.delete(outputDir));
@@ -89,7 +88,7 @@ public abstract class RockerTask extends DefaultTask {
     }
 
     /**
-     * Uses the project to get GradleExtension and runs the generator
+     * Runs the generator with the given configuration
      */
     public static void doCompileRocker(RockerConfiguration ext,
                                        Logger logger,

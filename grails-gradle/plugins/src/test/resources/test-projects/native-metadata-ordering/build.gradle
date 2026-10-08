@@ -9,16 +9,27 @@ plugins {
     id 'org.graalvm.buildtools.native' version '1.1.7'
 }
 
+// The build has no repositories, and the configuration cache resolves the classpaths of the
+// scheduled tasks even for a dry run, so nothing external is declared.
+grails {
+    bom = null
+    cliAutoProvision = false
+}
+
 tasks.register('inspectMetadataWiring') {
     def resourceTask = tasks.named('processResources')
     def bootJarTask = tasks.named('bootJar')
+    // What processResources takes its input from, which must no longer include the metadata.
+    def resourcesDependOnMetadata = providers.provider {
+        resourceTask.get().taskDependencies.getDependencies(resourceTask.get())
+                .any { it.name == 'generateNativeMetadata' }
+    }
+    def bootJarDependsOnMetadata = providers.provider {
+        bootJarTask.get().taskDependencies.getDependencies(bootJarTask.get())
+                .any { it.name == 'generateNativeMetadata' }
+    }
     doLast {
-        // What processResources takes its input from, which must no longer include the metadata.
-        println "PROCESS_RESOURCES_DEPENDS_ON_METADATA=" +
-                resourceTask.get().taskDependencies.getDependencies(resourceTask.get())
-                        .any { it.name == 'generateNativeMetadata' }
-        println "BOOTJAR_DEPENDS_ON_METADATA=" +
-                bootJarTask.get().taskDependencies.getDependencies(bootJarTask.get())
-                        .any { it.name == 'generateNativeMetadata' }
+        println "PROCESS_RESOURCES_DEPENDS_ON_METADATA=${resourcesDependOnMetadata.get()}"
+        println "BOOTJAR_DEPENDS_ON_METADATA=${bootJarDependsOnMetadata.get()}"
     }
 }

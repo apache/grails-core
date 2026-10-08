@@ -17,6 +17,13 @@
  *  under the License.
  */
 
+plugins {
+    // Reads projectVersion from the repository root gradle.properties, the file the release
+    // workflow bumps, so the suite always resolves the version the core build just published.
+    // Every subproject inherits it from here.
+    id 'org.apache.grails.buildsrc.properties'
+}
+
 def localMavenRepo = rootProject.layout.projectDirectory.dir('../build/local-maven')
 
 subprojects {

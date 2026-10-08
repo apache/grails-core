@@ -4,7 +4,8 @@ plugins {
 }
 
 tasks.register('inspectDefaults') {
+    def indy = providers.provider { project.extensions.getByName('grails').indy.get() }
     doLast {
-        println "INDY=${project.extensions.getByName('grails').indy.get()}"
+        println "INDY=${indy.get()}"
     }
 }

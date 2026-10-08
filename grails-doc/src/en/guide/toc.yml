@@ -86,6 +86,7 @@ commandLine:
     gradleDependencies: Defining Dependencies with Gradle
     gradleTasks: Working with Gradle Tasks
     gradlePlugins: Grails plugins for Gradle
+    gradleConfigurationCache: Using the Gradle Configuration Cache
 profiles:
   title: Application Profiles
   standardProfiles:

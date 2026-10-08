@@ -138,7 +138,7 @@ your own if you want a link to a controller to resolve.
 
 |`spring.gsp.templateRoots`
 |`classpath:/templates`, or `./src/main/resources/templates` when it exists
-|Where templates are loaded from. A `file:` root renders the templates themselves.
+|Where templates are loaded from, as a comma-separated value or a list. A `file:` root renders the templates themselves.
 
 |`spring.gsp.reloadingEnabled`
 |`true`
