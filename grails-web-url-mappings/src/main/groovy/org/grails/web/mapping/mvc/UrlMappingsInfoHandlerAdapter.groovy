@@ -167,14 +167,14 @@ class UrlMappingsInfoHandlerAdapter implements HandlerAdapter, ApplicationContex
                 if (modelAndView instanceof ModelAndView) {
                     return (ModelAndView) modelAndView
                 }
-                // All other render() variants (template, text, JSON, file, closure, object) set
-                // webRequest.renderView = false. If that flag is clear the response has already been
-                // handled; returning a ModelAndView here would cause DispatcherServlet to attempt
-                // view resolution and throw "Could not resolve view". (#15819)
-                if (!webRequest.renderView) {
-                    return null
-                }
                 if (result instanceof Map) {
+                    // All render() variants except render(view:) set webRequest.renderView = false.
+                    // Check the raw flag (not the composite isRenderView(), which also returns false
+                    // for error status, committed response, or redirect) so that only an explicit
+                    // render() call suppresses view resolution. (#15819)
+                    if (!webRequest.renderViewRequested) {
+                        return null
+                    }
                     String viewName = controllerClass.actionUriToViewName(action)
                     def finalModel = new LinkedHashMap<String, Object>()
                     def flashScope = webRequest.getFlashScope()
@@ -191,7 +191,7 @@ class UrlMappingsInfoHandlerAdapter implements HandlerAdapter, ApplicationContex
                 else if (result instanceof ModelAndView) {
                     return (ModelAndView) result
                 }
-                else if (result == null) {
+                else if (result == null && webRequest.renderView) {
                     return new ModelAndView(controllerClass.actionUriToViewName(action))
                 }
             }

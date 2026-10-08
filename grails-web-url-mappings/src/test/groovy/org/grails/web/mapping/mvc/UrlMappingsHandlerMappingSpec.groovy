@@ -19,6 +19,7 @@
 package org.grails.web.mapping.mvc
 
 import grails.artefact.Artefact
+import grails.artefact.Controller
 import grails.core.DefaultGrailsApplication
 import grails.util.GrailsWebMockUtil
 import grails.web.Action
@@ -295,8 +296,8 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
 
     @Issue('https://github.com/apache/grails-core/issues/15819')
     @Unroll
-    void "adapter returns null when renderView=false is set by action '#actionName' (result=#resultDesc)"() {
-        given: "a URL mapping for an action that sets renderView=false (simulating render(template:), render(text:), etc.)"
+    void "adapter returns null when render() writes the body for action '#actionName' (result=#resultDesc)"() {
+        given: "a URL mapping for an action that calls render() to write the response body"
         def grailsApplication = new DefaultGrailsApplication(FooController)
         grailsApplication.initialise()
         def holder = getUrlMappingsHolder {
@@ -319,8 +320,8 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
 
         where:
         actionName              | resultDesc
-        'renderText'            | 'null (renderView=false, returns null)'
-        'renderTextWithMap'     | 'Map (renderView=false, action also returns a Map)'
+        'renderText'            | 'null (render(text:) returns null)'
+        'renderTextWithMap'     | 'Map (render(text:) called, action also returns a Map)'
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15819')
@@ -348,13 +349,38 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         result.viewName == '/foo/myView'
     }
 
+    @Issue('https://github.com/apache/grails-core/issues/15819')
+    void "adapter returns ModelAndView when action sets an error status and returns a model (guard must not swallow error views)"() {
+        given: "a URL mapping for an action that sets an error status and returns a model"
+        def grailsApplication = new DefaultGrailsApplication(FooController)
+        grailsApplication.initialise()
+        def holder = getUrlMappingsHolder {
+            "/foo/errorWithModel"(controller: "foo", action: "errorWithModel")
+        }
+        holder = new GrailsControllerUrlMappings(grailsApplication, holder)
+        def handler = new UrlMappingsHandlerMapping(holder)
+
+        when: "the request is dispatched"
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        webRequest.renderView = true
+        def request = webRequest.request
+        request.setRequestURI("/foo/errorWithModel")
+        def handlerChain = handler.getHandler(request)
+        def handlerAdapter = new UrlMappingsInfoHandlerAdapter()
+        def result = handlerAdapter.handle(request, webRequest.response, handlerChain.handler)
+
+        then: "the adapter returns a ModelAndView so the error view is rendered — the guard must not swallow it"
+        result != null
+        result.model == [message: 'not found']
+    }
+
     void cleanup() {
         RequestContextHolder.resetRequestAttributes()
     }
 }
 
 @Artefact('Controller')
-class FooController  {
+class FooController implements Controller {
 
     static defaultAction = 'fooBar'
 
@@ -379,27 +405,22 @@ class FooController  {
     }
 
     /**
-     * Simulates render(text: 'hello') or render(template: '_partial'): sets renderView=false,
-     * writes content, returns null. The adapter must return null so DispatcherServlet does not
-     * attempt view resolution. (#15819)
+     * Calls render(text:), which sets renderView=false and writes the body. The adapter must
+     * return null so DispatcherServlet does not attempt view resolution. (#15819)
      */
     @Action
     def renderText() {
-        def webRequest = RequestContextHolder.currentRequestAttributes()
-        webRequest.renderView = false
-        webRequest.response.writer.write('hello')
+        render(text: 'hello')
         null
     }
 
     /**
-     * Simulates an action that calls render(text:) but also returns a Map — the bug scenario
-     * from #15819 where the adapter previously ignored renderView=false when result instanceof Map.
+     * Calls render(text:) and also returns a Map — the exact bug scenario from #15819 where the
+     * adapter previously ignored renderView=false when result instanceof Map.
      */
     @Action
     def renderTextWithMap() {
-        def webRequest = RequestContextHolder.currentRequestAttributes()
-        webRequest.renderView = false
-        webRequest.response.writer.write('hello')
+        render(text: 'hello')
         [foo: 'bar']
     }
 
@@ -410,11 +431,22 @@ class FooController  {
      */
     @Action
     def renderView() {
-        def webRequest = RequestContextHolder.currentRequestAttributes()
-        webRequest.request.setAttribute(
+        request.setAttribute(
             GrailsApplicationAttributes.MODEL_AND_VIEW,
             new ModelAndView('/foo/myView')
         )
         null
+    }
+
+    /**
+     * Sets an error status on the response and returns a model Map without calling render().
+     * The renderView flag stays true, so the adapter must still return a ModelAndView and let
+     * DispatcherServlet render the error view. The guard introduced for #15819 must not swallow
+     * this case. (#15819)
+     */
+    @Action
+    def errorWithModel() {
+        response.status = 404
+        [message: 'not found']
     }
 }
