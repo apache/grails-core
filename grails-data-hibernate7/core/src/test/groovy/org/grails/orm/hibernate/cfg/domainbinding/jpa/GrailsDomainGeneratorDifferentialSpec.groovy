@@ -228,7 +228,8 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                             }
                             continue
                         }
-                        if (property instanceof HibernateBasicProperty) {
+                        // a collection the mapping types with a class or serializable is one column of the owner's table, compared like any column
+                        if (property instanceof HibernateBasicProperty && !(bound?.value instanceof BasicValue)) {
                             if (!generator.validationAnnotations(property).isEmpty()) {
                                 skipped['bean validation constraints (applied by Hibernate after binding)']++
                             } else if (bound == null || !(bound.value instanceof HibernateCollection)) {
@@ -286,7 +287,7 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                             mismatches.addAll(compareEnum(where, (HibernateEnumProperty) property, generator, bound))
                         }
                         if (!(property instanceof HibernateSimpleIdentityProperty)) {
-                            mismatches.addAll(compareType(where, property, generator, bound, explicitTypes))
+                            mismatches.addAll(compareType(where, property, generator, bound, explicitTypes, property instanceof HibernateBasicProperty))
                         }
                     }
                 }
@@ -1066,11 +1067,11 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
      */
     private List<String> compareType(
             String where, HibernatePersistentProperty property, GrailsDomainGenerator generator,
-            Property bound, Map<String, Integer> explicitTypes) {
+            Property bound, Map<String, Integer> explicitTypes, boolean wholeCollection = false) {
         BasicValue value = (BasicValue) bound.value
         TypeFacets facets = generator.typeFacets(property)
-        // a collection property is typed with its element's class
-        Class<?> type = property instanceof HibernateBasicProperty ? ((HibernateBasicProperty) property).componentType : property.type
+        // a collection property is typed with its element's class, unless the whole collection is one column
+        Class<?> type = property instanceof HibernateBasicProperty && !wholeCollection ? ((HibernateBasicProperty) property).componentType : property.type
         List<String> found = []
         Map<String, String> actualParameters = [:]
         value.typeParameters?.stringPropertyNames()?.each { String key -> actualParameters[key] = value.typeParameters.getProperty(key) }

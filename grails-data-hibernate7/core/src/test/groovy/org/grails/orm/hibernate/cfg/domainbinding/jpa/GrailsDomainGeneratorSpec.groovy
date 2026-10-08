@@ -1296,14 +1296,14 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         newGenerator().unsupportedReason(entity, property).contains('SortedSet')
     }
 
-    void "a type mapped on the collection property itself is rejected by name"() {
+    void "a type name mapped on the collection property is rejected by name, because the binder gives it to the element as a class name and cannot boot"() {
         given:
         GrailsHibernatePersistentEntity entity = unbound(GenCollTyped)
         HibernateBasicProperty property = (HibernateBasicProperty) entity.getHibernatePropertyByName('notes')
 
         expect:
         !newGenerator().supports(property)
-        newGenerator().unsupportedReason(entity, property).contains('a type is mapped on the collection property itself')
+        newGenerator().unsupportedReason(entity, property).contains('names neither a class nor serializable')
     }
 
     void "a collection of embedded objects is rejected by name, because the binder cannot bind one"() {

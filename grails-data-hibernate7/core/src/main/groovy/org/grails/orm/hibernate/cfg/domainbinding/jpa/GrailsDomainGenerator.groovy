@@ -21,6 +21,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.jpa
 import java.lang.annotation.Annotation
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
+import java.sql.Types
 
 import groovy.transform.CompileStatic
 import jakarta.persistence.AssociationOverride
@@ -68,6 +69,7 @@ import net.bytebuddy.description.annotation.AnnotationDescription
 import net.bytebuddy.description.method.MethodDescription
 import net.bytebuddy.description.modifier.TypeManifestation
 import net.bytebuddy.description.modifier.Visibility
+import net.bytebuddy.description.type.TypeDefinition
 import net.bytebuddy.description.type.TypeDescription
 import net.bytebuddy.description.type.TypeList
 import net.bytebuddy.dynamic.DynamicType
@@ -113,6 +115,7 @@ import org.hibernate.generator.Assigned
 import org.hibernate.generator.Generator
 import org.hibernate.type.BasicType
 import org.hibernate.type.spi.TypeConfiguration
+import org.hibernate.usertype.UserCollectionType
 import org.hibernate.usertype.UserType
 
 import org.springframework.util.ClassUtils
@@ -807,12 +810,12 @@ class GrailsDomainGenerator {
             for (HibernatePersistentProperty peer : embeddedPeers(embedded)) {
                 collectConstraintSites(peer, current, sites)
             }
-        } else if (property instanceof HibernateBasicProperty || property instanceof HibernateToManyEntityProperty ||
+        } else if ((property instanceof HibernateBasicProperty && !boundAsColumn(property)) || property instanceof HibernateToManyEntityProperty ||
                 isDerived(property) || (property instanceof HibernateToOneProperty && boundAsOneToOne((HibernateToOneProperty) property))) {
             return
         } else {
             ColumnConfig columnConfig = firstColumnConfig(property.hibernateMappedForm)
-            boolean enumeration = property instanceof HibernateEnumProperty
+            boolean enumeration = property instanceof HibernateEnumProperty && !boundAsColumn(property)
             String name = enumeration ?
                     ((HibernateEnumProperty) property).resolveEnumColumnName(namingStrategy, columnNames, path) :
                     columnNames.getColumnNameForPropertyAndPath(property, path, columnConfig)
@@ -1014,9 +1017,11 @@ class GrailsDomainGenerator {
     }
 
     private TypeDecision decideType(HibernatePersistentProperty property) {
-        boolean isEnum = property instanceof HibernateEnumProperty
+        // a collection stored in one column is typed as a column of its own Java type, which is the collection
+        boolean column = boundAsColumn(property)
+        boolean isEnum = property instanceof HibernateEnumProperty && !column
         // the type of a collection property is the collection's; the binder types the element with the component type
-        boolean element = property instanceof HibernateBasicProperty
+        boolean element = property instanceof HibernateBasicProperty && !column
         Class<?> type = isEnum ? ((HibernateEnumProperty) property).enumType :
                 (element ? ((HibernateBasicProperty) property).componentType : property.type)
         String name = property.getTypeName(type)
@@ -1038,6 +1043,9 @@ class GrailsDomainGenerator {
         if (!explicit) {
             // type parameters with no type to give them to: the binder hands them to a built-in type, which ignores them
             return new TypeDecision(true, name, null)
+        }
+        if (column && property.isSerializableType()) {
+            return serializedCollectionType(parameters)
         }
         Class<?> named = loadClass(name, property)
         if (named != null) {
@@ -1075,6 +1083,18 @@ class GrailsDomainGenerator {
                     'stating it would need a converter, which annotations do not say for a type name'
         }
         return new TypeDecision(false, name, null, problem)
+    }
+
+    /**
+     * {@code serializable} on a collection stored in one column: the collection is serialized to bytes, the type Hibernate registers
+     * under that name for {@code Serializable}. A field declared {@code Serializable} (the property of the real class is read and
+     * written by its own accessors, whatever the field says) has that Java type, and the JDBC type is the binary one.
+     */
+    private static TypeDecision serializedCollectionType(Map<String, String> parameters) {
+        if (!parameters.isEmpty()) {
+            return new TypeDecision(false, 'serializable', null, 'is a registered type with type parameters, which no annotation states')
+        }
+        return new TypeDecision(true, 'serializable', new TypeFacets(null, Types.VARBINARY, parameters, Serializable))
     }
 
     private static Class<?> loadClass(String name, HibernatePersistentProperty property) {
@@ -1175,6 +1195,9 @@ class GrailsDomainGenerator {
      */
     private String collectionProblem(HibernateBasicProperty property) {
         PropertyConfig mapped = property.hibernateMappedForm
+        if (boundAsColumn(property)) {
+            return columnCollectionProblem(property)
+        }
         String writeProblem = writeRestrictionProblem(mapped)
         if (writeProblem != null) {
             return writeProblem
@@ -1188,7 +1211,7 @@ class GrailsDomainGenerator {
                     'the only ones the binder creates a collection for'
         }
         if (mapped.type != null) {
-            return 'a type is mapped on the collection property itself, which the binder applies to the collection and its element alike'
+            return mappedCollectionTypeProblem(property)
         }
         Class<?> elementType = property.componentType
         if (elementType == null || elementType == Object) {
@@ -1322,6 +1345,49 @@ class GrailsDomainGenerator {
         return property.isBidirectional() ?
                 (property.hibernateInverseSide instanceof HibernateManyToManyProperty || Map.isAssignableFrom(property.type)) :
                 !property.hibernateMappedForm.hasJoinKeyMapping()
+    }
+
+    /**
+     * The binder binds a collection property as one column of the owner's table, typed with the mapping's {@code type}, when the type
+     * is a class that is not a collection type (a {@code UserType}, for example) or {@code serializable}
+     * ({@code GrailsPropertyBinder}): it is no collection then, and has the index, the unique group and the column settings of any
+     * other column. Any other {@code type} stays a type of the collection, which no collection of values accepts (see
+     * {@link #mappedCollectionTypeProblem}).
+     */
+    private static boolean boundAsColumn(HibernatePersistentProperty property) {
+        return property instanceof HibernateBasicProperty && (property.isUserButNotCollectionType() || property.isSerializableType())
+    }
+
+    /**
+     * @return why the generator cannot describe the collection of values stored in one column ({@link #boundAsColumn}), or {@code null}
+     *     when it can: it is described like the column of a simple property, typed with the mapping's type
+     */
+    private String columnCollectionProblem(HibernateBasicProperty property) {
+        PropertyConfig mapped = property.hibernateMappedForm
+        if (mapped.columns != null && mapped.columns.size() > 1) {
+            return 'the mapping states several columns for a collection stored in one column'
+        }
+        TypeDecision type = decideType(property)
+        if (!type.supported) {
+            return "the type [${type.name}] ${type.problem}"
+        }
+        return null
+    }
+
+    /**
+     * A {@code type} on a collection property that is neither a class nor {@code serializable}: the binder gives the name to the
+     * element of the collection as a class name and fails to boot ({@code Could not load requested class: text}, probed for the
+     * registered names {@code string}, {@code text}, {@code materialized_clob} and {@code yes_no}), and a custom collection type is a
+     * class the generator does not describe yet.
+     */
+    private static String mappedCollectionTypeProblem(HibernateBasicProperty property) {
+        Class<?> userType = property.userType
+        if (userType != null && UserCollectionType.isAssignableFrom(userType)) {
+            return 'a custom collection type (a UserCollectionType) is mapped on the collection property, which the generator does not ' +
+                    'support yet'
+        }
+        return "the type [${property.hibernateMappedForm.typeName}] mapped on the collection property names neither a class nor " +
+                "serializable: the binder gives the name to the element as a class name and fails to boot ('Could not load requested class')"
     }
 
     /**
@@ -1580,8 +1646,13 @@ class GrailsDomainGenerator {
                 return compositeProblem
             }
         }
-        if (mapped.type != null) {
-            return 'a type is mapped on the collection property itself, which the binder applies to the collection and its element alike'
+        if (property.isUserButNotCollectionType()) {
+            return 'a class is mapped as the type of the collection property, which the binder binds as one column of the owner\'s table ' +
+                    'that holds the collection, and Hibernate fails to boot for a collection of entities'
+        }
+        if (mapped.type != null && property.userType != null) {
+            return 'a custom collection type (a UserCollectionType) is mapped on the collection property, which the generator does not ' +
+                    'support yet'
         }
         if (property instanceof HibernateManyToManyProperty) {
             HibernateAssociation other = property.hibernateInverseSide
@@ -2033,6 +2104,9 @@ class GrailsDomainGenerator {
      * {@link Column}, in the order the binder applies them.
      */
     ColumnFacets columnFacets(HibernatePersistentProperty property) {
+        if (boundAsColumn(property)) {
+            return basicColumnFacets(property, null, null)
+        }
         if (property instanceof HibernateBasicProperty) {
             throw new IllegalArgumentException(
                     "Property [${property.name}] is a collection: it has a key, an element and perhaps an index column, see collectionFacets")
@@ -2412,7 +2486,7 @@ class GrailsDomainGenerator {
         if (property instanceof HibernateEmbeddedProperty) {
             return defineEmbeddedField(builder, (HibernateEmbeddedProperty) property, embeddables, true)
         }
-        if (property instanceof HibernateBasicProperty) {
+        if (property instanceof HibernateBasicProperty && !boundAsColumn(property)) {
             return defineCollectionField(builder, (HibernateBasicProperty) property)
         }
         if (property instanceof HibernateToOneProperty) {
@@ -2445,8 +2519,29 @@ class GrailsDomainGenerator {
         for (Annotation constraint : carriedAnnotations(property)) {
             annotations << AnnotationDescription.ForLoadedAnnotation.of(constraint)
         }
-        return builder.defineField(property.name, type?.javaType() ?: columnFieldType(property), Visibility.PRIVATE)
+        return builder.defineField(property.name, fieldType(property, type), Visibility.PRIVATE)
                 .annotateField(annotations as AnnotationDescription[])
+    }
+
+    /**
+     * The type of the field of a column: the Java type the type facets name, else the property's. Hibernate's annotation binder takes a
+     * field of a collection type with no element type for a basic collection and fails to bind it, so a collection stored in one column
+     * is declared with its element type (and the {@code String} key of a map), and a serialized one with {@code Serializable}.
+     */
+    private TypeDefinition fieldType(HibernatePersistentProperty property, TypeFacets type) {
+        if (type?.javaType() != null) {
+            return TypeDescription.ForLoadedType.of(type.javaType())
+        }
+        if (boundAsColumn(property)) {
+            HibernateBasicProperty collection = (HibernateBasicProperty) property
+            Class<?> element = property instanceof HibernateEnumProperty ? ((HibernateEnumProperty) property).enumType : collection.componentType
+            if (element != null && element != Object) {
+                return CollectionKind.MAP.javaType.isAssignableFrom(property.type) ?
+                        TypeDescription.Generic.Builder.parameterizedType(property.type, String, element).build() :
+                        TypeDescription.Generic.Builder.parameterizedType(property.type, element).build()
+            }
+        }
+        return TypeDescription.ForLoadedType.of(columnFieldType(property))
     }
 
     /**
