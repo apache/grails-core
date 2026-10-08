@@ -684,6 +684,11 @@ class GrailsDomainGenerator {
                 isCustomProperty(property) || isEmbeddedValue(property)) && !decideType(property).supported) {
             return typeNotSupported(property, decideType(property))
         }
+        PropertyConfig stated = property.hibernateMappedForm
+        if (stated != null && stated.columns != null && stated.columns.size() > 1) {
+            return "Property [${property.name}] of [${entity.name}] is mapped with ${stated.columns.size()} columns, which the binder " +
+                    "cannot bind either: it fails with 'maps to ${stated.columns.size()} columns but 1 columns are required'"
+        }
         return "Property [${property.name}] of [${entity.name}] is a ${property.getClass().simpleName}, " +
                 'which the generator does not support yet'
     }
@@ -1063,10 +1068,6 @@ class GrailsDomainGenerator {
         }
         PropertyConfig mappedForm = property.hibernateMappedForm
         if (mappedForm.columns != null && mappedForm.columns.size() > 1) {
-            return false
-        }
-        if (property instanceof HibernateEnumProperty && mappedForm.derived) {
-            // the enum binder never reads the formula, it always binds a column
             return false
         }
         TypeDecision decision = decideType(property)

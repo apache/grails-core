@@ -95,6 +95,7 @@ class GeneratedDomainClassesBinderLeniencySpec extends Specification {
         'a property of a serializable class with no type'   | [GblSerializable]          | 'gbl_serializable' | ['id', 'version', 'thing']
         'an embedded property that is given a user type'    | [GblUserTyped]             | 'gbl_user_typed'  | ['id', 'version', 'home']
         'an embedded type that extends a domain class'      | [GblEmbBase, GblEmbOwner]  | 'gbl_emb_owner'   | ['id', 'version', 'emb_id', 'emb_a', 'emb_b']
+        'an enum mapped with a formula'                     | [GblEnumFormula]           | 'gbl_enum_formula' | ['id', 'version', 'color']
     }
 
     @Unroll
@@ -118,6 +119,7 @@ class GeneratedDomainClassesBinderLeniencySpec extends Specification {
         'a property of a serializable class with no type'   | [GblSerializable]          | 'serialCycle'    | ['first', 'second']
         'an embedded property that is given a user type'    | [GblUserTyped]             | 'userTypedCycle' | ['STREET', 'AVENUE']
         'an embedded type that extends a domain class'      | [GblEmbBase, GblEmbOwner]  | 'embeddedSubCycle' | ['a1/b1', 'a2/b2']
+        'an enum mapped with a formula'                     | [GblEnumFormula]           | 'enumFormulaCycle' | ['GREEN', 'RED']
     }
 
     private List tagsCycle() {
@@ -174,6 +176,13 @@ class GeneratedDomainClassesBinderLeniencySpec extends Specification {
         String first = GblEmbOwner.withNewSession { GblEmbOwner owner = GblEmbOwner.get(id); "${owner.emb.a}/${owner.emb.b}".toString() }
         GblEmbOwner.withTransaction { GblEmbOwner owner = GblEmbOwner.get(id); owner.emb = new GblEmbSub(a: 'a2', b: 'b2'); owner.save(failOnError: true, flush: true) }
         return [first, GblEmbOwner.withNewSession { GblEmbOwner owner = GblEmbOwner.get(id); "${owner.emb.a}/${owner.emb.b}".toString() }]
+    }
+
+    private List enumFormulaCycle() {
+        Long id = GblEnumFormula.withTransaction { new GblEnumFormula(color: GblColor.GREEN).save(failOnError: true, flush: true).id }
+        String first = GblEnumFormula.withNewSession { GblEnumFormula.get(id).color.name() }
+        GblEnumFormula.withTransaction { GblEnumFormula row = GblEnumFormula.get(id); row.color = GblColor.RED; row.save(failOnError: true, flush: true) }
+        return [first, GblEnumFormula.withNewSession { GblEnumFormula.get(id).color.name() }]
     }
 
     private List serialCycle() {
@@ -335,4 +344,15 @@ class GblEmbOwner {
     GblEmbSub emb
 
     static embedded = ['emb']
+}
+
+enum GblColor { RED, GREEN }
+
+@Entity
+class GblEnumFormula {
+    GblColor color
+
+    static mapping = {
+        color formula: 'upper(color)'
+    }
 }

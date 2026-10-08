@@ -94,7 +94,7 @@ class GrailsDomainGeneratorOptionCoverageSpec extends GrailsDomainGeneratorSuppo
             'property.updatable'           : COLUMN_KINDS,
             'property.type'                : ['basic'],
             'property.typeClass'           : ['basic', 'number', 'mode', 'home', 'tags', 'modes', 'targets', 'ordered'],
-            'property.derived'             : ['basic', 'number', 'mode', 'target'],
+            'property.derived'             : ['basic', 'number', 'target'],
             'property.cache'               : COLLECTIONS,
             'property.batchSize'           : COLLECTIONS,
             'property.sort'                : ['targets'],
@@ -138,6 +138,8 @@ class GrailsDomainGeneratorOptionCoverageSpec extends GrailsDomainGeneratorSuppo
             'property.updatable' : NO_COLUMN_KINDS,
             // the type of a foreign key column is the one of the column it references, and the binder ignores the length, precision and scale
             // of a collection of basic values too
+            // the enum binder never reads the formula of an enum property, it always binds a column
+            'property.derived'   : ['mode'],
             'column.length'      : ['target', 'tags', 'targets', 'ordered'],
             'column.precision'   : ['target', 'tags', 'targets', 'ordered'],
             'column.scale'       : ['target', 'tags', 'targets', 'ordered'],
