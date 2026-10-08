@@ -98,9 +98,10 @@ hibernate:
 Your domain classes, your queries and the GORM API do not change.
 The mapping can, though:
 
-* A few mapping options cannot be expressed with annotations.
-  Native binding refuses such a mapping with an `UnsupportedOperationException` at startup instead of ignoring the option.
+* Native binding refuses a mapping only when classic binding cannot use it either: classic binding fails to start with it, or boots it and fails on the first row.
+  The refusal is an `UnsupportedOperationException` at startup that says what classic binding does.
   The manual chapter lists them.
+  The one exception today is an embedded object as a part of a composite identifier, which classic binding boots and native binding does not support yet.
 * The generated schema differs from the one of classic binding in a few documented cases, for example a `check (idx >= 0)` constraint on the index column of every list, and the column types of foreign keys to nested composite identifiers.
 * A few defects of classic binding are not copied, such as a `unique` group that includes an enum property being dropped.
 * A `hasMany` inside a class listed in `static embedded` that more than one embedded property embeds gets a collection table of its own for every owner.

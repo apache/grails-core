@@ -80,7 +80,7 @@ For the domain classes in GORM's own test suites, both bindings produce the same
 [[nativeDomainBinding-refused]]
 === Mappings Native Binding Refuses
 
-Native binding does not refuse a mapping that classic binding accepts and can use. It refuses the mappings below, which classic binding cannot use either: classic binding fails to start with them, or it boots them and fails on the first row. The application fails at startup. The exception has an `UnsupportedOperationException` as its root cause, and the message names the domain class and the property, and says what classic binding does with the mapping.
+Native binding does not refuse a mapping that classic binding accepts and can use, with the one exception at the end of the table. It refuses the mappings below, which classic binding cannot use either: classic binding fails to start with them, or it boots them and fails on the first row. The application fails at startup. The exception has an `UnsupportedOperationException` as its root cause, and the message names the domain class and the property, and says what classic binding does with the mapping.
 
 [cols="2,3,3", options="header"]
 |===
@@ -107,6 +107,10 @@ Native binding does not refuse a mapping that classic binding accepts and can us
 | A collection that classic binding cannot create: a `SortedSet` of basic values, a `UserType` class as the `type` of a `hasMany` of domain classes, a `Map` of enums, a collection declared with a type that is not `Set`, `SortedSet`, `List`, `Collection` or `Map` (for example `HashSet`), a `hasMany` of a class that is not a domain class, an unknown `indexColumn` type, a default `sort` on a unidirectional `hasMany`, a `Map` or `Set` on a many-to-many that neither side owns (no `belongsTo`), and a hierarchy that mixes inheritance strategies.
 | `Collection property [...]: ...`, `Association property [...]: ...` or `Entity [...] uses ... but the root of its hierarchy uses ...`
 | Change the mapping as the message says. Classic binding fails to start with each of them.
+
+| An embedded object as a part of a composite identifier (`id composite: ['code', 'address']` where `address` is listed in `static embedded`). Classic binding boots this mapping; native binding does not support it yet.
+| `Composite identifier part [...] of [...] is a HibernateEmbeddedProperty, which the generator does not support yet ...`
+| Name the properties of the embedded class in the identifier, or give the entity a single-column identifier.
 
 | A registered Hibernate type name as the `type` of an enum property (`type: 'integer'`), or a registered type that converts its value (`yes_no`) as the `type` of the `indexColumn` of a list or a map.
 | `Type [...] of property [...] is a registered type on an enum ...` or `... the index column type [...] is a registered type that converts its value ...`
@@ -148,7 +152,7 @@ Some bugs of classic binding are not copied by native binding. Native binding do
 [[nativeDomainBinding-schema]]
 === Differences in the Schema
 
-The schema of 734 groups of related domain classes was created with both bindings on H2 and compared: tables, columns with type, nullability, default, length, precision and scale, primary keys with their column order, foreign keys, unique keys, indexes, check constraints and sequences. Native binding booted every group that classic binding boots, and these are the differences. Other databases are not covered by this comparison, so verify against your own database as described below.
+The schema of 765 groups of related domain classes was created with both bindings on H2 and compared: tables, columns with type, nullability, default, length, precision and scale, primary keys with their column order, foreign keys, unique keys, indexes, check constraints and sequences. Native binding booted every group that classic binding boots, and these are the differences. Other databases are not covered by this comparison, so verify against your own database as described below.
 
 [cols="2,3,3", options="header"]
 |===
@@ -211,7 +215,7 @@ The comparison finds no difference in the unique keys, indexes and identifier co
 
 Do not switch a production database over blindly. Whether `dbCreate: update` or a Liquibase changelog would change anything depends on the differences above.
 
-. Start the application with `hibernate.generatedDomainClasses: true` against a copy of your schema. Fix every refused mapping from the table above.
+. Start the application with `hibernate.generatedDomainClasses: true` against a copy of your schema. Fix every refused mapping from the table above; classic binding cannot use these either.
 . Run <<ref-diff-scripts-dbm-gorm-diff,dbm-gorm-diff>> against the copy. An empty diff means the switch does not change the schema. Otherwise, compare each reported change with the table above, and apply the changes you want through a migration.
 . Run your test suite once with the setting on.
 . Set the property in the environment where you want it first, for example in `development` only.
@@ -228,4 +232,4 @@ Envers audits the same entities and writes the same revisions with both bindings
 
 === Reporting an Unsupported Mapping
 
-If a mapping is refused that you think should work, or if the schema differs in a way that this page does not list, open an issue at https://github.com/apache/grails-core/issues with the domain classes, the `static mapping` blocks and the exception message or the DDL of each binding. The refusals above are not permanent; each one is a mapping that native binding does not yet express, and the list is expected to shrink.
+If a mapping is refused that you think should work, or if the schema differs in a way that this page does not list, open an issue at https://github.com/apache/grails-core/issues with the domain classes, the `static mapping` blocks and the exception message or the DDL of each binding. Native binding is meant to accept every mapping that classic binding can use, so a mapping that classic binding accepts and uses and that native binding refuses is a bug of native binding.
