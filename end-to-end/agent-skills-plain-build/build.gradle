@@ -23,7 +23,7 @@
 // the skill configuration itself, since nothing applies the BOM for it. agent-skills checks what it
 // extracts.
 plugins {
-    id 'com.skillsjars.gradle-plugin' version '0.1.4'
+    id 'com.skillsjars.gradle-plugin' version '0.2.0'
 }
 
 dependencies {

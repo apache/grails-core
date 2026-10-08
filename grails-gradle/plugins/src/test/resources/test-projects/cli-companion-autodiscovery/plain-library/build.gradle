@@ -1,0 +1,6 @@
+// A library of the same build without a cli companion, so discovery has nothing to bind for it
+plugins {
+    id 'java-library'
+}
+
+group = 'org.example.test'

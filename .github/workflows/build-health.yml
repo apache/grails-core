@@ -41,13 +41,18 @@ jobs:
           distribution: liberica
           java-version: 21
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "🩺 Check Core Projects"
         # build-logic is an included build, so its own health task is invoked through the root build.
-        run: ./gradlew buildHealth :build-logic-root:buildHealth --continue
+        # With the configuration cache enabled, core analysis retains about 3.7 GiB after mixed GC.
+        # The full analysis passed with a 5 GiB daemon and four workers, without any full GC.
+        run: >
+          ./gradlew buildHealth :build-logic-root:buildHealth --continue
+          --max-workers=4
+          -Dorg.gradle.jvmargs="-Dfile.encoding=UTF-8 -Xmx5G"
       - name: "📤 Upload Reports"
         if: always()
         uses: actions/upload-artifact@v7.0.1
@@ -80,7 +85,7 @@ jobs:
           distribution: liberica
           java-version: 21
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
@@ -117,7 +122,7 @@ jobs:
           distribution: liberica
           java-version: 21
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}

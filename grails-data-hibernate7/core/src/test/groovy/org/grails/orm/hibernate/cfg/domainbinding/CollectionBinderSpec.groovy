@@ -78,7 +78,7 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
     }
 
     def setupSpec() {
-        manager.registerDomainClasses(Person, Pet, CBManyToManyA, CBManyToManyB)
+        manager.registerDomainClasses(Person, Pet, CBManyToManyA, CBManyToManyB, CBNamedOwner, CBNamedInverse, CBOwnNameOwner, CBOwnNameInverse)
     }
 
     void "test bindCollection delegates configuration to property.setCollection"() {
@@ -116,6 +116,86 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
         collection.collectionTable.name == "custom_join_table"
         collection.collectionTable.schema == "custom_schema"
         collection.collectionTable.catalog == "custom_catalog"
+    }
+
+    void "the inverse side of a many-to-many adopts the join table the owner configures"() {
+        given:
+        def inverseEntity = mappingContext.getPersistentEntity(CBNamedInverse.name) as GrailsHibernatePersistentEntity
+        def ownersProp = inverseEntity.getPropertyByName("owners") as HibernateToManyProperty
+
+        when:
+        binder.bindCollection(ownersProp, "")
+
+        then:
+        def joinTable = ownersProp.hibernateMappedForm.joinTable
+        joinTable.name == "cb_named_join"
+        joinTable.schema == "cb_schema"
+        joinTable.keys*.name == ["inverse_ref"]
+        joinTable.column.name == "owner_ref"
+    }
+
+    void "the owning side keeps its own join table configuration when the inverse side is bound"() {
+        given:
+        def ownerEntity = mappingContext.getPersistentEntity(CBNamedOwner.name) as GrailsHibernatePersistentEntity
+        def othersProp = ownerEntity.getPropertyByName("others") as HibernateToManyProperty
+
+        when:
+        binder.bindCollection(othersProp, "")
+
+        then:
+        def joinTable = othersProp.hibernateMappedForm.joinTable
+        joinTable.name == "cb_named_join"
+        joinTable.keys*.name == ["owner_ref"]
+        joinTable.column.name == "inverse_ref"
+    }
+
+    void "an inverse side that names its own join table is not overwritten by the owner's"() {
+        given:
+        def inverseEntity = mappingContext.getPersistentEntity(CBOwnNameInverse.name) as GrailsHibernatePersistentEntity
+        def ownersProp = inverseEntity.getPropertyByName("owners") as HibernateToManyProperty
+
+        when:
+        binder.bindCollection(ownersProp, "")
+
+        then:
+        def joinTable = ownersProp.hibernateMappedForm.joinTable
+        joinTable.name == "cb_inverse_own_name"
+        joinTable.schema == null
+    }
+}
+
+@Entity
+class CBNamedOwner {
+    Long id
+    static hasMany = [others: CBNamedInverse]
+    static mapping = {
+        others joinTable: [name: 'cb_named_join', schema: 'cb_schema', key: 'owner_ref', column: 'inverse_ref']
+    }
+}
+
+@Entity
+class CBNamedInverse {
+    Long id
+    static hasMany = [owners: CBNamedOwner]
+    static belongsTo = CBNamedOwner
+}
+
+@Entity
+class CBOwnNameOwner {
+    Long id
+    static hasMany = [others: CBOwnNameInverse]
+    static mapping = {
+        others joinTable: [name: 'cb_owner_name', schema: 'cb_schema']
+    }
+}
+
+@Entity
+class CBOwnNameInverse {
+    Long id
+    static hasMany = [owners: CBOwnNameOwner]
+    static belongsTo = CBOwnNameOwner
+    static mapping = {
+        owners joinTable: [name: 'cb_inverse_own_name']
     }
 }
 

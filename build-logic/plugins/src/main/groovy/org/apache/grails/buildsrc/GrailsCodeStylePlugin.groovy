@@ -26,6 +26,7 @@ import groovy.transform.CompileStatic
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.plugins.quality.Checkstyle
 import org.gradle.api.plugins.quality.CheckstyleExtension
 import org.gradle.api.plugins.quality.CheckstylePlugin
@@ -224,13 +225,14 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
         project.tasks.register('codenarcFix') {
             it.group = 'verification'
             it.description = 'Automatically fixes some CodeNarc violations'
-            it.doLast {
-                project.fileTree(project.projectDir) {
-                    it.include 'src/**/*.groovy'
-                    it.include 'grails-app/**/*.groovy'
-                    it.include 'scripts/**/*.groovy'
-                    it.exclude '**/build/**'
-                }.each { file ->
+            def sources = project.fileTree(project.projectDir) {
+                it.include 'src/**/*.groovy'
+                it.include 'grails-app/**/*.groovy'
+                it.include 'scripts/**/*.groovy'
+                it.exclude '**/build/**'
+            }
+            it.doLast { Task task ->
+                sources.each { file ->
                     String content = file.text
                     String original = content
 
@@ -268,7 +270,7 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
 
                     if (content != original) {
                         file.text = content
-                        project.logger.lifecycle("Fixed CodeNarc violations in ${file.path}")
+                        task.logger.lifecycle("Fixed CodeNarc violations in ${file.path}")
                     }
                 }
             }

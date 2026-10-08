@@ -66,6 +66,7 @@ final class ActiveProcessorCountArgumentProvider implements CommandLineArgumentP
     }
 }
 
+boolean cacheTests = !doNotCacheTests
 allprojects {
     tasks.withType(Test).configureEach { testTask ->
         testTask.dependsOn(
@@ -75,8 +76,8 @@ allprojects {
 
         // Honor DO_NOT_CACHE_TESTS=1 so developers can repeatedly invoke the same test command
         // without --rerun-tasks (and without recompiling everything else).
-        testTask.outputs.cacheIf { !doNotCacheTests }
-        testTask.outputs.upToDateWhen { !doNotCacheTests }
+        testTask.outputs.cacheIf { cacheTests }
+        testTask.outputs.upToDateWhen { cacheTests }
         testTask.jvmArgumentProviders.add(new ActiveProcessorCountArgumentProvider(
                 Runtime.runtime.availableProcessors(), gradle.startParameter.maxWorkerCount))
     }

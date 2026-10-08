@@ -13,8 +13,21 @@ grails {
 
 tasks.register('inspectCommandPackaging') {
     dependsOn 'jar'
+    def runtimeJarFile = providers.provider { tasks.named('jar', Jar).get().archiveFile.get().asFile }
+    def jarEntries = { File jarFile ->
+        def entries = new LinkedHashSet<String>()
+        jarFile.withInputStream { InputStream input ->
+            new java.util.jar.JarInputStream(input).withCloseable { java.util.jar.JarInputStream jar ->
+                java.util.jar.JarEntry entry
+                while ((entry = jar.nextJarEntry) != null) {
+                    entries << entry.name
+                }
+            }
+        }
+        entries
+    }
     doLast {
-        def runtimeJar = tasks.named('jar', Jar).get().archiveFile.get().asFile
+        def runtimeJar = runtimeJarFile.get()
         def runtimeEntries = jarEntries(runtimeJar)
         println "RUNTIME_JAR=${runtimeJar.name}"
         println "RUNTIME_HAS_SCRIPT=${runtimeEntries.contains('META-INF/commands/legacy-only-script.groovy')}"
@@ -22,17 +35,4 @@ tasks.register('inspectCommandPackaging') {
         println "RUNTIME_HAS_GSP_TEMPLATE=${runtimeEntries.contains('META-INF/templates/legacy-only.gsp')}"
         println "RUNTIME_SCRIPT_COUNT=${runtimeEntries.count { it.startsWith('META-INF/commands/') && !it.endsWith('/') }}"
     }
-}
-
-static Set<String> jarEntries(File jarFile) {
-    def entries = new LinkedHashSet<String>()
-    jarFile.withInputStream { InputStream input ->
-        new java.util.jar.JarInputStream(input).withCloseable { java.util.jar.JarInputStream jar ->
-            java.util.jar.JarEntry entry
-            while ((entry = jar.nextJarEntry) != null) {
-                entries << entry.name
-            }
-        }
-    }
-    entries
 }

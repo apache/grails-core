@@ -191,6 +191,30 @@ class TableSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<F
 		except << ['', [], null]
 	}
 
+    void 'table tag skips the columns excluded by a list in application.yml with environment #variables'() {
+        given:
+        List<String> defaultExclusions = tagLib.exclusionsList
+        tagLib.environment = applicationYml('grails.plugin.fields.exclusions.list: [lastUpdated, "${EXAMPLE_EXCLUDED:password}"]', variables)
+
+        when:
+        def table = XML.parse(applyTemplate('<f:table collection="collection" maxProperties="0"/>', [collection: personList]))
+        def columns = table.thead.tr.th.a.collect { it.text().trim() }
+
+        then: 'the configured list replaces the default, which excludes the id'
+        tagLib.exclusionsList == ['lastUpdated', excluded]
+        'Id' in columns
+        !('Last Updated' in columns)
+        !(column in columns)
+
+        cleanup:
+        tagLib.exclusionsList = defaultExclusions
+
+        where:
+        variables                   | excluded   | column
+        [:]                         | 'password' | 'Password'
+        [EXAMPLE_EXCLUDED: 'minor'] | 'minor'    | 'Minor'
+    }
+
 	@Issue('https://github.com/grails/fields/issues/264')
 	void "table tag renders transient columns set by '<f:table collection=\"collection\" properties=\"['transient']\"/>'"() {
 		given:

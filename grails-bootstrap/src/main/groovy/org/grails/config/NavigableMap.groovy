@@ -221,61 +221,11 @@ class NavigableMap implements Map<String, Object>, Cloneable {
             if (subscriptStart > -1) {
                 String k = sourceKey[0..<subscriptStart]
                 String index = sourceKey[subscriptStart + 1..<subscriptEnd]
-                String remainder = subscriptEnd != sourceKey.length() - 1 ? sourceKey[subscriptEnd + 2..-1] : null
-                if (remainder) {
-
-                    boolean isNumber = index.isNumber()
-                    if (isNumber) {
-                        int i = index.toInteger()
-                        def currentValue = targetMap.get(k)
-                        List list = currentValue instanceof List ? currentValue : []
-                        if (list.size() > i) {
-                            def v = list.get(i)
-                            if (v instanceof Map) {
-                                ((Map) v).put(remainder, sourceValue)
-                            } else {
-                                Map newMap = [:]
-                                newMap.put(remainder, sourceValue)
-                                fill(list, i, null)
-                                list.set(i, newMap)
-                            }
-                        } else {
-                            Map newMap = [:]
-                            newMap.put(remainder, sourceValue)
-                            fill(list, i, null)
-                            list.set(i, newMap)
-                        }
-                        targetMap.put(k, list)
-                    } else {
-                        def currentValue = targetMap.get(k)
-                        Map nestedMap = currentValue instanceof Map ? currentValue : [:]
-                        targetMap.put(k, nestedMap)
-
-                        def v = nestedMap.get(index)
-                        if (v instanceof Map) {
-                            ((Map) v).put(remainder, sourceValue)
-                        } else {
-                            Map newMap = [:]
-                            newMap.put(remainder, sourceValue)
-                            nestedMap.put(index, newMap)
-                        }
-                    }
-                } else {
-                    def currentValue = targetMap.get(k)
-                    if (index.isNumber()) {
-                        List list = currentValue instanceof List ? currentValue : []
-                        int i = index.toInteger()
-                        fill(list, i, null)
-                        list.set(i, sourceValue)
-                        targetMap.put(k, list)
-                    } else {
-                        Map nestedMap = currentValue instanceof Map ? currentValue : [:]
-                        targetMap.put(k, nestedMap)
-                        nestedMap.put(index, sourceValue)
-                    }
+                String rest = sourceKey.substring(subscriptEnd + 1)
+                targetMap.put(k, setSubscriptValue(targetMap.get(k), index, rest, sourceValue))
+                if (isSubscriptChain(rest)) {
                     targetMap.put(sourceKey, sourceValue)
                 }
-
             }
         } else {
             Object currentValue = targetMap.containsKey(sourceKey) ? targetMap.get(sourceKey) : null
@@ -365,6 +315,44 @@ class NavigableMap implements Map<String, Object>, Cloneable {
             }
             return submap
         }
+    }
+
+    /**
+     * Sets a value in a list (numeric index) or map (other index) at the given subscript, creating
+     * the container when the current value is not one. The text following the subscript is either
+     * empty, further subscripts such as {@code [1]} for a list nested in a list, or a {@code .name}
+     * remainder stored as a key of a map element.
+     */
+    private Object setSubscriptValue(Object currentValue, String index, String rest, Object sourceValue) {
+        if (index.isNumber()) {
+            List list = currentValue instanceof List ? (List) currentValue : []
+            int i = index.toInteger()
+            fill(list, i, null)
+            list.set(i, subscriptElementValue(list.get(i), rest, sourceValue))
+            return list
+        }
+        Map nestedMap = currentValue instanceof Map ? (Map) currentValue : [:]
+        nestedMap.put(index, subscriptElementValue(nestedMap.get(index), rest, sourceValue))
+        return nestedMap
+    }
+
+    private Object subscriptElementValue(Object currentValue, String rest, Object sourceValue) {
+        if (!rest) {
+            return sourceValue
+        }
+        if (rest.startsWith('[')) {
+            int end = rest.indexOf(']')
+            if (end > 0) {
+                return setSubscriptValue(currentValue, rest[1..<end], rest.substring(end + 1), sourceValue)
+            }
+        }
+        Map element = currentValue instanceof Map ? (Map) currentValue : [:]
+        element.put(rest.substring(1), sourceValue)
+        return element
+    }
+
+    private static boolean isSubscriptChain(String rest) {
+        rest ==~ /(\[[^\]]*\])*/
     }
 
     private void fill(List list, Integer toIndex, Object value) {

@@ -384,11 +384,11 @@ class GormRegistry {
     }
 
     /**
-     * Completely removes a datastore from the registry.
+     * Completely removes a datastore from the registry. The global constraint registry is cleared
+     * only when the last datastore goes away, since other datastores still registered share it.
      */
     void removeDatastore(Datastore datastore) {
         if (datastore == null) return
-        removeConstraints()
         allDatastores.remove(datastore)
         datastoresByType.remove(datastore.getClass())
 
@@ -415,6 +415,7 @@ class GormRegistry {
         // references (classloader retention across reloads) and normalizedQualifiers grows by one
         // entry per tenant identifier ever seen.
         if (allDatastores.isEmpty()) {
+            removeConstraints()
             normalizedEntityKeysByClass.clear()
             normalizedEntityKeysByName.clear()
             normalizedQualifiers.clear()
@@ -1068,7 +1069,8 @@ class GormRegistry {
      * underlying constraint registry this clears is global), so takes no parameters, same as the
      * original. Lives here, not on {@code GormEnhancer}, because {@link #removeDatastore(Datastore)}
      * already owns every other piece of teardown for a datastore going away (API deregistration,
-     * datastore mapping cleanup, metaclass cleanup); constraint removal is one more.
+     * datastore mapping cleanup, metaclass cleanup); constraint removal is one more, run when the
+     * last datastore is removed so that datastores still registered keep the constraint.
      */
     @CompileDynamic
     void removeConstraints() {

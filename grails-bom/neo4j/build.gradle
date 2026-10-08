@@ -140,13 +140,16 @@ validateNoSnapshotDependencies.configure { Task it ->
     it.group = 'publishing'
     it.description = 'Validates that no snapshot dependencies are present in the project when performing a release.'
 
+    Provider<List<String>> snapshotDependencies = provider {
+        configurations.collectMany { config ->
+            config.allDependencies
+                    .findAll { dep -> dep.version && dep.version.contains('-SNAPSHOT') }
+                    .collect { dep -> "${dep.group}:${dep.name} (${dep.version})" as String }
+        }
+    }
     it.doLast {
-        configurations.each { config ->
-            config.allDependencies.each { dep ->
-                if (dep.version && dep.version.contains('-SNAPSHOT')) {
-                    throw new GradleException("Releases cannot have a snapshot dependency: ${dep.group}:${dep.name} (${dep.version})")
-                }
-            }
+        if (snapshotDependencies.get()) {
+            throw new GradleException("Releases cannot have a snapshot dependency: ${snapshotDependencies.get().first()}")
         }
     }
 }
@@ -162,6 +165,18 @@ if (ext.isReleaseBuild && ext.isPublishedExternal) {
     }
 }
 
+// The pom customization runs as the POM is generated, when the configuration cache allows no access
+// to the other projects, so it reads what it needs of them from this provider
+Provider<PropertyNameCalculator> bomPropertyNames = provider {
+    PropertyNameCalculator propertyNameCalculator = new PropertyNameCalculator(combinedPlatforms, combinedDependencies, combinedVersions)
+    propertyNameCalculator.addForcedGroupPrefix('org.apache.grails.profiles', 'grails-profile')
+    propertyNameCalculator.addProjects(rootProject.subprojects)
+    for (String gradleArtifactId : project.ext.gradleBuildProjects) {
+        propertyNameCalculator.addProject('org.apache.grails.gradle', gradleArtifactId, project.version as String, gradleArtifactId)
+    }
+    propertyNameCalculator
+}
+
 ext {
     pomDescription = 'Grails Neo4j BOM (Bill of Materials) for managing dependency versions used by Grails Projects with Neo4j'
     pomCustomization = { xml ->
@@ -172,12 +187,7 @@ ext {
         def depMgmt = root.dependencyManagement?.getAt(0)
         def deps = depMgmt?.dependencies?.getAt(0)
         if (deps) {
-            PropertyNameCalculator propertyNameCalculator = new PropertyNameCalculator(combinedPlatforms, combinedDependencies, combinedVersions)
-            propertyNameCalculator.addForcedGroupPrefix('org.apache.grails.profiles', 'grails-profile')
-            propertyNameCalculator.addProjects(rootProject.subprojects)
-            for (String gradleArtifactId : project.ext.gradleBuildProjects) {
-                propertyNameCalculator.addProject('org.apache.grails.gradle', gradleArtifactId, project.version as String, gradleArtifactId)
-            }
+            PropertyNameCalculator propertyNameCalculator = bomPropertyNames.get()
 
             Map<String, String> pomProperties = [:]
             deps.dependency.each { dep ->

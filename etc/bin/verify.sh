@@ -113,6 +113,11 @@ group_start "Verifying CLI Distribution ..."
 group_end
 echo "✅ CLI Distribution Verified"
 
+group_start "Verifying Documentation Distribution ..."
+"${SCRIPT_DIR}/verify-docs-distribution.sh" "${RELEASE_TAG}" "${DOWNLOAD_LOCATION}"
+group_end
+echo "✅ Documentation Distribution Verified"
+
 group_start "Verifying JAR Artifacts ..."
 "${SCRIPT_DIR}/verify-jar-artifacts.sh" "${RELEASE_TAG}" "${DOWNLOAD_LOCATION}"
 group_end
@@ -168,6 +173,19 @@ else
   VERIFY_FAILED=1
 fi
 
+group_start "Verifying Reproducible Documentation ..."
+set +e
+"${SCRIPT_DIR}/verify-docs-reproducible.sh" "${RELEASE_TAG}" "${DOWNLOAD_LOCATION}"
+DOCS_REPRODUCIBLE_STATUS=$?
+set -e
+group_end
+if [ "${DOCS_REPRODUCIBLE_STATUS}" -eq 0 ]; then
+  echo "✅ Reproducible Documentation Verified"
+else
+  echo "❌ Reproducible Documentation verification failed (exit ${DOCS_REPRODUCIBLE_STATUS})"
+  VERIFY_FAILED=1
+fi
+
 echo "Manual verification steps:"
 echo
 echo "☑️ 1 | Verify that the generated applications start correctly"
@@ -184,6 +202,9 @@ echo "☑️ 2 | Verify Grails command resolution"
 echo "     2.1 | Run './grailsw help' inside any of the app directories above."
 echo "     2.2 | Confirm that scaffolding commands (e.g. 'generate-*') are listed."
 echo "           This verifies that dynamic command resolution is working correctly."
+echo
+echo "☑️ 3 | Review the documentation"
+echo "     3.1 | Open ${DOWNLOAD_LOCATION}/apache-grails-${VERSION}-docs/html/index.html and browse the guide, reference and API pages."
 echo
 
 if [ "${VERIFY_FAILED}" -ne 0 ]; then

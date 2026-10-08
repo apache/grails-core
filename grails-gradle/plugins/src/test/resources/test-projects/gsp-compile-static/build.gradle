@@ -19,14 +19,18 @@ tasks.register('runsTheApplication', JavaExec) {
 }
 
 tasks.register('inspectGspCompileStatic') {
-    doLast {
-        println "PAGE_COMPILER=${tasks.named('compileGroovyPages').get().compileStatic.get()}"
-        println "WEBAPP_PAGE_COMPILER=${tasks.named('compileWebappGroovyPages').get().compileStatic.get()}"
-
+    def report = providers.provider {
         def jvmArgs = tasks.named('runsTheApplication', JavaExec).get()
                 .jvmArgumentProviders.collectMany { it.asArguments().toList() }
-        println "RUNNING_APPLICATION=${jvmArgs.contains('-Dgrails.views.gsp.compileStatic=true')}"
-        println "PAGE_COMPILER_STRICT=${tasks.named('compileGroovyPages').get().compileStaticStrict.get()}"
-        println "RUNNING_APPLICATION_STRICT=${jvmArgs.contains('-Dgrails.views.gsp.compileStaticConfig.strict=true')}"
+        [
+                "PAGE_COMPILER=${tasks.named('compileGroovyPages').get().compileStatic.get()}",
+                "WEBAPP_PAGE_COMPILER=${tasks.named('compileWebappGroovyPages').get().compileStatic.get()}",
+                "RUNNING_APPLICATION=${jvmArgs.contains('-Dgrails.views.gsp.compileStatic=true')}",
+                "PAGE_COMPILER_STRICT=${tasks.named('compileGroovyPages').get().compileStaticStrict.get()}",
+                "RUNNING_APPLICATION_STRICT=${jvmArgs.contains('-Dgrails.views.gsp.compileStaticConfig.strict=true')}"
+        ]*.toString()
+    }
+    doLast {
+        report.get().each { println it }
     }
 }

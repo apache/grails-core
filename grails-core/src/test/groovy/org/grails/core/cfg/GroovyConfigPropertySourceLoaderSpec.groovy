@@ -43,7 +43,7 @@ class GroovyConfigPropertySourceLoaderSpec extends Specification implements Envi
             app {
                 items = [[name: 'one', tags: ['x', 'y']], [name: 'two']]
                 rows = [[[name: 'a'], [name: 'b']], [[name: 'c']]]
-                names = ['p', 'q']
+                names = ['p', '${EXAMPLE_NAME:q}']
             }
         '''.stripIndent()
         def environment = new StandardEnvironment()
@@ -59,7 +59,7 @@ class GroovyConfigPropertySourceLoaderSpec extends Specification implements Envi
         bound.items[0].tags == ['x', 'y']
         bound.rows*.collect { it.name } == [['a', 'b'], ['c']]
 
-        and: 'a list of plain values'
+        and: 'placeholders in a list of plain values are resolved'
         bound.names == ['p', 'q']
     }
 

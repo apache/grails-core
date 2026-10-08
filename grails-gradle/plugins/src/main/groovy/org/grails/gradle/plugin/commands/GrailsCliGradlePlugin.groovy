@@ -272,9 +272,10 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
     protected Dependency findAdvertisedCliArtifact(Project project, ResolvedArtifactResult artifact) {
         def componentIdentifier = artifact.id.componentIdentifier
         if (componentIdentifier instanceof ProjectComponentIdentifier) {
-            Dependency projectCompanion = findProjectCliCompanion(project, (ProjectComponentIdentifier) componentIdentifier)
-            if (projectCompanion != null) {
-                return projectCompanion
+            if (isProjectOfThisBuild(project, (ProjectComponentIdentifier) componentIdentifier)) {
+                // the project's own cliArtifactId decides, so its jar - which this build has usually not built
+                // yet, and whose absence the configuration cache would record as an input - is never read
+                return findProjectCliCompanion(project, (ProjectComponentIdentifier) componentIdentifier)
             }
             // a project of an included build (or a same-named project in the wrong build) is not
             // addressable through findProject; fall through to the advertised module coordinate
@@ -329,6 +330,17 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
     }
 
     /**
+     * Whether the component is a project of the consuming build. Only those are addressable via findProject: a
+     * component from another build of the composite shares the project-path namespace and would resolve to the
+     * wrong project, which the build tree path comparison rejects.
+     */
+    @CompileDynamic
+    protected static boolean isProjectOfThisBuild(Project project, ProjectComponentIdentifier componentIdentifier) {
+        Project target = project.rootProject.findProject(componentIdentifier.projectPath)
+        target != null && target.buildTreePath == componentIdentifier.buildTreePath
+    }
+
+    /**
      * Binds a companion advertised by a project of the current build as a project dependency on
      * its {@code cli} feature capability, or returns {@code null} when the component is not a
      * resolvable project of the current build (an included-build project, or a coincidental
@@ -338,13 +350,10 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
      */
     @CompileDynamic
     protected Dependency findProjectCliCompanion(Project project, ProjectComponentIdentifier componentIdentifier) {
-        Project target = project.rootProject.findProject(componentIdentifier.projectPath)
-        // only a project of the consuming build is addressable via findProject; a component from
-        // another build of the composite shares the project-path namespace and would resolve to
-        // the wrong project — the build tree path comparison rejects that collision
-        if (target == null || target.buildTreePath != componentIdentifier.buildTreePath) {
+        if (!isProjectOfThisBuild(project, componentIdentifier)) {
             return null
         }
+        Project target = project.rootProject.findProject(componentIdentifier.projectPath)
         def cliArtifactId = target.findProperty('cliArtifactId')
         if (!cliArtifactId) {
             // the extra property is exported in the producer's afterEvaluate; the cliArtifact
