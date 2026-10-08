@@ -44,29 +44,6 @@ class UnbootableJoinToComposite {
 }
 
 @Entity
-class UnbootableMmComposite implements Serializable {
-
-    String a
-    String b
-    Set<UnbootableMmOther> others
-
-    static hasMany = [others: UnbootableMmOther]
-
-    static mapping = {
-        id composite: ['a', 'b']
-    }
-}
-
-@Entity
-class UnbootableMmOther {
-
-    Set<UnbootableMmComposite> composites
-
-    static hasMany = [composites: UnbootableMmComposite]
-    static belongsTo = [UnbootableMmComposite]
-}
-
-@Entity
 class UnbootableTarget {
 
     String label

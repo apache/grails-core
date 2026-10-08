@@ -51,8 +51,6 @@ import grails.unbootable.UnbootableRefToTop
 import grails.unbootable.UnbootableTarget
 import grails.unbootable.UnbootableTop
 import grails.unbootable.UnbootableJoinToComposite
-import grails.unbootable.UnbootableMmComposite
-import grails.unbootable.UnbootableMmOther
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 
 /**
@@ -219,7 +217,7 @@ class GrailsDomainGeneratorCompositeIdSpec extends GrailsDomainGeneratorSupport 
         }
     }
 
-    void "a collection to an entity with a composite identifier that the generator cannot describe is rejected by name"() {
+    void "a join table to an entity with a composite identifier is rejected by name, because the binder cannot boot it"() {
         when:
         newGenerator().generateAll(unbound(domain, composite), getClass().classLoader)
 
@@ -232,7 +230,6 @@ class GrailsDomainGeneratorCompositeIdSpec extends GrailsDomainGeneratorSupport 
         where:
         domain                    | composite             | property     | reason
         UnbootableJoinToComposite | UnbootableComposite   | 'targets'    | 'join table'
-        UnbootableMmOther         | UnbootableMmComposite | 'composites' | 'many-to-many'
     }
 
     void "a foreign key to a composite identifier inside an embedded type is stated with an association override for each column"() {

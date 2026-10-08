@@ -1772,7 +1772,9 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                 "${where} ${facet}: generator=${values[0]} binder=${values[1]}".toString()
             })
             // Hibernate copies the size of the referenced identifier onto the element column after binding
-            found.addAll(compareValueColumn("${where} element".toString(), facets.element(), collection.element, collection.collectionTable, true))
+            found.addAll(compareValueColumns(
+                    "${where} element".toString(), facets.elements().isEmpty() ? [facets.element()] : facets.elements(), collection.element,
+                    collection.collectionTable, true))
             found.addAll(compareCollectionTableIndexes(
                     where, facets.indexes(), collection, property instanceof HibernateManyToManyProperty && property.bidirectional, known))
         }

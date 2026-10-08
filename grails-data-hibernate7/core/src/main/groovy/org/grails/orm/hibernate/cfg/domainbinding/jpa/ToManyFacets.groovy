@@ -62,6 +62,11 @@ import org.hibernate.FetchMode
  * <p>{@code extraLazy} is an explicit {@code lazy: true}: the binder makes the collection extra-lazy, which Hibernate's annotation
  * binder cannot state, so {@code GeneratedDomainClassBinder} sets it on the collection after binding.</p>
  *
+ * <p>{@code elements} are the element columns of a join table in the order the binder binds them: one, or one for each identifier
+ * property when the associated entity has a composite identifier ({@code element} is the first of them); {@code referencedElements}
+ * names the column of the associated entity's key each one points at, and is empty unless that entity has a composite identifier.
+ * Both are empty when the collection has no join table.</p>
+ *
  * @since 9.0
  */
 @CompileStatic
@@ -89,5 +94,7 @@ record ToManyFacets(
     List<String> referencedKeys,
     TypeFacets indexType,
     List<IndexFacets> indexes,
-    Class<?> collectionType = null) {
+    Class<?> collectionType = null,
+    List<ColumnFacets> elements = [],
+    List<String> referencedElements = []) {
 }

@@ -675,7 +675,7 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
             ToManyFacets facets = generator.toManyFacets((HibernateToManyEntityProperty) property, qualifier)
             alignJoinColumns(collection.key, facets.keys())
             if (facets.manyToMany()) {
-                alignJoinColumns(collection.element, [facets.element()])
+                alignJoinColumns(collection.element, facets.elements())
             }
         } else if (property instanceof HibernateBasicProperty) {
             alignJoinColumns(collection.key, generator.collectionFacets((HibernateBasicProperty) property, qualifier).keys())
@@ -789,15 +789,15 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
             return
         }
         List<ColumnFacets> keys
-        ColumnFacets element
+        List<ColumnFacets> elements
         if (property instanceof HibernateToManyEntityProperty) {
             ToManyFacets facets = generator.toManyFacets((HibernateToManyEntityProperty) property, qualifier)
             keys = facets.keys()
-            element = facets.element()
+            elements = facets.elements()
         } else if (property instanceof HibernateBasicProperty) {
             CollectionFacets facets = generator.collectionFacets((HibernateBasicProperty) property, qualifier)
             keys = facets.keys()
-            element = facets.element()
+            elements = [facets.element()]
         } else {
             return
         }
@@ -807,7 +807,7 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
             table.primaryKey = null
         }
         restoreNullability(collection.key, keys)
-        restoreNullability(collection.element, [element])
+        restoreNullability(collection.element, elements)
         if (rederive) {
             collection.createAllKeys()
         }

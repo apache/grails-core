@@ -72,6 +72,7 @@ For the domain classes in GORM's own test suites, both bindings produce the same
 * A `discriminator` column may set `precision` and `scale`. They change nothing in the DDL of a string, integer or character column, in both bindings.
 * A multi-tenant id (`tenantId`) may have a mapped `type`: its column has the type, and the tenant filter still compares it with the current tenant.
 * The `defaultValue`, `comment`, `read` and `write` of the column mapping of an association or of a `hasMany` are put on the foreign key column (on the key column of a collection, and on the element column of a many-to-many for the options of the other side). The `length`, `precision` and `scale` change nothing: a foreign key column has the type of the column it references, and a `hasMany` of basic values ignores them too. This is the same in both bindings.
+* A many-to-many or a map of domain classes may involve an entity with a composite identifier on either side or on both: the join table has a key column for each identifier property of the owner and an element column for each one of the target, named as with classic binding. A foreign key to a composite identifier that the mapping gives fewer columns than the identifier has properties keeps the columns the mapping names and names the missing ones as classic binding does.
 * Identifier generators, inheritance strategies (single table, joined and table-per-concrete-class), discriminators, natural ids, optimistic locking, lazy and eager fetching, cascades, sorting, batch size and `cache` usage are mapped as with classic binding.
 
 [[nativeDomainBinding-refused]]
@@ -95,9 +96,9 @@ Nothing is ignored silently. A mapping that boots is bound the way it is written
 | `Collection property [...]: the type [...] mapped on the collection property names neither a class nor serializable ...` or `... a custom collection type (a UserCollectionType) is mapped on a collection of basic values ...`
 | Remove the `type`, or use `'serializable'` or a `UserType` class to store the collection in one column. Classic binding does not boot with a registered type name (it fails with `Could not load requested class`), and neither with a custom collection type on a collection of basic values.
 
-| A composite identifier that is combined with something the mapping does not state faithfully: a many-to-many, a map or a join table that involves an entity with a composite identifier, a composite identifier part that is the inverse side of a one-to-one, a foreign key mapped with a different number of columns than the identifier has properties, or a composite identifier referring to a deeply nested composite identifier.
+| A composite identifier combined with something that classic binding cannot boot either: a `hasMany` of domain classes with a join table to an entity with a composite identifier (a many-to-many and a map of a many-to-many are fine), a join table whose key columns are mapped on an entity with a composite identifier, a composite identifier part that is the inverse side of a one-to-one, a part that refers to an entity with a simple identifier or to a composite identifier more than one level deep, a joined subclass of such an entity, or a foreign key mapped with more columns than the identifier has properties.
 | `... composite identifier ...`, naming the entity and the part.
-| Give the entity a single-column identifier, or map the relationship with a domain class of its own.
+| Give the entity a single-column identifier, or map the relationship with a domain class of its own. Classic binding fails with `Foreign key ... must have same number of columns as the referenced primary key` or an `IndexOutOfBoundsException`.
 
 | An association mapped with a `formula`, or with several columns where the target does not have a composite identifier.
 | `... the association is mapped with a formula` or `... the mapping states several columns ...`
