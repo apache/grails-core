@@ -60,7 +60,7 @@ For the domain classes in GORM's own test suites, both bindings produce the same
 * Properties mapped with a `UserType` class, and with the registered converter types `yes_no`, `true_false` and `numeric_boolean`, are stored as before.
 * A `hasMany` of basic values whose `type` is `'serializable'` or a `UserType` class is stored in one column of the owner's table, as before, with the `index`, `unique` group and column settings of the property. A `type` on a `hasMany` of domain classes changes nothing in both bindings.
 * An `index` on the property of a `hasMany` is created over the key column of the collection table (and over the element column of a collection of enums), and `indexColumn` may give the index of a list or the key of a map a `type` other than integer or string.
-* A `hasMany` inside a class listed in `static embedded` (basic values, enums or domain classes, also in a nested embedded class) is stored in a collection table named after the embedded class, not after the owner, with a key column named after the embedded class too, as with classic binding.
+* A `hasMany` inside a class listed in `static embedded` (basic values, enums or domain classes, also in a nested embedded class) is stored in a collection table named after the embedded class, not after the owner, with a key column named after the embedded class too, as with classic binding. When more than one embedded property embeds the class, every owner gets a table of its own, see <<nativeDomainBinding-behavior,Differences in Behavior>>.
 * A `Map` on a many-to-many (`Map<String, Book> books` with a `Set` or another `Map` on the other side) writes its own join table, with the key column of the map as part of the primary key, as with classic binding. A `Set` on the other side reads that table and does not write it, and two maps are two separate tables: rows stored through one map are not visible through the other, in both bindings.
 * `type: 'serializable'` on a property that is not a collection (a `String`, a `byte[]` or any `Serializable`) is a binary column holding the Java serialization of the value, as with classic binding.
 * `params` on a registered type name such as `type: 'string'` are ignored, as with classic binding. They reach the type when it is a `UserType` that implements `ParameterizedType`.
@@ -86,10 +86,6 @@ Nothing is ignored silently. A mapping that boots is bound the way it is written
 | Mapping
 | Message of the root cause
 | What to do
-
-| A collection inside an embedded class that two embedded properties share: a `hasMany` in a class listed in `static embedded`, where more than one property of the application (of one domain class or of several) embeds that class.
-| `The collection [...] of the embedded type [...] is reachable through N embedded properties (...) ...`
-| Embed the class from one property only, or make it a domain class and map an association. Classic binding names the table and the key column of the collection after the embedded class, so all the owners share one table whose foreign key points at only one of them, and it fails to boot when the owners name the property alike.
 
 | A natural id that names a collection or a formula.
 | `The natural id of [...] names [...], which is ... only a simple property, an enum, a foreign key or an embedded type can be part of a natural id ...`
@@ -134,6 +130,9 @@ Some bugs of classic binding are not copied by native binding. Native binding do
 
 | A `unique` group on the property of a collection (`hasMany`).
 | The group names columns of the owner's table, which the table of the collection does not have. Classic binding tries to create a unique key over them and the statement fails when the schema is created, so the database has no such key. Native binding creates no key. The `index` option on the same property works in both bindings: the index is created over the key column of the collection table (and over the element column of a collection of enums), with the name the mapping gives it.
+
+| A `hasMany` inside a class listed in `static embedded` (basic values, enums or domain classes) when more than one embedded property of the application embeds that class: two domain classes, or one domain class with two properties of that type.
+| Classic binding names the table and the key column after the embedded class, so all the owners share one table. Its foreign key points at the owner that was bound first, so the collection of any other owner cannot be stored (the insert violates the key), the elements of two properties of one owner are mixed up, and the application fails to start when the properties have the same name. Native binding gives every owner a collection table of its own. The first owner, in the order of the entity name and then the property path, keeps the table and the key column of classic binding, so an existing database is not disturbed. The other owners get names that start with the table of the owner and the path of the embedded property, for example `author_address_phones` and `author_address_id`.
 
 | An `index` given as a closure on the property of a collection, for example `index: { column name: 'position' }`.
 | The closure configures the index column of a list or a map in both bindings. Classic binding also creates an index of the collection table that is named after the closure, a name that changes on every start. Native binding creates the index column and no such index.
@@ -189,6 +188,10 @@ The schema of 734 groups of related domain classes was created with both binding
 | No unique key on the table of a collection for a `unique` group mapped on the collection property.
 | See <<nativeDomainBinding-behavior,Differences in Behavior>>.
 | The key never existed in a database created by classic binding: the statement that creates it fails.
+
+| An extra collection table, with a key column named after the owner and the embedded property, for every owner after the first of an embedded class that has a `hasMany`.
+| See <<nativeDomainBinding-behavior,Differences in Behavior>>. Classic binding shares one table between the owners.
+| The first owner keeps its table and column names. The tables of the other owners are new: `update` creates them, and the elements that classic binding could not store for those owners were never in the database.
 
 | No index named after a closure on the table of a collection whose `index` is a closure.
 | See <<nativeDomainBinding-behavior,Differences in Behavior>>.

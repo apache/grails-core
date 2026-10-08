@@ -353,7 +353,7 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
             alignIdentifier((RootClass) persistentClass, generated, metadata)
         }
         for (Property property : persistentClass.declaredProperties) {
-            alignProperty(property, entity, real)
+            alignProperty(property, entity, real, null, '')
         }
         alignUniqueKeys(persistentClass, entity)
     }
@@ -538,7 +538,7 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
             alignCompositeIdentifier(root, entity, metadata)
             return
         }
-        alignProperty(root.identifierProperty, entity, entity.javaClass)
+        alignProperty(root.identifierProperty, entity, entity.javaClass, null, '')
         String name = entity.identity.name
         Field field = generated.generatedClass().getDeclaredField(name)
         GrailsIdGenerator marker = field.getAnnotation(GrailsIdGenerator)
@@ -623,7 +623,12 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
         })
     }
 
-    private void alignProperty(Property property, GrailsHibernatePersistentEntity owner, Class<?> ownerClass) {
+    /**
+     * @param holder the entity that declares the embedded property the property is inside, or {@code null} for a property of the entity
+     * @param path the dotted names of the embedded properties from {@code holder} down to the owner of the property
+     */
+    private void alignProperty(
+            Property property, GrailsHibernatePersistentEntity owner, Class<?> ownerClass, GrailsHibernatePersistentEntity holder, String path) {
         PersistentProperty<?> persistentProperty = owner.identity?.name == property.name ?
                 owner.identity : owner.getPropertyByName(property.name)
         if (persistentProperty instanceof HibernatePersistentProperty) {
@@ -633,11 +638,13 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
             alignJoinColumns(property.value, generator.toOneFacets((HibernateToOneProperty) persistentProperty).joinColumns())
         }
         if (property.value instanceof Collection && persistentProperty instanceof HibernatePersistentProperty) {
-            alignJoinColumns((Collection) property.value, (HibernatePersistentProperty) persistentProperty)
-            alignExtraLazy((Collection) property.value, (HibernatePersistentProperty) persistentProperty)
-            alignCollectionTable((Collection) property.value, (HibernatePersistentProperty) persistentProperty)
-            alignListIndexLength((Collection) property.value, (HibernatePersistentProperty) persistentProperty)
-            alignCollectionIndexes((Collection) property.value, (HibernatePersistentProperty) persistentProperty)
+            // a collection of an embedded type that several embedded properties reach has a table of its own, named after its owner
+            String qualifier = holder == null ? null : generator.embeddedCollectionQualifier(holder, path, persistentProperty.name)
+            alignJoinColumns((Collection) property.value, (HibernatePersistentProperty) persistentProperty, qualifier)
+            alignExtraLazy((Collection) property.value, (HibernatePersistentProperty) persistentProperty, qualifier)
+            alignCollectionTable((Collection) property.value, (HibernatePersistentProperty) persistentProperty, qualifier)
+            alignListIndexLength((Collection) property.value, (HibernatePersistentProperty) persistentProperty, qualifier)
+            alignCollectionIndexes((Collection) property.value, (HibernatePersistentProperty) persistentProperty, qualifier)
         }
         if (property.value instanceof Component && persistentProperty instanceof Embedded) {
             // PropertyBinder marks the property lazy when the mapping says lazy: true; @Basic(fetch = LAZY) on an @Embedded is ignored
@@ -650,7 +657,9 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
                 alignComponent(
                         (Component) property.value,
                         (GrailsHibernatePersistentEntity) embedded,
-                        BeanUtils.findPropertyType(property.name, ownerClass))
+                        BeanUtils.findPropertyType(property.name, ownerClass),
+                        holder == null ? owner : holder,
+                        path.isEmpty() ? property.name : "${path}.${property.name}".toString())
             }
         }
     }
@@ -661,15 +670,15 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
      * {@code precision} and {@code scale} change nothing, as the type of a foreign key column is the one of the column it references). A
      * {@code @JoinColumn} states none of them, so they are set on the columns of the bound model.
      */
-    private void alignJoinColumns(Collection collection, HibernatePersistentProperty property) {
+    private void alignJoinColumns(Collection collection, HibernatePersistentProperty property, String qualifier) {
         if (property instanceof HibernateToManyEntityProperty) {
-            ToManyFacets facets = generator.toManyFacets((HibernateToManyEntityProperty) property)
+            ToManyFacets facets = generator.toManyFacets((HibernateToManyEntityProperty) property, qualifier)
             alignJoinColumns(collection.key, facets.keys())
             if (facets.manyToMany()) {
                 alignJoinColumns(collection.element, [facets.element()])
             }
         } else if (property instanceof HibernateBasicProperty) {
-            alignJoinColumns(collection.key, generator.collectionFacets((HibernateBasicProperty) property).keys())
+            alignJoinColumns(collection.key, generator.collectionFacets((HibernateBasicProperty) property, qualifier).keys())
         }
     }
 
@@ -702,12 +711,12 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
      * {@code contains()} and {@code isEmpty()} do not initialize it). Hibernate 7's annotation binder always binds an ordinary
      * lazy collection and has no annotation for the extra-lazy kind, so the flag is set on the bound collection.
      */
-    private void alignExtraLazy(Collection collection, HibernatePersistentProperty property) {
+    private void alignExtraLazy(Collection collection, HibernatePersistentProperty property, String qualifier) {
         boolean extraLazy
         if (property instanceof HibernateToManyEntityProperty) {
-            extraLazy = generator.toManyFacets((HibernateToManyEntityProperty) property).extraLazy()
+            extraLazy = generator.toManyFacets((HibernateToManyEntityProperty) property, qualifier).extraLazy()
         } else if (property instanceof HibernateBasicProperty) {
-            extraLazy = generator.collectionFacets((HibernateBasicProperty) property).extraLazy()
+            extraLazy = generator.collectionFacets((HibernateBasicProperty) property, qualifier).extraLazy()
         } else {
             return
         }
@@ -723,12 +732,12 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
      * join table. The indexes the generator decided are created here on the table Hibernate bound for the collection, with the names the
      * mapping gives them.
      */
-    private void alignCollectionIndexes(Collection collection, HibernatePersistentProperty property) {
+    private void alignCollectionIndexes(Collection collection, HibernatePersistentProperty property, String qualifier) {
         List<IndexFacets> indexes
         if (property instanceof HibernateToManyEntityProperty) {
-            indexes = generator.toManyFacets((HibernateToManyEntityProperty) property).indexes()
+            indexes = generator.toManyFacets((HibernateToManyEntityProperty) property, qualifier).indexes()
         } else if (property instanceof HibernateBasicProperty) {
-            indexes = generator.collectionFacets((HibernateBasicProperty) property).indexes()
+            indexes = generator.collectionFacets((HibernateBasicProperty) property, qualifier).indexes()
         } else {
             return
         }
@@ -751,12 +760,12 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
      * Hibernate's annotation binder gives the index column of a list no length, which it sizes as a long string when the mapping types
      * the index as a string (a CLOB, which cannot be a key). The domain binder's column has the default length of every column it creates.
      */
-    private void alignListIndexLength(Collection collection, HibernatePersistentProperty property) {
+    private void alignListIndexLength(Collection collection, HibernatePersistentProperty property, String qualifier) {
         TypeFacets indexType
         if (property instanceof HibernateToManyEntityProperty) {
-            indexType = generator.toManyFacets((HibernateToManyEntityProperty) property).indexType()
+            indexType = generator.toManyFacets((HibernateToManyEntityProperty) property, qualifier).indexType()
         } else if (property instanceof HibernateBasicProperty) {
-            indexType = generator.collectionFacets((HibernateBasicProperty) property).indexType()
+            indexType = generator.collectionFacets((HibernateBasicProperty) property, qualifier).indexType()
         } else {
             return
         }
@@ -775,18 +784,18 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
      * column is nullable gets a unique key over its columns instead of a primary key. The nullability the generator decided
      * (the binder's) is restored on the columns, and for a set the key Hibernate derived from them is derived again.
      */
-    private void alignCollectionTable(Collection collection, HibernatePersistentProperty property) {
+    private void alignCollectionTable(Collection collection, HibernatePersistentProperty property, String qualifier) {
         if (collection.inverse || collection.oneToMany) {
             return
         }
         List<ColumnFacets> keys
         ColumnFacets element
         if (property instanceof HibernateToManyEntityProperty) {
-            ToManyFacets facets = generator.toManyFacets((HibernateToManyEntityProperty) property)
+            ToManyFacets facets = generator.toManyFacets((HibernateToManyEntityProperty) property, qualifier)
             keys = facets.keys()
             element = facets.element()
         } else if (property instanceof HibernateBasicProperty) {
-            CollectionFacets facets = generator.collectionFacets((HibernateBasicProperty) property)
+            CollectionFacets facets = generator.collectionFacets((HibernateBasicProperty) property, qualifier)
             keys = facets.keys()
             element = facets.element()
         } else {
@@ -814,10 +823,11 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
         }
     }
 
-    private void alignComponent(Component component, GrailsHibernatePersistentEntity embedded, Class<?> type) {
+    private void alignComponent(
+            Component component, GrailsHibernatePersistentEntity embedded, Class<?> type, GrailsHibernatePersistentEntity holder, String path) {
         component.componentClassName = type.name
         for (Property property : component.getProperties()) {
-            alignProperty(property, embedded, type)
+            alignProperty(property, embedded, type, holder, path)
         }
     }
 

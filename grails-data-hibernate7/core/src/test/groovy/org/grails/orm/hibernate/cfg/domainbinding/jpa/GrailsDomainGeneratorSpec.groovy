@@ -1407,27 +1407,39 @@ class GrailsDomainGeneratorSpec extends HibernateGormDatastoreSpec {
         items.getAnnotation(JoinTable).joinColumns()*.name() == ['gen_coll_embedded_entities_items_id']
     }
 
-    void "an embedded type that has a collection is rejected when a second embedded property shares it"() {
+    void "an embedded type that has a collection and is shared by two embedded properties has the table of each owner stated by the owner"() {
         when:
-        newGenerator().generateAll([unbound(EmbeddedCollectionOwnerA), unbound(EmbeddedCollectionOwnerB)], getClass().classLoader)
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = newGenerator().generateAll(
+                [unbound(EmbeddedCollectionOwnerB), unbound(EmbeddedCollectionOwnerA)], getClass().classLoader)
+        Class<?> ownerA = classes.find { it.key.name == EmbeddedCollectionOwnerA.name }.value
+        Class<?> ownerB = classes.find { it.key.name == EmbeddedCollectionOwnerB.name }.value
+        AssociationOverride first = ownerA.getDeclaredField('inner').getAnnotation(AssociationOverrides).value().find { it.name() == 'words' }
+        AssociationOverride second = ownerB.getDeclaredField('inner').getAnnotation(AssociationOverrides).value().find { it.name() == 'words' }
 
-        then:
-        UnsupportedOperationException e = thrown()
-        e.message.contains('The collection [words] of the embedded type [' + EmbeddedCollectionHolder.name + ']')
-        e.message.contains('is reachable through 2 embedded properties')
-        e.message.contains(EmbeddedCollectionOwnerA.name + '.inner')
-        e.message.contains(EmbeddedCollectionOwnerB.name + '.inner')
+        then: "the shared embeddable names no table, which a field annotation would fix for every owner"
+        !ownerA.getDeclaredField('inner').type.getDeclaredField('words').isAnnotationPresent(CollectionTable)
+        ownerA.getDeclaredField('inner').type == ownerB.getDeclaredField('inner').type
+
+        and: "the first owner by entity name keeps the table and the key column of the binder, the other one is qualified"
+        first.joinTable().name() == 'embedded_collection_holder_words'
+        first.joinTable().joinColumns()*.name() == ['embedded_collection_holder_id']
+        second.joinTable().name() == 'embedded_collection_ownerb_inner_words'
+        second.joinTable().joinColumns()*.name() == ['embedded_collection_ownerb_inner_id']
     }
 
-    void "an owner that embeds the same type with a collection twice is rejected"() {
+    void "an owner that embeds the same type with a collection twice has a table for each property"() {
         when:
-        newGenerator().generateAll([unbound(EmbeddedCollectionOwnerTwice)], getClass().classLoader)
+        Class<?> owner = newGenerator().generateAll([unbound(EmbeddedCollectionOwnerTwice)], getClass().classLoader).values().first()
+        Map<String, AssociationOverride> overrides = owner.getDeclaredField(field).getAnnotation(AssociationOverrides).value().collectEntries { [(it.name()): it] }
 
         then:
-        UnsupportedOperationException e = thrown()
-        e.message.contains('is reachable through 2 embedded properties')
-        e.message.contains(EmbeddedCollectionOwnerTwice.name + '.home')
-        e.message.contains(EmbeddedCollectionOwnerTwice.name + '.work')
+        overrides['words'].joinTable().name() == table
+        overrides['words'].joinTable().joinColumns()*.name() == [key]
+
+        where:
+        field  | table                                   | key
+        'home' | 'embedded_collection_holder_words'      | 'embedded_collection_holder_id'
+        'work' | 'embedded_collection_owner_twice_work_words' | 'embedded_collection_owner_twice_work_id'
     }
 
     void "owners that embed different types with collections are generated together"() {

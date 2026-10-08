@@ -103,6 +103,9 @@ The mapping can, though:
   The manual chapter lists them.
 * The generated schema differs from the one of classic binding in a few documented cases, for example a `check (idx >= 0)` constraint on the index column of every list, and the column types of foreign keys to nested composite identifiers.
 * A few defects of classic binding are not copied, such as a `unique` group that includes an enum property being dropped.
+* A `hasMany` inside a class listed in `static embedded` that more than one embedded property embeds gets a collection table of its own for every owner.
+  Classic binding shares one table whose foreign key points at only one owner, so the collection of any other owner cannot be stored, and it does not start when the properties have the same name.
+  The first owner (by entity name, then property path) keeps the table and the key column it has today, the others get names that start with their table and the path of the embedded property.
 * A custom collection type on a `hasMany` now takes effect, see <<native-binding-custom-collection-type,1.4>>.
 
 Before you switch an existing database, run `dbm-gorm-diff` against a copy of it with the setting on.

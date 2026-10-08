@@ -21,10 +21,6 @@ package grails.gorm.tests.generated
 import java.util.concurrent.atomic.AtomicInteger
 
 import grails.gorm.annotation.Entity
-import grails.unbootable.EmbeddedCollectionOwnerA
-import grails.unbootable.EmbeddedCollectionOwnerB
-import grails.unbootable.EmbeddedCollectionOwnerC
-import grails.unbootable.EmbeddedCollectionOwnerD
 import org.hibernate.mapping.Table
 import spock.lang.AutoCleanup
 import spock.lang.Specification
@@ -36,8 +32,8 @@ import org.grails.orm.hibernate.HibernateDatastore
  * A collection inside an embedded type, bound by the domain binder and by the generated classes. The domain binder names the table
  * of such a collection after the embedded type and not after the owner ({@code ecs_words_words}), and its key column after the
  * embedded type too ({@code ecs_words_id}), whatever the embedded property is called; the key points at the table of the owner. The
- * generated classes state the same names. Two embedded properties that share a type with a collection would share that one table,
- * which the binder cannot make sense of, so the generated mode rejects them by name.
+ * generated classes state the same names. Two embedded properties that share a type with a collection get a table each in the generated
+ * mode, see {@link GeneratedDomainClassesSharedEmbeddedCollectionSpec}.
  */
 class GeneratedDomainClassesEmbeddedCollectionSpec extends Specification {
 
@@ -254,58 +250,6 @@ class GeneratedDomainClassesEmbeddedCollectionSpec extends Specification {
         then:
         results[1] == results[0]
         results[1] == [2, ['blue', 'green', 'red'], 2]
-    }
-
-    void "a type with a collection that two embedded properties share is rejected by the generated mode and says why"() {
-        when: "the domain binder cannot boot owners that embed the type under the same name"
-        boot([EmbeddedCollectionOwnerA, EmbeddedCollectionOwnerB], false)
-
-        then:
-        thrown(Exception)
-
-        when:
-        boot([EmbeddedCollectionOwnerA, EmbeddedCollectionOwnerB], true)
-
-        then:
-        Exception e = thrown()
-        rootOf(e) instanceof UnsupportedOperationException
-        rootOf(e).message.contains('is reachable through 2 embedded properties')
-        rootOf(e).message.contains('EmbeddedCollectionOwnerA.inner')
-        rootOf(e).message.contains('EmbeddedCollectionOwnerB.inner')
-    }
-
-    void "under different property names the domain binder boots but keeps one table with a key to the first owner, which the generated mode does not copy"() {
-        when:
-        Map<String, Map> binder = schema([EmbeddedCollectionOwnerC, EmbeddedCollectionOwnerD], false)
-
-        then: "one collection table, a foreign key to one of the owners"
-        binder.keySet().count { it.contains('words') } == 1
-        binder.values().find { it.columns.containsKey('embedded_collection_holder_id') }.foreignKeys.size() == 1
-
-        when: "the second owner stores a collection"
-        EmbeddedCollectionOwnerD.withTransaction {
-            new EmbeddedCollectionOwnerD(second: new grails.unbootable.EmbeddedCollectionHolder(words: ['w'] as Set)).save(failOnError: true, flush: true)
-        }
-
-        then: "its row violates the foreign key to the other owner"
-        thrown(Exception)
-
-        when:
-        boot([EmbeddedCollectionOwnerC, EmbeddedCollectionOwnerD], true)
-
-        then:
-        Exception e = thrown()
-        rootOf(e) instanceof UnsupportedOperationException
-        rootOf(e).message.contains('EmbeddedCollectionOwnerC.first')
-        rootOf(e).message.contains('EmbeddedCollectionOwnerD.second')
-    }
-
-    private static Throwable rootOf(Throwable e) {
-        Throwable root = e
-        while (root.cause != null && root.cause != root) {
-            root = root.cause
-        }
-        return root
     }
 }
 

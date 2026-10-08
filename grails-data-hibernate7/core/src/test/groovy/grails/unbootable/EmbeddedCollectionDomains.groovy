@@ -22,7 +22,8 @@ import grails.gorm.annotation.Entity
 
 /**
  * Domain classes that embed a type with a collection, kept outside the packages the differential spec scans: the binder names the
- * table and the key column of the collection after the embedded type, so two owners of the type share one collection table.
+ * table and the key column of the collection after the embedded type, so two owners of the type share one collection table (the
+ * generated mode gives every owner a table of its own).
  */
 @Entity
 class EmbeddedCollectionOwnerA {
@@ -77,4 +78,63 @@ class EmbeddedCollectionOwnerTwice {
     EmbeddedCollectionHolder work
 
     static embedded = ['home', 'work']
+}
+
+/**
+ * Two owners that embed a type with a collection of entities and a list, under different names, and one owner that embeds the type
+ * twice, with a type nested in another.
+ */
+@Entity
+class EmbeddedCollectionItem {
+
+    String name
+}
+
+class EmbeddedItemsHolder {
+
+    Set<EmbeddedCollectionItem> items
+    List<String> order
+
+    static hasMany = [items: EmbeddedCollectionItem, order: String]
+}
+
+@Entity
+class EmbeddedItemsOwnerA {
+
+    EmbeddedItemsHolder mine
+
+    static embedded = ['mine']
+}
+
+@Entity
+class EmbeddedItemsOwnerB {
+
+    EmbeddedItemsHolder theirs
+
+    static embedded = ['theirs']
+}
+
+class EmbeddedMiddle {
+
+    String label
+    EmbeddedCollectionHolder deep
+
+    static embedded = ['deep']
+}
+
+@Entity
+class EmbeddedNestedOwnerA {
+
+    EmbeddedMiddle mid
+
+    static embedded = ['mid']
+}
+
+@Entity
+class EmbeddedNestedOwnerB {
+
+    EmbeddedMiddle mid
+    EmbeddedCollectionHolder direct
+
+    static embedded = ['mid', 'direct']
 }

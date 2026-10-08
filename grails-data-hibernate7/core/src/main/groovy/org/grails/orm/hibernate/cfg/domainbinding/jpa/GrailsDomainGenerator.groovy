@@ -209,6 +209,12 @@ class GrailsDomainGenerator {
     private final CreateKeyForProps keyForProps
     private final ForeignKeyColumnCountCalculator foreignKeyColumnCount = new ForeignKeyColumnCountCalculator()
 
+    /** The collections of embedded types that more than one embedded property reaches, as {@code <embedded class>#<collection>}. */
+    private Set<String> sharedEmbeddedCollections = new HashSet<String>()
+
+    /** For each such collection, the qualifier of the embedded properties that do not keep the binder's names, by {@link #embeddedUseKey}. */
+    private Map<String, String> embeddedCollectionQualifiers = new HashMap<String, String>()
+
     GrailsDomainGenerator(
             PersistentEntityNamingStrategy namingStrategy,
             ColumnNameForPropertyAndPathFetcher columnNames,
@@ -282,10 +288,7 @@ class GrailsDomainGenerator {
         for (GrailsHibernatePersistentEntity entity : given) {
             requireReferencedEntities(entity, given)
         }
-        String collision = embeddedCollectionCollision(given)
-        if (collision != null) {
-            throw new UnsupportedOperationException(collision)
-        }
+        assignEmbeddedCollectionQualifiers(given)
         List<GrailsHibernatePersistentEntity> ordered = new ArrayList<GrailsHibernatePersistentEntity>(given)
         ordered.sort { GrailsHibernatePersistentEntity a, GrailsHibernatePersistentEntity b -> depth(a) <=> depth(b) }
 
@@ -317,47 +320,81 @@ class GrailsDomainGenerator {
      * the owner, and gives it no owner-specific identity, so two embedded properties that share a type with a collection share one
      * table whose key is a foreign key to the owner that was bound first (probed: the rows of the other owner violate it unless the
      * identifiers happen to coincide), and Hibernate refuses the duplicate collection at boot when the two properties have the same name
-     * (pinned in {@code GrailsDomainBinderEmbeddedCollectionDefectSpec}). One embedded property per type is described exactly as the
-     * binder binds it; a second one is rejected by name rather than described with a table the generator would have to invent.
+     * (pinned in {@code GrailsDomainBinderEmbeddedCollectionDefectSpec}).
      *
-     * @return why the embedded properties of the entities cannot be described together, or {@code null} when no collection of an
-     *     embedded type is reachable through more than one embedded property
+     * <p>Every embedded property gets a collection table of its own. The first one, in the order of the entity name and then the
+     * property path, keeps the names the binder gives the shared table, so an existing database is undisturbed; the others get names
+     * qualified with the table of their owner and the path of their embedded property ({@link #embeddedCollectionQualifier}).</p>
      */
-    private static String embeddedCollectionCollision(Collection<GrailsHibernatePersistentEntity> entities) {
-        Map<String, List<String>> uses = new LinkedHashMap<String, List<String>>()
+    private void assignEmbeddedCollectionQualifiers(Collection<GrailsHibernatePersistentEntity> entities) {
+        Map<String, List<EmbeddedUse>> uses = new LinkedHashMap<String, List<EmbeddedUse>>()
         for (GrailsHibernatePersistentEntity entity : entities) {
             for (HibernatePersistentProperty property : entity.persistentPropertiesToBind) {
                 if (property instanceof HibernateEmbeddedProperty) {
-                    collectCollectionUses((HibernateEmbeddedProperty) property, "${entity.name}.${property.name}".toString(), uses, [])
+                    collectCollectionUses(entity, (HibernateEmbeddedProperty) property, property.name, uses, [])
                 }
             }
         }
-        Map.Entry<String, List<String>> shared = uses.entrySet().find { Map.Entry<String, List<String>> use -> use.value.size() > 1 }
-        if (shared == null) {
-            return null
+        Set<String> shared = new HashSet<String>()
+        Map<String, String> qualifiers = new HashMap<String, String>()
+        for (Map.Entry<String, List<EmbeddedUse>> entry : uses.entrySet()) {
+            if (entry.value.size() < 2) {
+                continue
+            }
+            shared << entry.key
+            List<EmbeddedUse> ordered = entry.value.sort(false) { EmbeddedUse a, EmbeddedUse b ->
+                a.owner.name <=> b.owner.name ?: a.path <=> b.path
+            }
+            for (EmbeddedUse use : ordered.drop(1)) {
+                qualifiers.put(embeddedUseKey(use.owner, use.path, use.collection), embeddedQualifier(use))
+            }
         }
-        String[] parts = shared.key.split('#')
-        return "The collection [${parts[1]}] of the embedded type [${parts[0]}] is reachable through ${shared.value.size()} embedded " +
-                "properties (${shared.value.join(', ')}): the binder names its table and its key column after the embedded type and not " +
-                'after the owner, so the owners share one table whose key is a foreign key to only one of them, and Hibernate refuses ' +
-                'the duplicate collection at boot when the properties have the same name (pinned in ' +
-                'GrailsDomainBinderEmbeddedCollectionDefectSpec), which the generator does not copy and annotations cannot say'
+        sharedEmbeddedCollections = shared
+        embeddedCollectionQualifiers = qualifiers
+    }
+
+    private String embeddedQualifier(EmbeddedUse use) {
+        List<String> segments = [use.owner.getTableName(namingStrategy).replace('`', '')]
+        segments.addAll(use.path.split(/\./).collect { String name -> namingStrategy.resolveColumnName(name).replace('`', '') })
+        return segments.join('_')
+    }
+
+    private static String embeddedUseKey(GrailsHibernatePersistentEntity owner, String path, String collection) {
+        return "${owner.name}|${path}|${collection}".toString()
+    }
+
+    /**
+     * @return the qualifier that the collection of an embedded type gets in the embedded property {@code path} of {@code owner} (the
+     *     dotted names of the embedded properties from the owner down to the embedded type that holds the collection), or {@code null}
+     *     when it keeps the names the binder gives it: it is reached through that one embedded property only, or that property is the
+     *     first of those that reach it. Known after {@link #generateAll} has run.
+     */
+    String embeddedCollectionQualifier(GrailsHibernatePersistentEntity owner, String path, String collection) {
+        return embeddedCollectionQualifiers.get(embeddedUseKey(owner, path, collection))
     }
 
     private static void collectCollectionUses(
-            HibernateEmbeddedProperty property, String path, Map<String, List<String>> uses, List<Class<?>> visiting) {
+            GrailsHibernatePersistentEntity owner, HibernateEmbeddedProperty property, String path,
+            Map<String, List<EmbeddedUse>> uses, List<Class<?>> visiting) {
         GrailsHibernatePersistentEntity type = (GrailsHibernatePersistentEntity) property.associatedEntity
         if (type == null || visiting.contains(type.javaClass)) {
             return
         }
         for (HibernatePersistentProperty peer : embeddedPeers(property)) {
             if (peer instanceof HibernateEmbeddedProperty) {
-                collectCollectionUses((HibernateEmbeddedProperty) peer, "${path}.${peer.name}".toString(), uses, visiting + [type.javaClass])
+                collectCollectionUses(owner, (HibernateEmbeddedProperty) peer, "${path}.${peer.name}".toString(), uses, visiting + [type.javaClass])
             } else if (peer instanceof HibernateToManyProperty) {
-                uses.computeIfAbsent("${type.javaClass.name}#${peer.name}".toString()) { String key -> new ArrayList<String>() }.add(path)
+                uses.computeIfAbsent(sharedKey(type, peer.name)) { String key -> new ArrayList<EmbeddedUse>() }
+                        .add(new EmbeddedUse(owner, path, peer.name))
             }
         }
     }
+
+    private static String sharedKey(GrailsHibernatePersistentEntity type, String collection) {
+        return "${type.javaClass.name}#${collection}".toString()
+    }
+
+    private static record EmbeddedUse(GrailsHibernatePersistentEntity owner, String path, String collection) { }
 
     private static void requireWholeHierarchy(GrailsHibernatePersistentEntity entity, Set<GrailsHibernatePersistentEntity> given) {
         if (!entity.isRoot() && superEntity(entity, given) == null) {
@@ -1447,6 +1484,14 @@ class GrailsDomainGenerator {
      * @throws UnsupportedOperationException when something about the collection cannot be stated yet
      */
     CollectionFacets collectionFacets(HibernateBasicProperty property) {
+        return collectionFacets(property, null)
+    }
+
+    /**
+     * @param qualifier the qualifier of a collection inside an embedded type that another embedded property reaches too
+     *     ({@link #embeddedCollectionQualifier}), or {@code null}: the collection then has a table and a key column of its own
+     */
+    CollectionFacets collectionFacets(HibernateBasicProperty property, String qualifier) {
         String problem = collectionProblem(property)
         if (problem != null) {
             throw new UnsupportedOperationException(unsupportedReason(property.hibernateOwner, property))
@@ -1456,23 +1501,51 @@ class GrailsDomainGenerator {
         JoinTable joinTable = mapped.joinTable
         // TableForManyCalculator: the join table's own schema, else the owner's table schema; the catalog is never the owner's
         String schema = joinTable?.schema != null ? joinTable.schema : entityFacets(property.hibernateOwner).schema()
+        String table = qualifier == null ? tableForMany.getTableName(property) : qualifiedTableName(property, qualifier)
+        List<ColumnFacets> keys = qualifiedKeys(collectionKeyColumns(property), collectionKeyReferencedColumns(property), qualifier)
+        ColumnFacets element = collectionElementFacets(property, kind)
         return new CollectionFacets(
                 kind,
-                tableForMany.getTableName(property),
+                table,
                 schema,
                 joinTable?.catalog,
-                collectionKeyFacets(property),
-                collectionElementFacets(property, kind),
+                qualifier == null ? collectionKeyFacets(property) : keys[0],
+                element,
                 collectionIndexFacets(property, kind),
                 property.isLazy(),
                 property.getLazy() == Boolean.TRUE,
                 FetchMode.JOIN == mapped.fetchMode ? FetchMode.JOIN : FetchMode.SELECT,
                 Math.max(property.batchSize, 0),
                 property.cacheUsage,
-                collectionKeyColumns(property),
+                keys,
                 collectionKeyReferencedColumns(property),
                 collectionIndexType(property, kind),
-                collectionTableIndexes(property, tableForMany.getTableName(property), collectionKeyColumns(property), collectionElementFacets(property, kind)))
+                collectionTableIndexes(property, table, keys, element))
+    }
+
+    /**
+     * The table of a collection inside an embedded type that has a table of its own: the qualifier (the table of the owner and the path of
+     * the embedded property) and the name the mapping gives the join table, else the name of the collection.
+     */
+    private String qualifiedTableName(HibernateToManyProperty property, String qualifier) {
+        String named = property.hibernateMappedForm.joinTable?.name
+        return "${qualifier}_${named != null ? named : namingStrategy.resolveColumnName(property.name).replace('`', '')}".toString()
+    }
+
+    /** The key columns of a collection that has a table of its own: named after the qualifier, one column for each key of the owner. */
+    private static List<ColumnFacets> qualifiedKeys(List<ColumnFacets> keys, List<String> referenced, String qualifier) {
+        if (qualifier == null) {
+            return keys
+        }
+        List<ColumnFacets> result = []
+        for (int i = 0; i < keys.size(); i++) {
+            ColumnFacets key = keys[i]
+            String name = keys.size() == 1 ? "${qualifier}_id".toString() : "${qualifier}_${referenced[i]}".toString()
+            result << new ColumnFacets(
+                    name, key.nullable(), key.unique(), key.insertable(), key.updatable(), key.length(), key.precision(), key.scale(),
+                    key.sqlType(), key.defaultValue(), key.read(), key.write(), key.comment())
+        }
+        return result
     }
 
     /**
@@ -1757,6 +1830,15 @@ class GrailsDomainGenerator {
      * @throws UnsupportedOperationException when something about the collection cannot be stated yet
      */
     ToManyFacets toManyFacets(HibernateToManyEntityProperty property) {
+        return toManyFacets(property, null)
+    }
+
+    /**
+     * @param qualifier the qualifier of a collection inside an embedded type that another embedded property reaches too
+     *     ({@link #embeddedCollectionQualifier}), or {@code null}: a collection that has a join table then has a table and a key
+     *     column of its own
+     */
+    ToManyFacets toManyFacets(HibernateToManyEntityProperty property, String qualifier) {
         if (toManyProblem(property) != null) {
             throw new UnsupportedOperationException(unsupportedReason(property.hibernateOwner, property))
         }
@@ -1821,6 +1903,11 @@ class GrailsDomainGenerator {
         }
         String condition = property instanceof HibernateOneToManyProperty && target.isMultiTenant() ?
                 target.getMultiTenantFilterCondition(defaultColumnNames) : null
+        if (qualifier != null && table != null && mappedBy == null) {
+            table = qualifiedTableName(property, qualifier)
+            keys = qualifiedKeys(keys != null ? keys : [key], keys != null ? collectionKeyReferencedColumns(property) : [], qualifier)
+            key = keys[0]
+        }
         return new ToManyFacets(
                 kind,
                 target.name,
@@ -2686,7 +2773,9 @@ class GrailsDomainGenerator {
                 if (facets.catalog()) {
                     joinTable = joinTable.define('catalog', facets.catalog())
                 }
-                annotations << joinTable.build()
+                if (!sharedEmbeddedCollection(property)) {
+                    annotations << joinTable.build()
+                }
             }
             annotations << manyToMany.build()
             if (facets.cascade().orphanRemoval()) {
@@ -2824,7 +2913,9 @@ class GrailsDomainGenerator {
         if (facets.catalog()) {
             table = table.define('catalog', facets.catalog())
         }
-        annotations << table.build()
+        if (!sharedEmbeddedCollection(property)) {
+            annotations << table.build()
+        }
         annotations << columnAnnotation(facets.element(), property.componentType)
         if (facets.kind() == CollectionKind.LIST) {
             annotations << AnnotationDescription.Builder.ofType(OrderColumn)
@@ -2940,6 +3031,81 @@ class GrailsDomainGenerator {
     }
 
     /**
+     * Whether the collection is inside an embedded type that more than one embedded property reaches. Its table and key are then stated by
+     * each owner with an {@code @AssociationOverride} ({@code @CollectionTable} on the field of the shared embeddable would win over it).
+     */
+    private boolean sharedEmbeddedCollection(HibernatePersistentProperty property) {
+        return sharedEmbeddedCollections.contains(sharedKey(property.hibernateOwner, property.name))
+    }
+
+    /**
+     * The collections of the embedded type of an embedded property, and of the embedded types nested in it, that more than one embedded
+     * property reaches, each with its path relative to the embedded property and the dotted path of the embedded property that holds it.
+     */
+    private void sharedCollectionPeers(
+            HibernateEmbeddedProperty property, String relative, String binderPath, List<Class<?>> visiting, List<SharedCollection> into) {
+        GrailsHibernatePersistentEntity type = (GrailsHibernatePersistentEntity) property.associatedEntity
+        if (type == null || visiting.contains(type.javaClass)) {
+            return
+        }
+        for (HibernatePersistentProperty peer : embeddedPeers(property)) {
+            if (peer instanceof HibernateEmbeddedProperty) {
+                sharedCollectionPeers((HibernateEmbeddedProperty) peer, relative.isEmpty() ? peer.name : "${relative}.${peer.name}".toString(),
+                        "${binderPath}.${peer.name}".toString(), visiting + [type.javaClass], into)
+            } else if (peer instanceof HibernateToManyProperty && sharedEmbeddedCollection(peer)) {
+                into << new SharedCollection(relative.isEmpty() ? peer.name : "${relative}.${peer.name}".toString(), binderPath, peer)
+            }
+        }
+    }
+
+    private static record SharedCollection(String relativePath, String binderPath, HibernatePersistentProperty property) { }
+
+    /**
+     * The {@code @AssociationOverride}s that state the table and the key of each shared collection of an embedded property for its
+     * owner: the table and the key column of the binder for the first embedded property that reaches the collection, names qualified with
+     * the owner and the path for the others.
+     */
+    private List<AnnotationDescription> sharedCollectionOverrides(HibernateEmbeddedProperty property) {
+        List<SharedCollection> shared = []
+        sharedCollectionPeers(property, '', property.name, [], shared)
+        return shared.collect { SharedCollection collection ->
+            String qualifier = embeddedCollectionQualifier(property.hibernateOwner, collection.binderPath(), collection.property().name)
+            AnnotationDescription.Builder joinTable
+            if (collection.property() instanceof HibernateToManyEntityProperty) {
+                ToManyFacets facets = toManyFacets((HibernateToManyEntityProperty) collection.property(), qualifier)
+                if (facets.mappedBy() != null || !facets.manyToMany()) {
+                    return null
+                }
+                joinTable = AnnotationDescription.Builder.ofType(JpaJoinTable)
+                        .define('name', facets.tableName())
+                        .defineAnnotationArray('joinColumns', TypeDescription.ForLoadedType.of(JoinColumn), keyJoinColumns(facets.keys(), facets.referencedKeys()))
+                        .defineAnnotationArray('inverseJoinColumns', TypeDescription.ForLoadedType.of(JoinColumn), joinColumnAnnotation(facets.element()))
+                if (facets.schema()) {
+                    joinTable = joinTable.define('schema', facets.schema())
+                }
+                if (facets.catalog()) {
+                    joinTable = joinTable.define('catalog', facets.catalog())
+                }
+            } else {
+                CollectionFacets facets = collectionFacets((HibernateBasicProperty) collection.property(), qualifier)
+                joinTable = AnnotationDescription.Builder.ofType(JpaJoinTable)
+                        .define('name', facets.tableName())
+                        .defineAnnotationArray('joinColumns', TypeDescription.ForLoadedType.of(JoinColumn), keyJoinColumns(facets.keys(), facets.referencedKeys()))
+                if (facets.schema()) {
+                    joinTable = joinTable.define('schema', facets.schema())
+                }
+                if (facets.catalog()) {
+                    joinTable = joinTable.define('catalog', facets.catalog())
+                }
+            }
+            return AnnotationDescription.Builder.ofType(AssociationOverride)
+                    .define('name', collection.relativePath())
+                    .define('joinTable', joinTable.build())
+                    .build()
+        }.findAll { AnnotationDescription override -> override != null }
+    }
+
+    /**
      * An embedded property is an {@code @Embedded} field of the generated embeddable type. The owner states every
      * column of the embedded type with {@code @AttributeOverride}, because the names and the nullability depend on the
      * owner (path prefix, parent property, table-per-hierarchy subclass); a nested embedded field inside the
@@ -2963,6 +3129,7 @@ class GrailsDomainGenerator {
                                                 [joinColumnAnnotation(leaf.column())] as AnnotationDescription[])
                                 .build()
                     }
+            associationOverrides.addAll(sharedCollectionOverrides(property))
             if (!associationOverrides.isEmpty()) {
                 annotations << AnnotationDescription.Builder.ofType(AssociationOverrides)
                         .defineAnnotationArray('value', TypeDescription.ForLoadedType.of(AssociationOverride),
