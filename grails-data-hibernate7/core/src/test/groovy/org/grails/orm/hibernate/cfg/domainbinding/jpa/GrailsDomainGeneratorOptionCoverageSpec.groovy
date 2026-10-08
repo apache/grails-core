@@ -21,6 +21,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.jpa
 import grails.gorm.annotation.Entity
 import jakarta.persistence.AccessType
 import jakarta.persistence.CascadeType
+import jakarta.persistence.Embedded
 import jakarta.persistence.EnumType
 import jakarta.persistence.FetchType
 import org.hibernate.MappingException
@@ -258,19 +259,19 @@ class GrailsDomainGeneratorOptionCoverageSpec extends GrailsDomainGeneratorSuppo
         property << ['tags', 'targets']
     }
 
-    void "a user type mapped on an embedded property is rejected by name, because the binder binds it as a simple value"() {
+    void "a user type mapped on an embedded property makes it one simple column of that type, as the binder binds it"() {
         given:
         PropertyConfig config = entity(GenCovOwner).getHibernatePropertyByName('home').hibernateMappedForm
         config.type = GenUpperType
 
         when:
-        generateGroup(GenCovOwner, GenCovTarget)
+        Class<?> owner = generateGroup(GenCovOwner, GenCovTarget).find { it.key.name == GenCovOwner.name }.value
+        java.lang.reflect.Field home = owner.getDeclaredField('home')
 
         then:
-        UnsupportedOperationException e = thrown()
-        e.message.contains('GenCovOwner')
-        e.message.contains('home')
-        e.message.contains('GenUpperType')
+        !home.isAnnotationPresent(Embedded)
+        home.getAnnotation(org.hibernate.annotations.Type).value() == GenUpperType
+        home.getAnnotation(jakarta.persistence.Column).name() == 'home'
 
         cleanup:
         config.type = null

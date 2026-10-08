@@ -330,7 +330,7 @@ class GrailsDomainGenerator {
         Map<String, List<EmbeddedUse>> uses = new LinkedHashMap<String, List<EmbeddedUse>>()
         for (GrailsHibernatePersistentEntity entity : entities) {
             for (HibernatePersistentProperty property : entity.persistentPropertiesToBind) {
-                if (property instanceof HibernateEmbeddedProperty) {
+                if (isComponent(property)) {
                     collectCollectionUses(entity, (HibernateEmbeddedProperty) property, property.name, uses, [])
                 }
             }
@@ -381,7 +381,7 @@ class GrailsDomainGenerator {
             return
         }
         for (HibernatePersistentProperty peer : embeddedPeers(property)) {
-            if (peer instanceof HibernateEmbeddedProperty) {
+            if (isComponent(peer)) {
                 collectCollectionUses(owner, (HibernateEmbeddedProperty) peer, "${path}.${peer.name}".toString(), uses, visiting + [type.javaClass])
             } else if (peer instanceof HibernateToManyProperty) {
                 uses.computeIfAbsent(sharedKey(type, peer.name)) { String key -> new ArrayList<EmbeddedUse>() }
@@ -443,7 +443,7 @@ class GrailsDomainGenerator {
                 if (target != null && !found.any { GrailsHibernatePersistentEntity other -> other.javaClass == target.javaClass }) {
                     found << target
                 }
-            } else if (property instanceof HibernateEmbeddedProperty) {
+            } else if (isComponent(property)) {
                 // the generated embeddable types its association fields with the generated target classes
                 GrailsHibernatePersistentEntity type = (GrailsHibernatePersistentEntity) ((HibernateEmbeddedProperty) property).associatedEntity
                 if (type != null && !visiting.contains(type.javaClass)) {
@@ -650,7 +650,7 @@ class GrailsDomainGenerator {
      * @return why {@link #generate} rejects the property, as the {@link UnsupportedOperationException} message names it
      */
     String unsupportedReason(GrailsHibernatePersistentEntity entity, HibernatePersistentProperty property) {
-        if (property instanceof HibernateEmbeddedProperty) {
+        if (isComponent(property)) {
             String problem = embeddedProblem((HibernateEmbeddedProperty) property, [])
             if (problem != null) {
                 return "Embedded property [${property.name}] of [${entity.name}]: ${problem}"
@@ -681,12 +681,8 @@ class GrailsDomainGenerator {
             }
         }
         if ((property instanceof HibernateSimpleProperty || property instanceof HibernateTenantIdProperty ||
-                isCustomProperty(property)) && !decideType(property).supported) {
+                isCustomProperty(property) || isEmbeddedValue(property)) && !decideType(property).supported) {
             return typeNotSupported(property, decideType(property))
-        }
-        if (isCustomProperty(property)) {
-            return "Property [${property.name}] of [${entity.name}] is a HibernateCustomProperty with no type mapped, " +
-                    'which the generator does not support yet: it states a custom type only when the mapping names a UserType class'
         }
         return "Property [${property.name}] of [${entity.name}] is a ${property.getClass().simpleName}, " +
                 'which the generator does not support yet'
@@ -912,7 +908,7 @@ class GrailsDomainGenerator {
     }
 
     private void collectConstraintSites(HibernatePersistentProperty property, String path, List<ConstraintSite> sites) {
-        if (property instanceof HibernateEmbeddedProperty) {
+        if (isComponent(property)) {
             HibernateEmbeddedProperty embedded = (HibernateEmbeddedProperty) property
             String current = path.isEmpty() ? embedded.name : "${path}.${embedded.name}".toString()
             for (HibernatePersistentProperty peer : embeddedPeers(embedded)) {
@@ -1043,14 +1039,13 @@ class GrailsDomainGenerator {
      * @return whether the generator can describe the property today: a plain single-column basic property, a
      *     derived (formula) property, the tenant id (an ordinary column), the version, an enum, an embedded object whose own properties are all
      *     supported, a collection of basic values or enums, a many-to-one association, the simple identifier, or a property of a type
-     *     GORM does not know ({@link HibernateCustomProperty}) that the mapping gives a {@code UserType} class. Custom types with no
-     *     type mapped, multi-column properties and the other associations are not supported yet.
+     *     GORM does not know ({@link HibernateCustomProperty}). Multi-column properties are not supported.
      */
     boolean supports(HibernatePersistentProperty property) {
         if (property instanceof HibernateSimpleIdentityProperty) {
             return property.hibernateOwner.isRoot() && decideType(property).supported
         }
-        if (property instanceof HibernateEmbeddedProperty) {
+        if (isComponent(property)) {
             return embeddedProblem((HibernateEmbeddedProperty) property, []) == null
         }
         if (property instanceof HibernateBasicProperty) {
@@ -1063,7 +1058,7 @@ class GrailsDomainGenerator {
             return toManyProblem((HibernateToManyEntityProperty) property) == null
         }
         if (!(property instanceof HibernateSimpleProperty) && !(property instanceof HibernateTenantIdProperty) &&
-                !isCustomProperty(property)) {
+                !isCustomProperty(property) && !isEmbeddedValue(property)) {
             return false
         }
         PropertyConfig mappedForm = property.hibernateMappedForm
@@ -1075,9 +1070,22 @@ class GrailsDomainGenerator {
             return false
         }
         TypeDecision decision = decideType(property)
-        // the binder binds a custom property like a simple one, from the type its mapping names; with none, the type it resolves
-        // from the class alone is not one an annotation states, so only a mapped UserType class is supported
-        return decision.supported && (!isCustomProperty(property) || decision.facets != null)
+        // the binder binds a custom property like a simple one, from the type its mapping names; with none, Hibernate infers the type from
+        // the field as the binder's resolution does (a serializable class is stored as bytes)
+        return decision.supported
+    }
+
+    /**
+     * @return whether the property is an embedded object the binder binds as a component. An embedded property that the mapping gives a
+     *     {@code UserType} is bound as one simple value of that type and not as a component, and is described like any other column.
+     */
+    private static boolean isComponent(HibernatePersistentProperty property) {
+        return property instanceof HibernateEmbeddedProperty && !((HibernateEmbeddedProperty) property).isUserButNotCollectionType()
+    }
+
+    /** @return whether the property is an embedded property the binder binds as one simple value of a {@code UserType}, see {@link #isComponent} */
+    private static boolean isEmbeddedValue(HibernatePersistentProperty property) {
+        return property instanceof HibernateEmbeddedProperty && !isComponent(property)
     }
 
     /**
@@ -1159,8 +1167,8 @@ class GrailsDomainGenerator {
             if (AttributeConverter.isAssignableFrom(named) && !isEnum) {
                 return convertedType(name, named, type)
             }
-            return new TypeDecision(false, name, null, 'names a class that is neither a UserType nor an AttributeConverter, which ' +
-                    '@Type and @Convert cannot name')
+            // the binder resolves a class name that is no UserType or converter through the types registered under Java class names
+            // (java.util.Date is the timestamp type), so the name is looked up as a registered type below
         }
         BasicType<?> registered = typeConfiguration.basicTypeRegistry.getRegisteredType(name)
         boolean identity = property instanceof HibernateSimpleIdentityProperty
@@ -1182,7 +1190,8 @@ class GrailsDomainGenerator {
         if (registered == null) {
             problem = 'is neither a UserType class nor a type registered with Hibernate'
         } else if (isEnum) {
-            problem = 'is a registered type on an enum, which the binder binds with its own type parameters'
+            problem = 'is a registered type on an enum: the binder boots it but cannot store a single row (the enum value cannot be cast to the ' +
+                    'type), so the application would fail on its first save'
         } else {
             problem = 'is a registered type that converts its value in a way @Convert does not state (not a JPA attribute converter, ' +
                     'or the type of a collection element, an identifier or an enum)'
@@ -1328,9 +1337,6 @@ class GrailsDomainGenerator {
         Class<?> elementType = property.componentType
         if (elementType == null || elementType == Object) {
             return 'the element type is not known'
-        }
-        if (mapped.joinTable.keys != null && mapped.joinTable.keys.size() > 1) {
-            return 'the join table has a composite key'
         }
         if (compositeIdentifier(property.hibernateOwner)) {
             String compositeProblem = compositeOwnerKeyProblem(property)
@@ -1661,8 +1667,9 @@ class GrailsDomainGenerator {
                     'states for the index of a list or the key of a map'
         }
         if (registered.valueConverter != null) {
-            return "the index column type [${name}] is a registered type that converts its value, which no annotation states for the " +
-                    'index of a list or the key of a map'
+            return "the index column type [${name}] is a registered type that converts its value: the binder boots it, but a list fails on " +
+                    'its first row (the integer index violates the check of the converted column) and the table of a map is not created ' +
+                    '(the column gets the type name as its SQL type), so the application cannot store a collection with it'
         }
         if (kind == CollectionKind.LIST) {
             Class<?> descriptor = javaTypeDescriptorClass(registered.javaTypeDescriptor.javaTypeClass)
@@ -1791,17 +1798,9 @@ class GrailsDomainGenerator {
                         'no row is ever written, and annotations cannot say it (Hibernate\'s annotation binder fails with a ' +
                         'NullPointerException when both sides are mappedBy)'
             }
-            if (property.hibernateMappedForm.joinTable.keys != null && property.hibernateMappedForm.joinTable.keys.size() > 1 ||
-                    other.hibernateMappedForm.joinTable.keys != null && other.hibernateMappedForm.joinTable.keys.size() > 1) {
-                return 'a join table has a composite key'
-            }
         } else if (property.bidirectional) {
             if (!(property.hibernateInverseSide instanceof HibernateManyToOneProperty)) {
                 return "the other side [${property.hibernateInverseSide?.name}] is not a many-to-one"
-            }
-        } else {
-            if (mapped.joinTable.keys != null && mapped.joinTable.keys.size() > 1) {
-                return 'the join table has a composite key'
             }
         }
         String indexTypeProblem = collectionIndexTypeProblem(property, kind)
@@ -2301,7 +2300,7 @@ class GrailsDomainGenerator {
         enclosing << embedded
         for (HibernatePersistentProperty peer : embeddedPeers(embedded)) {
             String path = relative.isEmpty() ? peer.name : "${relative}.${peer.name}".toString()
-            if (peer instanceof HibernateEmbeddedProperty) {
+            if (isComponent(peer)) {
                 collectLeaves((HibernateEmbeddedProperty) peer, currentPath, path, enclosing, leaves)
             } else if (peer instanceof HibernateToManyProperty) {
                 // a collection has a table of its own and no column in the owner's table: the embeddable states its table and columns itself
@@ -2366,20 +2365,12 @@ class GrailsDomainGenerator {
 
     /**
      * @return why the generator cannot describe the embedded property, or {@code null} when it can: every property of
-     *     the embedded type, nested embedded types included, must be supported, the embedded type must not extend
-     *     another persistent class, and embedded types must not contain each other
+     *     the embedded type, nested embedded types included, must be supported, and embedded types must not contain each other
      */
     private String embeddedProblem(HibernateEmbeddedProperty property, List<Class<?>> visiting) {
         GrailsHibernatePersistentEntity type = (GrailsHibernatePersistentEntity) property.associatedEntity
         if (type == null) {
             return 'the embedded type is unknown'
-        }
-        if (!type.isRoot()) {
-            return "the embedded type [${type.name}] extends another persistent class"
-        }
-        if (property.isUserButNotCollectionType()) {
-            return "the property is mapped with the type [${property.userType.name}]: the binder binds it as one simple value of that " +
-                    'type and not as an embedded object, which the generator does not state'
         }
         if (visiting.contains(type.javaClass)) {
             return "the embedded type [${type.name}] contains itself"
@@ -2387,7 +2378,7 @@ class GrailsDomainGenerator {
         List<Class<?>> path = new ArrayList<Class<?>>(visiting)
         path << type.javaClass
         for (HibernatePersistentProperty peer : embeddedPeers(property)) {
-            if (peer instanceof HibernateEmbeddedProperty) {
+            if (isComponent(peer)) {
                 String problem = embeddedProblem((HibernateEmbeddedProperty) peer, path)
                 if (problem != null) {
                     return problem
@@ -2638,7 +2629,7 @@ class GrailsDomainGenerator {
     private DynamicType.Builder<Object> defineField(
             DynamicType.Builder<Object> builder, HibernatePersistentProperty property, List<AnnotationDescription> extra,
             Map<String, DynamicType.Unloaded<?>> embeddables) {
-        if (property instanceof HibernateEmbeddedProperty) {
+        if (isComponent(property)) {
             return defineEmbeddedField(builder, (HibernateEmbeddedProperty) property, embeddables, true)
         }
         if (property instanceof HibernateBasicProperty && !boundAsColumn(property)) {
@@ -3086,7 +3077,7 @@ class GrailsDomainGenerator {
             return
         }
         for (HibernatePersistentProperty peer : embeddedPeers(property)) {
-            if (peer instanceof HibernateEmbeddedProperty) {
+            if (isComponent(peer)) {
                 sharedCollectionPeers((HibernateEmbeddedProperty) peer, relative.isEmpty() ? peer.name : "${relative}.${peer.name}".toString(),
                         "${binderPath}.${peer.name}".toString(), visiting + [type.javaClass], into)
             } else if (peer instanceof HibernateToManyProperty && sharedEmbeddedCollection(peer)) {
@@ -3233,7 +3224,7 @@ class GrailsDomainGenerator {
                 .name(name)
                 .annotateType(AnnotationDescription.Builder.ofType(Embeddable).build())
         for (HibernatePersistentProperty peer : peers) {
-            builder = peer instanceof HibernateEmbeddedProperty ?
+            builder = isComponent(peer) ?
                     defineEmbeddedField(builder, (HibernateEmbeddedProperty) peer, embeddables, false) :
                     defineField(builder, peer, [], embeddables)
         }
