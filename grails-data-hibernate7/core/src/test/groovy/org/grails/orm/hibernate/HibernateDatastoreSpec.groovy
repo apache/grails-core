@@ -245,6 +245,8 @@ class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
         def ds = new HibernateDatastore(config, GHUBook) {
             @Override
             protected void closeConnectionSources() throws IOException {
+                // close them first so the failure does not leave this datastore's SessionFactory open
+                super.closeConnectionSources()
                 throw new IOException("connection close failure")
             }
         }
@@ -265,6 +267,8 @@ class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
         def ds = new HibernateDatastore(config, GHUBook) {
             @Override
             protected void closeGormEnhancer() throws IOException {
+                // close it first so the failure does not leave this datastore in the GORM registry
+                super.closeGormEnhancer()
                 throw new IOException("enhancer close failure")
             }
         }
@@ -327,6 +331,8 @@ class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
         def ds = new HibernateDatastore(Collections.singletonMap(Settings.SETTING_DB_CREATE, "create-drop"), GHUBook) {
             @Override
             void destroy() throws Exception {
+                // release the datastore first so the failure does not leak its SessionFactory
+                super.destroy()
                 throw new RuntimeException("destroy failed")
             }
         }

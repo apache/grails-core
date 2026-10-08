@@ -18,8 +18,10 @@
  */
 package grails.boot
 
+import org.grails.config.yaml.YamlPropertySourceLoader
 import org.springframework.core.env.MapPropertySource
 import org.springframework.core.env.StandardEnvironment
+import org.springframework.core.io.ByteArrayResource
 import spock.lang.Specification
 
 /**
@@ -173,6 +175,33 @@ class GrailsBannerVersionLookupSpec extends Specification {
             !new Serving(present: ['tomcat': '1.1.1'])
                     .createBannerVersions(configured(['grails.banner.versions.exclude': 'container']))
                     .containsKey('Tomcat')
+    }
+
+    void 'banner version options can be configured as YAML lists with placeholders'() {
+        given:
+        def environment = configured()
+        def yaml = '''\
+            grails:
+              banner:
+                art.display: false
+                versions:
+                  exclude: ["${EXAMPLE_BANNER_EXCLUDE:container}"]
+                  order: [groovy, jvm]
+                  include: [undertow]
+            '''.stripIndent()
+        environment.propertySources.addFirst(new YamlPropertySourceLoader().load('test', new ByteArrayResource(yaml.bytes)).first())
+        def banner = new Serving(present: [tomcat: '1.1.1', undertow: '3.3.3'])
+        def bytes = new ByteArrayOutputStream()
+
+        when:
+        banner.printBanner(environment, GrailsBannerVersionLookupSpec, new PrintStream(bytes))
+
+        then:
+        def output = bytes.toString()
+        !output.contains('Tomcat')
+        output.contains('Undertow')
+        output.indexOf('Groovy') >= 0
+        output.indexOf('Groovy') < output.indexOf('JVM')
     }
 
     void 'naming the container as well as being shown it by default shows it once'() {

@@ -32,6 +32,7 @@ import groovy.lang.Closure;
 import jakarta.persistence.Tuple;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.ParameterExpression;
 
 import org.hibernate.FlushMode;
 import org.hibernate.Session;
@@ -488,6 +489,12 @@ public class HibernateQuery extends Query {
                 offset, max, lockResult, queryCache, fetchSize, timeout, flushMode, readOnly, proxyHandler);
     }
 
+    /** An executor that never pages, because max and offset do not apply to a count. */
+    private HibernateQueryExecutor getCountQueryExecutor() {
+        return new HibernateQueryExecutor(
+                null, null, lockResult, queryCache, fetchSize, timeout, flushMode, readOnly, proxyHandler);
+    }
+
     private JpaCriteriaQueryCreator<?> createJpaCriteriaQueryCreator() {
         ConversionService conversionService = getSession().getMappingContext().getConversionService();
         return new JpaCriteriaQueryCreator<>(
@@ -526,7 +533,8 @@ public class HibernateQuery extends Query {
         Number result;
         if (projections.getProjectionList().isEmpty()) {
             projections().count();
-            result = (Number) executeSingleResult();
+            var creator = createJpaCriteriaQueryCreator();
+            result = executeCount(creator.createQuery(), creator.getParameterValues());
         } else {
             HibernateCriteriaBuilder cb = getCriteriaBuilder();
 
@@ -539,10 +547,14 @@ public class HibernateQuery extends Query {
 
             countQuery.from(innerSubquery);
             countQuery.select(cb.count(cb.literal(1)));
-            result = (Number) getHibernateQueryExecutor().singleResult(getCurrentSession(), countQuery, creator.getParameterValues());
+            result = executeCount(countQuery, creator.getParameterValues());
         }
 
         return (Number) firePostQueryEvent(result);
+    }
+
+    private Number executeCount(JpaCriteriaQuery<?> query, Map<ParameterExpression<?>, Object> parameterValues) {
+        return (Number) getCountQueryExecutor().singleResult(getCurrentSession(), query, parameterValues);
     }
 
     private void firePreQueryEvent() {

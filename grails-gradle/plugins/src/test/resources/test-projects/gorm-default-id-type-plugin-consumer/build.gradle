@@ -8,18 +8,25 @@
 tasks.register('inspectGormIdType') {
     dependsOn ':plugin:compileJava'
 
-    doLast {
-        ['plugin', 'app'].each { projectName ->
+    def idTypeArguments = providers.provider {
+        ['plugin', 'app'].collectEntries { projectName ->
             def compileGroovy = project(":$projectName").tasks.named('compileGroovy').get()
             def arguments = compileGroovy.groovyOptions.forkOptions.jvmArgumentProviders
                     .collectMany { it.asArguments().toList() }
                     .findAll { it.startsWith('-Dgrails.gorm.defaultIdType=') }
+            [(projectName): arguments]
+        }
+    }
+    def pluginMain = project(':plugin').sourceSets.main
+    def pluginClassesDirs = pluginMain.output.classesDirs
+    def pluginCompileClasspath = pluginMain.compileClasspath
+
+    doLast {
+        idTypeArguments.get().each { projectName, arguments ->
             println "${projectName.toUpperCase()}_GORM_ID_TYPE_ARGS=${arguments}"
         }
 
-        def pluginProject = project(':plugin')
-        def urls = (pluginProject.sourceSets.main.output.classesDirs.files +
-                pluginProject.sourceSets.main.compileClasspath.files)*.toURI()*.toURL()
+        def urls = (pluginClassesDirs.files + pluginCompileClasspath.files)*.toURI()*.toURL()
         URLClassLoader loader = URLClassLoader.newInstance(urls as URL[], ClassLoader.platformClassLoader)
         try {
             def idType = Class.forName('example.PortableBook', false, loader).getDeclaredField('id').type

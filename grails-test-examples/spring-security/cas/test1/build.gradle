@@ -38,8 +38,9 @@ dependencies {
     implementation 'org.apache.grails:grails-layout'
 
     // 3rd party client-side assets bundled in webjars
-    implementation 'org.webjars:bootstrap:3.3.6'
-    implementation 'org.webjars:jquery:2.2.0'
+    testAndDevelopmentOnly platform(project(':grails-bom'))
+    testAndDevelopmentOnly 'org.webjars.npm:bootstrap'
+    testAndDevelopmentOnly 'org.webjars.npm:jquery'
 
     // Starts the CAS server the app authenticates against; see CasContainerHolder
     implementation 'org.testcontainers:testcontainers'

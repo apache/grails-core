@@ -39,7 +39,8 @@ class CollectionKeyColumnUpdaterSpec extends HibernateGormDatastoreSpec {
             CKCUItemOne,
             CKCUOwnerMany,
             CKCUItemMany1,
-            CKCUItemMany2
+            CKCUItemMany2,
+            CKCUBasicOwner
         )
     }
 
@@ -69,6 +70,23 @@ class CollectionKeyColumnUpdaterSpec extends HibernateGormDatastoreSpec {
         key.isUpdateable()
     }
 
+    def "bind keeps the key of a basic collection updateable although the owner has several unidirectional collections"() {
+        given:
+        def property = propertyFor(CKCUBasicOwner, "tags")
+        def column = new Column("test_col")
+        def key = new DependantValue(getGrailsDomainBinder().getMetadataBuildingContext(), null, null)
+        key.addColumn(column)
+        key.setUpdateable(false)
+
+        when:
+        updater.bind(property)
+
+        then:
+        1 * collectionKeyBinder.bind(property) >> key
+        key.isUpdateable()
+        column.isNullable()
+    }
+
     def "bind sets updateable false when multiple unidirectional"() {
         given:
         def property = propertyFor(CKCUOwnerMany, "items1")
@@ -85,6 +103,14 @@ class CollectionKeyColumnUpdaterSpec extends HibernateGormDatastoreSpec {
         !key.isUpdateable()
         column.isNullable()
     }
+}
+
+@Entity
+class CKCUBasicOwner {
+    Long id
+    Set<String> tags
+    List<Integer> scores
+    static hasMany = [tags: String, scores: Integer]
 }
 
 @Entity

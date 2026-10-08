@@ -14,7 +14,8 @@ Tag commit id: ${SHA}
 
 The artifacts to be voted on are located as follows (r${DIST_SVN_REVISION}):
 Source release: https://dist.apache.org/repos/dist/dev/${SVN_PROJECT}/${SVN_FOLDER}/${VERSION}/sources
-Binary distributions: https://dist.apache.org/repos/dist/dev/${SVN_PROJECT}/${SVN_FOLDER}/${VERSION}/distribution
+Binary and documentation distributions: https://dist.apache.org/repos/dist/dev/${SVN_PROJECT}/${SVN_FOLDER}/${VERSION}/distribution
+The documentation distribution, ${DIST_NAME}-${VERSION}-docs.zip (${DOCS_ZIP_SIZE}), is published to the website exactly as voted.
 
 Release artifacts are signed with a key from the following file:
 https://dist.apache.org/repos/dist/release/grails/KEYS

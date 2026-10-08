@@ -1,0 +1,88 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+The https://docs.gradle.org/{gradleVersion}/userguide/configuration_cache.html[Gradle configuration cache] stores the result of the configuration phase - the task graph and everything the tasks need to run - and reuses it when the same tasks are requested again.
+A build that reuses an entry skips configuring the projects altogether and runs more of its tasks in parallel, which makes repeated builds such as `./gradlew bootRun` or `./gradlew test` start noticeably faster.
+
+The Grails Gradle plugins support the configuration cache, and so do the Asset Pipeline and Grails Publish plugins in the versions the Grails Gradle BOM manages.
+Applications and plugins created with Grails 8.0 or later turn it on in their `gradle.properties`:
+
+[source,properties]
+.gradle.properties
+----
+org.gradle.configuration-cache=true
+----
+
+A project created with an earlier version can use it once it is upgraded to Grails 8.0, by adding the same line to its `gradle.properties`, as xref:upgrading#upgrading80x[Upgrading from Grails 7 to Grails 8] describes. When upgrading from an earlier Grails 8 milestone or release candidate, update the Grails Gradle plugins and BOM before enabling the configuration cache.
+To run a single build without it, pass `--no-configuration-cache`.
+
+The first build stores an entry and the next build with the same tasks and inputs reuses it:
+
+[source,console]
+----
+$ ./gradlew bootJar
+...
+Configuration cache entry stored.
+
+$ ./gradlew bootJar
+Reusing configuration cache.
+...
+Configuration cache entry reused.
+----
+
+==== Writing Compatible Build Logic
+
+With the configuration cache, the actions of a task run without access to the build model: a `doFirst` or `doLast` closure, an `onlyIf` condition or any other closure that runs while the task executes may not use `project`, other tasks, configurations or properties of the build script.
+Read what the task needs while it is configured, into a local variable or a provider, and use only that when it runs:
+
+[source,groovy]
+.build.gradle
+----
+tasks.register('printVersion') {
+    String version = project.version.toString() // <1>
+    doLast {
+        println "Version ${version}"            // <2>
+    }
+}
+----
+<1> Read while the task is configured
+<2> Only the value is used when the task runs
+
+Use the services Gradle injects instead of the methods of `project` to copy, delete or execute while a task runs, for example `FileSystemOperations` and `ExecOperations`.
+Gradle reports anything that cannot be stored, together with the line of the build script that caused it, and fails the build; see the https://docs.gradle.org/{gradleVersion}/userguide/configuration_cache_requirements.html[configuration cache requirements] for the complete list.
+
+Grails discovers the application's main class in the `findMainClass` task, after compilation.
+A configuration-time read of the `springBoot.mainClass` or `mainClassName` provider may return no value on a clean build, or the class found by an earlier build.
+A custom task that needs the discovered class must depend on `findMainClass` and read the provider during execution, when it returns the class found by the current build.
+Capture the provider while configuring the task rather than its current value.
+
+==== Plugins Without Configuration Cache Support
+
+A third-party Gradle plugin that does not support the configuration cache makes the build fail as soon as one of its tasks is part of it.
+Mark such tasks as not compatible to have Gradle run those builds without the configuration cache instead of failing them, as applications created with the `asciidoctor` feature do for the Asciidoctor Gradle plugin:
+
+[source,groovy]
+.build.gradle
+----
+tasks.withType(org.asciidoctor.gradle.jvm.AsciidoctorTask).configureEach {
+    notCompatibleWithConfigurationCache('The Asciidoctor Gradle plugin does not support the configuration cache')
+}
+----
+
+If a plugin cannot be dealt with that way, set `org.gradle.configuration-cache=false` in `gradle.properties` until it supports the configuration cache.
